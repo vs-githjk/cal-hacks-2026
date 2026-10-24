@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { purchaseFromRows, reviewsFromRows, stepFeedFromRows } from "./screens";
 import { PurchaseCard, ReceiptCard, ShieldCard, VetoCard } from "../components/buyer";
+import { BuyerScreen } from "../components/screens";
 
 const ts = (ms: number) => ({ microsSinceUnixEpoch: BigInt(ms) * 1000n });
 const purchase = (overrides: Record<string, unknown> = {}) => ({
@@ -76,6 +77,24 @@ describe("reviewsFromRows", () => {
     }] as never, "goal-a", "r1").veto;
     expect(veto?.sourceUrl).toBe("");
   });
+
+  it("does not repair evidence URLs containing raw whitespace or controls", () => {
+    for (const evidenceUrl of ["https://example.test/a b", "https://example.test/a\npath"]) {
+      const veto = reviewsFromRows([{
+        goalId: "goal-a", roundId: "r1", kind: "advocate", result: "veto", detail: "reason", evidenceUrl,
+        origin: "SIM", sellerId: "s", sellerName: "seller", landed: 90, bindingHash: "b".repeat(64), at: ts(2),
+      }] as never, "goal-a", "r1").veto;
+      expect(veto?.sourceUrl).toBe("");
+    }
+  });
+
+  it("shows no stale review when the selected round ID is not ready", () => {
+    const rows = [{
+      goalId: "goal-a", roundId: "old", kind: "advocate", result: "veto", detail: "old review", evidenceUrl: "https://example.test",
+      origin: "SIM", sellerId: "s", sellerName: "seller", landed: 90, bindingHash: "b".repeat(64), at: ts(2),
+    }];
+    expect(reviewsFromRows(rows as never, "goal-a")).toEqual({ veto: null, shield: null });
+  });
 });
 
 describe("stepFeedFromRows", () => {
@@ -118,6 +137,30 @@ describe("buyer cards", () => {
     expect(html).not.toContain("Approve");
   });
 
+  it("keeps the actual purchase path empty and read-only instead of showing sample cards or demo approval", () => {
+    const html = renderToStaticMarkup(createElement(BuyerScreen, {
+      goal: { text: "test goal", type: "budget_cap", state: "ACTIVE", cap: 100, reserved: 0, deadline: new Date(0), conditions: [], variant: "", origin: "SIM", skipped: [], allowance: null },
+      bids: [{ rank: 1, seller: "sample seller", origin: "SIM", condition: "new", landed: 10, adjusted: 10, recommendation: "buy", why: "sample", won: true }],
+      veto: { seller: "sample veto", origin: "SIM", landed: 10, finding: "sample", ruleId: "sample", sourceUrl: "", checkedAt: new Date(0), checkOrigin: "SIM" },
+      shield: { verdict: "block", seller: "sample shield", pageOrigin: "SIM", chars: 1, latencyMs: 1, evidence: [], ruleIds: [], version: "sample", verdictOrigin: "SIM" },
+      approval: { amount: 10, payee: "sample", allowance: 1, wordPair: "secret-code", codeExpiresAt: new Date(0), whyAnswer: "sample", attempts: [] },
+      purchase: null,
+      receipt: { seller: "sample receipt", item: "sample", condition: "new", amount: 10, shipping: 1, paymentMethod: "SIM", chargeId: "sample", chargeStatus: "SIM", paidAt: new Date(0), mandateId: "sample", mandateHash: "sample", mandateExpires: new Date(0), mandateOrigin: "SIM", signature: "sample" },
+      feed: [], buyerName: "buyer",
+      sample: { bids: true, veto: true, shield: true, approval: true, receipt: true },
+    }));
+    expect(html).toContain("No recorded mandate or payment is currently available");
+    expect(html).not.toContain("one-time code");
+    expect(html).not.toContain("calls you");
+    expect(html).not.toContain("signed mandate");
+    expect(html).not.toContain("sample seller");
+    expect(html).not.toContain("sample veto");
+    expect(html).not.toContain("sample shield");
+    expect(html).not.toContain("sample receipt");
+    expect(html).not.toContain("secret-code");
+    expect(html).not.toContain("<form");
+  });
+
   it("shows only the stored payment total and omits absent signature and shipping claims", () => {
     const html = renderToStaticMarkup(createElement(ReceiptCard, { receipt: {
       amount: 100, paymentMethod: "SIM, no money moved", chargeId: "ref-1", chargeStatus: "SIM, no money moved",
@@ -127,5 +170,14 @@ describe("buyer cards", () => {
     expect(html).toContain("SIM, no money moved");
     expect(html).not.toContain("Signature");
     expect(html).not.toContain("Shipping");
+  });
+
+  it("labels a Stripe test receipt without a SIM payment badge", () => {
+    const payment = purchaseFromRows([purchase({
+      paymentRef: "pi-test", paymentAmount: 100, paymentMode: "stripe_test", paidAt: ts(1_000), origin: "SIM",
+    })] as never, "goal-a", 2_000)!;
+    const html = renderToStaticMarkup(createElement(ReceiptCard, { receipt: payment.receipt }));
+    expect(html).toContain("Stripe test");
+    expect(html).not.toContain("SIM, no money moved");
   });
 });

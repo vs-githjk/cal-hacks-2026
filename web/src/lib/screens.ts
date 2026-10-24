@@ -333,6 +333,7 @@ interface BidReviewRow {
 }
 
 function safeEvidenceUrl(value: string): string {
+  if (/[\u0000-\u0020\u007f]/.test(value)) return "";
   try {
     const url = new URL(value);
     return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password ? url.href : "";
@@ -341,7 +342,8 @@ function safeEvidenceUrl(value: string): string {
 
 /** Map exact owned, caller-selected round rows; no seller, candidate, or verdict is inferred. */
 export function reviewsFromRows(rows: readonly BidReviewRow[], goalId: string, roundId?: string): { veto: VetoView | null; shield: ShieldView | null } {
-  const matching = rows.filter((row) => row.goalId === goalId && (!roundId || row.roundId === roundId));
+  if (!roundId) return { veto: null, shield: null };
+  const matching = rows.filter((row) => row.goalId === goalId && row.roundId === roundId);
   const latest = (kind: string) => matching.filter((row) => row.kind === kind).sort((a, b) => ms(b.at) - ms(a.at) || (a.checkId < b.checkId ? 1 : -1))[0];
   const advocate = latest("advocate");
   const veto = advocate?.result === "veto" ? {
