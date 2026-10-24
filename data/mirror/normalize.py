@@ -1,0 +1,96 @@
+"""Store listing (any actor's item) -> SpecCard with attrs and a listing block. Field names differ per actor,
+so each SpecCard field tries a list of candidate paths; a field no path finds stays absent (unknown)."""
+import hashlib
+import re
+
+FIELDS = {
+    "title": ["title", "name", "productTitle", "productName", "product.title"],
+    "url": ["url", "productUrl", "link", "itemUrl", "product.url"],
+    "price": ["price.value", "price.current", "currentPrice", "salePrice", "price", "soldPrice", "priceValue", "offerPrice"],
+    "was_price": ["originalPrice", "listPrice", "wasPrice", "regularPrice", "price.was", "strikethroughPrice"],
+    "shipping": ["shipping", "shippingPrice", "shippingCost", "delivery", "shippingInfo"],
+    "condition": ["condition", "itemCondition", "conditionName"],
+    "seller": ["seller.name", "seller", "sellerName", "sellerUsername", "soldBy", "seller.username", "store"],
+    "return_policy": ["returnPolicy", "returns", "returnsAccepted"],
+    "stock": ["stock", "availability", "stock_availability", "inStock", "in_stock", "stockStatus", "isAvailable", "available"],
+    "model_number": ["modelNumber", "mpn", "model", "sku", "itemNumber"],
+    "date": ["soldDate", "endedAt", "dateSold"],
+}
+# Marketplaces where sellers are often private people: never keep their handles.
+PRIVATE_SELLER_STORES = {"ebay_sold", "ebay_live"}
+CONDITIONS = [("open box", "open-box"), ("open-box", "open-box"), ("refurb", "refurbished"),
+              ("pre-owned", "used"), ("used", "used"), ("new", "new")]
+
+
+def pick(item, path):
+    cur = item
+    for k in path.split("."):
+        if not isinstance(cur, dict) or k not in cur:
+            return None
+        cur = cur[k]
+    return cur
+
+
+def first(item, paths):
+    for p in paths:
+        v = pick(item, p)
+        if v not in (None, "", [], {}):
+            return v
+    return None
+
+
+def money(v):
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, dict):
+        return money(first(v, ["value", "amount", "current", "price"]))
+    m = re.search(r"\d[\d,]*\.?\d*", str(v or ""))
+    return float(m.group(0).replace(",", "")) if m else None
+
+
+def condition(v, title=""):
+    text = f"{v or ''} {title}".lower() if v else ""
+    return next((c for k, c in CONDITIONS if k in text), "unknown")
+
+
+def attrs_from_title(title):
+    t = re.sub(r"[\u2122\u00ae]", "", title or "")
+    m = re.search(r"\b(RTX|RX|GTX)\s?(\d{4})\s?(Ti SUPER|Ti|SUPER|XTX|XT|GRE)?\b", t, re.I)
+    if m:
+        chip = f"{m.group(1).upper()} {m.group(2)}" + (f" {m.group(3).replace('ti', 'Ti').replace('super', 'SUPER')}" if m.group(3) else "")
+        return "gpu", {"chipset": chip.replace(" TI", " Ti")}
+    m = re.search(r"\b(\d{3,4})\s?W\b", t)
+    if m and re.search(r"power supply|PSU|80\+|80 PLUS", t, re.I):
+        return "psu", {"wattage": int(m.group(1)), "form_factor": "SFX" if re.search(r"\bSFX", t) else "ATX"}
+    if re.search(r"\b(mid|full|mini)[- ]tower|\bcase\b", t, re.I):
+        return "case", {}
+    return "unknown", {}
+
+
+def strip_private(store, item):
+    if store not in PRIVATE_SELLER_STORES:
+        return item
+    return {k: v for k, v in item.items() if not k.lower().startswith("seller")}
+
+
+def to_spec_card(store, item, snapshot_id, snapshot_date):
+    item = strip_private(store, item)
+    f = {k: first(item, paths) for k, paths in FIELDS.items()}
+    title = str(f["title"] or "")
+    cat, attrs = attrs_from_title(title)
+    seller = f["seller"]
+    listing = {
+        "url": f["url"], "price": money(f["price"]), "was_price": money(f["was_price"]),
+        "shipping": f["shipping"] if isinstance(f["shipping"], (str, int, float, bool)) else money(f["shipping"]),
+        "seller": seller if isinstance(seller, str) else (seller or {}).get("name") if isinstance(seller, dict) else None,
+        "return_policy": f["return_policy"], "stock": f["stock"], "sold_date": f["date"],
+    }
+    key = f"{store}:{f['url'] or title}"
+    return {
+        "id": f"{store}:{hashlib.sha1(key.encode()).hexdigest()[:12]}", "category": cat, "name": title,
+        "model_number": str(f["model_number"]) if f["model_number"] else None,
+        "condition": condition(f["condition"], title) if f["condition"] else "unknown",
+        "attrs": attrs, "price": listing["price"], "currency": "USD", "origin": "MIRROR",
+        "source": f["url"] or store, "snapshot_id": snapshot_id, "snapshot_date": snapshot_date,
+        "listing": {k: v for k, v in listing.items() if v is not None},
+    }

@@ -16,7 +16,8 @@
   "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]},
   "source": {"type": "string", "description": "listing URL, actor id or dataset id"},
   "snapshot_id": {"type": "string"},
-  "snapshot_date": {"type": "string"}
+  "snapshot_date": {"type": "string"},
+  "listing": {"type": "object", "description": "MIRROR or LIVE offer facts at snapshot time: url, price, was_price, shipping, seller, return_policy, stock, sold_date. Absent key = not on the page."}
  },
  "required": ["id", "category", "name", "attrs", "origin", "source"]
 }

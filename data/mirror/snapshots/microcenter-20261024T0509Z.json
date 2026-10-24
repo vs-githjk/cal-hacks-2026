@@ -1,0 +1,65 @@
+[
+ {
+  "id": "microcenter:5fa45d1fb0d0",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 5070 Ti GAMING TRIO Overclocked Triple Fan 16G GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": "869917",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card",
+  "snapshot_id": "microcenter-20261024T0509Z",
+  "snapshot_date": "2026-10-24T05:09:29.655Z",
+  "listing": {
+   "url": "https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card",
+   "price": 1259.99,
+   "stock": "1 IN STOCK"
+  }
+ },
+ {
+  "id": "microcenter:2630d713e79e",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 5070 Ti PRIME Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": "800102",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+  "snapshot_id": "microcenter-20261024T0509Z",
+  "snapshot_date": "2026-10-24T05:09:29.655Z",
+  "listing": {
+   "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "price": 1299.99,
+   "stock": "21 IN STOCK"
+  }
+ },
+ {
+  "id": "microcenter:50b1c0004391",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 5070 Ti Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": "805200",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+  "snapshot_id": "microcenter-20261024T0509Z",
+  "snapshot_date": "2026-10-24T05:09:29.655Z",
+  "listing": {
+   "url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "price": 1199.99,
+   "stock": "2 IN STOCK"
+  }
+ }
+]
