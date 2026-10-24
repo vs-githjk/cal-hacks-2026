@@ -395,3 +395,176 @@ def test_web_followup_stays_in_web_queue(buyer):
     asyncio.run(buyer.tell_owner(ctx, 'Review ready'))
     assert buyer.web_drain().replies == ['Bid in\nReview ready']
     assert not ctx.sent
+
+
+def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buyer):
+    ctx = Context()
+    buyer.ROUND.update(owner='authenticated-owner', phase='decided', bids=[
+        {'id': 'secret-bid', 'persona': 'Private Seller Name', 'total_landed_price': 582}],
+        order={'id': 'private-order'})
+    owner_context = object()
+    buyer.ROUND['owner_context'] = owner_context
+    before = dict(buyer.ROUND)
+    for command in ('hello', 'APPROVE 1', 'CANCEL'):
+        asyncio.run(buyer.handle_text(ctx, 'other-sender', command))
+    replies = [message.text() for to, message in ctx.sent if to == 'other-sender']
+    assert replies == ['A buyer session is active. Try again later.'] * 3
+    assert all('Private Seller Name' not in text and 'private-order' not in text and 'APPROVE' not in text for text in replies)
+    assert buyer.ROUND == before and buyer.ROUND['owner_context'] is owner_context
+
+
+def test_pending_prompt_uses_plain_approval_instructions_and_keeps_cancel(buyer):
+    ctx = Context()
+    buyer.ROUND.update(owner='owner', phase='decided', bids=[{'id': 'bid-1'}], order=None)
+    asyncio.run(buyer.handle_text(ctx, 'owner', 'hello'))
+    text = ctx.owner_text()
+    assert '<number>' not in text and '<n>' not in text
+    assert 'APPROVE followed by the bid number' in text and 'CANCEL' in text
+
+
+def test_plain_owner_text_does_not_replace_saved_chat_context(buyer):
+    old_context = object()
+    buyer.ROUND.update(owner='owner', owner_context=old_context, phase='decided', told_waiting=True)
+    ctx = Context()
+    asyncio.run(buyer.on_chat(ctx, 'owner', buyer.ChatMessage(content=[buyer.TextContent(text='hello')])))
+    assert buyer.ROUND['owner_context'] is old_context
+
+
+def test_tell_logs_no_private_reply_body(buyer):
+    ctx = Context()
+    private_body = 'approval code 482913 under $800 seller payload private'
+    asyncio.run(buyer.tell(ctx, 'owner', private_body))
+    logged = '\n'.join(str(call) for call in ctx.logger.method_calls)
+    assert private_body not in logged
+    assert '482913' not in logged and '$800' not in logged and 'seller payload' not in logged
+
+
+def test_start_round_stops_before_old_summary_after_final_send_is_superseded(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        async def checks(now):
+            return buyer.ROUND['seller_checks']
+        monkeypatch.setattr(crs, 'check_sellers', checks)
+
+        class PausedLastSeller(Context):
+            async def send(self, to, message):
+                if (isinstance(message, buyer.common.BidRequest)
+                        and to == buyer.common.address(buyer.common.SELLERS[-1])):
+                    started.set()
+                    await release.wait()
+                await super().send(to, message)
+
+        ctx = PausedLastSeller()
+        buyer.ROUND.clear()
+        task = asyncio.create_task(buyer.handle_text(ctx, 'old-owner', 'GPU under $800'))
+        await started.wait()
+        buyer.ROUND.clear()
+        buyer.ROUND.update(owner='new-owner', owner_context=ctx, round_token='replacement',
+                           need={'id': 'new-need'}, phase='bidding')
+        release.set()
+        await task
+        assert not any(to == 'new-owner' and isinstance(msg, buyer.ChatMessage) for to, msg in ctx.sent)
+    asyncio.run(run())
+
+
+def test_tick_failed_advice_send_does_not_fail_replacement_round(buyer):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        class PausedFailure(Context):
+            async def send(self, to, message):
+                if isinstance(message, buyer.common.AdviceRequest):
+                    started.set()
+                    await release.wait()
+                    raise OSError('private endpoint detail')
+                await super().send(to, message)
+
+        ctx = PausedFailure()
+        buyer.ROUND.update(phase='bidding', deadline=time.time() - 1, round_token='old-token',
+                           bids=[dict(buyer.ROUND['bids'][0])], owned=[])
+        task = asyncio.create_task(buyer.tick(ctx))
+        await started.wait()
+        buyer.ROUND.clear()
+        buyer.ROUND.update(owner='owner', phase='bidding', round_token='new-token', need={'id': 'new-need'},
+                           attempts=0, goal={'id': 'new-goal', 'state': 'HUNTING'})
+        release.set()
+        await task
+        assert buyer.ROUND['round_token'] == 'new-token'
+        assert buyer.ROUND['attempts'] == 0 and buyer.ROUND['phase'] == 'bidding'
+        assert 'private endpoint detail' not in '\n'.join(str(c) for c in ctx.logger.method_calls)
+    asyncio.run(run())
+
+
+def test_restart_card_does_not_start_new_round_after_cancel_during_reply(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        async def paused_reply(ctx, text):
+            started.set()
+            await release.wait()
+        started_rounds = []
+        async def start_round(ctx):
+            started_rounds.append(True)
+        monkeypatch.setattr(buyer, 'tell_owner', paused_reply)
+        monkeypatch.setattr(buyer, 'start_round', start_round)
+        buyer.ROUND.update(round_token='old-token', need={'id': 'old-need'})
+        task = asyncio.create_task(buyer.restart_card(Context(), 'stale quote'))
+        await started.wait()
+        buyer.ROUND.clear()
+        buyer.ROUND.update(round_token='new-token', need={'id': 'new-need'})
+        release.set()
+        await task
+        assert not started_rounds
+    asyncio.run(run())
+
+
+def test_advice_send_failure_after_review_does_not_overwrite_decision(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        class PausedFailure(Context):
+            async def send(self, to, message):
+                if isinstance(message, buyer.common.AdviceRequest):
+                    started.set()
+                    await release.wait()
+                    raise OSError('private endpoint detail')
+                await super().send(to, message)
+
+        async def conclude(ctx, reviewed):
+            buyer.ROUND['phase'] = 'decided'
+        monkeypatch.setattr(buyer, 'conclude', conclude)
+        ctx = PausedFailure()
+        buyer.ROUND.update(phase='bidding', deadline=time.time() - 1, round_token='same-token',
+                           bids=[dict(buyer.ROUND['bids'][0])], owned=[], attempts=0)
+        task = asyncio.create_task(buyer.tick(ctx))
+        await started.wait()
+        await buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+            cards_json=json.dumps([card()])))
+        assert buyer.ROUND['phase'] == 'decided'
+        release.set()
+        await task
+        assert buyer.ROUND['phase'] == 'decided' and buyer.ROUND['attempts'] == 0
+        assert 'private endpoint detail' not in '\n'.join(str(c) for c in ctx.logger.method_calls)
+    asyncio.run(run())
+
+
+def test_conclude_does_not_fail_expired_round_after_owner_send_await(buyer):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        class PauseFirstReply(Context):
+            async def send(self, to, message):
+                if isinstance(message, buyer.ChatMessage) and not started.is_set():
+                    started.set()
+                    await release.wait()
+                await super().send(to, message)
+
+        ctx = PauseFirstReply()
+        bid = dict(buyer.ROUND['bids'][0])
+        buyer.ROUND.update(round_token='expiring-token', phase='advice', bids=[bid],
+                           cards={bid['id']: card(recommendation='veto')}, attempts=0)
+        task = asyncio.create_task(buyer.conclude(ctx, reviewed=True))
+        await started.wait()
+        buyer.ROUND['goal']['deadline'] = '2000-01-01T00:00:00Z'
+        await buyer.tick(ctx)
+        assert buyer.ROUND['phase'] == 'done' and buyer.ROUND['goal']['state'] == 'EXPIRED'
+        release.set()
+        await task
+        assert buyer.ROUND['phase'] == 'done' and buyer.ROUND['attempts'] == 0
+    asyncio.run(run())
