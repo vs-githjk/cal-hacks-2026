@@ -149,6 +149,11 @@ def find_tool(name: str, which=shutil.which, home_bin: Path | None = None) -> st
     return str(p) if p.is_file() else None
 
 
+def mailbox_record(svc: Service) -> bool:
+    """True when this service was started with an Agentverse mailbox flag; the agent feed reads it back from the pidfile."""
+    return any(k.endswith("_MAILBOX") and v == "1" for k, v in svc.extra_env.items())
+
+
 def build_services(a, repo: Path = REPO) -> list[Service]:
     shield_url = f"http://{HOST}:{a.shield_port}"
     py = str(venv_python(repo))
@@ -168,6 +173,11 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
                 group="agents", extra_env=agent_env("ADVOCATE_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("buyer", 8001, [py, "buyer/buyer_agent.py"], repo / "agents", health="tcp", wait=90, group="agents",
                 extra_env=agent_env("BUYER_MAILBOX"), note=f"{mode}; port fixed in code"),
+        Service("agent-feed", 8790,
+                [sys.executable, "-m", "uvicorn", "agent_feed:app", "--app-dir", str(repo / "scripts"), "--host", HOST, "--port", "8790"],
+                repo, health_path="/v1/health", wait=30, group="feed",
+                extra_env={"AGENT_FEED_RUN_DIR": str(Path(getattr(a, "run_dir", None) or repo / ".run").resolve())},
+                note="read-only feed of the agents' status and last lines for the web corner tile"),
         Service("web", a.web_port,
                 ["npm", "exec", "--no-install", "--", "next", "dev", "-p", str(a.web_port)], repo / "web", wait=150, env_filter="web",
                 group="web", extra_env={"NEXT_TELEMETRY_DISABLED": "1"},
@@ -252,7 +262,7 @@ def decide_skips(services: list[Service], checks: list[Check]) -> None:
             continue
         if s.name == "market-stdb" and "spacetime CLI" in bad:
             s.skip_reason = f"spacetime CLI not installed. Install: {SPACETIME_INSTALL}"
-        elif s.name == "shield" and "shield deps (fastapi, uvicorn)" in bad:
+        elif s.name in ("shield", "agent-feed") and "shield deps (fastapi, uvicorn)" in bad:
             s.skip_reason = f"fastapi/uvicorn not importable. Fix: {SHIELD_DEPS_FIX}"
         elif s.group == "agents" and "uv" in bad and "agents/.venv" in {c.name for c in checks if not c.ok}:
             s.skip_reason = f"uv not found and agents/.venv missing. Install: {UV_INSTALL}"
@@ -599,6 +609,7 @@ def cmd_up(a, repo: Path = REPO) -> int:
             skip(svc, f"port {svc.port} is already in use by a process this launcher did not start", "failed")
             return None
         rec = start_process(svc, env_for(svc, file_env), run_dir)
+        rec["mailbox"] = mailbox_record(svc)
         record(svc, rec)
         print(f"  started  {svc.name} pid {rec['pid']} (log {rec['log']})")
         started.append((svc, rec))
@@ -695,7 +706,7 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--shield-port", type=int, default=8787)
     p.add_argument("--web-port", type=int, default=3100)
     p.add_argument("--stdb-port", type=int, default=3000, help="SpacetimeDB listen port")
-    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, web)")
+    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, agent-feed, web)")
     p.add_argument("--mailbox", action="store_true",
                    help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX); register each once with agents/connect.py <port>")
     p.add_argument("--strict", action="store_true", help="status: also exit 1 when a service is SKIPPED")
