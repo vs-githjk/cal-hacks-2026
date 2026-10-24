@@ -137,8 +137,14 @@ The verdict is the strongest action among the rules that fired; rules never get 
 on messages the rules allowed, and can only ADD a quarantine. A timeout, error or any other answer also
 quarantines (fail closed). It can never lower a rule's block or quarantine, and its words never enter the
 verdict. Off unless `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` are set. The model id is `SHIELD_MODEL` (default
-`claude-haiku-4-5`). **That default is unverified until a live call answers**; the Claude client is tested only
-with a mocked transport and has not been run against the live API.
+`claude-haiku-4-5`). The unit tests use a mocked transport only. **Live check, 2026-10-23:** both `claude-haiku-4-5` and
+`claude-haiku-4-5-20251001` answered HTTP 200 on a one-word call, so the default id works. One live corpus run
+(`--classifier`, default model, 1.5 s timeout) gave, rules only -> rules plus classifier: dev 30 -> 30 of 30 with
+false positives 0 -> 1 of 10; dev2 30 -> 30 of 30, false positives 0 of 15; held-out probe 6 -> 10 of 10;
+post-freeze check 6 -> 12 of 12; 0 calls unavailable. The classifier caught all 10 messages the rules missed
+(the only ones it was asked about, plus the controls). Cost of that: one false positive on a dev control (its id was
+not printed in that run; the runner now prints it) and a model call, about 0.5 s each, for every message the rules
+allow. Samples are small (10 to 15 per set): treat it as a promising layer, not a measured recall.
 
 `python3 -m shield.corpus.run_corpus --classifier` runs the four corpora with and without the classifier. It makes
 network calls ONLY when `ANTHROPIC_API_KEY` and `SHIELD_CLASSIFIER=1` are both set (in the environment or in a

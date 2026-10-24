@@ -183,6 +183,8 @@ def classifier_main(env_file: str) -> int:
         fp = f", false positives {rules_only['false_positives']} -> {with_clf['false_positives']} of {with_clf['controls']}" if with_clf["controls"] else ""
         print(f"{name}: stopped {rules_only['stopped']} -> {with_clf['stopped']} of {with_clf['attacks']}{fp}; "
               f"classifier suspicious {with_clf['clf_suspicious']}, classifier unavailable {with_clf['clf_unavailable']}")
+        if with_clf["false_positive_ids"]:
+            print(f"  controls stopped by the classifier: {', '.join(with_clf['false_positive_ids'])}")
     if unavailable:
         print(f"WARNING: {unavailable} classifier calls were unavailable (timeout, error or an unknown model id). "
               "Those are quarantines by fail-closed design, NOT classifier catches; do not quote them as recall.")
