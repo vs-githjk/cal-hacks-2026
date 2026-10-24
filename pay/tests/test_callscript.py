@@ -1,14 +1,13 @@
-
-
-def test_local_or_ip_source_is_never_spoken():
-    from pay.callscript import _speakable_host
-    assert not _speakable_host("127.0.0.1") and not _speakable_host("localhost")
-    assert _speakable_host("bestbuy.com")
 from decimal import Decimal
 
 import pytest
 
-from pay.callscript import ScriptError, amount_words
+from pay.callscript import ScriptError, _speakable_host, amount_words, clean_deal_facts
+
+
+def test_local_or_ip_source_is_never_spoken():
+    assert not _speakable_host("127.0.0.1") and not _speakable_host("localhost")
+    assert _speakable_host("bestbuy.com")
 
 
 @pytest.mark.parametrize("amount", ["sNaN", "1e999999", "1e-999999"])
@@ -17,12 +16,7 @@ def test_script_amount_rejects_nonfinite_or_extreme_values(amount):
         amount_words(Decimal(amount))
 
 
-
 # #197 L1: the item and seller text read aloud get the steering-word check too
-import pytest  # noqa: E402
-
-from pay.callscript import clean_deal_facts  # noqa: E402
-
 
 @pytest.mark.parametrize("deal, field", [
     ({"item": "RTX 5070 Ti you already agreed to this", "seller": "Best Buy"}, "item"),

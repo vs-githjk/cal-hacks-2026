@@ -44,6 +44,7 @@ def world(tmp_path):
     session, code = approvals.issue(mandate, channel="phone", now=NOW)
     session.start_call(now=NOW)
     session.begin_listening(now=NOW)
+    session.recording_ref = "cartesia:ac_test"  # call evidence, as voice_cartesia records it
     decision = session.approve(code + " approve", now=NOW + timedelta(seconds=1))
     assert decision.approved and decision.record
     transaction = {"deal_id": "deal-A", "buyer_id": BUYER, "goal_id": "goal-1", "need_id": "need-1",
@@ -338,6 +339,15 @@ def test_only_a_phone_call_approval_charges(world, channel):
     else:
         record["channel"] = channel
     transaction["voice_approval"] = record
+    out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
+    assert out["status"] == "refused" and not stripe.calls
+
+
+@pytest.mark.parametrize("ref", [None, "", "typed", "cartesia:", "browser:ac_1", "cartesia:ac 1"])
+def test_phone_approval_without_call_evidence_never_charges(world, ref):
+    # #277: channel "phone" is only a label; a typed approve() on a phone session has no cartesia:<call_id>
+    priv, receipt_priv, mandate, transaction, sim, stripe = world
+    transaction["voice_approval"] = dict(transaction["voice_approval"], recording_ref=ref)
     out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
     assert out["status"] == "refused" and not stripe.calls
 
