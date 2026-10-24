@@ -48,9 +48,11 @@ import PostNeedReducer from "./post_need_reducer";
 import RecordApprovalReducer from "./record_approval_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
 import RecordReceivingReducer from "./record_receiving_reducer";
+import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
 import SetFloorReducer from "./set_floor_reducer";
+import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
 
 // Import all procedure arg schemas
 
@@ -61,6 +63,7 @@ import MyBidsRow from "./my_bids_table";
 import MyGoalItemsRow from "./my_goal_items_table";
 import MyGoalsRow from "./my_goals_table";
 import MyNotificationsRow from "./my_notifications_table";
+import MyPairAttemptsRow from "./my_pair_attempts_table";
 import MyRoleRow from "./my_role_table";
 import PersonaRow from "./persona_table";
 import RejectedAttemptRow from "./rejected_attempt_table";
@@ -168,6 +171,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyNotificationsRow),
+  myPairAttempts: __table({
+    name: 'my_pair_attempts',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyPairAttemptsRow),
   myRole: __table({
     name: 'my_role',
     indexes: [
@@ -200,9 +210,11 @@ const reducersSchema = __reducers(
   __reducerSchema("record_approval", RecordApprovalReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),
   __reducerSchema("record_receiving", RecordReceivingReducer),
+  __reducerSchema("reissue_pair_code", ReissuePairCodeReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
   __reducerSchema("set_floor", SetFloorReducer),
+  __reducerSchema("set_floor_for_condition", SetFloorForConditionReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
@@ -221,6 +233,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_goals": Omit<typeof tablesSchema.schemaType.tables["myGoals"], "accessorName"> & { readonly accessorName: "my_goals" };
     /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
     readonly "my_notifications": Omit<typeof tablesSchema.schemaType.tables["myNotifications"], "accessorName"> & { readonly accessorName: "my_notifications" };
+    /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
+    readonly "my_pair_attempts": Omit<typeof tablesSchema.schemaType.tables["myPairAttempts"], "accessorName"> & { readonly accessorName: "my_pair_attempts" };
     /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
     readonly "my_role": Omit<typeof tablesSchema.schemaType.tables["myRole"], "accessorName"> & { readonly accessorName: "my_role" };
     /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
@@ -248,6 +262,7 @@ const tableAccessorAliases = {
   "my_goal_items": "myGoalItems",
   "my_goals": "myGoals",
   "my_notifications": "myNotifications",
+  "my_pair_attempts": "myPairAttempts",
   "my_role": "myRole",
   "seller_needs": "sellerNeeds",
 } as const;
@@ -280,6 +295,8 @@ export type DbView = __DbViewBase & {
   readonly "my_goals": __DbViewBase["myGoals"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __DbViewBase["myNotifications"];
+  /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
+  readonly "my_pair_attempts": __DbViewBase["myPairAttempts"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __DbViewBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
@@ -298,6 +315,8 @@ export type Tables = __TablesBase & {
   readonly "my_goals": __TablesBase["myGoals"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __TablesBase["myNotifications"];
+  /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
+  readonly "my_pair_attempts": __TablesBase["myPairAttempts"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __TablesBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */

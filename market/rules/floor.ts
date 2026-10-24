@@ -21,14 +21,36 @@ export function checkFloor(bid: { lines: BidLine[] }, floors: Record<string, num
   return reasons.length ? { ok: false, reasons } : { ok: true };
 }
 
-/** Every line's quantity is finite, above 0 and equal to what the need asked for. */
-export function checkQuantity(lines: { sku_spec: string; quantity: number }[], needQty: Map<string, number>): Result {
+export const floorKey = (sku_spec: string, condition: string) => `${sku_spec}|${condition}`;
+/** The condition of a floor set without one (set_floor): it covers every condition of that SKU. */
+export const ANY_CONDITION = "*";
+
+export interface FloorCheck {
+  /** False rejects the whole bid: a line below its floor, or a bad price or qty_available. */
+  ok: boolean;
+  reasons: string[];
+  /** Per line: "" when the line may be picked, else why not (a missing floor for its condition). */
+  lineRejects: string[];
+}
+
+/**
+ * Floors per (seller, sku_spec, condition), checked for one seller's bid. A line's quantity is the
+ * stock it offers (qty_available) and must be a finite number above 0.
+ */
+export function checkFloorByCondition(lines: BidLine[], floors: Map<string, number>, conditionOf: (l: BidLine) => string): FloorCheck {
   const reasons: string[] = [];
-  for (const l of lines) {
-    const want = needQty.get(l.sku_spec);
-    if (want === undefined) reasons.push(`${l.sku_spec}: not part of this need`);
-    else if (!positive(l.quantity)) reasons.push(`${l.sku_spec}: quantity ${l.quantity} is not a number above 0`);
-    else if (l.quantity !== want) reasons.push(`${l.sku_spec}: quantity ${l.quantity}, the need asks for ${want}`);
-  }
-  return reasons.length ? { ok: false, reasons } : { ok: true };
+  const lineRejects = lines.map((line) => {
+    const tag = `${line.sku_spec} ${conditionOf(line)}`;
+    if (!positive(line.quantity)) reasons.push(`${tag}: qty_available ${line.quantity} is not a number above 0`);
+    if (!positive(line.unit_price)) {
+      reasons.push(`${tag}: price ${line.unit_price} is not a positive number`);
+      return "";
+    }
+    // An exact (sku, condition) floor wins over a floor set for any condition of that SKU.
+    const floor = floors.get(floorKey(line.sku_spec, conditionOf(line))) ?? floors.get(floorKey(line.sku_spec, ANY_CONDITION));
+    if (floor === undefined) return `no floor set for ${tag}`;
+    if (line.unit_price < floor) reasons.push(`${tag}: ${money(line.unit_price)} is below this seller's floor of ${money(floor)}`);
+    return "";
+  });
+  return { ok: reasons.length === 0, reasons, lineRejects };
 }
