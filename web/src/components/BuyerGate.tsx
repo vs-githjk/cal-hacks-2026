@@ -7,6 +7,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { buyerSession } from "@/lib/screens";
+import { GoalComposer } from "./GoalComposer";
 
 // Demo pairing: the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
 const DEMO_BUYER = "vidyut";
@@ -76,7 +77,14 @@ export function BuyerGate({ children }: { children: ReactNode }) {
   const [roles, rolesReady] = useTable(tables.myRole);
   const session = buyerSession(conn.isActive, rolesReady, roles);
   if (session.status === "connecting") return <p className="text-muted">Connecting to the market...</p>;
-  if (session.status === "unpaired") return <PairScreen />;
+  if (session.status === "unpaired") {
+    return (
+      <div className="grid gap-3.5">
+        <GoalComposer buyerId={null} />
+        <PairScreen />
+      </div>
+    );
+  }
   return (
     <BuyerIdContext.Provider key={session.buyerId} value={session.buyerId}>
       {children}

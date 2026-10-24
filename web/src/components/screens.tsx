@@ -15,6 +15,8 @@ export interface BuyerScreenProps {
   goals: GoalView[];
   /** The buyer's spending rule; shown even before the first goal. */
   allowance: GoalView["allowance"];
+  /** The product request, first on the page (app/buyer fills it with the GoalComposer). */
+  composer?: ReactNode;
   /** The recent purchases card (app/buyer fills it from recorded memory); unavailable when absent. */
   purchases?: ReactNode;
   bids: RankedBid[];
@@ -90,6 +92,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
         <p className="text-muted">Connecting to the market...</p>
       ) : (
         <>
+          {p.composer}
           {p.review && p.onTyped ? (
             <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
           ) : (
