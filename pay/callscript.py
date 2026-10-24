@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, Overflow
 from typing import Any, Mapping, Optional
 from urllib.parse import urlsplit
 
@@ -81,12 +81,15 @@ def _cents(amount: Any) -> int:
         d = Decimal(str(amount))
     except InvalidOperation as e:
         raise ScriptError("amount must be a number") from e
-    if not d.is_finite() or d <= 0:
-        raise ScriptError("amount must be positive")
-    cents = d * 100
-    if cents != cents.to_integral_value():
-        raise ScriptError("amount must be a whole number of cents")
-    return int(cents)
+    if not d.is_finite() or d <= 0 or d.adjusted() > 11:
+        raise ScriptError("amount must be positive and within the supported read-back range")
+    try:
+        cents = d * 100
+        if cents <= 0 or cents != cents.to_integral_value():
+            raise ScriptError("amount must be a whole number of cents")
+        return int(cents)
+    except (InvalidOperation, Overflow, OverflowError, ValueError) as e:
+        raise ScriptError("amount must be a finite whole number of cents") from e
 
 
 def amount_words(amount: Any) -> str:
