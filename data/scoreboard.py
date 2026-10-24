@@ -1,11 +1,12 @@
 """Scoreboard numbers feed (Lane C, c12; issue #31). python3 -m data.scoreboard  -> data/scoreboard.json
 
-Four tiles (contracts/Scoreboard.schema.json), each recomputed from its source run when this module runs.
+Tiles (contracts/Scoreboard.schema.json), each recomputed from its source run when this module runs.
 A tile with no trustworthy number has value null, status none_yet or not_quotable, and a note saying why.
 """
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -89,9 +90,57 @@ def learning_tile() -> dict:
                  note=f"{rows}. A simulator we built, not the market. Negative or zero lift is shown, never hidden.")
 
 
+def _grab(rx: str, text: str) -> tuple[int, ...]:
+    m = re.search(rx, text, re.S)
+    if not m:
+        raise ValueError(f"results file no longer states: {rx}")
+    return tuple(int(g) for g in m.groups())
+
+
+def voice_tile() -> dict:
+    """Headline = the first run in pay/VOICE_ATTACKS.md (Lane D, d9); the after-fix run goes in detail only."""
+    text = (ROOT / "pay" / "VOICE_ATTACKS.md").read_text()
+    denied, n = _grab(r"First run, before any fix \(headline\): (\d+) of (\d+) denied", text)
+    fixed, fixed_n = _grab(r"After the fix: (\d+) of (\d+) denied", text)
+    when = "2026-10-24T08:22:00+00:00"  # "Sat Oct 24 01:22 PDT" in VOICE_ATTACKS.md
+    return _tile(id="voice_attacks", title="Voice attacks (held-out)", status="measured", value=round(denied / n, 4), unit="ratio",
+                 display=f"{denied} of {n} held-out voice attacks denied on the first run (after the fix: {fixed} of {fixed_n}; "
+                         "v04 is no longer blind)",
+                 count=n, date_range={"from": when, "to": when}, origin="SIM",
+                 source_run="python3 -m pytest pay/tests/test_voice_attacks.py -q",
+                 detail={"first_run": {"denied": denied, "n": n, "missed": ["v04"]}, "after_fix": {"denied": fixed, "n": fixed_n},
+                         "results_file": "pay/VOICE_ATTACKS.md"},
+                 note="Cases written by Lane C before the rules froze (sim/attacks/voice.jsonl). Headline is the first run; "
+                      "the fix was made after reading it, so the 10 of 10 is not blind.")
+
+
+def hyphenate_tile() -> dict:
+    """Headline = the first blind run in hyphenate/RESULTS-blind.md; the after-fixes rerun goes in detail only."""
+    text = (ROOT / "hyphenate" / "RESULTS-blind.md").read_text()
+    caught, planted = _grab(r"FIRST BLIND RUN.*?Planted: (\d+) of (\d+) caught", text)
+    passed, clean, flags = _grab(r"FIRST BLIND RUN.*?Clean: (\d+) of (\d+) passed, (\d+) false flags", text)
+    after_caught, after_planted, after_clean, after_clean_n = _grab(
+        r"After fixes.*?\*\*(\d+)/(\d+) planted caught, (\d+)/(\d+) clean passed", text)
+    (when,) = re.search(r"Run (\S+) UTC", text).groups()
+    return _tile(id="hyphenate_blind", title="Hyphenate blind planted errors", status="measured",
+                 value=round(caught / planted, 4), unit="ratio",
+                 display=f"{caught} of {planted} planted errors caught on the first blind run; {flags} of {clean} clean cases "
+                         "falsely flagged",
+                 count=planted + clean, date_range={"from": when, "to": when}, origin="SIM",
+                 source_run="python3 -m hyphenate.scenarios.blind_run --write",
+                 detail={"first_run": {"planted_caught": caught, "planted": planted, "clean_passed": passed, "clean": clean,
+                                       "clean_false_flags": flags},
+                         "after_fixes": {"planted_caught": after_caught, "planted": after_planted,
+                                         "clean_passed": after_clean, "clean": after_clean_n, "not_blind": ["b24", "k02", "k03"]},
+                         "results_file": "hyphenate/RESULTS-blind.md"},
+                 note="Cases frozen and hashed before any run, written without reading the engine. Headline is the first run; "
+                      "b24, k02 and k03 were fixed after it, so the rerun is not blind.")
+
+
 def build() -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile()]}
+    return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile(),
+                                                voice_tile(), hyphenate_tile()]}
 
 
 if __name__ == "__main__":
