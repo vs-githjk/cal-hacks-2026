@@ -20,9 +20,6 @@
   "shippingCost": 0,
   "shippingCurrency": "USD",
   "totalPrice": 1399.99,
-  "sellerUsername": "itsworthmore",
-  "sellerFeedbackScore": 187126,
-  "sellerFeedbackPercentage": 99.6,
   "buyingFormat": "fixed_price",
   "basic_info": {
    "listingId": "298743442526",
@@ -64,10 +61,6 @@
   "shippingCost": 0,
   "shippingCurrency": "USD",
   "totalPrice": 1489,
-  "sellerUsername": "jedmtech",
-  "sellerFeedbackScore": 268,
-  "sellerFeedbackPercentage": 100,
-  "sellerHasStore": true,
   "buyingFormat": "fixed_price",
   "basic_info": {
    "listingId": "900035263900",
@@ -109,9 +102,6 @@
   "shippingCost": 0,
   "shippingCurrency": "USD",
   "totalPrice": 1239.99,
-  "sellerUsername": "computermasons",
-  "sellerFeedbackScore": 1318,
-  "sellerFeedbackPercentage": 99.7,
   "buyingFormat": "fixed_price",
   "freeReturns": true,
   "basic_info": {

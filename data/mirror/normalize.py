@@ -16,6 +16,8 @@ FIELDS = {
     "model_number": ["modelNumber", "mpn", "model", "sku", "itemNumber"],
     "date": ["soldDate", "endedAt", "dateSold"],
 }
+# Marketplaces where sellers are often private people: never keep their handles.
+PRIVATE_SELLER_STORES = {"ebay_sold", "ebay_live"}
 CONDITIONS = [("open box", "open-box"), ("open-box", "open-box"), ("refurb", "refurbished"),
               ("pre-owned", "used"), ("used", "used"), ("new", "new")]
 
@@ -65,7 +67,14 @@ def attrs_from_title(title):
     return "unknown", {}
 
 
+def strip_private(store, item):
+    if store not in PRIVATE_SELLER_STORES:
+        return item
+    return {k: v for k, v in item.items() if not k.lower().startswith("seller")}
+
+
 def to_spec_card(store, item, snapshot_id, snapshot_date):
+    item = strip_private(store, item)
     f = {k: first(item, paths) for k, paths in FIELDS.items()}
     title = str(f["title"] or "")
     cat, attrs = attrs_from_title(title)
