@@ -52,7 +52,8 @@ def test_a_session_is_priced_at_the_list_price_in_cents_and_never_shows_the_floo
     assert r.status_code == 201 and s["status"] == "ready_for_complete" and s["currency"] == "USD"
     assert s["line_items"][0]["item"]["price"] == 130000
     assert {t["type"]: t["amount"] for t in s["totals"]} == {"subtotal": 130000, "fulfillment": 0, "total": 130000}
-    assert "1200" not in str(s) and "floor" not in str(s).lower()
+    priced = str([s["line_items"], s["totals"]])
+    assert "120000" not in priced and "1200.0" not in priced and "floor" not in str(s).lower()
     assert s["tech_bazaar"]["origin"] == "SIM" and s["ucp"]["version"] == "2026-01-11"
 
 
@@ -82,7 +83,7 @@ def test_complete_with_a_mandate_for_this_session_holds_the_order_and_moves_no_m
     r = client.post(f"/ucp/{SHOP}/checkout-sessions/{s['id']}/complete", json=pay(m))
     out = r.json()
     assert r.status_code == 200 and out["status"] == "complete_in_progress"
-    assert out["order"] == {"mandate_hash": m["hash"], "mandate_id": m["id"], "settlement": "tech_bazaar_pay_after_phone_approval",
+    assert out["order"] == {"status": "held", "mandate_hash": m["hash"], "mandate_id": m["id"], "settlement": "tech_bazaar_pay_after_phone_approval",
                             "money_moved_here": False, "origin": "SIM"}
     assert "completed" not in str(out).replace("complete_in_progress", "") and "paid" not in out["messages"][0]["content"].lower().replace("no money", "")
 
@@ -148,3 +149,23 @@ def test_the_buyer_object_keeps_only_a_short_name_and_email(client):
     r = client.post(f"/ucp/{SHOP}/checkout-sessions", json={"line_items": [{"item": {"id": "rtx 5070 ti"}}],
                                                            "buyer": {"full_name": "V" * 500, "email": "v@example.test", "card": "4242"}})
     assert r.json()["buyer"] == {"full_name": "V" * 120, "email": "v@example.test"}
+
+
+# ---------- #318 review 1 ----------
+
+def test_a_held_order_cannot_be_changed(client):
+    s = session(client).json()
+    held = client.post(f"/ucp/{SHOP}/checkout-sessions/{s['id']}/complete", json=pay(mandate_for(s))).json()
+    assert held["order"]["status"] == "held"
+    r = client.put(f"/ucp/{SHOP}/checkout-sessions/{s['id']}", json={"line_items": [{"item": {"id": "rtx 5070 ti"}, "quantity": 9}]})
+    assert r.status_code == 409 and r.json()["status"] == "complete_in_progress"
+    assert {t["type"]: t["amount"] for t in r.json()["totals"]}["total"] == 130000
+
+
+def test_one_shops_flood_does_not_block_another_shop(monkeypatch):
+    monkeypatch.setattr(ucp, "MAX_SESSIONS_PER_SHOP", 2)
+    a = {"id": "a", "name": "A", "listings": {"x": {"price": 10.0}}, "pricing": {}, "shipping": 0}
+    b = {**a, "id": "b"}
+    store = ucp.Sessions()
+    assert [store.create(a, {"line_items": [{"item": {"id": "x"}}]})[0] for _ in range(3)] == [201, 201, 503]
+    assert store.create(b, {"line_items": [{"item": {"id": "x"}}]})[0] == 201

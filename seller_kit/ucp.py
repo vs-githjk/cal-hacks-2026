@@ -34,7 +34,8 @@ SPEC = f"https://ucp.dev/{UCP_VERSION}/specification"
 HANDLER = "dev.techbazaar.phone_approval"
 HANDLER_ID = "tech_bazaar_phone_approval"
 SESSION_TTL_S = 30 * 60
-MAX_SESSIONS = 1000
+MAX_SESSIONS = 1000            # in all
+MAX_SESSIONS_PER_SHOP = 200     # so one shop's flood cannot block every other shop
 MAX_LINE_ITEMS = 20
 MAX_QUANTITY = 10
 STATUSES = ("incomplete", "ready_for_complete", "complete_in_progress", "canceled")
@@ -135,7 +136,8 @@ class Sessions:
         lines, errors = _lines(shop, body.get("line_items"))
         with self._lock:
             self._sweep()
-            if len(self._by_id) >= MAX_SESSIONS:
+            if (len(self._by_id) >= MAX_SESSIONS
+                    or sum(1 for x in self._by_id.values() if x["shop_id"] == shop["id"]) >= MAX_SESSIONS_PER_SHOP):
                 return 503, {"messages": [_error("busy", "too many open checkout sessions, try again later")]}
             sid = "cs_" + secrets.token_hex(12)
             s = {"id": sid, "shop_id": shop["id"], "currency": "USD", "buyer": _buyer(body.get("buyer")), "_expires": self.clock() + SESSION_TTL_S}
@@ -154,6 +156,8 @@ class Sessions:
             s = self._live(shop, sid)
             if isinstance(s, tuple):
                 return s
+            if s["status"] == "complete_in_progress":   # the held order must keep matching its mandate
+                return 409, {**view(s), "messages": [_error("held", "the order is held for the buyer's mandate and cannot change")]}
             if "buyer" in body:
                 s["buyer"] = _buyer(body.get("buyer"))
             if "line_items" in body:
@@ -173,7 +177,7 @@ class Sessions:
                 return 402, {**view(s), "messages": [_error("payment_required", why, "$.payment")]}
             m = body["payment"]["instrument"]["credential"]["mandate"]
             s["status"] = "complete_in_progress"
-            s["order"] = {"mandate_hash": m["hash"], "mandate_id": m["id"], "settlement": "tech_bazaar_pay_after_phone_approval",
+            s["order"] = {"status": "held", "mandate_hash": m["hash"], "mandate_id": m["id"], "settlement": "tech_bazaar_pay_after_phone_approval",
                           "money_moved_here": False, "origin": "SIM"}
             s["messages"] = [{"type": "info", "code": "held_for_approval", "content": HELD}]
             return 200, view(s)

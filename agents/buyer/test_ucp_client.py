@@ -85,3 +85,36 @@ def test_discovery_refuses_a_non_http_shop_url_and_a_missing_profile():
         U.discover("ftp://shop.example.test", transport=lambda m, u, b: (200, profile()))
     with pytest.raises(U.UcpError, match="no UCP profile"):
         U.discover("https://shop.example.test/ucp/x", transport=lambda m, u, b: (404, {"messages": []}))
+
+
+# ---------- #318 review 1 ----------
+
+def test_an_http_endpoint_behind_an_https_shop_is_refused():
+    with pytest.raises(U.UcpError, match="scheme"):
+        U.discover("https://shop.example.test/ucp/x",
+                   transport=lambda m, u, b: (200, profile(endpoint="http://shop.example.test/ucp/x")))
+
+
+def test_a_session_id_that_is_not_a_plain_id_never_goes_into_a_url():
+    shop = {"endpoint": "https://shop.example.test/ucp/x", "handler_id": "h1"}
+    for sid in ("../../admin", "cs_x/../y", "", None, "cs_ABC"):
+        with pytest.raises(U.UcpError, match="session id"):
+            U.complete(shop, {"id": sid}, {}, transport=lambda m, u, b: (200, {}))
+
+
+def test_the_http_transport_follows_no_redirect_and_wraps_network_errors(monkeypatch):
+    import urllib.error
+
+    def refuse(req, timeout):
+        raise urllib.error.URLError("connection refused")
+    monkeypatch.setattr(U._OPENER, "open", refuse)
+    with pytest.raises(U.UcpError, match="could not be reached"):
+        U.http_transport("GET", "https://shop.example.test/.well-known/ucp", None)
+    assert U._NoRedirect().redirect_request(None, None, 302, "Found", {}, "https://evil.example.test/") is None
+
+
+def test_an_oversized_or_non_json_answer_is_a_ucp_error():
+    with pytest.raises(U.UcpError, match="too large"):
+        U._json(b"x" * (U.MAX_BODY + 1))
+    with pytest.raises(U.UcpError, match="not JSON"):
+        U._json(b"<html>")
