@@ -401,13 +401,17 @@ export function bidIdOfDeal(dealId: string): string {
  * A hold that was released is claimed again only if the seller still has the stock; if another round took it the call
  * throws, so nothing is oversold. A deal that names no awarded bid touches nothing.
  */
-function claimDealUnits(ctx: Ctx, dealId: string, to: 'held' | 'sold') {
+function claimDealUnits(ctx: Ctx, dealId: string, buyerId: string, to: 'held' | 'sold') {
   const bidId = bidIdOfDeal(dealId);
   const mine = [...ctx.db.stockHold.bidId.filter(bidId)];
   if (!mine.length) return;
   const now = ms(ctx.timestamp);
   for (const hd of mine) {
-    if (hd.state === 'sold') continue;
+    // The deal belongs to the buyer whose need the round served: nobody else can renew, lock or pay for its unit.
+    const owner = ctx.db.need.id.find(ctx.db.round.id.find(hd.roundId)?.needId ?? '')?.buyerId;
+    if (owner !== buyerId) throw new SenderError('not your deal');
+    // A unit already sold is gone: a second mandate, approval or payment on it can never sell it again.
+    if (hd.state === 'sold') throw new SenderError(`${SOLD_OUT_REASON}; the deal must be re-quoted`);
     const active = hd.state === 'held' && ms(hd.expiresAt) > now;
     if (!active) {
       const bidRow = ctx.db.bid.id.find(bidId);
@@ -526,7 +530,7 @@ export function createMandate(
 ) {
   requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
-  claimDealUnits(ctx, a.dealId, 'held');
+  claimDealUnits(ctx, a.dealId, a.buyerId, 'held');
   const allow = allowanceFor(ctx, a.buyerId);
   const d = decide(allow, a.amount, ms(ctx.timestamp));
   const within = d.path === 'auto';
@@ -558,7 +562,7 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
   if (!sep.ok) throw new SenderError(sep.reasons.join('; '));
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
-  claimDealUnits(ctx, md.dealId, 'held');
+  claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp });
   event(ctx, 'approval_recorded', 'approval', a.mandateHash, `Approved by ${a.method.replace('_', ' ')}`, md.payee, md.origin);
 }
@@ -602,7 +606,7 @@ export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: st
   const auth = authorizePayment({ amount: a.amount, limit_checked: true, approval_id: String(ap.id) }, md.amount);
   if (!auth.ok) throw new SenderError(auth.reasons.join('; '));
   if (ctx.db.payment.mandateHash.find(a.mandateHash)) return rejected(ctx, 'payment', a.mandateHash, 'second payment for the same mandate refused');
-  claimDealUnits(ctx, md.dealId, 'sold');
+  claimDealUnits(ctx, md.dealId, md.buyerId, 'sold');
   ctx.db.payment.insert({ id: 0n, mandateHash: a.mandateHash, paymentRef: a.paymentRef, amount: a.amount, at: ctx.timestamp, mode: a.mode });
   event(ctx, 'payment_recorded', 'payment', a.mandateHash, mode.label, md.payee, mode.origin);
 }

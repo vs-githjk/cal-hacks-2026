@@ -1014,6 +1014,59 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect(holds()[0]!.state).toBe('held');
   });
 
+  it('one unit is sold once: a second mandate on a sold deal is refused, and no second payment row is written', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
+    expect(holds()[0]!.state).toBe('sold');
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', dealId: 'deal-bid-a1' })))).toThrow(/sold out to an earlier round/);
+    expect([...h.db.mandate.iter()].map((x) => x.hash)).toEqual(['h1']);
+    expect([...h.db.payment.iter()]).toHaveLength(1);
+    expect(holds()).toHaveLength(1);
+  });
+
+  it('a mandate made before the sale cannot pay for the same unit afterwards', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', dealId: 'deal-bid-a1' })));
+    for (const hash of ['h1', 'h2']) run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'voice_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi1', amount: 780, mode: 'sim' }));
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h2', paymentRef: 'pi2', amount: 780, mode: 'sim' }))).toThrow(/sold out to an earlier round/);
+    expect([...h.db.payment.iter()].map((x) => x.mandateHash)).toEqual(['h1']);
+    expect(holds()).toHaveLength(1);
+  });
+
+  it('another buyer cannot take or lock a rival\'s deal: a mandate on it is refused as not your deal', () => {
+    twoBuyerRounds();
+    close('round-1');
+    expect(() => run(BOB, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'hb', id: 'mdt-b', nonce: 'nb', buyerId: 'bob', dealId: 'deal-bid-a1' })))).toThrow(/not your deal/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+    expect(holds()[0]!.expiresAt.microsSinceUnixEpoch - h.db.round.id.find('round-1')!.closedAt!.microsSinceUnixEpoch).toBe(120_000_000n);
+    // The owner of the deal is unaffected and still buys the unit.
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
+    expect([...h.db.payment.iter()].map((x) => x.mandateHash)).toEqual(['h1']);
+  });
+
+  it('a line short of the need with no holds keeps its true quantity reason, not a false sold-out one', () => {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ items: [{ skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 2, unit: 'each' }] })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    bidIn(A, 'round-1', 'bid-a1', 700, { quantity: 1 });
+    bidIn(B, 'round-1', 'bid-b1', 760, { quantity: 2 });
+    advance(16_000);
+    close('round-1');
+    const short = resultOf('bid-a1');
+    expect(short.rank).toBe(0);
+    expect(short.reasons.join(' ')).toMatch(/qty_available 1 is below the 2 needed/);
+    expect(short.reasons).not.toContain('sold out to an earlier round');
+    expect(events().some((e) => e.kind === 'stock_sold_out')).toBe(false);
+    expect(holds().filter((x) => x.sellerId === 'seller-a')).toHaveLength(0);
+  });
+
   it('reset_demo clears every hold', () => {
     twoBuyerRounds();
     close('round-1');

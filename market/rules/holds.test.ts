@@ -51,6 +51,15 @@ describe('soldOutReasons', () => {
     expect(soldOutReasons([{ skuSpec: 'gpu', condition: 'new', quantity: 3 }], [hold()], 'seller-a', NOW, need)).toEqual(['']);
   });
 
+  it('stock below the need with no holds is not sold out: the real quantity reason is left to the line check', () => {
+    expect(soldOutReasons([{ skuSpec: 'gpu', condition: 'new', quantity: 1 }], [], 'seller-a', NOW, () => 2)).toEqual(['']);
+    expect(soldOutReasons([{ skuSpec: 'gpu', condition: 'new', quantity: 0 }], [hold()], 'seller-a', NOW, need)).toEqual(['']);
+  });
+
+  it('holds that cause the shortfall still mark the line (stock covers the need, the rest is held)', () => {
+    expect(soldOutReasons([{ skuSpec: 'gpu', condition: 'new', quantity: 2 }], [hold()], 'seller-a', NOW, () => 2)).toEqual([SOLD_OUT_REASON]);
+  });
+
   it('with no holds nothing is sold out, and the reason is the plain words the screen shows', () => {
     expect(soldOutReasons(lines, [], 'seller-a', NOW, need)).toEqual(['', '']);
     expect(SOLD_OUT_REASON).toBe('sold out to an earlier round');

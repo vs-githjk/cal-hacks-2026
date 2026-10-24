@@ -26,6 +26,8 @@ The referee is the same every time. These are not:
    - **Sold.** The payment is recorded. The unit is gone for good.
    - **Released.** The approval is denied (wrong code, silence, a no), or 2 minutes pass with no answer. The unit goes back on sale.
    - **Renewed.** Making the mandate for that deal starts a fresh 2 minutes, because the call starts then. If the hold had run out and another round took the unit meanwhile, the mandate is refused as sold out and the deal must be re-quoted.
+   - **One sale, one buyer.** A deal belongs to the buyer whose need the round served: another buyer's mandate on it is refused as "not your deal". Once a unit is sold, a second mandate, approval or payment on the same deal is refused as sold out and the deal must be re-quoted.
+   - **Short stock is not a sell-out.** A line that states less stock than the need keeps its real quantity reason; "sold out to an earlier round" is only shown when holds caused the shortfall.
 4. Nobody is oversold. Reducers run one at a time, so two rounds closing together are decided in a fixed order: whichever the market closes first.
 
 A deal is tied to its hold by its deal id, which names the awarded bid (`<bid id>`, `deal-<bid id>` or `<round id>:<bid id>`). A deal that names no awarded bid touches no hold.

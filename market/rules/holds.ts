@@ -33,7 +33,7 @@ export function availableStock(stock: number, holds: HoldLike[], sellerId: strin
 }
 
 /**
- * Per bid line: '' when the line still has enough stock for the need, else SOLD_OUT_REASON. `condition` on a
+ * Per bid line: SOLD_OUT_REASON when the stated stock covers the need but the active holds leave less than the need, else ''. `condition` on a
  * line is the effective one (the offered condition, else the one the need asked for).
  */
 export function soldOutReasons(
@@ -43,7 +43,10 @@ export function soldOutReasons(
   nowMs: number,
   needQty: (skuSpec: string) => number,
 ): string[] {
-  return lines.map((l) =>
-    availableStock(l.quantity, holds, sellerId, l.skuSpec, l.condition, nowMs) < needQty(l.skuSpec) ? SOLD_OUT_REASON : '',
-  );
+  // Only when the holds caused the shortfall: a line that states less stock than the need is short on its own, and the
+  // line check (scoring.checkLineSpec) reports that true quantity reason.
+  return lines.map((l) => {
+    const need = needQty(l.skuSpec);
+    return l.quantity >= need && availableStock(l.quantity, holds, sellerId, l.skuSpec, l.condition, nowMs) < need ? SOLD_OUT_REASON : '';
+  });
 }
