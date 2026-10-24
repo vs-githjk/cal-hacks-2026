@@ -59,6 +59,19 @@ def test_parser_accepts_only_fixed_fields_and_message_labels():
     assert status.parse_line(prefix + "AGENT_MSG name=buyer to=owner text=sealed request for bids extra=secret") is None
 
 
+def test_parser_rejects_oversized_producer_with_short_sdk_prefix():
+    address = "agent1q" + "a" * 80
+    producer = f"AGENT_STATUS name={'n' * 40} role=advocate address={address} mode=mailbox"
+    assert len(producer) > 140
+    assert status.parse_line("[b]: " + producer) is None
+
+
+def test_parser_rejects_multiline_log_records():
+    producer = status.status_line("buyer", "buyer", ADDR, mailbox=True)
+    assert status.parse_line("INFO:\n    [buyer]: " + producer) is None
+    assert status.parse_line("INFO: [buyer]: " + producer + "\nINFO: [buyer]: " + producer) is None
+
+
 def test_status_line_bound_and_addresses_are_rejected_not_truncated():
     at_limit = "agent1q" + "a" * 77
     line = status.status_line("buyer", "buyer", at_limit, mailbox=True)
