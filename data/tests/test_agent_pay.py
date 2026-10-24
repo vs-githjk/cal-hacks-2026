@@ -55,7 +55,7 @@ def test_the_token_is_never_printed_or_written_to_the_receipt(tmp_path):
     send, _ = fake_apify()
     r, printed = run_paid(tmp_path, send)
     assert TOKEN not in "\n".join(printed) and TOKEN not in (tmp_path / "agent_pay_run.json").read_text()
-    assert r["token"] == "apify_api_...1234"
+    assert "token" not in r and "1234" not in (tmp_path / "agent_pay_run.json").read_text()  # #347: not even the last 4
 
 
 def test_nothing_is_paid_without_typing_pay(tmp_path):
@@ -201,7 +201,7 @@ def test_a_url_error_on_the_run_after_paying_writes_a_not_live_receipt(tmp_path)
     with pytest.raises(SystemExit, match="check the wallet and .env"):
         run_paid(tmp_path, send, live=True)
     rec = receipt_of(tmp_path)
-    assert rec["label"] == "NOT LIVE: paid, but the run request failed (URLError)" and rec["token"] == "apify_api_...1234"
+    assert rec["label"] == "NOT LIVE: paid, but the run request failed (URLError)" and "token" not in rec
     assert f"APIFY_AGENT_TOKEN={TOKEN}" in (tmp_path / ".env").read_text()
 
 
@@ -248,15 +248,18 @@ def test_help_is_the_paid_run_runbook_and_spends_nothing(capsys, monkeypatch):
         pay_mod.main(["--help"])
     assert e.value.code == 0
     text = capsys.readouterr().out
-    for step in ("type PAY", "python3 -m data.claim_check.agent_pay_probe",
-                 "python3 -m data.claim_check.agent_pay --payer awal --amount 5",
-                 "python3 -m data.claim_check.agent_pay --payer mppx --amount 5",
-                 "python3 -m data.claim_check.agent_pay --token-from-env",
-                 "npx awal auth login", "npx awal balance", "npm i -g mppx", "mppx account create", "mppx account view",
+    for step in ("Anoop", "npx awal auth login", "npx awal auth verify", "npx awal show", "npx awal balance",
+                 "USDC on Base", "python3 -m data.claim_check.agent_pay_probe", "type PAY",
+                 "python3 -m data.claim_check.agent_pay --payer awal --amount 5", "--max-amount 5000000",
+                 "https://basescan.org/tx/", "screen-record (30 s)", "What to commit", "Never commit .env",
+                 "Agents can pay per call", "labelled LIVE", "Post on issue #347", "tx hash not captured",
+                 "python3 -m data.claim_check.agent_pay --token-from-env", "npm i -g mppx", "mppx account create",
                  "data/claim_check/agent_pay_run.json", "$1 to $10", "mode 600", "BEFORE", "AFTER"):
         assert step in text, step
+    steps = [text.index(f"\n{n}. ") for n in range(1, 11)]  # ten numbered steps, in order
+    assert steps == sorted(steps)
     labels = {  # each receipt label the code can write, and the next action the runbook gives for it
-        "LIVE\n": "share the run id",
+        "LIVE\n": "go to step 8",
         "LIVE (payment unverified by balance)": "do not pay again",
         "NOT LIVE: paid, but the Actor run did not succeed": "--token-from-env",
         "NOT LIVE: paid, but the run request failed": "check the Apify console",
@@ -281,3 +284,83 @@ def test_every_not_live_label_the_code_writes_is_in_the_help():
     assert len(found) >= 6
     for label in found:
         assert label.strip().rstrip(",") in pay_mod.__doc__, label
+
+
+TX = "0x" + "ab12" * 16
+NONCE = "0x" + "cd34" * 16
+WALLET_KEY = "0x" + "ef56" * 16
+
+
+@pytest.mark.parametrize("output", [
+    json.dumps({"token": TOKEN, "remainingBalanceUsd": 5, "txHash": TX}),
+    json.dumps({"token": TOKEN, "payment": {"success": True, "transaction": TX, "network": "eip155:8453"}}),
+    json.dumps({"token": TOKEN, "transactionHash": TX}),
+    '{\n "token": "%s",\n "settlement": {"transaction": "%s"}\n}' % (TOKEN, TX),
+    f"Paid. Transaction: {TX}\n" + json.dumps({"token": TOKEN}),
+    f"see https://basescan.org/tx/{TX}\n" + json.dumps({"token": TOKEN}),
+])
+def test_the_tx_hash_is_read_from_awal_json_or_text(output):
+    assert pay_mod.tx_from_output(output) == TX
+
+
+@pytest.mark.parametrize("output", [
+    json.dumps({"token": TOKEN, "authorization": {"nonce": NONCE}}),
+    f"nonce {NONCE}\n" + json.dumps({"token": TOKEN}),
+    f"private key hash {WALLET_KEY}",
+    json.dumps({"token": TOKEN, "transaction": "0xabc"}),
+    "",
+])
+def test_a_nonce_a_key_or_a_short_hex_is_never_taken_for_a_tx_hash(output):
+    assert pay_mod.tx_from_output(output) is None
+
+
+def test_a_paid_run_records_the_tx_hash_and_a_basescan_link(tmp_path):
+    send, _ = fake_apify()
+    out = json.dumps({"token": TOKEN, "remainingBalanceUsd": 5, "txHash": TX})
+    r, printed = run_paid(tmp_path, send, sh=lambda cmd: (0, out))
+    rec = receipt_of(tmp_path)
+    assert rec["tx_hash"] == TX and rec["tx_explorer"] == f"https://basescan.org/tx/{TX}"
+    assert any(TX in p and "https://basescan.org/tx/" in p for p in printed)
+    assert rec["label"] == r["label"] == "FAKE (test)"
+
+
+def test_no_tx_hash_says_copy_it_from_the_wallet_history_and_keeps_the_label_rules(tmp_path):
+    send, _ = fake_apify()
+    r, printed = run_paid(tmp_path, send, live=True)
+    rec = receipt_of(tmp_path)
+    assert rec["tx_hash"] == "tx hash not captured: copy it from the wallet history" and "tx_explorer" not in rec
+    assert rec["label"] == "LIVE" and any("tx hash not captured" in p for p in printed)
+
+
+def test_mppx_gets_no_basescan_link(tmp_path):
+    send, _ = fake_apify()
+    run_paid(tmp_path, send, sh=lambda cmd: (0, json.dumps({"token": TOKEN, "txHash": TX})), payer="mppx")
+    rec = receipt_of(tmp_path)
+    assert rec["tx_hash"] == TX and "tx_explorer" not in rec
+
+
+@pytest.mark.parametrize("case", ["ok", "no_token", "run_error"])
+def test_the_receipt_holds_no_token_key_or_env_value(tmp_path, monkeypatch, case):
+    """#347: the receipt is committed, so it must hold amounts, run id, tx hash and timestamps, never a secret."""
+    import urllib.error
+    env_secret = "sk_test_ENVSECRETVALUE9876"
+    monkeypatch.setenv("AGENT_WALLET_KEY", WALLET_KEY)
+    monkeypatch.setenv("SOME_API_TOKEN", "envtoken_ABCDEFGH1234")
+    (tmp_path / ".env").write_text(f"STRIPE_SECRET_KEY={env_secret}\nAGENT_WALLET_KEY={WALLET_KEY}\n")
+    noisy = (f"debug key={WALLET_KEY} nonce={NONCE} sig=0x{'9f' * 65}\n"
+             + json.dumps({"txHash": TX, **({} if case == "no_token" else {"token": TOKEN})}))
+    send0, _ = fake_apify()
+
+    def send(method, url, token=None, body=None, timeout=150):
+        if case == "run_error" and "/runs?" in url:
+            raise urllib.error.URLError("reset")
+        return send0(method, url, token, body, timeout)
+    try:
+        run_paid(tmp_path, send, sh=lambda cmd: (1 if case == "no_token" else 0, noisy), live=True)
+    except SystemExit:
+        pass
+    text = (tmp_path / "agent_pay_run.json").read_text()
+    for secret in (TOKEN, TOKEN[-12:], "apify_api_", WALLET_KEY, WALLET_KEY[2:], NONCE[2:], "9f" * 40,
+                   env_secret, "envtoken_ABCDEFGH1234"):
+        assert secret not in text, secret
+    assert json.loads(text)["tx_hash"] == TX

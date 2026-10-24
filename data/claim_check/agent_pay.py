@@ -1,55 +1,53 @@
-"""An AI agent pays Apify for one claim-check run with stablecoin, no Apify account (Lane C, issues #270, #342; in data/claim_check, not scripts/, per #276).
+"""An AI agent pays Apify for one claim-check run with stablecoin, no Apify account (Lane C, issues #270, #347; in data/claim_check, not scripts/, per #276).
 
-SPENDS REAL MONEY. Run it only on the machine whose wallet Vidyut approved. Cap: $1 to $10 per run (--amount).
+SPENDS REAL MONEY. Anoop runs it on his own machine with his Coinbase agentic wallet (awal, x402 on Base,
+about $10 USDC); Vidyut approved $5 to $10 and reimburses from the receipt. Cap: $1 to $10 per run (--amount).
 Terms (agi.apify.com/AGENTS.md): minimum $1, the token balance is a hard spend cap, the token expires 14 days after
 purchase, and unused balance is not refunded.
 
-RUNBOOK (from the repo root; pick ONE payer: awal or mppx)
+RUNBOOK FOR ANOOP (#347, from the repo root)
 
-1. Set up and fund the wallet (one time). The payer CLI holds the wallet; this script never sees a key.
-   awal (Coinbase Agentic Wallet, x402, USDC on Base):
+1. Install and sign in to awal (Coinbase Agentic Wallet; npx fetches it, Node.js needed):
        npx awal auth login <email>          sign in
        npx awal auth verify <otp>           confirm the code from the email
-       npx awal show                        funding UI: add USDC on Base (or: npx awal address)
+       npx awal status                      check you are signed in
+   The wallet key stays in Coinbase's wallet (or your own env as AGENT_WALLET_KEY), never in git, chat or a doc.
+   This script never reads, prints or stores it.
+
+2. Fund it with USDC on Base and check the balance:
+       npx awal show                        funding UI: add USDC on Base (or send to: npx awal address)
        npx awal balance                     check the USDC balance
-     Fund: at least --amount in USDC on Base, plus a little ETH on Base (about 0.000001 ETH) for the
-     one-time wallet deployment gas on the first payment.
-   mppx (MPP, USDC.e or pathUSD on Tempo):
-       npm i -g mppx
-       mppx account create                  the account lives in the OS keychain
-       mppx account view                    prints the address to fund
-     Fund: at least --amount in USDC.e or pathUSD on Tempo mainnet, plus a little extra for the network
-     fee (Apify does not sponsor it).
-   (pay.sh, x402 on Solana, also works: npm install -g @solana/pay; pay setup; pay whoami; fund USDC or USDT.)
+   Fund about $10 USDC on Base (at least --amount), plus a little ETH on Base (about 0.000001 ETH) for the
+   one-time wallet deployment gas on the first payment. Write down the USDC balance BEFORE.
 
-2. Note the wallet balance BEFORE:  npx awal balance   or   mppx account view
-   Expect at least --amount (default $5) plus the fee money from step 1.
-
-3. Free check that the pay wall answers (no payment, no key, no token):
+3. Run the free probe (no payment, no key, no token):
        python3 -m data.claim_check.agent_pay_probe
-   Expect "reached, not paid" and HTTP 402 for x402 and mpp prepaid-tokens at $5.00. If not, stop.
+   Expect "reached, not paid" and HTTP 402 for x402 prepaid-tokens at $5.00 in USDC (Base). If not, stop.
 
-4. Pay and run (pick one):
+4. Start the 30 s screen recording now, then run the paid command:
        python3 -m data.claim_check.agent_pay --payer awal --amount 5
-       python3 -m data.claim_check.agent_pay --payer mppx --amount 5
-   It shows what it will spend and asks you to type PAY (anything else stops it, nothing paid). Then:
-     a. the payer CLI buys a prepaid Apify token at agi.apify.com:
-          awal: npx awal x402 pay <agi url> --max-amount <amount in USDC units, 5000000 = $5>
-          mppx: mppx <agi url>   (the amount is in the URL; mppx takes no separate cap)
-     b. saves it as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); prints only its last 4 characters;
-     c. prints the token balance before the run (expect about --amount, e.g. $5);
-     d. runs the claim-check Actor once on the demo listing (waits up to 120 s);
-     e. prints the token balance after (expect a little less: the run's metered cost) and the run id,
-        and writes the receipt data/claim_check/agent_pay_run.json (token masked, no secret in it).
+   It shows what it will spend and asks you to type PAY (anything else stops it, nothing paid). Then it:
+     a. buys a prepaid Apify token at agi.apify.com through awal:
+          npx awal x402 pay <agi url> --max-amount 5000000   (USDC units, 5000000 = $5.00)
+     b. prints the Base transaction hash and https://basescan.org/tx/<hash> when awal's output has one;
+     c. saves the token as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); prints only its last 4 characters;
+     d. prints the Apify prepaid balance before the run (expect about $5);
+     e. runs the claim-check Actor once on the demo listing (waits up to 120 s) and prints the run id;
+     f. prints the Apify prepaid balance after (expect a little less: the run's metered cost),
+        and writes the receipt data/claim_check/agent_pay_run.json.
 
-5. Note the wallet balance AFTER (same command as step 2). Expect it down by --amount (plus the network fee).
+5. What to screen-record (30 s): the PAY prompt and typing PAY, the tx hash and basescan link, the balance
+   before, the run id and its status, the balance after, and the receipt label. Then, if time allows, open
+   the basescan link. Never show .env or the full token.
 
-6. Read the receipt label (printed, and "label" in data/claim_check/agent_pay_run.json) and act:
+6. Check the wallet AFTER: npx awal balance. Expect the USDC balance down by $5 (plus the one-time gas in ETH).
+
+7. Read the receipt label (printed, and "label" in data/claim_check/agent_pay_run.json) and act:
    LIVE
-       Paid in this run, the Actor run SUCCEEDED, and the token balance dropped. Done: share the run id and receipt.
+       Paid in this run, the Actor run SUCCEEDED, and the token balance dropped. Done: go to step 8.
    LIVE (payment unverified by balance)
        Paid and the run SUCCEEDED, but the balance could not be read or did not drop yet. Check it later with
-       GET https://agi.apify.com/prepaid-tokens/balance (Bearer APIFY_AGENT_TOKEN); do not pay again.
+       GET https://agi.apify.com/prepaid-tokens/balance (Bearer APIFY_AGENT_TOKEN); do not pay again. Go to step 8.
    NOT LIVE: paid, but the Actor run did not succeed (<status>)
        Money is spent and the token is saved. Do not pay again: fix the cause (status_message in the receipt), then
        rerun with the saved token: python3 -m data.claim_check.agent_pay --token-from-env
@@ -58,28 +56,48 @@ RUNBOOK (from the repo root; pick ONE payer: awal or mppx)
    NOT LIVE: payment may have happened, no token returned (payer exit <code>)
    NOT LIVE: payment may have happened, the payer CLI timed out
    NOT LIVE: payment may have happened, the payer CLI failed (<error>)
-       Payment may have happened: check the wallet and .env. Compare the wallet balance with step 2. If .env has
+       Payment may have happened: check the wallet and .env. Compare npx awal balance with step 2. If .env has
        APIFY_AGENT_TOKEN, rerun with --token-from-env. If the wallet dropped and there is no token, do not pay
-       again; keep the receipt (it holds the payer output, tokens masked) and ask Apify. If the wallet did not
-       drop, nothing was paid and step 4 can be retried.
+       again; keep the receipt and the tx hash and ask Apify. If the wallet did not drop, nothing was paid and
+       step 4 can be retried.
    NOT LIVE: no payment in this run (saved token)
    NOT LIVE: no payment in this run, and the run request failed (<error>)
        A --token-from-env rerun; never LIVE because nothing was paid in that run. The earlier paid receipt stands.
    FAKE (test)
        Only from the tests (fakes); never from a real run.
-   No receipt, and a message "Not paid: you did not type PAY." or "The payer CLI for <payer> is not installed
+   No receipt, and a message "Not paid: you did not type PAY." or "The payer CLI for awal is not installed
    (see step 1). Nothing was paid." means nothing was spent: fix and repeat step 4.
    The exit code is 0 only when the Actor run SUCCEEDED.
+   If the receipt says "tx hash not captured: copy it from the wallet history", awal printed no hash: copy it
+   from the wallet history (npx awal show) or from basescan for your wallet address.
 
-7. A rerun with the token already saved skips the purchase (never LIVE):
+8. What to commit (branch from main, PR into main; author AnoopIbrampur, no AI attribution):
+       data/claim_check/agent_pay_run.json      the receipt: amounts, run id, tx hash, timestamps; no token or key
+   Never commit .env. Before committing, check the staged diff has no apify_api_ token and no wallet key.
+
+9. After the run, update the Actor README section "Agents can pay per call" (data/claim_check/actor/README.md)
+   with what really happened, labelled LIVE: the date, $5 via awal x402 on Base, the real tx hash with its
+   basescan link, the Apify run id, and the balance before and after. Only if the label was LIVE.
+
+10. Post on issue #347: the tx hash (with the basescan link), the Apify run id, the receipt label, and the
+    30 s screen recording.
+
+A rerun with the token already saved skips the purchase (never LIVE):
        python3 -m data.claim_check.agent_pay --token-from-env
+Other payers also work (not the #347 plan): --payer mppx (MPP on Tempo: npm i -g mppx; mppx account create;
+mppx account view; fund USDC.e or pathUSD) and --payer pay.sh (x402 on Solana: npm install -g @solana/pay;
+pay setup; pay whoami; fund USDC or USDT). Their tx is not on Base, so no basescan link is printed.
 
 A human types PAY every time; no flag skips the prompt, so an agent cannot spend on its own. The $1 to $10 cap is
-per run. The script never reads, prints or stores a wallet key: the payer CLI holds the wallet and signs the 402
-challenge (awal signs in by email, mppx keeps its account in the OS keychain, pay.sh uses the OS keystore).
+per run. The payer CLI holds the wallet and signs the 402 challenge (awal signs in by email, mppx keeps its account
+in the OS keychain, pay.sh uses the OS keystore), so a key never passes through this code or a command line. The
+receipt is scrubbed of the token, every .env value and every secret-named environment variable before it is written.
 """
-# Sources checked 2026-10-24 for step 1 and the terms: https://agi.apify.com/AGENTS.md,
-# https://docs.apify.com/integrations/x402.md (awal, USDC plus a little ETH on Base), https://docs.apify.com/integrations/mpp.md (mppx on Tempo).
+# Sources checked 2026-10-24 for steps 1 and 2 and the terms: https://agi.apify.com/AGENTS.md,
+# https://docs.apify.com/integrations/x402.md (awal, USDC plus a little ETH on Base), https://docs.apify.com/integrations/mpp.md
+# (mppx on Tempo), https://docs.cdp.coinbase.com/agentic-wallet/cli/skills/pay-for-service.md and .../skills/fund.md
+# (awal status, show, address, x402 pay --max-amount). Those docs do not say where awal prints the settlement tx, so
+# tx_from_output reads JSON fields (txHash, transaction as in an x402 settle response, transactionHash) and then the text.
 from __future__ import annotations
 
 import argparse
@@ -108,6 +126,13 @@ PAYERS = {  # (protocol, command) per payer CLI; each one runs the whole 402 han
     "pay.sh": ("x402 on Solana", lambda url, usd: ["pay", "--mainnet", "--x402", "curl", url]),
 }
 TOKEN_RE = re.compile(r"apify_api_[A-Za-z0-9]+")
+TX_RE = re.compile(r"0x[0-9a-fA-F]{64}(?![0-9a-fA-F])")  # an EVM transaction hash: 32 bytes as 0x plus 64 hex
+TX_KEYS = {"txhash", "tx_hash", "transactionhash", "transaction_hash", "transaction", "tx", "settlementtxhash"}
+TX_WORDS = re.compile(r"\b(tx|txhash|transaction|hash|basescan)", re.I)
+NOT_TX_WORDS = re.compile(r"nonce|key|secret|seed|signature|private|mnemonic", re.I)  # an EIP-3009 nonce is also 0x plus 64 hex
+NO_TX = "tx hash not captured: copy it from the wallet history"
+BASESCAN = "https://basescan.org/tx/"
+SECRET_ENV = re.compile(r"KEY|SECRET|TOKEN|SEED|PRIVATE|MNEMONIC|PASSWORD", re.I)
 
 try:  # python.org builds on macOS ship without a CA bundle; certifi supplies one when it is installed
     import certifi
@@ -155,6 +180,52 @@ def token_from_output(out: str) -> str | None:
     return m.group(0) if m else None
 
 
+def _tx_in(data) -> str | None:
+    """A tx hash under a tx-like key anywhere in parsed JSON (x402 settle responses call it "transaction")."""
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if str(k).lower() in TX_KEYS and isinstance(v, str) and TX_RE.fullmatch(v.strip()):
+                return v.strip()
+        data = list(data.values())
+    if isinstance(data, list):
+        for v in data:
+            found = _tx_in(v)
+            if found:
+                return found
+    return None
+
+
+def tx_from_output(out) -> str | None:
+    """The on-chain transaction hash in the payer's output (#347), else None. JSON fields first (txHash, transaction,
+    transactionHash, ...), then a 0x plus 64 hex string on a line that names a tx or hash. A line that mentions a nonce,
+    key, secret, seed or signature is never read, so a nonce or key is never taken for a tx hash."""
+    if isinstance(out, bytes):
+        out = out.decode("utf-8", "replace")
+    out = out or ""
+    for chunk in [out.strip()] + list(reversed(out.strip().splitlines())):
+        try:
+            found = _tx_in(json.loads(chunk))
+        except ValueError:
+            continue
+        if found:
+            return found
+    for line in out.splitlines():
+        if TX_WORDS.search(line) and not NOT_TX_WORDS.search(line):
+            m = TX_RE.search(line)
+            if m:
+                return m.group(0)
+    return None
+
+
+def record_tx(receipt: dict, payer: str, stdout, out) -> None:
+    """Put the tx hash (and a Base explorer link for awal) in the receipt and print them; or say it was not captured."""
+    tx = tx_from_output(stdout)
+    receipt["tx_hash"] = tx or NO_TX
+    if tx and payer == "awal":
+        receipt["tx_explorer"] = BASESCAN + tx
+    out(f"Transaction: {tx}" + (f"  {BASESCAN}{tx}" if payer == "awal" else "") if tx else f"Transaction: {NO_TX}.")
+
+
 def save_token(env_file: Path, token: str) -> None:
     """Write APIFY_AGENT_TOKEN into the gitignored .env (replacing an older one), readable by this user only.
     The file is created with mode 600, and an existing one is set to 600 before the token is written (#329)."""
@@ -167,11 +238,38 @@ def save_token(env_file: Path, token: str) -> None:
 
 
 def masked_tail(text, n: int = 300) -> str:
-    """The end of the payer's output with any token masked, so a user can see what went wrong without a leak."""
+    """The end of the payer's output with any token masked and any long hex or key-like run redacted, so a user can see
+    what went wrong without a leak (#347: a tx hash goes in its own receipt field, never through here)."""
     if isinstance(text, bytes):
         text = text.decode("utf-8", "replace")
     tail = (text or "").strip()[-n:]
-    return TOKEN_RE.sub(lambda m: mask(m.group(0)), tail) or "(no output)"
+    tail = TOKEN_RE.sub(lambda m: mask(m.group(0)), tail)
+    tail = re.sub(r"(0x)?[0-9a-fA-F]{40,}", "[redacted hex]", tail)
+    tail = re.sub(r"(?<![A-Za-z0-9_./-])[A-Za-z0-9+/_-]{40,}={0,2}", "[redacted]", tail)
+    return tail or "(no output)"
+
+
+def secret_values(env_file: Path) -> set[str]:
+    """Every value in .env and every secret-named environment variable, so the receipt can be scrubbed of them."""
+    vals = {v for k, v in os.environ.items() if SECRET_ENV.search(k)}
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                vals.add(line.split("=", 1)[1].strip().strip("'\""))
+    return {v for v in vals if len(v) >= 8}
+
+
+def scrub(obj, secrets: set[str]):
+    """The receipt holds no secrets (#347): drop any token, .env value or secret env value from every string in it."""
+    if isinstance(obj, dict):
+        return {k: scrub(v, secrets) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [scrub(v, secrets) for v in obj]
+    if isinstance(obj, str):
+        obj = re.sub(r"apify_api_[.A-Za-z0-9]*", "[redacted token]", obj)  # even the masked last 4 stay out
+        for v in secrets:
+            obj = obj.replace(v, "[redacted]")
+    return obj
 
 
 def read_token(env_file: Path) -> str | None:
@@ -207,17 +305,18 @@ def label_for(live: bool, paid_now: bool, run_status: str | None, balance_moved:
 MAYBE_PAID = "Payment may have happened: check the wallet and .env."
 
 
-def write_receipt(receipt: dict, receipt_file: Path, out) -> None:
-    receipt_file.write_text(json.dumps(receipt, indent=1) + "\n")
+def write_receipt(receipt: dict, receipt_file: Path, out, secrets: set[str] = frozenset()) -> None:
+    receipt["written_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    receipt_file.write_text(json.dumps(scrub(receipt, set(secrets)), indent=1) + "\n")
     out(f"Receipt written to {receipt_file.relative_to(ROOT) if receipt_file.is_relative_to(ROOT) else receipt_file} ({receipt['label']}).")
 
 
-def fail_with_receipt(receipt: dict, receipt_file: Path, out, label: str, message: str):
+def fail_with_receipt(receipt: dict, receipt_file: Path, out, label: str, message: str, secrets: set[str] = frozenset()):
     """Once money may have been spent, never exit without an honest receipt (#329). These labels are never LIVE."""
     out(message)
     receipt["label"] = label
     receipt["error"] = message
-    write_receipt(receipt, receipt_file, out)
+    write_receipt(receipt, receipt_file, out, secrets)
     raise SystemExit(message)
 
 
@@ -247,32 +346,35 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
         try:
             code, stdout = sh(cmd(url, args.amount))
         except FileNotFoundError:  # the CLI never started, so nothing was paid
-            raise SystemExit(f"The payer CLI for {args.payer} is not installed (see step 0). Nothing was paid.") from None
+            raise SystemExit(f"The payer CLI for {args.payer} is not installed (see step 1). Nothing was paid.") from None
         except subprocess.TimeoutExpired as e:  # it may have paid before it hung; keep a token if it printed one (#329)
             partial = e.stdout.decode("utf-8", "replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
             token = token_from_output(partial)
             if token:
                 save_token(env_file, token)
-                receipt["token"] = mask(token)
+            record_tx(receipt, args.payer, partial, out)
             fail_with_receipt(receipt, receipt_file, out, "NOT LIVE: payment may have happened, the payer CLI timed out",
                               f"The payer CLI timed out after {e.timeout:g} s. {MAYBE_PAID}"
-                              + (f" Its token {mask(token)} was saved as APIFY_AGENT_TOKEN in {env_file.name}." if token else ""))
+                              + (f" Its token {mask(token)} was saved as APIFY_AGENT_TOKEN in {env_file.name}." if token else ""),
+                              secret_values(env_file))
         except (Exception, KeyboardInterrupt) as e:  # a Ctrl-C mid-payment also leaves the money question open
+            receipt["tx_hash"] = NO_TX
             fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: payment may have happened, the payer CLI failed ({type(e).__name__})",
-                              f"The payer CLI failed ({type(e).__name__}). {MAYBE_PAID}")
+                              f"The payer CLI failed ({type(e).__name__}). {MAYBE_PAID}", secret_values(env_file))
         receipt["payer_exit"] = code
+        record_tx(receipt, args.payer, stdout, out)
         token = token_from_output(stdout or "")
         if not token:
             fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: payment may have happened, no token returned (payer exit {code})",
                               f"The payer CLI did not return a token (exit {code}). Nothing was saved. {MAYBE_PAID} "
-                              f"End of its output (tokens masked): {masked_tail(stdout)}")
+                              f"End of its output (tokens masked): {masked_tail(stdout)}", secret_values(env_file))
         save_token(env_file, token)  # a minted token means the money is spent: keep it even on a non-zero exit (#329)
         paid_now = True
         if code != 0:
             out(f"Warning: the payer CLI exited {code} but returned a token, so it paid; the token was kept. "
                 f"End of its output (tokens masked): {masked_tail(stdout)}")
         out(f"a. Bought a prepaid token {mask(token)}; saved as APIFY_AGENT_TOKEN in {env_file.name} (mode 600).")
-    receipt["token"] = mask(token)
+    secrets = secret_values(env_file) | {token}
     before = balance(send, token)
     receipt["balance_before_usd"] = before
     out(f"c. Balance before the run: ${before}" if before is not None else "c. Balance before the run: could not be read")
@@ -283,9 +385,9 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
         if paid_now:
             fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: paid, but the run request failed ({why})",
                               f"Paid, and the token {mask(token)} is saved in {env_file.name}, but the run request failed ({why}). "
-                              f"A run may have started; check the Apify console. {MAYBE_PAID}")
+                              f"A run may have started; check the Apify console. {MAYBE_PAID}", secrets)
         fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: no payment in this run, and the run request failed ({why})",
-                          f"The run request failed ({why}). A run may have started; check the Apify console.")
+                          f"The run request failed ({why}). A run may have started; check the Apify console.", secrets)
     run_data = (data or {}).get("data") or {} if isinstance(data, dict) else {}
     receipt.update(run_http=status, run_id=run_data.get("id"), run_status=run_data.get("status"), status_message=run_data.get("statusMessage"))
     if run_data.get("defaultDatasetId"):
@@ -308,7 +410,7 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
     out(f"e. Balance after the run: ${after} (spent ${receipt.get('spent_usd')}); run id {receipt['run_id']}")
     moved = before is not None and after is not None and after < before
     receipt["label"] = label_for(live, paid_now, receipt.get("run_status"), balance_moved=moved)
-    write_receipt(receipt, receipt_file, out)
+    write_receipt(receipt, receipt_file, out, secrets)
     return receipt
 
 
