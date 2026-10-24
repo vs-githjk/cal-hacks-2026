@@ -98,3 +98,46 @@ Check each profile is Active on Agentverse, then find each by name in a fresh AS
 - The voice call gets only `{rule_id, summary, source_url}`; the summary is a fixed template per rule_id (`advocate/checks.py` CALL_SUMMARIES).
 
 Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" to one SKU (SIM table until Lane C's SpecCards land); a buyer who does not state PSU connector counts gets "fit not confirmed". Condition evidence is supplied in bid fields, not independently fetched; price history, recalls and seller records use fixtures. Voice approval and Stripe charges wait on Lane D.
+
+## CRS sandbox setup (Issue #15)
+
+Set `CRS_USERNAME` and `CRS_PASSWORD` in the private `agents/.env`; optionally set `CRS_BASE_URL` (default `https://api-sandbox.stitchcredit.com/api`). The adapter posts JSON credentials to `/users/login` once per process, caches the returned bearer token, rejects redirects, and permanently latches a failed login without retrying. Missing credentials perform zero network requests and override any old cache with `CRS not configured`. Set `CRS_TEST_IDENTITIES_PATH` there to an absolute path for a private operator JSON file outside the repository. The file has this shape; `request` must contain the exact body for the named persona from the official CRS Cal Hacks package version 1.1.2:
+
+An optional preissued `CRS_API_KEY` may be supplied for an already-authorized sandbox process; it skips login and is never written to logs. A configured `seller_4` may be an individually classified seller with no CRS persona. A configured `seller_5` may be a business seller only when its private profile references an already approved persona such as `P01`, `P02`, or `P12`; do not invent identity bodies or public seller data.
+
+```json
+{
+  "sellers": {
+    "seller_1": {
+      "seller_type": "business",
+      "consent": false,
+      "persona_ref": "P01",
+      "request": { "<official request fields>": "<private values>" }
+    },
+    "seller_4": {
+      "seller_type": "individual",
+      "consent": true
+    },
+    "seller_5": {
+      "seller_type": "business",
+      "consent": true,
+      "persona_ref": "P02",
+      "request": { "<official request fields>": "<private values>" }
+    }
+  }
+}
+```
+
+The proposed demo mapping is `seller_1=P01`, `seller_2=P02`, and `seller_3=P12`; set `consent` to true only after that seller's consent is explicitly recorded. `P16` is an optional approved step-up case. The adapter accepts only the exact-body digests for these official personas. Keep request bodies, identity data, and credentials out of git, logs, chat, and market state. Use the consent wording: `CRS sandbox identity check for this demo business seller's designated synthetic representative. Only a status band and check time are shared. No real-person data is submitted.`
+
+This is a synthetic representative identity check, not business-entity verification or a credit/financial-stability guarantee. An empty documented CRS message list maps to `verified_stable`; code `2401` maps to `caution`; other, malformed, or unknown results map to `not_verified`. Configured business sellers without a valid check remain ineligible for ordering. When CRS is genuinely absent, the adapter reports `CRS_NOT_CONFIGURED` and the market may continue without a CRS gate while showing its once-only notice. Individually classified sellers are exempt using trusted operator configuration and are not checked. The adapter stores only sanitized signals in `.cache/crs-signals.json`; a genuine cached sandbox result can be reused for up to 24 hours as `source: recorded`, retaining its original `checked_at` and provenance. Its display provenance is `cached from CRS <time>`.
+
+Lane A hands off the existing `SupplierSignal` fields (`supplier_id`, `stability`, `checked_at`, `source`) and a fixed reason derived from the band. Shared market enforcement and the greyed-out ineligible row remain Lane B work; this handoff does not implement a market reducer or publisher. For an explicit sandbox check, run from the repository root with the existing Windows interpreter:
+
+```powershell
+.\agents\.venv\Scripts\python.exe -B agents/crs.py --live
+```
+
+The equivalent command where `python3` is the configured interpreter is `python3 agents/crs.py --live`. Missing login credentials or profile configuration yields no CRS pass.
+
+Live sandbox proof: the CRS login returned HTTP 200, and the operator-approved official synthetic representative mapping was `seller_1=P01`, `seller_2=P02`, `seller_3=P12`. Three adapter calls returned valid responses at `2026-10-24T07:50:12Z`: sellers 1 and 2 were `verified_stable` and eligible; seller 3 was `not_verified` and blocked. A separate cache fallback check returned the same dated results as `recorded` with zero additional CRS calls. Credentials and tokens remain in ignored local runtime configuration. The result verifies representative identity only. Issue owner acceptance of this scope and Lane B's shared market/UI enforcement remain pending.

@@ -46,6 +46,18 @@ Each part in `fit_builds.json` now carries `checked` (level, source, date); a bu
 Say "12 of 12 on builds whose specs we confirmed on maker pages; 42 of 43 on the full set, partly unconfirmed". The set was tuned on once, so neither is held out.
 Next: confirm the remaining parts, and add held-out builds no one tuned against.
 
+### Second maker re-check (Sat 2026-10-24, maker pages read through a search index restricted to each maker's domain)
+26 more parts confirmed on maker domains (amd.com, intel.com, asus.com, msi.com, corsair.com, evga.com, gskill.com, samsung.com, nvidia.com, nzxt.com): nine CPUs (socket, TDP), seven boards (socket, form factor, memory type), three memory kits, the Corsair CX550, CV450 and EVGA 600 BR, two Samsung drives, the RTX 4090 Founders Edition (304 mm) and the NZXT H5 Flow (2023 spec 365 mm GPU, 165 mm cooler). Each part carries `check_source`.
+- Value corrected: Corsair CV450 PCIe 8-pin connectors 1 -> 2 (corsair.com lists two on one cable). No build truth changed.
+- Still unconfirmed: Seasonic FOCUS GX-850 (2019) 8-pin count (the maker PDF is for a later revision), Corsair RM650e and RM750e (2023) 8-pin counts, G.Skill Trident Z5 4x16GB (no such kit found on gskill.com), MSI RTX 4060 Ventus length.
+
+| set | builds | decided correct | false OK | false fail | uncertain |
+|---|---|---|---|---|---|
+| all 44 | 44 | 42 of 43 | 0 | 1 | 1 |
+| maker-checked subset (every part confirmed on a maker page) | 33 (was 12) | 33 of 33 | 0 | 0 | 0 |
+
+False OK is 0 on both. The checker was not changed; the set was tuned on once, so neither row is held out.
+
 ## First price numbers on real parts (MIRROR, RTX 5070 Ti)
 
 Run: `python3 -m data.mirror.price_spread`. Source: the c1 Apify snapshots in `data/mirror/snapshots/`. Out-of-stock listings are left out of the ask range (not buyable at that price) and counted.
