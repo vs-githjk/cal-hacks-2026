@@ -12,11 +12,17 @@
     "description": "Brand searched"
    },
    "product": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "Product as given"
    },
    "upc": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "UPC as given (digits only)"
    },
    "status": {
@@ -28,51 +34,87 @@
     "description": "One line in plain words"
    },
    "recall_title": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "Top recall's title"
    },
    "recall_date": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "Top recall's date"
    },
    "recall_url": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "Top recall's page on cpsc.gov"
    },
    "hazard": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "What the hazard is"
    },
    "remedy": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "What to do"
    },
    "units": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "Units recalled, as CPSC states it"
    },
    "match_on": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "What matched: model, UPC, product line or product name"
    },
    "matches": {
-    "type": "array",
+    "type": [
+     "array",
+     "null"
+    ],
     "description": "Every recall that names this model or UPC"
    },
    "possible": {
-    "type": "array",
+    "type": [
+     "array",
+     "null"
+    ],
     "description": "Recalls of the same product line or product name: leads, not matches"
    },
    "checked_at": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "When the CPSC answer was read (UTC)"
    },
    "source_url": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "The CPSC API search"
    },
    "origin": {
-    "type": "string",
+    "type": [
+     "string",
+     "null"
+    ],
     "description": "MIRROR: a dated read of CPSC"
    }
   },

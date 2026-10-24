@@ -133,3 +133,12 @@ def test_the_fetch_only_calls_the_cpsc_api(monkeypatch):
             raise AssertionError(f"fetched {url}")
         except ValueError as e:
             assert "only the CPSC" in str(e)
+
+
+def test_every_row_passes_the_dataset_schema_apify_validates(monkeypatch, tmp_path):  # a None field once failed a real run
+    import jsonschema
+    fields = json.loads((ACTOR / ".actor" / "dataset_schema.json").read_text())["fields"]
+    a = run(monkeypatch, tmp_path, {**FORM, "products": FORM["products"] + [" | no brand", "Apple | iPhone 15 Pro"]})
+    assert {r["status"] for r in a.rows} >= {"recalled", "none", "unverified"}
+    for row in a.rows:
+        jsonschema.validate(row, fields)
