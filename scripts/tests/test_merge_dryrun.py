@@ -142,3 +142,38 @@ def test_script_never_names_a_ref_writing_or_checkout_command() -> None:
     for banned in ("git merge ", "git checkout", "git switch", "git reset", "update-ref", "git push", "git rebase", "git commit "):
         assert banned not in text, banned
     assert chr(0x2014) not in text and chr(0x2013) not in text
+
+
+# docs/MERGE_0800.md: the command it tells you to run must be the table above it (the first version listed six
+# squash-merged Lane C branches the table had dropped, so the script printed 8 of 11 conflicts, not 1 of 5).
+def _merge_page() -> str:
+    return (Path(__file__).resolve().parents[2] / "docs" / "MERGE_0800.md").read_text()
+
+
+def _page_command(text: str) -> list[str]:
+    lines = [ln for ln in text.splitlines() if ln.startswith("bash scripts/merge_dryrun.sh ")]
+    assert len(lines) == 1
+    return lines[0].split()[2:]
+
+
+def test_merge_page_command_walks_exactly_the_tables_branches() -> None:
+    text = _merge_page()
+    args = _page_command(text)
+    assert args[0] == "origin/main"
+    rows = [ln.split("|")[2].strip().split()[0] for ln in text.splitlines()
+            if ln.startswith("| ") and ln.split("|")[1].strip().isdigit()]
+    assert args[1:] == rows
+    assert f"of {len(rows)} steps conflicts" in text
+
+
+def test_merge_page_command_names_no_squash_merged_lane_c_branch() -> None:
+    args = _page_command(_merge_page())
+    for gone in ("lane-c-118-snapshot-refresh", "lane-c-125-power-fit", "lane-c-c14-three-way-match",
+                 "lane-c-136-history-source", "lane-c-141-price-position", "lane-c-140-real-catch"):
+        assert not any(gone in a for a in args), gone
+
+
+def test_merge_page_says_where_the_script_lives() -> None:
+    text = _merge_page()
+    assert "from any checkout of the repo" not in text
+    assert "scripts/merge_dryrun.sh" in text and "a checkout of lane-d-night2" in text

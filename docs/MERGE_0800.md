@@ -47,11 +47,12 @@ Summary: 1 of 5 steps conflicts. Every branch is clean alone on main, so none of
 between branches. Step 5 is the one real code overlap: lane-d-night against #71 (the same 6 files with only #71 before it).
 
 lane-d-night keeps committing until about 07:00, so its tip will have moved. Re-run before you merge (it takes seconds, read
-only, from any checkout of the repo):
+only). The script lives on lane-d-night2 until step 1 is merged, so run it from a checkout of lane-d-night2 (or of main after
+step 1). This command is the five steps of the table above; at 06:14 it printed "1 of 5 steps conflict":
 
 ```
 git fetch origin
-bash scripts/merge_dryrun.sh origin/main lane-d-night2 origin/lane-c-118-snapshot-refresh origin/lane-c-125-power-fit origin/lane-c-127-recalls origin/lane-c-c14-three-way-match origin/lane-c-136-history-source origin/lane-c-141-price-position origin/lane-c-140-real-catch origin/claude/94-status-line origin/lane-b-market-floor lane-d-night
+bash scripts/merge_dryrun.sh origin/main lane-d-night2 origin/lane-c-127-recalls origin/claude/94-status-line origin/lane-b-market-floor lane-d-night
 ```
 
 Build the branch list from `gh pr list --state open` at re-run time, not from this page. A squash-merged branch (#152 and #153
