@@ -177,8 +177,9 @@ def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
     """Fail-closed gate using current trusted consent/profile and a fresh sandbox signal."""
     profiles = _profiles()
     profile = profiles.get(supplier_id)
-    if not profiles and (not check or (check.get("signal") is None and
-                                       check.get("reason") == REASON_NOT_CONFIGURED)):
+    missing_auth = not _configured()
+    empty_not_configured = _is_empty_not_configured(check)
+    if (missing_auth or not profiles) and empty_not_configured:
         return True
     if isinstance(profile, dict) and profile.get("seller_type") == "individual":
         return True
@@ -214,7 +215,8 @@ def to_crs_check(supplier_id: str, check: dict | None) -> dict:
     stability = signal.get("stability") if isinstance(signal, dict) else None
     reason = check.get("reason") if isinstance(check, dict) else None
     if stability not in REASON_CODES:
-        not_configured = not signal and (reason in {None, REASON_NOT_CONFIGURED})
+        not_configured = (_is_empty_not_configured(check) and
+                          (not _configured() or not _profiles()))
         return {
             "seller_id": supplier_id,
             "product": "tu_identity",
@@ -246,6 +248,13 @@ def to_crs_check(supplier_id: str, check: dict | None) -> dict:
     if isinstance(persona_id, str) and persona_id:
         result["persona_id"] = persona_id
     return result
+
+
+def _is_empty_not_configured(check) -> bool:
+    if check is None or check == {}:
+        return True
+    return (isinstance(check, dict) and set(check) == {"signal", "reason"} and
+            check.get("signal") is None and check.get("reason") == REASON_NOT_CONFIGURED)
 
 
 def _open_request(request):
