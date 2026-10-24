@@ -32,6 +32,7 @@ class Doc:
     starts: list[int]
     ends: list[int]
     invisible: list[int] = field(default_factory=list)
+    cache: dict = field(default_factory=dict, repr=False)  # per-message memo for rules that share work
 
     def raw_span(self, ns: int, ne: int) -> tuple[int, int]:
         """Map a half-open span of `norm` to a half-open span of `raw`."""

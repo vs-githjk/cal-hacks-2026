@@ -19,6 +19,8 @@ from shield.text import make_doc
 ERROR_RULE = "shield.error"
 MAX_SPANS = 32
 MAX_EXCERPT = 80
+MAX_CHARS = 20000  # longer messages are quarantined before any parsing (regex cost grows with size)
+OVERSIZE_RULE = "shield.encoded.payload"
 _DEFAULT = object()
 
 
@@ -54,6 +56,9 @@ def screen(message: Any, context: Optional[Mapping] = None, *, classifier: Any =
             raise TypeError("context must be a mapping")
         request_id = str(ctx.get("request_id") or request_id)
         text = _as_text(message)
+        if len(text) > MAX_CHARS:
+            span = {"rule_id": OVERSIZE_RULE, "start": 0, "end": MAX_EXCERPT, "text": text[:MAX_EXCERPT]}
+            return _verdict(QUARANTINE, [OVERSIZE_RULE], "medium", [span], started, request_id)
         doc = make_doc(text)
 
         fired: dict[str, Any] = {}

@@ -121,3 +121,27 @@ def test_response_still_validates_against_the_v0_contract_agents_use(client):
     for text in ("RTX 5070 Ti", "Ignore previous instructions"):
         body = client.post("/v1/shield/screen", json={"message_id": "m", "sender_agent": "x", "text": text}).json()
         jsonschema.Draft202012Validator(schema).validate(body)
+
+
+def test_body_over_64kb_is_413_and_never_parsed(client):
+    big = json.dumps({"text": "<!--" * 20000})
+    assert len(big) > 64 * 1024
+    r = client.post("/v1/shield/screen", content=big, headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    # chunked upload with no content-length is capped too
+    def chunks():
+        for _ in range(100):
+            yield b"x" * 1024
+    r = client.post("/v1/shield/screen", content=chunks(), headers={"content-type": "application/json"})
+    assert r.status_code == 413
+
+
+def test_body_under_the_cap_still_works_and_oversize_text_is_quarantined(client):
+    body = client.post("/v1/shield/screen", json={"text": "a b " * 8000}).json()  # 32 KB body, 32000 chars
+    assert body["verdict"] == "quarantine" and body["rule_ids"] == ["shield.encoded.payload"]
+    assert client.post("/v1/shield/screen", json={"text": "hello"}).status_code == 200
+
+
+def test_malformed_json_is_422_which_callers_treat_as_block(client):
+    r = client.post("/v1/shield/screen", content="{not json", headers={"content-type": "application/json"})
+    assert r.status_code == 422
