@@ -2,7 +2,7 @@
 
     python3 -m scripts.sponsor_status [--json web/public/sponsor-status.json] [--crs-cache <path>]
 
-Reads each integration's own status() (Bright Data, Tiger Data) and the last CrsCheck record (CRS). It makes no
+Reads each integration's own status() (Bright Data, Tiger Data) and the newest signal in the CRS adapter's cache. It makes no
 network call, opens no database connection and never prints an env value, a key, a URL or a CRS report field:
 only the sponsor name, yes or no, an ISO time and a short result word. A status that fails becomes result "error"
 with no message, so nothing it said can leak.
@@ -21,10 +21,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Where the CRS adapter (Lane A, #15) leaves its most recent CrsCheck record. Nothing writes it until that lands,
-# so today CRS reads "not configured" or "not called".
-CRS_CACHE = ROOT / "data" / "crs_last_check.json"
-CRS_ENV = ("CRS_USERNAME", "CRS_PASSWORD", "CRS_BASE_URL")
+# The CRS adapter (agents/crs.py, Lane A) caches its sandbox results here: supplier_id -> {persona_ref, signal, reason}.
+# Only signal.checked_at and signal.stability are read; persona_ref and reason never leave this file.
+CRS_CACHE = ROOT / ".cache" / "crs-signals.json"
+# Configured means both are set, as the adapter's own _configured() decides; CRS_BASE_URL is optional there.
+CRS_ENV = ("CRS_USERNAME", "CRS_PASSWORD")
+CRS_SOURCES = ("sandbox", "recorded")
 NAMES = ("Bright Data", "CRS", "Tiger Data")
 
 
@@ -59,25 +61,60 @@ def _tiger() -> dict:
         return _error("Tiger Data")
 
 
+def _parse_time(value: object) -> Optional[datetime]:
+    """An ISO 8601 time as an aware datetime (naive counts as UTC), or None when it does not parse."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        when = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+    except ValueError:
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+
+
+def _newest_signal(cache: object) -> Optional[tuple]:
+    """(checked_at text, stability) of the newest valid signal in the adapter's cache.
+
+    None when no entry carries a signal; raises ValueError when signals exist but none is usable."""
+    if not isinstance(cache, dict):
+        raise ValueError("cache is not an object")
+    seen, best = 0, None
+    for entry in cache.values():
+        signal = entry.get("signal") if isinstance(entry, dict) else None
+        if signal is None:
+            continue
+        seen += 1
+        if not isinstance(signal, dict):
+            continue
+        when = _parse_time(signal.get("checked_at"))
+        stability = signal.get("stability")
+        if when is None or signal.get("source") not in CRS_SOURCES or not isinstance(stability, str) or not stability:
+            continue
+        if best is None or when > best[0]:
+            best = (when, signal["checked_at"], stability)
+    if seen and best is None:
+        raise ValueError("no usable signal")
+    return None if best is None else (best[1], best[2])
+
+
 def _crs(cache: Path) -> dict:
     configured = all(os.environ.get(k, "").strip() for k in CRS_ENV)
     if not configured:
         return _row("CRS", False, None, "not_configured")
     try:
-        record = json.loads(Path(cache).read_text(encoding="utf-8"))
+        data = json.loads(Path(cache).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return _row("CRS", True, None, "not_called")
     except Exception:
         return _row("CRS", True, None, "error")
     try:
-        from pay.crs_gate import validate_check
-        if validate_check(record):
-            return _row("CRS", True, None, "error")
-        if record["origin"] == "NOT_CONFIGURED":
-            return _row("CRS", True, record["checked_at"], "not_configured")
-        return _row("CRS", True, record["checked_at"], "verified" if record["verified"] else "not_verified")
-    except Exception:
+        newest = _newest_signal(data)
+    except ValueError:
         return _row("CRS", True, None, "error")
+    if newest is None:
+        return _row("CRS", True, None, "not_called")
+    checked_at, stability = newest
+    return _row("CRS", True, checked_at, "verified" if stability == "verified_stable" else "not_verified")
 
 
 def collect(*, crs_cache: Optional[Path] = None) -> list[dict]:
@@ -99,7 +136,7 @@ def render(rows: list[dict]) -> str:
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="One honest status line per sponsor integration.")
     ap.add_argument("--json", metavar="PATH", help="also write the rows as JSON (for the web app)")
-    ap.add_argument("--crs-cache", metavar="PATH", help="where the last CrsCheck record lives")
+    ap.add_argument("--crs-cache", metavar="PATH", help="the CRS adapter cache (default .cache/crs-signals.json)")
     args = ap.parse_args(argv)
     rows = collect(crs_cache=Path(args.crs_cache) if args.crs_cache else None)
     print(render(rows))

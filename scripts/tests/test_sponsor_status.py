@@ -63,12 +63,17 @@ def no_network(monkeypatch):
     return calls
 
 
-def cache(tmp_path, **kw):
-    rec = {"seller_id": "seller-grace", "verified": True, "reason_codes": [], "product": "fraud_finder",
-           "checked_at": ts(NOW - timedelta(hours=1)), "origin": "SANDBOX"}
-    rec.update(kw)
-    p = tmp_path / "crs_last_check.json"
-    p.write_text(json.dumps(rec))
+def signal(supplier_id="seller-grace", stability="verified_stable", checked_at=None, source="sandbox"):
+    return {"supplier_id": supplier_id, "stability": stability, "source": source,
+            "checked_at": checked_at or ts(NOW - timedelta(hours=1))}
+
+
+def cache(tmp_path, entries=None, **kw):
+    """A file in the shape agents/crs.py writes: supplier_id -> {persona_ref, signal, reason}."""
+    if entries is None:
+        entries = {"seller-grace": {"persona_ref": "persona_SECRETREF", "signal": signal(**kw), "reason": "SECRETREASON"}}
+    p = tmp_path / "crs-signals.json"
+    p.write_text(json.dumps(entries))
     return p
 
 
@@ -115,14 +120,69 @@ def test_configured_but_never_called_says_so(monkeypatch):
     assert "last call: never" in S.render(list(rows.values()))
 
 
-def test_crs_reads_the_cached_check_record(tmp_path, monkeypatch):
-    for k in ("CRS_USERNAME", "CRS_PASSWORD", "CRS_BASE_URL"):
+CRS_CREDS = ("CRS_USERNAME", "CRS_PASSWORD")
+
+
+def test_crs_reads_the_cached_signal(tmp_path, monkeypatch):
+    for k in CRS_CREDS:
         monkeypatch.setenv(k, SECRETS[k])
     ok = by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]
     assert ok == {"name": "CRS", "configured": True, "last_call": ts(NOW - timedelta(hours=1)), "result": "verified"}
-    blocked = by_name(S.collect(crs_cache=cache(tmp_path, verified=False, reason_codes=["risk_score_high"])))["CRS"]
-    assert blocked["result"] == "not_verified"
-    assert "risk_score_high" not in json.dumps(blocked)
+    adverse = by_name(S.collect(crs_cache=cache(tmp_path, stability="unstable")))["CRS"]
+    assert adverse["result"] == "not_verified"
+    recorded = by_name(S.collect(crs_cache=cache(tmp_path, source="recorded")))["CRS"]
+    assert recorded["result"] == "verified"
+    shown = json.dumps([ok, adverse, recorded]) + S.render([ok, adverse, recorded])
+    assert "SECRETREF" not in shown and "SECRETREASON" not in shown and "seller-grace" not in shown
+
+
+def test_crs_is_configured_with_user_and_password_and_no_base_url(tmp_path, monkeypatch):
+    # The adapter falls back to its default sandbox URL, so CRS_BASE_URL is optional.
+    for k in CRS_CREDS:
+        monkeypatch.setenv(k, SECRETS[k])
+    monkeypatch.delenv("CRS_BASE_URL", raising=False)
+    row = by_name(S.collect(crs_cache=tmp_path / "none.json"))["CRS"]
+    assert row["configured"] is True and row["result"] == "not_called" and row["last_call"] is None
+    text = S.render([row])
+    assert "configured: yes" in text
+    assert SECRETS["CRS_USERNAME"] not in text and SECRETS["CRS_PASSWORD"] not in text
+
+
+@pytest.mark.parametrize("missing", CRS_CREDS)
+def test_crs_needs_both_user_and_password(tmp_path, monkeypatch, missing):
+    for k in CRS_CREDS:
+        monkeypatch.setenv(k, SECRETS[k])
+    monkeypatch.setenv(missing, "  ")
+    row = by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]
+    assert row["configured"] is False and row["result"] == "not_configured" and row["last_call"] is None
+
+
+def test_crs_default_cache_is_the_adapters_file():
+    assert S.CRS_CACHE == ROOT / ".cache" / "crs-signals.json"
+
+
+def test_crs_takes_the_newest_signal_across_suppliers(tmp_path, monkeypatch):
+    for k in CRS_CREDS:
+        monkeypatch.setenv(k, SECRETS[k])
+    older = signal("seller-a", "verified_stable", ts(NOW - timedelta(hours=5)))
+    newest = signal("seller-b", "unstable", ts(NOW - timedelta(minutes=5)))
+    entries = {
+        "seller-a": {"persona_ref": "p1", "signal": older, "reason": "x"},
+        "seller-b": {"persona_ref": "p2", "signal": newest, "reason": "y"},
+        "seller-c": {"persona_ref": "p3", "signal": None, "reason": "CRS_CONSENT"},
+        "seller-d": {"persona_ref": "p4", "signal": signal("seller-d", checked_at=ts(NOW - timedelta(days=1))), "reason": "z"},
+    }
+    row = by_name(S.collect(crs_cache=cache(tmp_path, entries)))["CRS"]
+    assert row["last_call"] == ts(NOW - timedelta(minutes=5)) and row["result"] == "not_verified"
+
+
+def test_crs_cache_without_a_signal_is_not_called(tmp_path, monkeypatch):
+    for k in CRS_CREDS:
+        monkeypatch.setenv(k, SECRETS[k])
+    entries = {"seller-c": {"persona_ref": "p3", "signal": None, "reason": "CRS_CONSENT"}}
+    for data in (entries, {}):
+        row = by_name(S.collect(crs_cache=cache(tmp_path, data)))["CRS"]
+        assert row == {"name": "CRS", "configured": True, "last_call": None, "result": "not_called"}
 
 
 def test_crs_cache_without_credentials_is_still_not_configured(tmp_path):
@@ -132,19 +192,30 @@ def test_crs_cache_without_credentials_is_still_not_configured(tmp_path):
     assert row["last_call"] is None
 
 
-def test_crs_not_configured_record_and_bad_files(tmp_path, monkeypatch):
-    for k in ("CRS_USERNAME", "CRS_PASSWORD", "CRS_BASE_URL"):
+def test_crs_bad_files_are_errors_without_leaking(tmp_path, monkeypatch):
+    for k in CRS_CREDS:
         monkeypatch.setenv(k, SECRETS[k])
-    nc = by_name(S.collect(crs_cache=cache(tmp_path, origin="NOT_CONFIGURED", verified=False)))["CRS"]
-    assert nc["result"] == "not_configured"
     bad = tmp_path / "bad.json"
     bad.write_text("{not json")
     row = by_name(S.collect(crs_cache=bad))["CRS"]
     assert row["result"] == "error" and row["last_call"] is None
-    odd = cache(tmp_path, ssn="123-45-6789")
+    listy = tmp_path / "list.json"
+    listy.write_text("[1, 2]")
+    assert by_name(S.collect(crs_cache=listy))["CRS"]["result"] == "error"
+    odd = cache(tmp_path, source="somewhere-else", stability="verified_stable")
     row = by_name(S.collect(crs_cache=odd))["CRS"]
-    assert row["result"] == "error"
-    assert "123-45-6789" not in json.dumps(row)
+    assert row["result"] == "error" and row["last_call"] is None
+    assert "SECRETREF" not in json.dumps(row)
+
+
+@pytest.mark.parametrize("stamp", ["not a date", "", None, 12345, "2026-13-45T99:00:00Z"])
+def test_crs_unparseable_checked_at_is_an_error_not_a_last_call(tmp_path, monkeypatch, stamp):
+    for k in CRS_CREDS:
+        monkeypatch.setenv(k, SECRETS[k])
+    entries = {"seller-grace": {"persona_ref": "p", "signal": {**signal(), "checked_at": stamp}, "reason": "r"}}
+    row = by_name(S.collect(crs_cache=cache(tmp_path, entries)))["CRS"]
+    assert row == {"name": "CRS", "configured": True, "last_call": None, "result": "error"}
+    assert "not a date" not in S.render([row])
 
 
 def test_output_never_contains_an_env_value(tmp_path, monkeypatch, capsys):
