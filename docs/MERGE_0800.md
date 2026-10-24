@@ -12,7 +12,7 @@ steps above it. lane-d-night2 is step 1 because `demo/rehearse.py` (T3) lives on
 
 | Step | Branch (PR) | Tip | Alone on main | Conflicts onto the running result |
 |---|---|---|---|---|
-| 1 | lane-d-night2 (this run) | 8425e05 | clean | clean |
+| 1 | lane-d-night2 (this run) | tip at merge time | clean | clean |
 | 2 | origin/lane-c-118-snapshot-refresh (#122) | f113d29 | clean | clean |
 | 3 | origin/lane-c-125-power-fit (#130) | cb7b158 | clean | docs/board/C.md |
 | 4 | origin/lane-c-127-recalls (#133) | 2b3ccc0 | clean | docs/board/C.md |
@@ -23,6 +23,21 @@ steps above it. lane-d-night2 is step 1 because `demo/rehearse.py` (T3) lives on
 | 9 | origin/claude/94-status-line (#111) | 2ef95b9 | clean | clean |
 | 10 | origin/lane-b-market-floor (#71) | 5487b6d | clean | clean |
 | 11 | lane-d-night (run 1, still building) | 3cea366 | clean | market/spacetimedb/src/{index.ts,market.test.ts,schema.ts}, web/src/module_bindings/{index.ts,types.ts,types/reducers.ts} |
+
+What "clean" means: no text conflict, nothing more. A clean merge can still be a red test, because two branches can each pass alone
+and fail together. Check that at every real merge: run the plan's Python test command on the dry-run tree before you merge. Get the tree
+with `git archive <tree>` into a temp dir (`git merge-tree --write-tree <running-result> <branch>` prints the tree id):
+
+```
+T=$(git merge-tree --write-tree origin/main lane-d-night2)
+D=$(mktemp -d) && git archive $T | tar -x -C $D && (cd $D && python3 -m pytest pay demo shield sim hyphenate data scripts -q)
+```
+
+Known red, fixed by step 1 itself: on the 04:22 tree, `demo/tests/test_demo_winner.py::test_b_a_too_long_listing_that_does_bid_is_vetoed_citing_the_maker_spec`
+failed (885 passed, 1 failed) because main #121 (35ee929) closed the advocate warning text to a rule template and the test still wanted
+`342 mm exceeds case clearance 305 mm` inside it. lane-d-night2 now carries the fix (commit 8ad798c: the test reads the numbers from the card's
+fit checks and the warning text only from the template). Re-run on the same tree after that fix: 886 passed, 0 failed. If a later main
+change moves that text again, the same command will show it before you merge.
 
 Summary: 7 of 11 steps conflict. Every branch is clean alone on main, so none of these is a bug in a branch; they are overlaps
 between branches. The Lane C PRs overlap on docs/board/C.md and data/scoreboard.json. Step 11 is the one real code overlap:
@@ -48,7 +63,8 @@ file reports it again; read each path's first row as the real overlap.
 Demo path first: lane-d-night2 (it carries the rehearsal tool), then Lane C data PRs, then Lane A's status parser, then #71,
 then lane-d-night.
 
-1. lane-d-night2. It is clean onto main and clean again under every later step, and after it `demo/rehearse.py` exists on main.
+1. lane-d-night2. It has no text conflict onto main or under any later step, its Python tests pass on the merged tree (886 passed, see
+   above), and after it `demo/rehearse.py` exists on main.
 2. Lane C data PRs in the order of rows 2 to 8. Merge the stacked pair #147 then #149 in that order. The reviewer rule from the
    board (22:26): stacked PRs conflict after a squash, so rebase each on main first, or merge with a merge commit.
 3. #111 (Lane A parse_line), then #71 (Lane B). Both merged clean at 04:22.
@@ -92,8 +108,18 @@ python3 demo/rehearse.py --runs 1
 ```
 
 Details and the full 08:00 command are in `docs/REHEARSAL.md`. A run resets the demo tables, so do not run it while someone is
-watching /buyer or /market. If a stage of the run fails after a merge, that merge is the likely cause: revert it before merging the
-next one. A missing script (`No such file` for `demo/rehearse.py`) is not a stage failure and never a reason to revert: it means
+watching /buyer or /market. After a merge that touches `market/spacetimedb/**` (#71, in step 3 of the order above, and lane-d-night, step 4) the running
+stack still has the module published at `launch up`, so republish it and re-load the roles BEFORE `rehearse.py`:
+
+```
+cd market && spacetime publish -s http://127.0.0.1:3000 -p ./spacetimedb --yes=all tech-bazaar && cd .. && python3 market/scripts/setup_roles.py
+```
+
+(or restart the launcher's market service, which does both). A stale module is the usual red after lane-d-night: the bridge calls the
+referee reducer `set_allowance`, the old module does not have it (0 matches on origin/main), `market/scripts/stdb.py` raises on the
+non-200 reply and `bridge.py` returns 1. A `<reducer> failed (4xx/5xx)` error that names a reducer the merge added means the module is
+stale, not that the merge is bad, so it is not a reason to revert: republish and run again. If a stage still fails after a republish,
+that merge is the likely cause: revert it before merging the next one. A missing script (`No such file` for `demo/rehearse.py`) is not a stage failure and never a reason to revert: it means
 lane-d-night2 is not merged yet. Until it is, use the interim check, which is what rehearse runs underneath:
 
 ```
