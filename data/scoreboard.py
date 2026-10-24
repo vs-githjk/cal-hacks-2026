@@ -1,11 +1,12 @@
 """Scoreboard numbers feed (Lane C, c12; issue #31). python3 -m data.scoreboard  -> data/scoreboard.json
 
-Four tiles (contracts/Scoreboard.schema.json), each recomputed from its source run when this module runs.
+Tiles (contracts/Scoreboard.schema.json), each recomputed from its source run when this module runs.
 A tile with no trustworthy number has value null, status none_yet or not_quotable, and a note saying why.
 """
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,7 +26,8 @@ def savings_tile() -> dict:
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
-                 display="No verified savings yet: the only prices captured (Best Buy) equal the price",
+                 display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
+                         f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
                  source_run="python3 -m data.baselines",
                  detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
@@ -59,7 +61,7 @@ def fit_tile(now: str) -> dict:
     return _tile(id="fit_accuracy", title="Fit accuracy", status="measured",
                  value=round(checked["correct"] / checked["decided"], 4) if checked["decided"] else None, unit="ratio",
                  display=f"{checked['correct']} of {checked['decided']} right on maker-checked builds; "
-                         f"{full['correct']} of {full['decided']} on all; {len(full['false_ok'])} false OK",
+                         f"{full['correct']} of {full['decided']} on all; {len(full['false_ok'])} false OK (tuned set, not held out)",
                  count=checked["n"], date_range={"from": when, "to": now[:10]}, origin="SIM",
                  source_run="python3 -m data.fit_checker.eval_builds",
                  detail={"checked": {"n": checked["n"], "correct": checked["correct"], "decided": checked["decided"]},
@@ -78,17 +80,65 @@ def learning_tile() -> dict:
                      for a, v in arch.items())
     return _tile(id="learning_lift", title="Seller learning lift", status="measured" if L["quotable"] else "not_quotable",
                  value=None, unit="points",
-                 display=("No lift to quote: the learner beats the fair control on "
-                          f"{len(L['winning_archetypes'])} of {len(arch)} held-out buyer types") if not L["quotable"] else rows,
+                 display=(f"No lift to quote ({len(L['winning_archetypes'])} of {len(arch)} archetypes, not quotable): the learner "
+                          "beats the fair control on too few held-out buyer types") if not L["quotable"] else rows,
                  count=sum(v["n"] for v in arch.values()), date_range={"from": w["run_at"], "to": w["run_at"]}, origin="SIM",
                  source_run=f"python3 -m sim.wind_tunnel --builders {w['builders']} --seeds {len(w['seeds'])}",
                  detail={"per_archetype": arch, "winning_archetypes": L["winning_archetypes"], "run_file": pick.name},
                  note=f"{rows}. A simulator we built, not the market. Negative or zero lift is shown, never hidden.")
 
 
+def _grab(rx: str, text: str) -> tuple[int, ...]:
+    m = re.search(rx, text, re.S)
+    if not m:
+        raise ValueError(f"results file no longer states: {rx}")
+    return tuple(int(g) for g in m.groups())
+
+
+def voice_tile() -> dict:
+    """Headline = the first run in pay/VOICE_ATTACKS.md (Lane D, d9); the after-fix run goes in detail only."""
+    text = (ROOT / "pay" / "VOICE_ATTACKS.md").read_text()
+    denied, n = _grab(r"First run, before any fix \(headline\): (\d+) of (\d+) denied", text)
+    fixed, fixed_n = _grab(r"After the fix: (\d+) of (\d+) denied", text)
+    when = "2026-10-24T08:22:00+00:00"  # "Sat Oct 24 01:22 PDT" in VOICE_ATTACKS.md
+    return _tile(id="voice_attacks", title="Voice attacks (held-out)", status="measured", value=round(denied / n, 4), unit="ratio",
+                 display=f"{denied} of {n} held-out voice attacks denied on the first run (after the fix: {fixed} of {fixed_n}; "
+                         "v04 is no longer blind)",
+                 count=n, date_range={"from": when, "to": when}, origin="SIM",
+                 source_run="python3 -m pytest pay/tests/test_voice_attacks.py -q",
+                 detail={"first_run": {"denied": denied, "n": n, "missed": ["v04"]}, "after_fix": {"denied": fixed, "n": fixed_n},
+                         "results_file": "pay/VOICE_ATTACKS.md"},
+                 note="Cases written by Lane C before the rules froze (sim/attacks/voice.jsonl). Headline is the first run; "
+                      "the fix was made after reading it, so the 10 of 10 is not blind.")
+
+
+def hyphenate_tile() -> dict:
+    """Headline = the first blind run in hyphenate/RESULTS-blind.md; the after-fixes rerun goes in detail only."""
+    text = (ROOT / "hyphenate" / "RESULTS-blind.md").read_text()
+    caught, planted = _grab(r"FIRST BLIND RUN.*?Planted: (\d+) of (\d+) caught", text)
+    passed, clean, flags = _grab(r"FIRST BLIND RUN.*?Clean: (\d+) of (\d+) passed, (\d+) false flags", text)
+    after_caught, after_planted, after_clean, after_clean_n = _grab(
+        r"After fixes.*?\*\*(\d+)/(\d+) planted caught, (\d+)/(\d+) clean passed", text)
+    (when,) = re.search(r"Run (\S+) UTC", text).groups()
+    return _tile(id="hyphenate_blind", title="Hyphenate blind planted errors", status="measured",
+                 value=round(caught / planted, 4), unit="ratio",
+                 display=f"{caught} of {planted} planted errors caught on the first blind run; {flags} of {clean} clean cases "
+                         "falsely flagged",
+                 count=planted + clean, date_range={"from": when, "to": when}, origin="SIM",
+                 source_run="python3 -m hyphenate.scenarios.blind_run --write",
+                 detail={"first_run": {"planted_caught": caught, "planted": planted, "clean_passed": passed, "clean": clean,
+                                       "clean_false_flags": flags},
+                         "after_fixes": {"planted_caught": after_caught, "planted": after_planted,
+                                         "clean_passed": after_clean, "clean": after_clean_n, "not_blind": ["b24", "k02", "k03"]},
+                         "results_file": "hyphenate/RESULTS-blind.md"},
+                 note="Cases frozen and hashed before any run, written without reading the engine. Headline is the first run; "
+                      "b24, k02 and k03 were fixed after it, so the rerun is not blind.")
+
+
 def build() -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile()]}
+    return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile(),
+                                                voice_tile(), hyphenate_tile()]}
 
 
 if __name__ == "__main__":

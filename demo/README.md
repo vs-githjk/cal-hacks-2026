@@ -34,7 +34,7 @@ It runs `run_all` (this folder's real lane code), then writes each step through 
 (buyer: `post_goal`, `post_need`; referee: `open_round`, `attach_verdict`, `attach_claim_check`, `close_round`, `create_mandate`, `record_approval`, `record_payment`;
 one seller identity per demo seller: `set_floor`, `place_bid`). Needs `referee.json` and `buyer-vidyut.json` from `market/scripts/setup_roles.py` (auto-found in `.tokens/` or the launcher's) and the
 local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `vidyut` with
-`spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. The buyer is Vidyut and the persona data is labelled SIM; the DB buyer id is `vidyut`, the only id /buyer pairs with.
+`spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. The buyer is Vidyut; the goal, owned parts and payment data are labelled SIM; the DB buyer id is `vidyut`, the only id /buyer pairs with.
 The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real card for each bid (a veto cites its source and disqualifies the bid at the close), the need carries
 `allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
 (`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its
@@ -54,23 +54,23 @@ listings in the snapshots run $1,239.99 to $1,489.00. One or two bids are real, 
 - One more real bid is inside the cap (an eBay seller, open-box $1,239.99, ranked last). The other real listings are over the cap or state no condition (Micro Center, Amazon), and are out.
 - **Shady Sam (SIM) bids $757.44**, far under the market, and is vetoed by Lane A's real advocate: his page shows open-box while he claims new, and his "was $1,099" does not match the price history (highest recorded $829.00). Both cite his page.
 - **Bargain Bin (SIM)** is vetoed by the real fit checker (336 mm card, 305 mm case). **Lowball (SIM)** bids under its floor and the referee rejects it before anyone sees it.
-- **Gadget Grove (SIM)** is one seller with two condition lines, new and open-box. **Fair Price PC (SIM)** is the static control.
+- **Gadget Grove (Vedant)** (a SIM seller, Vedant is the learner seller) is one seller with two condition lines, new and open-box. **Fair Price PC (SIM)** is the static control.
 - Honest Hal's page is used by beat 3 only (the clean control). At $789 his honest listing would undercut every real seller, so he does not bid in the market round.
-SIM listing prices (Bargain Bin, Lowball, Gadget Grove, Fair Price PC) sit inside the real $1,200 to $1,300 band by construction; Sam's price is Lane C's page price ($789).
+SIM listing prices (Bargain Bin, Lowball, Gadget Grove (Vedant), Fair Price PC) sit inside the real $1,200 to $1,300 band by construction; Sam's price is Lane C's page price ($789).
 Real merchants are never contacted or paid: the payee on a MIRROR seller is a SIM test address (`best-buy@pay.example.test`).
 
 ## Seller model (LOCKED Fri 22:36)
 One seller agent per seller of record (Amazon direct is one agent, each eBay listing is its own because the snapshot has no seller handle). The lines of a bid are
 **alternatives** for the same SKU. The market picks the **cheapest line whose condition is in the goal's `allowed_conditions`** (`new`, `open-box`), never a sum.
 The bid then ranks on that line's **quality-adjusted landed price**, and the advocate judges that same line. A real seller never gets an invented line: MIRROR
-agents bid only the conditions their real listings show (an earlier version derived open-box lines; they are gone). Gadget Grove shows the model: new $1,315.27 and
+agents bid only the conditions their real listings show (an earlier version derived open-box lines; they are gone). Gadget Grove (Vedant) shows the model: new $1,315.27 and
 open-box $1,247.02, open-box is picked ("picked of 2 lines"), the fit check runs once on that line, and an allowed open-box line is not flagged as "you asked for new".
 Quality-adjustment weights (open-box +4 percent, no returns +2, caution record +3) are SIM; real MIRROR sellers get the no-returns +2 because return terms were not captured.
 
 ## Real vs stand-in, per beat
 | Beat | REAL code and data | Stand-in (SIM) | Honest notes |
 |---|---|---|---|
-| 1 Goal | PSU need read from `data.fit_checker.tables.GPU_POWER`; contracts **Goal, OwnedPart, Need, Allowance** from `contracts/` (all on main, `demo/contracts_pending/` is deleted) | `demo/goal.py`: the persona (Vidyut, SIM) and goal parsing with `allowed_conditions` | `agents/buyer/goal.py` is real and pure (it loads without uagents through the same shim as the advocate) but is hardcoded to `rtx 4070 super 12gb` and one condition, so it cannot parse this goal; not used |
+| 1 Goal | PSU need read from `data.fit_checker.tables.GPU_POWER`; contracts **Goal, OwnedPart, Need, Allowance** from `contracts/` (all on main, `demo/contracts_pending/` is deleted) | `demo/goal.py`: Vidyut's goal and owned parts (SIM data) and goal parsing with `allowed_conditions` | `agents/buyer/goal.py` is real and pure (it loads without uagents through the same shim as the advocate) but is hardcoded to `rtx 4070 super 12gb` and one condition, so it cannot parse this goal; not used |
 | 2 Sealed round | **`agents/advocate/checks.py` (Lane A) `advise`, `call_reason`, `CALL_SUMMARIES`**; `data.fit_checker`; **`data.claim_check.check_claim` (Lane C), offline via a fixture fetch of `data/liar_pages/site`**; `shield.screen` on every seller's text; MIRROR bids from real snapshots; Shady Sam read from Lane C's hosted page | `demo/sellers.py` bid policy (MIRROR agents bid from real listings; Lane A's `agents/sellers/policy.py` uses its own catalog); `demo/standins/market.py` (sealing, floor, scoring: Python mirror of `market/rules`); glue in `demo/advice.py` | See "How the real advocate is loaded" below. The glue feeds the advocate only the picked line, and turns false claim-check results into warnings (the advocate does not read them yet). Price-history baseline, seller records and CPSC recalls are empty here (no data for this SKU, feed needs network) |
 | 3 Shield | `shield.screen` on Lane C's `shady-sam-gpu-5070ti-injected.html`; blocked, rule ids and evidence spans printed; clean page as control; verdict validated as the `ShieldVerdict` contract | none (the page is SIM, the screening is real) | Beat 2's screen passes only the payee of record; beat 3 also passes the price history |
 | 4 Approval | all of `pay/`: `new_mandate`, `script_for` (closed-schema reason), `ApprovalService`, `can_charge`, `sign_request` and `verify_request` (RFC 9421 Ed25519, TAP-style), `mark_used`, replay and an edited amount both fail; **Stripe test mode with `--stripe`** (see above) | call transport (transcripts typed by the runner, no Cartesia); the sim clock (+31 s per retry, no sleeping); the merchant (the runner calls `verify_request` directly) | The charge is a SIM stub unless `--stripe` and an `sk_test_` key |

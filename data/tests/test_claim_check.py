@@ -142,3 +142,27 @@ def test_default_fetch_is_the_ssrf_guarded_fetch():
     assert default_fetch is guarded_get
     with pytest.raises(ValueError):
         default_fetch("http://169.254.169.254/latest/meta-data/")
+
+
+def test_false_price_inside_a_sentence_is_not_hidden_by_other_fields():  # #76: first match used to win
+    for text in ("New RTX 5070 Ti for only $749", "In stock now at $749", "$749 new, 30-day returns"):
+        out = check(text, HAL_GPU, kind="price")
+        assert out["result"] == "false" and "$749.00" in out["reason"], text
+
+
+def test_was_price_five_dollars_above_history_high_is_false():
+    c = claim("was $1,105", HAL_GPU, kind="price")
+    out = check_claim(c, fetch=fetch, history=[{"date": "2026-10-01", "price": 1100.0}])
+    assert out["result"] == "false"
+    assert check_claim(claim("was $1,100", HAL_GPU, kind="price"), fetch=fetch,
+                       history=[{"date": "2026-10-01", "price": 1100.0}])["result"] == "verified"
+
+
+def test_private_ranges_are_refused_before_connecting():
+    import pytest
+    from data.claim_check.fetch import guarded_get
+    for ip in ("10.1.2.3", "172.16.5.4", "192.168.1.1"):
+        calls = []
+        with pytest.raises(ValueError, match="address not allowed"):
+            guarded_get("http://shop.example/x", resolve=lambda h, ip=ip: [ip], request=lambda *a: calls.append(a))
+        assert calls == [], ip

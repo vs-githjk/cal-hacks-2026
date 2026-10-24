@@ -6,7 +6,7 @@ import { AgentFeed, ApprovalCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, 
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { OriginChip, Pill } from "./ui";
 
-export const BUYER_NAME = "Vidyut"; // demo persona (SIM). Real sign-in replaces this.
+export const BUYER_NAME = "Vidyut"; // the buyer is fixed to Vidyut. Real sign-in replaces this.
 
 export interface BuyerScreenProps {
   goal: GoalView | null;
@@ -26,7 +26,6 @@ export function BuyerScreen(p: BuyerScreenProps) {
         <div className="flex items-center gap-2.5 text-[18px] font-bold tracking-[-0.01em]">Buyer</div>
         <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
           <span>{BUYER_NAME}</span>
-          <OriginChip origin="SIM" label="SIM persona" />
           {p.goal && <StatePill state={p.goal.state} />}
         </div>
       </div>

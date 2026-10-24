@@ -2,8 +2,12 @@
  "actorSpecification": 1,
  "name": "tech-bazaar-claim-check",
  "title": "Tech Bazaar claim check",
- "description": "Checks a seller's claim (price, was price, condition, stock, returns, socket) against the live listing page and returns verified, unverified or false with the evidence URL, time, method and a page hash.",
+ "description": "Checks a seller's price, condition or stock claim against the live listing page and returns verified, unverified or false with the page URL, time, method and a page hash. Evidence, not a verdict.",
  "version": "0.1",
  "input": "./input_schema.json",
- "dockerfile": "../Dockerfile"
+ "dockerfile": "../Dockerfile",
+ "storages": {
+  "dataset": "./dataset_schema.json"
+ },
+ "output": "./output_schema.json"
 }

@@ -3,6 +3,8 @@
 Checks what a seller says about a listing against the live listing page, and returns evidence.
 **Results are evidence, not a verdict.** A page we cannot read is `unverified`, never `false`.
 
+Apify Store: https://apify.com/anoopibrampur/tech-bazaar-claim-check
+
 Built for Tech Bazaar (Cal Hacks 2026). Source: https://github.com/vs-githjk/cal-hacks-2026 (`data/claim_check/`).
 
 ## What it checks

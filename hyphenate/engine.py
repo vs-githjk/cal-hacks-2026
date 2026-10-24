@@ -60,7 +60,7 @@ def seed_company(*, with_mirror: bool = True, mirror: Optional[dict] = None) -> 
     eng = Engine(mirror=mirror if mirror is not None else (mirror_refs() if with_mirror else {}))
     for v in (
         Vendor("bestbuy", "Best Buy (MIRROR listing, SIM payee)", "best-buy@pay.example.test", "acct_bb_4412"),
-        Vendor("gadget-grove", "Gadget Grove (SIM)", "gadget-grove@pay.example.test", "acct_gg_9087"),
+        Vendor("gadget-grove", "Gadget Grove (Vedant)", "gadget-grove@pay.example.test", "acct_gg_9087"),
         Vendor("bargain-bin", "Bargain Bin Marketplace (SIM)", "bargain-bin@pay.example.test", "acct_bin_2210", terms="prepay"),
         Vendor("newco", "NewCo Computers (SIM, no history)", "newco@pay.example.test", "acct_nc_7731"),
     ):

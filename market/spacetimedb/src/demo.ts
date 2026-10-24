@@ -1,8 +1,8 @@
-// Demo data, all labelled SIM. Vidyut is a labelled demo persona. Bids are not seeded: seller agents
+// Demo data, all labelled SIM. Bids are not seeded: seller agents
 // (or market/scripts/sim_sellers.mjs, SIM) place them through place_bid like anyone else.
 import type { InferSchema, ReducerCtx } from 'spacetimedb/server';
 import type spacetimedb from './schema';
-import { insertGoal } from './market';
+import { insertGoal, issuePairCode } from './market';
 
 type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
@@ -46,10 +46,7 @@ export function seedDemo(ctx: Ctx) {
       ctx.db.persona.insert({ sellerId: s.sellerId, name: s.name, archetype: s.archetype, voiceId: '', modelUrl: '', origin: 'SIM' });
     }
   }
-  if (!ctx.db.pairCode.buyerId.find(DEMO.buyerId)) {
-    const code = String(ctx.random.integerInRange(100000, 999999));
-    ctx.db.pairCode.insert({ buyerId: DEMO.buyerId, code });
-  }
+  if (!ctx.db.pairCode.buyerId.find(DEMO.buyerId)) issuePairCode(ctx, DEMO.buyerId);
   if (!ctx.db.goal.id.find(DEMO.goalId)) {
     // "a GPU for 1440p that fits my case and PSU, under $800, by Friday", as Lane A parses it.
     const deadline = new Date(Number(ctx.timestamp.microsSinceUnixEpoch / 1000n) + 3 * 24 * 3600_000).toISOString();
