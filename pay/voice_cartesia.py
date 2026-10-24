@@ -328,6 +328,35 @@ class VoiceResult:
     attempts: int = 0                # approval attempts that were judged
     trace: list = field(default_factory=list)   # outcomes only, never what was said
 
+    @property
+    def buyer_line(self) -> Optional[str]:
+        """What the buyer is told when the call did not approve (screen and chat); None when it approved."""
+        return None if self.approved else denial_line(self.reason)
+
+
+# #185: approval is by phone call only, so every way a call can fail ends in one plain line that says nothing was paid.
+_DENIAL_LINES = {
+    "call_failed": "Call failed, nothing was paid.",
+    "call_timeout": "The call timed out, nothing was paid.",
+    "no_answer": "No answer on the call, nothing was paid.",
+    "no_transcript": "Nobody spoke on the call, nothing was paid.",
+    "no_buyer_speech": "Nobody spoke on the call, nothing was paid.",
+    "silence": "Nobody spoke on the call, nothing was paid.",
+    "expired": "The deal expired before it was approved, nothing was paid.",
+    "not_configured": "The call could not be placed, nothing was paid.",
+}
+_NOT_APPROVED = ("wrong_code", "no_code", "max_attempts", "replay", "cooldown", "denied", "script_error")
+
+
+def denial_line(reason: Optional[str]) -> str:
+    """The buyer-facing line for a denied approval call. Never names the code or what was said."""
+    key = str(reason or "").split(":", 1)[0].strip()
+    if key in _DENIAL_LINES:
+        return _DENIAL_LINES[key]
+    if key in _NOT_APPROVED:
+        return "Not approved on the call, nothing was paid."
+    return "Not approved, nothing was paid."
+
 
 def judge_call(session, call: Mapping[str, Any], placed_at: datetime) -> tuple[Optional[Decision], list, int]:
     """Feed every buyer utterance of an ended call to the session. Returns (last decision, trace, ignored count).

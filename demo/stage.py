@@ -187,7 +187,8 @@ def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, d
         if outcomes and not outcomes[-1]["approved"]:
             out.blank()
             what = "no mandate was made" if outcomes[-1]["step"] == "build_mandate" else "the approval call did not approve"
-            out.note(f"STOPPED at beat {n}: {what} ({outcomes[-1]['reason']}). Nothing was charged and "
+            from pay.voice_cartesia import denial_line
+            out.note(f"STOPPED at beat {n}: {what} ({outcomes[-1]['reason']}). {denial_line(outcomes[-1]['reason'])} Nothing was charged and "
                      "no payment is recorded. Run again to retake.")
             return 1
         if n == 2 and run is not None and report_round_one(clients, run, out) and auto:

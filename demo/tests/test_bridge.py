@@ -658,3 +658,52 @@ def test_two_buyers_dry_run_prints_the_second_buyer(capsys):
     assert bridge.main(["--dry-run", "--two-buyers"]) == 0
     out = capsys.readouterr().out
     assert "buyer2" in out and "second buyer" in out
+
+
+# ---------------------------------------------------------------- #185: a failed or unanswered call says "nothing was paid"
+
+class DialFails(FakeCartesia):
+    def create_call(self, to_number, variables):
+        raise CartesiaError("call could not start")
+
+
+class NoAnswer(FakeCartesia):
+    def get_call(self, call_id):
+        return {"status": "failed", "end_reason": "dial_no_answer", "transcript": []}
+
+
+class NeverEnds(FakeCartesia):
+    def get_call(self, call_id):
+        return {"status": "in_progress"}
+
+
+@pytest.mark.parametrize("client_cls, reason, line", [
+    (DialFails, "call_failed", "Call failed, nothing was paid."),
+    (NoAnswer, "no_answer:dial_no_answer", "No answer on the call, nothing was paid."),
+    (NeverEnds, "call_timeout", "The call timed out, nothing was paid."),
+])
+def test_a_failed_unanswered_or_timed_out_call_pays_nothing_and_says_so(run, client_cls, reason, line):
+    gate = bridge.DealGate(run)
+    gate.typed_approval_present = lambda: False
+    client = client_cls("")
+    approver = bridge.make_live_approver(gate, client, buyer_name="Vidyut", on_code=lambda c, w: None, secret="s" * 32,
+                                         sleep=lambda x: None, poll=0, max_wait=0)
+    log, notes = [], []
+    outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=True), clients(log), delay=0, say=lambda s: None,
+                              sleep=lambda x: None, clock=lambda: 0.0, approver=approver, note=notes.append, deal_gate=gate)
+    kinds = [r for _, r, _ in log]
+    assert outcomes[0]["approved"] is False and outcomes[0]["reason"] == reason
+    assert "record_payment" not in kinds and "record_approval" not in kinds                  # no payment row, no approval row
+    deny = next(a for _, r, a in log if r == "deny_approval")
+    assert deny["mandate_hash"] == gate.mandate["hash"] and deny["reason"] == line.rstrip(".")  # /buyer: "Approval denied: <line>"
+    assert any(line in n for n in notes)                                                     # and on the operator console
+
+
+def test_not_configured_also_says_nothing_was_paid(run):
+    gate = bridge.DealGate(run)
+    approver = bridge.make_live_approver(gate, None, unconfigured="missing CARTESIA_API_KEY")
+    log = []
+    bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=True), clients(log), delay=0, say=lambda s: None,
+                   sleep=lambda x: None, clock=lambda: 0.0, approver=approver, deal_gate=gate)
+    deny = next(a for _, r, a in log if r == "deny_approval")
+    assert deny["reason"].endswith("nothing was paid") and "record_payment" not in [r for _, r, _ in log]

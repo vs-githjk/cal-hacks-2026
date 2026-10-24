@@ -1,7 +1,7 @@
 """Hardened approval core (d3): a one-time word-pair code, a code-only intent check, default deny.
 
 Voice is never the credential. The credential is a two-word code shown on the buyer's authenticated screen
-and spoken (or typed) inside one session about one exact mandate. No model decides "approve": `approve`
+and spoken on the phone call inside one session about one exact mandate. No model decides "approve": `approve`
 passes only when the normalized transcript holds the exact word pair AND the token "approve" or "approved"
 (nothing else counts: not "approves", "approval" or "disapprove"). Everything
 else, including silence, a timeout, low speech-to-text confidence and anything unclear, denies.
@@ -11,7 +11,7 @@ Flow:
     session, code = svc.issue(mandate)                   # show `code` on the review card; only its hash is kept
     script = script_for(mandate, advocate_reason)        # opening, deal read-back, why-not-cheaper answer
     session.start_call(); session.begin_listening()
-    decision = session.approve(transcript_text)          # or session.approve_typed(typed_text) (channel "typed")
+    decision = session.approve(transcript_text)          # a phone call transcript; there is no typed path (#185)
     if decision.approved: record = decision.record       # VoiceApproval; mandate is now approved
 """
 from __future__ import annotations
@@ -295,16 +295,6 @@ class ApprovalSession:
         utterance. `confidence` is the speech-to-text confidence; below 0.6 counts as a mismatch."""
         return self._attempt(transcript_text, _now_utc(now), confidence, self._voice_channel())
 
-    def approve_typed(self, code_text: Any, now: Optional[datetime] = None) -> Decision:
-        """The typed fallback on the review card. Same path, same mandate, same attempt budget, channel
-        "typed". Pressing the card's Approve button supplies the "approve" token, but only when the field
-        holds exactly the two code words; anything else is judged as typed."""
-        text = code_text
-        tokens = normalize(code_text).split()
-        if len(tokens) == 2 and all(t in WORD_SET for t in tokens):
-            text = f"{normalize(code_text)} {APPROVE_TOKEN}"
-        return self._attempt(text, _now_utc(now), None, "typed")
-
     def _voice_channel(self) -> str:
         return self.channel
 
@@ -325,7 +315,7 @@ class ApprovalSession:
             until = svc._cooldown_until.get(self.mandate_hash)
             if until is not None and now < until:
                 return Decision(False, "cooldown", self.state, False)
-            if channel != "typed" and self._listen_deadline is not None and now > self._listen_deadline:
+            if self._listen_deadline is not None and now > self._listen_deadline:
                 return self._finish(now, "denied", "no_answer", "silence")
             tokens = normalize(text).split()
             if not tokens:
