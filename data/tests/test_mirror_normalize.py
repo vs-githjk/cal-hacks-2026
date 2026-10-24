@@ -52,7 +52,8 @@ def test_paid_shipping_adds_to_landed_price():
 
 
 def test_shipping_conditions_and_unknowns_are_never_zero():
-    for extra in ({"shipping": "FREE shipping on orders over $35"}, {}, {"shipping": {"cutoffs": {"cutoff": 1}}}):
+    for extra in ({"shipping": "FREE shipping on orders over $35"}, {"shipping": "Free shipping for Plus members"}, {"shipping": "Free returns"},
+                  {"shipping": "Free in-store pickup"}, {"shipping": "Free delivery Tue, Oct 28"}, {}, {"shipping": {"cutoffs": {"cutoff": 1}}}):
         l = _card(**extra)
         assert l["shipping_cost"] is None and l["shipping_captured"] is False and l["landed_price"] is None, extra
 
@@ -69,3 +70,14 @@ def test_old_snapshots_gain_landed_fields_at_read_time():
     assert cards and all("shipping_captured" in c["listing"] for c in cards)
     asus = next(c for c in cards if "6614742" in (c["listing"].get("url") or ""))
     assert asus["listing"]["shipping_cost"] is None and asus["listing"]["landed_price"] is None
+
+
+def test_bare_free_phrases_and_free_shipping_type_are_zero():
+    for text in ("Free delivery", "FREE shipping", "free standard shipping.", " Free "):
+        assert _card(shipping=text)["shipping_cost"] == 0.0, text
+    assert _card(shippingType="free")["shipping_cost"] == 0.0
+    assert _card(shippingType="paid")["shipping_cost"] is None
+
+
+def test_zero_stock_is_out_of_stock():
+    assert _card(stock=0)["availability"] == "out of stock" and _card(stock="0")["availability"] == "out of stock"

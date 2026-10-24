@@ -4,6 +4,7 @@ import hashlib
 import re
 
 FIELDS = {
+    "shipping_type": ["shippingType"],
     "title": ["title", "name", "productTitle", "productName", "product.title"],
     "url": ["url", "productUrl", "link", "itemUrl", "product.url"],
     "price": ["price.value", "price.current", "currentPrice", "salePrice", "price", "soldPrice", "priceValue", "offerPrice"],
@@ -83,10 +84,17 @@ def landed(listing, price):
         t = ship.strip()
         if re.fullmatch(r"\$?\s*\d[\d,]*(\.\d+)?", t):
             cost = float(t.replace("$", "").replace(",", ""))
-        elif re.search(r"\bfree\b", t, re.I) and not re.search(r"\b(over|orders?|min|minimum|when|with)\b|\$", t, re.I):
+        elif re.fullmatch(r"\s*free(\s+(standard\s+)?(shipping|delivery))?\s*\.?\s*", t, re.I):  # only the bare phrase; anything conditional stays unknown
             cost = 0.0
+    if cost is None and str(listing.get("shipping_type") or "").lower() == "free":
+        cost = 0.0
     stock = listing.get("stock")
-    avail = ("in stock" if stock else "out of stock") if isinstance(stock, bool) else (str(stock) if stock not in (None, "") else None)
+    if isinstance(stock, bool):
+        avail = "in stock" if stock else "out of stock"
+    elif stock in (0, "0"):
+        avail = "out of stock"
+    else:
+        avail = str(stock) if stock not in (None, "") else None
     ok = cost is not None and price is not None
     return {"shipping_cost": cost, "shipping_captured": cost is not None,
             "landed_price": round(price + cost, 2) if ok else None, "availability": avail}
@@ -100,6 +108,7 @@ def to_spec_card(store, item, snapshot_id, snapshot_date):
     seller = f["seller"]
     listing = {
         "url": f["url"], "price": money(f["price"]), "was_price": money(f["was_price"]),
+        "shipping_type": f["shipping_type"],
         "shipping": f["shipping"] if isinstance(f["shipping"], (str, int, float, bool)) else money(f["shipping"]),
         "seller": seller if isinstance(seller, str) else (seller or {}).get("name") if isinstance(seller, dict) else None,
         "return_policy": f["return_policy"], "stock": f["stock"], "sold_date": f["date"],
