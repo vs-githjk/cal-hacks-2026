@@ -83,10 +83,22 @@ def _pricing(p: Any) -> Any:
     return out
 
 
+_MARKET_DAYS = re.compile(r"(\d+)[- ]day returns?", re.I)  # how the market reads return days (market/rules/scoring.ts returnsDays)
+_TIED_DAYS = re.compile(r"(\d+)\s*-?\s*days?\s*(?:returns?|refund|money)\b", re.I)
+_ANY_DAYS = re.compile(r"(\d+)\s*-?\s*days?\b(?!\s*-?\s*(?:warranty|guarantee))", re.I)
+
+
 def _return_days(text: Any) -> int:
-    """The first day count in the owner's returns answer ('30 days, no restocking fee' -> 30), or 0."""
-    m = re.search(r"(\d+)\s*-?\s*days?", str(text), re.I)
-    return int(m.group(1)) if m else 0
+    """The day count the owner tied to returns ('30 days returns', '7 day money back'), or the one day count in the
+    answer ('30 days, no restocking fee'); 0 when none or when several are given and none says returns."""
+    text = str(text)
+    if _MARKET_DAYS.search(text):
+        return 0  # the market already reads the owner's own words
+    tied = _TIED_DAYS.findall(text)
+    if tied:
+        return int(tied[0])
+    found = _ANY_DAYS.findall(text)
+    return int(found[0]) if len(found) == 1 else 0
 
 
 def _listing(item: dict) -> dict:
@@ -127,10 +139,19 @@ def build_config(answers: Any) -> dict:
         cfg["pricing"] = _pricing(answers["pricing"])
     perks = list(answers.get("perks") or [])
     if answers.get("returns"):
-        perks.append(f"returns: {answers['returns']}")
-        days = _return_days(answers["returns"])
-        if days and not any(re.search(rf"\b{days}[- ]day returns?", str(p), re.I) for p in perks):
-            perks.append(f"{days}-day returns")  # the market reads return days only in this form (market/rules/scoring.ts)
+        text, days = str(answers["returns"]), _return_days(answers["returns"])
+        if days and any(m.group(1) == str(days) for p in perks if (m := _MARKET_DAYS.search(str(p)))):
+            days = 0  # the owner already gave this day count as a perk
+        if days and len(f"{days}-day returns: {text}") <= 120:
+            perks.append(f"{days}-day returns: {text}")  # one perk: the owner's words behind the form the market reads
+        else:
+            perks.append(f"returns: {text}")
+            if days:  # the owner's words are too long to fold, so the day count is a second perk
+                if len(perks) > 9:
+                    raise ClientError(
+                        f"the returns answer is too long to fold into one perk, so it needs 2 of the 10 perk slots, and {len(perks) - 1} "
+                        f"other perks are given. Give at most 8 other perks or shorten the returns answer to {106 - len(str(days))} characters.")
+                perks.append(f"{days}-day returns")
     if perks:
         cfg["perks"] = perks
     if answers.get("claims"):

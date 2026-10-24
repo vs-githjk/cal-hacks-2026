@@ -75,7 +75,7 @@ def test_build_config_makes_a_sim_seller_config_from_owner_answers():
     assert listing["floor_by_condition"] == {"new": 1150}
     assert listing["condition"] == "new" and listing["listing_url"] == "https://example.com/sim/corner-pc/rtx-5070-ti"
     assert listing["attrs"]["chipset"] == "RTX 5070 Ti"
-    assert "returns: 30 days, no restocking fee" in cfg["perks"] and "free local pickup" in cfg["perks"]
+    assert "30-day returns: 30 days, no restocking fee" in cfg["perks"] and "free local pickup" in cfg["perks"]
     assert cfg["claims"] == ["new, sealed"]
 
 
@@ -91,11 +91,36 @@ def market_returns_days(perks):
 @pytest.mark.parametrize("returns,days", [
     ("30 days, no restocking fee", 30), ("14-day returns", 14), ("7 day money back", 7), ("30days", 30),
     ("no returns", 0), ("store credit only", 0), ("0 days", 0),
+    ("90-day warranty, 14-day returns", 14), ("90-day warranty, 14 days returns", 14), ("90 day warranty, 14 days money back", 14),
+    ("90-day warranty, 30 days to return", 30), ("90-day warranty only", 0), ("returns: 14-day returns", 14),
 ])
 def test_a_returns_answer_with_a_day_count_reaches_the_market_as_N_day_returns(returns, days):
     cfg = client.build_config(answers(returns=returns, perks=["free local pickup"]))
     assert market_returns_days(cfg["perks"]) == days, cfg["perks"]
-    assert f"returns: {returns}" in cfg["perks"] and "free local pickup" in cfg["perks"]  # owner's wording kept
+    assert any(returns in p for p in cfg["perks"]) and "free local pickup" in cfg["perks"]  # owner's wording kept
+    assert len(cfg["perks"]) == 2  # one perk for the returns answer, never two
+
+
+def test_a_warranty_day_count_never_becomes_a_returns_day_count():
+    """The first day count is not always returns: '90-day warranty, 14-day returns' must stay 14 in the market's reading."""
+    cfg = client.build_config(answers(returns="90-day warranty, 14-day returns"))
+    assert market_returns_days(cfg["perks"]) == 14 and "90-day returns" not in cfg["perks"], cfg["perks"]
+
+
+def test_nine_perks_and_a_returns_answer_still_fit_the_ten_perk_limit():
+    nine = [f"perk {i}" for i in range(9)]
+    cfg = client.build_config(answers(returns="30 days", perks=nine))
+    assert len(cfg["perks"]) == 10 and market_returns_days(cfg["perks"]) == 30
+
+
+def test_a_returns_answer_too_long_to_fold_needs_two_slots_and_the_owner_is_told_how_many_perks_fit():
+    long = "30 days, " + "no restocking fee and free return label " * 3
+    assert len(long) > 106
+    cfg = client.build_config(answers(returns=long, perks=["a"] * 8))
+    assert len(cfg["perks"]) == 10 and market_returns_days(cfg["perks"]) == 30
+    with pytest.raises(client.ClientError) as e:
+        client.build_config(answers(returns=long, perks=["a"] * 9))
+    assert "at most 8 other perks" in str(e.value) and "2 of the 10" in str(e.value)
 
 
 def test_the_day_count_perk_is_not_added_twice_when_the_owner_already_gave_it():
@@ -366,6 +391,14 @@ def test_skill_text_has_no_em_or_en_dashes_and_names_the_client_and_the_fee_as_p
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     assert "seller_kit_client.py" in skill
     assert "3 percent" in skill and "$25" in skill and "proposed" in skill.lower()
+
+
+def test_skill_says_only_what_the_ranking_does_today_about_perks_and_returns():
+    """market.ts calls rankBids without perksValue, so only condition and an N-day returns line (30 or more) move rank."""
+    text = " ".join((SKILL_DIR / "SKILL.md").read_text(encoding="utf-8").split())
+    assert "condition and a returns policy of at least 30 days count" in text
+    assert "other perks are shown to the buyer but do not change rank today" in text
+    assert "perks all count" not in text and "not decoration" not in text
 
 
 def test_marketplace_and_plugin_manifests_point_at_the_skill():
