@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { useBuyerId } from "./BuyerGate";
+import { MemoryProvider } from "./memory";
 import { OriginChip } from "./ui";
 
 const NAV = [
@@ -43,7 +44,7 @@ export function BuyerAppShell({ children }: { children: ReactNode }) {
           <OriginChip origin="SIM" label="SIM demo pairing" />
         </span>
       </div>
-      {children}
+      <MemoryProvider>{children}</MemoryProvider>
     </div>
   );
 }

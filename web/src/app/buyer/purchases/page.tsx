@@ -1,5 +1,5 @@
-import { Unavailable } from "@/components/ui";
+import { PurchasesView } from "@/components/memory";
 
 export default function PurchasesPage() {
-  return <Unavailable title="Purchases">Purchase history is not connected to this screen yet. Nothing is shown rather than a made-up purchase.</Unavailable>;
+  return <PurchasesView />;
 }

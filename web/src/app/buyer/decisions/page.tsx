@@ -1,5 +1,5 @@
-import { Unavailable } from "@/components/ui";
+import { DecisionsView } from "@/components/memory";
 
 export default function DecisionsPage() {
-  return <Unavailable title="Decisions">Decision summaries are not connected to this screen yet. Nothing is shown rather than an invented reason.</Unavailable>;
+  return <DecisionsView />;
 }

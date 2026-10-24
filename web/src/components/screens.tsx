@@ -2,6 +2,7 @@
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
 import { originMixLabel, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
+import type { ReactNode } from "react";
 import { ASI_ONE_URL } from "@/lib/agents";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
@@ -14,6 +15,8 @@ export interface BuyerScreenProps {
   goals: GoalView[];
   /** The buyer's spending rule; shown even before the first goal. */
   allowance: GoalView["allowance"];
+  /** The recent purchases card (app/buyer fills it from recorded memory); unavailable when absent. */
+  purchases?: ReactNode;
   bids: RankedBid[];
   veto: VetoView | null;
   shield: ShieldView | null;
@@ -97,7 +100,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
           )}
           <Searches goals={p.goals} />
           <div className="grid gap-3.5 md:grid-cols-3">
-            <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>
+            {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
             <SpendingRules allowance={p.allowance} />
             <Unavailable title="Owned parts">No approved buyer-private record of owned parts exists yet, so none are listed.</Unavailable>
           </div>

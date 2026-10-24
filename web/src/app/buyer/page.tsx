@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useReducer, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { useBuyerId } from "@/components/BuyerGate";
+import { RecentPurchases } from "@/components/memory";
 import { BuyerScreen } from "@/components/screens";
 import { allowanceForBuyer, asSim, bidsFromRows, feedFromRows, goalsForBuyer, latestRound, reviewFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
@@ -45,6 +46,7 @@ export default function BuyerPage() {
       connecting={!goalsReady || !eventsReady}
       goals={goals}
       allowance={allowance}
+      purchases={<RecentPurchases />}
       bids={sim ? asSim(sample.rankedBids) : liveBids}
       veto={asSim(sample.veto)}
       shield={asSim(sample.shield)}
