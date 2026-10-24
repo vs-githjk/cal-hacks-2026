@@ -120,10 +120,13 @@ _ASK_CEILING = rx(r"\b" + _ASK_CEILING_VERB + r"\b[^.\n]{0,60}?" + _PRIVATE_CEIL
 # listing word in the aside (the aside may not hold and/or/on/is/printed/set...), and a secret that is itself the
 # subject of is/are/was ("the password is on the sticker").
 _NOUN_AFTER = r"(?!\s*(?:[:/&]|(?:and|or|is|are|was|were|on|of|must|field|tag|label)\b))"
-_ASIDE_WORD = r"(?!(?:and|or|then|set|change|on|of|is|are|was|were|printed|by|at)\b)[\w'-]+,?"
+_ASIDE_WORD = r"(?!(?:and|or|then|set|change|on|of|is|are|was|were|printed|by|at)\b)[\w'-]+"
+# The aside may hold commas only when one comes right after the verb ("State, for our records, the card number");
+# 'State unknown, the password not tested' (a noun label, comma after the value) therefore stays honest.
+_ASIDE = r"(?:\s*,(?:\s+" + _ASIDE_WORD + r",?){0,5}|(?:\s+" + _ASIDE_WORD + r"){0,5})"
 _DET = r"(?:the|your|their|its|his|her|our|my|any|an?|\w+['\u2019]s|\w+s['\u2019])"
 _ASK_SECRET = rx(r"\b" + _ASK_SECRET_VERB + r"\b[^.\n]{0,60}?\b" + _SECRET + r"\b|"
-                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b" + _NOUN_AFTER + r"(?:\s*,)?(?:\s+" + _ASIDE_WORD + r"){0,5}\s+" + _DET
+                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b" + _NOUN_AFTER + _ASIDE + r"\s+" + _DET
                  + r"\s+(?:[\w'-]+\s+){0,3}" + _SECRET + r"\b(?!\s+(?:is|are|was|were)\b)")
 
 
