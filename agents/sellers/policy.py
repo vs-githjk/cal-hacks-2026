@@ -13,7 +13,7 @@ CATALOG = json.loads((Path(__file__).parent / "sellers.json").read_text(encoding
 
 def seller(name: str) -> dict:
     """A catalog seller as the dict make_bid reads (checked against contracts/SellerConfig.schema.json)."""
-    return seller_from_config({"id": name, **CATALOG["sellers"][name]})
+    return seller_from_config({"id": name, **CATALOG["sellers"][name]}, catalog=True)
 
 
 def _lines_for(have: dict) -> list[dict]:
@@ -22,10 +22,19 @@ def _lines_for(have: dict) -> list[dict]:
     return [primary, *have.get("alt_lines", [])]
 
 
+def _allowed_lines(want: dict, have: dict) -> list[dict]:
+    """The lines of one listing the buyer's condition allows (allowed_conditions, else the one condition asked for).
+    When none of this seller's lines is allowed, all of them (today's behaviour: the market judges the mismatch)."""
+    lines = _lines_for(have)
+    allowed = want.get("allowed_conditions") or ([want["condition"]] if want.get("condition") else [])
+    return [l for l in lines if l["condition"] in allowed] or lines
+
+
 def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | None:
     """Bid on every need line this seller carries (partial bids are fine); None if it carries none.
     A listing with several condition lines bids all of them as alternatives (the market takes the cheapest allowed
-    one per SKU), so the headline total counts only the cheapest line of each SKU.
+    one per SKU), so the headline total counts only the cheapest line of each SKU. When the need allows some of a
+    listing's conditions, only those lines are bid and priced, so the total never rests on a line the buyer excluded.
     Need items' legacy grade/pack_size fields are ignored."""
     lines, notes, cheapest = [], [], []
     discount = seller["discount"]
@@ -35,7 +44,7 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
         if not have:
             continue
         prices = []
-        for alt in _lines_for(have):
+        for alt in _allowed_lines(want, have):
             price = round(alt["price"] * (1 - discount), 2)
             if price < alt["floor"]:
                 notes.append(f"{sku} ({alt['condition']}) held at floor {alt['floor']:.2f}")
@@ -58,7 +67,7 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
              + (f", {'; '.join(notes)}" if notes else "")
              + f", plus ${seller['shipping']:.2f} shipping = ${total:.2f}."
              + (" Several condition lines of one SKU are alternatives; the total uses the cheapest."
-                if any(len(_lines_for(h)) > 1 for h in seller["listings"].values()) else "")
+                if len(lines) > len({l["sku_spec"] for l in lines}) else "")
              + (f" Not carried: {', '.join(skipped)}." if skipped else ""))
     now = now or datetime.now(timezone.utc)
     return {

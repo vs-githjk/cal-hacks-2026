@@ -191,8 +191,10 @@ SEEDS = {
 def register_custom_seller(role: str) -> None:
     """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
     Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
+    if role in SEEDS:
+        raise ValueError(f"{role!r} is already a Tech Bazaar agent: a custom seller must not reuse its key")
     env = role.upper().replace("-", "_")
-    SEEDS.setdefault(role, os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev"))
+    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
 
 
 def public_seed(role: str) -> bool:
@@ -201,13 +203,24 @@ def public_seed(role: str) -> bool:
     return SEEDS[role].endswith("-dev")
 
 
+def mailbox_on(role: str) -> bool:
+    """True when this role should go on Agentverse (AGENTS_MAILBOX, or its own flag; sellers share SELLERS_MAILBOX)."""
+    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
+    return bool(os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag))
+
+
+def mailbox_ready(role: str) -> bool:
+    """False only when mailbox mode is on for this role and it still has the public dev seed (agent_args would exit).
+    Multi-agent runners use it to skip that one agent instead of losing the whole process."""
+    return not (mailbox_on(role) and public_seed(role))
+
+
 def agent_args(role: str, port: int, **profile) -> dict:
     """Constructor args for an agent. AGENTS_MAILBOX=1 puts it on Agentverse (register once with
     `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
     readme_path, handle, published to Agentverse on connect."""
     args = dict(seed=SEEDS[role], port=port, publish_agent_details=True, **profile)
-    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
-    if os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag):
+    if mailbox_on(role):
         if public_seed(role):
             sys.exit(f"Set {role.upper()}_AGENT_SEED in agents/.env before going on Agentverse: the default seed is public.")
         return {**args, "mailbox": True}

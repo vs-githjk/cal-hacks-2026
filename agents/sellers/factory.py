@@ -21,6 +21,13 @@ SKU_RE = re.compile(r"^[a-z0-9][a-z0-9 .+/-]{0,79}$")
 # Ports already used by the repo's services and agents; custom sellers start looking at 8016.
 RESERVED_PORTS = {3000, 3100, 8001, 8003, 8004, 8010, 8011, 8012, 8013, 8014, 8015,
                   8787, 8788, 8789, 8790, 8791}
+# What each reserved port is for, so a refused config says which service it would collide with.
+PORT_OWNERS = {3000: "SpacetimeDB", 3100: "the web app", 8001: "the buyer agent", 8003: "the advocate agent",
+               8010: "the seller Bureau", 8011: "seller_1", 8012: "seller_2",
+               8013: "seller_3", 8014: "seller_4", 8015: "seller_5", 8787: "the shield service"}
+# Ids of the Tech Bazaar agents; a custom seller must not sign with their keys. Hardcoded so factory stays uagents-free.
+RESERVED_IDS = {"buyer", "advocate", "shield"}
+SELLER_ID_RE = re.compile(r"^seller_\d+$")
 
 
 class ConfigError(ValueError):
@@ -48,8 +55,9 @@ def _bad_url(url) -> str | None:
     return None
 
 
-def validate_config(cfg) -> dict:
-    """Return a normalized deep copy of cfg, or raise ConfigError naming every bad field."""
+def validate_config(cfg, *, catalog: bool = False) -> dict:
+    """Return a normalized deep copy of cfg, or raise ConfigError naming every bad field.
+    `catalog=True` is only for the built-in sellers (sellers.json), which own the reserved seller_N ids."""
     if not isinstance(cfg, dict):
         raise ConfigError([{"field": "config", "message": "must be a JSON object"}])
     errors = [{"field": _dotted(e.absolute_path), "message": e.message}
@@ -59,6 +67,11 @@ def validate_config(cfg) -> dict:
 
     cfg = copy.deepcopy(cfg)
     err = lambda field, message: errors.append({"field": field, "message": message})
+    if not catalog and (cfg["id"] in RESERVED_IDS or SELLER_ID_RE.match(cfg["id"])):
+        err("id", "is reserved for a Tech Bazaar agent")
+    port = cfg.get("port")
+    if port in RESERVED_PORTS:
+        err("port", f"{port} is used by {PORT_OWNERS.get(port, 'a Tech Bazaar service')}")
     pricing = cfg["pricing"]
     mode = pricing["mode"]
     if mode == "fixed_margin":
@@ -139,12 +152,12 @@ def load_config(path) -> dict:
     return validate_config(raw)
 
 
-def seller_from_config(cfg: dict) -> dict:
+def seller_from_config(cfg: dict, *, catalog: bool = False) -> dict:
     """The dict policy.make_bid reads. Validates first (so a hand-built dict gets the same checks).
 
     Each listing gets `price` (list price; for fixed_margin cost marked up), `floor` for its primary condition and
     `alt_lines` (each with condition, page_condition, price, floor, listing_url). `discount` is applied by the policy."""
-    cfg = validate_config(cfg)
+    cfg = validate_config(cfg, catalog=catalog)
     pricing = cfg["pricing"]
     fixed = pricing["mode"] == "fixed_margin"
     margin = pricing.get("margin_pct", 0)
@@ -171,7 +184,7 @@ def seller_from_config(cfg: dict) -> dict:
 def pick_port(cfg: dict, start: int = 8016) -> int:
     """The config's own port, else the first free local port from `start` that no repo service uses."""
     if cfg.get("port"):
-        return int(cfg["port"])
+        return int(cfg["port"])  # validate_config already refused reserved ports
     for port in range(start, start + 200):
         if port in RESERVED_PORTS:
             continue

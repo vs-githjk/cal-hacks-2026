@@ -15,6 +15,8 @@ import factory
 from factory import ConfigError, load_config, seller_from_config, validate_config
 from policy import CATALOG, make_bid, seller
 
+import run_all
+
 SCHEMA = Path(__file__).resolve().parents[2] / "contracts" / "SellerConfig.schema.json"
 GPU_TI, PSU = "rtx 5070 ti", "psu 750w"
 
@@ -183,6 +185,109 @@ def test_schema_file_is_a_valid_json_schema_and_accepts_good():
     Draft202012Validator(schema).validate(good())
 
 
+@pytest.mark.parametrize("sid", ["buyer", "advocate", "shield", "seller_1", "seller_5", "seller_12"])
+def test_reserved_agent_ids_are_refused(sid):
+    err = refused(dict(good(), id=sid), "id", "reserved for a Tech Bazaar agent")
+    assert [e["field"] for e in err.errors] == ["id"]
+
+
+def test_similar_but_unreserved_ids_are_accepted():
+    for sid in ("seller-1", "seller_one", "myseller_1", "buyer-2", "shield_x"):
+        assert validate_config(dict(good(), id=sid))["id"] == sid
+
+
+def test_catalog_sellers_may_use_their_reserved_ids():
+    assert validate_config({"id": "seller_1", **CATALOG["sellers"]["seller_1"]}, catalog=True)["id"] == "seller_1"
+    with pytest.raises(ConfigError):
+        seller_from_config({"id": "seller_1", **CATALOG["sellers"]["seller_1"]})
+
+
+@pytest.mark.parametrize("role", ["buyer", "advocate", "shield", "seller_1", "seller_4"])
+def test_register_custom_seller_refuses_an_existing_agent_role(role):
+    before = common.SEEDS[role]
+    with pytest.raises(ValueError, match="already a Tech Bazaar agent"):
+        common.register_custom_seller(role)
+    assert common.SEEDS[role] == before
+
+
+@pytest.mark.parametrize("port,owner", [(8011, "seller_1"), (8001, "buyer"), (3000, "SpacetimeDB"), (8787, "shield")])
+def test_reserved_ports_are_refused_with_the_service_named(port, owner):
+    err = refused(dict(good(), port=port), "port", owner)
+    assert [e["field"] for e in err.errors] == ["port"]
+
+
+def test_a_free_custom_port_is_accepted():
+    assert validate_config(dict(good(), port=9123))["port"] == 9123
+
+
+def test_headline_total_uses_only_the_lines_the_buyer_allows():
+    """Shop X: new $1000 plus open-box $900. Shop Y: new $1050. The need is new: Shop X must beat Shop Y at $1000."""
+    def shop(sid, price, alt=None):
+        cfg = good()
+        cfg["id"] = sid
+        ls = cfg["listings"][GPU_TI]
+        ls["price"], ls["floor_by_condition"] = price, {"new": price - 100}
+        if alt:
+            ls["alt_lines"] = [{"condition": "open-box", "price": alt}]
+            ls["floor_by_condition"]["open-box"] = alt - 100
+        cfg["pricing"] = {"mode": "discount", "discount": 0}
+        return seller_from_config(cfg)
+
+    x, y = shop("shop-x", 1000.0, alt=900.0), shop("shop-y", 1050.0)
+    n = need(GPU_TI)
+    bid_x, bid_y = make_bid(n, x), make_bid(n, y)
+    assert bid_x["total_landed_price"] == 1000.0 < bid_y["total_landed_price"] == 1050.0
+    assert [l["offered_condition"] for l in bid_x["lines"]] == ["new"]
+    # allowed_conditions widens the set: both lines are bid and the cheaper allowed one sets the total
+    wide = copy.deepcopy(n)
+    wide["items"][0]["allowed_conditions"] = ["new", "open-box"]
+    bid_wide = make_bid(wide, x)
+    assert bid_wide["total_landed_price"] == 900.0
+    assert sorted(l["offered_condition"] for l in bid_wide["lines"]) == ["new", "open-box"]
+    # nothing allowed among its lines: today's behaviour, every line bid and the cheapest sets the total
+    refurb = copy.deepcopy(n)
+    refurb["items"][0]["condition"] = "refurbished"
+    bid_none = make_bid(refurb, x)
+    assert bid_none["total_landed_price"] == 900.0 and len(bid_none["lines"]) == 2
+
+
+@pytest.fixture
+def event_loop_for_agents():
+    """uagents.Agent reads the current event loop; other test files can leave none set."""
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    asyncio.set_event_loop(None)
+    loop.close()
+
+
+def test_run_all_in_mailbox_mode_skips_sellers_with_a_public_seed(monkeypatch, capsys, event_loop_for_agents):
+    for k in ("AGENTS_MAILBOX", "SELLER_4_AGENT_SEED", "SELLER_5_AGENT_SEED"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("SELLERS_MAILBOX", "1")
+    for s in ("seller_1", "seller_2", "seller_3"):
+        monkeypatch.setitem(common.SEEDS, s, f"private-{s}")
+    agents = run_all.build_all()  # must not raise SystemExit
+    out = capsys.readouterr().out
+    assert [a.name for a in agents] == [seller(s)["name"] for s in ("seller_1", "seller_2", "seller_3")]
+    assert "seller_4 skipped: set SELLER_4_AGENT_SEED" in out and "seller_5 skipped: set SELLER_5_AGENT_SEED" in out
+
+
+def test_run_all_builds_every_seller_without_mailbox_mode(monkeypatch, event_loop_for_agents):
+    for k in ("AGENTS_MAILBOX", "SELLERS_MAILBOX"):
+        monkeypatch.delenv(k, raising=False)
+    assert len(run_all.build_all()) == 5
+
+
+def test_a_single_seller_agent_in_mailbox_mode_with_a_public_seed_still_exits(monkeypatch):
+    monkeypatch.setenv("SELLERS_MAILBOX", "1")
+    monkeypatch.setitem(common.SEEDS, "seller_4", "tech-bazaar-seller_4-dev")
+    assert not common.mailbox_ready("seller_4")
+    with pytest.raises(SystemExit):
+        common.agent_args("seller_4", 8014)
+
+
 def test_all_five_sellers_validate_against_the_schema():
     schema = json.loads(SCHEMA.read_text())
     sellers = CATALOG["sellers"]
@@ -190,7 +295,7 @@ def test_all_five_sellers_validate_against_the_schema():
     for sid, entry in sellers.items():
         cfg = {"id": sid, **entry}
         Draft202012Validator(schema).validate(cfg)
-        validate_config(cfg)
+        validate_config(cfg, catalog=True)
         assert cfg["origin"] == "SIM"
     assert common.SELLERS == [f"seller_{i}" for i in range(1, 6)]
 
