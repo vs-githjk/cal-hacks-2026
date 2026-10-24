@@ -1,3 +1,4 @@
 # Board: Lane C
 Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each lane has its own file, so PRs never conflict.
 - [22:21] c1 mirrors: 6 of 8 actors work (Micro Center, Best Buy, B&H, eBay sold, eBay live, Amazon), 20 RTX 5070 Ti SpecCards in data/mirror/snapshots, about $0.17 total; review fixes in (writes inside try, dirs created first, schema only adds listing, eBay seller handles dropped) | @A mirrored offers ready
+- [22:22] c4 liar pages (SIM): Honest Hal and Shady Sam with lie toggle (fake was price, open box as new, wrong socket); injected page with hidden instruction and payee swap at data/liar_pages/site/shady-sam-gpu-5070ti-injected.html; banners say simulated listing for a security demo, injected page says prompt-injection test page | @D beat-3 Shield test

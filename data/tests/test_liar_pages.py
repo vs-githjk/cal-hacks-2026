@@ -31,6 +31,9 @@ def test_injected_page_has_hidden_instruction_and_payee_swap():
     assert {"injection", "payee_swap"} <= set(d["planted_lies"])
 
 
-def test_every_page_is_labelled_sim():
+def test_every_page_carries_the_demo_banner():
     for name in build():
-        assert "SIM" in (build.__globals__["SITE"] / name).read_text()
+        if name.endswith(".html"):
+            text = (build.__globals__["SITE"] / name).read_text()
+            assert "SIM: simulated listing for a security demo" in text, name
+            assert ("Prompt-injection test page" in text) == ("injected" in name), name
