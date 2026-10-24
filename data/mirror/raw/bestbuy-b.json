@@ -1,0 +1,68 @@
+[
+ {
+  "skuId": "6631085",
+  "bsin": "J3P7TXRPQX",
+  "name": "MSI - NVIDIA GeForce RTX 5070 Ti 16G GAMING TRIO OC 16GB GDDR7 PCI Express Gen 5 Graphics Card - Black",
+  "brand": "MSI",
+  "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+  "image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6fac0ad2-dfa0-4b4f-94b3-46f74ecec110.jpg",
+  "price": 1249.99,
+  "regularPrice": 1249.99,
+  "savings": 0,
+  "savingsPercent": 0,
+  "rating": 4.9,
+  "reviewCount": 378,
+  "condition": "new",
+  "whatItIs": [
+   "Graphics Card"
+  ],
+  "sellerType": "1P",
+  "displayStatus": "active",
+  "isNew": false,
+  "searchQuery": "RTX 5070 Ti"
+ },
+ {
+  "skuId": "6618884",
+  "bsin": "J3ZW9X7J5X",
+  "name": "GIGABYTE - NVIDIA GeForce RTX 5070 Ti GAMING OC 16G GDDR7 PCI Express 5.0 Graphics Card - Black",
+  "brand": "GIGABYTE",
+  "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+  "image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/01b46a11-8fc0-42da-a127-094dd3a41343.png",
+  "price": 1249.99,
+  "regularPrice": 1249.99,
+  "savings": 0,
+  "savingsPercent": 0,
+  "rating": 4.8,
+  "reviewCount": 205,
+  "condition": "new",
+  "whatItIs": [
+   "Graphics Card"
+  ],
+  "sellerType": "1P",
+  "displayStatus": "active",
+  "isNew": false,
+  "searchQuery": "RTX 5070 Ti"
+ },
+ {
+  "skuId": "6614742",
+  "bsin": "JJGGLHJX4K",
+  "name": "ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition 16GB GDDR7 PCI Express 5.0 Graphics Card - Black",
+  "brand": "ASUS",
+  "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
+  "image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/96505925-44c6-4d24-a571-3ae1c981e0c2.png",
+  "price": 1299.99,
+  "regularPrice": 1299.99,
+  "savings": 0,
+  "savingsPercent": 0,
+  "rating": 4.7,
+  "reviewCount": 72,
+  "condition": "new",
+  "whatItIs": [
+   "Graphics Card"
+  ],
+  "sellerType": "1P",
+  "displayStatus": "active",
+  "isNew": false,
+  "searchQuery": "RTX 5070 Ti"
+ }
+]

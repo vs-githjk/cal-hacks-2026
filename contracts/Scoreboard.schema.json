@@ -5,6 +5,7 @@
  "type": "object",
  "properties": {
   "generated_at": {"type": "string"},
+  "price_position": {"type": "object", "description": "Optional. Where the demo winner's price sits among dated listings that fit (data/baselines/position.py). Show `sentence` as is; origin MIRROR."},
   "tiles": {
    "type": "array",
    "items": {

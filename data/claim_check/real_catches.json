@@ -1,0 +1,30 @@
+{
+ "origin": "MIRROR",
+ "scanned": {
+  "listings": 42,
+  "distinct_listings": 29,
+  "files": [
+   "amazon-20261024T0509Z.json",
+   "bestbuy-20261024T0508Z.json",
+   "bestbuy-20261024T0936Z.json",
+   "bh-20261024T0508Z.json",
+   "ebay_live-20261024T0508Z.json",
+   "ebay_live-20261024T1217Z.json",
+   "ebay_sold-20261024T0508Z.json",
+   "ebay_sold-20261024T0955Z.json",
+   "microcenter-20261024T0509Z.json",
+   "microcenter-20261024T0938Z.json",
+   "newegg-20261024T0936Z.json",
+   "bestbuy-20261024T0851Z.json"
+  ],
+  "rules": [
+   "condition",
+   "was_price",
+   "stock"
+  ],
+  "claims_judged": {
+   "verified": 4
+  }
+ },
+ "catches": []
+}

@@ -1,0 +1,65 @@
+[
+ {
+  "id": "bestbuy:9a072ed6c281",
+  "category": "gpu",
+  "name": "MSI - NVIDIA GeForce RTX 5070 Ti 16G GAMING TRIO OC 16GB GDDR7 PCI Express Gen 5 Graphics Card - Black",
+  "model_number": "G507T-16GTC",
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+  "snapshot_id": "bestbuy-20261024T0936Z",
+  "snapshot_date": "2026-10-24T09:36:33+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+   "price": 1249.99,
+   "was_price": 1249.99
+  }
+ },
+ {
+  "id": "bestbuy:eae46d340516",
+  "category": "gpu",
+  "name": "GIGABYTE - NVIDIA GeForce RTX 5070 Ti GAMING OC 16G GDDR7 PCI Express 5.0 Graphics Card - Black",
+  "model_number": "GV-N507TGAMING OC-16GD",
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+  "snapshot_id": "bestbuy-20261024T0936Z",
+  "snapshot_date": "2026-10-24T09:36:33+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+   "price": 1249.99,
+   "was_price": 1249.99
+  }
+ },
+ {
+  "id": "bestbuy:bc248aada8bf",
+  "category": "gpu",
+  "name": "ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition 16GB GDDR7 PCI Express 5.0 Graphics Card - Black",
+  "model_number": "PRIME-RTX5070TI-O16G",
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
+  "snapshot_id": "bestbuy-20261024T0936Z",
+  "snapshot_date": "2026-10-24T09:36:33+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
+   "price": 1299.99,
+   "was_price": 1299.99
+  }
+ }
+]

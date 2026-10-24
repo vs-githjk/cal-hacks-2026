@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 from datetime import datetime, timezone
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 from data.fit_checker.tables import MICROARCH_SOCKET
 
@@ -22,6 +22,7 @@ PATTERNS = [  # (field, regex, value from match); first match per field, every f
     ("return_days", r"(\d+)[- ]day returns?", lambda m: int(m.group(1))),
     ("stock", r"\b(out of stock|not in stock|unavailable|sold out)\b", lambda m: False),
     ("stock", r"\bin stock\b", lambda m: True),
+    ("warranty_months", r"(\d+)[- ]?(year|yr|month|mo)s?\b[- ]?(?:limited\s+)?warranty", lambda m: _warranty_months(int(m.group(1)), m.group(2))),
     ("condition", r"\bopen[- ]box\b", lambda m: "open-box"),
     ("condition", r"\brefurb", lambda m: "refurbished"),
     ("condition", r"\b(used|pre-owned)\b", lambda m: "used"),
@@ -98,7 +99,12 @@ from .fetch import guarded_get as default_fetch  # noqa: E402  (http(s) only, pu
 def page_facts(html):
     m = re.search(r'<script type="application/json" id="listing">(.*?)</script>', html, re.S)
     if m:
-        return json.loads(m.group(1)), "page listing JSON"
+        data = json.loads(m.group(1))
+        if isinstance(data, dict) and "warranty_months" not in data:
+            wm = _text_warranty(data.get("warranty"), data.get("description"))
+            if wm is not None:
+                data["warranty_months"] = wm
+        return data, "page listing JSON"
     for block in re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', html, re.S):
         try:
             data = json.loads(block)
@@ -113,7 +119,9 @@ def page_facts(html):
             avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
             facts = {"title": node.get("name"), "price": _money(offer.get("price")),
                      "condition": LD_CONDITION.get(cond), "stock": avail or None,
-                     "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy"))}
+                     "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
+                     "warranty_months": _ld_warranty(node.get("warranty") or offer.get("warranty"))
+                     if (node.get("warranty") or offer.get("warranty")) else _text_warranty(node.get("description"))}
             return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD"
     return {}, "no structured data"
 
@@ -138,6 +146,38 @@ def _one_return_policy(policy):
     return None if days is None else f"{days}-day returns"
 
 
+def _warranty_months(n, unit):
+    """N years or months -> whole months, or None when out of range (finite, non-negative, whole, at most 120 months)."""
+    n = _return_days(n)
+    if n is None:
+        return None
+    months = n * 12 if str(unit).lower().startswith(("y", "ann")) else n if str(unit).lower().startswith(("m", "mon")) else None
+    return months if months is not None and months <= 120 else None
+
+
+def _one_warranty(w):
+    d = w.get("durationOfWarranty") if isinstance(w, dict) else None
+    if not isinstance(d, dict):
+        return None
+    return _warranty_months(d.get("value"), d.get("unitCode") or d.get("unitText"))
+
+
+def _ld_warranty(w):
+    """schema.org WarrantyPromise -> months. A list counts only when every promise agrees."""
+    if isinstance(w, list):
+        found = {_one_warranty(x) for x in w}
+        return found.pop() if len(found) == 1 else None
+    return _one_warranty(w)
+
+
+def _text_warranty(*texts):
+    for t in texts:
+        m = re.search(PATTERNS[next(i for i, p in enumerate(PATTERNS) if p[0] == "warranty_months")][1], str(t or ""), re.I)
+        if m:
+            return _warranty_months(int(m.group(1)), m.group(2))
+    return None
+
+
 def _ld_returns(policy):
     """schema.org MerchantReturnPolicy -> "N-day returns", "returns not permitted", or None when it says neither.
     A list of policies counts only when every one agrees (we do not guess which country applies)."""
@@ -147,10 +187,18 @@ def _ld_returns(policy):
     return _one_return_policy(policy)
 
 
+SCHEMA_AVAILABLE = {"instock", "limitedavailability", "onlineonly", "instoreonly"}
+SCHEMA_UNAVAILABLE = {"outofstock", "soldout", "discontinued", "preorder", "presale", "backorder"}  # not available now
+
+
 def in_stock(v):
     if isinstance(v, bool):
         return v
     s = str(v).lower()
+    if s.replace(" ", "") in SCHEMA_AVAILABLE:
+        return True
+    if s.replace(" ", "") in SCHEMA_UNAVAILABLE:
+        return False
     if re.search(r"out of stock|outofstock|not in stock|unavailable|sold out|soldout", s) or s.startswith("0 "):
         return False  # negations first: "not in stock" contains "in stock"
     if "in stock" in s or "instock" in s or re.match(r"\d+ (units|in stock|remaining)", s):
@@ -158,15 +206,35 @@ def in_stock(v):
     return None
 
 
-def _history(url, facts, fetch, history):
+LIAR_PAGE_HOSTS = {"localhost:8765", "127.0.0.1:8765"}  # where we serve data/liar_pages/site (python -m http.server 8765)
+
+
+def is_our_liar_page(url):
+    """SIM is decided from the evidence URL (our own hosted pages), never from anything a page says about itself."""
+    p = urlparse(url or "")
+    return p.scheme == "http" and p.netloc in LIAR_PAGE_HOSTS and p.path.endswith(".html")
+
+
+def _history(url, facts, fetch, history, observations=None):
+    """Price history for a was-price claim, from our own records only: the caller's history, our recorded SIM series for a
+    SIM page, or our dated MIRROR observations of this exact URL. Nothing is read from the page being judged."""
     if history is not None:
         return history
-    if facts.get("origin") == "SIM" and facts.get("sku"):  # our planted pages publish their SIM price history
+    if is_our_liar_page(url) and facts.get("sku"):
         try:
-            return json.loads(fetch(urljoin(url, "price_history.json")))["series"].get(facts["sku"])
-        except (OSError, ValueError, KeyError):
+            from data.liar_pages.build import PRICE_HISTORY
+        except ImportError:  # the Actor bundle ships no records
             return None
-    return None
+        return PRICE_HISTORY.get(facts["sku"])
+    if observations is None:
+        try:
+            from data.baselines import observations as load_observations
+        except ImportError:  # the Actor bundle ships no records
+            return None
+        observations = load_observations()
+    series = sorted(({"date": str(r["observed_at"])[:10], "price": r["price"]} for r in observations if r.get("url") == url),
+                    key=lambda p: p["date"])
+    return series or None
 
 
 def judge(field, value, facts, at, series):
@@ -187,7 +255,7 @@ def judge(field, value, facts, at, series):
             ("false", f"claim says ${value:,.2f}; differs from the listing at {at}: the page shows ${page:,.2f}")
     if field == "was_price":
         if not series:
-            return "unverified", "could not verify: no dated price history for this item"
+            return "unverified", "could not verify: no dated price history from our own captures"
         top = max(series, key=lambda p: p["price"])
         span = f"{series[0]['date']} to {series[-1]['date']}"
         if value <= top["price"] + 0.01:
@@ -210,8 +278,16 @@ def judge(field, value, facts, at, series):
         if page is None:
             return "unverified", "could not verify: stock not stated on the page"
         word = lambda b: "in stock" if b else "out of stock"
-        return ("verified", f"the page shows {word(page)}") if page == value else \
-            ("false", f"claim says {word(value)}; differs from the listing at {at}: the page shows {word(page)}")
+        raw = str(facts.get("stock"))
+        shown = f"{raw} (not available now)" if raw.lower().replace(" ", "") in SCHEMA_UNAVAILABLE - {"outofstock", "soldout"} else word(page)
+        return ("verified", f"the page shows {shown}") if page == value else \
+            ("false", f"claim says {word(value)}; differs from the listing at {at}: the page shows {shown}")
+    if field == "warranty_months":
+        page = facts.get("warranty_months")
+        if page is None:
+            return "unverified", "could not verify: no warranty term on the page"
+        return ("verified", f"the page shows a {page}-month warranty") if page == value else \
+            ("false", f"claim says {value} months of warranty; differs from the listing at {at}: the page shows {page} months")
     if field == "return_days":
         policy = str(facts.get("return_policy") or "")
         if "not permitted" in policy:
@@ -225,7 +301,7 @@ def judge(field, value, facts, at, series):
     return "unverified", f"could not verify: {field} claims are not checked yet"
 
 
-def check_claim(claim, fetch=None, history=None):
+def check_claim(claim, fetch=None, history=None, observations=None):
     fetch = fetch or default_fetch
     url = claim.get("evidence_url") or ""
     unverified = lambda why: {**out, "method": f"could not verify: {why}", "reason": "could not verify"}
@@ -247,7 +323,7 @@ def check_claim(claim, fetch=None, history=None):
     out["evidence_hash"] = hashlib.sha256(body).hexdigest()
     try:  # a malformed page must not abort a batch or turn into "false"
         facts, source = page_facts(body.decode("utf-8", "replace"))
-        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history) if f == "was_price" else None))
+        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history, observations) if f == "was_price" else None))
                    for f, v in fields]
     except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")

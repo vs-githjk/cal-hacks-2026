@@ -33,3 +33,51 @@ def test_mirrored_gpu_and_psu_feed_the_fit_checker():
 def test_ebay_seller_handles_are_dropped():
     card = to_spec_card("ebay_live", {"title": "RTX 5070 Ti", "sellerUsername": "someone_123", "seller": "someone_123"}, "s", "d")
     assert "seller" not in card["listing"]
+
+
+def _card(**extra):
+    return to_spec_card("ebay_live", {"title": "RTX 5070 Ti", "url": "https://x.test/1", "price": "$1,000.00", **extra}, "s", "d")["listing"]
+
+
+def test_free_numeric_shipping_is_captured_and_landed_equals_price():  # #117
+    l = _card(shippingCost="0", shippingType="free")
+    assert l["shipping_cost"] == 0.0 and l["shipping_captured"] is True and l["landed_price"] == 1000.0
+    l = _card(shipping="Free delivery")
+    assert l["shipping_cost"] == 0.0 and l["shipping_captured"] is True
+
+
+def test_paid_shipping_adds_to_landed_price():
+    l = _card(shippingPrice="125.94")
+    assert l["shipping_cost"] == 125.94 and l["landed_price"] == 1125.94
+
+
+def test_shipping_conditions_and_unknowns_are_never_zero():
+    for extra in ({"shipping": "FREE shipping on orders over $35"}, {"shipping": "Free shipping for Plus members"}, {"shipping": "Free returns"},
+                  {"shipping": "Free in-store pickup"}, {"shipping": "Free delivery Tue, Oct 28"}, {}, {"shipping": {"cutoffs": {"cutoff": 1}}}):
+        l = _card(**extra)
+        assert l["shipping_cost"] is None and l["shipping_captured"] is False and l["landed_price"] is None, extra
+
+
+def test_availability_is_text_or_none():
+    assert _card()["availability"] is None
+    assert _card(inStock=False)["availability"] == "out of stock"
+    assert _card(availability="1 remaining")["availability"] == "1 remaining"
+
+
+def test_old_snapshots_gain_landed_fields_at_read_time():
+    from data.mirror.price_spread import load
+    cards = [c for cs in load().values() for c in cs]
+    assert cards and all("shipping_captured" in c["listing"] for c in cards)
+    asus = next(c for c in cards if "6614742" in (c["listing"].get("url") or ""))
+    assert asus["listing"]["shipping_cost"] is None and asus["listing"]["landed_price"] is None
+
+
+def test_bare_free_phrases_and_free_shipping_type_are_zero():
+    for text in ("Free delivery", "FREE shipping", "free standard shipping.", " Free "):
+        assert _card(shipping=text)["shipping_cost"] == 0.0, text
+    assert _card(shippingType="free")["shipping_cost"] == 0.0
+    assert _card(shippingType="paid")["shipping_cost"] is None
+
+
+def test_zero_stock_is_out_of_stock():
+    assert _card(stock=0)["availability"] == "out of stock" and _card(stock="0")["availability"] == "out of stock"

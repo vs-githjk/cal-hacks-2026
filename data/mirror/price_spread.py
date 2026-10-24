@@ -5,6 +5,8 @@ import statistics
 import sys
 from pathlib import Path
 
+from .normalize import landed
+
 SNAPS = Path(__file__).resolve().parent / "snapshots"
 BASELINE_STORE = "ebay_sold"
 
@@ -14,6 +16,10 @@ def load():
     for f in sorted(SNAPS.glob("*.json")):
         store = f.name.rsplit("-", 1)[0]
         cards.setdefault(store, []).extend(json.loads(f.read_text()))
+    for cs in cards.values():
+        for c in cs:  # snapshots written before #117 are not rewritten: they gain the landed fields here
+            if "shipping_captured" not in c.get("listing", {}):
+                c.setdefault("listing", {}).update(landed(c["listing"], c.get("price")))
     return cards
 
 
@@ -28,8 +34,17 @@ def out_of_stock(card):
     return stock is False or (isinstance(stock, str) and ("out" in stock.lower() or "sold out" in stock.lower()))
 
 
+def latest_by_url(cards):
+    """One card per listing URL, the latest snapshot winning: a re-capture of a listing is not a second listing."""
+    out = {}
+    for c in sorted(cards, key=lambda c: c.get("snapshot_date") or ""):
+        out[(c.get("listing") or {}).get("url") or c.get("source") or id(c)] = c
+    return list(out.values())
+
+
 def summarize(cards):
-    """Asks exclude out-of-stock listings (not buyable at that price); they are counted, not ranged."""
+    """Asks exclude out-of-stock listings (not buyable at that price); they are counted, not ranged. Each listing counts once."""
+    cards = {s: latest_by_url(cs) for s, cs in cards.items()}
     every = [c for s, cs in cards.items() if s != BASELINE_STORE for c in cs]
     asks = [c for c in every if not out_of_stock(c)]
     sold = [c for c in cards.get(BASELINE_STORE, []) if c.get("price")]
