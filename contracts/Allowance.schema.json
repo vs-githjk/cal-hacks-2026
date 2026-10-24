@@ -5,30 +5,51 @@
   "buyer_id": {
    "type": "string"
   },
-  "auto_approve_up_to": {
-   "type": "number"
-  },
   "currency": {
-   "type": "string"
+   "type": "string",
+   "enum": [
+    "USD"
+   ]
   },
-  "seat_id": {
-   "type": "string"
+  "per_purchase_limit": {
+   "type": "number",
+   "minimum": 0,
+   "description": "Starts at 0: every buy needs the call until trust grows"
   },
-  "raised_by": {
-   "type": "array",
-   "items": {
-    "type": "string"
-   }
+  "period_limit": {
+   "type": "number",
+   "minimum": 0
   },
-  "phone_ref": {
-   "type": "string"
+  "period": {
+   "type": "string",
+   "enum": [
+    "week",
+    "month"
+   ]
+  },
+  "spent_this_period": {
+   "type": "number",
+   "minimum": 0
+  },
+  "ladder_step": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "Allowance ladder level, raised only by the buyer"
+  },
+  "updated_at": {
+   "type": "string",
+   "format": "date-time"
   }
  },
  "required": [
   "buyer_id",
-  "auto_approve_up_to",
   "currency",
-  "raised_by",
-  "phone_ref"
- ]
+  "per_purchase_limit",
+  "period_limit",
+  "period",
+  "spent_this_period",
+  "ladder_step",
+  "updated_at"
+ ],
+ "additionalProperties": false
 }
