@@ -6,6 +6,7 @@ least one decision to the audit trail. Nothing here calls a model.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -16,6 +17,11 @@ from hyphenate.org import STANDARD_BUDGETS, Person, Policy, standard_people
 from hyphenate.vendors import Vendor
 from pay.mandate import format_ts, parse_ts
 from pay.replay import NonceStore
+
+def sku_key(sku: str) -> str:
+    """One spelling for matching a SKU to a price reference: 'rtx 5070 ti', 'RTX-5070-TI' and 'Rtx_5070-Ti ' are the same part."""
+    return re.sub(r"[^A-Z0-9]+", "-", str(sku).upper()).strip("-")
+
 
 RULES = {
     "sod.requester_cannot_approve": "Whoever requests a purchase can never approve it, directly or through a delegate.",
@@ -97,6 +103,10 @@ class Company:
             raise ValueError(f"time cannot go backwards: {at} is before {self.clock}")
         self.clock = at
         return at
+
+    def mirror_ref(self, sku: str) -> Optional[dict]:
+        k = sku_key(sku)
+        return next((r for key, r in self.mirror.items() if sku_key(key) == k), None)
 
     def add_vendor(self, v: Vendor) -> Vendor:
         self.vendors[v.id] = v

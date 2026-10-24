@@ -60,17 +60,18 @@ class ProcurementMixin:
             flags.append("over_budget")
             notes.append(f"{po['dept']} budget {usd(limit)}, committed {usd(used)}, this PO {usd(total)}")
         for l in po["lines"]:
-            ref = self.mirror.get(l["sku"])
+            ref = self.mirror_ref(l["sku"])
             r = resolve("market_price", [{"source": "mirror", "value": ref["price"], "as_of": ref["as_of"], "ref": ref.get("source", "")}] if ref else [], now=at)
             t = r["trusted"]
             if t:
                 refs.append({"type": "mirror", "id": l["sku"], "detail": f"{usd(t['value'])} as of {t['as_of'][:10]} {ref.get('origin', 'MIRROR')}"})
-                if l["unit"] > t["value"] * (1 + self.policy.mirror_above_pct):
-                    flags.append("above_market")
-                    notes.append(f"{l['sku']} at {usd(l['unit'])} is more than {int(self.policy.mirror_above_pct * 100)}% above the {usd(t['value'])} reference")
-                elif l["unit"] < t["value"] * (1 - self.policy.mirror_below_pct):
-                    flags.append("suspiciously_low")
-                    notes.append(f"{l['sku']} at {usd(l['unit'])} is more than {int(self.policy.mirror_below_pct * 100)}% below the {usd(t['value'])} reference")
+                high = l["unit"] > t["value"] * (1 + self.policy.mirror_above_pct)
+                low = l["unit"] < t["value"] * (1 - self.policy.mirror_below_pct)
+                if high or low:
+                    why = resolve("market_price", [{"source": "mirror", "value": t["value"], "as_of": ref["as_of"]}, {"source": "seller_claim", "value": l["unit"]}], now=at)["reason"]
+                    flags.append("above_market" if high else "suspiciously_low")
+                    side = f"more than {int(self.policy.mirror_above_pct * 100)}% above" if high else f"more than {int(self.policy.mirror_below_pct * 100)}% below"
+                    notes.append(f"{l['sku']} at {usd(l['unit'])} is {side} the {usd(t['value'])} reference. {why}")
             elif ref:
                 notes.append(f"{l['sku']}: market reference is stale, ignored")
         flags = list(dict.fromkeys(flags))
@@ -328,7 +329,7 @@ class ProcurementMixin:
             if res["accepted"]:
                 for s in res["serials"][:res["accepted"]]:
                     self.serials[s] = rid
-        rec = {"id": rid, "po_id": po_id, "by": by, "at": at, "lines": results, "accepted_value": acc_value, "rejected_value": rej_value}
+        rec = {"id": rid, "po_id": po_id, "by": by, "at": at, "seq": len(self.audit.decisions), "lines": results, "accepted_value": acc_value, "rejected_value": rej_value}
         self.receipts[rid] = rec
         po["receipts"].append(rid)
         n_acc, n_rej = sum(r["accepted"] for r in results), sum(r["rejected"] for r in results)

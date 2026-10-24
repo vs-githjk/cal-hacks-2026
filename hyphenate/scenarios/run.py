@@ -68,6 +68,9 @@ def write_results(dev, sd, ho, sh) -> None:
     out += ["", "Changes after the PR #40 review: three faults the reviewer found were fixed in the engine and added to the dev set as D37 (invoice splits one SKU over two lines), "
                 "D38 (requester charges another department) and D39 (strict vendor with a department-head requester). D10 now uses an art-department requester because cross-department requests are refused. "
                 "The held-out cases were not edited and their results did not change."]
+    out += ["", "Changes after the blind run (Lane C, issue #45; first blind result 26/27 planted, 2/7 false flags, in RESULTS-blind.md): the MIRROR reference lookup now ignores SKU spelling "
+                "and records the trust reason (D41); a second identical invoice after a new receipt is not a duplicate (C09, D40 keeps the no-new-receipt case held); an informational variance moved from `findings` to `info`. "
+                "D40, D41 and C09 were added to dev for these. The blind cases b24, k02 and k03 are therefore no longer blind. Held-out results did not change."]
     out += ["", f"dev_cases.py sha256 `{file_sha256('dev_cases')}`"]
     if sh:
         out.append(f"heldout_cases.py sha256 `{file_sha256('heldout_cases')}`")
