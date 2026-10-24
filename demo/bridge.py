@@ -38,7 +38,7 @@ from demo.common import MIRROR, SIM, Narrator, money  # noqa: E402
 
 DB_BUYER_ID = "vidyut"          # the id /buyer pairs with (web DEMO_BUYER) and the only one with a pairing code
 BUYER_TOKEN, REFEREE_TOKEN = "buyer-vidyut.json", "referee.json"
-MANDATE_MINUTES = 30
+MANDATE_MINUTES = 10
 MIN_WINDOW_S = 6
 REVIEW_WINDOW_S = 20
 LIVE_TAGS = {"MIRROR", "SIM", "LIVE"}
@@ -66,7 +66,7 @@ def _line(bid: dict, index: int, sku: str) -> dict:
             "unit_price": l["unit_price"], "quantity": l["quantity"]}
 
 
-def _line_metadata(bid: dict) -> list[dict]:
+def _line_metadata(bid: dict, *, seller_shipping: Optional[float] = None) -> list[dict]:
     """Hash the exact captured listing record (MIRROR) or exact SIM bid line; never guess a digest."""
     rows = []
     for index, line in enumerate(bid["lines"]):
@@ -88,9 +88,9 @@ def _line_metadata(bid: dict) -> list[dict]:
                                                ensure_ascii=False, allow_nan=False).encode()).hexdigest()
         if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise RuntimeError("line listing hash is unavailable")
-        shipping = line.get("shipping")
-        if shipping is None:
-            shipping = round(float(bid["total_landed_price"]) - min(x["unit_price"] for x in bid["lines"]), 2)
+        shipping = line["shipping"] if "shipping" in line else seller_shipping
+        if isinstance(shipping, bool) or not isinstance(shipping, (int, float)) or not math.isfinite(shipping) or shipping < 0:
+            raise RuntimeError("line shipping metadata is unavailable")
         rows.append({"lineIndex": index, "shipping": shipping, "listingId": listing_id, "listingHash": digest,
                      "source": source, "snapshotId": line.get("snapshot_id", ""),
                      "provenance": {"origin": line.get("origin", bid.get("origin", SIM))},
@@ -103,6 +103,16 @@ def _line_metadata(bid: dict) -> list[dict]:
 def _entries(ranking: dict) -> dict:
     """seller_id -> the ranking entry (ranked or disqualified) carrying the picked line index."""
     return {e["seller_id"]: e for e in [*ranking["ranked"], *ranking["disqualified"]]}
+
+
+def _seller_shipping(seller_id: str) -> float:
+    """Read shipping from the same offline seller fixtures used to build the demo bids."""
+    from demo.sellers import all_sellers
+
+    matches = [seller for seller in all_sellers()[0] if seller.id == seller_id]
+    if len(matches) != 1:
+        raise RuntimeError("seller shipping fixture is unavailable")
+    return matches[0].shipping
 
 
 def bid_id(bid: dict, round_no: int) -> str:
@@ -133,7 +143,7 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
              "lines": [_line(bid, i, sku) for i in range(len(bid["lines"]))],
              "stated_total": placed["unit_price"] * placed["quantity"], "perks": list(bid["perks"]), "claims": list(bid["claims"]),
              "origin": bid["origin"], "source": placed["listing_url"], "seller_id": sid,
-             "line_metadata": _line_metadata(bid)},
+             "line_metadata": _line_metadata(bid, seller_shipping=seller.get("shipping"))},
             tag=bid["origin"], pause=True, pace=pace,
             say=f"{bid['persona']} seals a bid: {placed['offered_condition']} {money(placed['unit_price'])}{alts}"))
     rejected = {e["bid_id"] for e in ranking["disqualified"] if e.get("kind") == "rejected"}   # floor: never screened
@@ -147,10 +157,20 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
                                 tag=SIM,
                                 say=f"Bazaar Shield (real shield.screen) on {bid['persona']}: {v['verdict']}"))
     for bid in bids:
+        selected_index = entry.get(bid["seller_id"], {}).get("line", 0)
         for c in claims.get(bid["id"], []):
+            matching = [i for i, line in enumerate(bid["lines"]) if line.get("listing_url") == c.get("evidence_url")]
+            if len(matching) != 1:
+                continue  # ambiguous or missing evidence has no safe line binding
+            line_index = matching[0]
+            if line_index != selected_index:
+                continue  # the market's review candidate contains selected lines only
+            metadata = _line_metadata(bid, seller_shipping=sellers[bid["seller_id"]].get("shipping"))[line_index]
             check_steps.append(Step("referee", "attach_claim_check",
                                     {"bid_id": bid_id(bid, round_no), "claim": c["text"], "check": c["check"],
-                                     "evidence_url": c["evidence_url"], "origin": c["origin"]},
+                                     "evidence_url": c["evidence_url"], "origin": c["origin"],
+                                     "line_index": line_index, "listing_id": metadata["listingId"],
+                                     "listing_hash": metadata["listingHash"]},
                                     tag=c["origin"],
                                     say=f"claim check (real data.claim_check) on {bid['persona']}: {c['check']}: {c['text']}"))
     bid_of = {b["id"]: b for b in bids}
@@ -178,7 +198,13 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     """Map a demo run (demo.run_demo.run_all) to reducer calls, in the order the stage story tells it."""
     b = run["beats"]
     goal, need, b2 = b["1"]["goal"], b["1"]["need"], b["2"]
-    sellers = {s["id"]: s for s in b2["sellers"]}
+    sellers = {}
+    for seller in b2["sellers"]:
+        bid = next((bid for bid in b2["bids"] if bid["seller_id"] == seller["id"]), None)
+        shipping = seller.get("shipping")
+        if shipping is None and bid is not None and any("shipping" not in line for line in bid["lines"]):
+            shipping = _seller_shipping(seller["id"])
+        sellers[seller["id"]] = {**seller, "shipping": shipping}
     steps: list[Step] = []
 
     # beat 1: Vidyut's goal and need (the buyer token posts both, for its own buyer id)
@@ -225,8 +251,9 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
 
 # What the market cannot take today (printed at the end of every run; mirrored in demo/README.md for Lane B).
 NOT_BRIDGED = [
-    "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 and the learner's lower open-box price now ranks, but the loss report itself is not on screen.",
-    "goal state (HUNTING, HOLD_FOR_CALL, DONE): no set_goal_state reducer; the goal stays ACTIVE and reserved_amount stays 0.",
+    "loss reports: market reducer record_loss_report exists, but this legacy bridge does not call it; beat 5's report and learning step remain console only.",
+    "claim checks with missing or ambiguous evidence URLs are skipped because they cannot be bound to one original listing line.",
+    "goal state: create_mandate sets the goal to HOLD_FOR_CALL when the deal exceeds allowance; this bridge does not mirror the earlier HUNTING transition or later DONE transition.",
     "buyer allowance: no set_allowance reducer, so /buyer shows the market's fresh $0 allowance, not Vidyut's $250 per purchase "
     "(the deal still correctly needs the call).",
     "voice approval and payment: no verified checkout evidence path exists, so local SIM call/code/charge output is not written as public approval or payment proof.",
@@ -283,13 +310,21 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                             or not isinstance(bid, str) or bid in candidates or not isinstance(lines, list)
                             or len(lines) != len(expected) or not isinstance(metadata, list)):
                         raise RuntimeError("review candidate readback is incomplete")
+                    metadata_by_index = {}
+                    for row in metadata:
+                        if not isinstance(row, dict):
+                            raise RuntimeError("review candidate line binding is incomplete")
+                        index = row.get("lineIndex")
+                        if isinstance(index, bool) or not isinstance(index, int) or index < 0 or index in metadata_by_index:
+                            raise RuntimeError("review candidate line binding is incomplete")
+                        metadata_by_index[index] = row
                     seen: set[str] = set()
                     for line in lines:
                         index = line.get("line_index") if isinstance(line, dict) else None
-                        if (isinstance(index, bool) or not isinstance(index, int) or index < 0 or index >= len(metadata)
-                                or not isinstance(metadata[index], dict) or metadata[index].get("lineIndex") != index
-                                or metadata[index].get("listingId") != line.get("listing_id")
-                                or metadata[index].get("listingHash") != line.get("listing_hash")
+                        row = metadata_by_index.get(index)
+                        if (isinstance(index, bool) or not isinstance(index, int) or index < 0
+                                or not isinstance(row, dict) or row.get("listingId") != line.get("listing_id")
+                                or row.get("listingHash") != line.get("listing_hash")
                                 or line.get("sku_spec") not in expected or line.get("sku_spec") in seen
                                 or line.get("quantity", 0) < expected[line.get("sku_spec")]):
                             raise RuntimeError("review candidate line binding is incomplete")
@@ -303,7 +338,9 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                 bridge = bridges.get(s.actor)
                 if bridge is None:
                     raise RuntimeError("MarketBridge seller is required to publish bids")
-                bridge.publish_bid(**s.args)
+                args = dict(s.args)
+                args["bid_id"] = args.pop("id")
+                bridge.publish_bid(**args)
             elif s.reducer == "attach_advocate_card":
                 candidate = candidates.get(s.args["bid_id"])
                 if candidate is None:
@@ -313,10 +350,13 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                 candidate = candidates.get(s.args["bid_id"])
                 if candidate is None:
                     raise RuntimeError("claim check has no bound review candidate")
-                for line in candidate["lines"]:
-                    bridges["referee"].attach_claim_check(
-                        **{**s.args, "binding_hash": candidate["binding_hash"], "line_index": line["line_index"],
-                           "listing_id": line["listing_id"], "listing_hash": line["listing_hash"]})
+                line_index = s.args.get("line_index")
+                line = next((line for line in candidate["lines"] if line.get("line_index") == line_index), None)
+                if (line is None or line.get("listing_id") != s.args.get("listing_id")
+                        or line.get("listing_hash") != s.args.get("listing_hash")):
+                    raise RuntimeError("claim evidence does not match its bound review line")
+                bridges["referee"].attach_claim_check(
+                    **{**s.args, "binding_hash": candidate["binding_hash"]})
             elif s.reducer == "create_mandate":
                 if run is None or "buyer" not in bridges:
                     raise RuntimeError("MarketBridge buyer and local run are required before a mandate")
@@ -349,7 +389,8 @@ def _verify_market_winner(market_bridge: Any, run: dict, need_id: str, round_id:
     if isinstance(line_index, bool) or not isinstance(line_index, int) or not 0 <= line_index < len(bid["lines"]):
         raise RuntimeError("local winner line is incomplete")
     line = bid["lines"][line_index]
-    meta = _line_metadata(bid)[line_index]
+    seller_shipping = _seller_shipping(bid["seller_id"]) if any("shipping" not in line for line in bid["lines"]) else None
+    meta = _line_metadata(bid, seller_shipping=seller_shipping)[line_index]
     try:
         amount = Decimal(str(run["beats"]["4"]["mandate"]["amount"])) * 100
         local = Decimal(str(winner["landed"])) * 100

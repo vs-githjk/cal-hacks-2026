@@ -129,6 +129,7 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     assert mand["goal_id"] == run["beats"]["1"]["goal"]["id"]
     assert mand["need_id"] == run["beats"]["1"]["need"]["id"]
+    assert mand["expiry_minutes"] == 10
 
 
 def test_round_window_covers_the_paced_steps(steps):
@@ -193,9 +194,10 @@ def test_divergence_is_reported_when_the_market_ranks_another_bid_first(run):
 
 def test_not_bridged_list_names_every_gap_and_no_secret():
     text = " ".join(bridge.NOT_BRIDGED)
-    for word in ("loss reports", "set_goal_state", "set_allowance", "floors per condition"):
+    for word in ("loss reports", "record_loss_report", "create_mandate", "HOLD_FOR_CALL", "ambiguous evidence URLs are skipped",
+                 "set_allowance", "floors per condition"):
         assert word in text
-    for fixed in ("advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
+    for fixed in ("no table or reducer", "goal stays ACTIVE", "advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
         assert fixed not in text, f"{fixed} is bridged now"
     assert "token" not in text.lower()
 
@@ -203,7 +205,7 @@ def test_not_bridged_list_names_every_gap_and_no_secret():
 def _gate_run():
     line = {"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1.0, "offered_condition": "new",
             "listing_url": "https://example.test/gpu", "listing_id": "fixture-1", "listing_hash": "a" * 64, "origin": "SIM",
-            "attrs": {}, "basis": "fixture"}
+            "attrs": {}, "basis": "fixture", "shipping": 0.0}
     bid = {"id": "bid-1", "seller_id": "seller-a", "origin": "SIM", "source": "fixture",
            "total_landed_price": 10.0, "lines": [line]}
     return {"beats": {
@@ -254,7 +256,7 @@ def test_round_mapping_publishes_exact_metadata_and_defers_bound_reviews():
     import hashlib
     import json
 
-    line = {"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1, "offered_condition": "new",
+    line = {"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1, "offered_condition": "new", "shipping": 0.0,
             "listing_url": "https://example.test/gpu", "listing_id": "fixture-1", "origin": "SIM",
             "attrs": {"model": "gpu"}, "basis": "SIM fixture"}
     bid = {"id": "bid-1", "seller_id": "seller-a", "persona": "Seller A", "origin": "SIM", "lines": [line],
@@ -301,6 +303,98 @@ def test_missing_mirror_snapshot_hash_fails_closed():
         bridge._line_metadata({"lines": [line], "total_landed_price": 1.0})
 
 
+def test_missing_line_shipping_fails_closed():
+    line = {"listing_id": "fixture-1", "listing_url": "https://example.test/gpu", "origin": "SIM",
+            "attrs": {}, "unit_price": 10.0, "quantity": 1}
+    with pytest.raises(RuntimeError, match="shipping metadata is unavailable"):
+        bridge._line_metadata({"lines": [line], "total_landed_price": 12.0})
+
+
+def test_seller_shipping_is_read_from_the_real_seller_fixture():
+    from demo.sellers import all_sellers
+
+    seller = next(s for s in all_sellers()[0] if s.id == "gadget-grove")
+    assert bridge._seller_shipping("gadget-grove") == seller.shipping
+
+
+def test_place_bid_maps_demo_id_to_market_bridge_bid_id():
+    from agents.market_bridge import MarketBridge
+    import inspect
+
+    assert "bid_id" in inspect.signature(MarketBridge.publish_bid).parameters
+    log = []
+
+    class SellerBridge:
+        def publish_bid(self, *, bid_id, round_id, seller_id, **kwargs):
+            log.append((bid_id, round_id, seller_id, kwargs))
+
+    step = bridge.Step("seller:seller-a", "place_bid", {"id": "bid-1", "round_id": "round-1",
+                      "seller_id": "seller-a", "persona": "Seller A", "lines": [], "line_metadata": []})
+    bridge.execute([step], {step.actor: Fake(log, step.actor)}, bridges={step.actor: SellerBridge()},
+                   delay=0, say=lambda _: None)
+    assert log[0][:3] == ("bid-1", "round-1", "seller-a")
+
+
+def test_review_line_metadata_uses_original_index_for_alternative_line():
+    log, now = [], [0.0]
+
+    class AlternativeBridge(GateBridge):
+        def review_candidates(self, round_id):
+            return [{"round_id": round_id, "need_id": "need-1", "bid_id": "bid-1", "binding_hash": "b" * 64,
+                     "line_metadata": [{"lineIndex": 1, "listingId": "fixture-2", "listingHash": "c" * 64}],
+                     "lines": [{"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1.0, "line_index": 1,
+                                "listing_id": "fixture-2", "listing_hash": "c" * 64}]}]
+
+    steps = [bridge.Step("referee", "close_round", {"round_id": "round-1"}, close=True, review=True),
+             bridge.Step("referee", "attach_advocate_card", {"bid_id": "bid-1", "recommendation": "buy",
+                         "rule_id": "ok", "text": "ok", "source_url": "url", "origin": "SIM"})]
+    bridge.execute(steps, {"referee": Fake(log, "referee")}, bridges={"referee": AlternativeBridge(log, None)},
+                   run=_gate_run(), delay=0, say=lambda _: None, sleep=lambda x: None, clock=lambda: now[0])
+    assert any(entry[0] == "attach_advocate_card" for entry in log)
+
+
+def test_claim_check_binds_only_to_claims_original_listing_line():
+    line0 = {"sku_spec": "gpu", "unit_price": 12.0, "quantity": 1, "offered_condition": "new",
+             "listing_url": "https://example.test/new", "listing_id": "listing-new", "listing_hash": "a" * 64,
+             "origin": "SIM", "shipping": 0.0, "attrs": {}}
+    line1 = {"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1, "offered_condition": "open-box",
+             "listing_url": "https://example.test/open", "listing_id": "listing-open", "listing_hash": "b" * 64,
+             "origin": "SIM", "shipping": 0.0, "attrs": {}}
+    bid = {"id": "bid-1", "seller_id": "seller-a", "persona": "Gadget Grove", "origin": "SIM",
+           "lines": [line0, line1], "total_landed_price": 10.0, "perks": [], "claims": []}
+    claims = [{"text": "New, retail box", "check": "false", "evidence_url": line0["listing_url"], "origin": "SIM"},
+              {"text": "Open-box, retail box", "check": "false", "evidence_url": line1["listing_url"], "origin": "SIM"}]
+    steps = bridge.round_steps(round_no=1, need_id="need-1", bids=[bid],
+                               ranking={"ranked": [{"seller_id": "seller-a", "line": 1}], "disqualified": []},
+                               sellers={"seller-a": {"lines": [{"floor": 1}]}}, shield=[],
+                               claims={"bid-1": claims}, cards=[], delay=0, pace=1)
+    check_args = [step.args for step in steps if step.reducer == "attach_claim_check"]
+    assert [(item["claim"], item["line_index"], item["listing_id"], item["listing_hash"])
+            for item in check_args] == [("Open-box, retail box", 1, "listing-open", "b" * 64)]
+    log, now = [], [0.0]
+    candidate_bridge = GateBridge(log, None)
+    candidate_bridge.review_candidates = lambda round_id: [{"round_id": round_id, "need_id": "need-1", "bid_id": "bid-1",
+        "binding_hash": "b" * 64, "line_metadata": [
+            {"lineIndex": 0, "listingId": "listing-new", "listingHash": "a" * 64},
+            {"lineIndex": 1, "listingId": "listing-open", "listingHash": "b" * 64}],
+        "lines": [{"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1.0, "line_index": 1,
+                   "listing_id": "listing-open", "listing_hash": "b" * 64}]}]
+    review_steps = [bridge.Step("referee", "close_round", {"round_id": "round-1"}, close=True, review=True),
+                    bridge.Step("referee", "attach_claim_check", check_args[0]),
+                    bridge.Step("referee", "close_round", {"round_id": "round-1"}, close=True)]
+    bridge.execute(review_steps, {"referee": Fake(log, "referee")}, bridges={"referee": candidate_bridge},
+                   run=_gate_run(), delay=0, say=lambda _: None, sleep=lambda _: None, clock=lambda: now[0])
+    attached = next(entry[1] for entry in log if entry[0] == "attach_claim_check")
+    assert (attached["line_index"], attached["listing_id"], attached["listing_hash"]) == (1, "listing-open", "b" * 64)
+
+    ambiguous_bid = {**bid, "lines": [line0, {**line1, "listing_url": line0["listing_url"]}]}
+    ambiguous = bridge.round_steps(round_no=1, need_id="need-1", bids=[ambiguous_bid],
+                                   ranking={"ranked": [{"seller_id": "seller-a", "line": 1}], "disqualified": []},
+                                   sellers={"seller-a": {"lines": [{"floor": 1}]}}, shield=[],
+                                   claims={"bid-1": claims}, cards=[], delay=0, pace=1)
+    assert not any(step.reducer == "attach_claim_check" for step in ambiguous)
+
+
 def test_plan_binds_mandate_to_goal_and_need_and_has_no_synthetic_approval_or_payment():
     goal = {"id": "goal-1", "type": "build", "cap": 10.0, "deadline": "2026-10-25",
             "items": [{"part": "gpu", "sku_spec": "gpu", "condition": "new", "allowed_conditions": ["new"],
@@ -310,7 +404,7 @@ def test_plan_binds_mandate_to_goal_and_need_and_has_no_synthetic_approval_or_pa
                                                 "variant": "model", "quantity": 1, "unit": "item"}]}
     line = {"sku_spec": "gpu", "unit_price": 10.0, "quantity": 1, "offered_condition": "new",
             "listing_url": "https://example.test/gpu", "listing_id": "fixture-1", "listing_hash": "a" * 64,
-            "origin": "SIM", "attrs": {}, "basis": "fixture"}
+            "origin": "SIM", "attrs": {}, "basis": "fixture", "shipping": 0.0}
     bid = {"id": "bid-1", "seller_id": "seller-a", "persona": "Seller A", "origin": "SIM", "source": "fixture",
            "lines": [line], "total_landed_price": 10.0, "perks": [], "claims": []}
     run = {"beats": {
@@ -361,7 +455,8 @@ def test_claim_check_uses_review_binding_and_original_selected_line():
     referee_bridge = GateBridge(log, None)
     steps = [bridge.Step("referee", "close_round", {"round_id": "round-1"}, close=True, review=True),
              bridge.Step("referee", "attach_claim_check", {"bid_id": "bid-1", "claim": "new",
-                         "check": "unverified", "evidence_url": "https://example.test/gpu", "origin": "SIM"}),
+                         "check": "unverified", "evidence_url": "https://example.test/gpu", "origin": "SIM",
+                         "line_index": 0, "listing_id": "fixture-1", "listing_hash": "a" * 64}),
              bridge.Step("referee", "close_round", {"round_id": "round-1"}, close=True)]
     now = [0.0]
     bridge.execute(steps, {"referee": Fake(log, "referee")}, bridges={"referee": referee_bridge},
