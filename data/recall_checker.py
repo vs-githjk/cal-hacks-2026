@@ -14,8 +14,9 @@ per brand for 24 hours (data.recalls.brand_items). How a recall is matched, stri
             Soundcore or iPhone), a model token found only in the recall's description (which may say "NOT affected"), or,
             for a name of generic words only ("Power Bank"), every one of those words in the recall: a lead, never a match;
   none      the API answered and nothing of that brand matched a model, line or product word we were given;
-  unverified no brand given, no product to match (no model, line or product word, and no category hit), or the lookup
-            failed. Never "none" on a failure or on a brand alone.
+  unverified no brand given, no product to match (no model, no product line of 4+ digits, no product word, and no category
+            hit; a UPC that is not listed rules out nothing, since recalls rarely list one), or the lookup failed. Never "none"
+            on a failure or on a brand alone.
 "none" covers U.S. CPSC recalls only; it does not mean the product was never recalled anywhere.
 """
 from __future__ import annotations
@@ -83,16 +84,27 @@ def _generic_hit(product: str, brand: str, text: str) -> bool:
     return bool(words) and all(_word(w, text) or _word(w + "s", text) or (w.endswith("s") and _word(w[:-1], text)) for w in words)
 
 
-def _upc(v) -> str:
-    return re.sub(r"\D", "", str(v or "")).lstrip("0")
+GTIN_MAX = 14  # the longest barcode number (GTIN-14); more digits than this is several codes
+
+
+def _upc_codes(v) -> set[str]:
+    """Each code in one UPC value, without leading zeros. Commas, slashes, semicolons or words separate codes; hyphens and
+    spaces inside one code ("8-41234-56789-0") are kept together unless the digits run past GTIN_MAX, then they split too."""
+    out = set()
+    for chunk in re.split(r"[^\d\s-]+", str(v or "")):
+        pieces = [chunk]
+        if len(re.sub(r"\D", "", chunk)) > GTIN_MAX:
+            pieces = chunk.split()
+            if any(len(re.sub(r"\D", "", p)) > GTIN_MAX for p in pieces):
+                pieces = re.split(r"\D+", chunk)
+        out |= {re.sub(r"\D", "", p).lstrip("0") for p in pieces}
+    return out - {""}
 
 
 def _upcs(item: dict) -> set[str]:
     out = set()
     for u in item.get("ProductUPCs") or []:
-        v = u.get("UPC") if isinstance(u, dict) else u
-        if v:
-            out.add(_upc(v))
+        out |= _upc_codes(u.get("UPC") if isinstance(u, dict) else u)
     return out
 
 
@@ -133,7 +145,7 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
     out["searched"] = f"CPSC recalls for brand {brand}, read {out['checked_at'][:10]}"
     model, line = _tokens(product, brand)
     names = _names(product, brand)
-    generic_only = not (model or line or names)
+    generic_only = not (model or any(len(t) >= 4 for t in line) or names)  # "128g" alone is a size, not a product signal (#314)
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -165,10 +177,11 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
         out["status"] = "possible"
         out["summary"] = (f"POSSIBLE: {len(out['possible'])} CPSC recall(s) of {brand} on the same product line or product name, but none names "
                           f"this model; check the recall page and your model number")
-    elif generic_only and not upc_key:  # a brand alone (or only generic words) never earns "none": nothing was matched against
+    elif generic_only:  # a brand alone (or only generic words or a size) never earns "none", even with a UPC: no real recall lists one
         out["status"] = "unverified"
         out["summary"] = (f"UNVERIFIED: no model, product line or product name given for {brand}, so no recall could be ruled out "
-                          "(add the model number or UPC and run again)")
+                          + (f"(UPC {upc_digits} is not listed on any {brand} recall, but most recalls list no UPC; add the model number "
+                             "and run again)" if upc_key else "(add the model number or UPC and run again)"))
     else:
         out["status"] = "none"
         out["summary"] = f"NONE: no CPSC recall of {brand} matches {product or 'this product'} ({out['searched']}); U.S. CPSC recalls only"

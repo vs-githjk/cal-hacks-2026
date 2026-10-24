@@ -149,3 +149,51 @@ def test_a_non_dict_products_entry_does_not_crash(tmp_path):
 def test_sizes_and_clock_speeds_are_not_model_tokens():
     model, _ = _tokens("Galaxy S24 Ultra 256GB 2.4GHz 128G", "Samsung")
     assert model == {"s24"}
+
+
+# --- #314 probes ---------------------------------------------------------------------------------------------------
+def test_a_upc_miss_on_a_brand_only_check_is_unverified_never_none(tmp_path):  # HIGH: no real recall lists a UPC
+    r = check("", "Anker", "anker", tmp_path, upc="000000000001")
+    assert r["status"] == "unverified" and r["summary"].startswith("UNVERIFIED: no model")
+
+
+def test_a_upc_miss_on_a_generic_only_name_with_no_category_hit_is_unverified(tmp_path):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["841234567890"])
+    r = check_product("Anker Power Bank", "Anker", upc="841234567891", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "unverified" and r["matches"] == [] and r["possible"] == []
+
+
+def test_a_listed_upc_on_a_brand_only_check_is_still_recalled(tmp_path):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["841234567890"])
+    r = check_product("", "Anker", upc="841234567890", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled" and r["matches"][0]["match_on"] == "UPC 841234567890"
+
+
+def test_a_name_with_only_a_size_is_unverified_never_none(tmp_path):  # MEDIUM: "128g" is a size, not a product signal
+    assert check("Anker 128g", "Anker", "anker", tmp_path)["status"] == "unverified"
+    assert check("128GB", "Anker", "anker", tmp_path)["status"] == "unverified"
+
+
+def test_a_four_digit_product_line_still_counts(tmp_path):
+    assert check("PowerCore 10000 A1229", "Anker", "anker", tmp_path)["possible"][0]["match_on"] == "product line 10000"
+    assert check("10000", "Anker", "anker", tmp_path)["status"] == "possible"
+
+
+def test_one_upc_field_holding_several_upcs_matches_each(tmp_path):  # MEDIUM: "a, b" used to become one long number
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["841234567890, 841234567891"])
+    r = check_product("Charger", "Anker", upc="841234567891", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled" and r["matches"][0]["match_on"] == "UPC 841234567891"
+
+
+def test_two_short_codes_never_join_into_a_false_upc_match(tmp_path):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["1234, 5678"])
+    r = check_product("Charger", "Anker", upc="12345678", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] != "recalled" and r["matches"] == []
+
+
+@pytest.mark.parametrize("listed", ["841234567890 / 841234567891", "841234567890; 0841234567891", "841234567890 841234567891",
+                                    "UPC 841234567891"])
+def test_upc_lists_with_other_separators_match_each_code(tmp_path, listed):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=[listed])
+    r = check_product("Charger", "Anker", upc="841234567891", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled"

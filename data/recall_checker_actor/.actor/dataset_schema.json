@@ -27,7 +27,7 @@
    },
    "status": {
     "type": "string",
-    "description": "recalled (exact model or UPC), possible (same product line or product name, not this model), none, or unverified (no brand, or the lookup failed)"
+    "description": "recalled (exact model or UPC), possible (same product line or product name, not this model), none, or unverified (no brand, no model, product line or product word, or the lookup failed)"
    },
    "summary": {
     "type": "string",

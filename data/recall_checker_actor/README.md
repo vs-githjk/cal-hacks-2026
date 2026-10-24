@@ -5,7 +5,7 @@
 - **recalled**: a recall names this exact model or UPC;
 - **possible**: a recall of the same brand names the same product line or product name, but not this model (a lead to check, never called a match);
 - **none**: CPSC answered and no recall of that brand matches;
-- **unverified**: no brand was given, or the lookup failed. A failure is never reported as "none".
+- **unverified**: no brand was given, nothing to match (no model, product line or product word), or the lookup failed. A failure is never reported as "none".
 
 Every match carries the **recall page on cpsc.gov**, the date, the **hazard**, the **remedy** (refund, repair or replacement) and how many **units** were recalled.
 
@@ -27,9 +27,10 @@ Press **Start** with the default form. Here is what it returned, as a dated samp
 2. **Recalled** needs your **UPC** listed on the recall (leading zeros are ignored, so a 12-digit UPC-A matches the same code listed as a 13-digit EAN-13), or a **model token** from your product name (letters and digits, such as `A1263`, `Note7`, `B650E-F`) in the recall's title, product names or model numbers.
 3. **Possible** is a lead, never a match: a **product-line number** (digits only, such as `10000`), a **distinctive product word** (such as `Soundcore` or `PowerCore`), a model named only in the recall's description (which may say "this model is NOT affected"), or, for a name made only of generic words like "Power Bank", every one of those words in the recall.
 4. Sizes like `10000mAh`, `65W`, `16GB` or `2.4GHz` are read as product lines or ignored, never as model numbers.
-5. A brand with no model, product line or product word is **unverified** and free: nothing was matched, so it can never say "none".
+5. A brand with no model, product line (4+ digits, such as `10000`) or product word is **unverified** and free: nothing was matched, so it can never say "none". This holds even when you give a UPC and it is not found: most recalls list no UPC, so a UPC that is not listed rules nothing out (a UPC that is listed is still **recalled**). A size alone, such as `Anker 128GB`, is not a product signal either.
+6. One recall field may list several UPCs (`841234567890, 841234567891`): each code is compared on its own, and two short codes are never joined into one.
 
-Add the model number or UPC for the most precise answer. Without one, the best you can get is "possible".
+Add the model number for the most precise answer, and the UPC if you have it. Without a model, the best you can get is "possible" (or "recalled" if the recall lists your UPC).
 
 ## Input
 
