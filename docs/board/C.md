@@ -79,3 +79,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [08:52] #145: advocate.same_seller: bids from different seller ids that share a payee, a declared owner or a non-marketplace listing host count as one seller; only the group's cheapest stays, the others are vetoed with both seller ids; the current demo run (demo/out/sample-run.json) groups nothing
 - 09:29 #175: normalize.landed reads eBay '+$N delivery|shipping'; 3 eBay rows now have landed prices; demo winner unchanged. PR open.
 - 11:03 #205: Apify Actor fallbacks (down, slow 6 s, quota 402/429, empty) all give unverified + 'claim check unavailable', one call, no retry; row in REAL_VS_SIMULATED. PR open.
+- 11:01 #204 (c11): baselines read saved Bright Data rows if present (never call it); tests for dated rows with URLs and source labels, two owners on the demo item, feed date range. PR open.

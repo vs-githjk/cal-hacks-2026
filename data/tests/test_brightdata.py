@@ -243,3 +243,17 @@ def test_unverified_store_rows_say_so(monkeypatch):
     rows = bd.observations(client=fake.client(), now=NOW, urls=[mc])
     assert rows[0]["store"] == "microcenter" and rows[0]["mapping"] == "unverified"
     assert dict(fake.requests[0].url.params)["dataset_id"] == "gd_mkckexq2uquhupguv"
+
+
+# #197 L2: only a numeric final_price or one plain $N.NN price is read; anything else is unreadable (no price)
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize("raw, want", [
+    (1299.99, 1299.99), (1300, 1300.0), ("$1,299.99", 1299.99), ("1299.99", 1299.99), ("$ 1,299", 1299.0), (" $989.00 ", 989.0),
+    ("-5", None), (-5, None), ("$9.99/mo for 24 months", None), ("1.299,99", None), ("$1,299.99 - $1,499.99", None),
+    ("from $999", None), ("12.999", None), ("1,29,999", None), ("", None), (None, None), (True, None), (float("nan"), None),
+    ("$0.00", None), ("1e3", None),
+])
+def test_price_accepts_only_a_number_or_one_plain_dollar_amount(raw, want):
+    assert bd._price(raw) == want, raw

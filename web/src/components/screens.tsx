@@ -1,10 +1,10 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import type { ApprovalView, ReviewView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
+import { originMixLabel, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
-import { OriginChip, Pill, SampleOnly } from "./ui";
+import { Pill, SampleOnly } from "./ui";
 import { DotPattern } from "./ui/dot-pattern";
 
 
@@ -88,6 +88,7 @@ export interface MarketScreenProps {
 
 export function MarketScreen(p: MarketScreenProps) {
   const c = p.originCounts;
+  const mixLabel = originMixLabel(c);
   const s = p.sample ?? {};
   return (
     <div className="grid gap-3.5">
@@ -98,7 +99,7 @@ export function MarketScreen(p: MarketScreenProps) {
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}
           {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}
-          {p.round && <OriginChip origin={p.round.origin} />}
+          {mixLabel && <span className="font-mono text-[12px]">{mixLabel}</span>}
         </div>
       </div>
       <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
