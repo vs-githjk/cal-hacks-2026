@@ -61,8 +61,11 @@ class _Logger:
 
 def _buyer_agent():
     agents_dir = str(Path(__file__).resolve().parents[1])
+    buyer_dir = str(Path(__file__).resolve().parent)
     if agents_dir not in sys.path:
         sys.path.insert(0, agents_dir)
+    if buyer_dir not in sys.path:
+        sys.path.insert(0, buyer_dir)
     return importlib.import_module("buyer_agent")
 
 
@@ -100,6 +103,7 @@ class ReplayMarketAdapter:
         self.ctx = _Context(transport)
         self._started = False
         self._entered = False
+        self._scratch_nonce_store = None
 
     def __enter__(self):
         if self._entered:
@@ -122,6 +126,27 @@ class ReplayMarketAdapter:
             raise ReplayError(f"buyer runtime globals cannot be isolated: {type(exc).__name__}") from None
         self._originals = (self.buyer.business_now, self.buyer.crs.check_sellers,
                            self.buyer.common.screen, self.buyer.common.screen_bid)
+        self._replay_module = importlib.import_module("agents.buyer.replay")
+        self._replay_path_original = self._replay_module._state_path
+
+        def guarded_state_path(value):
+            path = self._replay_path_original(value)
+            protected = [state.DEFAULT_DB_PATH]
+            buyer_state_module = getattr(self.buyer, "buyer_state", None)
+            if buyer_state_module is not None:
+                protected.append(getattr(buyer_state_module, "DEFAULT_DB_PATH", None))
+            try:
+                resolved = path.resolve()
+                matches_protected = any(candidate is not None and Path(candidate).resolve() == resolved
+                                        for candidate in protected)
+            except (OSError, RuntimeError, TypeError, ValueError):
+                raise ReplayError("replay state path is invalid") from None
+            if matches_protected:
+                raise ReplayError("replay state must not use either buyer live default database")
+            return path
+
+        self._replay_path_guard = guarded_state_path
+        self._replay_module._state_path = guarded_state_path
         self._socket_originals = (socket.socket.connect, socket.socket.connect_ex,
                                   socket.create_connection, socket.getaddrinfo,
                                   socket.socket.sendto, getattr(socket.socket, "sendmsg", None))
@@ -146,6 +171,7 @@ class ReplayMarketAdapter:
         try:
             (self.buyer.business_now, self.buyer.crs.check_sellers,
              self.buyer.common.screen, self.buyer.common.screen_bid) = self._originals
+            self._replay_module._state_path = self._replay_path_original
             (socket.socket.connect, socket.socket.connect_ex,
              socket.create_connection, socket.getaddrinfo,
              socket.socket.sendto, original_sendmsg) = self._socket_originals
@@ -170,6 +196,15 @@ class ReplayMarketAdapter:
                 self.buyer.buyer_state.DEFAULT_DB_PATH = self._buyer_state_path
             self._started = False
         finally:
+            nonce_store = self._scratch_nonce_store
+            original_store = self._global_snapshot.get("NONCE_STORE")
+            if nonce_store is not None and nonce_store is not original_store:
+                close = getattr(nonce_store, "close", None)
+                if callable(close):
+                    close()
+                else:
+                    nonce_store._db.close()
+            self._scratch_nonce_store = None
             self._entered = False
         return False
 
@@ -301,7 +336,8 @@ class ReplayMarketAdapter:
         self.buyer.buyer_state.DEFAULT_DB_PATH = replay_path
         from pay.replay import NonceStore
 
-        self.buyer.NONCE_STORE = NonceStore()
+        self._scratch_nonce_store = NonceStore()
+        self.buyer.NONCE_STORE = self._scratch_nonce_store
 
 
 def _deny_network(*args, **kwargs):

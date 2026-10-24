@@ -14,6 +14,7 @@ import pytest
 
 from agents.buyer import replay, state
 from agents.buyer.replay import run_replay
+from agents.buyer import replay_market
 from agents.buyer.replay_market import ReplayMarketAdapter, SimProvider, SimTransport
 
 
@@ -440,3 +441,49 @@ def test_replay_rejects_unmarked_provider(buyer):
     with pytest.raises(replay.ReplayError, match="explicit SimProvider"):
         ReplayMarketAdapter(clock=SimClock(), checker=FakeChecker(), provider=UnmarkedProvider(),
                             transport=SimTransport())
+
+
+@pytest.mark.parametrize("protected", ["replay", "buyer"])
+def test_protected_state_path_is_rejected_before_database_open(tmp_path, replay_stack, monkeypatch, protected):
+    buyer, _, _, _, _, runner = replay_stack
+    protected_path = tmp_path / protected / ".state" / "state.sqlite3"
+    replay_default = tmp_path / "adapter-default" / ".state" / "state.sqlite3"
+    if protected == "replay":
+        monkeypatch.setattr(state, "DEFAULT_DB_PATH", protected_path)
+    else:
+        monkeypatch.setattr(state, "DEFAULT_DB_PATH", replay_default)
+        buyer_state_module = getattr(buyer, "buyer_state", None)
+        if buyer_state_module is None:
+            from types import SimpleNamespace
+            buyer_state_module = SimpleNamespace()
+            monkeypatch.setattr(buyer, "buyer_state", buyer_state_module, raising=False)
+        monkeypatch.setattr(buyer_state_module, "DEFAULT_DB_PATH", protected_path, raising=False)
+
+    def forbid_open(_path):
+        raise AssertionError("protected replay path reached open_state")
+
+    monkeypatch.setattr(state, "open_state", forbid_open)
+    with pytest.raises(replay.ReplayError):
+        runner.run(run_replay([row(T0 + timedelta(seconds=1))], scenario(T0 + timedelta(minutes=1)),
+                              replay_stack[3], replay_stack[4], protected_path))
+
+
+def test_buyer_loader_finds_nested_module_without_preload(monkeypatch, buyer):
+    module_paths = {str(Path(replay_market.__file__).resolve().parent.parent),
+                    str(Path(replay_market.__file__).resolve().parent)}
+    monkeypatch.setattr(sys, "path", [entry for entry in sys.path
+                                      if str(Path(entry or ".").resolve()) not in module_paths])
+    prior = sys.modules.pop("buyer_agent", None)
+    fake_agent = Mock()
+    fake_agent.on_message.side_effect = lambda *a, **k: lambda fn: fn
+    fake_agent.on_interval.side_effect = lambda *a, **k: lambda fn: fn
+    fake_agent.on_rest_post.side_effect = lambda *a, **k: lambda fn: fn
+    fake_agent.on_rest_get.side_effect = lambda *a, **k: lambda fn: fn
+    try:
+        with patch("uagents.Agent", return_value=fake_agent):
+            loaded = replay_market._buyer_agent()
+        assert Path(loaded.__file__).resolve() == Path(replay_market.__file__).with_name("buyer_agent.py").resolve()
+    finally:
+        sys.modules.pop("buyer_agent", None)
+        if prior is not None:
+            sys.modules["buyer_agent"] = prior
