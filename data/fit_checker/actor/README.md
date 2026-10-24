@@ -73,7 +73,7 @@ Or give the same build as JSON parts in `parts` (it overrides the form for any p
 - **cooler:** `height_mm`, `sockets`, or `type: "aio"` with `radiator_mm`
 - **storage** (a list): `interface` (for example "M.2 PCIe 4.0 X4" or "SATA 6.0 Gb/s")
 
-A part can also be given as just its name (`"cooler": "Noctua NH-D15"`): it is looked up by that exact name, and with no maker data its rules come back uncertain. A drive must be an object (`{"interface": "M.2 PCIe 4.0 X4"}`); a plain string drive is named as unreadable. Sizes must be finite numbers above 0 (NaN, infinity and 0 count as unknown and are named). Your own numbers always win over our maker data. Sockets and memory types are read in any case (`am5` is `AM5`), numbers may be strings (`"300"`), and a size of 0 counts as unknown.
+A part can also be given as just its name (`"cooler": "Noctua NH-D15"`): it is looked up by that exact name, and with no maker data its rules come back uncertain. A drive must be an object (`{"interface": "M.2 PCIe 4.0 X4"}`); a plain string drive is named as unreadable. Sizes must be finite numbers above 0 (NaN, infinity and 0 count as unknown and are named). Counts (cables, slots, ports, modules) must be whole numbers, never negative; a negative or fractional count, or an implausible figure like a 1 W TDP, is named and treated as unknown. Form factors are read in any case (`atx`, `Micro ATX`) and lists may be comma strings (`"AM5, AM4"`). A cooler's `type: "aio"` and a case's `type` are used exactly as given. Your own numbers always win over our maker data. Sockets and memory types are read in any case (`am5` is `AM5`), numbers may be strings (`"300"`), and a size of 0 counts as unknown.
 
 ## Output
 

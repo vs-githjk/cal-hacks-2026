@@ -47,7 +47,12 @@ NUMBERS = {"tdp_w", "max_power_w", "memory_slots", "memory_max_speed_mhz", "m2_s
 POSITIVE = {"tdp_w", "max_power_w", "memory_slots", "modules", "length_mm", "board_power_w", "rec_psu_w", "wattage",
             "max_gpu_length_mm", "max_cooler_height_mm", "height_mm", "radiator_mm"}  # 0 here means unknown, never a pass
 LISTS = {"sockets", "motherboard_form_factors", "psu_form_factors", "radiator_mounts_mm"}
-UPPER = {"socket", "memory_type", "type"}  # am5 and AM5 are the same socket; ddr5 and DDR5 the same memory
+COUNTS = {"memory_slots", "modules", "m2_slots", "sata_ports", "pcie_16pin", "pcie_8pin"}  # whole numbers, never negative
+MINIMUM = {"tdp_w": 15, "max_power_w": 15, "wattage": 100}  # below this the figure is junk (a 1 W TDP), so it counts as unknown
+UPPER = {"socket", "memory_type", "memory_form", "form"}  # am5 and AM5 are the same socket; ddr5 and DDR5, dimm and DIMM the same
+FORM_FACTORS = {"ATX": "ATX", "MICRO ATX": "Micro ATX", "MICROATX": "Micro ATX", "MATX": "Micro ATX", "MINI ITX": "Mini ITX", "MINI-ITX": "Mini ITX",
+                "ITX": "Mini ITX", "EATX": "EATX", "E-ATX": "EATX", "XL ATX": "XL ATX", "SFX": "SFX", "SFX-L": "SFX-L", "TFX": "TFX"}
+FORM_KEYS = {"form_factor", "motherboard_form_factors", "psu_form_factors"}  # a cooler's or case's own `type` is never changed
 BRANDS = {"MSI": r"\bmsi\b", "GIGABYTE": r"\bgigabyte\b|\bgv-n", "ASUS": r"\basus\b|\b(prime|proart|tuf)-?rtx", "PNY": r"\bpny\b|\bvcg"}
 CHIPSET_ESTIMATE = "chipset reference figure from NVIDIA or AMD (tables.GPU_POWER), an estimate, not this card's maker page"
 
@@ -107,15 +112,26 @@ def _clean(attrs: dict, problems: list, cat: str) -> dict:
             except (TypeError, ValueError, OverflowError):
                 problems.append(f"{cat}.{k} is not a finite number ({v!r})")
                 continue
-            if k in POSITIVE and v <= 0:
-                problems.append(f"{cat}.{k} must be above 0 ({v!r}); treated as unknown")
+            if v < 0:
+                problems.append(f"{cat}.{k} cannot be negative ({v!r}); treated as unknown")
+                continue
+            if k in COUNTS and not float(v).is_integer():
+                problems.append(f"{cat}.{k} must be a whole number ({v!r}); treated as unknown")
+                continue
+            if (k in POSITIVE and v <= 0) or v < MINIMUM.get(k, 0):
+                problems.append(f"{cat}.{k} is not a usable figure ({v!r}); treated as unknown")
                 continue
         if k in LISTS and isinstance(v, str):
-            v = [v]
+            v = [x.strip() for x in v.split(",") if x.strip()] if k in ("sockets", *FORM_KEYS) else [v]  # "AM5, AM4" is two sockets
         if k in UPPER and isinstance(v, str):
             v = v.strip().upper()
+        if k == "type" and cat == "memory" and isinstance(v, str):
+            v = v.strip().upper()  # a memory type only; a cooler's "aio" and a case's "ATX Mid Tower" are left as given
         if k == "sockets" and isinstance(v, list):
-            v = [s.strip().upper() if isinstance(s, str) else s for s in v]
+            v = [x.strip().upper() if isinstance(x, str) else x for x in v]
+        if k in FORM_KEYS:
+            canon = lambda x: FORM_FACTORS.get(re.sub(r"\s+", " ", x.strip()).upper(), x.strip()) if isinstance(x, str) else x
+            v = [canon(x) for x in v] if isinstance(v, list) else canon(v)
         out[k] = v
     return out
 

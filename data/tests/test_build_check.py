@@ -310,3 +310,54 @@ def test_a_resume_without_its_output_record_does_not_call_earlier_builds_not_run
     asyncio.run(load_main(monkeypatch, actor).main())
     line = actor.status[-1][0]
     assert "not run" not in line and "1 earlier build(s) were checked before a restart" in line
+
+
+# review fixes (#286)
+AIO = {"name": "360 AIO", "type": "aio", "radiator_mm": 360, "height_mm": 150, "sockets": ["AM5"]}
+
+
+def test_an_aio_cooler_with_no_fitting_radiator_mount_fails():
+    r = check_build({"cooler": AIO, "case": {"name": "k", "radiator_mounts_mm": [120]}})
+    assert by_rule(r)["fit.cooler_height"]["verdict"] == "fail" and "360 mm radiator has no mount" in by_rule(r)["fit.cooler_height"]["reason"]
+    assert r["verdict"] == "fail" and r["parts"]["cooler"]["attrs"]["type"] == "aio"  # the type is never uppercased
+
+
+def test_an_aio_with_a_fitting_mount_passes_and_with_no_mounts_given_is_uncertain():
+    ok = check_build({"cooler": AIO, "case": {"name": "k", "radiator_mounts_mm": [240, 360]}})
+    assert by_rule(ok)["fit.cooler_height"]["verdict"] == "pass"
+    unknown = check_build({"cooler": AIO, "case": {"name": "k"}})
+    assert by_rule(unknown)["fit.cooler_height"]["verdict"] == "uncertain" and unknown["verdict"] == "uncertain"
+
+
+def test_a_case_type_keeps_its_case_and_finds_the_board_table():
+    r = check_build({"motherboard": {"name": "b", "form_factor": "ATX"}, "case": {"name": "k", "type": "ATX Mid Tower"}})
+    assert by_rule(r)["fit.form_factor"]["verdict"] == "pass" and r["parts"]["case"]["attrs"]["type"] == "ATX Mid Tower"
+
+
+@pytest.mark.parametrize("part,field,drive", [("psu", "pcie_16pin", None), ("psu", "pcie_8pin", None),
+                                              ("motherboard", "m2_slots", {"interface": "M.2 PCIe 4.0 X4"}),
+                                              ("motherboard", "sata_ports", {"interface": "SATA 6.0 Gb/s"})])
+@pytest.mark.parametrize("bad", [-1, -3, "-2", 1.5])
+def test_negative_and_fractional_counts_never_pass(part, field, drive, bad):
+    parts = {"psu": {"name": "p", "wattage": 750, "pcie_16pin": 0, "pcie_8pin": 0}, "gpu": {"name": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC"},
+             "motherboard": {"name": "b"}}
+    parts[part][field] = bad
+    if drive:
+        parts["storage"] = [drive]
+    r = check_build(parts)
+    assert r["verdict"] != "pass" and any(f"{part}.{field}" in p for p in r["problems"])
+    assert all(c["verdict"] != "pass" for c in r["checks"] if c["rule_id"] in ("fit.gpu_connectors", "fit.storage"))
+
+
+def test_the_lows_lowercase_sizes_comma_sockets_and_tiny_tdp():
+    r = check_build({"cpu": {"name": "c", "socket": "AM5"}, "cooler": {"name": "k", "sockets": "AM5, AM4", "height_mm": 120},
+                     "motherboard": {"name": "b", "socket": "am5", "form_factor": "atx"}, "case": {"name": "k", "motherboard_form_factors": "atx, micro atx"}})
+    assert by_rule(r)["fit.cooler_socket"]["verdict"] == "pass" and by_rule(r)["fit.form_factor"]["verdict"] == "pass"
+    assert by_rule(r)["fit.cpu_socket"]["verdict"] == "pass"
+    tiny = check_build({"cpu": {"name": "c", "vendor": "AMD", "tdp_w": 1}, "psu": {"name": "p", "wattage": 650}})
+    assert "cpu.tdp_w" in " ".join(tiny["problems"]) and "tdp_w" not in tiny["parts"]["cpu"]["attrs"]
+
+
+def test_a_memory_type_and_form_are_still_read_in_any_case():
+    r = check_build({"motherboard": {"name": "Asus PRIME B650-PLUS WIFI"}, "memory": {"name": "m", "type": "ddr5", "form": "dimm"}})
+    assert by_rule(r)["fit.ram_type"]["verdict"] == "pass" and by_rule(r)["fit.ram_form"]["verdict"] == "pass"
