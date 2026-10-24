@@ -16,13 +16,13 @@ _NOUN = rx(r"\b(?:words?|codes?|phrase|passphrase|pass\s+phrase|pair|digits|numb
 _DEVICE = r"(?:screen|display|device|phone|tablet|app|browser|monitor|laptop|computer)"
 _THEIRS = r"(?:your|ur|the\s+buyer'?s?|the\s+owner'?s?|their|his|her)"
 _WHERE = rx(r"\b" + _THEIRS + r"\s+(?:\w+\s+){0,2}?" + _DEVICE + r"\b|\bon\s+(?:the\s+)?(?:screen|display)\b"
-            r"|\bpopped\s+up\b|\b(?:you|they)\s+(?:see|saw|got|received)\b|\byour\s+owner\s+(?:got|sees|saw|received)\b"
+            r"|\bscreen\s+(?:codes?|words?)\b|\bpopped\s+up\b|\b(?:you|they)\s+(?:see|saw|got|received)\b|\byour\s+owner\s+(?:got|sees|saw|received)\b"
             r"|\b(?:hit|tap|press|click)\s+(?:the\s+)?approve\b|\bit\s+(?:shows|displays|says)\b|\bpop-?\s?ups?\b"
             r"|\b(?:the\s+buyer'?s?|the\s+owner'?s?|your\s+owner'?s?|your\s+buyer'?s?)\s+(?:\w+\s+){0,2}?"
             r"(?:screen|display|phone|device|app|tablet)\b|\bonce\s+approved\b|\bafter\s+approving\b|\bwhen\s+(?:you|u)\s+approve\b"
             r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b|\bapproval\b|\bverification\b|\bpairing\b|\bone[-\s]time\b|\btwo[-\s]word\b|\b2[-\s]word\b|\bmagic\b|\bsecret\b")
 _ASK = rx(r"\?|\b(?:please|pls|plz)\b|\b(?:read|recite|tell|say|send|give|share|type|enter|repeat|spell|paste|text|dm|e-?mail|reply"
-          r"|respond|what|whats|which|show|echo|mirror|wants|forward|provide|confirm|post|drop|put|need|want|let\s+(?:me|us)\s+know|aloud|out|message|ping|shoot"
+          r"|respond|what|whats|which|show|echo|mirror|wants|input|include|insert|fill\s+in|forward|provide|confirm|post|drop|put|need|want|let\s+(?:me|us)\s+know|aloud|out|message|ping|shoot"
           r"|whisper|relay|disclose|reveal|list|write|state|required|waiting|like|send\s+over|pass\s+(?:on|along))\b"
           r"|\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase)\s+needed\b")  # not a bare "needed": "no pairing code needed"
 # The approval itself or the buyer's own device: a code noun next to one of these is an ask even with no verb at all
@@ -46,7 +46,12 @@ _CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|wor
 # their own device. It is skipped only when it names no approval credential and nothing sends the code to the seller.
 _HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
 _TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
-                r"|give|what|whats|which|relay|whisper|aloud)\b")
+                r"|give|what|whats|relay|whisper|aloud|include|list|write|form|notes?|comments?|portal|checkout|gift|listing"
+                r"|field|website|site|cart|account|seller'?s?|box|below|above)\b"
+                r"|\b(?:order|delivery|shipping)\s+(?:notes?|comments?|instructions|form|field|message)\b"
+                # the code's source is the buyer's screen or someone else's device: never the buyer's own headset
+                r"|\b(?:on|from|off|in)\s+(?:your|ur|the\s+buyer'?s?|the\s+owner'?s?|your\s+owner'?s?)\s+(?:\w+\s+)?screen\b"
+                r"|\b(?:the\s+buyer'?s?|the\s+owner'?s?|your\s+owner'?s?|your\s+buyer'?s?)\s+(?:\w+\s+){0,2}?" + _DEVICE + r"\b")
 # "tell me what your screen says", "what does the buyer's screen read": relaying the screen's text, no noun needed
 _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THEIRS + r"\s+" + _DEVICE +
             r"\b[^.!?]{0,15}?\b(?:says?|reads?|reading|shows?\s+(?:as\s+)?(?:the\s+)?(?:code|words?))\b"
