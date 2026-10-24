@@ -17,3 +17,6 @@ target/
 .env*.local
 *.tsbuildinfo
 next-env.d.ts
+
+# local render-check screenshots
+shot-*.png
