@@ -18,7 +18,7 @@ except ImportError:
     CTX = ssl.create_default_context()
 
 from .actors import ACTORS
-from .normalize import FIELDS, first, to_spec_card
+from .normalize import FIELDS, first, strip_private, to_spec_card
 
 HERE = Path(__file__).resolve().parent
 API = "https://api.apify.com/v2"
@@ -41,27 +41,31 @@ def call(method, path, body=None, timeout=330):
 
 
 def run(store):
+    """Never raises: every outcome, including a paid run that broke later, comes back as a log record."""
     actor, inp = ACTORS[store]
     started = time.time()
+    rec = {"store": store, "actor": actor, "input": inp}
     try:
         r = call("POST", f"/acts/{actor.replace('/', '~')}/runs?waitForFinish=300&maxItems=10", inp)["data"]
+        rec.update(run_id=r["id"], status=r["status"], cost_usd=r.get("usageTotalUsd"))
         while r["status"] in ("READY", "RUNNING") and time.time() - started < 420:
             time.sleep(10)
             r = call("GET", f"/actor-runs/{r['id']}")["data"]
-        items = call("GET", f"/datasets/{r['defaultDatasetId']}/items?clean=1&limit=10")
         if r["status"] in ("READY", "RUNNING"):
             call("POST", f"/actor-runs/{r['id']}/abort")
-    except Exception as e:  # a broken low-user actor is skipped, not retried
-        return {"store": store, "actor": actor, "status": f"ERROR {type(e).__name__}: {str(e)[:120]}"}
-    now = datetime.now(timezone.utc)
-    snap = f"{store}-{now:%Y%m%dT%H%MZ}"
-    (HERE / "raw" / f"{store}.json").write_text(json.dumps(items[:3], indent=1))
-    cards = [to_spec_card(store, it, snap, now.isoformat(timespec="seconds")) for it in items]
-    (HERE / "snapshots" / f"{snap}.json").write_text(json.dumps(cards, indent=1))
-    present = sorted(k for k in FIELDS if items and any(first(it, FIELDS[k]) not in (None, "") for it in items))
-    return {"store": store, "actor": actor, "run_id": r["id"], "status": r["status"], "items": len(items),
-            "cost_usd": r.get("usageTotalUsd"), "secs": round(time.time() - started), "fields": present,
-            "snapshot_id": snap, "input": inp}
+        rec.update(status=r["status"], cost_usd=r.get("usageTotalUsd"))
+        items = call("GET", f"/datasets/{r['defaultDatasetId']}/items?clean=1&limit=10")
+        now = datetime.now(timezone.utc)
+        snap = f"{store}-{now:%Y%m%dT%H%MZ}"
+        (HERE / "raw" / f"{store}.json").write_text(json.dumps([strip_private(store, it) for it in items[:3]], indent=1))
+        cards = [to_spec_card(store, it, snap, now.isoformat(timespec="seconds")) for it in items]
+        (HERE / "snapshots" / f"{snap}.json").write_text(json.dumps(cards, indent=1))
+        rec.update(items=len(items), snapshot_id=snap,
+                   fields=sorted(k for k in FIELDS if any(first(it, FIELDS[k]) not in (None, "") for it in items)))
+    except Exception as e:  # a broken low-user actor is skipped, not retried; its cost stays in the log
+        rec["status"] = f"ERROR {type(e).__name__}: {str(e)[:120]}"
+    rec["secs"] = round(time.time() - started)
+    return rec
 
 
 def renormalize():
@@ -87,6 +91,8 @@ if __name__ == "__main__":
             print(r["store"], r.get("items"), r.get("cost_usd"), r.get("fields"))
         sys.exit()
     stores = sys.argv[1:] or list(ACTORS)
+    for d in ("raw", "snapshots"):
+        (HERE / d).mkdir(exist_ok=True)
     with ThreadPoolExecutor(4) as pool:  # free plan: max 5 concurrent runs
         results = list(pool.map(run, stores))
     log = HERE / "runs.json"
