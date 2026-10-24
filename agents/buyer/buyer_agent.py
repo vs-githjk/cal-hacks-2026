@@ -101,7 +101,8 @@ def blocked_reasons(sender: str, text: str, context: dict | None = None) -> str 
 
 
 async def emit(ctx: Context, cls: str, text: str):
-    """Step event: at most one per class per goal per 10 minutes reaches the owner; the rest are only logged."""
+    """Step event: every one reaches the agent feed as a fixed label; at most one per class per goal per 10 minutes
+    reaches the owner's chat, the rest are only logged."""
     now = time.time()
     if hunt.should_emit(ROUND.setdefault("last_sent", {}), cls, now):
         ROUND["last_sent"][cls] = now
@@ -112,6 +113,7 @@ async def emit(ctx: Context, cls: str, text: str):
             ctx.logger.info(f"step event ({cls}, sent with the next message)")
     else:
         ctx.logger.info(f"step event ({cls}, throttled)")
+    log_msg(ctx, "buyer", "owner", cls.replace(" ", "_"))  # last, so the feed's "last message" is the event
 
 
 def set_state(state: str):

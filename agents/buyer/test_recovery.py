@@ -116,6 +116,16 @@ def test_recovery_notice_is_not_suppressed_by_progress_throttle(buyer):
     assert 'next round' in ctx.owner_text()
 
 
+def test_every_step_event_reaches_the_feed_but_chat_is_throttled(buyer):
+    ctx = Context()
+    asyncio.run(buyer.emit(ctx, 'bid in', 'Bid in: Seller at $582.00 (sealed round still open).'))
+    asyncio.run(buyer.emit(ctx, 'bid in', 'Bid in: Other at $590.00 (sealed round still open).'))
+    feed = [c.args[0] for c in ctx.logger.info.call_args_list if c.args[0].startswith('AGENT_MSG')]
+    assert feed == ['AGENT_MSG name=buyer to=owner text=bid in'] * 2  # fixed label, never the bid text
+    assert ctx.logger.info.call_args_list[-1].args[0] == feed[-1]  # last line, so the feed shows it
+    assert buyer.ROUND['events'] == ['Bid in: Seller at $582.00 (sealed round still open).']  # one per 10 min
+
+
 def test_shield_blocked_review_retries(buyer, monkeypatch):
     monkeypatch.setattr(buyer, 'blocked_reasons', lambda *a: 'injection')
     ctx = Context()
