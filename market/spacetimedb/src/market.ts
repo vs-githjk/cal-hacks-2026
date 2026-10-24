@@ -587,6 +587,9 @@ export function denyApproval(ctx: Ctx, a: { mandateHash: string; reason: string 
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) throw new SenderError('already approved; a denial can no longer release the units');
   for (const hd of [...ctx.db.stockHold.bidId.filter(bidIdOfDeal(md.dealId))]) {
     if (hd.state !== 'held') continue;
+    // A mandate can name a bid that did not exist yet, so a denial frees only the holds of the buyer whose need the round
+    // served (the same owner test claimDealUnits uses), never a rival's unit.
+    if (ctx.db.need.id.find(ctx.db.round.id.find(hd.roundId)?.needId ?? '')?.buyerId !== md.buyerId) continue;
     ctx.db.stockHold.id.update({ ...hd, state: 'released' });
     event(ctx, 'stock_released', 'stock_hold', hd.bidId, 'A held unit was released: the approval was denied', hd.sellerId, md.origin);
   }

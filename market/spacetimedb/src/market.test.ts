@@ -1096,7 +1096,34 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     // Bob's own round is untouched: his round-2 winner is the next best bid and holds a different line.
     close('round-2');
     expect(holds().filter((x) => x.state === 'held').map((x) => x.bidId).sort()).toEqual(['bid-a1', 'bid-b2']);
-    // Vidyut still buys his own unit.
+    // The unit still goes to Vidyut.
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    expect(holds().find((x) => x.bidId === 'bid-a1')!.state).toBe('held');
+  });
+
+  it('a rival mandate made before any bid exists cannot free your held unit: denying releases only holds the denier owns', () => {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(BOB, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2', buyerId: 'bob', goalId: 'goal-2' })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
+    // Bob names Vidyut's bid id before it exists: no bid, so no owner to refuse, and the mandate is made.
+    run(BOB, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'hb', id: 'mdt-b', nonce: 'nb', buyerId: 'bob', amount: 99999, dealId: 'deal-bid-a1' })));
+    for (const r of ['1', '2']) {
+      bidIn(A, `round-${r}`, `bid-a${r}`, 700);
+      bidIn(B, `round-${r}`, `bid-b${r}`, 760);
+      bidIn(C, `round-${r}`, `bid-c${r}`, 780);
+    }
+    advance(16_000);
+    close('round-1');
+    expect(holds().map((x) => [x.bidId, x.state])).toEqual([['bid-a1', 'held']]);
+    // Bob denies his own mandate: the hold on Vidyut's bid is not Bob's to release.
+    run(BOB, (ctx) => m.denyApproval(ctx, { mandateHash: 'hb', reason: 'no' }));
+    expect(holds().find((x) => x.bidId === 'bid-a1')!.state).toBe('held');
+    expect(events().some((e) => e.kind === 'stock_released')).toBe(false);
+    close('round-2');
+    expect(resultOf('bid-a2')).toMatchObject({ rank: 0, reasons: ['sold out to an earlier round'] });
+    expect(holds().find((x) => x.bidId === 'bid-a1')!.state).toBe('held');
+    // The unit still goes to Vidyut.
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
     expect(holds().find((x) => x.bidId === 'bid-a1')!.state).toBe('held');
   });
