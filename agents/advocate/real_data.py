@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path
@@ -89,12 +91,17 @@ def _listing_titles(rows) -> dict:
     return {r["url"]: r.get("title") or "" for r in rows if isinstance(r, dict) and r.get("url")}
 
 
+def our_brands(line: dict, titles: dict | None = None) -> set[str]:
+    """The brands OUR data names for a line: the SKU spec and our own listing row for its URL. Never seller fields."""
+    return _brands_in(line.get("sku_spec")) | _brands_in((titles or {}).get(line.get("listing_url") or "", ""))
+
+
 def brands_of(line: dict, titles: dict | None = None) -> tuple[set[str], str | None]:
     """-> (brands to look up, a note when the seller's brand disagrees). Our brand comes from the SKU spec and from our own
     listing row for the bid's listing URL; the seller's words (attrs.brand or vendor, offered spec, name, URL) can only ADD a
     lookup, never replace ours, so a seller-set brand is never a way past the recall check (#291)."""
     attrs = line.get("attrs") or {}
-    ours = _brands_in(line.get("sku_spec")) | _brands_in((titles or {}).get(line.get("listing_url") or "", ""))
+    ours = our_brands(line, titles)
     seller_set = {_norm(attrs[k]) for k in ("brand", "vendor") if isinstance(attrs.get(k), str) and attrs[k].strip()}
     theirs = _brands_in(f"{line.get('offered_spec') or ''} {attrs.get('name') or ''} {(line.get('listing_url') or '').replace('/', ' ')}")
     note = None
@@ -133,7 +140,11 @@ def recalls_for_bids(bids, fetch=None, now=None, cache_dir=None, rows=None, budg
     titles = _listing_titles(rows)
     wanted, notes = {}, []  # (sku, brand) -> bid ids
     for bid in bids:
-        for line in bid.get("lines", []):
+        for line in _lines(bid):
+            if not isinstance(line, dict):  # #330: a line we cannot read is unverified, never a TypeError that drops every card
+                notes.append(_note("advocate.recall_unverified", "Recall check unavailable for one bid line (unverified): "
+                                   "the line could not be read, so no recall lookup was made.", "https://www.cpsc.gov/Recalls"))
+                continue
             sku = _norm(line.get("sku_spec"))
             brands, note = brands_of(line, titles)
             if note:
@@ -142,6 +153,10 @@ def recalls_for_bids(bids, fetch=None, now=None, cache_dir=None, rows=None, budg
                 notes.append(_note("advocate.recall_unverified",
                                    f"Recall check unavailable for {sku} (unverified): no brand given, so no recall lookup was made.",
                                    "https://www.cpsc.gov/Recalls"))
+            elif not our_brands(line, titles) & set(BRANDS):  # #330: only the seller named a brand, so the lookup is theirs, not ours
+                notes.append(_note("advocate.recall_unverified",
+                                   f"Recall check for {sku} is unverified: brand not confirmed from our data, so the recall "
+                                   "lookup used the seller's brand only.", "https://www.cpsc.gov/Recalls"))
             for brand in brands:
                 wanted.setdefault((sku, brand), []).append(bid.get("id"))
     by_brand = {}
@@ -175,6 +190,12 @@ def recalls_for_bids(bids, fetch=None, now=None, cache_dir=None, rows=None, budg
     return found, notes
 
 
+def _lines(bid) -> list:
+    """A bid's lines as a list (anything else is no lines); each line is checked for shape by the caller."""
+    lines = bid.get("lines") if isinstance(bid, dict) else None
+    return lines if isinstance(lines, list) else []
+
+
 def with_notes(cards: list[dict], notes: list[dict]) -> list[dict]:
     """One labelled note per unverified lookup on every card (an INFO warning: it never changes the recommendation).
     A card whose reason is "No problems found" while a check could not run says "Some checks could not run" instead (#291),
@@ -197,14 +218,40 @@ def with_notes(cards: list[dict], notes: list[dict]) -> list[dict]:
 def advice_inputs(need: dict, bids: list[dict], fetch=None, now=None, as_of=None, rows=None, cache_dir=None):
     """Everything advocate_agent passes to checks.advise: baseline, records, recalls, notes. We hold no real seller records yet,
     so records is empty (no record warning) rather than the SIM table."""
-    skus = [i["sku_spec"] for i in need.get("items", [])] + [l["sku_spec"] for b in bids for l in b.get("lines", [])]
+    skus = [i.get("sku_spec") for i in need.get("items", []) if isinstance(i, dict)] + \
+           [l.get("sku_spec") for b in bids for l in _lines(b) if isinstance(l, dict)]
     baseline, notes = baseline_for(skus, as_of=as_of, rows=rows)
     recalls, recall_notes = recalls_for_bids(bids, fetch=fetch, now=now, cache_dir=cache_dir, rows=rows)
     return baseline, {}, recalls, notes + recall_notes
 
 
-def shield_baseline(as_of=None, rows=None) -> dict:
-    """The buyer's trusted price references: only real, dated baselines (no sample prices). A SKU without one gets no price
-    reference, which screen_bid and hunt.public_hint already handle."""
-    real, _ = baseline_for(["rtx 5070 ti"], as_of=as_of, rows=rows)
+def shield_baseline(skus, as_of=None, rows=None) -> dict:
+    """The buyer's trusted price references for these SKUs: only real, dated baselines (no sample prices). A SKU without one
+    gets no price reference, which screen_bid and hunt.public_hint already handle."""
+    real, _ = baseline_for([s for s in skus if s], as_of=as_of, rows=rows)
     return real
+
+
+SHIELD_TTL_S = 300.0  # the buyer re-reads its references this often, so a long-running agent never keeps a >24 h old price
+_SHIELD_CACHE: dict = {}
+_SHIELD_LOCK = threading.Lock()
+
+
+def cached_shield_baseline(skus, ttl_s: float = SHIELD_TTL_S, clock=time.monotonic, **kw) -> dict:
+    """shield_baseline for the round's own SKUs, cached for ttl_s (#330: not read once at import, not hard-coded to one SKU).
+    A failing read gives no reference for those SKUs (no price check), never a stale or sample price."""
+    key = tuple(sorted({_norm(s) for s in skus if s}))
+    if not key:
+        return {}
+    now = clock()
+    with _SHIELD_LOCK:
+        hit = _SHIELD_CACHE.get(key)
+        if hit and now - hit[0] < ttl_s:
+            return hit[1]
+    try:
+        value = shield_baseline(key, **kw)
+    except Exception:
+        value = {}
+    with _SHIELD_LOCK:
+        _SHIELD_CACHE[key] = (now, value)
+    return value

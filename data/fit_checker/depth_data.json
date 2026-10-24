@@ -88,8 +88,8 @@
   },
   {
    "name": "Cooler Master MasterBox NR200P",
-   "max_cooler_height_mm": 155,
-   "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L"
+   "max_cooler_height_mm": 153,
+   "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L; we use 153, the lower (glass panel) figure, since the panel is not known"
   },
   {
    "name": "NZXT H5 Flow",

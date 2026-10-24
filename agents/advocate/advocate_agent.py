@@ -1,5 +1,6 @@
 """Quality Advocate uAgent. Run from the agents folder: python -m advocate.advocate_agent
 Every word on a card comes from checks.py code; no model rewrites it, so seller text cannot steer a warning."""
+import asyncio
 import json
 from pathlib import Path
 
@@ -34,7 +35,8 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
         ctx.logger.warning(f"shield {verdict['verdict']} from {sender}: {verdict['reasons']}")
         return
     need, bids = json.loads(msg.need_json), json.loads(msg.bids_json)
-    baseline, records, recalls, notes = real_data.advice_inputs(need, bids)  # dated baseline, CPSC; unverified lookups become notes
+    # dated baseline, CPSC; unverified lookups become notes. In a thread: the CPSC lookups take up to 10 s (#330)
+    baseline, records, recalls, notes = await asyncio.to_thread(real_data.advice_inputs, need, bids)
     cards = real_data.with_notes(checks.advise(need, bids, baseline, records, recalls, owned=need.get("owned", {})), notes)
     for c in cards:
         common.validate("AdvocateCard", c)
