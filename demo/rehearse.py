@@ -67,7 +67,7 @@ def parse_beat(line: str) -> Optional[int]:
 def default_stage_cmd(root: Path = ROOT) -> str:
     stage = Path(root) / "demo" / "stage.py"
     if stage.exists():
-        return f"python3 {stage} --auto"
+        return f"python3 {stage} --auto --bid-window 20"     # #183: one run under the 2:00 cut
     return f"python3 {Path(root) / 'demo' / 'bridge.py'} --reset --rounds 2 --step-delay 1"
 
 
