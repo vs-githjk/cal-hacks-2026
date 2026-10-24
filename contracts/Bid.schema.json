@@ -8,9 +8,6 @@
   "need_id": {
    "type": "string"
   },
-  "supplier_id": {
-   "type": "string"
-  },
   "persona": {
    "type": "string"
   },
@@ -28,6 +25,19 @@
      },
      "quantity": {
       "type": "number"
+     },
+     "offered_spec": {
+      "type": "string"
+     },
+     "offered_condition": {
+      "type": "string",
+      "enum": [
+       "new",
+       "open-box",
+       "refurbished",
+       "used",
+       "unknown"
+      ]
      }
     },
     "required": [
@@ -66,19 +76,27 @@
   },
   "source": {
    "type": "string",
+   "description": "listing URL, actor id or dataset id"
+  },
+  "origin": {
+   "type": "string",
    "enum": [
-    "live",
-    "mirror",
-    "simulated",
-    "sandbox",
-    "recorded"
+    "LIVE",
+    "MIRROR",
+    "SIM"
    ]
+  },
+  "seller_id": {
+   "type": "string"
+  },
+  "supplier_id": {
+   "type": "string",
+   "description": "Deprecated alias of seller_id, still sent by Lane A; the market reads it as seller_id"
   }
  },
  "required": [
   "id",
   "need_id",
-  "supplier_id",
   "persona",
   "lines",
   "total_landed_price",
@@ -88,6 +106,19 @@
   "mirror_snapshot_id",
   "decision_trace",
   "expires_at",
-  "source"
+  "source",
+  "origin"
+ ],
+ "anyOf": [
+  {
+   "required": [
+    "seller_id"
+   ]
+  },
+  {
+   "required": [
+    "supplier_id"
+   ]
+  }
  ]
 }

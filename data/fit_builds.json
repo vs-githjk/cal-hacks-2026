@@ -1,6 +1,6 @@
 {
  "frozen": "2026-10-24T04:52Z",
- "hand_checked": false,
+ "hand_checked": "per build (see each build's hand_checked); checked by an agent reading maker pages on 2026-10-23, not by a person",
  "note": "Truth = within the makers' published specs (recommended PSU, clearances, sockets). Drafted from known spec values; each part's spec page still needs a human re-check. Do not edit truths to match the checker.",
  "builds": [
   {
@@ -18,7 +18,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -36,7 +40,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -50,7 +58,11 @@
       "module_gb": 16
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -62,7 +74,12 @@
       "length_mm": 303
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "msi.com: 303 x 121 x 49 mm, 750 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM850x (2024)",
@@ -73,10 +90,15 @@
       "wattage": 850,
       "form_factor": "ATX",
       "pcie_16pin": 1,
-      "pcie_8pin": 4
+      "pcie_8pin": 3
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "corsair.com: 1x 12V-2x6, 3x PCIe 8-pin",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Fractal Design North",
@@ -91,13 +113,18 @@
        "Mini ITX"
       ],
       "max_gpu_length_mm": 355,
-      "max_cooler_height_mm": 170,
+      "max_cooler_height_mm": 145,
       "psu_form_factors": [
        "ATX"
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "cooler:Thermalright Peerless Assassin 120 SE",
@@ -117,7 +144,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "thermalright.com: 155 mm; AM4, AM5, 115X, 1200, 1700, 1851",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "storage:Samsung 990 Pro 2TB",
@@ -129,11 +161,17 @@
       "form_factor": "M.2-2280"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
-   "truth": "fits",
-   "why": "all within spec"
+   "truth": "does_not_fit",
+   "why": "PA120 SE 155 mm cooler, North clearance 145 mm (fixed on re-check)",
+   "truth_before_recheck": "fits",
+   "hand_checked": false
   },
   {
    "id": "hero_650w",
@@ -150,7 +188,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -168,7 +210,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -180,7 +226,12 @@
       "length_mm": 303
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "msi.com: 303 x 121 x 49 mm, 750 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM650e (2023)",
@@ -189,16 +240,20 @@
      "condition": "new",
      "attrs": {
       "wattage": 650,
-      "form_factor": "ATX",
-      "pcie_16pin": 1,
-      "pcie_8pin": 2
+      "form_factor": "ATX"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "connector counts not found on corsair.com",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "NVIDIA recommends 750 W for RTX 5070 Ti"
+   "why": "NVIDIA recommends 750 W for RTX 5070 Ti",
+   "hand_checked": false
   },
   {
    "id": "hero_750w",
@@ -215,7 +270,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -233,7 +292,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -245,7 +308,12 @@
       "length_mm": 303
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "msi.com: 303 x 121 x 49 mm, 750 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM750e (2023)",
@@ -255,15 +323,20 @@
      "attrs": {
       "wattage": 750,
       "form_factor": "ATX",
-      "pcie_16pin": 1,
-      "pcie_8pin": 3
+      "pcie_16pin": 1
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "corsair.com RMe manual: 1x 12VHPWR; 8-pin count not confirmed",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "750 W meets NVIDIA's recommendation"
+   "why": "750 W meets NVIDIA's recommendation",
+   "hand_checked": false
   },
   {
    "id": "am5_cpu_am4_board",
@@ -280,7 +353,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI B550 GAMING GEN3",
@@ -298,11 +375,16 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "AM5 CPU, AM4 board"
+   "why": "AM5 CPU, AM4 board",
+   "hand_checked": false
   },
   {
    "id": "zen3_b550",
@@ -319,7 +401,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI B550 GAMING GEN3",
@@ -337,7 +423,11 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
@@ -351,11 +441,16 @@
       "module_gb": 8
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "AM4, DDR4"
+   "why": "AM4, DDR4",
+   "hand_checked": false
   },
   {
    "id": "am4_cpu_am5_board",
@@ -372,7 +467,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -390,11 +489,16 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "AM4 CPU, AM5 board"
+   "why": "AM4 CPU, AM5 board",
+   "hand_checked": false
   },
   {
    "id": "rpl_z790",
@@ -411,7 +515,11 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -429,7 +537,11 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -443,11 +555,16 @@
       "module_gb": 16
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "LGA1700, DDR5 board"
+   "why": "LGA1700, DDR5 board",
+   "hand_checked": false
   },
   {
    "id": "arl_z790",
@@ -464,7 +581,11 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -482,11 +603,16 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "LGA1851 CPU, LGA1700 board"
+   "why": "LGA1851 CPU, LGA1700 board",
+   "hand_checked": false
   },
   {
    "id": "arl_z890",
@@ -503,7 +629,11 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI PRO Z890-A WIFI",
@@ -521,7 +651,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -535,11 +669,16 @@
       "module_gb": 16
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "LGA1851, DDR5"
+   "why": "LGA1851, DDR5",
+   "hand_checked": false
   },
   {
    "id": "4090_14900k_750",
@@ -556,7 +695,11 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -574,7 +717,11 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:Asus ROG STRIX RTX 4090 GAMING OC",
@@ -583,10 +730,15 @@
      "condition": "new",
      "attrs": {
       "chipset": "RTX 4090",
-      "length_mm": 358
+      "length_mm": 357.6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "rog.asus.com: 357.6 x 149.3 x 70.1 mm; nvidia.com 4090: 450 W, 850 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM750e (2023)",
@@ -596,11 +748,15 @@
      "attrs": {
       "wattage": 750,
       "form_factor": "ATX",
-      "pcie_16pin": 1,
-      "pcie_8pin": 3
+      "pcie_16pin": 1
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "corsair.com RMe manual: 1x 12VHPWR; 8-pin count not confirmed",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Lian Li O11 Dynamic EVO",
@@ -615,18 +771,24 @@
        "Micro ATX",
        "Mini ITX"
       ],
-      "max_gpu_length_mm": 422,
+      "max_gpu_length_mm": 455,
       "max_cooler_height_mm": 167,
       "psu_form_factors": [
        "ATX"
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "lian-li.com: GPU 455.7, cooler 167, E-ATX under 280 mm",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "NVIDIA recommends 850 W for RTX 4090"
+   "why": "NVIDIA recommends 850 W for RTX 4090",
+   "hand_checked": false
   },
   {
    "id": "4090fe_14900k_1000",
@@ -643,7 +805,11 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -661,7 +827,11 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:NVIDIA RTX 4090 Founders Edition",
@@ -673,7 +843,11 @@
       "length_mm": 304
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM1000x (2024)",
@@ -684,10 +858,15 @@
       "wattage": 1000,
       "form_factor": "ATX",
       "pcie_16pin": 1,
-      "pcie_8pin": 6
+      "pcie_8pin": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "corsair.com cable page: 1x 12V-2x6, 4x PCIe 8-pin",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Lian Li O11 Dynamic EVO",
@@ -702,14 +881,19 @@
        "Micro ATX",
        "Mini ITX"
       ],
-      "max_gpu_length_mm": 422,
+      "max_gpu_length_mm": 455,
       "max_cooler_height_mm": 167,
       "psu_form_factors": [
        "ATX"
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "lian-li.com: GPU 455.7, cooler 167, E-ATX under 280 mm",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "cooler:Noctua NH-D15",
@@ -718,7 +902,7 @@
      "condition": "new",
      "attrs": {
       "type": "air",
-      "height_mm": 165,
+      "height_mm": 168,
       "sockets": [
        "AM4",
        "AM5",
@@ -729,11 +913,18 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at spec page: 168 mm with fans (old infosheet said 165)",
+      "date": "2026-10-23"
+     }
     }
    ],
-   "truth": "fits",
-   "why": "1000 W, 304 mm card, 165 mm cooler in 167 mm"
+   "truth": "does_not_fit",
+   "why": "NH-D15 is 168 mm, O11 EVO clearance 167 mm (fixed on re-check)",
+   "truth_before_recheck": "fits",
+   "hand_checked": false
   },
   {
    "id": "strix4090_north",
@@ -745,10 +936,15 @@
      "condition": "new",
      "attrs": {
       "chipset": "RTX 4090",
-      "length_mm": 358
+      "length_mm": 357.6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "rog.asus.com: 357.6 x 149.3 x 70.1 mm; nvidia.com 4090: 450 W, 850 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Fractal Design North",
@@ -763,17 +959,23 @@
        "Mini ITX"
       ],
       "max_gpu_length_mm": 355,
-      "max_cooler_height_mm": 170,
+      "max_cooler_height_mm": 145,
       "psu_form_factors": [
        "ATX"
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "358 mm card, 355 mm clearance"
+   "why": "358 mm card, 355 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "fe4090_north",
@@ -788,7 +990,11 @@
       "length_mm": 304
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Fractal Design North",
@@ -803,17 +1009,23 @@
        "Mini ITX"
       ],
       "max_gpu_length_mm": 355,
-      "max_cooler_height_mm": 170,
+      "max_cooler_height_mm": 145,
       "psu_form_factors": [
        "ATX"
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "304 mm card, 355 mm clearance"
+   "why": "304 mm card, 355 mm clearance",
+   "hand_checked": false
   },
   {
    "id": "5070ti_nr200p",
@@ -828,7 +1040,12 @@
       "length_mm": 303
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "msi.com: 303 x 121 x 49 mm, 750 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -848,11 +1065,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "303 mm card, 330 mm clearance"
+   "why": "303 mm card, 330 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "9070xt_nr200p",
@@ -867,7 +1090,12 @@
       "length_mm": 320
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "sapphiretech.com: 320 x 120.25 x 61.6 mm",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -887,11 +1115,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "320 mm card, 330 mm clearance"
+   "why": "320 mm card, 330 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "astral5090_nr200p",
@@ -903,10 +1137,15 @@
      "condition": "new",
      "attrs": {
       "chipset": "RTX 5090",
-      "length_mm": 358
+      "length_mm": 357.6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "rog.asus.com: 357.6 x 149.3 x 76 mm",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -926,11 +1165,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "358 mm card, 330 mm clearance"
+   "why": "358 mm card, 330 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "nhd15_nr200p",
@@ -942,7 +1187,7 @@
      "condition": "new",
      "attrs": {
       "type": "air",
-      "height_mm": 165,
+      "height_mm": 168,
       "sockets": [
        "AM4",
        "AM5",
@@ -953,7 +1198,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at spec page: 168 mm with fans (old infosheet said 165)",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -973,11 +1223,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "165 mm cooler, 155 mm clearance"
+   "why": "165 mm cooler, 155 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "pa120_nr200p",
@@ -1000,7 +1256,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "thermalright.com: 155 mm; AM4, AM5, 115X, 1200, 1700, 1851",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -1020,11 +1281,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "155 mm cooler, 155 mm clearance"
+   "why": "155 mm cooler, 155 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "nhu12s_nr200p",
@@ -1047,7 +1314,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at: 158 mm with fan",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -1067,11 +1339,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "158 mm cooler, 155 mm clearance"
+   "why": "158 mm cooler, 155 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "ak400_q300l",
@@ -1094,7 +1372,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "deepcool.com: 127x97x155 mm",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox Q300L",
@@ -1114,11 +1397,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 360, cooler 159, mATX/ITX, ATX PSU",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "155 mm cooler, 159 mm clearance"
+   "why": "155 mm cooler, 159 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "nhd15_h5",
@@ -1130,7 +1419,7 @@
      "condition": "new",
      "attrs": {
       "type": "air",
-      "height_mm": 165,
+      "height_mm": 168,
       "sockets": [
        "AM4",
        "AM5",
@@ -1141,7 +1430,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at spec page: 168 mm with fans (old infosheet said 165)",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:NZXT H5 Flow",
@@ -1162,11 +1456,18 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "retailer",
+      "source": "retailer listings only (nzxt.com rate-limited): original H5 Flow GPU 365, cooler 165; 2024 H5 Flow is 410/170",
+      "date": "2026-10-23"
+     }
     }
    ],
-   "truth": "fits",
-   "why": "165 mm cooler, 165 mm clearance"
+   "truth": "does_not_fit",
+   "why": "NH-D15 is 168 mm, H5 Flow clearance 165 mm (fixed on re-check)",
+   "truth_before_recheck": "fits",
+   "hand_checked": false
   },
   {
    "id": "drp5_h5",
@@ -1189,7 +1490,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "bequiet.com: 168 mm",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:NZXT H5 Flow",
@@ -1210,11 +1516,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "retailer",
+      "source": "retailer listings only (nzxt.com rate-limited): original H5 Flow GPU 365, cooler 165; 2024 H5 Flow is 410/170",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "168 mm cooler, 165 mm clearance"
+   "why": "168 mm cooler, 165 mm clearance",
+   "hand_checked": false
   },
   {
    "id": "atx_board_nr200p",
@@ -1235,7 +1547,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -1255,11 +1571,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "ATX board, Mini ITX case"
+   "why": "ATX board, Mini ITX case",
+   "hand_checked": false
   },
   {
    "id": "itx_board_nr200p",
@@ -1277,10 +1599,15 @@
       "memory_type": "DDR5",
       "memory_slots": 2,
       "m2_slots": 3,
-      "sata_ports": 2
+      "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "gigabyte.com: 2x DDR5 DIMM, 3x M.2 (PCIe only), 4x SATA",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -1300,11 +1627,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "Mini ITX board and case"
+   "why": "Mini ITX board and case",
+   "hand_checked": true
   },
   {
    "id": "matx_board_q300l",
@@ -1325,7 +1658,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox Q300L",
@@ -1345,11 +1682,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 360, cooler 159, mATX/ITX, ATX PSU",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "Micro ATX board and case"
+   "why": "Micro ATX board and case",
+   "hand_checked": false
   },
   {
    "id": "atx_board_q300l",
@@ -1370,7 +1713,11 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Cooler Master MasterBox Q300L",
@@ -1390,11 +1737,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "coolermaster.com: GPU 360, cooler 159, mATX/ITX, ATX PSU",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "ATX board, Micro ATX case"
+   "why": "ATX board, Micro ATX case",
+   "hand_checked": false
   },
   {
    "id": "ddr4_on_am5",
@@ -1415,7 +1768,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
@@ -1429,11 +1786,16 @@
       "module_gb": 8
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "DDR4 kit, DDR5 board"
+   "why": "DDR4 kit, DDR5 board",
+   "hand_checked": false
   },
   {
    "id": "ddr5_on_d4_board",
@@ -1454,7 +1816,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -1468,11 +1834,16 @@
       "module_gb": 16
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "DDR5 kit, DDR4 board"
+   "why": "DDR5 kit, DDR4 board",
+   "hand_checked": false
   },
   {
    "id": "ddr4_on_d4_board",
@@ -1493,7 +1864,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:G.Skill Ripjaws V DDR4-3600 2x16GB",
@@ -1507,11 +1882,16 @@
       "module_gb": 16
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "DDR4 kit, DDR4 board"
+   "why": "DDR4 kit, DDR4 board",
+   "hand_checked": false
   },
   {
    "id": "4dimm_on_itx",
@@ -1529,10 +1909,15 @@
       "memory_type": "DDR5",
       "memory_slots": 2,
       "m2_slots": 3,
-      "sata_ports": 2
+      "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "gigabyte.com: 2x DDR5 DIMM, 3x M.2 (PCIe only), 4x SATA",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "memory:G.Skill Trident Z5 DDR5-6000 4x16GB",
@@ -1546,11 +1931,16 @@
       "module_gb": 16
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "4 modules, 2 slots"
+   "why": "4 modules, 2 slots",
+   "hand_checked": false
   },
   {
    "id": "5070ti_600br",
@@ -1567,7 +1957,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -1579,7 +1973,12 @@
       "length_mm": 303
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "msi.com: 303 x 121 x 49 mm, 750 W PSU",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:EVGA 600 BR",
@@ -1593,11 +1992,16 @@
       "pcie_8pin": 2
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "600 W and two 8-pin; card needs 750 W"
+   "why": "600 W and two 8-pin; card needs 750 W",
+   "hand_checked": false
   },
   {
    "id": "4060_7600_550",
@@ -1614,7 +2018,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -1632,7 +2040,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:MSI RTX 4060 VENTUS 2X",
@@ -1648,7 +2060,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "nvidia.com 4060: 115 W, 550 W minimum, 1x 8-pin (card length not re-checked)",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair CX550",
@@ -1662,11 +2079,16 @@
       "pcie_8pin": 2
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "550 W meets NVIDIA's recommendation; one 8-pin"
+   "why": "550 W meets NVIDIA's recommendation; one 8-pin",
+   "hand_checked": false
   },
   {
    "id": "4060_450",
@@ -1683,7 +2105,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:MSI RTX 4060 VENTUS 2X",
@@ -1699,7 +2125,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "nvidia.com 4060: 115 W, 550 W minimum, 1x 8-pin (card length not re-checked)",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair CV450",
@@ -1713,11 +2144,16 @@
       "pcie_8pin": 1
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "NVIDIA recommends 550 W for RTX 4060"
+   "why": "NVIDIA recommends 550 W for RTX 4060",
+   "hand_checked": false
   },
   {
    "id": "xtx_750",
@@ -1734,7 +2170,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:Sapphire NITRO+ RX 7900 XTX",
@@ -1747,10 +2187,17 @@
       "power_connector": [
        "8pin",
        3
-      ]
+      ],
+      "board_power_w": 420,
+      "rec_psu_w": 800
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "sapphiretech.com (Vapor-X): 320 mm, 420 W board power, 800 W minimum PSU, 3x 8-pin",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM750e (2023)",
@@ -1760,15 +2207,20 @@
      "attrs": {
       "wattage": 750,
       "form_factor": "ATX",
-      "pcie_16pin": 1,
-      "pcie_8pin": 3
+      "pcie_16pin": 1
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "corsair.com RMe manual: 1x 12VHPWR; 8-pin count not confirmed",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "AMD recommends 800 W for RX 7900 XTX"
+   "why": "AMD recommends 800 W for RX 7900 XTX",
+   "hand_checked": false
   },
   {
    "id": "xtx_850_lancool",
@@ -1785,7 +2237,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -1803,7 +2259,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:Sapphire NITRO+ RX 7900 XTX",
@@ -1816,10 +2276,17 @@
       "power_connector": [
        "8pin",
        3
-      ]
+      ],
+      "board_power_w": 420,
+      "rec_psu_w": 800
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "sapphiretech.com (Vapor-X): 320 mm, 420 W board power, 800 W minimum PSU, 3x 8-pin",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Seasonic FOCUS GX-850 (2019)",
@@ -1833,7 +2300,11 @@
       "pcie_8pin": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Lian Li Lancool 216",
@@ -1855,11 +2326,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "lian-li.com: GPU 392, cooler 180.5, E-ATX under 280 mm, ATX PSU",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "850 W, three 8-pin, 320 mm in 392 mm"
+   "why": "850 W, three 8-pin, 320 mm in 392 mm",
+   "hand_checked": false
   },
   {
    "id": "nvme_b650",
@@ -1880,7 +2357,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "storage:Samsung 990 Pro 2TB",
@@ -1892,11 +2373,16 @@
       "form_factor": "M.2-2280"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "board has M.2 slots"
+   "why": "board has M.2 slots",
+   "hand_checked": false
   },
   {
    "id": "sata_b650",
@@ -1917,7 +2403,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "storage:Samsung 870 EVO 1TB",
@@ -1929,11 +2419,16 @@
       "form_factor": "2.5"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "board has SATA ports"
+   "why": "board has SATA ports",
+   "hand_checked": false
   },
   {
    "id": "terra_lowprofile",
@@ -1956,7 +2451,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at: 70 mm with fan underneath (low-profile mode), 86 mm with fan on top",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Fractal Design Terra",
@@ -1976,11 +2476,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com + Terra manual: GPU 322, cooler 48 to 77 by spine position (77 at spine 1, GPU width then 43 mm), SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "70 mm cooler, 77 mm clearance"
+   "why": "70 mm cooler, 77 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "terra_tower",
@@ -2003,7 +2509,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "thermalright.com: 155 mm; AM4, AM5, 115X, 1200, 1700, 1851",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Fractal Design Terra",
@@ -2023,11 +2534,17 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com + Terra manual: GPU 322, cooler 48 to 77 by spine position (77 at spine 1, GPU width then 43 mm), SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "155 mm cooler, 77 mm clearance"
+   "why": "155 mm cooler, 77 mm clearance",
+   "hand_checked": true
   },
   {
    "id": "terra_atx_psu",
@@ -2041,10 +2558,15 @@
       "wattage": 850,
       "form_factor": "ATX",
       "pcie_16pin": 1,
-      "pcie_8pin": 4
+      "pcie_8pin": 3
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "corsair.com: 1x 12V-2x6, 3x PCIe 8-pin",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Fractal Design Terra",
@@ -2064,7 +2586,12 @@
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com + Terra manual: GPU 322, cooler 48 to 77 by spine position (77 at spine 1, GPU width then 43 mm), SFX/SFX-L",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Gigabyte B650I AORUS ULTRA",
@@ -2079,14 +2606,20 @@
       "memory_type": "DDR5",
       "memory_slots": 2,
       "m2_slots": 3,
-      "sata_ports": 2
+      "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "gigabyte.com: 2x DDR5 DIMM, 3x M.2 (PCIe only), 4x SATA",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "Terra takes SFX PSUs only"
+   "why": "Terra takes SFX PSUs only",
+   "hand_checked": true
   },
   {
    "id": "zen3_b350",
@@ -2103,7 +2636,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B350M-A",
@@ -2121,11 +2658,17 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "asus.com CPU list shows Ryzen 5 5600GE/GT; 5600X not confirmed in what we could read",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "B350M-A lists Ryzen 5000 after a BIOS update"
+   "why": "B350M-A lists Ryzen 5000 after a BIOS update",
+   "hand_checked": false
   },
   {
    "id": "coffee_z270",
@@ -2142,7 +2685,12 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "intel.com: compatible with 300 Series chipsets only",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME Z270-A",
@@ -2160,11 +2708,16 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "Coffee Lake needs a 300-series board"
+   "why": "Coffee Lake needs a 300-series board",
+   "hand_checked": false
   },
   {
    "id": "kaby_z370",
@@ -2181,7 +2734,12 @@
       "vendor": "Intel"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "intel.com: i7-77xx use 100 and 200 Series chipsets (Z370 exclusion inferred from series)",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME Z370-A",
@@ -2199,11 +2757,16 @@
       "sata_ports": 6
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "does_not_fit",
-   "why": "Kaby Lake is not supported on 300-series boards"
+   "why": "Kaby Lake is not supported on 300-series boards",
+   "hand_checked": false
   },
   {
    "id": "9950x_5090fe_1000",
@@ -2220,7 +2783,11 @@
       "vendor": "AMD"
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -2238,7 +2805,11 @@
       "sata_ports": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "not re-checked",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "gpu:NVIDIA RTX 5090 Founders Edition",
@@ -2250,7 +2821,12 @@
       "length_mm": 304
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "partial",
+      "source": "nvidia.com 5090 guide: 1000 W PSU, 4x 8-pin or one 600 W 16-pin (length 304 not re-checked)",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "psu:Corsair RM1000x (2024)",
@@ -2261,10 +2837,15 @@
       "wattage": 1000,
       "form_factor": "ATX",
       "pcie_16pin": 1,
-      "pcie_8pin": 6
+      "pcie_8pin": 4
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "corsair.com cable page: 1x 12V-2x6, 4x PCIe 8-pin",
+      "date": "2026-10-23"
+     }
     },
     {
      "id": "case:Lian Li O11 Dynamic EVO",
@@ -2279,18 +2860,25 @@
        "Micro ATX",
        "Mini ITX"
       ],
-      "max_gpu_length_mm": 422,
+      "max_gpu_length_mm": 455,
       "max_cooler_height_mm": 167,
       "psu_form_factors": [
        "ATX"
       ]
      },
      "origin": "SIM",
-     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "lian-li.com: GPU 455.7, cooler 167, E-ATX under 280 mm",
+      "date": "2026-10-23"
+     }
     }
    ],
    "truth": "fits",
-   "why": "NVIDIA recommends 1000 W for RTX 5090"
+   "why": "NVIDIA recommends 1000 W for RTX 5090",
+   "hand_checked": false
   }
- ]
+ ],
+ "recheck_note": "Values were corrected after the freeze from maker pages; truths changed for demo_hero, nhd15_h5 and 4090fe_14900k_1000. Builds were not added or removed."
 }

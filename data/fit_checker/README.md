@@ -17,5 +17,5 @@ attrs per SpecCard category:
 - storage: interface (as in dataset, e.g. "M.2 PCIe 4.0 X4", "SATA 6.0 Gb/s"), form_factor
 
 Hand tables (`tables.py`): CPU microarchitecture to socket, GPU chipset to board power / recommended PSU / connector,
-BIOS notes, case type to board and PSU form factors. Rows marked `# verify` need a second check.
+BIOS notes, case type to board and PSU form factors.
 The dataset has no case clearances, cooler heights or PSU connector counts; those come from listings (Apify) or are uncertain.
