@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from agents.buyer import checkout
 from agents.buyer.chat_approval import format_settlement_result
+from agents.advocate.checks import CALL_SUMMARIES
 from pay.approval import ApprovalService
 from pay.mandate import new_mandate
 from pay.tap import keyring, verify_request
@@ -24,13 +25,15 @@ NOW = datetime.now(timezone.utc).replace(microsecond=0)
 def tx():
     mandate = new_mandate(deal_id="deal-1", buyer_id="buyer-1", goal_id="goal-1", amount=79.99,
                           payee="seller-1", now=NOW)
+    summary = CALL_SUMMARIES["advocate.ok"]
     return {"deal_id": "deal-1", "buyer_id": "buyer-1", "goal_id": "goal-1", "need_id": "need-1",
             "bid_id": "bid-1", "phase": "pending_approval", "deal": {"id": "deal-1", "goal_id": "goal-1",
             "need_id": "need-1", "bid_id": "bid-1", "amount": 79.99, "payee": "seller-1"},
             "order": None, "advocate_card": {"need_id": "need-1", "bid_id": "bid-1", "warnings": [],
+            "claim_checks": [],
             "recommendation": "buy", "wait_until": "", "call_reason": {"rule_id": "advocate.ok",
-            "summary": "No problems found in the checks", "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
-            "rule_id": "advocate.ok", "reason": "No problems found in the checks",
+            "summary": summary, "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
+            "rule_id": "advocate.ok", "reason": summary,
             "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
             "mandate": mandate, "voice_approval": None,
             "allowance_authorization": None, "settlement": None, "settlement_result": None,

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from agents.advocate.checks import CALL_SUMMARIES
 from agents.buyer.chat_approval import approve_in_chat, format_settlement_result
 from pay.approval import ApprovalService, code_hash
 from pay.mandate import new_mandate
@@ -16,15 +17,17 @@ def transaction():
     now = datetime.now(timezone.utc).replace(microsecond=0)
     mandate = new_mandate(deal_id="deal-chat", buyer_id="vidyut", goal_id="goal-chat", amount=75.25,
                           payee="seller-chat", within_allowance=False, now=now)
+    summary = CALL_SUMMARIES["advocate.ok"]
     return {"deal_id": "deal-chat", "buyer_id": "vidyut", "goal_id": "goal-chat", "need_id": "need-chat",
             "bid_id": "bid-chat", "phase": "pending_approval", "deal": {"id": "deal-chat",
             "goal_id": "goal-chat", "need_id": "need-chat", "bid_id": "bid-chat", "amount": 75.25,
             "payee": "seller-chat"}, "order": None, "mandate": mandate, "voice_approval": None,
             "allowance_authorization": None, "settlement": None, "settlement_result": None,
             "advocate_card": {"need_id": "need-chat", "bid_id": "bid-chat", "warnings": [],
-                "recommendation": "buy", "wait_until": "", "call_reason": {"rule_id": "advocate.ok",
-                "summary": "No problems found in the checks", "source_url": "https://example.com/check"},
-                "rule_id": "advocate.ok", "reason": "No problems found in the checks",
+                "claim_checks": [], "recommendation": "buy", "wait_until": "",
+                "call_reason": {"rule_id": "advocate.ok", "summary": summary,
+                "source_url": "https://example.com/check"},
+                "rule_id": "advocate.ok", "reason": summary,
                 "source_url": "https://example.com/check"}}
 
 
