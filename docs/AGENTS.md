@@ -27,3 +27,6 @@ Read this first. Append what you learn at the bottom (one line, `[HH:MM] agent: 
 - [22:05] Reformatting a shared schema file causes needless conflicts; change only the lines you need.
 
 ## Log
+
+## Seller model (LOCKED Fri 22:36)
+One seller agent per SELLER OF RECORD: whoever takes the money and ships. Amazon selling directly is one agent; each third-party merchant on Amazon is its own agent; Newegg, a local shop, a brand's own store are each one agent. One agent may bid several condition lines (new, open-box, refurbished, bundle) for the same SKU inside one sealed bid. Every listing normalizes to one canonical SKU (MPN or UPC) in SpecCard. The advocate ranks on quality-adjusted landed price (condition, warranty, returns, seller record); the buyer's goal sets which conditions are allowed. Manufacturers bid only when they sell direct.
