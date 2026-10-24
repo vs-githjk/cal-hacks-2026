@@ -23,7 +23,7 @@ export function BuyerAppShell({ children }: { children: ReactNode }) {
   const name = profiles.find((p) => p.buyerId === buyerId)?.displayName || "Buyer";
   return (
     <div className="grid gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line pb-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line pb-2">
         <nav aria-label="Buyer" className="flex flex-wrap gap-0.5">
           {NAV.map((n) => {
             const on = path === n.href;
