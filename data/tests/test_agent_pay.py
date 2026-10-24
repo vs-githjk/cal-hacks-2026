@@ -139,3 +139,97 @@ def test_only_a_paid_succeeded_run_is_live(tmp_path):
     r, _ = run_paid(tmp_path, send, live=True)
     assert r["label"] == "LIVE"
     assert json.loads((tmp_path / "agent_pay_run.json").read_text())["label"] == "LIVE"
+
+
+# #329: once money may have been spent, the token is never lost and a receipt is always written (never LIVE)
+def receipt_of(tmp_path):
+    return json.loads((tmp_path / "agent_pay_run.json").read_text())
+
+
+def test_a_token_on_a_non_zero_payer_exit_is_saved_with_a_warning(tmp_path):
+    send, calls = fake_apify()
+    r, printed = run_paid(tmp_path, send, sh=lambda cmd: (1, json.dumps({"token": TOKEN})), live=True)
+    assert f"APIFY_AGENT_TOKEN={TOKEN}" in (tmp_path / ".env").read_text()
+    assert any(p.startswith("Warning: the payer CLI exited 1") for p in printed) and TOKEN not in "\n".join(printed)
+    assert r["payer_exit"] == 1 and r["run_id"] == "RUNFAKE1" and any("/runs?" in c[1] for c in calls)
+
+
+def test_no_token_writes_a_maybe_paid_receipt_and_shows_a_masked_tail(tmp_path):
+    send, calls = fake_apify()
+    printed = []
+    with pytest.raises(SystemExit, match="did not return a token"):
+        pay_mod.run(args(), send=send, sh=lambda cmd: (1, "paid tx 0xabc then crashed"), ask=lambda p: "PAY",
+                    sleep=lambda s: None, out=printed.append, env_file=tmp_path / ".env",
+                    receipt_file=tmp_path / "agent_pay_run.json", live=True)
+    rec = receipt_of(tmp_path)
+    assert rec["label"].startswith("NOT LIVE") and "may have happened" in rec["label"] and rec["payer_exit"] == 1
+    assert "check the wallet and .env" in rec["error"] and "paid tx 0xabc then crashed" in "\n".join(printed)
+    assert calls == [] and not (tmp_path / ".env").exists()
+
+
+def test_the_masked_tail_never_shows_a_token():
+    assert pay_mod.masked_tail("x apify_api_SECRETABCD y") == "x apify_api_...ABCD y"
+    assert pay_mod.masked_tail(b"") == "(no output)"
+
+
+@pytest.mark.parametrize("partial", [None, json.dumps({"token": TOKEN}).encode()])
+def test_a_payer_timeout_writes_a_not_live_receipt_and_keeps_any_token(tmp_path, partial):
+    import subprocess
+
+    def sh(cmd):
+        raise subprocess.TimeoutExpired(cmd, 300, output=partial)
+    send, calls = fake_apify()
+    printed = []
+    with pytest.raises(SystemExit, match="Payment may have happened"):
+        pay_mod.run(args(), send=send, sh=sh, ask=lambda p: "PAY", sleep=lambda s: None, out=printed.append,
+                    env_file=tmp_path / ".env", receipt_file=tmp_path / "agent_pay_run.json", live=True)
+    rec = receipt_of(tmp_path)
+    assert rec["label"].startswith("NOT LIVE") and "timed out" in rec["label"] and calls == []
+    assert TOKEN not in "\n".join(printed) and TOKEN not in json.dumps(rec)
+    env = tmp_path / ".env"
+    assert (f"APIFY_AGENT_TOKEN={TOKEN}" in env.read_text()) if partial else not env.exists()
+
+
+def test_a_url_error_on_the_run_after_paying_writes_a_not_live_receipt(tmp_path):
+    import urllib.error
+    send0, _ = fake_apify()
+
+    def send(method, url, token=None, body=None, timeout=150):
+        if "/runs?" in url:
+            raise urllib.error.URLError("timed out")
+        return send0(method, url, token, body, timeout)
+    with pytest.raises(SystemExit, match="check the wallet and .env"):
+        run_paid(tmp_path, send, live=True)
+    rec = receipt_of(tmp_path)
+    assert rec["label"] == "NOT LIVE: paid, but the run request failed (URLError)" and rec["token"] == "apify_api_...1234"
+    assert f"APIFY_AGENT_TOKEN={TOKEN}" in (tmp_path / ".env").read_text()
+
+
+def test_a_balance_read_error_does_not_lose_the_receipt(tmp_path):
+    send0, _ = fake_apify()
+
+    def send(method, url, token=None, body=None, timeout=150):
+        if url.endswith("/balance"):
+            raise TimeoutError("read timed out")
+        return send0(method, url, token, body, timeout)
+    r, _ = run_paid(tmp_path, send, live=True)
+    assert r["label"] == "LIVE (payment unverified by balance)" and receipt_of(tmp_path)["label"] == r["label"]
+
+
+def test_live_says_unverified_when_the_balance_is_unknown(tmp_path):
+    send0, _ = fake_apify()
+
+    def send(method, url, token=None, body=None, timeout=150):
+        return (500, None) if url.endswith("/balance") else send0(method, url, token, body, timeout)
+    r, _ = run_paid(tmp_path, send, live=True)
+    assert r["balance_before_usd"] is None and r["label"] == "LIVE (payment unverified by balance)"
+
+
+def test_the_env_file_is_never_world_readable_even_for_a_moment(tmp_path, monkeypatch):
+    monkeypatch.setattr(pay_mod.os, "chmod", lambda *a, **k: None)  # the mode must come from the create, not a later chmod
+    env = tmp_path / ".env"
+    pay_mod.save_token(env, TOKEN)
+    assert stat.S_IMODE(env.stat().st_mode) == 0o600
+    env.chmod(0o644)
+    pay_mod.save_token(env, TOKEN)  # an existing, wider .env is tightened too
+    assert stat.S_IMODE(env.stat().st_mode) == 0o600 and env.read_text().count("APIFY_AGENT_TOKEN=") == 1

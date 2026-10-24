@@ -15,7 +15,10 @@ Run steps, in order:
        c. prints the token's balance (GET https://agi.apify.com/prepaid-tokens/balance);
        d. runs the claim-check Actor once on the demo listing with that token;
        e. prints the balance again and the run id, and writes data/claim_check/agent_pay_run.json. The receipt is labelled
-          LIVE only when this run paid and the Actor run SUCCEEDED; otherwise it says why it is not LIVE.
+          LIVE only when this run paid and the Actor run SUCCEEDED (with "payment unverified by balance" when the
+          balance could not be read or did not drop); otherwise it says why it is not LIVE.
+     If anything fails once money may have been spent (the payer CLI exits non-zero, times out, or the run request
+     fails), a token it printed is still saved, and a NOT LIVE receipt says what is known and what failed (#329).
   3. A rerun with the token already saved skips the purchase:   python3 -m data.claim_check.agent_pay --token-from-env
      (its receipt is never LIVE: nothing was paid in that run).
 
@@ -102,11 +105,22 @@ def token_from_output(out: str) -> str | None:
 
 
 def save_token(env_file: Path, token: str) -> None:
-    """Write APIFY_AGENT_TOKEN into the gitignored .env (replacing an older one), readable by this user only."""
+    """Write APIFY_AGENT_TOKEN into the gitignored .env (replacing an older one), readable by this user only.
+    The file is created with mode 600, and an existing one is set to 600 before the token is written (#329)."""
     lines = env_file.read_text().splitlines() if env_file.exists() else []
     lines = [l for l in lines if not l.startswith("APIFY_AGENT_TOKEN=")] + [f"APIFY_AGENT_TOKEN={token}"]
-    env_file.write_text("\n".join(lines) + "\n")
-    os.chmod(env_file, 0o600)
+    fd = os.open(env_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        os.fchmod(fd, 0o600)  # an existing .env keeps its old mode on open; tighten it before the token goes in
+        f.write("\n".join(lines) + "\n")
+
+
+def masked_tail(text, n: int = 300) -> str:
+    """The end of the payer's output with any token masked, so a user can see what went wrong without a leak."""
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+    tail = (text or "").strip()[-n:]
+    return TOKEN_RE.sub(lambda m: mask(m.group(0)), tail) or "(no output)"
 
 
 def read_token(env_file: Path) -> str | None:
@@ -120,19 +134,40 @@ def read_token(env_file: Path) -> str | None:
 
 
 def balance(send, token: str) -> float | None:
-    status, data = send("GET", f"{AGI}/prepaid-tokens/balance", token=token)
+    try:  # a balance read is informational; a network error must not cost the receipt (#329)
+        status, data = send("GET", f"{AGI}/prepaid-tokens/balance", token=token)
+    except Exception:
+        return None
     return data.get("remainingBalanceUsd") if status == 200 and isinstance(data, dict) else None
 
 
-def label_for(live: bool, paid_now: bool, run_status: str | None) -> str:
-    """LIVE only for a real run that paid in this run and whose Actor run SUCCEEDED (#290)."""
+def label_for(live: bool, paid_now: bool, run_status: str | None, balance_moved: bool = True) -> str:
+    """LIVE only for a real run that paid in this run and whose Actor run SUCCEEDED (#290). When the balance could not
+    be read or did not drop, the label says the payment is unverified by balance (#329)."""
     if not live:
         return "FAKE (test)"
     if not paid_now:
         return "NOT LIVE: no payment in this run (saved token)"
     if run_status != "SUCCEEDED":
         return f"NOT LIVE: paid, but the Actor run did not succeed ({run_status or 'no status'})"
-    return "LIVE"
+    return "LIVE" if balance_moved else "LIVE (payment unverified by balance)"
+
+
+MAYBE_PAID = "Payment may have happened: check the wallet and .env."
+
+
+def write_receipt(receipt: dict, receipt_file: Path, out) -> None:
+    receipt_file.write_text(json.dumps(receipt, indent=1) + "\n")
+    out(f"Receipt written to {receipt_file.relative_to(ROOT) if receipt_file.is_relative_to(ROOT) else receipt_file} ({receipt['label']}).")
+
+
+def fail_with_receipt(receipt: dict, receipt_file: Path, out, label: str, message: str):
+    """Once money may have been spent, never exit without an honest receipt (#329). These labels are never LIVE."""
+    out(message)
+    receipt["label"] = label
+    receipt["error"] = message
+    write_receipt(receipt, receipt_file, out)
+    raise SystemExit(message)
 
 
 def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_file: Path | None = None,
@@ -156,25 +191,59 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
         out("Terms: the token is a hard spend cap, expires in 14 days, and unused balance is not refunded.")
         if ask("Type PAY to continue: ").strip() != "PAY":  # always asked; there is no flag that skips it (#290)
             raise SystemExit("Not paid: you did not type PAY.")
-        code, stdout = sh(cmd(url, args.amount))
-        token = token_from_output(stdout)
-        if code != 0 or not token:
-            raise SystemExit(f"The payer CLI did not return a token (exit {code}). Nothing was saved; check its own output above.")
-        save_token(env_file, token)
-        paid_now = True
         receipt["paid_via"] = f"{protocol} via {args.payer}"
         receipt["amount_usd"] = args.amount
+        try:
+            code, stdout = sh(cmd(url, args.amount))
+        except FileNotFoundError:  # the CLI never started, so nothing was paid
+            raise SystemExit(f"The payer CLI for {args.payer} is not installed (see step 0). Nothing was paid.") from None
+        except subprocess.TimeoutExpired as e:  # it may have paid before it hung; keep a token if it printed one (#329)
+            partial = e.stdout.decode("utf-8", "replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
+            token = token_from_output(partial)
+            if token:
+                save_token(env_file, token)
+                receipt["token"] = mask(token)
+            fail_with_receipt(receipt, receipt_file, out, "NOT LIVE: payment may have happened, the payer CLI timed out",
+                              f"The payer CLI timed out after {e.timeout:g} s. {MAYBE_PAID}"
+                              + (f" Its token {mask(token)} was saved as APIFY_AGENT_TOKEN in {env_file.name}." if token else ""))
+        except (Exception, KeyboardInterrupt) as e:  # a Ctrl-C mid-payment also leaves the money question open
+            fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: payment may have happened, the payer CLI failed ({type(e).__name__})",
+                              f"The payer CLI failed ({type(e).__name__}). {MAYBE_PAID}")
+        receipt["payer_exit"] = code
+        token = token_from_output(stdout or "")
+        if not token:
+            fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: payment may have happened, no token returned (payer exit {code})",
+                              f"The payer CLI did not return a token (exit {code}). Nothing was saved. {MAYBE_PAID} "
+                              f"End of its output (tokens masked): {masked_tail(stdout)}")
+        save_token(env_file, token)  # a minted token means the money is spent: keep it even on a non-zero exit (#329)
+        paid_now = True
+        if code != 0:
+            out(f"Warning: the payer CLI exited {code} but returned a token, so it paid; the token was kept. "
+                f"End of its output (tokens masked): {masked_tail(stdout)}")
         out(f"a. Bought a prepaid token {mask(token)}; saved as APIFY_AGENT_TOKEN in {env_file.name} (mode 600).")
     receipt["token"] = mask(token)
     before = balance(send, token)
     receipt["balance_before_usd"] = before
     out(f"c. Balance before the run: ${before}" if before is not None else "c. Balance before the run: could not be read")
-    status, data = send("POST", f"{API}/acts/{ACTOR}/runs?waitForFinish=120", token=token, body=DEMO_INPUT)
+    try:
+        status, data = send("POST", f"{API}/acts/{ACTOR}/runs?waitForFinish=120", token=token, body=DEMO_INPUT)
+    except Exception as e:  # URLError, a timeout or a reset after paying: a receipt, never a bare traceback (#329)
+        why = type(e).__name__
+        if paid_now:
+            fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: paid, but the run request failed ({why})",
+                              f"Paid, and the token {mask(token)} is saved in {env_file.name}, but the run request failed ({why}). "
+                              f"A run may have started; check the Apify console. {MAYBE_PAID}")
+        fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: no payment in this run, and the run request failed ({why})",
+                          f"The run request failed ({why}). A run may have started; check the Apify console.")
     run_data = (data or {}).get("data") or {} if isinstance(data, dict) else {}
     receipt.update(run_http=status, run_id=run_data.get("id"), run_status=run_data.get("status"), status_message=run_data.get("statusMessage"))
     if run_data.get("defaultDatasetId"):
-        _, items = send("GET", f"{API}/datasets/{run_data['defaultDatasetId']}/items?clean=1", token=token)
-        receipt["results"] = [{k: r.get(k) for k in ("id", "text", "result", "reason")} for r in items or [] if isinstance(r, dict)]
+        try:
+            _, items = send("GET", f"{API}/datasets/{run_data['defaultDatasetId']}/items?clean=1", token=token)
+        except Exception as e:  # the run already happened; record that its rows could not be read
+            items, receipt["results_error"] = None, type(e).__name__
+        items = items if isinstance(items, list) else []
+        receipt["results"] = [{k: r.get(k) for k in ("id", "text", "result", "reason")} for r in items if isinstance(r, dict)]
     out(f"d. Claim-check run {receipt['run_id']}: {receipt['run_status']} ({receipt['status_message']})")
     after = balance(send, token)
     for _ in range(3):  # metering can lag the run by a little; wait briefly for the balance to move
@@ -186,9 +255,9 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
     if before is not None and after is not None:
         receipt["spent_usd"] = round(before - after, 5)
     out(f"e. Balance after the run: ${after} (spent ${receipt.get('spent_usd')}); run id {receipt['run_id']}")
-    receipt["label"] = label_for(live, paid_now, receipt.get("run_status"))
-    receipt_file.write_text(json.dumps(receipt, indent=1) + "\n")
-    out(f"Receipt written to {receipt_file.relative_to(ROOT) if receipt_file.is_relative_to(ROOT) else receipt_file} ({receipt['label']}).")
+    moved = before is not None and after is not None and after < before
+    receipt["label"] = label_for(live, paid_now, receipt.get("run_status"), balance_moved=moved)
+    write_receipt(receipt, receipt_file, out)
     return receipt
 
 
