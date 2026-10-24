@@ -7,6 +7,10 @@ def test_gpu_title_gives_chipset_the_fit_tables_know():
     assert cat == "gpu" and attrs["chipset"] == "RTX 5070 Ti"
 
 
+def test_trademark_symbol_does_not_hide_chipset():
+    assert attrs_from_title("PNY NVIDIA GeForce RTX\u2122 5070 Ti OC")[1]["chipset"] == "RTX 5070 Ti"
+
+
 def test_psu_title_gives_wattage():
     assert attrs_from_title("Corsair RM850x 850W 80 PLUS Gold Fully Modular ATX Power Supply") == ("psu", {"wattage": 850, "form_factor": "ATX"})
 

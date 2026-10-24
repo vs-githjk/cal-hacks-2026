@@ -2,7 +2,7 @@
 
 Q = "RTX 5070 Ti"
 ACTORS = {
-    "newegg": ("kawsar/newegg-product-scraper", {"keywords": [Q], "maxItems": 3, "maxPages": 1}),
+    "newegg": ("kawsar/newegg-product-scraper", {"productUrls": ["https://www.newegg.com/p/pl?d=rtx+5070+ti"], "maxItems": 3, "maxPages": 1}),
     "microcenter": ("sian.agency/microcenter-product-scraper", {"keywords": [Q], "scrapeMode": "overview", "maxResults": 3}),
     "bestbuy": ("benthepythondev/bestbuy-scraper", {"mode": "search", "searchQuery": Q, "maxProducts": 3}),
     "bh": ("shahidirfan/B-H-Photo-Scraper", {"startUrls": [{"url": "https://www.bhphotovideo.com/c/search?q=rtx%205070%20ti"}], "results_wanted": 3, "max_pages": 1}),

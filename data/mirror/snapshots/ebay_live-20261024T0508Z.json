@@ -1,0 +1,71 @@
+[
+ {
+  "id": "ebay_live:328f518a2f91",
+  "category": "gpu",
+  "name": "MSI Gaming Trio OC GeForce RTX 5070 Ti 16GB RAM - Graphics Card - NEW & SEALED!!",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
+  "snapshot_id": "ebay_live-20261024T0508Z",
+  "snapshot_date": "2026-10-24T05:08:59.160Z",
+  "listing": {
+   "url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
+   "price": 1399.99,
+   "shipping": "Free delivery",
+   "seller": "itsworthmore",
+   "stock": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:48777b5e8a30",
+  "category": "gpu",
+  "name": "New MSI GeForce RTX 5070 Ti 16G FRIEREN EDITION OC GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1489.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
+  "snapshot_id": "ebay_live-20261024T0508Z",
+  "snapshot_date": "2026-10-24T05:08:59.160Z",
+  "listing": {
+   "url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
+   "price": 1489.0,
+   "shipping": "Free delivery",
+   "seller": "jedmtech",
+   "stock": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:c467640248fd",
+  "category": "gpu",
+  "name": "Gigabyte GeForce RTX 5070 Ti OC 16GB GDDR7 Graphics Card GV-N507TGAMING OC-16GD",
+  "model_number": null,
+  "condition": "open-box",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+  "snapshot_id": "ebay_live-20261024T0508Z",
+  "snapshot_date": "2026-10-24T05:08:59.160Z",
+  "listing": {
+   "url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+   "price": 1239.99,
+   "shipping": "Free delivery",
+   "seller": "computermasons",
+   "stock": "3 remaining"
+  }
+ }
+]
