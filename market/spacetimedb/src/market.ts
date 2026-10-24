@@ -517,6 +517,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   const rows = [...ctx.db.bid.roundId.filter(roundId)];
   const rejections = new Map<string, string[]>();
+  const heldBack = new Map<string, string>();
   const verified = new Map<string, number>();
   for (const b of rows) {
     const reasons: string[] = [];
@@ -527,6 +528,10 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       if (c.kind === 'claim' && c.result === 'verified') verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
       if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
     }
+    // #191: the latest advocate card decides; caution (fit unconfirmed) ranks below confirmed bids and says so.
+    const cards = [...ctx.db.bidCheck.bidId.filter(b.id)].filter((c) => c.kind === 'advocate').sort((x, y) => (x.id < y.id ? -1 : 1));
+    const card = cards[cards.length - 1];
+    if (card?.result === 'caution') heldBack.set(b.id, `held back: advocate caution (${card.detail})`);
     if (reasons.length) rejections.set(b.id, reasons);
   }
   // The seller fee is deliberately not passed: it never feeds ranking (invariant 8).
@@ -546,7 +551,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   const lineRejects = new Map(rows.map((b) => [b.id, b.lines.map((_: Line, i: number) => b.lineRejects[i] || soldOut.get(b.id)![i] || '')]));
   const ranked = rankBids(rows.map(toBid), {
-    needItems, rejections, lineRejects, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
+    needItems, rejections, lineRejects, spendLimit, heldBack, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
   });
   const byId = new Map(rows.map((b) => [b.id, b]));
   for (const x of ranked.ranked) {
@@ -555,7 +560,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     // adjusted_total is the real score rankBids sorted on (equal to landed when nothing adjusted it).
     const pickedLines = x.picked.map((i) => x.bid.lines[i]!);
     ctx.db.roundResult.insert({
-      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [],
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
       lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
       adjustedTotal: x.score, adjustmentReason: adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality),
     });
@@ -590,6 +595,9 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
 
 // ---------------------------------------------------------------- mandate, approval, payment
 
+export const MANDATE_MAX_EXPIRY_MIN = 10;
+export const APPROVAL_METHODS = ['voice_code', 'allowance'];
+
 /** MOCK until Vidyut's Mandate lands: same fields as the 00-shared shape. */
 export function createMandate(
   ctx: Ctx,
@@ -598,8 +606,17 @@ export function createMandate(
     requestedBy: string; origin: string;
   },
 ) {
-  requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
+  requireRole(ctx, 'create_mandate', ['referee']);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
+  // #191: a mandate exists only for the round's real winner, paid to that seller, at its landed price, for minutes.
+  const bid = ctx.db.bid.id.find(bidIdOfDeal(a.dealId));
+  const won = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].find((r) => r.bidId === bid.id) : undefined;
+  if (!bid || !won || won.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
+  if (a.payee !== bid.sellerId) throw new SenderError(`payee must be the winning seller (${bid.sellerId})`);
+  if (Math.abs(a.amount - won.landed) > 1e-9) throw new SenderError('amount must equal the winning landed price');
+  if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {
+    throw new SenderError(`expiry must be 1 to ${MANDATE_MAX_EXPIRY_MIN} minutes`);
+  }
   claimDealUnits(ctx, a.dealId, a.buyerId, 'held');
   const allow = allowanceFor(ctx, a.buyerId);
   const d = decide(allow, a.amount, ms(ctx.timestamp));
@@ -609,10 +626,11 @@ export function createMandate(
     expiry: tsFromMs(ms(ctx.timestamp) + a.expiryMinutes * 60_000), nonce: a.nonce, withinAllowance: within,
     requestedBy: a.requestedBy, origin: a.origin,
   });
-  event(ctx, 'mandate_created', 'mandate', a.hash, within ? 'Deal within the allowance' : 'Deal needs the buyer call', a.payee, a.origin);
+  // #191: one neutral public label, so the floor never shows which side of the allowance a deal fell.
+  event(ctx, 'mandate_created', 'mandate', a.hash, 'Deal ready for approval', a.payee, a.origin);
   if (within) {
     // Inside the allowance: approved by the buyer's own standing rule, with a receipt.
-    ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp });
+    ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp, voiceApprovalId: '' });
     saveAllowance(ctx, recordAutoSpend(allow, a.amount, ms(ctx.timestamp)));
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Bought within your allowance: ${d.reason}. Receipt for deal ${a.dealId}.`, push: false, at: ctx.timestamp });
     event(ctx, 'approval_recorded', 'approval', a.hash, 'Approved within the allowance', a.payee, a.origin);
@@ -621,19 +639,21 @@ export function createMandate(
   }
 }
 
-export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string }) {
-  requireRole(ctx, 'record_approval', ['buyer', 'referee']);
+export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string; voiceApprovalId: string }) {
+  // #191 (LOCKED: approval by phone call only): the referee relays the call result; no buyer screen records an approval.
+  requireRole(ctx, 'record_approval', ['referee']);
+  if (!APPROVAL_METHODS.includes(a.method)) throw new SenderError(`method must be one of ${APPROVAL_METHODS.join(', ')}`);
   const md = ctx.db.mandate.hash.find(a.mandateHash);
   if (!md) throw new SenderError('no mandate with that hash');
-  // Only the mandate's own buyer, or the referee relaying that buyer's verified code.
-  requireRole(ctx, 'record_approval', ['buyer', 'referee'], md.buyerId);
+  if (a.method === 'allowance' && !md.withinAllowance) throw new SenderError('this deal is over the allowance; only the call approves it');
+  if (a.method === 'voice_code' && !a.voiceApprovalId.trim()) throw new SenderError('a voice approval needs the VoiceApproval id from the call');
   if (a.approvedBy !== md.buyerId) throw new SenderError(`approvedBy must be the mandate's buyer (${md.buyerId})`);
   const sep = requesterMayApprove(md.requestedBy, a.approvedBy);
   if (!sep.ok) throw new SenderError(sep.reasons.join('; '));
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
-  ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp });
+  ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp, voiceApprovalId: a.voiceApprovalId.trim() });
   event(ctx, 'approval_recorded', 'approval', a.mandateHash, `Approved by ${a.method.replace('_', ' ')}`, md.payee, md.origin);
 }
 
@@ -813,27 +833,6 @@ export function issueApprovalCode(ctx: Ctx, { mandateHash, code }: { mandateHash
   else ctx.db.approvalCode.insert(row);
 }
 
-/**
- * The typed fallback: the mandate's own buyer types the code shown on its screen. A match records the same approval the call
- * would (method typed_code) for that exact mandate. A miss returns { approved: false } without throwing, so it is counted; 5 lock it.
- * The code never appears in a message.
- */
-export function approveTyped(ctx: Ctx, { mandateHash, code }: { mandateHash: string; code: string }) {
-  const md = ctx.db.mandate.hash.find(mandateHash);
-  if (!md) throw new SenderError('no mandate with that hash');
-  requireRole(ctx, 'approve_typed', ['buyer'], md.buyerId);
-  const ac = ctx.db.approvalCode.mandateHash.find(mandateHash);
-  if (!ac) throw new SenderError('no code issued for this mandate yet; wait for the call');
-  if (ac.locked) throw new SenderError('typed approval is locked after too many wrong codes; approve on the call');
-  if (normCode(code) !== ac.code) {
-    const failures = ac.failures + 1;
-    ctx.db.approvalCode.mandateHash.update({ ...ac, failures, locked: failures >= APPROVAL_MAX_FAILURES });
-    return { approved: false, reason: 'wrong code' };
-  }
-  recordApproval(ctx, { mandateHash, method: 'typed_code', approvedBy: md.buyerId });
-  return { approved: true, reason: '' };
-}
-
 /** This buyer's mandates still waiting for approval, with the code to show on this screen only. */
 export function myPendingApprovalsView(ctx: VCtx) {
   const id = myBuyerId(ctx);
@@ -845,6 +844,38 @@ export function myPendingApprovalsView(ctx: VCtx) {
       mandateHash: md.hash, mandateId: md.id, amount: md.amount, payee: md.payee, expiry: md.expiry, code: ac.code,
       failures: ac.failures, locked: ac.locked, issuedAt: ac.issuedAt, origin: md.origin,
     }];
+  });
+}
+
+/**
+ * #191-5: the checks on bids in this buyer's own rounds (advocate cards, Shield verdicts, claim checks), so /buyer shows the
+ * live veto and Shield cards. Never another buyer's rounds; sellers and strangers see nothing.
+ */
+export function myBidChecksView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  if (!id) return [];
+  return [...ctx.db.need.buyerId.filter(id)].flatMap((n) =>
+    [...ctx.db.round.needId.filter(n.id)].flatMap((r) => [...ctx.db.bid.roundId.filter(r.id)]).flatMap((b) =>
+      [...ctx.db.bidCheck.bidId.filter(b.id)].map((c) => ({
+        id: c.id, bidId: b.id, roundId: b.roundId, sellerId: b.sellerId, persona: b.persona, bidOrigin: b.origin, kind: c.kind,
+        result: c.result, detail: c.detail, evidenceUrl: c.evidenceUrl, origin: c.origin, at: c.at,
+      })),
+    ),
+  ).sort((x, y) => (x.id < y.id ? -1 : 1));
+}
+
+/** #191-5: this buyer's mandates with their approval and payment rows, so /buyer shows the live approval and receipt cards. */
+export function myDealsView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  if (!id) return [];
+  return [...ctx.db.mandate.iter()].filter((md) => md.buyerId === id).map((md) => {
+    const ap = ctx.db.approval.mandateHash.find(md.hash);
+    const pay = ctx.db.payment.mandateHash.find(md.hash);
+    return {
+      mandateHash: md.hash, mandateId: md.id, dealId: md.dealId, amount: md.amount, payee: md.payee, expiry: md.expiry,
+      withinAllowance: md.withinAllowance, origin: md.origin, approvalMethod: ap?.method ?? '', voiceApprovalId: ap?.voiceApprovalId ?? '',
+      approvedAt: ap?.at, paymentRef: pay?.paymentRef ?? '', paymentMode: pay?.mode ?? '', paidAt: pay?.at,
+    };
   });
 }
 

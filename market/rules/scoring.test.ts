@@ -327,3 +327,15 @@ describe("partial bids on a multi-item need (#136)", () => {
     expect(r.ranked.every((x) => x.complete && x.missing.length === 0)).toBe(true);
   });
 });
+
+describe("#191 held back (advocate caution) ranks below confirmed bids", () => {
+  it("a cheaper held-back bid still ranks, but below every confirmed bid; ties among held-back bids keep price order", () => {
+    const cheapUnconfirmed = mk("ebay", 1036.99);
+    const otherUnconfirmed = mk("ebay2", 1100);
+    const confirmed = mk("best-buy", 1299.99);
+    const heldBack = new Map([[cheapUnconfirmed.id, "held back: fit unconfirmed"], [otherUnconfirmed.id, "held back: fit unconfirmed"]]);
+    const r = rankBids([cheapUnconfirmed, otherUnconfirmed, confirmed], { needItems: items, heldBack });
+    expect(r.ranked.map((x) => x.bid.seller_id)).toEqual(["best-buy", "ebay", "ebay2"]);
+    expect(rankBids([cheapUnconfirmed, confirmed], { needItems: items }).ranked[0]!.bid.seller_id).toBe("ebay");
+  });
+});
