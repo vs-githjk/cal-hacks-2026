@@ -20,7 +20,6 @@ import common
 import crs
 import hunt
 import payment
-import status
 from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
@@ -65,7 +64,7 @@ async def tell(ctx: Context, to: str, text: str):
     else:
         msg = ChatMessage(content=[TextContent(text=text)])
         CHAT_DIAG.send_started(msg.msg_id, to, ctx.session, ROUND.get("need", {}).get("id", ""))
-        ctx.logger.info(status.msg_line("buyer", "owner", "reply"))
+        ctx.logger.info("AGENT_MSG name=buyer to=owner text=reply to owner")
         try:
             result = await ctx.send(to, msg)
         except Exception as exc:
