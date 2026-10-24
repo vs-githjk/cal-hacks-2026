@@ -82,8 +82,8 @@ def learning_tile() -> dict:
     w = json.loads(pick.read_text())
     L = w["learning"]
     arch = L["per_archetype"]
-    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}"
-                     for a, v in arch.items())
+    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}, "
+                     f"lift vs median control {v['learner'] - v['control_median']:+.2f}" for a, v in arch.items())
     return _tile(id="learning_lift", title="Seller learning lift", status="measured" if L["quotable"] else "not_quotable",
                  value=None, unit="points",
                  display=(f"No lift to quote ({len(L['winning_archetypes'])} of {len(arch)} archetypes, not quotable): the learner "
