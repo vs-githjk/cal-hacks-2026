@@ -8,6 +8,10 @@
   "shady-sam": {
    "name": "Shady Sam's Deals (SIM)",
    "payee": "shady-sam@pay.example.test"
+  },
+  "renew-refurb": {
+   "name": "ReNew Refurb (SIM)",
+   "payee": "renew-refurb@pay.example.test"
   }
  }
 }
