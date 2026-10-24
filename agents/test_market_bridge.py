@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -55,7 +56,9 @@ def test_coordinator_posts_goal_need_then_opens_a_separate_referee_round():
     need = {"id": "need-1", "delivery_window": "by Friday", "spend_limit": 900, "consent": True,
             "auction_window_s": 12, "items": [{"sku_spec": "gpu", "condition": "new", "variant": "retail",
                                                    "quantity": 1, "unit": "each"}]}
-    buyer_client = FakeMarket(sql_rows=[[{"id": "goal-1", "buyerId": "vidyut", "cap": 900}]])
+    buyer_client = FakeMarket(sql_rows=[[], [{"id": "goal-1", "buyerId": "vidyut", "type": "part_by_date",
+        "cap": 900, "deadline": "2026-10-30T00:00:00Z"}], [{"skuSpec": "gpu", "condition": "new",
+        "variant": "retail", "quantity": 1, "skippedOwnedPartId": ""}]])
     buyer = MarketBridge("buyer", client=buyer_client)
     buyer.post_goal(goal, buyer_id="vidyut")
     buyer.post_need(need, buyer_id="vidyut", goal_id="goal-1")
@@ -210,3 +213,108 @@ def test_incomplete_or_nonwinning_result_never_becomes_order(mutation):
         assert bridge.authoritative_winner("round-1", [
             {"sku_spec": "gpu", "quantity": 2}, {"sku_spec": "cpu", "quantity": 1},
         ]) is None
+
+
+def _purchase_status(*, mandate=None, mandate_id="md-1", amount=40.0, payee="seller-a", expiry=None,
+                     reserved=True, retired=False, settled=False, approval=None,
+                     payment_ref=None, payment_amount=None, payment_mode=None):
+    now = datetime(2026, 10, 24, tzinfo=timezone.utc)
+    expiry = expiry or now + timedelta(minutes=9)
+    if isinstance(expiry, str):
+        expiry = datetime.fromisoformat(expiry.replace("Z", "+00:00"))
+    micros = int(expiry.timestamp()) * 1_000_000
+    return {"mandateHash": mandate or "a" * 64, "mandateId": mandate_id, "dealId": "deal-1",
+        "goalId": "goal-1", "needId": "need-1", "amount": amount, "payee": payee,
+        "expiry": [micros], "origin": "SIM", "withinAllowance": False, "retired": retired,
+        "reservationMatches": reserved, "settled": settled,
+        "approvalMethod": {"0": approval} if approval is not None else {"1": []},
+        "approvedAt": {"0": [micros]} if approval is not None else {"1": []},
+        "paymentRef": {"0": payment_ref} if payment_ref is not None else {"1": []},
+        "paymentAmount": {"0": payment_amount} if payment_amount is not None else {"1": []},
+        "paymentMode": {"0": payment_mode} if payment_mode is not None else {"1": []},
+        "paidAt": {"1": []}}
+
+
+def test_purchase_status_is_buyer_private_and_normalizes_sats_fields():
+    market = FakeMarket(sql_rows=[[_purchase_status(approval="typed_code", payment_ref="ch_test",
+        payment_amount=40.0, payment_mode="sim")]])
+    bridge = MarketBridge("buyer", client=market)
+    row = bridge.purchase_status("a" * 64)
+    assert row["approval_method"] == "typed_code"
+    assert row["payment_ref"] == "ch_test" and row["payment_mode"] == "sim"
+    assert row["expiry"] == "2026-10-24T00:09:00Z"
+    assert "FROM my_purchase_status" in market.queries[0]
+    assert "SELECT *" not in market.queries[0]
+    with pytest.raises(MarketBridgeError, match="purchase_status_binding_invalid"):
+        MarketBridge("referee", client=FakeMarket()).purchase_status("a" * 64)
+    with pytest.raises(MarketBridgeError, match="purchase_status_binding_invalid"):
+        bridge.purchase_status("x" * 64)
+
+
+def test_purchase_status_rejects_missing_foreign_and_malformed_rows():
+    with pytest.raises(MarketBridgeError, match="purchase_status_readback_missing"):
+        MarketBridge("buyer", client=FakeMarket()).purchase_status("a" * 64)
+    foreign = _purchase_status(mandate="b" * 64)
+    with pytest.raises(MarketBridgeError, match="purchase_status_readback_invalid"):
+        MarketBridge("buyer", client=FakeMarket(sql_rows=[[foreign]])).purchase_status("a" * 64)
+    malformed = _purchase_status() | {"expiry": [True]}
+    with pytest.raises(MarketBridgeError, match="market_timestamp_invalid"):
+        MarketBridge("buyer", client=FakeMarket(sql_rows=[[malformed]])).purchase_status("a" * 64)
+
+
+def test_seller_loss_report_projection_is_role_checked_and_normalizes_timestamp():
+    row = {"id": "loss-1", "roundId": "round-1", "sellerId": "seller-a", "won": False,
+        "gapBand": "within5", "reason": "price", "sourceUrl": "https://example.test/listing",
+        "strategyDiff": [{"key": "price_step", "from": "0", "to": "0.02"}],
+        "whatToChange": "Review the quoted price.", "whatToChangeOrigin": "SIM", "origin": "SIM",
+        "createdAt": [1_798_848_000_000_000]}
+    bridge = MarketBridge("seller", client=FakeMarket(sql_rows=[[row]]))
+    report = bridge.loss_reports()[0]
+    assert report["seller_id"] == "seller-a" and report["created_at"].endswith("Z")
+    assert "FROM my_loss_reports" in bridge._client.queries[0]
+    assert "SELECT *" not in bridge._client.queries[0]
+    with pytest.raises(MarketBridgeError, match="loss_reports_role_mismatch"):
+        MarketBridge("buyer", client=FakeMarket()).loss_reports()
+
+
+@pytest.mark.parametrize("change", [
+    {"mandateHash": "b" * 64}, {"amount": 41.0}, {"payee": "seller-b"},
+    {"reservationMatches": False}, {"retired": True}, {"withinAllowance": True},
+])
+def test_create_mandate_requires_exact_private_readback(change):
+    from pay.mandate import new_mandate
+    now = datetime(2026, 10, 24, tzinfo=timezone.utc)
+    mandate = new_mandate(deal_id="deal-1", buyer_id="vidyut", goal_id="goal-1", amount=40.0,
+        payee="seller-a", within_allowance=False, origin="SIM", now=now)
+    status = _purchase_status(mandate=mandate["hash"], mandate_id=mandate["id"],
+                              expiry=mandate["expires_at"]) | change
+    market = FakeMarket(sql_rows=[[status]])
+    bridge = MarketBridge("buyer", client=market)
+    with pytest.raises(MarketBridgeError):
+        bridge.create_mandate(mandate, need_id="need-1", buyer_id="vidyut", now=now)
+    assert market.calls[0][0] == "create_mandate"
+    assert market.calls[0][1] == {"hash": mandate["hash"], "id": mandate["id"], "deal_id": "deal-1",
+        "buyer_id": "vidyut", "amount": 40.0, "payee": "seller-a", "expiry_minutes": 10,
+        "nonce": mandate["nonce"], "requested_by": "", "origin": "SIM", "goal_id": "goal-1", "need_id": "need-1"}
+
+
+def test_create_mandate_accepts_exact_buyer_private_readback():
+    from pay.mandate import new_mandate
+    now = datetime(2026, 10, 24, tzinfo=timezone.utc)
+    mandate = new_mandate(deal_id="deal-1", buyer_id="vidyut", goal_id="goal-1", amount=40.0,
+        payee="seller-a", within_allowance=False, origin="SIM", now=now)
+    status = _purchase_status(mandate=mandate["hash"], mandate_id=mandate["id"],
+                              expiry=mandate["expires_at"])
+    bridge = MarketBridge("buyer", client=FakeMarket(sql_rows=[[status]]))
+    assert bridge.create_mandate(mandate, need_id="need-1", buyer_id="vidyut", now=now)["mandate_hash"] == mandate["hash"]
+
+
+@pytest.mark.parametrize("mode", ["sim", "stripe_test"])
+def test_referee_records_only_canonical_payment_mode(mode):
+    market = FakeMarket()
+    bridge = MarketBridge("referee", client=market)
+    assert bridge.record_payment(mandate_hash="a" * 64, payment_ref="ch_test", amount=40.0, mode=mode) == {"recorded": True}
+    assert market.calls == [("record_payment", {"mandate_hash": "a" * 64,
+        "payment_ref": "ch_test", "amount": 40.0, "mode": mode})]
+    with pytest.raises(MarketBridgeError, match="payment_binding_invalid"):
+        bridge.record_payment(mandate_hash="a" * 64, payment_ref="ch_test", amount=40.0, mode="SIM")

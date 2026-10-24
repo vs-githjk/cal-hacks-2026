@@ -87,10 +87,11 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
                 and math.isfinite(seller["discount"]) and 0 <= seller["discount"] < 1):
             price = round(have["price"] * (1 - seller["discount"]), 2)
             if price < have["floor"]:
-                notes.append(f"{sku} held at floor {have['floor']:.2f}")
+                notes.append(f"{sku} pricing constraint applied")
                 price = have["floor"]
             lines.append({"sku_spec": sku, "unit_price": price, "quantity": want["quantity"],
                           "offered_condition": have["condition"], "variant": have["variant"],
+                          "listing_id": have.get("listing_id", f"SIM:{seller['id']}:{sku}"),
                           "listing_url": have["listing_url"], "page_condition": have["page_condition"],
                           "attrs": dict(have["attrs"]), "origin": "SIM", "source": "simulated"})
             origins.add("SIM")
@@ -116,9 +117,9 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
             lines.append({"sku_spec": sku, "unit_price": price, "quantity": want["quantity"],
                           "shipping": line_shipping,
                           "offered_condition": card["condition"], "variant": card.get("variant", "retail"),
-                          "listing_url": card["source"], "attrs": dict(card.get("attrs") or {}),
+                          "listing_id": card["id"], "listing_url": card["source"],
+                          "attrs": dict(card.get("attrs") or {}),
                           "origin": "MIRROR", "source": card["source"], "seller_of_record": card["seller_of_record"],
-                          "listing_id": card["id"],
                           "model_number": card.get("model_number"),
                           "snapshot_id": card["snapshot_id"], "snapshot_date": card["snapshot_date"],
                           "floor_evidence": {k: inputs["floor"][k] for k in ("origin", "source", "observed_at")},

@@ -14,6 +14,7 @@ from uagents_core.contrib.protocols.payment import CommitPayment, CompletePaymen
 
 import common
 import payment
+from market_bridge import MarketBridge
 from agents.buyer import checkout, state
 from pay.mandate import mandate_hash
 from pay.replay import NonceStore
@@ -22,6 +23,36 @@ from shield.receipt import parse_unique_json
 
 PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013}
 _CHARGE_ID = re.compile(r"(?:pi|ch)_[A-Za-z0-9_]{1,128}\Z")
+_MARKET_SELLER_SUBJECT = {"seller_1": "seller-a", "seller_2": "seller-b", "seller_3": "seller-c"}
+
+
+def _market_bid(bid: dict, seller: dict) -> None:
+    subject = _MARKET_SELLER_SUBJECT[bid["supplier_id"]]
+    token_file = os.environ.get(f"SPACETIMEDB_{subject.replace('-', '_').upper()}_TOKEN_FILE")
+    if not token_file:
+        raise ValueError("seller Market identity is not configured")
+    market = MarketBridge("seller", token_file=token_file)
+    metadata = []
+    for index, line in enumerate(bid["lines"]):
+        origin = line.get("origin", bid["origin"])
+        source = line.get("source", bid["source"])
+        listing_id = line.get("listing_id") or line.get("listing_url")
+        if not isinstance(listing_id, str) or not listing_id or not isinstance(source, str) or not source:
+            raise ValueError("listing evidence is incomplete")
+        listing_hash = hashlib.sha256(json.dumps(line, sort_keys=True, separators=(",", ":"),
+                                                 ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+        metadata.append({"lineIndex": index,
+                         "shipping": line.get("shipping", seller["shipping"] if origin == "SIM" and index == 0 else 0.0),
+                         "listingId": listing_id, "listingHash": listing_hash, "source": source,
+                         "snapshotId": line.get("snapshot_id", bid.get("mirror_snapshot_id", "")),
+                         "provenance": {"origin": origin, "source": source,
+                                        **({"seller_of_record": line["seller_of_record"]}
+                                           if isinstance(line.get("seller_of_record"), str) else {})},
+                         "attrs": line.get("attrs", {})})
+    market.publish_bid(bid_id=bid["id"], round_id=f"round-{bid['need_id']}", seller_id=subject,
+                       persona=bid["persona"], lines=bid["lines"], line_metadata=metadata,
+                       stated_total=bid["total_landed_price"], perks=bid["perks"], claims=bid["claims"],
+                       origin=bid["origin"], source=bid["source"])
 
 
 def _read_transaction(db_path, deal_id: str, buyer_id: str) -> dict | None:
@@ -176,6 +207,11 @@ def build(name: str) -> Agent:
         if bid is None:
             return
         common.validate("Bid", bid)
+        try:
+            _market_bid(bid, s)
+        except Exception as exc:
+            ctx.logger.warning(f"Market bid publication failed: {type(exc).__name__}")
+            return
         await ctx.send(sender, common.BidReply(bid_json=json.dumps(bid),
                                                persona_line=persona_line(s, bid["total_landed_price"])))
 
