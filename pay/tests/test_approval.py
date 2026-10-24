@@ -413,7 +413,6 @@ def test_accepted_spoken_forms(svc, fmt):
 ATTACKS = [
     # id, template ({code} own code, {other} another deal's code, {w1} {w2} own words), expected reason
     ("replay_of_another_deals_code", "{other} approve", "replay"),
-    ("misheard_near_miss_plural", "{w1}s {w2}s approve", "wrong_code"),
     ("near_miss_one_word_wrong", "{w1} zipper approve", "wrong_code"),
     ("words_swapped", "{w2} {w1} approve", "wrong_code"),
     ("someone_else_says_only_approve", "approve", "no_code"),
@@ -600,3 +599,44 @@ def test_refusal_words_deny():
     from pay.approval import NEGATIONS
     for w in ("refuse", "refused", "without", "nothing", "nor"):
         assert w in NEGATIONS
+
+
+# ---------- speech-to-text spelling of code words ----------
+
+@pytest.mark.parametrize("shape", ["{a}'s {b}", "{a}s {b}", "{a} {b}'s", "{a}’s {b}s"])
+def test_possessive_or_plural_code_word_still_approves(deal, shape):
+    m, s, code = deal
+    a, b = code.split()
+    # the real call of Oct 24 00:08: STT wrote "the two words from my screen are 'orchid's sunset.' Approve."
+    d = s.approve("the two words from my screen are '" + shape.format(a=a, b=b) + ".' Approve.", sec(8))
+    assert d.approved and d.reason is None
+
+
+@pytest.mark.parametrize("bend", [lambda w: w[:-1] + "x", lambda w: w[:3] + "h" + w[3:], lambda w: w[0] + w[2:]])
+def test_one_letter_accent_slip_still_approves(deal, bend):
+    m, s, code = deal
+    a, b = code.split()
+    heard = f"{bend(a)} {b}" if len(a) >= len(b) else f"{a} {bend(b)}"   # bend the longer word (5+ letters)
+    assert s.approve(f"{heard} approve", sec(8)).approved
+
+
+def test_a_word_two_letters_off_is_wrong(deal):
+    m, s, code = deal
+    a, b = code.split()
+    d = s.approve(f"{a[:-2]}qq {b} approve", sec(8))
+    assert not d.approved and d.reason == "wrong_code"
+
+
+def test_close_spellings_never_turn_a_wrong_pair_into_a_right_one(deal):
+    m, s, code = deal
+    a, b = code.split()
+    assert not s.approve(f"{b}s {a}s approve", sec(8)).approved            # swapped stays wrong
+    from pay.words import WORDS
+    other = next(w for w in WORDS if w not in (a, b))
+    assert not s.approve(f"{other}s {b} approve", sec(9)).approved         # a different word stays wrong
+
+
+def test_no_list_word_is_another_list_word_plus_s():
+    from pay.words import WORDS
+    listed = set(WORDS)
+    assert not [w for w in WORDS if w + "s" in listed]

@@ -95,6 +95,17 @@ def _within(a: str, b: str, limit: int = 2) -> bool:
     return prev[-1] <= limit
 
 
+def _as_code_word(token: str) -> str:
+    """Map a heard token to the list word one edit away, so an accent or a speech-to-text spelling ("orchid's"
+    normalizes to "orchids", "sunsat", "orchd") still counts. List words are at least 3 edits apart, so at most
+    one is that close. The pair still has to be this deal's two words in order; two edits let ordinary words
+    in ("zipper" is two from "copper"), so the limit stays at one."""
+    if token in WORD_SET or len(token) < 4:
+        return token
+    near = [w for w in WORDS if _within(token, w, 1)]
+    return near[0] if len(near) == 1 else token
+
+
 def _code_like(token: str) -> bool:
     """A word of the list or a near miss of one (a misheard code word): used only to pick the deny reason."""
     return token in WORD_SET or (len(token) >= 4 and any(_within(token, w) for w in WORDS))
@@ -304,7 +315,10 @@ class ApprovalSession:
             if not tokens:
                 return self._finish(now, "denied", "no_answer", "silence")
             self._listen_deadline = None
-            reason = self._judge(tokens, confidence)
+            # speech-to-text never emits invisible format characters; text carrying them is an injection, and
+            # the close-spelling match below must not glue a split word back together
+            hidden = isinstance(text, str) and any(unicodedata.category(c) == "Cf" for c in text)
+            reason = "wrong_code" if hidden else self._judge(tokens, confidence)
             svc._attempts[self.mandate_hash] = svc.attempts_used(self.mandate_hash) + 1
             self.attempts += 1
             if reason is None:
@@ -326,8 +340,9 @@ class ApprovalSession:
             return "no_code"
         if NEGATIONS & set(tokens):
             return "no_code"
+        words = [_as_code_word(t) for t in tokens]
         pair_hashes = [hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest()
-                       for a, b in zip(tokens, tokens[1:]) if a in WORD_SET and b in WORD_SET]
+                       for a, b in zip(words, words[1:]) if a in WORD_SET and b in WORD_SET]
         own = any(hmac.compare_digest(h, self.code_hash) for h in pair_hashes)
         if not own:
             for h in pair_hashes:
