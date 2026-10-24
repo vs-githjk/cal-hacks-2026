@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T15:54:58+00:00",
+ "generated_at": "2026-10-24T15:54:59+00:00",
  "tiles": [
   {
    "detail": {
@@ -97,24 +97,24 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T15:54:58+00:00",
-    "to": "2026-10-24T15:54:58+00:00"
+    "from": "2026-10-24T15:54:59+00:00",
+    "to": "2026-10-24T15:54:59+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T15:54:58+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T15:54:59+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
     "checked": {
-     "n": 33,
-     "correct": 33,
-     "decided": 33
+     "n": 39,
+     "correct": 39,
+     "decided": 39
     },
     "all": {
-     "n": 44,
-     "correct": 42,
-     "decided": 43,
+     "n": 50,
+     "correct": 48,
+     "decided": 49,
      "uncertain": 1
     },
     "false_ok": 0,
@@ -125,8 +125,8 @@
    "status": "measured",
    "value": 1.0,
    "unit": "ratio",
-   "display": "33 of 33 right on maker-checked builds; 42 of 43 on all; 0 false OK (tuned set, not held out)",
-   "count": 33,
+   "display": "39 of 39 right on maker-checked builds; 48 of 49 on all; 0 false OK (tuned set, not held out)",
+   "count": 39,
    "date_range": {
     "from": "2026-10-24",
     "to": "2026-10-24"
