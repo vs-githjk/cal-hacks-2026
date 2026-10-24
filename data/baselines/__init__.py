@@ -55,7 +55,7 @@ def observations() -> list[dict]:
                 continue
             rows.append({"provider": "ebay-sold" if store in SOLD else c.get("provider", "apify"),  # a second Actor family sets its own label to count as a second source
                           "store": store, "sku": "rtx 5070 ti" if c["attrs"].get("chipset") == "RTX 5070 Ti" else c["name"],
-                         "price": c["price"], "in_stock": not out_of_stock(c), "condition": c.get("condition", "unknown"),
+                         "title": c.get("name"), "price": c["price"], "in_stock": not out_of_stock(c), "condition": c.get("condition", "unknown"),
                          "kind": "sold" if store in SOLD else "ask", "observed_at": c["snapshot_date"],
                          "sold_date": c["listing"].get("sold_date"),
                          "url": c["listing"].get("url") or c.get("source"), "snapshot_id": c.get("snapshot_id"), "origin": "MIRROR"})
