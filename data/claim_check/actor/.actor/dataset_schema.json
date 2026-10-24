@@ -1,0 +1,36 @@
+{
+ "actorSpecification": 1,
+ "fields": {
+  "type": "object",
+  "properties": {
+   "id": {"type": "string", "description": "Claim id from the input"},
+   "text": {"type": "string", "description": "The claim as written"},
+   "kind": {"type": "string", "description": "price, condition, stock, ..."},
+   "evidence_url": {"type": "string", "description": "Listing page that was checked"},
+   "result": {"type": "string", "enum": ["verified", "unverified", "false"], "description": "Evidence, not a verdict. An unreadable page is unverified, never false"},
+   "checked_at": {"type": "string", "description": "When the page was read (ISO-8601 UTC)"},
+   "method": {"type": "string", "description": "How the result was reached"},
+   "evidence_hash": {"type": "string", "description": "sha256 of the page bytes (empty if the page could not be read)"},
+   "reason": {"type": "string", "description": "Neutral explanation"}
+  },
+  "required": ["result", "evidence_url", "checked_at", "method", "reason"]
+ },
+ "views": {
+  "results": {
+   "title": "Claim check results",
+   "transformation": {"fields": ["id", "text", "result", "reason", "evidence_url", "checked_at", "evidence_hash"]},
+   "display": {
+    "component": "table",
+    "properties": {
+     "id": {"label": "Claim", "format": "text"},
+     "text": {"label": "Text", "format": "text"},
+     "result": {"label": "Result", "format": "text"},
+     "reason": {"label": "Reason", "format": "text"},
+     "evidence_url": {"label": "Page", "format": "link"},
+     "checked_at": {"label": "Checked at", "format": "date"},
+     "evidence_hash": {"label": "Page hash", "format": "text"}
+    }
+   }
+  }
+ }
+}
