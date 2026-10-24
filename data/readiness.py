@@ -4,13 +4,15 @@
     check_page(url, html, now=None)         -> the same, for a page already fetched
 
 status: "blocks" (an agent would skip the listing), "warns" (an agent cannot confirm something), "ready" (no findings), or
-"unreadable" (the page could not be fetched or parsed; nothing is known). Findings are {rule_id, severity, what_an_agent_sees,
-source_url, fix}, worded as what a shopping agent sees, never what the seller did.
+"unreadable" (the page could not be fetched or parsed, or the store showed a bot check instead of the listing; nothing is
+known). Findings are {rule_id, severity, what_an_agent_sees, source_url, fix}, worded as what a shopping agent sees, never
+what the seller did.
 
 What is read: the page's schema.org Product JSON-LD (data.claim_check.page_facts and ld_product: the Product whose @id or
 url is the page, else the first with offers), with price, name and availability re-checked strictly here. Then:
   page checks   no Product structured data (blocks), no price that is a finite number of at least 0.01 or a plain numeric
-                string (blocks), a price with no three-letter priceCurrency (warns), no name as text (warns), no condition
+                string in offers.price, offers.priceSpecification.price or an AggregateOffer's lowPrice (blocks), a
+                lowPrice that is not one price (warns), a price with no three-letter priceCurrency (warns), no name as text (warns), no condition
                 (warns), no return policy (warns), no model identifier (mpn, gtin or sku) an agent can match to maker specs
                 (warns), availability not a schema.org value (warns);
   seller_report title claims against the page's own data (blocks), and shipping and stock stated (warns).
@@ -56,6 +58,52 @@ def _plain_price(v):
 def _currency(v):
     """A three-letter currency code ("USD"), upper-cased, else None (missing, "XYZ!!", "$", 840)."""
     return v.strip().upper() if isinstance(v, str) and CURRENCY.fullmatch(v.strip()) else None
+
+
+def _offer_price(offer: dict) -> tuple:
+    """(price, currency, source, high) as an agent reads the offer (#353): offers.price with offers.priceCurrency; else the first
+    offers.priceSpecification (one or a list) with a readable price, with its own priceCurrency (else the offer's); else an
+    AggregateOffer's lowPrice, the lowest price on offer, with high its highPrice. source names the field the price came from.
+    Every price passes _plain_price, so "$5", 0 or "1,749.99" in any of these places is still no price."""
+    cur = _currency(offer.get("priceCurrency"))
+    price = _plain_price(offer.get("price"))
+    if price is not None:
+        return price, cur, "price", None
+    specs = offer.get("priceSpecification")
+    for spec in specs if isinstance(specs, list) else [specs]:
+        if isinstance(spec, dict) and _plain_price(spec.get("price")) is not None:
+            return _plain_price(spec.get("price")), _currency(spec.get("priceCurrency")) or cur, "priceSpecification.price", None
+    low = _plain_price(offer.get("lowPrice"))
+    if low is not None:
+        return low, cur, "lowPrice", _plain_price(offer.get("highPrice"))
+    return None, cur, None, None
+
+
+# A 200 page that is a bot check, not the listing (#353). Strong markers are the challenge pages' own scripts and ids; weak
+# ones (plain words a real page can also say) count only in the <title> or on a short page, as challenge pages are short.
+BOT_WALL_STRONG = (("cloudflare", ("cf-browser-verification", "challenge-platform", "cf_chl_", "cf-challenge", "attention required! | cloudflare")),
+                   ("akamai", ("errors.edgesuite.net",)),
+                   ("perimeterx", ("px-captcha", "_pxcaptcha", "perimeterx", "/px/client")),
+                   ("datadome", ("captcha-delivery.com", "geo.captcha-delivery", "datadome")),
+                   ("incapsula", ("_incapsula_resource", "incapsula incident id")))
+BOT_WALL_WEAK = ("just a moment...", "access denied", "captcha", "are you a robot", "are you a human", "verify you are human",
+                 "confirm you are a human", "press & hold", "press &amp; hold", "unusual traffic", "request blocked", "pardon our interruption")
+SHORT_PAGE = 20000  # characters: a challenge page is a few KB; a store's real product page is far longer
+
+
+def _bot_wall(html: str) -> str | None:
+    """Which bot check the page is ("cloudflare", "akamai", "perimeterx", "datadome", "incapsula", "a captcha"), else None.
+    Only asked of a page with no structured data: a real listing that loads reCAPTCHA or says "access denied" is still read."""
+    low = html.lower()
+    for name, marks in BOT_WALL_STRONG:
+        if any(m in low for m in marks):
+            return name
+    title = re.search(r"<title[^>]*>([^<]{0,300})", low)
+    where = (title.group(1) if title else "") + (low if len(low) <= SHORT_PAGE else "")
+    hit = next((m for m in BOT_WALL_WEAK if m in where), None)
+    if hit is None:
+        return None
+    return "akamai" if hit == "access denied" and "reference #" in low else "a captcha" if "captcha" in hit else "a bot check"
 
 
 def _availability(v):
@@ -106,10 +154,15 @@ def _page_findings(url: str, facts: dict, how: str, product: dict | None = None,
     if facts.get("price") is None:
         out.append(_finding("listing.price_unreadable", "blocks", "The Product data has no price an agent can read.", url,
                             "Put the price as a number in offers.price, with offers.priceCurrency."))
-    elif product is not None and _currency((offer or {}).get("priceCurrency")) is None:
-        out.append(_finding("listing.currency_unknown", "warns", "The Product data has no currency an agent can read, so it cannot "
-                            "tell which currency the price is in or compare it with other sellers.", url,
-                            "Set offers.priceCurrency to a three-letter ISO 4217 code, for example USD or CAD."))
+    else:
+        if product is not None and facts.get("currency") is None:
+            out.append(_finding("listing.currency_unknown", "warns", "The Product data has no currency an agent can read, so it cannot "
+                                "tell which currency the price is in or compare it with other sellers.", url,
+                                "Set offers.priceCurrency to a three-letter ISO 4217 code, for example USD or CAD."))
+        if facts.get("price_from") == "lowPrice" and facts.get("price_high") != facts.get("price"):
+            out.append(_finding("listing.price_range", "warns", "The Product data gives a price range (AggregateOffer), so an agent "
+                                "reads the lowPrice as the price and cannot tell what this listing costs a shopper.", url,
+                                "Give this listing's own price in offers.price (an Offer), or set lowPrice and highPrice to the same value."))
     if not facts.get("condition"):
         out.append(_finding("listing.condition_unknown", "warns", "No item condition is stated, so an agent cannot tell new from "
                             "used or refurbished.", url, "Set offers.itemCondition, for example https://schema.org/NewCondition."))
@@ -148,11 +201,19 @@ def check_page(url: str, html: str, now: datetime | None = None) -> dict:
 
 def _check_page(url: str, html: str, at: str) -> dict:
     facts, how = page_facts(html, url)
+    if how == "no structured data":
+        wall = _bot_wall(html)
+        if wall:  # we were shown a challenge, not the listing: nothing is known about the page, so it is free (#353)
+            return _unreadable(url, at, f"the store showed a bot check ({wall}) instead of the listing, so its page was not read",
+                               "bot_wall")
     product = ld_product(html, url) if how == "page JSON-LD" else None
     offer = _offer(product) if product else {}
     if how != "no structured data":  # read the raw values ourselves: the claim check is lenient where an agent is not
         facts = dict(facts)
-        facts["price"] = _plain_price(offer.get("price") if product is not None else facts.get("price"))
+        if product is not None:
+            facts["price"], facts["currency"], facts["price_from"], facts["price_high"] = _offer_price(offer)
+        else:
+            facts["price"] = _plain_price(facts.get("price"))
         title = product.get("name") if product is not None else facts.get("title")
         facts["title"] = title.strip() if isinstance(title, str) and title.strip() else None
         if product is not None:
@@ -163,8 +224,10 @@ def _check_page(url: str, html: str, at: str) -> dict:
     findings = list({f["rule_id"]: f for f in findings}.values())  # one finding per rule
     status = "blocks" if any(f["severity"] == "blocks" for f in findings) else "warns" if findings else "ready"
     read = {k: facts.get(k) for k in ("title", "price", "condition", "stock", "return_policy", "warranty_months") if facts.get(k) is not None}
-    if _currency(offer.get("priceCurrency")):
-        read["currency"] = _currency(offer["priceCurrency"])
+    if facts.get("price") is not None:
+        for k in ("currency", "price_high"):  # price_high: the price is an AggregateOffer's lowPrice, this its highPrice
+            if facts.get(k) is not None:
+                read[k] = facts[k]
     shipping = _shipping(offer)
     if shipping is not None:
         read["shipping"] = shipping

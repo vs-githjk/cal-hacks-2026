@@ -2,6 +2,7 @@
 stubbed; the real page is the saved Canada Computers JSON-LD (MIRROR, Oct 24 2026); everything else is a SIM page; no network."""
 import asyncio
 import functools
+import http.server
 import importlib.util
 import json
 import socket
@@ -533,3 +534,148 @@ def test_a_normal_local_response_still_reads_headers_and_body(monkeypatch, chunk
         assert read(guarded.MAX_PAGE_BYTES + 1, time.monotonic() + 5) == body
     finally:
         srv.close()
+
+
+# #353 item 1: a REAL local http.server (threaded, 127.0.0.1) behind guarded_get's resolve and request hooks. The guard
+# refuses loopback, so resolve gives a public address and request swaps in 127.0.0.1 and the server's port.
+class _Shapes(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"  # so a keep-alive response really keeps the connection open
+    body = b"<html>" + b"y" * 150000 + b"</html>"
+
+    def log_message(self, *a):
+        pass
+
+    def do_GET(self):
+        body = b"z" * (3 * 1024 * 1024) if self.path == "/big-eof" else self.body
+        shape = self.path.strip("/")
+        if shape == "close":  # HTTP/1.1, Content-Length, Connection: close
+            head, self.close_connection = b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % len(body), True
+        elif shape == "http10":  # an HTTP/1.0 server: will_close, even with a length
+            head, self.close_connection = b"HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n" % len(body), True
+        elif shape in ("eof", "big-eof"):  # no length and not chunked: the body ends when the server closes
+            head, self.close_connection = b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", True
+        elif shape == "chunked":
+            head, self.close_connection = b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", False
+            body = b"".join(b"%x\r\n" % len(body[i:i + 40000]) + body[i:i + 40000] + b"\r\n"
+                            for i in range(0, len(body), 40000)) + b"0\r\n\r\n"
+        else:  # keep-alive with a Content-Length: the server waits for the next request
+            head, self.close_connection = b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n" % len(body), False
+        self.wfile.write(head + body)
+        self.wfile.flush()
+
+
+@pytest.fixture
+def local_server(monkeypatch):
+    monkeypatch.setattr(socket, "create_connection", REAL_CONNECT)
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Shapes)
+    srv.daemon_threads = True
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    yield srv.server_address[1]
+    srv.shutdown()
+    srv.server_close()
+
+
+def local_get(port, url):
+    from data.claim_check import fetch as guarded
+    seen = []
+
+    def request(scheme, host, _port, path, ip, timeout):
+        seen.append(ip)
+        return guarded._request(scheme, host, port, path, "127.0.0.1", timeout)
+    body = guarded.guarded_get(url, resolve=lambda h: ["93.184.216.34"], request=request)
+    assert seen == ["93.184.216.34"]  # the guard checked and chose the public address; only the test swaps it
+    return body
+
+
+@pytest.mark.parametrize("shape", ["close", "http10", "eof", "chunked", "keepalive"])
+def test_every_response_shape_from_a_real_local_server_reads_the_whole_body(local_server, shape):
+    assert local_get(local_server, f"http://shop.example/{shape}") == _Shapes.body
+
+
+def test_a_close_delimited_body_over_the_cap_is_refused(local_server):
+    with pytest.raises(ValueError, match="too large"):
+        local_get(local_server, "http://shop.example/big-eof")
+
+
+@pytest.mark.parametrize("shape", ["close", "http10", "eof"])
+def test_a_page_served_with_connection_close_is_checked_not_unreadable(local_server, monkeypatch, shape):
+    monkeypatch.setattr(_Shapes, "body", page().encode())
+    r = check_listing(f"http://shop.example/{shape}", fetch=lambda u: local_get(local_server, u), now=NOW)
+    assert r["status"] == "ready", r["summary"]
+
+
+# #353 item 2: priceSpecification.price and AggregateOffer are schema.org prices an agent can read
+def offer_page(offer: dict) -> str:
+    product = product_of(page())
+    kept = {k: v for k, v in product["offers"].items() if k not in ("@type", "price", "priceCurrency")}
+    product["offers"] = {**kept, **offer}
+    return f'<html><script type="application/ld+json">{json.dumps(product)}</script></html>'
+
+
+@pytest.mark.parametrize("spec", [{"@type": "UnitPriceSpecification", "price": 299.99, "priceCurrency": "USD"},
+                                  [{"@type": "UnitPriceSpecification", "price": "299.99", "priceCurrency": "usd"}]])
+def test_a_price_in_price_specification_is_read(spec):
+    r = check_page("https://shop.example/m27q", offer_page({"@type": "Offer", "priceSpecification": spec}), now=NOW)
+    assert r["status"] == "ready", r["findings"]
+    assert r["facts_read"]["price"] == 299.99 and r["facts_read"]["currency"] == "USD"
+
+
+def test_an_aggregate_offer_reads_its_low_price_and_warns_that_it_is_a_range():
+    r = check_page("https://shop.example/m27q", offer_page({"@type": "AggregateOffer", "lowPrice": 279.5, "highPrice": "319.00",
+                                                            "priceCurrency": "USD", "offerCount": 3}), now=NOW)
+    assert r["status"] == "warns" and rules(r) == ["listing.price_range"]
+    assert r["facts_read"]["price"] == 279.5 and r["facts_read"]["price_high"] == 319.0 and r["facts_read"]["currency"] == "USD"
+    assert "lowPrice" in r["findings"][0]["what_an_agent_sees"]
+
+
+def test_an_aggregate_offer_with_one_price_is_ready():
+    r = check_page("https://shop.example/m27q", offer_page({"@type": "AggregateOffer", "lowPrice": 299.99, "highPrice": 299.99,
+                                                            "priceCurrency": "USD"}), now=NOW)
+    assert r["status"] == "ready" and r["facts_read"]["price"] == 299.99
+
+
+@pytest.mark.parametrize("offer", [{"@type": "AggregateOffer", "lowPrice": "1,749.99", "priceCurrency": "USD"},
+                                   {"@type": "AggregateOffer", "highPrice": 300, "priceCurrency": "USD"},
+                                   {"@type": "Offer", "priceSpecification": {"price": "$5", "priceCurrency": "USD"}},
+                                   {"@type": "Offer", "priceSpecification": {"price": 0, "priceCurrency": "USD"}},
+                                   {"@type": "Offer", "priceSpecification": "299.99"}])
+def test_a_bad_price_in_the_new_shapes_still_blocks(offer):
+    r = check_page("https://shop.example/m27q", offer_page(offer), now=NOW)
+    assert r["status"] == "blocks" and "listing.price_unreadable" in rules(r) and "price" not in r["facts_read"]
+
+
+def test_offers_price_wins_over_price_specification():
+    r = check_page("https://shop.example/m27q", offer_page({"@type": "Offer", "price": 250, "priceCurrency": "USD",
+                                                            "priceSpecification": {"price": 999, "priceCurrency": "CAD"}}), now=NOW)
+    assert r["facts_read"]["price"] == 250 and r["facts_read"]["currency"] == "USD"
+
+
+# #353 item 3: a 200 bot-wall page with no JSON-LD is unreadable (free), not blocks (charged)
+BOT_WALLS = {
+    "cloudflare": '<html><head><title>Just a moment...</title></head><body><div id="challenge-platform"></div>'
+                  '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script></body></html>',
+    "akamai": "<html><head><title>Access Denied</title></head><body><h1>Access Denied</h1>You don't have permission to access "
+              "this server.<p>Reference #18.6f2c2e17.1729800000.1a2b3c</p></body></html>",
+    "perimeterx": '<html><body><div id="px-captcha"></div><p>Press &amp; Hold to confirm you are a human</p></body></html>',
+    "datadome": '<html><body><script src="https://ct.captcha-delivery.com/c.js"></script></body></html>',
+    "captcha": "<html><head><title>Are you a robot?</title></head><body><div class=g-recaptcha></div></body></html>",
+}
+
+
+@pytest.mark.parametrize("name", sorted(BOT_WALLS))
+def test_a_bot_wall_page_is_unreadable_and_not_charged(monkeypatch, name):
+    r = check_page("https://shop.example/wall", BOT_WALLS[name], now=NOW)
+    assert r["status"] == "unreadable" and r["findings"] == [] and r["error"] == "bot_wall", r["summary"]
+    assert "bot check" in r["summary"] and "—" not in r["summary"] and "–" not in r["summary"]
+    monkeypatch.setitem(PAGES, "https://shop.example/wall", BOT_WALLS[name])
+    a, _ = run(monkeypatch, {"listingUrls": ["https://shop.example/wall"]})
+    assert a.rows[0]["status"] == "unreadable" and a.charges == []
+
+
+def test_a_real_page_that_mentions_access_denied_or_loads_recaptcha_is_still_checked():
+    with_ld = page().replace("</html>", '<script src="https://www.google.com/recaptcha/api.js"></script>Access Denied</html>')
+    assert check_page("https://shop.example/x", with_ld, now=NOW)["status"] == "ready"
+    long_page = ("<html><head><title>SIM Monitor</title></head><body>" + "<p>specs and more specs</p>" * 3000
+                 + "Access denied for expired coupon codes. Log in (captcha) to see deals.</body></html>")
+    r = check_page("https://shop.example/x", long_page, now=NOW)
+    assert r["status"] == "blocks" and rules(r) == ["listing.no_structured_data"]
