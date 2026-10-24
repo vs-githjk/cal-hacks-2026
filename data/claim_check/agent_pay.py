@@ -31,6 +31,8 @@ RUNBOOK FOR ANOOP (#347, from the repo root)
           npx awal x402 pay <agi url> --max-amount 5000000   (USDC units, 5000000 = $5.00)
      b. prints the Base transaction hash and https://basescan.org/tx/<hash> when awal's output has one;
      c. saves the token as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); prints only its last 4 characters;
+        if .env cannot be written, it saves the token to a mode 600 file .agent_pay_token.<UTC time> (gitignored)
+        instead and stops with a NOT LIVE receipt that names that file (see step 7);
      d. prints the Apify prepaid balance before the run (expect about $5);
      e. runs the claim-check Actor once on the demo listing (waits up to 120 s) and prints the run id;
      f. prints the Apify prepaid balance after (expect a little less: the run's metered cost),
@@ -53,6 +55,15 @@ RUNBOOK FOR ANOOP (#347, from the repo root)
        rerun with the saved token: python3 -m data.claim_check.agent_pay --token-from-env
    NOT LIVE: paid, but the run request failed (<error>)
        Token saved. A run may have started: check the Apify console, then rerun with --token-from-env.
+   NOT LIVE: paid, but .env could not be written (token in a fallback file)
+       Money is spent and the token is in the file named by "token_file" in the receipt (.agent_pay_token.<UTC time>
+       in the repo root or your home, mode 600, gitignored). Do not pay again: fix .env (read-only, a directory, disk
+       full or not UTF-8), move the APIFY_AGENT_TOKEN line from that file into .env, delete the file, then rerun with
+       --token-from-env.
+   NOT LIVE: paid, but the token could not be saved anywhere
+       Money is spent and neither .env nor the fallback file could hold the token; its last 4 characters are
+       printed. Do not pay again: copy it now from the payer output above into .env as APIFY_AGENT_TOKEN, then
+       rerun with --token-from-env. If it is gone, keep the receipt and the tx hash and ask Apify.
    NOT LIVE: payment may have happened, no token returned (payer exit <code>)
    NOT LIVE: payment may have happened, the payer CLI timed out
    NOT LIVE: payment may have happened, the payer CLI failed (<error>)
@@ -226,15 +237,79 @@ def record_tx(receipt: dict, payer: str, stdout, out) -> None:
     out(f"Transaction: {tx}" + (f"  {BASESCAN}{tx}" if payer == "awal" else "") if tx else f"Transaction: {NO_TX}.")
 
 
-def save_token(env_file: Path, token: str) -> None:
-    """Write APIFY_AGENT_TOKEN into the gitignored .env (replacing an older one), readable by this user only.
-    The file is created with mode 600, and an existing one is set to 600 before the token is written (#329)."""
-    lines = env_file.read_text().splitlines() if env_file.exists() else []
+FALLBACK_PREFIX = ".agent_pay_token."  # gitignored; holds the token only when .env cannot be written (#354)
+ENV_NOT_WRITTEN = "NOT LIVE: paid, but .env could not be written (token in a fallback file)"
+TOKEN_NOT_SAVED = "NOT LIVE: paid, but the token could not be saved anywhere"
+
+
+class TokenNotSaved(Exception):
+    """Neither .env nor a fallback file could hold the minted token (#354)."""
+
+
+def _write_env(env_file: Path, token: str) -> None:
+    lines = env_file.read_text(encoding="utf-8").splitlines() if env_file.exists() else []
     lines = [l for l in lines if not l.startswith("APIFY_AGENT_TOKEN=")] + [f"APIFY_AGENT_TOKEN={token}"]
     fd = os.open(env_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
         os.fchmod(fd, 0o600)  # an existing .env keeps its old mode on open; tighten it before the token goes in
         f.write("\n".join(lines) + "\n")
+
+
+def fallback_dirs(env_file: Path) -> list[Path]:
+    """Where a token goes when .env cannot be written: next to .env (the repo root), then the user's home."""
+    dirs = [env_file.parent]
+    try:
+        dirs.append(Path.home())
+    except (RuntimeError, KeyError, OSError):
+        pass
+    return dirs
+
+
+def save_token(env_file: Path, token: str) -> tuple[Path, str] | None:
+    """Write APIFY_AGENT_TOKEN into the gitignored .env (replacing an older one), readable by this user only.
+    The file is created with mode 600, and an existing one is set to 600 before the token is written (#329).
+    Returns None when .env holds the token. If .env cannot be read or written (read-only, a directory, disk full,
+    not UTF-8), the token goes to a new mode 600 file .agent_pay_token.<UTC time> (gitignored) and this returns
+    (that path, the .env error); if that fails too, it raises TokenNotSaved (#354)."""
+    try:
+        _write_env(env_file, token)
+        return None
+    except (OSError, UnicodeDecodeError) as e:
+        env_error = type(e).__name__
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    for d in fallback_dirs(env_file):
+        path = Path(d) / f"{FALLBACK_PREFIX}{stamp}"
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)  # never world-readable, never overwrites
+            with os.fdopen(fd, "w") as f:
+                f.write(f"APIFY_AGENT_TOKEN={token}\n")
+            return path, env_error
+        except OSError:
+            continue
+    raise TokenNotSaved(env_error)
+
+
+def keep_token(env_file: Path, token: str, receipt: dict, receipt_file: Path, out, paid_note: str = "") -> None:
+    """Save a minted token; if .env cannot hold it, stop with a NOT LIVE receipt that names where it went (#354).
+    The receipt never holds the token: it names only the fallback path."""
+    try:
+        where = save_token(env_file, token)
+    except TokenNotSaved as e:
+        receipt["token_file"] = "none: the token could not be saved"
+        out(f"The token ends in {token[-4:]}. Copy it now from the payer output above.")  # printed only, never in the receipt
+        fail_with_receipt(receipt, receipt_file, out, TOKEN_NOT_SAVED,
+                          f"{paid_note}Paid, but the token could not be saved: {env_file.name} failed ({e}) and so did the "
+                          f"fallback file. Copy the token now from the payer output above and "
+                          f"put it in .env as APIFY_AGENT_TOKEN, then rerun with --token-from-env. Do not pay again.",
+                          safe_secret_values(env_file) | {token})
+    if where is None:
+        return
+    path, env_error = where
+    receipt["token_file"] = str(path)
+    fail_with_receipt(receipt, receipt_file, out, ENV_NOT_WRITTEN,
+                      f"{paid_note}Paid, but {env_file.name} could not be written ({env_error}). The token {mask(token)} was "
+                      f"saved to {path} (mode 600). Move that line into .env as APIFY_AGENT_TOKEN, delete {path.name}, then "
+                      f"rerun with --token-from-env. Do not pay again.", safe_secret_values(env_file) | {token})
 
 
 def masked_tail(text, n: int = 300) -> str:
@@ -247,6 +322,14 @@ def masked_tail(text, n: int = 300) -> str:
     tail = re.sub(r"(0x)?[0-9a-fA-F]{40,}", "[redacted hex]", tail)
     tail = re.sub(r"(?<![A-Za-z0-9_./-])[A-Za-z0-9+/_-]{40,}={0,2}", "[redacted]", tail)
     return tail or "(no output)"
+
+
+def safe_secret_values(env_file: Path) -> set[str]:
+    """secret_values, but an unreadable .env (a directory, no permission, not UTF-8) never costs the receipt (#354)."""
+    try:
+        return secret_values(env_file)
+    except (OSError, UnicodeDecodeError):
+        return {v for k, v in os.environ.items() if SECRET_ENV.search(k) and len(v) >= 8}
 
 
 def secret_values(env_file: Path) -> set[str]:
@@ -350,31 +433,31 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
         except subprocess.TimeoutExpired as e:  # it may have paid before it hung; keep a token if it printed one (#329)
             partial = e.stdout.decode("utf-8", "replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
             token = token_from_output(partial)
-            if token:
-                save_token(env_file, token)
             record_tx(receipt, args.payer, partial, out)
+            if token:
+                keep_token(env_file, token, receipt, receipt_file, out, "The payer CLI timed out after it returned a token. ")
             fail_with_receipt(receipt, receipt_file, out, "NOT LIVE: payment may have happened, the payer CLI timed out",
                               f"The payer CLI timed out after {e.timeout:g} s. {MAYBE_PAID}"
                               + (f" Its token {mask(token)} was saved as APIFY_AGENT_TOKEN in {env_file.name}." if token else ""),
-                              secret_values(env_file))
+                              safe_secret_values(env_file))
         except (Exception, KeyboardInterrupt) as e:  # a Ctrl-C mid-payment also leaves the money question open
             receipt["tx_hash"] = NO_TX
             fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: payment may have happened, the payer CLI failed ({type(e).__name__})",
-                              f"The payer CLI failed ({type(e).__name__}). {MAYBE_PAID}", secret_values(env_file))
+                              f"The payer CLI failed ({type(e).__name__}). {MAYBE_PAID}", safe_secret_values(env_file))
         receipt["payer_exit"] = code
         record_tx(receipt, args.payer, stdout, out)
         token = token_from_output(stdout or "")
         if not token:
             fail_with_receipt(receipt, receipt_file, out, f"NOT LIVE: payment may have happened, no token returned (payer exit {code})",
                               f"The payer CLI did not return a token (exit {code}). Nothing was saved. {MAYBE_PAID} "
-                              f"End of its output (tokens masked): {masked_tail(stdout)}", secret_values(env_file))
-        save_token(env_file, token)  # a minted token means the money is spent: keep it even on a non-zero exit (#329)
+                              f"End of its output (tokens masked): {masked_tail(stdout)}", safe_secret_values(env_file))
+        keep_token(env_file, token, receipt, receipt_file, out)  # a minted token means the money is spent: keep it even on a non-zero exit (#329)
         paid_now = True
         if code != 0:
             out(f"Warning: the payer CLI exited {code} but returned a token, so it paid; the token was kept. "
                 f"End of its output (tokens masked): {masked_tail(stdout)}")
         out(f"a. Bought a prepaid token {mask(token)}; saved as APIFY_AGENT_TOKEN in {env_file.name} (mode 600).")
-    secrets = secret_values(env_file) | {token}
+    secrets = safe_secret_values(env_file) | {token}
     before = balance(send, token)
     receipt["balance_before_usd"] = before
     out(f"c. Balance before the run: ${before}" if before is not None else "c. Balance before the run: could not be read")

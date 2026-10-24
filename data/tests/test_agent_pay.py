@@ -1,7 +1,9 @@
 """Agent pays Apify (#270 Tier B): the paid script runs end to end on fakes only; nothing here can spend money."""
 import argparse
 import json
+import os
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -263,6 +265,8 @@ def test_help_is_the_paid_run_runbook_and_spends_nothing(capsys, monkeypatch):
         "LIVE (payment unverified by balance)": "do not pay again",
         "NOT LIVE: paid, but the Actor run did not succeed": "--token-from-env",
         "NOT LIVE: paid, but the run request failed": "check the Apify console",
+        "NOT LIVE: paid, but .env could not be written (token in a fallback file)": "--token-from-env",
+        "NOT LIVE: paid, but the token could not be saved anywhere": "copy it now from the payer output above",
         "NOT LIVE: payment may have happened, no token returned": "check the wallet and .env",
         "NOT LIVE: payment may have happened, the payer CLI timed out": "check the wallet and .env",
         "NOT LIVE: payment may have happened, the payer CLI failed": "check the wallet and .env",
@@ -364,3 +368,93 @@ def test_the_receipt_holds_no_token_key_or_env_value(tmp_path, monkeypatch, case
                    env_secret, "envtoken_ABCDEFGH1234"):
         assert secret not in text, secret
     assert json.loads(text)["tx_hash"] == TX
+
+
+# #354: a minted token is never lost when .env cannot be written. As root a chmod 0400 file is still writable, so
+# there the read-only case is simulated by making os.open refuse .env, which keeps the test real on CI and locally.
+def _refuse(monkeypatch, refuse):
+    real_open = pay_mod.os.open
+
+    def fake_open(path, flags, *a, **kw):
+        err = refuse(Path(path))
+        if err:
+            raise err
+        return real_open(path, flags, *a, **kw)
+    monkeypatch.setattr(pay_mod.os, "open", fake_open)
+
+
+def _make_env(tmp_path, monkeypatch, how):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))  # a fallback never lands in the real home
+    (tmp_path / "home").mkdir()
+    env = tmp_path / ".env"
+    if how == "read_only":
+        env.write_text("OTHER=1\n")
+        env.chmod(0o400)
+        if os.geteuid() == 0:
+            _refuse(monkeypatch, lambda p: PermissionError(13, "Permission denied") if p == env else None)
+    elif how == "directory":
+        env.mkdir()
+    elif how == "not_utf8":
+        env.write_bytes(b"OTHER=\xff\xfe\n")
+    return env
+
+
+def _fallbacks(tmp_path):
+    return sorted(tmp_path.glob(pay_mod.FALLBACK_PREFIX + "*")) + sorted((tmp_path / "home").glob(pay_mod.FALLBACK_PREFIX + "*"))
+
+
+@pytest.mark.parametrize("how", ["read_only", "directory", "not_utf8"])
+def test_a_token_that_cannot_go_in_env_goes_to_a_600_fallback_file_with_a_not_live_receipt(tmp_path, monkeypatch, how):
+    _make_env(tmp_path, monkeypatch, how)
+    send, calls = fake_apify()
+    printed = []
+    with pytest.raises(SystemExit, match="Do not pay again"):
+        pay_mod.run(args(), send=send, sh=lambda cmd: (0, json.dumps({"token": TOKEN, "txHash": TX})), ask=lambda p: "PAY",
+                    sleep=lambda s: None, out=printed.append, env_file=tmp_path / ".env",
+                    receipt_file=tmp_path / "agent_pay_run.json", live=True)
+    files = _fallbacks(tmp_path)
+    assert len(files) == 1 and files[0].parent == tmp_path and files[0].read_text() == f"APIFY_AGENT_TOKEN={TOKEN}\n"
+    assert stat.S_IMODE(files[0].stat().st_mode) == 0o600
+    rec = receipt_of(tmp_path)
+    assert rec["label"] == pay_mod.ENV_NOT_WRITTEN and rec["token_file"] == str(files[0]) and rec["tx_hash"] == TX
+    raw = (tmp_path / "agent_pay_run.json").read_text()
+    assert TOKEN not in raw and "1234" not in raw and str(files[0]) in rec["error"]
+    assert TOKEN not in "\n".join(printed) and any(str(files[0]) in p for p in printed)
+    assert calls == []  # it stops before the run; the rerun uses --token-from-env
+    import subprocess
+    ignored = subprocess.run(["git", "check-ignore", "-q", str(pay_mod.ROOT / files[0].name)], cwd=pay_mod.ROOT)
+    assert ignored.returncode == 0, "the fallback file name must be gitignored"
+
+
+def test_when_the_fallback_also_fails_it_prints_the_last_4_and_still_writes_the_receipt(tmp_path, monkeypatch):
+    _make_env(tmp_path, monkeypatch, "directory")
+    _refuse(monkeypatch, lambda p: OSError(28, "No space left on device") if p.name.startswith(pay_mod.FALLBACK_PREFIX) else None)
+    send, calls = fake_apify()
+    printed = []
+    with pytest.raises(SystemExit, match="Do not pay again"):
+        pay_mod.run(args(), send=send, sh=lambda cmd: (0, json.dumps({"token": TOKEN})), ask=lambda p: "PAY",
+                    sleep=lambda s: None, out=printed.append, env_file=tmp_path / ".env",
+                    receipt_file=tmp_path / "agent_pay_run.json", live=True)
+    assert _fallbacks(tmp_path) == []
+    rec = receipt_of(tmp_path)
+    assert rec["label"] == pay_mod.TOKEN_NOT_SAVED and "--token-from-env" in rec["error"]
+    raw = (tmp_path / "agent_pay_run.json").read_text()
+    assert TOKEN not in raw and "1234" not in raw
+    text = "\n".join(printed)
+    assert TOKEN not in text and "ends in 1234" in text and "Copy it now from the payer output above" in text
+    assert calls == []
+
+
+def test_a_payer_timeout_whose_token_cannot_go_in_env_still_keeps_it(tmp_path, monkeypatch):
+    import subprocess
+    _make_env(tmp_path, monkeypatch, "directory")
+
+    def sh(cmd):
+        raise subprocess.TimeoutExpired(cmd, 300, output=json.dumps({"token": TOKEN}).encode())
+    send, _ = fake_apify()
+    with pytest.raises(SystemExit, match="timed out"):
+        pay_mod.run(args(), send=send, sh=sh, ask=lambda p: "PAY", sleep=lambda s: None, out=lambda m: None,
+                    env_file=tmp_path / ".env", receipt_file=tmp_path / "agent_pay_run.json", live=True)
+    rec = receipt_of(tmp_path)
+    files = _fallbacks(tmp_path)
+    assert rec["label"] == pay_mod.ENV_NOT_WRITTEN and rec["token_file"] == str(files[0]) and TOKEN not in json.dumps(rec)
