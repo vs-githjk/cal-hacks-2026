@@ -1,4 +1,4 @@
-"""Tech Bazaar buyer agent: buyer's goal -> ownership memory -> sealed round with three sellers -> advocate cards
+"""Tech Bazaar buyer agent: buyer's goal -> ownership memory -> sealed round with the seller agents -> advocate cards
 -> approval. Run from agents/:  .venv/Scripts/python.exe buyer/buyer_agent.py   (BUYER_MAILBOX=1 for Agentverse)"""
 import json
 import os
