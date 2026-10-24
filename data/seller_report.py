@@ -11,6 +11,7 @@ A finding without a source_url is dropped. Wording says what an agent sees, neve
 """
 from __future__ import annotations
 
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,10 +28,23 @@ def _url(card: dict) -> str:
 def _select(cards: list[dict], listings) -> tuple[str, list[dict]]:
     if isinstance(listings, str):
         store, _, item = listings.partition(":")
-        picked = [c for c in cards if c.get("id", "").split(":")[0] == store and (not item or item in _url(c))]
+        picked = [c for c in cards if c.get("id", "").split(":")[0] == store and (not item or item in re.split(r"[/?&=#]", _url(c)))]
         return listings, picked
     wanted = set(listings)
     return "listings", [c for c in cards if _url(c) in wanted]
+
+
+PAID_SHIPPING = re.compile(r"\s*\+?\s*\$\s*(\d[\d,]*(?:\.\d+)?)\s+(?:delivery|shipping)\s*\.?\s*", re.I)
+
+
+def shipping_stated(listing: dict, price) -> bool:
+    """Shipping an agent can price: what normalize.landed reads, or a plain "+$N delivery" / "+$N shipping" (a stated price
+    that landed() does not parse yet; read here so the report does not count our parser's gap against the listing)."""
+    from data.mirror.normalize import landed
+    if landed(listing, price)["shipping_captured"]:
+        return True
+    ship = listing.get("shipping")
+    return isinstance(ship, str) and bool(PAID_SHIPPING.fullmatch(ship))
 
 
 def _finding(rule_id, severity, sees, source_url, fix):
@@ -61,15 +75,13 @@ def findings_for(card: dict, band: dict | None, observations: list[dict]) -> lis
             out.append(_finding(f"claim.{r['rule_id']}", "blocks", f"The title claim does not match the listing's own data: {r['reason']}.",
                                 url, "Make the title and the item specifics agree."))
     price = card.get("price")
-    if band and price is not None and band.get("min") is not None:
-        if price < band["min"] or price > band["max"]:
-            edge = band["min_url"] if price < band["min"] else band["max_url"]
-            side = "below" if price < band["min"] else "above"
-            out.append(_finding("price.outside_band", "warns", f"${price:,.2f} is {side} the dated band of in-stock retail asks we hold "
-                                f"(${band['min']:,.2f} to ${band['max']:,.2f}, n = {band['n']}, {band['dates']}); an agent treats it as "
-                                "an outlier and checks it harder.", edge, "Check the price, or state why it differs (condition, bundle)."))
+    comparable = (card.get("attrs") or {}).get("chipset") == "RTX 5070 Ti" and card.get("condition") in ("new", "unknown")
+    if band and comparable and price is not None and band.get("max") is not None and price > band["max"]:
+        out.append(_finding("price.above_band", "warns", f"${price:,.2f} is above every in-stock retail ask we hold for a new card "
+                            f"(${band['min']:,.2f} to ${band['max']:,.2f}, n = {band['n']}, {band['dates']}); an agent warns on a "
+                            "price above its baseline.", band["max_url"], "Check the price against the dated retail asks."))
     lt = landed(card.get("listing") or {}, price)
-    if not lt["shipping_captured"]:
+    if not shipping_stated(card.get("listing") or {}, price):
         out.append(_finding("listing.shipping_unknown", "warns", "No shipping cost is stated in a form an agent can read, so it cannot "
                             "compute a landed price.", url, "State the shipping cost as a number, or 'Free shipping' with no condition."))
     if lt["availability"] is None:

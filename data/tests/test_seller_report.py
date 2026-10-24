@@ -42,12 +42,28 @@ def test_a_clean_listing_has_no_findings():
 def test_each_rule_fires_with_a_source_and_a_severity():
     rep = report(["https://www.ebay.com/itm/2", "https://www.ebay.com/itm/3"], AS_OF, cards=[VAGUE, LIAR], observations=OBS)
     assert rules(rep) == ["claim.condition", "fit.length_unknown", "fit.power_unknown", "listing.shipping_unknown",
-                          "listing.stock_unknown", "price.outside_band"]
+                          "listing.stock_unknown"]
     for f in rep["findings"]:
         assert f["source_url"].startswith("https://") and f["severity"] in ("blocks", "warns") and f["fix"]
     assert next(f for f in rep["findings"] if f["rule_id"] == "claim.condition")["severity"] == "blocks"
-    band = next(f for f in rep["findings"] if f["rule_id"] == "price.outside_band")
-    assert band["source_url"] == "https://bestbuy.example/a" and "below the dated band" in band["what_an_agent_sees"]
+    assert not any("below" in f["what_an_agent_sees"] for f in rep["findings"])  # a low price is not a finding
+
+
+def test_a_price_above_every_retail_ask_warns_and_cites_the_highest_ask():
+    high = card("ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", 1499.0, "https://www.ebay.com/itm/9")
+    f = report(["https://www.ebay.com/itm/9"], AS_OF, cards=[high], observations=OBS)["findings"]
+    assert [x["rule_id"] for x in f] == ["price.above_band"]
+    assert f[0]["source_url"] == "https://microcenter.example/c" and "an agent warns on a price above its baseline" in f[0]["what_an_agent_sees"]
+    used = {**high, "condition": "open-box"}  # the band is new-condition retail asks: other conditions are not compared
+    assert report(["https://www.ebay.com/itm/9"], AS_OF, cards=[used], observations=OBS)["findings"] == []
+
+
+def test_paid_shipping_written_as_plus_dollars_is_stated():
+    for text in ("+$12.99 delivery", "+$29.95 shipping", " + $ 5 delivery."):
+        c = card("ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", 1299.99, "https://www.ebay.com/itm/7", shipping=text)
+        assert report(["https://www.ebay.com/itm/7"], AS_OF, cards=[c], observations=OBS)["findings"] == [], text
+    c = card("ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", 1299.99, "https://www.ebay.com/itm/7", shipping="Ships soon")
+    assert [f["rule_id"] for f in report(["https://www.ebay.com/itm/7"], AS_OF, cards=[c], observations=OBS)["findings"]] == ["listing.shipping_unknown"]
 
 
 def test_a_finding_without_a_source_is_dropped():
@@ -66,8 +82,10 @@ def test_wording_says_what_an_agent_sees_never_what_the_seller_did():
 
 
 def test_a_mirror_seller_id_selects_by_store_and_item_id():
-    rep = report("ebay_live:itm/2", AS_OF, cards=[GOOD, VAGUE], observations=OBS)
+    rep = report("ebay_live:2", AS_OF, cards=[GOOD, VAGUE], observations=OBS)
     assert [p["url"] for p in rep["listings"]] == ["https://www.ebay.com/itm/2"]
+    assert report("ebay_live:23", AS_OF, cards=[{**VAGUE, "source": "https://www.ebay.com/itm/123", "listing": {**VAGUE["listing"], "url": "https://www.ebay.com/itm/123"}}],
+                  observations=OBS)["listings"] == []  # exact item id, not a substring
 
 
 def test_the_committed_sample_report_is_labelled_mirror_and_dated():
