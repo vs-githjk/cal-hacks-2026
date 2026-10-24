@@ -574,6 +574,8 @@ def test_completepayment_rejects_mismatch_then_accepts_exact_late_ack(runtime):
     tx.update(phase="submitted", settlement=envelope["settlement"],
         mandate=envelope["mandate"], settlement_result=envelope["settlement_result"],
         payment_ref=envelope["settlement_result"]["charge_id"])
+    tx["order"]["payment_ref"] = tx["payment_ref"]
+    tx["order"]["status"] = "charged"
     state.save_transaction(db, tx)
     buyer.ROUND.update(transaction=tx, pending_hold=True)
     buyer.MARKET_BUYER.purchase_status.return_value = {
@@ -610,6 +612,8 @@ def charged_transaction(buyer, db):
     tx.update(phase="submitted", settlement=envelope["settlement"],
         mandate=envelope["mandate"], settlement_result=envelope["settlement_result"],
         payment_ref=envelope["settlement_result"]["charge_id"])
+    tx["order"]["payment_ref"] = tx["payment_ref"]
+    tx["order"]["status"] = "charged"
     state.save_transaction(db, tx)
     assert charger.calls and buyer.NONCE_STORE.get_payment_attempt(tx["mandate"]["hash"])["phase"] == "charged"
     buyer.MARKET_BUYER.purchase_status.return_value = {
@@ -655,6 +659,66 @@ def test_charged_attempt_with_wrong_request_binding_cannot_settle(runtime, monke
     assert state.load_goal(db, tx["goal_id"], "owner")["state"] == "HOLD_FOR_CALL"
     buyer.MARKET_BUYER.settle_goal.assert_not_called()
     buyer.MARKET_REFEREE.record_payment.assert_not_called()
+    assert len(charger.calls) == 1
+
+
+def test_final_owner_notice_failure_keeps_settlement_and_releases_goal(runtime):
+    buyer, db = runtime
+    tx, charger = charged_transaction(buyer, db)
+    ctx = Context()
+    original_send = ctx.send
+    async def fail_final_notice(to, message):
+        if to == "owner" and hasattr(message, "text") and message.text().startswith("Purchase "):
+            raise ConnectionError("simulated final notification failure")
+        await original_send(to, message)
+    ctx.send = fail_final_notice
+
+    asyncio.run(buyer.on_complete(ctx, tx["mandate"]["payee"],
+        CompletePayment(transaction_id="ch_simulated_runtime")))
+
+    settled = state.load_transaction(db, tx["deal_id"], tx["buyer_id"])
+    assert settled["phase"] == "settled"
+    assert state.load_goal(db, tx["goal_id"], "owner")["state"] == "DONE"
+    assert buyer.ROUND.get("pending_hold") is False
+    assert not any(isinstance(message, RejectPayment) for _, message in ctx.sent)
+    assert len(charger.calls) == 1
+    before = buyer.MARKET_BUYER.post_goal.call_count
+    asyncio.run(buyer.handle_text(ctx, "owner", "a new GPU under $800 by Friday"))
+    assert buyer.MARKET_BUYER.post_goal.call_count == before + 1
+    assert buyer.ROUND.get("pending_hold") is not True
+
+
+@pytest.mark.parametrize("settle_first", [False, True])
+def test_tick_does_not_expire_charged_or_settled_goal(runtime, monkeypatch, settle_first):
+    buyer, db = runtime
+    tx, charger = charged_transaction(buyer, db)
+    goal = state.load_goal(db, tx["goal_id"], "owner")
+    goal["deadline"] = (NOW - timedelta(seconds=1)).isoformat()
+    if settle_first:
+        goal["state"] = "HOLD_FOR_CALL"
+    state.save_goal(db, goal)
+    buyer.ROUND.clear()
+    if settle_first:
+        ctx = Context()
+        asyncio.run(buyer.buyer_startup(ctx))
+        buyer.MARKET_BUYER.purchase_status.return_value = {
+            "payment_ref": "ch_simulated_runtime", "payment_mode": "sim", "payment_amount": 582.0}
+        buyer.MARKET_BUYER.settle_goal.return_value = {"settled": True}
+        asyncio.run(buyer.on_complete(ctx, tx["mandate"]["payee"],
+            CompletePayment(transaction_id="ch_simulated_runtime")))
+    else:
+        asyncio.run(buyer.buyer_startup(Context()))
+    monkeypatch.setattr(buyer, "business_now", lambda: NOW + timedelta(days=2))
+    ctx = Context()
+
+    asyncio.run(buyer.tick(ctx))
+
+    expected_goal_state = "DONE" if settle_first else "HOLD_FOR_CALL"
+    expected_tx_phase = "settled" if settle_first else "uncertain"
+    assert state.load_goal(db, tx["goal_id"], "owner")["state"] == expected_goal_state
+    assert state.load_transaction(db, tx["deal_id"], tx["buyer_id"])["phase"] == expected_tx_phase
+    assert not any("EXPIRED" in message.text() or "nothing ordered" in message.text().lower()
+                   for _, message in ctx.sent if hasattr(message, "text"))
     assert len(charger.calls) == 1
 
 
