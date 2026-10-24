@@ -31,7 +31,6 @@ export function connectionBuilder() {
 
 export const toDate = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 
-export const fmtMoney = (x: number) =>
-  x.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: x % 1 ? 2 : 0 });
+export { formatMoney as fmtMoney } from "./money";
 
 export const fmtTime = (ts: Timestamp) => toDate(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });

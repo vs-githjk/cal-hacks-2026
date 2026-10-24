@@ -1,12 +1,12 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import type { ApprovalView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
-import { AgentFeed, ApprovalCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
+import type { ApprovalView, ReviewView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
+import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { OriginChip, Pill, SampleOnly } from "./ui";
+import { DotPattern } from "./ui/dot-pattern";
 
-export const BUYER_NAME = "Vidyut"; // the real buyer (locked Sat 00:52). Real sign-in replaces this.
 
 export interface BuyerScreenProps {
   goal: GoalView | null;
@@ -14,8 +14,15 @@ export interface BuyerScreenProps {
   veto: VetoView | null;
   shield: ShieldView | null;
   approval: ApprovalView | null;
+  /** A live mandate waiting for this buyer; when present it replaces the sample approval card. */
+  review?: ReviewView | null;
+  onTyped?: (mandateHash: string, code: string) => Promise<string>;
   receipt: ReceiptView | null;
   feed: FeedItem[];
+  /** From the market (my_buyer_profile); the page falls back to the buyer id. */
+  buyerName: string;
+  /** Id of the latest round close event; a new one flips the bids open. */
+  revealKey?: string;
   connecting?: boolean;
   /** Cards fed from lib/sample.ts; each shows a SIM sample chip. */
   sample?: { bids?: boolean; veto?: boolean; shield?: boolean; approval?: boolean; receipt?: boolean };
@@ -28,7 +35,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
         <div className="flex items-center gap-2.5 text-[18px] font-bold tracking-[-0.01em]">Buyer</div>
         <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
-          <span>{BUYER_NAME}</span>
+          <span>{p.buyerName}</span>
           {p.goal && <StatePill state={p.goal.state} />}
         </div>
       </div>
@@ -46,11 +53,15 @@ export function BuyerScreen(p: BuyerScreenProps) {
             <GoalCard goal={p.goal} />
             <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={p.goal.cap} /></SampleOnly>
           </div>
-          <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} /></SampleOnly>
+          <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
           <div className="grid gap-3.5 lg:grid-cols-3">
             <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
             <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-            <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>
+            {p.review && p.onTyped ? (
+              <ReviewCard review={p.review} allowance={p.goal.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
+            ) : (
+              <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>
+            )}
           </div>
           <div className="grid gap-3.5 lg:grid-cols-[8fr_4fr]">
             <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>
@@ -80,9 +91,11 @@ export function MarketScreen(p: MarketScreenProps) {
   const s = p.sample ?? {};
   return (
     <div className="grid gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        <div className="text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee's floor</span></div>
-        <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
+      <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
+        {/* Very faint, static, decorative; fades out before the small round text on the right. */}
+        <DotPattern width={12} height={12} className="fill-line [mask-image:linear-gradient(to_right,white,transparent_40%)]" />
+        <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee's floor</span></div>
+        <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}
           {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}
           {p.round && <OriginChip origin={p.round.origin} />}

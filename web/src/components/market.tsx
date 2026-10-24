@@ -8,6 +8,15 @@ export function RoundTimeline({ round }: { round: RoundView }) {
   const total = Math.max(round.closedMs, round.windowMs);
   const pct = (ms: number) => `${(ms / total) * 100}%`;
   const rows = ["bottom-5", "top-5", "top-9"]; // label offsets, cycling
+  // Label an arrival only when its row has room since the last label there (12% of the track); every dot keeps its tooltip.
+  const lastInRow = [-1, -1, -1];
+  const labelled = round.arrivals.map((a, i) => {
+    const r = i % 3, at = a.atMs / total;
+    if (lastInRow[r] >= 0 && at - lastInRow[r] < 0.12) return false;
+    lastInRow[r] = at;
+    return true;
+  });
+  const short = (s: string) => (s.length > 14 ? `${s.slice(0, 13)}…` : s);
   return (
     <Card>
       <Label>
@@ -27,19 +36,19 @@ export function RoundTimeline({ round }: { round: RoundView }) {
               style={{ left: pct(a.atMs) }}
               title={`${a.label} at ${(a.atMs / 1000).toFixed(1)} s (${a.origin}${a.refused ? ", refused" : ""})`}
             >
-              <span className={`absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap font-mono text-[11px] text-muted sm:inline ${rows[i % 3]}`}>{a.label}</span>
+              <span className={`absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap font-mono text-[11px] text-muted sm:inline ${rows[i % 3]}`}>{labelled[i] ? short(a.label) : ""}</span>
             </div>
           ))}
           <div className="absolute top-[22px] h-10 w-0.5 -translate-x-1/2 bg-ink" style={{ left: pct(round.windowMs) }}>
-            <span className="absolute -top-5 left-1 whitespace-nowrap text-[11px] font-semibold tracking-[0.04em]">deadline {round.windowMs / 1000} s</span>
+            <span className={`absolute -top-5 whitespace-nowrap text-[11px] font-semibold tracking-[0.04em] ${round.windowMs / total > 0.7 ? "right-1" : "left-1"}`}>deadline {round.windowMs / 1000} s</span>
           </div>
-          {round.state === "closed" && (
+          {round.state === "closed" && round.closedMs - round.windowMs > total * 0.15 && (
             <div className="absolute top-[22px] h-10 w-0.5 -translate-x-1/2 bg-ink" style={{ left: "100%" }}>
               <span className="absolute -top-5 right-1 hidden whitespace-nowrap sm:inline text-[11px] font-semibold tracking-[0.04em]">close {(round.closedMs / 1000).toFixed(0)} s</span>
             </div>
           )}
-          {[0, total / 2, round.windowMs].map((ms) => (
-            <span key={ms} className="absolute -bottom-1.5 -translate-x-1/2 font-mono text-[11px] text-muted" style={{ left: pct(ms) }}>{(ms / 1000).toFixed(0)} s</span>
+          {[...new Set([0, total / 2, round.windowMs])].map((ms) => (
+            <span key={ms} className={`absolute -bottom-1.5 whitespace-nowrap font-mono text-[11px] text-muted ${ms / total > 0.9 ? "-translate-x-full" : ms === 0 ? "" : "-translate-x-1/2"}`} style={{ left: pct(ms) }}>{(ms / 1000).toFixed(0)} s</span>
           ))}
         </div>
       )}
@@ -203,7 +212,7 @@ export function FloorEvents({ events, max = 60 }: { events: FloorEventView[]; ma
           {events.slice(0, max).map((e) => (
             <li key={e.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(e.at)}</span>
-              <span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className={`mb-px block text-[11px] font-bold uppercase tracking-[0.06em] ${KIND_STYLE[e.kind] ?? "text-muted"}`}>{e.kind}</span>
                 {e.label} <OriginChip origin={e.origin} /> <span className="font-mono text-[11px] text-muted">{e.ref}</span>
               </span>

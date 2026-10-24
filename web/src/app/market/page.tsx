@@ -25,16 +25,18 @@ export default function MarketPage() {
 
   // Loss reports and the learning diff have no market table yet (Lane A owns them): SIM sample.
   return (
-    <MarketScreen
-      connecting={!roundsReady || !eventsReady}
-      round={sim ? asSim(sample.round) : round}
-      cap={sim ? sample.goal.cap : cap}
-      lines={shownLines}
-      lossReports={asSim(sample.lossReports)}
-      learning={asSim(sample.learning)}
-      events={floor}
-      originCounts={originCounts(shownLines)}
-      sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
-    />
+    <>
+      <MarketScreen
+        connecting={!roundsReady || !eventsReady}
+        round={sim ? asSim(sample.round) : round}
+        cap={sim ? sample.goal.cap : cap}
+        lines={shownLines}
+        lossReports={asSim(sample.lossReports)}
+        learning={asSim(sample.learning)}
+        events={floor}
+        originCounts={originCounts(shownLines)}
+        sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
+      />
+    </>
   );
 }

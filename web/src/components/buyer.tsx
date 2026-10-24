@@ -1,15 +1,20 @@
+"use client";
 // web/src/components/buyer.tsx
 // Cards for the buyer screen. Each takes a view model from lib/screens.ts; none reads SpacetimeDB directly,
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
-import type { ApprovalView, FeedItem, GoalView, RankedBid, ReceiptView, ShieldView, VetoView } from "@/lib/screens";
+import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { DotPattern } from "@/components/ui/dot-pattern";
+import { REVIEW_MAX_FAILURES, type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import { commas, typedStatus } from "@/lib/money";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
 export function GoalCard({ goal }: { goal: GoalView }) {
   const a = goal.allowance;
   return (
-    <Card>
+    <Card tactile>
       <Label>Goal</Label>
       <p className="mb-3 text-[22px] font-medium leading-[1.3] tracking-[-0.01em] text-balance">
         <q>{goal.text}</q>
@@ -33,7 +38,6 @@ export function GoalCard({ goal }: { goal: GoalView }) {
       {goal.skipped.map((s) => (
         <p key={s} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the PSU.</b> {s}</p>
       ))}
-      <p className="mt-2.5 text-[13px] text-muted">The cap is the ceiling to hunt under. The allowance is what it may spend without a call. Above it, it calls.</p>
     </Card>
   );
 }
@@ -50,13 +54,30 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap: number }) {
   const vetoed = bids.filter((b) => b.recommendation === "veto").length;
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
   const refused = bids.filter((b) => b.recommendation === "refused").length;
+  const field = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const spot = (e: PointerEvent) => {
+    const el = field.current;
+    if (!el || reduce || window.innerWidth < 640) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  };
+  const unspot = () => {
+    field.current?.style.removeProperty("--mx");
+    field.current?.style.removeProperty("--my");
+  };
   return (
-    <Card className="flex flex-col justify-between">
-      <div>
+    <Card hero tactile className="flex flex-col justify-between">
+      <div onPointerMove={spot} onPointerLeave={unspot}>
         <Label>{win ? "Best verified price" : "Hunting"}</Label>
         {win ? (
           <>
-            <div className="my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
+            <div ref={field} className="relative -mx-2 px-2">
+              {/* Decorative dot field behind the one hero number; it follows the pointer at 640 px and up, unless motion is reduced. */}
+              <DotPattern width={14} height={14} cx={1.2} cy={1.2} cr={1.2} className="fill-muted/35 [mask-image:radial-gradient(260px_circle_at_var(--mx,70%)_var(--my,40%),white,transparent)]" />
+              <div className="relative z-10 my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
+            </div>
             <div className="text-[15px] text-muted">
               <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
             </div>
@@ -99,14 +120,27 @@ const REC: Record<RankedBid["recommendation"], { kind: "veto" | "caution" | "buy
   unchecked: { kind: "out", text: "No card yet" },
 };
 
-export function RankedBids({ bids, roundLabel = "Sealed round 1" }: { bids: RankedBid[]; roundLabel?: string }) {
+/**
+ * Ranked bids. Hover tints a row, click or Enter expands its Why with the source and the market row it came from.
+ * When a new round close arrives (revealKey changes), the rows flip open in rank order, 60 ms apart, and the winner pulses once.
+ */
+export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: { bids: RankedBid[]; roundLabel?: string; revealKey?: string }) {
+  const reduce = useReducedMotion();
+  const [open, setOpen] = useState<string | null>(null);
+  const [play, setPlay] = useState(0);
+  const seen = useRef(revealKey);
+  useEffect(() => {
+    if (revealKey && seen.current !== undefined && revealKey !== seen.current && !reduce) setPlay((n) => n + 1);
+    seen.current = revealKey;
+  }, [revealKey, reduce]);
+  const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   return (
-    <Card>
+    <Card tactile>
       <Label>{roundLabel} · ranked by quality-adjusted landed price</Label>
       {bids.length === 0 ? (
         <p className="text-muted">Bids are sealed until the round closes. Nobody, not even you, sees them before then.</p>
       ) : (
-        <div className="-mx-[18px] overflow-x-auto px-[18px]">
+        <div className="-mx-[18px] overflow-x-auto px-[18px] [perspective:900px]">
           <table className="w-full border-collapse text-[14px] tabular-nums">
             <thead>
               <tr>
@@ -114,24 +148,56 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1" }: { bids: Rank
               </tr>
             </thead>
             <tbody>
-              {bids.map((b) => {
+              {bids.map((b, i) => {
+                const k = b.rowRef ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
                 const struck = b.recommendation === "veto" ? "line-through text-muted" : "";
+                const expanded = open === k;
                 return (
-                  <tr key={b.seller + b.condition} className={b.won ? "bg-mint-soft" : out ? "text-muted" : ""}>
-                    <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                    <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /></Td>
-                    <Td>
-                      <Tag>{b.condition}</Tag>
-                      {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
-                    </Td>
-                    <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
-                    <Td right className={struck}>{b.adjusted === null ? "·" : b.won ? <b>{money(b.adjusted)}</b> : money(b.adjusted)}</Td>
-                    <Td><Verdict kind={REC[b.recommendation].kind}>{REC[b.recommendation].text}</Verdict></Td>
-                    <Td className="text-[13px] text-muted">
-                      {b.why} {b.sourceUrl && <SourceLink href={b.sourceUrl}>{b.recommendation === "veto" ? "source page" : new URL(b.sourceUrl).host.replace("www.", "")}</SourceLink>}
-                    </Td>
-                  </tr>
+                  <Fragment key={`${k}-${play}`}>
+                    <motion.tr
+                      tabIndex={0}
+                      role="button"
+                      aria-expanded={expanded}
+                      onClick={() => toggle(k)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggle(k);
+                        }
+                      }}
+                      initial={play ? { rotateX: -90, opacity: 0 } : false}
+                      animate={
+                        play && b.won
+                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(255,255,255,0)", "inset 0 0 0 2px rgba(255,255,255,0.55)", "inset 0 0 0 0 rgba(255,255,255,0)"] }
+                          : { rotateX: 0, opacity: 1 }
+                      }
+                      transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
+                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${b.won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}`}
+                    >
+                      <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /></Td>
+                      <Td>
+                        <Tag>{b.condition}</Tag>
+                        {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
+                      </Td>
+                      <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
+                      <Td right className={struck}>{b.adjusted === null ? "·" : b.won ? <b>{money(b.adjusted)}</b> : money(b.adjusted)}</Td>
+                      <Td><Verdict kind={REC[b.recommendation].kind}>{REC[b.recommendation].text}</Verdict></Td>
+                      <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
+                    </motion.tr>
+                    {expanded && (
+                      <tr className={b.won ? "bg-mint-soft" : "bg-soft"}>
+                        <td colSpan={7} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
+                          <p>{b.why || "No reason recorded."}</p>
+                          <p className="mt-1 text-muted">
+                            {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /> · </> : "No source link · "}
+                            {b.rowRef ? <>market row <Code>{b.rowRef}</Code></> : <>sample row, not from this market <OriginChip origin="SIM" /></>}
+                          </p>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -181,7 +247,7 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
         {blocked ? "Blocked before the advocate saw it" : "Allowed"}
       </div>
       <p className="mt-1.5 text-[13px] text-muted">
-        {blocked ? "Injected listing" : "Listing"} from {shield.seller} · {shield.chars.toLocaleString()} chars · {shield.latencyMs.toFixed(1)} ms · severity {shield.severity}
+        {blocked ? "Injected listing" : "Listing"} from {shield.seller} · {commas(shield.chars)} chars · {shield.latencyMs.toFixed(1)} ms · severity {shield.severity}
       </p>
       <div className="mt-2.5 overflow-hidden rounded-[10px] border border-line bg-soft px-3 py-2.5 font-mono text-[12px] leading-[1.5] [overflow-wrap:anywhere]">
         {shield.evidence.map((e, i) => (e.hit ? <mark key={i} className="rounded-[3px] bg-coral-soft px-0.5 text-coral">{e.text}</mark> : <span key={i}>{e.text}</span>))}
@@ -211,7 +277,9 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
         <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{approval.wordPair}</span>
         <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
       </div>
-      <p className="text-[14px]">You asked "why not the cheaper one?" It answered: {approval.whyAnswer}</p>
+      <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
+      <p className="mt-1.5 text-[14px]">You asked "why not the cheaper one?" It answered: {approval.whyAnswer}</p>
+      <p className="mt-1.5 text-[13px] text-muted">{CAP_RULE}</p>
       <ol className="mt-2.5 grid gap-1.5 text-[13px]">
         {approval.attempts.map((a, i) => (
           <li key={i} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-2.5">
@@ -221,6 +289,65 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
           </li>
         ))}
       </ol>
+    </Card>
+  );
+}
+
+export const CAP_RULE = "Goal cap is the ceiling to hunt under. Allowance is what it may spend without a call.";
+
+/** Live b5 review card: the word pair issued for this exact mandate, and a labelled typed fallback bound to the same mandate. */
+export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView; allowance: number | null; onTyped: (code: string) => Promise<string> }) {
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const left = REVIEW_MAX_FAILURES - review.failures;
+  return (
+    <Card stripe="amber">
+      <Label>Review and approve</Label>
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">
+        {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
+      </h3>
+      <p className="text-[13px] text-muted">
+        Mandate <Code>{review.mandateId}</Code> · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
+      </p>
+      <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
+        <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{review.code}</span>
+        <small className="text-[12px] text-muted">one-time code for this mandate, this screen only</small>
+      </div>
+      <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
+      <form
+        className="mt-3 grid gap-1.5"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setMsg("");
+          setMsg(await onTyped(code.trim()));
+          setBusy(false);
+          setCode("");
+        }}
+      >
+        <label htmlFor="typed-code" className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
+          Typed fallback (if the call fails): type the code to approve this same mandate
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="typed-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            disabled={review.locked || busy}
+            autoComplete="off"
+            placeholder="two words"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-soft px-3 font-mono"
+          />
+          <button disabled={review.locked || busy || !code.trim()} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink disabled:opacity-50">
+            Approve
+          </button>
+        </div>
+        <p className="text-[13px] text-muted" aria-live="polite">
+          {typedStatus({ locked: review.locked, busy, msg, failures: review.failures, left })}
+        </p>
+      </form>
+      <p className="mt-1 text-[13px] text-muted">{CAP_RULE}</p>
     </Card>
   );
 }
@@ -269,7 +396,7 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
           {items.slice(0, max).map((f) => (
             <li key={f.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(f.at)}</span>
-              <span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className={`mb-px block text-[11px] font-bold uppercase tracking-[0.06em] ${FEED_STYLE[f.kind]}`}>{f.title}</span>
                 {f.text} {f.origin && <OriginChip origin={f.origin} />}
               </span>
