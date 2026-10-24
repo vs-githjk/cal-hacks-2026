@@ -237,3 +237,21 @@ def test_beat4_stock_unknown_but_price_rose_still_stops(rounds):
 def test_stock_state_words():
     for raw, state in (("Sold Out", "out"), ("In Stock", "in"), ("Add to Cart", "unknown"), (None, "unknown"), ("", "unknown")):
         assert brightdata.stock_state(raw) == state, raw
+
+
+# ---------- T12 red team: a live price that cannot be a price never counts as a live read ----------
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf"), 0, 0.0, -5.0, True, "n/a", "", [1299.99]])
+def test_t12_unreadable_live_price_is_empty_not_a_live_read(bad):
+    """NaN compares false against every price, so it used to read as 'price_changed' and let the call go on as a LIVE read;
+    0 and negative prices read as 'cheaper'. Any of them is no read at all: MIRROR stays, the reason is shown."""
+    r = do_recheck(LISTING, fetch=fake([row(price=bad)]), now=NOW)
+    assert (r["state"], r["price"], r["origin"], r.get("detail")) == ("empty", None, "MIRROR", "unreadable_price")
+    assert recheck.stop_reason(r, 1299.99, 1300.0) is None   # no read is not a stop: the quote stands, as for any empty result
+
+
+def test_t12_beat4_shows_the_mirror_fallback_for_an_unreadable_live_price(rounds):
+    out, text = beat4(rounds, via([row(price=float("nan"))]))
+    assert "stopped" not in out and out["recheck"]["state"] == "empty" and out["recheck"]["origin"] == "MIRROR"
+    assert "[LIVE]" not in text.split("Live re-check")[1].split("\n")[0]
+    assert "nan" not in text.lower().split("live re-check")[1].split("\n")[0]

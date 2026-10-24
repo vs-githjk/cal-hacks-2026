@@ -11,6 +11,7 @@ stop_reason() turns a result into the one sentence that stops the call, or None 
 """
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
@@ -27,6 +28,18 @@ def _status_default() -> dict:
 def _fetch_default(*, urls):
     from data.baselines import brightdata
     return brightdata.observations(urls=urls)
+
+
+def _live_price(v) -> Optional[float]:
+    """The row's price as a positive finite number, or None. NaN compares false against every price and 0 or a negative
+    reads as 'cheaper', so either would let the call go on as a LIVE read; a bool is not a price."""
+    if isinstance(v, bool):
+        return None
+    try:
+        p = float(v)
+    except (TypeError, ValueError):
+        return None
+    return p if math.isfinite(p) and p > 0 else None
 
 
 def will_fetch(fetch: Optional[Callable] = None) -> bool:
@@ -47,16 +60,17 @@ def recheck(listing: dict, *, fetch: Optional[Callable] = None, status: Optional
         rows = fetch(urls=[listing["url"]])
     except brightdata.NotConfigured:
         return {"state": "not_configured", "price": None, "fetched_at": None, "origin": MIRROR}
-    mine = [r for r in rows if r.get("url") == listing["url"] and r.get("price") is not None]
+    here = [r for r in rows if r.get("url") == listing["url"] and r.get("price") is not None]
+    mine = [r for r in here if _live_price(r["price"]) is not None]
     if not mine:
-        reason = str(status().get("last_result") or "empty")
+        reason = "unreadable_price" if here else str(status().get("last_result") or "empty")
         state = "slow" if reason == "slow" else "empty"
         out = {"state": state, "price": None, "fetched_at": None, "origin": MIRROR}
         if state == "empty":
             out["detail"] = reason
         return out
     r = mine[0]
-    price = float(r["price"])
+    price = _live_price(r["price"])
     raw = r.get("availability")
     if r.get("in_stock"):
         state = "ok" if abs(price - float(listing["price"])) < CENT else "price_changed"
