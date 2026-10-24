@@ -238,6 +238,20 @@ def test_deeply_nested_json_is_422_not_500(client, custom):
     assert not custom.exists() or list(custom.iterdir()) == []
 
 
+@pytest.mark.parametrize("shape", ["list", "dict"])
+@pytest.mark.parametrize("depth", [500, 900, 999])
+def test_schema_legal_deep_attrs_are_422_not_500(client, custom, shape, depth):
+    # attrs is a free-form object, so a body under the size limit can nest past the recursion limit inside the factory
+    deep = "[" * depth + "]" * depth if shape == "list" else '{"a":' * depth + "1" + "}" * depth
+    text = json.dumps(good()).replace('"RTX 5070 Ti"', deep)
+    assert len(text) < 64 * 1024
+    r = _raw(client, text)
+    assert r.status_code == 422, r.text
+    assert fields(r) == {"config": "nested too deeply"}
+    assert not custom.exists() or list(custom.iterdir()) == []
+    assert client.get("/v1/sellers").json() == []
+
+
 # ---- misc
 
 def test_health_and_cors(client):

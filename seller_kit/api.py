@@ -121,6 +121,9 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             norm = validate_config(cfg)
         except ConfigError as e:
             norm, errors = None, list(e.errors)
+        except RecursionError:
+            # attrs is free-form, so a body under the size limit can still nest past the recursion limit in the factory
+            return _one(422, "config", "nested too deeply")
         if norm is not None and not ID_RE.fullmatch(norm["id"]):
             errors.append({"field": "id", "message": "must be 2 to 40 characters: lowercase letters, digits, - and _, starting with a letter or digit"})
         if isinstance(cfg, dict) and cfg.get("origin") == "LIVE":
