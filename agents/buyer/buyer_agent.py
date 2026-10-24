@@ -30,7 +30,7 @@ from market_bridge import MarketBridge, MarketBridgeError
 from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
-from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
+from goal import apply_owned, clarification_question, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
 from logic import advice_need_for, decide, make_order, sealed
 
 ADVICE_TIMEOUT_S = 15
@@ -516,7 +516,11 @@ async def handle_text(ctx: Context, sender: str, text: str):
     try:
         goal, told = parse_goal(text, buyer_id)
     except ValueError as e:
-        await tell(ctx, sender, f"I could not read a goal from that. {e}")
+        try:
+            question = clarification_question(text)
+        except ValueError:
+            question = None
+        await tell(ctx, sender, question or f"I could not read a goal from that. {e}")
         return
     try:
         db = state_db()

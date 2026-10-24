@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pytest
 
 from common import validate
-from goal import OWNED, apply_owned, clarification_question, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
+from goal import OWNED, apply_owned, clarification_question, demo_goal_fields, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
 from logic import sealed
 
 DEMO = ("a new GPU for 1440p that fits my case and PSU, under $800, by Friday. "
@@ -144,3 +144,52 @@ def test_parse_goal_rejects_nonpositive_cap_and_past_deadline():
         parse_goal("GPU, new, under $0 by Friday", "b", now=NOW)
     with pytest.raises(ValueError, match="past"):
         parse_goal("GPU, new, under $800 by 2026-10-22", "b", now=NOW)
+
+
+FRIDAY_GOAL = "RTX 5070 Ti that fits my case, under $1,300, by Friday, new or open-box"
+CASE_TOLD = "I have a mid-tower case that takes cards up to 305 mm."
+
+
+def test_demo_5070_ti_goal_parses_all_fields_and_case_limit():
+    goal, owned = parse_goal(f"{FRIDAY_GOAL}. {CASE_TOLD}", "buyer-1", now=NOW)
+    goal = apply_owned(goal, owned)
+    assert goal["cap"] == 1300 and goal["deadline"] == "2026-10-30T23:59:00Z"
+    need = need_from_goal(goal)
+    assert [i["sku_spec"] for i in need["items"]] == ["rtx 5070 ti"]
+    assert need["items"][0]["allowed_conditions"] == ["new", "open-box"]
+    assert owned_attrs(owned)["case"]["max_gpu_length_mm"] == 305
+
+
+def test_fits_my_case_is_a_constraint_not_a_case_to_buy():
+    goal, _ = parse_goal(FRIDAY_GOAL, "buyer-1", now=NOW)
+    assert [i["part"] for i in goal["items"]] == ["gpu"]
+
+
+def test_goal_without_a_cap_asks_the_budget_question():
+    text = "RTX 5070 Ti that fits my case, by Friday, new or open-box"
+    assert clarification_question(text) == "What is your maximum budget?"
+    with pytest.raises(ValueError, match="What is your maximum budget"):
+        parse_goal(text, "b", now=NOW)
+
+
+def test_used_is_not_an_allowed_condition():
+    # Rule: only new and open-box are recognised; a used-only goal has no condition and is asked about.
+    text = "RTX 5070 Ti, used, under $900 by Friday"
+    assert clarification_question(text) == "What condition do you want: new or open-box?"
+    with pytest.raises(ValueError, match="new or open-box"):
+        parse_goal(text, "b", now=NOW)
+    goal, _ = parse_goal("RTX 5070 Ti, new or used, under $900 by Friday", "b", now=NOW)
+    assert goal["items"][0]["condition"] == "new" and "allowed_conditions" not in goal["items"][0]
+
+
+def test_two_digit_cap_is_read():
+    goal, _ = parse_goal("a new GPU under $85 by Friday", "b", now=NOW)
+    assert goal["cap"] == 85
+
+
+def test_demo_goal_fields_match_lane_d_stand_in_shape():
+    assert demo_goal_fields(FRIDAY_GOAL, NOW) == {
+        "cap": 1300.0, "deadline": "2026-10-30T23:59:00Z",
+        "allowed_conditions": ["new", "open-box"], "sku_spec": "rtx 5070 ti"}
+    with pytest.raises(ValueError, match="maximum budget"):
+        demo_goal_fields("RTX 5070 Ti, by Friday, new", NOW)

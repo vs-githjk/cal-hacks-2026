@@ -133,8 +133,8 @@ def _owned(text: str, buyer_id: str, now: datetime) -> list[dict]:
             part("psu", m.group(0), {})
         if m := re.search(rf"\b(?:{PARTS['case']})\b", s, re.I):
             attrs = {}
-            if c := re.search(r"(\d{2,3})\s*mm\s*(?:of\s+)?gpu clearance|gpu clearance (?:of\s+)?(\d{2,3})\s*mm", s, re.I):
-                attrs["max_gpu_length_mm"] = int(c.group(1) or c.group(2))
+            if c := re.search(r"(\d{2,3})\s*mm\s*(?:of\s+)?gpu clearance|gpu clearance (?:of\s+)?(\d{2,3})\s*mm|cards up to (\d{2,3})\s*mm", s, re.I):
+                attrs["max_gpu_length_mm"] = int(c.group(1) or c.group(2) or c.group(3))
             part(f"case {m.group(0).lower()}", m.group(0), attrs)
     return out
 
@@ -150,7 +150,9 @@ def parse_goal(text: str, buyer_id: str, now: datetime | None = None) -> tuple[d
     if cap is None:
         raise ValueError("Tell me a budget, e.g. 'under $800'.")
     build = re.search(r"\bbuild\b", t)
-    cats = ["gpu", "psu", "case"] if build else [c for c, rx in PARTS.items() if re.search(rf"\b(?:{rx})\b", t)]
+    # "fits my case" names a constraint on the card, not a case to buy.
+    wanted = re.sub(rf"\b(?:fits?|fitting)\s+(?:in\s+)?(?:my|our)\s+(?:{PARTS['case']})\b", " ", t)
+    cats = ["gpu", "psu", "case"] if build else [c for c, rx in PARTS.items() if re.search(rf"\b(?:{rx})\b", wanted)]
     if re.search(r"\b(?:RTX|RX|GTX)\s*\d{3,4}\b|\b\d{3,4}\s*(?:GPU|graphics card)\b", text, re.I) and "gpu" not in cats:
         cats.append("gpu")
     if not cats:
@@ -166,6 +168,16 @@ def parse_goal(text: str, buyer_id: str, now: datetime | None = None) -> tuple[d
             "reserved_amount": 0, "created_at": now.isoformat(),
             "notes": f"'{text.strip()}', {now.astimezone().strftime('%H:%M')}"}
     return common.validate("Goal", goal), _owned(text, buyer_id, now)
+
+
+def demo_goal_fields(text: str, now: datetime | None = None) -> dict:
+    """Same dict shape as demo/goal.py parse_goal: cap, deadline, allowed_conditions, sku_spec (for Lane D to swap in)."""
+    goal, _ = parse_goal(text, "demo", now)
+    gpu = next((i for i in goal["items"] if i["part"] == "gpu"), None)
+    if gpu is None:
+        raise ValueError("Which GPU model? I can't resolve that request yet.")
+    return {"cap": goal["cap"], "deadline": goal["deadline"],
+            "allowed_conditions": gpu.get("allowed_conditions") or [gpu["condition"]], "sku_spec": gpu["sku_spec"]}
 
 
 def remember(buyer_id: str, parts: list[dict]) -> list[dict]:
