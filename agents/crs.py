@@ -214,7 +214,7 @@ def to_crs_check(supplier_id: str, check: dict | None) -> dict:
     signal = check.get("signal") if isinstance(check, dict) else None
     stability = signal.get("stability") if isinstance(signal, dict) else None
     reason = check.get("reason") if isinstance(check, dict) else None
-    if stability not in REASON_CODES:
+    if not isinstance(stability, str) or stability not in REASON_CODES:
         not_configured = (_is_empty_not_configured(check) and
                           (not _configured() or not _profiles()))
         return {
@@ -226,7 +226,9 @@ def to_crs_check(supplier_id: str, check: dict | None) -> dict:
             "origin": "NOT_CONFIGURED" if not_configured else "SANDBOX",
             "checked_at": now,
         }
-    if signal.get("supplier_id") != supplier_id or signal.get("source") not in {"sandbox", "recorded"}:
+    source = signal.get("source")
+    if (signal.get("supplier_id") != supplier_id or
+            not isinstance(source, str) or source not in {"sandbox", "recorded"}):
         return {"seller_id": supplier_id, "product": "tu_identity", "verified": False,
                 "reason_codes": ["CRS_INVALID"], "origin": "SANDBOX", "checked_at": now}
     try:
@@ -234,7 +236,6 @@ def to_crs_check(supplier_id: str, check: dict | None) -> dict:
     except (KeyError, ValueError, TypeError, OverflowError):
         return {"seller_id": supplier_id, "product": "tu_identity", "verified": False,
                 "reason_codes": ["CRS_INVALID"], "origin": "SANDBOX", "checked_at": now}
-    source = signal.get("source")
     origin = {"sandbox": "SANDBOX", "recorded": "CACHED"}.get(source, "NOT_CONFIGURED")
     result = {
         "seller_id": supplier_id,
