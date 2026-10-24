@@ -352,42 +352,7 @@ def test_session_cannot_approve_after_the_mandate_expired(svc):
     assert not d.approved and d.reason == "expired"
 
 
-# ---------- typed fallback ----------
-
-def test_typed_fallback_approves_through_the_same_path_with_channel_typed(deal):
-    m, s, code = deal
-    d = s.approve_typed(code.upper(), sec(4))
-    assert d.approved
-    assert d.record["channel"] == "typed" and validate_record(d.record) == []
-    assert d.record["mandate_hash"] == m["hash"] and m["approval_id"] == d.record["id"]
-    assert charge_ok(m)
-    assert s.approve_typed(code, sec(5)).reason == "replay"
-
-
-def test_typed_wrong_code_and_typed_code_for_another_deal_deny(svc):
-    a, b = make("deal-A"), make("deal-B")
-    sa, ca = svc.issue(a, now=T0)
-    sb, cb = svc.issue(b, now=T0)
-    d = sb.approve_typed(ca, sec(1))
-    assert not d.approved and d.reason == "replay"
-    sc, cc = svc.issue(make("deal-C"), now=T0)
-    bad = sc.approve_typed("silver ribbon" if cc != "silver ribbon" else "amber falcon", sec(1))
-    assert bad.reason == "wrong_code"
-    assert not charge_ok(b, deal_id="deal-B")
-
-
-def test_typed_and_voice_share_one_attempt_budget_and_cooldown(deal):
-    m, s, code = deal
-    assert s.approve("yes", sec(0)).reason == "no_code"
-    assert s.approve_typed(code, sec(2)).reason == "cooldown"
-    assert s.approve_typed(code, sec(COOLDOWN_SECONDS + 1)).approved
-    assert s.attempts == 2
-
-
-def test_typed_field_with_extra_words_is_not_auto_approved(deal):
-    m, s, code = deal
-    d = s.approve_typed(f"{code} please", sec(1))
-    assert not d.approved and d.reason == "no_code"
+# ---------- no typed fallback (#185): see pay/tests/test_nothing_paid.py ----------
 
 
 # ---------- normalization ----------

@@ -58,8 +58,8 @@ def test_canonical_is_sorted_no_spaces_and_only_hash_fields():
         "tier_price": None, "nonce": "ab", "expires_at": "2026-10-24T01:10:00Z",
         "status": "pending", "buyer_id": "b",
     }
-    assert canonical(m) == (
-        '{"amount":10,"currency":"USD","deal_id":"d1","expires_at":"2026-10-24T01:10:00Z",'
+    assert canonical(m) == (   # buyer_id is a hash field since #186; status is not
+        '{"amount":10,"buyer_id":"b","currency":"USD","deal_id":"d1","expires_at":"2026-10-24T01:10:00Z",'
         '"nonce":"ab","payee":"p","tier_price":null}'
     )
 
@@ -74,11 +74,11 @@ def test_hash_is_sha256_hex_of_canonical_and_stable():
 
 def test_hash_matches_independent_golden_value():
     m = {
-        "deal_id": "d1", "amount": 10, "currency": "USD", "payee": "p",
+        "deal_id": "d1", "buyer_id": "b", "amount": 10, "currency": "USD", "payee": "p",
         "tier_price": None, "nonce": "ab", "expires_at": "2026-10-24T01:10:00Z",
     }
     literal = (
-        '{"amount":10,"currency":"USD","deal_id":"d1","expires_at":"2026-10-24T01:10:00Z",'
+        '{"amount":10,"buyer_id":"b","currency":"USD","deal_id":"d1","expires_at":"2026-10-24T01:10:00Z",'
         '"nonce":"ab","payee":"p","tier_price":null}'
     )
     assert mandate_hash(m) == hashlib.sha256(literal.encode()).hexdigest()
@@ -91,8 +91,9 @@ def test_hash_is_key_order_independent_and_ignores_other_fields():
     random.Random(7).shuffle(items)
     shuffled = dict(items)
     assert mandate_hash(shuffled) == m["hash"]
-    other = dict(m, status="approved", approval_id="x", tap_signature="sig", buyer_id="zzz")
+    other = dict(m, status="approved", approval_id="x", tap_signature="sig")
     assert mandate_hash(other) == m["hash"]
+    assert mandate_hash(dict(m, buyer_id="zzz")) != m["hash"]          # buyer_id is bound since #186
 
 
 def test_integral_float_and_int_amount_hash_the_same():

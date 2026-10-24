@@ -24,17 +24,17 @@ export const goal: GoalView = {
 };
 
 export const rankedBids: RankedBid[] = [
-  { rank: 1, seller: "Shady Sam's Deals", origin: "SIM", condition: "new", landed: 757.44, adjusted: 757.44, adjustedReason: "", recommendation: "veto", why: "Listed as new; the page says open-box.", sourceUrl: "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html", won: false },
-  { rank: 2, seller: "Bargain Bin Hardware", origin: "SIM", condition: "new", landed: 1199, adjusted: 1199, adjustedReason: "", recommendation: "veto", why: "336 mm card, your case allows 305 mm (fit.gpu_length)", won: false },
-  { rank: 3, seller: "Best Buy", origin: "MIRROR", condition: "new", landed: 1249.99, adjusted: 1274.99, adjustedReason: "under 30-day returns, +2%", recommendation: "caution", why: "Fit not confirmed from the listing; PSU and connector pass.", sourceUrl: "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085", won: true },
-  { rank: 4, seller: "Fair Price PC", origin: "SIM", condition: "new", landed: 1289, adjusted: 1289, adjustedReason: "", recommendation: "buy", why: "All checks pass", won: false },
-  { rank: 5, seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "open-box", altLines: [{ condition: "new", unitPrice: 1315.27 }], landed: 1247.02, adjusted: 1296.9, adjustedReason: "open-box condition, +4%", recommendation: "buy", why: "Cheapest allowed line is open-box; adjusted for condition", won: false },
-  { rank: 6, seller: "eBay seller ...824742", origin: "MIRROR", condition: "open-box", landed: 1239.99, adjusted: 1314.39, adjustedReason: "open-box condition, +4%; under 30-day returns, +2%", recommendation: "caution", why: "Fit not confirmed; open-box adjustment", won: false },
-  { rank: null, seller: "Micro Center", origin: "MIRROR", condition: "unknown", landed: 1199.99, adjusted: null, adjustedReason: "", recommendation: "ineligible", why: "Snapshot states no condition; the advocate will not guess", won: false },
-  { rank: null, seller: "Amazon.com (sells direct)", origin: "MIRROR", condition: "unknown", landed: 1299.99, adjusted: null, adjustedReason: "", recommendation: "ineligible", why: "Snapshot states no condition", won: false },
-  { rank: null, seller: "eBay seller ...442526", origin: "MIRROR", condition: "new", landed: 1399.99, adjusted: null, adjustedReason: "", recommendation: "ineligible", why: "$99.99 over your $1,300 cap", won: false },
-  { rank: null, seller: "eBay seller ...263900", origin: "MIRROR", condition: "new", landed: 1489, adjusted: null, adjustedReason: "", recommendation: "ineligible", why: "$189.00 over your $1,300 cap", won: false },
-  { rank: null, seller: "Lowball Direct", origin: "SIM", condition: "new", landed: 1090, adjusted: null, adjustedReason: "", recommendation: "refused", why: "Below the seller's own floor; the referee rejected it before the round", won: false },
+  { rank: 1, seller: "Shady Sam's Deals", origin: "SIM", condition: "new", landed: 757.44, recommendation: "veto", why: "Listed as new; the page says open-box.", sourceUrl: "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html", won: false },
+  { rank: 2, seller: "Bargain Bin Hardware", origin: "SIM", condition: "new", landed: 1199, recommendation: "veto", why: "336 mm card, your case allows 305 mm (fit.gpu_length)", won: false },
+  { rank: 3, seller: "Best Buy", origin: "MIRROR", condition: "new", landed: 1249.99, recommendation: "caution", why: "Fit not confirmed from the listing; PSU and connector pass.", sourceUrl: "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085", won: true },
+  { rank: 4, seller: "Fair Price PC", origin: "SIM", condition: "new", landed: 1289, recommendation: "buy", why: "All checks pass", won: false },
+  { rank: 5, seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "open-box", altLines: [{ condition: "new", unitPrice: 1315.27 }], landed: 1247.02, recommendation: "buy", why: "Cheapest allowed line is open-box; adjusted for condition", won: false },
+  { rank: 6, seller: "eBay seller ...824742", origin: "MIRROR", condition: "open-box", landed: 1239.99, recommendation: "caution", why: "Fit not confirmed; open-box adjustment", won: false },
+  { rank: null, seller: "Micro Center", origin: "MIRROR", condition: "unknown", landed: 1199.99, recommendation: "ineligible", why: "Snapshot states no condition; the advocate will not guess", won: false },
+  { rank: null, seller: "Amazon.com (sells direct)", origin: "MIRROR", condition: "unknown", landed: 1299.99, recommendation: "ineligible", why: "Snapshot states no condition", won: false },
+  { rank: null, seller: "eBay seller ...442526", origin: "MIRROR", condition: "new", landed: 1399.99, recommendation: "ineligible", why: "$99.99 over your $1,300 cap", won: false },
+  { rank: null, seller: "eBay seller ...263900", origin: "MIRROR", condition: "new", landed: 1489, recommendation: "ineligible", why: "$189.00 over your $1,300 cap", won: false },
+  { rank: null, seller: "Lowball Direct", origin: "SIM", condition: "new", landed: 1090, recommendation: "refused", why: "Below the seller's own floor; the referee rejected it before the round", won: false },
 ];
 
 export const veto: VetoView = {

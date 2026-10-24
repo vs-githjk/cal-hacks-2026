@@ -35,6 +35,12 @@ _SUMMARY_BLOCKED = frozenset({
     "pretend", "override", "pay", "paid", "payment", "payments", "payee", "send", "sent", "dollar",
     "dollars", "usd", "bucks", "cash", "refund",
 })
+# Item and seller text read aloud also must not steer the buyer (#197): "you already agreed to this", "official reseller".
+_FACTS_BLOCKED = _SUMMARY_BLOCKED | frozenset({
+    "you", "your", "yours", "agreed", "agree", "already", "official", "officially", "authorized", "authorised",
+    "verified", "certified", "trusted", "guaranteed", "confirmed", "promised", "advocate", "shield", "bazaar", "buyer",
+    "referee", "now", "urgent",
+})
 
 
 class ScriptError(ValueError):
@@ -154,14 +160,26 @@ def _host(url: str) -> Optional[str]:
     return host[4:] if host.startswith("www.") else host
 
 
-def _plain(value: Any, pattern: "re.Pattern[str]") -> Optional[str]:
+def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY_BLOCKED) -> Optional[str]:
     """The value when it is a short plain string that passes `pattern` and holds no steering word, else None."""
     if not isinstance(value, str):
         return None
     v = " ".join(value.split())
-    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & _SUMMARY_BLOCKED:
+    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & blocked:
         return None
     return v
+
+
+CRS_LINES = {
+    "verified": "The seller was checked with CRS and verified",
+    "sim_seller": "This is a simulated seller, not checked with CRS",
+}
+
+
+PRICE_LINES = {
+    "live": "The price was checked live just now",
+    "mirror": "The price is from a dated listing snapshot",
+}
 
 
 def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
@@ -175,14 +193,26 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
         return kept, dropped
     if not isinstance(deal, Mapping):
         return kept, ["deal"]
-    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller")]
+    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "crs", "price")]
     for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
         if key in deal:
-            v = _plain(deal[key], pattern)
+            v = _plain(deal[key], pattern, _FACTS_BLOCKED)
             if v is None:
                 dropped.append(key)
             else:
                 kept[key] = v
+    if "crs" in deal:   # our own CRS result (#257), a fixed phrase per value; nothing the seller wrote is read
+        line = CRS_LINES.get(deal["crs"]) if isinstance(deal["crs"], str) else None
+        if line is None:
+            dropped.append("crs")
+        else:
+            kept["crs"] = line
+    if "price" in deal:   # our own Bright Data re-check (#269), a fixed phrase per value
+        line = PRICE_LINES.get(deal["price"]) if isinstance(deal["price"], str) else None
+        if line is None:
+            dropped.append("price")
+        else:
+            kept["price"] = line
     if "condition" in deal:
         c = CONDITIONS.get(str(deal["condition"]).strip().lower()) if isinstance(deal["condition"], str) else None
         if c is None:
@@ -228,6 +258,10 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
         deal_line += f", {facts['condition']}"
     deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
     deal_line += f", for {words}"
+    if "crs" in facts:
+        deal_line += f". {facts['crs']}"
+    if "price" in facts:
+        deal_line += f". {facts['price']}"
     kept, dropped = clean_advocate_reason(advocate_reason)
     parts = []
     if "rule_id" in kept or "summary" in kept:

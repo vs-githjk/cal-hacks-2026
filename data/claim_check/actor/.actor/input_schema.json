@@ -1,15 +1,28 @@
 {
- "title": "Claims to check",
+ "title": "Listing claim checker input",
  "type": "object",
  "schemaVersion": 1,
  "properties": {
+  "listingUrl": {
+   "title": "Product page URL",
+   "type": "string",
+   "editor": "textfield",
+   "description": "The live product listing to check the claims against (http or https).",
+   "prefill": "https://www.canadacomputers.com/en/powered-by-nvidia/269441/msi-rtx-5070-ti-16g-shadow-3x-oc-gddr7-triple-fans-rtx-5070-ti-16g-shadow-3x-oc.html"
+  },
+  "claimTexts": {
+   "title": "Claims to check",
+   "type": "array",
+   "editor": "stringList",
+   "description": "What the seller says, one claim per line. Examples: \"price $1,749.99\", \"new\", \"in stock\", \"2-year warranty\", \"30-day returns\".",
+   "prefill": ["price $1,749.99", "new", "in stock"]
+  },
   "claims": {
-   "title": "Claims",
+   "title": "Batch: claims on many pages (advanced)",
    "type": "array",
    "editor": "json",
-   "description": "Each item: {id, text, kind, evidence_url} (Tech Bazaar Claim). Optional field and value skip text parsing.",
-   "prefill": [{"id": "c1", "text": "was $1,099", "kind": "price", "evidence_url": "https://example.com/listing"}]
+   "sectionCaption": "Advanced: many listings in one run",
+   "description": "A list of {id, text, evidence_url} objects, one per claim, each with its own page. Optional field and value skip text parsing. Used together with the fields above if both are given."
   }
- },
- "required": ["claims"]
+ }
 }

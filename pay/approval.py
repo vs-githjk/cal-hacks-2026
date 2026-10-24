@@ -1,7 +1,7 @@
 """Hardened approval core (d3): a one-time word-pair code, a code-only intent check, default deny.
 
 Voice is never the credential. The credential is a two-word code shown on the buyer's authenticated screen
-and spoken (or typed) inside one session about one exact mandate. No model decides "approve": `approve`
+and spoken on the phone call inside one session about one exact mandate. No model decides "approve": `approve`
 passes only when the normalized transcript holds the exact word pair AND the token "approve" or "approved"
 (nothing else counts: not "approves", "approval" or "disapprove"). Everything
 else, including silence, a timeout, low speech-to-text confidence and anything unclear, denies.
@@ -11,7 +11,7 @@ Flow:
     session, code = svc.issue(mandate)                   # show `code` on the review card; only its hash is kept
     script = script_for(mandate, advocate_reason)        # opening, deal read-back, why-not-cheaper answer
     session.start_call(); session.begin_listening()
-    decision = session.approve(transcript_text)          # or session.approve_typed(typed_text) (channel "typed")
+    decision = session.approve(transcript_text)          # a phone call transcript; there is no typed path (#185)
     if decision.approved: record = decision.record       # VoiceApproval; mandate is now approved
 """
 from __future__ import annotations
@@ -42,12 +42,24 @@ MAX_ATTEMPTS = 3
 COOLDOWN_SECONDS = 30
 LISTEN_WINDOW_SECONDS = 10
 MAX_TOKENS = 12
-# A spoken amount is not consent to this deal's amount ("<code> approve nine hundred dollars" must not approve a
-# $1,249.99 mandate). Only money units, or "hundred"/"thousand" not followed by "percent", count, so ordinary speech
-# ("the two words on my screen are ...", "a hundred percent", "100% sure", "it's 12:30") still works. This catches a
-# spoken different amount, not every possible phrasing; the real money control is the signed mandate hash.
-MONEY_UNITS = frozenset({"dollar", "dollars", "bucks", "cent", "cents"})
-MAGNITUDES = frozenset({"hundred", "thousand"})
+# Consent is the code, "approve" or "approved", and filler, nothing else (#195, red team M1). Any digit, number word or
+# money unit denies ("<code> approve $900", "nine ninety nine", "1.2k"), and so does any other word ("approve for seller
+# z"): a spoken amount or payee is never consent to this mandate's. "two" counts as filler only in "two word(s)", as the
+# real call of Oct 24 00:08 said ("the two words from my screen are ..."). The money control is still the signed mandate.
+MONEY_UNITS = frozenset({"dollar", "dollars", "buck", "bucks", "cent", "cents", "usd", "grand", "k"})
+NUMBER_WORDS = frozenset({
+    "zero", "oh", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+    "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty", "forty",
+    "fourty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand", "million", "billion", "half",
+    "quarter", "point", "percent", "dozen",
+})
+FILLER = frozenset({
+    "okay", "ok", "uh", "um", "umm", "er", "erm", "hmm", "so", "yes", "yeah", "yep", "sure", "alright", "right", "well",
+    "hello", "hi", "hey", "the", "a", "my", "code", "codes", "word", "words", "is", "are", "its", "it", "from", "on",
+    "screen", "says", "i", "please", "and", "that", "thats", "this", "here",
+    # #195 answer from the owner: "approve, thank you" and "okay go ahead, approve" pass; a number or another amount still denies
+    "thanks", "thank", "you", "now", "go", "ahead", "good", "sounds",
+})
 MIN_CONFIDENCE = 0.6
 APPROVE_TOKEN = "approve"
 APPROVE_TOKENS = frozenset({APPROVE_TOKEN, "approved"})  # speech-to-text often hears "approve" as "approved"; exactly these two
@@ -285,16 +297,6 @@ class ApprovalSession:
         utterance. `confidence` is the speech-to-text confidence; below 0.6 counts as a mismatch."""
         return self._attempt(transcript_text, _now_utc(now), confidence, self._voice_channel())
 
-    def approve_typed(self, code_text: Any, now: Optional[datetime] = None) -> Decision:
-        """The typed fallback on the review card. Same path, same mandate, same attempt budget, channel
-        "typed". Pressing the card's Approve button supplies the "approve" token, but only when the field
-        holds exactly the two code words; anything else is judged as typed."""
-        text = code_text
-        tokens = normalize(code_text).split()
-        if len(tokens) == 2 and all(t in WORD_SET for t in tokens):
-            text = f"{normalize(code_text)} {APPROVE_TOKEN}"
-        return self._attempt(text, _now_utc(now), None, "typed")
-
     def _voice_channel(self) -> str:
         return self.channel
 
@@ -315,7 +317,7 @@ class ApprovalSession:
             until = svc._cooldown_until.get(self.mandate_hash)
             if until is not None and now < until:
                 return Decision(False, "cooldown", self.state, False)
-            if channel != "typed" and self._listen_deadline is not None and now > self._listen_deadline:
+            if self._listen_deadline is not None and now > self._listen_deadline:
                 return self._finish(now, "denied", "no_answer", "silence")
             tokens = normalize(text).split()
             if not tokens:
@@ -324,7 +326,11 @@ class ApprovalSession:
             # speech-to-text never emits invisible format characters; text carrying them is an injection, and
             # the close-spelling match below must not glue a split word back together
             hidden = isinstance(text, str) and any(unicodedata.category(c) == "Cf" for c in text)
-            reason = "wrong_code" if hidden else self._judge(tokens, confidence)
+            # normalize() turns any other script into blanks; a non-ASCII digit, letter or symbol ("approve ٩٠٠", "€",
+            # "九百") must deny, not vanish (#195)
+            foreign = isinstance(text, str) and any(ord(c) > 127 and (c.isalnum() or unicodedata.category(c)[0] == "S")
+                                                    for c in unicodedata.normalize("NFKC", text))
+            reason = "wrong_code" if hidden else "no_code" if foreign else self._judge(tokens, confidence)
             svc._attempts[self.mandate_hash] = svc.attempts_used(self.mandate_hash) + 1
             self.attempts += 1
             if reason is None:
@@ -346,12 +352,16 @@ class ApprovalSession:
             return "no_code"
         if NEGATIONS & set(tokens):
             return "no_code"
-        if MONEY_UNITS & set(tokens) or any(t in MAGNITUDES and tokens[i + 1:i + 2] != ["percent"] for i, t in enumerate(tokens)):
-            return "no_code"                   # an amount was spoken; consent must be the code and "approve" only
+        two_words = {i for i, t in enumerate(tokens) if t == "two" and tokens[i + 1:i + 2] in (["words"], ["word"])}
+        if any(any(c.isdigit() for c in t) for t in tokens) or MONEY_UNITS & set(tokens) or any(
+                t in NUMBER_WORDS and i not in two_words for i, t in enumerate(tokens)):
+            return "no_code"                   # a number was spoken; consent must be the code and "approve" only
         words = [_as_code_word(t) for t in tokens]
-        pair_hashes = [hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest()
-                       for a, b in zip(words, words[1:]) if a in WORD_SET and b in WORD_SET]
-        own = any(hmac.compare_digest(h, self.code_hash) for h in pair_hashes)
+        pairs = [(k, hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest())
+                 for k, (a, b) in enumerate(zip(words, words[1:])) if a in WORD_SET and b in WORD_SET]
+        pair_hashes = [h for _, h in pairs]
+        own_at = [k for k, h in pairs if hmac.compare_digest(h, self.code_hash)]
+        own = bool(own_at)
         if not own:
             for h in pair_hashes:
                 owner = svc._codes.get(h)
@@ -360,6 +370,11 @@ class ApprovalSession:
             return "wrong_code" if any(_code_like(t) for t in tokens) else "no_code"
         if not APPROVE_TOKENS & set(tokens):
             return "no_code"                   # the code alone is not consent
+        # Outside this deal's pair (said once), every heard token must be approve or filler as heard: no other list word, no
+        # repeat of the code, and no near miss mapped onto a list word ("rover", "apples" are not "river", "apple" here).
+        if len(own_at) != 1 or any(t not in APPROVE_TOKENS and t not in FILLER and i not in two_words
+                                   for i, t in enumerate(tokens) if i not in (own_at[0], own_at[0] + 1)):
+            return "no_code"                   # any other word (a payee, a term, a condition) is not consent to this mandate
         if not svc.store.consume(NS_CODE, self.code_hash):
             return "replay"                    # single use
         return None

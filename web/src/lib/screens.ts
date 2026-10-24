@@ -29,8 +29,6 @@ export interface RankedBid {
   condition: string;
   altLines?: { condition: string; unitPrice: number }[]; // the other condition lines the same seller bid
   landed: number;
-  adjusted: number | null; // quality-adjusted score the ranking used; null when not ranked; equals landed when nothing adjusted it
-  adjustedReason: string; // why adjusted differs from landed ("" when it does not)
   recommendation: Recommendation;
   why: string;
   sourceUrl?: string;
@@ -126,9 +124,11 @@ export interface RoundView {
   sealedCount: number;
   state: "open" | "closed";
   origin: Origin;
-  arrivals: { label: string; atMs: number; origin: Origin; refused: boolean }[];
+  arrivals: Arrival[];
   seenBeforeClose: { buyer: number; public: number };
 }
+
+export interface Arrival { label: string; atMs: number; origin: Origin; refused: boolean }
 
 export interface SellerLine {
   seller: string;
@@ -210,7 +210,7 @@ interface EventRow { id: bigint; kind: string; refTable: string; refId: string; 
 interface LineRow { offeredCondition: string; unitPrice: number }
 interface ResultRow {
   id: bigint; roundId: string; bidId: string; sellerId: string; persona: string; rank: number; landed: number; reasons: string[];
-  lines: LineRow[]; origin: string; source: string; adjustedTotal: number; adjustmentReason: string;
+  lines: LineRow[]; origin: string; source: string;
 }
 interface RoundRow { id: string; needId: string; openedAt: Timestamp; deadline: Timestamp; extensions: number; state: string; sealedCount: number; closedAt?: Timestamp; origin: string }
 
@@ -248,8 +248,6 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         condition: cond(picked?.offeredCondition ?? ""),
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
-        adjusted: ranked ? r.adjustedTotal : null,
-        adjustedReason: ranked ? r.adjustmentReason : "",
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
         why: r.reasons.join("; ") || card?.label || "",
         sourceUrl: safeUrl(r.source) ?? undefined,
@@ -351,6 +349,32 @@ export function originCounts(items: readonly { origin: Origin }[]): { LIVE: numb
   const c = { LIVE: 0, MIRROR: 0, SIM: 0 };
   for (const i of items) c[i.origin]++;
   return c;
+}
+
+/** The honest origin mix as "18 bids · 12 MIRROR · 6 SIM" (zero counts dropped from the breakdown); "" when every count is 0. */
+export function originMixLabel(c: { LIVE: number; MIRROR: number; SIM: number }): string {
+  const total = c.LIVE + c.MIRROR + c.SIM;
+  if (total === 0) return "";
+  const breakdown = (["LIVE", "MIRROR", "SIM"] as const).filter((o) => c[o] > 0).map((o) => `${c[o]} ${o}`).join(" · ");
+  return `${total} bid${total === 1 ? "" : "s"} · ${breakdown}`;
+}
+
+/**
+ * Group a round's arrivals (sorted by atMs, as roundFromRows gives them) into clusters no two of which land
+ * within gapFrac of the track, so a dense run of near-simultaneous bids draws as one marker, never a pile of
+ * overlapping dots or labels. Every arrival stays in exactly one cluster: none are dropped.
+ */
+export function clusterArrivals(arrivals: readonly Arrival[], totalMs: number, gapFrac = 0.03): Arrival[][] {
+  if (!arrivals.length) return [];
+  const minGap = gapFrac * totalMs;
+  const clusters: Arrival[][] = [[arrivals[0]!]];
+  for (let i = 1; i < arrivals.length; i++) {
+    const a = arrivals[i]!;
+    const cur = clusters[clusters.length - 1]!;
+    if (a.atMs - cur[cur.length - 1]!.atMs < minGap) cur.push(a);
+    else clusters.push([a]);
+  }
+  return clusters;
 }
 
 interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; code: string; failures: number; locked: boolean; origin: string }
