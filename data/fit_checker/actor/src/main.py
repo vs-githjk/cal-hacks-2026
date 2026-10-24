@@ -1,8 +1,8 @@
 """Apify Actor entry: check each PC build and write one dataset row per rule (pass, fail or uncertain, with maker sources).
 
-Pricing (pay-per-event): one "build-checked" event per build that ran at least one rule. A build with no pair of parts to
-compare, or one we could not read, is free. A failed charge (or a run without pay-per-event pricing) is logged and never
-fails the run. The next build index is saved before the charge, so a restarted run never charges a build twice.
+Pricing (pay-per-event): one "build-checked" event per build that ran at least one rule, charged before its rows are delivered.
+A build with no pair of parts to compare is free. A spent limit or a failed charge stops the run and the summary says how many
+builds were not run. The state marks a build paid before delivery, so a restarted run never charges a build twice.
 """
 import asyncio
 
@@ -37,34 +37,63 @@ def rows_of(result: dict) -> list:
     return [{"build_id": result["build_id"], "build_verdict": result["verdict"], **c} for c in checks]
 
 
-def summary(results: list) -> str:
-    if len(results) == 1:
-        return results[0]["summary"]
-    n = {v: sum(1 for r in results if r["verdict"] == v) for v in ("pass", "fail", "uncertain")}
-    return f"{len(results)} builds: {n['pass']} pass, {n['fail']} fail, {n['uncertain']} uncertain"
+def summary(results: list, total: int | None = None, stopped: str | None = None) -> str:
+    if len(results) == 1 and not stopped:
+        out = results[0]["summary"]
+    else:
+        n = {v: sum(1 for r in results if r["verdict"] == v) for v in ("pass", "fail", "uncertain")}
+        out = f"{len(results)} build(s): {n['pass']} pass, {n['fail']} fail, {n['uncertain']} uncertain"
+    if total is not None and len(results) < total:
+        out += f"; {total - len(results)} build(s) not run: {stopped or 'stopped early'}"
+    return out
 
 
-async def run_builds(builds, push, charge, log=print, get_state=None, set_state=None) -> list:
-    """Check each build, push its rows, charge one event per build that ran a rule. Stops at the user's charge limit."""
-    start = int((await get_state()) or 0) if get_state else 0
-    results = []
-    for index in range(start, len(builds)):
-        r = check_one(builds[index])
-        results.append(r)
+def _index(v) -> int:
+    try:
+        return max(0, int(v or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _state(v) -> tuple[int, bool]:
+    """(next build index, whether that build is already paid). A missing or corrupt state starts from the top."""
+    if isinstance(v, dict):
+        return _index(v.get("index")), bool(v.get("paid"))
+    return _index(v), False
+
+
+async def run_builds(builds, push, charge, log=print, get_state=None, set_state=None, prior=None, save=None):
+    """Check each build, charge it, then deliver its rows. Returns (results, stopped).
+
+    Charge first, so no build is delivered once the user's limit is spent. The state records a paid build before its rows
+    are pushed, so a restart re-delivers it without charging again. A failed charge stops the run (nothing is delivered
+    unpaid). A build that ran no rule is free and is always delivered."""
+    index, paid = _state(await get_state()) if get_state else (0, False)
+    results, stopped = list(prior or [])[:index], None
+    for i in range(index, len(builds)):
+        r, res = check_one(builds[i]), None
+        if r["checks"] and not (paid and i == index):
+            try:
+                res = await charge(event_name=EVENT, count=1)
+            except Exception as e:
+                log(f"charge failed ({type(e).__name__}); stopping so no build is delivered unpaid")
+                stopped = "the charge failed"
+                break
+            if getattr(res, "event_charge_limit_reached", False) and not getattr(res, "charged_count", 1):
+                stopped = "your charge limit was reached"
+                break
+            if set_state:
+                await set_state({"index": i, "paid": True})
         await push(rows_of(r))
+        results.append(r)
         if set_state:
-            await set_state(index + 1)
-        if not r["checks"]:
-            continue
-        try:
-            res = await charge(event_name=EVENT, count=1)
-        except Exception as e:  # not on pay-per-event pricing, or the charge failed: log it and go on
-            log(f"charge skipped ({type(e).__name__}): {e}")
-            continue
+            await set_state({"index": i + 1, "paid": False})
+        if save:
+            await save(results)
         if getattr(res, "event_charge_limit_reached", False):
-            log("the user's charge limit for build-checked was reached; stopping")
+            stopped = "your charge limit was reached"
             break
-    return results
+    return results, stopped
 
 
 async def main():
@@ -73,10 +102,15 @@ async def main():
         if not builds:
             await Actor.set_status_message("No build given: add your parts under Your build", is_terminal=True)
             return
-        results = await run_builds(builds, Actor.push_data, Actor.charge, log=Actor.log.warning,
-                                   get_state=lambda: Actor.get_value(STATE_KEY), set_state=lambda v: Actor.set_value(STATE_KEY, v))
-        await Actor.set_value("OUTPUT", {"summary": summary(results), "builds": results})
-        await Actor.set_status_message(summary(results), is_terminal=True)
+        prior = ((await Actor.get_value("OUTPUT")) or {}).get("builds") or []  # a resume keeps the builds already reported
+
+        async def save(results):
+            await Actor.set_value("OUTPUT", {"summary": summary(results, len(builds)), "builds": results})
+        results, stopped = await run_builds(builds, Actor.push_data, Actor.charge, log=Actor.log.warning, prior=prior, save=save,
+                                            get_state=lambda: Actor.get_value(STATE_KEY), set_state=lambda v: Actor.set_value(STATE_KEY, v))
+        line = summary(results, len(builds), stopped)
+        await Actor.set_value("OUTPUT", {"summary": line, "checked": len(results), "total": len(builds), "builds": results})
+        await Actor.set_status_message(line, is_terminal=True)
 
 
 if __name__ == "__main__":

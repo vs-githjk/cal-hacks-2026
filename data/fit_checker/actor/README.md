@@ -2,7 +2,7 @@
 
 **Check a PC build before you buy it.** List the parts (CPU, motherboard, RAM, graphics card, power supply, case, cooler, drives). The Actor runs 12 compatibility rules and returns **pass**, **fail** or **uncertain** for each one, with the numbers it compared and the **maker spec pages** behind them.
 
-It never guesses. A spec nobody knows makes that rule **uncertain**, not a pass, so an "all clear" means every rule was actually checked.
+It never guesses. A spec nobody knows makes that rule **uncertain**, not a pass. A build with parts missing never gets a plain PASS: the summary says which rules could run and which parts were not given, for example `PASS for the 1 rule(s) that could run; not given: memory, gpu, psu, case, cooler`. A part we cannot read, an unknown key (say `gpus`) or a bad number makes the build **uncertain** and names it.
 
 Built for **AI shopping agents**. Our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), uses it to veto a part that will not fit before any money moves. It's also useful to PC builders, resellers and anyone quoting a build.
 
@@ -33,7 +33,7 @@ The cooler height comes from thermalright.com and the case clearance from fracta
 
 ## Input
 
-Give each part a `name` plus any specs you know. Where you leave a spec out and we hold maker data for that **exact** part, we fill it in and cite the maker page. Your own numbers always win.
+Give each part a `name` plus any specs you know (a part given as just a name string works too). Where you leave a spec out and we hold maker data for that **exact** part, we fill it in and cite the maker page. Your own numbers always win. Sockets and memory types are read in any case (`am5` is `AM5`), numbers may be strings (`"300"`), and a size of 0 counts as unknown.
 
 ```json
 {
@@ -69,23 +69,24 @@ One dataset row per rule:
 {"build_id": "build-1", "build_verdict": "fail", "rule_id": "fit.cooler_height", "verdict": "fail",
  "reason": "cooler height 155 mm exceeds case clearance 145 mm",
  "parts": ["Thermalright Peerless Assassin 120 SE", "Fractal Design North"],
- "sources": ["fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU", "thermalright.com: 155 mm; AM4, AM5, 115X, 1200, 1700, 1851"]}
+ "sources": ["fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU", "thermalright.com: 155 mm; AM4, AM5, 115X, 1200, 1700, 1851"],
+ "origin": "MIRROR (dated maker data, Oct 24 2026)"}
 ```
 
-The run's status line gives the verdict, and the key-value store's `OUTPUT` record holds every build with its parts, the specs we filled in and their sources.
+`origin` says whether a row's numbers came from our dated maker data or only from your input. A figure for a sibling model is cited with that caveat, and GPU board power and cable needs that come from NVIDIA or AMD chipset reference figures are cited as estimates. The run's status line gives the verdict, and the key-value store's `OUTPUT` record holds every build with its parts, the specs we filled in and their sources.
 
 ## Maker data we hold (dated Oct 24 2026)
 
 - **Graphics cards:** RTX 5070 Ti models from MSI (Gaming Trio, Ventus 3X, Vanguard), Gigabyte (Gaming OC, Windforce), ASUS (Prime, ProArt, TUF) and PNY, with length and recommended PSU. Chipset power tables cover 30 cards: GeForce RTX 30, 40 and 50 series, and Radeon RX 7000 and RX 9070.
 - **Coolers:** Thermalright Peerless Assassin 120 SE, Noctua NH-D15, NH-U12S, NH-L12S, DeepCool AK400, be quiet! Dark Rock Pro 5.
-- **Cases:** Fractal Design North, Cooler Master MasterBox NR200P, NZXT H5 Flow.
+- **Cases:** Fractal Design North, Cooler Master MasterBox NR200P (we use its 153 mm glass-panel cooler clearance, the lower of its two figures), NZXT H5 Flow.
 - **Boards:** Asus PRIME B650-PLUS WIFI, PRIME Z270-A, MSI B550 GAMING GEN3, PRO Z790-A WIFI, PRO Z890-A WIFI, PRO B760M-A DDR4 II.
 
 For any other part, give its specs; the rules work the same.
 
 ## Use it from an AI agent or your code
 
-**AI agents (MCP):** `https://mcp.apify.com/?actors=anoopibrampur/pc-build-compatibility-checker` adds it as a tool in any MCP client.
+**AI agents (MCP):** `https://mcp.apify.com?tools=anoopibrampur/pc-build-compatibility-checker` adds it as a tool in any MCP client.
 
 **API:**
 
@@ -97,7 +98,7 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~pc-build-compatibility
 
 ## Pricing
 
-**$0.005 per build checked.** A build is charged only when at least one rule ran. A build with no pair of parts to compare, or one we could not read, is free. A restarted run never charges a build twice, and the Actor stops at your spending limit. Platform usage is included.
+**$0.005 per build checked.** A build is charged only when at least one rule ran, and it is charged before its results are delivered. A build with no pair of parts to compare is free. When your spending limit is reached the run stops and the summary says how many builds were not run. A restarted run never charges a build twice. Platform usage is included.
 
 ## FAQ
 
@@ -109,4 +110,4 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~pc-build-compatibility
 
 ## Source
 
-[github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/fit_checker/`. Labels: maker data is MIRROR (a dated read of maker pages).
+[github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/fit_checker/`. Labels: maker data is MIRROR (a dated read of maker pages). The Actor is built from this folder after `./bundle.sh` copies the fit checker into `src/data/`.
