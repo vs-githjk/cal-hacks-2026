@@ -46,7 +46,8 @@ def build(name: str) -> Agent:
 
     @agent.on_message(model=common.BidRequest)
     async def on_bid_request(ctx: Context, sender: str, msg: common.BidRequest):
-        verdict = common.screen(f"bidreq-{name}-{ctx.session}", sender, msg.need_json)
+        verdict = common.screen(f"bidreq-{name}-{ctx.session}", sender, msg.need_json,
+                                common.shield_context(sender, payee_of_record=agent.address))
         if verdict["verdict"] != "allow":
             ctx.logger.warning(f"ignored BidRequest from {sender}: {verdict['reasons']}")
             return
@@ -61,7 +62,8 @@ def build(name: str) -> Agent:
 
     @agent.on_message(model=common.OrderPlaced)
     async def on_order(ctx: Context, sender: str, msg: common.OrderPlaced):
-        verdict = common.screen(f"order-{name}-{ctx.session}", sender, msg.order_json + "\n" + msg.mandate_json)
+        verdict = common.screen(f"order-{name}-{ctx.session}", sender, msg.order_json + "\n" + msg.mandate_json,
+                                common.shield_context(sender, payee_of_record=agent.address))
         if verdict["verdict"] != "allow":
             ctx.logger.warning(f"ignored OrderPlaced from {sender}: {verdict['reasons']}")
             return
@@ -71,7 +73,8 @@ def build(name: str) -> Agent:
 
     @pay.on_message(CommitPayment)
     async def on_commit(ctx: Context, sender: str, msg: CommitPayment):
-        verdict = common.screen(f"commit-{name}-{ctx.session}", sender, msg.model_dump_json())
+        verdict = common.screen(f"commit-{name}-{ctx.session}", sender, msg.model_dump_json(),
+                                common.shield_context(sender, payee_of_record=agent.address))
         if verdict["verdict"] != "allow":
             ctx.logger.warning(f"ignored CommitPayment from {sender}: {verdict['reasons']}")
             return
