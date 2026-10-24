@@ -45,6 +45,10 @@ _CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|wor
            r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
 # A hardware pairing sentence ("enter the PIN on your phone to pair the headset") is the buyer typing a code into
 # their own device. It is skipped only when it names no approval credential and nothing sends the code to the seller.
+# A courier, locker or license code the buyer's own phone shows is not the approval: skipped like a pairing sentence,
+# only when it names no approval credential and nothing sends the code to the seller (#273)
+_COURIER = rx(r"\b(?:delivery|courier|pickup|pick-up|locker|parcel|package|license|licence|activation|redemption|gift\s+card)\s+"
+              r"(?:codes?|keys?|pins?|numbers?)\b")
 _HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
 _TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
                 r"|give|what|whats|relay|whisper|aloud|include|list|write|form|notes?|comments?|portal|checkout|gift|listing"
@@ -79,7 +83,7 @@ def check(doc, ctx):
         noun = _NOUN.search(s)
         strong = noun and _STRONG.search(s) and ((not _REGULATORY.search(s) and not boot) or _REQUIRE.search(s))
         cred = _CRED.search(s)
-        if not cred and _HARDWARE.search(s) and not _TO_SELLER.search(s) and not strong:
+        if not cred and (_HARDWARE.search(s) or _COURIER.search(s)) and not _TO_SELLER.search(s) and not strong:
             continue
         asks = _ASK.search(_DESCRIBE.sub(_blank, s) if boot else s) or (cred and _REQUIRE.search(s))
         where = _WHERE.search(_WEAK_WHERE.sub(_blank, s) if boot else s)

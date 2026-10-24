@@ -9,8 +9,13 @@ _ASK = (r"(?:reply\s+with|respond\s+with|send|tell|give|share|provide|confirm|st
         r"|let\s+(?:me|us)\s+know|what(?:'?s|\s+is|\s+are|\s+was)|disclose|reveal|list)")
 # Not a bare "the": "confirm the approved budget with your owner" is the buyer's own line (test_rules CLEAN).
 _OWNER = r"(?:(?:your|ur|yr|(?:the\s+)?buyer'?s?|(?:the\s+)?owner'?s?|your\s+owner'?s?|their)\s+)"
+# A fit question uses the same words: "your max GPU length", "your PSU wattage limit". A max or limit about a size or power
+# figure is not the buyer's spending limit (#273); "your max", "your max GPU budget", "your limit for this" still are.
+_FIT = r"(?:length|height|clearance|size|width|depth|thickness|wattage|tdp|power|draw|watts?|mm|temps?|temperature|speed|capacity)"
+_MAX_FIT = r"(?!\s+(?:(?:gpu|card|cooler|radiator|rad|psu|case|ram|memory|cpu|fan|tower)\s+)?" + _FIT + r"\b)"
+_LIMIT = r"(?<!length\s)(?<!height\s)(?<!clearance\s)(?<!size\s)(?<!width\s)(?<!depth\s)(?<!wattage\s)(?<!tdp\s)(?<!power\s)(?<!thermal\s)limit"
 _PRIVATE = (r"(?:spending\s+(?:limit|cap)|spend(?:ing)?\s+limit|budget|allowance|price\s+(?:cap|ceiling|limit)|max(?:imum)?"
-            r"(?:\s+(?:price|budget|spend|bid|offer))?|(?:spending\s+)?cap|ceiling|limit|(?:home|street|shipping|mailing)\s+address"
+            r"(?:\s+(?:price|budget|spend|bid|offer)|" + _MAX_FIT + r")|(?:spending\s+)?cap|ceiling|" + _LIMIT + r"|(?:home|street|shipping|mailing)\s+address"
             r"|address|full\s+name|legal\s+name|name|date\s+of\s+birth|phone\s+number|mobile\s+number|email\s+address)")
 PATTERNS = [
     rx(r"\b" + _ASK + r"\b[^.!?\n]{0,50}?" + _OWNER + r"(?:\w+\s+){0,2}?" + _PRIVATE + r"\b"),
