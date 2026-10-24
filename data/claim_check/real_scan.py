@@ -56,22 +56,24 @@ def scan(files: list[Path] | None = None, observations: list[dict] | None = None
         from data.baselines import observations as load
         observations = load()
     files = snapshot_files() if files is None else files
-    listings, catches, judged = 0, [], {}
+    listings, catches, judged, urls = 0, [], {}, set()
     for f in files:
         for card in json.loads(f.read_text()):
             listings += 1
+            urls.add((card.get("listing") or {}).get("url") or card.get("source"))
             for r in check_card(card, observations):
                 judged[r["result"]] = judged.get(r["result"], 0) + 1
                 if r["result"] == "false":
                     catches.append({"url": (card.get("listing") or {}).get("url") or card.get("source"), "snapshot_id": card.get("snapshot_id"),
                                     "snapshot_date": card.get("snapshot_date"), "claim_text": r["claim_text"],
                                     "page_evidence": r["page_evidence"], "rule_id": r["rule_id"], "result": r["result"], "reason": r["reason"]})
-    return {"origin": "MIRROR", "scanned": {"listings": listings, "files": [f.name for f in files], "rules": list(RULES), "claims_judged": judged}, "catches": catches}
+    return {"origin": "MIRROR", "scanned": {"listings": listings, "distinct_listings": len(urls), "files": [f.name for f in files], "rules": list(RULES), "claims_judged": judged}, "catches": catches}
 
 
 if __name__ == "__main__":
     res = scan()
     OUT.write_text(json.dumps(res, indent=1) + "\n")
-    print(f"scanned {res['scanned']['listings']} listings in {len(res['scanned']['files'])} files; {len(res['catches'])} catches")
+    sc = res["scanned"]
+    print(f"{sc['listings']} snapshot rows, {sc['distinct_listings']} distinct listings, in {len(sc['files'])} files; {len(res['catches'])} catches")
     for c in res["catches"]:
         print(f"  {c['rule_id']}: {c['claim_text'][:60]} -> {c['reason']}")

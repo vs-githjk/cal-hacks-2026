@@ -44,3 +44,11 @@ def test_was_price_above_every_dated_capture_is_flagged_only_with_captures():
     out = check_card(card("GPU was $200"), rows)
     assert [r["result"] for r in out if r["rule_id"] == "was_price"] == ["false"]
     assert [r["result"] for r in check_card(card("GPU was $200"), []) if r["rule_id"] == "was_price"] == ["unverified"]
+
+
+def test_distinct_listings_counts_urls_not_snapshot_rows():  # #155
+    saved = json.loads(OUT.read_text())["scanned"]
+    cards = [c for f in snapshot_files() for c in json.loads(f.read_text())]
+    urls = {(c.get("listing") or {}).get("url") or c.get("source") for c in cards}
+    assert saved["distinct_listings"] == len(urls) and saved["listings"] == len(cards) and len(urls) < len(cards)
+    assert scan(observations=[])["scanned"]["distinct_listings"] == len(urls)
