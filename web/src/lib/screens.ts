@@ -34,6 +34,8 @@ export interface RankedBid {
   why: string;
   sourceUrl?: string;
   won: boolean;
+  /** The market row this bid was drawn from (round_result/<id>); absent on sample rows. */
+  rowRef?: string;
 }
 
 export interface VetoView {
@@ -240,6 +242,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         why: r.reasons.join("; ") || card?.label || "",
         sourceUrl: /^https?:\/\//.test(r.source) ? r.source : undefined,
         won: r.rank === 1 && card?.rec !== "veto",
+        rowRef: `round_result/${r.id}`,
       };
     });
 }

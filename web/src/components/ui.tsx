@@ -21,7 +21,7 @@ export function OriginChip({ origin, label }: { origin: string; label?: string }
   return (
     <span
       title={ORIGIN_TITLE[o]}
-      className={`inline-flex items-center whitespace-nowrap rounded-md px-1.5 py-0.5 align-middle font-mono text-[11px] font-semibold leading-[1.5] tracking-[0.06em] ${ORIGIN_STYLE[o]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-md px-1.5 py-0.5 align-middle font-mono text-[11px] font-semibold leading-[1.5] tracking-[0.06em] motion-safe:transition-transform motion-safe:duration-100 motion-safe:active:scale-95 ${ORIGIN_STYLE[o]}`}
     >
       {label ?? o}
     </span>
@@ -30,12 +30,14 @@ export function OriginChip({ origin, label }: { origin: string; label?: string }
 
 /** Condition or variant tag: new, open-box, retail. */
 export function Tag({ children }: { children: ReactNode }) {
-  return <span className="inline-flex items-center rounded-md bg-slate-soft px-1.5 py-0.5 text-[12px] font-semibold text-slate">{children}</span>;
+  return <span className="inline-flex items-center rounded-md bg-slate-soft px-1.5 py-0.5 text-[12px] font-semibold text-slate motion-safe:transition-transform motion-safe:duration-100 motion-safe:active:scale-95">{children}</span>;
 }
 
-export function Card({ children, className = "", stripe, hero }: { children: ReactNode; className?: string; stripe?: "coral" | "ink" | "amber" | "mint"; hero?: boolean }) {
+/** tactile: hover lifts 2px with a deeper shadow, press scales to 0.99 (150 ms; none when motion is reduced). */
+export function Card({ children, className = "", stripe, hero, tactile }: { children: ReactNode; className?: string; stripe?: "coral" | "ink" | "amber" | "mint"; hero?: boolean; tactile?: boolean }) {
   const left = stripe ? ` border-l-4 ${{ coral: "border-l-coral", ink: "border-l-ink", amber: "border-l-amber", mint: "border-l-mint" }[stripe]}` : "";
-  return <section data-hero={hero || undefined} className={`card min-w-0 p-[18px]${left} ${className}`}>{children}</section>;
+  const feel = tactile ? " motion-safe:transition-[transform,box-shadow] motion-safe:duration-150 motion-safe:ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(18,20,23,0.08)] motion-safe:active:scale-[0.99]" : "";
+  return <section data-hero={hero || undefined} className={`card min-w-0 p-[18px]${left}${feel} ${className}`}>{children}</section>;
 }
 
 /** Small uppercase section label. Headings inside cards are this, never a big heading; the big thing is the number. */

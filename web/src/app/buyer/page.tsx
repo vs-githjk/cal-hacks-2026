@@ -96,6 +96,7 @@ function BuyerView() {
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
   const sim = liveBids.length === 0;
   const review = useMemo(() => reviewFromRows(pending), [pending]);
+  const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
   // A wrong code is counted in my_pending_approvals (failures); a match records the approval and the row leaves the view.
   const onTyped = async (mandateHash: string, code: string) => {
     if (!code) return "Type the two words shown above.";
@@ -121,6 +122,7 @@ function BuyerView() {
       receipt={asSim(sample.receipt)}
       feed={feed}
       buyerName={profiles[0]?.displayName || DEMO_BUYER}
+      revealKey={closeKey}
       sample={{ bids: sim, veto: true, shield: true, approval: !review, receipt: true }}
     />
   );

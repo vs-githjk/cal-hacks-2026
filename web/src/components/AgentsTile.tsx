@@ -139,7 +139,7 @@ export function AgentsTile() {
         {sim && <span className="ml-auto shrink-0" title="sample rows until the agents write"><OriginChip origin="SIM" /></span>}
       </button>
       {!open ? (
-        <ul className="hidden px-3 pb-2 pt-1 sm:grid sm:gap-0.5">
+        <ul className="hidden px-3 pb-2 pt-1 sm:grid sm:grid-cols-[minmax(0,1fr)] sm:gap-0.5">
           {rows.slice(0, 3).map((r) => (
             <li key={r.agent.key} className="flex items-baseline gap-1.5 text-[12px]">
               <b className="shrink-0 font-semibold">{r.agent.name.split(" ")[0]}</b>

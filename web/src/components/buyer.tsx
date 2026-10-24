@@ -2,7 +2,9 @@
 // web/src/components/buyer.tsx
 // Cards for the buyer screen. Each takes a view model from lib/screens.ts; none reads SpacetimeDB directly,
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
-import { useState } from "react";
+import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { DotPattern } from "@/components/ui/dot-pattern";
 import { REVIEW_MAX_FAILURES, type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 
@@ -11,7 +13,7 @@ const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", 
 export function GoalCard({ goal }: { goal: GoalView }) {
   const a = goal.allowance;
   return (
-    <Card>
+    <Card tactile>
       <Label>Goal</Label>
       <p className="mb-3 text-[22px] font-medium leading-[1.3] tracking-[-0.01em] text-balance">
         <q>{goal.text}</q>
@@ -51,13 +53,30 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap: number }) {
   const vetoed = bids.filter((b) => b.recommendation === "veto").length;
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
   const refused = bids.filter((b) => b.recommendation === "refused").length;
+  const field = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const spot = (e: PointerEvent) => {
+    const el = field.current;
+    if (!el || reduce || window.innerWidth < 640) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--my", `${e.clientY - r.top}px`);
+  };
+  const unspot = () => {
+    field.current?.style.removeProperty("--mx");
+    field.current?.style.removeProperty("--my");
+  };
   return (
-    <Card hero className="flex flex-col justify-between">
-      <div>
+    <Card hero tactile className="flex flex-col justify-between">
+      <div onPointerMove={spot} onPointerLeave={unspot}>
         <Label>{win ? "Best verified price" : "Hunting"}</Label>
         {win ? (
           <>
-            <div className="my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
+            <div ref={field} className="relative -mx-2 px-2">
+              {/* Decorative dot field behind the one hero number; it follows the pointer at 640 px and up, unless motion is reduced. */}
+              <DotPattern width={14} height={14} cx={1.2} cy={1.2} cr={1.2} className="fill-muted/35 [mask-image:radial-gradient(260px_circle_at_var(--mx,70%)_var(--my,40%),white,transparent)]" />
+              <div className="relative z-10 my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
+            </div>
             <div className="text-[15px] text-muted">
               <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
             </div>
@@ -100,14 +119,27 @@ const REC: Record<RankedBid["recommendation"], { kind: "veto" | "caution" | "buy
   unchecked: { kind: "out", text: "No card yet" },
 };
 
-export function RankedBids({ bids, roundLabel = "Sealed round 1" }: { bids: RankedBid[]; roundLabel?: string }) {
+/**
+ * Ranked bids. Hover tints a row, click or Enter expands its Why with the source and the market row it came from.
+ * When a new round close arrives (revealKey changes), the rows flip open in rank order, 60 ms apart, and the winner pulses once.
+ */
+export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: { bids: RankedBid[]; roundLabel?: string; revealKey?: string }) {
+  const reduce = useReducedMotion();
+  const [open, setOpen] = useState<string | null>(null);
+  const [play, setPlay] = useState(0);
+  const seen = useRef(revealKey);
+  useEffect(() => {
+    if (revealKey && seen.current !== undefined && revealKey !== seen.current && !reduce) setPlay((n) => n + 1);
+    seen.current = revealKey;
+  }, [revealKey, reduce]);
+  const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   return (
-    <Card>
+    <Card tactile>
       <Label>{roundLabel} · ranked by quality-adjusted landed price</Label>
       {bids.length === 0 ? (
         <p className="text-muted">Bids are sealed until the round closes. Nobody, not even you, sees them before then.</p>
       ) : (
-        <div className="-mx-[18px] overflow-x-auto px-[18px]">
+        <div className="-mx-[18px] overflow-x-auto px-[18px] [perspective:900px]">
           <table className="w-full border-collapse text-[14px] tabular-nums">
             <thead>
               <tr>
@@ -115,24 +147,56 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1" }: { bids: Rank
               </tr>
             </thead>
             <tbody>
-              {bids.map((b) => {
+              {bids.map((b, i) => {
+                const k = b.rowRef ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
                 const struck = b.recommendation === "veto" ? "line-through text-muted" : "";
+                const expanded = open === k;
                 return (
-                  <tr key={b.seller + b.condition} className={b.won ? "bg-mint-soft" : out ? "text-muted" : ""}>
-                    <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                    <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /></Td>
-                    <Td>
-                      <Tag>{b.condition}</Tag>
-                      {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
-                    </Td>
-                    <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
-                    <Td right className={struck}>{b.adjusted === null ? "·" : b.won ? <b>{money(b.adjusted)}</b> : money(b.adjusted)}</Td>
-                    <Td><Verdict kind={REC[b.recommendation].kind}>{REC[b.recommendation].text}</Verdict></Td>
-                    <Td className="text-[13px] text-muted">
-                      {b.why} {b.sourceUrl && <SourceLink href={b.sourceUrl}>{b.recommendation === "veto" ? "source page" : new URL(b.sourceUrl).host.replace("www.", "")}</SourceLink>}
-                    </Td>
-                  </tr>
+                  <Fragment key={`${k}-${play}`}>
+                    <motion.tr
+                      tabIndex={0}
+                      role="button"
+                      aria-expanded={expanded}
+                      onClick={() => toggle(k)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggle(k);
+                        }
+                      }}
+                      initial={play ? { rotateX: -90, opacity: 0 } : false}
+                      animate={
+                        play && b.won
+                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(14,122,86,0)", "inset 0 0 0 2px rgba(14,122,86,0.55)", "inset 0 0 0 0 rgba(14,122,86,0)"] }
+                          : { rotateX: 0, opacity: 1 }
+                      }
+                      transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
+                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${b.won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}`}
+                    >
+                      <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /></Td>
+                      <Td>
+                        <Tag>{b.condition}</Tag>
+                        {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
+                      </Td>
+                      <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
+                      <Td right className={struck}>{b.adjusted === null ? "·" : b.won ? <b>{money(b.adjusted)}</b> : money(b.adjusted)}</Td>
+                      <Td><Verdict kind={REC[b.recommendation].kind}>{REC[b.recommendation].text}</Verdict></Td>
+                      <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
+                    </motion.tr>
+                    {expanded && (
+                      <tr className={b.won ? "bg-mint-soft" : "bg-soft"}>
+                        <td colSpan={7} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
+                          <p>{b.why || "No reason recorded."}</p>
+                          <p className="mt-1 text-muted">
+                            {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /> · </> : "No source link · "}
+                            {b.rowRef ? <>market row <Code>{b.rowRef}</Code></> : <>sample row, not from this market <OriginChip origin="SIM" /></>}
+                          </p>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })}
             </tbody>
