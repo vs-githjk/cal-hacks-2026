@@ -54,6 +54,7 @@ class Line:
     snapshot_date: str = ""
     discount: float = 0.0
     bid_override: Optional[float] = None   # a rogue agent that ignores its floor (demo of the referee)
+    offer: Optional[float] = None          # a knockout stage's improved offer (#337), set by the seller's tactic, never under the floor
 
 
 @dataclass
@@ -73,6 +74,7 @@ class Seller:
     note: str = ""
     withheld: list[dict] = field(default_factory=list)  # own catalog lines the seller agent did not bid, with the cited reason
     shipping_captured: bool = False                      # False: the listing does not state a delivery cost (shown as such)
+    tactic: str = "hold"                                 # #337 knockout stages: hold, step or best_now (agents/sellers/tactics.py)
 
 
 def _slug(text: str) -> str:
@@ -249,10 +251,11 @@ def sim_sellers() -> list[Seller]:
     grove = _sim_seller("gadget-grove", "Gadget Grove (Vedant)", [
         _sim_line("gadget-grove", "new", 1349.0, 1230.0, f"{band}, honest card and 303 mm", discount=0.025),
         _sim_line("gadget-grove", "open-box", 1319.0, 1190.0, f"{band}, open-box line of the same card", discount=0.025)],
-        learning=True)
+        learning=True, tactic="step")
     # A seller whose agent tries to bid under its own floor: the referee rejects it before anyone sees it.
     lowball = _sim_seller("lowball", "Lowball Direct (SIM)",
-                          [_sim_line("lowball", "new", 1180.0, 1150.0, band, bid_override=1090.0)], note="rogue: bids under its floor")
+                          [_sim_line("lowball", "new", 1180.0, 1150.0, band, bid_override=1090.0)], note="rogue: bids under its floor",
+                          tactic="best_now")
     lowball.claims = []
     # The static control: honest, fair, and a little above the real winner (and the cap). It never changes its bid.
     fair = _sim_seller("fair-price-pc", "Fair Price PC (SIM)", [_sim_line("fair-price-pc", "new", 1329.0, 1200.0, f"{band}, honest card and 303 mm")],
@@ -270,6 +273,8 @@ def line_price(line: Line, step: float = 0.0) -> tuple[float, str]:
     line (bid_override) skips the clamp on purpose, to show the referee."""
     if line.bid_override is not None:
         return line.bid_override, "rogue agent ignored its floor"
+    if line.offer is not None:
+        return line.offer, "knockout stage offer"
     price = round(line.list_price * (1 - line.discount) * (1 - step), 2)
     if price < line.floor:
         return line.floor, f"held at floor {line.floor:,.2f}"

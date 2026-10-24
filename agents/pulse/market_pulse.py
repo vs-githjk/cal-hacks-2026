@@ -16,6 +16,7 @@ seller's next price: lowered by the step, never below its floor, never raised.
 from __future__ import annotations
 
 import json
+import math
 import os
 from typing import Any, Callable, Optional
 
@@ -181,6 +182,53 @@ def apply(price: float, floor: float, note: dict) -> float:
             or not all(math.isfinite(x) for x in nums) or not 0 < step <= 0.25 or price <= floor):
         return price
     return round(max(floor, price * (1 - step)), 2)
+
+
+def _cents(price: Any) -> Optional[int]:
+    if isinstance(price, bool) or not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 0:
+        return None
+    return int(round(price * 100))
+
+
+def stage_ticks(result: dict, *, round_id: str, sku: str, ts: str) -> list[dict]:
+    """#337: every knockout stage offer as a Tiger bid tick (one round_id per stage), and the champion as a win."""
+    rows = [{"ts": ts, "round_id": f"{round_id}/stage-{o['stage']}", "sku": sku, "seller_id": o["seller_id"],
+             "price_cents": c, "event": "bid"} for o in result.get("offers") or [] if (c := _cents(o.get("price"))) is not None]
+    champ = result.get("champion")
+    if champ and (c := _cents(champ.get("landed"))) is not None:
+        rows.append({"ts": ts, "round_id": f"{round_id}/stage-{champ['stage']}", "sku": sku, "seller_id": champ["seller_id"],
+                     "price_cents": c, "event": "win"})
+    return rows
+
+
+def tactic_table(result: dict) -> dict:
+    """seller_id -> its tactic, its own offers by stage and how it ended, for comparing tactics across rounds."""
+    table: dict = {}
+    for o in result.get("offers") or []:
+        t = table.setdefault(o["seller_id"], {"tactic": o.get("tactic"), "offers": [], "outcome": "still in"})
+        t["offers"].append(o["price"])
+    for st in result.get("stages") or []:
+        for e in st["entries"]:
+            if e["seller_id"] in table and e["status"] == "knocked_out":
+                table[e["seller_id"]]["outcome"] = f"out in stage {st['stage']} ({e.get('rule_id')})"
+            elif e["seller_id"] in table and e["status"] == "champion":
+                table[e["seller_id"]]["outcome"] = f"champion after stage {st['stage']}"
+    return table
+
+
+def record_stages(result: dict, *, round_id: str, sku: str, ts: str, write: Optional[Callable[[list], dict]] = None) -> dict:
+    """Store the stage ticks in Tiger Data. Without TIGER_DATA_SERVICE_URL it says not_configured and stores nothing;
+    a failing store says error with the exception type only (the connection string never appears)."""
+    rows = stage_ticks(result, round_id=round_id, sku=sku, ts=ts)
+    if write is None:
+        from data.tiger import store
+        if not os.environ.get(store.ENV):
+            return {"status": "not_configured", "rows": len(rows)}
+        write = store.write_bid_ticks
+    try:
+        return {"status": "stored", **write(rows)}
+    except Exception as e:  # noqa: BLE001  (a store outage never stops the round)
+        return {"status": "error", "error": type(e).__name__, "rows": len(rows)}
 
 
 def main() -> int:
