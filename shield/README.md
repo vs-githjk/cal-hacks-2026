@@ -56,6 +56,11 @@ the same signed request presented twice blocks the second time. Keys come only f
 
 `GET /v1/shield/rules`, `GET /v1/shield/health`.
 
+Limits and status codes: a message over 20000 characters is not parsed; it returns `quarantine` with
+`shield.encoded.payload`. A request body over 64 KB returns HTTP 413. A malformed JSON body returns HTTP 422.
+**Callers must treat any non-200 response (413, 422, 5xx, timeout) as block.** `verify-mandate` needs `expected`
+with all of `deal_id`, `amount` and `payee`; a missing one returns `block` with `shield.mandate.malformed_request`.
+
 Fail closed: any internal error, malformed message or malformed context returns `block` with `shield.error`.
 No free text from any model is ever put in a verdict. Logs hold a sha256 prefix, the verdict and rule ids,
 never message bodies.
