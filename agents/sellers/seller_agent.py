@@ -247,7 +247,7 @@ def build(name: str) -> Agent:
             bid = _make_bid_with_learning(need, s, name)
         except Exception as exc:
             ctx.logger.warning(f"seller learning unavailable: {type(exc).__name__}")
-            bid = make_bid(need, s)
+            return
         if bid is None:
             return
         common.validate("Bid", bid)
