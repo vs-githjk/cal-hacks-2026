@@ -14,6 +14,7 @@ export const BidLine = t.object('BidLine', {
 export const NeedItemArg = t.object('NeedItemArg', {
   skuSpec: t.string(),
   condition: t.string(),
+  allowedConditions: t.array(t.string()), // empty means only `condition`
   variant: t.string(),
   quantity: t.f64(),
   unit: t.string(),
@@ -54,6 +55,7 @@ export const needItem = table(
     variant: t.string(),
     quantity: t.f64(),
     unit: t.string(),
+    allowedConditions: t.array(t.string()).default([]), // appended last so a publish migrates in place
   },
 );
 
@@ -152,9 +154,9 @@ export const bidCheck = table(
   {
     id: t.u64().primaryKey().autoInc(),
     bidId: t.string().index('btree'),
-    kind: t.string(), // shield | claim
-    result: t.string(), // allow|quarantine|block or verified|unverified|false
-    detail: t.string(),
+    kind: t.string(), // shield | claim | advocate
+    result: t.string(), // allow|quarantine|block, verified|unverified|false, or buy|caution|veto
+    detail: t.string(), // advocate: the rule id, then the text
     evidenceUrl: t.string(),
     origin: t.string(),
     at: t.timestamp(),
@@ -233,6 +235,7 @@ export const payment = table(
     paymentRef: t.string(),
     amount: t.f64(),
     at: t.timestamp(),
+    mode: t.string().default('sim'), // sim | stripe_test
   },
 );
 

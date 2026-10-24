@@ -56,6 +56,11 @@ export const attach_claim_check = spacetimedb.reducer(
   (ctx, a) => m.attachClaimCheck(ctx, a),
 );
 
+export const attach_advocate_card = spacetimedb.reducer(
+  { bidId: t.string(), recommendation: t.string(), ruleId: t.string(), text: t.string(), sourceUrl: t.string(), origin: t.string() },
+  (ctx, a) => m.attachAdvocateCard(ctx, a),
+);
+
 export const create_mandate = spacetimedb.reducer(
   {
     hash: t.string(), id: t.string(), dealId: t.string(), buyerId: t.string(), amount: t.f64(), payee: t.string(),
@@ -70,7 +75,7 @@ export const record_approval = spacetimedb.reducer(
 );
 
 export const record_payment = spacetimedb.reducer(
-  { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64() },
+  { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string() },
   (ctx, a) => m.recordPayment(ctx, a),
 );
 

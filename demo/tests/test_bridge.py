@@ -36,14 +36,14 @@ def clients(log, fail=None):
 def test_order_follows_the_stage_story(steps):
     kinds = [s.reducer for s in steps if s.reducer != "set_floor"]
     assert kinds[:3] == ["post_goal", "post_need", "open_round"]
-    assert kinds.index("place_bid") < kinds.index("attach_verdict") < kinds.index("close_round")
+    assert kinds.index("place_bid") < kinds.index("attach_verdict") < kinds.index("attach_advocate_card") < kinds.index("close_round")
     tail = kinds[kinds.index("close_round") + 1:]
     assert tail == ["attach_verdict", "create_mandate", "record_approval", "record_payment", "record_payment"]
 
 
 def test_each_reducer_is_called_by_the_role_it_demands(steps):
     allowed = {"post_goal": "buyer", "post_need": "buyer", "open_round": "referee", "close_round": "referee",
-               "attach_verdict": "referee", "attach_claim_check": "referee", "create_mandate": "referee",
+               "attach_verdict": "referee", "attach_claim_check": "referee", "attach_advocate_card": "referee", "create_mandate": "referee",
                "record_approval": "referee", "record_payment": "referee"}
     for s in steps:
         if s.reducer in ("set_floor", "place_bid"):
@@ -63,6 +63,7 @@ def test_goal_and_need_are_tony_starks_and_withhold_nothing_new(steps):
     assert any(i["skipped_owned_part_id"] == "owned-psu" for i in goal["items"])
     need = steps[1].args
     assert need["spend_limit"] == 1300 and need["items"][0]["sku_spec"] == "rtx 5070 ti" and len(need["items"]) == 1
+    assert need["items"][0]["condition"] == "new" and need["items"][0]["allowed_conditions"] == ["new", "open-box"]
     assert "Tony Stark" in steps[0].say
 
 
@@ -74,10 +75,12 @@ def test_bids_carry_origin_picked_line_and_floor(run, steps):
     assert best["lines"][0]["offered_condition"] == "new" and best["source"].startswith("https://www.bestbuy.com")
     sim = bids["bid-need-tony-stark-5070ti-shady-sam"].args
     assert sim["origin"] == "SIM"
-    gg = bids["bid-need-tony-stark-5070ti-gadget-grove"].args     # two alternative lines in the demo, the picked one is placed
-    assert len(gg["lines"]) == 1 and gg["lines"][0]["offered_condition"] == "open-box" and gg["lines"][0]["unit_price"] == 1247.02
+    gg = bids["bid-need-tony-stark-5070ti-gadget-grove"].args     # two alternative lines: BOTH are placed, the market picks one
+    assert [(l["offered_condition"], l["unit_price"]) for l in gg["lines"]] == [("new", 1315.27), ("open-box", 1247.02)]
+    assert gg["stated_total"] == 1247.02 and gg["source"].startswith("https://example.com/sim/gadget-grove")
     floors = {s.actor: s.args["floor"] for s in steps if s.reducer == "set_floor"}
     assert floors["seller:lowball"] > 1090.0          # the referee floor rejection is the market's, not ours
+    assert floors["seller:gadget-grove"] == 1190.0    # one floor per SKU: the lowest of its two condition lines
     lowball = bids["bid-need-tony-stark-5070ti-lowball"].args
     assert lowball["lines"][0]["unit_price"] < floors["seller:lowball"]
 
@@ -90,6 +93,35 @@ def test_shield_and_claim_results_come_from_the_real_run(run, steps):
     claims = [s.args for s in steps if s.reducer == "attach_claim_check"]
     assert any(c["check"] == "false" and c["bid_id"].endswith("shady-sam") for c in claims)
     assert all(c["check"] in ("verified", "unverified", "false") for c in claims)
+
+
+def test_advocate_cards_are_the_real_cards_and_every_veto_cites_its_source(run, steps):
+    cards = [s.args for s in steps if s.reducer == "attach_advocate_card"]
+    assert len(cards) == len(run["beats"]["2"]["cards"])
+    by = {c["bid_id"].replace("bid-need-tony-stark-5070ti-", ""): c for c in cards}
+    assert by["shady-sam"]["recommendation"] == "veto" and by["shady-sam"]["rule_id"] == "advocate.condition"
+    assert by["shady-sam"]["source_url"].endswith("shady-sam-gpu-5070ti-lies.html")
+    assert by["bargain-bin"]["recommendation"] == "veto" and by["bargain-bin"]["rule_id"] == "fit.gpu_length"
+    assert by["best-buy"]["recommendation"] == "caution"
+    assert all(c["source_url"] and c["text"] for c in cards if c["recommendation"] == "veto")
+    kinds = [s.reducer for s in steps]
+    last_card = max(i for i, s in enumerate(steps) if s.reducer == "attach_advocate_card")
+    assert last_card < kinds.index("close_round")                    # a card must land before the close to count
+
+
+def test_round_two_cards_use_round_two_bid_ids(run):
+    s2 = bridge.plan(run, delay=2.0, rounds=2)
+    cards = [s.args["bid_id"] for s in s2 if s.reducer == "attach_advocate_card"]
+    assert len(cards) == 2 * len(run["beats"]["2"]["cards"]) and sum(c.endswith("-r2") for c in cards) == len(cards) // 2
+
+
+def test_payment_mode_follows_the_charge(run, steps):
+    pays = [s for s in steps if s.reducer == "record_payment"]
+    assert run["beats"]["4"]["charge"]["mode"] == "SIM stub"
+    assert [p.args["mode"] for p in pays] == ["sim", "sim"] and pays[0].tag == bridge.SIM
+    live = {**run, "beats": {**run["beats"], "4": {**run["beats"]["4"], "charge": {**run["beats"]["4"]["charge"], "mode": "Stripe test mode"}}}}
+    lp = [s for s in bridge.plan(live) if s.reducer == "record_payment"]
+    assert [p.args["mode"] for p in lp] == ["stripe_test", "stripe_test"] and lp[0].tag == "LIVE"
 
 
 def test_money_steps_use_the_demos_real_mandate(run, steps):
@@ -146,17 +178,20 @@ def test_a_refused_reducer_stops_the_run(steps):
     assert [r for _, r, _ in log] == ["post_goal", "post_need"]
 
 
-def test_divergence_is_reported_when_the_market_ranks_a_vetoed_bid_first(run):
+def test_divergence_is_reported_when_the_market_ranks_another_bid_first(run):
     rows = [[1, "round-1", "b1", "bargain-bin", "Bargain Bin Hardware (SIM)", 1, 1199.0], [2, "round-1", "b2", "best-buy", "Best Buy", 2, 1249.99],
-            [3, "round-1", "b3", "shady-sam", "Shady Sam's Deals (SIM)", 0, 757.44]]
+            [3, "round-1", "b3", "shady-sam", "Shady Sam's Deals (SIM)", 0, 757.44, ["Advocate veto (advocate.condition: x) [source: u]"]]]
     out = bridge.compare_to_db(rows, run)
-    assert "#1 Bargain Bin Hardware (SIM) $1,199.00" in out[0] and "DIVERGENCE" in out[1]
+    assert "#1 Bargain Bin Hardware (SIM) $1,199.00" in out[0] and any("DIVERGENCE" in line for line in out)
+    assert any(line.startswith("market OUT: Shady Sam") and "Advocate veto" in line for line in out)
     rows[0][5], rows[1][5] = 2, 1
-    assert "agree" in bridge.compare_to_db(rows, run)[1]
+    assert "agree" in bridge.compare_to_db(rows, run)[-1]
 
 
 def test_not_bridged_list_names_every_gap_and_no_secret():
     text = " ".join(bridge.NOT_BRIDGED)
-    for word in ("advocate veto", "allowed_conditions", "loss reports", "set_goal_state", "set_allowance", "footer"):
+    for word in ("loss reports", "set_goal_state", "set_allowance", "floors per condition"):
         assert word in text
+    for fixed in ("advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
+        assert fixed not in text, f"{fixed} is bridged now"
     assert "token" not in text.lower()

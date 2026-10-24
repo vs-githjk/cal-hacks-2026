@@ -6,6 +6,8 @@ export type Condition = "new" | "open-box" | "refurbished" | "used" | "unknown";
 export interface NeedItem {
   sku_spec: string;
   condition: Condition;
+  /** Conditions the buyer accepts for this item (new or open-box). Empty or absent: only `condition`. */
+  allowed_conditions?: Condition[];
   /** Retail or OEM, cooler included, model number. */
   variant: string;
   quantity: number;

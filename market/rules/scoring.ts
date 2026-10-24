@@ -1,9 +1,15 @@
-// Rank sealed bids: landed price minus perks value, lowest first. A line whose condition or
-// variant differs from the goal disqualifies the bid. The fee is never read here.
-import type { MarketConfig } from "../config";
-import type { Bid, BidLine, NeedItem, Result } from "./types";
-import { round2 } from "./types";
+// Rank sealed bids on quality-adjusted landed price, lowest first. A bid's lines for one SKU are
+// ALTERNATIVES (new, open-box, ...): the cheapest line whose condition the buyer allows is the one
+// that ranks, never a sum. A bid over the spend limit is out ("over_cap"). The fee is never read here.
+import type { MarketConfig, QualityWeights } from "../config";
+import type { Bid, BidLine, Condition, NeedItem, Result } from "./types";
+import { money, round2 } from "./types";
 import { checkQuantity } from "./floor";
+
+/** Conditions the buyer accepts for an item: allowed_conditions, else just the one it asks for. */
+export function allowedConditions(item: NeedItem): Condition[] {
+  return item.allowed_conditions?.length ? item.allowed_conditions : [item.condition];
+}
 
 export function checkLineSpec(line: BidLine, needItems: Map<string, NeedItem>): Result {
   const item = needItems.get(line.sku_spec);
@@ -14,21 +20,21 @@ export function checkLineSpec(line: BidLine, needItems: Map<string, NeedItem>): 
   const offered = line.offered_spec ?? line.sku_spec;
   if (offered !== item.sku_spec) reasons.push(`variant: offered ${offered}, goal asks for ${item.sku_spec}`);
   const cond = line.offered_condition ?? item.condition;
-  if (cond !== item.condition) reasons.push(`condition: offered ${cond}, goal asks for ${item.condition}`);
+  const allowed = allowedConditions(item);
+  if (!allowed.includes(cond)) reasons.push(`condition: offered ${cond}, goal asks for ${allowed.join(" or ")}`);
   return reasons.length ? { ok: false, reasons } : { ok: true };
-}
-
-/** Sum of line prices. Never trusts the seller's stated total. */
-export function landedPrice(bid: Pick<Bid, "lines">): number {
-  return round2(bid.lines.reduce((s, l) => s + l.unit_price * l.quantity, 0));
 }
 
 export interface RankOptions {
   needItems: Map<string, NeedItem>;
   perksValue?: (bid: Bid) => number;
   verifiedClaims?: (bid: Bid) => number;
-  /** Rejections from other checks (floor, CPSC recall, claim check, Shield), by bid id. */
+  /** Rejections from other checks (floor, CPSC recall, claim check, Shield, advocate veto), by bid id. */
   rejections?: Map<string, string[]>;
+  /** The buyer's cap. A bid whose picked lines cost more is out with reason over_cap. Never shown to sellers. */
+  spendLimit?: number;
+  /** Quality weights (condition, returns). Absent: the plain landed price ranks. */
+  quality?: QualityWeights;
   /** Accepted so callers can pass the whole config; the fee in it is deliberately unused. */
   config?: MarketConfig;
 }
@@ -36,26 +42,74 @@ export interface RankOptions {
 export interface Ranked {
   bid: Bid;
   rank: number;
+  /** Plain price of the picked lines (no quality adjustment). */
   landed: number;
+  /** Quality-adjusted landed price less perks value: what the ranking sorts on. */
   score: number;
   verified: number;
+  /** Indexes into bid.lines of the picked (cheapest allowed) line per SKU. */
+  picked: number[];
 }
 
-export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; disqualified: { bid: Bid; reasons: string[] }[] } {
-  const disqualified: { bid: Bid; reasons: string[] }[] = [];
+export interface Disqualified {
+  bid: Bid;
+  reasons: string[];
+  /** Cheapest line per SKU, for display; 0 when no line has a usable price. */
+  landed: number;
+}
+
+const cost = (l: BidLine) => (Number.isFinite(l.unit_price * l.quantity) ? l.unit_price * l.quantity : Infinity);
+
+/** Per SKU: the cheapest allowed line (first on a tie), or the reasons the cheapest line failed. */
+function pickLines(bid: Bid, needItems: Map<string, NeedItem>) {
+  const bySku = new Map<string, number[]>();
+  bid.lines.forEach((l, i) => bySku.set(l.sku_spec, [...(bySku.get(l.sku_spec) ?? []), i]));
+  const picked: number[] = [];
+  const reasons: string[] = [];
+  const cheapestAny: number[] = [];
+  for (const idx of bySku.values()) {
+    const checked = idx.map((i) => ({ i, r: checkLineSpec(bid.lines[i]!, needItems) }));
+    const cheaper = <T extends { i: number }>(a: T, b: T): T => (cost(bid.lines[b.i]!) < cost(bid.lines[a.i]!) ? b : a);
+    cheapestAny.push(checked.reduce(cheaper).i);
+    const ok = checked.filter((c) => c.r.ok);
+    if (ok.length) picked.push(ok.reduce(cheaper).i);
+    else {
+      const r = checked.reduce(cheaper).r;
+      if (!r.ok) reasons.push(...r.reasons);
+    }
+  }
+  return { picked, reasons: [...new Set(reasons)], cheapestAny };
+}
+
+const returnsDays = (perks: string[]) => Math.max(0, ...perks.map((p) => Number(/(\d+)[- ]day returns?/i.exec(p)?.[1] ?? 0)));
+
+function qualityAdjusted(bid: Bid, picked: BidLine[], needItems: Map<string, NeedItem>, w: QualityWeights): number {
+  const returns = returnsDays(bid.perks) >= w.min_returns_days ? 0 : w.no_returns_adj;
+  return picked.reduce((s, l) => {
+    const cond = l.offered_condition ?? needItems.get(l.sku_spec)?.condition ?? "new";
+    return s + l.unit_price * l.quantity * (1 + (w.condition_adj[cond] ?? 0) + returns);
+  }, 0);
+}
+
+export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; disqualified: Disqualified[] } {
+  const disqualified: Disqualified[] = [];
   const eligible: Omit<Ranked, "rank">[] = [];
   for (const bid of bids) {
     const reasons = [...(opts.rejections?.get(bid.id) ?? [])];
-    for (const line of bid.lines) {
-      const r = checkLineSpec(line, opts.needItems);
-      if (!r.ok) reasons.push(...r.reasons);
+    const { picked, reasons: lineReasons, cheapestAny } = pickLines(bid, opts.needItems);
+    reasons.push(...lineReasons);
+    const pickedLines = picked.map((i) => bid.lines[i]!);
+    const landed = round2(pickedLines.reduce((s, l) => s + l.unit_price * l.quantity, 0));
+    if (!lineReasons.length && opts.spendLimit !== undefined && landed > opts.spendLimit + 1e-9) {
+      reasons.push(`over_cap: landed ${money(landed)} is over the goal cap`);
     }
     if (reasons.length) {
-      disqualified.push({ bid, reasons });
+      const shown = cheapestAny.reduce((s, i) => s + cost(bid.lines[i]!), 0);
+      disqualified.push({ bid, reasons, landed: round2(Number.isFinite(shown) ? shown : 0) });
       continue;
     }
-    const landed = landedPrice(bid);
-    eligible.push({ bid, landed, score: round2(landed - (opts.perksValue?.(bid) ?? 0)), verified: opts.verifiedClaims?.(bid) ?? 0 });
+    const adjusted = opts.quality ? qualityAdjusted(bid, pickedLines, opts.needItems, opts.quality) : landed;
+    eligible.push({ bid, landed, score: round2(adjusted - (opts.perksValue?.(bid) ?? 0)), verified: opts.verifiedClaims?.(bid) ?? 0, picked });
   }
   eligible.sort(
     (a, b) =>

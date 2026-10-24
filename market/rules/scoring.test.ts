@@ -127,3 +127,107 @@ describe("rankBids", () => {
     );
   });
 });
+
+// ---- Seller model (LOCKED Fri 22:36): condition lines are ALTERNATIVES per SKU, allowed_conditions, the cap ----
+const openOk: NeedItem = { ...need, allowed_conditions: ["new", "open-box"] };
+const itemsOk = new Map([[GPU, openOk]]);
+const ln = (price: number, cond?: "new" | "open-box" | "refurbished") => ({
+  sku_spec: GPU, unit_price: price, quantity: 1, ...(cond ? { offered_condition: cond } : {}),
+});
+
+describe("allowed_conditions", () => {
+  it("checkLineSpec accepts an open-box line when the need allows new or open-box", () => {
+    expect(checkLineSpec(ln(1, "open-box"), itemsOk).ok).toBe(true);
+    expect(checkLineSpec(ln(1, "new"), itemsOk).ok).toBe(true);
+  });
+  it("still rejects a condition outside the allowed set and names the allowed ones", () => {
+    const r = checkLineSpec(ln(1, "refurbished"), itemsOk);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reasons[0]).toMatch(/refurbished.*new or open-box/);
+  });
+  it("an empty or missing allowed_conditions means only the need's own condition", () => {
+    expect(checkLineSpec(ln(1, "open-box"), new Map([[GPU, { ...need, allowed_conditions: [] }]])).ok).toBe(false);
+    expect(checkLineSpec(ln(1, "open-box"), items).ok).toBe(false);
+  });
+  it("rankBids ranks an open-box bid when it is allowed", () => {
+    const eb = mk("ebay", 1239, { lines: [ln(1239, "open-box")] });
+    const r = rankBids([eb], { needItems: itemsOk });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([eb.id]);
+  });
+});
+
+describe("a bid's lines for one SKU are alternatives", () => {
+  it("picks the cheapest allowed line and never sums them", () => {
+    const gg = mk("gadget", 0, { lines: [ln(320, "new"), ln(300, "open-box")] });
+    const r = rankBids([gg], { needItems: itemsOk });
+    expect(r.ranked[0]!.landed).toBe(300);
+    expect(r.ranked[0]!.picked).toEqual([1]);
+  });
+  it("two new lines [300, 320] rank at 300, not 620", () => {
+    const gg = mk("gadget", 0, { lines: [ln(300), ln(320)] });
+    expect(rankBids([gg], { needItems: items }).ranked[0]!.landed).toBe(300);
+  });
+  it("skips a cheaper line whose condition is not allowed and picks the cheapest allowed one", () => {
+    const gg = mk("gadget", 0, { lines: [ln(200, "refurbished"), ln(320, "new"), ln(300, "open-box")] });
+    const r = rankBids([gg], { needItems: itemsOk });
+    expect(r.ranked[0]!.landed).toBe(300);
+    expect(r.ranked[0]!.picked).toEqual([2]);
+  });
+  it("is out only when no line is allowed, with the reasons of the cheapest line", () => {
+    const gg = mk("gadget", 0, { lines: [ln(250, "refurbished"), ln(260, "refurbished")] });
+    const r = rankBids([gg], { needItems: itemsOk });
+    expect(r.ranked).toEqual([]);
+    expect(r.disqualified[0]!.reasons[0]).toMatch(/refurbished/);
+    expect(r.disqualified[0]!.landed).toBe(250);
+  });
+  it("ranks the bid on the picked line against other bids", () => {
+    const gg = mk("gadget", 0, { lines: [ln(900, "new"), ln(700, "open-box")] });
+    const other = mk("other", 750);
+    const r = rankBids([other, gg], { needItems: itemsOk });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([gg.id, other.id]);
+  });
+});
+
+describe("spend limit", () => {
+  it("drops a bid over the cap with the reason over_cap, and never states the cap", () => {
+    const over = mk("ebay", 1489);
+    const under = mk("best", 1249);
+    const r = rankBids([over, under], { needItems: items, spendLimit: 1300 });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([under.id]);
+    expect(r.disqualified[0]!.bid.id).toBe(over.id);
+    expect(r.disqualified[0]!.reasons[0]).toMatch(/^over_cap/);
+    expect(r.disqualified[0]!.reasons.join(" ")).not.toContain("1300");
+    expect(r.disqualified[0]!.landed).toBe(1489);
+  });
+  it("a bid exactly at the cap stays in; no spendLimit means no cap", () => {
+    expect(rankBids([mk("a", 1300)], { needItems: items, spendLimit: 1300 }).ranked).toHaveLength(1);
+    expect(rankBids([mk("a", 99999)], { needItems: items }).ranked).toHaveLength(1);
+  });
+  it("judges the cap on the picked line: an over-cap alternative does not sink the bid", () => {
+    const gg = mk("gadget", 0, { lines: [ln(1315, "new"), ln(1247, "open-box")] });
+    expect(rankBids([gg], { needItems: itemsOk, spendLimit: 1300 }).ranked[0]!.landed).toBe(1247);
+  });
+});
+
+describe("quality-adjusted price", () => {
+  const quality = {
+    condition_adj: { new: 0, "open-box": 0.04, refurbished: 0.08, used: 0.15, unknown: 0 },
+    no_returns_adj: 0.02,
+    min_returns_days: 30,
+  };
+  it("an open-box line must beat a new line by more than its condition discount, and no returns costs 2 percent", () => {
+    const bestBuy = mk("best-buy", 1250); // new, no returns perk: 1275
+    const ebay = mk("ebay", 1240, { lines: [ln(1240, "open-box")] }); // open-box, no returns: 1240 * 1.06 = 1314.4
+    const fair = mk("fair", 1289, { perks: ["30-day returns"] }); // 1289
+    const r = rankBids([ebay, fair, bestBuy], { needItems: itemsOk, quality });
+    expect(r.ranked.map((x) => x.bid.seller_id)).toEqual(["best-buy", "fair", "ebay"]);
+    expect(r.ranked[0]!.score).toBe(1275);
+    expect(r.ranked[2]!.score).toBe(1314.4);
+    expect(r.ranked[2]!.landed).toBe(1240); // landed stays the plain price
+  });
+  it("without quality weights the plain landed price ranks (unchanged behaviour)", () => {
+    const ebay = mk("ebay", 1240, { lines: [ln(1240, "open-box")] });
+    const bestBuy = mk("best-buy", 1250);
+    expect(rankBids([bestBuy, ebay], { needItems: itemsOk }).ranked[0]!.bid.seller_id).toBe("ebay");
+  });
+});
