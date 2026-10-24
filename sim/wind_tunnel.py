@@ -1,34 +1,36 @@
-"""Wind tunnel (Lane C, c7; issue #30). SIM: a simulator we built, not the market.
+"""Wind tunnel (Lane C, c7; issues #30 and #34). SIM: a simulator we built, not the market.
 
     python3 -m sim.wind_tunnel --builders 10 --seeds 3      # writes sim/RESULTS.md and sim/out/wind_tunnel-<date>.json
 
 Learning arm (benign builders only): parametric buyers from real part data (maker-checked PSUs and cases in
 data/fit_builds.json) run sealed rounds through demo.round.run_round (real Shield, claim check, fit checker and
-advocate) against every demo seller. The learner (Gadget Grove) updates its price step from its own loss reports on
-the TRAINING builders only; then its strategy is frozen and it meets the frozen control (Fair Price PC, sim/CONTROL.md)
-on builders from HELD-OUT archetypes. Lift = learner win rate minus control win rate on those builders. An untrained
-learner column shows how much of any lift is learning rather than the learner's extra open-box line.
-Attack arm (no learning measured): every row of sim/attacks/held_out.jsonl and shield/corpus/dev.jsonl through
-shield.core.screen, reported in separate columns. Shield is never tuned on held_out.jsonl.
+advocate) against every demo seller plus a second, field-median control. The learner (Gadget Grove) updates its price
+step with demo.learning.update_strategy (a Lane D SIM stand-in, price step only; not Abhinav's a7 strategy) from its own
+loss reports on TRAINING builders only, then is frozen and meets the frozen controls (sim/CONTROL.md) on builders from
+HELD-OUT archetypes. A headline lift is printed only when the learner beats the field-median control on at least
+MIN_WINNING_ARCHETYPES distinct held-out archetypes; otherwise only the per-archetype table is shown.
+Attack arm (no learning measured): sim/attacks/held_out.jsonl and shield/corpus/dev.jsonl through shield.core.screen,
+separate columns. Shield is never tuned on held_out.jsonl.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import random
-import statistics
 from datetime import datetime, timezone
 from pathlib import Path
 
 from demo.common import validate
 from demo.learning import loss_reports, update_strategy
 from demo.round import run_round
-from demo.sellers import all_sellers
+from demo.sellers import _sim_line, _sim_seller, all_sellers
 from shield.core import screen
 
 ROOT = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
-LEARNER, CONTROL = "gadget-grove", "fair-price-pc"
+LEARNER, CONTROL, CONTROL_MEDIAN = "gadget-grove", "fair-price-pc", "median-market-pc"
+LEARNER_RULE = "demo.learning.update_strategy (Lane D SIM stand-in, price step only; not Abhinav's a7 strategy)"
+MIN_WINNING_ARCHETYPES = 2  # distinct held-out archetypes where learner > field-median control, before any headline
 
 # Real parts, values confirmed on maker pages (data/fit_builds.json, hand_checked builds).
 CASES = {"north": {"max_gpu_length_mm": 355, "max_cooler_height_mm": 145}, "lancool216": {"max_gpu_length_mm": 392},
@@ -45,7 +47,12 @@ ARCHETYPES = {  # cap range (USD), allowed conditions, case pool. Caps sit aroun
     "small_case": ((1250, 1400), ["new"], ["nr200p"]),
 }
 HELD_OUT = ("open_box_ok", "small_case")  # never seen in training
-MIN_ROUNDS_TO_QUOTE = 20  # below this, the lift tile shows raw counts, not a number
+
+
+def median_control():
+    """Second control, frozen in sim/CONTROL.md: static, honest, priced at the field median ($1,248.50)."""
+    line = _sim_line(CONTROL_MEDIAN, "new", 1248.50, 1200.0, "SIM field-median control, honest card and 303 mm")
+    return _sim_seller(CONTROL_MEDIAN, "Median Market PC (SIM)", [line], control=True)
 
 
 def make_builders(n: int, seed: int) -> list[dict]:
@@ -56,9 +63,9 @@ def make_builders(n: int, seed: int) -> list[dict]:
         arch = names[i % len(names)]
         (lo, hi), conds, cases = ARCHETYPES[arch]
         case = rng.choice(cases)
+        psu = rng.choice(list(PSUS))
         out.append({"id": f"b{seed}-{i:02d}", "archetype": arch, "cap": float(rng.randrange(lo, hi + 1, 5)),
-                    "conditions": conds, "case_name": case, "case": CASES[case], "psu_name": (p := rng.choice(list(PSUS))),
-                    "psu": PSUS[p]})
+                    "conditions": conds, "case_name": case, "case": CASES[case], "psu_name": psu, "psu": PSUS[psu]})
     return out
 
 
@@ -79,7 +86,7 @@ def _winner(res: dict):
 
 
 def run_seed(seed: int, n_builders: int, now: datetime) -> dict:
-    sellers, _ = all_sellers()
+    sellers = all_sellers()[0] + [median_control()]
     by_id = {s.id: s for s in sellers}
     builders = make_builders(n_builders, seed)
     train = [b for b in builders if b["archetype"] not in HELD_OUT]
@@ -88,37 +95,39 @@ def run_seed(seed: int, n_builders: int, now: datetime) -> dict:
     for r, b in enumerate(train, 1):  # learning: only from the learner's own loss reports
         res = _round(b, sellers, now, r, strategy)
         if _winner(res) != LEARNER and res["winner"]:
-            reports, _ = loss_reports(res, by_id, now)
-            mine = next((x for x in reports if x["seller_id"] == LEARNER), None)
+            mine = next((x for x in loss_reports(res, by_id, now)[0] if x["seller_id"] == LEARNER), None)
             if mine:
                 strategy, diff = update_strategy(strategy, mine)
                 if diff:
                     diffs.append({"builder": b["id"], "band": mine["gap_band"], "reason": mine["reason"], **diff})
     frozen = dict(strategy)
-
-    def rates(strat):
-        wins = [_winner(_round(b, sellers, now, 100 + i, strat)) for i, b in enumerate(held)]
-        n = len(held) or 1
-        return wins, {"learner": wins.count(LEARNER) / n, "control": wins.count(CONTROL) / n}
-
-    wins, trained = rates(frozen)
-    _, untrained = rates({"price_step": 0.0})
-    per_arch = {}
-    for a in HELD_OUT:
-        idx = [i for i, b in enumerate(held) if b["archetype"] == a]
-        n = len(idx) or 1
-        per_arch[a] = {"n": len(idx), "learner": sum(wins[i] == LEARNER for i in idx) / n,
-                       "control": sum(wins[i] == CONTROL for i in idx) / n}
+    rows = []
+    for i, b in enumerate(held):
+        rows.append({"builder": b["id"], "archetype": b["archetype"],
+                     "winner_trained": _winner(_round(b, sellers, now, 100 + i, frozen)),
+                     "winner_untrained": _winner(_round(b, sellers, now, 200 + i, {"price_step": 0.0}))})
     return {"seed": seed, "train_builders": len(train), "held_out_builders": len(held), "frozen_strategy": frozen,
-            "strategy_diffs": diffs, "held_out_winners": wins, "learner": trained["learner"], "control": trained["control"],
-            "untrained": untrained["learner"], "per_archetype": per_arch}
+            "strategy_diffs": diffs, "held_out": rows}
 
 
-def summarize_lift(seeds: list[dict]) -> dict:
-    lifts = [s["learner"] - s["control"] for s in seeds]
-    untrained = [s["untrained"] - s["control"] for s in seeds]
-    return {"lift_mean": round(statistics.mean(lifts), 4), "lift_range": (min(lifts), max(lifts)),
-            "untrained_lift_mean": round(statistics.mean(untrained), 4), "per_seed": lifts}
+def per_archetype(seeds: list[dict]) -> dict:
+    """Win rates pooled across seeds, one row per held-out archetype (the independent unit, not the round)."""
+    out = {}
+    for a in HELD_OUT:
+        rows = [r for s in seeds for r in s["held_out"] if r["archetype"] == a]
+        n = len(rows) or 1
+        rate = lambda who, col="winner_trained": sum(r[col] == who for r in rows) / n
+        out[a] = {"n": len(rows), "learner": rate(LEARNER), "untrained": rate(LEARNER, "winner_untrained"),
+                  "control": rate(CONTROL), "control_median": rate(CONTROL_MEDIAN),
+                  "winners": sorted({r["winner_trained"] or "none" for r in rows}),
+                  "identical_across_seeds": len({tuple((r["winner_trained"], r["winner_untrained"]) for r in s["held_out"]
+                                                       if r["archetype"] == a) for s in seeds}) <= 1}
+    return out
+
+
+def quote_gate(per_arch: dict, control_key: str = "control_median") -> tuple[bool, list]:
+    winning = sorted(a for a, v in per_arch.items() if v["n"] and v["learner"] > v[control_key])
+    return len(winning) >= MIN_WINNING_ARCHETYPES, winning
 
 
 def attack_arm() -> dict:
@@ -137,54 +146,60 @@ def attack_arm() -> dict:
 def run(builders: int = 10, seeds: int = 3, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     per = [run_seed(s, builders, now) for s in range(seeds)]
+    arch = per_archetype(per)
+    ok, winning = quote_gate(arch)
     return {"origin": "SIM", "run_at": now.isoformat(timespec="seconds"), "builders": builders, "seeds": list(range(seeds)),
-            "learning": {**summarize_lift(per), "held_out_archetypes": list(HELD_OUT), "learner": LEARNER, "control": CONTROL,
-                         "seeds": per},
+            "learning": {"learner": LEARNER, "learner_rule": LEARNER_RULE, "controls": [CONTROL, CONTROL_MEDIAN],
+                         "held_out_archetypes": list(HELD_OUT), "per_archetype": arch, "quotable": ok,
+                         "winning_archetypes": winning, "seeds": per},
             "attack": attack_arm()}
 
 
 def markdown(out: dict) -> str:
     L, A = out["learning"], out["attack"]
-    n_held = sum(s["held_out_builders"] for s in L["seeds"])
-    lo, hi = L["lift_range"]
-    pct = lambda x: f"{x * 100:+.0f} pts"
-    wins = sum(s["held_out_winners"].count(L["learner"]) for s in L["seeds"])
-    cwins = sum(s["held_out_winners"].count(L["control"]) for s in L["seeds"])
-    verdict = (f"**Too few held-out rounds to quote a lift (n = {n_held}, below {MIN_ROUNDS_TO_QUOTE}).** Raw counts: the learner won "
-               f"{wins} of {n_held} held-out rounds, the control {cwins} of {n_held}. Run with more builders before using a number."
-               if n_held < MIN_ROUNDS_TO_QUOTE else
-               "**No positive lift: the learning seller did not beat the static control on held-out builders.**"
-               if L["lift_mean"] <= 0 else
-               f"Learning sellers beat a fair static seller by {pct(L['lift_mean'])} on held-out simulated builders "
-               f"(n = {n_held} held-out rounds, {len(out['seeds'])} seeds, range {pct(lo)} to {pct(hi)}); "
-               "this is a simulator we built, not the market.")
-    lines = [f"# Wind tunnel results (SIM)", "",
+    arch = L["per_archetype"]
+    n_held = sum(v["n"] for v in arch.values())
+    pts = lambda x: f"{x * 100:+.0f} pts"
+    if L["quotable"]:
+        lift = sum(arch[a]["learner"] - arch[a]["control_median"] for a in arch) / len(arch)
+        unt = sum(arch[a]["untrained"] - arch[a]["control_median"] for a in arch) / len(arch)
+        verdict = (f"Learning sellers beat a fair static seller (field-median control) by {pts(lift)} on held-out simulated "
+                   f"builders across {len(arch)} archetypes (n = {n_held} rounds, {len(out['seeds'])} seeds); the same seller "
+                   f"without learning scored {pts(unt)}. This is a simulator we built, not the market.")
+    else:
+        verdict = (f"**No headline lift.** The learner beats the field-median control on {len(L['winning_archetypes'])} of "
+                   f"{len(arch)} held-out archetypes ({', '.join(L['winning_archetypes']) or 'none'}); the gate needs "
+                   f"{MIN_WINNING_ARCHETYPES}. Per-archetype results below; do not quote a single number.")
+    lines = ["# Wind tunnel results (SIM)", "",
              f"Run {out['run_at']} UTC: `python3 -m sim.wind_tunnel --builders {out['builders']} --seeds {len(out['seeds'])}`. "
-             "Everything here is SIM. Control and learner are defined in sim/CONTROL.md.", "",
+             "Everything here is SIM. Controls and learner are defined in sim/CONTROL.md.",
+             f"Learner: {L['learner']}, updated by {L['learner_rule']}.", "",
              "## Learning arm (benign builders only)", verdict, "",
-             "| seed | train builders | held-out builders | learner win rate | control win rate | untrained learner | lift | frozen price step |",
+             "| held-out archetype | rounds (all seeds) | learner (trained) | learner (untrained) | control fair-price-pc ($1,289) | "
+             "control median-market-pc ($1,248.50) | winners seen | identical across seeds |",
              "|---|---|---|---|---|---|---|---|"]
-    for s in L["seeds"]:
-        lines.append(f"| {s['seed']} | {s['train_builders']} | {s['held_out_builders']} | {s['learner']:.2f} | {s['control']:.2f} | "
-                     f"{s['untrained']:.2f} | {pct(s['learner'] - s['control'])} | {s['frozen_strategy']['price_step']:.2f} |")
-    lines += ["", f"Mean lift {pct(L['lift_mean'])} (range {pct(lo)} to {pct(hi)}); untrained learner vs control {pct(L['untrained_lift_mean'])}. "
-              f"Held-out archetypes: {', '.join(L['held_out_archetypes'])}.", "",
-              "Per held-out archetype (learner / control win rate, by seed): " + "; ".join(
-                  f"seed {s['seed']}: " + ", ".join(f"{a} {v['learner']:.2f}/{v['control']:.2f} (n={v['n']})" for a, v in s["per_archetype"].items())
-                  for s in L["seeds"]),
+    for a, v in arch.items():
+        lines.append(f"| {a} | {v['n']} | {v['learner']:.2f} | {v['untrained']:.2f} | {v['control']:.2f} | {v['control_median']:.2f} | "
+                     f"{', '.join(v['winners'])} | {'yes' if v['identical_across_seeds'] else 'no'} |")
+    lines += ["", "Frozen price step by seed: " + ", ".join(f"seed {s['seed']} {s['frozen_strategy']['price_step']:.2f}" for s in L["seeds"]),
               "", "## Attack arm (Shield, rules only, no classifier; no learning measured)",
               "| set | attacks | stopped | block rate | clean | false blocks |", "|---|---|---|---|---|---|"]
     for name in ("dev", "held_out"):
         x = A[name]
         lines.append(f"| {name} | {x['attacks']} | {x['stopped']} | {x['block_rate']:.0%} | {x['controls']} | {x['false_blocks']} |")
-    lines += ["", f"Held-out misses: {', '.join(A['held_out']['missed']) or 'none'}. Held-out false blocks: {', '.join(A['held_out']['false_block_ids']) or 'none'}.",
+    lines += ["", f"Held-out misses: {', '.join(A['held_out']['missed']) or 'none'}. Held-out false blocks: "
+              f"{', '.join(A['held_out']['false_block_ids']) or 'none'}.",
               "The dev column is what the rules were written against; quote held-out, never a pooled number, and never \"secure\".",
-              "", "## Caveats", f"- n is small: {n_held} held-out rounds in total. Seeds vary builders (cap, case, PSU); sellers are deterministic.",
-              *(["- **Every seed gave the same lift.** Winners depend on the builder's archetype only, so the seeds add no "
-                 "independent evidence and the range is not an interval. Seeds that vary sellers too are needed before quoting."]
-                if lo == hi and len(L["seeds"]) > 1 else []),
-              "- The learner has an open-box line the control lacks (sim/CONTROL.md); compare with the untrained column.",
-              "- Rounds reuse demo/round.py on SIM and MIRROR sellers from one dated snapshot (Oct 24)."]
+              "", "## Caveats",
+              f"- The independent unit is the held-out archetype ({len(arch)} of them), not the round ({n_held} rounds).",
+              "- Seeds vary builders (cap, case, PSU); sellers are deterministic."]
+    if all(v["identical_across_seeds"] for v in arch.values()):
+        lines.append("- **Per-archetype results are identical across seeds**: the seeds add no independent evidence.")
+    if all(v["control"] == 0 for v in arch.values()):
+        lines.append("- **The control at $1,289 never wins, by construction** (cheaper eligible sellers always exist), so lift "
+                     "against it is just the learner's win rate. Use the field-median control column.")
+    lines += ["- The learner also carries an open-box line the controls lack (sim/CONTROL.md); compare with the untrained column.",
+              "- Rounds reuse demo/round.py on SIM and MIRROR sellers from one dated snapshot (Oct 24 UTC)."]
     return "\n".join(lines) + "\n"
 
 
@@ -195,7 +210,8 @@ def main() -> None:
     a = ap.parse_args()
     out = run(a.builders, a.seeds)
     (HERE / "out").mkdir(exist_ok=True)
-    (HERE / "out" / f"wind_tunnel-{out['run_at'][:10]}.json").write_text(json.dumps(out, indent=1, default=list))
+    tag = f"{out['run_at'][:10]}-b{a.builders}x{a.seeds}"
+    (HERE / "out" / f"wind_tunnel-{tag}.json").write_text(json.dumps(out, indent=1, default=list))
     (HERE / "RESULTS.md").write_text(markdown(out))
     print(markdown(out))
 

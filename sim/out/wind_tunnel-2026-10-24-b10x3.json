@@ -1,6 +1,6 @@
 {
  "origin": "SIM",
- "run_at": "2026-10-24T06:10:48+00:00",
+ "run_at": "2026-10-24T06:31:21+00:00",
  "builders": 10,
  "seeds": [
   0,
@@ -8,34 +8,56 @@
   2
  ],
  "learning": {
-  "lift_mean": 0.5,
-  "lift_range": [
-   0.5,
-   0.5
-  ],
-  "untrained_lift_mean": 0.0,
-  "per_seed": [
-   0.5,
-   0.5,
-   0.5
+  "learner": "gadget-grove",
+  "learner_rule": "demo.learning.update_strategy (Lane D SIM stand-in, price step only; not Abhinav's a7 strategy)",
+  "controls": [
+   "fair-price-pc",
+   "median-market-pc"
   ],
   "held_out_archetypes": [
    "open_box_ok",
    "small_case"
   ],
-  "learner": "gadget-grove",
-  "control": "fair-price-pc",
+  "per_archetype": {
+   "open_box_ok": {
+    "n": 3,
+    "learner": 0.0,
+    "untrained": 0.0,
+    "control": 0.0,
+    "control_median": 0.0,
+    "winners": [
+     "bargain-bin"
+    ],
+    "identical_across_seeds": true
+   },
+   "small_case": {
+    "n": 3,
+    "learner": 0.6666666666666666,
+    "untrained": 0.0,
+    "control": 0.0,
+    "control_median": 0.3333333333333333,
+    "winners": [
+     "gadget-grove",
+     "median-market-pc"
+    ],
+    "identical_across_seeds": false
+   }
+  },
+  "quotable": false,
+  "winning_archetypes": [
+   "small_case"
+  ],
   "seeds": [
    {
     "seed": 0,
     "train_builders": 8,
     "held_out_builders": 2,
     "frozen_strategy": {
-     "price_step": 0.07
+     "price_step": 0.03
     },
     "strategy_diffs": [
      {
-      "builder": "b0-00",
+      "builder": "b0-01",
       "band": "within10",
       "reason": "price",
       "price_step": {
@@ -44,7 +66,7 @@
       }
      },
      {
-      "builder": "b0-01",
+      "builder": "b0-02",
       "band": "within5",
       "reason": "price",
       "price_step": {
@@ -53,7 +75,7 @@
       }
      },
      {
-      "builder": "b0-02",
+      "builder": "b0-03",
       "band": "within10",
       "reason": "price",
       "price_step": {
@@ -62,7 +84,7 @@
       }
      },
      {
-      "builder": "b0-03",
+      "builder": "b0-06",
       "band": "within5",
       "reason": "price",
       "price_step": {
@@ -87,36 +109,22 @@
        "from": 0.07,
        "to": 0.03
       }
+     }
+    ],
+    "held_out": [
+     {
+      "builder": "b0-04",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
      },
      {
-      "builder": "b0-09",
-      "band": "within10",
-      "reason": "price",
-      "price_step": {
-       "from": 0.03,
-       "to": 0.07
-      }
+      "builder": "b0-05",
+      "archetype": "small_case",
+      "winner_trained": "median-market-pc",
+      "winner_untrained": "median-market-pc"
      }
-    ],
-    "held_out_winners": [
-     "bargain-bin",
-     "gadget-grove"
-    ],
-    "learner": 0.5,
-    "control": 0.0,
-    "untrained": 0.0,
-    "per_archetype": {
-     "open_box_ok": {
-      "n": 1,
-      "learner": 0.0,
-      "control": 0.0
-     },
-     "small_case": {
-      "n": 1,
-      "learner": 1.0,
-      "control": 0.0
-     }
-    }
+    ]
    },
    {
     "seed": 1,
@@ -172,25 +180,20 @@
       }
      }
     ],
-    "held_out_winners": [
-     "bargain-bin",
-     "gadget-grove"
-    ],
-    "learner": 0.5,
-    "control": 0.0,
-    "untrained": 0.0,
-    "per_archetype": {
-     "open_box_ok": {
-      "n": 1,
-      "learner": 0.0,
-      "control": 0.0
+    "held_out": [
+     {
+      "builder": "b1-04",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
      },
-     "small_case": {
-      "n": 1,
-      "learner": 1.0,
-      "control": 0.0
+     {
+      "builder": "b1-05",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
      }
-    }
+    ]
    },
    {
     "seed": 2,
@@ -201,7 +204,7 @@
     },
     "strategy_diffs": [
      {
-      "builder": "b2-02",
+      "builder": "b2-01",
       "band": "within10",
       "reason": "price",
       "price_step": {
@@ -210,7 +213,7 @@
       }
      },
      {
-      "builder": "b2-03",
+      "builder": "b2-02",
       "band": "within5",
       "reason": "price",
       "price_step": {
@@ -246,25 +249,20 @@
       }
      }
     ],
-    "held_out_winners": [
-     "bargain-bin",
-     "gadget-grove"
-    ],
-    "learner": 0.5,
-    "control": 0.0,
-    "untrained": 0.0,
-    "per_archetype": {
-     "open_box_ok": {
-      "n": 1,
-      "learner": 0.0,
-      "control": 0.0
+    "held_out": [
+     {
+      "builder": "b2-04",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
      },
-     "small_case": {
-      "n": 1,
-      "learner": 1.0,
-      "control": 0.0
+     {
+      "builder": "b2-05",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
      }
-    }
+    ]
    }
   ]
  },
