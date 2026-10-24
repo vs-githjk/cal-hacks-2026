@@ -3,7 +3,7 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with three seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
+Fetch.ai uAgents for Tech Bazaar. The buyer accepts a goal in ASI:One, remembers owned parts, runs a sealed round with three seller agents, and has the Quality Advocate check every bid. The verified ASI:One evidence covers goal-to-reviewed-bids delivery, a cited veto and timeout/retry; checkout and payment are not claimed as live here.
 
 ## Agents
 
@@ -18,13 +18,15 @@ Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 
 
 The five existing addresses come from private seeds in `agents/.env`; the Shield address comes from `agents/.env.shield`, injected into its process environment. Both files are gitignored and never committed. Seller listings, prices and records are SIM (simulated, example.com links).
 
-Public profile verification on October 23, 2026 at 23:46 PDT: Agentverse's `GET /v1/search/agents/{address}` returned HTTP 200 for all six addresses, with matching names and handles, `status: active`, published Agent Chat Protocol 0.3.0, and READMEs containing both required badges. All six profiles were republished at 23:45 PDT; the five existing identities are unchanged. This verifies public metadata at that time, not ongoing responsiveness or ASI:One discovery. The advocate and seller Chat Protocol handlers explain their roles; shopping goals still start with the buyer.
+The agent processes run locally. When the mailbox flags are enabled, those local processes connect through their Agentverse mailboxes; the public profile check does not prove that a process is currently running.
+
+Public profile verification on October 24, 2026 at 01:50 PDT: Agentverse's `GET /v1/search/agents/{address}` returned HTTP 200 for all six addresses, with matching names and handles, `status: active`, published Agent Chat Protocol 0.3.0, and READMEs containing both required badges. This verifies public metadata at that time, not ongoing responsiveness or checkout. The advocate and seller Chat Protocol handlers explain their roles; shopping goals still start with the buyer.
 
 ## Issue #14 verification
 
-All six agents replied through ASI:One in a fresh conversation. The buyer delivered three bids with a cited advocate veto at 00:05 PDT October 24, and a controlled advocate outage produced a visible timeout/retry message with nothing ordered at 00:06. See [ISSUE14_EVIDENCE.md](ISSUE14_EVIDENCE.md) for the conversation link, observations and verification limits. Checkout was not exercised.
+The fresh ASI:One evidence covers the buyer goal, three reviewed bids, a cited advocate veto and a controlled advocate outage with visible timeout/retry at 00:05 to 00:06 PDT October 24. See [ISSUE14_EVIDENCE.md](ISSUE14_EVIDENCE.md) for the conversation link, observations and verification limits. Checkout and payment were not exercised.
 
-After restoring the advocate, the scheduled automatic retry visibly delivered a new round with three reviewed bids in the same ASI:One conversation. No purchase approval was sent. Open a PR whose body includes `Closes #14` after verification.
+After restoring the advocate, the scheduled automatic retry visibly delivered a new round with three reviewed bids in the same ASI:One conversation. No purchase approval was sent.
 
 The [Claude hub plan](https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU) names a Shield client among its agent roles. The sixth agent here adds that role while keeping the issue's buyer, advocate and three sellers. A separate seller gateway is not implemented.
 

@@ -5,7 +5,7 @@ verifies signed payment requests against their mandate. Beat 3 of the demo: an i
 before the advocate reads it, and the rule that fired is shown.
 
 Status: core is built and tested (shield and pay together: 423 tests, no network). Lane C adds OpenAPI docs, API keys, rate limits, metering and
-`shield-bench` on top of this core. Signed verdict receipts are not built yet (see Limits).
+`shield-bench` on top of this core. Payment screening can optionally issue a short-lived signed receipt bound to the exact RequestPayment bytes; the receipt proves screening only, not approval or seller identity.
 
 ## Run it
 
@@ -22,6 +22,8 @@ Environment (names only, no values in git):
 |---|---|
 | `SHIELD_TAP_PUBKEYS` | comma-separated base64 raw Ed25519 public keys that may sign payment requests. Empty means every `verify-mandate` call fails with `unknown_key` |
 | `SHIELD_NONCE_DB` | path of the SQLite nonce store (default in memory; set a file so a restart cannot replay) |
+| `SHIELD_RECEIPT_PRIVATE_KEY_PATH` | optional path to a Shield-owned Ed25519 private key; only this key signs payment allow receipts |
+| `SHIELD_RECEIPT_PUBKEYS` | buyer-side comma-separated base64 raw Ed25519 public keys used to verify Shield receipts; empty fails closed |
 | `SHIELD_REGISTRY` | path of the verify-agent registry JSON (default `shield/registry.json`); a bad file stops startup |
 | `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` | both required to switch the optional Claude classifier on. Off by default |
 | `SHIELD_MODEL` | classifier model id. Default `claude-haiku-4-5`, **unverified until a live call answers**: if the id is wrong every call is `unavailable` (a fail-closed quarantine) and the run prints a WARNING |
@@ -55,6 +57,17 @@ Wraps `pay.tap.verify_request` and the mandate checks. A payee, amount, deal or 
 `quarantine` with `shield.mandate.mismatch` plus the specific reason; every other failure (tampered body,
 replayed or expired signature, unknown key) is `block`. A successful call consumes the request's nonce, so
 the same signed request presented twice blocks the second time. Keys come only from the server.
+
+`POST /v1/shield/screen-payment` screens an exact serialized Payment Protocol `RequestPayment` and returns a receipt only when the registered seller, funds, recipient, reference, description and expected transaction bindings match and Shield allows the request:
+
+```json
+{"message_id":"req:...","sender_agent":"<registered seller agent address>",
+ "request_json":"<exact UTF-8 RequestPayment JSON>",
+ "expected":{"deal_id":"...","mandate_hash":"...","amount_cents":74900,"currency":"USD","payee":"<seller agent address>"}}
+```
+
+The version 1 Ed25519 receipt is signed over sorted compact ASCII JSON with the domain prefix
+`tech-bazaar/shield-allow-receipt/v1\n`. It binds the exact request SHA-256, message ID, deal, mandate hash, amount, currency, payee, allow verdict, key ID and integer issue/expiry timestamps; lifetime is at most 60 seconds. Without a configured signing key the route still returns the screening verdict without a receipt. Checkout and MerchantSim refuse a missing receipt or an unknown public key. A receipt says only that Shield allowed those exact bytes at that time. It does not prove a buyer approved, that the seller owns the payee, or authorize another amount or deal. The existing `/screen` response stays unchanged.
 
 `POST /v1/shield/verify-agent` (task d4 follow-on)
 ```

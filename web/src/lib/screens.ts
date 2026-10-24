@@ -72,6 +72,23 @@ export interface ApprovalView {
   attempts: { at: Date; label: string; said: string; approved: boolean }[];
 }
 
+/** A live mandate waiting for the buyer, from my_pending_approvals. The code shows on this screen only. */
+export interface ReviewView {
+  mandateHash: string;
+  mandateId: string;
+  amount: number;
+  payee: string;
+  expiry: Date;
+  codeExpiresAt: Date;
+  code: string;
+  failures: number;
+  locked: boolean;
+  origin: Origin;
+}
+
+/** Matches APPROVAL_MAX_FAILURES in market/spacetimedb/src/market.ts. */
+export const REVIEW_MAX_FAILURES = 5;
+
 export interface ReceiptView {
   seller: string;
   item: string;
@@ -317,4 +334,14 @@ export function originCounts(items: readonly { origin: Origin }[]): { LIVE: numb
   const c = { LIVE: 0, MIRROR: 0, SIM: 0 };
   for (const i of items) c[i.origin]++;
   return c;
+}
+
+interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; codeExpiresAt: Timestamp; code: string; failures: number; locked: boolean; origin: string }
+
+export function reviewFromRows(rows: readonly PendingRow[]): ReviewView | null {
+  const now = BigInt(Date.now());
+  const r = [...rows]
+    .filter((row) => row.codeExpiresAt.microsSinceUnixEpoch / 1000n > now)
+    .sort((a, b) => (a.codeExpiresAt.microsSinceUnixEpoch < b.codeExpiresAt.microsSinceUnixEpoch ? 1 : -1))[0];
+  return r ? { ...r, expiry: d(r.expiry), codeExpiresAt: d(r.codeExpiresAt), origin: asOrigin(r.origin) } : null;
 }

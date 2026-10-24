@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T07:25:14+00:00",
+ "generated_at": "2026-10-24T08:49:52+00:00",
  "tiles": [
   {
    "detail": {
@@ -27,7 +27,7 @@
    "status": "none_yet",
    "value": null,
    "unit": "USD",
-   "display": "No verified savings yet: the only prices captured (Best Buy) equal the price",
+   "display": "No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference one_source, 6 retail asks from 1 provider)",
    "count": 6,
    "date_range": {
     "from": "2026-10-24T05:08:39.627Z",
@@ -82,12 +82,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T07:25:14+00:00",
-    "to": "2026-10-24T07:25:14+00:00"
+    "from": "2026-10-24T08:49:52+00:00",
+    "to": "2026-10-24T08:49:52+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T07:25:14+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T08:49:52+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
@@ -110,7 +110,7 @@
    "status": "measured",
    "value": 1.0,
    "unit": "ratio",
-   "display": "12 of 12 right on maker-checked builds; 42 of 43 on all; 0 false OK",
+   "display": "12 of 12 right on maker-checked builds; 42 of 43 on all; 0 false OK (tuned set, not held out)",
    "count": 12,
    "date_range": {
     "from": "2026-10-24",
@@ -156,7 +156,7 @@
    "status": "not_quotable",
    "value": null,
    "unit": "points",
-   "display": "No lift to quote: the learner beats the fair control on 1 of 2 held-out buyer types",
+   "display": "No lift to quote (1 of 2 archetypes, not quotable): the learner beats the fair control on too few held-out buyer types",
    "count": 30,
    "date_range": {
     "from": "2026-10-24T06:31:11+00:00",
@@ -165,6 +165,73 @@
    "origin": "SIM",
    "source_run": "python3 -m sim.wind_tunnel --builders 30 --seeds 3",
    "note": "open_box_ok: learner 0.00, untrained 0.00, median control 0.00; small_case: learner 1.00, untrained 0.00, median control 0.00. A simulator we built, not the market. Negative or zero lift is shown, never hidden."
+  },
+  {
+   "detail": {
+    "first_run": {
+     "denied": 9,
+     "n": 10,
+     "missed": [
+      "v04"
+     ]
+    },
+    "after_fix": {
+     "denied": 10,
+     "n": 10
+    },
+    "results_file": "pay/VOICE_ATTACKS.md"
+   },
+   "id": "voice_attacks",
+   "title": "Voice attacks (held-out)",
+   "status": "measured",
+   "value": 0.9,
+   "unit": "ratio",
+   "display": "9 of 10 held-out voice attacks denied on the first run (after the fix: 10 of 10; v04 is no longer blind)",
+   "count": 10,
+   "date_range": {
+    "from": "2026-10-24T08:22:00+00:00",
+    "to": "2026-10-24T08:22:00+00:00"
+   },
+   "origin": "SIM",
+   "source_run": "python3 -m pytest pay/tests/test_voice_attacks.py -q",
+   "note": "Cases written by Lane C before the rules froze (sim/attacks/voice.jsonl). Headline is the first run; the fix was made after reading it, so the 10 of 10 is not blind."
+  },
+  {
+   "detail": {
+    "first_run": {
+     "planted_caught": 26,
+     "planted": 27,
+     "clean_passed": 5,
+     "clean": 7,
+     "clean_false_flags": 2
+    },
+    "after_fixes": {
+     "planted_caught": 27,
+     "planted": 27,
+     "clean_passed": 7,
+     "clean": 7,
+     "not_blind": [
+      "b24",
+      "k02",
+      "k03"
+     ]
+    },
+    "results_file": "hyphenate/RESULTS-blind.md"
+   },
+   "id": "hyphenate_blind",
+   "title": "Hyphenate blind planted errors",
+   "status": "measured",
+   "value": 0.963,
+   "unit": "ratio",
+   "display": "26 of 27 planted errors caught on the first blind run; 2 of 7 clean cases falsely flagged",
+   "count": 34,
+   "date_range": {
+    "from": "2026-10-24T07:01:38+00:00",
+    "to": "2026-10-24T07:01:38+00:00"
+   },
+   "origin": "SIM",
+   "source_run": "python3 -m hyphenate.scenarios.blind_run --write",
+   "note": "Cases frozen and hashed before any run, written without reading the engine. Headline is the first run; b24, k02 and k03 were fixed after it, so the rerun is not blind."
   }
  ]
 }

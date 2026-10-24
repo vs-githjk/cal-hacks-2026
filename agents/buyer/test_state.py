@@ -42,7 +42,10 @@ def transaction(deal_id, buyer_id, phase="pending_approval"):
                         "expires_at": "2026-10-24T00:10:00Z", "hash": "a" * 64,
                         "within_allowance": False, "status": "pending", "origin": "SIM"},
             "advocate_card": {"need_id": "need-1", "bid_id": "bid-1", "warnings": [],
-                              "recommendation": "pick", "wait_until": ""}}
+                              "recommendation": "buy", "wait_until": "",
+                              "call_reason": {"rule_id": "advocate.ok", "summary": "The bid fits the goal.",
+                                              "source_url": "https://example.com/review"}}
+            }
 
 
 def test_owned_parts_round_trip_per_buyer_and_replace_same_kind(db):
@@ -81,6 +84,21 @@ def test_goal_and_transaction_ids_cannot_be_reassigned_to_another_owner(db):
 
     assert state.load_goal(db, "goal-1", "buyer-a")["buyer_id"] == "buyer-a"
     assert state.load_transaction(db, "deal-1", "buyer-a")["buyer_id"] == "buyer-a"
+
+
+def test_load_rejects_state_rows_whose_payload_disagrees_with_indexed_columns(db):
+    state.remember_owned(db, "buyer-a", [owned("buyer-a", "psu 750w", "PSU")])
+    state.save_transaction(db, transaction("deal-1", "buyer-a"))
+    db.execute("UPDATE owned_parts SET kind='gpu' WHERE buyer_id='buyer-a'")
+    db.execute("UPDATE transactions SET phase='submitted' WHERE deal_id='deal-1'")
+    db.commit()
+
+    with pytest.raises(ValueError):
+        state.load_owned_parts(db, "buyer-a")
+    with pytest.raises(ValueError):
+        state.load_transaction(db, "deal-1", "buyer-a")
+    with pytest.raises(ValueError):
+        state.recover_on_start(db)
 
 
 @pytest.mark.parametrize("bad", [

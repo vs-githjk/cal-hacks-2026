@@ -861,3 +861,145 @@ describe('pair code attempt limit', () => {
     expect(text).not.toContain(code);
   });
 });
+
+describe('b5 approval code on the buyer screen, typed fallback bound to the same mandate', () => {
+  const CODE = 'velvet falcon';
+  const issue = (code = CODE) => run(REF, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code }));
+  const typed = (who: Auth, code: string) => run(who, (ctx) => m.approveTyped(ctx, { mandateHash: 'h1', code }));
+  beforeEach(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs())));
+
+  it('only the referee issues the code; only the mandate buyer sees it, with amount, payee and expiry', () => {
+    for (const who of [VIDYUT, A, STRANGER]) expect(() => run(who, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code: CODE }))).toThrow(/not allowed/);
+    issue();
+    const mine = m.myPendingApprovalsView(h.viewContext(VIDYUT) as any);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ mandateHash: 'h1', mandateId: 'mdt-1', amount: 780, payee: 'seller-a', code: CODE, origin: 'SIM' });
+    expect(mine[0].codeExpiresAt.microsSinceUnixEpoch).toBe(mine[0].issuedAt.microsSinceUnixEpoch + 300_000_000n);
+    for (const who of [BOB, A, STRANGER]) expect(m.myPendingApprovalsView(h.viewContext(who) as any)).toHaveLength(0);
+  });
+
+  it('an approved mandate never gets a code (nothing to approve)', () => {
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    expect(() => issue()).toThrow(/already approved/);
+  });
+
+  it('the typed code approves the same mandate the call would (method typed_code), case and spacing ignored', () => {
+    issue();
+    expect(typed(VIDYUT, '  Velvet   FALCON ')).toMatchObject({ approved: true });
+    expect(h.db.approval.mandateHash.find('h1')).toMatchObject({ method: 'typed_code', approvedBy: 'vidyut' });
+    expect(m.myPendingApprovalsView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
+    expect([...h.db.payment.iter()]).toHaveLength(1);
+  });
+
+  it('a wrong typed code is counted, never echoed, and 5 lock the code', () => {
+    issue();
+    expect(typed(VIDYUT, 'copper marble')).toMatchObject({ approved: false });
+    expect(m.myPendingApprovalsView(h.viewContext(VIDYUT) as any)[0]).toMatchObject({ failures: 1, locked: false });
+    for (let i = 0; i < 4; i++) typed(VIDYUT, 'copper marble');
+    expect(() => typed(VIDYUT, CODE)).toThrow(/locked/);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+    const text = JSON.stringify([...h.db.floorEvent.iter()].map((e) => e.label)) + JSON.stringify([...h.db.notification.iter()].map((n) => n.text));
+    expect(text).not.toContain('velvet');
+  });
+
+  it('another buyer, a seller or the referee cannot type the code for this mandate; no code issued means no typed approval', () => {
+    for (const who of [BOB, A, REF]) expect(() => typed(who, CODE)).toThrow(/not allowed/);
+    expect(() => typed(VIDYUT, CODE)).toThrow(/no code issued/);
+  });
+
+  it('hides and rejects a typed approval at the shared 300-second voice-code TTL', () => {
+    expect(m.APPROVAL_CODE_TTL_MS).toBe(300_000); // parity with pay.approval.CALL_CODE_TTL_S=300
+    issue();
+    advance(300_000);
+    expect(m.myPendingApprovalsView(h.viewContext(VIDYUT) as any)[0].codeExpiresAt.microsSinceUnixEpoch)
+      .toBeLessThanOrEqual(h.clock.now().microsSinceUnixEpoch);
+    expect(() => typed(VIDYUT, CODE)).toThrow(/approval code expired/);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+  });
+});
+
+describe('b6 seller screen: pooled lot band, own loss reports, strategy diff', () => {
+  const report = (over: Partial<Parameters<typeof m.recordLossReport>[1]> = {}) => ({
+    id: 'lr-1', roundId: 'round-1', sellerId: 'seller-a', won: false, gapBand: 'within5', reason: 'price', sourceUrl: 'https://example.com/sim/a',
+    strategyDiff: [{ key: 'price_step', from: '0.00', to: '0.03' }], whatToChange: 'Lower your price by about 3%.', whatToChangeOrigin: 'SIM template', origin: 'SIM', ...over,
+  });
+
+  it('only the referee records a loss report; band and reason must be from the contract', () => {
+    for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.recordLossReport(ctx, report()))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.recordLossReport(ctx, report({ gapBand: '3.2%' })))).toThrow(/gap_band/);
+    expect(() => run(REF, (ctx) => m.recordLossReport(ctx, report({ reason: 'secret threshold' })))).toThrow(/reason/);
+    run(REF, (ctx) => m.recordLossReport(ctx, report()));
+  });
+
+  it('a seller sees only its own loss reports', () => {
+    run(REF, (ctx) => m.recordLossReport(ctx, report()));
+    run(REF, (ctx) => m.recordLossReport(ctx, report({ id: 'lr-2', sellerId: 'seller-b', reason: 'fit' })));
+    expect(m.myLossReportsView(h.viewContext(A) as any).map((r: any) => r.id)).toEqual(['lr-1']);
+    expect(m.myLossReportsView(h.viewContext(A) as any)[0]).toMatchObject({ gapBand: 'within5', reason: 'price', whatToChange: 'Lower your price by about 3%.' });
+    expect(m.myLossReportsView(h.viewContext(B) as any).map((r: any) => r.id)).toEqual(['lr-2']);
+    expect(m.myLossReportsView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
+  });
+
+  it('a seller screen pairs with its own code, sees its reports, and can never bid', () => {
+    run(OWNER, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a' }));
+    expect(() => run(A, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a' }))).toThrow(/not allowed/);
+    const code = h.db.pairCode.buyerId.find('seller:seller-a')!.code;
+    const screen = as('seller-a-laptop');
+    expect(run(screen, (ctx) => m.pairSellerScreen(ctx, { sellerId: 'seller-a', code: 'nope' }))).toMatchObject({ paired: false });
+    expect(run(screen, (ctx) => m.pairSellerScreen(ctx, { sellerId: 'seller-a', code }))).toMatchObject({ paired: true });
+    expect(m.myRoleView(h.viewContext(screen) as any)[0]).toMatchObject({ role: 'seller_screen', subjectId: 'seller-a' });
+    run(REF, (ctx) => m.recordLossReport(ctx, report()));
+    expect(m.myLossReportsView(h.viewContext(screen) as any)).toHaveLength(1);
+    setupRound();
+    expect(() => run(screen, (ctx) => m.placeBid(ctx, bidArgs('bid-x', [line(780)])))).toThrow(/not allowed/);
+    expect(() => run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: 'x' }))).toThrow(/not allowed/);
+  });
+
+  it('the pooled lot shows a ceiling band, never the spend limit', () => {
+    setupRound();
+    const v = m.sellerNeedsView(h.viewContext(A) as any);
+    expect(v[0]).toMatchObject({ skuSpec: GPU, quantity: 1, ceilingBand: '$500 to $1,000' });
+    expect(JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? String(x) : x))).not.toMatch(/800/);
+  });
+});
+
+describe('#60 agent events for the Fetch agents tile', () => {
+  const ev = (over: Partial<Parameters<typeof m.recordAgentEvent>[1]> = {}) => ({
+    agentName: 'Tech Bazaar Buyer', address: 'agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8', text: 'Round open, 3 sellers invited', ts: '2026-10-24T08:00:00Z', origin: 'LIVE', ...over,
+  });
+
+  it('a seller, a buyer or a stranger cannot record an agent event', () => {
+    for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.recordAgentEvent(ctx, ev()))).toThrow(/not allowed/);
+    expect([...h.db.agentEvent.iter()]).toHaveLength(0);
+  });
+
+  it('the referee records one, public, with the given ts; an unknown origin is stored as SIM', () => {
+    run(REF, (ctx) => m.recordAgentEvent(ctx, ev()));
+    run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ origin: 'REAL', text: 'x' })));
+    const rows = [...h.db.agentEvent.iter()];
+    expect(rows[0]).toMatchObject({ agentName: 'Tech Bazaar Buyer', text: 'Round open, 3 sellers invited', origin: 'LIVE' });
+    expect(rows[0].ts.toDate().toISOString()).toBe('2026-10-24T08:00:00.000Z');
+    expect(rows[1].origin).toBe('SIM');
+  });
+
+  it('refuses an address that is not an agent address and a bad ts', () => {
+    expect(() => run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ address: '0xabc' })))).toThrow(/address/);
+    expect(() => run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ ts: 'yesterday' })))).toThrow(/ts/);
+  });
+});
+
+describe('#37 item 9 buyer display name', () => {
+  it('seed_demo gives the buyer the display name Vidyut; only that buyer sees it', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    expect(m.myBuyerProfileView(h.viewContext(VIDYUT) as any)).toEqual([expect.objectContaining({ buyerId: 'vidyut', displayName: 'Vidyut' })]);
+    for (const who of [BOB, A, REF, STRANGER]) expect(m.myBuyerProfileView(h.viewContext(who) as any)).toHaveLength(0);
+  });
+
+  it('only the referee or the owner sets a display name; a seller or the buyer cannot', () => {
+    for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.setBuyerProfile(ctx, { buyerId: 'vidyut', displayName: 'X' }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.setBuyerProfile(ctx, { buyerId: 'vidyut', displayName: '  ' }))).toThrow(/display name/);
+    run(REF, (ctx) => m.setBuyerProfile(ctx, { buyerId: 'vidyut', displayName: 'Vidyut' }));
+    expect(h.db.buyerProfile.buyerId.find('vidyut')?.displayName).toBe('Vidyut');
+  });
+});

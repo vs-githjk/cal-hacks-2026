@@ -74,13 +74,13 @@ Diagram, components and data flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 | Sponsor | Product | What it does in Tech Bazaar | Depth |
 |---|---|---|---|
-| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol | Every agent is a uAgent registered on Agentverse. Your whole request (brief, bids, warnings, approval, payment) runs in an ASI:One chat. | Core |
-| Fetch.ai | Payment Protocol, Interactive Cards | The seller sends `RequestPayment`; the buyer sends `CommitPayment` with a signed mandate, only after the approval gate. Bids, warnings and approvals appear as cards, with a plain-text fallback (numbered bids, reply `APPROVE <id>`). | Core |
+| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol | Six profiles are verified active on Agentverse with Agent Chat Protocol 0.3.0 and both required badges. ASI:One evidence covers the goal, reviewed bids, cited veto and timeout/retry; checkout and payment are not claimed as live here. | Core |
+| Fetch.ai | Payment Protocol | The repository contains the Payment Protocol seam and a plain-text fallback. Interactive Cards are not claimed because they are not verified in this build. | Core |
 | Visa | Trusted Agent Protocol | Every agent request to a seller is signed with HTTP Message Signatures and verified at the seller and in Shield. The UI shows "signature verified". | Core |
 | Visa | Visa test card over Stripe test mode or Link | The payment is a Stripe test-mode charge on a Visa test card, made through the Payment Protocol. | Core |
 | Visa | Intelligent Commerce (tokenized agent credentials) | An adapter behind the same payment interface. It replaces the Stripe path only if Visa grants sandbox access. | Adapter |
 | Cartesia | Line voice agent | Above your allowance, a voice agent calls you, reads the deal and records your yes or no before payment. In-browser call first; phone call via an imported Twilio number or SIP trunk is to be verified. Personas can also speak their bids on the floor. | Core |
-| Apify | MCP server, Store actors, our own Actor | Mirrors listings from Newegg, PCPartPicker, Micro Center, Best Buy, B&H, eBay (sold and live) and Amazon (actor slugs in the research file). We also build and publish a claim-check Actor: claim and URL in, verified, unverified or false plus evidence out. | Core |
+| Apify | MCP server, Store actors, our own Actor | Mirrors listings from Newegg, PCPartPicker, Micro Center, Best Buy, B&H, eBay (sold and live) and Amazon (actor slugs in the research file). We also build and publish a claim-check Actor ([Apify Store](https://apify.com/anoopibrampur/tech-bazaar-claim-check)): claim and URL in, verified, unverified or false plus evidence out. | Core |
 | Bright Data | MCP server, SERP API, Web Unlocker | Price and claim checks across the wider web. | Core |
 | CRS | Credit API sandbox, MCP server | Identity and fraud check on business sellers; a failed check greys out the seller's bid with the reason. Test identities only, band output. | Adapter |
 | Armadin | Bazaar Shield API (our build) | Shield is our agent-to-agent security API with a versioned schema, signed verdict receipts and a `shield-bench` for any swarm. In the demo it blocks an injected listing live, and a judge can attack it in the "Hack the market" console. | Core |
@@ -119,18 +119,18 @@ Every bid, claim and screen carries a badge (**LIVE**, **MIRROR**, **SIM**, **SA
 
 ## Fetch.ai agents
 
-> **Team: fill this table as each agent registers on Agentverse.** A row marked *pending* is not registered yet.
+> **Verified metadata, retrieved Oct 24, 2026 at 01:50 PDT.** The six profiles below returned HTTP 200 and `active` status from Agentverse, with Agent Chat Protocol 0.3.0 and both required badges. This verifies public metadata, not ongoing responsiveness or checkout.
 
 | Agent name | Role | Agentverse address |
 |---|---|---|
-| *pending* | Buyer agent: remembers your parts, runs the auction, pays within your allowance | *pending* |
-| *pending* | Quality advocate: challenges each bid with cited warnings | *pending* |
-| *pending* | Shield: screens messages, verifies signatures, checks claims | *pending* |
-| *pending* | Seller gateway: routes requests to the seller fleet | *pending* |
-| *pending* | Seller agent, named persona 1 | *pending* |
-| *pending* | Seller agent, named persona 2 | *pending* |
+| Tech Bazaar Buyer | Buyer agent and goal front door | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` |
+| Tech Bazaar Quality Advocate | Quality advocate with cited warnings | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` |
+| Tech Bazaar Shield Client | Shield screening chat client | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` |
+| Byte Bros Outlet | SIM seller agent | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` |
+| Silicon Sally's Surplus | SIM seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` |
+| FlashDeal Frankie | SIM seller agent with a planted condition fixture | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` |
 
-The rest of the seller fleet runs behind the gateway and is labelled as a fleet in the UI.
+Only the six named profiles above are included in this verified agent count.
 
 ## Repo layout
 

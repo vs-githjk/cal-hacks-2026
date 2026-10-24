@@ -2,7 +2,7 @@
 Apify mirrors, claim-check, fit checker, hosted liar pages, baselines, price feed. Tasks: docs/kickoff/C-data-truth.md.
 
 - `fit_checker/` c2 fit checker (see its README). Tests: `python -m pytest data/tests`.
-- `claim_check/` c3 claim check (MOCK, final I/O).
+- `claim_check/` c3 claim check (real; checks every field a claim states, the worst result wins).
 - `fit_builds.json` frozen build set; scores in `RESULTS.md`.
 
 ## Data sources and rights
@@ -32,7 +32,7 @@ Total for the test round: about $0.17 of the $205 credit.
 - `from data.claim_check import check_claim` (final I/O, adds `reason`). Rules: price, was price (vs dated price history), condition, stock, return window, socket (vs maker table). Unreadable page = unverified, never false.
 - Done-check (SIM, liar pages served on localhost): open box listed as new, fake was price and wrong socket all return false with evidence URLs; the honest page verifies. Saved in `claim_check/done_check.json`.
 - Real store pages: only schema.org JSON-LD is read so far; many stores block plain fetches, which returns unverified.
-- Apify Actor wrapper in `claim_check/actor/` (not yet run on the platform).
+- Apify Actor wrapper in `claim_check/actor/`, published: https://apify.com/anoopibrampur/tech-bazaar-claim-check
 
 ## c11 baselines
 - `python3 -m data.baselines` writes `data/baselines/feed.json` (recorded price feed, MIRROR, dated) and prints the RTX 5070 Ti reference. `baseline(sku, at)` needs two dated providers within 24 h; until Bright Data is approved it reports `one_source`. Retail, in-stock, new or unstated asks only; eBay sold and eBay live are separate series, never in the median.

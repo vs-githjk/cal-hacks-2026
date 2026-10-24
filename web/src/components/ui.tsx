@@ -33,9 +33,9 @@ export function Tag({ children }: { children: ReactNode }) {
   return <span className="inline-flex items-center rounded-md bg-slate-soft px-1.5 py-0.5 text-[12px] font-semibold text-slate">{children}</span>;
 }
 
-export function Card({ children, className = "", stripe }: { children: ReactNode; className?: string; stripe?: "coral" | "ink" | "amber" | "mint" }) {
+export function Card({ children, className = "", stripe, hero }: { children: ReactNode; className?: string; stripe?: "coral" | "ink" | "amber" | "mint"; hero?: boolean }) {
   const left = stripe ? ` border-l-4 ${{ coral: "border-l-coral", ink: "border-l-ink", amber: "border-l-amber", mint: "border-l-mint" }[stripe]}` : "";
-  return <section className={`card min-w-0 p-[18px]${left} ${className}`}>{children}</section>;
+  return <section data-hero={hero || undefined} className={`card min-w-0 p-[18px]${left} ${className}`}>{children}</section>;
 }
 
 /** Small uppercase section label. Headings inside cards are this, never a big heading; the big thing is the number. */

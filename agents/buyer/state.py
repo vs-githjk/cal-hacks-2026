@@ -230,9 +230,10 @@ def open_state(path: str | Path | None = None) -> sqlite3.Connection:
 def load_owned_parts(db: sqlite3.Connection, buyer_id: str) -> list[dict]:
     buyer_id = _nonempty(buyer_id, "buyer_id")
     out = []
-    for (payload,) in db.execute("SELECT payload FROM owned_parts WHERE buyer_id=? ORDER BY kind", (buyer_id,)):
+    for row_kind, payload in db.execute("SELECT kind, payload FROM owned_parts WHERE buyer_id=? ORDER BY kind", (buyer_id,)):
         part = _load(payload)
-        _validate_owned(buyer_id, part)
+        if _validate_owned(buyer_id, part) != row_kind:
+            raise ValueError("stored owned part kind does not match its row")
         out.append(part)
     return out
 
@@ -285,11 +286,12 @@ def save_goal(db: sqlite3.Connection, goal: dict) -> None:
 
 def load_transaction(db: sqlite3.Connection, deal_id: str, buyer_id: str) -> dict | None:
     deal_id, buyer_id = _nonempty(deal_id, "deal_id"), _nonempty(buyer_id, "buyer_id")
-    row = db.execute("SELECT payload FROM transactions WHERE deal_id=? AND buyer_id=?", (deal_id, buyer_id)).fetchone()
+    row = db.execute("SELECT phase, payload FROM transactions WHERE deal_id=? AND buyer_id=?", (deal_id, buyer_id)).fetchone()
     if not row:
         return None
-    transaction = _load(row[0])
-    if _validate_transaction(transaction)[:2] != (deal_id, buyer_id):
+    phase, payload = row
+    transaction = _load(payload)
+    if _validate_transaction(transaction)[:2] != (deal_id, buyer_id) or transaction["phase"] != phase:
         raise ValueError("stored transaction IDs do not match its row")
     return transaction
 
@@ -319,7 +321,8 @@ def recover_on_start(db: sqlite3.Connection) -> None:
                           "WHERE phase IN ('pending_approval', 'submitted')").fetchall()
         for deal_id, buyer_id, phase, payload in rows:
             transaction = _load(payload)
-            _validate_transaction(transaction)
+            if _validate_transaction(transaction)[:2] != (deal_id, buyer_id) or transaction["phase"] != phase:
+                raise ValueError("stored transaction IDs or phase do not match its row")
             transaction["phase"] = "paused" if phase == "pending_approval" else "uncertain"
             db.execute("UPDATE transactions SET phase=?, payload=? WHERE deal_id=? AND buyer_id=?",
                        (transaction["phase"], _dump(transaction), deal_id, buyer_id))
