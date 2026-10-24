@@ -27,3 +27,6 @@ shot-*.png
 # signing keys (never commit; VISA_TAP_PRIVATE_KEY_PATH points outside the repo)
 *.pem
 *.key
+
+# local launcher state (scripts/launch.py)
+.run/
