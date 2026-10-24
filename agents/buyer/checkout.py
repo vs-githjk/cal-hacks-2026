@@ -106,13 +106,31 @@ def _bound_transaction(transaction: Mapping[str, Any], *, approval_phase: bool,
     return tx, dict(mandate), dict(deal)
 
 
-def _advocate_reason(card: Mapping[str, Any]) -> dict | None:
-    reason = card.get("call_reason")
-    if not isinstance(reason, Mapping):
+_REASON_KEYS = ("rule_id", "summary", "source_url")
+
+
+def _closed_reason(reason: Any) -> dict | None:
+    """Copy only the closed-schema call reason; anything else (seller text, extra keys) is dropped."""
+    if not isinstance(reason, Mapping) or not all(isinstance(reason.get(k), str) for k in _REASON_KEYS):
         return None
-    # Only the same stored closed-schema reason used by the canonical review enters script_for.
-    return {"rule_id": reason.get("rule_id"), "summary": reason.get("summary"),
-            "source_url": reason.get("source_url")}
+    return {k: reason[k] for k in _REASON_KEYS}
+
+
+def passed_over_reason(winner: Mapping[str, Any], bids: Any, cards: Mapping[str, Any]) -> dict | None:
+    """The call_reason of the cheapest reviewed bid that costs less than the winner but was vetoed or
+    flagged with caution; None when no cheaper bid was passed over. Reads only the advocate card's own
+    closed-schema call_reason, never any seller-written field of the bid."""
+    try:
+        price = winner["total_landed_price"]
+        cheaper = [b for b in bids if b.get("id") != winner.get("id") and b["total_landed_price"] < price
+                   and isinstance(cards.get(b.get("id")), Mapping)
+                   and cards[b["id"]].get("recommendation") in ("veto", "caution")]
+        if not cheaper:
+            return None
+        cheapest = min(cheaper, key=lambda b: b["total_landed_price"])
+        return _closed_reason(cards[cheapest["id"]].get("call_reason"))
+    except (KeyError, TypeError, AttributeError):
+        return None
 
 
 def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
@@ -142,7 +160,7 @@ def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
             # Suppress callback exception text: it could contain the one-time code.
             raise PermissionError("private approval code delivery failed") from None
 
-    result = run_approval_call(mandate, _advocate_reason(tx["advocate_card"]), client, service,
+    result = run_approval_call(mandate, _closed_reason(tx.get("passed_over_reason")), client, service,
                                deal=deal, buyer_name=buyer_name, on_code=private_delivery,
                                now=business_clock)
     record = result.record

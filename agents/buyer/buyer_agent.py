@@ -740,6 +740,7 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
         await fail_round(ctx, "The advocate's review was invalid or incomplete. Nothing ordered.", always_notify=True)
         return
     ROUND["cards"] = {c["bid_id"]: c for c in cards}
+    ROUND["reviewed_cards"] = dict(ROUND["cards"])  # every bid's card; ROUND["cards"] is later cut to the winner
     try:
         _record_market_reviews(cards)
         _, referee_market = market_clients()
@@ -1086,6 +1087,7 @@ async def on_requote(ctx: Context, fresh: dict):
         await tell_owner(ctx, "Private purchase approval is not configured for this owner. Nothing was reserved.")
         return
     try:
+        from buyer.checkout import passed_over_reason
         bid = ROUND["bids"][n - 1]
         card = ROUND["cards"][bid["id"]]
         deal_id = f"deal-{uuid4().hex}"
@@ -1102,7 +1104,9 @@ async def on_requote(ctx: Context, fresh: dict):
             "need_id": ROUND["need"]["id"], "bid_id": bid["id"], "phase": "pending_approval",
             "deal": deal, "order": None, "advocate_card": card, "mandate": mandate,
             "voice_approval": None, "allowance_authorization": None, "settlement": None,
-            "settlement_result": None, "payment_ref": None, "mode": bid.get("origin", "SIM")}
+            "settlement_result": None, "payment_ref": None, "mode": bid.get("origin", "SIM"),
+            "passed_over_reason": passed_over_reason(
+                bid, ROUND.get("review_bids") or ROUND["bids"], ROUND.get("reviewed_cards") or ROUND["cards"])}
         buyer_market, _referee_market = market_clients()
         status = buyer_market.create_mandate(mandate, need_id=ROUND["need"]["id"],
             buyer_id=MARKET_BUYER_ID, now=business_now())
