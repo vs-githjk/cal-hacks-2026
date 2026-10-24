@@ -13,6 +13,9 @@ from dataclasses import dataclass, field
 INVISIBLE = frozenset(
     "​‌‍‎‏⁠⁡⁢⁣⁤﻿­᠎"
     "‪‫‬‭‮⁦⁧⁨⁩"
+    # fillers and blanks that render as nothing: Hangul fillers, braille blank, combining grapheme joiner, variation
+    # selector 16, Mongolian FVS1, Khmer inherent vowel, tag space, Arabic letter mark
+    "ㅤﾠ⠀ᅟ឵͏️᠋󠀠؜"
 )
 
 # Small, deliberate table: the look-alikes attackers actually use to dodge keyword filters.

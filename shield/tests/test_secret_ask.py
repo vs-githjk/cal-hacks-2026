@@ -247,7 +247,8 @@ def test_a_line_break_or_html_tag_does_not_hide_a_secret_ask(text):
 
 
 def test_a_blank_line_or_a_sentence_mark_still_separates_sentences():
-    for text in ["State\n\nyour password", "State\r\n\r\nyour password", "State\n \n your password", "State.\nYour password"]:
+    # #201: "your password" alone is a candidate now, so the separation is shown with a bare noun
+    for text in ["State\n\na password", "State\r\n\r\na password", "State\n \n a password", "State.\nA password", "State! A password"]:
         assert not secret_ask.candidates(make_doc(text)), text
 
 
@@ -396,3 +397,122 @@ def test_a_slow_transport_hits_the_total_deadline_and_fails_closed(monkeypatch):
 def test_the_deadline_does_not_touch_a_fast_answer(monkeypatch):
     content = _capture(monkeypatch, lambda: ClaudeClassifier("k", deadline=2).classify_secret_ask("hi", {}))
     assert "hi" in content
+
+
+# --- #201: sentence splitting, more verbs, verbless "your <secret>", SSN ---------------------------------------
+SPLIT_ASKS = [
+    "Please reply to bob@gmail.com with your password",
+    "Email me at bob@shop.com and include your card number",
+    "Please [send](https://a.co) your [password](https://a.co)",
+    "Please send. your password",
+    "Send your pass.word",
+]
+
+
+@pytest.mark.parametrize("text", SPLIT_ASKS)
+def test_dots_inside_emails_urls_and_tokens_do_not_split_an_ask(text):
+    assert secret_ask.candidates(make_doc(text)), text
+    clf = FakeModel(asks=["password", "pass.word", "card number"])
+    assert screen(text, SELLER, classifier=clf)["rule_ids"] == ["shield.classifier.secret_ask"]
+
+
+def test_an_email_address_and_a_url_stay_inside_one_sentence():
+    text = "Please reply to bob@gmail.com with your password"
+    (s, e), = secret_ask.candidates(make_doc(text))
+    assert text[s:e] == text
+    text = "Please [send](https://a.co) your [password](https://a.co)"
+    (s, e), = secret_ask.candidates(make_doc(text))
+    assert text[s:e] == text
+
+
+NEW_VERBS = ["email", "mail", "message", "dm", "show", "say", "write", "include", "attach", "put", "supply", "disclose",
+             "upload", "forward", "post", "drop", "leave", "answer", "respond", "fill", "let me know"]
+
+
+@pytest.mark.parametrize("verb", NEW_VERBS)
+def test_each_new_ask_verb_makes_a_candidate_without_your_or_the(verb):
+    for text in (f"{verb.capitalize()} me a password", f"Please {verb} a pin code"):
+        assert secret_ask.candidates(make_doc(text)), text
+
+
+@pytest.mark.parametrize("text", [
+    "Your password.", "Your password is needed", "Password please", "pls, pin code", "ur password", "the seed phrase",
+    "Please confirm one thing. Your password.",
+])
+def test_a_verbless_your_or_the_secret_is_a_candidate(text):
+    assert secret_ask.candidates(make_doc(text)), text
+
+
+def test_a_verbless_candidate_goes_with_the_sentence_before_it():
+    text = "Great card. Please confirm one thing. Your password."
+    (s, e), = secret_ask.candidates(make_doc(text))
+    assert text[s:e] == "Please confirm one thing. Your password"
+    clf = FakeModel(asks=["confirm one thing. your password"])
+    assert screen(text, SELLER, classifier=clf)["rule_ids"] == ["shield.classifier.secret_ask"]
+    assert clf.seen and "please confirm one thing" in clf.seen[0].lower()
+
+
+@pytest.mark.parametrize("text", [
+    "Send your SSN", "What is your social security number?", "State the social security no.", "your ssn please",
+    "Send your account number", "What's your routing number", "Give us your bank account number",
+])
+def test_ssn_and_your_bank_numbers_are_candidates(text):
+    assert secret_ask.candidates(make_doc(text)), text
+
+
+@pytest.mark.parametrize("text", [
+    "Invoice shows account number 4411 for returns.", "Routing number printed on the receipt.",
+    "Send the account number on the invoice to returns.", "Ships Monday. Password reset tool included.",
+    "Contact sales@shop.com. Ships in 2 days.", "Specs at https://a.co/x.html. 16 GB.",
+])
+def test_bank_numbers_without_your_and_plain_dotted_text_are_not_candidates(text):
+    assert not secret_ask.candidates(make_doc(text)), text
+
+
+def test_the_classifier_prompt_names_ssn_and_bank_numbers():
+    from shield import classifier
+    p = classifier._SECRET_SYSTEM.lower()
+    assert "social security number" in p and "routing number" in p
+
+
+def _corpus_strings():
+    """Every string the demo and the snapshots hold: JSON values, HTML pages, Python string literals."""
+    import ast
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[2]
+
+    def walk(x):
+        if isinstance(x, str):
+            yield x
+        elif isinstance(x, dict):
+            for v in x.values():
+                yield from walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                yield from walk(v)
+    for base in ("demo", "data/mirror", "data/liar_pages"):
+        for f in sorted((root / base).rglob("*")):
+            if not f.is_file() or "__pycache__" in f.parts or "tests" in f.parts:
+                continue
+            if f.suffix == ".json":
+                yield from ((f, t) for t in walk(json.loads(f.read_text(encoding="utf-8"))))
+            elif f.suffix in (".html", ".htm"):
+                yield f, f.read_text(encoding="utf-8", errors="replace")
+            elif f.suffix == ".py":
+                yield from ((f, n.value) for n in ast.walk(ast.parse(f.read_text(encoding="utf-8")))
+                            if isinstance(n, ast.Constant) and isinstance(n.value, str))
+
+
+def test_no_false_candidates_in_the_demo_the_mirror_snapshots_or_the_liar_pages():
+    """#201 done-check: the wider filter costs no model call on any honest text the demo shows."""
+    seen, hits = 0, []
+    for f, text in _corpus_strings():
+        seen += 1
+        hits += [(f.name, text[s:e][:80]) for s, e in secret_ask.candidates(make_doc(text))]
+    assert seen > 500 and hits == []
+
+
+@pytest.mark.parametrize("ch", ["ㅤ", "ﾠ", "⠀", "ᅟ", "឵", "͏", "️", "᠋", "\U000e0020", "؜"])
+def test_blank_filler_characters_do_not_hide_a_secret_noun(ch):
+    """#201 Low: fillers that render as nothing are dropped like a zero-width space."""
+    assert secret_ask.candidates(make_doc(f"Send me a pass{ch}word")), repr(ch)

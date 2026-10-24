@@ -172,7 +172,8 @@ which answers the closed schema `{ask_for_secret: bool, reason_code}` (`reason_c
 for seller-side text (every `sender_role` except buyer, advocate and marketplace, after trimming and lowercasing, so
 "seller_agent", "vendor", "Seller " and a missing role all count) that no other rule already decided. Yes gives
 quarantine `shield.classifier.secret_ask`. No classifier (no key, `classifier=None`), a timeout (1.5 s per socket
-operation and 4 s for the whole call), an error, a self-contradicting answer (`ask_for_secret` false with
+operation and 4 s per classifier call; a seller message with a candidate can make two calls, the secret-ask one and
+the general one, so about 8 s in the worst case), an error, a self-contradicting answer (`ask_for_secret` false with
 `requests_secret`) or any answer outside the schema gives quarantine `shield.classifier.unavailable` for a candidate (fail closed); text
 that is not a candidate is never affected, and buyer, advocate and marketplace text is never held for this.
 Consequence: with the classifier off, an honest seller line such as "State: like new, no password set." is
