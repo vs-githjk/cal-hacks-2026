@@ -32,9 +32,13 @@ def _prose_rule(rule_id, action, severity, describe, patterns, seller_only=False
 # ---- prompt and rule leaks -------------------------------------------------------------------------------
 _LEAK_VERB = r"(?:print|repeat|reveal|show|output|display|recite|share|paste|echo|dump|copy|leak|tell\s+me|give\s+me|list|disclose|expose)"
 _LEAK_OBJ = (r"(?:system\s+prompt|hidden\s+prompt|initial\s+prompt|your\s+(?:initial\s+|original\s+|hidden\s+|full\s+)?"
-             r"(?:instructions|prompt|rules|guidelines|configuration|programming)|the\s+rules\s+you\s+follow)")
+             r"(?:instructions|prompt|rules|guidelines|configuration|programming))")
+# "the rules you follow" can be a seller describing its own site ("We list the rules you follow for warranty claims"), so it
+# only counts when the verb is addressed to the reader: it opens a sentence, or follows a request word ("please", "now", "you must").
+_ASK = r"(?:^|[.!?:;\n]\s*|\b(?:please|now|just|first|then|and|kindly|also|to|must|should|can\s+you|could\s+you|will\s+you|would\s+you)\s+)"
 LEAK = [
     rx(r"\b" + _LEAK_VERB + r"\b[^.\n]{0,40}?\b" + _LEAK_OBJ),
+    rx(_ASK + _LEAK_VERB + r"\b[^.\n]{0,40}?\bthe\s+rules\s+you\s+follow"),
     rx(r"\b(?:repeat|print|output|echo|copy|recite)\s+(?:all\s+|everything\s+|the\s+(?:whole\s+)?)?(?:of\s+)?(?:the\s+)?(?:text|words|content|everything|messages?)?\s*(?:above|before\s+this)\b"),
     rx(r"\b(?:beginning|starting|begin|start)\s+with\s+the\s+words?\s+['\"]?you\s+are\b"),
     rx(r"\bwhat\s+(?:were|are)\s+your\s+(?:initial|original|first|hidden|system)\s+(?:instructions|rules|prompt|guidelines)\b"),
