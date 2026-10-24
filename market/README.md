@@ -45,7 +45,7 @@ spacetime generate --lang typescript --out-dir ../web/src/module_bindings --modu
 cd ../web && npm ci && npm run dev
 ```
 
-`spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes.
+`spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes. WARNING: this wipes all rounds, bids and results -- fine against a local or test database, never against a live market with real data.
 
 For a rehearsal, run or project the demo, not `npm run dev`: `npm run demo --prefix web` (`next build && next start -p 3100`) so the screen is a production build with no dev indicator or Insight badge.
 
@@ -53,7 +53,9 @@ For a rehearsal, run or project the demo, not `npm run dev`: `npm run demo --pre
 
 One live market for every laptop: Abhinav's agents, Vidyut's bridge/call/pay Mac and the deployed web all point at the same hosted database instead of a local server each.
 
-`seed_demo` and `reset_demo` are already safe to run on a database that already has data (every insert in `seed_demo` is guarded by a `find` first; `reset_demo` never touches `role`, `owner` or `pair_code`, so a republish or a re-seed never breaks an open tab or a paired agent). `init` only ever sets the owner once, so republishing an existing database never changes who owns it. See `spacetimedb/src/market.test.ts`, describe block `#293 Maincloud`.
+`seed_demo` and `reset_demo` are idempotent to re-run (every insert in `seed_demo` is guarded by a `find` first; `reset_demo` never touches `role`, `owner` or `pair_code`, so a republish or a re-seed never breaks an open tab or a paired agent). `init` only ever sets the owner once, so republishing an existing database never changes who owns it. See `spacetimedb/src/market.test.ts`, describe block `#293 Maincloud`.
+
+WARNING: `reset_demo` deletes all rounds, bids, needs, goals, payments and results -- it is NOT safe to run on a live market with real rounds. Only run it on a fresh deployment or a test database, never on a live market with real data.
 
 **Vidyut runs this** (his `spacetime login` becomes the module owner, which the referee and buyer tokens depend on):
 
