@@ -8,6 +8,10 @@ For every run it records the wall time, seconds per beat (from the `BEAT <n>` li
 read-only end-state checks against the local SpacetimeDB, and optional headless Chrome screenshots of /buyer and /market at
 the end of each beat. It writes `<out>/REPORT.md`, `<out>/runs.json` and one `<out>/run<k>.log` per run.
 
+There is no scripted approval (#251): a stage command without --live-call ends at beat 4's approval gate ("approval needs the real
+phone call (--live-call); nothing was paid", exit 1), so that run counts as failed and has no beat 5. A full rehearsal uses
+--stage-cmd with --live-call, which places ONE real approval call per run; the harness never adds it for you.
+
 Nothing is faked: a check that cannot be read is recorded as `skipped` with the reason, a screenshot that fails is recorded
 and never fatal, and a stack that is down means no run (exit code 2). Secrets: the harness reads no token or env file, and
 any env value whose name looks secret is replaced by `[redacted]` in everything it prints or writes.
@@ -321,6 +325,8 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
     if args.dry_run:
         say_r(f"rehearse plan (dry run, nothing touched): {args.runs} run(s), one after another")
         say_r(f"  stage command: {redact(cmd, secrets)}")
+        say_r("  approval: " + ("each run places ONE real approval phone call (--live-call)" if "--live-call" in cmd else
+              "no --live-call, so each run ends at beat 4's approval gate (nothing paid, exit 1); add it to --stage-cmd for a full run"))
         say_r(f"  preflight: {HOST}:{STDB_PORT} (SpacetimeDB) and {HOST}:{WEB_PORT} (web) must accept connections, else exit 2")
         say_r(f"  per run: wall time, seconds per beat from `BEAT <n>` lines, timeout {args.timeout:g} s")
         say_r("  end-state checks (read only): " + ", ".join(CHECKS))
