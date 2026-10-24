@@ -9,6 +9,9 @@ Paste 00-shared.md first, then this.
 2. Answer the price-history question tonight. Known from the research: PCPartPicker trend charts are images only, Keepa is paid and Amazon only, eBay sold listings give a used baseline, and the docyx dataset is a dated mid-2025 pre-shortage snapshot (a labelled baseline). If nothing gives usable history by Sat 03:00, seed a dated history series labelled SIM and say so on screen.
 3. Start the fit checker as a pure, tested function on `docyx/pc-part-dataset` (MIT; clone or fetch the JSON from GitHub): input SpecCards with `attrs`, output pass or fail with the reason ("board is AM4, CPU is AM5"). Add the two small tables the dataset lacks: CPU microarchitecture to socket, and GPU chipset to board power. Write 20 failing tests first from real combinations. Unknown means "uncertain".
 
+## DATA FOR SELLER LEARNING (Fri 21:15, core loop in 00-shared)
+Seller agents bid from real listings (MIRROR) and learn from demand. Expose the aggregated demand (what was asked, at what ceiling, what went unfilled) as a feed sellers can read. Done-check: the seller view shows at least 5 real requests typed by teammates or judges.
+
 ## GOALS TO SAT 10:00 (TALKABLE PROGRESS: the second round of sponsor and judge feedback)
 1. By Fri 22:00 (after Vidyut's OK to spend): one small test run of at least 4 of the listed Apify actors; actor ids and cost per run written in data/README.md. Done-check: one real listing JSON per working actor committed (public data only).
 2. By Fri 23:00: the measurement method for the Saturday numbers is written (price spread, advocate answer key, fit accuracy) and the price-history source decision is posted. Done-check: data/METHOD.md and a board line.

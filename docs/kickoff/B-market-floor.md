@@ -17,6 +17,9 @@ Paste 00-shared.md first, then this.
 2. Add a PC optimizer test: Seller A is cheapest on the CPU and board but its free-shipping threshold is missed; moving the keyboard to Seller A costs a little more per line and saves the shipping fee. The toggle "cheapest per line" versus "optimizer" must show this.
 3. Spacetime go or no-go at Fri 23:00 as planned (Convex fallback); then wire the builder view (post a brief, watch bids land live) to the module.
 
+## LOSS REPORTS AND THE BATTLE VIEW (Fri 21:15, core loop in 00-shared)
+When a round closes, the market emits a LossReport per seller: won or lost, the gap to the winner, and the reason code (price, fit, condition, delivery, record, or advocate veto with its source). Propose a LossReport contract and log it in docs/CHANGES.md. The floor shows the battle (bids landing, the veto, the winner) and a seller "learning curve" (win rate and gap over rounds). Done-check: 3 rounds in a row show a seller agent closing the gap.
+
 ## GOALS TO SAT 10:00 (TALKABLE PROGRESS: the second round of sponsor and judge feedback)
 1. By Fri 22:30: the rename PR (condition, variant, attrs, CPSC wording, fee as config, neutral fixtures) is merged with all market/rules tests green. Done-check: test run output pasted on the board, SHA posted.
 2. By Fri 23:00: Spacetime go or no-go made and posted; the hello module is extended with needs, bids and orders tables. Done-check: a Need posted from Python shows in the web shell.

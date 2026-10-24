@@ -9,6 +9,9 @@ Paste 00-shared.md first, then this.
 2. Spike the Cartesia call today: an in-browser voice call that reads a deal (parts, price, advocate verdict, savings) and takes a spoken yes or no (this is the fallback and the first thing that must work). Then test the phone path (TO VERIFY): Cartesia Line calls out from an imported Twilio number (`cartesia call <number> <agent_id>`) or through a SIP trunk to `sip.cartesia.ai` (beta); it needs a Twilio number and Cartesia credits, so confirm the cost with Vidyut before the first call. Test numbers only, no real person's number in the repo, store it as a reference in env.
 3. Stripe test charge on a Visa test card and the Shield skeleton, as already planned; add a mandate test for a split order (one mandate per seller).
 
+## REFEREE ROLE (Fri 21:15, core loop in 00-shared)
+Shield and the approval gate are the referee of the battle. Loss reports and learning summaries pass through Shield too, so no seller text reaches the buyer, the advocate or the call script unscreened. The fee is flat and never feeds ranking; add a test for it.
+
 ## GOALS TO SAT 10:00 (TALKABLE PROGRESS: the second round of sponsor and judge feedback)
 1. By Fri 22:30: Stripe test charge on a Visa test card works from code; Shield /screen skeleton returns allow, quarantine or block; CRS sandbox call returns a test identity. Done-check: three terminal outputs, no secrets.
 2. By Fri 23:30: the approval gate is test-first complete (no payment without approval_id; a voice yes for one deal cannot approve another; no answer means no payment). Done-check: the test file passes.

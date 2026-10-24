@@ -9,6 +9,9 @@ Paste 00-shared.md first, then this.
 2. Write OwnedPart (contract, log it in docs/CHANGES.md) and the memory store: "I already have a 750 W PSU and 16 GB DDR4" becomes entries; the Need builder drops or flags lines the builder owns, and the card says "you already own X (your note, Fri 21:10)".
 3. Stub the quality advocate against Lane C's fit checker (a pure function, same input and output you mock today): it must return fit failures as cited warnings, and be able to veto the cheapest bid.
 
+## SELLER LEARNING (Fri 21:15, core loop in 00-shared)
+Seller agents learn. After each round, read the market's loss report (won or lost, the gap, the reason) and update a small per-seller strategy record (price step, bundle, delivery note), always staying at or above the floor. Show the owner a 3-line "what to change to win next time" summary written by Claude from the loss reports. Done-check: a seller agent that lost round 1 on price bids differently in round 2, and the change cites the loss report.
+
 ## GOALS TO SAT 10:00 (TALKABLE PROGRESS: the second round of sponsor and judge feedback)
 1. By Fri 23:00: the buyer agent is registered on Agentverse and answers in ASI:One; a message with specs and a budget becomes a Need and shows on Lane B's screen. Done-check: a teammate types the brief in ASI:One and the Need row appears.
 2. By Fri 23:30: OwnedPart is in contracts/ and docs/CHANGES.md, and "I already have a 750 W PSU" removes the PSU line from the Need with the entry cited. Done-check: a unit test and one ASI:One transcript.

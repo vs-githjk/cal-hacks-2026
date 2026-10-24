@@ -27,6 +27,27 @@ Rewritten Fri Oct 23, about 21:00 PDT for the PC and consumer tech pivot (decide
 
 You are one of four coding agents building Bidding Royale at Cal Hacks 13.0 (hacking Fri Oct 23 18:00 to HARD deadline Sun Oct 25 09:00 PDT; judging needs a live demo). All code is written during the hackathon.
 
+## CORE LOOP: agents battle, both sides win (Fri 21:15, Vidyut; this is the architecture, everything else hangs on it)
+- **Buyer agents fight for the best verified price.** Each buyer agent carries its owner's need, ownership memory and allowance. It opens a sealed round, and its quality advocate checks every bid and can veto the cheapest with sources. It buys only inside the allowance or after the voice approval.
+- **Seller agents fight for the sale, and they learn.** Each seller agent bids from its owner's real listings and never goes below its floor. After every round it gets a **loss report** from the market: won or lost, the gap to the winning bid, and the reason (price, fit, condition, delivery time, seller record, or the advocate's veto with its source). It then adjusts its next bid strategy inside the owner's rules: price, bundle, delivery or condition notes. The seller's owner sees "what to change to win next time" plus demand trends (what buyers asked for, what sold, unfilled demand at each price point). That is the seller-side value and what Seller Pro and Brand Insights sell.
+- **The market referees.** It keeps sealed bids, the same flat fee for everyone, no paying for rank, Shield screening every message, and a public, anonymized record of every round once it closes. Memory and allowances stay private.
+- **Why both sides come back:** buyers save verified money and time; sellers learn faster than they could alone and win more of the right sales. Every round makes both sides' agents smarter.
+- **Sponsors in the loop:**
+  - Fetch.ai: every agent is a uAgent on Agentverse, the buyer talks in ASI:One, and payment uses the Payment Protocol.
+  - Visa: the Trusted Agent Protocol signs the buyer agent's purchase, paid through Stripe on a Visa test card.
+  - Apify and Bright Data: real listings and prices that seller agents bid from and the advocate checks against.
+  - Cartesia: the voice approval call above the allowance.
+  - Armadin: Shield protects the battle from injection and manipulation.
+  - CRS: identity and stability check on business sellers.
+  - Anthropic: Claude powers the advocate and seller learning summaries.
+  - Spacetime: the live market state and the 3D floor.
+  - Tiger Data (MLH): price and demand history.
+- **Who builds it:**
+  - Lane A: the agents, including seller learning (strategy update from loss reports).
+  - Lane B: the market, loss reports and the battle on the floor, including a seller "learning curve" view.
+  - Lane C: the real data the bids and checks stand on.
+  - Lane D: approval, payment and Shield.
+
 ## The product in one line (working line; the final pitch line is OPEN, Vidyut decides)
 Bidding Royale is the buying agent for PC builders. Tell it your parts and budget: sellers bid, it checks every part fits and every price is real, and you get the best verified deal. Sellers learn what builders want.
 
