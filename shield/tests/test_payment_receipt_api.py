@@ -45,6 +45,38 @@ def test_screen_payment_refuses_binding_mismatch_without_receipt():
     assert "receipt" not in response.json()
 
 
+@pytest.mark.parametrize("duplicate", [
+    '"recipient":"attacker","recipient":"seller-agent-1"',
+    '"reference":"other","reference":"hash-1"',
+    '"amount":"1.00","amount":"749.00"',
+])
+def test_screen_payment_rejects_duplicate_request_keys(duplicate):
+    private = Ed25519PrivateKey.generate()
+    registry = Registry(agents=[{"address": PAYEE, "name": "seller", "role": "seller", "seller_of_record": "seller"}])
+    client = TestClient(create_app(registry=registry, receipt_private_key=private))
+    field = duplicate.split(":", 1)[0]
+    if field == '"amount"':
+        key = '"amount":"749.00"'
+    elif field == '"recipient"':
+        key = '"recipient":"seller-agent-1"'
+    else:
+        key = '"reference":"hash-1"'
+    malicious = REQUEST.replace(key, duplicate, 1)
+    response = client.post("/v1/shield/screen-payment", json=payload(malicious))
+    assert response.status_code == 200 and response.json()["verdict"] == "block"
+    assert "receipt" not in response.json()
+
+
+@pytest.mark.parametrize("amount", [" 749.00 ", "7.499E+2"])
+def test_screen_payment_requires_canonical_cents_string(amount):
+    private = Ed25519PrivateKey.generate()
+    registry = Registry(agents=[{"address": PAYEE, "name": "seller", "role": "seller", "seller_of_record": "seller"}])
+    client = TestClient(create_app(registry=registry, receipt_private_key=private))
+    request_json = REQUEST.replace("749.00", amount)
+    response = client.post("/v1/shield/screen-payment", json=payload(request_json))
+    assert response.json()["verdict"] == "block" and "receipt" not in response.json()
+
+
 def test_missing_signer_keeps_screening_operational_without_receipt():
     registry = Registry(agents=[{"address": PAYEE, "name": "seller", "role": "seller", "seller_of_record": "seller"}])
     client = TestClient(create_app(registry=registry, receipt_private_key=None))

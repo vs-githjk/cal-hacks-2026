@@ -60,6 +60,12 @@ def test_each_receipt_binding_mismatch_is_refused(field, value):
     assert not verify_allow_receipt(receipt, keyring(private.public_key()), **(BINDING | {field: value}), now=NOW)
 
 
+def test_expected_cents_must_be_a_positive_integer():
+    receipt, private = make_receipt()
+    assert not verify_allow_receipt(receipt, keyring(private.public_key()),
+        **(BINDING | {"amount_cents": 74900.0}), now=NOW)
+
+
 def resign(receipt, private):
     payload = {k: v for k, v in receipt.items() if k != "signature"}
     return payload | {"signature": base64.b64encode(private.sign(DOMAIN + _canonical(payload))).decode("ascii")}
