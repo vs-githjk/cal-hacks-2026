@@ -129,7 +129,8 @@ def preflight(tmp_repo, which, env=None, **kw):
     svcs = L.build_services(a, tmp_repo)
     checks = L.run_preflight(a, svcs, env if env is not None else {"ANTHROPIC_API_KEY": SECRET}, "note", repo=tmp_repo, which=which,
                              can_import=kw.get("can_import", lambda m: True), port_busy=kw.get("port_busy", lambda p: False),
-                             home_bin=kw.get("home_bin", tmp_repo / "nobin"))
+                             home_bin=kw.get("home_bin", tmp_repo / "nobin"),
+                             agent_runner=kw.get("agent_runner", lambda cmd, **opts: L.subprocess.CompletedProcess(cmd, 0)))
     return svcs, checks
 
 
@@ -161,6 +162,58 @@ def test_missing_shield_deps_and_node_skip_their_services(tmp_path):
     L.decide_skips(svcs, checks)
     by = {s.name: s for s in svcs}
     assert "fastapi" in by["shield"].skip_reason and "node" in by["web"].skip_reason
+
+
+def test_preflight_checks_cryptography_in_agent_child_environment(tmp_path, monkeypatch):
+    py = L.venv_python(tmp_path)
+    py.parent.mkdir(parents=True)
+    py.touch()
+    monkeypatch.setenv("AGENTS_MAILBOX", "1")
+    monkeypatch.setenv("BUYER_MAILBOX", "1")
+    seen = {}
+
+    def runner(cmd, **kwargs):
+        seen.update(cmd=cmd, **kwargs)
+        return L.subprocess.CompletedProcess(cmd, 0)
+
+    svcs, checks = preflight(tmp_path, which=lambda n: "/bin/x", agent_runner=runner)
+    check = next(c for c in checks if c.name == "agent deps (cryptography)")
+    assert check.ok
+    assert seen["cmd"] == [str(py), "-c", "import cryptography"]
+    assert seen["env"]["SHIELD_URL"] == "http://127.0.0.1:8787"
+    assert seen["env"]["AGENTS_MAILBOX"] == seen["env"]["SELLERS_MAILBOX"] == ""
+    assert seen["env"]["BUYER_MAILBOX"] == "1"
+    assert seen["capture_output"] is True and seen["timeout"] == 10
+
+
+def test_preflight_reports_agent_import_failure_without_subprocess_output(tmp_path):
+    py = L.venv_python(tmp_path)
+    py.parent.mkdir(parents=True)
+    py.touch()
+
+    def runner(cmd, **kwargs):
+        return L.subprocess.CompletedProcess(cmd, 1, stdout=b"secret", stderr=b"secret")
+
+    _, checks = preflight(tmp_path, which=lambda n: "/bin/x", agent_runner=runner)
+    check = next(c for c in checks if c.name == "agent deps (cryptography)")
+    assert not check.ok and "secret" not in check.detail
+
+
+def test_agents_venv_setup_probe_includes_cryptography(tmp_path, monkeypatch):
+    py = L.venv_python(tmp_path)
+    py.parent.mkdir(parents=True)
+    py.touch()
+    calls = []
+    probes = []
+    monkeypatch.setattr(L, "find_uv", lambda: "uv")
+    monkeypatch.setattr(L.subprocess, "run", lambda cmd, **kwargs: probes.append((cmd, kwargs)) or L.subprocess.CompletedProcess(cmd, 1))
+    monkeypatch.setattr(L, "run_step", lambda *args, **kwargs: calls.append(args) or True)
+
+    child_env = {"SHIELD_URL": "http://127.0.0.1:8787", "BUYER_MAILBOX": ""}
+    assert L.ensure_agents_venv(tmp_path, tmp_path / ".run", {}, probe_env=child_env) is None
+    assert probes[0][0] == [str(py), "-c", "import uagents, jsonschema, cryptography"]
+    assert probes[0][1]["env"] == child_env and probes[0][1]["timeout"] == 10
+    assert calls
 
 
 def test_busy_port_reported_unless_owned(tmp_path):
