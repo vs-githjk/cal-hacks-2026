@@ -1,0 +1,109 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "deal_id": {
+   "type": "string",
+   "description": "Order or lot deal this mandate authorizes"
+  },
+  "buyer_id": {
+   "type": "string"
+  },
+  "goal_id": {
+   "type": "string"
+  },
+  "amount": {
+   "type": "number",
+   "description": "Exact total in currency units, incl. shipping and tax"
+  },
+  "currency": {
+   "type": "string",
+   "enum": [
+    "USD"
+   ]
+  },
+  "payee": {
+   "type": "string",
+   "description": "Seller agent address or merchant id that receives the funds"
+  },
+  "tier_price": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "Lot tier price reached, if a pooled lot"
+  },
+  "nonce": {
+   "type": "string",
+   "description": "Single-use random value, 128 bits hex"
+  },
+  "created_at": {
+   "type": "string",
+   "format": "date-time"
+  },
+  "expires_at": {
+   "type": "string",
+   "format": "date-time",
+   "description": "Quote TTL, at most 10 minutes after created_at"
+  },
+  "hash": {
+   "type": "string",
+   "description": "sha256 hex over canonical JSON of deal_id, amount, currency, payee, tier_price, nonce, expires_at (sorted keys, no spaces)"
+  },
+  "within_allowance": {
+   "type": "boolean",
+   "description": "True means auto-approve path; false means the voice approval call is required"
+  },
+  "status": {
+   "type": "string",
+   "enum": [
+    "pending",
+    "approved",
+    "denied",
+    "expired",
+    "used"
+   ]
+  },
+  "approval_id": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "description": "VoiceApproval.id or allowance approval id; null until approved"
+  },
+  "tap_signature": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "description": "Visa Trusted Agent Protocol HTTP message signature over the request carrying this hash"
+  },
+  "origin": {
+   "type": "string",
+   "enum": [
+    "LIVE",
+    "MIRROR",
+    "SIM"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "deal_id",
+  "buyer_id",
+  "amount",
+  "currency",
+  "payee",
+  "nonce",
+  "created_at",
+  "expires_at",
+  "hash",
+  "within_allowance",
+  "status",
+  "origin"
+ ],
+ "additionalProperties": false
+}
