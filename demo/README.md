@@ -69,7 +69,9 @@ After beat 2 the runner reads the market's `round_result` back and prints its ra
 Exit codes: 0 all beats played, 1 refused or stopped (service down, market refusal, denial, `q`), 130 Ctrl-C. Open /buyer (paired as `vidyut`) and /market first; the console reminds you.
 The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2, the loss report itself is console only (NOT BRIDGED).
 
-Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, buyer allowance, denied approval attempts, personas and the
+The bridge sets Vidyut's standing allowance ($250 per buy, $500 a month, SIM) with the referee's `set_allowance` right after the goal, so /buyer shows it and the deal still needs the call. The market starts spending this period at $0 (the run's $120 spent is not bridged).
+
+Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, denied approval attempts, personas and the
 buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
 
 ## Tags

@@ -160,6 +160,12 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       {"id": goal["id"], "buyer_id": buyer_id, "type": goal["type"], "cap": goal["cap"], "deadline": goal["deadline"],
                        "po_number": "", "origin": SIM, "items": items},
                       pause=True, say=f"Vidyut (DB buyer id {buyer_id}) sets a goal: {b['1']['goal_text']}"))
+    al = b["1"]["allowance"]      # SIM: Vidyut's standing allowance; the referee sets it (a buyer can only lower their own)
+    steps.append(Step("referee", "set_allowance",
+                      {"buyer_id": buyer_id, "per_purchase_limit": al["per_purchase_limit"], "period_limit": al["period_limit"],
+                       "period": al["period"]},
+                      pause=True, say=f"Vidyut's allowance is set: {money(al['per_purchase_limit'])} per buy, "
+                                      f"{money(al['period_limit'])} a {al['period']}; above it the agent calls"))
     n = need["items"][0]
     steps.append(Step("buyer", "post_need",
                       {"id": need["id"], "buyer_id": buyer_id, "goal_id": goal["id"], "delivery_window": need["delivery_window"],
@@ -182,7 +188,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       pause=True, say=f"Bazaar Shield BLOCKS {sam['persona']}'s injected listing re-post "
                                       f"({len(inj['rule_ids'])} rules, {inj['latency_ms']} ms)"))
 
-    # beat 4: mandate, approval, payment (the buyer's allowance is the market's own, see the gaps in demo/README.md)
+    # beat 4: mandate, approval, payment (the deal is above the allowance set in beat 1, so it needs the call)
     m, ch, win = (mandate if mandate is not None else b["4"]["mandate"]), b["4"]["charge"], b2["winner"]
     wbid = next(x for x in b2["bids"] if x["id"] == win["bid_id"])
     steps.append(Step("referee", "create_mandate",
@@ -216,8 +222,6 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
 NOT_BRIDGED = [
     "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 and the learner's lower open-box price now ranks, but the loss report itself is not on screen.",
     "goal state (HUNTING, HOLD_FOR_CALL, DONE): no set_goal_state reducer; the goal stays ACTIVE and reserved_amount stays 0.",
-    "buyer allowance: no set_allowance reducer, so /buyer shows the market's fresh $0 allowance, not Vidyut's $250 per purchase "
-    "(the deal still correctly needs the call).",
     "denied approval attempts (wrong code, no 'approve'): record_approval only logs a second approval; the denied tries are console only.",
     "the one-time approval code on /buyer: no reducer or table carries it (notifications are written only by the market's own reducers), "
     "so with --live-call the code prints on the operator console as SCREEN CODE; Lane B needs a buyer-scoped show_approval_code.",

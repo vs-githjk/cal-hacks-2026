@@ -93,7 +93,7 @@ def test_every_step_lands_in_exactly_one_beat_in_order(run):
     beats = stage.assign_beats(steps)
     assert sorted(beats) == [1, 2, 3, 4, 5]
     assert [s for n in sorted(beats) for s in beats[n]] == steps
-    assert [s.reducer for s in beats[1]] == ["post_goal", "post_need"]
+    assert [s.reducer for s in beats[1]] == ["post_goal", "set_allowance", "post_need"]
     assert beats[2][0].reducer == "open_round" and beats[2][-1].reducer == "close_round"
     assert [s.reducer for s in beats[3]] == ["attach_verdict"]
     assert [s.reducer for s in beats[4]] == ["create_mandate", "record_approval", "record_payment", "record_payment"]
@@ -112,7 +112,7 @@ def test_auto_runs_check_reset_then_beats_in_order_with_a_cue_before_each(capsys
     assert code == 0 and asked == []
     out = capsys.readouterr().out
     assert log[0][:2] == ("referee", "reset_demo")
-    assert reducers(log)[1:3] == ["post_goal", "post_need"]
+    assert reducers(log)[1:4] == ["post_goal", "set_allowance", "post_need"]
     assert reducers(log).count("open_round") == 2 and reducers(log)[-1] == "close_round"
     cues = [m.start() for m in re.finditer(r"SAY THIS", out)]
     assert len(cues) == 5

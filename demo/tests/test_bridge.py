@@ -35,14 +35,14 @@ def clients(log, fail=None):
 
 def test_order_follows_the_stage_story(steps):
     kinds = [s.reducer for s in steps if s.reducer != "set_floor"]
-    assert kinds[:3] == ["post_goal", "post_need", "open_round"]
+    assert kinds[:4] == ["post_goal", "set_allowance", "post_need", "open_round"]
     assert kinds.index("place_bid") < kinds.index("attach_verdict") < kinds.index("attach_advocate_card") < kinds.index("close_round")
     tail = kinds[kinds.index("close_round") + 1:]
     assert tail == ["attach_verdict", "create_mandate", "record_approval", "record_payment", "record_payment"]
 
 
 def test_each_reducer_is_called_by_the_role_it_demands(steps):
-    allowed = {"post_goal": "buyer", "post_need": "buyer", "open_round": "referee", "close_round": "referee",
+    allowed = {"post_goal": "buyer", "post_need": "buyer", "set_allowance": "referee", "open_round": "referee", "close_round": "referee",
                "attach_verdict": "referee", "attach_claim_check": "referee", "attach_advocate_card": "referee", "create_mandate": "referee",
                "record_approval": "referee", "record_payment": "referee"}
     for s in steps:
@@ -56,12 +56,23 @@ def test_each_reducer_is_called_by_the_role_it_demands(steps):
             assert s.args.get("id", "").replace("bid-need-vidyut-5070ti-", "") in ("", s.actor.split(":")[1])
 
 
+def test_vidyuts_demo_allowance_is_set_by_the_referee_right_after_the_goal(run, steps):
+    a = run["beats"]["1"]["allowance"]
+    step = next(s for s in steps if s.reducer == "set_allowance")
+    assert step.actor == "referee" and steps.index(step) == 1 and steps[0].reducer == "post_goal"
+    assert step.args == {"buyer_id": "vidyut", "per_purchase_limit": a["per_purchase_limit"], "period_limit": a["period_limit"], "period": a["period"]}
+    assert (a["per_purchase_limit"], a["period_limit"]) == (250.0, 500.0)
+    # the deal is still above it, so it still needs the call
+    assert next(s for s in steps if s.reducer == "create_mandate").args["amount"] > step.args["per_purchase_limit"]
+    assert [s.reducer for s in steps].count("set_allowance") == 1
+
+
 def test_goal_and_need_are_vidyuts_and_withhold_nothing_new(steps):
     goal = steps[0].args
     assert goal["buyer_id"] == "vidyut" and goal["cap"] == 1300 and goal["origin"] == "SIM"
     assert goal["items"][0]["condition"] == "new or open-box"
     assert any(i["skipped_owned_part_id"] == "owned-psu" for i in goal["items"])
-    need = steps[1].args
+    need = steps[2].args
     assert need["spend_limit"] == 1300 and need["items"][0]["sku_spec"] == "rtx 5070 ti" and len(need["items"]) == 1
     assert need["items"][0]["condition"] == "new" and need["items"][0]["allowed_conditions"] == ["new", "open-box"]
     assert "Vidyut" in steps[0].say
@@ -175,7 +186,7 @@ def test_a_refused_reducer_stops_the_run(steps):
     log = []
     with pytest.raises(RuntimeError, match="not allowed"):
         bridge.execute(steps, clients(log, {"post_need": ["not allowed: post_need"]}), delay=0, say=lambda s: None, sleep=lambda x: None)
-    assert [r for _, r, _ in log] == ["post_goal", "post_need"]
+    assert [r for _, r, _ in log] == ["post_goal", "set_allowance", "post_need"]
 
 
 def test_divergence_is_reported_when_the_market_ranks_another_bid_first(run):
@@ -190,9 +201,9 @@ def test_divergence_is_reported_when_the_market_ranks_another_bid_first(run):
 
 def test_not_bridged_list_names_every_gap_and_no_secret():
     text = " ".join(bridge.NOT_BRIDGED)
-    for word in ("loss reports", "set_goal_state", "set_allowance", "floors per condition"):
+    for word in ("loss reports", "set_goal_state", "floors per condition"):
         assert word in text
-    for fixed in ("advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
+    for fixed in ("buyer allowance", "set_allowance", "advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
         assert fixed not in text, f"{fixed} is bridged now"
     assert "token" not in text.lower()
 
