@@ -122,3 +122,31 @@ def test_no_other_list_word_near_miss_repeat_or_foreign_script_rides_along(said)
     a, b = code.split()
     d = s.approve(said.format(code=code, a=a, b=b), now=T0 + timedelta(seconds=5))
     assert not d.approved and d.reason == "no_code", said
+
+
+
+# #195 answer (Vidyut, #203 12:45): the proposed filler list, plus thanks, thank, you, now, go, ahead, good, sounds
+@pytest.mark.parametrize("said", [
+    "{code}, approve, thank you", "{code} approve thanks", "Okay go ahead, {code}, approve", "{code}. Sounds good, approve.",
+    "Good, {code}, approve now", "Thank you. {code}. Approved.", "{code} approve, go ahead",
+])
+def test_the_owners_extra_filler_words_still_approve(said):
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    assert s.approve(said.format(code=code), now=T0 + timedelta(seconds=5)).approved, said
+
+
+@pytest.mark.parametrize("said", [
+    "{code} approve, thank you, nine hundred", "{code} approve 900 thanks", "{code} go ahead and approve twelve ninety nine",
+    "Thank you, no. {code} approve", "{code} sounds good but wait", "{code} approve, go ahead, cancel",
+])
+def test_a_number_or_a_no_next_to_the_new_filler_still_denies(said):
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    assert not s.approve(said.format(code=code), now=T0 + timedelta(seconds=5)).approved, said
+
+
+def test_the_new_filler_words_are_never_code_words():
+    from pay.approval import FILLER, WORD_SET
+    assert not ({"thanks", "thank", "you", "now", "go", "ahead", "good", "sounds"} & WORD_SET)
+    assert {"thanks", "thank", "you", "now", "go", "ahead", "good", "sounds"} <= FILLER

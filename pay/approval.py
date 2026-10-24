@@ -57,6 +57,8 @@ FILLER = frozenset({
     "okay", "ok", "uh", "um", "umm", "er", "erm", "hmm", "so", "yes", "yeah", "yep", "sure", "alright", "right", "well",
     "hello", "hi", "hey", "the", "a", "my", "code", "codes", "word", "words", "is", "are", "its", "it", "from", "on",
     "screen", "says", "i", "please", "and", "that", "thats", "this", "here",
+    # #195 answer from the owner: "approve, thank you" and "okay go ahead, approve" pass; a number or another amount still denies
+    "thanks", "thank", "you", "now", "go", "ahead", "good", "sounds",
 })
 MIN_CONFIDENCE = 0.6
 APPROVE_TOKEN = "approve"
