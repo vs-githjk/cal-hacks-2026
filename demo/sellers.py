@@ -84,20 +84,16 @@ def _stock_ok(listing: dict) -> bool:
     return not (stock is False or (isinstance(stock, str) and stock.lower() in ("out_of_stock", "out of stock")))
 
 
-_DELIVERY_COST = re.compile(r"\$\s*([\d,]+(?:\.\d{1,2})?)\s*(?:delivery|shipping)", re.I)
-
-
 def stated_shipping(listing: dict) -> Optional[float]:
-    """The delivery cost a listing states, or None when it states none. A numeric listing.shipping_cost wins;
-    then 'free delivery/shipping' (0.0) or '+$29.95 delivery' (29.95). A delivery date range is not a cost."""
+    """The delivery cost a listing states, or None when it states none. A numeric listing.shipping_cost wins; else the
+    data lane's anchored rule (data.mirror.normalize.landed): a bare 'free delivery' is 0.0 and '+$29.95 delivery' is
+    29.95, while '+C $12.99' (not USD), 'or free over $35' and 'free shipping on orders over $35' (conditional) and a
+    delivery date range state no cost (#188)."""
     cost = listing.get("shipping_cost")
     if isinstance(cost, (int, float)) and not isinstance(cost, bool):
         return float(cost)
-    text = str(listing.get("shipping") or "")
-    if re.search(r"free (delivery|shipping)", text, re.I):
-        return 0.0
-    m = _DELIVERY_COST.search(text)
-    return float(m.group(1).replace(",", "")) if m else None
+    from data.mirror.normalize import landed
+    return landed({"shipping": listing.get("shipping"), "shipping_type": listing.get("shipping_type")}, None)["shipping_cost"]
 
 
 def load_offers() -> tuple[list[dict], list[str]]:
