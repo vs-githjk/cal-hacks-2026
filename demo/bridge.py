@@ -25,7 +25,7 @@ import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -192,7 +192,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                                       f"({len(inj['rule_ids'])} rules, {inj['latency_ms']} ms)"))
 
     # beat 4: mandate, approval, payment (the deal is above the allowance set in beat 1, so it needs the call)
-    m, ch, win = (mandate if mandate is not None else b["4"]["mandate"]), b["4"]["charge"], b2["winner"]
+    m, win = (mandate if mandate is not None else b["4"]["mandate"]), b2["winner"]
     wbid = next(x for x in b2["bids"] if x["id"] == win["bid_id"])
     steps.append(Step("referee", "create_mandate",
                       {"hash": m["hash"], "id": m["id"], "deal_id": m["deal_id"], "buyer_id": buyer_id, "amount": m["amount"],
@@ -200,16 +200,18 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                        "origin": m["origin"]},
                       tag=m["origin"], pause=True,
                       say=f"mandate for {wbid['persona']}: {money(m['amount'])} to {m['payee']} (a SIM test address)"))
-    steps.append(Step("referee", "record_approval", {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": buyer_id},
+    # Only a real call is a voice approval. The scripted story is method sim_script, and its payment is always the SIM stub,
+    # even if the run's own beat 4 made a Stripe test charge (#193). With --live-call, execute's charger replaces the stub.
+    steps.append(Step("referee", "record_approval",
+                      {"mandate_hash": m["hash"], "method": "voice_code" if live_call else "sim_script", "approved_by": buyer_id},
                       pause=True, gate="approval_call",
                       say=("a real phone call: the buyer says the code from the screen and 'approve'; the referee relays the verified code"
                            if live_call else
-                           "the call approves on the third try (wrong code, no 'approve', then right): the referee relays the verified code")))
-    pay_mode = "stripe_test" if ch["mode"] == "Stripe test mode" else "sim"
-    ref = "ch_sim_" + m["hash"][:12] if live_call and pay_mode == "sim" else ch["id"]
-    pay = {"mandate_hash": m["hash"], "payment_ref": ref, "amount": m["amount"], "mode": pay_mode}
-    steps.append(Step("referee", "record_payment", dict(pay), pause=True, tag="LIVE" if pay_mode == "stripe_test" else SIM,
-                      say=f"payment recorded: {ref} ({ch['mode']})"))
+                           "SIM scripted approval, no phone call: the runner types the three tries (wrong code, no 'approve', then right)")))
+    ref = "ch_sim_" + m["hash"][:12]
+    pay = {"mandate_hash": m["hash"], "payment_ref": ref, "amount": m["amount"], "mode": "sim"}
+    steps.append(Step("referee", "record_payment", dict(pay), pause=True, tag=SIM,
+                      say=f"payment recorded: {ref} (SIM stub, no money moved)"))
     steps.append(Step("referee", "record_payment", dict(pay),
                       pause=True, say="the same payment again: the market's own idempotency refuses it and shows the refusal"))
 
@@ -282,14 +284,25 @@ NOT_BRIDGED = [
 
 def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[Step], None],
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
-            approver: Optional[Callable[[Step], dict]] = None, note: Callable[[str], None] = lambda text: None) -> list[dict]:
+            approver: Optional[Callable[[Step], dict]] = None, note: Callable[[str], None] = lambda text: None,
+            charger: Optional[Callable[[Step], dict]] = None) -> list[dict]:
     """Run the steps in order. A reducer refusal stops the run with the market's own message.
     With an `approver`, the approval step runs only after it returns approved; a denial skips the approval and every payment
-    step and ends the run there (the mandate stays pending, nothing is charged). Returns the approval outcomes."""
+    step and ends the run there (the mandate stays pending, nothing is charged). Returns the approval outcomes.
+    A `charger` (make_charger) runs once, at the first payment step, and only after the approver said approved AND the market
+    recorded the approval; its payment ref and mode replace the SIM stub's. Without an approver it never runs."""
     deadline: Optional[float] = None
     outcomes: list[dict] = []
     mandate_hash = ""
+    approved_and_recorded, paid = False, None
     for s in steps:
+        if s.reducer == "record_payment" and charger is not None and approver is not None and approved_and_recorded:
+            first = paid is None
+            if first:
+                paid = charger(s)
+                if paid.get("note"):
+                    note(paid["note"])
+            s = replace(s, args={**s.args, **paid["args"]}, tag=paid["tag"], say=paid["say"] if first else s.say)
         say(s)
         if s.reducer == "create_mandate" and s.actor in clients:
             mandate_hash = s.args.get("hash", "")
@@ -324,6 +337,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                     raise
         else:
             client.call(s.reducer, **s.args)
+        if s.gate == "approval_call" and approver is not None:
+            approved_and_recorded = True    # the approver said approved and the market took the approval row
         if s.window_s:
             deadline = clock() + s.window_s
         if s.pause and delay > 0:
@@ -360,6 +375,21 @@ def make_live_approver(mandate: dict, advocate_reason: Any, client: Any, *, unco
         return outcome(True, None, res.call_id)
 
     return approve
+
+
+def make_charger(mandate: dict, env: Any, *, use_stripe: bool, stripe_test: Optional[Callable] = None) -> Callable[[Step], dict]:
+    """The --live-call --stripe payment: one Stripe TEST PaymentIntent for the mandate the call approved (sk_test_ key only),
+    else the SIM stub with a note saying why. execute() calls it only behind the approval gate; it never runs before a call."""
+    from demo.approval_flow import charge_or_stub
+
+    def charge(step: Optional[Step]) -> dict:
+        ch, why = charge_or_stub(mandate, env, use_stripe, stripe_test)
+        live = ch["mode"] == "Stripe test mode"
+        return {"args": {"payment_ref": ch["id"], "mode": "stripe_test" if live else "sim"}, "tag": "LIVE" if live else SIM,
+                "say": f"payment recorded: {ch['id']} ({ch['mode']}" + (", no money moved)" if not live else ", Visa test card, no real money)"),
+                "note": why}
+
+    return charge
 
 
 def compare_to_db(rows: list, run: dict) -> list[str]:
@@ -413,7 +443,8 @@ def main(argv: Optional[list] = None) -> int:
                     help="2 also plays beat 5's round 2 (default 1)")
     ap.add_argument("--reset", action="store_true", help="call reset_demo first (referee): wipes needs, goals, rounds; keeps roles and pair codes")
     ap.add_argument("--dry-run", action="store_true", help="print the reducer calls only")
-    ap.add_argument("--stripe", action="store_true", help="Stripe TEST charge in beat 4 (sk_test_ key only), as run_demo.py --stripe")
+    ap.add_argument("--stripe", action="store_true",
+                    help="with --live-call only: ONE Stripe TEST charge (sk_test_ key only) after the call approves")
     ap.add_argument("--live-call", action="store_true",
                     help="beat 4 places ONE real Cartesia phone call to APPROVAL_CALL_TO; approval and payment are recorded only if the call approves")
     ap.add_argument("--env-file", type=Path, default=None,
@@ -425,12 +456,11 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
     ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
     args = ap.parse_args(argv)
-    if args.live_call and args.stripe:
-        ap.error("--live-call and --stripe cannot be combined: the Stripe test charge runs before the round and must never run before a call approves")
+    if args.stripe and not args.live_call:
+        ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (the scripted approval is SIM)")
 
     from demo.run_demo import run_all, stripe_env, DEFAULT_ENV_FILE
-    env = {**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else None
-    run = run_all(say=Narrator(False), use_stripe=args.stripe, env=env)
+    run = run_all(say=Narrator(False))       # never a Stripe call here: this run builds the plan, before any round or call
     live_mandate = fresh_pending_mandate(run["beats"]["4"]["mandate"]) if args.live_call else None
     steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, mandate=live_mandate, live_call=args.live_call,
                  two_buyers=args.two_buyers)
@@ -445,10 +475,14 @@ def main(argv: Optional[list] = None) -> int:
             return
         out.line(s.tag if s.tag in LIVE_TAGS else SIM, f"{who:<26}{s.reducer:<22}{s.say}")
 
-    approver, client_note = None, ""
+    approver, client_note, charger = None, "", None
     if args.live_call:
         approver, client_note = live_approver_for(args, run, live_mandate, out)
         out.note(client_note)
+    if args.stripe:
+        charger = make_charger(live_mandate, {**os.environ, **stripe_env(DEFAULT_ENV_FILE)}, use_stripe=True)
+        out.note("Stripe: ONE test-mode charge (sk_test_ key only) after the call approves and the market records the approval; "
+                 "a denied, silent or failed call charges nothing")
     if args.dry_run:
         for s in steps:
             say(s)
@@ -460,7 +494,7 @@ def main(argv: Optional[list] = None) -> int:
     if not args.stripe:
         out.note("Payment is the SIM stub: /market labels it 'SIM stub, no money moved'. Use --stripe for a Stripe TEST charge.")
     try:
-        return _run_live(args, steps, run, out, say, approver)
+        return _run_live(args, steps, run, out, say, approver, charger)
     except (OSError, subprocess.CalledProcessError) as e:
         out.blank()
         if isinstance(e, subprocess.CalledProcessError):
@@ -499,7 +533,7 @@ def live_approver_for(args, run: dict, mandate: dict, out) -> tuple[Callable[[St
                               on_code=show, secret=env.get(vc.SECRET_ENV)), where
 
 
-def _run_live(args, steps, run, out, say, approver=None) -> int:
+def _run_live(args, steps, run, out, say, approver=None, charger=None) -> int:
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
     from stdb import Market   # the market's own bridge; reads SPACETIMEDB_HTTP and SPACETIMEDB_DB
     tokens = find_tokens_dir(args.tokens_dir)
@@ -524,7 +558,7 @@ def _run_live(args, steps, run, out, say, approver=None) -> int:
         clients["referee"].call("reset_demo")
         time.sleep(1)
     try:
-        execute(steps, clients, delay=args.step_delay, say=say, approver=approver, note=out.note)
+        execute(steps, clients, delay=args.step_delay, say=say, approver=approver, note=out.note, charger=charger)
     except RuntimeError as e:
         out.blank()
         out.note(f"STOPPED by the market: {e}")
