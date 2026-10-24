@@ -39,7 +39,7 @@ def test_a_good_claude_answer_is_used_and_labelled_claude():
         return {"action": "lower_price", "step_pct": 3, "why": "busy_market"}
     n = note(writer)
     assert n["what_to_change_origin"] == "Claude" and n["price_step"] == 0.03
-    assert n["what_to_change"] == "Many sellers are bidding on this part. Lower your price by about 3%, and keep it above your floor."
+    assert n["what_to_change"] == "Many rounds ran for this part in the last day. Lower your price by about 3%, and keep it above your floor."
     assert set(seen) == {"gap_band", "reason", "sku", "market"}     # no cap, floor, rival price or buyer in what the model sees
     def keys(x):
         return set(x) | set().union(*(keys(v) for v in x.values() if isinstance(v, dict))) if isinstance(x, dict) else set()
@@ -160,3 +160,20 @@ def test_busy_or_quiet_only_when_tiger_answered():
     assert n["what_to_change_origin"].startswith("SIM template")
     n = note(lambda f: {"action": "check_fit_data", "step_pct": 0, "why": "listing_flagged"}, report={**REPORT, "reason": "fit"})
     assert n["what_to_change_origin"] == "Claude" and n["what_to_change"].startswith("The advocate flagged your listing")
+
+
+
+# ---------- #323 review 3 ----------
+
+@pytest.mark.parametrize("answer, reason", [
+    ({"action": "fix_condition_claim", "step_pct": 0, "why": "listing_flagged"}, "condition"),   # a referee call, not the advocate's
+    ({"action": "fix_listing_claims", "step_pct": 0, "why": "lost_narrowly"}, "advocate_veto"),  # a margin explains price only
+    ({"action": "check_fit_data", "step_pct": 0, "why": "lost_widely"}, "fit"),
+])
+def test_review_3_whys_that_are_not_true_fall_back(answer, reason):
+    n = note(lambda f: answer, report={**REPORT, "reason": reason})
+    assert n["what_to_change_origin"].startswith("SIM template"), (answer, reason)
+
+
+def test_demand_phrases_speak_of_rounds_not_sellers():
+    assert all("sellers" not in P.WHY[k] for k in ("busy_market", "quiet_market"))

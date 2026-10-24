@@ -27,7 +27,7 @@ ACTIONS = {"price": ("lower_price",), "fit": ("check_fit_data",), "condition": (
 MODEL = "claude-opus-5-5"
 # The "why" and the action are closed lists; the seller only ever reads these fixed phrases.
 WHY = {"lost_narrowly": "You lost by a small margin", "lost_widely": "You lost by a wide margin",
-       "busy_market": "Many sellers are bidding on this part", "quiet_market": "Few sellers are bidding on this part",
+       "busy_market": "Many rounds ran for this part in the last day", "quiet_market": "Few rounds ran for this part in the last day",
        "listing_flagged": "The advocate flagged your listing"}
 ACTION_LINE = {"lower_price": "Lower your price by about {pct}%, and keep it above your floor.",
                "check_fit_data": "Check your fit data against the maker's page.",
@@ -79,10 +79,12 @@ def _line(action: str, step: float, why: str) -> str:
 
 
 def allowed_why(report: dict, market: Optional[dict] = None) -> set:
-    """The "why" phrases that are true for this loss: the margin matches the band; "flagged" only for a loss the
-    advocate or a claim check caused; busy or quiet only when Tiger Data answered with demand."""
-    out = {"lost_narrowly"} if report["gap_band"] in ("within5", "within10") else {"lost_widely"}
-    if report["reason"] in ("advocate_veto", "condition", "fit"):
+    """The "why" phrases that are true for this loss: a margin only for a price loss, matching its band; "flagged"
+    only for a loss the advocate caused; busy or quiet (rounds per day) only when Tiger Data answered with demand."""
+    out = set()
+    if report["reason"] == "price":     # the band is a price gap: it explains only a price loss
+        out.add("lost_narrowly" if report["gap_band"] in ("within5", "within10") else "lost_widely")
+    if report["reason"] in ("advocate_veto", "fit"):   # the advocate's call; a condition loss is the referee's
         out.add("listing_flagged")
     rounds = ((market or {}).get("demand") or {}).get("round_hours_24h")
     if isinstance(rounds, int) and not isinstance(rounds, bool):
