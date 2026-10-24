@@ -71,7 +71,7 @@ class PayablesMixin:
         computed = sum(l["qty"] * l["unit"] for l in inv_lines)
         stated = cents(total) if total is not None else computed
         inv = {"id": iid, "po_id": po_id, "vendor_id": v.id, "number": number, "date": date, "lines": inv_lines, "total": stated, "computed": computed,
-               "remit_to": remit_to, "claim": claim, "status": "received", "received_at": at, "findings": [], "payable": 0, "supersedes": supersedes}
+               "remit_to": remit_to, "claim": claim, "status": "received", "received_at": at, "findings": [], "info": [], "seq": len(self.audit.decisions), "payable": 0, "supersedes": supersedes}
         self.invoices[iid] = inv
         try:
             return self._intake(po, v, inv, iid, subj, inv_lines, stated, computed, number, date, at, remit_to, claim, supersedes, vendor_id)
@@ -99,7 +99,8 @@ class PayablesMixin:
                 continue
             same = sorted((l["sku"], l["qty"], l["unit"]) for l in o["lines"]) == sig and o["total"] == stated
             days = abs((parse_ts(at) - parse_ts(o["received_at"])).days)
-            if same and days <= self.policy.duplicate_window_days:
+            new_goods = any(self.receipts[r]["seq"] > o["seq"] for r in po["receipts"])  # goods arrived after the earlier bill: this bill covers them
+            if same and days <= self.policy.duplicate_window_days and not new_goods:
                 findings.append(Finding("possible_duplicate", "", f"same vendor, PO, lines and total as {o['id']} ({o['number']}) received {days} day(s) earlier"))
                 break
         if supersedes and supersedes in self.invoices and self.invoices[supersedes]["status"] == "held":
@@ -133,7 +134,8 @@ class PayablesMixin:
                 trust.append(resolve("goods_quantity", [{"source": "seller_claim", "value": pl["billed"] + il["qty"], "ref": f"invoice:{iid}"}, {"source": "receiving", "value": pl["accepted"], "ref": "receiving"}]))
         if claim and claim.get("result") == "false":
             findings.append(Finding("claim_false", "", f"independent page check says the claim does not hold: {claim.get('reason', 'see evidence')}"))
-        inv["findings"] = [f.to_dict() for f in findings]
+        inv["findings"] = [f.to_dict() for f in findings if f.hold]  # what needs a person
+        inv["info"] = [f.to_dict() for f in findings if not f.hold]  # booked as-is, kept for the record (e.g. variance inside tolerance)
         tds = []
         for r in trust:
             if r["trusted"] and not r["agreed"]:
