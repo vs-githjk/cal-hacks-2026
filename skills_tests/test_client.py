@@ -142,6 +142,19 @@ def test_a_warranty_or_guarantee_count_with_words_between_is_never_read_as_retur
     assert any(returns in p for p in cfg["perks"])
 
 
+@pytest.mark.parametrize("returns, days", [
+    ("Returns accepted within 30 days. 90-day warranty.", 30),
+    ("Returns within 30 days. 1 year warranty", 30),
+    ("Exchange within 14 days. 30 days support.", 14),
+])
+def test_a_real_returns_count_is_not_swallowed_by_a_following_warranty_or_support_sentence(returns, days):
+    """Fix round 2: a sentence that starts with a digit after a period must still end the clause, or the next
+    sentence's warranty or support wording hides the real returns count and the shop is ranked down."""
+    cfg = client.build_config(answers(returns=returns))
+    assert client._return_days(returns) == days
+    assert market_returns_days(cfg["perks"]) == days, cfg["perks"]
+
+
 def test_nine_perks_and_a_returns_answer_still_fit_the_ten_perk_limit():
     nine = [f"perk {i}" for i in range(9)]
     cfg = client.build_config(answers(returns="30 days", perks=nine))

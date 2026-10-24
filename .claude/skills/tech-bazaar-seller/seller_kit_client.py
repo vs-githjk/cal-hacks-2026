@@ -88,13 +88,13 @@ _TIED_DAYS = re.compile(r"(\d+)\s*-?\s*days?\s*(?:returns?|refund|money)\b", re.
 _DAYS = re.compile(r"(\d+)\s*-?\s*days?\b", re.I)
 _NO_RETURNS = re.compile(r"\bno\s+returns?\b|\bfinal\s+sale\b|\bnon-?\s?refundable\b|\bno\s+refunds?\b", re.I)
 _NOT_RETURNS = re.compile(r"warrant|guarant|support", re.I)
-_CLAUSE_END = re.compile(r"[,;]|\.(?=\s+[A-Z]|\s*$)")  # a period ends a clause only as a sentence end, not in 'mfr. warranty'
+_CLAUSE_END = re.compile(r"[,;]|\.(?=\s+(?![a-z])|\s*$)")  # a period ends a clause unless a lowercase word follows ('mfr. warranty')
 
 
 def _return_days(text: Any) -> int:
     """The day count the owner tied to returns ('30 days returns', '7 day money back'), or the one day count in the
     answer ('30 days, no restocking fee') when nothing in the answer says there are no returns; day counts in a clause
-    (the text between commas, semicolons and sentence-ending periods) about a warranty, guarantee or support never count; 0 otherwise."""
+    (the text between commas, semicolons and periods not followed by a lowercase word, so 'mfr. warranty' stays one clause) about a warranty, guarantee or support never count; 0 otherwise."""
     text = str(text)
     if _MARKET_DAYS.search(text):
         return 0  # the market already reads the owner's own words
