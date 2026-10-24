@@ -265,6 +265,7 @@ class FakeCartesia:
 
 def live_parts(run, says):
     gate = bridge.DealGate(run)
+    gate.typed_approval_present = lambda: False      # a market without approve_typed (#191): the code may go to /buyer
     client = FakeCartesia(says)
     shown = []
 
@@ -362,6 +363,21 @@ def test_the_code_goes_to_buyer_through_issue_approval_code_and_is_not_printed(r
     assert issued == [("referee", {"mandate_hash": gate.mandate["hash"], "code": shown[0][0]})] and shown[0][1] is None
     kinds = [r for _, r, _ in log]
     assert kinds.index("create_mandate") < kinds.index("issue_approval_code") < kinds.index("record_approval")
+
+
+def test_the_code_stays_off_buyer_while_the_market_has_typed_approval(run, tmp_path):
+    """#211 review: issue_approval_code arms the market's approve_typed, so the code never goes to /buyer while it exists."""
+    gate, client, shown, approver = live_parts(run, lambda code: f"{code} approve")
+    gate.typed_approval_present = lambda: True
+    log, outcomes = run_with(run, approver, gate)
+    assert "issue_approval_code" not in [r for _, r, _ in log]
+    assert "approve_typed" in shown[0][1] and outcomes[0]["approved"] is True       # the call still judges the same code
+    with_typed, without, missing = tmp_path / "a.ts", tmp_path / "b.ts", tmp_path / "none.ts"
+    with_typed.write_text("export const approve_typed = spacetimedb.reducer(")
+    without.write_text("export const issue_approval_code = spacetimedb.reducer(")
+    assert bridge.market_has_typed_approval(with_typed) and not bridge.market_has_typed_approval(without)
+    assert bridge.market_has_typed_approval(missing)                                  # unreadable: fail closed
+    assert bridge.DealGate(run).typed_approval_present is bridge.market_has_typed_approval
 
 
 def test_a_refused_issue_approval_code_falls_back_to_the_console_and_says_why(run):

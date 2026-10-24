@@ -57,7 +57,9 @@ When beat 4 starts the bridge reads the market's own `round_result` and takes ra
 bid's deal, landed amount and seller's payee, 10 minutes (`MANDATE_MINUTES`), sent with `create_mandate`. No single readable rank 1, or a #1 that is not a bid
 this run placed, stops the run there with no mandate and nothing paid; this holds for the scripted run too. With `--live-call` it then runs
 `pay.voice_cartesia.run_approval_call` for that mandate: one call to `APPROVAL_CALL_TO` only, the two-word code sent to /buyer with `issue_approval_code`
-(the same code the call judges; printed as `SCREEN CODE` only if the market refuses it), three tries. After the call the market is read again, and only an
+(the same code the call judges; printed as `SCREEN CODE` when the market refuses it, and also while the market module still
+exports `approve_typed`, because a code on /buyer would arm that typed approval; see #191), three tries. The code reaches /buyer
+only on a `--live-call` run: the scripted run issues no code. After the call the market is read again, and only an
 approved call plus a `pay.mandate.can_charge` pass against the market's rank 1 makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
 answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
 `--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). Without `--live-call` the approval is

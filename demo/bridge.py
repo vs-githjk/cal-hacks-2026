@@ -348,6 +348,18 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
     return outcomes
 
 
+MARKET_MODULE = ROOT / "market" / "spacetimedb" / "src" / "index.ts"
+
+
+def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:
+    """True while the market module still exports approve_typed (a typed-code approval, issue #191 item 2), or when that
+    cannot be read. The code then stays off /buyer: on /buyer it would arm typed approval, which the phone-only rule forbids."""
+    try:
+        return "approve_typed" in module.read_text(encoding="utf-8")
+    except OSError:
+        return True
+
+
 class GateRefused(RuntimeError):
     """Beat 4 cannot name a deal from the market's own ranking, so no mandate is made."""
 
@@ -378,6 +390,7 @@ class DealGate:
         self.mandate: Optional[dict] = None
         self.winner: Optional[dict] = None
         self._referee: Any = None
+        self.typed_approval_present: Callable[[], bool] = market_has_typed_approval
 
     def expectations(self, rows: list) -> dict:
         w = market_winner(rows, self.round_id)
@@ -442,6 +455,8 @@ class DealGate:
         """issue_approval_code for this mandate: the code shows on the buyer's own /buyer screen. None when it did, else why not."""
         if self._referee is None or self.mandate is None:
             return "no mandate on the market"
+        if self.typed_approval_present():
+            return "the market still has approve_typed (typed-code approval, #191), so the code is kept off /buyer"
         try:
             self._referee.call("issue_approval_code", mandate_hash=self.mandate["hash"], code=code)
             return None
