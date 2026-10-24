@@ -107,7 +107,7 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
     say.line(winner_seller.origin, f"winner: {winner_seller.name} at {landed_note(winner_seller, w['landed'])}; vetoed as cheaper: " + "; ".join(vetoed))
     return {"sellers": [_seller_artifact(s) for s in sellers], "skips": skips, **res,
             "veto_reason": res["cards"][0]["call_reason"] if res["cards"] and res["cards"][0]["recommendation"] == "veto" else None,
-            "winner_seller_id": w["seller_id"]}
+            "winner_seller_id": w["seller_id"], "winner_note": landed_note(winner_seller, w["landed"])}
 
 
 def _seller_artifact(s: Seller) -> dict:

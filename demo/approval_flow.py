@@ -109,7 +109,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     say.header(4, "Two-way call approves a deal above the allowance",
                "REAL pay.mandate, pay.callscript, pay.approval, pay.tap, pay.replay; SIM call transport, clock and merchant; "
                + ("Stripe TEST API" if use_stripe else "SIM Stripe stub"))
-    say.line(SIM, f"winning deal: {seller['name']} {money(amount)}; {why_call}: the agent must call")
+    say.line(SIM, f"winning deal: {seller['name']} at {b2['winner_note']}; {why_call}: the agent must call")
     if bid["origin"] == MIRROR:
         say.line(SIM, f"the bid is MIRROR (a real, dated listing); the payee {payee} is a SIM test address, so no real merchant is contacted or paid")
     goal["state"], goal["reserved_amount"] = "HOLD_FOR_CALL", amount

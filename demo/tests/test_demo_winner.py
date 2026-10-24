@@ -138,6 +138,17 @@ def test_d_the_winner_line_says_before_sales_tax_and_shipping_not_captured(resul
     assert "$1,299.99" in line and "before sales tax" in line and "shipping: not captured" in line
 
 
+def test_d_every_winner_line_in_the_run_says_before_sales_tax(result):
+    _, text = result
+    deal = next(l for l in text.splitlines() if "winning deal:" in l)
+    assert "Best Buy at $1,299.99 before sales tax, shipping: not captured" in deal
+    r2 = next(l for l in text.splitlines() if "round-2 winner:" in l)
+    assert "before sales tax" in r2 and "shipping:" in r2
+    for l in text.splitlines():
+        if "winner:" in l or "winning deal:" in l:
+            assert "before sales tax" in l, l
+
+
 # (e) cap edge: exactly the cap is inside, one cent over is out
 
 def test_e_landed_exactly_at_the_cap_is_inside_and_one_cent_over_is_out():
