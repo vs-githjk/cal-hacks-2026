@@ -6,6 +6,7 @@ import hashlib
 import logging
 import os
 import json
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping, Optional
 
@@ -15,7 +16,7 @@ from pay.replay import NonceStore
 from pay.tap import keyring
 from pay.tap import load_private_key
 from pay.reasons import reason_for
-from shield.receipt import sign_allow_receipt
+from shield.receipt import parse_unique_json, sign_allow_receipt
 from shield.agent import verify_agent
 from shield.core import screen
 from shield.registry import Registry, load_registry
@@ -91,7 +92,7 @@ def handle_screen_payment(payload: Any, registry: Registry, receipt_private_key=
                 or isinstance(amount_cents, bool) or not isinstance(amount_cents, int) or amount_cents <= 0
                 or currency != "USD" or payee != sender):
             raise ValueError("invalid expected payment binding")
-        request = json.loads(request_json)
+        request = parse_unique_json(request_json)
         if not isinstance(request, dict) or set(request) - {"accepted_funds", "recipient", "deadline_seconds", "reference", "description", "metadata"}:
             raise ValueError("malformed RequestPayment")
         funds = request.get("accepted_funds")
@@ -100,6 +101,8 @@ def handle_screen_payment(payload: Any, registry: Registry, receipt_private_key=
             raise ValueError("RequestPayment must contain one complete accepted-funds entry")
         if not isinstance(funds[0].get("amount"), str):
             raise ValueError("RequestPayment amount must be a string")
+        if not re.fullmatch(r"[0-9]+\.[0-9]{2}", funds[0]["amount"]):
+            raise ValueError("RequestPayment amount must use canonical cents")
         try:
             amount = Decimal(funds[0]["amount"])
         except (InvalidOperation, TypeError, ValueError):
