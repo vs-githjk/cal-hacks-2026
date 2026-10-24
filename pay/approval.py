@@ -2,7 +2,8 @@
 
 Voice is never the credential. The credential is a two-word code shown on the buyer's authenticated screen
 and spoken (or typed) inside one session about one exact mandate. No model decides "approve": `approve`
-passes only when the normalized transcript holds the exact word pair AND the token "approve". Everything
+passes only when the normalized transcript holds the exact word pair AND the token "approve" or "approved"
+(nothing else counts: not "approves", "approval" or "disapprove"). Everything
 else, including silence, a timeout, low speech-to-text confidence and anything unclear, denies.
 
 Flow:
@@ -43,11 +44,12 @@ LISTEN_WINDOW_SECONDS = 10
 MAX_TOKENS = 12
 MIN_CONFIDENCE = 0.6
 APPROVE_TOKEN = "approve"
+APPROVE_TOKENS = frozenset({APPROVE_TOKEN, "approved"})  # speech-to-text often hears "approve" as "approved"; exactly these two
 # Any of these anywhere in the utterance means "no" (or "not sure"): deny.
 NEGATIONS = frozenset({
     "no", "not", "nope", "nah", "dont", "never", "cant", "cannot", "wont", "didnt", "isnt", "wasnt",
     "shouldnt", "stop", "cancel", "deny", "denied", "decline", "reject", "wait", "hold", "should", "would",
-    "could", "can", "if", "whether", "maybe", "unless",
+    "could", "can", "if", "whether", "maybe", "unless", "refuse", "refused", "without", "nothing", "nor",
 })
 
 STATES = ("issued", "awaiting_code", "approved", "denied", "expired")
@@ -262,7 +264,7 @@ class ApprovalSession:
 
     def approve(self, transcript_text: Any, now: Optional[datetime] = None, *,
                 confidence: Optional[float] = None) -> Decision:
-        """One spoken attempt. Approves only on the exact word pair plus the token "approve" in the same
+        """One spoken attempt. Approves only on the exact word pair plus the token "approve" or "approved" in the same
         utterance. `confidence` is the speech-to-text confidence; below 0.6 counts as a mismatch."""
         return self._attempt(transcript_text, _now_utc(now), confidence, self._voice_channel())
 
@@ -316,7 +318,7 @@ class ApprovalSession:
             return Decision(False, reason, self.state, False)
 
     def _judge(self, tokens: list[str], confidence: Optional[float]) -> Optional[str]:
-        """None when the utterance is the right code plus "approve"; else the deny reason."""
+        """None when the utterance is the right code plus "approve" or "approved"; else the deny reason."""
         svc = self._svc
         if confidence is not None and not (isinstance(confidence, (int, float)) and confidence >= MIN_CONFIDENCE):
             return "wrong_code"
@@ -333,7 +335,7 @@ class ApprovalSession:
                 if owner is not None and owner != self.mandate_hash:
                     return "replay"            # a code issued for another deal
             return "wrong_code" if any(_code_like(t) for t in tokens) else "no_code"
-        if APPROVE_TOKEN not in tokens:
+        if not APPROVE_TOKENS & set(tokens):
             return "no_code"                   # the code alone is not consent
         if not svc.store.consume(NS_CODE, self.code_hash):
             return "replay"                    # single use
