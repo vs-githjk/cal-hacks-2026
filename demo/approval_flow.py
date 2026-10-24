@@ -107,6 +107,10 @@ def charge_or_stub(mandate: Mapping[str, Any], env: Mapping[str, str], use_strip
                     "so the SIM stub runs")
         except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             note = f"Stripe test call failed ({type(e).__name__}), so the SIM stub runs"
+        if charge is not None and charge.get("status") != "succeeded":   # #208: only a succeeded intent is a test charge
+            note = (f"Stripe test PaymentIntent {charge.get('id')} came back {charge.get('status') or 'with no status'}, "
+                    "not succeeded, so the SIM stub is recorded")
+            charge = None
     return charge or stripe_charge_sim(mandate), note
 
 

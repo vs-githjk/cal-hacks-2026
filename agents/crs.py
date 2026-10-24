@@ -17,6 +17,7 @@ LOGIN_PATH = "/users/login"
 ENDPOINT_PATH = "/transunion/identity-manager-verification/basic"
 ENDPOINT = f"{DEFAULT_BASE_URL}{ENDPOINT_PATH}"
 CACHE_MAX_AGE = timedelta(hours=24)
+PAYEE_TTL = timedelta(minutes=10)   # #257: one check per payee at the payment gate, reused for this long
 REASON_VERIFIED = "Synthetic representative identity verified by CRS sandbox."
 REASON_CAUTION = "CRS sandbox returned a fraud alert; additional proof is required."
 REASON_NOT_VERIFIED = "CRS sandbox could not verify the synthetic representative identity."
@@ -354,8 +355,9 @@ def _cache_write(path, data):
             pass
 
 
-async def check_sellers(now: datetime) -> dict[str, dict]:
-    """Check only configured, consented, business profiles; cache contains sanitized signals only."""
+async def check_sellers(now: datetime, only: set[str] | None = None) -> dict[str, dict]:
+    """Check only configured, consented, business profiles; cache contains sanitized signals only.
+    `only` limits the check to these supplier ids (check_payee asks for one)."""
     _issued_personas.clear()
     _, cache_path = _paths()
     profiles, cache = _profiles(), _cache_read(cache_path)
@@ -365,6 +367,8 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
     results = {}
     for supplier_id, profile in profiles.items():
         if not isinstance(supplier_id, str) or not supplier_id:
+            continue
+        if only is not None and supplier_id not in only:
             continue
         if not isinstance(profile, dict) or profile.get("seller_type") != "business":
             results[supplier_id] = {"signal": None, "reason": REASON_PROFILE}
@@ -410,6 +414,78 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
         else:
             results[supplier_id] = {"signal": None, "reason": REASON_UNAVAILABLE}
     return results
+
+
+_payee_cache: dict[str, tuple[datetime, dict]] = {}
+
+
+class ProfilesUnreadable(RuntimeError):
+    """CRS_TEST_IDENTITIES_PATH is set but the file is missing, unreadable or has no sellers: who is a business is unknown."""
+
+
+def _payee_profile(supplier_id: str):
+    """The seller's profile (ids and seller_type compared without case), None when there is none. When a profile file
+    is configured but cannot be read, ProfilesUnreadable: an unreadable file never turns a business into a SIM seller."""
+    profile_path, _ = _paths()
+    if profile_path is None:
+        return None                      # no profile file configured: no seller is a known business
+    try:
+        data = json.loads(profile_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ProfilesUnreadable(f"CRS profile file unreadable ({type(e).__name__})") from None
+    sellers = data.get("sellers") if isinstance(data, dict) else None
+    if not isinstance(sellers, dict) or not sellers:
+        raise ProfilesUnreadable("CRS profile file has no sellers")
+    want = str(supplier_id).strip().lower()
+    hits = [v for k, v in sellers.items() if isinstance(k, str) and k.strip().lower() == want]
+    if len(hits) > 1:
+        raise ProfilesUnreadable("CRS profile file has two entries for this seller")
+    if hits and not isinstance(hits[0], dict):
+        raise ProfilesUnreadable("CRS profile entry for this seller is not an object")
+    return hits[0] if hits else None
+
+
+def sim_reason(supplier_id: str) -> str | None:
+    """Why this payee is a SIM seller, or None when it must be checked as a business. Only no profile file, no profile
+    for the seller, or a profile that says "individual" is SIM; any other profile (an odd or missing seller_type too) is
+    checked, and check_sellers holds it if it is not an approved business. Raises ProfilesUnreadable."""
+    if _paths()[0] is None:
+        return "no CRS profile file is configured (CRS_TEST_IDENTITIES_PATH)"
+    profile = _payee_profile(supplier_id)
+    if profile is None:
+        return "no business CRS profile for this seller"
+    if str(profile.get("seller_type", "")).strip().lower() == "individual":
+        return "its CRS profile is an individual seller"
+    return None
+
+
+def is_business(supplier_id: str) -> bool:
+    return sim_reason(supplier_id) is None
+
+
+async def check_payee(supplier_id: str, now: datetime) -> dict:
+    """#257: one CRS check of the payee at the payment gate, cached per payee for PAYEE_TTL.
+    Returns {"business", "check", "cached"}: `check` is the CrsCheck (pay.crs_gate judges it) for a business payee,
+    None for a SIM seller (no business profile, so no request). A transport failure is never cached."""
+    why_sim = sim_reason(supplier_id)            # read every time: a changed profile or consent is never cached over
+    if why_sim is not None:
+        _payee_cache.pop(supplier_id, None)
+        return {"business": False, "check": None, "cached": False, "sim_reason": why_sim}
+    hit = _payee_cache.get(supplier_id)
+    consent = (_payee_profile(supplier_id) or {}).get("consent") is True
+    if hit is not None and now < hit[0] and consent:
+        return {**hit[1], "cached": True}
+    key = next((k for k in _profiles() if isinstance(k, str) and k.strip().lower() == str(supplier_id).strip().lower()),
+               supplier_id)
+    legacy = (await check_sellers(now, only={key})).get(key)
+    check = to_crs_check(key, legacy)
+    check["seller_id"] = supplier_id          # the seller being paid; payee_ok matches it exactly
+    outcome = {"business": True, "check": check}
+    if check["verified"] and "CRS_UNAVAILABLE" not in check["reason_codes"]:
+        _payee_cache[supplier_id] = (now + PAYEE_TTL, outcome)   # only a verified, fresh answer is reused
+    else:
+        _payee_cache.pop(supplier_id, None)
+    return {**outcome, "cached": False}
 
 
 def main():
