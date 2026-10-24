@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "supplier_id": {
+   "type": "string"
+  },
+  "stability": {
+   "type": "string",
+   "enum": [
+    "verified_stable",
+    "caution",
+    "not_verified"
+   ]
+  },
+  "checked_at": {
+   "type": "string"
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "supplier_id",
+  "stability",
+  "checked_at",
+  "source"
+ ]
+}

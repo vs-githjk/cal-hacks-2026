@@ -1,0 +1,75 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "buyer_id": {
+   "type": "string"
+  },
+  "items": {
+   "type": "array",
+   "items": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "sku_spec": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "pack_size": {
+      "type": "string"
+     },
+     "quantity": {
+      "type": "number"
+     },
+     "unit": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "sku_spec",
+     "grade",
+     "pack_size",
+     "quantity",
+     "unit"
+    ]
+   }
+  },
+  "delivery_window": {
+   "type": "string"
+  },
+  "spend_limit": {
+   "type": "number"
+  },
+  "consent": {
+   "type": "boolean"
+  },
+  "auction_window_s": {
+   "type": "integer"
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "buyer_id",
+  "items",
+  "delivery_window",
+  "spend_limit",
+  "consent",
+  "auction_window_s",
+  "source"
+ ]
+}

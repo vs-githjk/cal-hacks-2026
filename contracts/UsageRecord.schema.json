@@ -1,0 +1,35 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "buyer_id": {
+   "type": "string"
+  },
+  "sku_spec": {
+   "type": "string"
+  },
+  "week": {
+   "type": "string"
+  },
+  "quantity_used": {
+   "type": "number"
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "buyer_id",
+  "sku_spec",
+  "week",
+  "quantity_used",
+  "source"
+ ]
+}

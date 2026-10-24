@@ -1,0 +1,24 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "kind": {
+   "type": "string"
+  },
+  "ref_id": {
+   "type": "string"
+  },
+  "at": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "id",
+  "kind",
+  "ref_id",
+  "at"
+ ]
+}

@@ -1,0 +1,52 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "need_id": {
+   "type": "string"
+  },
+  "bid_id": {
+   "type": "string"
+  },
+  "warnings": {
+   "type": "array",
+   "items": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "kind": {
+      "type": "string"
+     },
+     "text": {
+      "type": "string"
+     },
+     "source_url": {
+      "type": "string"
+     },
+     "dollar_impact": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "kind",
+     "text",
+     "source_url",
+     "dollar_impact"
+    ]
+   }
+  },
+  "recommendation": {
+   "type": "string"
+  },
+  "wait_until": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "need_id",
+  "bid_id",
+  "warnings",
+  "recommendation",
+  "wait_until"
+ ]
+}

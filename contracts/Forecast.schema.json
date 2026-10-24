@@ -1,0 +1,32 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "buyer_id": {
+   "type": "string"
+  },
+  "sku_spec": {
+   "type": "string"
+  },
+  "week": {
+   "type": "string"
+  },
+  "predicted_quantity": {
+   "type": "number"
+  },
+  "reason": {
+   "type": "string"
+  },
+  "error_last_week": {
+   "type": "number"
+  }
+ },
+ "required": [
+  "buyer_id",
+  "sku_spec",
+  "week",
+  "predicted_quantity",
+  "reason",
+  "error_last_week"
+ ]
+}

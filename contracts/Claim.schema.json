@@ -1,0 +1,68 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "bid_id": {
+   "type": "string"
+  },
+  "text": {
+   "type": "string"
+  },
+  "kind": {
+   "type": "string",
+   "enum": [
+    "stock",
+    "delivery",
+    "fees",
+    "returns",
+    "price",
+    "spec"
+   ]
+  },
+  "check": {
+   "type": "string",
+   "enum": [
+    "verified",
+    "unverified",
+    "false"
+   ]
+  },
+  "evidence_url": {
+   "type": "string"
+  },
+  "checked_at": {
+   "type": "string"
+  },
+  "method": {
+   "type": "string"
+  },
+  "evidence_hash": {
+   "type": "string"
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "bid_id",
+  "text",
+  "kind",
+  "check",
+  "evidence_url",
+  "checked_at",
+  "method",
+  "evidence_hash",
+  "source"
+ ]
+}

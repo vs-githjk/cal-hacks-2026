@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "order_id": {
+   "type": "string"
+  },
+  "account": {
+   "type": "string"
+  },
+  "debit": {
+   "type": "number"
+  },
+  "credit": {
+   "type": "number"
+  },
+  "memo": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "order_id",
+  "account",
+  "debit",
+  "credit",
+  "memo"
+ ]
+}

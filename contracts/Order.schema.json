@@ -1,0 +1,48 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "need_id": {
+   "type": "string"
+  },
+  "bid_id": {
+   "type": "string"
+  },
+  "amount": {
+   "type": "number"
+  },
+  "approved_by": {
+   "type": "string"
+  },
+  "approval_id": {
+   "type": "string"
+  },
+  "limit_checked": {
+   "type": "boolean"
+  },
+  "idempotency_key": {
+   "type": "string"
+  },
+  "payment_ref": {
+   "type": "string"
+  },
+  "status": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "id",
+  "need_id",
+  "bid_id",
+  "amount",
+  "approved_by",
+  "approval_id",
+  "limit_checked",
+  "idempotency_key",
+  "payment_ref",
+  "status"
+ ]
+}

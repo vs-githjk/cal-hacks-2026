@@ -1,0 +1,93 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "need_id": {
+   "type": "string"
+  },
+  "supplier_id": {
+   "type": "string"
+  },
+  "persona": {
+   "type": "string"
+  },
+  "lines": {
+   "type": "array",
+   "items": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "sku_spec": {
+      "type": "string"
+     },
+     "unit_price": {
+      "type": "number"
+     },
+     "quantity": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "sku_spec",
+     "unit_price",
+     "quantity"
+    ]
+   }
+  },
+  "total_landed_price": {
+   "type": "number"
+  },
+  "perks": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "claims": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "floor_check_passed": {
+   "type": "boolean"
+  },
+  "mirror_snapshot_id": {
+   "type": "string"
+  },
+  "decision_trace": {
+   "type": "string"
+  },
+  "expires_at": {
+   "type": "string"
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "need_id",
+  "supplier_id",
+  "persona",
+  "lines",
+  "total_landed_price",
+  "perks",
+  "claims",
+  "floor_check_passed",
+  "mirror_snapshot_id",
+  "decision_trace",
+  "expires_at",
+  "source"
+ ]
+}

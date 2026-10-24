@@ -1,0 +1,40 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "message_id": {
+   "type": "string"
+  },
+  "sender_agent": {
+   "type": "string"
+  },
+  "verdict": {
+   "type": "string",
+   "enum": [
+    "allow",
+    "quarantine",
+    "block"
+   ]
+  },
+  "reasons": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "attack_type": {
+   "type": "string"
+  },
+  "latency_ms": {
+   "type": "number"
+  }
+ },
+ "required": [
+  "message_id",
+  "sender_agent",
+  "verdict",
+  "reasons",
+  "attack_type",
+  "latency_ms"
+ ]
+}
