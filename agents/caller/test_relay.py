@@ -121,16 +121,21 @@ def test_a_request_over_the_char_or_body_cap_is_too_large_not_shield_blocked(tex
 def test_two_threads_with_the_same_mandate_place_one_call():
     import threading
 
-    import time
-
-    class SlowSet(set):   # widens the check-then-add window, so the test fails without the lock
-        def __contains__(self, item):
-            time.sleep(0.05)
-            return super().__contains__(item)
-
-    m, seen, results = mandate(), SlowSet(), []
     clients = [FakeCartesia(lambda code: f"{code} approve") for _ in range(8)]
-    barrier = threading.Barrier(len(clients))
+    barrier, inside = threading.Barrier(len(clients)), threading.Barrier(len(clients))
+
+    class AllInsideSet(set):
+        """The membership check waits until every thread is inside it. Without the lock all 8 then see "not called"
+        together and dial; with it the first thread waits out the timeout alone and the rest are told already_called."""
+        def __contains__(self, item):
+            found = super().__contains__(item)   # read before the wait, as an unlocked check-then-add would
+            try:
+                inside.wait(timeout=0.5)
+            except threading.BrokenBarrierError:
+                pass
+            return found
+
+    m, seen, results = mandate(), AllInsideSet(), []
 
     def go(c):
         barrier.wait()
