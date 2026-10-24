@@ -11,3 +11,10 @@ ACTORS = {
     "amazon": ("junglee/Amazon-crawler", {"categoryOrProductUrls": [{"url": "https://www.amazon.com/s?k=rtx+5070+ti"}], "maxItemsPerStartUrl": 3, "maxSearchPagesPerStartUrl": 1}),
     "pcpartpicker": ("lulzasaur/pcpartpicker-scraper", {"category": "video-card", "maxResults": 3, "country": "us"}),
 }
+
+# Second source for dated baselines (#47): a different Actor family per store, run separately and stored in
+# snapshots_b/ with provider "apify-b", so a baseline can count two independent sources within 24 h.
+SECOND_SOURCE = {
+    "bestbuy": ("axlymxp/bestbuy-scraper", {"searchQuery": Q, "maxResults": 3, "fetchProductDetails": False}),
+    "microcenter": ("fortuitous_pirate/microcenter-scraper", {"searchQuery": Q, "maxProducts": 3, "scrapeDetails": False}),
+}

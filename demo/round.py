@@ -118,7 +118,9 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
     for r in ranking["ranked"]:
         cards.append(advice.advise(need, bid_by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs))
     for card in cards:
-        validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")})
+        validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation",
+                                                         "wait_until", "claim_checks", "call_reason",
+                                                         "rule_id", "reason", "source_url")})
     winner = next((r for r, c in zip(ranking["ranked"], cards) if c["recommendation"] != "veto"), None)
     for b in bids:
         validate("Bid", b)

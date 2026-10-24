@@ -41,7 +41,7 @@ def fit_display(bid: dict, owned_attrs: dict) -> dict:
 def advise(need: dict, bid: dict, entry: dict, claims: list[dict], owned_attrs: dict) -> dict:
     """One AdvocateCard for a bid, judged on the line the market picked (`entry`, from market.rank_bids)."""
     mod, _ = advocate_checks()
-    sel = bid["lines"][entry["line"]]
+    sel = {**bid["lines"][entry["line"]], "line_index": entry["line"]}
     one = {**bid, "lines": [sel], "supplier_id": bid["seller_id"], "total_landed_price": entry["landed"]}
     item = dict(need["items"][0])
     if sel["offered_condition"] in (item.get("allowed_conditions") or []):
@@ -53,6 +53,8 @@ def advise(need: dict, bid: dict, entry: dict, claims: list[dict], owned_attrs: 
     warnings = sorted(card["warnings"] + extra, key=lambda w: -w["dollar_impact"])
     kinds = {w["kind"] for w in warnings}
     rec = "veto" if kinds & mod.VETO_KINDS else "caution" if kinds - mod.INFO_KINDS else "buy"
-    card = {**card, "warnings": warnings[:mod.MAX_WARNINGS], "recommendation": rec, "call_reason": mod.call_reason(warnings, one),
+    reason = mod.call_reason(warnings, one)
+    card = {**card, "warnings": warnings[:mod.MAX_WARNINGS], "recommendation": rec, "call_reason": reason,
+            "rule_id": reason["rule_id"], "reason": reason["summary"], "source_url": reason["source_url"],
             "line": entry["line"], "fit": fit_display(one, owned_attrs), "judged_condition": sel["offered_condition"]}
     return card

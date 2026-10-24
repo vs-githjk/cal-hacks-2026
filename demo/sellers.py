@@ -27,14 +27,14 @@ from demo.pages import page_listing, read_page
 SKU = "rtx 5070 ti"
 CHIPSET = "RTX 5070 Ti"
 FLOOR_OF_LIST = 0.93  # a MIRROR agent never bids below 93 percent of its listed price (SIM assumption)
+POLICY_SOURCE = "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py"
 
-SELLER_OF_RECORD = {  # snapshot file prefix -> seller of record for listings the retailer sells itself
+SELLER_OF_RECORD = {  # snapshot file prefix -> operator-grouped direct retailer, not marketplace labels
     "bestbuy": "Best Buy",
     "microcenter": "Micro Center",
     "bh": "B&H Photo",
-    "amazon": "Amazon.com",   # label only: Amazon listings are split by who the listing says sells it
-    "ebay_live": "eBay",
 }
+STORE_LABELS = {"amazon": "Amazon.com", "ebay_live": "eBay"}
 
 
 @dataclass
@@ -51,6 +51,8 @@ class Line:
     snapshot_date: str = ""
     discount: float = 0.0
     bid_override: Optional[float] = None   # a rogue agent that ignores its floor (demo of the referee)
+    listing_id: Optional[str] = None
+    seller_of_record: Optional[str] = None
 
 
 @dataclass
@@ -68,6 +70,7 @@ class Seller:
     control: bool = False
     page_html: Optional[str] = None
     note: str = ""
+    seller_of_record: Optional[str] = None
 
 
 def _slug(text: str) -> str:
@@ -95,38 +98,44 @@ def load_offers() -> tuple[list[dict], list[str]]:
                 dropped.setdefault(prefix, []).append(card["id"])
                 continue
             offers.append({"prefix": prefix, "card": card, "listing": listing})
-    skips = [f"{SELLER_OF_RECORD.get(prefix, prefix)}: {len(ids)} real listing(s) out of stock or unpriced in the snapshot, no bid"
+    skips = [f"{SELLER_OF_RECORD.get(prefix, STORE_LABELS.get(prefix, prefix))}: {len(ids)} real listing(s) out of stock or unpriced in the snapshot, no bid"
              for prefix, ids in sorted(dropped.items())]
     return offers, skips
 
 
-def _mirror_line(offer: dict, condition: str) -> Line:
+def _mirror_line(offer: dict, condition: str, seller_of_record: Optional[str]) -> Line:
     card = offer["card"]
     price = float(card["price"])
     return Line(condition=condition, list_price=price, floor=round(price * FLOOR_OF_LIST, 2),
                 listing_url=card["source"], origin=MIRROR, page_condition=condition,
                 basis=f"real listing {card['snapshot_id']} at {price:,.2f}, floor {FLOOR_OF_LIST:.0%} of list (SIM assumption)",
                 attrs={"category": "gpu", "chipset": CHIPSET}, snapshot_id=card["snapshot_id"],
-                snapshot_date=card["snapshot_date"])
+                snapshot_date=card["snapshot_date"], listing_id=card["id"],
+                seller_of_record=seller_of_record)
 
 
 def mirror_sellers(offers: list[dict]) -> list[Seller]:
     """One agent per seller of record. Amazon selling directly is one agent; each eBay listing is its own agent
-    because the snapshot does not capture the seller handle."""
+    because the snapshot does not capture the seller handle. Marketplace identities absent from the listing are
+    retained for skip visibility but are not eligible to bid."""
     groups: dict[str, list[dict]] = {}
     names: dict[str, str] = {}
+    records: dict[str, Optional[str]] = {}
     for o in offers:
         prefix, listing = o["prefix"], o["listing"]
         if prefix == "ebay_live":
             sid = "ebay-" + _slug(o["card"]["source"].split("/itm/")[1].split("?")[0])[-6:]
             names[sid] = f"eBay seller of item ...{sid[-6:]} (handle not captured)"
+            records[sid] = None
         elif prefix == "amazon":
             direct = listing.get("seller") == "Amazon.com"
             sid = "amazon-direct" if direct else "amazon-3p-" + _slug(o["card"]["id"])[-4:]
             names[sid] = "Amazon.com (sells direct)" if direct else "Amazon third-party seller (name not captured)"
+            records[sid] = "Amazon.com" if direct else None
         else:
             sid = _slug(SELLER_OF_RECORD[prefix])
             names[sid] = SELLER_OF_RECORD[prefix]
+            records[sid] = SELLER_OF_RECORD[prefix]
         groups.setdefault(sid, []).append(o)
     sellers = []
     for sid, group in sorted(groups.items()):
@@ -135,7 +144,7 @@ def mirror_sellers(offers: list[dict]) -> list[Seller]:
             cond = o["card"].get("condition") or "unknown"
             if cond not in by_cond or o["card"]["price"] < by_cond[cond]["card"]["price"]:
                 by_cond[cond] = o
-        lines = [_mirror_line(o, cond) for cond, o in sorted(by_cond.items())]
+        lines = [_mirror_line(o, cond, records[sid]) for cond, o in sorted(by_cond.items())]
         shipping_txt = next((o["listing"].get("shipping") for o in group if o["listing"].get("shipping")), "")
         first = group[0]
         claims = [{"text": f"{l.condition} per the listing", "kind": "spec", "field": "condition", "value": l.condition,
@@ -143,7 +152,8 @@ def mirror_sellers(offers: list[dict]) -> list[Seller]:
         sellers.append(Seller(id=sid, name=names[sid], origin=MIRROR, lines=lines, shipping=0.0,
                               returns_days=0, claims=claims, payee=f"{sid}@pay.example.test",
                               note=f"delivery per listing: {shipping_txt or 'not captured'}; first listing {first['card']['id']}; "
-                                   "payee is a SIM test address, no real merchant is paid"))
+                                   "payee is a SIM test address, no real merchant is paid",
+                              seller_of_record=records[sid]))
     return sellers
 
 
@@ -206,7 +216,15 @@ def sim_sellers() -> list[Seller]:
 
 def all_sellers() -> tuple[list[Seller], list[str]]:
     offers, skips = load_offers()
-    return mirror_sellers(offers) + sim_sellers(), skips
+    mirror = mirror_sellers(offers)
+    eligible = []
+    for seller in mirror:
+        if seller.seller_of_record is None:
+            for line in seller.lines:
+                skips.append(f"MIRROR listing skipped: seller identity not captured; snapshot {line.snapshot_id}; source {line.listing_url}")
+        else:
+            eligible.append(seller)
+    return eligible + sim_sellers(), skips
 
 
 def line_price(line: Line, step: float = 0.0) -> tuple[float, str]:
@@ -216,28 +234,42 @@ def line_price(line: Line, step: float = 0.0) -> tuple[float, str]:
         return line.bid_override, "rogue agent ignored its floor"
     price = round(line.list_price * (1 - line.discount) * (1 - step), 2)
     if price < line.floor:
-        return line.floor, f"held at floor {line.floor:,.2f}"
+        return line.floor, "held at the configured floor"
     return price, "list less discount"
 
 
-def make_bid(seller: Seller, need: dict, now: datetime, strategy: Optional[dict] = None) -> dict:
+def make_bid(seller: Seller, need: dict, now: datetime, strategy: Optional[dict] = None) -> Optional[dict]:
     """One sealed bid: every condition line this seller carries for the SKU. `need` must already be sealed
     (no spend_limit). Contract fields of Bid plus origin, seller_id and per-line listing facts; floors are
     NOT in the bid (the market holds them)."""
     assert "spend_limit" not in need, "sellers never see the buyer's cap (sealed bids)"
+    if seller.origin == MIRROR and seller.seller_of_record is None:
+        return None
     step = (strategy or {}).get("price_step", 0.0)
     want = need["items"][0]
     lines, notes = [], []
     for ln in seller.lines:
         price, why = line_price(ln, step if seller.learning else 0.0)
-        lines.append({"sku_spec": want["sku_spec"], "unit_price": price, "quantity": want["quantity"],
+        item = {"sku_spec": want["sku_spec"], "unit_price": price, "quantity": want["quantity"],
                       "offered_condition": ln.condition, "page_condition": ln.page_condition or ln.condition,
-                      "listing_url": ln.listing_url, "origin": ln.origin, "attrs": dict(ln.attrs), "basis": ln.basis})
+                      "listing_url": ln.listing_url, "origin": ln.origin, "attrs": dict(ln.attrs), "basis": ln.basis}
+        if seller.origin == MIRROR:
+            item.update({"listing_id": ln.listing_id, "seller_of_record": ln.seller_of_record,
+                         "snapshot_id": ln.snapshot_id, "snapshot_date": ln.snapshot_date,
+                         "shipping": seller.shipping,
+                         "floor_evidence": {"origin": SIM, "source": POLICY_SOURCE,
+                                            "observed_at": ln.snapshot_date},
+                         "shipping_evidence": {"origin": SIM, "source": POLICY_SOURCE,
+                                               "policy": "Shipping amount unobserved; zero is the existing SIM policy."}})
+        lines.append(item)
         notes.append(f"{ln.condition} {price:,.2f} ({why})")
-    perks = ["free shipping"] + ([f"{seller.returns_days}-day returns"] if seller.returns_days else [])
+    perks = ([] if seller.origin == MIRROR else ["free shipping"])
+    perks += [f"{seller.returns_days}-day returns"] if seller.returns_days else []
     trace = f"{seller.name}: " + "; ".join(notes) + f"; plus {seller.shipping:,.2f} shipping"
+    if seller.origin == MIRROR:
+        trace += "; MIRROR asking price with SIM operator floor and SIM shipping policy (shipping amount unobserved)"
     snap = next((l.snapshot_id for l in seller.lines if l.snapshot_id), "sim-hosted-pages-2026-10-23")
-    return {"id": f"bid-{need['id']}-{seller.id}", "need_id": need["id"], "supplier_id": seller.id, "seller_id": seller.id,
+    bid = {"id": f"bid-{need['id']}-{seller.id}", "need_id": need["id"], "supplier_id": seller.id, "seller_id": seller.id,
             "persona": seller.name, "lines": lines,
             # cheapest line plus shipping: the bid carries several condition lines, the buyer takes one
             "total_landed_price": round(min(l["unit_price"] for l in lines) + seller.shipping, 2),
@@ -245,3 +277,6 @@ def make_bid(seller: Seller, need: dict, now: datetime, strategy: Optional[dict]
             "mirror_snapshot_id": snap, "decision_trace": trace,
             "expires_at": utc_iso(now + timedelta(seconds=need.get("auction_window_s", 12))),
             "source": SOURCE_OF[seller.origin], "origin": seller.origin}
+    if seller.origin == MIRROR:
+        bid["seller_of_record"] = seller.seller_of_record
+    return bid

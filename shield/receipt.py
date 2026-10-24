@@ -22,6 +22,19 @@ _FIELDS = {"version", "receipt_id", "message_id", "request_sha256", "deal_id", "
            "signature"}
 
 
+def parse_unique_json(value: str | bytes) -> Any:
+    """Parse UTF-8 JSON while rejecting repeated keys at every nesting level."""
+    def unique_pairs(pairs):
+        result = {}
+        for key, item in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = item
+        return result
+
+    return json.loads(value, object_pairs_hook=unique_pairs)
+
+
 def _canonical(payload: Mapping[str, Any]) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
                       allow_nan=False).encode("ascii")
@@ -79,6 +92,8 @@ def verify_allow_receipt(receipt: Any, keys: Mapping[str, Ed25519PublicKey], *, 
     """Pure verification: no nonce store, I/O or caller-provided purchase authority."""
     if not isinstance(keys, Mapping) or not keys:
         return _no("receipt_unknown_key")
+    if isinstance(amount_cents, bool) or not isinstance(amount_cents, int) or amount_cents <= 0:
+        return _no("receipt_binding_mismatch")
     if not isinstance(receipt, Mapping) or set(receipt) != _FIELDS:
         return _no("receipt_schema_invalid")
     try:

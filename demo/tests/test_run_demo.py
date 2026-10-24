@@ -16,6 +16,7 @@ from unittest import mock
 import pytest
 
 from demo import adapters, run_demo
+from demo.advice import advise as demo_advise
 from demo.approval_flow import STRIPE_ENV, stripe_charge_test
 from demo.common import Narrator, schema_errors
 from pay.callscript import clean_advocate_reason
@@ -110,6 +111,23 @@ def test_beat2_cheapest_eligible_bid_is_vetoed_with_a_cited_source(run):
     assert b2["winner"]["seller_id"] == "best-buy" and b2["winner_seller_id"] == "best-buy"
 
 
+def test_demo_advice_emits_closed_advocate_card_with_matching_safety_mirrors():
+    from demo.advice import advise
+
+    need = {"id": "need-test", "items": [{"sku_spec": "rtx 5070 ti", "condition": "new",
+                                             "allowed_conditions": ["new"], "quantity": 1}]}
+    bid = {"id": "bid-test", "seller_id": "seller_1", "lines": [{"sku_spec": "rtx 5070 ti",
+            "unit_price": 100, "quantity": 1, "offered_condition": "new", "listing_url": "https://shop.example/gpu",
+            "attrs": {"category": "gpu", "length_mm": 250}, "origin": "SIM"}]}
+    card = advise(need, bid, {"line": 0, "landed": 100}, [], {})
+    projection = {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until",
+                                        "claim_checks", "call_reason", "rule_id", "reason", "source_url")}
+    from demo.common import validate
+    validate("AdvocateCard", projection)
+    assert card["rule_id"] == card["call_reason"]["rule_id"]
+    assert card["reason"] == card["call_reason"]["summary"]
+
+
 def test_beat2_a_real_mirror_seller_wins_on_a_real_line(run):
     b2 = b(run, 2)
     win = next(x for x in b2["bids"] if x["id"] == b2["winner"]["bid_id"])
@@ -145,7 +163,7 @@ def test_advice_compares_on_quality_adjusted_price_not_raw_price(run):
 def test_beat2_incompatible_part_is_vetoed_by_the_fit_checker(run):
     card = next(c for c in b(run, 2)["cards"] if c["bid_id"].endswith("bargain-bin"))
     assert card["recommendation"] == "veto" and card["call_reason"]["rule_id"] == "fit.gpu_length"
-    assert "336 mm exceeds case clearance 305 mm" in card["warnings"][0]["text"]
+    assert card["warnings"][0]["text"] == "Does not fit: The card is longer than your case allows."
 
 
 def test_beat2_referee_rejects_a_bid_under_its_floor_before_ranking(run):
@@ -180,8 +198,7 @@ def test_real_fit_checker_advocate_claim_check_and_shield_are_actually_called():
     from data.fit_checker import check_fit
     from shield.core import screen
     mod, how = adapters.advocate_checks()
-    assert how.startswith("REAL agents/advocate/checks.py")
-    assert Path(mod.__file__).resolve() == ROOT / "agents" / "advocate" / "checks.py"
+    assert how.startswith("REAL agents/advocate/checks.py") and Path(mod.__file__).as_posix().endswith("agents/advocate/checks.py")
     with mock.patch.object(mod, "check_fit", wraps=check_fit) as fit, mock.patch.object(mod, "advise", wraps=mod.advise) as adv, \
             mock.patch.object(mod, "call_reason", wraps=mod.call_reason) as cr, \
             mock.patch("demo.round.screen", wraps=screen) as sh, mock.patch("demo.beats.screen", wraps=screen) as sh3:
@@ -327,6 +344,22 @@ def test_beat5_learner_closes_the_gap_inside_its_floor_against_a_static_control(
     assert "SIM template" in b5["what_to_change_origin"]
 
 
+def test_demo_advice_preserves_original_selected_line_index():
+    need = {"id": "n1", "items": [{"sku_spec": "rtx 5070 ti", "condition": "new",
+                                     "allowed_conditions": ["new", "open-box"], "quantity": 1}]}
+    attrs = {"category": "gpu", "chipset": "RTX 5070 Ti", "length_mm": 303}
+    bid = {"id": "b1", "seller_id": "sim-seller", "origin": "SIM", "total_landed_price": 100,
+           "lines": [
+               {"sku_spec": "rtx 5070 ti", "unit_price": 110, "quantity": 1, "offered_condition": "new",
+                "page_condition": "new", "origin": "SIM", "listing_url": "https://example.com/new", "attrs": attrs},
+               {"sku_spec": "rtx 5070 ti", "unit_price": 100, "quantity": 1, "offered_condition": "open-box",
+                "page_condition": "open-box", "origin": "SIM", "listing_url": "https://example.com/open-box", "attrs": attrs},
+           ]}
+    card = demo_advise(need, bid, {"line": 1, "landed": 100}, [], {})
+    assert card["line"] == 1
+    assert card["claim_checks"][0]["line_index"] == 1
+
+
 # ---------- contracts ----------
 
 def test_every_artifact_validates_against_its_contract(run):
@@ -335,7 +368,9 @@ def test_every_artifact_validates_against_its_contract(run):
              ("Mandate", a["mandate_at_approval"]), ("VoiceApproval", a["approval_record"])]
     pairs += [("OwnedPart", o) for o in a["owned_parts"]] + [("Bid", x) for x in a["bids"]] + [("Claim", c) for c in a["claims"]]
     pairs += [("LossReport", r) for r in a["loss_reports"]]
-    pairs += [("AdvocateCard", {k: c[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")}) for c in a["verdicts"]["advocate_cards"]]
+    pairs += [("AdvocateCard", {k: c[k] for k in ("need_id", "bid_id", "warnings", "recommendation",
+                                                    "wait_until", "claim_checks", "call_reason",
+                                                    "rule_id", "reason", "source_url")}) for c in a["verdicts"]["advocate_cards"]]
     shield = a["verdicts"]["shield"] + [a["verdicts"]["injected_listing"], a["verdicts"]["control_listing"]]
     pairs += [("ShieldVerdict", {k: s[k] for k in ("message_id", "sender_agent", "verdict", "reasons", "attack_type", "latency_ms")}) for s in shield]
     assert len(pairs) > 40

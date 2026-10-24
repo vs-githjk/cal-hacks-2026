@@ -26,7 +26,9 @@ from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember,
 from logic import decide, make_order, sealed
 
 ADVICE_TIMEOUT_S = 15
+RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE
+CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
 SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
@@ -146,19 +148,32 @@ def web_drain() -> WebOut:
 
 
 async def handle_text(ctx: Context, sender: str, text: str):
-    # Single buyer deployment: no sender other than the owner of the active round sees its state.
-    if ROUND.get("owner") and sender != ROUND["owner"]:
-        await tell(ctx, sender, "A buyer session is active. Try again later.")
+    state = ROUND.get("goal", {}).get("state")
+    terminal = (ROUND.get("phase") in ("done", "expired", "paused")
+                or state in ("DONE", "EXPIRED", "PAUSED"))
+    # shortcut: payment completion is untracked, upgrade when the protocol supplies a verified terminal state.
+    if ROUND.get("owner") and sender != ROUND["owner"] and (not terminal or ROUND.get("order")):
+        if not ROUND.get("told_foreign_busy"):
+            ROUND["told_foreign_busy"] = True
+            await tell(ctx, sender, "A buyer session is active. Try again later.")
         return
     cmd = hunt.command(text)
     if cmd and cmd[0] == "approve" and ROUND.get("owner") == sender:
         await approve(ctx, cmd[1])
         return
     if cmd and cmd[0] == "cancel" and ROUND.get("owner") == sender:
+        if ROUND.get("order"):
+            await tell_owner(ctx, "An order has already been placed; CANCEL cannot reverse it. Nothing was canceled.")
+            return
+        retired_need_ids = list(ROUND.get("retired_need_ids", []))
+        need_id = ROUND.get("need", {}).get("id")
+        if need_id and need_id not in retired_need_ids:
+            retired_need_ids = (retired_need_ids + [need_id])[-RETIRED_NEED_HISTORY:]
         ROUND.clear()
+        ROUND["retired_need_ids"] = retired_need_ids
         await tell(ctx, sender, "Cancelled. Nothing ordered. Send a new goal when you are ready.")
         return
-    if ROUND.get("phase") == "decided" and not ROUND.get("order"):
+    if ROUND.get("phase") == "decided" and not ROUND.get("order") and not terminal:
         # A deal waits for the owner. ASI:One's own assistant also messages us (recaps of our replies);
         # never let that text start a new round or approve anything.
         if not ROUND.get("told_waiting"):
@@ -167,16 +182,13 @@ async def handle_text(ctx: Context, sender: str, text: str):
                                     "or CANCEL to drop it and start a new goal.")
         return
     if ROUND.get("order"):
-        # Same reason: after an order, a recap of it ("$581.99 for the GPU") would read as a new goal.
-        m = re.match(r"(?is)^(?:@\S+\s+)*new\b[:\s]*(.+)", text.strip())
-        if not m:
-            if not ROUND.get("told_ordered"):
-                ROUND["told_ordered"] = True
-                await tell(ctx, sender, "That order is placed. To start another goal, begin with NEW, "
-                                        "e.g. 'NEW a 850 W PSU under $150'.")
-            return
-        text = m.group(1)
-    if ROUND.get("phase") in ("checking", "bidding", "advice", "requote"):
+        # Keep the uncertain payment and its ids bound until a completion signal exists.
+        if not ROUND.get("told_ordered"):
+            ROUND["told_ordered"] = True
+            await tell(ctx, sender, "An order is already placed; its payment status is unresolved. "
+                                    "A new goal cannot replace it yet.")
+        return
+    if not terminal and ROUND.get("phase") in ("checking", "bidding", "advice", "requote"):
         if not ROUND.get("told_busy"):  # once per round: ASI:One rate-limits bursts of replies
             ROUND["told_busy"] = True
             await tell(ctx, sender, "A sealed round is already running; results soon.")
@@ -190,11 +202,15 @@ async def handle_text(ctx: Context, sender: str, text: str):
     owned = remember(buyer_id, told)
     goal = apply_owned(goal, owned)
     need = need_from_goal(goal)
+    retired_need_ids = list(ROUND.get("retired_need_ids", []))
+    old_need_id = ROUND.get("need", {}).get("id")
+    if old_need_id and old_need_id != need["id"]:
+        retired_need_ids = (retired_need_ids + [old_need_id])[-RETIRED_NEED_HISTORY:]
     ROUND.clear()
     # Async seller/advocate callbacks must reply on the owner's Chat Protocol session.
     ROUND.update(owner=sender, owner_context=ctx if sender != WEB else None,
                  goal=goal, owned=owned, need=need, bids=[], personas={}, cards={},
-                 attempts=0, last_sent={})
+                 attempts=0, last_sent={}, retired_need_ids=retired_need_ids)
     out = skip_lines(goal, owned)
     if not need["items"]:
         set_state("DONE")
@@ -212,9 +228,14 @@ async def handle_text(ctx: Context, sender: str, text: str):
 async def start_round(ctx: Context, need: dict | None = None):
     """Open a sealed round. A retry gets a fresh Need id so stale bids from the last round cannot count."""
     need = need or need_from_goal(ROUND["goal"])
+    retired_need_ids = list(ROUND.get("retired_need_ids", []))
+    old_need_id = ROUND.get("need", {}).get("id")
+    if old_need_id and old_need_id != need["id"]:
+        retired_need_ids = (retired_need_ids + [old_need_id])[-RETIRED_NEED_HISTORY:]
     token = uuid4().hex
-    ROUND.update(need=need, bids=[], personas={}, cards={}, seller_checks={},
-                 reviewed=False, order=None, mandate=None, phase="checking", deadline=0, round_token=token)
+    ROUND.update(need=need, retired_need_ids=retired_need_ids, bids=[], personas={}, cards={}, seller_checks={},
+                 reviewed=False, order=None, mandate=None, told_foreign_busy=False,
+                 phase="checking", deadline=0, round_token=token)
     set_state("HUNTING")
     try:
         checks = await crs.check_sellers(datetime.now(timezone.utc))
@@ -268,6 +289,15 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
     if sender not in SELLER_ADDRS:
         ctx.logger.info("bid from unregistered sender ignored")
         return
+    bid = None
+    try:
+        bid = common.validate("Bid", json.loads(msg.bid_json))
+    except Exception:
+        pass
+    if (bid and bid["need_id"] in ROUND.get("retired_need_ids", [])
+            and bid.get("supplier_id") == SELLER_ADDRS[sender]):
+        ctx.logger.info("stale bid ignored")
+        return
     verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, BASELINE)
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
@@ -279,7 +309,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
         ctx.logger.info("late or stray bid ignored")
         return
     try:
-        bid = common.validate("Bid", json.loads(msg.bid_json))
+        bid = bid or common.validate("Bid", json.loads(msg.bid_json))
     except Exception as exc:
         ctx.logger.warning(f"invalid bid dropped: {type(exc).__name__}")
         return
@@ -301,17 +331,34 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
     token, need_id = ROUND.get("round_token"), ROUND.get("need", {}).get("id")
     if sender != common.address("advocate") or ROUND.get("phase") != "advice":
         return
+    raw = None
+    try:
+        raw = json.loads(msg.cards_json)
+    except Exception:
+        pass
+    raw_need_ids = ([c.get("need_id") for c in raw]
+                    if isinstance(raw, list) and raw and all(isinstance(c, dict) for c in raw) else [])
+    if (raw_need_ids and all(isinstance(value, str) and value for value in raw_need_ids)
+            and len(set(raw_need_ids)) == 1
+            and raw_need_ids[0] in ROUND.get("retired_need_ids", [])):
+        ctx.logger.info("stale advocate reply ignored")
+        return
     reasons = blocked_reasons(sender, msg.cards_json, common.shield_context(sender))
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
+    cards = None
+    if isinstance(raw, list) and raw:
+        try:
+            cards = [common.validate("AdvocateCard", c) for c in raw]
+        except Exception:
+            cards = None
     if reasons:
         await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
     try:
-        raw = json.loads(msg.cards_json)
         if not isinstance(raw, list):
             raise ValueError("expected a list of review cards")
-        cards = [common.validate("AdvocateCard", c) for c in raw]
+        cards = cards or [common.validate("AdvocateCard", c) for c in raw]
         if (not cards or len(cards) != len(ROUND["bids"])
                 or {c["bid_id"] for c in cards} != {b["id"] for b in ROUND["bids"]}
                 or any(c["need_id"] != ROUND["need"]["id"]
@@ -380,21 +427,36 @@ async def conclude(ctx: Context, reviewed: bool):
     ROUND["phase"] = "decided"
     out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
     now_utc = datetime.now(timezone.utc)
+    seller_checks = ROUND.get("seller_checks", {})
+    not_configured_suppliers = {
+        b["supplier_id"] for b in bids
+        if crs.to_crs_check(b["supplier_id"], seller_checks.get(b["supplier_id"])).get("origin") == "NOT_CONFIGURED"
+    }
+    if not_configured_suppliers and not ROUND.get("crs_notice_sent"):
+        ROUND["crs_notice_sent"] = True
+        await tell_owner(ctx, CRS_NOT_CONFIGURED_NOTICE)
+        if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
+            return
     eligible_suppliers = {b["supplier_id"] for b in bids
-                          if crs.eligible(b["supplier_id"], ROUND.get("seller_checks", {}).get(b["supplier_id"]), now_utc)}
+                          if crs.eligible(b["supplier_id"], seller_checks.get(b["supplier_id"]), now_utc)}
     for n, b in enumerate(bids, 1):
         card = cards.get(b["id"], {})
         rec = card.get("recommendation", "not reviewed")
         out.append(f"{n}. {b['persona']}: ${b['total_landed_price']:.2f} [{b['source']}]")
         check = ROUND.get("seller_checks", {}).get(b["supplier_id"], {})
         signal = check.get("signal")
-        reason = ("Trusted individual seller; CRS check exempt."
+        supplier_not_configured = b["supplier_id"] in not_configured_suppliers
+        reason = ("Seller eligibility was not verified."
+                  if supplier_not_configured
+                  else "Trusted individual seller; CRS check exempt."
                   if b["supplier_id"] in eligible_suppliers and not signal
                   else check.get("reason") or crs.REASON_UNAVAILABLE)
         if signal:
             status = f"CRS: {signal['stability']} - {reason}"
             if signal["source"] == "recorded":
                 status += f" (cached from CRS {signal['checked_at']})"
+        elif supplier_not_configured:
+            status = f"CRS: not configured - {reason}"
         else:
             status = f"CRS: {'exempt' if b['supplier_id'] in eligible_suppliers else 'ineligible'} - {reason}"
         out.append(f"   {status}")
@@ -442,7 +504,6 @@ async def conclude(ctx: Context, reviewed: bool):
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     await tell_owner(ctx, "\n".join(out))
-
 
 async def approve(ctx: Context, n: int):
     bids = ROUND.get("bids", [])

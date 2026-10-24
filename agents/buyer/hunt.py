@@ -72,11 +72,11 @@ def public_hint(need: dict, baseline: dict) -> str:
     return f"No seller bid; the best public listing would be {', '.join(parts)}. Nothing bought."
 
 
-def settle(req: RequestPayment, mandate: dict | None, approvals: dict, used: set):
-    """The buyer's one code path for a RequestPayment: a CommitPayment, or a RejectPayment with the reason."""
-    if mandate is None:
+def settle(req: RequestPayment, transaction: dict | None, now: datetime | None = None):
+    """Create CommitPayment only from stored approval plus a successful MerchantSim charge result."""
+    if transaction is None:
         return RejectPayment(reason="no open mandate")
     try:
-        return payment.commit(req, mandate, approvals, used)
+        return payment.commit(req, transaction, now=now)
     except PermissionError as e:
         return RejectPayment(reason=str(e))

@@ -4,6 +4,7 @@ import importlib
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -15,6 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import crs
+
+REAL_CHECK_SELLERS = crs.check_sellers
+REAL_ELIGIBLE = crs.eligible
 
 
 @pytest.fixture
@@ -336,6 +340,72 @@ def test_trusted_individual_output_uses_exemption_reason(buyer):
     assert 'Approved synthetic representative profile is unavailable' not in ctx.owner_text()
 
 
+def _approved_profile_without_auth(monkeypatch):
+    body = {"firstName": "Synthetic"}
+    monkeypatch.setattr(crs, "APPROVED_PERSONAS", {"official-a": crs._canonical_hash(body)})
+    monkeypatch.setattr(crs, "_profiles", lambda: {"seller_1": {
+        "seller_type": "business", "consent": True, "persona_ref": "official-a", "request": body}})
+    monkeypatch.setattr(crs, "_paths", lambda: (None, Path(__file__).with_name("missing-crs-cache-test.json")))
+
+
+def test_no_crs_config_winner_notifies_once_and_stays_unchecked(buyer, monkeypatch):
+    monkeypatch.delenv('CRS_API_KEY', raising=False)
+    monkeypatch.delenv('CRS_USERNAME', raising=False)
+    monkeypatch.delenv('CRS_PASSWORD', raising=False)
+    monkeypatch.setattr(crs, 'check_sellers', REAL_CHECK_SELLERS)
+    monkeypatch.setattr(crs, 'eligible', REAL_ELIGIBLE)
+    _approved_profile_without_auth(monkeypatch)
+    requests = []
+
+    def no_network(*args, **kwargs):
+        requests.append((args, kwargs))
+        raise AssertionError('CRS must not call the provider without configuration')
+
+    monkeypatch.setattr(crs, '_open_request', no_network)
+    checks = asyncio.run(crs.check_sellers(datetime.now(timezone.utc)))
+    assert checks['seller_1']['reason'] == crs.REASON_NOT_CONFIGURED
+    assert requests == []
+
+    buyer.ALLOWANCE = 0
+    buyer.ROUND.update(phase='advice', seller_checks=checks,
+                       cards={'bid-1': card()},
+                       bids=[dict(buyer.ROUND['bids'][0], supplier_id='seller_1')])
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    text = ctx.owner_text()
+    assert text.count('CRS not configured') == 1
+    assert 'CRS: not configured' in text
+    assert 'CRS: exempt' not in text
+    assert 'Reply APPROVE 1' in text
+    assert not buyer.ROUND.get('order')
+
+
+def test_not_configured_row_does_not_relabel_configured_adverse_row(buyer, monkeypatch):
+    monkeypatch.delenv('CRS_API_KEY', raising=False)
+    monkeypatch.delenv('CRS_USERNAME', raising=False)
+    monkeypatch.delenv('CRS_PASSWORD', raising=False)
+    monkeypatch.setattr(crs, 'eligible', REAL_ELIGIBLE)
+    _approved_profile_without_auth(monkeypatch)
+    checks = {
+        'seller_1': {'signal': None, 'reason': crs.REASON_NOT_CONFIGURED},
+        'seller_2': {'signal': {'supplier_id': 'seller_2', 'stability': 'not_verified',
+                                'checked_at': '2026-10-24T08:00:00Z', 'source': 'sandbox'},
+                     'reason': crs.REASON_NOT_VERIFIED},
+    }
+    buyer.ROUND.update(phase='advice', seller_checks=checks,
+                       bids=[dict(buyer.ROUND['bids'][0], supplier_id='seller_1'),
+                             dict(buyer.ROUND['bids'][0], id='bid-2', supplier_id='seller_2', persona='Adverse')],
+                       cards={'bid-1': card(), 'bid-2': card(bid_id='bid-2')})
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    text = ctx.owner_text()
+    assert 'CRS: not configured - Seller eligibility was not verified.' in text
+    assert f'CRS: not_verified - {crs.REASON_NOT_VERIFIED}' in text
+    assert 'Deal found: Adverse' not in text
+    assert text.count('CRS not configured') == 1
+
+
 def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer, monkeypatch):
     from uagents.context import ExternalContext
     from uagents.crypto import Identity
@@ -407,15 +477,162 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
     buyer.ROUND.update(owner='authenticated-owner', phase='decided', bids=[
         {'id': 'secret-bid', 'persona': 'Private Seller Name', 'total_landed_price': 582}],
         order={'id': 'private-order'})
-    owner_context = object()
+    owner_context = Context()
     buyer.ROUND['owner_context'] = owner_context
     before = dict(buyer.ROUND)
     for command in ('hello', 'APPROVE 1', 'CANCEL'):
         asyncio.run(buyer.handle_text(ctx, 'other-sender', command))
     replies = [message.text() for to, message in ctx.sent if to == 'other-sender']
-    assert replies == ['A buyer session is active. Try again later.'] * 3
+    assert replies == ['A buyer session is active. Try again later.']
     assert all('Private Seller Name' not in text and 'private-order' not in text and 'APPROVE' not in text for text in replies)
-    assert buyer.ROUND == before and buyer.ROUND['owner_context'] is owner_context
+    asyncio.run(buyer.handle_text(ctx, 'authenticated-owner', 'APPROVE 1'))
+    assert any(to == 'authenticated-owner' and 'private-order' in message.text()
+               for to, message in owner_context.sent)
+    assert buyer.ROUND == before | {'told_foreign_busy': True}
+    assert buyer.ROUND['owner_context'] is owner_context
+
+
+@pytest.mark.parametrize(('phase', 'state'), [
+    ('done', 'ACTIVE'), ('decided', 'DONE'), ('bidding', 'EXPIRED'), ('advice', 'PAUSED')])
+def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase, state):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', owner_context=object(), phase=phase,
+                       goal={'id': 'old-goal', 'state': state}, order=None)
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    assert buyer.ROUND['owner'] == 'bob'
+    assert buyer.ROUND['goal']['buyer_id'] == 'bob'
+    assert buyer.ROUND['goal']['id'] != 'old-goal'
+    assert buyer.ROUND['phase'] == 'bidding'
+
+
+def test_foreign_busy_notice_resets_for_a_new_round(buyer):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', phase='bidding', told_foreign_busy=True)
+    asyncio.run(buyer.start_round(ctx, dict(buyer.ROUND['need'])))
+    assert not buyer.ROUND['told_foreign_busy']
+    ctx.sent.clear()
+    for _ in range(2):
+        asyncio.run(buyer.handle_text(ctx, 'bob', 'hello'))
+    assert [message.text() for to, message in ctx.sent if to == 'bob'] == [
+        'A buyer session is active. Try again later.']
+
+
+def test_malformed_new_sender_goal_preserves_terminal_owner(buyer):
+    ctx = Context()
+    old_context = object()
+    buyer.ROUND.update(owner='alice', owner_context=old_context, phase='done',
+                       goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
+    before = dict(buyer.ROUND)
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under'))
+    assert buyer.ROUND == before
+    assert buyer.ROUND['owner_context'] is old_context
+    assert buyer.ROUND['owner'] == 'alice'
+
+
+def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch):
+    buyer.ROUND.update(owner='alice', owner_context=object(), phase='done',
+                       goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    current_need = buyer.ROUND['need']['id']
+    monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'allow'})
+    monkeypatch.setattr(buyer.common, 'validate', lambda contract, payload: payload)
+    old_bid = {'id': 'old-bid', 'need_id': 'old-need', 'supplier_id': 'seller_1', 'persona': 'Seller',
+               'total_landed_price': 500, 'source': 'SIM'}
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(old_bid), persona_line='Seller')))
+    assert buyer.ROUND['owner'] == 'bob' and buyer.ROUND['need']['id'] == current_need
+    assert buyer.ROUND['phase'] == 'bidding'
+    assert all(bid['id'] != 'old-bid' for bid in buyer.ROUND['bids'])
+
+
+def test_shield_blocked_retired_bid_does_not_notify_current_owner(buyer, monkeypatch):
+    buyer.ROUND.update(owner='bob', retired_need_ids=['old-need'], phase='bidding', deadline=time.time() + 60)
+    before = dict(buyer.ROUND)
+    monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'block', 'reasons': ['injection']})
+    bid = {'id': 'old-bid', 'need_id': 'old-need', 'persona': 'Seller', 'lines': [],
+           'total_landed_price': 500, 'perks': [], 'claims': [], 'floor_check_passed': True,
+           'mirror_snapshot_id': '', 'decision_trace': '', 'expires_at': '', 'source': 'sandbox',
+           'origin': 'SIM', 'supplier_id': 'seller_1'}
+    ctx = Context()
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(bid), persona_line='Seller')))
+    assert buyer.ROUND == before
+    assert not ctx.sent
+
+
+def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(buyer, monkeypatch):
+    ctx = Context()
+    old_need_id = buyer.ROUND['need']['id']
+    asyncio.run(buyer.handle_text(ctx, 'owner', 'CANCEL'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    assert old_need_id in buyer.ROUND['retired_need_ids']
+    monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'block', 'reasons': ['injection']})
+    bid = {'id': 'old-bid', 'need_id': old_need_id, 'persona': 'Seller', 'lines': [],
+           'total_landed_price': 500, 'perks': [], 'claims': [], 'floor_check_passed': True,
+           'mirror_snapshot_id': '', 'decision_trace': '', 'expires_at': '', 'source': 'sandbox',
+           'origin': 'SIM', 'supplier_id': 'seller_1'}
+    ctx.sent.clear()
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(bid), persona_line='Seller')))
+    assert buyer.ROUND['owner'] == 'bob'
+    assert not ctx.sent
+
+
+def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, monkeypatch):
+    ctx = Context()
+    buyer.ROUND['need']['id'] = 'alice-need'
+    buyer.ROUND.update(owner='alice', phase='done', goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    current_need = buyer.ROUND['need']['id']
+    buyer.ROUND.update(phase='advice', bids=[{'id': 'bob-bid'}], attempts=0)
+    screened = []
+    monkeypatch.setattr(buyer, 'blocked_reasons', lambda *args: screened.append(args) or 'stale reply blocked')
+    ctx.sent.clear()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card(need_id='alice-need', bid_id='alice-bid')]))))
+    assert buyer.ROUND['owner'] == 'bob' and buyer.ROUND['need']['id'] == current_need
+    assert buyer.ROUND['phase'] == 'advice' and buyer.ROUND['attempts'] == 0
+    assert buyer.ROUND['retired_need_ids'] == ['alice-need']
+    assert not screened
+    assert not ctx.sent
+
+
+def test_known_retired_malformed_shield_blocked_advocate_reply_is_inert(buyer, monkeypatch):
+    buyer.ROUND['retired_need_ids'] = ['old-need']
+    before = dict(buyer.ROUND)
+    screened = []
+    monkeypatch.setattr(buyer, 'blocked_reasons', lambda *args: screened.append(args) or 'blocked')
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([{'need_id': 'old-need'}]))))
+    assert buyer.ROUND == before
+    assert not screened
+    assert not ctx.sent
+
+
+def test_unknown_foreign_invalid_advocate_reply_fails_current_round(buyer):
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card(need_id='foreign-need', bid_id='foreign-bid', recommendation='surprise')]))))
+    assert buyer.ROUND['phase'] == 'waiting'
+    assert buyer.ROUND['attempts'] == 1
+    assert 'Nothing ordered' in ctx.owner_text()
+
+
+def test_ordered_round_cannot_be_cleared_by_cancel_or_new_goal(buyer):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', phase='decided', goal={'id': 'goal-1', 'state': 'DONE'},
+                       order={'id': 'order-1', 'payment_ref': 'payment-1'},
+                       mandate={'hash': 'mandate-1'})
+    before = dict(buyer.ROUND)
+    asyncio.run(buyer.handle_text(ctx, 'alice', 'CANCEL'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'PSU under $150'))
+    assert buyer.ROUND == before | {'told_foreign_busy': True}
+    replies = '\n'.join(message.text() for _, message in ctx.sent)
+    assert 'Cancelled. Nothing ordered.' not in replies
+    assert 'Nothing was canceled.' in replies
+    assert buyer.ROUND['order']['payment_ref'] == 'payment-1'
 
 
 def test_pending_prompt_uses_plain_approval_instructions_and_keeps_cancel(buyer):
@@ -572,4 +789,38 @@ def test_conclude_does_not_fail_expired_round_after_owner_send_await(buyer):
         release.set()
         await task
         assert buyer.ROUND['phase'] == 'done' and buyer.ROUND['attempts'] == 0
+    run_bounded(run())
+
+
+def test_conclude_stops_after_crs_notice_if_owner_cancels_and_starts_new_goal(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+
+        class PauseNotice(Context):
+            async def send(self, to, message):
+                if (isinstance(message, buyer.ChatMessage) and message.content
+                        and message.content[0].text == buyer.CRS_NOT_CONFIGURED_NOTICE):
+                    started.set()
+                    await release.wait()
+                await super().send(to, message)
+
+        monkeypatch.setattr(crs, 'to_crs_check', lambda *a: {'origin': 'NOT_CONFIGURED'})
+        picked = []
+        monkeypatch.setattr(buyer.hunt, 'pick_best', lambda *a: picked.append(True))
+        buyer.ROUND.update(round_token='old-token', phase='advice', need={'id': 'old-need', 'spend_limit': 800},
+                           bids=[dict(buyer.ROUND['bids'][0])], seller_checks={})
+        ctx = PauseNotice()
+        task = asyncio.create_task(buyer.conclude(ctx, reviewed=True))
+        await asyncio.wait_for(started.wait(), timeout=5)
+        # Same state transition as CANCEL followed immediately by a replacement goal.
+        buyer.ROUND.clear()
+        buyer.ROUND.update(round_token='new-token', phase='bidding', need={'id': 'new-need'},
+                           goal={'id': 'new-goal', 'state': 'HUNTING'}, bids=[], attempts=0)
+        release.set()
+        await asyncio.wait_for(task, timeout=5)
+        assert not picked
+        assert buyer.ROUND['round_token'] == 'new-token'
+        assert buyer.ROUND['need']['id'] == 'new-need'
+        assert buyer.ROUND['phase'] == 'bidding'
+
     run_bounded(run())
