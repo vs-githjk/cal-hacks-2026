@@ -336,3 +336,13 @@ def test_up_only_keeps_records_of_other_live_services():
 
 def test_pid_without_start_marker_is_not_ours():
     assert L.pid_is_ours({"pid": os.getpid(), "lstart": None}) is False
+
+
+def test_mailbox_flag_sets_agent_env_only_when_asked(tmp_path):
+    base = dict(shield_port=8787, stdb_port=3000, web_port=3100)
+    off = {s.name: s for s in L.build_services(Namespace(**base, mailbox=False), tmp_path)}
+    on = {s.name: s for s in L.build_services(Namespace(**base, mailbox=True), tmp_path)}
+    assert "BUYER_MAILBOX" not in off["buyer"].extra_env
+    assert on["buyer"].extra_env["BUYER_MAILBOX"] == "1"
+    assert on["advocate"].extra_env["ADVOCATE_MAILBOX"] == "1"
+    assert on["sellers"].extra_env["SELLERS_MAILBOX"] == "1"

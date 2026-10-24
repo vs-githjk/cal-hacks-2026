@@ -1,0 +1,31 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Scoreboard",
+ "description": "Four tiles Lane B renders. Every number comes from a named source run; a tile with no trustworthy number has value null and says why.",
+ "type": "object",
+ "properties": {
+  "generated_at": {"type": "string"},
+  "tiles": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {"type": "string", "enum": ["verified_savings", "attacks_blocked", "fit_accuracy", "learning_lift"]},
+     "title": {"type": "string"},
+     "status": {"type": "string", "enum": ["measured", "not_quotable", "none_yet"]},
+     "value": {"type": ["number", "null"]},
+     "unit": {"type": "string"},
+     "display": {"type": "string", "description": "the one line to show on the tile"},
+     "count": {"type": "integer", "description": "how many items the number rests on"},
+     "date_range": {"type": "object", "properties": {"from": {"type": "string"}, "to": {"type": "string"}}, "required": ["from", "to"]},
+     "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]},
+     "source_run": {"type": "string", "description": "the command that produced the number"},
+     "detail": {"type": "object"},
+     "note": {"type": "string"}
+    },
+    "required": ["id", "title", "status", "value", "unit", "display", "count", "date_range", "origin", "source_run", "note"]
+   }
+  }
+ },
+ "required": ["generated_at", "tiles"]
+}
