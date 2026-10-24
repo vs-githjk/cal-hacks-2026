@@ -62,7 +62,10 @@ def recalls_for(product_title: str, brand: str, fetch=None, now=None, cache_dir=
                  for i in items if isinstance(i, dict) and _matches(i, brand, product_title)]
     except (OSError, ValueError, TypeError, AttributeError, KeyError) as e:  # any failure: we do not know, so never "none"
         return {**out, "error": type(e).__name__}
-    return {**out, "status": "found" if found else "none", "recalls": found}
+    searched = f"searched ProductName={brand} on {out['checked_at'][:10]}"
+    reason = (f"{len(found)} CPSC recall(s) matched brand {brand} and graphics card or model words ({searched})" if found else
+              f"no CPSC recall matched brand {brand} and graphics card or model words ({searched}); this does not mean the product was never recalled anywhere")
+    return {**out, "status": "found" if found else "none", "recalls": found, "reason": reason}
 
 
 def _cached(brand, now, cache_dir):

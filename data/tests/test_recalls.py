@@ -18,6 +18,7 @@ def serve(items):
 def test_real_asus_answer_with_only_a_motherboard_recall_is_none(tmp_path):
     out = recalls_for(TITLE, "ASUS", fetch=serve(json.loads((FIX / "recalls_asus_real.json").read_text())), now=NOW, cache_dir=tmp_path)
     assert out["status"] == "none" and out["recalls"] == [] and "saferproducts.gov" in out["source_url"]
+    assert "searched ProductName=ASUS on 2026-10-24" in out["reason"] and "no CPSC recall matched" in out["reason"]
 
 
 def test_a_graphics_card_recall_is_found(tmp_path):  # SIM fixture, not a real recall
