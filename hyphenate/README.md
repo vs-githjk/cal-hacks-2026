@@ -1,7 +1,7 @@
 # hyphenate/: the purchasing seat and the AP clerk seat (Lane D)
 
 One line on the seats: **an IT buyer's purchasing seat and an accounts-payable clerk seat for a 40-person game studio's computer-gear buying (Pixel Forge Games, SIM), with limited access, a clean record of every call, and the sense to ask a person.**
-Tony Stark is the requester (same persona as the Tech Bazaar demo). The studio, its people, vendors, invoices and bank records are **SIM**. Price references are **MIRROR** (median asking price from the dated listings in `data/mirror/snapshots`). The bank record is shaped like a Stripe test record and is SIM unless a real test charge is wired in. No model makes or changes a control decision; everything runs offline.
+Vidyut is the requester (same persona as the Tech Bazaar demo). The studio, its people, vendors, invoices and bank records are **SIM**. Price references are **MIRROR** (median asking price from the dated listings in `data/mirror/snapshots`). The bank record is shaped like a Stripe test record and is SIM unless a real test charge is wired in. No model makes or changes a control decision; everything runs offline.
 
 ```
 python3 -m hyphenate.demo                     # the moment, narrated (add --json for structure)
@@ -57,7 +57,7 @@ Shapes (field names are exact):
 - **Reconciliation row**: `payment, invoice, po, ledger, bank, seller_claim, mirror[{sku,po_unit,mirror,mirror_as_of}], agreed, believed, reason, origin`.
 
 ## The moment (3 lines)
-1. Tony asks for 3 GPUs; he cannot approve, the department head is over his limit, the controller says no with a $2,600 ceiling, and the system re-plans to 2 units inside it.
+1. Vidyut asks for 3 GPUs; Vidyut cannot approve the PO, the department head is over the limit, the controller says no with a $2,600 ceiling, and the system re-plans to 2 units inside it.
 2. Receiving finds one unit open-box; the vendor's invoice bills 2 as new and asks to be paid to a different bank account: held, credit memo drafted, and `explain()` names the rule, the receiving record, the vendor's new strict level and every decision it rests on.
 3. The vendor's bank details then change the day before payment: held until the controller verifies by call-back; the bank record is $5 off the ledger and the bank is believed, written down with why.
 

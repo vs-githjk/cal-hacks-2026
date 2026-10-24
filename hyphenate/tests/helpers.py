@@ -13,7 +13,7 @@ def serials(n, tag="A"):
 
 def approved_po(eng=None, vendor="bestbuy", lines=None, at="10-05"):
     eng = eng or seed_company(mirror={})
-    out = eng.request(requester="tony", vendor_id=vendor, lines=lines or [gpu()], at=T(at, 9), justification="render farm")
+    out = eng.request(requester="vidyut", vendor_id=vendor, lines=lines or [gpu()], at=T(at, 9), justification="render farm")
     pid = out.data["po"]["id"]
     r = eng.approve(pid, by="rhodey", at=T(at, 10))
     assert r.ok, r.to_dict()
