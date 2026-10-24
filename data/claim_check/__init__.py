@@ -206,12 +206,21 @@ def in_stock(v):
     return None
 
 
+LIAR_PAGE_HOSTS = {"localhost:8765", "127.0.0.1:8765"}  # where we serve data/liar_pages/site (python -m http.server 8765)
+
+
+def is_our_liar_page(url):
+    """SIM is decided from the evidence URL (our own hosted pages), never from anything a page says about itself."""
+    p = urlparse(url or "")
+    return p.scheme == "http" and p.netloc in LIAR_PAGE_HOSTS and p.path.endswith(".html")
+
+
 def _history(url, facts, fetch, history, observations=None):
     """Price history for a was-price claim, from our own records only: the caller's history, our recorded SIM series for a
     SIM page, or our dated MIRROR observations of this exact URL. Nothing is read from the page being judged."""
     if history is not None:
         return history
-    if facts.get("origin") == "SIM" and facts.get("sku"):
+    if is_our_liar_page(url) and facts.get("sku"):
         try:
             from data.liar_pages.build import PRICE_HISTORY
         except ImportError:  # the Actor bundle ships no records
