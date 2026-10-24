@@ -64,19 +64,22 @@ def msg_line(name: str, to: str, kind: str) -> str:
 
 def parse_line(line: str) -> dict | None:
     """Parse one SDK-prefixed producer line; reject embedded or malformed markers."""
-    if not isinstance(line, str) or len(line) > _MAX_LINE_LENGTH + 160:
+    if not isinstance(line, str) or "\n" in line or "\r" in line or len(line) > _MAX_LINE_LENGTH + 160:
         return None
     m = _SDK_LINE.fullmatch(line)
     if not m:
         return None
     kind, body = m.groups()
+    producer = f"{kind} {body}"
+    if len(producer) > _MAX_LINE_LENGTH:
+        return None
     if kind == "AGENT_STATUS":
-        parsed = _STATUS.fullmatch(f"{kind} {body}")
+        parsed = _STATUS.fullmatch(producer)
         if not parsed:
             return None
         name, role, address, mode = parsed.groups()
         return {"type": kind, "name": name, "role": role, "address": address, "mode": mode}
-    parsed = _MESSAGE.fullmatch(f"{kind} {body}")
+    parsed = _MESSAGE.fullmatch(producer)
     if not parsed:
         return None
     name, to, text = parsed.groups()
