@@ -4,12 +4,13 @@
   {
    "detail": {
     "reference": {
-     "status": "one_source",
-     "median": null,
-     "reference_unconfirmed": 1254.99,
+     "status": "ok",
+     "median": 1254.99,
+     "reference_unconfirmed": null,
      "n": 6,
      "providers": [
-      "apify"
+      "apify",
+      "apify-b"
      ]
     },
     "sold_kept_out": {
@@ -27,15 +28,15 @@
    "status": "none_yet",
    "value": null,
    "unit": "USD",
-   "display": "No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference one_source, 6 retail asks from 1 provider)",
+   "display": "No verified savings yet: no verified purchase recorded yet (reference ok, 6 retail asks from 2 providers)",
    "count": 6,
    "date_range": {
-    "from": "2026-10-24T05:08:39.627Z",
-    "to": "2026-10-24T05:09:29.655Z"
+    "from": "2026-10-24T05:09:29.655Z",
+    "to": "2026-10-24T08:51:32+00:00"
    },
    "origin": "MIRROR",
    "source_run": "python3 -m data.baselines",
-   "note": "Unconfirmed reference (not a baseline): median $1,254.99 of 6 in-stock retail asks (one_source: a baseline needs two dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
+   "note": "Baseline: median $1,254.99 of 6 in-stock retail asks (ok, providers apify, apify-b; a baseline needs two dated providers within 24 h). Provider apify-b re-checked Best Buy only (3 listings); Micro Center has one provider. eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
   },
   {
    "detail": {
