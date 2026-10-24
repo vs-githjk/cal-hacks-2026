@@ -50,7 +50,8 @@ class StripeTestCharger:
 
     def charge(self, *, amount_cents: int, currency: str, idempotency_key: str, metadata: Mapping[str, str]) -> dict:
         form = {"amount": str(amount_cents), "currency": currency.lower(), "payment_method": STRIPE_TEST_CARD,
-                "payment_method_types[]": "card", "confirm": "true"}
+                "automatic_payment_methods[enabled]": "true",
+                "automatic_payment_methods[allow_redirects]": "never", "confirm": "true"}
         form.update({f"metadata[{k}]": str(v) for k, v in metadata.items()})
         req = urllib.request.Request(STRIPE_API, data=urllib.parse.urlencode(form).encode(), method="POST",
                                      headers={"Authorization": f"Bearer {self._key}", "Idempotency-Key": idempotency_key})
@@ -59,7 +60,7 @@ class StripeTestCharger:
                 pi = json.loads(r.read())
         except urllib.error.HTTPError as e:
             err = json.loads(e.read() or b"{}").get("error", {})
-            raise RuntimeError(err.get("code") or err.get("type") or f"http_{e.code}") from None
+            raise RuntimeError(f"{err.get('code') or err.get('type') or f'http_{e.code}'}: {err.get('message', '')}") from None
         if pi.get("status") != "succeeded":
             raise RuntimeError(f"payment_intent_{pi.get('status')}")
         return {"id": pi["id"], "status": pi["status"]}
