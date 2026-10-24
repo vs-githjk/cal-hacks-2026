@@ -55,3 +55,27 @@ def test_listing_length_from_title_and_url():
     assert out["length_mm"] == 304 and out["source"].startswith("https://www.asus.com/")
     assert listing_length("https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti", "NVIDIA GeForce RTX 5070 Ti Overclocked Triple Fan 16GB")["length_mm"] is None
     assert listing_length("", "NVIDIA GeForce RTX 5070 Ti 16GB") == {"length_mm": None, "note": "model not identifiable from listing"}
+
+
+def test_demo_listings_has_one_row_per_url_latest_snapshot_wins(monkeypatch):  # #155
+    from data.fit_checker import gpu_lengths
+    from data.mirror import price_spread
+
+    def card(price, date):
+        return {"name": "ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", "price": price, "snapshot_date": date,
+                "attrs": {"chipset": "RTX 5070 Ti"}, "listing": {"url": "https://bestbuy.example/prime"}, "source": "x"}
+
+    monkeypatch.setattr(price_spread, "load", lambda: {"bestbuy": [card(1299.99, "2026-10-24T05:00:00Z"), card(1249.99, "2026-10-24T09:00:00Z")]})
+    monkeypatch.setattr(gpu_lengths, "_raw_listings", lambda: [])
+    mirror = [r for r in gpu_lengths.demo_listings() if r["origin"] == "MIRROR"]
+    assert len(mirror) == 1 and mirror[0]["price"] == 1249.99
+
+
+def test_the_report_has_no_duplicate_urls():
+    urls = [r["url"] for r in gpu_lengths_report() if r["origin"] == "MIRROR" and r.get("url")]
+    assert len(urls) == len(set(urls))
+
+
+def gpu_lengths_report():
+    from data.fit_checker.gpu_lengths import report
+    return report()
