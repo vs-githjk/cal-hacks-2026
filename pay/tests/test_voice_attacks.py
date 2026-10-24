@@ -47,8 +47,9 @@ def test_every_voice_attack_is_denied(case):
         d = s.silence(now)
     elif kind == "second_approval":
         assert s.approve(u, now=now).approved
+        first_id = m["approval_id"]
         d = s.approve(u, now=now + timedelta(seconds=1))
-        assert m["approval_id"] is not None
+        assert d.reason == "replay" and d.record is None and m["approval_id"] == first_id   # no second approval row
     else:
         d = s.approve(u, now=now, confidence=case["setup"].get("stt_confidence"))
     assert not d.approved, (case["id"], d.reason)
@@ -65,9 +66,16 @@ def test_real_call_phrasing_still_approves():
     assert s.approve(f"Okay. Uh, the... two words from my screen are '{a}'s {b}.' Approve.", now=T0 + timedelta(seconds=5)).approved
 
 
-@pytest.mark.parametrize("said", ["{code} approve 900", "{code} approve twelve hundred", "{code} approved, fifty bucks"])
+@pytest.mark.parametrize("said", ["{code} approve nine hundred dollars", "{code} approve twelve hundred", "{code} approved, fifty bucks"])
 def test_a_spoken_amount_denies(said):
     svc = ApprovalService(SECRET)
     s, code = svc.issue(make(), now=T0)
     d = s.approve(said.format(code=code), now=T0 + timedelta(seconds=5))
     assert not d.approved and d.reason == "no_code"
+
+
+@pytest.mark.parametrize("said", ["{code}, a hundred percent, approve", "{code} approve, I'm 100% sure", "approve, {code}, it's 12:30 now"])
+def test_numbers_that_are_not_amounts_still_approve(said):
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    assert s.approve(said.format(code=code), now=T0 + timedelta(seconds=5)).approved

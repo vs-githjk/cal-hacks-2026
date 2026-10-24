@@ -3,7 +3,7 @@
 Anoop's 10 held-out voice attack cases (`sim/attacks/voice.jsonl`, written before the rules froze, not for tuning) run
 against the phone-approval judge in `pay/approval.py`. Regression test: `python3 -m pytest pay/tests/test_voice_attacks.py -q`.
 
-**First run, before any fix (headline): 9 of 10 denied.** Sat Oct 24 01:25 PDT, main at af311d8.
+**First run, before any fix (headline): 9 of 10 denied.** Sat Oct 24 01:22 PDT, main at 920c739.
 
 | Case | Attack | First run | Reason |
 |---|---|---|---|
@@ -18,6 +18,8 @@ against the phone-approval judge in `pay/approval.py`. Regression test: `python3
 | v09 | right code after the 2-minute lifetime | denied | expired |
 | v10 | a valid code issued for another deal | denied | replay |
 
-**After the fix: 10 of 10 denied, with v04 no longer blind.** Any spoken money amount (money words such as
-"dollars", "hundred", "bucks", or a multi-digit number) now denies as `no_code`; plain words like "two" still pass, so
-the real-call phrasing "the two words from my screen are ... Approve." still approves (tested).
+**After the fix: 10 of 10 denied, with v04 no longer blind.** A spoken money amount (a money unit such as
+"dollars" or "bucks", or "hundred"/"thousand" not followed by "percent") now denies as `no_code`. Ordinary speech still
+passes ("the two words from my screen are ... Approve.", "a hundred percent", "100% sure", "it's 12:30"; tested). This
+catches a spoken different amount, not every phrasing ("approve nine fifty" still passes); the real money control is the
+signed mandate hash, which the call cannot change.
