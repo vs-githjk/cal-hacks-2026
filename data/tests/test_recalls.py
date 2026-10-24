@@ -64,3 +64,11 @@ def test_a_gaming_laptop_or_monitor_recall_does_not_match_a_graphics_card(tmp_pa
 def test_a_model_token_is_required_in_the_recall(tmp_path):
     generic = [{**SIM_GPU_RECALL[0], "Title": "ASUS Recalls Graphics Cards", "Products": [{"Name": "ASUS graphics card"}]}]
     assert recalls_for(TITLE, "ASUS", fetch=serve(generic), now=NOW, cache_dir=tmp_path)["status"] == "none"
+
+
+def test_an_empty_brand_is_unverified_and_never_calls_the_api(tmp_path):
+    def boom(url):
+        raise AssertionError("the API must not be called")
+    for brand in (None, "", "   "):
+        out = recalls_for(TITLE, brand, fetch=boom, now=NOW, cache_dir=tmp_path)
+        assert out["status"] == "unverified" and out["recalls"] == [] and out["source_url"] is None, repr(brand)

@@ -47,6 +47,10 @@ def _matches(item, brand, title):
 
 def recalls_for(product_title: str, brand: str, fetch=None, now=None, cache_dir=None) -> dict:
     now = now or datetime.now(timezone.utc)
+    if not isinstance(brand, str) or not brand.strip():  # nothing to search for: no API call, we do not know
+        return {"status": "unverified", "recalls": [], "checked_at": now.isoformat(timespec="seconds"), "source_url": None,
+                "reason": "no brand given, so no recall lookup was made"}
+    brand = brand.strip()
     cache_dir = Path(cache_dir) if cache_dir else CACHE
     url = API + quote(brand)
     out = {"status": "unverified", "recalls": [], "checked_at": now.isoformat(timespec="seconds"), "source_url": url}
