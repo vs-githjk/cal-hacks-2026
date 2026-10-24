@@ -1,0 +1,40 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "seller_id": {
+   "type": "string"
+  },
+  "deliveries": {
+   "type": "integer"
+  },
+  "rejects": {
+   "type": "integer"
+  },
+  "credits_requested": {
+   "type": "number"
+  },
+  "credits_captured": {
+   "type": "number"
+  },
+  "recalls_blocked": {
+   "type": "integer"
+  },
+  "on_time_rate": {
+   "type": "number"
+  },
+  "updated_at": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "seller_id",
+  "deliveries",
+  "rejects",
+  "credits_requested",
+  "credits_captured",
+  "recalls_blocked",
+  "on_time_rate",
+  "updated_at"
+ ]
+}

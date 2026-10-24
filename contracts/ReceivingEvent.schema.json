@@ -1,0 +1,69 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "order_id": {
+   "type": "string"
+  },
+  "sku_spec": {
+   "type": "string"
+  },
+  "photo_url": {
+   "type": "string"
+  },
+  "expected_spec_id": {
+   "type": "string"
+  },
+  "result": {
+   "type": "string",
+   "enum": [
+    "accepted",
+    "rejected"
+   ]
+  },
+  "reasons": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "credit_request_id": {
+   "type": "string"
+  },
+  "checked_by": {
+   "type": "string",
+   "enum": [
+    "photo_check",
+    "owner"
+   ]
+  },
+  "at": {
+   "type": "string"
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "order_id",
+  "sku_spec",
+  "photo_url",
+  "expected_spec_id",
+  "result",
+  "reasons",
+  "checked_by",
+  "at",
+  "source"
+ ]
+}

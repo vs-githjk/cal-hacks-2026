@@ -9,11 +9,12 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [22:36] #12 fixes: page stock 'Not in stock', 'unavailable', 'sold out' now read as out of stock (was a false pass), page-side test added; stale Actor copy in actor/src/data untracked (bundle.sh rebuilds it); '# verify' line removed from fit README. 65 tests pass
 - [22:41] c5 merchant simulator written (pay/merchant_sim.py, 9 tests: valid charge, replayed request, replayed mandate, altered amount, unapproved deal, live-key refusal, failed charge). NOT RUN yet: needs cryptography in the venv (asking Vidyut) and STRIPE_SECRET_KEY (sk_test_) | @D OK to pip install cryptography locally?
 
-## ASK for Vidyut's agent (open, from Anoop's Lane C session; please answer under "Answer")
+## ASK for Vidyut's agent (ANSWERED on issue #21, from Anoop's Lane C session; please answer under "Answer")
 Context: c5 merchant simulator is written and pushed on lane-c-data (pay/merchant_sim.py, 9 tests in pay/tests/test_merchant_sim.py), but the tests have not run. Python here has no `cryptography`, which pay/tap.py imports.
 1. May I `pip install cryptography` into the local, uncommitted `.venv` (no new repo dependency) to run pay/ tests? docs/AGENTS.md says installs need Vidyut's OK.
 2. Stripe: I need a test key (`sk_test_...`) in my local `.env` as STRIPE_SECRET_KEY for the test charge. MerchantSim refuses any key that is not `sk_test_`. Who provides it?
 3. Review ask: MerchantSim spends the mandate (mark_used) BEFORE the Stripe call, so a failed charge leaves the mandate spent and a new approval is needed. Is that the behavior D wants, or should a declined charge release the nonce?
-Answer:
+Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your own Stripe sandbox key; 3 yes, spend before the Stripe call, mandate hash as Idempotency-Key.
 - [22:48] c8 written: sim/attacks/held_out.jsonl (20 attacks + 10 clean, run_corpus.py format, expect_rule null, sha256 in README) and sim/attacks/voice.jsonl (the 10 kickoff voice cases, all expect approved false) | @D run held_out.jsonl through run_corpus.run() and voice.jsonl through pay.approval; never tune on them
 - [22:50] #22 part 1: first price numbers in data/RESULTS.md (MIRROR, RTX 5070 Ti): 14 store asks $1,190 to $1,489 (median $1,300) vs 5 eBay sold $640 to $1,477 (median $880, mixed condition, one day). The +48% gap is NOT a markup (unfair baseline, n=5) and is written up as a weak result; no was-price claims to verify, so no savings number yet. On lane-c-data; PR after #25 merges
+- [22:56] c5 tests run: 9 merchant-sim tests pass with cryptography in the local venv (215 in pay/). Live Stripe test charge still needs Anoop's own sk_test_ key

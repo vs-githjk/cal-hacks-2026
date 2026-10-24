@@ -17,10 +17,11 @@
      "sku_spec": {
       "type": "string"
      },
-     "grade": {
-      "type": "string"
+     "condition": {
+      "type": "string",
+      "enum": ["new", "open-box", "refurbished", "used"]
      },
-     "pack_size": {
+     "variant": {
       "type": "string"
      },
      "quantity": {
@@ -32,8 +33,8 @@
     },
     "required": [
      "sku_spec",
-     "grade",
-     "pack_size",
+     "condition",
+     "variant",
      "quantity",
      "unit"
     ]
