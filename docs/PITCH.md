@@ -10,7 +10,7 @@
 
 ## The five beats (stage order)
 
-1. Set a goal (ASI:One; ownership memory skips the part Tony already owns).
+1. Set a goal (ASI:One; ownership memory skips the part Tony Stark already owns).
 2. Sellers bid; the advocate vetoes a trap with a source (fit by code; origin badges on every bid).
 3. Shield blocks an injected listing live (a judge can try it in the "Hack the market" console).
 4. The two-way call approves above the allowance (word-pair code, amount read back, replay fails).
@@ -20,7 +20,7 @@ CRS, Hyphenate, Tiger Data and the IT fleet view are named adapters, not extra b
 
 ## The multiverse line (say it exactly)
 
-"This is one real order, Tony's. When many orders pool, this is what a seller sees. One or two bids here are real, the rest are labelled simulated." Never say "many buyers use it". The Lot Wall (Tony's gold REAL brick, the rest grey SIM, the price ladder, folded back to one brick) is a later item built from real lot rows once the core loop works; if it is not built, show the plain lot table.
+"This is one real order, Tony Stark's. When many orders pool, this is what a seller sees. One or two bids here are real, the rest are labelled simulated." Never say "many buyers use it". The Lot Wall (Tony Stark's gold REAL brick, the rest grey SIM, the price ladder, folded back to one brick) is a later item built from real lot rows once the core loop works; if it is not built, show the plain lot table.
 
 ## Sourced facts (only these)
 
