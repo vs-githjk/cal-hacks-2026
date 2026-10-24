@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T10:07:39+00:00",
+ "generated_at": "2026-10-24T11:15:16+00:00",
  "tiles": [
   {
    "detail": {
@@ -97,19 +97,19 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T10:07:39+00:00",
-    "to": "2026-10-24T10:07:39+00:00"
+    "from": "2026-10-24T11:15:16+00:00",
+    "to": "2026-10-24T11:15:16+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T10:07:39+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T11:15:16+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
     "checked": {
-     "n": 12,
-     "correct": 12,
-     "decided": 12
+     "n": 33,
+     "correct": 33,
+     "decided": 33
     },
     "all": {
      "n": 44,
@@ -125,8 +125,8 @@
    "status": "measured",
    "value": 1.0,
    "unit": "ratio",
-   "display": "12 of 12 right on maker-checked builds; 42 of 43 on all; 0 false OK (tuned set, not held out)",
-   "count": 12,
+   "display": "33 of 33 right on maker-checked builds; 42 of 43 on all; 0 false OK (tuned set, not held out)",
+   "count": 33,
    "date_range": {
     "from": "2026-10-24",
     "to": "2026-10-24"
@@ -139,7 +139,7 @@
    "detail": {
     "per_archetype": {
      "open_box_ok": {
-      "n": 18,
+      "n": 30,
       "learner": 0.0,
       "untrained": 0.0,
       "control": 0.0,
@@ -150,11 +150,11 @@
       "identical_across_seeds": true
      },
      "small_case": {
-      "n": 18,
-      "learner": 0.3333333333333333,
+      "n": 30,
+      "learner": 0.2,
       "untrained": 0.0,
       "control": 0.0,
-      "control_median": 0.6666666666666666,
+      "control_median": 0.8,
       "winners": [
        "gadget-grove",
        "median-market-pc"
@@ -162,11 +162,11 @@
       "identical_across_seeds": false
      },
      "sff_open_box": {
-      "n": 18,
-      "learner": 0.7777777777777778,
+      "n": 30,
+      "learner": 0.6333333333333333,
       "untrained": 0.0,
       "control": 0.0,
-      "control_median": 0.16666666666666666,
+      "control_median": 0.26666666666666666,
       "winners": [
        "gadget-grove",
        "median-market-pc",
@@ -175,7 +175,7 @@
       "identical_across_seeds": false
      },
      "new_only_tight": {
-      "n": 18,
+      "n": 30,
       "learner": 0.0,
       "untrained": 0.0,
       "control": 0.0,
@@ -189,7 +189,7 @@
     "winning_archetypes": [
      "sff_open_box"
     ],
-    "run_file": "wind_tunnel-2026-10-24-b48x3.json"
+    "run_file": "wind_tunnel-2026-10-24-b48x5.json"
    },
    "id": "learning_lift",
    "title": "Seller learning lift",
@@ -197,14 +197,14 @@
    "value": null,
    "unit": "points",
    "display": "No lift to quote (1 of 4 archetypes, not quotable): the learner beats the fair control on too few held-out buyer types",
-   "count": 72,
+   "count": 120,
    "date_range": {
-    "from": "2026-10-24T08:54:26+00:00",
-    "to": "2026-10-24T08:54:26+00:00"
+    "from": "2026-10-24T10:49:16+00:00",
+    "to": "2026-10-24T10:49:16+00:00"
    },
    "origin": "SIM",
-   "source_run": "python3 -m sim.wind_tunnel --builders 48 --seeds 3",
-   "note": "open_box_ok: learner 0.00, untrained 0.00, median control 0.00, lift vs median control +0.00; small_case: learner 0.33, untrained 0.00, median control 0.67, lift vs median control -0.33; sff_open_box: learner 0.78, untrained 0.00, median control 0.17, lift vs median control +0.61; new_only_tight: learner 0.00, untrained 0.00, median control 0.00, lift vs median control +0.00. A simulator we built, not the market. Negative or zero lift is shown, never hidden."
+   "source_run": "python3 -m sim.wind_tunnel --builders 48 --seeds 5",
+   "note": "open_box_ok: learner 0.00, untrained 0.00, median control 0.00, lift vs median control +0.00; small_case: learner 0.20, untrained 0.00, median control 0.80, lift vs median control -0.60; sff_open_box: learner 0.63, untrained 0.00, median control 0.27, lift vs median control +0.37; new_only_tight: learner 0.00, untrained 0.00, median control 0.00, lift vs median control +0.00. A simulator we built, not the market. Negative or zero lift is shown, never hidden."
   },
   {
    "detail": {

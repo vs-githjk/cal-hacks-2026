@@ -6,6 +6,9 @@ as {category: SpecCard attrs}, e.g. {"psu": {"wattage": 750}, "case": {"max_gpu_
 Fit is Lane C's checker (data.fit_checker), run once per bid on the bid's parts plus the owned parts.
 Fee fields are ignored: the advocate never sees a fee. Text rule: neutral wording ("did not match"), no en/em dashes.
 """
+import re
+from urllib.parse import urlsplit
+
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
 
@@ -54,7 +57,7 @@ def _warn(kind, text, url, dollars, rule_id=None):
     downgraded to a caution that says so; code-decided warnings fall back to the rule's own source."""
     if not url and kind in ("condition", "spec"):
         kind, text = "unsourced", text + " No listing link to cite, so this is a caution, not a veto."
-    url = url or CODE_SOURCES.get(kind) or CODE_SOURCES["unsourced"]
+    url = _safe_source_url(url) if url else CODE_SOURCES.get(kind) or CODE_SOURCES["unsourced"]
     return {"kind": kind, "rule_id": rule_id or f"advocate.{kind}",
             "text": text.replace("\u2014", ",").replace("\u2013", " to "),
             "source_url": url, "dollar_impact": round(float(dollars), 2)}
@@ -91,48 +94,68 @@ def _fit_warnings(bid, owned):
     url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""
     out = []
     if fails:
-        out.append(_warn("fit", f"Does not fit: {'; '.join(c['reason'] for c in fails)} (rule {fails[0]['rule_id']}).",
-                         url, bid["total_landed_price"], rule_id=fails[0]["rule_id"]))
+        rid = fails[0]["rule_id"]
+        summary = CALL_SUMMARIES.get(rid, CALL_SUMMARIES["fit"])
+        out.append(_warn("fit", f"Does not fit: {summary}.", url, bid["total_landed_price"], rule_id=rid))
     elif unsure:
-        out.append(_warn("fit_unknown", f"Fit not confirmed: {'; '.join(c['reason'] for c in unsure)}.", url, 0))
+        out.append(_warn("fit_unknown", f"Fit not confirmed: {CALL_SUMMARIES['advocate.fit_unknown']}.", url, 0))
     if fit["notes"]:
-        out.append(_warn("note", "; ".join(fit["notes"]) + ".", url, 0))
+        out.append(_warn("note", "The fit checker returned a non-blocking note.", url, 0))
     return out
+
+
+# #89: seller-supplied strings never reach card text. Conditions map to this closed set, item names come from the
+# buyer's own need, seller ids must match our pattern, and fit text comes from the rule templates.
+CONDITIONS = {"new", "open box", "refurbished", "used"}
+
+
+def _cond(value) -> str:
+    v = _norm(value)
+    return v if v in CONDITIONS else "an unrecognized condition"
+
+
+def _item(sku, wanted) -> str:
+    return sku if sku in (wanted or {}) else "this item"
+
+
+def _seller(supplier_id) -> str:
+    return f"Seller {supplier_id}" if re.fullmatch(r"seller_\d{1,3}", str(supplier_id)) else "This seller"
 
 
 def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
     out = _fit_warnings(bid, owned)
     for line in bid["lines"]:
-        sku = line["sku_spec"]
+        sku = _item(line["sku_spec"], wanted)
         total = line["unit_price"] * line["quantity"]
         url = line.get("listing_url", "")
 
         # an honest offer of a different condition than asked for: caution, not a veto
-        asked = _norm((wanted or {}).get(sku))
+        asked = _norm((wanted or {}).get(line["sku_spec"]))
         if asked and _norm(line.get("offered_condition")) not in ("", asked):
-            out.append(_warn("spec", f"You asked for {asked}; this offer is {_norm(line['offered_condition'])}.",
+            out.append(_warn("spec", f"You asked for {_cond(asked)}; this offer is {_cond(line['offered_condition'])}.",
                              url, 0))
 
         offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
         if offered and page and offered != page:
+            offered, page = _cond(offered), _cond(page)
             out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
                              "The condition claim did not match the listing.", url, total))
 
-        base = baseline.get(_norm(sku))
+        base = baseline.get(_norm(line["sku_spec"]))
         if base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
             over = (line["unit_price"] - base["unit_price"]) * line["quantity"]
             out.append(_warn("price", f"{sku} at ${line['unit_price']:.2f} is above the price history baseline "
                              f"of ${base['unit_price']:.2f}; the price claim did not match the price history "
                              f"by ${over:.2f}.", base["source_url"], over))
 
-        hit = next((r for r in recalls if r["match"] in _norm(sku)), None)
+        hit = next((r for r in recalls if r["match"] in _norm(line["sku_spec"])), None)
         if hit:
             out.append(_warn("recall", f"{sku} matches a CPSC recall entry ('{hit['match']}').",
                              hit["source_url"], total))
 
     rec = records.get(bid["supplier_id"])
     if rec and rec["record"] != "good":
-        out.append(_warn("record", f"Seller {bid['supplier_id']} has a '{rec['record']}' record.",
+        out.append(_warn("record", f"{_seller(bid['supplier_id'])} has a '{_norm(rec['record'])}' record.",
                          rec.get("source_url", ""), 0))
 
     if not bid.get("floor_check_passed", True):
@@ -151,8 +174,10 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
         rec = "veto" if kinds & VETO_KINDS else "caution" if kinds - INFO_KINDS else "buy"
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
         warnings = sorted(warnings, key=lambda w: -w["dollar_impact"])[:MAX_WARNINGS]
-        cards.append({"need_id": need["id"], "bid_id": bid["id"], "warnings": warnings,
-                      "recommendation": rec, "wait_until": "", "call_reason": reason})
+        # #89 closed output: recommendation, rule_id, reason (template only) and source_url at the top level
+        cards.append({"need_id": need["id"], "bid_id": bid["id"], "recommendation": rec,
+                      "rule_id": reason["rule_id"], "reason": reason["summary"], "source_url": reason["source_url"],
+                      "warnings": warnings, "wait_until": "", "call_reason": reason})
     return cards
 
 
@@ -164,10 +189,26 @@ def call_reason(warnings: list[dict], bid: dict) -> dict:
     if not ranked:
         url = bid["lines"][0].get("listing_url") if bid.get("lines") else None
         return {"rule_id": "advocate.ok", "summary": CALL_SUMMARIES["advocate.ok"],
-                "source_url": url or CODE_SOURCES["unsourced"]}
+                "source_url": _safe_source_url(url) if url else CODE_SOURCES["unsourced"]}
     w = ranked[0]
     rid = w["rule_id"] if w["rule_id"] in CALL_SUMMARIES else ("fit" if w["kind"] == "fit" else f"advocate.{w['kind']}")
-    return {"rule_id": rid, "summary": CALL_SUMMARIES[rid], "source_url": w["source_url"]}
+    return {"rule_id": rid, "summary": CALL_SUMMARIES[rid],
+            "source_url": _safe_source_url(w["source_url"])}
+
+
+def _safe_source_url(value: str) -> str:
+    """Keep valid public citation URLs unchanged; replace unsafe or malformed values."""
+    if not isinstance(value, str) or not value or any(char.isspace() for char in value):
+        return CODE_SOURCES["unsourced"]
+    try:
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return CODE_SOURCES["unsourced"]
+        parsed.port  # force malformed ports to fail closed
+    except (TypeError, ValueError):
+        return CODE_SOURCES["unsourced"]
+    return value
 
 
 def best_bid(bids: list[dict], cards: list[dict]):
