@@ -6,7 +6,7 @@ import { reducers, tables } from "@/module_bindings";
 import { OriginBadge } from "@/components/OriginBadge";
 import { fmtMoney, fmtTime, toDate } from "@/lib/stdb";
 
-// Demo persona (SIM). Real sign-in replaces this.
+// Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
 const DEMO_BUYER = "vidyut";
 
 const GOAL_TYPE: Record<string, string> = {
@@ -52,7 +52,7 @@ function PairScreen() {
     <section className="panel mx-auto max-w-md p-6">
       <h1 className="mb-2 text-lg font-semibold">Pair this screen with Vidyut</h1>
       <p className="mb-4 text-sm text-[var(--muted)]">
-        Vidyut is a demo persona (SIM). Enter the pairing code from the demo operator. Sellers can never pair.
+        Enter the pairing code from the demo operator. Sellers can never pair.
       </p>
       <form
         className="flex gap-2"
@@ -113,7 +113,7 @@ function BuyerScreen() {
       <section className="panel p-5">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Goal</h1>
-          <span className="text-xs text-[var(--muted)]">Buyer: Vidyut (demo persona)</span>
+          <span className="text-xs text-[var(--muted)]">Buyer: Vidyut</span>
         </div>
 
         {!goalsReady ? (

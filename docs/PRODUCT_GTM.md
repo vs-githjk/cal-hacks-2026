@@ -56,7 +56,7 @@ Two screens, same state: ASI:One on a phone and the builder view on a laptop, wi
 
 | Time | Screen | Beat |
 |---|---|---|
-| 0 to 10 s | ASI:One | Vidyut (a labelled demo persona) already owns a rig the agent remembers. Vidyut asks for a GPU that fits the case and PSU plus a 32 GB DDR5 kit, up to the allowance. "You already own a 750 W PSU, skip it" (memory entry cited). No chat window beyond the request. |
+| 0 to 10 s | ASI:One | Vidyut already owns a rig (the rig data is labelled SIM) the agent remembers. Vidyut asks for a GPU that fits the case and PSU plus a 32 GB DDR5 kit, up to the allowance. "You already own a 750 W PSU, skip it" (memory entry cited). No chat window beyond the request. |
 | 10 to 30 s | Builder view and floor | Sealed round opens to marketplace, used and SIM sellers. Bids reveal at the deadline. |
 | 30 to 55 s | Builder view | The cheapest bid is vetoed with sources (does not fit, or used sold as new, or a price far below the used baseline). A "was" price is flagged: "the price claim did not match the price history". Shield quarantines a planted payee swap. The optimizer split beats cheapest-per-line once shipping is counted (toggle shown once). |
 | 55 to 75 s | Phone | The deal is above the allowance, so the Cartesia agent calls, reads the parts, price, verdict and savings, and Vidyut says yes. The recorded answer appears, then the Stripe test charge on a Visa test card with the verified signature. A smaller deal inside the allowance auto-approves with a receipt. |
