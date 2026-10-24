@@ -1,0 +1,220 @@
+[
+ {
+  "id": "ebay_live:43e775a79322",
+  "category": "gpu",
+  "name": "PNY NVIDIA GeForce RTX\u2122 5070 Ti OC Triple Fan Graphics Card 16GB GDDR7 256-bit",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/407307072531?_skw=RTX+5070+Ti+new&epid=2355139091&hash=item5ed564b413:g:bR4AAeSwGflq2SHv",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/407307072531?_skw=RTX+5070+Ti+new&epid=2355139091&hash=item5ed564b413:g:bR4AAeSwGflq2SHv",
+   "price": 1299.0,
+   "shipping_type": "paid",
+   "shipping": "+$29.95 delivery",
+   "stock": "1 remaining",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:139c8ce5f833",
+  "category": "gpu",
+  "name": "ASUS ROG Strix RTX 5070 Ti OC 16GB GDDR7 GPU - Perfect Condition! Fast Shipping!",
+  "model_number": null,
+  "condition": "open-box",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1399.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/900035405699?_skw=RTX+5070+Ti+new&epid=13080533205&hash=itemd18e4a6783:g:1ygAAeSwsEpq24uL",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/900035405699?_skw=RTX+5070+Ti+new&epid=13080533205&hash=itemd18e4a6783:g:1ygAAeSwsEpq24uL",
+   "price": 1399.0,
+   "shipping_type": "free",
+   "shipping": "Free delivery",
+   "stock": "1 remaining",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 1399.0,
+   "availability": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:0c28d0f94b4a",
+  "category": "gpu",
+  "name": "Gigabyte GeForce RTX 5070 Ti OC 16GB GDDR7 Graphics Card GV-N507TGAMING OC-16GD",
+  "model_number": null,
+  "condition": "open-box",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/800825824742?_skw=RTX+5070+Ti+new&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/800825824742?_skw=RTX+5070+Ti+new&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+   "price": 1239.99,
+   "shipping_type": "free",
+   "shipping": "Free delivery",
+   "stock": "3 remaining",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 1239.99,
+   "availability": "3 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:d9f096c5c3ae",
+  "category": "gpu",
+  "name": "MSI Gaming Trio OC GeForce RTX 5070 Ti 16GB RAM - Graphics Card - NEW & SEALED!!",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/298743442526?_skw=RTX+5070+Ti+new&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/298743442526?_skw=RTX+5070+Ti+new&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
+   "price": 1399.99,
+   "shipping_type": "free",
+   "shipping": "Free delivery",
+   "stock": "1 remaining",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 1399.99,
+   "availability": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:135a0340dda9",
+  "category": "gpu",
+  "name": "MSI Gaming GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 Video Card RTX 5070 Ti",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1036.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/298319235887?_skw=RTX+5070+Ti+new&epid=14075342780&hash=item4575364b2f:g:bOUAAeSwur5qBpOU",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/298319235887?_skw=RTX+5070+Ti+new&epid=14075342780&hash=item4575364b2f:g:bOUAAeSwur5qBpOU",
+   "price": 1036.99,
+   "was_price": 1042.49,
+   "shipping_type": "paid",
+   "shipping": "+$12.99 delivery",
+   "stock": "1 remaining",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:aed8a42ea153",
+  "category": "gpu",
+  "name": "PNY NVIDIA GeForce RTX 5070 Ti OC Triple Fan Graphics Card 16GB GDDR7 GPU - Exce",
+  "model_number": null,
+  "condition": "used",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1329.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/327385020083?_skw=RTX+5070+Ti+new&hash=item4c39aaf6b3:g:QsEAAeSwmh9qv-tE",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/327385020083?_skw=RTX+5070+Ti+new&hash=item4c39aaf6b3:g:QsEAAeSwmh9qv-tE",
+   "price": 1329.99,
+   "was_price": 1399.99,
+   "shipping_type": "paid",
+   "shipping": "+$19.99 delivery",
+   "stock": "1 remaining",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:b8cb92464501",
+  "category": "gpu",
+  "name": "GIGABYTE Windforce OC GeForce RTX 5070 Ti 16GB - Graphics Card - NEW & SEALED!!",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1349.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/940033801385?_skw=RTX+5070+Ti+new&hash=itemdade617ca9:g:TCYAAeSwfahq2lph",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/940033801385?_skw=RTX+5070+Ti+new&hash=itemdade617ca9:g:TCYAAeSwfahq2lph",
+   "price": 1349.99,
+   "shipping_type": "free",
+   "shipping": "Free delivery",
+   "stock": "1 remaining",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 1349.99,
+   "availability": "1 remaining"
+  }
+ },
+ {
+  "id": "ebay_live:573b2a0908e5",
+  "category": "gpu",
+  "name": "TUF-RTX5070TI-O16G ASUS NVIDIA GeForce RTX 5070 TUF Gaming OC 16GB GDDR7 GPU",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1449.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/327392082384?_skw=RTX+5070+Ti+new&hash=item4c3a16b9d0:g:fq4AAeSwLDZqxVT-",
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "snapshot_date": "2026-10-24T12:17:26+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/327392082384?_skw=RTX+5070+Ti+new&hash=item4c3a16b9d0:g:fq4AAeSwLDZqxVT-",
+   "price": 1449.0,
+   "shipping_type": "free",
+   "shipping": "Free delivery",
+   "stock": "1 remaining",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 1449.0,
+   "availability": "1 remaining"
+  }
+ }
+]
