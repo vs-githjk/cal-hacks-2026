@@ -7,7 +7,7 @@ TRUSTED_PROVENANCE = {"registry", "mirror", "bound_state"}
 MARKETPLACE_DOMAINS = {
     "amazon.com", "ebay.com", "bestbuy.com", "newegg.com", "microcenter.com", "bhphotovideo.com",
 }
-IGNORED_DOMAINS = {"example.com", "github.com", "cpsc.gov"}
+IGNORED_DOMAINS = {"example.com", "github.com", "cpsc.gov", "test", "invalid", "example", "localhost"}
 IDENTITY_URL_FIELDS = ("listing_urls", "evidence_urls")
 REASON = {
     "rule_id": "advocate.same_seller",
@@ -16,16 +16,21 @@ REASON = {
 }
 
 
-def _stable_value(value):
-    return value.strip().lower() if isinstance(value, str) and value.strip() else None
+def _stable_value(field, value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    value = value.strip()
+    return value if field == "payee" else value.casefold()
 
 
 def _merchant_host(value):
-    if not isinstance(value, str):
+    if not isinstance(value, str) or any(ord(char) < 32 or ord(char) == 127 for char in value):
         return None
     try:
         parsed = urlsplit(value.strip())
         if parsed.scheme.lower() not in ("http", "https") or not parsed.hostname:
+            return None
+        if parsed.username is not None or parsed.password is not None or parsed.netloc.endswith(":"):
             return None
         _ = parsed.port
         host = parsed.hostname.lower()
@@ -34,8 +39,6 @@ def _merchant_host(value):
         if host.endswith("."):
             return None
     except ValueError:
-        return None
-    if not host or host == "test" or host.endswith(".test"):
         return None
     if any(host == domain or host.endswith(f".{domain}")
            for domain in MARKETPLACE_DOMAINS | IGNORED_DOMAINS):
@@ -86,7 +89,7 @@ def exclude_same_seller(candidates, trusted_identity_by_seller):
         if not isinstance(provenance, str) or provenance not in TRUSTED_PROVENANCE:
             continue
         for field in ("payee", "owner"):
-            value = _stable_value(identity.get(field))
+            value = _stable_value(field, identity.get(field))
             if value:
                 by_identity[(field, value)].append(seller_id)
         for field in IDENTITY_URL_FIELDS:

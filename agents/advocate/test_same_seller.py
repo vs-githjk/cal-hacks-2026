@@ -15,7 +15,7 @@ def test_shared_trusted_payee_excludes_later_seller_and_keeps_best_first():
 
     kept, exclusions = exclude_same_seller(
         [best, later],
-        {"seller-a": trusted(payee="Payee@Example.test"),
+        {"seller-a": trusted(payee="payee@example.test"),
          "seller-b": trusted("bound_state", payee="payee@example.test")},
     )
 
@@ -45,6 +45,19 @@ def test_shared_trusted_owner_groups_sellers():
     assert [(e["kept_seller_id"], e["excluded_seller_id"]) for e in exclusions] == [("seller-a", "seller-b")]
 
 
+def test_case_sensitive_payee_ids_remain_distinct():
+    best = candidate("seller-a")
+    later = candidate("seller-b")
+
+    kept, exclusions = exclude_same_seller([best, later], {
+        "seller-a": trusted(payee="acct_Ab"),
+        "seller-b": trusted(payee="acct_aB"),
+    })
+
+    assert kept == [best, later]
+    assert exclusions == []
+
+
 def test_untrusted_seller_claims_and_marketplace_hosts_do_not_group_sellers():
     bids = [candidate("ebay-seller-a", source_url="https://www.ebay.com/itm/1",
                       competitor_owner="Same Corporation"),
@@ -66,8 +79,8 @@ def test_lookalike_marketplace_host_is_eligible_and_exact_host_groups():
     later = candidate("seller-b")
 
     kept, exclusions = exclude_same_seller([best, later], {
-        "seller-a": trusted(listing_urls=["https://shop.ebay.com.evil.example/item"]),
-        "seller-b": trusted(evidence_urls=["http://SHOP.EBAY.COM.EVIL.EXAMPLE./listing/2"]),
+        "seller-a": trusted(listing_urls=["https://shop.ebay.com.evil/item"]),
+        "seller-b": trusted(evidence_urls=["http://SHOP.EBAY.COM.EVIL./listing/2"]),
     })
 
     assert kept == [best]
@@ -75,16 +88,27 @@ def test_lookalike_marketplace_host_is_eligible_and_exact_host_groups():
 
 
 def test_placeholders_reserved_hosts_and_code_owned_sources_are_ignored():
-    candidates = [candidate(seller_id) for seller_id in (
-        "example", "test", "github", "cpsc", "example-subdomain", "test-subdomain")]
-    identities = {
-        "example": trusted(listing_urls=["https://example.com/listing/1"]),
-        "test": trusted(listing_urls=["https://store.example.test/item"]),
-        "github": trusted(listing_urls=["https://github.com/vs-githjk/cal-hacks-2026/blob/main/x"]),
-        "cpsc": trusted(listing_urls=["https://www.cpsc.gov/Recalls/1"]),
-        "example-subdomain": trusted(listing_urls=["https://shop.example.com/listing/2"]),
-        "test-subdomain": trusted(listing_urls=["https://example.test/offer"]),
-    }
+    ignored_url_pairs = (
+        ("https://example.com/one", "https://example.com/two"),
+        ("https://shop.example.com/one", "https://shop.example.com/two"),
+        ("https://merchant.test/one", "https://merchant.test/two"),
+        ("https://shop.merchant.test/one", "https://shop.merchant.test/two"),
+        ("https://github.com/org/repo", "https://github.com/other/repo"),
+        ("https://gist.github.com/user/id", "https://gist.github.com/other/id"),
+        ("https://www.cpsc.gov/Recalls/1", "https://www.cpsc.gov/Recalls/2"),
+        ("https://merchant.invalid/one", "https://merchant.invalid/two"),
+        ("https://shop.merchant.invalid/one", "https://shop.merchant.invalid/two"),
+        ("https://merchant.example/one", "https://merchant.example/two"),
+        ("https://shop.merchant.example/one", "https://shop.merchant.example/two"),
+        ("http://localhost/one", "http://localhost/two"),
+        ("http://api.localhost/one", "http://api.localhost/two"),
+    )
+    candidates, identities = [], {}
+    for index, (left_url, right_url) in enumerate(ignored_url_pairs):
+        left, right = f"seller-{index}-a", f"seller-{index}-b"
+        candidates.extend([candidate(left), candidate(right)])
+        identities[left] = trusted(listing_urls=[left_url])
+        identities[right] = trusted(evidence_urls=[right_url])
 
     kept, exclusions = exclude_same_seller(candidates, identities)
 
@@ -176,6 +200,23 @@ def test_malformed_url_ports_are_ignored():
 
     assert kept == [best, later]
     assert exclusions == []
+
+
+def test_control_characters_userinfo_and_empty_ports_are_ignored():
+    invalid_urls = (
+        "https://merchant.example.org/item\r\n",
+        "https://user@merchant.example.org/item",
+        "https://merchant.example.org:/item",
+    )
+    for index, invalid_url in enumerate(invalid_urls):
+        best, later = candidate(f"seller-{index}-a"), candidate(f"seller-{index}-b")
+        kept, exclusions = exclude_same_seller([best, later], {
+            best["supplier_id"]: trusted(listing_urls=[invalid_url]),
+            later["supplier_id"]: trusted(evidence_urls=["https://merchant.example.org/item"]),
+        })
+
+        assert kept == [best, later]
+        assert exclusions == []
 
 
 def test_candidate_source_citation_is_not_merchant_ownership_evidence():
