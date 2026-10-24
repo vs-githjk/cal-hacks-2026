@@ -74,9 +74,11 @@ def test_a_claim_with_no_id_does_not_match_a_row_naming_another_claim():
     assert out["result"] == "unverified"
 
 
-def test_a_lone_row_with_no_id_is_used():
-    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{"result": "false", "evidence_hash": "ab"}])[0])
-    assert out["result"] == "false"
+@pytest.mark.parametrize("row", [{"result": "verified", "evidence_url": "https://ex.com/p", "evidence_hash": "abc"},
+                                 {"id": None, "result": "verified", "evidence_url": "https://ex.com/p", "evidence_hash": "abc"}])
+def test_a_lone_row_with_no_id_is_not_ours(row):  # #245 item 1
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[row])[0])
+    assert out["result"] == "unverified" and out["method"].startswith(f"{UNAVAILABLE}: empty")
 
 
 @pytest.mark.parametrize("result", ["verified", "false"])
@@ -108,3 +110,52 @@ def test_a_sub_second_bound_is_not_sent_as_zero():
     post, calls = fake(status=201, rows=[])
     check_via_actor(CLAIM, post=post, timeout=0.5)
     assert calls[0][0].endswith("?timeout=1") and calls[0][2] == 0.5
+
+
+# review fixes (#245)
+OK = {**CLAIM, "result": "verified", "evidence_url": "https://www.bestbuy.com/site/x", "evidence_hash": "abc"}
+
+
+def test_a_well_formed_row_still_passes_through():
+    assert check_via_actor(CLAIM, post=fake(status=201, rows=[OK])[0])["result"] == "verified"
+
+
+@pytest.mark.parametrize("h", ["   ", 123, True, ["x"], {"a": 1}])
+def test_a_hash_that_is_not_a_real_string_is_unverified(h):
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{**OK, "evidence_hash": h}])[0])
+    assert out["result"] == "unverified"
+
+
+@pytest.mark.parametrize("url", ["http://[bad", "http://", "https:///path", None])
+def test_a_malformed_or_hostless_url_is_unverified_and_nothing_raises(url):
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{**OK, "evidence_url": url}])[0])
+    assert out["result"] == "unverified"
+
+
+def test_a_row_without_its_own_url_does_not_borrow_the_claims():  # #245 item 6
+    row = {k: v for k, v in OK.items() if k != "evidence_url"}
+    assert check_via_actor(CLAIM, post=fake(status=201, rows=[row])[0])["result"] == "unverified"
+
+
+class Exploding(dict):
+    def get(self, *a, **k):
+        raise KeyError("boom")
+
+
+def test_a_row_that_raises_while_read_is_unverified():
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[Exploding(OK)])[0])
+    assert out["result"] == "unverified" and out["method"] == f"{UNAVAILABLE}: error"
+
+
+def test_a_missing_claim_never_raises():
+    assert check_via_actor(None, post=fake(status=201, rows=[OK])[0])["result"] == "unverified"
+
+
+def test_rows_for_one_claim_that_disagree_are_unverified():
+    rows = [OK, {**OK, "result": "false"}]
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=rows)[0])
+    assert out["result"] == "unverified" and "disagree" in out["method"]
+
+
+def test_identical_duplicate_rows_are_fine():
+    assert check_via_actor(CLAIM, post=fake(status=201, rows=[OK, dict(OK)])[0])["result"] == "verified"

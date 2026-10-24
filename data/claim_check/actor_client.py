@@ -46,12 +46,14 @@ def _http_post(url, body, headers, timeout):
 
 
 def _unavailable(claim, case, detail=""):
-    return {"result": "unverified", "evidence_url": claim.get("evidence_url") or "",
+    url = claim.get("evidence_url")
+    return {"result": "unverified", "evidence_url": url if isinstance(url, str) else "",
             "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "method": f"{UNAVAILABLE}: {case}" + (f" ({detail})" if detail else ""), "evidence_hash": "", "reason": UNAVAILABLE}
 
 
 def check_via_actor(claim: dict, post=None, timeout: float = TIMEOUT) -> dict:
+    claim = claim if isinstance(claim, dict) else {}
     post = post or _http_post
     token = os.environ.get("APIFY_TOKEN", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -75,19 +77,41 @@ def check_via_actor(claim: dict, post=None, timeout: float = TIMEOUT) -> dict:
         return _unavailable(claim, "error", f"HTTP {status}")
     if not isinstance(rows, list):
         return _unavailable(claim, "error", "unreadable body")
+    try:  # reading rows never raises: anything unexpected is unverified
+        return _read(claim, rows)
+    except Exception:
+        return _unavailable(claim, "error")
+
+
+def _http_url(url) -> bool:
+    if not isinstance(url, str):
+        return False
+    try:
+        u = urlparse(url)
+    except ValueError:
+        return False
+    return u.scheme in ("http", "https") and bool(u.netloc)
+
+
+def _read(claim: dict, rows: list) -> dict:
+    """Only rows naming this claim's id count. Rows that disagree, or a verdict without its own http(s) page and page hash,
+    are unverified."""
     cid = claim.get("id")
-    row = next((r for r in rows if isinstance(r, dict) and cid is not None and r.get("id") == cid), None)
-    if row is None and len(rows) == 1 and isinstance(rows[0], dict) and rows[0].get("id") in (None, cid):  # a lone row naming another claim is not ours
-        row = rows[0]
-    if not isinstance(row, dict):
+    mine = [r for r in rows if isinstance(r, dict) and cid is not None and r.get("id") == cid]
+    if not mine:
         return _unavailable(claim, "empty", "no row for this claim")
+    if len({str(r.get("result")) for r in mine}) > 1:
+        return _unavailable(claim, "error", "rows for this claim disagree")
+    row = mine[0]
     if row.get("result") not in RESULTS:
         return _unavailable(claim, "error", "row has no valid result")
-    url = row.get("evidence_url") or claim.get("evidence_url") or ""
-    if not isinstance(url, str) or urlparse(url).scheme not in ("http", "https"):  # same rule as check_claim
-        return _unavailable(claim, "error", "evidence url is not http or https")
-    if row["result"] != "unverified" and not row.get("evidence_hash"):  # verified or false always comes with the page hash
+    if row["result"] == "unverified":
+        return {**_unavailable(claim, "empty"), "method": str(row.get("method") or "apify actor"), "reason": str(row.get("reason") or "could not verify")}
+    url, h = row.get("evidence_url"), row.get("evidence_hash")
+    if not _http_url(url):  # the row's own page, so the hash is tied to the page that was read (same rule as check_claim)
+        return _unavailable(claim, "error", "evidence url is not an http or https page")
+    if not (isinstance(h, str) and h.strip()):  # verified or false always comes with the page hash
         return _unavailable(claim, "error", "verdict without a page hash")
     return {"result": row["result"], "evidence_url": url,
-            "checked_at": row.get("checked_at") or datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "method": row.get("method") or "apify actor", "evidence_hash": row.get("evidence_hash") or "", "reason": row.get("reason") or ""}
+            "checked_at": str(row.get("checked_at") or datetime.now(timezone.utc).isoformat(timespec="seconds")),
+            "method": str(row.get("method") or "apify actor"), "evidence_hash": h.strip(), "reason": str(row.get("reason") or "")}
