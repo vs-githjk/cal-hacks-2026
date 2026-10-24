@@ -14,12 +14,14 @@ import re
 import sqlite3
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, Overflow
 from typing import Optional
 
 NS_MANDATE = "mandate"
 NS_TAP = "tap"
 RETIRED_BEFORE_SUBMISSION = "retired_before_submission"
+_GOAL_CALL_WINDOW = timedelta(minutes=30)
 
 
 def _retirement_request_matches(request_body: bytes, *, mandate_hash: str, deal_id: str,
@@ -110,6 +112,51 @@ class NonceStore:
             self._db.execute("SELECT COUNT(*) FROM used_nonce").fetchone()
         except sqlite3.DatabaseError as e:
             raise ValueError(f"nonce store file is corrupt: {path}") from e
+
+    def claim_goal_call(self, buyer_id: str, goal_id: str, mandate_hash: str,
+                        now: datetime) -> bool:
+        """Claim one durable 30-minute voice-call slot for a buyer's parent goal."""
+        if (not isinstance(buyer_id, str) or not buyer_id
+                or not isinstance(goal_id, str) or not goal_id
+                or not isinstance(mandate_hash, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", mandate_hash)
+                or not isinstance(now, datetime) or now.tzinfo is None):
+            return False
+        try:
+            if now.utcoffset() != timedelta(0):
+                return False
+            now_ts = now.astimezone(timezone.utc).timestamp()
+        except (OverflowError, OSError, ValueError):
+            return False
+        try:
+            purpose = hashlib.sha256(json.dumps([buyer_id, goal_id], ensure_ascii=False,
+                                               separators=(",", ":")).encode("utf-8")).hexdigest()
+        except (UnicodeEncodeError, ValueError):
+            return False
+        namespace = "goal_call:" + purpose
+        with self._lock:
+            try:
+                self._db.execute("BEGIN IMMEDIATE")
+                row = self._db.execute(
+                    "SELECT MAX(used_at) FROM used_nonce WHERE namespace=?", (namespace,)
+                ).fetchone()
+                latest = row[0] if row else None
+                if latest is not None and now_ts - latest < _GOAL_CALL_WINDOW.total_seconds():
+                    self._db.commit()
+                    return False
+                self._db.execute("INSERT INTO used_nonce (namespace, nonce, used_at) VALUES (?, ?, ?)",
+                                 (namespace, mandate_hash, now_ts))
+                self._db.commit()
+                return True
+            except sqlite3.IntegrityError:
+                self._db.rollback()
+                return False
+            except Exception:
+                try:
+                    self._db.rollback()
+                except sqlite3.Error:
+                    pass
+                return False
 
     def seen(self, namespace: str, nonce: str) -> bool:
         with self._lock:
