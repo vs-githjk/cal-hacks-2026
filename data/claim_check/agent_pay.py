@@ -61,9 +61,10 @@ RUNBOOK FOR ANOOP (#347, from the repo root)
        full or not UTF-8), move the APIFY_AGENT_TOKEN line from that file into .env, delete the file, then rerun with
        --token-from-env.
    NOT LIVE: paid, but the token could not be saved anywhere
-       Money is spent and neither .env nor the fallback file could hold the token; its last 4 characters are
-       printed. Do not pay again: copy it now from the payer output above into .env as APIFY_AGENT_TOKEN, then
-       rerun with --token-from-env. If it is gone, keep the receipt and the tx hash and ask Apify.
+       Money is spent, and neither .env nor the fallback file could hold the token. The token could not be saved,
+       and it is not shown on screen (the payer output is captured, never printed). Do NOT pay again. Keep the
+       receipt and the tx hash (with its basescan link), check the npx awal history (npx awal show) for the
+       payment, and ask Apify support with the tx hash.
    NOT LIVE: payment may have happened, no token returned (payer exit <code>)
    NOT LIVE: payment may have happened, the payer CLI timed out
    NOT LIVE: payment may have happened, the payer CLI failed (<error>)
@@ -296,11 +297,11 @@ def keep_token(env_file: Path, token: str, receipt: dict, receipt_file: Path, ou
         where = save_token(env_file, token)
     except TokenNotSaved as e:
         receipt["token_file"] = "none: the token could not be saved"
-        out(f"The token ends in {token[-4:]}. Copy it now from the payer output above.")  # printed only, never in the receipt
         fail_with_receipt(receipt, receipt_file, out, TOKEN_NOT_SAVED,
                           f"{paid_note}Paid, but the token could not be saved: {env_file.name} failed ({e}) and so did the "
-                          f"fallback file. Copy the token now from the payer output above and "
-                          f"put it in .env as APIFY_AGENT_TOKEN, then rerun with --token-from-env. Do not pay again.",
+                          f"fallback file. The token is not shown on screen. Do NOT pay again. Keep this receipt and the tx "
+                          f"hash (with its basescan link), check the npx awal history (npx awal show) for the payment, and "
+                          f"ask Apify support with the tx hash.",
                           safe_secret_values(env_file) | {token})
     if where is None:
         return

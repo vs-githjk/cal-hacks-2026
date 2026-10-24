@@ -266,7 +266,7 @@ def test_help_is_the_paid_run_runbook_and_spends_nothing(capsys, monkeypatch):
         "NOT LIVE: paid, but the Actor run did not succeed": "--token-from-env",
         "NOT LIVE: paid, but the run request failed": "check the Apify console",
         "NOT LIVE: paid, but .env could not be written (token in a fallback file)": "--token-from-env",
-        "NOT LIVE: paid, but the token could not be saved anywhere": "copy it now from the payer output above",
+        "NOT LIVE: paid, but the token could not be saved anywhere": "ask Apify support with the tx hash",
         "NOT LIVE: payment may have happened, no token returned": "check the wallet and .env",
         "NOT LIVE: payment may have happened, the payer CLI timed out": "check the wallet and .env",
         "NOT LIVE: payment may have happened, the payer CLI failed": "check the wallet and .env",
@@ -426,22 +426,26 @@ def test_a_token_that_cannot_go_in_env_goes_to_a_600_fallback_file_with_a_not_li
     assert ignored.returncode == 0, "the fallback file name must be gitignored"
 
 
-def test_when_the_fallback_also_fails_it_prints_the_last_4_and_still_writes_the_receipt(tmp_path, monkeypatch):
+def test_when_the_fallback_also_fails_it_says_the_token_is_lost_and_still_writes_the_receipt(tmp_path, monkeypatch):
     _make_env(tmp_path, monkeypatch, "directory")
     _refuse(monkeypatch, lambda p: OSError(28, "No space left on device") if p.name.startswith(pay_mod.FALLBACK_PREFIX) else None)
     send, calls = fake_apify()
     printed = []
-    with pytest.raises(SystemExit, match="Do not pay again"):
-        pay_mod.run(args(), send=send, sh=lambda cmd: (0, json.dumps({"token": TOKEN})), ask=lambda p: "PAY",
+    with pytest.raises(SystemExit, match="Do NOT pay again"):
+        pay_mod.run(args(), send=send, sh=lambda cmd: (0, json.dumps({"token": TOKEN, "txHash": TX})), ask=lambda p: "PAY",
                     sleep=lambda s: None, out=printed.append, env_file=tmp_path / ".env",
                     receipt_file=tmp_path / "agent_pay_run.json", live=True)
     assert _fallbacks(tmp_path) == []
     rec = receipt_of(tmp_path)
-    assert rec["label"] == pay_mod.TOKEN_NOT_SAVED and "--token-from-env" in rec["error"]
+    assert rec["label"] == pay_mod.TOKEN_NOT_SAVED and rec["tx_hash"] == TX and rec["tx_explorer"] == pay_mod.BASESCAN + TX
     raw = (tmp_path / "agent_pay_run.json").read_text()
     assert TOKEN not in raw and "1234" not in raw
     text = "\n".join(printed)
-    assert TOKEN not in text and "ends in 1234" in text and "Copy it now from the payer output above" in text
+    assert TOKEN not in text and "1234" not in text and "above" not in text.lower()  # the token is never on screen
+    for words in ("not shown on screen", "Do NOT pay again", "tx hash (with its basescan link)", "npx awal",
+                  "ask Apify support with the tx hash"):
+        assert words in text and words in rec["error"], words
+    assert "above" not in pay_mod.__doc__
     assert calls == []
 
 
