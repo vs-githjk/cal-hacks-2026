@@ -2,6 +2,7 @@
 // Small shared pieces. Every color comes from tokens.css; no literal colors here.
 import type { ReactNode } from "react";
 import { formatMoney } from "@/lib/money";
+import { safeUrl } from "@/lib/url";
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 
@@ -85,6 +86,7 @@ export function Code({ children }: { children: ReactNode }) {
 /** Source link: always visible, always the real host. */
 export function SourceLink({ href, children }: { href: string; children?: ReactNode }) {
   const text = children ?? href.replace(/^https?:\/\//, "").slice(0, 60);
+  if (!safeUrl(href)) return <span className="break-all text-[13px] text-muted">{text || "no source"}</span>;
   return (
     <a href={href} target="_blank" rel="noreferrer" className="break-all border-b border-current text-[13px] text-sky no-underline">
       {text}

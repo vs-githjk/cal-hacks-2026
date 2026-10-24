@@ -106,6 +106,17 @@ describe('sealed round', () => {
     expect(h.db.round.id.find('round-1')?.sealedCount).toBe(2);
   });
 
+  it('#135 refuses a source that starts like a URL but is not one ("https://"), and keeps real URLs and plain labels', () => {
+    setupRound();
+    for (const bad of ['https://', 'http://', 'https:// x.example']) {
+      expect(() => run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-bad', [line(780)]), source: bad }))).toThrow(/source/);
+    }
+    expect(h.db.bid.id.find('bid-bad')).toBeFalsy();
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-url', [line(780)]), source: 'https://example.com/listing?id=1' }));
+    run(B, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-label', [line(760)]), source: 'sim:fixture' }));
+    expect(h.db.round.id.find('round-1')?.sealedCount).toBe(2);
+  });
+
   it('refuses a line whose SKU the need does not have, stores no bid, and the seller can still bid', () => {
     setupRound();
     expect(() => run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780), { ...line(10), skuSpec: 'junk' }])))).toThrow('bid refused: junk: not part of this need');
@@ -749,19 +760,29 @@ describe('pair code attempt limit', () => {
   });
   const wrong = () => (code === '111111' ? '222222' : '111111');
 
-  it('5 wrong attempts lock the code; the caller sees its own failure count', () => {
+  it('5 wrong attempts lock that identity, not the code; the caller sees its own failure count', () => {
     const first = as('first-screen');
     tryPair(first, wrong());
     expect(m.myPairAttemptsView(h.viewContext(first) as any)[0]!.failures).toBe(1);
-    for (let i = 0; i < 4; i++) expect(tryPair(as(`screen-${i}`), wrong())).toMatchObject({ paired: false });
-    expect(h.db.pairCode.buyerId.find('vidyut')!.locked).toBe(true);
+    for (let i = 0; i < 4; i++) expect(tryPair(first, wrong())).toMatchObject({ paired: false });
+    expect(() => tryPair(first, code)).toThrow(/locked/);
+    expect(m.myRoleView(h.viewContext(first) as any)).toHaveLength(0);
+    expect(h.db.pairCode.buyerId.find('vidyut')).toMatchObject({ locked: false, failedAttempts: 5 });
   });
 
-  it('the correct code after the lock still fails', () => {
-    for (let i = 0; i < 5; i++) tryPair(as(`screen-${i}`), wrong());
-    const late = as('late-screen');
-    expect(() => tryPair(late, code)).toThrow(/locked/);
-    expect(m.myRoleView(h.viewContext(late) as any)).toHaveLength(0);
+  it('#135 one identity cannot burn other identities tries: a stranger with 5 misses leaves the owner screen free to pair', () => {
+    const stranger = as('stranger-screen');
+    for (let i = 0; i < 5; i++) tryPair(stranger, wrong());
+    for (let i = 0; i < 4; i++) tryPair(as(`other-${i}`), wrong());
+    const owner = as('stage-screen');
+    expect(m.myPairAttemptsView(h.viewContext(owner) as any)).toHaveLength(0);
+    expect(tryPair(owner, code)).toMatchObject({ paired: true });
+    expect(m.myRoleView(h.viewContext(owner) as any)[0]).toMatchObject({ role: 'buyer', subjectId: 'vidyut' });
+  });
+
+  it('#135 failures still count per code across identities, for the operator', () => {
+    for (let i = 0; i < 3; i++) tryPair(as(`screen-${i}`), wrong());
+    expect(h.db.pairCode.buyerId.find('vidyut')!.failedAttempts).toBe(3);
   });
 
   it('one caller is stopped after 5 failures even across different codes', () => {
@@ -775,7 +796,7 @@ describe('pair code attempt limit', () => {
   });
 
   it('the operator can reissue a fresh code that works', () => {
-    for (let i = 0; i < 5; i++) tryPair(as(`screen-${i}`), wrong());
+    for (let i = 0; i < 5; i++) tryPair(as('screen-0'), wrong());
     run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }));
     const row = h.db.pairCode.buyerId.find('vidyut')!;
     expect(row).toMatchObject({ locked: false, failedAttempts: 0 });
@@ -804,9 +825,10 @@ describe('pair code attempt limit', () => {
   });
 
   it('the code never appears in an error, a floor event or a notification', () => {
-    for (let i = 0; i < 5; i++) tryPair(as(`screen-${i}`), wrong());
+    const x = as('x');
+    for (let i = 0; i < 5; i++) tryPair(x, wrong());
     let msg = '';
-    try { tryPair(as('x'), code); } catch (e) { msg = String(e); }
+    try { tryPair(x, code); } catch (e) { msg = String(e); }
     expect(msg).not.toContain(code);
     const text = JSON.stringify([...h.db.floorEvent.iter()].map((e) => e.label)) + JSON.stringify([...h.db.notification.iter()].map((n) => n.text));
     expect(text).not.toContain(code);
