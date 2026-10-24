@@ -1,0 +1,171 @@
+{
+ "generated_at": "2026-10-24T06:46:48+00:00",
+ "tiles": [
+  {
+   "detail": {
+    "asks": {
+     "n": 11,
+     "min": 1199.99,
+     "median": 1299.99,
+     "max": 1489.0
+    },
+    "baseline": {
+     "n": 5,
+     "min": 640.0,
+     "median": 880.0,
+     "max": 1476.86,
+     "conditions": [
+      "new",
+      "open-box",
+      "unknown",
+      "used"
+     ]
+    },
+    "out_of_stock_left_out": 4
+   },
+   "id": "verified_savings",
+   "title": "Dated verified savings",
+   "status": "none_yet",
+   "value": null,
+   "unit": "USD",
+   "display": "No verified savings yet: the only was prices captured (Best Buy) equal the price",
+   "count": 11,
+   "date_range": {
+    "from": "2026-10-24T05:08",
+    "to": "2026-10-24T05:09"
+   },
+   "origin": "MIRROR",
+   "source_run": "python3 -m data.mirror.price_spread",
+   "note": "Store asks vs 5 eBay sales from one day, mixed condition: the gap is not a markup and not a saving. SIM savings, when they exist, go in a separate column and are never added to real ones."
+  },
+  {
+   "detail": {
+    "held_out": {
+     "attacks": 20,
+     "block_rate": 0.6,
+     "false_block_rate": 0.2,
+     "missed": [
+      "h01",
+      "h03",
+      "h05",
+      "h07",
+      "h09",
+      "h13",
+      "h15",
+      "h20"
+     ],
+     "false_blocks": [
+      "k04",
+      "k05"
+     ]
+    },
+    "dev": {
+     "attacks": 30,
+     "block_rate": 1.0,
+     "false_block_rate": 0.0
+    },
+    "adaptive": {
+     "status": "not run yet"
+    },
+    "judge_attempts": {
+     "count": 0,
+     "status": "console not built yet"
+    },
+    "voice": {
+     "status": "voice set written (sim/attacks/voice.jsonl), not yet run"
+    }
+   },
+   "id": "attacks_blocked",
+   "title": "Attacks blocked (held-out)",
+   "status": "measured",
+   "value": 0.6,
+   "unit": "ratio",
+   "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
+   "count": 20,
+   "date_range": {
+    "from": "2026-10-24T06:46:48+00:00",
+    "to": "2026-10-24T06:46:48+00:00"
+   },
+   "origin": "SIM",
+   "source_run": "python3 -m shield.bench",
+   "note": "Run at 2026-10-24T06:46:48+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+  },
+  {
+   "detail": {
+    "checked": {
+     "n": 12,
+     "correct": 12,
+     "decided": 12
+    },
+    "all": {
+     "n": 44,
+     "correct": 42,
+     "decided": 43,
+     "uncertain": 1
+    },
+    "false_ok": 0,
+    "false_fail": 1
+   },
+   "id": "fit_accuracy",
+   "title": "Fit accuracy",
+   "status": "measured",
+   "value": 1.0,
+   "unit": "ratio",
+   "display": "12 of 12 right on maker-checked builds; 42 of 43 on all; 0 false OK",
+   "count": 12,
+   "date_range": {
+    "from": "2026-10-24",
+    "to": "2026-10-24"
+   },
+   "origin": "SIM",
+   "source_run": "python3 -m data.fit_checker.eval_builds",
+   "note": "Specs checked on maker pages by an agent, not a person. The set was tuned on once, so this is not held out."
+  },
+  {
+   "detail": {
+    "per_archetype": {
+     "open_box_ok": {
+      "n": 15,
+      "learner": 0.0,
+      "untrained": 0.0,
+      "control": 0.0,
+      "control_median": 0.0,
+      "winners": [
+       "bargain-bin"
+      ],
+      "identical_across_seeds": true
+     },
+     "small_case": {
+      "n": 15,
+      "learner": 1.0,
+      "untrained": 0.0,
+      "control": 0.0,
+      "control_median": 0.0,
+      "winners": [
+       "gadget-grove"
+      ],
+      "identical_across_seeds": true
+     }
+    },
+    "winning_archetypes": [
+     "small_case"
+    ],
+    "run_file": "wind_tunnel-2026-10-24-b30x3.json"
+   },
+   "id": "learning_lift",
+   "title": "Seller learning lift",
+   "status": "not_quotable",
+   "value": null,
+   "unit": "points",
+   "display": "No lift to quote: the learner beats the fair control on 1 of 2 held-out buyer types",
+   "count": 30,
+   "date_range": {
+    "from": "2026-10-24T06:31:11+00:00",
+    "to": "2026-10-24T06:31:11+00:00"
+   },
+   "origin": "SIM",
+   "source_run": "python3 -m sim.wind_tunnel --builders 30 --seeds 3",
+   "note": "open_box_ok: learner 0.00, untrained 0.00, median control 0.00; small_case: learner 1.00, untrained 0.00, median control 0.00. A simulator we built, not the market. Negative or zero lift is shown, never hidden."
+  }
+ ]
+}
