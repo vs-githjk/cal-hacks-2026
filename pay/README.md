@@ -6,9 +6,11 @@ Tasks: docs/kickoff/D-pay-trust.md.
 - **Live in this folder:** mandate hash and verification (`mandate.py`), the used-nonce store (`replay.py`), the
   hardened approval core (`approval.py`, `callscript.py`, `words.py`: d3), and
   **TAP-style signing per RFC 9421; conformance checked by our merchant simulator** (`tap.py`).
-- **Not live:** Stripe charge (test mode, later task), Visa Intelligent Commerce (an adapter swaps in only if Visa
-  grants sandbox access). We never say "Visa settles": the payment is a Stripe test charge on a Visa test card,
-  and the request signature is verified by our own merchant simulator, not by Visa.
+- **Checkout path:** MerchantSim is wired to a Stripe test-mode PaymentIntent charger, a Shield signed allow
+  receipt, a TAP signature, a genuine VoiceApproval or stored allowance authorization, and durable single-use
+  attempt state. This code path has offline fake-charger coverage; it is not evidence of a live Stripe test charge.
+  Visa Intelligent Commerce remains unavailable. We never say "Visa settles": any eventual result is a Stripe
+  test charge on a Visa test card, and our own MerchantSim verifies the request signature.
 - Python 3.12, `cryptography` for Ed25519, `jsonschema` used for schema checks only if installed (a minimal
   manual check runs otherwise). Run the tests from the repo root: `python3 -m pytest pay/tests`.
 
@@ -17,7 +19,7 @@ Tasks: docs/kickoff/D-pay-trust.md.
 from pay.mandate import new_mandate, verify, can_charge, mark_used
 from pay.replay import NonceStore
 
-store = NonceStore("/abs/path/nonces.json")      # path optional; memory only without it
+store = NonceStore("/abs/path/nonces.sqlite3")  # path optional; memory only without it
 m = new_mandate(deal_id="deal-A", buyer_id="b1", amount=1119.00, payee="seller-x", tier_price=None)
 verify(m)                       # Verdict(ok, reason): hash, ttl cap, expiry, status (not approval)
 m["status"], m["approval_id"] = "approved", "appr-1"   # set only by the approval flow
@@ -74,6 +76,36 @@ UNIQUE (namespace, nonce) constraint, so it is True once and False after, even w
 share the file. A corrupt or non-SQLite file raises (fail closed) instead of loading empty. Namespaces: `mandate`,
 `tap` and (d3) `approval_code`. The store does not prune old nonces; it is small for a demo.
 
+### MerchantSim checkout boundary
+
+`MerchantSim.handle` accepts the exact UTF-8 Payment Protocol `RequestPayment` bytes, the Shield receipt, the
+stable buyer-bound message ID, and buyer ID. Its approval lookup must return the full transaction from the
+authenticated buyer's private state; a caller-provided approval flag or receipt never authorizes a purchase.
+The request must contain one canonical two-decimal USD Stripe fund, exact mandate reference, payee and deal ID.
+Duplicate JSON keys and noncanonical amount strings are refused before charging.
+
+The durable attempt row and mandate nonce are claimed atomically before Stripe submission, using the mandate's
+existing `mandate:<hash>` idempotency key and exact stored cents, currency and payee. The owner process uses
+`agents/.state/state.sqlite3` (the checkout worker base may still have the older `.state.sqlite3` default until Ops commits `af8ec3c` and `40721ee` are integrated) for both `agents.buyer.state` and `pay.replay.NonceStore`; startup recovery runs once
+by that owner and changes interrupted `submitted` attempts to `uncertain`. Constructing another MerchantSim does
+not recover or retry anything. Only a trusted local `reconcile(deal_id, buyer_id, mandate_hash)` can retry the
+identical stored parameters, and only while the original mandate remains unexpired. Expired uncertain attempts
+remain uncertain for provider lookup/manual reconciliation. A stored `charged` result is returned without another
+charger call, including after the buyer transaction is marked settled.
+
+If cancellation wins before submission, `NonceStore.retirement_attempt(...)` builds the exact `req:` message-ID and
+request-digest binding with `receipt_keyid='not-submitted'`. `retire_unsubmitted_attempt(attempt, mandate_nonce)`
+atomically consumes that mandate nonce and records only `reason='retired_before_submission'`; `True` is the local
+no-charge proof. It returns `False` when submission/reconciliation/uncertainty/charge already won, or for any other
+refusal reason. Market may release a reservation only from this proof, never from a generic MerchantSim refusal.
+The attempt-to-nonce link is durable in the same SQLite file, so an identical repeated retirement is idempotent but
+cannot be claimed using another already-consumed nonce.
+
+The Shield signer uses `SHIELD_RECEIPT_PRIVATE_KEY_PATH`; buyer/MerchantSim verification uses the comma-separated
+`SHIELD_RECEIPT_PUBKEYS`. Missing verification keys fail closed. Stripe requires `STRIPE_SECRET_KEY` with the
+`sk_test_` prefix and uses Stripe's Visa test payment method. Tests use temporary SQLite files and fake chargers;
+they do not call Stripe.
+
 ## Approval flow (d3: `pay/approval.py`, `pay/callscript.py`, `pay/words.py`; contract `contracts/VoiceApproval.schema.json`)
 Voice is never the credential. The credential is a one-time two-word code on the buyer's authenticated screen,
 spoken (or typed) inside one session about one exact mandate. No model decides "approve": code does. Pure Python,
@@ -128,17 +160,14 @@ if d.approved:
 - The transport must send "why" questions to `script.why_answer` and only answer attempts to `approve`, because every
   attempt to `approve` counts against the 3.
 
-### TODO stubs (the call transport is a later task)
-- **Cartesia hookup (TODO).** In-browser call is the default and the fallback. The transport will: speak
-  `script.spoken()`, call `session.begin_listening(now)`, send each final STT transcript and its confidence to
-  `session.approve(text, confidence=c)`, speak `script.why_answer` on a "why" intent, and speak `script.approved_line`
-  or `script.denied_line` from `Decision`. Needs `CARTESIA_API_KEY` and `CARTESIA_AGENT_ID`. Setup, features used and
-  known limitations (carrier, latency, noisy rooms, in-browser fallback) go here when it is built.
-- **Photon phone path (TODO).** Calls only the number registered in a prior in-app step, with `svc.issue(mandate,
-  channel="phone")`. The phone alone can never approve because the code is shown only on the screen. Stays Tier 1 until
-  Photon is proven (Lane C spike).
-- **Review card (Lane B).** Shows `code` from `svc.issue`, a typed field wired to `session.approve_typed`, and the
-  record on approve.
+The buyer checkout adapter calls the existing Cartesia approval flow only after validating the frozen deal, stored
+AdvocateCard, and pending mandate. The code is privately delivered to the authenticated buyer screen through the
+provided callback; it is never returned in the result or written to ordinary chat/log paths. The recorded
+`VoiceApproval` must match the mandate id/hash, approval id, exact amount and payee read-back, and issue/decision times.
+`approved_voice_record_matches` is the shared gate used by the adapter, MerchantSim, and CommitPayment. Browser
+approval sessions retain the 120-second default; the phone path uses the same `VOICE_CODE_TTL_SECONDS` constant as
+`CALL_CODE_TTL_S` (300 seconds, still within the mandate's own expiry). An allowance authorization remains its own
+stored market approval and is never represented as a voice record.
 
 Run the tests from the repo root: `python3 -m pytest pay/tests/test_approval.py`.
 
