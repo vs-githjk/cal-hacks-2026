@@ -45,6 +45,59 @@ def test_gpu_too_long_vetoed_with_reason():
     assert w["kind"] == "fit" and w["text"] == "Does not fit: The card is longer than your case allows."
 
 
+def test_same_seller_rule_uses_server_order_and_expands_each_excluded_bid():
+    candidates = [
+        {"bid_id": "kept", "seller_id": "seller-a", "binding_hash": "a" * 64},
+        {"bid_id": "excluded-1", "seller_id": "seller-b", "binding_hash": "b" * 64},
+        {"bid_id": "excluded-2", "seller_id": "seller-b", "binding_hash": "c" * 64},
+    ]
+    identities = {
+        "seller-a": {"provenance": "registry", "payee": "merchant-1"},
+        "seller-b": {"provenance": "mirror", "payee": "merchant-1"},
+    }
+
+    exclusions = checks.same_seller_exclusions(candidates, identities)
+
+    reason = {
+        "rule_id": "advocate.same_seller",
+        "summary": "This seller shares trusted identity evidence with a higher-ranked seller",
+        "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/same_seller.py",
+    }
+    assert exclusions == [
+        {"kept_bid_id": "kept", "kept_seller_id": "seller-a", "kept_binding_hash": "a" * 64,
+         "excluded_bid_id": "excluded-1", "excluded_seller_id": "seller-b", "excluded_binding_hash": "b" * 64,
+         "reason": reason},
+        {"kept_bid_id": "kept", "kept_seller_id": "seller-a", "kept_binding_hash": "a" * 64,
+         "excluded_bid_id": "excluded-2", "excluded_seller_id": "seller-b", "excluded_binding_hash": "c" * 64,
+         "reason": reason},
+    ]
+
+
+def test_same_seller_rule_does_not_infer_identity_from_candidate_fields_or_untrusted_map():
+    candidates = [
+        {"bid_id": "a", "seller_id": "seller-a", "binding_hash": "a" * 64,
+         "payee": "merchant-1", "owner": "merchant-1", "listing_url": "https://shop.example/item"},
+        {"bid_id": "b", "seller_id": "seller-b", "binding_hash": "b" * 64,
+         "payee": "merchant-1", "owner": "merchant-1", "listing_url": "https://shop.example/item"},
+    ]
+    identities = {
+        "seller-a": {"provenance": "seller_claim", "payee": "merchant-1"},
+        "seller-b": {"provenance": "seller_claim", "payee": "merchant-1"},
+    }
+
+    assert checks.same_seller_exclusions(candidates, identities) == []
+
+
+def test_same_seller_rule_cannot_let_a_vetoed_bid_suppress_the_eligible_next_seller():
+    eligible = [{"bid_id": "clean-next", "seller_id": "seller-b", "binding_hash": "b" * 64}]
+    identities = {
+        "seller-a": {"provenance": "registry", "owner": "owner-1"},
+        "seller-b": {"provenance": "registry", "owner": "owner-1"},
+    }
+
+    assert checks.same_seller_exclusions(eligible, identities) == []
+
+
 def test_psu_too_small_vetoed():
     card = run([bid("b1", "seller_1", 590, attrs={**ATTRS, "chipset": "RX 7800 XT", "rec_psu_w": 850})])[0]
     assert card["recommendation"] == "veto" and card["warnings"][0]["kind"] == "fit"

@@ -663,6 +663,11 @@ export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; ch
 }
 
 export const ADVOCATE_RECOMMENDATIONS = ['buy', 'caution', 'veto'];
+export const SAME_SELLER_REASON = {
+  rule_id: 'advocate.same_seller',
+  summary: 'This seller shares trusted identity evidence with a higher-ranked seller',
+  source_url: 'https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/same_seller.py',
+} as const;
 
 /**
  * The advocate relay (referee) attaches Lane A's card for one bid. A veto disqualifies the bid in the
@@ -793,6 +798,154 @@ function reviewCandidates(ctx: { db: Ctx['db'] | VCtx['db'] }) {
   return out;
 }
 
+type ReviewRanking = {
+  rows: BidRow[];
+  metas: Map<string, LineMeta[]>;
+  needItems: Map<string, NeedItem>;
+  candidateHashes: Map<string, string>;
+  ranked: ReturnType<typeof rankBids>;
+};
+
+/** One authoritative post-check eligibility and ordering pass, shared by the referee view and final close. */
+function rankReviewRound(ctx: { db: Ctx['db'] | VCtx['db'] }, roundId: string,
+                         sameSellerExclusions: Map<string, string[]> = new Map()): ReviewRanking {
+  const round = ctx.db.round.id.find(roundId);
+  if (!round) throw new SenderError(`no round ${roundId}`);
+  const needItems = needItemsFor(ctx, round.needId);
+  const rows = [...ctx.db.bid.roundId.filter(roundId)];
+  const rejections = new Map<string, string[]>();
+  const verified = new Map<string, number>();
+  const metas = new Map<string, LineMeta[]>();
+  const candidateHashes = new Map<string, string>();
+  for (const b of rows) {
+    const reasons: string[] = [];
+    const parsedMeta = parseLineMeta(b.lineMetaJson || '[]', b.lines.length);
+    if (!parsedMeta.rows) reasons.push(`missing or invalid line metadata: ${parsedMeta.reason}`);
+    else metas.set(b.id, parsedMeta.rows);
+    if (!b.floorCheckPassed) reasons.push('below this seller floor');
+    const checks = [...ctx.db.bidCheck.bidId.filter(b.id)];
+    if (!checks.some((c) => c.kind === 'shield')) reasons.push('missing independent Shield review');
+    const candidateRank = parsedMeta.rows && b.floorCheckPassed
+      ? rankBids([toBid(b, parsedMeta.rows)], { needItems, lineRejects: new Map([[b.id, b.lineRejects]]), quality: MARKET_CONFIG.quality }).ranked[0]
+      : undefined;
+    const candidate = candidateRank && candidateRank.picked.length === needItems.size && parsedMeta.rows
+      ? selectedCandidate(roundId, round.needId, b, parsedMeta.rows, candidateRank.picked, candidateRank.landed, needItems)
+      : undefined;
+    if (candidate) candidateHashes.set(b.id, candidate.bindingHash);
+    if (candidateRank && candidateRank.picked.length !== needItems.size) reasons.push('bid does not cover every requested item');
+    const bound = (check: typeof checks[number], line?: { line_index: number; listing_id: string; listing_hash: string }) => {
+      try {
+        const proof = JSON.parse(check.bindingJson || '{}');
+        return proof.bindingHash === candidate?.bindingHash && (!line || (proof.lineIndex === line.line_index
+          && proof.listingId === line.listing_id && proof.listingHash === line.listing_hash));
+      } catch { return false; }
+    };
+    if (candidate && !checks.some((c) => c.kind === 'advocate' && bound(c))) reasons.push('missing AdvocateCard bound to the selected candidate');
+    const selectedLines = candidate ? JSON.parse(candidate.linesJson) as { line_index: number; listing_id: string; listing_hash: string }[] : [];
+    for (const claim of b.claims) for (const line of selectedLines) {
+      if (!checks.some((c) => c.kind === 'claim' && c.detail === claim && bound(c, line))) {
+        reasons.push(`missing independent check for claim: ${claim} on selected line ${line.line_index}`);
+      }
+    }
+    for (const c of checks) {
+      if (c.kind === 'shield' && c.result !== 'allow') reasons.push(`Bazaar Shield ${c.result}: ${c.detail}`);
+      if (c.kind === 'claim' && c.result === 'false') reasons.push(`claim did not match the page: ${c.detail}`);
+      if (c.kind === 'claim' && c.result === 'verified' && bound(c)) verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
+      if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
+    }
+    if (sameSellerExclusions.has(b.id)) reasons.push(...sameSellerExclusions.get(b.id)!);
+    if (reasons.length) rejections.set(b.id, reasons);
+  }
+  const spendLimit = ctx.db.need.id.find(round.needId)?.spendLimit;
+  const lineRejects = new Map(rows.map((b) => [b.id, b.lineRejects]));
+  const ranked = rankBids(rows.map((b) => toBid(b, metas.get(b.id))), {
+    needItems, rejections, lineRejects, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
+  });
+  return { rows, metas, needItems, candidateHashes, ranked };
+}
+
+/** Referee-only final ordering after independent checks, before same-seller exclusions. */
+export function eligibleReviewCandidatesView(ctx: VCtx) {
+  if (roleOf(ctx)?.role !== 'referee') return [];
+  const out: { roundId: string; needId: string; bidId: string; sellerId: string; origin: string; rank: number; landed: number; linesJson: string; lineMetaJson: string; bindingHash: string }[] = [];
+  for (const round of ctx.db.round.iter()) {
+    if (round.state !== 'review') continue;
+    const ranking = rankReviewRound(ctx, round.id);
+    const byId = new Map(ranking.rows.map((b) => [b.id, b]));
+    for (const item of ranking.ranked.ranked) {
+      if (item.picked.length !== ranking.needItems.size) continue;
+      const b = byId.get(item.bid.id)!;
+      const metadata = ranking.metas.get(b.id)!;
+      const selected = selectedCandidate(round.id, round.needId, b, metadata, item.picked, item.landed, ranking.needItems);
+      out.push({ roundId: round.id, needId: round.needId, bidId: b.id, sellerId: b.sellerId, origin: b.origin,
+        rank: item.rank, landed: item.landed, ...selected });
+    }
+  }
+  return out;
+}
+
+function sameSellerProof(bindingJson: string) {
+  try { return JSON.parse(bindingJson || 'null'); } catch { return undefined; }
+}
+
+/** Referee-only proof that one eligible seller must be excluded for sharing trusted identity with a higher-ranked seller. */
+export function attachSameSellerExclusion(
+  ctx: Ctx,
+  a: { roundId: string; keptBidId: string; excludedBidId: string; keptBindingHash: string; excludedBindingHash: string },
+) {
+  requireRole(ctx, 'attach_same_seller_exclusion', ['referee']);
+  const round = ctx.db.round.id.find(a.roundId);
+  if (!round || round.state !== 'review' || !round.reviewDeadline || ms(ctx.timestamp) >= ms(round.reviewDeadline)) {
+    throw new SenderError('same-seller exclusions are accepted only during review');
+  }
+  if (a.keptBidId === a.excludedBidId || !/^[a-f0-9]{64}$/.test(a.keptBindingHash)
+      || !/^[a-f0-9]{64}$/.test(a.excludedBindingHash)) throw new SenderError('same-seller proof needs distinct bids and current SHA-256 bindings');
+  const ranking = rankReviewRound(ctx, a.roundId);
+  const kept = ranking.ranked.ranked.find((row) => row.bid.id === a.keptBidId);
+  const excluded = ranking.ranked.ranked.find((row) => row.bid.id === a.excludedBidId);
+  const keptBid = ranking.rows.find((row) => row.id === a.keptBidId);
+  const excludedBid = ranking.rows.find((row) => row.id === a.excludedBidId);
+  if (!kept || !excluded || !keptBid || !excludedBid || kept.rank >= excluded.rank
+      || kept.picked.length !== ranking.needItems.size || excluded.picked.length !== ranking.needItems.size
+      || keptBid.sellerId === excludedBid.sellerId
+      || ranking.candidateHashes.get(a.keptBidId) !== a.keptBindingHash
+      || ranking.candidateHashes.get(a.excludedBidId) !== a.excludedBindingHash) {
+    throw new SenderError('same-seller proof must bind eligible bids in current Market rank order');
+  }
+  const proof = {
+    keptBidId: a.keptBidId, keptSellerId: keptBid.sellerId, keptBindingHash: a.keptBindingHash,
+    excludedBidId: a.excludedBidId, excludedSellerId: excludedBid.sellerId, excludedBindingHash: a.excludedBindingHash,
+    reason: SAME_SELLER_REASON,
+  };
+  const detail = `${SAME_SELLER_REASON.rule_id}: ${SAME_SELLER_REASON.summary}`;
+  const existing = [...ctx.db.bidCheck.bidId.filter(a.excludedBidId)].filter((check) => check.kind === 'same_seller');
+  const matching = existing.find((check) => check.result === 'excluded' && check.detail === detail
+    && check.evidenceUrl === SAME_SELLER_REASON.source_url && JSON.stringify(sameSellerProof(check.bindingJson)) === JSON.stringify(proof));
+  if (matching) return;
+  const row = { bidId: a.excludedBidId, kind: 'same_seller', result: 'excluded', detail,
+    evidenceUrl: SAME_SELLER_REASON.source_url, origin: excludedBid.origin, at: ctx.timestamp, bindingJson: JSON.stringify(proof) };
+  if (existing.length) {
+    ctx.db.bidCheck.id.update({ ...existing[0]!, ...row });
+    for (const duplicate of existing.slice(1)) ctx.db.bidCheck.id.update({ ...duplicate, result: 'stale' });
+  } else ctx.db.bidCheck.insert({ id: 0n, ...row });
+}
+
+/** Referee-only confirmation that a stale duplicate exclusion no longer applies after re-review. */
+export function clearSameSellerExclusion(ctx: Ctx, { roundId, excludedBidId }: { roundId: string; excludedBidId: string }) {
+  requireRole(ctx, 'clear_same_seller_exclusion', ['referee']);
+  const round = ctx.db.round.id.find(roundId);
+  if (!round || round.state !== 'review' || !round.reviewDeadline || ms(ctx.timestamp) >= ms(round.reviewDeadline)) {
+    throw new SenderError('same-seller exclusions can be cleared only during review');
+  }
+  const bid = ctx.db.bid.id.find(excludedBidId);
+  if (!bid || bid.roundId !== roundId) throw new SenderError('no excluded bid in this round');
+  for (const check of ctx.db.bidCheck.bidId.filter(excludedBidId)) {
+    if (check.kind !== 'same_seller') continue;
+    if (check.result === 'excluded') throw new SenderError('only a stale same-seller exclusion can be cleared');
+    if (check.result === 'stale') ctx.db.bidCheck.id.update({ ...check, result: 'cleared' });
+  }
+}
+
 export function closeRound(ctx: Ctx, { roundId }: { roundId: string }) {
   requireRole(ctx, 'close_round', ['referee']);
   return closeRoundInner(ctx, roundId, false);
@@ -802,6 +955,51 @@ export function closeRound(ctx: Ctx, { roundId }: { roundId: string }) {
 export function closeRoundOnDeadline(ctx: Ctx, roundId: string) {
   requireRole(ctx, 'close_round_on_deadline (the deadline scheduler)', ['scheduler']);
   return closeRoundInner(ctx, roundId, true);
+}
+
+function validateSameSellerProofs(ctx: Ctx, ranking: ReviewRanking): Map<string, string[]> | undefined {
+  const bids = new Map(ranking.rows.map((bid) => [bid.id, bid]));
+  const ranked = new Map(ranking.ranked.ranked.map((item) => [item.bid.id, item]));
+  const active = ranking.rows.flatMap((bid) => [...ctx.db.bidCheck.bidId.filter(bid.id)]
+    .filter((check) => check.kind === 'same_seller' && check.result !== 'cleared'));
+  const excluded = new Map<string, string[]>();
+  let stale = false;
+  for (const check of active) {
+    if (check.result === 'stale') { stale = true; continue; }
+    const proof = sameSellerProof(check.bindingJson);
+    const keptBid = proof && bids.get(proof.keptBidId);
+    const excludedBid = proof && bids.get(proof.excludedBidId);
+    const keptRank = proof && ranked.get(proof.keptBidId);
+    const excludedRank = proof && ranked.get(proof.excludedBidId);
+    const valid = check.result === 'excluded' && check.bidId === proof?.excludedBidId
+      && check.detail === `${SAME_SELLER_REASON.rule_id}: ${SAME_SELLER_REASON.summary}`
+      && check.evidenceUrl === SAME_SELLER_REASON.source_url
+      && proof?.reason?.rule_id === SAME_SELLER_REASON.rule_id
+      && proof?.reason?.summary === SAME_SELLER_REASON.summary
+      && proof?.reason?.source_url === SAME_SELLER_REASON.source_url
+      && keptBid && excludedBid && keptBid.sellerId === proof.keptSellerId && excludedBid.sellerId === proof.excludedSellerId
+      && keptBid.sellerId !== excludedBid.sellerId && keptRank && excludedRank && keptRank.rank < excludedRank.rank
+      && ranking.candidateHashes.get(keptBid.id) === proof.keptBindingHash
+      && ranking.candidateHashes.get(excludedBid.id) === proof.excludedBindingHash;
+    if (!valid) { stale = true; continue; }
+    const reason = `same-seller exclusion: ${proof.keptBidId} (${proof.keptSellerId}) shares trusted identity with the higher-ranked seller`;
+    if (excluded.has(proof.excludedBidId)) { stale = true; continue; }
+    excluded.set(proof.excludedBidId, [reason]);
+  }
+  return stale ? undefined : excluded;
+}
+
+function reopenForSameSellerReview(ctx: Ctx, roundId: string, round: NonNullable<ReturnType<typeof ctx.db.round.id.find>>) {
+  for (const bid of ctx.db.bid.roundId.filter(roundId)) for (const check of ctx.db.bidCheck.bidId.filter(bid.id)) {
+    if (check.kind === 'same_seller' && check.result !== 'cleared' && check.result !== 'stale') {
+      ctx.db.bidCheck.id.update({ ...check, result: 'stale' });
+    }
+  }
+  const reviewDeadline = tsFromMs(ms(ctx.timestamp) + REVIEW_WINDOW_MS);
+  ctx.db.round.id.update({ ...round, state: 'review', reviewDeadline });
+  scheduleClose(ctx, roundId, reviewDeadline);
+  event(ctx, 'same_seller_review_reopened', 'round', roundId,
+    'Same-seller review must be refreshed after independent checks changed', '', round.origin);
 }
 
 function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
@@ -828,56 +1026,14 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     throw new SenderError('review period is still open until its deadline');
   }
 
-  const needItems = needItemsFor(ctx, r.needId);
-  const rows = [...ctx.db.bid.roundId.filter(roundId)];
-  const rejections = new Map<string, string[]>();
-  const verified = new Map<string, number>();
-  const metas = new Map<string, LineMeta[]>();
-  const candidateHashes = new Map<string, string>();
-  for (const b of rows) {
-    const reasons: string[] = [];
-    const parsedMeta = parseLineMeta(b.lineMetaJson || '[]', b.lines.length);
-    if (!parsedMeta.rows) reasons.push(`missing or invalid line metadata: ${parsedMeta.reason}`);
-    else metas.set(b.id, parsedMeta.rows);
-    if (!b.floorCheckPassed) reasons.push('below this seller floor');
-    const checks = [...ctx.db.bidCheck.bidId.filter(b.id)];
-    if (!checks.some((c) => c.kind === 'shield')) reasons.push('missing independent Shield review');
-    const candidateRank = parsedMeta.rows && b.floorCheckPassed
-      ? rankBids([toBid(b, parsedMeta.rows)], { needItems, lineRejects: new Map([[b.id, b.lineRejects]]), quality: MARKET_CONFIG.quality }).ranked[0]
-      : undefined;
-    const candidate = candidateRank && candidateRank.picked.length === needItems.size && parsedMeta.rows
-      ? selectedCandidate(roundId, r.needId, b, parsedMeta.rows, candidateRank.picked, candidateRank.landed, needItems)
-      : undefined;
-    if (candidate) candidateHashes.set(b.id, candidate.bindingHash);
-    if (candidateRank && candidateRank.picked.length !== needItems.size) reasons.push('bid does not cover every requested item');
-    const bound = (check: typeof checks[number], line?: { line_index: number; listing_id: string; listing_hash: string }) => {
-      try {
-        const proof = JSON.parse(check.bindingJson || '{}');
-        return proof.bindingHash === candidate?.bindingHash && (!line || (proof.lineIndex === line.line_index
-          && proof.listingId === line.listing_id && proof.listingHash === line.listing_hash));
-      } catch { return false; }
-    };
-    if (candidate && !checks.some((c) => c.kind === 'advocate' && bound(c))) reasons.push('missing AdvocateCard bound to the selected candidate');
-    const selectedLines = candidate ? JSON.parse(candidate.linesJson) as { line_index: number; listing_id: string; listing_hash: string }[] : [];
-    for (const claim of b.claims) for (const line of selectedLines) {
-      if (!checks.some((c) => c.kind === 'claim' && c.detail === claim && bound(c, line))) {
-        reasons.push(`missing independent check for claim: ${claim} on selected line ${line.line_index}`);
-      }
-    }
-    for (const c of checks) {
-      if (c.kind === 'shield' && c.result !== 'allow') reasons.push(`Bazaar Shield ${c.result}: ${c.detail}`);
-      if (c.kind === 'claim' && c.result === 'false') reasons.push(`claim did not match the page: ${c.detail}`);
-      if (c.kind === 'claim' && c.result === 'verified' && bound(c)) verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
-      if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
-    }
-    if (reasons.length) rejections.set(b.id, reasons);
+  const baseRanking = rankReviewRound(ctx, roundId);
+  const sameSellerExclusions = validateSameSellerProofs(ctx, baseRanking);
+  if (!sameSellerExclusions) {
+    reopenForSameSellerReview(ctx, roundId, r);
+    return;
   }
-  // The seller fee is deliberately not passed: it never feeds ranking (invariant 8).
-  const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
-  const lineRejects = new Map(rows.map((b) => [b.id, b.lineRejects]));
-  const ranked = rankBids(rows.map((b) => toBid(b, metas.get(b.id))), {
-    needItems, rejections, lineRejects, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
-  });
+  const ranking = sameSellerExclusions.size ? rankReviewRound(ctx, roundId, sameSellerExclusions) : baseRanking;
+  const { rows, metas, candidateHashes, ranked } = ranking;
   const byId = new Map(rows.map((b) => [b.id, b]));
   for (const x of ranked.ranked) {
     const b = byId.get(x.bid.id)!;

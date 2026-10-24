@@ -70,6 +70,27 @@ function beginReview() {
 
 const candidate = (bidId: string) => m.reviewCandidatesView(h.viewContext(REF) as any).find((row) => row.bidId === bidId)!;
 
+function attachOrdinaryReviewChecks() {
+  for (const row of m.reviewCandidatesView(h.viewContext(REF) as any)) {
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: row.bidId, verdict: 'allow', ruleIds: [], origin: 'SIM' }));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, {
+      bidId: row.bidId, recommendation: 'buy', ruleId: '', text: '', sourceUrl: '', origin: 'SIM', bindingHash: row.bindingHash,
+    }));
+  }
+}
+
+const eligibleCandidates = () => m.eligibleReviewCandidatesView(h.viewContext(REF) as any);
+const attachSameSeller = (keptBidId: string, excludedBidId: string, keptBindingHash?: string, excludedBindingHash?: string) => {
+  const rows = eligibleCandidates();
+  return run(REF, (ctx) => m.attachSameSellerExclusion(ctx, {
+    roundId: 'round-1', keptBidId, excludedBidId,
+    keptBindingHash: keptBindingHash ?? rows.find((row) => row.bidId === keptBidId)!.bindingHash,
+    excludedBindingHash: excludedBindingHash ?? rows.find((row) => row.bidId === excludedBidId)!.bindingHash,
+  }));
+};
+const clearSameSeller = (excludedBidId: string) =>
+  run(REF, (ctx) => m.clearSameSellerExclusion(ctx, { roundId: 'round-1', excludedBidId }));
+
 function closeReadyRound() {
   beginReview();
   const candidates = new Map(m.reviewCandidatesView(h.viewContext(REF) as any).map((row) => [row.bidId, row]));
@@ -131,6 +152,181 @@ describe('candidate SHA-256 binding', () => {
     expect(m.sha256('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
     expect(m.sha256('✓')).toBe('1dabba21cdad44541f6b15796f8d22978fc7ea10c46aeceeeeb66c23b3ac7604');
   });
+});
+
+describe('same-seller review exclusions', () => {
+  it('uses post-check Market order so a vetoed first bid cannot suppress a clean later seller', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bad-cheap', [line(710)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('clean-next', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    const vetoed = candidate('bad-cheap');
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, {
+      bidId: 'bad-cheap', recommendation: 'veto', ruleId: 'advocate.condition', text: 'fixed test veto',
+      sourceUrl: 'https://example.test/check', origin: 'SIM', bindingHash: vetoed.bindingHash,
+    }));
+
+    expect(eligibleCandidates().map(({ bidId, rank }) => [bidId, rank])).toEqual([['clean-next', 1]]);
+  });
+
+  it('orders verified ties with the Market verified-count tie-break before exclusions', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('sealed-first', [line(720)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('verified-second', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    const row = candidate('verified-second');
+    const selected = JSON.parse(row.linesJson)[0];
+    run(REF, (ctx) => m.attachClaimCheck(ctx, {
+      bidId: row.bidId, claim: 'warranty', check: 'verified', evidenceUrl: '', origin: 'SIM', bindingHash: row.bindingHash,
+      lineIndex: selected.line_index, listingId: selected.listing_id, listingHash: selected.listing_hash,
+    }));
+
+    expect(eligibleCandidates().map(({ bidId, rank }) => [bidId, rank])).toEqual([
+      ['verified-second', 1], ['sealed-first', 2],
+    ]);
+  });
+
+  it('removes a false-claim bid from the same-seller candidate order', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('false-claim', [line(710)]), claims: ['warranty'] }));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('clean-claim', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    const row = candidate('false-claim');
+    const selected = JSON.parse(row.linesJson)[0];
+    run(REF, (ctx) => m.attachClaimCheck(ctx, {
+      bidId: row.bidId, claim: 'warranty', check: 'false', evidenceUrl: '', origin: 'SIM', bindingHash: row.bindingHash,
+      lineIndex: selected.line_index, listingId: selected.listing_id, listingHash: selected.listing_hash,
+    }));
+
+    expect(eligibleCandidates().map(({ bidId, rank }) => [bidId, rank])).toEqual([['clean-claim', 1]]);
+  });
+
+  it('persists a fixed, bound exclusion as a separate BidCheck and reranks clean bids at close', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('kept-bid', [line(710)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('excluded-bid', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    const kept = eligibleCandidates().find((row) => row.bidId === 'kept-bid')!;
+    const excluded = eligibleCandidates().find((row) => row.bidId === 'excluded-bid')!;
+    attachSameSeller('kept-bid', 'excluded-bid');
+    attachSameSeller('kept-bid', 'excluded-bid');
+    const [proof] = [...h.db.bidCheck.bidId.filter('excluded-bid')].filter((check) => check.kind === 'same_seller');
+    expect(proof).toMatchObject({
+      result: 'excluded',
+      detail: 'advocate.same_seller: This seller shares trusted identity evidence with a higher-ranked seller',
+      evidenceUrl: 'https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/same_seller.py',
+    });
+    expect(JSON.parse(proof!.bindingJson)).toEqual({
+      keptBidId: 'kept-bid', keptSellerId: 'seller-a', keptBindingHash: kept.bindingHash,
+      excludedBidId: 'excluded-bid', excludedSellerId: 'seller-b', excludedBindingHash: excluded.bindingHash,
+      reason: {
+        rule_id: 'advocate.same_seller',
+        summary: 'This seller shares trusted identity evidence with a higher-ranked seller',
+        source_url: 'https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/same_seller.py',
+      },
+    });
+    expect([...h.db.bidCheck.bidId.filter('excluded-bid')].filter((check) => check.kind === 'same_seller')).toHaveLength(1);
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()].map(({ bidId, rank }) => [bidId, rank])).toEqual([
+      ['kept-bid', 1], ['excluded-bid', 0],
+    ]);
+    expect([...h.db.roundResult.iter()].find((row) => row.bidId === 'excluded-bid')!.reasons.join(' ')).toMatch(/same.seller/i);
+  });
+
+  it('reopens review and marks stale proofs when a verified-count tie changes the winner order', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('first-tie', [line(720)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('second-tie', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    attachSameSeller('first-tie', 'second-tie');
+    const current = candidate('second-tie');
+    const selected = JSON.parse(current.linesJson)[0];
+    run(REF, (ctx) => m.attachClaimCheck(ctx, {
+      bidId: 'second-tie', claim: 'warranty', check: 'verified', evidenceUrl: '', origin: 'SIM', bindingHash: current.bindingHash,
+      lineIndex: selected.line_index, listingId: selected.listing_id, listingHash: selected.listing_hash,
+    }));
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+
+    expect(h.db.round.id.find('round-1')!.state).toBe('review');
+    expect(h.db.round.id.find('round-1')!.reviewDeadline!.microsSinceUnixEpoch).toBeGreaterThan(h.clock.now().microsSinceUnixEpoch);
+    expect([...h.db.roundResult.iter()]).toHaveLength(0);
+    expect([...h.db.bidCheck.bidId.filter('second-tie')].find((check) => check.kind === 'same_seller')!.result).toBe('stale');
+    expect(events().some((event) => event.kind === 'same_seller_review_reopened')).toBe(true);
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(h.db.round.id.find('round-1')!.state).toBe('review');
+    expect([...h.db.roundResult.iter()]).toHaveLength(0);
+    attachSameSeller('second-tie', 'first-tie');
+    clearSameSeller('second-tie');
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    expect([...h.db.roundResult.iter()].map(({ bidId, rank }) => [bidId, rank])).toEqual([
+      ['second-tie', 1], ['first-tie', 0],
+    ]);
+  });
+
+  it('requires a referee to clear stale proof before an otherwise eligible bid can close', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('kept-vetoed', [line(710)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('was-excluded', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    attachSameSeller('kept-vetoed', 'was-excluded');
+    expect(() => clearSameSeller('was-excluded')).toThrow(/stale/i);
+    const kept = candidate('kept-vetoed');
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, {
+      bidId: 'kept-vetoed', recommendation: 'veto', ruleId: 'advocate.condition', text: 'fixed test veto',
+      sourceUrl: 'https://example.test/check', origin: 'SIM', bindingHash: kept.bindingHash,
+    }));
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(h.db.round.id.find('round-1')!.state).toBe('review');
+    expect([...h.db.bidCheck.bidId.filter('was-excluded')].find((check) => check.kind === 'same_seller')!.result).toBe('stale');
+    expect(() => run(VIDYUT, (ctx) => m.clearSameSellerExclusion(ctx, { roundId: 'round-1', excludedBidId: 'was-excluded' }))).toThrow(/not allowed/i);
+
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(h.db.round.id.find('round-1')!.state).toBe('review');
+    expect([...h.db.roundResult.iter()]).toHaveLength(0);
+    clearSameSeller('was-excluded');
+    clearSameSeller('was-excluded');
+    expect([...h.db.bidCheck.bidId.filter('was-excluded')].find((check) => check.kind === 'same_seller')!.result).toBe('cleared');
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()].map(({ bidId, rank }) => [bidId, rank])).toEqual([
+      ['was-excluded', 1], ['kept-vetoed', 0],
+    ]);
+  });
+
+  it('rejects an exclusion unless both current candidates are eligible and the kept bid precedes it', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('earlier', [line(710)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('later', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    const rows = eligibleCandidates();
+    expect(() => attachSameSeller('later', 'earlier')).toThrow(/rank|order/i);
+    expect(() => attachSameSeller('earlier', 'later', '0'.repeat(64), rows.find((row) => row.bidId === 'later')!.bindingHash)).toThrow(/rank|order|binding/i);
+    expect(() => run(VIDYUT, (ctx) => m.attachSameSellerExclusion(ctx, {
+      roundId: 'round-1', keptBidId: 'earlier', excludedBidId: 'later',
+      keptBindingHash: rows[0]!.bindingHash, excludedBindingHash: rows[1]!.bindingHash,
+    }))).toThrow(/not allowed/i);
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(() => run(REF, (ctx) => m.attachSameSellerExclusion(ctx, {
+      roundId: 'round-1', keptBidId: 'earlier', excludedBidId: 'later',
+      keptBindingHash: rows[0]!.bindingHash, excludedBindingHash: rows[1]!.bindingHash,
+    }))).toThrow(/review/i);
+  });
+
 });
 
 describe('post_need and redaction', () => {
@@ -200,6 +396,7 @@ describe('migration-safe bid line metadata', () => {
     advance(15_000);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     expect(m.reviewCandidatesView(h.viewContext(REF) as any)).toHaveLength(0);
+    expect(m.eligibleReviewCandidatesView(h.viewContext(REF) as any)).toHaveLength(0);
     advance(m.REVIEW_WINDOW_MS);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     expect([...h.db.roundResult.iter()]).toMatchObject([
