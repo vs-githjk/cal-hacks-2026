@@ -33,7 +33,11 @@ def build(priv, **kw):
     return m, {"method": "POST", "url": URL, "headers": headers, "body": body}
 
 
+GOOD_EXPECTED = {"deal_id": "deal-A", "amount": 1119, "payee": "shady-sam@pay.example.test"}
+
+
 def run(keys, req, store=None, **kw):
+    kw.setdefault("expected", dict(GOOD_EXPECTED))
     return verify_mandate(req, keys=keys, store=store or NonceStore(), now=NOW, **kw)
 
 
@@ -67,7 +71,7 @@ def test_expected_mandate_hash_mismatch_is_quarantined(priv, keys):
 
 def test_tampered_body_blocks(priv, keys):
     m, req = build(priv)
-    req["body"] = req["body"].replace("1119", "9999")
+    req["body"] = req["body"] + " "  # the mandate is unchanged, only the signed digest no longer matches
     out = run(keys, req)
     assert out["verdict"] == "block" and out["rule_ids"] == ["shield.mandate.digest_mismatch"]
 
@@ -89,7 +93,8 @@ def test_unknown_key_and_missing_headers_block(priv):
 
 def test_expired_signature_blocks(priv, keys):
     m, req = build(priv)
-    out = verify_mandate(req, keys=keys, store=NonceStore(), now=NOW + timedelta(hours=1))
+    out = verify_mandate(req, keys=keys, store=NonceStore(), now=NOW + timedelta(hours=1),
+                         expected=dict(GOOD_EXPECTED))
     assert out["verdict"] == "block"
 
 
@@ -103,3 +108,30 @@ def test_missing_keys_or_store_fails_closed(priv):
     m, req = build(priv)
     out = verify_mandate(req, keys=None, store=NonceStore(), now=NOW)
     assert out["verdict"] == "block" and out["rule_ids"] == ["shield.error"]
+
+
+@pytest.mark.parametrize("expected", [
+    None, {}, {"deal_id": "deal-A"}, {"deal_id": "deal-A", "amount": 1119}, {"deal_id": "deal-A", "payee": "shady-sam@pay.example.test"},
+    {"amount": 1119, "payee": "shady-sam@pay.example.test"}, "deal-A", ["deal-A"],
+])
+def test_missing_or_partial_expected_blocks_instead_of_skipping_the_checks(priv, keys, expected):
+    m, req = build(priv)
+    out = verify_mandate(req, keys=keys, store=NonceStore(), now=NOW, expected=expected)
+    assert out["verdict"] == "block" and out["rule_ids"] == ["shield.mandate.malformed_request"]
+    # the same signed request is fine once the caller states all three expectations
+    assert run(keys, req)["verdict"] == "allow"
+
+
+def test_malformed_request_blocks_via_the_api_when_expected_is_partial(priv, keys):
+    from shield.service import handle_verify_mandate
+    m, req = build(priv)
+    req["expected"] = {"deal_id": "deal-A"}
+    out = handle_verify_mandate(req, keys, NonceStore())
+    assert out["verdict"] == "block" and out["rule_ids"] == ["shield.mandate.malformed_request"]
+
+
+def test_unreadable_mandate_with_expected_blocks(priv, keys):
+    m, req = build(priv)
+    req["body"] = "{}"
+    out = run(keys, req)
+    assert out["verdict"] == "block" and out["rule_ids"] == ["shield.mandate.malformed_request"]

@@ -18,6 +18,7 @@ from pay.replay import NonceStore
 from pay.tap import verify_request
 from shield import VERSION
 
+REQUIRED_EXPECTED = ("deal_id", "amount", "payee")
 MISMATCH_REASONS = frozenset({
     "mandate_mismatch", "mandate_hash_mismatch", "hash_mismatch", "payee_mismatch", "amount_mismatch",
     "deal_mismatch", "buyer_mismatch",
@@ -57,7 +58,8 @@ def verify_mandate(request: Any, *, keys: Optional[Mapping], store: Optional[Non
                    now: Optional[datetime] = None, expected: Optional[Mapping] = None) -> dict:
     """`request`: {method, url, headers, body (str), mandate?, expected_mandate_hash?}.
     `keys`: the server's own keyring (never taken from the caller). `expected`: {deal_id, amount, payee,
-    buyer_id?} the caller expects this payment to be for."""
+    buyer_id?} the caller expects this payment to be for;
+    deal_id, amount and payee are all required."""
     started = time.perf_counter()
     request_id = uuid.uuid4().hex
     try:
@@ -68,14 +70,17 @@ def verify_mandate(request: Any, *, keys: Optional[Mapping], store: Optional[Non
         body = request["body"]
         body_bytes = body.encode("utf-8") if isinstance(body, str) else bytes(body)
         mandate = _mandate_of(request)
-        if expected is not None and mandate is not None:
-            try:
-                bad = _expectations(mandate, expected["deal_id"], expected["amount"], expected["payee"],
-                                    expected.get("buyer_id"))
-            except KeyError:
-                bad = None  # malformed mandate: verify_request reports the precise reason
-            if bad is not None:
-                return _from_reason(bad.reason, started, request_id)
+        # All three expectations are required: a missing one must never mean "skip that check".
+        if (not isinstance(expected, Mapping) or mandate is None
+                or any(k not in expected for k in REQUIRED_EXPECTED)):
+            return _verdict("block", ["shield.mandate.malformed_request"], "high", started, request_id)
+        try:
+            bad = _expectations(mandate, expected["deal_id"], expected["amount"], expected["payee"],
+                                expected.get("buyer_id"))
+        except KeyError:
+            bad = None  # the MANDATE lacks a field: verify_request reports the precise reason
+        if bad is not None:
+            return _from_reason(bad.reason, started, request_id)
         result = verify_request(
             method=request["method"], url=request["url"], headers=request["headers"], body=body_bytes,
             keys=keys, store=store, now=now, mandate=request.get("mandate"),

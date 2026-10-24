@@ -94,6 +94,7 @@ def test_verify_mandate_ignores_caller_supplied_keys(client, priv):
                            private_key=other, now=now)
     out = client.post("/v1/shield/verify-mandate", json={
         "method": "POST", "url": "https://x.example.com/c", "headers": headers, "body": body,
+        "expected": {"deal_id": "d1", "amount": 100, "payee": "p"},
         "keys": {"anything": "x"}}).json()
     assert out["verdict"] == "block" and out["rule_ids"] == ["shield.mandate.unknown_key"]
 
