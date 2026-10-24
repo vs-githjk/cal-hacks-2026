@@ -1,0 +1,2296 @@
+{
+ "frozen": "2026-10-24T04:52Z",
+ "hand_checked": false,
+ "note": "Truth = within the makers' published specs (recommended PSU, clearances, sockets). Drafted from known spec values; each part's spec page still needs a human re-check. Do not edit truths to match the checker.",
+ "builds": [
+  {
+   "id": "demo_hero",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "category": "memory",
+     "name": "Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 6000,
+      "modules": 2,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
+     "category": "gpu",
+     "name": "MSI RTX 5070 Ti VENTUS 3X OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5070 Ti",
+      "length_mm": 303
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM850x (2024)",
+     "category": "psu",
+     "name": "Corsair RM850x (2024)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 850,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Fractal Design North",
+     "category": "case",
+     "name": "Fractal Design North",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 355,
+      "max_cooler_height_mm": 170,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "cooler:Thermalright Peerless Assassin 120 SE",
+     "category": "cooler",
+     "name": "Thermalright Peerless Assassin 120 SE",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 155,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "storage:Samsung 990 Pro 2TB",
+     "category": "storage",
+     "name": "Samsung 990 Pro 2TB",
+     "condition": "new",
+     "attrs": {
+      "interface": "M.2 PCIe 4.0 X4",
+      "form_factor": "M.2-2280"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "all within spec"
+  },
+  {
+   "id": "hero_650w",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
+     "category": "gpu",
+     "name": "MSI RTX 5070 Ti VENTUS 3X OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5070 Ti",
+      "length_mm": 303
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM650e (2023)",
+     "category": "psu",
+     "name": "Corsair RM650e (2023)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 650,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 2
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "NVIDIA recommends 750 W for RTX 5070 Ti"
+  },
+  {
+   "id": "hero_750w",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
+     "category": "gpu",
+     "name": "MSI RTX 5070 Ti VENTUS 3X OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5070 Ti",
+      "length_mm": 303
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM750e (2023)",
+     "category": "psu",
+     "name": "Corsair RM750e (2023)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 750,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 3
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "750 W meets NVIDIA's recommendation"
+  },
+  {
+   "id": "am5_cpu_am4_board",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI B550 GAMING GEN3",
+     "category": "motherboard",
+     "name": "MSI B550 GAMING GEN3",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM4",
+      "chipset": "B550",
+      "chipset_series": 5,
+      "form_factor": "ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 1,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "AM5 CPU, AM4 board"
+  },
+  {
+   "id": "zen3_b550",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 5800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 5800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM4",
+      "microarchitecture": "Zen 3",
+      "tdp_w": 105,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI B550 GAMING GEN3",
+     "category": "motherboard",
+     "name": "MSI B550 GAMING GEN3",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM4",
+      "chipset": "B550",
+      "chipset_series": 5,
+      "form_factor": "ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 1,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
+     "category": "memory",
+     "name": "Corsair Vengeance LPX DDR4-3200 2x8GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR4",
+      "speed_mhz": 3200,
+      "modules": 2,
+      "module_gb": 8
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "AM4, DDR4"
+  },
+  {
+   "id": "am4_cpu_am5_board",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 5800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 5800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM4",
+      "microarchitecture": "Zen 3",
+      "tdp_w": 105,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "AM4 CPU, AM5 board"
+  },
+  {
+   "id": "rpl_z790",
+   "parts": [
+    {
+     "id": "cpu:Intel Core i5-14600K",
+     "category": "cpu",
+     "name": "Intel Core i5-14600K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "microarchitecture": "Raptor Lake Refresh",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI PRO Z790-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z790-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "Z790",
+      "chipset_series": 7,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "category": "memory",
+     "name": "Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 6000,
+      "modules": 2,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "LGA1700, DDR5 board"
+  },
+  {
+   "id": "arl_z790",
+   "parts": [
+    {
+     "id": "cpu:Intel Core Ultra 7 265K",
+     "category": "cpu",
+     "name": "Intel Core Ultra 7 265K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "microarchitecture": "Arrow Lake",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI PRO Z790-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z790-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "Z790",
+      "chipset_series": 7,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "LGA1851 CPU, LGA1700 board"
+  },
+  {
+   "id": "arl_z890",
+   "parts": [
+    {
+     "id": "cpu:Intel Core Ultra 7 265K",
+     "category": "cpu",
+     "name": "Intel Core Ultra 7 265K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "microarchitecture": "Arrow Lake",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI PRO Z890-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z890-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "chipset": "Z890",
+      "chipset_series": 8,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "category": "memory",
+     "name": "Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 6000,
+      "modules": 2,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "LGA1851, DDR5"
+  },
+  {
+   "id": "4090_14900k_750",
+   "parts": [
+    {
+     "id": "cpu:Intel Core i9-14900K",
+     "category": "cpu",
+     "name": "Intel Core i9-14900K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "microarchitecture": "Raptor Lake Refresh",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI PRO Z790-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z790-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "Z790",
+      "chipset_series": 7,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:Asus ROG STRIX RTX 4090 GAMING OC",
+     "category": "gpu",
+     "name": "Asus ROG STRIX RTX 4090 GAMING OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 4090",
+      "length_mm": 358
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM750e (2023)",
+     "category": "psu",
+     "name": "Corsair RM750e (2023)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 750,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 3
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Lian Li O11 Dynamic EVO",
+     "category": "case",
+     "name": "Lian Li O11 Dynamic EVO",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "EATX",
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 422,
+      "max_cooler_height_mm": 167,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "NVIDIA recommends 850 W for RTX 4090"
+  },
+  {
+   "id": "4090fe_14900k_1000",
+   "parts": [
+    {
+     "id": "cpu:Intel Core i9-14900K",
+     "category": "cpu",
+     "name": "Intel Core i9-14900K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "microarchitecture": "Raptor Lake Refresh",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:MSI PRO Z790-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z790-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "Z790",
+      "chipset_series": 7,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:NVIDIA RTX 4090 Founders Edition",
+     "category": "gpu",
+     "name": "NVIDIA RTX 4090 Founders Edition",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 4090",
+      "length_mm": 304
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM1000x (2024)",
+     "category": "psu",
+     "name": "Corsair RM1000x (2024)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 1000,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Lian Li O11 Dynamic EVO",
+     "category": "case",
+     "name": "Lian Li O11 Dynamic EVO",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "EATX",
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 422,
+      "max_cooler_height_mm": 167,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "cooler:Noctua NH-D15",
+     "category": "cooler",
+     "name": "Noctua NH-D15",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 165,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "1000 W, 304 mm card, 165 mm cooler in 167 mm"
+  },
+  {
+   "id": "strix4090_north",
+   "parts": [
+    {
+     "id": "gpu:Asus ROG STRIX RTX 4090 GAMING OC",
+     "category": "gpu",
+     "name": "Asus ROG STRIX RTX 4090 GAMING OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 4090",
+      "length_mm": 358
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Fractal Design North",
+     "category": "case",
+     "name": "Fractal Design North",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 355,
+      "max_cooler_height_mm": 170,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "358 mm card, 355 mm clearance"
+  },
+  {
+   "id": "fe4090_north",
+   "parts": [
+    {
+     "id": "gpu:NVIDIA RTX 4090 Founders Edition",
+     "category": "gpu",
+     "name": "NVIDIA RTX 4090 Founders Edition",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 4090",
+      "length_mm": 304
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Fractal Design North",
+     "category": "case",
+     "name": "Fractal Design North",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 355,
+      "max_cooler_height_mm": 170,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "304 mm card, 355 mm clearance"
+  },
+  {
+   "id": "5070ti_nr200p",
+   "parts": [
+    {
+     "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
+     "category": "gpu",
+     "name": "MSI RTX 5070 Ti VENTUS 3X OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5070 Ti",
+      "length_mm": 303
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "303 mm card, 330 mm clearance"
+  },
+  {
+   "id": "9070xt_nr200p",
+   "parts": [
+    {
+     "id": "gpu:Sapphire PULSE RX 9070 XT",
+     "category": "gpu",
+     "name": "Sapphire PULSE RX 9070 XT",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RX 9070 XT",
+      "length_mm": 320
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "320 mm card, 330 mm clearance"
+  },
+  {
+   "id": "astral5090_nr200p",
+   "parts": [
+    {
+     "id": "gpu:Asus ROG ASTRAL RTX 5090",
+     "category": "gpu",
+     "name": "Asus ROG ASTRAL RTX 5090",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5090",
+      "length_mm": 358
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "358 mm card, 330 mm clearance"
+  },
+  {
+   "id": "nhd15_nr200p",
+   "parts": [
+    {
+     "id": "cooler:Noctua NH-D15",
+     "category": "cooler",
+     "name": "Noctua NH-D15",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 165,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "165 mm cooler, 155 mm clearance"
+  },
+  {
+   "id": "pa120_nr200p",
+   "parts": [
+    {
+     "id": "cooler:Thermalright Peerless Assassin 120 SE",
+     "category": "cooler",
+     "name": "Thermalright Peerless Assassin 120 SE",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 155,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "155 mm cooler, 155 mm clearance"
+  },
+  {
+   "id": "nhu12s_nr200p",
+   "parts": [
+    {
+     "id": "cooler:Noctua NH-U12S",
+     "category": "cooler",
+     "name": "Noctua NH-U12S",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 158,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "158 mm cooler, 155 mm clearance"
+  },
+  {
+   "id": "ak400_q300l",
+   "parts": [
+    {
+     "id": "cooler:DeepCool AK400",
+     "category": "cooler",
+     "name": "DeepCool AK400",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 155,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox Q300L",
+     "category": "case",
+     "name": "Cooler Master MasterBox Q300L",
+     "condition": "new",
+     "attrs": {
+      "type": "MicroATX Mini Tower",
+      "motherboard_form_factors": [
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 360,
+      "max_cooler_height_mm": 159,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "155 mm cooler, 159 mm clearance"
+  },
+  {
+   "id": "nhd15_h5",
+   "parts": [
+    {
+     "id": "cooler:Noctua NH-D15",
+     "category": "cooler",
+     "name": "Noctua NH-D15",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 165,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:NZXT H5 Flow",
+     "category": "case",
+     "name": "NZXT H5 Flow",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 365,
+      "max_cooler_height_mm": 165,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "165 mm cooler, 165 mm clearance"
+  },
+  {
+   "id": "drp5_h5",
+   "parts": [
+    {
+     "id": "cooler:be quiet! Dark Rock Pro 5",
+     "category": "cooler",
+     "name": "be quiet! Dark Rock Pro 5",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 168,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:NZXT H5 Flow",
+     "category": "case",
+     "name": "NZXT H5 Flow",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 365,
+      "max_cooler_height_mm": 165,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "168 mm cooler, 165 mm clearance"
+  },
+  {
+   "id": "atx_board_nr200p",
+   "parts": [
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "ATX board, Mini ITX case"
+  },
+  {
+   "id": "itx_board_nr200p",
+   "parts": [
+    {
+     "id": "motherboard:Gigabyte B650I AORUS ULTRA",
+     "category": "motherboard",
+     "name": "Gigabyte B650I AORUS ULTRA",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "Mini ITX",
+      "memory_type": "DDR5",
+      "memory_slots": 2,
+      "m2_slots": 3,
+      "sata_ports": 2
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox NR200P",
+     "category": "case",
+     "name": "Cooler Master MasterBox NR200P",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Tower",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 330,
+      "max_cooler_height_mm": 155,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "Mini ITX board and case"
+  },
+  {
+   "id": "matx_board_q300l",
+   "parts": [
+    {
+     "id": "motherboard:MSI PRO B760M-A DDR4 II",
+     "category": "motherboard",
+     "name": "MSI PRO B760M-A DDR4 II",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "B760",
+      "chipset_series": 7,
+      "form_factor": "Micro ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox Q300L",
+     "category": "case",
+     "name": "Cooler Master MasterBox Q300L",
+     "condition": "new",
+     "attrs": {
+      "type": "MicroATX Mini Tower",
+      "motherboard_form_factors": [
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 360,
+      "max_cooler_height_mm": 159,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "Micro ATX board and case"
+  },
+  {
+   "id": "atx_board_q300l",
+   "parts": [
+    {
+     "id": "motherboard:MSI PRO Z790-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z790-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "Z790",
+      "chipset_series": 7,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Cooler Master MasterBox Q300L",
+     "category": "case",
+     "name": "Cooler Master MasterBox Q300L",
+     "condition": "new",
+     "attrs": {
+      "type": "MicroATX Mini Tower",
+      "motherboard_form_factors": [
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 360,
+      "max_cooler_height_mm": 159,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "ATX board, Micro ATX case"
+  },
+  {
+   "id": "ddr4_on_am5",
+   "parts": [
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
+     "category": "memory",
+     "name": "Corsair Vengeance LPX DDR4-3200 2x8GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR4",
+      "speed_mhz": 3200,
+      "modules": 2,
+      "module_gb": 8
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "DDR4 kit, DDR5 board"
+  },
+  {
+   "id": "ddr5_on_d4_board",
+   "parts": [
+    {
+     "id": "motherboard:MSI PRO B760M-A DDR4 II",
+     "category": "motherboard",
+     "name": "MSI PRO B760M-A DDR4 II",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "B760",
+      "chipset_series": 7,
+      "form_factor": "Micro ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "category": "memory",
+     "name": "Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 6000,
+      "modules": 2,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "DDR5 kit, DDR4 board"
+  },
+  {
+   "id": "ddr4_on_d4_board",
+   "parts": [
+    {
+     "id": "motherboard:MSI PRO B760M-A DDR4 II",
+     "category": "motherboard",
+     "name": "MSI PRO B760M-A DDR4 II",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "B760",
+      "chipset_series": 7,
+      "form_factor": "Micro ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:G.Skill Ripjaws V DDR4-3600 2x16GB",
+     "category": "memory",
+     "name": "G.Skill Ripjaws V DDR4-3600 2x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR4",
+      "speed_mhz": 3600,
+      "modules": 2,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "DDR4 kit, DDR4 board"
+  },
+  {
+   "id": "4dimm_on_itx",
+   "parts": [
+    {
+     "id": "motherboard:Gigabyte B650I AORUS ULTRA",
+     "category": "motherboard",
+     "name": "Gigabyte B650I AORUS ULTRA",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "Mini ITX",
+      "memory_type": "DDR5",
+      "memory_slots": 2,
+      "m2_slots": 3,
+      "sata_ports": 2
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "memory:G.Skill Trident Z5 DDR5-6000 4x16GB",
+     "category": "memory",
+     "name": "G.Skill Trident Z5 DDR5-6000 4x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 6000,
+      "modules": 4,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "4 modules, 2 slots"
+  },
+  {
+   "id": "5070ti_600br",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
+     "category": "gpu",
+     "name": "MSI RTX 5070 Ti VENTUS 3X OC",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5070 Ti",
+      "length_mm": 303
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:EVGA 600 BR",
+     "category": "psu",
+     "name": "EVGA 600 BR",
+     "condition": "new",
+     "attrs": {
+      "wattage": 600,
+      "form_factor": "ATX",
+      "pcie_16pin": 0,
+      "pcie_8pin": 2
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "600 W and two 8-pin; card needs 750 W"
+  },
+  {
+   "id": "4060_7600_550",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 5 7600",
+     "category": "cpu",
+     "name": "AMD Ryzen 5 7600",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 4",
+      "tdp_w": 65,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:MSI RTX 4060 VENTUS 2X",
+     "category": "gpu",
+     "name": "MSI RTX 4060 VENTUS 2X",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 4060",
+      "length_mm": 199,
+      "power_connector": [
+       "8pin",
+       1
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair CX550",
+     "category": "psu",
+     "name": "Corsair CX550",
+     "condition": "new",
+     "attrs": {
+      "wattage": 550,
+      "form_factor": "ATX",
+      "pcie_16pin": 0,
+      "pcie_8pin": 2
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "550 W meets NVIDIA's recommendation; one 8-pin"
+  },
+  {
+   "id": "4060_450",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 5 7600",
+     "category": "cpu",
+     "name": "AMD Ryzen 5 7600",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 4",
+      "tdp_w": 65,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:MSI RTX 4060 VENTUS 2X",
+     "category": "gpu",
+     "name": "MSI RTX 4060 VENTUS 2X",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 4060",
+      "length_mm": 199,
+      "power_connector": [
+       "8pin",
+       1
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair CV450",
+     "category": "psu",
+     "name": "Corsair CV450",
+     "condition": "new",
+     "attrs": {
+      "wattage": 450,
+      "form_factor": "ATX",
+      "pcie_16pin": 0,
+      "pcie_8pin": 1
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "NVIDIA recommends 550 W for RTX 4060"
+  },
+  {
+   "id": "xtx_750",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 7800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 7800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 4",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:Sapphire NITRO+ RX 7900 XTX",
+     "category": "gpu",
+     "name": "Sapphire NITRO+ RX 7900 XTX",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RX 7900 XTX",
+      "length_mm": 320,
+      "power_connector": [
+       "8pin",
+       3
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM750e (2023)",
+     "category": "psu",
+     "name": "Corsair RM750e (2023)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 750,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 3
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "AMD recommends 800 W for RX 7900 XTX"
+  },
+  {
+   "id": "xtx_850_lancool",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 7800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 7800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 4",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:Sapphire NITRO+ RX 7900 XTX",
+     "category": "gpu",
+     "name": "Sapphire NITRO+ RX 7900 XTX",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RX 7900 XTX",
+      "length_mm": 320,
+      "power_connector": [
+       "8pin",
+       3
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Seasonic FOCUS GX-850 (2019)",
+     "category": "psu",
+     "name": "Seasonic FOCUS GX-850 (2019)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 850,
+      "form_factor": "ATX",
+      "pcie_16pin": 0,
+      "pcie_8pin": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Lian Li Lancool 216",
+     "category": "case",
+     "name": "Lian Li Lancool 216",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "EATX",
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 392,
+      "max_cooler_height_mm": 180,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "850 W, three 8-pin, 320 mm in 392 mm"
+  },
+  {
+   "id": "nvme_b650",
+   "parts": [
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "storage:Samsung 990 Pro 2TB",
+     "category": "storage",
+     "name": "Samsung 990 Pro 2TB",
+     "condition": "new",
+     "attrs": {
+      "interface": "M.2 PCIe 4.0 X4",
+      "form_factor": "M.2-2280"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "board has M.2 slots"
+  },
+  {
+   "id": "sata_b650",
+   "parts": [
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "storage:Samsung 870 EVO 1TB",
+     "category": "storage",
+     "name": "Samsung 870 EVO 1TB",
+     "condition": "new",
+     "attrs": {
+      "interface": "SATA 6.0 Gb/s",
+      "form_factor": "2.5"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "board has SATA ports"
+  },
+  {
+   "id": "terra_lowprofile",
+   "parts": [
+    {
+     "id": "cooler:Noctua NH-L12S",
+     "category": "cooler",
+     "name": "Noctua NH-L12S",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 70,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Fractal Design Terra",
+     "category": "case",
+     "name": "Fractal Design Terra",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Desktop",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 322,
+      "max_cooler_height_mm": 77,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "70 mm cooler, 77 mm clearance"
+  },
+  {
+   "id": "terra_tower",
+   "parts": [
+    {
+     "id": "cooler:Thermalright Peerless Assassin 120 SE",
+     "category": "cooler",
+     "name": "Thermalright Peerless Assassin 120 SE",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 155,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Fractal Design Terra",
+     "category": "case",
+     "name": "Fractal Design Terra",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Desktop",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 322,
+      "max_cooler_height_mm": 77,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "155 mm cooler, 77 mm clearance"
+  },
+  {
+   "id": "terra_atx_psu",
+   "parts": [
+    {
+     "id": "psu:Corsair RM850x (2024)",
+     "category": "psu",
+     "name": "Corsair RM850x (2024)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 850,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Fractal Design Terra",
+     "category": "case",
+     "name": "Fractal Design Terra",
+     "condition": "new",
+     "attrs": {
+      "type": "Mini ITX Desktop",
+      "motherboard_form_factors": [
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 322,
+      "max_cooler_height_mm": 77,
+      "psu_form_factors": [
+       "SFX",
+       "SFX-L"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Gigabyte B650I AORUS ULTRA",
+     "category": "motherboard",
+     "name": "Gigabyte B650I AORUS ULTRA",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "Mini ITX",
+      "memory_type": "DDR5",
+      "memory_slots": 2,
+      "m2_slots": 3,
+      "sata_ports": 2
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "Terra takes SFX PSUs only"
+  },
+  {
+   "id": "zen3_b350",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 5 5600X",
+     "category": "cpu",
+     "name": "AMD Ryzen 5 5600X",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM4",
+      "microarchitecture": "Zen 3",
+      "tdp_w": 65,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B350M-A",
+     "category": "motherboard",
+     "name": "Asus PRIME B350M-A",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM4",
+      "chipset": "B350",
+      "chipset_series": 3,
+      "form_factor": "Micro ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 1,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "B350M-A lists Ryzen 5000 after a BIOS update"
+  },
+  {
+   "id": "coffee_z270",
+   "parts": [
+    {
+     "id": "cpu:Intel Core i7-8700K",
+     "category": "cpu",
+     "name": "Intel Core i7-8700K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1151",
+      "microarchitecture": "Coffee Lake",
+      "tdp_w": 95,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME Z270-A",
+     "category": "motherboard",
+     "name": "Asus PRIME Z270-A",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1151",
+      "chipset": "Z270",
+      "chipset_series": 2,
+      "form_factor": "ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "Coffee Lake needs a 300-series board"
+  },
+  {
+   "id": "kaby_z370",
+   "parts": [
+    {
+     "id": "cpu:Intel Core i7-7700K",
+     "category": "cpu",
+     "name": "Intel Core i7-7700K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1151",
+      "microarchitecture": "Kaby Lake",
+      "tdp_w": 91,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME Z370-A",
+     "category": "motherboard",
+     "name": "Asus PRIME Z370-A",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1151",
+      "chipset": "Z370",
+      "chipset_series": 3,
+      "form_factor": "ATX",
+      "memory_type": "DDR4",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "does_not_fit",
+   "why": "Kaby Lake is not supported on 300-series boards"
+  },
+  {
+   "id": "9950x_5090fe_1000",
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 9 9950X",
+     "category": "cpu",
+     "name": "AMD Ryzen 9 9950X",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 170,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "motherboard:Asus PRIME B650-PLUS WIFI",
+     "category": "motherboard",
+     "name": "Asus PRIME B650-PLUS WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "chipset": "B650",
+      "chipset_series": 6,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 2,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "gpu:NVIDIA RTX 5090 Founders Edition",
+     "category": "gpu",
+     "name": "NVIDIA RTX 5090 Founders Edition",
+     "condition": "new",
+     "attrs": {
+      "chipset": "RTX 5090",
+      "length_mm": 304
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "psu:Corsair RM1000x (2024)",
+     "category": "psu",
+     "name": "Corsair RM1000x (2024)",
+     "condition": "new",
+     "attrs": {
+      "wattage": 1000,
+      "form_factor": "ATX",
+      "pcie_16pin": 1,
+      "pcie_8pin": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    },
+    {
+     "id": "case:Lian Li O11 Dynamic EVO",
+     "category": "case",
+     "name": "Lian Li O11 Dynamic EVO",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "EATX",
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 422,
+      "max_cooler_height_mm": 167,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm"
+    }
+   ],
+   "truth": "fits",
+   "why": "NVIDIA recommends 1000 W for RTX 5090"
+  }
+ ]
+}
