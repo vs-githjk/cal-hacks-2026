@@ -6,6 +6,8 @@ What is simulated: the call transport (the transcripts are typed by the runner, 
 advances 31 s per retry to clear the 30 s cooldown instead of sleeping) and the merchant (verify_request is what
 Lane C's merchant simulator will call). The Stripe charge is a SIM stub unless `--stripe` is passed AND
 STRIPE_SECRET_KEY starts with sk_test_; then it is one Stripe test-mode PaymentIntent on a Visa test card.
+Before the mandate exists, the winning price is re-checked live through Bright Data (demo/recheck.py) when
+BRIGHT_DATA_API_KEY is set; out of stock or a price above the quote stops the call, anything unreadable keeps the MIRROR quote.
 The approval code is never printed or stored. No key is ever printed.
 """
 from __future__ import annotations
@@ -22,6 +24,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from typing import Any, Callable, Mapping, Optional
 
+from demo import recheck as recheck_mod
 from demo.common import LIVE, MIRROR, SIM, money, validate
 from demo.goal import needs_call
 from pay.approval import ApprovalService, script_for
@@ -97,8 +100,34 @@ def _signing_key(env: Mapping[str, str], tmp: str):
     return load_private_key(path), note + "throwaway Ed25519 key in a temp dir (deleted after the run)"
 
 
+def _live_recheck(b1: dict, b2: dict, bid: dict, win: dict, seller: dict, say, recheck_fn: Optional[Callable]) -> tuple[dict, Optional[str]]:
+    """Ask Bright Data what the winning listing costs now, print one honest line, return (result, stop reason or None).
+    Not configured, slow or empty keep the quoted MIRROR price and say so; only an out of stock page or a rise above
+    the quote stops the call (demo/recheck.py)."""
+    line = bid["lines"][win["line"]]
+    listing = {"url": line["listing_url"], "price": float(line["unit_price"]), "cap": float(b1["goal"]["cap"]),
+               "snapshot_date": seller["lines"][win["line"]].get("snapshot_date", "")}
+    if recheck_fn is not None or recheck_mod.will_fetch():
+        say.line(LIVE, "fetching live price through Bright Data (up to a minute)...")
+    res = (recheck_fn or recheck_mod.recheck)(listing)
+    dated = (listing["snapshot_date"] or "")[:10] or "an earlier date"
+    state = res["state"]
+    if state == "not_configured":
+        say.line(MIRROR, f"Live re-check: Bright Data not configured, using the MIRROR price from {dated}")
+    elif state in ("slow", "empty"):
+        why = "no answer in time" if state == "slow" else f"nothing readable ({res.get('detail', 'empty')})"
+        say.line(MIRROR, f"Live re-check: {why}, so the quoted MIRROR price from {dated} stands ({money(listing['price'])})")
+    else:
+        stock = "in stock" if state != "out_of_stock" else "OUT OF STOCK"
+        say.line(LIVE, f"Live re-check through Bright Data: {money(res['price'])}, {stock}, {recheck_mod.clock(res)}")
+    reason = recheck_mod.stop_reason(res, listing["price"], listing["cap"])
+    if reason is None and state == "price_changed":
+        say.line(LIVE, f"live price {money(res['price'])} is below the quote: the mandate stays at the quoted {money(listing['price'])}", 1)
+    return res, reason
+
+
 def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, env: Optional[Mapping[str, str]] = None,
-              stripe_test: Optional[Callable] = None) -> dict:
+              stripe_test: Optional[Callable] = None, recheck_fn: Optional[Callable] = None) -> dict:
     env = os.environ if env is None else env
     t0 = now.replace(microsecond=0)
     bid, win = b2["winner_bid"], b2["winner"]
@@ -116,6 +145,11 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     states = [{"state": "HUNTING", "at": b1["goal"]["created_at"]}, {"state": "HOLD_FOR_CALL", "reserved_amount": amount}]
     if not call:
         raise RuntimeError("the demo deal fits inside the allowance; nothing to approve on a call")
+    live_check, stop = _live_recheck(b1, b2, bid, win, seller, say, recheck_fn)
+    if stop:
+        say.line(LIVE, f"call NOT placed: {stop}")
+        return {"deal": {"deal_id": f"deal-{bid['id']}", "amount": amount, "payee": payee, "seller_id": seller["id"], "why_call": why_call},
+                "recheck": live_check, "stopped": {"at": "recheck", "reason": stop}, "origin": SIM}
 
     mandate = new_mandate(deal_id=f"deal-{bid['id']}", buyer_id=goal["buyer_id"], amount=amount, payee=payee, goal_id=goal["id"],
                           within_allowance=False, origin=bid["origin"], now=t0)
@@ -241,5 +275,5 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
                       "key_source": key_source, "body_sha256_in_digest": headers["Content-Digest"]},
         "verify": {"first": {"ok": bool(first), "reason": first.reason}, "replay": {"ok": bool(replay), "reason": replay.reason},
                    "altered": {"ok": bool(altered), "reason": altered.reason}},
-        "charge": charge, "goal_state_log": states, "goal_final": goal, "code_redacted": True, "origin": SIM,
+        "recheck": live_check, "charge": charge, "goal_state_log": states, "goal_final": goal, "code_redacted": True, "origin": SIM,
     }
