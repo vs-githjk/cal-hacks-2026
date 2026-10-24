@@ -1609,3 +1609,136 @@ describe('buyer purchase status', () => {
     }
   });
 });
+
+describe('buyer bid reviews and round IDs', () => {
+  const reviews = (who: Auth): ReturnType<typeof m.myBidReviewsView> => (mod.my_bid_reviews as any)(h.viewContext(who) as any);
+  const rounds = (who: Auth): ReturnType<typeof m.myBuyerRoundsView> => (mod.my_buyer_rounds as any)(h.viewContext(who) as any);
+  const addGoalAndNeed = (who: Auth, buyerId: string, goalId: string, needId: string) => {
+    run(who, (ctx) => m.postGoal(ctx, goalArgs({ id: goalId, buyerId })));
+    run(who, (ctx) => m.postNeed(ctx, needArgs({ id: needId, goalId, buyerId })));
+  };
+  const bindingHash = 'a'.repeat(64);
+  const metadata = (lineIndex = 2, listingId = 'https://example.test/selected') => JSON.stringify([{
+    lineIndex, shipping: 0, listingId, listingHash: 'b'.repeat(64), source: 'fixture', snapshotId: 'snapshot-1',
+    provenance: { origin: 'SIM' }, attrs: {},
+  }]);
+  const fixture = (args: {
+    who: Auth; buyerId: string; goalId: string; needId: string; roundId: string; state: string;
+    rank?: number; resultHash?: string; lineMetaJson?: string; persona?: string;
+    checks: { kind: string; result: string; detail: string; evidenceUrl?: string;
+      binding?: Record<string, unknown>; bindingJson?: string }[];
+  }) => {
+    addGoalAndNeed(args.who, args.buyerId, args.goalId, args.needId);
+    run(REF, (ctx) => {
+      ctx.db.round.insert({
+        id: args.roundId, needId: args.needId, openedAt: ctx.timestamp, deadline: ctx.timestamp, extensions: 0,
+        state: args.state, sealedCount: 1, closedAt: args.state === 'closed' ? ctx.timestamp : undefined,
+        origin: 'SIM', reviewDeadline: undefined,
+      });
+      ctx.db.roundResult.insert({
+        id: 0n, roundId: args.roundId, bidId: `bid-${args.roundId}`, sellerId: `seller-${args.buyerId}`,
+        persona: args.persona ?? 'stored seller persona', rank: args.rank ?? 1, landed: 780, reasons: [], lines: [line(780)],
+        origin: 'SIM', source: 'fixture', lineMetaJson: args.lineMetaJson ?? metadata(), bindingHash: args.resultHash ?? bindingHash,
+      });
+      for (const check of args.checks) ctx.db.bidCheck.insert({
+        id: 0n, bidId: `bid-${args.roundId}`, kind: check.kind, result: check.result, detail: check.detail,
+        evidenceUrl: check.evidenceUrl ?? '', origin: 'SIM', at: ctx.timestamp,
+        bindingJson: check.bindingJson ?? (check.binding ? JSON.stringify(check.binding) : ''),
+      });
+    });
+  };
+
+  it('lists only closed buyer-owned reviews and returns separate owned round IDs for all phases', () => {
+    const advBinding = { bindingHash };
+    const claimBinding = {
+      bindingHash, lineIndex: 2, listingId: 'https://example.test/selected', listingHash: 'b'.repeat(64),
+    };
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-closed-a', needId: 'need-closed-a', roundId: 'closed-a', state: 'closed', checks: [
+      { kind: 'shield', result: 'allow', detail: 'shield.rule.1, shield.rule.2' },
+      { kind: 'advocate', result: 'buy', detail: 'advocate.rule: reviewed', evidenceUrl: 'https://example.test/review', binding: advBinding },
+      { kind: 'claim', result: 'verified', detail: 'supports the listing', evidenceUrl: 'https://example.test/selected', binding: claimBinding },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-closed-b', needId: 'need-closed-b', roundId: 'closed-b', state: 'closed', checks: [
+      { kind: 'shield', result: 'quarantine', detail: 'shield.rule.pending' },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-open', needId: 'need-open', roundId: 'open-a', state: 'open', checks: [
+      { kind: 'shield', result: 'allow', detail: 'open shield row' },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-review', needId: 'need-review', roundId: 'review-a', state: 'review', checks: [
+      { kind: 'advocate', result: 'buy', detail: 'review state row', binding: advBinding },
+    ] });
+    fixture({ who: BOB, buyerId: 'bob', goalId: 'bob-goal', needId: 'bob-need', roundId: 'bob-closed', state: 'closed', checks: [
+      { kind: 'shield', result: 'block', detail: 'bob.rule' },
+    ] });
+
+    expect(mod.my_bid_reviews).toBeDefined();
+    expect(mod.my_buyer_rounds).toBeDefined();
+    const ownedRounds = rounds(VIDYUT);
+    expect(ownedRounds.map((row) => row.roundId)).toEqual(['closed-a', 'closed-b', 'open-a', 'review-a']);
+    expect(ownedRounds.map((row) => row.state)).toEqual(['closed', 'closed', 'open', 'review']);
+    expect(rounds(BOB).map((row) => row.roundId)).toEqual(['bob-closed']);
+    const ownReviews = reviews(VIDYUT);
+    expect(ownReviews.map((row) => row.roundId)).toEqual(['closed-a', 'closed-a', 'closed-a', 'closed-b']);
+    expect(reviews(BOB).map((row) => row.roundId)).toEqual(['bob-closed']);
+    for (const who of [REF, A, B, C, STRANGER]) {
+      expect(reviews(who)).toHaveLength(0);
+      expect(rounds(who)).toHaveLength(0);
+    }
+
+    const claim = ownReviews.find((row) => row.kind === 'claim')!;
+    expect(claim).toMatchObject({
+      goalId: 'goal-closed-a', needId: 'need-closed-a', roundId: 'closed-a', bidId: 'bid-closed-a',
+      sellerId: 'seller-vidyut', sellerName: 'stored seller persona', landed: 780, bindingHash,
+      result: 'verified', detail: 'supports the listing', evidenceUrl: 'https://example.test/selected',
+      origin: 'SIM', lineIndex: 2, listingId: 'https://example.test/selected', listingHash: 'b'.repeat(64),
+    });
+    expect(typeof claim.checkId).toBe('bigint');
+    const shield = ownReviews.find((row) => row.kind === 'shield')!;
+    expect(shield).toMatchObject({ roundId: 'closed-a', result: 'allow', detail: 'shield.rule.1, shield.rule.2', bindingHash: '' });
+    expect(shield.lineIndex).toBeUndefined();
+    const serialized = JSON.stringify(ownReviews, (_key, value) => typeof value === 'bigint' ? value.toString() : value);
+    for (const hidden of ['bindingJson', 'lineMetaJson', 'snapshotId', 'shipping', 'provenance', 'attrs', 'nonce', 'approvalCode']) {
+      expect(serialized).not.toContain(hidden);
+    }
+  });
+
+  it('omits stale, malformed, unselected, and disqualified claim bindings while retaining exact bid-scoped Shield rows', () => {
+    const staleHash = 'c'.repeat(64);
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-stale', needId: 'need-stale', roundId: 'stale', state: 'closed', checks: [
+      { kind: 'shield', result: 'block', detail: 'shield.rule.blocked' },
+      { kind: 'advocate', result: 'veto', detail: 'stale advocate', binding: { bindingHash: staleHash } },
+      { kind: 'claim', result: 'verified', detail: 'stale claim', binding: {
+        bindingHash: staleHash, lineIndex: 2, listingId: 'https://example.test/selected', listingHash: 'b'.repeat(64),
+      } },
+      { kind: 'advocate', result: 'buy', detail: 'missing binding', bindingJson: '' },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-unselected', needId: 'need-unselected', roundId: 'unselected', state: 'closed', checks: [
+      { kind: 'claim', result: 'verified', detail: 'wrong original line', binding: {
+        bindingHash, lineIndex: 1, listingId: 'https://example.test/selected', listingHash: 'b'.repeat(64),
+      } },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-malformed', needId: 'need-malformed', roundId: 'malformed', state: 'closed', checks: [
+      { kind: 'claim', result: 'verified', detail: 'bad JSON', bindingJson: '{' },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-disqualified', needId: 'need-disqualified', roundId: 'disqualified', state: 'closed', rank: 0, checks: [
+      { kind: 'shield', result: 'allow', detail: 'shield.rule.checked' },
+      { kind: 'advocate', result: 'veto', detail: 'advocate.rule: veto', evidenceUrl: 'https://example.test/veto', binding: { bindingHash } },
+      { kind: 'claim', result: 'verified', detail: 'claim lacks selected ranked line', binding: {
+        bindingHash, lineIndex: 2, listingId: 'https://example.test/selected', listingHash: 'b'.repeat(64),
+      } },
+    ] });
+    fixture({ who: VIDYUT, buyerId: 'vidyut', goalId: 'goal-large', needId: 'need-large', roundId: 'oversized', state: 'closed', persona: 'p'.repeat(129), checks: [
+      { kind: 'shield', result: 'allow', detail: 'oversized persona' },
+    ] });
+
+    const rows = reviews(VIDYUT);
+    expect(rows.filter((row) => row.roundId === 'stale').map((row) => row.kind)).toEqual(['shield']);
+    expect(rows.filter((row) => row.roundId === 'unselected' || row.roundId === 'malformed')).toHaveLength(0);
+    expect(rows.filter((row) => row.roundId === 'disqualified').map((row) => row.kind)).toEqual(['shield', 'advocate']);
+    expect(rows.find((row) => row.roundId === 'disqualified' && row.kind === 'advocate')).toMatchObject({ bindingHash, result: 'veto' });
+    expect(rows.filter((row) => row.roundId === 'oversized')).toHaveLength(0);
+    expect(rows.find((row) => row.roundId === 'stale' && row.kind === 'shield')).toMatchObject({
+      bidId: 'bid-stale', sellerId: 'seller-vidyut', result: 'block', detail: 'shield.rule.blocked', bindingHash: '',
+    });
+  });
+});
