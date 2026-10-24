@@ -142,3 +142,19 @@ def test_every_row_passes_the_dataset_schema_apify_validates(monkeypatch, tmp_pa
     assert {r["status"] for r in a.rows} >= {"recalled", "none", "unverified"}
     for row in a.rows:
         jsonschema.validate(row, fields)
+
+
+def test_the_bundled_actor_code_runs_on_its_own(tmp_path):  # a real run failed: the bundle imported data.claim_check
+    import shutil
+    import subprocess
+    root = tmp_path / "actor"
+    shutil.copytree(ACTOR, root, ignore=shutil.ignore_patterns("data", "__pycache__"))
+    for f in ("recalls.py", "recall_checker.py"):  # bundle.sh copies these from the folder above, as in the repo
+        shutil.copy(ACTOR.parent / f, tmp_path / f)
+    subprocess.run(["sh", str(root / "bundle.sh")], check=True, cwd=root)
+    code = (f"import sys; sys.path.insert(0, {str(root / 'src')!r}); "
+            "from data.recall_checker import check_product; "
+            f"r = check_product('PowerCore 10000 A1263', 'Anker', fetch=lambda u: open({str(FIX / 'recalls_anker_real.json')!r}, 'rb').read(), cache_dir={str(tmp_path / 'c')!r}); "
+            "print(r['status'])")
+    out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, cwd=tmp_path)
+    assert out.stdout.strip() == "recalled", out.stderr

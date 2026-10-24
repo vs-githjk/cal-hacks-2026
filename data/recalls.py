@@ -46,8 +46,9 @@ def brand_items(brand: str, fetch=None, now=None, cache_dir=None):
     cached = _cached(brand, now, cache_dir)
     if cached:
         return cached[0], cached[1], url
-    from data.claim_check.fetch import guarded_get
-    body = (fetch or guarded_get)(url)
+    if fetch is None:  # only then: an Actor bundle passes its own fetch and does not ship data.claim_check
+        from data.claim_check.fetch import guarded_get as fetch
+    body = fetch(url)
     items = json.loads(body.decode("utf-8") if isinstance(body, (bytes, bytearray)) else body)
     checked_at = now.isoformat(timespec="seconds")
     if isinstance(items, list):
