@@ -109,6 +109,19 @@ describe("rankBids", () => {
     expect(r.ranked[1]!.landed).toBe(780);
   });
 
+  it("disqualifies a bid that omits any requested SKU", () => {
+    const psu = "psu-850w-gold";
+    const needWithPsu = new Map([...items, [psu, { sku_spec: psu, condition: "new", variant: "retail", quantity: 1, unit: "each" } as NeedItem]]);
+    const gpuOnly = mk("seller-a", 780);
+    const complete = mk("seller-b", 900, { lines: [
+      { sku_spec: GPU, unit_price: 780, quantity: 1 },
+      { sku_spec: psu, unit_price: 120, quantity: 1 },
+    ] });
+    const r = rankBids([gpuOnly, complete], { needItems: needWithPsu });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([complete.id]);
+    expect(r.disqualified.find((x) => x.bid.id === gpuOnly.id)?.reasons.join(" ")).toMatch(/psu-850w-gold.*does not cover/);
+  });
+
   // Invariant 8: the fee is flat and never feeds ranking.
   it("INVARIANT fee-never-ranks: changing the fee changes no ranking", () => {
     fc.assert(

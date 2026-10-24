@@ -43,8 +43,26 @@ const bidArgs = (id: string, lines: ReturnType<typeof line>[]) => ({
   id, roundId: 'round-1', persona: 'p', lines, statedTotal: 0, perks: [], claims: [], origin: 'SIM', source: 'sim:fixture',
 });
 
+function closeReadyRound() {
+  run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+  for (const b of [...h.db.bid.roundId.filter('round-1')]) {
+    const checks = [...h.db.bidCheck.bidId.filter(b.id)];
+    if (!checks.some((c) => c.kind === 'shield')) run(REF, (ctx) => m.attachVerdict(ctx, { bidId: b.id, verdict: 'allow', ruleIds: [], origin: 'SIM' }));
+    if (!checks.some((c) => c.kind === 'advocate')) run(REF, (ctx) => m.attachAdvocateCard(ctx, {
+      bidId: b.id, recommendation: 'buy', ruleId: '', text: '', sourceUrl: '', origin: 'SIM',
+    }));
+    for (const claim of b.claims) {
+      if (!checks.some((c) => c.kind === 'claim' && c.detail === claim)) run(REF, (ctx) => m.attachClaimCheck(ctx, {
+        bidId: b.id, claim, check: 'verified', evidenceUrl: '', origin: 'SIM',
+      }));
+    }
+  }
+  advance(m.REVIEW_WINDOW_MS);
+  run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+}
+
 const mandateArgs = (over: Partial<Parameters<typeof m.createMandate>[1]> = {}) => ({
-  hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'vidyut', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', requestedBy: '', origin: 'SIM', ...over,
+  hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'vidyut', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', requestedBy: '', origin: 'SIM', goalId: '', needId: '', ...over,
 });
 
 const goalArgs = (over: Partial<m.PostGoalArgs> = {}): m.PostGoalArgs => ({
@@ -92,6 +110,67 @@ describe('post_need and redaction', () => {
     expect(v[0]).toMatchObject({ needId: 'need-1', roundId: 'round-1', skuSpec: GPU, condition: 'new' });
     const text = JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? String(x) : x));
     expect(text).not.toMatch(/spendLimit|800|goal|vidyut/);
+  });
+});
+
+describe('goal reservation and settlement', () => {
+  it('reserves one current deal, records spend only on payment, and marks DONE only after the exact buyer settlement ack', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-1', goalId: 'goal-1', needId: 'need-1' })));
+    expect(h.db.goal.id.find('goal-1')).toMatchObject({ state: 'HOLD_FOR_CALL', reservedAmount: 780 });
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_deal_1', amount: 780, mode: 'stripe_test' }));
+    expect(h.db.goal.id.find('goal-1')).toMatchObject({ state: 'HOLD_FOR_CALL', reservedAmount: 780 });
+    expect(() => run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1', paymentRef: 'pi_wrong' }))).toThrow(/exact recorded payment/);
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1', paymentRef: 'pi_deal_1' }));
+    expect(h.db.goal.id.find('goal-1')).toMatchObject({ state: 'DONE', reservedAmount: 0, poNumber: 'deal-1' });
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1', paymentRef: 'pi_deal_1' }));
+  });
+
+  it('binds one hold to the exact deal and mandate and releases only an expired unapproved mandate', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ goalId: 'goal-1', needId: 'need-1', dealId: 'deal-1' })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', goalId: 'goal-1', needId: 'need-1', dealId: 'deal-2' })))).toThrow(/active deal reservation/);
+    run(REF, (ctx) => m.reserveGoal(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1', amount: 780 }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
+    advance(10 * 60_000 + 1);
+    expect(() => run(REF, (ctx) => m.releaseGoalReservation(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1' }))).toThrow(/approved or charged/);
+    expect(h.db.goal.id.find('goal-1')).toMatchObject({ reservedDealId: 'deal-1', reservedMandateHash: 'h1', reservedAmount: 780 });
+  });
+
+  it('releases the exact expired unapproved hold and rejects non-finite goal or mandate values', () => {
+    expect(() => run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ cap: Infinity })))).toThrow(/finite positive/);
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: Infinity })))).toThrow(/finite and positive/);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ expiryMinutes: 11 })))).toThrow(/between 1 and 10/);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ goalId: 'goal-1', needId: 'need-1', dealId: 'deal-1' })));
+    advance(10 * 60_000 + 1);
+    run(REF, (ctx) => m.releaseGoalReservation(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1' }));
+    expect(h.db.goal.id.find('goal-1')).toMatchObject({ state: 'HUNTING', reservedAmount: 0, reservedDealId: '', reservedMandateHash: '' });
+  });
+
+  it('does not let a one-item Need mark a multi-item parent goal done', () => {
+    const psu = 'psu-850w-gold';
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+      { skuSpec: psu, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ goalId: 'goal-1', needId: 'need-1' })))).toThrow(/complete goal/);
+    expect(h.db.goal.id.find('goal-1')!.reservedAmount).toBe(0);
+  });
+
+  it('makes step events buyer-private and stable-ID idempotent', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    const args = { stableId: 'goal-1:deal-found:1', goalId: 'goal-1', klass: 'deal found', text: 'Candidate found.', origin: 'SIM' };
+    run(VIDYUT, (ctx) => m.recordStepEvent(ctx, args));
+    run(VIDYUT, (ctx) => m.recordStepEvent(ctx, args));
+    expect(m.myGoalStepEventsView(h.viewContext(VIDYUT) as any)).toHaveLength(1);
+    expect(m.myGoalStepEventsView(h.viewContext(BOB) as any)).toHaveLength(0);
+    expect(() => run(BOB, (ctx) => m.recordStepEvent(ctx, args))).toThrow(/no goal for this buyer/);
   });
 });
 
@@ -143,7 +222,7 @@ describe('bid quantity', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { quantity: 4 })])));
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     expect([...h.db.roundResult.iter()][0]).toMatchObject({ rank: 1, landed: 780 });
   });
 
@@ -151,7 +230,7 @@ describe('bid quantity', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { quantity: 1 })])));
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     expect([...h.db.roundResult.iter()][0]!.rank).toBe(1);
   });
 });
@@ -165,7 +244,7 @@ describe('floor', () => {
     expect(mine.floorCheckPassed).toBe(false);
     expect(mine.rejectReason).toContain('floor');
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     const res = [...h.db.roundResult.iter()];
     const a = res.find((r) => r.bidId === 'bid-a')!;
     expect(a.rank).toBe(0);
@@ -184,7 +263,7 @@ describe('close_round', () => {
     run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-c', verdict: 'quarantine', ruleIds: ['payee_swap'], origin: 'SIM' }));
     expect(() => run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }))).toThrow(/still open/);
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     const res = [...h.db.roundResult.iter()];
     expect(res.find((r) => r.bidId === 'bid-a')!.rank).toBe(1);
     expect(res.find((r) => r.bidId === 'bid-b')!.reasons.join(' ')).toMatch(/condition: offered open-box/);
@@ -198,7 +277,29 @@ describe('close_round', () => {
     advance(16_000);
     expect(() => run(A, (ctx) => m.closeRoundOnDeadline(ctx, 'round-1'))).toThrow(/scheduler/);
     run(TestAuth.internal(), (ctx) => m.closeRoundOnDeadline(ctx, 'round-1'));
+    expect(h.db.round.id.find('round-1')!.state).toBe('review');
+    advance(m.REVIEW_WINDOW_MS);
+    run(TestAuth.internal(), (ctx) => m.closeRoundOnDeadline(ctx, 'round-1'));
     expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+  });
+});
+
+describe('two-phase bid and review lifecycle', () => {
+  it('freezes bids at cutoff, refuses early finalization, and cannot rank a bid with missing independent review', () => {
+    setupRound(1);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+
+    advance(16_000);
+    run(TestAuth.internal(), (ctx) => m.closeRoundOnDeadline(ctx, 'round-1'));
+    expect(h.db.round.id.find('round-1')!.state).toBe('review');
+    expect(() => run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-late', [line(700)])))).toThrow(/closed|review/);
+    expect(h.db.bid.id.find('bid-late')).toBeFalsy();
+    expect(() => run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }))).toThrow(/review|deadline/);
+
+    advance(21_000);
+    run(TestAuth.internal(), (ctx) => m.closeRoundOnDeadline(ctx, 'round-1'));
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    expect([...h.db.roundResult.iter()].find((r) => r.bidId === 'bid-a')!.rank).toBe(0);
   });
 });
 
@@ -352,12 +453,12 @@ describe('every state change writes a floor event', () => {
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'allow', ruleIds: [], origin: 'SIM' }));
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
     run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
     expect(events().slice(n0).map((e) => e.kind)).toEqual([
-      'bid_sealed', 'verdict', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
+      'bid_sealed', 'verdict', 'review_opened', 'advocate_card', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
     ]);
   });
 });
@@ -435,15 +536,20 @@ describe('b2 allowance ladder', () => {
   });
 
   it('inside the allowance a buy auto-approves with a receipt and counts against the period; above it, it calls', () => {
-    paidDeal('d1', 780);
+    paidDeal('d1', 20);
     receive(VIDYUT, 'd1');
     const per = allowance()!.perPurchaseLimit;
+    expect(allowance()!.spentThisPeriod).toBe(20);
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'small', id: 'm-small', amount: per, nonce: 's' })));
     expect(h.db.mandate.hash.find('small')!.withinAllowance).toBe(true);
     expect(h.db.approval.mandateHash.find('small')!.method).toBe('allowance');
-    expect(allowance()!.spentThisPeriod).toBe(per);
+    expect(allowance()!.spentThisPeriod).toBe(20);
     expect([...h.db.notification.buyerId.filter('vidyut')].some((n) => n.text.includes('within your allowance'))).toBe(true);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'small', paymentRef: 'pi_small', amount: per, mode: 'sim' }));
+    expect(allowance()!.spentThisPeriod).toBe(20 + per);
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'small', paymentRef: 'pi_replay', amount: per, mode: 'sim' }));
+    expect(allowance()!.spentThisPeriod).toBe(20 + per);
+    expect(events().some((e) => e.kind === 'payment_rejected' && e.refId === 'small')).toBe(true);
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'big', id: 'm-big', amount: per + 1, nonce: 'b' })));
     expect(h.db.mandate.hash.find('big')!.withinAllowance).toBe(false);
     expect(h.db.approval.mandateHash.find('big')).toBeFalsy();
@@ -469,7 +575,7 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
   const veto = { recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'The card is longer than your case allows', sourceUrl: 'https://example.com/spec', origin: 'SIM' };
   const closeIt = () => {
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     return [...h.db.roundResult.iter()];
   };
 
@@ -494,7 +600,7 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
     run(REF, (ctx) => m.attachAdvocateCard(ctx, { ...veto, bidId: 'bid-a', recommendation: 'caution', ruleId: 'advocate.fit_unknown' }));
     const res = closeIt();
     expect(res[0]!.rank).toBe(1);
-    expect([...h.db.bidCheck.iter()].map((c) => [c.kind, c.result])).toEqual([['advocate', 'caution']]);
+    expect([...h.db.bidCheck.iter()].filter((c) => c.kind === 'advocate').map((c) => [c.kind, c.result])).toEqual([['advocate', 'caution']]);
   });
 
   it('writes a floor event without the seller or the text, and a veto line on the buyer feed', () => {
@@ -546,7 +652,7 @@ describe('allowed conditions, alternative lines and the cap at close', () => {
   };
   const closeIt = () => {
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     return [...h.db.roundResult.iter()];
   };
 
@@ -565,7 +671,7 @@ describe('allowed conditions, alternative lines and the cap at close', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { offeredCondition: 'open-box' })])));
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     expect([...h.db.roundResult.iter()][0]!.reasons.join(' ')).toMatch(/condition: offered open-box/);
   });
 
@@ -637,7 +743,7 @@ describe('seller model: floor per condition and alternative lines', () => {
     setupRound();
     run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(300), line(260, { offeredCondition: 'open-box' })])));
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     const r = [...h.db.roundResult.iter()][0]!;
     expect(r).toMatchObject({ rank: 1, landed: 300 });
     expect(r.lines.map((l) => [l.offeredCondition || 'new', l.unitPrice])).toEqual([['new', 300]]);
@@ -649,7 +755,7 @@ describe('seller model: floor per condition and alternative lines', () => {
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(760), line(590, { offeredCondition: 'open-box' })])));
     expect((m.myBidsView(h.viewContext(A) as any)[0] as any).rejectReason).toMatch(/open-box.*below this seller's floor/);
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     expect([...h.db.roundResult.iter()][0]!.rank).toBe(0);
   });
 
@@ -658,7 +764,7 @@ describe('seller model: floor per condition and alternative lines', () => {
     run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(200, { offeredCondition: 'refurbished' }), line(720)])));
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(650, { offeredCondition: 'refurbished' })])));
     advance(16_000);
-    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    closeReadyRound();
     const res = [...h.db.roundResult.iter()];
     expect(res.find((r) => r.bidId === 'bid-c')).toMatchObject({ rank: 1, landed: 720 });
     expect(res.find((r) => r.bidId === 'bid-b')!.reasons.join(' ')).toMatch(/no floor set/);

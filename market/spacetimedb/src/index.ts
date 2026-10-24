@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, allowance, bid, goal, goalItem, notification, pairAttempt, role, roundTimer } from './schema';
+import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, allowance, bid, goal, goalItem, goalStepEvent, notification, pairAttempt, role, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -71,7 +71,7 @@ export const attach_advocate_card = spacetimedb.reducer(
 export const create_mandate = spacetimedb.reducer(
   {
     hash: t.string(), id: t.string(), dealId: t.string(), buyerId: t.string(), amount: t.f64(), payee: t.string(),
-    expiryMinutes: t.u32(), nonce: t.string(), requestedBy: t.string(), origin: t.string(),
+    expiryMinutes: t.u32(), nonce: t.string(), requestedBy: t.string(), origin: t.string(), goalId: t.string(), needId: t.string(),
   },
   (ctx, a) => m.createMandate(ctx, a),
 );
@@ -84,6 +84,31 @@ export const record_approval = spacetimedb.reducer(
 export const record_payment = spacetimedb.reducer(
   { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string() },
   (ctx, a) => m.recordPayment(ctx, a),
+);
+
+export const set_goal_state = spacetimedb.reducer(
+  { goalId: t.string(), state: t.string(), reservedAmount: t.f64() },
+  (ctx, a) => m.setGoalState(ctx, a),
+);
+
+export const record_step_event = spacetimedb.reducer(
+  { stableId: t.string(), goalId: t.string(), klass: t.string(), text: t.string(), origin: t.string() },
+  (ctx, a) => m.recordStepEvent(ctx, a),
+);
+
+export const settle_goal = spacetimedb.reducer(
+  { goalId: t.string(), dealId: t.string(), mandateHash: t.string(), paymentRef: t.string() },
+  (ctx, a) => m.settleGoal(ctx, a),
+);
+
+export const reserve_goal = spacetimedb.reducer(
+  { goalId: t.string(), dealId: t.string(), mandateHash: t.string(), amount: t.f64() },
+  (ctx, a) => m.reserveGoal(ctx, a),
+);
+
+export const release_goal_reservation = spacetimedb.reducer(
+  { goalId: t.string(), dealId: t.string(), mandateHash: t.string() },
+  (ctx, a) => m.releaseGoalReservation(ctx, a),
 );
 
 export const record_receiving = spacetimedb.reducer(
@@ -110,3 +135,4 @@ export const my_role = spacetimedb.view({ name: 'my_role', public: true }, t.arr
 export const my_pair_attempts = spacetimedb.view({ name: 'my_pair_attempts', public: true }, t.array(pairAttempt.rowType), (ctx) => m.myPairAttemptsView(ctx));
 export const my_allowance = spacetimedb.view({ name: 'my_allowance', public: true }, t.array(allowance.rowType), (ctx) => m.myAllowanceView(ctx));
 export const my_notifications = spacetimedb.view({ name: 'my_notifications', public: true }, t.array(notification.rowType), (ctx) => m.myNotificationsView(ctx));
+export const my_goal_step_events = spacetimedb.view({ name: 'my_goal_step_events', public: true }, t.array(goalStepEvent.rowType), (ctx) => m.myGoalStepEventsView(ctx));

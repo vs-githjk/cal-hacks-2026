@@ -99,6 +99,7 @@ function writeFloor(ctx: Ctx, what: string, skuSpec: string, condition: string, 
 }
 
 export const PAIR_MAX_FAILURES = 5;
+export const REVIEW_WINDOW_MS = 20_000;
 
 /**
  * A browser screen takes the buyer role with the demo pairing code (SIM sign-in). A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
@@ -203,7 +204,7 @@ export function postGoal(ctx: Ctx, a: PostGoalArgs) {
 export function insertGoal(ctx: Ctx, a: PostGoalArgs) {
   if (!GOAL_TYPES.includes(a.type)) throw new SenderError(`goal type must be one of ${GOAL_TYPES.join(', ')}`);
   if (ctx.db.goal.id.find(a.id)) throw new SenderError(`goal ${a.id} already exists`);
-  if (!(a.cap > 0)) throw new SenderError('goal cap must be positive');
+  if (!(Number.isFinite(a.cap) && a.cap > 0)) throw new SenderError('goal cap must be a finite positive number');
   const deadlineMs = Date.parse(a.deadline);
   if (!/^\d{4}-\d{2}-\d{2}T/.test(a.deadline) || Number.isNaN(deadlineMs)) throw new SenderError('deadline must be an ISO datetime, for example 2026-10-30T23:59:00Z');
   for (const i of a.items) {
@@ -212,11 +213,108 @@ export function insertGoal(ctx: Ctx, a: PostGoalArgs) {
   allowanceFor(ctx, a.buyerId);
   ctx.db.goal.insert({
     id: a.id, buyerId: a.buyerId, type: a.type, cap: a.cap, deadline: tsFromMs(deadlineMs), state: 'ACTIVE', reservedAmount: 0,
+    reservedDealId: '', reservedMandateHash: '',
     poNumber: a.poNumber, origin: a.origin, createdAt: ctx.timestamp,
   });
   for (const i of a.items) ctx.db.goalItem.insert({ id: 0n, goalId: a.id, ...i });
   ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: a.id, klass: 'state', text: 'Goal set. The agent is hunting.', push: false, at: ctx.timestamp });
   event(ctx, 'goal_posted', 'goal', a.id, 'A buyer set a goal', '', a.origin);
+}
+
+const GOAL_STATES = ['ACTIVE', 'HUNTING', 'HOLD_FOR_CALL', 'PAUSED', 'EXPIRED'];
+const STEP_CLASSES = ['state', 'progress to goal', 'deal found', 'bid in', 'veto', 'payment'];
+
+export function setGoalState(ctx: Ctx, a: { goalId: string; state: string; reservedAmount: number }) {
+  const buyerId = requireRole(ctx, 'set_goal_state', ['buyer']).subjectId;
+  const g = ctx.db.goal.id.find(a.goalId);
+  if (!g || g.buyerId !== buyerId) throw new SenderError('no goal for this buyer');
+  if (!GOAL_STATES.includes(a.state)) throw new SenderError(`goal state must be one of ${GOAL_STATES.join(', ')}`);
+  if (!(Number.isFinite(a.reservedAmount) && a.reservedAmount >= 0 && a.reservedAmount <= g.cap)) throw new SenderError('reserved amount must be between zero and the goal cap');
+  if (a.reservedAmount > 0 && (g.reservedAmount !== a.reservedAmount || !g.reservedDealId || !g.reservedMandateHash)) {
+    throw new SenderError('a reservation must be bound to a deal and mandate');
+  }
+  if (a.reservedAmount === 0 && g.reservedAmount > 0) throw new SenderError('use release_goal_reservation for an active hold');
+  if (g.state === 'DONE' || g.state === 'EXPIRED') throw new SenderError(`goal is ${g.state.toLowerCase()} and cannot change`);
+  if (a.state === 'HOLD_FOR_CALL' && a.reservedAmount <= 0) throw new SenderError('a call hold needs a positive reservation');
+  if (a.reservedAmount > 0) {
+    const other = [...ctx.db.goal.buyerId.filter(buyerId)].find((x) => x.id !== g.id && x.reservedAmount > 0);
+    if (other) throw new SenderError('this buyer already has an active deal reservation');
+  }
+  ctx.db.goal.id.update({ ...g, state: a.state, reservedAmount: a.reservedAmount });
+}
+
+function reserveGoalInner(ctx: Ctx, goalId: string, dealId: string, mandateHash: string, amount: number) {
+  const g = ctx.db.goal.id.find(goalId);
+  if (!g) throw new SenderError('no goal for this buyer');
+  if (!(Number.isFinite(amount) && amount > 0 && amount <= g.cap)) throw new SenderError('reservation amount must be finite, positive, and within the goal cap');
+  if (!dealId || !mandateHash) throw new SenderError('reservation needs a deal ID and mandate hash');
+  if (g.state === 'DONE' || g.state === 'EXPIRED' || g.state === 'PAUSED' || ms(ctx.timestamp) > ms(g.deadline)) throw new SenderError('goal cannot accept a new deal');
+  if (g.reservedAmount > 0) {
+    if (g.reservedAmount === amount && g.reservedDealId === dealId && g.reservedMandateHash === mandateHash) return g;
+    throw new SenderError('goal already has an active deal reservation');
+  }
+  const other = [...ctx.db.goal.buyerId.filter(g.buyerId)].find((x) => x.id !== g.id && x.reservedAmount > 0);
+  if (other) throw new SenderError('this buyer already has an active deal reservation');
+  return ctx.db.goal.id.update({ ...g, reservedAmount: amount, reservedDealId: dealId, reservedMandateHash: mandateHash });
+}
+
+export function reserveGoal(ctx: Ctx, a: { goalId: string; dealId: string; mandateHash: string; amount: number }) {
+  const g = ctx.db.goal.id.find(a.goalId);
+  if (!g) throw new SenderError('no goal for this buyer');
+  requireRole(ctx, 'reserve_goal', ['buyer', 'referee'], g.buyerId);
+  const md = ctx.db.mandate.hash.find(a.mandateHash);
+  if (!md || md.goalId !== a.goalId || md.dealId !== a.dealId || md.buyerId !== g.buyerId || md.amount !== a.amount) {
+    throw new SenderError('reservation must match an existing exact mandate');
+  }
+  reserveGoalInner(ctx, a.goalId, a.dealId, a.mandateHash, a.amount);
+}
+
+export function releaseGoalReservation(ctx: Ctx, a: { goalId: string; dealId: string; mandateHash: string }) {
+  const g = ctx.db.goal.id.find(a.goalId);
+  if (!g) throw new SenderError('no goal for this buyer');
+  requireRole(ctx, 'release_goal_reservation', ['buyer', 'referee'], g.buyerId);
+  if (g.reservedDealId !== a.dealId || g.reservedMandateHash !== a.mandateHash || g.reservedAmount <= 0) throw new SenderError('reservation identity does not match');
+  const md = ctx.db.mandate.hash.find(a.mandateHash);
+  if (!md || md.goalId !== a.goalId || md.dealId !== a.dealId || ms(ctx.timestamp) <= ms(md.expiry)) throw new SenderError('only an expired mandate may release its reservation');
+  if (ctx.db.approval.mandateHash.find(a.mandateHash) || ctx.db.payment.mandateHash.find(a.mandateHash)) throw new SenderError('approved or charged deal holds cannot be released');
+  ctx.db.goal.id.update({ ...g, state: 'HUNTING', reservedAmount: 0, reservedDealId: '', reservedMandateHash: '' });
+}
+
+export function recordStepEvent(ctx: Ctx, a: { stableId: string; goalId: string; klass: string; text: string; origin: string }) {
+  const buyerId = requireRole(ctx, 'record_step_event', ['buyer']).subjectId;
+  const g = ctx.db.goal.id.find(a.goalId);
+  if (!g || g.buyerId !== buyerId) throw new SenderError('no goal for this buyer');
+  if (!a.stableId || a.stableId.length > 128) throw new SenderError('stable event id must be 1 to 128 characters');
+  if (!STEP_CLASSES.includes(a.klass)) throw new SenderError(`event class must be one of ${STEP_CLASSES.join(', ')}`);
+  if (!a.text || a.text.length > 500) throw new SenderError('event text must be 1 to 500 characters');
+  const old = ctx.db.goalStepEvent.stableId.find(a.stableId);
+  if (old) {
+    if (old.goalId !== a.goalId || old.buyerId !== buyerId || old.klass !== a.klass || old.text !== a.text) throw new SenderError('stable event id was already used for different content');
+    return;
+  }
+  ctx.db.goalStepEvent.insert({ stableId: a.stableId, buyerId, goalId: a.goalId, klass: a.klass, text: a.text, origin: a.origin, at: ctx.timestamp });
+}
+
+/** Only an authenticated buyer acknowledgement after an existing exact payment can settle a goal. */
+export function settleGoal(ctx: Ctx, a: { goalId: string; dealId: string; mandateHash: string; paymentRef: string }) {
+  const buyerId = requireRole(ctx, 'settle_goal', ['buyer']).subjectId;
+  const g = ctx.db.goal.id.find(a.goalId);
+  if (!g || g.buyerId !== buyerId) throw new SenderError('no goal for this buyer');
+  const md = ctx.db.mandate.hash.find(a.mandateHash);
+  if (!md || md.dealId !== a.dealId || md.goalId !== a.goalId || md.buyerId !== buyerId) throw new SenderError('no matching mandate for this goal and deal');
+  const payment = ctx.db.payment.mandateHash.find(md.hash);
+  if (!payment || payment.paymentRef !== a.paymentRef || payment.amount !== md.amount) throw new SenderError('goal settlement needs the exact recorded payment');
+  if (g.state === 'DONE') {
+    if (g.poNumber === a.dealId) return;
+    throw new SenderError('goal was already settled to a different deal');
+  }
+  if (g.reservedDealId !== a.dealId || g.reservedMandateHash !== a.mandateHash || g.reservedAmount !== md.amount) throw new SenderError('payment does not match the active reservation');
+  const requested = [...ctx.db.goalItem.goalId.filter(g.id)].filter((i) => !i.skippedOwnedPartId).map((i) => `${i.skuSpec}|${i.quantity}`).sort();
+  const need = md.needId ? ctx.db.need.id.find(md.needId) : undefined;
+  if (!need || need.goalId !== g.id || need.buyerId !== buyerId) throw new SenderError('settlement need is not bound to this complete goal');
+  const covered = [...ctx.db.needItem.needId.filter(md.needId)].map((i) => `${i.skuSpec}|${i.quantity}`).sort();
+  if (requested.length !== covered.length || requested.some((x, i) => x !== covered[i])) throw new SenderError('a partial deal cannot complete the parent goal');
+  ctx.db.goal.id.update({ ...g, state: 'DONE', reservedAmount: 0, reservedDealId: '', reservedMandateHash: '', poNumber: a.dealId });
 }
 
 // ---------------------------------------------------------------- rounds
@@ -238,7 +336,7 @@ export function openRound(ctx: Ctx, { roundId, needId, windowS }: { roundId: str
   if (!n) throw new SenderError(`no need ${needId}`);
   if (ctx.db.round.id.find(roundId)) throw new SenderError(`round ${roundId} already exists`);
   const deadline = tsFromMs(ms(ctx.timestamp) + windowS * 1000);
-  ctx.db.round.insert({ id: roundId, needId, openedAt: ctx.timestamp, deadline, extensions: 0, state: 'open', sealedCount: 0, closedAt: undefined, origin: n.origin });
+  ctx.db.round.insert({ id: roundId, needId, openedAt: ctx.timestamp, deadline, extensions: 0, state: 'open', sealedCount: 0, closedAt: undefined, origin: n.origin, reviewDeadline: undefined });
   scheduleClose(ctx, roundId, deadline);
   event(ctx, 'round_opened', 'round', roundId, `Sealed round open for ${windowS} s`, '', n.origin);
 }
@@ -252,6 +350,7 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   const me = { sellerId: requireRole(ctx, 'place_bid', ['seller']).subjectId };
   const r = ctx.db.round.id.find(a.roundId);
   if (!r) throw new SenderError(`no round ${a.roundId}`);
+  if (r.state !== 'open') throw new SenderError(`round is ${r.state}; bids are closed`);
   if (!a.lines.length) throw new SenderError('a bid has at least one line');
   const needCond = new Map([...ctx.db.needItem.needId.filter(r.needId)].map((i) => [i.skuSpec, i.condition]));
   const condOf = (sku: string, offered: string) => offered || needCond.get(sku) || 'new';
@@ -371,9 +470,21 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     if (fromTimer) return;
     throw new SenderError('round already closed');
   }
-  if (!isClosed(clockOf(r), ms(ctx.timestamp))) {
-    if (fromTimer) return scheduleClose(ctx, roundId, r.deadline);
-    throw new SenderError('round is still open until its deadline');
+  if (r.state === 'open') {
+    if (!isClosed(clockOf(r), ms(ctx.timestamp))) {
+      if (fromTimer) return scheduleClose(ctx, roundId, r.deadline);
+      throw new SenderError('round is still open until its deadline');
+    }
+    const reviewDeadline = tsFromMs(ms(ctx.timestamp) + REVIEW_WINDOW_MS);
+    ctx.db.round.id.update({ ...r, state: 'review', reviewDeadline });
+    scheduleClose(ctx, roundId, reviewDeadline);
+    event(ctx, 'review_opened', 'round', roundId, 'Bid cutoff reached; independent checks are being collected', '', r.origin);
+    return;
+  }
+  if (r.state !== 'review' || !r.reviewDeadline) throw new SenderError('round lifecycle state is invalid');
+  if (ms(ctx.timestamp) < ms(r.reviewDeadline)) {
+    if (fromTimer) return scheduleClose(ctx, roundId, r.reviewDeadline);
+    throw new SenderError('review period is still open until its deadline');
   }
 
   const needItems = new Map<string, NeedItem>();
@@ -388,8 +499,14 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const verified = new Map<string, number>();
   for (const b of rows) {
     const reasons: string[] = [];
+    const checks = [...ctx.db.bidCheck.bidId.filter(b.id)];
+    if (!checks.some((c) => c.kind === 'shield')) reasons.push('missing independent Shield review');
+    if (!checks.some((c) => c.kind === 'advocate')) reasons.push('missing independent Advocate review');
+    for (const claim of b.claims) {
+      if (!checks.some((c) => c.kind === 'claim' && c.detail === claim)) reasons.push(`missing independent check for claim: ${claim}`);
+    }
     if (!b.floorCheckPassed) reasons.push('below this seller floor');
-    for (const c of ctx.db.bidCheck.bidId.filter(b.id)) {
+    for (const c of checks) {
       if (c.kind === 'shield' && c.result !== 'allow') reasons.push(`Bazaar Shield ${c.result}: ${c.detail}`);
       if (c.kind === 'claim' && c.result === 'false') reasons.push(`claim did not match the page: ${c.detail}`);
       if (c.kind === 'claim' && c.result === 'verified') verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
@@ -425,26 +542,42 @@ export function createMandate(
   ctx: Ctx,
   a: {
     hash: string; id: string; dealId: string; buyerId: string; amount: number; payee: string; expiryMinutes: number; nonce: string;
-    requestedBy: string; origin: string;
+    requestedBy: string; origin: string; goalId: string; needId: string;
   },
 ) {
   requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
+  if (!(Number.isFinite(a.amount) && a.amount > 0)) throw new SenderError('mandate amount must be finite and positive');
+  if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes > 0 && a.expiryMinutes <= 10)) throw new SenderError('mandate expiry must be between 1 and 10 minutes');
   const allow = allowanceFor(ctx, a.buyerId);
   const d = decide(allow, a.amount, ms(ctx.timestamp));
   const within = d.path === 'auto';
+  if (a.goalId) {
+    const g = ctx.db.goal.id.find(a.goalId);
+    if (!g || g.buyerId !== a.buyerId) throw new SenderError('no goal for this buyer');
+    const n = a.needId ? ctx.db.need.id.find(a.needId) : undefined;
+    if (!n || n.goalId !== g.id || n.buyerId !== a.buyerId) throw new SenderError('mandate need is not bound to this buyer goal');
+    if (n.spendLimit > g.cap) throw new SenderError('need cap is above the goal cap');
+    const expected = [...ctx.db.goalItem.goalId.filter(g.id)].filter((i) => !i.skippedOwnedPartId).map((i) => `${i.skuSpec}|${i.quantity}`).sort();
+    const covered = [...ctx.db.needItem.needId.filter(n.id)].map((i) => `${i.skuSpec}|${i.quantity}`).sort();
+    if (expected.length !== covered.length || expected.some((x, i) => x !== covered[i])) throw new SenderError('mandate need does not cover the complete goal');
+    reserveGoalInner(ctx, a.goalId, a.dealId, a.hash, a.amount);
+    const current = ctx.db.goal.id.find(a.goalId)!;
+    ctx.db.goal.id.update({ ...current, state: within ? 'HUNTING' : 'HOLD_FOR_CALL' });
+  } else if (a.needId) {
+    throw new SenderError('a need cannot be bound without its goal');
+  }
   ctx.db.mandate.insert({
     hash: a.hash, id: a.id, dealId: a.dealId, buyerId: a.buyerId, amount: a.amount, payee: a.payee,
     expiry: tsFromMs(ms(ctx.timestamp) + a.expiryMinutes * 60_000), nonce: a.nonce, withinAllowance: within,
-    requestedBy: a.requestedBy, origin: a.origin,
+    requestedBy: a.requestedBy, origin: a.origin, goalId: a.goalId, needId: a.needId,
   });
   event(ctx, 'mandate_created', 'mandate', a.hash, within ? 'Deal within the allowance' : 'Deal needs the buyer call', a.payee, a.origin);
   if (within) {
-    // Inside the allowance: approved by the buyer's own standing rule, with a receipt.
+    // The standing rule authorizes the deal, but spend is counted only after a confirmed charge.
     ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp });
-    saveAllowance(ctx, recordAutoSpend(allow, a.amount, ms(ctx.timestamp)));
-    ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Bought within your allowance: ${d.reason}. Receipt for deal ${a.dealId}.`, push: false, at: ctx.timestamp });
-    event(ctx, 'approval_recorded', 'approval', a.hash, 'Approved within the allowance', a.payee, a.origin);
+    ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Auto-approved within your allowance: ${d.reason}. Waiting for the seller payment request; no charge yet.`, push: false, at: ctx.timestamp });
+    event(ctx, 'approval_recorded', 'approval', a.hash, 'Authorized within the allowance; charge not yet made', a.payee, a.origin);
   } else {
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'state', text: `Call needed: ${d.reason}.`, push: true, at: ctx.timestamp });
   }
@@ -481,10 +614,18 @@ export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: st
   const ap = ctx.db.approval.mandateHash.find(a.mandateHash);
   if (!ap) throw new SenderError('no approval row for this mandate hash; payment refused');
   if (a.amount !== md.amount) throw new SenderError('payment amount differs from the mandate amount');
+  if (md.goalId) {
+    const g = ctx.db.goal.id.find(md.goalId);
+    if (!g || g.buyerId !== md.buyerId || g.reservedAmount !== md.amount || g.state === 'DONE' || g.state === 'EXPIRED') {
+      throw new SenderError('payment does not match the active goal reservation');
+    }
+  }
   const auth = authorizePayment({ amount: a.amount, limit_checked: true, approval_id: String(ap.id) }, md.amount);
   if (!auth.ok) throw new SenderError(auth.reasons.join('; '));
   if (ctx.db.payment.mandateHash.find(a.mandateHash)) return rejected(ctx, 'payment', a.mandateHash, 'second payment for the same mandate refused');
   ctx.db.payment.insert({ id: 0n, mandateHash: a.mandateHash, paymentRef: a.paymentRef, amount: a.amount, at: ctx.timestamp, mode: a.mode });
+  // Every successful spend counts against the same period budget, whether a call or standing rule approved it.
+  saveAllowance(ctx, recordAutoSpend(allowanceFor(ctx, md.buyerId), a.amount, ms(ctx.timestamp)));
   event(ctx, 'payment_recorded', 'payment', a.mandateHash, mode.label, md.payee, mode.origin);
 }
 
@@ -576,6 +717,11 @@ export function myAllowanceView(ctx: VCtx) {
 export function myNotificationsView(ctx: VCtx) {
   const id = myBuyerId(ctx);
   return id ? [...ctx.db.notification.buyerId.filter(id)] : [];
+}
+
+export function myGoalStepEventsView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  return id ? [...ctx.db.goalStepEvent.buyerId.filter(id)] : [];
 }
 
 // ---------------------------------------------------------------- demo operator

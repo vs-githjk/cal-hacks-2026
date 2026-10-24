@@ -76,6 +76,9 @@ function pickLines(bid: Bid, needItems: Map<string, NeedItem>, lineRejects: stri
   const picked: number[] = [];
   const reasons: string[] = [];
   const cheapestAny: number[] = [];
+  for (const sku of needItems.keys()) {
+    if (!bySku.has(sku)) reasons.push(`${sku}: bid does not cover requested item`);
+  }
   for (const idx of bySku.values()) {
     const checked = idx.map((i) => ({
       i,

@@ -69,6 +69,8 @@ export const goal = table(
     deadline: t.timestamp(),
     state: t.string(),
     reservedAmount: t.f64(),
+    reservedDealId: t.string().default(''),
+    reservedMandateHash: t.string().default(''),
     poNumber: t.string(),
     origin: t.string(), // market-internal, for the badge; not in the Goal contract
     createdAt: t.timestamp(),
@@ -97,6 +99,20 @@ export const notification = table(
     klass: t.string(), // deal_found | bid_in | veto | progress | state
     text: t.string(),
     push: t.bool(),
+    at: t.timestamp(),
+  },
+);
+
+/** Private buyer progress events; stableId makes caller retries idempotent. */
+export const goalStepEvent = table(
+  { name: 'goal_step_event' },
+  {
+    stableId: t.string().primaryKey(),
+    buyerId: t.string().index('btree'),
+    goalId: t.string(),
+    klass: t.string(),
+    text: t.string(),
+    origin: t.string(),
     at: t.timestamp(),
   },
 );
@@ -192,6 +208,8 @@ export const mandate = table(
     withinAllowance: t.bool(), // true: auto-approved inside the allowance; false: needs the call
     requestedBy: t.string(), // who asked for the buy (IT seat); empty for a consumer's own buy
     origin: t.string(),
+    goalId: t.string().default(''),
+    needId: t.string().default(''),
   },
 );
 
@@ -261,10 +279,11 @@ export const round = table(
     openedAt: t.timestamp(),
     deadline: t.timestamp(),
     extensions: t.u32(),
-    state: t.string(), // open | closed
+    state: t.string(), // open | review | closed
     sealedCount: t.u32(),
     closedAt: t.option(t.timestamp()),
     origin: t.string(),
+    reviewDeadline: t.option(t.timestamp()),
   },
 );
 
@@ -335,7 +354,7 @@ export const roundTimer = table(
 );
 
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt,
+  need, needItem, goal, goalItem, notification, goalStepEvent, owner, role, pairCode, pairAttempt,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,

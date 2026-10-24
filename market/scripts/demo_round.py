@@ -54,7 +54,7 @@ for r in ref.sql(f"SELECT seller_id, rank, landed, reasons FROM round_result WHE
     print("  result:", r)
 mh = f"mh-{run}"
 ref.call("create_mandate", hash=mh, id=f"mdt-{run}", deal_id=f"{rnd}-seller-c", buyer_id="vidyut", amount=745, payee="seller-c",
-         expiry_minutes=10, nonce=run, requested_by="", origin="SIM")
+         expiry_minutes=10, nonce=run, requested_by="", origin="SIM", goal_id="", need_id="")
 print("allowance before:", vidyut.sql("SELECT ladder_step, per_purchase_limit FROM my_allowance"))
 print("pay before approval:", refused("referee", "record_payment", mandate_hash=mh, payment_ref="pi_sim", amount=745, mode="sim"))
 print("seller-c approves own deal:", refused("seller-c", "record_approval", mandate_hash=mh, method="typed_code", approved_by="vidyut"))
@@ -70,6 +70,6 @@ for amount in (40, 60):
     before = vidyut.sql("SELECT spent_this_period FROM my_allowance")[0][0]
     h = f"mh-{run}-{amount}"
     ref.call("create_mandate", hash=h, id=f"mdt-{h}", deal_id=f"accessory-{amount}", buyer_id="vidyut", amount=amount, payee="seller-a",
-             expiry_minutes=10, nonce=h, requested_by="", origin="SIM")
+             expiry_minutes=10, nonce=h, requested_by="", origin="SIM", goal_id="", need_id="")
     spent = vidyut.sql("SELECT spent_this_period FROM my_allowance")[0][0]
     print(f"${amount} buy:", "auto-approved inside the allowance" if spent > before else "above the allowance, needs the call", f"(spent this week ${spent:g})")
