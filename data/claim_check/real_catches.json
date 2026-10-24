@@ -1,0 +1,25 @@
+{
+ "origin": "MIRROR",
+ "scanned": {
+  "listings": 28,
+  "files": [
+   "amazon-20261024T0509Z.json",
+   "bestbuy-20261024T0508Z.json",
+   "bh-20261024T0508Z.json",
+   "ebay_live-20261024T0508Z.json",
+   "ebay_sold-20261024T0508Z.json",
+   "ebay_sold-20261024T0955Z.json",
+   "microcenter-20261024T0509Z.json",
+   "bestbuy-20261024T0851Z.json"
+  ],
+  "rules": [
+   "condition",
+   "was_price",
+   "stock"
+  ],
+  "claims_judged": {
+   "verified": 2
+  }
+ },
+ "catches": []
+}
