@@ -111,6 +111,7 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
     folder = Path(os.path.abspath(custom_dir or CUSTOM_DIR))
     # replace=true overwrites a shop's config, and the kit cannot tell one shop from another: only the operator may.
     operator = operator_token if operator_token is not None else os.environ.get(OPERATOR_ENV, "")
+    operator = operator.strip()   # a blank or whitespace token is unset: replace stays refused (#237)
     lock = threading.Lock()
     app = FastAPI(title="Tech Bazaar Seller Kit", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(BodyLimit)
