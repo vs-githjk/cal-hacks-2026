@@ -74,8 +74,58 @@ def test_a_spoken_amount_denies(said):
     assert not d.approved and d.reason == "no_code"
 
 
+# #195 (red team M1): any number at all denies now, even one that is not an amount. Consent is the code, "approve" and
+# filler only; the buyer says it again without the number.
 @pytest.mark.parametrize("said", ["{code}, a hundred percent, approve", "{code} approve, I'm 100% sure", "approve, {code}, it's 12:30 now"])
-def test_numbers_that_are_not_amounts_still_approve(said):
+def test_any_number_denies_even_when_it_is_not_an_amount(said):
     svc = ApprovalService(SECRET)
     s, code = svc.issue(make(), now=T0)
-    assert s.approve(said.format(code=code), now=T0 + timedelta(seconds=5)).approved
+    d = s.approve(said.format(code=code), now=T0 + timedelta(seconds=5))
+    assert not d.approved and d.reason == "no_code"
+
+
+@pytest.mark.parametrize("said", [
+    "{code} approve $900", "{code} approve nine ninety nine", "{code} approve 1.2k", "{code} approve for seller z",
+    # more of the same: other amounts, other payees, extra terms
+    "approve {code} twelve forty nine", "{code} approved 1,249.99", "{code} approve to bob", "{code} approve but ship to my office",
+    "{code} approve one grand", "{code} approve half", "{code} approve 0", "{code} approve and also the other one",
+])
+def test_any_other_amount_payee_or_term_denies(said):
+    """#195: with the right code, an approval that names anything else (an amount, a payee, a condition) is denied."""
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    d = s.approve(said.format(code=code), now=T0 + timedelta(seconds=5))
+    assert not d.approved and d.reason == "no_code", said
+
+
+@pytest.mark.parametrize("said", [
+    "{code} approve", "{code} approved", "approve {code}", "Okay, {code}, approve.", "Yes. {code}. Approved.",
+    "Um, the code is {code}. Approve please.", "My screen says {code}, approve", "The two words are {code}. Approve.",
+    "Uh, the... two words from my screen are {code}. Approve.",
+])
+def test_the_code_approve_and_filler_still_approve(said):
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    assert s.approve(said.format(code=code), now=T0 + timedelta(seconds=5)).approved, said
+
+
+@pytest.mark.parametrize("said", [
+    "{a} {b} approve river kitten", "{a} {b} river approve", "{a} {b} {a} {b} approve", "{code} approve zebra",
+    "{code} approve nickel", "{code} approve rover", "{code} approve apply", "{code} approve apples", "{code} approve oranges",
+    "{code} approve \u0669\u0660\u0660", "{code} approve \u096f\u0966\u0966", "{code} approve \u4e5d\u767e\u30c9\u30eb",
+    "{code} approve \u20ac", "{code} approve \U0001f600", "{code} approve caf\u00e9",
+])
+def test_no_other_list_word_near_miss_repeat_or_foreign_script_rides_along(said):
+    """#217 review: only this deal's pair, once; every other token as heard must be approve or filler."""
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    a, b = code.split()
+    d = s.approve(said.format(code=code, a=a, b=b), now=T0 + timedelta(seconds=5))
+    assert not d.approved and d.reason == "no_code", said
+
+
+def test_the_typed_path_gets_the_same_judge():
+    svc = ApprovalService(SECRET)
+    s, code = svc.issue(make(), now=T0)
+    for i, said in enumerate([f"{code} approve 900", f"{code} approve for bob", f"{code} river"]):
+        assert not s.approve_typed(said, now=T0 + timedelta(seconds=5 + 31 * i)).approved, said
