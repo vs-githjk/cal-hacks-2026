@@ -1,23 +1,6 @@
-"""Pure buyer logic: forecast -> Need, auction decision, Order and payment mandate. No I/O."""
-import math
+"""Pure buyer logic: sealed Need, auction decision, Order and payment mandate. No I/O."""
 import uuid
 from datetime import datetime, timedelta, timezone
-
-
-def need_from_forecast(forecasts: list[dict], on_hand: dict, owner: dict) -> dict:
-    """forecasts: Forecast dicts plus grade, pack_size, pack_qty (units per pack) and unit.
-    on_hand: sku_spec -> units already in stock. Quantity is in whole packs, rounded up."""
-    items = []
-    for f in forecasts:
-        short = f["predicted_quantity"] - on_hand.get(f["sku_spec"], 0)
-        packs = math.ceil(short / f["pack_qty"]) if short > 0 else 0
-        if packs:
-            items.append({"sku_spec": f["sku_spec"], "grade": f["grade"], "pack_size": f["pack_size"],
-                          "quantity": packs, "unit": "pack"})
-    return {"id": f"need-{uuid.uuid4().hex[:8]}", "buyer_id": owner["buyer_id"], "items": items,
-            "delivery_window": owner["delivery_window"], "spend_limit": owner["spend_limit"],
-            "consent": owner.get("consent", True), "auction_window_s": owner.get("auction_window_s", 12),
-            "source": "simulated"}
 
 
 def sealed(need: dict) -> dict:

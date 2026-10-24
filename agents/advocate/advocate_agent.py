@@ -10,24 +10,30 @@ from advocate import checks, mock_data
 agent = Agent(name="quality_advocate", seed=common.SEEDS["advocate"], port=8003,
               endpoint=["http://localhost:8003/submit"])
 
+# Closed schema: Claude may only return the same number of rephrased strings.
+REPHRASE_TOOL = {"name": "rephrase", "description": "Return the warnings rephrased, same count and order.",
+                 "input_schema": {"type": "object", "required": ["texts"], "additionalProperties": False,
+                                  "properties": {"texts": {"type": "array", "items": {"type": "string"}}}}}
+
 
 def plainer(cards: list[dict]) -> list[dict]:
-    """Optional: Claude rewrites warning text only. Any failure keeps the original text."""
-    if not os.getenv("ANTHROPIC_API_KEY"):
+    """Optional: Claude rephrases warning text only. kind, numbers, source and recommendation stay code's.
+    Any failure keeps the code's text."""
+    texts = [w["text"] for c in cards for w in c["warnings"]]
+    if not os.getenv("ANTHROPIC_API_KEY") or not texts:
         return cards
     try:
         import anthropic
-        texts = [w["text"] for c in cards for w in c["warnings"]]
-        if not texts:
-            return cards
         msg = anthropic.Anthropic().messages.create(
-            model="claude-haiku-5-5", max_tokens=1024,
+            model="claude-haiku-5-5", max_tokens=1024, tools=[REPHRASE_TOOL],
+            tool_choice={"type": "tool", "name": "rephrase"},
             messages=[{"role": "user", "content":
-                       "Rewrite each warning for a busy restaurant owner: plainer, one sentence, keep every "
-                       "number exactly. Return ONLY a JSON array of strings, same length and order.\n"
-                       + json.dumps(texts)}])
-        new = json.loads(msg.content[0].text)
-        if not (isinstance(new, list) and len(new) == len(texts) and all(isinstance(t, str) and t for t in new)):
+                       "Rephrase each PC part warning for a buyer: plain, one sentence, keep every number and "
+                       "name exactly, neutral tone (say a claim 'did not match', never 'wrong' or 'liar'), "
+                       "no dashes.\n" + json.dumps(texts)}])
+        new = next(b.input["texts"] for b in msg.content if b.type == "tool_use")
+        if len(new) != len(texts) or not all(isinstance(t, str) and t.strip() for t in new) \
+                or any("—" in t or "–" in t for t in new):
             return cards
         it = iter(new)
         for c in cards:
@@ -45,7 +51,8 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
         ctx.logger.warning(f"shield {verdict['verdict']} from {sender}: {verdict['reasons']}")
         return
     need, bids = json.loads(msg.need_json), json.loads(msg.bids_json)
-    cards = checks.advise(need, bids, mock_data.BASELINE, mock_data.SIGNALS, mock_data.RECALLS)
+    cards = checks.advise(need, bids, mock_data.BASELINE, mock_data.RECORDS, mock_data.RECALLS,
+                          owned=need.get("owned", {}))
     original = json.loads(json.dumps(cards))
     cards = plainer(cards)
     try:

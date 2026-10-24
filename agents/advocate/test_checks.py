@@ -1,90 +1,100 @@
 import common
 from advocate import checks, mock_data
+from data.fit_checker import check_fit
 
-TH = "chicken thigh, USDA Grade A, 40lb case"
-TOM = "roma tomato, US No. 1, 25lb case"
-URL = mock_data.USDA_URL
-BASELINE = {TH: {"unit_price": 2.10, "source_url": URL}, TOM: {"unit_price": 1.20, "source_url": URL}}
-SIGNALS = {s: {"supplier_id": s, "stability": st, "checked_at": "", "source": "simulated", "source_url": mock_data.CRS_URL}
-           for s, st in [("sup-golden", "verified_stable"), ("sup-bargain", "caution"), ("sup-newco", "not_verified")]}
-NEED = {"id": "need-1", "buyer_id": "r-1", "delivery_window": "Mon 6-8am", "spend_limit": 500, "consent": True,
-        "auction_window_s": 60, "source": "simulated",
-        "items": [{"sku_spec": TH, "grade": "USDA Grade A", "pack_size": "40lb case", "quantity": 100, "unit": "lb"},
-                  {"sku_spec": TOM, "grade": "US No. 1", "pack_size": "25lb case", "quantity": 50, "unit": "lb"}]}
+GPU = "rtx 4070 super 12gb"
+ATTRS = {"category": "gpu", "chipset": "RTX 4070 SUPER", "length_mm": 267, "power_connector": ["8pin", 1]}
+OWNED = {"psu": {"wattage": 750, "pcie_8pin": 2}, "case": {"max_gpu_length_mm": 330}}
+NEED = {"id": "need-1", "owned": OWNED,
+        "items": [{"sku_spec": GPU, "condition": "new", "variant": "12gb", "quantity": 1}]}
 
 
-def bid(bid_id, supplier, lines, total, floor=True, trace=""):
-    return {"id": bid_id, "need_id": "need-1", "supplier_id": supplier, "persona": "p",
-            "lines": [{"sku_spec": s, "unit_price": p, "quantity": q} for s, p, q in lines],
-            "total_landed_price": total, "perks": [], "claims": [], "floor_check_passed": floor,
-            "mirror_snapshot_id": "m", "decision_trace": trace, "expires_at": "", "source": "simulated"}
+def bid(bid_id, seller, price, offered="new", page="new", attrs=ATTRS, floor=True, sku=GPU, qty=1):
+    return {"id": bid_id, "need_id": "need-1", "supplier_id": seller, "origin": "simulated",
+            "lines": [{"sku_spec": sku, "unit_price": price, "quantity": qty, "offered_condition": offered,
+                       "page_condition": page, "listing_url": f"https://example.com/listing/{bid_id}",
+                       "attrs": attrs}],
+            "total_landed_price": price * qty, "floor_check_passed": floor, "fee": 99.0}
 
 
-def run(bids, recalls=()):
-    return checks.advise(NEED, bids, BASELINE, SIGNALS, list(recalls))
+def run(bids, recalls=None, owned=None):
+    return checks.advise(NEED, bids, mock_data.BASELINE, mock_data.RECORDS,
+                         mock_data.RECALLS if recalls is None else recalls, owned)
 
 
-def test_cheapest_grade_swap_vetoed_next_best_wins():
-    cheap = bid("b1", "sup-golden", [("chicken thigh, USDA Grade B, 40lb case", 1.50, 100), (TOM, 1.0, 50)], 200)
-    good = bid("b2", "sup-golden", [(TH, 2.0, 100), (TOM, 1.1, 50)], 255)
-    pricey = bid("b3", "sup-golden", [(TH, 2.1, 100), (TOM, 1.2, 50)], 270)
-    bids = [cheap, good, pricey]
+def test_cheapest_condition_mismatch_vetoed_next_best_wins():
+    bids = [bid("b1", "seller_1", 540, offered="new", page="open-box"),
+            bid("b2", "seller_2", 590), bid("b3", "seller_1", 620)]
     cards = run(bids)
     assert cards[0]["recommendation"] == "veto"
+    [w] = cards[0]["warnings"]
+    assert w["kind"] == "condition" and w["source_url"] == "https://example.com/listing/b1"
+    assert "listed as new, the page says open box" in w["text"]
     assert cards[1]["recommendation"] == "buy"
     assert checks.best_bid(bids, cards)["id"] == "b2"
 
 
-def test_swap_in_decision_trace_vetoed():
-    b = bid("b1", "sup-golden", [(TH, 2.0, 100)], 200, trace="Substituted 30lb case for availability")
-    assert run([b])[0]["recommendation"] == "veto"
-
-
-def test_overpay_dollar_impact():
-    b = bid("b1", "sup-golden", [(TH, 2.50, 100), (TOM, 1.2, 50)], 310)  # baseline 2.10, +19%
-    card = run([b])[0]
-    assert card["recommendation"] == "caution"
+def test_gpu_too_long_vetoed_with_reason():
+    card = run([bid("b1", "seller_1", 590, attrs={**ATTRS, "length_mm": 340})])[0]
+    assert card["recommendation"] == "veto"
     [w] = card["warnings"]
-    assert w["kind"] == "price" and w["dollar_impact"] == 40.0
-    assert w["source_url"] == mock_data.USDA_URL
+    assert w["kind"] == "fit" and "340 mm" in w["text"] and "330 mm" in w["text"]
 
 
-def test_within_tolerance_no_warning():
-    b = bid("b1", "sup-golden", [(TH, 2.30, 100)], 230)  # +9.5%
-    assert run([b])[0]["warnings"] == []
+def test_psu_too_small_vetoed():
+    card = run([bid("b1", "seller_1", 590, attrs={**ATTRS, "chipset": "RX 7800 XT", "rec_psu_w": 850})])[0]
+    assert card["recommendation"] == "veto" and card["warnings"][0]["kind"] == "fit"
 
 
-def test_max_three_warnings_sorted():
-    b = bid("b1", "sup-bargain", [("chicken thigh, USDA Grade B, 40lb case", 3.0, 100), (TOM, 2.0, 50)],
-            400, floor=False)
-    card = run([b], recalls=["roma tomato"])[0]
+def test_fit_deterministic_and_unknown_attr_is_caution_not_veto():
+    long_gpu = bid("b1", "seller_1", 590, attrs={**ATTRS, "length_mm": 340})
+    assert run([long_gpu]) == run([long_gpu])  # same input, same fit verdict
+    unknown = run([bid("b2", "seller_1", 590, attrs={"category": "gpu", "chipset": "RTX 4070 SUPER"})])[0]
+    assert unknown["recommendation"] == "caution"
+    assert [w["kind"] for w in unknown["warnings"]] == ["fit_unknown"]
+
+
+def test_fit_notes_shown_without_changing_recommendation():
+    gpu16 = {**ATTRS, "power_connector": ["16pin", 2]}  # PSU has 2x 8-pin, so the card's adapter is used
+    card = run([bid("b1", "seller_1", 590, attrs=gpu16)])[0]
+    assert card["recommendation"] == "buy" and [w["kind"] for w in card["warnings"]] == ["note"]
+
+
+def test_price_above_history():
+    card = run([bid("b1", "seller_1", 700)])[0]  # baseline 600, +16.7%
+    [w] = card["warnings"]
+    assert card["recommendation"] == "caution" and w["kind"] == "price" and w["dollar_impact"] == 100.0
+    assert "did not match the price history" in w["text"]
+
+
+def test_seller_3_record_caution():
+    card = run([bid("b1", "seller_3", 590)])[0]
+    assert [w["kind"] for w in card["warnings"]] == ["record"] and card["recommendation"] == "caution"
+
+
+def test_recall_vetoes():
+    card = run([bid("b1", "seller_1", 590)], recalls=[{"match": "rtx 4070", "source_url": mock_data.CPSC_URL}])[0]
+    assert card["recommendation"] == "veto" and card["warnings"][0]["source_url"] == mock_data.CPSC_URL
+
+
+def test_max_three_sorted_veto_kept():
+    b = bid("b1", "seller_3", 700, attrs={**ATTRS, "length_mm": 340}, floor=False)  # fit, price, record, floor
+    card = run([b])[0]
     impacts = [w["dollar_impact"] for w in card["warnings"]]
     assert len(impacts) == 3 and impacts == sorted(impacts, reverse=True)
     assert card["recommendation"] == "veto"
 
 
-def test_crs_caution_and_not_verified_warn():
-    for sup in ("sup-bargain", "sup-newco"):
-        card = run([bid("b1", sup, [(TH, 2.0, 100)], 200)])[0]
-        assert [w["kind"] for w in card["warnings"]] == ["stability"]
-        assert card["recommendation"] == "caution"
-        assert card["warnings"][0]["source_url"]
-
-
-def test_recall_vetoes():
-    card = run([bid("b1", "sup-golden", [(TOM, 1.0, 50)], 50)], recalls=["roma tomato"])[0]
-    assert card["recommendation"] == "veto"
-
-
 def test_no_winner_when_all_vetoed():
-    bids = [bid("b1", "sup-golden", [("thigh, grade B", 1.0, 100)], 100)]
+    bids = [bid("b1", "seller_1", 500, page="used")]
     assert checks.best_bid(bids, run(bids)) is None
 
 
-def test_cards_validate_and_have_sources():
-    bids = [bid("b1", "sup-bargain", [("chicken thigh, USDA Grade B, 40lb case", 3.0, 100), (TOM, 2.0, 50)],
-                400, floor=False),
-            bid("b2", "sup-golden", [(TH, 2.0, 100), (TOM, 1.1, 50)], 255)]
-    for card in run(bids, recalls=["roma tomato"]):
+def test_cards_validate_no_dashes_no_fee():
+    bids = [bid("b1", "seller_3", 700, page="refurbished", attrs={**ATTRS, "length_mm": 340}, floor=False),
+            bid("b2", "seller_2", 590)]
+    for card in run(bids):
         common.validate("AdvocateCard", card)
-        assert all(w["source_url"] for w in card["warnings"])
+        for w in card["warnings"]:
+            assert w["source_url"] and "—" not in w["text"] and "–" not in w["text"]
+            assert "fee" not in w["text"].lower() and "wrong" not in w["text"].lower()

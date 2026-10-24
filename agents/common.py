@@ -1,6 +1,7 @@
 """Shared bits for every Lane A agent: contract checks, Shield screening, wire messages, agent seeds."""
 import json
 import os
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -9,7 +10,9 @@ from jsonschema import Draft202012Validator
 from uagents import Model
 from uagents.crypto import Identity
 
-CONTRACTS = Path(__file__).resolve().parent.parent / "contracts"
+ROOT = Path(__file__).resolve().parent.parent
+CONTRACTS = ROOT / "contracts"
+sys.path.insert(0, str(ROOT))  # so agents can import other lanes' code, e.g. `from data.fit_checker import check_fit`
 
 
 def validate(contract: str, obj: dict) -> dict:
@@ -59,11 +62,18 @@ class AdviceReply(Model):
     cards_json: str  # list of AdvocateCard
 
 
+class OrderPlaced(Model):
+    """Buyer -> winning seller: the order is approved; ask for payment against this mandate (Payment Protocol)."""
+    order_json: str  # Order
+    mandate_json: str  # payment.make_mandate(...) dict
+
+
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
+SELLERS = ["seller_1", "seller_2", "seller_3"]  # three named seller agents, each its own uAgent
 SEEDS = {
-    "buyer": os.getenv("BUYER_AGENT_SEED", "bidding-royale-buyer-dev"),
-    "advocate": os.getenv("ADVOCATE_AGENT_SEED", "bidding-royale-advocate-dev"),
-    "supplier": os.getenv("SUPPLIER_AGENT_SEED", "bidding-royale-supplier-dev"),
+    "buyer": os.getenv("BUYER_AGENT_SEED", "tech-bazaar-buyer-dev"),
+    "advocate": os.getenv("ADVOCATE_AGENT_SEED", "tech-bazaar-advocate-dev"),
+    **{s: os.getenv(f"{s.upper()}_AGENT_SEED", f"tech-bazaar-{s}-dev") for s in SELLERS},
 }
 
 
