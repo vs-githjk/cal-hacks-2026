@@ -6,6 +6,7 @@ import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
 import { ANY_CONDITION, checkFloorByCondition } from '../../rules/floor';
 import { rankBids } from '../../rules/scoring';
+import { priceLossReports, type LossReportArgs } from '../../rules/loss-report';
 import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
@@ -930,6 +931,26 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     const b = byId.get(d.bid.id)!;
     ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source, lineMetaJson: metas.has(b.id) ? JSON.stringify(metas.get(b.id)) : '[]', bindingHash: candidateHashes.get(b.id) ?? '' });
   }
+  const evidenceByBid = new Map<string, { origin: string; pickedListingUrls: string[] }>();
+  for (const row of ranked.ranked) {
+    if (!row.complete) continue;
+    const b = byId.get(row.bid.id)!;
+    const metadata = metas.get(b.id) ?? [];
+    const pickedListingUrls = row.picked.flatMap((index) => {
+      const meta = metadata[index];
+      if (!meta) return [];
+      const provenance = meta.provenance;
+      return Object.prototype.hasOwnProperty.call(provenance, 'listing_url')
+        ? [typeof provenance.listing_url === 'string' ? provenance.listing_url : '']
+        : [meta.listingId];
+    });
+    const origin = row.picked.map((index) => metadata[index]?.provenance.origin)
+      .find((value): value is string => typeof value === 'string') ?? b.origin;
+    evidenceByBid.set(b.id, { origin, pickedListingUrls });
+  }
+  for (const report of priceLossReports(roundId, ranked.ranked, evidenceByBid)) {
+    if (!ctx.db.lossReport.id.find(report.id)) ctx.db.lossReport.insert({ ...report, createdAt: ctx.timestamp });
+  }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
   const top = ranked.ranked[0];
   event(ctx, 'auction_closed', 'round', roundId, top ? `Round closed: ${ranked.ranked.length} ranked, ${ranked.disqualified.length} out` : 'Round closed: no eligible bid', top?.bid.seller_id ?? '', r.origin);
@@ -1235,11 +1256,6 @@ export function myPendingApprovalsView(ctx: VCtx) {
 
 export const GAP_BANDS = ['within5', 'within10', 'within20', 'over20'];
 export const LOSS_REASONS = ['price', 'fit', 'condition', 'delivery', 'record', 'advocate_veto'];
-
-export interface LossReportArgs {
-  id: string; roundId: string; sellerId: string; won: boolean; gapBand: string; reason: string; sourceUrl: string;
-  strategyDiff: { key: string; from: string; to: string }[]; whatToChange: string; whatToChangeOrigin: string; origin: string;
-}
 
 /** Referee only: a seller's loss report (banded gap, reason category, source), with its strategy diff and "what to change" when present. */
 export function recordLossReport(ctx: Ctx, a: LossReportArgs) {
