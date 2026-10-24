@@ -109,6 +109,19 @@ describe("rankBids", () => {
     expect(r.ranked[1]!.landed).toBe(780);
   });
 
+  it("counts flat shipping once on the selected alternative and in the cap and score", () => {
+    const needQty: NeedItem = { ...need, quantity: 2, allowed_conditions: ["new", "open-box"] };
+    const needItems = new Map([[GPU, needQty]]);
+    const bid = mk("seller-a", 1, { lines: [
+      { sku_spec: GPU, offered_condition: "new", unit_price: 100, quantity: 2, shipping: 5 },
+      { sku_spec: GPU, offered_condition: "open-box", unit_price: 95, quantity: 2, shipping: 20 },
+    ] });
+    const ranked = rankBids([bid], { needItems, spendLimit: 205 });
+    expect(ranked.ranked[0]!.picked).toEqual([0]);
+    expect(ranked.ranked[0]!.landed).toBe(205);
+    expect(rankBids([bid], { needItems, spendLimit: 204 }).ranked).toHaveLength(0);
+  });
+
   it("disqualifies a bid that omits any requested SKU", () => {
     const psu = "psu-850w-gold";
     const needWithPsu = new Map([...items, [psu, { sku_spec: psu, condition: "new", variant: "retail", quantity: 1, unit: "each" } as NeedItem]]);

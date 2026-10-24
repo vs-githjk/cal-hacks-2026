@@ -69,11 +69,11 @@ export const goal = table(
     deadline: t.timestamp(),
     state: t.string(),
     reservedAmount: t.f64(),
-    reservedDealId: t.string().default(''),
-    reservedMandateHash: t.string().default(''),
     poNumber: t.string(),
     origin: t.string(), // market-internal, for the badge; not in the Goal contract
     createdAt: t.timestamp(),
+    reservedDealId: t.string().default(''), // appended for in-place migration
+    reservedMandateHash: t.string().default(''), // appended for in-place migration
   },
 );
 
@@ -203,6 +203,7 @@ export const bid = table(
     source: t.string(),
     sealedAt: t.timestamp(),
     lineRejects: t.array(t.string()).default([]), // per line: '' or why it cannot be picked (no floor set)
+    lineMetaJson: t.string().default('[]'), // appended migration-safe metadata keyed by original line index
   },
 );
 
@@ -218,6 +219,7 @@ export const bidCheck = table(
     evidenceUrl: t.string(),
     origin: t.string(),
     at: t.timestamp(),
+    bindingJson: t.string().default(''), // append-only binding to the selected original bid lines
   },
 );
 
@@ -239,6 +241,8 @@ export const mandate = table(
     origin: t.string(),
     goalId: t.string().default(''),
     needId: t.string().default(''),
+    retired: t.bool().default(false), // appended: terminal no-charge retirement proof was accepted
+    retirementAttemptId: t.string().default(''), // exact local req:<sha256> attempt; appended for migration safety
   },
 );
 
@@ -312,7 +316,7 @@ export const round = table(
     sealedCount: t.u32(),
     closedAt: t.option(t.timestamp()),
     origin: t.string(),
-    reviewDeadline: t.option(t.timestamp()),
+    reviewDeadline: t.option(t.timestamp()).default(undefined),
   },
 );
 
@@ -331,6 +335,7 @@ export const roundResult = table(
     lines: t.array(BidLine),
     origin: t.string(),
     source: t.string(),
+    lineMetaJson: t.string().default('[]'), // selected metadata; original indexes stay bound for review/evidence
   },
 );
 

@@ -52,6 +52,11 @@ export const place_bid = spacetimedb.reducer(
   (ctx, a) => m.placeBid(ctx, a),
 );
 
+export const set_bid_line_meta = spacetimedb.reducer(
+  { bidId: t.string(), lineMetaJson: t.string() },
+  (ctx, a) => m.setBidLineMeta(ctx, a),
+);
+
 export const close_round = spacetimedb.reducer({ roundId: t.string() }, (ctx, a) => m.closeRound(ctx, a));
 
 export const close_round_on_deadline = spacetimedb.reducer({ onSchedule: roundTimer }, { timer: roundTimer.rowType }, (ctx, { timer }) =>
@@ -64,12 +69,12 @@ export const attach_verdict = spacetimedb.reducer(
 );
 
 export const attach_claim_check = spacetimedb.reducer(
-  { bidId: t.string(), claim: t.string(), check: t.string(), evidenceUrl: t.string(), origin: t.string() },
+  { bidId: t.string(), claim: t.string(), check: t.string(), evidenceUrl: t.string(), origin: t.string(), bindingHash: t.string(), lineIndex: t.u32(), listingId: t.string(), listingHash: t.string() },
   (ctx, a) => m.attachClaimCheck(ctx, a),
 );
 
 export const attach_advocate_card = spacetimedb.reducer(
-  { bidId: t.string(), recommendation: t.string(), ruleId: t.string(), text: t.string(), sourceUrl: t.string(), origin: t.string() },
+  { bidId: t.string(), recommendation: t.string(), ruleId: t.string(), text: t.string(), sourceUrl: t.string(), origin: t.string(), bindingHash: t.string() },
   (ctx, a) => m.attachAdvocateCard(ctx, a),
 );
 
@@ -134,6 +139,11 @@ export const release_goal_reservation = spacetimedb.reducer(
   (ctx, a) => m.releaseGoalReservation(ctx, a),
 );
 
+export const resolve_no_charge = spacetimedb.reducer(
+  { dealId: t.string(), mandateHash: t.string(), attemptId: t.string() },
+  (ctx, a) => m.resolveNoCharge(ctx, a),
+);
+
 export const record_receiving = spacetimedb.reducer(
   {
     id: t.string(), orderId: t.string(), skuSpec: t.string(), photoUrl: t.string(), expectedSpecId: t.string(),
@@ -165,5 +175,10 @@ const PendingApprovalRow = t.object('PendingApprovalRow', {
   failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp(), codeExpiresAt: t.timestamp(), origin: t.string(),
 });
 export const my_pending_approvals = spacetimedb.view({ name: 'my_pending_approvals', public: true }, t.array(PendingApprovalRow), (ctx) => m.myPendingApprovalsView(ctx));
+const ReviewCandidateRow = t.object('ReviewCandidateRow', {
+  roundId: t.string(), needId: t.string(), bidId: t.string(), sellerId: t.string(), origin: t.string(), rank: t.u32(), landed: t.f64(),
+  linesJson: t.string(), lineMetaJson: t.string(), bindingHash: t.string(),
+});
+export const review_candidates = spacetimedb.view({ name: 'review_candidates', public: true }, t.array(ReviewCandidateRow), (ctx) => m.reviewCandidatesView(ctx));
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
 export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));

@@ -34,6 +34,8 @@ export interface BidLine {
   offered_condition?: Condition;
   unit_price: number;
   quantity: number;
+  /** Flat per-selected-line shipping fee, charged once at the Need quantity. */
+  shipping?: number;
 }
 
 export interface Bid {

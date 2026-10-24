@@ -16,7 +16,8 @@ type Auth = ReturnType<typeof as>;
 let h: ReturnType<typeof createModuleTestHarness<InferSchema<typeof spacetimedb>>>;
 const run = <T>(auth: Auth, f: (ctx: any) => T) => h.withReducerTx(auth, f);
 const idOf = (auth: Auth): Identity => run(auth, (ctx) => ctx.sender);
-const advance = (ms: number) => h.clock.advance(TimeDuration.fromMillis(ms));
+const advanceRaw = (ms: number) => h.clock.advance(TimeDuration.fromMillis(ms));
+const advance = (ms: number) => { ensureTestMetadata(); advanceRaw(ms); };
 const events = () => [...h.db.floorEvent.iter()];
 
 const GPU = 'gpu-rtx5070ti-retail';
@@ -34,8 +35,10 @@ const needArgs = (over: Partial<m.PostNeedArgs> = {}): m.PostNeedArgs => ({
   items: [{ skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }], ...over,
 });
 
-function setupRound(windowS = 15) {
-  run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ auctionWindowS: windowS })));
+function setupRound(windowS = 15, allowedConditions: string[] = []) {
+  run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ auctionWindowS: windowS,
+    items: [{ skuSpec: GPU, condition: 'new', allowedConditions, variant: 'retail', quantity: 1, unit: 'each' }],
+  })));
   run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS }));
 }
 
@@ -43,17 +46,45 @@ const bidArgs = (id: string, lines: ReturnType<typeof line>[]) => ({
   id, roundId: 'round-1', persona: 'p', lines, statedTotal: 0, perks: [], claims: [], origin: 'SIM', source: 'sim:fixture',
 });
 
+function ensureTestMetadata() {
+  for (const b of [...h.db.bid.roundId.filter('round-1')]) {
+    if ((b.lineMetaJson || '[]') !== '[]') continue;
+    if (h.db.round.id.find(b.roundId)?.state !== 'open') continue;
+    const seller = b.sellerId === 'seller-a' ? A : b.sellerId === 'seller-b' ? B : C;
+    const lineMetaJson = JSON.stringify(b.lines.map((_line: any, lineIndex: number) => ({
+      lineIndex, shipping: 0, listingId: `https://example.test/${b.id}/${lineIndex}`,
+      listingHash: 'a'.repeat(64), source: 'test-fixture', snapshotId: 'snapshot-test',
+      provenance: { origin: 'SIM' }, attrs: {},
+    })));
+    run(seller, (ctx) => m.setBidLineMeta(ctx, { bidId: b.id, lineMetaJson }));
+  }
+}
+
+function beginReview() {
+  ensureTestMetadata();
+  if (h.db.round.id.find('round-1')!.state === 'open') {
+    advanceRaw(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+  }
+}
+
+const candidate = (bidId: string) => m.reviewCandidatesView(h.viewContext(REF) as any).find((row) => row.bidId === bidId)!;
+
 function closeReadyRound() {
-  run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+  beginReview();
+  const candidates = new Map(m.reviewCandidatesView(h.viewContext(REF) as any).map((row) => [row.bidId, row]));
   for (const b of [...h.db.bid.roundId.filter('round-1')]) {
     const checks = [...h.db.bidCheck.bidId.filter(b.id)];
+    const current = candidates.get(b.id);
     if (!checks.some((c) => c.kind === 'shield')) run(REF, (ctx) => m.attachVerdict(ctx, { bidId: b.id, verdict: 'allow', ruleIds: [], origin: 'SIM' }));
-    if (!checks.some((c) => c.kind === 'advocate')) run(REF, (ctx) => m.attachAdvocateCard(ctx, {
-      bidId: b.id, recommendation: 'buy', ruleId: '', text: '', sourceUrl: '', origin: 'SIM',
+    if (current && !checks.some((c) => c.kind === 'advocate')) run(REF, (ctx) => m.attachAdvocateCard(ctx, {
+      bidId: b.id, recommendation: 'buy', ruleId: '', text: '', sourceUrl: '', origin: 'SIM', bindingHash: current.bindingHash,
     }));
-    for (const claim of b.claims) {
-      if (!checks.some((c) => c.kind === 'claim' && c.detail === claim)) run(REF, (ctx) => m.attachClaimCheck(ctx, {
-        bidId: b.id, claim, check: 'verified', evidenceUrl: '', origin: 'SIM',
+    if (current) for (const claim of b.claims) for (const selected of JSON.parse(current.linesJson)) {
+      const exists = checks.some((c) => c.kind === 'claim' && c.detail === claim && c.bindingJson.includes(`"lineIndex":${selected.line_index}`));
+      if (!exists) run(REF, (ctx) => m.attachClaimCheck(ctx, {
+        bidId: b.id, claim, check: 'verified', evidenceUrl: '', origin: 'SIM', bindingHash: current.bindingHash,
+        lineIndex: selected.line_index, listingId: selected.listing_id, listingHash: selected.listing_hash,
       }));
     }
   }
@@ -95,6 +126,13 @@ beforeEach(() => {
   run(C, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
 });
 
+describe('candidate SHA-256 binding', () => {
+  it('uses the standard SHA-256 digest for UTF-8 canonical candidate data', () => {
+    expect(m.sha256('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+    expect(m.sha256('✓')).toBe('1dabba21cdad44541f6b15796f8d22978fc7ea10c46aeceeeeb66c23b3ac7604');
+  });
+});
+
 describe('post_need and redaction', () => {
   it('writes the need and a floor event without the spend limit in any public label', () => {
     setupRound();
@@ -110,6 +148,90 @@ describe('post_need and redaction', () => {
     expect(v[0]).toMatchObject({ needId: 'need-1', roundId: 'round-1', skuSpec: GPU, condition: 'new' });
     const text = JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? String(x) : x));
     expect(text).not.toMatch(/spendLimit|800|goal|vidyut/);
+  });
+});
+
+describe('migration-safe bid line metadata', () => {
+  it('requires seller-owned complete metadata, permits only exact retries, and blocks later changes', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('meta-bid', [line(780), line(760, { offeredCondition: 'open-box' })])));
+    const mk = (shipping: number) => JSON.stringify([
+      { lineIndex: 0, shipping, listingId: 'https://example.test/new', listingHash: 'a'.repeat(64), source: 'fixture', snapshotId: 'snap', provenance: { origin: 'SIM' }, attrs: {} },
+      { lineIndex: 1, shipping: 0, listingId: 'https://example.test/open', listingHash: 'b'.repeat(64), source: 'fixture', snapshotId: 'snap', provenance: { origin: 'SIM' }, attrs: {} },
+    ]);
+    expect(() => run(B, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: mk(1) }))).toThrow(/no bid for this seller/);
+    expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: mk(-1) }))).toThrow(/shipping/);
+    const value = mk(2);
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: value }));
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: value }));
+    expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: mk(3) }))).toThrow(/immutable/);
+    advance(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: value }))).not.toThrow();
+  });
+
+  it('uses the shared picker for the private review candidate and carries original line index and selected metadata', () => {
+    setupRound(15, ['new', 'open-box']);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('meta-pick', [line(780), line(760, { offeredCondition: 'open-box' })])));
+    const lineMetaJson = JSON.stringify([
+      { lineIndex: 0, shipping: 30, listingId: 'https://example.test/new', listingHash: 'a'.repeat(64), source: 'fixture', snapshotId: 'snap', provenance: { origin: 'SIM' }, attrs: {} },
+      { lineIndex: 1, shipping: 0, listingId: 'https://example.test/open', listingHash: 'b'.repeat(64), source: 'fixture', snapshotId: 'snap', provenance: { origin: 'SIM' }, attrs: {} },
+    ]);
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-pick', lineMetaJson }));
+    advance(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const candidates = m.reviewCandidatesView(h.viewContext(REF) as any);
+    expect(candidates).toHaveLength(1);
+    expect(JSON.parse(candidates[0]!.linesJson)).toMatchObject([{ line_index: 1, listing_id: 'https://example.test/open', shipping: 0 }]);
+    expect(m.reviewCandidatesView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
+  });
+
+  it('hashes the exact selected slice and refuses a card bound to another candidate', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bound-card', [line(780)])));
+    beginReview();
+    const selected = candidate('bound-card');
+    const expected = m.sha256(JSON.stringify({
+      roundId: selected.roundId, needId: selected.needId, bidId: selected.bidId, sellerId: selected.sellerId,
+      origin: 'SIM', landed: selected.landed, lines: JSON.parse(selected.linesJson), lineMetaJson: selected.lineMetaJson,
+    }));
+    expect(selected.bindingHash).toBe(expected);
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bound-card', verdict: 'allow', ruleIds: [], origin: 'SIM' }));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bound-card', recommendation: 'buy', ruleId: '', text: '', sourceUrl: '', origin: 'SIM', bindingHash: '0'.repeat(64) }));
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()][0]).toMatchObject({ rank: 0 });
+    expect([...h.db.roundResult.iter()][0]!.reasons.join(' ')).toMatch(/AdvocateCard bound to the selected candidate/);
+  });
+
+  it('requires claim evidence to identify the original line, exact listing, and candidate hash', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bound-claim', [line(780)]), claims: ['warranty'] }));
+    beginReview();
+    const selected = candidate('bound-claim');
+    const lineEvidence = JSON.parse(selected.linesJson)[0]!;
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bound-claim', verdict: 'allow', ruleIds: [], origin: 'SIM' }));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bound-claim', recommendation: 'buy', ruleId: '', text: '', sourceUrl: '', origin: 'SIM', bindingHash: selected.bindingHash }));
+    const evidence = { bidId: 'bound-claim', claim: 'warranty', check: 'verified', evidenceUrl: 'https://example.test/warranty', origin: 'SIM',
+      bindingHash: selected.bindingHash, lineIndex: lineEvidence.line_index, listingId: lineEvidence.listing_id, listingHash: lineEvidence.listing_hash };
+    expect(() => run(REF, (ctx) => m.attachClaimCheck(ctx, { ...evidence, lineIndex: 1 }))).toThrow(/original listing and line index/);
+    expect(() => run(REF, (ctx) => m.attachClaimCheck(ctx, { ...evidence, listingHash: 'b'.repeat(64) }))).toThrow(/original listing and line index/);
+    run(REF, (ctx) => m.attachClaimCheck(ctx, evidence));
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()][0]!.rank).toBe(1);
+  });
+
+  it('refuses to rank or finalize a bid with missing line metadata', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('missing-meta', [line(780)])));
+    advanceRaw(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'missing-meta', verdict: 'allow', ruleIds: [], origin: 'SIM' }));
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.roundId.filter('round-1')][0]).toMatchObject({ rank: 0 });
+    expect([...h.db.roundResult.roundId.filter('round-1')][0]!.reasons.join(' ')).toMatch(/line metadata/);
   });
 });
 
@@ -140,6 +262,26 @@ describe('goal reservation and settlement', () => {
     expect(h.db.goal.id.find('goal-1')).toMatchObject({ reservedDealId: 'deal-1', reservedMandateHash: 'h1', reservedAmount: 780 });
   });
 
+  it('releases an approved deal only on exact referee no-charge retirement proof and blocks stale callbacks', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ goalId: 'goal-1', needId: 'need-1', dealId: 'deal-retire' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
+    const attemptId = `req:${'a'.repeat(64)}`;
+    expect(() => run(VIDYUT, (ctx) => m.resolveNoCharge(ctx, { dealId: 'deal-retire', mandateHash: 'h1', attemptId }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.resolveNoCharge(ctx, { dealId: 'other-deal', mandateHash: 'h1', attemptId }))).toThrow(/matching goal mandate/);
+    expect(() => run(REF, (ctx) => m.resolveNoCharge(ctx, { dealId: 'deal-retire', mandateHash: 'h1', attemptId: 'refused' }))).toThrow(/request hash/);
+    run(REF, (ctx) => m.resolveNoCharge(ctx, { dealId: 'deal-retire', mandateHash: 'h1', attemptId }));
+    run(REF, (ctx) => m.resolveNoCharge(ctx, { dealId: 'deal-retire', mandateHash: 'h1', attemptId }));
+    expect(h.db.goal.id.find('goal-1')).toMatchObject({ state: 'HUNTING', reservedAmount: 0, reservedDealId: '', reservedMandateHash: '' });
+    expect(h.db.mandate.hash.find('h1')).toMatchObject({ retired: true, retirementAttemptId: attemptId });
+    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }))).toThrow(/retired/);
+    expect(() => run(REF, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code: 'apple river' }))).toThrow(/retired/);
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_late', amount: 780, mode: 'stripe_test' }))).toThrow(/retired/);
+    expect(() => run(REF, (ctx) => m.resolveNoCharge(ctx, { dealId: 'deal-retire', mandateHash: 'h1', attemptId: `req:${'b'.repeat(64)}` }))).toThrow(/different request/);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'm2', goalId: 'goal-1', needId: 'need-1', dealId: 'deal-next' })))).not.toThrow();
+  });
+
   it('releases the exact expired unapproved hold and rejects non-finite goal or mandate values', () => {
     expect(() => run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ cap: Infinity })))).toThrow(/finite positive/);
     run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
@@ -150,6 +292,21 @@ describe('goal reservation and settlement', () => {
     advance(10 * 60_000 + 1);
     run(REF, (ctx) => m.releaseGoalReservation(ctx, { goalId: 'goal-1', dealId: 'deal-1', mandateHash: 'h1' }));
     expect(h.db.goal.id.find('goal-1')).toMatchObject({ state: 'HUNTING', reservedAmount: 0, reservedDealId: '', reservedMandateHash: '' });
+  });
+
+  it('does not let a late charge from an expired deal consume a newer same-amount reservation', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ goalId: 'goal-1', needId: 'need-1', dealId: 'deal-old' })));
+    advance(10 * 60_000 + 1);
+    run(REF, (ctx) => m.releaseGoalReservation(ctx, { goalId: 'goal-1', dealId: 'deal-old', mandateHash: 'h1' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'h2', id: 'mdt-2', nonce: 'n2', dealId: 'deal-new', goalId: 'goal-1', needId: 'need-1',
+    })));
+    run(REF, (ctx) => ctx.db.approval.insert({ id: 0n, mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_late', amount: 780, mode: 'stripe_test' })))
+      .toThrow(/active goal reservation/);
+    expect(h.db.payment.mandateHash.find('h1')).toBeFalsy();
   });
 
   it('does not let a one-item Need mark a multi-item parent goal done', () => {
@@ -260,6 +417,7 @@ describe('close_round', () => {
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(699, { offeredCondition: 'open-box' })])));
     run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(720)])));
+    beginReview();
     run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-c', verdict: 'quarantine', ruleIds: ['payee_swap'], origin: 'SIM' }));
     expect(() => run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }))).toThrow(/still open/);
     advance(16_000);
@@ -361,11 +519,11 @@ describe('SECURITY caller identity', () => {
     ['open_round', (ctx) => m.openRound(ctx, { roundId: 'round-x', needId: 'need-1', windowS: 15 })],
     ['close_round', (ctx) => m.closeRound(ctx, { roundId: 'round-1' })],
     ['attach_verdict', (ctx) => m.attachVerdict(ctx, { bidId: 'bid-b', verdict: 'block', ruleIds: ['x'], origin: 'SIM' })],
-    ['attach_claim_check', (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM' })],
+    ['attach_claim_check', (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM', bindingHash: '', lineIndex: 0, listingId: '', listingHash: '' })],
     ['create_mandate', (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h9' }))],
     ['record_approval', (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' })],
     ['record_payment', (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' })],
-    ['attach_advocate_card', (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'x', sourceUrl: 'https://x', origin: 'SIM' })],
+    ['attach_advocate_card', (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'x', sourceUrl: 'https://x', origin: 'SIM', bindingHash: '' })],
     ['assign_role', (ctx) => m.assignRole(ctx, { identity: ctx.sender, role: 'referee', subjectId: 'market' })],
     ['reset_demo', (ctx) => m.resetDemoChecked(ctx)],
     ['seed_demo', (ctx) => m.seedDemoChecked(ctx)],
@@ -411,7 +569,7 @@ describe('SECURITY caller identity', () => {
     setupRound();
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
     expect(() => run(A, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-b', verdict: 'block', ruleIds: ['x'], origin: 'SIM' }))).toThrow(/not allowed/);
-    expect(() => run(A, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM' }))).toThrow(/not allowed/);
+    expect(() => run(A, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM', bindingHash: '', lineIndex: 0, listingId: '', listingHash: '' }))).toThrow(/not allowed/);
     expect([...h.db.bidCheck.iter()]).toHaveLength(0);
   });
 
@@ -451,6 +609,7 @@ describe('every state change writes a floor event', () => {
     setupRound();
     const n0 = events().length;
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    beginReview();
     run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'allow', ruleIds: [], origin: 'SIM' }));
     advance(16_000);
     closeReadyRound();
@@ -458,7 +617,7 @@ describe('every state change writes a floor event', () => {
     run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
     expect(events().slice(n0).map((e) => e.kind)).toEqual([
-      'bid_sealed', 'verdict', 'review_opened', 'advocate_card', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
+      'bid_sealed', 'review_opened', 'verdict', 'advocate_card', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
     ]);
   });
 });
@@ -583,7 +742,9 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(700)])));
-    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', ...veto }));
+    beginReview();
+    const selected = candidate('bid-b');
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', ...veto, bindingHash: selected.bindingHash }));
     const res = closeIt();
     const b = res.find((r) => r.bidId === 'bid-b')!;
     expect(b.rank).toBe(0);
@@ -597,7 +758,10 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
   it('a caution or buy card is recorded and does not disqualify', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
-    run(REF, (ctx) => m.attachAdvocateCard(ctx, { ...veto, bidId: 'bid-a', recommendation: 'caution', ruleId: 'advocate.fit_unknown' }));
+    beginReview();
+    const selected = candidate('bid-a');
+    expect(selected.bindingHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { ...veto, bidId: 'bid-a', recommendation: 'caution', ruleId: 'advocate.fit_unknown', bindingHash: selected.bindingHash }))).not.toThrow();
     const res = closeIt();
     expect(res[0]!.rank).toBe(1);
     expect([...h.db.bidCheck.iter()].filter((c) => c.kind === 'advocate').map((c) => [c.kind, c.result])).toEqual([['advocate', 'caution']]);
@@ -606,8 +770,11 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
   it('writes a floor event without the seller or the text, and a veto line on the buyer feed', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    beginReview();
     const n0 = events().length;
-    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }));
+    const selected = candidate('bid-a');
+    expect(selected.bindingHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, bindingHash: selected.bindingHash }))).not.toThrow();
     const e = events().slice(n0);
     expect(e.map((x) => x.kind)).toEqual(['advocate_card']);
     expect(e[0]!.label).toMatch(/veto/);
@@ -623,9 +790,11 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
   it('a veto must cite a source, the recommendation must be known, and the bid must exist', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
-    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, sourceUrl: '' }))).toThrow(/source/);
-    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, recommendation: 'maybe' }))).toThrow(/recommendation/);
-    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'nope', ...veto }))).toThrow(/no bid/);
+    beginReview();
+    const bindingHash = candidate('bid-a').bindingHash;
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, sourceUrl: '', bindingHash }))).toThrow(/source/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, recommendation: 'maybe', bindingHash }))).toThrow(/recommendation/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'nope', ...veto, bindingHash }))).toThrow(/no bid/);
     expect([...h.db.bidCheck.iter()]).toHaveLength(0);
   });
 
@@ -633,13 +802,13 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     closeIt();
-    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }))).toThrow(/closed/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, bindingHash: '' }))).toThrow(/closed/);
   });
 
   it('SECURITY: a buyer cannot attach a card either', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
-    expect(() => run(VIDYUT, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, bindingHash: '' }))).toThrow(/not allowed/);
   });
 });
 
