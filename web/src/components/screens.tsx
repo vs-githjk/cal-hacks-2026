@@ -7,7 +7,6 @@ import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
-import { DotPattern } from "./ui/dot-pattern";
 
 
 export interface BuyerScreenProps {
@@ -57,7 +56,7 @@ function Searches({ goals }: { goals: GoalView[] }) {
             <p className="min-w-0 text-[15px] font-medium text-balance"><q>{g.text}</q></p>
             <StatePill state={g.state} />
           </div>
-          <p className="mt-1 text-[13px] text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
+          <p className="mt-1 text-[13px] tabular-nums text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
         </Card>
       ))}
     </div>
@@ -73,7 +72,7 @@ function SpendingRules({ allowance: a }: { allowance: GoalView["allowance"] }) {
       ) : a.perPurchase > 0 ? (
         <>
           <p className="text-[28px] font-semibold tracking-[-0.02em] tabular-nums">{money(a.perPurchase)}</p>
-          <p className="mt-1 text-[13px] text-muted">per buy without a call. {money(a.spent)} of {money(a.periodLimit)} used this {a.period}, step {a.ladderStep}.</p>
+          <p className="mt-1 text-[13px] tabular-nums text-muted">per buy without a call. {money(a.spent)} of {money(a.periodLimit)} used this {a.period}, step {a.ladderStep}.</p>
         </>
       ) : (
         <p className="text-[18px] font-medium">Every buy calls you first.</p>
@@ -150,8 +149,6 @@ export function MarketScreen(p: MarketScreenProps) {
   return (
     <div className="grid gap-3.5">
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        {/* Very faint, static, decorative; fades out before the small round text on the right. */}
-        <DotPattern width={12} height={12} className="fill-line [mask-image:linear-gradient(to_right,white,transparent_40%)]" />
         <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee&apos;s floor</span></div>
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}

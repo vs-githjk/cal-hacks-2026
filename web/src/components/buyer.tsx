@@ -4,7 +4,6 @@
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { DotPattern } from "@/components/ui/dot-pattern";
 import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
@@ -77,8 +76,6 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
         {win ? (
           <>
             <div ref={field} className="relative -mx-2 px-2">
-              {/* Decorative dot field behind the one hero number; it follows the pointer at 640 px and up, unless motion is reduced. */}
-              <DotPattern width={14} height={14} cx={1.2} cy={1.2} cr={1.2} className="fill-muted/35 [mask-image:radial-gradient(260px_circle_at_var(--mx,70%)_var(--my,40%),white,transparent)]" />
               <div className="relative z-10 my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
             </div>
             <div className="text-[15px] text-muted">
@@ -174,10 +171,10 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${b.won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}`}
                     >
                       <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /></Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} />{b.won && <> <Tag>Winner</Tag></>}</Td>
                       <Td>
                         <Tag>{b.condition}</Tag>
-                        {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
+                        {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] tabular-nums text-muted">{l.condition} {money(l.unitPrice)}</span>)}
                       </Td>
                       <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
                       <Td><Verdict kind={b.heldBack ? "caution" : REC[b.recommendation].kind}>{b.heldBack ? "Held back" : REC[b.recommendation].text}</Verdict></Td>
@@ -221,7 +218,7 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
   return (
     <Card stripe="coral">
       <Label>Advocate veto</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">Bid vetoed: {veto.seller}{veto.landed ? `, ${money(veto.landed)}` : ""}</h3>
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">Bid vetoed: {veto.seller}{veto.landed ? `, ${money(veto.landed)}` : ""}</h3>
       <p className="text-[14px]">{veto.claim ? <>Listed as &quot;{veto.claim}&quot;. </> : null}{veto.finding}</p>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
         <dt className="text-muted">Rule</dt><dd><Code>{veto.ruleId}</Code></dd>
@@ -276,7 +273,7 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
   return (
     <Card stripe="amber">
       <Label>Approval call</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">
         {approval.within ? `${money(approval.amount)} to ${approval.payee}, within your allowance` : `${money(approval.amount)} is above your ${money(approval.allowance)} allowance, so it called`}
       </h3>
       {approval.wordPair && (
@@ -310,10 +307,10 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
   return (
     <Card stripe="amber">
       <Label>Review and approve</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">
         {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
       </h3>
-      <p className="text-[13px] text-muted">
+      <p className="text-[13px] tabular-nums text-muted">
         Mandate <Code>{review.mandateId}</Code> · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
       </p>
       <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
