@@ -1,13 +1,13 @@
 {
- "generated_at": "2026-10-24T11:18:36+00:00",
+ "generated_at": "2026-10-24T11:37:36+00:00",
  "tiles": [
   {
    "detail": {
     "reference": {
      "status": "ok",
-     "median": 1254.99,
+     "median": 1259.99,
      "reference_unconfirmed": null,
-     "n": 6,
+     "n": 7,
      "providers": [
       "apify",
       "apify-b"
@@ -16,7 +16,7 @@
       "eBay sold",
       "retailer listings (Apify)"
      ],
-     "ask_median": 1254.99
+     "ask_median": 1259.99
     },
     "sold_kept_out": {
      "n": 5,
@@ -42,15 +42,15 @@
    "status": "none_yet",
    "value": null,
    "unit": "USD",
-   "display": "No verified savings yet: no verified purchase recorded yet (reference ok, 6 retail asks from 2 providers)",
-   "count": 6,
+   "display": "No verified savings yet: no verified purchase recorded yet (reference ok, 7 retail asks from 2 providers)",
+   "count": 7,
    "date_range": {
     "from": "2026-10-24T05:09:29.655Z",
-    "to": "2026-10-24T08:51:32+00:00"
+    "to": "2026-10-24T09:38:02+00:00"
    },
    "origin": "MIRROR",
    "source_run": "python3 -m data.baselines",
-   "note": "Baseline: median $1,254.99 of 6 in-stock retail asks (ok, providers apify, apify-b; a baseline needs two distinct data owners). Data owners: eBay sold and retailer listings (Apify). eBay sold median $880.00 of 5 (last 30 days, mixed condition), shown beside the ask median, never blended. apify-b re-checked Best Buy only (3 listings) and is the same data owner as apify. SIM savings, when they exist, go in a separate column and are never added to real ones."
+   "note": "Baseline: median $1,259.99 of 7 in-stock retail asks (ok, providers apify, apify-b; a baseline needs two distinct data owners). Data owners: eBay sold and retailer listings (Apify). eBay sold median $880.00 of 5 (last 30 days, mixed condition), shown beside the ask median, never blended. apify-b re-checked Best Buy only (3 listings) and is the same data owner as apify. SIM savings, when they exist, go in a separate column and are never added to real ones."
   },
   {
    "detail": {
@@ -97,12 +97,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T11:18:36+00:00",
-    "to": "2026-10-24T11:18:36+00:00"
+    "from": "2026-10-24T11:37:36+00:00",
+    "to": "2026-10-24T11:37:36+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T11:18:36+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T11:37:36+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
@@ -273,5 +273,39 @@
    "source_run": "python3 -m hyphenate.scenarios.blind_run --write",
    "note": "Cases frozen and hashed before any run, written without reading the engine. Headline is the first run; b24, k02 and k03 were fixed after it, so the rerun is not blind."
   }
- ]
+ ],
+ "price_position": {
+  "sku": "rtx 5070 ti",
+  "price": 1299.99,
+  "condition": "new",
+  "as_of": "2026-10-24T09:55:10+00:00",
+  "rank": 1,
+  "of_n": 2,
+  "stores": [
+   "bestbuy",
+   "microcenter"
+  ],
+  "cheapest_fitting": {
+   "price": 1299.99,
+   "store": "bestbuy",
+   "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"
+  },
+  "snapshot_dates": [
+   "2026-10-24"
+  ],
+  "sold_median": 880.0,
+  "sold_n": 5,
+  "tied_with": [
+   {
+    "store": "microcenter",
+    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card"
+   }
+  ],
+  "unknown_fit": 2,
+  "too_long": 3,
+  "max_gpu_length_mm": 305,
+  "status": "ok",
+  "sentence": "Tied as the cheapest of the listings we can confirm fit; 2 of unknown length not counted (2 new listings at 2 stores, Oct 24) (30-day eBay sold median, mixed condition: $880.00, n = 5)",
+  "origin": "MIRROR"
+ }
 }
