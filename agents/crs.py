@@ -177,9 +177,8 @@ def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
     """Fail-closed gate using current trusted consent/profile and a fresh sandbox signal."""
     profiles = _profiles()
     profile = profiles.get(supplier_id)
-    if not profiles and not check:
-        return True
-    if not profiles and isinstance(check, dict) and check.get("reason") == REASON_NOT_CONFIGURED:
+    if not profiles and (not check or (check.get("signal") is None and
+                                       check.get("reason") == REASON_NOT_CONFIGURED)):
         return True
     if isinstance(profile, dict) and profile.get("seller_type") == "individual":
         return True
@@ -215,7 +214,7 @@ def to_crs_check(supplier_id: str, check: dict | None) -> dict:
     stability = signal.get("stability") if isinstance(signal, dict) else None
     reason = check.get("reason") if isinstance(check, dict) else None
     if stability not in REASON_CODES:
-        not_configured = reason == REASON_NOT_CONFIGURED and not signal
+        not_configured = not signal and (reason in {None, REASON_NOT_CONFIGURED})
         return {
             "seller_id": supplier_id,
             "product": "tu_identity",
