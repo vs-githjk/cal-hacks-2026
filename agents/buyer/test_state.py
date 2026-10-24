@@ -48,8 +48,10 @@ def transaction(deal_id, buyer_id, phase="pending_approval"):
                         "expires_at": "2026-10-24T00:10:00Z", "hash": "a" * 64,
                         "within_allowance": False, "status": "pending", "origin": "SIM"},
             "advocate_card": {"need_id": "need-1", "bid_id": "bid-1", "warnings": [],
-                              "recommendation": "buy", "wait_until": "",
-                              "call_reason": {"rule_id": "advocate.ok", "summary": "The bid fits the goal.",
+                              "recommendation": "buy", "wait_until": "", "claim_checks": [],
+                              "rule_id": "advocate.ok", "reason": "No problems found in the checks",
+                              "source_url": "https://example.com/review",
+                              "call_reason": {"rule_id": "advocate.ok", "summary": "No problems found in the checks",
                                               "source_url": "https://example.com/review"}}
             }
 
