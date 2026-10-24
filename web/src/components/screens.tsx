@@ -6,7 +6,6 @@ import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, R
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { OriginChip, Pill, SampleOnly } from "./ui";
 
-export const BUYER_NAME = "Vidyut"; // the real buyer (locked Sat 00:52). Real sign-in replaces this.
 
 export interface BuyerScreenProps {
   goal: GoalView | null;
@@ -19,6 +18,8 @@ export interface BuyerScreenProps {
   onTyped?: (mandateHash: string, code: string) => Promise<string>;
   receipt: ReceiptView | null;
   feed: FeedItem[];
+  /** From the market (my_buyer_profile); the page falls back to the buyer id. */
+  buyerName: string;
   connecting?: boolean;
   /** Cards fed from lib/sample.ts; each shows a SIM sample chip. */
   sample?: { bids?: boolean; veto?: boolean; shield?: boolean; approval?: boolean; receipt?: boolean };
@@ -31,7 +32,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
         <div className="flex items-center gap-2.5 text-[18px] font-bold tracking-[-0.01em]">Buyer</div>
         <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
-          <span>{BUYER_NAME}</span>
+          <span>{p.buyerName}</span>
           {p.goal && <StatePill state={p.goal.state} />}
         </div>
       </div>

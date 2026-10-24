@@ -8,6 +8,7 @@ type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
 export const DEMO = {
   buyerId: 'vidyut',
+  buyerName: 'Vidyut', // the real buyer (locked Sat 00:52)
   goalId: 'goal-vidyut-gpu',
   sellers: [
     { sellerId: 'seller-a', name: 'Seller A', archetype: 'refurbisher' },
@@ -50,6 +51,7 @@ export function seedDemo(ctx: Ctx) {
     }
   }
   if (!ctx.db.pairCode.buyerId.find(DEMO.buyerId)) issuePairCode(ctx, DEMO.buyerId);
+  if (!ctx.db.buyerProfile.buyerId.find(DEMO.buyerId)) ctx.db.buyerProfile.insert({ buyerId: DEMO.buyerId, displayName: DEMO.buyerName, origin: 'SIM' });
   if (!ctx.db.goal.id.find(DEMO.goalId)) {
     // "a GPU for 1440p that fits my case and PSU, under $800, by Friday", as Lane A parses it.
     const deadline = new Date(Number(ctx.timestamp.microsSinceUnixEpoch / 1000n) + 3 * 24 * 3600_000).toISOString();

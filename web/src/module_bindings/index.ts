@@ -57,6 +57,7 @@ import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
 import ReissueSellerScreenCodeReducer from "./reissue_seller_screen_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
+import SetBuyerProfileReducer from "./set_buyer_profile_reducer";
 import SetFloorReducer from "./set_floor_reducer";
 import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
 
@@ -67,6 +68,7 @@ import AgentEventRow from "./agent_event_table";
 import FloorEventRow from "./floor_event_table";
 import MyAllowanceRow from "./my_allowance_table";
 import MyBidsRow from "./my_bids_table";
+import MyBuyerProfileRow from "./my_buyer_profile_table";
 import MyGoalItemsRow from "./my_goal_items_table";
 import MyGoalsRow from "./my_goals_table";
 import MyLossReportsRow from "./my_loss_reports_table";
@@ -173,6 +175,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyBidsRow),
+  myBuyerProfile: __table({
+    name: 'my_buyer_profile',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyBuyerProfileRow),
   myGoalItems: __table({
     name: 'my_goal_items',
     indexes: [
@@ -256,6 +265,7 @@ const reducersSchema = __reducers(
   __reducerSchema("reissue_seller_screen_code", ReissueSellerScreenCodeReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
+  __reducerSchema("set_buyer_profile", SetBuyerProfileReducer),
   __reducerSchema("set_floor", SetFloorReducer),
   __reducerSchema("set_floor_for_condition", SetFloorForConditionReducer),
 );
@@ -270,6 +280,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_allowance": Omit<typeof tablesSchema.schemaType.tables["myAllowance"], "accessorName"> & { readonly accessorName: "my_allowance" };
     /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
     readonly "my_bids": Omit<typeof tablesSchema.schemaType.tables["myBids"], "accessorName"> & { readonly accessorName: "my_bids" };
+    /** @deprecated Use `myBuyerProfile` instead. This alias will be removed in the next major version. */
+    readonly "my_buyer_profile": Omit<typeof tablesSchema.schemaType.tables["myBuyerProfile"], "accessorName"> & { readonly accessorName: "my_buyer_profile" };
     /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
     readonly "my_goal_items": Omit<typeof tablesSchema.schemaType.tables["myGoalItems"], "accessorName"> & { readonly accessorName: "my_goal_items" };
     /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
@@ -306,6 +318,7 @@ const REMOTE_MODULE = {
 const tableAccessorAliases = {
   "my_allowance": "myAllowance",
   "my_bids": "myBids",
+  "my_buyer_profile": "myBuyerProfile",
   "my_goal_items": "myGoalItems",
   "my_goals": "myGoals",
   "my_loss_reports": "myLossReports",
@@ -338,6 +351,8 @@ export type DbView = __DbViewBase & {
   readonly "my_allowance": __DbViewBase["myAllowance"];
   /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
   readonly "my_bids": __DbViewBase["myBids"];
+  /** @deprecated Use `myBuyerProfile` instead. This alias will be removed in the next major version. */
+  readonly "my_buyer_profile": __DbViewBase["myBuyerProfile"];
   /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
   readonly "my_goal_items": __DbViewBase["myGoalItems"];
   /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
@@ -362,6 +377,8 @@ export type Tables = __TablesBase & {
   readonly "my_allowance": __TablesBase["myAllowance"];
   /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
   readonly "my_bids": __TablesBase["myBids"];
+  /** @deprecated Use `myBuyerProfile` instead. This alias will be removed in the next major version. */
+  readonly "my_buyer_profile": __TablesBase["myBuyerProfile"];
   /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
   readonly "my_goal_items": __TablesBase["myGoalItems"];
   /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */

@@ -94,6 +94,13 @@ export const BidLine = __t.object("BidLine", {
 });
 export type BidLine = __Infer<typeof BidLine>;
 
+export const BuyerProfile = __t.object("BuyerProfile", {
+  buyerId: __t.string(),
+  displayName: __t.string(),
+  origin: __t.string(),
+});
+export type BuyerProfile = __Infer<typeof BuyerProfile>;
+
 export const FloorEvent = __t.object("FloorEvent", {
   id: __t.u64(),
   kind: __t.string(),
@@ -178,6 +185,9 @@ export type MyAllowance = __Infer<typeof MyAllowance>;
 
 export const MyBids = __t.object("MyBids", {});
 export type MyBids = __Infer<typeof MyBids>;
+
+export const MyBuyerProfile = __t.object("MyBuyerProfile", {});
+export type MyBuyerProfile = __Infer<typeof MyBuyerProfile>;
 
 export const MyGoalItems = __t.object("MyGoalItems", {});
 export type MyGoalItems = __Infer<typeof MyGoalItems>;

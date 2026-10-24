@@ -871,3 +871,18 @@ describe('#60 agent events for the Fetch agents tile', () => {
     expect(() => run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ ts: 'yesterday' })))).toThrow(/ts/);
   });
 });
+
+describe('#37 item 9 buyer display name', () => {
+  it('seed_demo gives the buyer the display name Vidyut; only that buyer sees it', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    expect(m.myBuyerProfileView(h.viewContext(VIDYUT) as any)).toEqual([expect.objectContaining({ buyerId: 'vidyut', displayName: 'Vidyut' })]);
+    for (const who of [BOB, A, REF, STRANGER]) expect(m.myBuyerProfileView(h.viewContext(who) as any)).toHaveLength(0);
+  });
+
+  it('only the referee or the owner sets a display name; a seller or the buyer cannot', () => {
+    for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.setBuyerProfile(ctx, { buyerId: 'vidyut', displayName: 'X' }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.setBuyerProfile(ctx, { buyerId: 'vidyut', displayName: '  ' }))).toThrow(/display name/);
+    run(REF, (ctx) => m.setBuyerProfile(ctx, { buyerId: 'vidyut', displayName: 'Vidyut' }));
+    expect(h.db.buyerProfile.buyerId.find('vidyut')?.displayName).toBe('Vidyut');
+  });
+});

@@ -23,7 +23,7 @@ function PairScreen() {
   const failures = attempts[0]?.failures ?? 0;
   return (
     <section className="card mx-auto max-w-md p-6">
-      <h1 className="mb-2 text-lg font-semibold">Pair this screen with Vidyut</h1>
+      <h1 className="mb-2 text-lg font-semibold">Pair this screen with the buyer</h1>
       <p className="mb-4 text-sm text-muted">
         Enter the pairing code from the demo operator. Sellers can never pair.
       </p>
@@ -88,6 +88,7 @@ function BuyerView() {
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [notes] = useTable(tables.myNotifications);
   const [pending] = useTable(tables.myPendingApprovals);
+  const [profiles] = useTable(tables.myBuyerProfile);
   const approveTyped = useReducer(reducers.approveTyped);
 
   const goal = useMemo(() => goalFromRows(goals, goalItems, allowances[0]), [goals, goalItems, allowances]);
@@ -119,6 +120,7 @@ function BuyerView() {
       onTyped={onTyped}
       receipt={asSim(sample.receipt)}
       feed={feed}
+      buyerName={profiles[0]?.displayName || DEMO_BUYER}
       sample={{ bids: sim, veto: true, shield: true, approval: !review, receipt: true }}
     />
   );

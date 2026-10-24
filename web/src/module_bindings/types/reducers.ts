@@ -29,6 +29,7 @@ import ReissuePairCodeReducer from "../reissue_pair_code_reducer";
 import ReissueSellerScreenCodeReducer from "../reissue_seller_screen_code_reducer";
 import ResetDemoReducer from "../reset_demo_reducer";
 import SeedDemoReducer from "../seed_demo_reducer";
+import SetBuyerProfileReducer from "../set_buyer_profile_reducer";
 import SetFloorReducer from "../set_floor_reducer";
 import SetFloorForConditionReducer from "../set_floor_for_condition_reducer";
 
@@ -55,6 +56,7 @@ export type ReissuePairCodeParams = __Infer<typeof ReissuePairCodeReducer>;
 export type ReissueSellerScreenCodeParams = __Infer<typeof ReissueSellerScreenCodeReducer>;
 export type ResetDemoParams = __Infer<typeof ResetDemoReducer>;
 export type SeedDemoParams = __Infer<typeof SeedDemoReducer>;
+export type SetBuyerProfileParams = __Infer<typeof SetBuyerProfileReducer>;
 export type SetFloorParams = __Infer<typeof SetFloorReducer>;
 export type SetFloorForConditionParams = __Infer<typeof SetFloorForConditionReducer>;
 

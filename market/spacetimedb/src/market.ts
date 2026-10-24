@@ -710,3 +710,21 @@ export function recordAgentEvent(ctx: Ctx, a: { agentName: string; address: stri
   const origin = a.origin === 'LIVE' || a.origin === 'MIRROR' ? a.origin : 'SIM';
   ctx.db.agentEvent.insert({ id: 0n, agentName: a.agentName, address: a.address, text: a.text.slice(0, 280), ts: tsFromMs(at), origin });
 }
+
+// ---- #37 item 9: buyer display name ----
+
+/** Referee or owner: the name a buyer's screens show. */
+export function setBuyerProfile(ctx: Ctx, { buyerId, displayName }: { buyerId: string; displayName: string }) {
+  requireRole(ctx, 'set_buyer_profile', ['referee', 'owner']);
+  const name = displayName.trim();
+  if (!name) throw new SenderError('display name required');
+  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM' };
+  if (ctx.db.buyerProfile.buyerId.find(buyerId)) ctx.db.buyerProfile.buyerId.update(row);
+  else ctx.db.buyerProfile.insert(row);
+}
+
+export function myBuyerProfileView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  const row = id ? ctx.db.buyerProfile.buyerId.find(id) : undefined;
+  return row ? [row] : [];
+}

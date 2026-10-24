@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, StrategyStep, allowance, bid, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
+import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, StrategyStep, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -19,6 +19,7 @@ export const pair_seller_screen = spacetimedb.reducer({ sellerId: t.string(), co
   m.pairSellerScreen(ctx, a);
 });
 export const reissue_seller_screen_code = spacetimedb.reducer({ sellerId: t.string() }, (ctx, a) => m.reissueSellerScreenCode(ctx, a));
+export const set_buyer_profile = spacetimedb.reducer({ buyerId: t.string(), displayName: t.string() }, (ctx, a) => m.setBuyerProfile(ctx, a));
 export const set_floor = spacetimedb.reducer({ skuSpec: t.string(), floor: t.f64() }, (ctx, a) => m.setFloor(ctx, a));
 export const set_floor_for_condition = spacetimedb.reducer(
   { skuSpec: t.string(), condition: t.string(), floor: t.f64() },
@@ -139,3 +140,4 @@ const PendingApprovalRow = t.object('PendingApprovalRow', {
 });
 export const my_pending_approvals = spacetimedb.view({ name: 'my_pending_approvals', public: true }, t.array(PendingApprovalRow), (ctx) => m.myPendingApprovalsView(ctx));
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
+export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));
