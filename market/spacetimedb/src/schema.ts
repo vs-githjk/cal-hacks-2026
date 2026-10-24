@@ -313,6 +313,26 @@ export const floorEvent = table(
   },
 );
 
+/**
+ * One row per unit held for a round's winning line. Written at close, renewed when the mandate is made,
+ * sold by the payment and released by a denial or by its 2 minute expiry. Public: seller, line and round
+ * only (no buyer, amount or mandate). Available stock = a bid line's stated stock minus its active holds.
+ */
+export const stockHold = table(
+  { name: 'stock_hold', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    sellerId: t.string().index('btree'),
+    skuSpec: t.string(),
+    condition: t.string(),
+    qty: t.f64(),
+    roundId: t.string().index('btree'),
+    bidId: t.string().index('btree'),
+    expiresAt: t.timestamp(),
+    state: t.string(), // held | sold | released
+  },
+);
+
 export const persona = table(
   { name: 'persona', public: true },
   {
@@ -338,6 +358,6 @@ const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
-  round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,
+  round, roundResult, rejectedAttempt, floorEvent, stockHold, persona, roundTimer,
 });
 export default spacetimedb;

@@ -40,6 +40,7 @@ import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
 import CloseRoundReducer from "./close_round_reducer";
 import CreateMandateReducer from "./create_mandate_reducer";
+import DenyApprovalReducer from "./deny_approval_reducer";
 import OpenRoundReducer from "./open_round_reducer";
 import PairBuyerScreenReducer from "./pair_buyer_screen_reducer";
 import PlaceBidReducer from "./place_bid_reducer";
@@ -71,6 +72,7 @@ import RejectedAttemptRow from "./rejected_attempt_table";
 import RoundRow from "./round_table";
 import RoundResultRow from "./round_result_table";
 import SellerNeedsRow from "./seller_needs_table";
+import StockHoldRow from "./stock_hold_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -137,6 +139,26 @@ const tablesSchema = __schema({
       { name: 'round_result_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, RoundResultRow),
+  stockHold: __table({
+    name: 'stock_hold',
+    indexes: [
+      { accessor: 'bidId', name: 'stock_hold_bid_id_idx_btree', algorithm: 'btree', columns: [
+        'bidId',
+      ] },
+      { accessor: 'id', name: 'stock_hold_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'roundId', name: 'stock_hold_round_id_idx_btree', algorithm: 'btree', columns: [
+        'roundId',
+      ] },
+      { accessor: 'sellerId', name: 'stock_hold_seller_id_idx_btree', algorithm: 'btree', columns: [
+        'sellerId',
+      ] },
+    ],
+    constraints: [
+      { name: 'stock_hold_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, StockHoldRow),
   myAllowance: __table({
     name: 'my_allowance',
     indexes: [
@@ -203,6 +225,7 @@ const reducersSchema = __reducers(
   __reducerSchema("attach_verdict", AttachVerdictReducer),
   __reducerSchema("close_round", CloseRoundReducer),
   __reducerSchema("create_mandate", CreateMandateReducer),
+  __reducerSchema("deny_approval", DenyApprovalReducer),
   __reducerSchema("open_round", OpenRoundReducer),
   __reducerSchema("pair_buyer_screen", PairBuyerScreenReducer),
   __reducerSchema("place_bid", PlaceBidReducer),

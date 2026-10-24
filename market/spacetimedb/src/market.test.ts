@@ -357,7 +357,7 @@ describe('every state change writes a floor event', () => {
     run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
     expect(events().slice(n0).map((e) => e.kind)).toEqual([
-      'bid_sealed', 'verdict', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
+      'bid_sealed', 'verdict', 'stock_held', 'auction_closed', 'mandate_created', 'approval_recorded', 'stock_sold', 'payment_recorded',
     ]);
   });
 });
@@ -810,5 +810,220 @@ describe('pair code attempt limit', () => {
     expect(msg).not.toContain(code);
     const text = JSON.stringify([...h.db.floorEvent.iter()].map((e) => e.label)) + JSON.stringify([...h.db.notification.iter()].map((n) => n.text));
     expect(text).not.toContain(code);
+  });
+});
+
+describe('T11 contention: two buyers, one unit (stock holds)', () => {
+  // Vidyut's round-1 and Bob's round-2 want the same SKU. Every seller states one unit in stock.
+  const bidIn = (who: Auth, roundId: string, id: string, price: number, extra: Partial<{ offeredCondition: string; quantity: number }> = {}, more: ReturnType<typeof line>[] = []) =>
+    run(who, (ctx) => m.placeBid(ctx, { ...bidArgs(id, [line(price, extra), ...more]), roundId }));
+  const close = (roundId: string) => run(REF, (ctx) => m.closeRound(ctx, { roundId }));
+  const resultOf = (bidId: string) => [...h.db.roundResult.iter()].find((r) => r.bidId === bidId)!;
+  const holds = () => [...h.db.stockHold.iter()];
+
+  function twoBuyerRounds(bobItems?: m.PostNeedArgs['items']) {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(BOB, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2', buyerId: 'bob', goalId: 'goal-2', ...(bobItems ? { items: bobItems } : {}) })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
+    for (const r of ['1', '2']) {
+      bidIn(A, `round-${r}`, `bid-a${r}`, 700);
+      bidIn(B, `round-${r}`, `bid-b${r}`, 760);
+      bidIn(C, `round-${r}`, `bid-c${r}`, 780);
+    }
+    advance(16_000);
+  }
+
+  it('the round that closes first wins the last unit and holds it; the later round skips that line and awards the next best bid', () => {
+    twoBuyerRounds();
+    close('round-1');
+    expect(resultOf('bid-a1').rank).toBe(1);
+    expect(holds()).toHaveLength(1);
+    expect(holds()[0]).toMatchObject({ sellerId: 'seller-a', skuSpec: GPU, condition: 'new', qty: 1, roundId: 'round-1', bidId: 'bid-a1', state: 'held' });
+    expect(Number(holds()[0]!.expiresAt.microsSinceUnixEpoch - h.db.round.id.find('round-1')!.closedAt!.microsSinceUnixEpoch)).toBe(120_000_000);
+
+    close('round-2');
+    expect(resultOf('bid-a2')).toMatchObject({ rank: 0, reasons: ['sold out to an earlier round'] });
+    expect(resultOf('bid-b2').rank).toBe(1);
+    expect(resultOf('bid-b1').rank).toBe(2);
+    expect(holds().filter((x) => x.sellerId === 'seller-a' && x.state === 'held')).toHaveLength(1); // nobody is oversold
+    expect(holds().find((x) => x.roundId === 'round-2')).toMatchObject({ sellerId: 'seller-b', state: 'held' });
+  });
+
+  it('close order decides who gets the unit: the same bids in the other order give the other outcome', () => {
+    twoBuyerRounds();
+    close('round-2');
+    expect(resultOf('bid-a2').rank).toBe(1);
+    close('round-1');
+    expect(resultOf('bid-a1')).toMatchObject({ rank: 0, reasons: ['sold out to an earlier round'] });
+    expect(resultOf('bid-b1').rank).toBe(1);
+  });
+
+  it('is deterministic: replaying the same two rounds gives the same ranks', () => {
+    const ranks = () => {
+      twoBuyerRounds();
+      close('round-1');
+      close('round-2');
+      return [...h.db.roundResult.iter()].map((r) => `${r.bidId}:${r.rank}`).sort();
+    };
+    const first = ranks();
+    h = createModuleTestHarness(spacetimedb, mod);
+    h.clock.set(T0);
+    // a fresh harness has no roles; rebuild them the way beforeEach does
+    run(OWNER, (ctx) => m.init(ctx));
+    for (const [who, role, sub] of [[REF, 'referee', 'market'], [VIDYUT, 'buyer', 'vidyut'], [BOB, 'buyer', 'bob'], [A, 'seller', 'seller-a'], [B, 'seller', 'seller-b'], [C, 'seller', 'seller-c']] as const) {
+      const identity = idOf(who);
+      run(OWNER, (ctx) => m.assignRole(ctx, { identity, role, subjectId: sub }));
+    }
+    for (const [who, cond, floor] of [[A, 'new', 700], [A, 'open-box', 100], [B, 'new', 650], [B, 'open-box', 100], [C, 'new', 100], [C, 'open-box', 100]] as const) {
+      run(who, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: cond, floor }));
+    }
+    expect(ranks()).toEqual(first);
+  });
+
+  it('a seller with spare stock is not skipped: two units serve both rounds', () => {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(BOB, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2', buyerId: 'bob', goalId: 'goal-2' })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
+    bidIn(A, 'round-1', 'bid-a1', 700, { quantity: 2 });
+    bidIn(A, 'round-2', 'bid-a2', 700, { quantity: 2 });
+    advance(16_000);
+    close('round-1');
+    close('round-2');
+    expect(resultOf('bid-a1').rank).toBe(1);
+    expect(resultOf('bid-a2').rank).toBe(1);
+    expect(holds()).toHaveLength(2);
+  });
+
+  it('a denied approval releases the unit, so the later round can award it', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(VIDYUT, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'wrong code' }));
+    expect(holds()[0]!.state).toBe('released');
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+    expect(events().some((e) => e.kind === 'stock_released')).toBe(true);
+    close('round-2');
+    expect(resultOf('bid-a2').rank).toBe(1);
+  });
+
+  it('an unanswered hold expires after 2 minutes and the unit is released', () => {
+    twoBuyerRounds();
+    close('round-1');
+    advance(119_000);
+    expect(h.db.round.id.find('round-2')!.state).toBe('open'); // not closed yet: round 2 still waits
+    advance(2_000);
+    close('round-2');
+    expect(resultOf('bid-a2').rank).toBe(1);
+    expect(holds().find((x) => x.roundId === 'round-1')!.state).toBe('released');
+  });
+
+  it('a hold still inside its 2 minutes blocks the later round', () => {
+    twoBuyerRounds();
+    close('round-1');
+    advance(100_000);
+    close('round-2');
+    expect(resultOf('bid-a2').rank).toBe(0);
+  });
+
+  it('a recorded payment sells the unit for good: it stays out of every later round', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    expect(holds()[0]!.state).toBe('held');
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
+    expect(holds()[0]!.state).toBe('sold');
+    advance(3_600_000);
+    close('round-2');
+    expect(resultOf('bid-a2')).toMatchObject({ rank: 0, reasons: ['sold out to an earlier round'] });
+    expect(events().some((e) => e.kind === 'stock_sold')).toBe(true);
+  });
+
+  it('the call starts the 2 minutes: creating the mandate renews the hold, so a slow stage does not lose the unit', () => {
+    twoBuyerRounds();
+    close('round-1');
+    advance(110_000);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    advance(100_000); // 210 s after the close, 100 s after the mandate
+    close('round-2');
+    expect(resultOf('bid-a2').rank).toBe(0);
+  });
+
+  it('a mandate for a unit that was released and then taken by another round is refused, never oversold', () => {
+    twoBuyerRounds();
+    close('round-1');
+    advance(130_000);
+    close('round-2'); // A's unit went to round 2
+    expect(resultOf('bid-a2').rank).toBe(1);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })))).toThrow(/sold out to an earlier round/);
+    expect(h.db.mandate.hash.find('h1')).toBeFalsy();
+  });
+
+  it('a released unit nobody took can be claimed again by its own mandate', () => {
+    twoBuyerRounds();
+    close('round-1');
+    advance(130_000);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    expect(holds().find((x) => x.roundId === 'round-1')!.state).toBe('held');
+  });
+
+  it('a sold-out line falls to the seller\'s other allowed line instead of dropping the whole bid', () => {
+    twoBuyerRounds([{ skuSpec: GPU, condition: 'new', allowedConditions: ['new', 'open-box'], variant: 'retail', quantity: 1, unit: 'each' }]);
+    // seller A also stated an open-box line in round 2 only: it needs its own bid, so re-open the case with a fresh round
+    close('round-1'); // A's new line is held
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-3', needId: 'need-2', windowS: 15 }));
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-a3', [line(700), line(650, { offeredCondition: 'open-box' })]), roundId: 'round-3' }));
+    advance(16_000);
+    close('round-3');
+    const r = resultOf('bid-a3');
+    expect(r.rank).toBeGreaterThan(0);
+    expect(r.lines.map((l) => l.offeredCondition)).toEqual(['open-box']);
+  });
+
+  it('deny_approval: the mandate buyer or the referee only, never after an approval, and the public label names no amount', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    expect(() => run(BOB, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'x' }))).toThrow(/not allowed/);
+    expect(() => run(A, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'x' }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.denyApproval(ctx, { mandateHash: 'nope', reason: 'x' }))).toThrow(/no mandate/);
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    expect(() => run(REF, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'x' }))).toThrow(/already approved/);
+    expect(holds()[0]!.state).toBe('held');
+  });
+
+  it('a referee denial releases too, writes one rejected attempt, and the public labels carry no amount or buyer', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(REF, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'silence on the call' }));
+    expect(holds()[0]!.state).toBe('released');
+    expect([...h.db.rejectedAttempt.iter()].filter((x) => x.kind === 'approval')).toHaveLength(1);
+    const text = JSON.stringify([...events().map((e) => e.label), ...[...h.db.rejectedAttempt.iter()].map((x) => x.reason)]);
+    expect(text).not.toMatch(/780|vidyut|bob/i);
+  });
+
+  it('a mandate that names no awarded bid does not touch any hold (older flows are unchanged)', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'some-other-deal' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
+    expect(holds()[0]!.state).toBe('held');
+  });
+
+  it('reset_demo clears every hold', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect(holds()).toHaveLength(0);
+  });
+
+  it('public hold rows carry the seller, line and round only: no buyer id, amount or mandate', () => {
+    twoBuyerRounds();
+    close('round-1');
+    expect(Object.keys(holds()[0]!).sort()).toEqual(['bidId', 'condition', 'expiresAt', 'id', 'qty', 'roundId', 'sellerId', 'skuSpec', 'state']);
   });
 });
