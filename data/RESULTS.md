@@ -48,33 +48,33 @@ Next: confirm the remaining parts, and add held-out builds no one tuned against.
 
 ## First price numbers on real parts (MIRROR, RTX 5070 Ti)
 
-Run: `python3 -m data.mirror.price_spread`. Source: the c1 Apify snapshots in `data/mirror/snapshots/`.
+Run: `python3 -m data.mirror.price_spread`. Source: the c1 Apify snapshots in `data/mirror/snapshots/`. Out-of-stock listings are left out of the ask range (not buyable at that price) and counted.
 
 Snapshots (MIRROR): 2026-10-24T05:08, 2026-10-24T05:09 UTC. Query "RTX 5070 Ti", 3 to 5 items per store.
 
 | what | n | min | median | max |
 |---|---|---|---|---|
-| store asks (Micro Center, Best Buy, B&H, eBay live, Amazon) | 14 | $1,189.95 | $1,299.99 | $1,489.00 |
+| store asks, in stock or stock unknown | 11 | $1,199.99 | $1,299.99 | $1,489.00 |
 | eBay sold baseline, 2026-10-23 to 2026-10-23 | 5 | $640.00 | $880.00 | $1,476.86 |
 
-Asks vs the sold median: +35% (lowest ask) to +69% (highest), median +48%.
+Asks vs the sold median: +36% (lowest ask) to +69% (highest), median +48%.
 
 | store | n priced | min | median | max |
 |---|---|---|---|---|
 | amazon | 2 | $1,299.99 | $1,344.99 | $1,389.99 |
 | bestbuy | 3 | $1,249.99 | $1,249.99 | $1,299.99 |
-| bh | 3 | $1,189.95 | $1,299.99 | $1,399.99 |
+| bh | 0 | - | - | - |
 | ebay_live | 3 | $1,239.99 | $1,399.99 | $1,489.00 |
 | microcenter | 3 | $1,199.99 | $1,259.99 | $1,299.99 |
 
-Listings with no price on the page: 1. Baseline conditions: new, open-box, unknown, used.
+Left out of the ask range: 4 out-of-stock listings. Listings with no price on the page: 0. Baseline conditions: new, open-box, unknown, used.
 
 **Read this before quoting anything above. These results are weak, and some look bad for us:**
 - **The baseline is not a fair one.** It has 5 eBay sales, all ending on one day, in mixed condition (new, used, open box, unknown). Its median ($880) sits far below every store ask, and the cheapest sales ($640 open box, $699 "new") could be partial or misdescribed items we have not checked. The "+48%" is asks against a mixed used-market median. **It is not a markup and must not be quoted as one.**
 - **Two sold "new" items differ by about $778** ($699 and $1,476.86, and the second also had $125.94 shipping). With n = 5, the sold price for this card is not pinned down at all.
-- **The sample is tiny.** There are 14 priced asks, 3 to 5 per store, and 3 of them (B&H) are out of stock, so they cannot be bought at that price.
-- **There is nothing to verify savings against.** No store showed a "was" price that differed from its price (Best Buy's was equal to its price), so this snapshot has no discount claims to check, and no "verified savings" number exists yet.
+- **The sample is tiny.** There are 11 priced asks that are in stock or of unknown stock, 2 to 3 per store; 4 more listings were out of stock (all 3 at B&H, 1 at Amazon) and are left out.
+- **No savings number exists yet.** The only was prices captured (Best Buy) equal the price; the other scrapers do not capture one. So this snapshot has no discount claims to check.
 - **Only one dated source.** The kickoff asks for two dated sources within 24 h before a buy (c11). This is one source, at one time.
 
-What it does show: across 5 stores at one time, asks for this card (new where stated; first-party stores give no condition; one eBay ask is open box) sat in a narrow band ($1,190 to $1,489, median $1,300).
+What it shows: across 4 stores with buyable or unknown-stock listings at one time, asks for this card (new where stated; first-party stores give no condition; one eBay ask is open box) ran from $1,199.99 to $1,489.00, median $1,299.99.
 Next: a condition-matched baseline (new only, more sold rows, 30 days), a second dated source (c11), and a re-run on a second day.

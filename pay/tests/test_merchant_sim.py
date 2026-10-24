@@ -108,3 +108,27 @@ def test_stripe_charger_refuses_a_live_key():
         StripeTestCharger(secret_key="sk_live_123")
     with pytest.raises(ValueError):
         StripeTestCharger(secret_key="")
+
+
+# #29 review fixes
+def test_amount_with_fraction_of_a_cent_is_refused_before_spending():
+    priv = Ed25519PrivateKey.generate()
+    m = new_mandate(deal_id="deal-C", buyer_id="b1", amount=19.995, payee="honest-hal", now=NOW)
+    m["status"], m["approval_id"] = "approved", "appr-c"
+    stripe = FakeStripe()
+    sim = MerchantSim(keys=keyring(priv.public_key()), store=NonceStore(), approvals={"deal-C": dict(m)}.get, charger=stripe)
+    out = sim.handle(**signed(priv, m), now=NOW)
+    assert out["status"] == "refused" and out["reason"] == "bad_amount" and not stripe.calls
+
+
+def test_request_deal_is_checked_against_the_record():
+    priv = Ed25519PrivateKey.generate()
+    m = new_mandate(deal_id="deal-A", buyer_id="b1", amount=749.0, payee="honest-hal", now=NOW)
+    m["status"], m["approval_id"] = "approved", "appr-1"
+    stripe = FakeStripe()
+    # a lookup bug hands back deal-A's approval row for a request about deal-B
+    sim = MerchantSim(keys=keyring(priv.public_key()), store=NonceStore(), approvals=lambda deal: dict(m), charger=stripe)
+    body = json.dumps({"deal_id": "deal-B", "mandate": m}).encode()
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=NOW)
+    out = sim.handle(method="POST", url=URL, headers=headers, body=body, now=NOW)
+    assert out["status"] == "refused" and out["reason"] == "deal_mismatch" and not stripe.calls

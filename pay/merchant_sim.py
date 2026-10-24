@@ -16,6 +16,7 @@ are not hashed, so a mandate from the request body proves nothing about approval
 from __future__ import annotations
 
 import json
+from decimal import Decimal, InvalidOperation
 import os
 import ssl
 import urllib.parse
@@ -66,6 +67,17 @@ class StripeTestCharger:
         return {"id": pi["id"], "status": pi["status"]}
 
 
+def _whole_cents(amount: Any) -> Optional[int]:
+    """Exact cents, or None when the amount is not a positive whole number of cents (19.995 is refused)."""
+    try:
+        cents = Decimal(str(amount)) * 100
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+    if isinstance(amount, bool) or not cents.is_finite() or cents <= 0 or cents != cents.to_integral_value():
+        return None
+    return int(cents)
+
+
 class MerchantSim:
     def __init__(self, *, keys: Mapping[str, Any], store: NonceStore,
                  approvals: Callable[[str], Optional[Mapping[str, Any]]], charger: Any):
@@ -80,7 +92,8 @@ class MerchantSim:
 
         try:
             req = json.loads(body)
-            deal_id = req["deal_id"]
+            deal_id, req_mandate = req["deal_id"], req["mandate"]
+            req_amount, req_payee = req_mandate["amount"], req_mandate["payee"]
         except (ValueError, TypeError, KeyError, UnicodeDecodeError):
             return refuse("bad_body", "body must be JSON with deal_id and mandate")
         record = self.approvals(deal_id) if isinstance(deal_id, str) else None
@@ -93,7 +106,11 @@ class MerchantSim:
                                  store=self.store, now=now, expected_mandate_hash=record.get("hash"))
         if not verdict:
             return refuse(verdict.reason, verdict.detail)
-        expect = {"deal_id": record["deal_id"], "amount": record["amount"], "payee": record["payee"], "store": self.store}
+        cents = _whole_cents(record.get("amount"))
+        if cents is None:
+            return refuse("bad_amount", "amount must be a positive whole number of cents")
+        # what the REQUEST asks to pay, checked against the merchant's own row (not the row against itself)
+        expect = {"deal_id": deal_id, "amount": req_amount, "payee": req_payee, "store": self.store}
         verdict = can_charge(record, now, **expect)
         if not verdict:
             return refuse(verdict.reason, verdict.detail)
@@ -103,7 +120,7 @@ class MerchantSim:
             return refuse(e.reason, e.detail)
 
         try:
-            charge = self.charger.charge(amount_cents=round(float(record["amount"]) * 100), currency=record["currency"],
+            charge = self.charger.charge(amount_cents=cents, currency=record["currency"],
                                          idempotency_key=idempotency_key(record),
                                          metadata={"deal_id": record["deal_id"], "mandate_hash": record["hash"], "origin": "SIM"})
         except Exception as e:  # mandate stays spent: a new approval is needed, never a silent retry
