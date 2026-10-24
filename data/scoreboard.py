@@ -25,12 +25,12 @@ def savings_tile() -> dict:
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
-                 display="No verified savings yet: the only was prices captured (Best Buy) equal the price",
+                 display="No verified savings yet: the only prices captured (Best Buy) equal the price",
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
                  source_run="python3 -m data.baselines",
-                 detail={"reference": {"status": b["status"], "median": b["median"], "n": b["n"], "providers": b["providers"]},
+                 detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
                          "sold_kept_out": b["sold"], "marketplace": b["marketplace"]},
-                 note=f"Reference: median ${b['median']:,.2f} of {b['n']} in-stock retail asks ({b['status']}: a baseline needs two "
+                 note=f"Unconfirmed reference (not a baseline): median ${b['reference_unconfirmed'] or b['median']:,.2f} of {b['n']} in-stock retail asks ({b['status']}: a baseline needs two "
                       "dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. "
                       "SIM savings, when they exist, go in a separate column and are never added to real ones.")
 

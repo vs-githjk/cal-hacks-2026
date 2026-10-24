@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import json
 import statistics
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from data.mirror.price_spread import load, out_of_stock
 
 HERE = Path(__file__).resolve().parent
-RETAIL = {"bestbuy", "microcenter", "bh", "amazon", "newegg"}
+RETAIL = {"bestbuy", "microcenter", "bh", "newegg"}  # amazon is out until the seller of record is captured
 MARKETPLACE = {"ebay_live"}
 SOLD = {"ebay_sold"}
 WINDOW = timedelta(hours=24)
@@ -26,8 +26,8 @@ MIN_PROVIDERS = 2
 
 
 def _ts(s: str) -> datetime:
-    s = s.replace("Z", "+00:00")
-    return datetime.fromisoformat(s if "+" in s[10:] else s + "+00:00")
+    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def observations() -> list[dict]:
@@ -37,7 +37,8 @@ def observations() -> list[dict]:
         for c in cards:
             if not c.get("price"):
                 continue
-            rows.append({"provider": "apify", "store": store, "sku": "rtx 5070 ti" if c["attrs"].get("chipset") == "RTX 5070 Ti" else c["name"],
+            rows.append({"provider": c.get("provider", "apify"),  # a second Actor family sets its own label to count as a second source
+                          "store": store, "sku": "rtx 5070 ti" if c["attrs"].get("chipset") == "RTX 5070 Ti" else c["name"],
                          "price": c["price"], "in_stock": not out_of_stock(c), "condition": c.get("condition", "unknown"),
                          "kind": "sold" if store in SOLD else "ask", "observed_at": c["snapshot_date"],
                          "url": c["listing"].get("url") or c.get("source"), "snapshot_id": c.get("snapshot_id"), "origin": "MIRROR"})
@@ -57,8 +58,9 @@ def baseline(sku: str, at: str, rows: list[dict] | None = None) -> dict:
         return {"status": "stale" if stale else "empty", "median": None, "n": 0, "providers": [], "from": None, "to": None,
                 "rows": [], "sold": {"n": len(sold)}, "marketplace": {"n": len(market)}, "origin": "MIRROR"}
     times = sorted(r["observed_at"] for r in asks)
-    return {"status": "ok" if len(providers) >= MIN_PROVIDERS else "one_source",
-            "median": round(statistics.median(r["price"] for r in asks), 2), "n": len(asks), "providers": providers,
+    ok = len(providers) >= MIN_PROVIDERS
+    mid = round(statistics.median(r["price"] for r in asks), 2)
+    return {"status": "ok" if ok else "one_source", "median": mid if ok else None, "reference_unconfirmed": None if ok else mid, "n": len(asks), "providers": providers,
             "from": times[0], "to": times[-1], "rows": asks,
             "sold": {"n": len(sold), "median": round(statistics.median(r["price"] for r in sold), 2) if sold else None,
                      "note": "eBay sold, mixed condition: never in the median"},
@@ -78,5 +80,5 @@ def main():
     f = write_feed()
     b = baseline("rtx 5070 ti", f["to"])
     print(f"feed: {len(f['rows'])} rows, {f['from']} to {f['to']}, providers {f['providers']}")
-    print(f"baseline rtx 5070 ti at {f['to']}: {b['status']}, median {b['median']} from {b['n']} retail asks; "
+    print(f"baseline rtx 5070 ti at {f['to']}: {b['status']}, median {b['median'] or b.get('reference_unconfirmed')} from {b['n']} retail asks; "
           f"sold n={b['sold']['n']} (kept out); marketplace n={b['marketplace']['n']}")

@@ -1,12 +1,13 @@
 {
- "generated_at": "2026-10-24T07:08:48+00:00",
+ "generated_at": "2026-10-24T07:25:14+00:00",
  "tiles": [
   {
    "detail": {
     "reference": {
      "status": "one_source",
-     "median": 1279.99,
-     "n": 8,
+     "median": null,
+     "reference_unconfirmed": 1254.99,
+     "n": 6,
      "providers": [
       "apify"
      ]
@@ -26,15 +27,15 @@
    "status": "none_yet",
    "value": null,
    "unit": "USD",
-   "display": "No verified savings yet: the only was prices captured (Best Buy) equal the price",
-   "count": 8,
+   "display": "No verified savings yet: the only prices captured (Best Buy) equal the price",
+   "count": 6,
    "date_range": {
     "from": "2026-10-24T05:08:39.627Z",
     "to": "2026-10-24T05:09:29.655Z"
    },
    "origin": "MIRROR",
    "source_run": "python3 -m data.baselines",
-   "note": "Reference: median $1,279.99 of 8 in-stock retail asks (one_source: a baseline needs two dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
+   "note": "Unconfirmed reference (not a baseline): median $1,254.99 of 6 in-stock retail asks (one_source: a baseline needs two dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
   },
   {
    "detail": {
@@ -81,12 +82,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T07:08:48+00:00",
-    "to": "2026-10-24T07:08:48+00:00"
+    "from": "2026-10-24T07:25:14+00:00",
+    "to": "2026-10-24T07:25:14+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T07:08:48+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T07:25:14+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
