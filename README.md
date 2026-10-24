@@ -151,6 +151,18 @@ sim/        Lane D: wind tunnel (simulated builders, hostile agents)
 docs/       architecture, sponsor map, real vs simulated, interviews, kickoff prompts, team board
 ```
 
+## Run it
+
+One command brings the whole product up locally and tells the truth about what is up (Python 3.12, stdlib only):
+
+```bash
+python3 scripts/launch.py up       # preflight, then start every service that can start
+python3 scripts/launch.py status   # table of service, port, pid, health; exit 1 if a service is down
+python3 scripts/launch.py down     # stop only the processes it started
+```
+
+`up` prints one OK or MISSING line per prerequisite with the fix command, then starts SpacetimeDB (publishes `tech-bazaar` and runs `seed_demo`), Shield (8787), the seller, advocate and buyer agents (8010, 8003, 8001) and the web app (3100). Logs are in `.run/logs/<service>.log`, pids in `.run/pids.json` (both gitignored). A service whose prerequisite is missing is shown as SKIPPED with the exact install command, never as up. Keys come from `--env-file` (default `~/hackathons/cal-hacks-13-2026/lane-d/.env`) into child environments only; only key names are printed. Nothing global is installed: the only installs are a project-local `uv` venv in `agents/.venv` and `npm ci` in `web/` and `market/`. Port flags: `--shield-port`, `--web-port`, `--stdb-port` (the agent ports are fixed in `agents/` code). Tests: `python3 -m pytest scripts/tests -q`.
+
 ## Quickstart
 
 > Run commands are added as each lane's code lands. Until then, this section lists what you need.

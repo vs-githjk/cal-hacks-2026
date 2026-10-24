@@ -40,6 +40,8 @@ SHIELD_DEPS_FIX = "python3 -m pip install fastapi uvicorn"
 FALLBACK_KEY_NAMES = ["ANTHROPIC_API_KEY", "AGENTVERSE_API_KEY", "STRIPE_SECRET_KEY", "APPROVAL_SECRET"]
 
 ADDR_RE = re.compile(r"agent1q[0-9a-z]{40,70}")
+# log markers worth surfacing in status: (substring, what it means)
+LOG_WARNINGS = [("Unable to publish manifest", "Agentverse not reachable (manifest not published): the agent runs locally only")]
 LABELLED_ADDR_RE = re.compile(r"^\s*(\w+) address: (agent1q[0-9a-z]{40,70})", re.M)
 
 
@@ -135,16 +137,25 @@ def venv_python(repo: Path) -> Path:
 
 
 def find_uv() -> str | None:
-    return shutil.which("uv") or (str(p) if (p := Path.home() / ".local" / "bin" / "uv").exists() else None)
+    return find_tool("uv")
+
+
+def find_tool(name: str, which=shutil.which, home_bin: Path | None = None) -> str | None:
+    """PATH first, then ~/.local/bin (where uv and spacetime install themselves, often not on a non-login PATH)."""
+    found = which(name)
+    if found:
+        return found
+    p = (home_bin if home_bin is not None else Path.home() / ".local" / "bin") / name
+    return str(p) if p.is_file() else None
 
 
 def build_services(a, repo: Path = REPO) -> list[Service]:
     shield_url = f"http://{HOST}:{a.shield_port}"
     py = str(venv_python(repo))
     return [
-        Service("market-stdb", a.stdb_port, ["spacetime", "start", "--listen-addr", f"{HOST}:{a.stdb_port}"], repo / "market",
-                health="tcp", wait=40, group="market",
-                note="SpacetimeDB; the module is published and seeded after it is up"),
+        Service("market-stdb", a.stdb_port, [find_tool("spacetime") or "spacetime", "start", "--listen-addr", f"{HOST}:{a.stdb_port}"], repo / "market",
+                health_path="/v1/ping", wait=40, group="market",
+                note="SpacetimeDB; tech-bazaar module published and seed_demo run by `up`"),
         Service("shield", a.shield_port,
                 [sys.executable, "-m", "uvicorn", "shield.api:app", "--host", HOST, "--port", str(a.shield_port)], repo,
                 health_path="/v1/shield/health", wait=30, group="shield"),
@@ -176,7 +187,7 @@ class Check:
 
 def run_preflight(a, services: list[Service], file_env: dict[str, str], env_note: str, *,
                   repo: Path = REPO, which=shutil.which, can_import=None, port_busy=None,
-                  owned_ports: set[int] | None = None) -> list[Check]:
+                  owned_ports: set[int] | None = None, home_bin: Path | None = None) -> list[Check]:
     can_import = can_import or (lambda mod: __import__("importlib.util").util.find_spec(mod) is not None)
     port_busy = port_busy or tcp_open
     owned_ports = owned_ports or set()
@@ -194,13 +205,13 @@ def run_preflight(a, services: list[Service], file_env: dict[str, str], env_note
     out.append(Check("npm", bool(which("npm")), "", NODE_INSTALL))
     out.append(Check("web/node_modules", (repo / "web" / "node_modules").is_dir(), "", "",
                      auto="up runs `npm ci` in web/"))
-    stdb = which("spacetime")
+    stdb = find_tool("spacetime", which, home_bin)
     out.append(Check("spacetime CLI", bool(stdb), stdb or "", SPACETIME_INSTALL))
     if stdb:
         out.append(Check("market/node_modules", (repo / "market" / "node_modules").is_dir(), "", "",
                          auto="up runs `npm ci` in market/"))
     env_ok = bool(file_env)
-    out.append(Check("env file", env_ok, env_note, f"create it from .env.example, or pass --env-file PATH"))
+    out.append(Check("env file", env_ok, env_note.removeprefix("env file "), f"create it from .env.example, or pass --env-file PATH"))
     names = key_names_from_example(repo / ".env.example")
     present, missing = key_report(names, file_env)
     out.append(Check("keys present (names only)", bool(present), ", ".join(present) or "none"))
@@ -257,13 +268,13 @@ def tcp_open(port: int, host: str = HOST, timeout: float = 1.0) -> bool:
         return False
 
 
-def http_ok(port: int, path: str, timeout: float = 2.0) -> bool:
-    """Any HTTP response below 500 means a live server; a refused connection or a 5xx does not."""
+def http_ok(port: int, path: str, timeout: float = 2.0, max_status: int = 500) -> bool:
+    """Any HTTP response below max_status means a live server; a refused connection or a 5xx does not."""
     try:
         with urllib.request.urlopen(f"http://{HOST}:{port}{path}", timeout=timeout) as r:
-            return r.status < 500
+            return r.status < max_status
     except urllib.error.HTTPError as e:
-        return e.code < 500
+        return e.code < max_status
     except Exception:
         return False
 
@@ -359,6 +370,14 @@ def addresses_from_log(path: str | None, service: str) -> list[str]:
     return [f"{label}: {addr}" for addr, label in found.items()]
 
 
+def log_warnings(path: str | None) -> list[str]:
+    try:
+        text = Path(path).read_text(encoding="utf-8", errors="replace") if path else ""
+    except OSError:
+        return []
+    return [msg for needle, msg in LOG_WARNINGS if needle in text]
+
+
 def evaluate(rec: dict, check_http=http_ok, check_tcp=tcp_open) -> tuple[str, str]:
     """Return (label, health text). Labels: UP, DOWN, SKIPPED, FAILED."""
     state = rec.get("state")
@@ -385,7 +404,8 @@ def status_rows(state: dict, **kw) -> list[dict]:
         label, health = evaluate(rec, **kw)
         rows.append({"service": name, "port": rec.get("port"), "pid": rec.get("pid") if label in ("UP", "DOWN") else None,
                      "label": label, "health": health, "note": rec.get("note", ""), "log": rec.get("log"),
-                     "addresses": addresses_from_log(rec.get("log"), name) if label in ("UP", "DOWN") else []})
+                     "addresses": addresses_from_log(rec.get("log"), name) if label in ("UP", "DOWN") else [],
+                     "warnings": (log_warnings(rec.get("log")) + rec.get("static_warnings", [])) if label == "UP" else []})
     return rows
 
 
@@ -403,6 +423,7 @@ def format_table(rows: list[dict]) -> str:
     if addr:
         out += "\n\nAgentverse addresses printed by the agents (from their logs):\n" + "\n".join(f"  {s:<9} {x}" for s, x in addr)
     notes = [f"  {r['service']}: {r['note']}" for r in rows if r["note"] and r["label"] in ("UP", "DOWN")]
+    notes += [f"  {r['service']}: WARNING {w}" for r in rows for w in r.get("warnings", [])]
     if notes:
         out += "\n\nNotes:\n" + "\n".join(notes)
     return out
@@ -525,6 +546,7 @@ def cmd_up(a, repo: Path = REPO) -> int:
     run_env = dict(os.environ)
     if shutil.which("node"):
         run_env["PATH"] = str(Path(shutil.which("node")).parent) + os.pathsep + run_env.get("PATH", "")
+    run_env["PATH"] = run_env["PATH"] + os.pathsep + str(Path.home() / ".local" / "bin") if "PATH" in run_env else str(Path.home() / ".local" / "bin")
 
     def record(svc: Service, rec: dict) -> None:
         rec.setdefault("note", svc.note)
@@ -549,6 +571,13 @@ def cmd_up(a, repo: Path = REPO) -> int:
         agents_err = ensure_agents_venv(repo, run_dir, run_env)
     web_err = ensure_npm(repo, "web", run_dir, run_env) if any(s.name == "web" and not s.skip_reason for s in services) else None
     stdb_ready = False
+    if not agents_err and venv_python(repo).exists() and "SSL_CERT_FILE" not in os.environ:
+        # macOS python has no CA bundle of its own; point the agents at certifi from their own venv (nothing installed)
+        r = subprocess.run([str(venv_python(repo)), "-c", "import certifi;print(certifi.where())"], capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            for s_ in services:
+                if s_.group == "agents":
+                    s_.defaults["SSL_CERT_FILE"] = r.stdout.strip()
 
     started: list[tuple[Service, dict]] = []
 
@@ -581,13 +610,22 @@ def cmd_up(a, repo: Path = REPO) -> int:
             else:
                 stdb_ready = True
                 server = f"http://{HOST}:{a.stdb_port}"
-                senv = env_for(svc, file_env)
-                run_step("spacetime publish tech-bazaar", ["spacetime", "publish", "-s", server, "-p", "./spacetimedb", "--yes=all", "tech-bazaar"],
-                         repo / "market", senv, run_dir, "setup-market-publish", 300)
-                run_step("spacetime call seed_demo", ["spacetime", "call", "-s", server, "tech-bazaar", "seed_demo"],
-                         repo / "market", senv, run_dir, "setup-market-seed", 120)
-                run_step("market/scripts/setup_roles.py", [sys.executable, str(repo / "market" / "scripts" / "setup_roles.py")],
-                         repo, senv, run_dir, "setup-market-roles", 120)
+                senv = {**env_for(svc, file_env), "SPACETIMEDB_HTTP": server, "SPACETIMEDB_SERVER": server}
+                steps = [("spacetime publish tech-bazaar", [svc.cmd[0], "publish", "-s", server, "-p", "./spacetimedb", "--yes=all", "tech-bazaar"],
+                          repo / "market", "setup-market-publish", 300),
+                         ("spacetime call seed_demo", [svc.cmd[0], "call", "-s", server, "tech-bazaar", "seed_demo"],
+                          repo / "market", "setup-market-seed", 120),
+                         ("market/scripts/setup_roles.py", [sys.executable, str(repo / "market" / "scripts" / "setup_roles.py")],
+                          repo, "setup-market-roles", 120)]
+                warns = []
+                for label, cmd, cwd, logname, to in steps:
+                    if not run_step(label, cmd, cwd, senv, run_dir, logname, to):
+                        warns.append(f"setup step failed: {label} (log {log_path(run_dir, logname)})")
+                if not http_ok(a.stdb_port, "/v1/database/tech-bazaar", max_status=300):
+                    warns.append("module tech-bazaar is not published (the market has no tables)")
+                if warns:
+                    rec["static_warnings"] = warns
+                    pf.save(state)
 
     for svc in [s for s in services if s.name != "market-stdb"]:
         if svc.group == "agents" and agents_err and not svc.skip_reason:

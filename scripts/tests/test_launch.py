@@ -101,7 +101,8 @@ def preflight(tmp_repo, which, env=None, **kw):
     a = make_args()
     svcs = L.build_services(a, tmp_repo)
     checks = L.run_preflight(a, svcs, env if env is not None else {"ANTHROPIC_API_KEY": SECRET}, "note", repo=tmp_repo, which=which,
-                             can_import=kw.get("can_import", lambda m: True), port_busy=kw.get("port_busy", lambda p: False))
+                             can_import=kw.get("can_import", lambda m: True), port_busy=kw.get("port_busy", lambda p: False),
+                             home_bin=kw.get("home_bin", tmp_repo / "nobin"))
     return svcs, checks
 
 
@@ -138,7 +139,7 @@ def test_missing_shield_deps_and_node_skip_their_services(tmp_path):
 def test_busy_port_reported_unless_owned(tmp_path):
     a = make_args()
     svcs = L.build_services(a, tmp_path)
-    kw = dict(repo=tmp_path, which=lambda n: "/bin/x", can_import=lambda m: True, port_busy=lambda p: p == 8787)
+    kw = dict(repo=tmp_path, home_bin=tmp_path / "nobin", which=lambda n: "/bin/x", can_import=lambda m: True, port_busy=lambda p: p == 8787)
     checks = L.run_preflight(a, svcs, {}, "n", **kw)
     assert [c for c in checks if c.name.startswith("port 8787")][0].ok is False
     checks = L.run_preflight(a, svcs, {}, "n", owned_ports={8787}, **kw)
@@ -170,7 +171,7 @@ def test_env_loading_never_echoes_values(run_dir, started, tmp_path, capsys):
     env, note = L.load_env_file(envf)
     print(note)
     buf = io.StringIO()
-    L.print_preflight(L.run_preflight(make_args(), [], env, note, repo=tmp_path, which=lambda n: None,
+    L.print_preflight(L.run_preflight(make_args(), [], env, note, repo=tmp_path, which=lambda n: None, home_bin=tmp_path / "nobin",
                                       can_import=lambda m: True, port_busy=lambda p: False), buf)
     print(buf.getvalue())
     assert SECRET not in capsys.readouterr().out
@@ -288,3 +289,40 @@ def test_addresses_parsed_from_log(tmp_path):
     a, b = "agent1q" + "b" * 58, "agent1q" + "c" * 58
     p.write_text(f"seller_2 address: {a}\nINFO Starting agent with address: {b}\n")
     assert L.addresses_from_log(str(p), "advocate") == [f"seller_2: {a}", f"advocate: {b}"]
+
+
+def test_log_marker_warning_surfaces_in_status(run_dir, started):
+    rec = started(fake_tcp(free_port()))
+    assert wait_up(rec)
+    with open(rec["log"], "a") as f:
+        f.write("WARNING: [x]: Unable to publish manifest: Cannot connect to host agentverse.ai:443\n")
+    L.PidFile(run_dir).save({"services": {"fake-agent": rec}})
+    buf = io.StringIO()
+    assert L.cmd_status(run_dir, out=buf) == 0
+    assert "WARNING Agentverse not reachable" in buf.getvalue()
+
+
+def test_find_tool_falls_back_to_home_bin(tmp_path):
+    (tmp_path / "spacetime").write_text("#!/bin/sh\n")
+    assert L.find_tool("spacetime", lambda n: None, tmp_path) == str(tmp_path / "spacetime")
+    assert L.find_tool("spacetime", lambda n: "/usr/bin/spacetime", tmp_path) == "/usr/bin/spacetime"
+    assert L.find_tool("spacetime", lambda n: None, tmp_path / "empty") is None
+
+
+def test_spacetime_found_in_home_bin_means_market_not_skipped(tmp_path):
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "spacetime").write_text("")
+    svcs, checks = preflight(tmp_path, which=lambda n: None if n == "spacetime" else "/bin/x", home_bin=tmp_path / "bin")
+    L.decide_skips(svcs, checks)
+    assert {s.name: s for s in svcs}["market-stdb"].skip_reason is None
+    assert any(c.name == "spacetime CLI" and c.ok for c in checks)
+
+
+def test_static_setup_warning_surfaces_in_status(run_dir, started):
+    rec = started(fake_tcp(free_port()))
+    assert wait_up(rec)
+    rec["static_warnings"] = ["module tech-bazaar is not published (the market has no tables)"]
+    L.PidFile(run_dir).save({"services": {"fake-agent": rec}})
+    buf = io.StringIO()
+    L.cmd_status(run_dir, out=buf)
+    assert "WARNING module tech-bazaar is not published" in buf.getvalue()
