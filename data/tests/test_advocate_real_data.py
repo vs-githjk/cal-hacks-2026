@@ -41,6 +41,7 @@ def test_a_dated_baseline_from_two_owners_gives_a_real_source_page(rd):
 def test_a_stale_baseline_is_unverified_with_a_labelled_note(rd):
     base, notes = rd.real_data.baseline_for(["rtx 5070 ti"], as_of="2026-10-26T06:00:00+00:00", rows=ROWS)
     assert "rtx 5070 ti" not in base and notes[0]["rule_id"] == "advocate.baseline_unverified" and "more than 24 h old" in notes[0]["text"]
+    assert "Price baseline unavailable" in notes[0]["text"]
 
 
 def test_one_data_owner_is_unverified_not_a_price(rd):
@@ -56,9 +57,10 @@ def test_a_failing_lookup_is_unverified_never_a_silent_pass(rd, monkeypatch):
     assert base == {} and "price lookup failed" in notes[0]["text"]
 
 
-def test_a_sku_with_no_real_data_keeps_its_labelled_sim_row(rd):
+def test_a_sku_with_no_real_data_never_falls_back_to_a_sample_price(rd):  # guards: no mock_data fallback
     base, notes = rd.real_data.baseline_for(["rtx 4070 super 12gb"], as_of=AT, rows=ROWS)
-    assert base["rtx 4070 super 12gb"]["source"] == "simulated" and notes == []
+    assert base == {} and notes[0]["text"].startswith("Price baseline unavailable for rtx 4070 super 12gb (unverified)")
+    assert "no sample price was used" in notes[0]["text"]
 
 
 def test_an_unknown_sku_with_no_data_is_unverified(rd):
@@ -84,7 +86,7 @@ def advise(rd, bids, **kw):
 def test_the_price_check_fires_from_the_dated_baseline_with_a_real_source(rd, tmp_path):
     cards = advise(rd, [bid(1499.0)], cache_dir=tmp_path)  # 18% above the $1,269.99 baseline
     price = next(w for w in cards[0]["warnings"] if w["kind"] == "price")
-    assert "$1269.99" in price["text"] and price["source_url"] == "https://microcenter.example/p/1269.99"
+    assert "$1269.99 (MIRROR, dated 2026-10-24)" in price["text"] and price["source_url"] == "https://microcenter.example/p/1269.99"
     assert "example.com" not in price["source_url"] and cards[0]["recommendation"] == "caution"
 
 
@@ -126,9 +128,9 @@ def test_a_failing_recall_lookup_is_unverified_not_none(rd, tmp_path):
     assert any(w["rule_id"] == "advocate.recall_unverified" for w in cards[0]["warnings"]) and cards[0]["recommendation"] != "veto"
 
 
-def test_the_buyers_shield_baseline_is_real_for_the_5070_ti_and_sim_for_the_rest(rd):
+def test_the_buyers_shield_baseline_is_real_only(rd):
     ref = rd.real_data.shield_baseline(as_of=AT, rows=ROWS)
-    assert ref["rtx 5070 ti"]["source"] == "MIRROR" and ref["rtx 4070 super 12gb"]["source"] == "simulated"
+    assert ref["rtx 5070 ti"]["source"] == "MIRROR" and list(ref) == ["rtx 5070 ti"]  # real only, no sample prices
 
 
 def test_the_agents_import_the_real_data_module_not_mock_data():
@@ -136,3 +138,22 @@ def test_the_agents_import_the_real_data_module_not_mock_data():
     buyer = (ROOT / "agents" / "buyer" / "buyer_agent.py").read_text()
     assert "real_data" in adv and "mock_data.BASELINE" not in adv and "mock_data.RECALLS" not in adv
     assert "advocate.real_data import shield_baseline" in buyer and "from advocate.mock_data import BASELINE" not in buyer
+
+
+
+def test_a_recall_miss_means_no_veto_and_no_note(rd, tmp_path):
+    cards = advise(rd, [bid(1275.0)], fetch=lambda url: b"[]", cache_dir=tmp_path)
+    assert cards[0]["recommendation"] == "buy" and not [w for w in cards[0]["warnings"] if w["kind"] in ("recall", "note")]
+
+
+def test_there_are_no_sample_seller_records(rd, tmp_path):
+    base, records, recalls, notes = rd.real_data.advice_inputs(NEED, [bid(1275.0)], as_of=AT, rows=ROWS, fetch=lambda url: b"[]", cache_dir=tmp_path)
+    assert records == {}
+
+
+def test_the_price_check_needs_the_baseline_call(rd, monkeypatch, tmp_path):  # mutation guard: drop the call and this goes red
+    calls = []
+    real = rd.real_data.price_baselines.baseline
+    monkeypatch.setattr(rd.real_data.price_baselines, "baseline", lambda *a, **k: calls.append(a) or real(*a, **k))
+    cards = advise(rd, [bid(1499.0)], cache_dir=tmp_path)
+    assert calls and any(w["kind"] == "price" for w in cards[0]["warnings"])

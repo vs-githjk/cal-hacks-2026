@@ -147,8 +147,9 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
         base = baseline.get(_norm(line["sku_spec"]))
         if base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
             over = (line["unit_price"] - base["unit_price"]) * line["quantity"]
+            dated = f" ({base['source']}, dated {base['as_of'][:10]})" if base.get("as_of") else ""  # #283: name the row's date
             out.append(_warn("price", f"{sku} at ${line['unit_price']:.2f} is above the price history baseline "
-                             f"of ${base['unit_price']:.2f}; the price claim did not match the price history "
+                             f"of ${base['unit_price']:.2f}{dated}; the price claim did not match the price history "
                              f"by ${over:.2f}.", base["source_url"], over))
 
         hit = next((r for r in recalls if r["match"] in _norm(line["sku_spec"])), None)

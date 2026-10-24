@@ -1,4 +1,4 @@
-"""Real reference data for the advocate (Lane C, issue #283 T3). Replaces mock_data where we hold real data.
+"""Real reference data for the advocate (Lane C, issue #283 T3). The agents no longer read mock_data.
 
 baseline_for(skus, as_of=None)  -> (baseline, notes)   price baselines in the shape checks.advise reads
 recalls_for_bids(bids, ...)     -> (recalls, notes)    CPSC recall entries in the shape checks.advise reads
@@ -7,8 +7,8 @@ with_notes(cards, notes)        -> cards               adds one labelled "note" 
 Real means: price from data.baselines.baseline (dated retail asks from two data owners), recalls from data.recalls
 (the CPSC public API), and a source_url that is a real page. A lookup that fails, is stale or has no data is "unverified":
 there is no price or recall check for that SKU, and every card says so in a note, never a silent pass. The notes are
-INFO warnings, so they never change a recommendation. SKUs we hold no real data for keep their SIM rows from mock_data,
-labelled source "simulated". Tests use fakes only; nothing here calls the network unless a fetch is passed or CPSC is reached.
+INFO warnings, so they never change a recommendation. Nothing falls back to mock_data: a SKU with no real data has no price
+check and a "price baseline unavailable" note. Tests use fakes only; nothing here calls the network unless a fetch is passed or CPSC is reached.
 """
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # the repo root, f
 from data import baselines as price_baselines
 from data import recalls as cpsc
 
-from advocate import mock_data
 
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 NOTE_SOURCE = f"{REPO}/agents/advocate/real_data.py"
@@ -57,12 +56,11 @@ def baseline_for(skus, as_of=None, rows=None) -> tuple[dict, list[dict]]:
             near = min(b["rows"], key=lambda r: abs(r["price"] - b["median"]))  # a real listing page near the median
             out[sku] = {"unit_price": b["median"], "source_url": near["url"], "source": "MIRROR", "as_of": b["to"], "n": b["n"],
                         "owners": b["owners"], "label": f"MIRROR dated {b['from'][:10]} to {b['to'][:10]}, {b['n']} retail asks"}
-        elif sku in mock_data.BASELINE:
-            out[sku] = mock_data.BASELINE[sku]  # SIM row, labelled source "simulated"
-        else:
+        else:  # never a silent sample price: no real baseline means no price comparison, and the card says so
             why = {"stale": "the newest retail prices are more than 24 h old", "empty": "we hold no price data for it",
                    "one_source": "only one data owner has priced it"}.get(b.get("status"), "the price lookup failed")
-            notes.append(_note("advocate.baseline_unverified", f"Price check unverified for {sku}: {why}, so no price comparison was made."))
+            notes.append(_note("advocate.baseline_unverified",
+                               f"Price baseline unavailable for {sku} (unverified): {why}. No price comparison was made, and no sample price was used."))
     return out, notes
 
 
@@ -90,7 +88,7 @@ def recalls_for_bids(bids, fetch=None, now=None, cache_dir=None) -> tuple[list[d
                 found.append({"match": sku, "source_url": r["recalls"][0].get("url") or r.get("source_url") or "https://www.cpsc.gov/Recalls"})
             elif r["status"] == "unverified":
                 why = r.get("reason") or "the CPSC lookup failed"
-                notes.append(_note("advocate.recall_unverified", f"Recall check unverified for {sku}: {why}.",
+                notes.append(_note("advocate.recall_unverified", f"Recall check unavailable for {sku} (unverified): {why}.",
                                    r.get("source_url") or "https://www.cpsc.gov/Recalls"))
     return found, notes
 
@@ -108,14 +106,16 @@ def with_notes(cards: list[dict], notes: list[dict]) -> list[dict]:
 
 
 def advice_inputs(need: dict, bids: list[dict], fetch=None, now=None, as_of=None, rows=None, cache_dir=None):
-    """Everything advocate_agent passes to checks.advise: baseline, records (SIM, no real seller records yet), recalls, notes."""
+    """Everything advocate_agent passes to checks.advise: baseline, records, recalls, notes. We hold no real seller records yet,
+    so records is empty (no record warning) rather than the SIM table."""
     skus = [i["sku_spec"] for i in need.get("items", [])] + [l["sku_spec"] for b in bids for l in b.get("lines", [])]
     baseline, notes = baseline_for(skus, as_of=as_of, rows=rows)
     recalls, recall_notes = recalls_for_bids(bids, fetch=fetch, now=now, cache_dir=cache_dir)
-    return baseline, mock_data.RECORDS, recalls, notes + recall_notes
+    return baseline, {}, recalls, notes + recall_notes
 
 
 def shield_baseline(as_of=None, rows=None) -> dict:
-    """The buyer's trusted price references: real where we hold data, the labelled SIM rows for the rest."""
+    """The buyer's trusted price references: only real, dated baselines (no sample prices). A SKU without one gets no price
+    reference, which screen_bid and hunt.public_hint already handle."""
     real, _ = baseline_for(["rtx 5070 ti"], as_of=as_of, rows=rows)
-    return {**mock_data.BASELINE, **real}
+    return real
