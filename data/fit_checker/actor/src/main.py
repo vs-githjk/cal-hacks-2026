@@ -63,17 +63,20 @@ def check_one(build: dict) -> dict:
 
 def rows_of(result: dict) -> list:
     checks = result["checks"] or [{"rule_id": "fit.no_checks", "verdict": "uncertain", "reason": result["summary"], "parts": [], "sources": []}]
-    return [{"build_id": result["build_id"], "build_verdict": result["verdict"], **c} for c in checks]
+    return [{"build_id": result["build_id"], "build_verdict": result["verdict"], "complete": result.get("complete", False),
+             "missing_parts": result.get("missing_parts", []), **c} for c in checks]
 
 
-def summary(results: list, total: int | None = None, stopped: str | None = None) -> str:
+def summary(results: list, total: int | None = None, stopped: str | None = None, earlier: int = 0) -> str:
     if len(results) == 1 and not stopped:
         out = results[0]["summary"]
     else:
-        n = {v: sum(1 for r in results if r["verdict"] == v) for v in ("pass", "fail", "uncertain")}
-        out = f"{len(results)} build(s): {n['pass']} pass, {n['fail']} fail, {n['uncertain']} uncertain"
-    if total is not None and len(results) < total:
-        out += f"; {total - len(results)} build(s) not run: {stopped or 'stopped early'}"
+        n = {v: sum(1 for r in results if r["verdict"] == v) for v in ("pass", "partial", "fail", "uncertain")}
+        out = f"{len(results)} build(s): {n['pass']} pass, {n['partial']} partial, {n['fail']} fail, {n['uncertain']} uncertain"
+    if earlier:
+        out += f"; {earlier} earlier build(s) were checked before a restart (their rows are in the dataset)"
+    if total is not None and len(results) + earlier < total:
+        out += f"; {total - len(results) - earlier} build(s) not run: {stopped or 'stopped early'}"
     return out
 
 
@@ -99,6 +102,7 @@ async def run_builds(builds, push, charge, log=print, get_state=None, set_state=
     unpaid). A build that ran no rule is free and is always delivered."""
     index, paid = _state(await get_state()) if get_state else (0, False)
     results, stopped = list(prior or [])[:index], None
+    unrecorded = index - len(results)  # checked before a restart, but the OUTPUT record that listed them was lost
     for i in range(index, len(builds)):
         r, res = check_one(builds[i]), None
         if r["checks"] and not (paid and i == index):
@@ -122,7 +126,7 @@ async def run_builds(builds, push, charge, log=print, get_state=None, set_state=
         if getattr(res, "event_charge_limit_reached", False):
             stopped = "your charge limit was reached"
             break
-    return results, stopped
+    return results, stopped, unrecorded
 
 
 async def main():
@@ -135,9 +139,9 @@ async def main():
 
         async def save(results):
             await Actor.set_value("OUTPUT", {"summary": summary(results, len(builds)), "builds": results})
-        results, stopped = await run_builds(builds, Actor.push_data, Actor.charge, log=Actor.log.warning, prior=prior, save=save,
+        results, stopped, earlier = await run_builds(builds, Actor.push_data, Actor.charge, log=Actor.log.warning, prior=prior, save=save,
                                             get_state=lambda: Actor.get_value(STATE_KEY), set_state=lambda v: Actor.set_value(STATE_KEY, v))
-        line = summary(results, len(builds), stopped)
+        line = summary(results, len(builds), stopped, earlier)
         await Actor.set_value("OUTPUT", {"summary": line, "checked": len(results), "total": len(builds), "builds": results})
         await Actor.set_status_message(line, is_terminal=True)
 

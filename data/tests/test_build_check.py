@@ -129,7 +129,7 @@ def test_a_run_writes_one_row_per_rule_and_a_summary(monkeypatch):
 def test_batch_builds_and_an_unreadable_build_never_pass(monkeypatch):
     a = run(monkeypatch, {"builds": [{"id": "ok", "parts": {"cpu": {"name": "c", "socket": "AM5"}, "motherboard": {"name": "b", "socket": "AM5"}}},
                                      {"id": "bad", "parts": {"cpu": "not a dict"}}]})
-    assert a.status[-1][0] == "2 build(s): 1 pass, 0 fail, 1 uncertain"
+    assert a.status[-1][0] == "2 build(s): 0 pass, 1 partial, 0 fail, 1 uncertain"
     assert [r["rule_id"] for r in a.rows if r["build_id"] == "bad"] == ["fit.no_checks"]
 
 
@@ -162,7 +162,7 @@ def test_a_failed_charge_stops_the_run_and_delivers_nothing_unpaid(monkeypatch):
 def test_the_limit_stops_the_run_and_the_summary_names_the_builds_not_run(monkeypatch):  # #248 item 3
     b = run(monkeypatch, {"builds": [{"id": str(i), "parts": GOOD} for i in range(3)]}, limit=1)
     assert len(b.charges) == 1 and {r["build_id"] for r in b.rows} == {"0"}
-    assert b.status[-1][0] == "1 build(s): 1 pass, 0 fail, 0 uncertain; 2 build(s) not run: your charge limit was reached"
+    assert b.status[-1][0] == "1 build(s): 0 pass, 1 partial, 0 fail, 0 uncertain; 2 build(s) not run: your charge limit was reached"
     assert b.kv["OUTPUT"]["checked"] == 1 and b.kv["OUTPUT"]["total"] == 3
 
 
@@ -189,7 +189,7 @@ def test_a_resume_keeps_builds_already_reported_and_a_corrupt_state_starts_over(
     actor.kv["STATE_next_build"] = 1
     actor.kv["OUTPUT"] = {"builds": [{"build_id": "1", "verdict": "fail", "summary": "FAIL: x", "checks": []}]}
     asyncio.run(load_main(monkeypatch, actor).main())
-    assert [b["build_id"] for b in actor.kv["OUTPUT"]["builds"]] == ["1", "2"] and actor.status[-1][0].startswith("2 build(s): 1 pass, 1 fail")
+    assert [b["build_id"] for b in actor.kv["OUTPUT"]["builds"]] == ["1", "2"] and actor.status[-1][0].startswith("2 build(s): 0 pass, 1 partial, 1 fail")
     c = run(monkeypatch, {"builds": [{"id": "1", "parts": GOOD}]})
     c2 = FakeActor({"builds": [{"id": "1", "parts": GOOD}]})
     c2.kv["STATE_next_build"] = "abc"
@@ -211,7 +211,7 @@ def test_an_unreadable_part_or_unknown_key_makes_the_build_uncertain_and_names_i
 
 def test_a_partial_build_never_says_a_plain_pass():
     r = check_build({"cpu": {"name": "c", "socket": "AM5"}, "motherboard": {"name": "b", "socket": "AM5"}})
-    assert r["verdict"] == "pass" and not r["complete"] and r["rules_run"] == 1
+    assert r["verdict"] == "partial" and not r["complete"] and r["rules_run"] == 1
     assert r["summary"].startswith("PASS for the 1 rule(s) that could run; not given: memory, gpu, psu, case, cooler")
 
 
@@ -270,3 +270,43 @@ def test_every_form_field_is_mapped_to_a_part():
     text = (ACTOR / "src" / "main.py").read_text()
     for key in SCHEMA:
         assert key in ("parts", "builds") or f'"{key}"' in text, key
+
+
+# review fixes (#278)
+@pytest.mark.parametrize("part,field", [("cooler", "height_mm"), ("psu", "wattage"), ("gpu", "length_mm")])
+@pytest.mark.parametrize("bad", [float("nan"), "nan", float("inf"), "-inf", "1e999"])
+def test_nan_and_infinite_sizes_never_pass(part, field, bad):
+    parts = {k: dict(v) for k, v in DEMO.items()}
+    parts["cooler"]["height_mm"] = 140  # so the demo's real cooler fail does not hide the probe
+    parts[part][field] = bad
+    r = check_build(parts)
+    # never a pass; where maker data exists it replaces the bad value (the 155 mm cooler then fails for real)
+    assert r["verdict"] in ("uncertain", "fail") and any(f"{part}.{field}" in p for p in r["problems"])
+
+
+def test_a_partial_builds_rows_say_partial_with_the_missing_parts(monkeypatch):
+    a = run(monkeypatch, {"builds": [{"id": "1", "parts": GOOD}]})
+    assert all(r["build_verdict"] == "partial" and r["complete"] is False for r in a.rows)
+    assert a.rows[0]["missing_parts"] == ["memory", "gpu", "psu", "case", "cooler"]
+    full = run(monkeypatch, FORM)
+    assert all(r["complete"] is True and r["missing_parts"] == [] for r in full.rows)
+
+
+def test_a_plain_string_drive_is_named_as_unreadable():
+    r = check_build({**DEMO, "storage": ["Samsung 990 Pro"]})
+    assert r["verdict"] != "pass" and any("drive in storage could not be read" in p for p in r["problems"])
+
+
+def test_a_row_citing_only_a_chipset_estimate_is_labelled_an_estimate():
+    r = check_build({"gpu": {"name": "Zotac Gaming GeForce RTX 4070 Super"}, "psu": {"name": "p", "wattage": 650}})
+    assert by_rule(r)["fit.psu_wattage"]["origin"] == "estimate (NVIDIA or AMD chipset reference figures)"
+    mixed = by_rule(check_build({"gpu": {"name": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC"}, "psu": {"name": "p", "wattage": 750}}))
+    assert mixed["fit.psu_wattage"]["origin"] == "MIRROR (dated maker data, Oct 24 2026) and chipset estimates"
+
+
+def test_a_resume_without_its_output_record_does_not_call_earlier_builds_not_run(monkeypatch):
+    actor = FakeActor({"builds": [{"id": "1", "parts": GOOD}, {"id": "2", "parts": GOOD}]})
+    actor.kv["STATE_next_build"] = {"index": 1, "paid": False}
+    asyncio.run(load_main(monkeypatch, actor).main())
+    line = actor.status[-1][0]
+    assert "not run" not in line and "1 earlier build(s) were checked before a restart" in line

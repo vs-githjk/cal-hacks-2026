@@ -1,6 +1,6 @@
 """Compatibility check for one PC build given as named parts (Lane C; the PC build compatibility Actor).
 
-check_build(parts) -> {"verdict": pass|fail|uncertain, "complete": bool, "summary", "rules_run", "missing_parts", "problems",
+check_build(parts) -> {"verdict": pass|partial|fail|uncertain, "complete": bool, "summary", "rules_run", "missing_parts", "problems",
                        "checks": [{rule_id, verdict, reason, parts, sources, origin}],
                        "parts": {category: {"name", "attrs", "maker_data": {attr: source}}}, "notes"}
 parts: {"cpu"|"motherboard"|"memory"|"gpu"|"psu"|"case"|"cooler": {"name": str, <spec>: value, ...}, "storage": [{...}]}
@@ -15,6 +15,7 @@ which parts were not given. The rules are check_fit's own.
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 
@@ -100,9 +101,11 @@ def _clean(attrs: dict, problems: list, cat: str) -> dict:
                 v = float(v) if isinstance(v, str) else v
                 if isinstance(v, bool) or not isinstance(v, (int, float)):
                     raise ValueError
+                if not math.isfinite(v):  # NaN fails every comparison, so it would pass every rule
+                    raise ValueError
                 v = int(v) if float(v).is_integer() else v
-            except (TypeError, ValueError):
-                problems.append(f"{cat}.{k} is not a number ({v!r})")
+            except (TypeError, ValueError, OverflowError):
+                problems.append(f"{cat}.{k} is not a finite number ({v!r})")
                 continue
             if k in POSITIVE and v <= 0:
                 problems.append(f"{cat}.{k} must be above 0 ({v!r}); treated as unknown")
@@ -118,10 +121,11 @@ def _clean(attrs: dict, problems: list, cat: str) -> dict:
 
 
 def _resolve(cat: str, given, problems: list) -> dict | None:
-    if isinstance(given, str):  # a part named only: read it as its name
+    if isinstance(given, str) and cat != "storage":  # a part named only is looked up by name (documented in the README)
         given = {"name": given}
     if not isinstance(given, dict):
-        problems.append(f"{cat} could not be read (give an object with a name and specs)")
+        problems.append(f"{cat} could not be read (give an object with a name and specs)" if cat != "storage"
+                        else f"a drive in storage could not be read ({given!r}); give {{\"interface\": ...}}")
         return None
     given = dict(given)
     name = str(given.pop("name", "") or "")
@@ -137,6 +141,15 @@ def _resolve(cat: str, given, problems: list) -> dict | None:
             if k not in attrs:
                 maker.setdefault(k, CHIPSET_ESTIMATE)
     return {"name": name, "attrs": attrs, "maker_data": maker}
+
+
+def _origin(sources: list) -> str:
+    maker = [s for s in sources if s != CHIPSET_ESTIMATE]
+    if not sources:
+        return "your input"
+    if not maker:
+        return "estimate (NVIDIA or AMD chipset reference figures)"
+    return "MIRROR (dated maker data, Oct 24 2026)" + (" and chipset estimates" if len(maker) < len(sources) else "")
 
 
 def check_build(parts) -> dict:
@@ -162,14 +175,15 @@ def check_build(parts) -> dict:
         cats = [k for k in RULE_PARTS.get(c["rule_id"], ()) if k in resolved]
         used = RULE_ATTRS.get(c["rule_id"], set())
         sources = sorted({src for k in cats for a, src in resolved[k]["maker_data"].items() if a in used})
-        checks.append({**c, "parts": [resolved[k]["name"] or k for k in cats], "sources": sources,
-                       "origin": "MIRROR (dated maker data, Oct 24 2026)" if sources else "your input"})
+        checks.append({**c, "parts": [resolved[k]["name"] or k for k in cats], "sources": sources, "origin": _origin(sources)})
     n = {v: sum(1 for c in checks if c["verdict"] == v) for v in ("pass", "fail", "uncertain")}
     missing = [c for c in CATEGORIES if c not in resolved]
     verdict = out["verdict"]
     if problems and verdict == "pass":
         verdict = "uncertain"
     complete = not missing and not problems
+    if verdict == "pass" and not complete:
+        verdict = "partial"  # every rule that ran passed, but parts were not given, so this is not an all clear
     if verdict == "fail":
         head = f"FAIL: {out['reasons'][0]}"
     elif problems:

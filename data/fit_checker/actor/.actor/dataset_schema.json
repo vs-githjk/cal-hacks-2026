@@ -11,10 +11,11 @@
     "type": "string",
     "enum": [
      "pass",
+     "partial",
      "fail",
      "uncertain"
     ],
-    "description": "The whole build: any fail is fail, else any uncertain is uncertain"
+    "description": "The whole build: any fail is fail, else any uncertain is uncertain; pass only when every part was given (partial when parts are missing)"
    },
    "rule_id": {
     "type": "string",
@@ -50,6 +51,17 @@
    "origin": {
     "type": "string",
     "description": "Where this row's numbers came from: MIRROR (dated maker data, Oct 24 2026) or your input"
+   },
+   "complete": {
+    "type": "boolean",
+    "description": "True when every part was given and read"
+   },
+   "missing_parts": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Parts not given, so their rules did not run"
    }
   },
   "required": [
@@ -71,7 +83,9 @@
      "parts",
      "sources",
      "origin",
-     "build_verdict"
+     "build_verdict",
+     "complete",
+     "missing_parts"
     ]
    },
    "display": {
@@ -108,6 +122,14 @@
      "origin": {
       "label": "Numbers from",
       "format": "text"
+     },
+     "complete": {
+      "label": "All parts given",
+      "format": "boolean"
+     },
+     "missing_parts": {
+      "label": "Parts not given",
+      "format": "array"
      }
     }
    }

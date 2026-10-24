@@ -2,7 +2,7 @@
 
 **Check a PC build before you buy it.** Fill in the parts (CPU, motherboard, RAM, graphics card, power supply, case, cooler). The Actor runs up to **12 compatibility rules** and returns **pass**, **fail** or **uncertain** for each one, with the numbers it compared and the **maker spec pages** behind them.
 
-It never guesses. A spec nobody knows makes that rule **uncertain**, not a pass. A build with parts missing never gets a plain PASS: the summary says which rules could run and which parts were not given, for example `PASS for the 1 rule(s) that could run; not given: memory, gpu, psu, case, cooler`. A part we cannot read, an unknown key or a bad number makes the build **uncertain** and names it.
+It never guesses. A spec nobody knows makes that rule **uncertain**, not a pass. A build with parts missing never gets a plain PASS: its verdict is **partial**, and the summary says which rules could run and which parts were not given, for example `PASS for the 1 rule(s) that could run; not given: memory, gpu, psu, case, cooler`. A part we cannot read, an unknown key or a bad number makes the build **uncertain** and names it.
 
 Built for **AI shopping agents**. Our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), uses it to veto a part that will not fit before any money moves. It is just as useful to PC builders, resellers and anyone quoting a build.
 
@@ -73,7 +73,7 @@ Or give the same build as JSON parts in `parts` (it overrides the form for any p
 - **cooler:** `height_mm`, `sockets`, or `type: "aio"` with `radiator_mm`
 - **storage** (a list): `interface` (for example "M.2 PCIe 4.0 X4" or "SATA 6.0 Gb/s")
 
-Your own numbers always win over our maker data. Sockets and memory types are read in any case (`am5` is `AM5`), numbers may be strings (`"300"`), and a size of 0 counts as unknown.
+A part can also be given as just its name (`"cooler": "Noctua NH-D15"`): it is looked up by that exact name, and with no maker data its rules come back uncertain. A drive must be an object (`{"interface": "M.2 PCIe 4.0 X4"}`); a plain string drive is named as unreadable. Sizes must be finite numbers above 0 (NaN, infinity and 0 count as unknown and are named). Your own numbers always win over our maker data. Sockets and memory types are read in any case (`am5` is `AM5`), numbers may be strings (`"300"`), and a size of 0 counts as unknown.
 
 ## Output
 
@@ -87,7 +87,7 @@ One dataset row per rule:
  "origin": "MIRROR (dated maker data, Oct 24 2026)"}
 ```
 
-`origin` says whether a row's numbers came from our dated maker data or only from your input. A figure for a sibling model is cited with that caveat, and GPU board power and cable needs taken from NVIDIA or AMD chipset reference figures are cited as estimates. The key-value store's `OUTPUT` record holds every build with its verdict, `complete`, `rules_run`, `missing_parts`, the specs we filled in and their sources.
+Each row also carries `complete` and `missing_parts`, and `build_verdict` is `partial` when every rule that ran passed but parts were missing. `origin` says whether a row's numbers came from our dated maker data, from chipset estimates only, or only from your input. A figure for a sibling model is cited with that caveat, and GPU board power and cable needs taken from NVIDIA or AMD chipset reference figures are cited as estimates. The key-value store's `OUTPUT` record holds every build with its verdict, `complete`, `rules_run`, `missing_parts`, the specs we filled in and their sources.
 
 ## Maker data we hold (dated Oct 24 2026)
 
@@ -119,7 +119,7 @@ An AI agent with a stablecoin wallet and **no Apify account** can pay for this A
 2. The agent's wallet pays it (for example `npx awal x402 pay ...`, `mppx ...` or `pay.sh`), and Apify returns a token with a hard spend cap: at least $1, it expires after 14 days, and unused balance is not refunded.
 3. The agent runs this Actor with `Authorization: Bearer <token>`, and each build is metered against that balance. This works because the Actor uses limited permissions.
 
-**What we have verified (Oct 24 2026):** our probe, [`scripts/apify_agent_pay_probe.py`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/scripts/apify_agent_pay_probe.py), reaches the 402 pay wall for a prepaid token and for a proxied run of this Actor. That is *reached, not paid*. This section will say LIVE only after a real paid run.
+**What we have verified (Oct 24 2026):** unpaid requests to agi.apify.com answered **HTTP 402** for a prepaid token (x402 and MPP) and for a proxied run of this Actor ($1.00 USDC on Base). That is *reached, not paid*. This section will say LIVE only after a real paid run.
 
 ## Use it from an AI agent or your code
 
@@ -147,4 +147,4 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~pc-build-compatibility
 
 ## Source
 
-[github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/fit_checker/`. Labels: maker data is MIRROR (a dated read of maker pages). The Actor is built from this folder after `./bundle.sh` copies the fit checker into `src/data/`.
+[github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/fit_checker/`. Labels: maker data is MIRROR (a dated read of maker pages). **Building from git alone fails:** run `./bundle.sh` first, which copies the fit checker and its data into `src/data/` (that copy is not committed, so there is one source of truth).
