@@ -1,6 +1,7 @@
 "use client";
 // The header and the run mode footer for every page.
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
@@ -8,32 +9,115 @@ import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
 import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
 
-/** Header: wordmark plus two links. Drop into layout.tsx in place of the <header>. */
+const NAV: { href: string; label: string; match?: string }[] = [
+  { href: "/", label: "Home" },
+  { href: "/buyer", label: "Buyer" },
+  { href: "/market", label: "Market" },
+  { href: "/floor", label: "Floor" },
+  { href: "/seller/seller-a", label: "Seller", match: "/seller" },
+];
+const THEME_KEY = "tb_theme";
+
+/** Header: mark, pill nav, market status and a light or dark toggle. Also lights card borders under the pointer. */
 export function AppHeader() {
   const path = usePathname();
-  const link = (href: string, label: string) => (
-    <Link
-      href={href}
-      className={`inline-flex min-h-11 items-center rounded-lg px-3 text-[14px] font-medium ${path === href ? "text-ink" : "text-muted hover:text-ink"}`}
-      aria-current={path === href ? "page" : undefined}
-    >
-      {label}
-    </Link>
-  );
+  const conn = useSpacetimeDB();
+  const [light, setLight] = useState(false);
+
+  useEffect(() => {
+    let saved = false;
+    try {
+      saved = localStorage.getItem(THEME_KEY) === "light";
+    } catch {
+      // Blocked storage: dark, the default.
+    }
+    setLight(saved);
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", light);
+  }, [light]);
+
+  // One listener for the whole app: the card under the pointer gets --mx and --my for its lit border.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let last: HTMLElement | null = null;
+    const move = (e: PointerEvent) => {
+      const card = (e.target as Element | null)?.closest?.(".card") as HTMLElement | null;
+      if (last && last !== card) {
+        last.style.removeProperty("--mx");
+        last.style.removeProperty("--my");
+      }
+      last = card;
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      card.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    return () => window.removeEventListener("pointermove", move);
+  }, []);
+
+  const flip = () => {
+    setLight((l) => {
+      try {
+        localStorage.setItem(THEME_KEY, l ? "dark" : "light");
+      } catch {
+        // Not remembered; still switches.
+      }
+      return !l;
+    });
+  };
+
   return (
-    <header className="border-b border-line bg-panel">
+    <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
       <nav className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 py-2">
-        <Link href="/" className="mr-1 inline-flex min-h-11 shrink-0 items-center gap-2.5 whitespace-nowrap text-[18px] font-bold tracking-[-0.01em] sm:mr-3">
-          <span className="relative inline-block h-[22px] w-[22px] rounded-[7px] bg-accent" aria-hidden>
-            <span className="absolute inset-1.5 rounded-[3px] bg-accent-ink opacity-90" />
-          </span>
-          Tech Bazaar
+        <Link href="/" className="inline-flex min-h-11 shrink-0 items-center gap-2.5 whitespace-nowrap text-[17px] font-semibold tracking-[-0.02em]">
+          <Mark size={24} />
+          <span className="hidden sm:inline">Tech Bazaar</span>
         </Link>
-        {link("/buyer", "Buyer")}
-        {link("/market", "Market")}
-        {link("/floor", "Floor")}
+        <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto [scrollbar-width:none]">
+          {NAV.map((n) => {
+            const on = n.match ? path.startsWith(n.match) : path === n.href;
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={on ? "page" : undefined}
+                className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-medium transition-colors ${on ? "bg-accent-soft text-accent-2" : "text-muted hover:bg-soft hover:text-ink"}`}
+              >
+                {n.label}
+              </Link>
+            );
+          })}
+        </div>
+        <span className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:flex">
+          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-mint shadow-[0_0_10px_var(--mint)]" : "bg-coral"}`} aria-hidden />
+          {conn.isActive ? "market live" : "offline"}
+        </span>
+        <button
+          type="button"
+          onClick={flip}
+          aria-label={light ? "Switch to dark" : "Switch to light"}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted hover:text-ink"
+        >
+          <span aria-hidden className="text-[15px] leading-none">{light ? "◐" : "◑"}</span>
+        </button>
       </nav>
     </header>
+  );
+}
+
+/** The Tech Bazaar mark: a referee ring with a sealed bid at its center. */
+export function Mark({ size = 24, spin = false }: { size?: number; spin?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="shrink-0">
+      <circle cx="50" cy="50" r="44" fill="none" stroke="var(--line-2)" strokeWidth="3" />
+      <g className={spin ? "origin-center motion-safe:animate-[orbit_18s_linear_infinite]" : ""} style={{ transformBox: "fill-box" }}>
+        <circle cx="50" cy="50" r="44" fill="none" stroke="var(--accent)" strokeWidth="6" strokeDasharray="70 207" strokeLinecap="round" />
+      </g>
+      <rect x="32" y="32" width="36" height="36" rx="9" fill="var(--accent)" />
+      <rect x="42" y="42" width="16" height="16" rx="4" fill="var(--accent-ink)" />
+    </svg>
   );
 }
 

@@ -1,55 +1,81 @@
-/* Tech Bazaar design tokens, direction A "Ledger". Replaces the :root, dark and @theme blocks in web/src/app/globals.css.
+/* Tech Bazaar design tokens: the team reference artifact (dark first, Ledger structure).
    Tailwind v4: the @theme inline block turns every token into a utility (bg-panel, text-muted, border-line, font-display, ...). */
 @import "tailwindcss";
 
+
+/* Base: the team reference artifact (dark first). Light mode is the .light class on <html> (toggle in the header).
+   Old names stay as aliases (canvas, soft, coral) so every existing component keeps working. */
 :root {
-  --canvas: #f7f7f9;
-  --panel: #ffffff;
-  --soft: #f1f2f5;
-  --ink: #121417;
-  --muted: #5f6672;
-  --line: #e3e5ea;
-  --accent: #4f46e5;
-  --accent-ink: #ffffff;
-  --mint: #0e7a56;
-  --mint-soft: #e4f5ec;
-  --coral: #b3400f;
-  --coral-soft: #fcebe2;
-  --amber: #8a5a05;
-  --amber-soft: #fbf1d3;
-  --sky: #0b5f9e;
-  --sky-soft: #e3f0fb;
-  --slate: #475569;
-  --slate-soft: #eceef2;
+  --canvas: #06090f;
+  --canvas-2: #0a101a;
+  --panel: #0e1521;
+  --soft: #121a28;
+  --glass: rgba(13, 20, 32, 0.66);
+  --ink: #e9eef7;
+  --ink-2: #c3cbd9;
+  --muted: #8792a6;
+  --line: #1a2334;
+  --line-2: #26324a;
+  --accent: #6f8cff;
+  --accent-2: #a9bbff;
+  --accent-ink: #06090f;
+  --accent-soft: rgba(111, 140, 255, 0.14);
+  --coral: #ff7b5c; /* flare: vetoes, denials, errors */
+  --coral-soft: rgba(255, 123, 92, 0.14);
+  --mint: #3fe0a5;
+  --mint-soft: rgba(63, 224, 165, 0.13);
+  --amber: #f3c660;
+  --amber-soft: rgba(243, 198, 96, 0.14);
+  --sky: #5fb8ff;
+  --sky-soft: rgba(95, 184, 255, 0.14);
+  --slate: #9aa6bb;
+  --slate-soft: rgba(154, 166, 187, 0.12);
+  --grid: rgba(111, 140, 255, 0.1);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   --radius: 16px;
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #0d1017;
-    --panel: #151a24;
-    --soft: #1b2130;
-    --ink: #e9ecf1;
-    --muted: #99a1ad;
-    --line: #262d3a;
-    --accent: #8f8bff;
-    --accent-ink: #0d1017;
-    --mint: #5ddba6;
-    --mint-soft: #10301f;
-    --coral: #ff9a73;
-    --coral-soft: #3a1a0e;
-    --amber: #f3c969;
-    --amber-soft: #3a2b08;
-    --sky: #7cc0f5;
-    --sky-soft: #0f2b43;
-    --slate: #b3bcc9;
-    --slate-soft: #232a36;
-    color-scheme: dark;
-  }
+:root.light {
+  --canvas: #f2f4f9;
+  --canvas-2: #e9edf5;
+  --panel: #ffffff;
+  --soft: #f6f8fc;
+  --glass: rgba(255, 255, 255, 0.72);
+  --ink: #0e1320;
+  --ink-2: #2a3346;
+  --muted: #5d687c;
+  --line: #dfe4ee;
+  --line-2: #c9d1e0;
+  --accent: #3a54e3;
+  --accent-2: #2237b8;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(58, 84, 227, 0.1);
+  --coral: #c7441a;
+  --coral-soft: rgba(199, 68, 26, 0.1);
+  --mint: #0e7a56;
+  --mint-soft: rgba(14, 122, 86, 0.1);
+  --amber: #8a5a05;
+  --amber-soft: rgba(138, 90, 5, 0.1);
+  --sky: #0b5f9e;
+  --sky-soft: rgba(11, 95, 158, 0.1);
+  --slate: #5a6478;
+  --slate-soft: rgba(90, 100, 120, 0.1);
+  --grid: rgba(58, 84, 227, 0.12);
+  --shadow: 0 20px 50px rgba(20, 30, 60, 0.12);
+  color-scheme: light;
 }
 
 @theme inline {
   --color-canvas: var(--canvas);
+  --color-canvas-2: var(--canvas-2);
+  --color-ink-2: var(--ink-2);
+  --color-line-2: var(--line-2);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-flare: var(--coral);
+  --color-flare-soft: var(--coral-soft);
+  --color-glass: var(--glass);
   --color-panel: var(--panel);
   --color-soft: var(--soft);
   --color-ink: var(--ink);
@@ -103,3 +129,37 @@ body {
   from { transform: scale(.6); opacity: 0 }
   to { transform: scale(1); opacity: 1 }
 }
+
+/* Blueprint grid behind every page, fading down the screen. Decorative only. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black, transparent 75%);
+}
+main, header, footer { position: relative; z-index: 1; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* Touch the lines: a card's border lights up under the pointer (--mx, --my set by the shell). */
+.card { position: relative; isolation: isolate; }
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), var(--accent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes orbit { to { transform: rotate(360deg) } }
+@keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }
