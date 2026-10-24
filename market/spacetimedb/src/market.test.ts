@@ -941,6 +941,32 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect(events().some((e) => e.kind === 'stock_sold')).toBe(true);
   });
 
+  it('replaying the same need after its own sale does not compete with itself: the seller is not sold out to its own earlier round', () => {
+    twoBuyerRounds();
+    close('round-1');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
+    expect(holds()[0]!.state).toBe('sold');
+    // The demo's round 2: the same need again, the same sellers, minutes later.
+    advance(600_000);
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-r2', needId: 'need-1', windowS: 15 }));
+    bidIn(A, 'round-r2', 'bid-a1-r2', 700);
+    bidIn(B, 'round-r2', 'bid-b1-r2', 760);
+    advance(16_000);
+    close('round-r2');
+    expect(resultOf('bid-a1-r2')).toMatchObject({ rank: 1, reasons: [] });
+    expect(resultOf('bid-b1-r2').rank).toBe(2);
+    // The second buyer's round still meets the sold unit, so two buyers keep competing for the last one.
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-r3', needId: 'need-2', windowS: 15 }));
+    bidIn(A, 'round-r3', 'bid-a2-r3', 700);
+    bidIn(B, 'round-r3', 'bid-b2-r3', 760);
+    advance(16_000);
+    close('round-r3');
+    expect(resultOf('bid-a2-r3')).toMatchObject({ rank: 0, reasons: ['sold out to an earlier round'] });
+    expect(resultOf('bid-b2-r3').rank).toBe(1);
+  });
+
   it('the call starts the 2 minutes: creating the mandate renews the hold, so a slow stage does not lose the unit', () => {
     twoBuyerRounds();
     close('round-1');

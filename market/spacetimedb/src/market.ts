@@ -480,8 +480,11 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const needQtyOf = (sku: string) => needItems.get(sku)?.quantity ?? 1;
   const condOfLine = (l: Line) => l.offeredCondition || needItems.get(l.skuSpec)?.condition || 'new';
   const soldOut = new Map<string, string[]>();
+  // Only holds from rounds that served a different need count: replaying the same need (the demo's round 2) must not
+  // compete with its own earlier sale, while a second buyer's round still meets the held or sold unit.
+  const sameNeed = (h: HoldRow) => ctx.db.round.id.find(h.roundId)?.needId === r.needId;
   for (const b of rows) {
-    const held = [...ctx.db.stockHold.sellerId.filter(b.sellerId)].map(asHoldLike);
+    const held = [...ctx.db.stockHold.sellerId.filter(b.sellerId)].filter((h) => !sameNeed(h)).map(asHoldLike);
     soldOut.set(b.id, soldOutReasons(b.lines.map((l: Line) => ({ skuSpec: l.skuSpec, condition: condOfLine(l), quantity: l.quantity })), held, b.sellerId, nowMs, needQtyOf));
   }
   const lineRejects = new Map(rows.map((b) => [b.id, b.lines.map((_: Line, i: number) => b.lineRejects[i] || soldOut.get(b.id)![i] || '')]));
