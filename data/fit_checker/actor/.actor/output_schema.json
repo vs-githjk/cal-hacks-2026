@@ -1,0 +1,12 @@
+{
+ "actorOutputSchemaVersion": 1,
+ "title": "Build check output",
+ "properties": {
+  "checks": {
+   "type": "string",
+   "title": "Compatibility checks",
+   "description": "One row per rule per build: pass, fail or uncertain, the reason and the maker pages it used",
+   "template": "{{links.apiDefaultDatasetUrl}}/items?view=checks"
+  }
+ }
+}
