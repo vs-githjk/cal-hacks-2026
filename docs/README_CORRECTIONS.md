@@ -79,8 +79,8 @@ Every number here is copied from a results file named in its row, with the date 
 | Number | Set and honest reading | Result | Source | Date |
 |---|---|---|---|---|
 | Shield, attacks stopped | dev and dev2, in-sample (rules were written looking at them) | 30 of 30 and 30 of 30 | `shield/corpus/RESULTS.md` | 2026-10-23 |
-| Shield, attacks stopped | frozen probe, an upper bound (the author had read it) | 6 of 10 (60.0%) | `shield/corpus/RESULTS.md` | 2026-10-23 |
-| Shield, attacks stopped | post-freeze check, run once, not tuned: our best guess of real recall | 6 of 12 (50.0%) | `shield/corpus/RESULTS.md` | 2026-10-23 |
+| Shield, attacks stopped | frozen probe, first run, an upper bound (the author had read it), no longer blind | 6 of 10 (60.0%) | `shield/corpus/RESULTS.md` | 2026-10-23 |
+| Shield, attacks stopped | post-freeze check, first run, no longer blind (its misses are listed in RESULTS.md) | 6 of 12 (50.0%) | `shield/corpus/RESULTS.md` | 2026-10-23 |
 | Shield, clean controls wrongly stopped | dev and dev2 controls | 0 of 10 and 0 of 15 | `shield/corpus/RESULTS.md` | 2026-10-23 |
 | Shield, held-out set in the wind tunnel run | 20 attacks, 12 stopped (60%); 2 false blocks on clean rows | 60% | `sim/RESULTS-2026-10-24-b48x3.md` | 2026-10-24 |
 | Fit checker, decided builds correct | full frozen set of 44 builds, specs partly unconfirmed, tuned on once: not held out | 42 of 43 | `data/RESULTS.md` | 2026-10-23 |

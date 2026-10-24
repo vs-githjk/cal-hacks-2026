@@ -182,3 +182,23 @@ def test_h_pitch_stage_line_uses_the_locked_wording():
         text = read(doc)
         for old in ("one real order", "many orders pool", "bids here are real", "one or two bids"):
             assert old not in text, f"{doc}: LOCKED stage-line wording dropped '{old}'"
+
+
+def test_i_shield_numbers_on_the_two_frozen_files_are_first_run_figures():
+    """T12 red team. test_b only checks that a figure appears somewhere in RESULTS.md, and '6 of 12' still does once lane-d-night
+    is merged (RESULTS.md then says 'fresh12.jsonl 6 of 12 to 8 of 12 ... in-sample too'). The docs called that set 'run once, not
+    tuned' and 'our best guess of real recall', which the merged RESULTS.md contradicts. A line that quotes the post-freeze
+    check or the frozen probe must say it is the first run and no longer blind, and must not claim it was never tuned."""
+    bad = []
+    for doc in DASH_DOCS:
+        for n, line in lines(doc):
+            quotes = re.search(r"post-freeze|frozen probe|after we froze", line, re.I) and re.search(r"\b(?:6 of 12|6 of 10)\b", line)
+            if not quotes:
+                continue
+            low = line.lower()
+            if "first run" not in low or "no longer blind" not in low:
+                bad.append(f"{doc}:{n}: say 'first run' and 'no longer blind': {line.strip()[:120]}")
+            for old in ("not tuned", "run once", "best guess of real recall"):
+                if old in low:
+                    bad.append(f"{doc}:{n}: '{old}' is false once lane-d-night is merged: {line.strip()[:120]}")
+    assert not bad, "\n".join(bad)

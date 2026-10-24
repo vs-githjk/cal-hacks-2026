@@ -41,7 +41,7 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 
 **Armadin** (Lane D core, Lane C product layer, Lane A `/verify-agent`)
 - Carries: Bazaar Shield: `/v1/shield/screen`, `/verify-agent`, `/verify-mandate`, `/v1/check-claim`, rules as data, the attack corpus, a key and a `shield-bench` for any attack file. Signed verdict receipts are planned, not built.
-- Proof: `shield/api.py`, `shield/product.py`, `shield/bench.py`, `shield/corpus/RESULTS.md` (6 of 12 on the post-freeze check, 2026-10-23).
+- Proof: `shield/api.py`, `shield/product.py`, `shield/bench.py`, `shield/corpus/RESULTS.md` (6 of 12 on the first run of the post-freeze check, no longer blind, 2026-10-23).
 - Breaks without it: the injected listing reaches the advocate, a payee swap goes through, and the block-rate tile reads zero.
 - Demo moment: beat 3, Shield blocks an injected listing live. The "Hack the market" console is planned, not built; judges can send attacks to the API or the bench.
 - Hard requirements: Best Security Hack, sponsored by Armadin (posted prize: headphones, possibly hacking tools; not cash). Report "blocked X of Y on this corpus" per set (dev, held-out; the adaptive set is planned, not built), never "secure"; hand them a key and the bench.

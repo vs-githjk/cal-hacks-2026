@@ -23,7 +23,7 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 | Payments | SIM stub by default; SANDBOX with `--stripe` (one Stripe test charge on a Visa test card; no real money) | `demo/approval_flow.py` | D |
 | Request signatures (Visa TAP style) | LIVE code, verified by our own merchant simulator; Visa does not verify them | `pay/tap.py`, `pay/merchant_sim.py` | D |
 | Visa Intelligent Commerce | planned: swaps in only with Visa sandbox access | none yet | D |
-| Shield verdicts | LIVE code on every message; scored per set (dev and dev2 in-sample, frozen probe an upper bound, post-freeze check 6 of 12, 2026-10-23) | `shield/corpus/RESULTS.md` | D |
+| Shield verdicts | LIVE code on every message; scored per set (dev and dev2 in-sample, frozen probe an upper bound, post-freeze check 6 of 12 on its first run and no longer blind, 2026-10-23) | `shield/corpus/RESULTS.md` | D |
 | Claude | Optional: a seller persona line and Shield's classifier (off by default); the advocate is code | `agents/sellers/seller_agent.py`, `shield/classifier.py` | A |
 | Hyphenate IT buyer purchasing | SIM company around a real rule engine; blind planted-error run reported | `hyphenate/RESULTS-blind.md` | D |
 | Receiving check photos (buyer path) | planned, not built | none yet | C |
