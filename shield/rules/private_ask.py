@@ -11,9 +11,13 @@ _ASK = (r"(?:reply\s+with|respond\s+with|send|tell|give|share|provide|confirm|st
 _OWNER = r"(?:(?:your|ur|yr|(?:the\s+)?buyer'?s?|(?:the\s+)?owner'?s?|your\s+owner'?s?|their)\s+)"
 # A fit question uses the same words: "your max GPU length", "your PSU wattage limit". A max or limit about a size or power
 # figure is not the buyer's spending limit (#273); "your max", "your max GPU budget", "your limit for this" still are.
-_FIT = r"(?:length|height|clearance|size|width|depth|thickness|wattage|tdp|power|draw|watts?|mm|temps?|temperature|speed|capacity)"
-_MAX_FIT = r"(?!\s+(?:(?:gpu|card|cooler|radiator|rad|psu|case|ram|memory|cpu|fan|tower)\s+)?" + _FIT + r"\b)"
-_LIMIT = r"(?<!length\s)(?<!height\s)(?<!clearance\s)(?<!size\s)(?<!width\s)(?<!depth\s)(?<!wattage\s)(?<!tdp\s)(?<!power\s)(?<!thermal\s)limit"
+# "size", "power", "draw" and "capacity" also mean money ("your max size", "your buying power limit"), so they count
+# only right after a part noun ("your max GPU size"). A money word in the same sentence still quarantines (below).
+_PART = r"(?:gpu|card|cooler|radiator|rad|psu|case|ram|memory|cpu|fan|tower)"
+_FIT = r"(?:length|height|clearance|width|depth|thickness|wattage|tdp|watts?|mm|temps?|temperature)"
+_MAX_FIT = (r"(?!\s+(?:" + _PART + r"\s+)?" + _FIT + r"\b|\s+" + _PART + r"\s+(?:size|power|draw|capacity)\b)")
+_LIMIT = r"(?<!length\s)(?<!height\s)(?<!clearance\s)(?<!width\s)(?<!depth\s)(?<!wattage\s)(?<!tdp\s)(?<!thermal\s)limit"
+_MONEY = r"(?:\$|\b(?:dollars?|usd|bucks|spend\w*|pay|paying|budget|price\w*|cost|afford|amount)\b)"
 _PRIVATE = (r"(?:spending\s+(?:limit|cap)|spend(?:ing)?\s+limit|budget|allowance|price\s+(?:cap|ceiling|limit)|max(?:imum)?"
             r"(?:\s+(?:price|budget|spend|bid|offer)|" + _MAX_FIT + r")|(?:spending\s+)?cap|ceiling|" + _LIMIT + r"|(?:home|street|shipping|mailing)\s+address"
             r"|address|full\s+name|legal\s+name|name|date\s+of\s+birth|phone\s+number|mobile\s+number|email\s+address)")
@@ -28,6 +32,11 @@ PATTERNS = [
     rx(r"\b(?:what'?s|what\s+is|tell\s+me)\s+the\s+max(?:imum)?\s+(?:you|they|the\s+buyer)\s+(?:can|will|would)\b"),
     rx(r"\b(?:what(?:'?s|\s+is)|state|tell\s+me|give\s+me|share|reveal)\s+the\s+(?:limit|cap|ceiling|max(?:imum)?|budget|allowance)\b"),
     rx(r"(?:^|[\s,;:])(?:budget|allowance|spending\s+limit|max(?:imum)?\s+budget)\s*\?"),
+    # #273: a fit-worded max or limit with a money word in the same sentence ("your max length in dollars")
+    rx(r"\b" + _OWNER + r"(?:\w+\s+){0,3}?(?:max(?:imum)?|limit)\b[^.!?\n]{0,40}?" + _MONEY
+       + r"|" + _MONEY + r"[^.!?\n]{0,40}?\b" + _OWNER + r"(?:\w+\s+){0,3}?(?:max(?:imum)?|limit)\b"),
+    rx(r"\bhow\s+much\s+(?:do|would|did|will)\s+(?:you|they|the\s+buyer|your\s+owner)\s+(?:want|plan|intend|hope|wish|like)\s+to\s+"
+       r"(?:spend|pay)\b"),
     rx(r"\b(?:full\s+name|home\s+address|phone\s+number|shipping\s+address)\b[^.!?\n]{0,40}?\bplease\b"),
 ]
 
