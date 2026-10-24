@@ -9,6 +9,7 @@ from pathlib import Path
 
 import crs
 import pytest
+from buyer import hunt
 
 
 NOW = datetime(2026, 10, 24, 8, tzinfo=timezone.utc)
@@ -311,14 +312,27 @@ def test_to_crs_check_has_flat_sanitized_shape():
     check = {"signal": {"supplier_id": "seller_1", "stability": "verified_stable",
                          "checked_at": NOW.isoformat(), "source": "sandbox"}}
     assert crs.to_crs_check("seller_1", check) == {
-        "supplier_id": "seller_1", "product": "tu_identity", "verified": True,
+        "seller_id": "seller_1", "product": "tu_identity", "verified": True,
         "reason_codes": ["CRS_IDENTITY_VERIFIED"], "origin": "SANDBOX",
         "checked_at": NOW.isoformat(),
     }
-    assert crs.to_crs_check("seller_1", {"signal": None, "reason": crs.REASON_NOT_CONFIGURED}) == {
-        "supplier_id": "seller_1", "product": "tu_identity", "verified": False,
-        "reason_codes": ["CRS_NOT_CONFIGURED"], "origin": "NOT_CONFIGURED", "checked_at": None,
-    }
+    not_configured = crs.to_crs_check("seller_1", {"signal": None, "reason": crs.REASON_NOT_CONFIGURED})
+    assert not_configured["seller_id"] == "seller_1"
+    assert not_configured["product"] == "tu_identity"
+    assert not_configured["verified"] is False
+    assert not_configured["reason_codes"] == ["CRS_NOT_CONFIGURED"]
+    assert not_configured["origin"] == "NOT_CONFIGURED"
+    assert datetime.fromisoformat(not_configured["checked_at"].replace("Z", "+00:00"))
+    unavailable = crs.to_crs_check("seller_1", {"signal": None, "reason": crs.REASON_UNAVAILABLE})
+    assert unavailable["seller_id"] == "seller_1"
+    assert unavailable["origin"] == "SANDBOX"
+    assert unavailable["reason_codes"] == ["CRS_UNAVAILABLE"]
+    assert unavailable["verified"] is False
+    assert datetime.fromisoformat(unavailable["checked_at"].replace("Z", "+00:00"))
+    invalid = crs.to_crs_check("seller_1", {"signal": {"supplier_id": "other",
+        "stability": "verified_stable", "checked_at": NOW.isoformat(), "source": "sandbox"}})
+    assert invalid["reason_codes"] == ["CRS_INVALID"]
+    assert invalid["verified"] is False
 
 
 def test_absent_crs_config_is_nonblocking_but_adverse_check_denies(monkeypatch, tmp_path):
@@ -326,7 +340,10 @@ def test_absent_crs_config_is_nonblocking_but_adverse_check_denies(monkeypatch, 
     monkeypatch.delenv("CRS_API_KEY", raising=False)
     monkeypatch.delenv("CRS_USERNAME", raising=False)
     monkeypatch.delenv("CRS_PASSWORD", raising=False)
-    assert crs.eligible("seller_1", None, NOW)
+    check = {"signal": None, "reason": crs.REASON_NOT_CONFIGURED}
+    assert crs.eligible("seller_1", check, NOW)
+    bids = [{"id": "cheap", "supplier_id": "seller_1", "total_landed_price": 10}]
+    assert hunt.pick_best(bids, {"cheap": {"recommendation": "buy"}}, {"seller_1"}) == 1
     adverse = {"signal": {"supplier_id": "seller_1", "stability": "not_verified",
                            "checked_at": NOW.isoformat(), "source": "sandbox"}}
     assert not crs.eligible("seller_1", adverse, NOW)

@@ -113,6 +113,16 @@ An optional preissued `CRS_API_KEY` may be supplied for an already-authorized sa
       "consent": false,
       "persona_ref": "P01",
       "request": { "<official request fields>": "<private values>" }
+    },
+    "seller_4": {
+      "seller_type": "individual",
+      "consent": true
+    },
+    "seller_5": {
+      "seller_type": "business",
+      "consent": true,
+      "persona_ref": "P02",
+      "request": { "<official request fields>": "<private values>" }
     }
   }
 }
@@ -120,7 +130,7 @@ An optional preissued `CRS_API_KEY` may be supplied for an already-authorized sa
 
 The proposed demo mapping is `seller_1=P01`, `seller_2=P02`, and `seller_3=P12`; set `consent` to true only after that seller's consent is explicitly recorded. `P16` is an optional approved step-up case. The adapter accepts only the exact-body digests for these official personas. Keep request bodies, identity data, and credentials out of git, logs, chat, and market state. Use the consent wording: `CRS sandbox identity check for this demo business seller's designated synthetic representative. Only a status band and check time are shared. No real-person data is submitted.`
 
-This is a synthetic representative identity check, not business-entity verification or a credit/financial-stability guarantee. An empty documented CRS message list maps to `verified_stable`; code `2401` maps to `caution`; other, malformed, or unknown results map to `not_verified`. Business sellers without a valid configured check remain ineligible for ordering. Individually classified sellers are exempt using trusted operator configuration and are not checked. The adapter stores only sanitized signals in `.cache/crs-signals.json`; a genuine cached sandbox result can be reused for up to 24 hours as `source: recorded`, retaining its original `checked_at` and provenance. Its display provenance is `cached from CRS <time>`.
+This is a synthetic representative identity check, not business-entity verification or a credit/financial-stability guarantee. An empty documented CRS message list maps to `verified_stable`; code `2401` maps to `caution`; other, malformed, or unknown results map to `not_verified`. Configured business sellers without a valid check remain ineligible for ordering. When CRS is genuinely absent, the adapter reports `CRS_NOT_CONFIGURED` and the market may continue without a CRS gate while showing its once-only notice. Individually classified sellers are exempt using trusted operator configuration and are not checked. The adapter stores only sanitized signals in `.cache/crs-signals.json`; a genuine cached sandbox result can be reused for up to 24 hours as `source: recorded`, retaining its original `checked_at` and provenance. Its display provenance is `cached from CRS <time>`.
 
 Lane A hands off the existing `SupplierSignal` fields (`supplier_id`, `stability`, `checked_at`, `source`) and a fixed reason derived from the band. Shared market enforcement and the greyed-out ineligible row remain Lane B work; this handoff does not implement a market reducer or publisher. For an explicit sandbox check, run from the repository root with the existing Windows interpreter:
 
