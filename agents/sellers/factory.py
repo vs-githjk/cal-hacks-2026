@@ -69,7 +69,9 @@ def validate_config(cfg, *, catalog: bool = False) -> dict:
     err = lambda field, message: errors.append({"field": field, "message": message})
     # Compare the id the way common.register_custom_seller builds its seed env name (- becomes _), so 'seller-1'
     # cannot read seller_1's seed through SELLER_1_AGENT_SEED.
-    folded_id = cfg["id"].replace("-", "_")
+    # A trailing '_agent' is stripped too: 'seller_1_agent' and 'buyer_agent' fall back to the built-in's
+    # <NAME>_AGENT_SEED, so they are the same reserved ids.
+    folded_id = cfg["id"].replace("-", "_").removesuffix("_agent")
     if not catalog and (folded_id in RESERVED_IDS or SELLER_ID_RE.match(folded_id)):
         err("id", "is reserved for a Tech Bazaar agent")
     port = cfg.get("port")

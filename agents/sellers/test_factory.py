@@ -186,23 +186,29 @@ def test_schema_file_is_a_valid_json_schema_and_accepts_good():
 
 
 @pytest.mark.parametrize("sid", ["buyer", "advocate", "shield", "seller_1", "seller_5", "seller_12",
-                                 "seller-1", "seller-5", "seller-12", "seller-01"])
+                                 "seller-1", "seller-5", "seller-12", "seller-01",
+                                 "seller_1_agent", "seller-1-agent", "seller_5_agent", "buyer_agent",
+                                 "advocate_agent", "shield_agent", "shield-agent"])
 def test_reserved_agent_ids_are_refused(sid):
     err = refused(dict(good(), id=sid), "id", "reserved for a Tech Bazaar agent")
     assert [e["field"] for e in err.errors] == ["id"]
 
 
 def test_similar_but_unreserved_ids_are_accepted():
-    for sid in ("seller-one", "seller_one", "myseller_1", "my-seller-1", "buyer-2", "shield_x", "seller-1a"):
+    for sid in ("seller-one", "seller_one", "myseller_1", "my-seller-1", "buyer-2", "shield_x", "seller-1a",
+                "buyer_agent_2", "shield_agent_x", "seller-1-agents"):
         assert validate_config(dict(good(), id=sid))["id"] == sid
 
 
-@pytest.mark.parametrize("sid", ["seller-1", "seller-5", "seller_1"])
+@pytest.mark.parametrize("sid", ["seller-1", "seller-5", "seller_1", "seller_1_agent", "seller-1-agent",
+                                 "buyer_agent", "shield_agent"])
 def test_hyphen_ids_never_read_a_built_in_sellers_seed(sid, monkeypatch):
     """A hyphen id maps to the same env name as the built-in (seller-1 -> SELLER_1_AGENT_SEED), so it must be refused
     by the factory and, even if a caller skips the factory, by register_custom_seller."""
     monkeypatch.setenv("SELLER_1_AGENT_SEED", "reviewer-fake-seed-xyz")
     monkeypatch.setenv("SELLER_5_AGENT_SEED", "reviewer-fake-seed-xyz")
+    monkeypatch.setenv("BUYER_AGENT_SEED", "reviewer-fake-seed-xyz")
+    monkeypatch.setenv("SHIELD_AGENT_SEED", "reviewer-fake-seed-xyz")
     before = dict(common.SEEDS)
     with pytest.raises(ConfigError):
         seller_from_config(dict(good(), id=sid))

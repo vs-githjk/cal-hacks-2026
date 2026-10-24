@@ -179,6 +179,7 @@ class OrderPlaced(Model):
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
 SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named seller agents, each its own uAgent
 SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015}
+BUILT_IN_ROLES = ("buyer", "advocate", "shield", *SELLERS)
 SEEDS = {
     "buyer": os.getenv("BUYER_AGENT_SEED", "tech-bazaar-buyer-dev"),
     "advocate": os.getenv("ADVOCATE_AGENT_SEED") or os.getenv("ADVOCATE_SEED", "tech-bazaar-advocate-dev"),
@@ -194,10 +195,12 @@ def register_custom_seller(role: str) -> None:
     if role in SEEDS:
         raise ValueError(f"{role!r} is already a Tech Bazaar agent: a custom seller must not reuse its key")
     env = role.upper().replace("-", "_")
-    if env in {existing.upper() for existing in SEEDS}:
-        # 'seller-1' maps to SELLER_1_AGENT_SEED, the built-in seller_1's private seed.
-        raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env} belongs to a built-in agent, "
-                         "a custom seller must not reuse its key")
+    # Both env names a role reads are checked against every name a built-in reads: 'seller-1' and 'seller_1_agent'
+    # both land on SELLER_1_AGENT_SEED, 'buyer_agent' on BUYER_AGENT_SEED, so none may reuse a built-in's key.
+    owned = {f"{built_in.upper()}{suffix}" for built_in in BUILT_IN_ROLES for suffix in ("_AGENT_SEED", "_SEED")}
+    if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
+        raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
+                         "built-in agent, a custom seller must not reuse its key")
     SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
 
 
