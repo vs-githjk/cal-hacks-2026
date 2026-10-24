@@ -58,7 +58,7 @@ def attacks_tile(now: str) -> dict:
                                       "missed": h["missed"], "false_blocks": h["false_blocks"]},
                          "dev": {"attacks": d["attacks"], "block_rate": d["block_rate"], "false_block_rate": d["false_block_rate"]},
                          "adaptive": b["adaptive"], "judge_attempts": {"count": 0, "status": "console not built yet"},
-                         "voice": {"status": "voice set written (sim/attacks/voice.jsonl), not yet run"}},
+                         "voice": {"see_tile": "voice_attacks"}},
                  note=f"Run at {now} (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. "
                       "Dev (what the rules were written against) is shown separately, never pooled. Never say secure.")
 
