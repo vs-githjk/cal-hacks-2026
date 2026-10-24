@@ -166,3 +166,51 @@ def test_private_ranges_are_refused_before_connecting():
         with pytest.raises(ValueError, match="address not allowed"):
             guarded_get("http://shop.example/x", resolve=lambda h, ip=ip: [ip], request=lambda *a: calls.append(a))
         assert calls == [], ip
+
+
+FIX = __import__("pathlib").Path(__file__).resolve().parents[1] / "claim_check" / "fixtures"
+
+
+def fixture_check(text, name):
+    return check_claim({"text": text, "kind": "returns", "evidence_url": f"https://store.example/{name}"},
+                       fetch=lambda url: (FIX / url.rsplit("/", 1)[1]).read_bytes())
+
+
+def test_returns_read_from_json_ld_merchant_return_policy():  # #73 item 6
+    assert fixture_check("30-day returns", "sim-return-policy.html")["result"] == "false"
+    assert fixture_check("15-day returns", "sim-return-policy.html")["result"] == "verified"
+    out = fixture_check("30-day returns", "sim-no-returns.html")
+    assert out["result"] == "false" and "not permitted" in out["reason"]
+
+
+def test_real_page_without_a_return_policy_stays_unverified():
+    out = fixture_check("30-day returns", "mirror-canadacomputers-269441.html")
+    assert out["result"] == "unverified"
+    assert fixture_check("$1,749.99", "mirror-canadacomputers-269441.html")["result"] == "verified"  # saved page still parses
+
+def test_shipping_threshold_dollars_are_not_read_as_the_price():  # #99: never a false flag on an honest page
+    from data.claim_check import parse_claims
+    assert dict(parse_claims({"text": "New RTX 5070 Ti, free shipping over $35"})) == {"condition": "new"}
+    for text in ("Save $50 today, new", "$20 off, new", "New, $5 fee"):
+        assert "price" not in dict(parse_claims({"text": text})), text
+    assert check("New RTX 5070 Ti, free shipping over $35", HAL_GPU)["result"] == "verified"
+
+
+def test_two_price_amounts_make_the_price_unverified():
+    from data.claim_check import parse_claims
+    assert dict(parse_claims({"text": "$789 or $749 with trade-in"}))["price"] is None
+    out = check("$789 or $749 with trade-in", HAL_GPU, kind="price")
+    assert out["result"] == "unverified" and "more than one amount" in out["reason"]
+
+
+def test_a_false_price_beside_shipping_or_off_words_is_still_false():  # #106
+    for text in ("New RTX 5070 Ti, free shipping, $749", "Payoff price new $749", "Free shipping, new $749",
+                 "Free shipping: $749 new", "New $749 shipping included", "$50 off $749 new"):
+        out = check(text, HAL_GPU, kind="price")
+        assert out["result"] == "false" and "$749.00" in out["reason"], text
+
+
+def test_non_price_amounts_beside_offer_words_are_unverified_not_false():
+    for text in ("New, free shipping on orders of $35 or more", "New, includes $50 gift card", "New, save up to $50",
+                 "New, $25 rebate", "New, $10 coupon"):
+        assert check(text, HAL_GPU)["result"] == "unverified", text

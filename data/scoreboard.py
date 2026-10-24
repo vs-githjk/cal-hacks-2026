@@ -25,7 +25,9 @@ def savings_tile() -> dict:
     rows = observations()
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
-    return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
+    # Always none_yet for now: no verified purchase is recorded anywhere yet, so there is nothing to measure savings on.
+    status = "none_yet"
+    return _tile(id="verified_savings", title="Dated verified savings", status=status, value=None, unit="USD",
                  display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
                          f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
@@ -76,8 +78,8 @@ def learning_tile() -> dict:
     w = json.loads(pick.read_text())
     L = w["learning"]
     arch = L["per_archetype"]
-    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}"
-                     for a, v in arch.items())
+    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}, "
+                     f"lift vs median control {v['learner'] - v['control_median']:+.2f}" for a, v in arch.items())
     return _tile(id="learning_lift", title="Seller learning lift", status="measured" if L["quotable"] else "not_quotable",
                  value=None, unit="points",
                  display=(f"No lift to quote ({len(L['winning_archetypes'])} of {len(arch)} archetypes, not quotable): the learner "
