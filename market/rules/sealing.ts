@@ -20,7 +20,7 @@ export interface AuctionClock {
   config: SealConfig;
 }
 
-export type Viewer = { kind: "supplier"; id: string } | { kind: "buyer" } | { kind: "public" };
+export type Viewer = { kind: "seller"; id: string } | { kind: "buyer" } | { kind: "public" };
 
 export function newAuction(need_id: string, opened_ms: number, window_s: number, config: SealConfig = DEFAULT_SEAL): AuctionClock {
   return { need_id, opened_ms, deadline_ms: opened_ms + window_s * 1000, extensions: 0, closed_ms: null, config };
@@ -51,9 +51,9 @@ export function tryBid(a: AuctionClock, now_ms: number): BidTiming {
   return { accepted: true, extended: false, auction: a };
 }
 
-/** Bids a viewer may see. Suppliers only ever see their own; others see nothing until close. */
-export function visibleBids<B extends { supplier_id: string }>(bids: B[], a: AuctionClock, viewer: Viewer, now_ms: number): B[] {
-  if (viewer.kind === "supplier") return bids.filter((b) => b.supplier_id === viewer.id);
+/** Bids a viewer may see. Sellers only ever see their own; others see nothing until close. */
+export function visibleBids<B extends { seller_id: string }>(bids: B[], a: AuctionClock, viewer: Viewer, now_ms: number): B[] {
+  if (viewer.kind === "seller") return bids.filter((b) => b.seller_id === viewer.id);
   return isClosed(a, now_ms) ? bids : [];
 }
 

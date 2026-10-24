@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "type": "object",
  "properties": {
-  "supplier_id": {
+  "seller_id": {
    "type": "string"
   },
   "min_order_value": {
@@ -35,7 +35,7 @@
   }
  },
  "required": [
-  "supplier_id",
+  "seller_id",
   "min_order_value",
   "delivery_fee",
   "free_delivery_over",

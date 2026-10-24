@@ -1,12 +1,12 @@
-// Split-order optimizer: choose a supplier per line for the lowest total that meets every
-// supplier minimum, delivery fees included. Sizes are small (about 30 lines, 6 suppliers), so we
-// enumerate supplier subsets, assign each line to the cheapest supplier in the subset, then repair
-// any supplier under its minimum by moving in the lines that cost least extra to move.
-import type { Allocation, NeedItem, OrderPlan, PlanMode, SupplierTerms } from "./types";
+// Split-order optimizer: choose a seller per line for the lowest total that meets every
+// seller minimum, delivery fees included. Sizes are small (about 30 lines, 6 sellers), so we
+// enumerate seller subsets, assign each line to the cheapest seller in the subset, then repair
+// any seller under its minimum by moving in the lines that cost least extra to move.
+import type { Allocation, NeedItem, OrderPlan, PlanMode, SellerTerms } from "./types";
 import { money, round2 } from "./types";
 
 export interface Offer {
-  supplier_id: string;
+  seller_id: string;
   bid_id: string;
   sku_spec: string;
   unit_price: number;
@@ -16,19 +16,19 @@ export interface Offer {
 export interface PlanInput {
   need: { id: string; items: NeedItem[] };
   offers: Offer[];
-  terms: SupplierTerms[];
+  terms: SellerTerms[];
   advocate?: boolean;
-  names?: { suppliers?: Record<string, string>; items?: Record<string, string> };
+  names?: { sellers?: Record<string, string>; items?: Record<string, string> };
 }
 
-export type Plan = Omit<OrderPlan, "source"> & { uncovered: string[] };
+export type Plan = Omit<OrderPlan, "origin"> & { uncovered: string[] };
 
 const cents = (x: number) => Math.round(x * 100);
 const byStr = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
-/** Turn sealed bids into per-line offers: cheapest eligible line per supplier, full quantity only. */
+/** Turn sealed bids into per-line offers: cheapest eligible line per seller, full quantity only. */
 export function offersFromBids(
-  bids: { id: string; supplier_id: string; lines: { sku_spec: string; unit_price: number; quantity: number }[] }[],
+  bids: { id: string; seller_id: string; lines: { sku_spec: string; unit_price: number; quantity: number }[] }[],
   need: { id: string; items: NeedItem[] },
   eligible: (bidId: string, sku_spec: string) => boolean = () => true,
 ): Offer[] {
@@ -38,20 +38,20 @@ export function offersFromBids(
     for (const l of bid.lines) {
       const q = needQty.get(l.sku_spec);
       if (q === undefined || l.quantity < q || !eligible(bid.id, l.sku_spec)) continue;
-      const key = `${bid.supplier_id}|${l.sku_spec}`;
+      const key = `${bid.seller_id}|${l.sku_spec}`;
       const cur = best.get(key);
       if (!cur || l.unit_price < cur.unit_price || (l.unit_price === cur.unit_price && bid.id < cur.bid_id)) {
-        best.set(key, { supplier_id: bid.supplier_id, bid_id: bid.id, sku_spec: l.sku_spec, unit_price: l.unit_price, quantity: q });
+        best.set(key, { seller_id: bid.seller_id, bid_id: bid.id, sku_spec: l.sku_spec, unit_price: l.unit_price, quantity: q });
       }
     }
   }
-  return [...best.values()].sort((a, b) => byStr(a.supplier_id, b.supplier_id) || byStr(a.sku_spec, b.sku_spec));
+  return [...best.values()].sort((a, b) => byStr(a.seller_id, b.seller_id) || byStr(a.sku_spec, b.sku_spec));
 }
 
 interface Ctx {
   lines: string[]; // coverable sku_specs, sorted
-  offer: Map<string, Map<string, Offer>>; // sku -> supplier -> offer
-  terms: Map<string, SupplierTerms>;
+  offer: Map<string, Map<string, Offer>>; // sku -> seller -> offer
+  terms: Map<string, SellerTerms>;
 }
 
 const lineCost = (o: Offer) => cents(o.unit_price * o.quantity);
@@ -62,18 +62,18 @@ function feeOf(ctx: Ctx, s: string, subtotalC: number): number {
   return subtotalC < cents(t.free_delivery_over) ? cents(t.delivery_fee) : 0;
 }
 
-type Assignment = Map<string, string>; // sku -> supplier
+type Assignment = Map<string, string>; // sku -> seller
 
 function cheapestIn(ctx: Ctx, allowed: (s: string) => boolean): Assignment | null {
   const a: Assignment = new Map();
   for (const sku of ctx.lines) {
     let pick: Offer | undefined;
     for (const o of ctx.offer.get(sku)!.values()) {
-      if (!allowed(o.supplier_id)) continue;
-      if (!pick || lineCost(o) < lineCost(pick) || (lineCost(o) === lineCost(pick) && o.supplier_id < pick.supplier_id)) pick = o;
+      if (!allowed(o.seller_id)) continue;
+      if (!pick || lineCost(o) < lineCost(pick) || (lineCost(o) === lineCost(pick) && o.seller_id < pick.seller_id)) pick = o;
     }
     if (!pick) return null;
-    a.set(sku, pick.supplier_id);
+    a.set(sku, pick.seller_id);
   }
   return a;
 }
@@ -97,7 +97,7 @@ function totalOf(ctx: Ctx, a: Assignment): { sub: number; fees: number } {
 const underMin = (ctx: Ctx, a: Assignment) =>
   [...subtotals(ctx, a)].filter(([s, st]) => st < minOf(ctx, s)).map(([s]) => s).sort(byStr);
 
-/** Move lines into suppliers under their minimum without pushing a donor under its own. */
+/** Move lines into sellers under their minimum without pushing a donor under its own. */
 function repair(ctx: Ctx, start: Assignment): Assignment | null {
   const a = new Map(start);
   for (let guard = 0; guard < ctx.lines.length * ctx.lines.length + 1; guard++) {
@@ -125,25 +125,25 @@ export function planOrder(input: PlanInput, mode: PlanMode): Plan {
   const offer = new Map<string, Map<string, Offer>>();
   for (const o of input.offers) {
     if (!offer.has(o.sku_spec)) offer.set(o.sku_spec, new Map());
-    const cur = offer.get(o.sku_spec)!.get(o.supplier_id);
+    const cur = offer.get(o.sku_spec)!.get(o.seller_id);
     if (!cur || lineCost(o) < lineCost(cur) || (lineCost(o) === lineCost(cur) && o.bid_id < cur.bid_id)) {
-      offer.get(o.sku_spec)!.set(o.supplier_id, o);
+      offer.get(o.sku_spec)!.set(o.seller_id, o);
     }
   }
   const ctx: Ctx = {
     lines: [...offer.keys()].sort(byStr),
     offer,
-    terms: new Map(input.terms.map((t) => [t.supplier_id, t])),
+    terms: new Map(input.terms.map((t) => [t.seller_id, t])),
   };
   const uncovered = input.need.items.map((i) => i.sku_spec).filter((s) => !offer.has(s));
   const naive = cheapestIn(ctx, () => true) ?? new Map();
 
   let chosen: Assignment = naive;
   if (mode === "optimizer" && ctx.lines.length) {
-    const suppliers = [...new Set(input.offers.map((o) => o.supplier_id))].sort(byStr);
+    const sellers = [...new Set(input.offers.map((o) => o.seller_id))].sort(byStr);
     let best: { a: Assignment; total: number; n: number } | undefined;
-    for (let mask = 1; mask < 1 << suppliers.length; mask++) {
-      const inSet = new Set(suppliers.filter((_, i) => mask & (1 << i)));
+    for (let mask = 1; mask < 1 << sellers.length; mask++) {
+      const inSet = new Set(sellers.filter((_, i) => mask & (1 << i)));
       const start = cheapestIn(ctx, (s) => inSet.has(s));
       if (!start || new Set(start.values()).size !== inSet.size) continue;
       const fixed = repair(ctx, start);
@@ -158,16 +158,16 @@ export function planOrder(input: PlanInput, mode: PlanMode): Plan {
 }
 
 function toPlan(input: PlanInput, ctx: Ctx, mode: PlanMode, a: Assignment, naive: Assignment, uncovered: string[]): Plan {
-  const sName = (s: string) => input.names?.suppliers?.[s] ?? s;
+  const sName = (s: string) => input.names?.sellers?.[s] ?? s;
   const iName = (k: string) => input.names?.items?.[k] ?? k;
   const bySup = new Map<string, Allocation>();
   for (const sku of ctx.lines) {
     const s = a.get(sku)!;
     const o = ctx.offer.get(sku)!.get(s)!;
-    if (!bySup.has(s)) bySup.set(s, { supplier_id: s, bid_id: o.bid_id, lines: [] });
+    if (!bySup.has(s)) bySup.set(s, { seller_id: s, bid_id: o.bid_id, lines: [] });
     bySup.get(s)!.lines.push({ sku_spec: sku, quantity: o.quantity, unit_price: o.unit_price });
   }
-  const allocations = [...bySup.values()].sort((x, y) => byStr(x.supplier_id, y.supplier_id));
+  const allocations = [...bySup.values()].sort((x, y) => byStr(x.seller_id, y.seller_id));
   const { sub, fees } = totalOf(ctx, a);
   const short = underMin(ctx, a);
   const naiveTotal = totalOf(ctx, naive);
@@ -189,7 +189,7 @@ function toPlan(input: PlanInput, ctx: Ctx, mode: PlanMode, a: Assignment, naive
     explanation.push(
       moved
         ? `Cheapest per line would send ${sName(s)} only ${money(st / 100)}, under its ${money(minOf(ctx, s) / 100)} minimum; this plan clears it.`
-        : `${sName(s)} gets ${money(st / 100)}, under its ${money(minOf(ctx, s) / 100)} minimum, so the supplier may refuse this order.`,
+        : `${sName(s)} gets ${money(st / 100)}, under its ${money(minOf(ctx, s) / 100)} minimum, so the seller may refuse this order.`,
     );
   }
   if (mode === "optimizer" && naiveTotal.fees > fees) explanation.push(`Saves ${money((naiveTotal.fees - fees) / 100)} in delivery fees.`);

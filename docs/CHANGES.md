@@ -15,3 +15,4 @@
 - [21:56] B (proposed): Bid and Claim gain origin (LIVE|MIRROR|SIM, required). source changes from the old live|mirror|simulated enum to a string (listing URL, actor id or dataset id), matching C's SpecCard. Bid.supplier_id becomes seller_id. Bid.lines[] gains optional offered_condition (new|open-box|refurbished|used|unknown) per the 21:00 rename; offered_spec stays optional.
 - [21:56] B: SpecCard now uses C's schema (21:45) byte for byte, replacing B's restaurant-shaped draft. One SpecCard, owned by C.
 - [21:56] B (proposed): FloorEvent v2 kinds gain goal_posted, goal_state, round_opened, approval_recorded, payment_recorded, loss_report, allowance_raised; supplier_id becomes seller_id.
+- [21:58] B (proposed): SupplierTerms renamed SellerTerms; supplier_id becomes seller_id in SellerTerms, OrderPlan, QualityRecord and Persona (term map). SupplierSignal is D's and is left alone.

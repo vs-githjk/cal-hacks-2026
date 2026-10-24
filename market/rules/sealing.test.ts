@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { closeAuction, isClosed, newAuction, sealedCount, tryBid, visibleBids } from "./sealing";
 
 const cfg = { extend_s: 10, snipe_window_s: 5, max_extensions: 2 };
-const bid = (id: string, supplier_id: string) => ({ id, supplier_id });
+const bid = (id: string, seller_id: string) => ({ id, seller_id });
 
 describe("sealing", () => {
   it("accepts a bid before the deadline without extending when early", () => {
@@ -42,30 +42,30 @@ describe("sealing", () => {
   it("before close, only the bidder sees its own bid; nobody else sees anything", () => {
     const a = newAuction("n1", 0, 60, cfg);
     const bids = [bid("b1", "s1"), bid("b2", "s2")];
-    expect(visibleBids(bids, a, { kind: "supplier", id: "s1" }, 1000)).toEqual([bids[0]]);
+    expect(visibleBids(bids, a, { kind: "seller", id: "s1" }, 1000)).toEqual([bids[0]]);
     expect(visibleBids(bids, a, { kind: "buyer" }, 1000)).toEqual([]);
     expect(visibleBids(bids, a, { kind: "public" }, 1000)).toEqual([]);
     expect(sealedCount(bids)).toBe(2);
   });
 
-  it("after close, buyer and public see all bids, suppliers still only their own", () => {
+  it("after close, buyer and public see all bids, sellers still only their own", () => {
     const a = newAuction("n1", 0, 60, cfg);
     const bids = [bid("b1", "s1"), bid("b2", "s2")];
     expect(visibleBids(bids, a, { kind: "buyer" }, 61_000)).toEqual(bids);
     expect(visibleBids(bids, a, { kind: "public" }, 61_000)).toEqual(bids);
-    expect(visibleBids(bids, a, { kind: "supplier", id: "s2" }, 61_000)).toEqual([bids[1]]);
+    expect(visibleBids(bids, a, { kind: "seller", id: "s2" }, 61_000)).toEqual([bids[1]]);
   });
 
-  it("property: before close, a non-bidder never sees another supplier's bid", () => {
+  it("property: before close, a non-bidder never sees another seller's bid", () => {
     fc.assert(
       fc.property(
-        fc.array(fc.record({ id: fc.uuid(), supplier_id: fc.constantFrom("s1", "s2", "s3") })),
+        fc.array(fc.record({ id: fc.uuid(), seller_id: fc.constantFrom("s1", "s2", "s3") })),
         fc.constantFrom("s1", "s2", "s3", "s4"),
         fc.integer({ min: 0, max: 59_999 }),
         (bids, viewer, now) => {
           const a = newAuction("n", 0, 60, cfg);
-          const seen = visibleBids(bids, a, { kind: "supplier", id: viewer }, now);
-          return seen.every((b) => b.supplier_id === viewer);
+          const seen = visibleBids(bids, a, { kind: "seller", id: viewer }, now);
+          return seen.every((b) => b.seller_id === viewer);
         },
       ),
     );

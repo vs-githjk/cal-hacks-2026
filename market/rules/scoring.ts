@@ -1,26 +1,33 @@
-// Rank sealed bids: landed price minus perks value, lowest first. Wrong spec disqualifies.
-import type { Bid, BidLine, Result, SpecCard } from "./types";
+// Rank sealed bids: landed price minus perks value, lowest first. A line whose condition or
+// variant differs from the goal disqualifies the bid. The fee is never read here.
+import type { MarketConfig } from "../config";
+import type { Bid, BidLine, NeedItem, Result } from "./types";
 import { round2 } from "./types";
 
-export function checkLineSpec(line: BidLine, specCards: Map<string, SpecCard>): Result {
-  const card = specCards.get(line.sku_spec);
-  if (!card) return { ok: false, reasons: [`${line.sku_spec}: no spec card for this item`] };
+export function checkLineSpec(line: BidLine, needItems: Map<string, NeedItem>): Result {
+  const item = needItems.get(line.sku_spec);
+  if (!item) return { ok: false, reasons: [`${line.sku_spec}: not part of this goal`] };
+  const reasons: string[] = [];
   const offered = line.offered_spec ?? line.sku_spec;
-  if (offered === card.sku_spec || card.allowed_substitutes.includes(offered)) return { ok: true };
-  return { ok: false, reasons: [`${card.item_name}: offered ${offered}, spec is ${card.sku_spec} (not equivalent)`] };
+  if (offered !== item.sku_spec) reasons.push(`variant: offered ${offered}, goal asks for ${item.sku_spec}`);
+  const cond = line.offered_condition ?? item.condition;
+  if (cond !== item.condition) reasons.push(`condition: offered ${cond}, goal asks for ${item.condition}`);
+  return reasons.length ? { ok: false, reasons } : { ok: true };
 }
 
-/** Sum of line prices. Never trusts the supplier's stated total. */
+/** Sum of line prices. Never trusts the seller's stated total. */
 export function landedPrice(bid: Pick<Bid, "lines">): number {
   return round2(bid.lines.reduce((s, l) => s + l.unit_price * l.quantity, 0));
 }
 
 export interface RankOptions {
-  specCards: Map<string, SpecCard>;
+  needItems: Map<string, NeedItem>;
   perksValue?: (bid: Bid) => number;
   verifiedClaims?: (bid: Bid) => number;
-  /** Rejections from other checks (floor, recall, failed claim, Shield), by bid id. */
+  /** Rejections from other checks (floor, CPSC recall, claim check, Shield), by bid id. */
   rejections?: Map<string, string[]>;
+  /** Accepted so callers can pass the whole config; the fee in it is deliberately unused. */
+  config?: MarketConfig;
 }
 
 export interface Ranked {
@@ -37,7 +44,7 @@ export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; di
   for (const bid of bids) {
     const reasons = [...(opts.rejections?.get(bid.id) ?? [])];
     for (const line of bid.lines) {
-      const r = checkLineSpec(line, opts.specCards);
+      const r = checkLineSpec(line, opts.needItems);
       if (!r.ok) reasons.push(...r.reasons);
     }
     if (reasons.length) {

@@ -21,7 +21,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
-     "supplier_id": {
+     "seller_id": {
       "type": "string"
      },
      "bid_id": {
@@ -52,7 +52,7 @@
      }
     },
     "required": [
-     "supplier_id",
+     "seller_id",
      "bid_id",
      "lines"
     ]
