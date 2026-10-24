@@ -8,7 +8,6 @@ import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, R
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
-import { DotPattern } from "./ui/dot-pattern";
 
 
 export interface BuyerScreenProps {
@@ -58,7 +57,7 @@ function Searches({ goals }: { goals: GoalView[] }) {
             <p className="min-w-0 text-[15px] font-medium text-balance"><q>{g.text}</q></p>
             <StatePill state={g.state} />
           </div>
-          <p className="mt-1 text-[13px] text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
+          <p className="mt-1 text-[13px] tabular-nums text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
         </Card>
       ))}
     </div>
@@ -133,8 +132,6 @@ export function MarketScreen(p: MarketScreenProps) {
   return (
     <div className="grid gap-3.5">
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        {/* Very faint, static, decorative; fades out before the small round text on the right. */}
-        <DotPattern width={12} height={12} className="fill-line [mask-image:linear-gradient(to_right,white,transparent_40%)]" />
         <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee&apos;s floor</span></div>
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}
