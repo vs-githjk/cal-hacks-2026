@@ -68,11 +68,18 @@
        "allOf": [{"if": {"properties": {"origin": {"const": "SIM"}}, "required": ["origin"]},
                  "then": {"properties": {"source": {"const": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py"}}}}],
        "description": "Public floor evidence provenance only; the numeric private floor is excluded."},
-     "shipping_evidence": {"type": "object", "properties": {
-       "origin": {"type": "string", "const": "SIM"},
-       "source": {"type": "string", "const": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py"},
-       "policy": {"type": "string", "const": "Shipping amount unobserved; zero is the existing SIM policy."}},
-       "required": ["origin", "source", "policy"], "additionalProperties": false}
+     "shipping_evidence": {"oneOf": [
+       {"type": "object", "properties": {
+         "origin": {"type": "string", "const": "SIM"},
+         "source": {"type": "string", "const": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py"},
+         "policy": {"type": "string", "const": "Shipping amount unobserved; zero is the existing SIM policy."}},
+         "required": ["origin", "source", "policy"], "additionalProperties": false},
+       {"type": "object", "properties": {
+         "origin": {"type": "string", "const": "MIRROR"},
+         "source": {"type": "string"},
+         "observed_at": {"type": "string"}},
+         "required": ["origin", "source", "observed_at"], "additionalProperties": false}
+     ]}
     },
     "not": {"required": ["floor"]},
     "required": [

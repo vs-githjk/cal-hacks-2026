@@ -16,6 +16,8 @@ def _mirror_listings(name: str) -> list[dict]:
     stores = CATALOG.get("mirror_assignments", {}).get(name, {})
     rows = []
     for path in sorted(SNAPSHOTS.glob("*.json")):
+        if "sold" in path.name.lower():
+            continue
         store = path.name.split("-")[0]
         seller_of_record = stores.get(store)
         if not seller_of_record:
@@ -42,12 +44,20 @@ def _term(value: dict, key: str) -> bool:
     source = item.get("source")
     observed_at = item.get("observed_at")
     try:
+        if not isinstance(source, str) or len(source) > 2048:
+            return False
         parsed = urlsplit(source)
+        hostname = parsed.hostname
+        port = parsed.port
         when = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
         return (isinstance(amount, (int, float)) and not isinstance(amount, bool) and math.isfinite(amount)
-                and amount >= 0 and parsed.scheme in ("http", "https") and parsed.hostname is not None
-                and parsed.username is None and parsed.password is None and when.tzinfo is not None)
-    except (AttributeError, TypeError, ValueError):
+                and amount >= 0 and parsed.scheme in ("http", "https") and isinstance(hostname, str)
+                and hostname and not any(char.isspace() or ord(char) < 0x20 or ord(char) == 0x7f for char in hostname)
+                and parsed.username is None and parsed.password is None
+                and (port is None or 1 <= port <= 65535)
+                and not any(ord(char) <= 0x20 or ord(char) == 0x7f for char in source)
+                and when.tzinfo is not None and when.utcoffset() is not None)
+    except (AttributeError, TypeError, ValueError, OverflowError):
         return False
 
 
@@ -123,7 +133,8 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
                           "model_number": card.get("model_number"),
                           "snapshot_id": card["snapshot_id"], "snapshot_date": card["snapshot_date"],
                           "floor_evidence": {k: inputs["floor"][k] for k in ("origin", "source", "observed_at")},
-                          "shipping_evidence": dict(inputs["shipping"])})
+                          "shipping_evidence": {key: inputs["shipping"][key]
+                                                for key in ("origin", "source", "observed_at")}})
             origins.add("MIRROR")
     if not lines or len(origins) != 1:
         return None

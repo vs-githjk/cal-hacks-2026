@@ -221,6 +221,9 @@ def test_registered_bid_handler_applies_own_loss_before_building_and_sending_bid
             events.append("reports")
             return [_loss()]
 
+        def publish_bid(self, **_kwargs):
+            events.append("publish")
+
     monkeypatch.setattr(seller_agent, "MarketBridge", _LearningBridge)
     original_make_bid = policy_make_bid
 
@@ -240,7 +243,7 @@ def test_registered_bid_handler_applies_own_loss_before_building_and_sending_bid
 
     asyncio.run(handler(ctx, "buyer-test", message))
 
-    assert events == ["reports", ("make_bid", 0.07), "reply"]
+    assert events == ["reports", ("make_bid", 0.07), "publish", "reply"]
     assert len(ctx.sent) == 1
     bid = json.loads(ctx.sent[0][1].bid_json)
     assert bid["lines"][0]["unit_price"] == 90.21
