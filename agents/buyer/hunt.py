@@ -1,4 +1,5 @@
 """a4/a5 pure hunt rules: goal states, step-event throttle, retry, quote TTL, payment settle. No I/O."""
+import re
 from datetime import datetime, timezone
 
 from uagents_core.contrib.protocols.payment import RejectPayment, RequestPayment
@@ -13,6 +14,17 @@ QUOTE_TTL_S = 600  # a quote is good for 10 minutes
 QUOTE_DRIFT = 0.02  # more than 2% price change restarts the card
 BUY_PUBLIC_IF_NO_BID = False  # ruling 12, not confirmed: when False we only name the best public listing
 OPEN = ("ACTIVE", "HUNTING", "HOLD_FOR_CALL")  # states the deadline can still expire
+
+
+def command(text: str):
+    """("approve", n) or ("cancel",) only when that is the whole message (leading @mentions allowed),
+    so an approval word inside a longer text, such as an assistant's recap, never counts. Else None."""
+    t = re.sub(r"^(?:@\S+\s+)+", "", text.strip()).strip().rstrip(".!").strip()
+    if m := re.fullmatch(r"(?i)approve\s+#?(\d+)", t):
+        return ("approve", int(m.group(1)))
+    if re.fullmatch(r"(?i)cancel", t):
+        return ("cancel",)
+    return None
 
 
 def pick_best(bids: list[dict], cards: dict) -> int | None:
