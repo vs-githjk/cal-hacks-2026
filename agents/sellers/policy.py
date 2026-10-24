@@ -161,7 +161,7 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
                           "listing_id": card["id"], "listing_url": card["source"],
                           "attrs": dict(card.get("attrs") or {}),
                           "origin": "MIRROR", "source": card["source"], "seller_of_record": card["seller_of_record"],
-                          "model_number": card.get("model_number"),
+                          **({"model_number": card["model_number"]} if isinstance(card.get("model_number"), str) else {}),
                           "snapshot_id": card["snapshot_id"], "snapshot_date": card["snapshot_date"],
                           "floor_evidence": {k: inputs["floor"][k] for k in ("origin", "source", "observed_at")},
                           "shipping_evidence": {key: inputs["shipping"][key]

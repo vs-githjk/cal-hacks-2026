@@ -33,6 +33,8 @@ export interface RankedBid {
   why: string;
   sourceUrl?: string;
   won: boolean;
+  /** #191: the referee ranked it below confirmed bids (advocate caution); the reason as close_round wrote it. */
+  heldBack?: string;
   /** The market row this bid was drawn from (round_result/<id>); absent on sample rows. */
   rowRef?: string;
 }
@@ -41,7 +43,7 @@ export interface VetoView {
   seller: string;
   origin: Origin;
   landed: number;
-  claim: string; // what the seller said
+  claim?: string; // what the seller said (a false claim check); absent when none was checked
   finding: string; // what the page showed
   ruleId: string;
   sourceUrl: string;
@@ -51,15 +53,15 @@ export interface VetoView {
 
 export interface ShieldView {
   verdict: "block" | "quarantine" | "allow";
-  severity: string;
+  severity?: string; // severity, chars, latency and version come from the Shield service; a market row does not store them
   seller: string;
   pageOrigin: Origin;
-  chars: number;
-  latencyMs: number;
+  chars?: number;
+  latencyMs?: number;
   evidence: { text: string; hit: boolean }[]; // spans; hit = highlighted
   ruleIds: string[];
   control?: { name: string; verdict: string; latencyMs: number };
-  version: string;
+  version?: string;
   verdictOrigin: Origin;
 }
 
@@ -67,9 +69,10 @@ export interface ApprovalView {
   amount: number;
   payee: string;
   allowance: number;
-  wordPair: string; // the one-time code shown on this screen only
+  wordPair?: string; // the one-time code shown on this screen only (absent once a live deal is approved)
   codeExpiresAt: Date;
-  whyAnswer: string; // the advocate's spoken answer to "why not the cheaper one?"
+  whyAnswer?: string; // the advocate's spoken answer to "why not the cheaper one?"
+  within?: boolean; // approved by the allowance rule, not a call
   attempts: { at: Date; label: string; said: string; approved: boolean }[];
 }
 
@@ -91,20 +94,21 @@ export const REVIEW_MAX_FAILURES = 5;
 
 export interface ReceiptView {
   seller: string;
-  item: string;
-  condition: string;
+  item?: string;
+  condition?: string;
   amount: number;
-  shipping: number;
+  shipping?: number; // absent when the market row does not state it (never shown as $0)
   paymentMethod: string;
   chargeId: string;
   chargeStatus: string; // e.g. "SIM stub, no money moved"
+  chargeOrigin?: Origin;
   paidAt: Date;
   mandateId: string;
   mandateHash: string;
   mandateExpires: Date;
   mandateOrigin: Origin;
-  signature: string;
-  replayRefused: boolean;
+  signature?: string;
+  replayRefused?: boolean;
 }
 
 export type FeedKind = "deal" | "bid" | "veto" | "block" | "progress";
@@ -133,7 +137,7 @@ export interface SellerLine {
   landed: number;
   referee: "passed" | "refused";
   refereeReason?: string;
-  outcome: { kind: "won" | "ranked" | "veto" | "ineligible" | "alt" | "refused"; rank?: number; note?: string };
+  outcome: { kind: "won" | "ranked" | "held" | "veto" | "ineligible" | "alt" | "refused"; rank?: number; note?: string };
 }
 
 export interface LossReport { seller: string; origin: Origin; gapBand: string; reason: string; sourceUrl: string }
@@ -204,7 +208,10 @@ export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItem
 
 interface EventRow { id: bigint; kind: string; refTable: string; refId: string; sellerId: string; label: string; origin: string; at: Timestamp }
 interface LineRow { offeredCondition: string; unitPrice: number }
-interface ResultRow { id: bigint; roundId: string; bidId: string; sellerId: string; persona: string; rank: number; landed: number; reasons: string[]; lines: LineRow[]; origin: string; source: string }
+interface ResultRow {
+  id: bigint; roundId: string; bidId: string; sellerId: string; persona: string; rank: number; landed: number; reasons: string[];
+  lines: LineRow[]; origin: string; source: string;
+}
 interface RoundRow { id: string; needId: string; openedAt: Timestamp; deadline: Timestamp; extensions: number; state: string; sealedCount: number; closedAt?: Timestamp; origin: string }
 
 /** The latest advocate card per bid, read from the public advocate_card events ("Advocate veto (rule)" or "Advocate: buy"). */
@@ -233,6 +240,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
       const ranked = r.rank > 0;
       const picked = r.lines[0];
       const refused = !ranked && r.reasons.some((x) => /floor/i.test(x));
+      const held = ranked ? r.reasons.find((x) => x.startsWith("held back")) : undefined;
       return {
         rank: ranked ? r.rank : null,
         seller: r.persona || r.sellerId,
@@ -244,6 +252,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         why: r.reasons.join("; ") || card?.label || "",
         sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
+        ...(held ? { heldBack: held } : {}),
         rowRef: `round_result/${r.id}`,
       };
     });
@@ -319,6 +328,8 @@ export function linesFromRows(results: readonly ResultRow[], events: readonly Ev
       if (i > 0) return { ...base, outcome: { kind: "alt", note: "not the picked line" } };
       if (r.rank === 0) return { ...base, outcome: { kind: "ineligible", note: r.reasons.join("; ") || "not eligible" } };
       if (card?.rec === "veto") return { ...base, outcome: { kind: "veto", rank: r.rank, note: card.label } };
+      const held = r.reasons.find((x) => x.startsWith("held back"));
+      if (held) return { ...base, outcome: { kind: "held", rank: r.rank, note: held } };
       return { ...base, outcome: { kind: r.rank === 1 ? "won" : "ranked", rank: r.rank } };
     }),
   );
@@ -371,4 +382,64 @@ interface PendingRow { mandateHash: string; mandateId: string; amount: number; p
 export function reviewFromRows(rows: readonly PendingRow[]): ReviewView | null {
   const r = [...rows].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
   return r ? { ...r, expiry: d(r.expiry), origin: asOrigin(r.origin) } : null;
+}
+
+// ---- #191-5: live veto, Shield, approval and receipt cards (my_bid_checks, my_deals). Only what the rows hold; nothing filled in.
+
+interface CheckRow { id: bigint; bidId: string; roundId: string; sellerId: string; persona: string; bidOrigin: string; kind: string; result: string; detail: string; evidenceUrl: string; origin: string; at: Timestamp }
+interface DealRow {
+  mandateHash: string; mandateId: string; dealId: string; amount: number; payee: string; expiry: Timestamp; withinAllowance: boolean; origin: string;
+  approvalMethod: string; voiceApprovalId: string; approvedAt?: Timestamp; paymentRef: string; paymentMode: string; paidAt?: Timestamp;
+}
+
+const latestOf = <T extends { id: bigint }>(xs: T[]) => [...xs].sort((a, b) => (a.id < b.id ? 1 : -1))[0];
+
+/** The latest advocate veto in this round, with the seller's false claim (if one was checked) and the landed price. */
+export function vetoFromRows(checks: readonly CheckRow[], results: readonly ResultRow[], roundId: string | undefined): VetoView | null {
+  const c = latestOf(checks.filter((x) => x.roundId === roundId && x.kind === "advocate" && x.result === "veto"));
+  if (!c) return null;
+  const [, rule = "", text = c.detail] = /^([\w.]+): (.*)$/s.exec(c.detail) ?? [];
+  const claim = latestOf(checks.filter((x) => x.bidId === c.bidId && x.kind === "claim" && x.result === "false"));
+  return {
+    seller: c.persona || c.sellerId, origin: asOrigin(c.bidOrigin), landed: results.find((r) => r.bidId === c.bidId)?.landed ?? 0,
+    ...(claim ? { claim: claim.detail } : {}), finding: text, ruleId: rule, sourceUrl: c.evidenceUrl, checkedAt: d(c.at), checkOrigin: asOrigin(c.origin),
+  };
+}
+
+/** The latest Shield block or quarantine in this round, with the rule ids the row stores. */
+export function shieldFromRows(checks: readonly CheckRow[], roundId: string | undefined): ShieldView | null {
+  const c = latestOf(checks.filter((x) => x.roundId === roundId && x.kind === "shield" && x.result !== "allow"));
+  if (!c) return null;
+  return {
+    verdict: c.result === "quarantine" ? "quarantine" : "block", seller: c.persona || c.sellerId, pageOrigin: asOrigin(c.bidOrigin),
+    evidence: [], ruleIds: c.detail.split(",").map((x) => x.trim()).filter(Boolean), verdictOrigin: asOrigin(c.origin),
+  };
+}
+
+const PAY_LABEL: Record<string, { method: string; status: string; origin: Origin }> = {
+  sim: { method: "SIM stub", status: "SIM stub, no money moved", origin: "SIM" },
+  stripe_test: { method: "Stripe test mode", status: "Stripe test mode", origin: "LIVE" },
+};
+
+/** The buyer's latest deal: the approval card once the call (or the allowance) approved it, the receipt once paid. */
+export function dealFromRows(deals: readonly DealRow[], allowance: number | null, results: readonly ResultRow[] = []): { approval: ApprovalView | null; receipt: ReceiptView | null } {
+  const dl = [...deals].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
+  if (!dl) return { approval: null, receipt: null };
+  const approval: ApprovalView | null = dl.approvalMethod && dl.approvedAt
+    ? {
+        amount: dl.amount, payee: dl.payee, allowance: allowance ?? 0, codeExpiresAt: d(dl.expiry), within: dl.approvalMethod === "allowance",
+        attempts: [{ at: d(dl.approvedAt), label: dl.approvalMethod === "allowance" ? "Approved within the allowance" : "Approved on the call", said: dl.voiceApprovalId ? `VoiceApproval ${dl.voiceApprovalId}` : "", approved: true }],
+      }
+    : null;
+  const bidId = dl.dealId.replace(/^deal-/, "").split(":").pop();
+  const line = results.find((r) => r.bidId === bidId)?.lines[0] as (LineRow & { skuSpec?: string }) | undefined;
+  const pay = PAY_LABEL[dl.paymentMode] ?? PAY_LABEL.sim!;
+  const receipt: ReceiptView | null = dl.paidAt
+    ? {
+        seller: dl.payee, ...(line?.skuSpec ? { item: line.skuSpec } : {}), ...(line?.offeredCondition ? { condition: line.offeredCondition } : {}),
+        amount: dl.amount, paymentMethod: pay.method, chargeId: dl.paymentRef, chargeStatus: pay.status, chargeOrigin: pay.origin, paidAt: d(dl.paidAt),
+        mandateId: dl.mandateId, mandateHash: dl.mandateHash, mandateExpires: d(dl.expiry), mandateOrigin: asOrigin(dl.origin),
+      }
+    : null;
+  return { approval, receipt };
 }
