@@ -178,18 +178,22 @@ def format_settlement_result(envelope: Mapping[str, Any]) -> str:
     mandate_hash = settlement.get("mandate_hash")
     deal_id = settlement.get("deal_id")
     cents = settlement.get("amount_cents")
-    if (not isinstance(mandate_hash, str) or len(mandate_hash) != 64
-            or not isinstance(deal_id, str) or not deal_id
+    if (not isinstance(mandate_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", mandate_hash)
+            or not isinstance(deal_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", deal_id)
             or isinstance(cents, bool) or not isinstance(cents, int) or cents <= 0):
         return "Payment result unavailable; do not mark this purchase paid."
     prefix = mandate_hash[:12]
     if result.get("status") == "charged":
         charge_id = result.get("charge_id")
         origin = result.get("origin")
-        if (result.get("mandate_hash") != mandate_hash or origin not in ("SIM", "stripe_test")
-                or not isinstance(charge_id, str) or not charge_id.startswith(("pi_", "ch_"))):
+        mode = settlement.get("mode")
+        if mode not in ("SIM", "stripe_test"):
+            return "Payment mode unavailable; do not mark this purchase paid."
+        if (result.get("mandate_hash") != mandate_hash or origin != "SIM"
+                or not isinstance(charge_id, str)
+                or not re.fullmatch(r"(?:pi|ch)_[A-Za-z0-9_]{1,128}", charge_id)):
             return "Payment result unavailable; do not mark this purchase paid."
-        return (f"{origin} payment confirmed for deal {deal_id}: ${cents // 100}.{cents % 100:02d}, "
+        return (f"{mode} payment confirmed for deal {deal_id}: ${cents // 100}.{cents % 100:02d}, "
                 f"reference {charge_id}, mandate {prefix}.")
     if result.get("status") == "refused" or result.get("status") == "uncertain":
         return f"Payment {result['status']} for deal {deal_id}; mandate {prefix}."
