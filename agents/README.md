@@ -90,6 +90,8 @@ Register each once, while it is running, using the existing private `AGENTVERSE_
 .venv/Scripts/python connect.py 8004
 ```
 
+Buyer-owned goals, owned parts and purchase state live in the ignored local SQLite file `agents/.state/state.sqlite3`; TAP replay nonces share that file. The dedicated `.state` directory is restricted to the current Windows user and mode `0700` on POSIX so SQLite journals and WAL sidecars inherit private access; the database itself uses a restricted Windows DACL and mode `0600` on POSIX. If the legacy `agents/.state.sqlite3` exists without the new database, startup fails closed with a migration instruction. Startup recovery pauses an interrupted approval and marks a submitted payment uncertain. It never restores an old uAgents `Context`, resumes a voice call or retries a charge. After restart, the buyer must reattach through a fresh authenticated conversation and review a fresh quote before continuing. The current agent supports one active buyer at a time; another buyer receives a generic busy reply without private state. Custom `open_state(path)` locations must place the database inside a dedicated `.state` directory.
+
 Check each profile is Active on Agentverse, then find each by name in a fresh ASI:One chat. Local web chat fallback: `.venv/Scripts/python buyer/web_chat.py`, then open http://localhost:8080. Lane D owns mailbox flags in `scripts/launch.py`.
 
 ## Safety rules in code
