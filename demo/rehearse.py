@@ -12,7 +12,7 @@ Nothing is faked: a check that cannot be read is recorded as `skipped` with the 
 and never fatal, and a stack that is down means no run (exit code 2). Secrets: the harness reads no token or env file, and
 any env value whose name looks secret is replaced by `[redacted]` in everything it prints or writes.
 
-Exit codes: 0 every run exited 0 and no check failed, 1 a run failed or a check failed, 2 the stack is down.
+Exit codes: 0 every run exited 0 and no check failed (a skipped check keeps 0 but the run is called unverified, never clean), 1 a run failed or a check failed, 2 the stack is down.
 """
 from __future__ import annotations
 
@@ -171,8 +171,9 @@ def one_run(k: int, cmd: str, out: Path, args, secrets: list, sql, shoot, say) -
     log_path = out / f"run{k}.log"
     timed_out = False
     with open(log_path, "w") as log:
+        # A Python stage block-buffers a pipe; without this every BEAT line arrives at exit and every beat reads 0 s.
         proc = subprocess.Popen(shlex.split(cmd), cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, bufsize=1)
+                                text=True, bufsize=1, env={**os.environ, "PYTHONUNBUFFERED": "1"})
         fired = threading.Event()
 
         def kill():
@@ -241,8 +242,10 @@ def report_md(runs: list, cmd: str, args, started: str) -> str:
         L.append(f"Slowest beat: beat {b} in run {run} ({s} s).")
     else:
         L.append("Slowest beat: unknown (the stage command printed no `BEAT <n>` lines, so there are no per-beat timings).")
-    passed = sum(1 for r in runs if r["exit_code"] == 0 and "fail" not in r["checks"].values())
-    L += [f"Clean runs: {passed} of {len(runs)} (exit 0 and no failed check).", ""]
+    clean = sum(1 for r in runs if is_clean(r))
+    unverified = sum(1 for r in runs if is_unverified(r))
+    L += [f"Clean runs: {clean} of {len(runs)} (exit 0 and every check passed).",
+          f"Unverified runs: {unverified} of {len(runs)} (exit 0, no failed check, but at least one check was skipped, so the end state was not confirmed).", ""]
     problems = []
     for r in runs:
         if r["exit_code"] != 0:
@@ -261,6 +264,14 @@ def report_md(runs: list, cmd: str, args, started: str) -> str:
     L += ["## What the checks read", ""] + [f"- `{n}`: {w} (`{q}`)" for n, (q, _o, w) in CHECKS.items()] + [""]
     L.append("Logs: one `run<k>.log` per run beside this file (secret values replaced by `[redacted]`).")
     return "\n".join(L) + "\n"
+
+
+def is_clean(r: dict) -> bool:
+    return r["exit_code"] == 0 and bool(r["checks"]) and all(v == "pass" for v in r["checks"].values())
+
+
+def is_unverified(r: dict) -> bool:
+    return r["exit_code"] == 0 and "fail" not in r["checks"].values() and not is_clean(r)
 
 
 def stack_down_md(down: list, at: str) -> str:
@@ -315,7 +326,13 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
     (out / "runs.json").write_text(json.dumps(runs, indent=2) + "\n")
     (out / "REPORT.md").write_text(redact(report_md(runs, cmd, args, started), secrets))
     bad = any(r["exit_code"] != 0 or "fail" in r["checks"].values() for r in runs)
-    say_r(f"report: {out}/REPORT.md ({'problems found' if bad else 'all clean'})")
+    if bad:
+        verdict = "problems found"
+    elif all(is_clean(r) for r in runs):
+        verdict = "all clean"
+    else:
+        verdict = "unverified: at least one check was skipped, see Problems"
+    say_r(f"report: {out}/REPORT.md ({verdict})")
     return 1 if bad else 0
 
 

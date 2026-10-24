@@ -5,11 +5,11 @@ Vidyut watching, not debugging. It starts nothing and stops nothing: the stack m
 
 ## The 08:00 command
 
-Run from the repo checkout that has the local stack running (SpacetimeDB on 3000, web on 3100):
+```
+python3 /Users/vidyutsriram/hackathons/cal-hacks-13-2026/bidding-royale/demo/rehearse.py --runs 3 --screens --out /Users/vidyutsriram/hackathons/cal-hacks-13-2026/bidding-royale/demo/rehearsal/2026-10-24-0800
+```
 
-```
-python3 /ABSOLUTE/PATH/TO/demo/rehearse.py --runs 3 --screens --out /ABSOLUTE/PATH/TO/demo/rehearsal/2026-10-24-0800
-```
+Run it from the bidding-royale checkout (the one running the stack: SpacetimeDB on 3000, web on 3100, with its `.run`), not from a worktree, because the stage command and its health check are built from the checkout whose `rehearse.py` runs. This works after the T3 merge into main.
 
 Plan only, nothing touched: add `--dry-run`. One run, no screenshots: `--runs 1`.
 
@@ -40,11 +40,12 @@ alone prints no such lines, so with the bridge default the beat columns show `-`
 | `round_2_present` | `round` has at least two rows | beat 5 (round 2) never opened |
 
 `skipped` means the query could not be read (CLI missing, not logged in, server down); the reason is in Problems. A skipped
-check is never counted as a pass, and it does not fail the run.
+check is never counted as a pass, and it does not fail the run. A run counts as clean only when it exits 0 and every check is
+`pass`; a run with a skipped check is reported as unverified (`Unverified runs: n of N`, and the last line says `unverified`, not `all clean`).
 
 ## Exit codes
 
-- 0: every run exited 0 and no check failed.
+- 0: every run exited 0 and no check failed (skipped checks keep 0, but the harness says `unverified`, not `all clean`).
 - 1: a run failed (non-zero exit or timeout) or a check failed. The harness still finishes the remaining runs.
 - 2: the stack is down (port 3000 or 3100 refused). `REPORT.md` says `stack down at HH:MM, not run` and nothing was started.
 

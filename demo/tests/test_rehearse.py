@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,16 @@ for n in range(1, 4):
     time.sleep(0.02)
 print("boom: stopped by the market at beat 3", flush=True)
 sys.exit(1)
+"""
+
+# What a real Python stage does: plain print, no flush, stdout is a pipe. Without PYTHONUNBUFFERED in the child's env,
+# every BEAT line arrives when the process exits and every beat reads 0 s.
+UNFLUSHED_STAGE = """\
+import time
+for n in range(1, 6):
+    print(f"BEAT {n} of 5: title {n}")
+    time.sleep(0.3)
+print("done")
 """
 
 LEAKY_STAGE = """\
@@ -155,7 +166,33 @@ def test_checks_skipped_with_reason_when_sql_fails(tmp_path):
     assert set(r["checks"].values()) == {"skipped"}
     assert set(r["checks"]) == {"round_closed", "awarded_line", "payment_row", "round_2_present"}
     assert code == 0, "a skipped check is not a failure"
-    assert "spacetime not logged in" in (out / "REPORT.md").read_text()
+    report = (out / "REPORT.md").read_text()
+    assert "spacetime not logged in" in report
+    assert "Clean runs: 0 of 1" in report, "nothing was verified, so the run is not clean"
+    assert "Unverified runs: 1 of 1" in report
+
+
+def test_unverified_is_printed_instead_of_all_clean_when_checks_are_skipped(tmp_path):
+    def bad_sql(query):
+        raise RuntimeError("spacetime not on PATH")
+
+    say = []
+    out = tmp_path / "out"
+    code = rehearse.main(["--stage-cmd", stage(tmp_path, "ok.py", OK_STAGE), "--out", str(out), "--runs", "1"],
+                         probe=up, sql=bad_sql, shoot=no_shots, say=say.append)
+    last = say[-1]
+    assert code == 0
+    assert "unverified" in last and "clean" not in last
+
+
+def test_a_fully_passing_run_is_clean_and_not_unverified(tmp_path):
+    say = []
+    out = tmp_path / "out"
+    code = rehearse.main(["--stage-cmd", stage(tmp_path, "ok.py", OK_STAGE), "--out", str(out), "--runs", "2"],
+                         probe=up, sql=good_sql, shoot=no_shots, say=say.append)
+    report = (out / "REPORT.md").read_text()
+    assert code == 0 and "all clean" in say[-1]
+    assert "Clean runs: 2 of 2" in report and "Unverified runs: 0 of 2" in report
 
 
 def test_checks_fail_when_the_data_is_wrong(tmp_path):
@@ -227,3 +264,20 @@ def test_parse_sql_rows_reads_the_cli_table():
     assert rehearse.parse_sql_rows(text) == [['"r1"', '"closed"'], ['"r2"', '"closed"']]
     assert rehearse.parse_sql_rows(" id | state \n----+------\n") == []
     assert rehearse.parse_sql_rows("") == []
+
+
+def test_unflushed_stage_output_still_gives_real_beat_times_and_spread_out_screenshots(tmp_path):
+    shot_times = []
+
+    def shoot(url, path):
+        shot_times.append(time.monotonic())
+        Path(path).write_bytes(b"png")
+        return True, ""
+
+    code, out = run(tmp_path, stage(tmp_path, "unflushed.py", UNFLUSHED_STAGE), "--runs", "1", "--screens", shoot=shoot)
+    r = json.loads((out / "runs.json").read_text())[0]
+    assert code == 0
+    assert set(r["beats"]) == {"1", "2", "3", "4", "5"}
+    assert all(v >= 0.25 for v in r["beats"].values()), r["beats"]
+    assert len(shot_times) == 10
+    assert max(shot_times) - min(shot_times) >= 0.9, "screenshots must be taken as the beats happen, not all at the end"
