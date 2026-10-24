@@ -17,11 +17,11 @@ OPEN = ("ACTIVE", "HUNTING", "HOLD_FOR_CALL")  # states the deadline can still e
 
 
 def command(text: str):
-    """("approve", n) or ("cancel",) only when that is the whole message (leading @mentions allowed),
+    """("approve",) or ("cancel",) only when that is the whole message (leading @mentions allowed),
     so an approval word inside a longer text, such as an assistant's recap, never counts. Else None."""
     t = re.sub(r"^(?:@\S+\s+)+", "", text.strip()).strip().rstrip(".!").strip()
-    if m := re.fullmatch(r"(?i)approve\s+#?(\d+)", t):
-        return ("approve", int(m.group(1)))
+    if m := re.fullmatch(r"(?i)approve(?:\s+#?\d+)?", t):
+        return ("approve",)
     if re.fullmatch(r"(?i)cancel", t):
         return ("cancel",)
     return None

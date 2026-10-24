@@ -11,7 +11,7 @@ Your buying agent for computer gear. Tell it a goal; it remembers what you alrea
 - "Build me a new GPU, PSU and case under $1200 by Sunday."
 - "A new 850 W PSU under $150 by Monday."
 
-Then reply `APPROVE <number>` to order the bid it recommends.
+Then it phones you to approve the bid it recommends: say the spoken code on the call. There is no typed approval.
 
 ## What it does
 

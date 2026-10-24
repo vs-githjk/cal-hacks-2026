@@ -48,6 +48,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(buyer, "business_now", lambda: NOW)
     monkeypatch.setattr(buyer.crs, "eligible", lambda _supplier, check, _now: bool(check and check.get("eligible")))
     monkeypatch.setattr(buyer, "blocked_reasons", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(buyer, "_approval_call", lambda: (buyer.APPROVAL_CALL_CLIENT, "not_configured"))  # never dial
     for name, value in {
         "ROUND": {}, "WEB_OUTBOX": [],
         "APPROVAL_SERVICE": None, "APPROVAL_CALL_CLIENT": None, "MERCHANT_SIM": None,
@@ -256,41 +257,23 @@ def owner_texts(ctx):
     return [message.text() for _to, message in ctx.sent if hasattr(message, "text")]
 
 
-def test_owner_phone_call_approval_uses_real_service_and_persists_before_order(runtime):
+def _wire_voice(buyer, client, secret):
+    buyer.NONCE_STORE = NonceStore(str(state.DEFAULT_DB_PATH))
+    buyer.APPROVAL_SERVICE = ApprovalService(secret, store=buyer.NONCE_STORE, code_ttl_seconds=VOICE_CODE_TTL_SECONDS)
+    buyer.APPROVAL_CALL_CLIENT = client
+
+
+def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     buyer, db = runtime
     ready_for_requote(buyer)
     buyer.MARKET_BUYER.record_approval.return_value = {
         "approval_method": "voice_code", "approved_at": NOW.isoformat()}
-    ctx = Context()
-    asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])))
-    transaction = buyer.ROUND.get("transaction")
-    assert transaction and transaction["phase"] == "pending_approval"
-    checkout._bound_transaction(transaction, approval_phase=True, now=NOW)
-    buyer.NONCE_STORE = NonceStore(str(state.DEFAULT_DB_PATH))
-    service = ApprovalService("buyer-runtime-voice-approval-secret", store=buyer.NONCE_STORE,
-                              code_ttl_seconds=VOICE_CODE_TTL_SECONDS)
-    buyer.APPROVAL_SERVICE = service
     client = FakeVoiceClient()
-    buyer.APPROVAL_CALL_CLIENT = client
-
-    async def foreign_owner_attempt():
-        foreign = Context()
-        msg = buyer.ChatMessage(content=[buyer.TextContent(text="APPROVE 1")])
-        await buyer.on_chat(foreign, "foreign-owner", msg)
-        assert not any("One-time approval code:" in text for text in owner_texts(foreign))
-        unchanged = state.load_transaction(db, transaction["deal_id"], transaction["buyer_id"])
-        assert unchanged["phase"] == "pending_approval" and unchanged["voice_approval"] is None
-        assert service.attempts_used(transaction["mandate"]["hash"]) == 0
-        assert client.calls == 0
-        assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in foreign.sent)
-
-    asyncio.run(foreign_owner_attempt())
-
+    _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
     owner_ctx = CodeCapturingContext(client)
-    asyncio.run(asyncio.wait_for(buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(
-        content=[buyer.TextContent(text="APPROVE 1")])), timeout=10))
+    asyncio.run(asyncio.wait_for(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
 
-    approved = state.load_transaction(db, transaction["deal_id"], transaction["buyer_id"])
+    approved = state.load_transaction(db, buyer.ROUND["transaction"]["deal_id"], buyer.ROUND["transaction"]["buyer_id"])
     assert client.calls == 1
     assert approved["phase"] == "approved"
     assert approved["voice_approval"]["channel"] == "phone"
@@ -300,43 +283,39 @@ def test_owner_phone_call_approval_uses_real_service_and_persists_before_order(r
     assert buyer.MARKET_BUYER.record_approval.call_args.kwargs["method"] == "voice_code"
     assert any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
     texts = owner_texts(owner_ctx)
+    assert any("Calling you now to approve" in text for text in texts)
     assert any("One-time approval code:" in text and "Calling your phone now" in text for text in texts)
+    assert not any("APPROVE" in text for text in texts)
+
+    # a repeat of the same offer, or any owner text, never starts a second call or a typed approval
+    asyncio.run(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])))
+    for text in ("APPROVE 1", "approve", "yes"):
+        asyncio.run(buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
+    assert client.calls == 1 and buyer.MARKET_BUYER.record_approval.call_count == 1
 
 
-def test_owner_typing_the_code_never_approves(runtime):
-    """A call that does not connect must not leave a typed-code route: the code is only ever spoken."""
+def test_failed_call_says_nothing_was_paid_and_a_typed_code_never_approves(runtime):
+    """A call that does not connect must not leave a typed route: the code is only ever spoken."""
     buyer, db = runtime
     ready_for_requote(buyer)
-    ctx = Context()
-    asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])))
-    transaction = buyer.ROUND["transaction"]
-    buyer.NONCE_STORE = NonceStore(str(state.DEFAULT_DB_PATH))
-    buyer.APPROVAL_SERVICE = ApprovalService("buyer-runtime-no-typed-secret", store=buyer.NONCE_STORE,
-                                             code_ttl_seconds=VOICE_CODE_TTL_SECONDS)
 
     class NoAnswerClient(FakeVoiceClient):
         def get_call(self, call_id):
             return {"id": call_id, "status": "failed", "end_reason": "dial_no_answer", "transcript": []}
 
     client = NoAnswerClient()
-    buyer.APPROVAL_CALL_CLIENT = client
-
-    async def run():
-        owner_ctx = CodeCapturingContext(client)
-
-        async def say(text):
-            await buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(content=[buyer.TextContent(text=text)]))
-
-        await asyncio.wait_for(say("APPROVE 1"), timeout=10)
-        await say(client.code)  # typing the code afterwards is only ordinary chat text
-        return owner_ctx
-
-    owner_ctx = asyncio.run(run())
+    _wire_voice(buyer, client, "buyer-runtime-no-typed-secret")
+    owner_ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    transaction = buyer.ROUND["transaction"]
+    for text in ("APPROVE 1", client.code):  # typing the code afterwards is only ordinary chat text
+        asyncio.run(buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
     held = state.load_transaction(db, transaction["deal_id"], transaction["buyer_id"])
-    assert held["phase"] != "approved" and held["voice_approval"] is None or held["voice_approval"]["result"] != "approved"
-    assert held["phase"] in {"paused", "denied"}
+    assert held["phase"] in {"paused", "denied"} and held["voice_approval"] is None and held["order"] is None
+    assert client.calls == 1
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
     assert not buyer.MARKET_BUYER.record_approval.called
+    assert any("Nothing was paid" in text for text in owner_texts(owner_ctx))
 
 
 def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, monkeypatch):
@@ -344,15 +323,10 @@ def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, m
     for name in ("CARTESIA_API_KEY", "CARTESIA_AGENT_ID", "APPROVAL_CALL_TO", "CARTESIA_PHONE_NUMBER_ID"):
         monkeypatch.delenv(name, raising=False)
     ready_for_requote(buyer)
-    ctx = Context()
-    asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])))
-    transaction = buyer.ROUND["transaction"]
-    buyer.NONCE_STORE = NonceStore(str(state.DEFAULT_DB_PATH))
-    buyer.APPROVAL_SERVICE = ApprovalService("buyer-runtime-unconfigured-secret", store=buyer.NONCE_STORE,
-                                             code_ttl_seconds=VOICE_CODE_TTL_SECONDS)
-    buyer.APPROVAL_CALL_CLIENT = None
-
+    _wire_voice(buyer, None, "buyer-runtime-unconfigured-secret")
     owner_ctx = Context()
+    asyncio.run(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])))
+    transaction = buyer.ROUND["transaction"]
     for text in ("APPROVE 1", "yes", "approve 1"):
         asyncio.run(buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
 
@@ -362,7 +336,8 @@ def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, m
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
     assert not buyer.MARKET_BUYER.record_approval.called
     texts = owner_texts(owner_ctx)
-    assert any("Phone approval is not set up" in text and "Nothing was approved" in text for text in texts)
+    assert any("Phone approval is not set up" in text and "Nothing was approved" in text
+               and "nothing was paid" in text for text in texts)
     assert not any("One-time approval code:" in text for text in texts)
 
 
