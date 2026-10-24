@@ -9,3 +9,4 @@ Read first: docs/kickoff/00-shared.md (product, invariants, contracts, red-team 
 - Small commits, PR into main, main always runs. Post progress and asks as one line in docs/board/<your lane>.md.
 - Sandbox and test identities only. Label anything simulated (LIVE, MIRROR, SIM).
 - No em dashes or en dashes in user-facing text.
+- Every coding agent: read docs/AGENTS.md first (shared conventions and gotchas from reviews); append what you learn at the bottom.
