@@ -273,6 +273,9 @@ export const PairCode = __t.object("PairCode", {
   code: __t.string(),
   failedAttempts: __t.u32(),
   locked: __t.bool(),
+  windowStart: __t.timestamp(),
+  windowMisses: __t.u32(),
+  throttledUntil: __t.timestamp(),
 });
 export type PairCode = __Infer<typeof PairCode>;
 
@@ -369,6 +372,8 @@ export const RoundResult = __t.object("RoundResult", {
   },
   origin: __t.string(),
   source: __t.string(),
+  adjustedTotal: __t.f64(),
+  adjustmentReason: __t.string(),
 });
 export type RoundResult = __Infer<typeof RoundResult>;
 

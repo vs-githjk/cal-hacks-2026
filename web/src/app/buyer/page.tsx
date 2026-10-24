@@ -42,9 +42,11 @@ function PairScreen() {
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          inputMode="numeric"
-          placeholder="6-digit code"
-          className="flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="XXXXX-XXXXX"
+          className="flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono uppercase placeholder:normal-case"
         />
         <button className="min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink">Pair</button>
       </form>

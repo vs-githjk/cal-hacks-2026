@@ -2,6 +2,7 @@
 // goal text, cap, allowance, other sellers' bids before close) lives in a private table and
 // reaches clients only through the views in index.ts.
 import { schema, table, t } from 'spacetimedb/server';
+import { Timestamp } from 'spacetimedb';
 
 export const BidLine = t.object('BidLine', {
   skuSpec: t.string(),
@@ -111,7 +112,12 @@ export const role = table(
   { identity: t.identity().primaryKey(), role: t.string(), subjectId: t.string().index('btree') },
 );
 
-/** Demo pairing code per buyer, so a browser screen can take the buyer role (SIM sign-in). */
+/**
+ * Demo pairing code per buyer, so a browser screen can take the buyer role (SIM sign-in). The code is a
+ * 10-character Crockford base32 string (no ambiguous characters), shown grouped as XXXXX-XXXXX.
+ * windowStart/windowMisses/throttledUntil are the soft, code-wide brute-force throttle (#135): they never
+ * lock the code, only make a caller wait, so the per-identity lock above stays the only permanent block.
+ */
 export const pairCode = table(
   { name: 'pair_code' },
   {
@@ -119,6 +125,9 @@ export const pairCode = table(
     code: t.string(),
     failedAttempts: t.u32().default(0), // appended last so a publish migrates in place
     locked: t.bool().default(false),
+    windowStart: t.timestamp().default(Timestamp.UNIX_EPOCH),
+    windowMisses: t.u32().default(0),
+    throttledUntil: t.timestamp().default(Timestamp.UNIX_EPOCH),
   },
 );
 
@@ -312,6 +321,11 @@ export const roundResult = table(
     lines: t.array(BidLine),
     origin: t.string(),
     source: t.string(),
+    // #135: the real quality-adjusted score rankBids used to order this row (equal to landed when not
+    // ranked or when nothing adjusted it), plus the short reason it differs from landed. Appended last so a
+    // publish migrates in place.
+    adjustedTotal: t.f64().default(0),
+    adjustmentReason: t.string().default(''),
   },
 );
 

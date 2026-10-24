@@ -8,7 +8,8 @@ const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
 
 const result = (over: Record<string, unknown> = {}) => ({
   id: 1n, roundId: "round-1", bidId: "bid-a", sellerId: "fair-price-pc", persona: "Fair Price PC (SIM)", rank: 1, landed: 1289,
-  reasons: [] as string[], lines: [{ offeredCondition: "new", unitPrice: 1289 }], origin: "SIM", source: "https://example.com/fair", ...over,
+  reasons: [] as string[], lines: [{ offeredCondition: "new", unitPrice: 1289 }], origin: "SIM", source: "https://example.com/fair",
+  adjustedTotal: 1289, adjustmentReason: "", ...over,
 });
 const event = (over: Record<string, unknown> = {}) => ({
   id: 1n, kind: "bid_sealed", refTable: "bid", refId: "bid-a", sellerId: "fair-price-pc", label: "", origin: "SIM", at: ts(T0), ...over,
@@ -38,10 +39,18 @@ test("bidsFromRows: a source of just https:// renders the row with no link, and 
   assert.equal(label!.sourceUrl, undefined);
 });
 
-test("bidsFromRows shows the landed price from the row and never invents an adjusted score", () => {
-  const [b] = bidsFromRows([result({ landed: 1247.02 })], [], "round-1");
+test("bidsFromRows shows the landed price from the row, and the real stored adjusted_total, never a recomputed one", () => {
+  const [b] = bidsFromRows([result({ landed: 1247.02, adjustedTotal: 1296.9, adjustmentReason: "open-box condition, +4%" })], [], "round-1");
   assert.equal(b!.landed, 1247.02);
-  assert.equal("adjusted" in b!, false);
+  assert.equal(b!.adjusted, 1296.9);
+  assert.equal(b!.adjustedReason, "open-box condition, +4%");
+});
+
+test("bidsFromRows never shows an adjusted score for a row that was not ranked", () => {
+  const [b] = bidsFromRows([result({ rank: 0, adjustedTotal: 1090, adjustmentReason: "" })], [], "round-1");
+  assert.equal(b!.rank, null);
+  assert.equal(b!.adjusted, null);
+  assert.equal(b!.adjustedReason, "");
 });
 
 test("bidsFromRows ranks 1, 2, then unranked; filters to the round; the advocate veto blocks the win", () => {

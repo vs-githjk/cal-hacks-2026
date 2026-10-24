@@ -29,6 +29,8 @@ export interface RankedBid {
   condition: string;
   altLines?: { condition: string; unitPrice: number }[]; // the other condition lines the same seller bid
   landed: number;
+  adjusted: number | null; // quality-adjusted score the ranking used; null when not ranked; equals landed when nothing adjusted it
+  adjustedReason: string; // why adjusted differs from landed ("" when it does not)
   recommendation: Recommendation;
   why: string;
   sourceUrl?: string;
@@ -202,7 +204,10 @@ export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItem
 
 interface EventRow { id: bigint; kind: string; refTable: string; refId: string; sellerId: string; label: string; origin: string; at: Timestamp }
 interface LineRow { offeredCondition: string; unitPrice: number }
-interface ResultRow { id: bigint; roundId: string; bidId: string; sellerId: string; persona: string; rank: number; landed: number; reasons: string[]; lines: LineRow[]; origin: string; source: string }
+interface ResultRow {
+  id: bigint; roundId: string; bidId: string; sellerId: string; persona: string; rank: number; landed: number; reasons: string[];
+  lines: LineRow[]; origin: string; source: string; adjustedTotal: number; adjustmentReason: string;
+}
 interface RoundRow { id: string; needId: string; openedAt: Timestamp; deadline: Timestamp; extensions: number; state: string; sealedCount: number; closedAt?: Timestamp; origin: string }
 
 /** The latest advocate card per bid, read from the public advocate_card events ("Advocate veto (rule)" or "Advocate: buy"). */
@@ -238,6 +243,8 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         condition: cond(picked?.offeredCondition ?? ""),
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
+        adjusted: ranked ? r.adjustedTotal : null,
+        adjustedReason: ranked ? r.adjustmentReason : "",
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
         why: r.reasons.join("; ") || card?.label || "",
         sourceUrl: safeUrl(r.source) ?? undefined,

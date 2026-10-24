@@ -667,6 +667,33 @@ describe('allowed conditions, alternative lines and the cap at close', () => {
     expect(res.find((r) => r.bidId === 'bid-b')!.rank).toBe(1);
     expect(res.find((r) => r.bidId === 'bid-a')!.rank).toBe(2);
   });
+
+  it('#135 the stored adjusted_total is the real score rankBids used, with a reason, and rows land in adjusted order', () => {
+    setup();
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-a', [line(760, { offeredCondition: 'open-box' })]), perks: ['free shipping'] }));
+    run(B, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-b', [line(780)]), perks: ['30-day returns'] }));
+    const res = closeIt();
+    const a = res.find((r) => r.bidId === 'bid-a')!;
+    const b = res.find((r) => r.bidId === 'bid-b')!;
+    // 760 open-box, no returns: condition +4%, no-returns +2% -> 760 * 1.06 = 805.6. 780 new with returns: no adjustment.
+    expect(a.adjustedTotal).toBeCloseTo(805.6, 5);
+    expect(a.adjustedTotal).not.toBe(a.landed);
+    expect(a.adjustmentReason).toBe('open-box condition, +4%; under 30-day returns, +2%');
+    expect(b.adjustedTotal).toBe(b.landed);
+    expect(b.adjustmentReason).toBe('');
+    expect([a, b].sort((x, y) => x.rank - y.rank).map((r) => r.adjustedTotal)).toEqual([b.adjustedTotal, a.adjustedTotal].sort((x, y) => x - y));
+  });
+
+  it('#135 a disqualified row stores its landed price as adjusted_total, with no reason (it was never ranked)', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(760, { offeredCondition: 'open-box' })])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const r = [...h.db.roundResult.iter()][0]!;
+    expect(r.rank).toBe(0);
+    expect(r.adjustedTotal).toBe(r.landed);
+    expect(r.adjustmentReason).toBe('');
+  });
 });
 
 describe('record_payment mode (sim or stripe_test)', () => {
@@ -832,6 +859,66 @@ describe('pair code attempt limit', () => {
     expect(msg).not.toContain(code);
     const text = JSON.stringify([...h.db.floorEvent.iter()].map((e) => e.label)) + JSON.stringify([...h.db.notification.iter()].map((n) => n.text));
     expect(text).not.toContain(code);
+  });
+});
+
+describe('#135 pairing code format and code-wide throttle', () => {
+  let code = '';
+  const tryPair = (who: Auth, c: string) => run(who, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: c }));
+  const GUESS = 'ZZZZZ-ZZZZZ'; // never the real code: Crockford base32 excludes I L O U, so Z is valid but this exact string is astronomically unlikely to be drawn
+  beforeEach(() => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    code = h.db.pairCode.buyerId.find('vidyut')!.code;
+  });
+
+  it('the code is 10-character Crockford base32 (no I L O U), grouped as XXXXX-XXXXX', () => {
+    expect(code).toMatch(/^[0-9A-Z]{5}-[0-9A-Z]{5}$/);
+    expect(code).not.toMatch(/[ILOU]/);
+  });
+
+  it('pairing is case-insensitive and ignores the grouping dash', () => {
+    expect(tryPair(as('lower'), code.toLowerCase())).toMatchObject({ paired: true });
+    expect(tryPair(as('nodash'), code.replace('-', ''))).toMatchObject({ paired: true });
+  });
+
+  it('rotating 30 identities cannot pair by guessing: the code-wide throttle blocks guesses well before 30 identities run out', () => {
+    let blocked = 0;
+    for (let i = 0; i < 30; i++) {
+      try {
+        expect(tryPair(as(`rot-${i}`), GUESS)).toMatchObject({ paired: false });
+      } catch (e) {
+        blocked++;
+        expect(String(e)).toMatch(/wait/);
+      }
+    }
+    expect(blocked).toBeGreaterThan(0);
+    for (let i = 0; i < 30; i++) expect(m.myRoleView(h.viewContext(as(`rot-${i}`)) as any)).toHaveLength(0);
+  });
+
+  it('the throttle engages at 20 misses on a code and releases after 60 s', () => {
+    for (let i = 0; i < 20; i++) expect(tryPair(as(`m-${i}`), GUESS)).toMatchObject({ paired: false });
+    expect(() => tryPair(as('m-throttled'), GUESS)).toThrow(/wait/);
+    advance(59_000);
+    expect(() => tryPair(as('m-still-throttled'), GUESS)).toThrow(/wait/);
+    advance(1_000);
+    expect(tryPair(as('m-released'), GUESS)).toMatchObject({ paired: false }); // normal miss again, not a throttle error
+  });
+
+  it('the owner still pairs with the real code once the throttle window passes', () => {
+    for (let i = 0; i < 20; i++) tryPair(as(`n-${i}`), GUESS);
+    const owner = as('owner-screen');
+    expect(() => tryPair(owner, code)).toThrow(/wait/);
+    advance(60_000);
+    expect(tryPair(owner, code)).toMatchObject({ paired: true });
+    expect(m.myRoleView(h.viewContext(owner) as any)[0]).toMatchObject({ role: 'buyer', subjectId: 'vidyut' });
+  });
+
+  it('a throttled wait never names the code', () => {
+    for (let i = 0; i < 20; i++) tryPair(as(`q-${i}`), GUESS);
+    let msg = '';
+    try { tryPair(as('q-20'), code); } catch (e) { msg = String(e); }
+    expect(msg).toMatch(/wait/);
+    expect(msg).not.toContain(code);
   });
 });
 

@@ -5,7 +5,7 @@ import { SenderError, type InferSchema, type ReducerCtx, type ViewCtx, type Anon
 import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
 import { ANY_CONDITION, checkFloorByCondition } from '../../rules/floor';
-import { rankBids } from '../../rules/scoring';
+import { adjustmentReason, rankBids } from '../../rules/scoring';
 import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
@@ -101,11 +101,23 @@ function writeFloor(ctx: Ctx, what: string, skuSpec: string, condition: string, 
 }
 
 export const PAIR_MAX_FAILURES = 5;
+// #135: identities are free, so a per-identity lock alone lets an attacker brute-force the code by rotating
+// identities. This soft, code-wide throttle backs it up: PAIR_THROTTLE_MISSES wrong codes on the same code
+// within PAIR_THROTTLE_WINDOW_MS make every new attempt on that code (right or wrong, any identity) wait
+// PAIR_THROTTLE_WAIT_MS. It never locks the code; the owner always gets through once the wait is over.
+export const PAIR_THROTTLE_MISSES = 20;
+export const PAIR_THROTTLE_WINDOW_MS = 10 * 60 * 1000;
+export const PAIR_THROTTLE_WAIT_MS = 60 * 1000;
+// Crockford base32: no I L O U, so a misread character is never mistaken for another. 10 characters, shown
+// grouped as XXXXX-XXXXX; compared case-insensitively with the grouping ignored (normPairCode).
+const PAIR_CODE_CHARS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const normPairCode = (s: string) => s.toUpperCase().replace(/[^0-9A-Z]/g, '');
 
 /**
  * A browser screen takes the buyer role with the demo pairing code (SIM sign-in). A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
  * roll the count back). 5 failures lock that caller (identity) across every code; the code itself only counts failures for the
- * operator, so a stranger's misses can never lock the owner's screen out.
+ * operator, so a stranger's misses can never lock the owner's screen out. The code-wide throttle above backs
+ * this up: it is a wait, not a lock, so the operator never has to reissue just because it tripped.
  * The code itself never appears in a message.
  */
 export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
@@ -130,12 +142,22 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   if (want.locked) throw new SenderError('pairing is locked after too many wrong codes; ask the operator for a new code');
   const mine = ctx.db.pairAttempt.identity.find(ctx.sender);
   if (mine && mine.failures >= PAIR_MAX_FAILURES) throw new SenderError('this screen is locked after too many wrong codes; ask the operator');
-  if (want.code !== code) {
-    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: want.failedAttempts + 1 });
+  const now = ms(ctx.timestamp);
+  if (now < ms(want.throttledUntil)) {
+    throw new SenderError(`too many wrong codes on this screen recently; wait ${Math.ceil((ms(want.throttledUntil) - now) / 1000)} s and try again`);
+  }
+  if (normPairCode(want.code) !== normPairCode(code)) {
+    const windowAge = now - ms(want.windowStart);
+    const freshWindow = windowAge > PAIR_THROTTLE_WINDOW_MS;
+    const windowStart = freshWindow ? ctx.timestamp : want.windowStart;
+    const windowMisses = (freshWindow ? 0 : want.windowMisses) + 1;
+    const throttledUntil = windowMisses >= PAIR_THROTTLE_MISSES ? tsFromMs(now + PAIR_THROTTLE_WAIT_MS) : want.throttledUntil;
+    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: want.failedAttempts + 1, windowStart, windowMisses, throttledUntil });
     const failures = (mine?.failures ?? 0) + 1;
     if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures });
     else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures });
     if (failures >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', key, 'A screen is locked after too many wrong codes');
+    if (windowMisses >= PAIR_THROTTLE_MISSES) event(ctx, 'pairing_throttled', 'pair_code', key, 'Pairing on a screen is throttled after many wrong codes');
     return { paired: false, reason: 'wrong pairing code' };
   }
   if (cur) ctx.db.role.identity.update({ ...cur, subjectId });
@@ -143,7 +165,7 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   return { paired: true, reason: '' };
 }
 
-/** Owner only: a fresh code for this buyer, unlocked, with its counter reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
+/** Owner only: a fresh code for this buyer, unlocked, with its counter and its throttle reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
 export function reissuePairCode(ctx: Ctx, { buyerId }: { buyerId: string }) {
   requireRole(ctx, 'reissue_pair_code', ['owner']);
   issuePairCode(ctx, buyerId);
@@ -158,10 +180,13 @@ export function reissueSellerScreenCode(ctx: Ctx, { sellerId }: { sellerId: stri
 }
 
 export function issuePairCode(ctx: Ctx, buyerId: string) {
-  const code = String(ctx.random.integerInRange(100000, 999999));
+  let raw = '';
+  for (let i = 0; i < 10; i++) raw += PAIR_CODE_CHARS[ctx.random.integerInRange(0, PAIR_CODE_CHARS.length - 1)];
+  const code = `${raw.slice(0, 5)}-${raw.slice(5)}`;
+  const fresh = { buyerId, code, failedAttempts: 0, locked: false, windowStart: ctx.timestamp, windowMisses: 0, throttledUntil: Timestamp.UNIX_EPOCH };
   const cur = ctx.db.pairCode.buyerId.find(buyerId);
-  if (cur) ctx.db.pairCode.buyerId.update({ buyerId, code, failedAttempts: 0, locked: false });
-  else ctx.db.pairCode.insert({ buyerId, code, failedAttempts: 0, locked: false });
+  if (cur) ctx.db.pairCode.buyerId.update(fresh);
+  else ctx.db.pairCode.insert(fresh);
 }
 
 // ---------------------------------------------------------------- allowance (D's shape, rules/allowance)
@@ -527,11 +552,21 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   for (const x of ranked.ranked) {
     const b = byId.get(x.bid.id)!;
     // The lines are the picked alternatives (the cheapest allowed line per SKU), the ones the rank is about.
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source });
+    // adjusted_total is the real score rankBids sorted on (equal to landed when nothing adjusted it).
+    const pickedLines = x.picked.map((i) => x.bid.lines[i]!);
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [],
+      lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
+      adjustedTotal: x.score, adjustmentReason: adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality),
+    });
   }
   for (const d of ranked.disqualified) {
     const b = byId.get(d.bid.id)!;
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source });
+    // Never ranked, so there is no adjusted score to show: adjusted_total stays the landed price.
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons,
+      lines: b.lines, origin: b.origin, source: b.source, adjustedTotal: d.landed, adjustmentReason: '',
+    });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
   const top = ranked.ranked[0];
