@@ -5,7 +5,10 @@ GET /v1/agents -> [{name, role, address, status, last_message, at, origin}]
 status is decided per agent from its own log lines, never from a pidfile flag: "agentverse" only when the process is alive
 and that agent logged "Starting mailbox client for" (the uagents mailbox loop running) and none of the mailbox or manifest
 failure lines (no mailbox created yet, cannot reach the mailbox server, 401 on retrieve, manifest not published); "local" when
-it is alive without that; "down" otherwise (also when its log is missing). Manifests publish fine without a mailbox, so a
+it is alive without that; "down" otherwise (also when its log is missing). A mailbox created by connect.py after the agent
+started logs one unattributed [mailbox] "Successfully registered" line: it clears "mailbox not found" for the single agent
+waiting on one, and with several waiting they stay local (cannot say which). Only tags that logged "Starting agent with
+address" are agents, so uagents module loggers (resolver, dispenser, mailbox ...) never become rows. Manifests publish fine without a mailbox, so a
 published manifest proves nothing about Agentverse.
 Nothing here is invented: a missing run dir, pidfile or log gives down rows with no address and no message.
 origin is SIM for every row except a seller whose sellers.json entry says otherwise: our own agents are not "LIVE" (a real
@@ -44,8 +47,10 @@ RECORD_PREFIXES = ("ORDER ", "MANDATE ")
 SECRET_RE = re.compile(r"\b(?:sk|pk|rk|whsec)_[A-Za-z0-9_]{6,}|eyJ[A-Za-z0-9_-]{10,}|Bearer\s+\S+", re.I)
 # uagents mailbox.py:214 (the loop running) and the lines that say the mailbox is not working (mailbox.py:238, 243, 247, agent.py:1129)
 MAILBOX_UP = "Starting mailbox client for"
-MAILBOX_FAILURES = ("Agent mailbox not found", "Failed to connect to mailbox server", "Failed to retrieve messages",
-                    "Unable to publish manifest")
+MAILBOX_MISSING = "Agent mailbox not found"
+MAILBOX_FAILURES = ("Failed to connect to mailbox server", "Failed to retrieve messages", "Unable to publish manifest")
+# uagents mailbox.py:155, logged by the module logger [mailbox], not by any agent: connect.py created the missing mailbox
+MAILBOX_REGISTERED = "Successfully registered as mailbox agent"
 SELLERS_JSON = REPO / "agents" / "sellers" / "sellers.json"
 ORIGINS = ("LIVE", "MIRROR", "SIM")
 
@@ -66,10 +71,17 @@ def read_text(path: str | None) -> str | None:
 
 def parse_log(text: str) -> dict[str, dict]:
     """Agents in one log: {tag: {address, last_message, last_index, mailbox}}; last_index orders messages across agents.
-    mailbox is True only when that agent logged the mailbox client starting and none of the failure lines."""
+    mailbox is True only when that agent logged the mailbox client starting and none of the failure lines.
+    An agent is a tag that logged "Starting agent with address:" (or a labelled address): every other tag in the log is a
+    uagents module logger (resolver, dispenser, mailbox, network, setup, server, config ...) and never becomes a row.
+    A [mailbox] "Successfully registered" line names no agent, so it clears the "mailbox not found" flag only when exactly
+    one agent is waiting on a mailbox; with two or more waiting it cannot say which, and they all stay local."""
     agents: dict[str, dict] = {}
     labels: dict[str, str] = {}  # address -> label ("seller_1 address: ...")
-    for i, raw in enumerate(text.splitlines()):
+    lines = text.splitlines()
+    real = {m.group(1) for m in (LINE_RE.match(r.strip()) for r in lines)
+            if m and START_RE.search(m.group(2)) and not m.group(1).startswith("uagents") and m.group(1) != "bureau"}
+    for i, raw in enumerate(lines):
         line = raw.strip()
         lab = LABEL_RE.match(line)
         if lab:
@@ -79,11 +91,19 @@ def parse_log(text: str) -> dict[str, dict]:
         if not m:
             continue
         tag, msg = m.group(1), m.group(2)
-        if tag.startswith("uagents") or tag == "bureau":
+        if tag == "mailbox" and MAILBOX_REGISTERED in msg:
+            waiting = [a for a in agents.values() if a["mailbox_missing"]]
+            if len(waiting) == 1:
+                waiting[0]["mailbox_missing"] = False
             continue
-        a = agents.setdefault(tag, {"address": None, "last_message": None, "last_index": -1, "mailbox_up": False, "mailbox_bad": False})
+        if tag not in real:
+            continue
+        a = agents.setdefault(tag, {"address": None, "last_message": None, "last_index": -1, "mailbox_up": False,
+                                    "mailbox_bad": False, "mailbox_missing": False})
         if MAILBOX_UP in msg:
             a["mailbox_up"] = True
+        if MAILBOX_MISSING in msg:
+            a["mailbox_missing"] = True
         if any(f in msg for f in MAILBOX_FAILURES):
             a["mailbox_bad"] = True
         s = START_RE.search(msg)
@@ -96,9 +116,9 @@ def parse_log(text: str) -> dict[str, dict]:
     for addr, label in labels.items():  # an agent that only printed its labelled address still gets a row
         if not any(a["address"] == addr for a in agents.values()):
             agents.setdefault(label, {"address": addr, "last_message": None, "last_index": -1, "mailbox_up": False,
-                                      "mailbox_bad": False})
+                                      "mailbox_bad": False, "mailbox_missing": False})
     for a in agents.values():
-        a["mailbox"] = a.pop("mailbox_up") and not a.pop("mailbox_bad")
+        a["mailbox"] = a.pop("mailbox_up") and not a.pop("mailbox_bad") and not a.pop("mailbox_missing")
     return agents
 
 

@@ -331,3 +331,92 @@ def test_missing_fastapi_skips_the_feed_like_the_shield():
     checks = [L.Check("shield deps (fastapi, uvicorn)", False, "", "fix")]
     L.decide_skips(svcs, checks)
     assert {s.name for s in svcs if s.skip_reason} == {"shield", "agent-feed"}
+
+
+# ---- T4R: module loggers are not agents; a mailbox created after start clears "Local only" -------------------------------
+
+MODULE_NOISE = (
+    "WARNING:  [resolver]: Almanac API lookup attempt 1/3 for agent1qxyz failed: timeout\n"
+    "ERROR:    [dispenser]: Failed to send envelope: Cannot connect to host localhost:8014\n"
+    "INFO:     [network]: Registering on Almanac\n"
+    "INFO:     [setup]: configuring\n"
+    "INFO:     [server]: listening\n"
+    "WARNING:  [config]: something\n"
+    "INFO:     [communication]: dispatch\n"
+)
+
+
+def test_module_loggers_never_become_rows_even_with_fresh_errors(tmp_path):
+    run = standard_run(tmp_path)
+    log = run / "logs" / "buyer.log"
+    log.write_text(BUYER_LOG + MODULE_NOISE, encoding="utf-8")
+    rows = F.agent_rows(run)
+    assert [r["name"] for r in rows if r["role"] == "buyer"] == ["tech_bazaar_buyer"]
+    buyer = by_role(rows, "buyer")
+    assert buyer["last_message"] == "late or stray bid ignored"
+    # the module errors came after the buyer's last line, so it is not stamped fresh by them
+    assert buyer["at"] is None
+    assert not {"resolver", "dispenser", "network", "setup", "server", "config", "communication"} & set(by_name(rows))
+
+
+def test_module_logger_only_log_is_a_down_row_not_a_made_up_agent(tmp_path):
+    run = write_run(tmp_path, {"buyer": alive_rec(tmp_path / ".run" / "logs" / "buyer.log")}, {"buyer": MODULE_NOISE})
+    rows = [r for r in F.agent_rows(run) if r["role"] == "buyer"]
+    assert len(rows) == 1 and rows[0]["name"] == F.DEFAULT_NAMES["buyer"]
+    assert rows[0]["status"] == "down" and rows[0]["last_message"] is None and rows[0]["address"] is None
+
+
+def test_agent_whose_line_comes_before_its_start_line_still_gets_its_row(tmp_path):
+    log = ("INFO:     [tech_bazaar_buyer]: to owner: early message\n"
+           f"INFO:     [tech_bazaar_buyer]: Starting agent with address: {ADDR_B}\n" + MODULE_NOISE)
+    run = write_run(tmp_path, {"buyer": alive_rec(tmp_path / ".run" / "logs" / "buyer.log")}, {"buyer": log})
+    row = by_role(F.agent_rows(run), "buyer")
+    assert row["name"] == "tech_bazaar_buyer" and row["last_message"] == "to owner: early message"
+
+
+REGISTERED = "INFO:     [mailbox]: Successfully registered as mailbox agent in Agentverse\n"
+NOT_FOUND = "WARNING:  [{t}]: Agent mailbox not found: create one using the agent inspector\n"
+
+
+def seller4_log(*extra: str) -> str:
+    return (f"INFO:     [seller_4]: Starting agent with address: {ADDR_1}\n" + mailbox_up("seller_4")
+            + NOT_FOUND.format(t="seller_4") + "".join(extra))
+
+
+def test_mailbox_created_after_start_clears_local_only_without_a_restart(tmp_path):
+    run = write_run(tmp_path, {"sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log")},
+                    {"sellers": seller4_log(REGISTERED)})
+    rows = [r for r in F.agent_rows(run) if r["role"] == "seller"]
+    assert [r["name"] for r in rows] == ["seller_4"]  # no phantom 'mailbox' row
+    assert rows[0]["status"] == "agentverse"
+    assert rows[0]["last_message"] == "Agent mailbox not found: create one using the agent inspector"
+    # before connect.py runs it is still honest
+    before = write_run(tmp_path / "b", {"sellers": alive_rec(tmp_path / "b" / ".run" / "logs" / "sellers.log")},
+                       {"sellers": seller4_log()})
+    assert [r["status"] for r in F.agent_rows(before) if r["role"] == "seller"] == ["local"]
+
+
+def test_registration_line_with_two_agents_missing_a_mailbox_cannot_say_which(tmp_path):
+    log = (f"INFO:     [seller_4]: Starting agent with address: {ADDR_1}\n"
+           f"INFO:     [seller_5]: Starting agent with address: {ADDR_2}\n"
+           + mailbox_up("seller_4", "seller_5") + NOT_FOUND.format(t="seller_4") + NOT_FOUND.format(t="seller_5") + REGISTERED)
+    run = write_run(tmp_path, {"sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log")}, {"sellers": log})
+    rows = by_name([r for r in F.agent_rows(run) if r["role"] == "seller"])
+    assert set(rows) == {"seller_4", "seller_5"}
+    assert {r["status"] for r in rows.values()} == {"local"}  # unattributable: stay Local only, never guess Agentverse
+
+
+def test_registration_line_never_clears_a_connect_or_auth_failure(tmp_path):
+    for n, bad in enumerate(("WARNING:  [seller_4]: Failed to connect to mailbox server: Cannot connect to host agentverse.ai\n",
+                "ERROR:    [seller_4]: Failed to retrieve messages: 401:Unauthorized\n")):
+        log = (f"INFO:     [seller_4]: Starting agent with address: {ADDR_1}\n" + mailbox_up("seller_4")
+               + NOT_FOUND.format(t="seller_4") + REGISTERED + bad)
+        base = tmp_path / str(n)
+        run = write_run(base, {"sellers": alive_rec(base / ".run" / "logs" / "sellers.log")}, {"sellers": log})
+        assert [r["status"] for r in F.agent_rows(run) if r["role"] == "seller"] == ["local"]
+
+
+def test_a_second_not_found_after_registration_goes_local_again(tmp_path):
+    run = write_run(tmp_path, {"sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log")},
+                    {"sellers": seller4_log(REGISTERED, NOT_FOUND.format(t="seller_4"))})
+    assert [r["status"] for r in F.agent_rows(run) if r["role"] == "seller"] == ["local"]
