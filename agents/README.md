@@ -106,6 +106,8 @@ Check each profile is Active on Agentverse, then find each by name in a fresh AS
 
 ## Safety rules in code
 
+Containment (issue #143, SIM, offline): **8 of 8 contained with Shield off**. The 8 held-out attacks Shield's rules do not block (the same ids `shield.bench` reports) are put into a bid's free text with Shield bypassed; the advocate's closed output still validates, the winner, payee and amount are unchanged, and no charge happens without an approval row for the mandate (`agents/tests/test_containment.py`).
+
 - `payment.py` requires an approval entry for the same mandate hash and checks replay, expiry, payee and amount. The buyer currently creates that entry from chat `APPROVE` or its allowance: this is a SIM approval stub, not Lane D's voice approval record. Stripe charging is not connected.
 - Buyer and seller bid/order/payment handlers and the advocate request handler call Shield before acting. Configure `SHIELD_URL` for screening; when configured but unreachable it blocks. With no URL, the current client allows messages using a labelled stub.
 - Prices come from policy code, never from a model. Fit is decided by Lane C's checker, never by a model.

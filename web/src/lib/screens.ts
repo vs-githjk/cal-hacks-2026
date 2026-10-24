@@ -29,11 +29,12 @@ export interface RankedBid {
   condition: string;
   altLines?: { condition: string; unitPrice: number }[]; // the other condition lines the same seller bid
   landed: number;
-  adjusted: number | null; // quality-adjusted; null when not ranked
   recommendation: Recommendation;
   why: string;
   sourceUrl?: string;
   won: boolean;
+  /** The market row this bid was drawn from (round_result/<id>); absent on sample rows. */
+  rowRef?: string;
 }
 
 export interface VetoView {
@@ -71,6 +72,22 @@ export interface ApprovalView {
   whyAnswer: string; // the advocate's spoken answer to "why not the cheaper one?"
   attempts: { at: Date; label: string; said: string; approved: boolean }[];
 }
+
+/** A live mandate waiting for the buyer, from my_pending_approvals. The code shows on this screen only. */
+export interface ReviewView {
+  mandateHash: string;
+  mandateId: string;
+  amount: number;
+  payee: string;
+  expiry: Date;
+  code: string;
+  failures: number;
+  locked: boolean;
+  origin: Origin;
+}
+
+/** Matches APPROVAL_MAX_FAILURES in market/spacetimedb/src/market.ts. */
+export const REVIEW_MAX_FAILURES = 5;
 
 export interface ReceiptView {
   seller: string;
@@ -133,6 +150,8 @@ export interface FloorEventView { key: string; at: Date; kind: string; label: st
 // ---- Row to view mapping (see docs/design/2026-10-23-web/README.md). Plain row shapes so this stays testable.
 
 import type { Timestamp } from "spacetimedb";
+import { formatMoney } from "./money.ts";
+import { safeUrl } from "./url.ts";
 
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 export const asOrigin = (o: string): Origin => (o === "LIVE" || o === "MIRROR" ? o : "SIM");
@@ -165,7 +184,7 @@ export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItem
   const what = mine.map((i) => `${i.quantity > 1 ? `${i.quantity} x ` : ""}${i.skuSpec}`).join(", ") || "a goal";
   const when = deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   return {
-    text: `${what}${conditions.length ? `, ${conditions.join(" or ")}` : ""}, under ${g.cap.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })} by ${when}`,
+    text: `${what}${conditions.length ? `, ${conditions.join(" or ")}` : ""}, under ${formatMoney(Math.round(g.cap))} by ${when}`,
     type: (["budget_cap", "part_by_date", "build_by_date"].includes(g.type) ? g.type : "budget_cap") as GoalView["type"],
     state: g.state as GoalView["state"],
     cap: g.cap,
@@ -219,11 +238,11 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         condition: cond(picked?.offeredCondition ?? ""),
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
-        adjusted: ranked ? r.landed : null, // quality-adjusted score is not on round_result yet; landed is shown in both columns
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
         why: r.reasons.join("; ") || card?.label || "",
-        sourceUrl: /^https?:\/\//.test(r.source) ? r.source : undefined,
+        sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
+        rowRef: `round_result/${r.id}`,
       };
     });
 }
@@ -317,4 +336,11 @@ export function originCounts(items: readonly { origin: Origin }[]): { LIVE: numb
   const c = { LIVE: 0, MIRROR: 0, SIM: 0 };
   for (const i of items) c[i.origin]++;
   return c;
+}
+
+interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; code: string; failures: number; locked: boolean; origin: string }
+
+export function reviewFromRows(rows: readonly PendingRow[]): ReviewView | null {
+  const r = [...rows].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
+  return r ? { ...r, expiry: d(r.expiry), origin: asOrigin(r.origin) } : null;
 }

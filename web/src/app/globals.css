@@ -1,55 +1,51 @@
-/* Tech Bazaar design tokens, direction A "Ledger". Replaces the :root, dark and @theme blocks in web/src/app/globals.css.
+/* Tech Bazaar design tokens: the team reference artifact (dark first, Ledger structure).
    Tailwind v4: the @theme inline block turns every token into a utility (bg-panel, text-muted, border-line, font-display, ...). */
 @import "tailwindcss";
 
-:root {
-  --canvas: #f7f7f9;
-  --panel: #ffffff;
-  --soft: #f1f2f5;
-  --ink: #121417;
-  --muted: #5f6672;
-  --line: #e3e5ea;
-  --accent: #4f46e5;
-  --accent-ink: #ffffff;
-  --mint: #0e7a56;
-  --mint-soft: #e4f5ec;
-  --coral: #b3400f;
-  --coral-soft: #fcebe2;
-  --amber: #8a5a05;
-  --amber-soft: #fbf1d3;
-  --sky: #0b5f9e;
-  --sky-soft: #e3f0fb;
-  --slate: #475569;
-  --slate-soft: #eceef2;
-  --radius: 16px;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #0d1017;
-    --panel: #151a24;
-    --soft: #1b2130;
-    --ink: #e9ecf1;
-    --muted: #99a1ad;
-    --line: #262d3a;
-    --accent: #8f8bff;
-    --accent-ink: #0d1017;
-    --mint: #5ddba6;
-    --mint-soft: #10301f;
-    --coral: #ff9a73;
-    --coral-soft: #3a1a0e;
-    --amber: #f3c969;
-    --amber-soft: #3a2b08;
-    --sky: #7cc0f5;
-    --sky-soft: #0f2b43;
-    --slate: #b3bcc9;
-    --slate-soft: #232a36;
-    color-scheme: dark;
-  }
+/* Black and white, one constant theme (no light switch). Meaning never rides on hue: origin chips differ by
+   label and weight, vetoes keep their strikethrough and the word "Vetoed", winners keep their row fill. */
+:root {
+  --canvas: #000000;
+  --canvas-2: #070707;
+  --panel: #0b0b0b;
+  --soft: #151515;
+  --glass: rgba(0, 0, 0, 0.72);
+  --ink: #f5f5f5;
+  --ink-2: #c8c8c8;
+  --muted: #8c8c8c;
+  --line: #1f1f1f;
+  --line-2: #333333;
+  --accent: #ffffff;
+  --accent-2: #e6e6e6;
+  --accent-ink: #000000;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --coral: #ffffff; /* flare: vetoes, denials, errors (read by the word and the strikethrough) */
+  --coral-soft: rgba(255, 255, 255, 0.12);
+  --mint: #ffffff; /* won, approved, live */
+  --mint-soft: rgba(255, 255, 255, 0.16);
+  --amber: #a6a6a6; /* SIM */
+  --amber-soft: rgba(255, 255, 255, 0.06);
+  --sky: #d9d9d9; /* MIRROR, source links */
+  --sky-soft: rgba(255, 255, 255, 0.1);
+  --slate: #8c8c8c;
+  --slate-soft: rgba(255, 255, 255, 0.07);
+  --grid: rgba(255, 255, 255, 0.05);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --radius: 16px;
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-canvas: var(--canvas);
+  --color-canvas-2: var(--canvas-2);
+  --color-ink-2: var(--ink-2);
+  --color-line-2: var(--line-2);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-flare: var(--coral);
+  --color-flare-soft: var(--coral-soft);
+  --color-glass: var(--glass);
   --color-panel: var(--panel);
   --color-soft: var(--soft);
   --color-ink: var(--ink);
@@ -103,3 +99,37 @@ body {
   from { transform: scale(.6); opacity: 0 }
   to { transform: scale(1); opacity: 1 }
 }
+
+/* Blueprint grid behind every page, fading down the screen. Decorative only. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black, transparent 75%);
+}
+main, header, footer { position: relative; z-index: 1; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* Touch the lines: a card's border lights up under the pointer (--mx, --my set by the shell). */
+.card { position: relative; isolation: isolate; }
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), var(--accent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes orbit { to { transform: rotate(360deg) } }
+@keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }

@@ -20,9 +20,9 @@
    "shipping_type": "paid",
    "shipping": "+$29.95 delivery",
    "stock": "1 remaining",
-   "shipping_cost": null,
-   "shipping_captured": false,
-   "landed_price": null,
+   "shipping_cost": 29.95,
+   "shipping_captured": true,
+   "landed_price": 1328.95,
    "availability": "1 remaining"
   }
  },
@@ -129,9 +129,9 @@
    "shipping_type": "paid",
    "shipping": "+$12.99 delivery",
    "stock": "1 remaining",
-   "shipping_cost": null,
-   "shipping_captured": false,
-   "landed_price": null,
+   "shipping_cost": 12.99,
+   "shipping_captured": true,
+   "landed_price": 1049.98,
    "availability": "1 remaining"
   }
  },
@@ -157,9 +157,9 @@
    "shipping_type": "paid",
    "shipping": "+$19.99 delivery",
    "stock": "1 remaining",
-   "shipping_cost": null,
-   "shipping_captured": false,
-   "landed_price": null,
+   "shipping_cost": 19.99,
+   "shipping_captured": true,
+   "landed_price": 1349.98,
    "availability": "1 remaining"
   }
  },

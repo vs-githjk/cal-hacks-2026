@@ -42,3 +42,6 @@ next-env.d.ts
 
 # written by next dev on every run
 /AGENTS.md
+
+# Finder or iCloud duplicate copies ("name 2.ts")
+* 2.*

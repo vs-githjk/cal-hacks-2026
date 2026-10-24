@@ -234,7 +234,8 @@ def test_an_id_with_a_trailing_newline_is_refused(client, custom, bad_id):
 def test_deeply_nested_json_is_422_not_500(client, custom):
     r = _raw(client, "[" * 5000 + "]" * 5000)
     assert r.status_code == 422, r.text
-    assert fields(r) == {"config": "not valid JSON"}
+    # the C JSON scanner on some builds parses this depth (then it is a list, not an object); others hit RecursionError
+    assert fields(r) in ({"config": "not valid JSON"}, {"config": "must be a JSON object"}, {"config": "nested too deeply"})
     assert not custom.exists() or list(custom.iterdir()) == []
 
 

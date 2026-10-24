@@ -15,12 +15,12 @@ from data.fit_checker import check_fit
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
-VETO_KINDS = {"condition", "fit", "recall"}
+VETO_KINDS = {"condition", "fit", "recall", "same_seller"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
 CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
-                "note": f"{REPO}/data/fit_checker/README.md", "record": f"{REPO}/agents/advocate/checks.py",
+                "note": f"{REPO}/data/fit_checker/README.md", "same_seller": f"{REPO}/agents/advocate/checks.py", "record": f"{REPO}/agents/advocate/checks.py",
                 "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py"}
 
 # Closed-schema reason for the voice call: summary comes only from this table, never from seller text or a model.
@@ -32,6 +32,7 @@ CALL_SUMMARIES = {
     "advocate.spec": "This offer is not the condition you asked for",
     "advocate.record": "This seller has a caution record",
     "advocate.floor": "This bid did not pass the price floor check",
+    "advocate.same_seller": "Another bid in this round comes from the same seller",
     "advocate.unsourced": "A claim on this bid could not be checked against its listing",
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
     "fit.gpu_length": "The card is longer than your case allows",
@@ -163,13 +164,85 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
     return out
 
 
+BIG_MARKETS = frozenset({"amazon.com", "ebay.com", "bestbuy.com", "newegg.com", "microcenter.com", "bhphotovideo.com"})
+# placeholder and local hosts that many simulated sellers legitimately share; a shared host here says nothing about ownership
+SHARED_TEST_HOSTS = frozenset({"example.com", "example.org", "example.net", "127.0.0.1", "localhost"})
+_SECOND_LEVEL = {"co", "com", "org", "net", "gov", "ac"}
+
+
+def _registrable(host: str) -> str:
+    parts = [p for p in (host or "").lower().strip(".").split(".") if p]
+    if len(parts) >= 3 and len(parts[-1]) == 2 and parts[-2] in _SECOND_LEVEL:
+        return ".".join(parts[-3:])
+    return ".".join(parts[-2:])
+
+
+def _seller_keys(bid) -> set[str]:
+    """What identifies one seller across supplier ids: the payee, a declared owner, and each non-marketplace listing host."""
+    keys = set()
+    payee = _norm(bid.get("payee"))
+    if payee:
+        keys.add(f"payee:{payee}")
+    owner = _norm(bid.get("owner"))
+    if owner:
+        keys.add(f"owner:{owner}")
+    for line in bid.get("lines", []):
+        try:
+            host = _registrable(urlsplit(line.get("listing_url") or "").hostname or "")
+        except ValueError:
+            continue
+        if host and host not in BIG_MARKETS and host not in SHARED_TEST_HOSTS and not host.endswith(".test"):
+            keys.add(f"host:{host}")
+    return keys
+
+
+def _bid_key(b):
+    return b["total_landed_price"]  # the order best_bid ranks on
+
+
+def _group_shills(bids):
+    """Bids from different supplier ids that share a key are one seller. Returns {dropped bid id: (kept bid, key type)}."""
+    parent = list(range(len(bids)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    keys = [_seller_keys(b) for b in bids]
+    for i in range(len(bids)):
+        for j in range(i):
+            if bids[i]["supplier_id"] != bids[j]["supplier_id"] and keys[i] & keys[j]:
+                parent[find(i)] = find(j)
+    groups = {}
+    for i in range(len(bids)):
+        groups.setdefault(find(i), []).append(i)
+    out = {}
+    for members in groups.values():
+        if len({bids[i]["supplier_id"] for i in members}) < 2:
+            continue
+        kept = min(members, key=lambda i: _bid_key(bids[i]))
+        for i in members:
+            if i != kept and bids[i]["supplier_id"] != bids[kept]["supplier_id"]:
+                shared = sorted(keys[i] & keys[kept]) or sorted(keys[i] & set().union(*(keys[m] for m in members if m != i)))
+                out[bids[i]["id"]] = (bids[kept], shared[0].split(":")[0] if shared else "key")
+    return out
+
+
 def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls: list[dict],
            owned: dict | None = None) -> list[dict]:
     owned = owned if owned is not None else need.get("owned", {})
     wanted = {i["sku_spec"]: i.get("condition") for i in need.get("items", [])}
     cards = []
+    shills = _group_shills(bids)
     for bid in bids:
         warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted)
+        if bid["id"] in shills:
+            kept, key_type = shills[bid["id"]]
+            warnings.append(_warn("same_seller", f"Same seller as {kept['supplier_id']}: shares {key_type}. "
+                                  f"Seller ids: {bid['supplier_id']} and {kept['supplier_id']}.",
+                                  (kept.get("lines") or [{}])[0].get("listing_url", ""), 0))
         kinds = {w["kind"] for w in warnings}  # decided before truncation so a veto is never hidden
         rec = "veto" if kinds & VETO_KINDS else "caution" if kinds - INFO_KINDS else "buy"
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
@@ -214,4 +287,4 @@ def _safe_source_url(value: str) -> str:
 def best_bid(bids: list[dict], cards: list[dict]):
     vetoed = {c["bid_id"] for c in cards if c["recommendation"] == "veto"}
     ok = [b for b in bids if b["id"] not in vetoed]
-    return min(ok, key=lambda b: b["total_landed_price"]) if ok else None
+    return min(ok, key=_bid_key) if ok else None

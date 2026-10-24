@@ -6,6 +6,7 @@ from pathlib import Path
 from uagents import Agent, Context
 
 import common
+import status
 from advocate import checks, mock_data
 
 agent = Agent(**common.agent_args(
@@ -19,8 +20,14 @@ common.include_profile_chat(agent, "I am Tech Bazaar's Quality Advocate. I revie
                             "Send buying goals to @techbazaarbuyer; this chat cannot approve purchases.")
 
 
+@agent.on_event("startup")
+async def announce(ctx: Context):
+    ctx.logger.info(status.status_line("advocate", "advocate", agent.address, mailbox=common.mailbox_on("advocate")))
+
+
 @agent.on_message(model=common.AdviceRequest, replies=common.AdviceReply)
 async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
+    ctx.logger.info(status.msg_line("buyer", "advocate", "advice_request"))
     verdict = common.screen(f"advice-{ctx.session}", sender, msg.need_json + msg.bids_json,
                             common.shield_context(sender))
     if verdict["verdict"] != "allow":
@@ -31,6 +38,7 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
                           owned=need.get("owned", {}))
     for c in cards:
         common.validate("AdvocateCard", c)
+    ctx.logger.info(status.msg_line("advocate", "buyer", "advice"))
     await ctx.send(sender, common.AdviceReply(cards_json=json.dumps(cards)))
 
 

@@ -28,6 +28,7 @@ SUMMARIES: dict[str, str] = {
     "advocate.spec": "This offer is not the condition you asked for",
     "advocate.record": "This seller has a caution record",
     "advocate.floor": "This bid did not pass the price floor check",
+    "advocate.same_seller": "Another bid in this round comes from the same seller",
     "advocate.unsourced": "A claim on this bid could not be checked against its listing",
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
     "advocate.ok": "No problems found in the checks",
