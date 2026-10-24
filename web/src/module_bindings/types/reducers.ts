@@ -24,6 +24,7 @@ import ReissuePairCodeReducer from "../reissue_pair_code_reducer";
 import ResetDemoReducer from "../reset_demo_reducer";
 import SeedDemoReducer from "../seed_demo_reducer";
 import SetFloorReducer from "../set_floor_reducer";
+import SetFloorForConditionReducer from "../set_floor_for_condition_reducer";
 
 export type AssignRoleParams = __Infer<typeof AssignRoleReducer>;
 export type AttachAdvocateCardParams = __Infer<typeof AttachAdvocateCardReducer>;
@@ -43,4 +44,5 @@ export type ReissuePairCodeParams = __Infer<typeof ReissuePairCodeReducer>;
 export type ResetDemoParams = __Infer<typeof ResetDemoReducer>;
 export type SeedDemoParams = __Infer<typeof SeedDemoReducer>;
 export type SetFloorParams = __Infer<typeof SetFloorReducer>;
+export type SetFloorForConditionParams = __Infer<typeof SetFloorForConditionReducer>;
 

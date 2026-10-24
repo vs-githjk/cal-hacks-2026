@@ -34,7 +34,7 @@ joe.call("post_need", id=need, buyer_id="joe", goal_id="goal-joe-gpu", delivery_
          items=[{"sku_spec": GPU, "condition": "new", "allowed_conditions": ["new"], "variant": "retail", "quantity": 1, "unit": "each"}])
 ref.call("open_round", round_id=rnd, need_id=need, window_s=WINDOW)
 for s, cond, floor in [("seller-a", "new", 250), ("seller-a", "open-box", 200), ("seller-b", "open-box", 600), ("seller-c", "new", 690)]:
-    agent[s].call("set_floor", sku_spec=GPU, condition=cond, floor=floor)
+    agent[s].call("set_floor_for_condition", sku_spec=GPU, condition=cond, floor=floor)
 # Seller A offers new 300 and open-box 260 for one SKU; the need allows only new, so 300 must be chosen.
 bids = {"seller-a": [line(300, "new"), line(260, "open-box")], "seller-b": [line(699, "open-box")], "seller-c": [line(745, "new")]}
 for s, lines in bids.items():

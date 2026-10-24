@@ -69,12 +69,12 @@ beforeEach(() => {
   grant(B, 'seller', 'seller-b');
   grant(C, 'seller', 'seller-c');
   // Floors are per (seller, sku, condition). Open-box floors are low so they never bite by accident.
-  run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'new', floor: 700 }));
-  run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
-  run(B, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'new', floor: 650 }));
-  run(B, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
-  run(C, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'new', floor: 100 }));
-  run(C, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
+  run(A, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'new', floor: 700 }));
+  run(A, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
+  run(B, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'new', floor: 650 }));
+  run(B, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
+  run(C, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'new', floor: 100 }));
+  run(C, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
 });
 
 describe('post_need and redaction', () => {
@@ -636,7 +636,7 @@ describe('seller model: floor per condition and alternative lines', () => {
 
   it('a line below the floor for its condition rejects the whole bid, even when another line is fine', () => {
     setupRound();
-    run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 600 }));
+    run(A, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'open-box', floor: 600 }));
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(760), line(590, { offeredCondition: 'open-box' })])));
     expect((m.myBidsView(h.viewContext(A) as any)[0] as any).rejectReason).toMatch(/open-box.*below this seller's floor/);
     advance(16_000);
@@ -655,8 +655,18 @@ describe('seller model: floor per condition and alternative lines', () => {
     expect(res.find((r) => r.bidId === 'bid-b')!.reasons.join(' ')).toMatch(/no floor set/);
   });
 
-  it('set_floor takes a condition and refuses an unknown one', () => {
-    expect(() => run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'mint', floor: 10 }))).toThrow(/condition/);
+  it('set_floor_for_condition refuses an unknown condition', () => {
+    expect(() => run(A, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'mint', floor: 10 }))).toThrow(/condition/);
+  });
+
+  it('set_floor without a condition (the Lane D bridge call) covers every condition; an exact floor wins', () => {
+    setupRound();
+    run(B, (ctx) => m.setFloor(ctx, { skuSpec: GPU, floor: 640 }));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(645, { offeredCondition: 'refurbished' }), line(700)])));
+    expect((m.myBidsView(h.viewContext(B) as any)[0] as any).lineRejects).toEqual(['', '']);
+    run(C, (ctx) => m.setFloor(ctx, { skuSpec: GPU, floor: 900 }));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(720)])));
+    expect((m.myBidsView(h.viewContext(C) as any)[0] as any).floorCheckPassed).toBe(true);
   });
 });
 

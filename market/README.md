@@ -76,7 +76,8 @@ joe.call("post_need", id="need-1", buyer_id="joe", goal_id="goal-joe-gpu",
          items=[{"sku_spec": "gpu-rtx5070ti-retail", "condition": "new",
                  "allowed_conditions": ["new"], "variant": "retail", "quantity": 1, "unit": "each"}])
 ref.call("open_round", round_id="round-1", need_id="need-1", window_s=15)
-seller.call("set_floor", sku_spec="gpu-rtx5070ti-retail", condition="new", floor=700)   # one floor per condition
+seller.call("set_floor", sku_spec="gpu-rtx5070ti-retail", floor=700)              # any condition of this SKU
+seller.call("set_floor_for_condition", sku_spec="gpu-rtx5070ti-retail", condition="open-box", floor=600)
 seller.call("place_bid", id="bid-a", round_id="round-1", persona="Seller A",
             lines=[{"sku_spec": "gpu-rtx5070ti-retail", "offered_spec": "",
                     "offered_condition": "", "unit_price": 780, "quantity": 1}],
@@ -94,10 +95,11 @@ Pass every name in snake_case. SpacetimeDB's HTTP API wants top-level reducer ar
 | `assign_role(identity, role, subject_id)` | owner | role is buyer, seller or referee |
 | `pair_buyer_screen(buyer_id, code)` | a screen with no role, or a buyer | demo sign-in (SIM); a seller or referee is refused. A wrong code does not throw (so the count sticks) and shows in `my_pair_attempts`; 5 wrong codes lock the code, and 5 lock the caller across every code; the code never appears in a message |
 | `reissue_pair_code(buyer_id)` | owner | fresh code, unlocked, counter reset |
-| `set_floor(sku_spec, condition, floor)` | seller | one floor per (seller, sku_spec, condition); private, only the seller reads it |
+| `set_floor(sku_spec, floor)` | seller | a floor for every condition of that SKU (unchanged call; the Lane D bridge uses it); private |
+| `set_floor_for_condition(sku_spec, condition, floor)` | seller | a floor for one (seller, sku_spec, condition); it wins over `set_floor`; private |
 | `post_need(...)`, `post_goal(...)` | buyer, for its own buyer_id | goal follows Lane A's Goal contract; starts ACTIVE, reserved 0. Each need item carries `allowed_conditions` (empty means only its `condition`) |
 | `open_round(round_id, need_id, window_s)` | referee | schedules the auto close at the deadline |
-| `place_bid(...)` | seller, as its own seller_id | sealed; anti-snipe extends. Lines are alternatives per SKU, never summed; a line's quantity is its stock (qty_available) and must be above 0. At close the cheapest allowed line with enough stock is picked, priced for the need quantity. Any line below the floor for its condition rejects the whole bid (recorded, never ranks); a line with no floor for its condition is just not eligible |
+| `place_bid(...)` | seller, as its own seller_id | sealed; anti-snipe extends. Lines are alternatives per SKU, never summed; a line's quantity is its stock (qty_available) and must be above 0. At close the cheapest allowed line with enough stock is picked, priced for the need quantity. Any line below its floor (exact condition first, else the any-condition floor) rejects the whole bid (recorded, never ranks); a line with neither floor is just not eligible |
 | `close_round(round_id)` | referee after the deadline (the scheduler closes it anyway) | ranks with `rules/scoring`; writes `round_result`. A bid's lines for one SKU are alternatives: the cheapest line whose condition is in the need item's `allowed_conditions` (empty means only `condition`) ranks, never the sum. A bid over `need.spend_limit` is out with `over_cap` (the cap itself is never shown). The score is quality-adjusted landed price (`QUALITY` in `config.ts`, PROPOSED: open-box +4 percent, refurbished +8, used +15, no 30-day-returns perk +2); `landed` stays the plain price |
 | `attach_verdict(bid_id, verdict, rule_ids, origin)` | referee (Shield) | quarantine or block disqualifies |
 | `attach_claim_check(bid_id, claim, check, evidence_url, origin)` | referee (claim check relay) | `false` disqualifies; `verified` breaks ties |

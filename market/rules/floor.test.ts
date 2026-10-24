@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkFloor, checkFloorByCondition, floorKey } from "./floor";
+import { ANY_CONDITION, checkFloor, checkFloorByCondition, floorKey } from "./floor";
 
 // SIM fixture: a GPU and a PSU.
 const lines = [
@@ -59,6 +59,13 @@ describe("floor per (seller, sku_spec, condition)", () => {
     const r = checkFloorByCondition([L("new", 300), L("refurbished", 220)], floors, cond);
     expect(r.ok).toBe(true);
     expect(r.lineRejects).toEqual(["", `no floor set for ${GPU} refurbished`]);
+  });
+
+  it("a floor for any condition (set_floor without a condition) applies when there is no exact one", () => {
+    const any = new Map([[floorKey(GPU, ANY_CONDITION), 280], [floorKey(GPU, "open-box"), 250]]);
+    expect(checkFloorByCondition([L("refurbished", 300)], any, cond).lineRejects).toEqual([""]);
+    expect(checkFloorByCondition([L("refurbished", 270)], any, cond).ok).toBe(false);
+    expect(checkFloorByCondition([L("open-box", 260)], any, cond).ok).toBe(true);
   });
 
   it("qty_available must be a finite number above 0: 0, -1, NaN and Infinity reject the bid", () => {

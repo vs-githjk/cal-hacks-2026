@@ -52,6 +52,7 @@ import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
 import SetFloorReducer from "./set_floor_reducer";
+import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
 
 // Import all procedure arg schemas
 
@@ -213,6 +214,7 @@ const reducersSchema = __reducers(
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
   __reducerSchema("set_floor", SetFloorReducer),
+  __reducerSchema("set_floor_for_condition", SetFloorForConditionReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

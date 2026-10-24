@@ -15,7 +15,11 @@ export const pair_buyer_screen = spacetimedb.reducer({ buyerId: t.string(), code
   m.pairBuyerScreen(ctx, a);
 });
 export const reissue_pair_code = spacetimedb.reducer({ buyerId: t.string() }, (ctx, a) => m.reissuePairCode(ctx, a));
-export const set_floor = spacetimedb.reducer({ skuSpec: t.string(), condition: t.string(), floor: t.f64() }, (ctx, a) => m.setFloor(ctx, a));
+export const set_floor = spacetimedb.reducer({ skuSpec: t.string(), floor: t.f64() }, (ctx, a) => m.setFloor(ctx, a));
+export const set_floor_for_condition = spacetimedb.reducer(
+  { skuSpec: t.string(), condition: t.string(), floor: t.f64() },
+  (ctx, a) => m.setFloorForCondition(ctx, a),
+);
 
 export const post_need = spacetimedb.reducer(
   {

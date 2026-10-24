@@ -22,6 +22,8 @@ export function checkFloor(bid: { lines: BidLine[] }, floors: Record<string, num
 }
 
 export const floorKey = (sku_spec: string, condition: string) => `${sku_spec}|${condition}`;
+/** The condition of a floor set without one (set_floor): it covers every condition of that SKU. */
+export const ANY_CONDITION = "*";
 
 export interface FloorCheck {
   /** False rejects the whole bid: a line below its floor, or a bad price or qty_available. */
@@ -44,7 +46,8 @@ export function checkFloorByCondition(lines: BidLine[], floors: Map<string, numb
       reasons.push(`${tag}: price ${line.unit_price} is not a positive number`);
       return "";
     }
-    const floor = floors.get(floorKey(line.sku_spec, conditionOf(line)));
+    // An exact (sku, condition) floor wins over a floor set for any condition of that SKU.
+    const floor = floors.get(floorKey(line.sku_spec, conditionOf(line))) ?? floors.get(floorKey(line.sku_spec, ANY_CONDITION));
     if (floor === undefined) return `no floor set for ${tag}`;
     if (line.unit_price < floor) reasons.push(`${tag}: ${money(line.unit_price)} is below this seller's floor of ${money(floor)}`);
     return "";

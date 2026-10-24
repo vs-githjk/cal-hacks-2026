@@ -4,7 +4,7 @@
 import { SenderError, type InferSchema, type ReducerCtx, type ViewCtx, type AnonymousViewCtx } from 'spacetimedb/server';
 import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
-import { checkFloorByCondition } from '../../rules/floor';
+import { ANY_CONDITION, checkFloorByCondition } from '../../rules/floor';
 import { rankBids } from '../../rules/scoring';
 import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
@@ -78,10 +78,19 @@ export function assignRole(ctx: Ctx, a: { identity: Identity; role: string; subj
 
 const CONDITIONS = ['new', 'open-box', 'refurbished', 'used'];
 
-/** A seller's floor for one (sku_spec, condition). */
-export function setFloor(ctx: Ctx, { skuSpec, condition, floor }: { skuSpec: string; condition: string; floor: number }) {
-  const me = requireRole(ctx, 'set_floor', ['seller']);
+/** A seller's floor for every condition of one SKU (the original call; the Lane D bridge uses it). */
+export function setFloor(ctx: Ctx, { skuSpec, floor }: { skuSpec: string; floor: number }) {
+  writeFloor(ctx, 'set_floor', skuSpec, ANY_CONDITION, floor);
+}
+
+/** A seller's floor for one (sku_spec, condition); it wins over a floor set for any condition. */
+export function setFloorForCondition(ctx: Ctx, { skuSpec, condition, floor }: { skuSpec: string; condition: string; floor: number }) {
   if (!CONDITIONS.includes(condition)) throw new SenderError(`condition must be one of ${CONDITIONS.join(', ')}`);
+  writeFloor(ctx, 'set_floor_for_condition', skuSpec, condition, floor);
+}
+
+function writeFloor(ctx: Ctx, what: string, skuSpec: string, condition: string, floor: number) {
+  const me = requireRole(ctx, what, ['seller']);
   if (!(Number.isFinite(floor) && floor > 0)) throw new SenderError('floor must be a positive number');
   for (const f of ctx.db.sellerFloor.sellerId.filter(me.subjectId)) {
     if (f.skuSpec === skuSpec && f.condition === condition) ctx.db.sellerFloor.id.delete(f.id);
@@ -89,11 +98,10 @@ export function setFloor(ctx: Ctx, { skuSpec, condition, floor }: { skuSpec: str
   ctx.db.sellerFloor.insert({ id: 0n, sellerId: me.subjectId, skuSpec, floor, condition });
 }
 
-/** A browser screen takes the buyer role with the demo pairing code (SIM sign-in). */
 export const PAIR_MAX_FAILURES = 5;
 
 /**
- * A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
+ * A browser screen takes the buyer role with the demo pairing code (SIM sign-in). A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
  * roll the count back). 5 failures lock the code, and 5 failures lock the caller across every code.
  * The code itself never appears in a message.
  */

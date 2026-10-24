@@ -12,6 +12,5 @@ import {
 
 export default {
   skuSpec: __t.string(),
-  condition: __t.string(),
   floor: __t.f64(),
 };

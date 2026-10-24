@@ -134,7 +134,7 @@ export const sellerFloor = table(
     sellerId: t.string().index('btree'),
     skuSpec: t.string(),
     floor: t.f64(),
-    condition: t.string().default('new'), // floors are per (seller, sku, condition); appended last
+    condition: t.string().default('*'), // per (seller, sku, condition); '*' means any condition; appended last
   },
 );
 
