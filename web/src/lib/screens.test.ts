@@ -47,12 +47,15 @@ describe("purchaseFromRows", () => {
       { paymentRef: "p", paymentAmount: 99, paymentMode: "sim" },
       { paymentRef: "p", paymentAmount: Number.NaN, paymentMode: "sim" },
       { paymentRef: "p", paymentAmount: 100, paymentMode: "live" },
+      { paymentRef: "", paymentAmount: 100, paymentMode: "sim", paidAt: ts(900) },
       { paymentRef: "p", paymentAmount: 100, paymentMode: "sim", retired: true },
+      { settled: true },
+      { approvalMethod: "typed_code" },
     ]) expect(purchaseFromRows([purchase(extra)] as never, "goal-a", 1_000)?.state).toBe("inconsistent");
   });
 
   it("uses recorded approval, retirement and expiry states without manufacturing a receipt", () => {
-    expect(purchaseFromRows([purchase({ approvalMethod: "typed_code" })] as never, "goal-a", 1_000)?.state).toBe("approval_recorded");
+    expect(purchaseFromRows([purchase({ approvalMethod: "typed_code", approvedAt: ts(900) })] as never, "goal-a", 1_000)?.state).toBe("approval_recorded");
     expect(purchaseFromRows([purchase({ retired: true })] as never, "goal-a", 1_000)?.state).toBe("retired");
     expect(purchaseFromRows([purchase({ reservationMatches: false })] as never, "goal-a", 30_000)?.state).toBe("expired");
   });
@@ -68,6 +71,14 @@ describe("reviewsFromRows", () => {
     const result = reviewsFromRows(rows as never, "goal-a", "r1");
     expect(result.veto).toMatchObject({ seller: "seller", finding: "claimed\n<unsafe>", sourceUrl: "" });
     expect(result.shield).toMatchObject({ verdict: "quarantine", ruleIds: ["rule-1"], scope: "bid" });
+  });
+
+  it("retains an earlier bid veto when another bid has a later non-veto advocate result", () => {
+    const reviews = reviewsFromRows([
+      { goalId: "goal-a", roundId: "r1", bidId: "vetoed", checkId: 1n, kind: "advocate", result: "veto", detail: "veto reason", evidenceUrl: "https://example.test/veto?x=1#source", origin: "MIRROR", sellerId: "s1", sellerName: "stored label", landed: 90, bindingHash: "a".repeat(64), at: ts(1) },
+      { goalId: "goal-a", roundId: "r1", bidId: "approved", checkId: 2n, kind: "advocate", result: "buy", detail: "buy reason", evidenceUrl: "", origin: "LIVE", sellerId: "s2", sellerName: "other", landed: 80, bindingHash: "b".repeat(64), at: ts(2) },
+    ] as never, "goal-a", "r1");
+    expect(reviews.veto).toMatchObject({ seller: "stored label", finding: "veto reason", sourceUrl: "https://example.test/veto?x=1#source", checkOrigin: "MIRROR" });
   });
 
   it("rejects credentialed evidence URLs", () => {

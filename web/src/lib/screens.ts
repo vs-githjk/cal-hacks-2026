@@ -292,9 +292,11 @@ const validPaymentModes = new Set(["sim", "stripe_test"]);
 
 function statusFor(row: PurchaseStatusRow, nowMs: number): PurchaseStatusView {
   const hasAnyPayment = row.paymentRef !== undefined || row.paymentAmount !== undefined || row.paymentMode !== undefined || row.paidAt !== undefined;
-  const paymentValid = row.paymentRef !== undefined && Number.isFinite(row.paymentAmount) && row.paymentAmount === row.amount &&
+  const paymentValid = typeof row.paymentRef === "string" && row.paymentRef.trim().length > 0 && Number.isFinite(row.paymentAmount) && row.paymentAmount === row.amount &&
     row.paymentMode !== undefined && validPaymentModes.has(row.paymentMode) && row.paidAt !== undefined;
-  const inconsistent = (hasAnyPayment && !paymentValid) || (paymentValid && row.retired);
+  const hasAnyApproval = row.approvalMethod !== undefined || row.approvedAt !== undefined;
+  const approvalValid = typeof row.approvalMethod === "string" && row.approvalMethod.length > 0 && row.approvedAt !== undefined;
+  const inconsistent = (hasAnyPayment && !paymentValid) || (row.settled && !paymentValid) || (paymentValid && row.retired) || (hasAnyApproval && !approvalValid);
   let state: PurchaseState;
   let receipt: ReceiptView | null = null;
   if (inconsistent) state = "inconsistent";
@@ -308,12 +310,12 @@ function statusFor(row: PurchaseStatusRow, nowMs: number): PurchaseStatusView {
     };
   } else if (row.retired) state = "retired";
   else if (ms(row.expiry) <= nowMs) state = "expired";
-  else if (row.approvalMethod) state = "approval_recorded";
+  else if (approvalValid) state = "approval_recorded";
   else state = "pending_approval";
   return {
     mandateHash: row.mandateHash, mandateId: row.mandateId, dealId: row.dealId, amount: row.amount, payee: row.payee,
-    expiry: timestampDate(row.expiry), origin: asOrigin(row.origin), approvalMethod: row.approvalMethod,
-    approvedAt: row.approvedAt ? timestampDate(row.approvedAt) : undefined, state, receipt,
+    expiry: timestampDate(row.expiry), origin: asOrigin(row.origin), approvalMethod: approvalValid ? row.approvalMethod : undefined,
+    approvedAt: approvalValid ? timestampDate(row.approvedAt!) : undefined, state, receipt,
   };
 }
 
@@ -345,7 +347,8 @@ export function reviewsFromRows(rows: readonly BidReviewRow[], goalId: string, r
   if (!roundId) return { veto: null, shield: null };
   const matching = rows.filter((row) => row.goalId === goalId && row.roundId === roundId);
   const latest = (kind: string) => matching.filter((row) => row.kind === kind).sort((a, b) => ms(b.at) - ms(a.at) || (a.checkId < b.checkId ? 1 : -1))[0];
-  const advocate = latest("advocate");
+  const advocate = matching.filter((row) => row.kind === "advocate" && row.result === "veto")
+    .sort((a, b) => ms(b.at) - ms(a.at) || (a.checkId < b.checkId ? 1 : -1))[0];
   const veto = advocate?.result === "veto" ? {
     seller: advocate.sellerName, origin: asOrigin(advocate.origin), landed: advocate.landed,
     finding: advocate.detail, sourceUrl: safeEvidenceUrl(advocate.evidenceUrl),
