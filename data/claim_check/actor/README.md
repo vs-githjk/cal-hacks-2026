@@ -7,6 +7,9 @@ Apify Store: https://apify.com/anoopibrampur/tech-bazaar-claim-check
 
 Built for Tech Bazaar (Cal Hacks 2026). Source: https://github.com/vs-githjk/cal-hacks-2026 (`data/claim_check/`).
 
+## Price
+$0.01 per claim checked; nothing charged when the page cannot be fetched. (Pay-per-event, one `claim-checked` event per claim whose page was fetched and judged.)
+
 ## What it checks
 On real store pages, against the page's schema.org Product JSON-LD:
 - **Price**
