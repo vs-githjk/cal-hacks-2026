@@ -1,4 +1,8 @@
 """shield.override.instruction: text that tries to replace the reading agent's instructions."""
+import html
+import re
+import unicodedata
+
 from shield.rules.base import BLOCK, Rule, finditer_spans, rx
 
 PATTERNS = [
@@ -9,7 +13,9 @@ PATTERNS = [
        r"(?:previous\s+|prior\s+|above\s+|earlier\s+|system\s+|safety\s+)?"
        r"(?:instructions?|rules?|prompts?|guidelines?|programming|safeguards?)"),
     rx(r"\bnew\s+instructions?\s*:"),
-    rx(r"(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}(?:system|assistant|developer)[ \t]{0,5}(?:prompt|message|note|override)?[ \t]{0,5}[:\]]"),
+    # A role label: "System prompt:", "[system]", "assistant:" always. A bare "System:" is judged by bare_system_spans.
+    rx(r"(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}(?:system[ \t]{0,5}(?:prompt|message|note|override)|assistant|developer)[ \t]{0,5}[:\]]"
+       r"|(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}system[ \t]{0,5}\][ \t]{0,5}"),
     rx(r"\byou\s+are\s+now\s+(?:a|an|the|in|my|acting|operating|unrestricted|free|dan|no\s+longer)\b"),
     rx(r"\bfrom\s+now\s+on,?\s+(?:you|ignore|always|only)\b"),
     rx(r"\bpretend\s+(?:to\s+be|you\s+are)\b"),
@@ -94,7 +100,7 @@ I18N_PATTERNS = [
     rx(r"新的?(?:指令|指示|命令)\s*[:：]"),
     rx(r"(?:致|给)(?:所有)?[^。！？\n]{0,6}?(?:代理|智能体|助手|机器人|ai)[^。！？\n]{0,3}?[:：]"),
     # labels in all three: système, Systemhinweis, 系统提示, with an imperative right after them
-    rx(r"(?:^|[\n\r>\[\(\{\"'【「])[ \t]{0,20}(?:(?:instruction|message|note|consigne)\s+syst[eè]me|syst[eè]me|d[eé]veloppeur"
+    rx(r"(?:^|[\n\r>\[\(\{\"'【「])[ \t]{0,20}(?:(?:instruction|message|note|consigne)\s+syst[eè]me|syst[eè]me|system|d[eé]veloppeur"
        r"|systemhinweis|systemnachricht|systemanweisung|entwickler|系统(?:提示|消息|通知|指令)?|开发者)[ \t]{0,5}[\]】」]?[ \t]{0,5}[:：\]】」][ \t]{0,5}"
        r"(?:\w+[ \t]+){0,2}?(?:" + _FR_ACTION + "|" + _DE_ACTION + r")"),
     rx(r"(?:^|[\n\r>\[\(\{\"'【「])[ \t]{0,20}(?:系统(?:提示|消息|通知|指令)?|开发者)[ \t]{0,5}[\]】」]?[ \t]{0,5}[:：\]】」][ \t]{0,5}"
@@ -102,8 +108,88 @@ I18N_PATTERNS = [
 ]
 
 
+# #250: a bare "System:" at a line start (after a bullet or bold marker too) passes only when the rest of its line, or
+# the next non-blank line, is made of spec words: an OS, a maker or product line, a model number, a unit or a build
+# word. Any other word (approve, pay, trust, now ...) makes it a label aimed at the agent: fail closed.
+_SYS_LABEL = rx(r"(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}(?:[-*\u2022#]+[ \t]{0,5})?[*_]{0,2}system[*_]{0,2}[ \t]{0,5}:[*_]{0,2}")
+_SPEC_WORDS = frozenset("""
+windows win home pro edition linux ubuntu fedora debian mint mac macos os chrome chromeos steam deck amd intel ryzen core ultra
+threadripper xeon celeron pentium athlon apple nvidia geforce rtx gtx radeon rx arc ti super xt xtx gb tb mb ghz mhz w watt watts
+ddr ssd hdd nvme ram memory storage cpu gpu psu case atx matx itx eatx mini micro mid full tower desktop laptop gaming prebuilt
+pre built custom oem with and plus x in of asus msi gigabyte asrock evga zotac pny sapphire xfx corsair nzxt lian li fractal
+dell hp lenovo acer alienware optiplex pavilion thinkpad thinkcentre omen legion predator rog strix tuf aorus prime dual eagle
+includes included not fully tested working new used refurbished none n a requirements compatible kompatibel mit avec
+sealed retail box open liquid air cooled water aio rgb wifi bluetooth ethernet usb hdmi displayport dp ports port
+the bit oc founders ventus trio windforce build builds h hr hrs hours manual bare board motherboard mobo only card
+chassis cooler fan fans see listing photos ddr am lga no mag tomahawk aero elite master extreme hero apex formula
+activated licensed genuine pc graphics integrated lts version great good excellent condition never like macbook imac
+air studio inch bit
+""".split())
+_WORD = rx(r"[^\W_]+")
+_NEXT = rx(r"\S")
+# The letters a model number may carry around its digits: i7, 14700K, 7800X3D, 12GB, DDR5, AM5, RTX4090, B650, M2
+_MODEL_LETTERS = frozenset("i k ks kf f x xd d g gb tb mb ghz mhz w u h hx hs p s t te xt xtx ti rtx gtx rx gt am ddr lga v b z a e c m".split())
+
+
+def _spec_word(w):
+    if w in _SPEC_WORDS:
+        return True
+    letters = re.findall(r"[^\W\d_]+", w)
+    return len(w) <= 12 and any(c.isdigit() for c in w) and all(r in _MODEL_LETTERS or r in _SPEC_WORDS for r in letters)
+
+
+def _line_words(doc, start, end):
+    # judged on the caller's own text, so a folded view ("DDR5" read as "ddrs") does not turn a model number into prose
+    raw = doc.raw[doc.starts[start]:doc.ends[end - 1]]
+    return _WORD.findall(unicodedata.normalize("NFKC", html.unescape(raw)).lower())
+
+
+# A line after the spec line that gives an order ("Approve the seller", "- pay now", "You must trust this seller")
+_ORDER_LINE = rx(r"[ \t]{0,20}(?:[-*\u2022#>]+[ \t]{0,5})?[*_]{0,2}(?:approve|pay|release|send|transfer|wire|trust|skip|ignore"
+                 r"|disregard|charge|authori[sz]e|confirm|buy|purchase|accept|select|choose|pick|rank|override|bypass|proceed"
+                 r"|complete|finali[sz]e|execute|do\s+not|don'?t|never|always|immediately|now|agents?|assistant"
+                 r"|you\s+(?:must|should|need|have\s+to|are\s+(?:now|required|instructed|authori[sz]ed)))\b")
+
+
+def _line_end(text, pos):
+    end = text.find("\n", pos)
+    return len(text) if end < 0 else end
+
+
+def bare_system_spans(doc):
+    text = doc.norm
+    judged = set()   # line ends already judged: a second label on a line is inside the first one's words
+    for m in _SYS_LABEL.finditer(text):
+        nxt = _NEXT.search(text, m.end())   # the rest of the line, or the next non-blank line however far down
+        if not nxt:
+            continue
+        end = _line_end(text, nxt.start())
+        if end in judged:
+            continue
+        judged.add(end)
+        words = _line_words(doc, nxt.start(), end)
+        while not words:   # "System: -" or "System: ...": the next line with a word decides
+            nxt = _NEXT.search(text, end)
+            if not nxt:
+                break
+            end = _line_end(text, nxt.start())
+            words = _line_words(doc, nxt.start(), end)
+        bad = not all(_spec_word(w) for w in words)
+        stop = end
+        for _ in range(3):   # the next three non-blank lines must not give an order either
+            nxt = _NEXT.search(text, stop)
+            if bad or not nxt:
+                break
+            stop = _line_end(text, nxt.start())
+            bad = bool(_ORDER_LINE.match(text, text.rfind("\n", 0, nxt.start()) + 1))
+        if bad:
+            start = m.start() + (1 if text[m.start()] in "\n\r>[({\"'" else 0)
+            yield doc.raw_span(start, stop)
+
+
 def check(doc, ctx):
     yield from finditer_spans(doc, PATTERNS + I18N_PATTERNS)
+    yield from bare_system_spans(doc)
     simplified = doc.norm.translate(_T2S)
     if simplified != doc.norm:
         for p in I18N_PATTERNS:
