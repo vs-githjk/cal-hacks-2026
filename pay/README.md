@@ -39,8 +39,8 @@ mark_used(m, store=store, deal_id="deal-A", amount=1119.00, payee="seller-x")   
 
 ## TAP-style signing (`pay/tap.py`)
 Signs every buyer-agent request with an RFC 9421 HTTP Message Signature (Ed25519). The signature covers
-`@method`, `@authority`, `@path`, `content-digest` and `mandate-hash`, with params `created`, `expires`,
-`keyid`, `alg="ed25519"`, `nonce` and `tag="agent-browser-auth"`. Query strings are not covered; the money fields
+`@method`, `@authority`, `@path`, `@query`, `content-digest` and `mandate-hash`, with params `created`, `expires`,
+`keyid`, `alg="ed25519"`, `nonce` and `tag="agent-browser-auth"`. The query string is covered (changing `?x=1` to `?x=2` fails); the money fields
 live in the signed body.
 ```python
 from pay.tap import load_private_key, keyring, sign_request, verify_request, attach_signature

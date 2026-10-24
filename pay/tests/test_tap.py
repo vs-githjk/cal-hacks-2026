@@ -77,7 +77,7 @@ def test_headers_follow_rfc9421_shape(priv):
     assert h["Mandate-Hash"] == m["hash"] == mandate_hash(m)
     assert h["Content-Digest"] == "sha-256=:" + base64.b64encode(hashlib.sha256(body).digest()).decode() + ":"
     si = h["Signature-Input"]
-    assert si.startswith('sig1=("@method" "@authority" "@path" "content-digest" "mandate-hash");')
+    assert si.startswith('sig1=("@method" "@authority" "@path" "@query" "content-digest" "mandate-hash");')
     for param in ("created=", "expires=", 'keyid="', 'alg="ed25519"', 'nonce="', f'tag="{TAG}"'):
         assert param in si
     assert re.fullmatch(r"sig1=:[A-Za-z0-9+/=]+:", h["Signature"])
@@ -91,6 +91,7 @@ def test_signature_matches_an_independently_built_signature_base(priv):
         '"@method": POST',
         '"@authority": merchant.example.com',
         '"@path": /v1/charge',
+        '"@query": ?x=1',
         f'"content-digest": {h["Content-Digest"]}',
         f'"mandate-hash": {m["hash"]}',
         f'"@signature-params": {params}',
@@ -136,6 +137,9 @@ def test_tampered_amount_with_recomputed_digest_fails_signature(priv, keys):
     ("method", "PUT"),
     ("url", "https://evil.example.com/v1/charge?x=1"),
     ("url", "https://merchant.example.com/v1/refund?x=1"),
+    ("url", "https://merchant.example.com/v1/charge?x=2"),
+    ("url", "https://merchant.example.com/v1/charge?x=1&y=2"),
+    ("url", "https://merchant.example.com/v1/charge"),
 ])
 def test_tampered_method_authority_or_path_fails(priv, keys, field, value):
     m, body, h = signed(priv)
@@ -311,3 +315,22 @@ def test_end_to_end_with_key_from_env(tmp_path, monkeypatch):
     priv = load_private_key()
     m, body, h = signed(priv)
     assert check(keyring(priv.public_key()), h, body).ok
+
+
+def test_request_signed_without_query_cannot_gain_one_and_vice_versa(priv, keys):
+    m = mandate()
+    body = body_for(m)
+    bare = "https://merchant.example.com/v1/charge"
+    h = sign_request(method="POST", url=bare, body=body, mandate=m, private_key=priv, now=NOW)
+    assert check(keys, h, body, url=bare).ok
+    h2 = sign_request(method="POST", url=bare, body=body, mandate=m, private_key=priv, now=NOW)
+    r = check(keys, h2, body, url=bare + "?redirect=evil")
+    assert not r.ok and r.reason == "bad_signature"
+
+
+def test_signature_must_cover_query(priv, keys):
+    m, body, h = signed(priv)
+    h2 = dict(h)
+    h2["Signature-Input"] = h["Signature-Input"].replace(' "@query"', "")
+    r = check(keys, h2, body)
+    assert not r.ok and r.reason == "bad_component_set"

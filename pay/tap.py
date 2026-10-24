@@ -33,7 +33,7 @@ KEY_ENV = "VISA_TAP_PRIVATE_KEY_PATH"
 TAG = "agent-browser-auth"
 ALG = "ed25519"
 LABEL = "sig1"
-COMPONENTS = ("@method", "@authority", "@path", "content-digest", "mandate-hash")
+COMPONENTS = ("@method", "@authority", "@path", "@query", "content-digest", "mandate-hash")
 MAX_SIGNATURE_TTL_SECONDS = 300
 DEFAULT_TTL_SECONDS = 60
 CLOCK_SKEW_SECONDS = 30
@@ -123,6 +123,7 @@ def _component_values(method: str, url: str, content_digest: str, mand_hash: str
         "@method": method.upper(),
         "@authority": _authority(split),
         "@path": split.path or "/",
+        "@query": "?" + split.query,  # RFC 9421 section 2.2.7: always a leading "?", even when empty
         "content-digest": content_digest,
         "mandate-hash": mand_hash,
     }
