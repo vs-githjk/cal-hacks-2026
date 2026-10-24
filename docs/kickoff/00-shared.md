@@ -168,7 +168,7 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 
 Existing: Need, SpecCard, SupplierTerms, Bid, Claim, ShieldVerdict, SupplierSignal, AdvocateCard, OrderPlan, Order, ReceivingEvent, QualityRecord, LedgerEntry, Persona, FloorEvent v2 (Vedant's proposals SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord, FloorEvent v2 stand). Add to Bid and Claim: `origin` (LIVE, MIRROR, SIM) and `source`.
 
-**New proposals. Each is logged in docs/CHANGES.md before merge; everyone reviews on the board by Fri 22:30 (contracts frozen).**
+**New proposals. Each is logged in a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`) before merge; everyone reviews on the board by Fri 22:30 (contracts frozen).**
 - `LossReport {id, round_id, seller_id, won, gap_band: within5|within10|within20|over20, reason: price|fit|condition|delivery|record|advocate_veto, source_url, created_at}` (owner Vedant). Never carries thresholds or model details. Rate limited per seller.
 - `OwnedPart {id, buyer_id, sku_spec, item_name, condition, acquired_on, source: bought_here|told_by_user|imported, attrs{as SpecCard}, notes}` (owner Abhinav). The buyer's profile is its OwnedParts plus its allowance. For an IT buyer it is fleet memory.
 - `Goal {id, buyer_id, type: budget_cap|part_by_date|build_by_date, items[], cap, deadline, state: ACTIVE|HUNTING|HOLD_FOR_CALL|DONE|EXPIRED|PAUSED, reserved_amount, po_number?, created_at}` (owner Vedant with Abhinav; reducer is Vedant's).
@@ -176,13 +176,13 @@ Existing: Need, SpecCard, SupplierTerms, Bid, Claim, ShieldVerdict, SupplierSign
 - `Allowance {buyer_id, auto_approve_up_to (starts 0), currency, seat_id?, raised_by: [receiving_event_id], phone_ref}` (shape Vidyut, reducer Vedant). phone_ref is a reference, never a raw number in the repo.
 - Also proposed: `VoiceApproval {id, mandate_hash, called_at, code_ok, approve_token, answer: approve|deny|no_answer, transcript_ref}` (Vidyut), `ShieldVerdict` v1 schema `{verdict: allow|quarantine|block, rule_ids[], severity, evidence_spans[], latency_ms, request_id, version}` with no free text from a model, plus a signed receipt (Vidyut).
 
-Contract changes go in docs/CHANGES.md first; unobjected proposals stand.
+Contract changes go in a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`) first; unobjected proposals stand.
 
 ## Term map (words to use in code, tests, UI and docs)
 buyer (the agent's owner; "builder" only for DIY upgraders), seller, goal, bid, lot (a pooled SKU order), mandate, allowance, condition (new, open-box, refurbished, used), variant (retail or OEM, cooler included, model number), CPSC recall, loss report, advocate, advocate veto, Lot Wall, origin badge (LIVE, MIRROR, SIM), wind tunnel, Bazaar Shield. Say "charges worth questioning" or "the price claim did not match the price history", never "wrong" or "liar".
 
 ## Repo layout (each lane owns its folder; touch others only through contracts/)
-- contracts/ shared JSON schemas (change only with a note in docs/CHANGES.md)
+- contracts/ shared JSON schemas (change only with a note in a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`))
 - agents/ Lane A: Python uAgents (buyer, advocate, sellers, goal loop, CRS gate, open seller protocol, Shield /verify-agent, sim clock)
 - market/ Lane B: SpacetimeDB module (rounds, goals, lots, allowance, reservation ledger) and market/rules
 - web/ Lane B: Next.js buyer screen, seller screen, Lot Wall (later item), 3D floor, Hyphenate pages
@@ -211,7 +211,7 @@ Hours of planned work to Sun 03:00, judgement estimates, roughly equal: A Abhina
 - No secrets in the repo, chat or logs. Never read or edit `.env`. Sandbox and test identities only.
 - Never add Co-Authored-By or any attribution trailer to a commit. Stage only files you changed. Never push or merge to main unless Vidyut says "push"; he ships.
 - Branch per task, small PRs, main always runs. Write the failing test first for logic (reducers, fit rules, Shield, mandate, call).
-- Post one line per finish or need in docs/BOARD.md (newest at the bottom). Anything more than 90 minutes behind a gate goes to Vidyut at once.
+- Post one line per finish or need in docs/board/<your lane>.md (newest at the bottom). Anything more than 90 minutes behind a gate goes to Vidyut at once.
 - Never write "Visa settles". Say "Stripe test mode on a Visa test card, signed under Visa's Trusted Agent Protocol; our merchant simulator verifies the signature".
 - Never call a real store a liar. Say "the price claim did not match the price history", "differs from the listing at time T", "could not verify". The planted liar runs only on pages we host.
 - Never claim more than built. Never "secure": say "blocked X of Y on this corpus". Never say "many buyers use it".
