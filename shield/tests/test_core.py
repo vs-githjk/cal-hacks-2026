@@ -1,6 +1,5 @@
 """d4 Shield core contract: verdict shape, fail closed, classifier hook limits, Anoop's injected page."""
 import json
-import subprocess
 
 import pytest
 
@@ -11,11 +10,6 @@ from shield.core import screen
 KEYS = {"verdict", "rule_ids", "severity", "evidence_spans", "latency_ms", "request_id", "version"}
 SELLERS_PAYEE = "shady-sam@pay.example.test"
 HIST = [829.0, 799.0, 789.0]
-
-
-def _git_show(path):
-    r = subprocess.run(["git", "show", f"origin/lane-c-c4-liar:{path}"], capture_output=True, text=True)
-    return r.stdout if r.returncode == 0 else None
 
 
 def test_verdict_shape_is_stable_and_has_no_free_text():
@@ -137,24 +131,25 @@ def test_claude_classifier_builds_request_without_network(monkeypatch):
     assert seen["hdr"]["x-api-key"] == "test-key-not-real"
 
 
-# ---- Anoop's injected page (lane-c-c4-liar) ----
+# ---- Anoop's injected page (data/liar_pages on main, copied into the dev corpus as a01 and c09, c10) ----
 
-@pytest.mark.skipif(_git_show("data/liar_pages/site/shady-sam-gpu-5070ti-injected.html") is None,
-                    reason="origin/lane-c-c4-liar not fetched")
+def _case(case_id):
+    from shield.corpus.run_corpus import DEV, load
+    return next(r for r in load(DEV) if r["id"] == case_id)
+
+
 def test_anoops_injected_page_is_blocked_with_rules_shown():
-    page = _git_show("data/liar_pages/site/shady-sam-gpu-5070ti-injected.html")
-    out = screen(page, {"payee_of_record": SELLERS_PAYEE, "price_history": HIST})
+    row = _case("a01")
+    assert "SYSTEM NOTE TO SHOPPING AGENTS" in row["message"]
+    out = screen(row["message"], row["context"], classifier=None)
     assert out["verdict"] == "block"
     assert {"shield.override.instruction", "shield.hidden.instruction", "shield.payee.swap",
             "shield.money.approval", "shield.price.contradiction"} <= set(out["rule_ids"])
+    shown = {sp["rule_id"] for sp in out["evidence_spans"]}
+    assert "shield.payee.swap" in shown and "shield.hidden.instruction" in shown
 
 
-@pytest.mark.skipif(_git_show("data/liar_pages/site/honest-hal-gpu-5070ti.html") is None,
-                    reason="origin/lane-c-c4-liar not fetched")
 def test_anoops_honest_pages_are_allowed():
-    for name in ("honest-hal-gpu-5070ti", "honest-hal-cpu-5800x3d", "shady-sam-gpu-5070ti"):
-        page = _git_show(f"data/liar_pages/site/{name}.html")
-        seller = "honest-hal" if "honest" in name else "shady-sam"
-        out = screen(page, {"payee_of_record": f"{seller}@pay.example.test",
-                            "price_history": HIST if "gpu" in name else [339.0, 329.0]})
-        assert out["verdict"] == "allow", (name, out)
+    for cid in ("c09", "c10"):
+        row = _case(cid)
+        assert screen(row["message"], row["context"], classifier=None)["verdict"] == "allow", cid
