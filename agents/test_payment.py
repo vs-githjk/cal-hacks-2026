@@ -21,6 +21,7 @@ def checkout():
     session, code = service.issue(mandate, channel="phone", now=NOW)
     session.start_call(now=NOW)
     session.begin_listening(now=NOW)
+    session.recording_ref = "cartesia:ac_test"  # call evidence, as voice_cartesia records it
     voice = session.approve(code + " approve", now=NOW + timedelta(seconds=1)).record
     assert voice and voice["result"] == "approved"
     tx = {"deal_id": "deal-1", "buyer_id": "buyer-1", "goal_id": "goal-1", "need_id": "need-1",
