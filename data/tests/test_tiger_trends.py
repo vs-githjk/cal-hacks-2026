@@ -71,8 +71,7 @@ def configured(monkeypatch):
 
 # no env: not configured, never invented points, no connection attempt
 def test_no_env_is_not_configured_with_no_rows_and_no_connection(monkeypatch):
-    import psycopg2
-    monkeypatch.setattr(psycopg2, "connect", lambda *a, **k: pytest.fail("connected without env"))
+    monkeypatch.setattr(store, "_connect", lambda: pytest.fail("connected without env"))
     c = Connector()
     d = trends.demand_by_sku(connect=c)
     l = trends.loss_coach("seller_3", connect=c)
