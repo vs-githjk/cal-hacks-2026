@@ -718,6 +718,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const rejections = new Map<string, string[]>();
   const verified = new Map<string, number>();
   const metas = new Map<string, LineMeta[]>();
+  const candidateHashes = new Map<string, string>();
   for (const b of rows) {
     const reasons: string[] = [];
     const parsedMeta = parseLineMeta(b.lineMetaJson || '[]', b.lines.length);
@@ -732,6 +733,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     const candidate = candidateRank && candidateRank.picked.length === needItems.size && parsedMeta.rows
       ? selectedCandidate(roundId, r.needId, b, parsedMeta.rows, candidateRank.picked, candidateRank.landed, needItems)
       : undefined;
+    if (candidate) candidateHashes.set(b.id, candidate.bindingHash);
     if (candidateRank && candidateRank.picked.length !== needItems.size) reasons.push('bid does not cover every requested item');
     const bound = (check: typeof checks[number], line?: { line_index: number; listing_id: string; listing_hash: string }) => {
       try {
@@ -766,11 +768,11 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     const b = byId.get(x.bid.id)!;
     // The lines are the picked alternatives (the cheapest allowed line per SKU), the ones the rank is about.
     const metadata = metas.get(b.id)!;
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source, lineMetaJson: JSON.stringify(x.picked.map((i) => metadata[i]!)) });
+    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source, lineMetaJson: JSON.stringify(x.picked.map((i) => metadata[i]!)), bindingHash: candidateHashes.get(b.id) ?? '' });
   }
   for (const d of ranked.disqualified) {
     const b = byId.get(d.bid.id)!;
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source, lineMetaJson: metas.has(b.id) ? JSON.stringify(metas.get(b.id)) : '[]' });
+    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source, lineMetaJson: metas.has(b.id) ? JSON.stringify(metas.get(b.id)) : '[]', bindingHash: candidateHashes.get(b.id) ?? '' });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
   const top = ranked.ranked[0];

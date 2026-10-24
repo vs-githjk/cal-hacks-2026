@@ -336,6 +336,7 @@ export const roundResult = table(
     origin: t.string(),
     source: t.string(),
     lineMetaJson: t.string().default('[]'), // selected metadata; original indexes stay bound for review/evidence
+    bindingHash: t.string().default(''), // exact selected candidate hash, persisted for closed-round readback
   },
 );
 

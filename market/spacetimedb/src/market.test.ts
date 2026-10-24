@@ -265,6 +265,7 @@ describe('migration-safe bid line metadata', () => {
     advance(m.REVIEW_WINDOW_MS);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     expect([...h.db.roundResult.iter()][0]).toMatchObject({ rank: 0 });
+    expect([...h.db.roundResult.iter()][0]!.bindingHash).toBe(selected.bindingHash);
     expect([...h.db.roundResult.iter()][0]!.reasons.join(' ')).toMatch(/AdvocateCard bound to the selected candidate/);
   });
 
