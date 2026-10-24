@@ -37,8 +37,9 @@ PSU_750 = from_dataset("power-supply", {"name": "Corsair RM750e", "type": "ATX",
 PSU_850 = from_dataset("power-supply", {"name": "Corsair RM850x", "type": "ATX", "wattage": 850})
 
 NR200P = card("case", "Cooler Master MasterBox NR200P", type="Mini ITX Tower", psu_form_factors=["SFX", "SFX-L"], max_gpu_length_mm=330, max_cooler_height_mm=155)
-NORTH = card("case", "Fractal Design North", type="ATX Mid Tower", max_gpu_length_mm=355, max_cooler_height_mm=170)
-NH_D15 = card("cooler", "Noctua NH-D15", height_mm=165, sockets=["AM4", "AM5", "LGA1700", "LGA1851"])
+NORTH = card("case", "Fractal Design North", type="ATX Mid Tower", max_gpu_length_mm=355, max_cooler_height_mm=145)
+LANCOOL216 = card("case", "Lian Li Lancool 216", type="ATX Mid Tower", max_gpu_length_mm=392, max_cooler_height_mm=180)
+NH_D15 = card("cooler", "Noctua NH-D15", height_mm=168, sockets=["AM4", "AM5", "LGA1700", "LGA1851"])
 PA120 = card("cooler", "Thermalright Peerless Assassin 120 SE", height_mm=155, sockets=["AM4", "AM5", "LGA1700", "LGA1851"])
 SSD_990 = from_dataset("internal-hard-drive", {"name": "Samsung 990 Pro", "form_factor": "M.2-2280", "interface": "M.2 PCIe 4.0 X4"})
 
@@ -170,7 +171,7 @@ def test_nvme_on_am5_board_passes():
 
 # aggregation and safety
 def test_full_demo_build_passes():
-    out = check_fit([R7_9800X3D, B650, DDR5_6000, RTX5070TI, PSU_850, NORTH, PA120, SSD_990])
+    out = check_fit([R7_9800X3D, B650, DDR5_6000, RTX5070TI, PSU_850, LANCOOL216, PA120, SSD_990])
     connectors = rule(out, "fit.gpu_connectors")["verdict"]
     assert connectors == "uncertain"  # dataset PSU rows carry no connector counts
     assert out["verdict"] == "uncertain" and out["rule_id"] == "fit.gpu_connectors"
@@ -214,3 +215,7 @@ def test_sfx_psu_in_atx_tower_is_uncertain():
 def test_5070ti_adapter_needs_two_8pin_per_nvidia():
     psu = card("psu", "850 two 8-pin", wattage=850, form_factor="ATX", pcie_8pin=2, pcie_16pin=0)
     assert rule(check_fit([R7_9800X3D, RTX5070TI, psu]), "fit.gpu_connectors")["verdict"] == "pass"
+
+
+def test_pa120_does_not_fit_the_north():  # fractal-design.com: 145 mm cooler clearance
+    assert check_fit([PA120, NORTH])["rule_id"] == "fit.cooler_height"

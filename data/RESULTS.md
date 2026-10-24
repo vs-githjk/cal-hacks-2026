@@ -32,4 +32,16 @@ The uncertain row is a 300-series AM4 board with Ryzen 5000, where support depen
 - EATX in an ATX mid tower (known only by case type) and an SFX PSU in an ATX bay are now uncertain, not fail.
 - Table rows re-checked: RTX 5070 Ti and 5070 on nvidia.com (2x 8-pin adapter, 750 W and 650 W). RX 9070 and 9070 XT recommended PSU left out: amd.com blocked our fetch and third-party pages disagree, so the load estimate decides.
 
-Next: re-open each spec page in fit_builds.json (then set hand_checked), and add held-out builds no one tuned against.
+### Spec re-check (Fri, maker pages read by an agent, not a person)
+Each part in `fit_builds.json` now carries `checked` (level, source, date); a build is `hand_checked` only if every part was confirmed on a maker page.
+- Values corrected: Fractal North cooler clearance 145 mm (was 170); Noctua NH-D15 168 mm (was 165); O11 Dynamic EVO GPU 455 mm; Strix 4090 and Astral 5090 357.6 mm; Sapphire NITRO+ 7900 XTX 420 W board power, 800 W PSU; RM850x 2024 has 3x 8-pin, RM1000x has 4x; B650I AORUS ULTRA 4 SATA. RM650e and RM750e connector counts could not be confirmed and were removed (unknown).
+- Truths changed by the corrections: `demo_hero` (PA120 SE does not fit the North), `nhd15_h5`, `4090fe_14900k_1000`. No builds added or removed.
+- Not confirmed: Ryzen 5 5600X on PRIME B350M-A, H5 Flow (retailer listings only), CPU TDPs, memory kits, most boards and remaining PSUs.
+
+| set | builds | decided correct | false OK | false fail | uncertain |
+|---|---|---|---|---|---|
+| all 44 (after re-check) | 44 | 42 of 43 | 0 | 1 | 1 |
+| maker-checked subset | 12 | 12 of 12 | 0 | 0 | 0 |
+
+Say "12 of 12 on builds whose specs we confirmed on maker pages; 42 of 43 on the full set, partly unconfirmed". The set was tuned on once, so neither is held out.
+Next: confirm the remaining parts, and add held-out builds no one tuned against.

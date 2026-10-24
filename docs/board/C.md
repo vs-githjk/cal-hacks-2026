@@ -1,3 +1,4 @@
 # Board: Lane C
 Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each lane has its own file, so PRs never conflict.
 - [22:24] fit review fixes: CPU without power info -> uncertain; EATX in mid tower and SFX in ATX bay -> uncertain; 5070 Ti adapter corrected to 2x 8-pin (nvidia.com); RX 9070 rec PSU left out (amd.com blocked, sources disagree). Frozen set unchanged: 0 false OK; still not hand-checked, do not quote 42/43 as hand-checked
+- [22:30] fit spec re-check: 12 of 44 builds fully confirmed on maker pages (12/12 correct, 0 false OK); fixes include Fractal North cooler clearance 145 mm (PA120 SE does NOT fit it) and NH-D15 168 mm; 3 build truths changed; full set still 0 false OK. Details in data/RESULTS.md | @A @B if any demo persona uses a North with a 155 mm cooler, change it
