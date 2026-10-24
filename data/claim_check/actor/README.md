@@ -31,3 +31,15 @@ Results on real store pages are MIRROR (a dated read of a public page). Results 
 
 ## Build
 `./bundle.sh` copies the checker into `src/data/` (gitignored), then push this folder.
+
+## Example run on a real store page (MIRROR, 2026-10-24 07:31 UTC)
+Run on Apify against a Canada Computers listing (MSI RTX 5070 Ti 16G Shadow 3X OC, prices in CAD) and one Micro Center listing. The claims are test claims we wrote, not claims made by the stores.
+
+| claim | page | result | evidence |
+|---|---|---|---|
+| price $1,749.99 | Canada Computers | verified | the page shows $1,749.99 (page JSON-LD) |
+| condition new | Canada Computers | verified | the page shows new |
+| in stock | Canada Computers | false | differs from the listing at 07:31 UTC: the page shows out of stock |
+| in stock | Micro Center | unverified | could not verify: page fetch failed (http 403) |
+
+Large US retailers (Micro Center, Best Buy, B&H, Newegg) usually refuse a plain fetch, so their pages come back `unverified`, never `false`.
