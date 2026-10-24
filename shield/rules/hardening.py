@@ -95,12 +95,12 @@ SPOOF = [
 # ---- soft requests for private data ----------------------------------------------------------------------
 # "name" and "state" are also nouns ("Wi-Fi name and password", "solid state drive ... password"): they count as
 # asking verbs only when an imperative cue comes first. A cue word ("please state", "could you name") is enough on
-# its own; at a sentence start or after a colon the verb must also be followed by the thing asked for ("State the
-# maximum ..."), so "State: like new" and "Name and password are printed on the sticker" stay honest.
-_ASKED_OBJECT = r"\s+(?:the|your|our|my|its|us|me|how|what|whether|if|this|that|a|an|all|any)\b"
-_IMPERATIVE = (r"(?:(?:please|kindly|just|then|to|must|should|will|would\s+you|could\s+you|can\s+you|"
-               r"(?:you|we)\s+(?:can|could|may|need\s+to|have\s+to))\s+(?:please\s+)?"
-               r"|(?:^|[.!?;:\n])\s*(?=(?:state|name)" + _ASKED_OBJECT + r"))")
+# its own. At a sentence start or after a colon the noun readings are ruled out instead of the asks listed, so a
+# comma or an adverb after the verb ("State, for our records, ...", "State plainly ...") cannot hide a real ask:
+# "State: like new", "Name and password are printed", "Name is printed", "Name on the label" stay honest.
+_NOT_NOUN_USE = r"(?!\s*:|\s+(?:and|or|is|are|was|on|of|must|field|tag)\b)"
+_IMPERATIVE = (r"(?:(?:please|kindly|just|then|to|must|should|will|would\s+you|could\s+you|can\s+you)\s+(?:please\s+)?"
+               r"|(?:^|[.!?;:\n])\s*(?=(?:state|name)\b" + _NOT_NOUN_USE + r"))")
 _ASK = (r"(?:tell|share|reveal|disclose|let\s+(?:us|me)\s+know|confirm|what(?:'s|\s+is|\s+are)|how\s+(?:much|high)|provide|send|"
         r"give|reply\s+with|divulge|indicate|specify|say|paste|enter|submit|" + _IMPERATIVE + r"(?:state|name))")
 _PRIVATE_CEILING = (r"(?:(?:the\s+)?most\s+(?:your|the)\s+(?:owner|buyer|principal)|max(?:imum)?\s+(?:price\s+|budget\s+|amount\s+|spend\w*\s+)?"
