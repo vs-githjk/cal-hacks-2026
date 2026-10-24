@@ -51,6 +51,23 @@ answer, dial failure, expired mandate) or a missing Cartesia setup prints the de
 `--live-call` cannot be combined with `--stripe` (that charge runs before the round). Without `--live-call` nothing changes. The market has no place to show the code yet, so it is
 on the operator console (see NOT BRIDGED); tests use a fake client and place no call.
 
+## Stage runner (`demo/stage.py`): one command for the video and the room
+```
+python3 demo/stage.py                      # check services, reset, press Enter to play each beat
+python3 demo/stage.py --auto               # hands free: each beat starts after its reading delay
+python3 demo/stage.py --auto --live-call   # beat 4 places ONE real Cartesia call (see above for what denies it)
+python3 demo/stage.py --dry-run            # cues and reducer calls only: no check, no reset, no market
+python3 -m pytest demo/tests/test_stage.py # fakes only, about a second
+```
+It wraps `bridge.py` (same reducers, same tokens, same live-call gate) and adds the show around it:
+1. **Service check.** The launcher's own status logic (`scripts/launch.py status`) reads `--run-dir` (default `.run` in this checkout; when you run from another checkout than the live stack, pass the stack's, for example `--run-dir /path/to/bidding-royale/.run`). It refuses to start if any service is DOWN or FAILED, or if the launcher started nothing; `--force` plays anyway and says FORCED. A SKIPPED service does not block (the launcher already said why).
+2. **Reset.** `reset_demo` (referee), which keeps roles and pair codes, then the beats.
+3. **Five beats, in order.** 1 goal and need, 2 sealed round (open to close), 3 Shield blocks the injected listing, 4 mandate, approval, payment, 5 round 2 with the learner's lower price. Before each beat the console prints `BEAT n of 5` and one **SAY THIS** line for the narrator.
+4. **Pacing.** Without `--auto` it waits for Enter before each beat (`q` stops). With `--auto` it waits `--delays` seconds between a beat's cue and the beat (five numbers, default `7,8,6,9,8`, time to say the line); `--step-delay` (default 2) is the pause between visible steps inside a beat, as in the bridge.
+5. **Live call.** `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. Retake by running again (it resets). The two-word code prints as `SCREEN CODE` on this console (see NOT BRIDGED). `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
+Exit codes: 0 all beats played, 1 refused or stopped (service down, market refusal, denial, `q`), 130 Ctrl-C. Open /buyer (paired as `vidyut`) and /market first; the console reminds you.
+The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2, the loss report itself is console only (NOT BRIDGED).
+
 Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, buyer allowance, denied approval attempts, personas and the
 buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
 
