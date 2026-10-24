@@ -35,3 +35,10 @@ shot-*.png
 sim/attacks/heldout2.jsonl
 # custom sellers written by the Seller Kit (SIM configs, one JSON per shop)
 agents/sellers/custom/
+
+# buyer state is private and shared with pay.replay.NonceStore
+agents/.state/
+agents/.state.sqlite3
+agents/.state.sqlite3-journal
+agents/.state.sqlite3-wal
+agents/.state.sqlite3-shm
