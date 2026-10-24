@@ -28,3 +28,12 @@ def test_so_dimm_does_not_fit_a_desktop_board_and_unstated_forms_stay_as_before(
     assert next(c for c in out["checks"] if c["rule_id"] == "fit.ram_form")["verdict"] == "uncertain"
     mem["attrs"].pop("form")
     assert all(c["rule_id"] != "fit.ram_form" for c in check_fit([board, mem])["checks"])
+
+
+def test_names_match_exactly_after_normalizing_case_and_spaces():  # review fix: no loose matching
+    assert ram_vs_board("MSI PRO Z790-A WIFI", "DDR5")["verdict"] == "pass"
+    assert ram_vs_board("  msi   pro z790-a  wifi ", "DDR5")["verdict"] == "pass"
+    ddr4_variant = ram_vs_board("MSI PRO Z790-A WIFI DDR4", "DDR4")
+    assert ddr4_variant["verdict"] == "uncertain" and ddr4_variant["source"] is None and "not in our maker data" in ddr4_variant["reason"]
+    assert ram_vs_board("MSI PRO B760M-A DDR4", "DDR4")["verdict"] == "uncertain"  # the maker's "DDR4 II" board is a different name
+    assert cooler_vs_case("Noctua NH-D15 chromax", "Fractal Design North")["verdict"] == "uncertain"

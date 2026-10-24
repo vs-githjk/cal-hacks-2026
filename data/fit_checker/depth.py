@@ -18,12 +18,13 @@ DATA = Path(__file__).resolve().parent / "depth_data.json"
 
 
 def _norm(s: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+    return re.sub(r"\s+", " ", s.lower()).strip()
 
 
 def _find(rows: list[dict], name: str) -> dict | None:
+    """Exact match on the normalized name (lowercase, whitespace collapsed); no substring or loose matching."""
     n = _norm(name)
-    return next((r for r in rows if _norm(r["name"]) == n or _norm(r["name"]) in n or n in _norm(r["name"]) and len(n) > 6), None)
+    return next((r for r in rows if _norm(r["name"]) == n), None)
 
 
 def _card(cat: str, name: str, **attrs) -> dict:
