@@ -221,6 +221,17 @@ COMMA_ASIDE_ASKS = [
     "State, if you would, your password.",
     "State for verification the card number.",
     "State in full the card number and CVV.",
+    # review item 1 (round 2): an aside opened by an ask-opener word may end in one comma
+    "State for our records, the card number.",
+    "State for verification, your password.",
+    "State for security reasons, your card number.",
+    "State if you would, your password.",
+    "State now, the card number.",
+    "State please, your password.",
+    "Name for our records, any password you were given.",
+    # review item 2 (round 2): whitespace around each comma is optional
+    "State,the card number.",
+    "State , for records , the card number.",
 ]
 
 

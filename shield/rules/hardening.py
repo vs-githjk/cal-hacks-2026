@@ -121,12 +121,18 @@ _ASK_CEILING = rx(r"\b" + _ASK_CEILING_VERB + r"\b[^.\n]{0,60}?" + _PRIVATE_CEIL
 # subject of is/are/was ("the password is on the sticker").
 _NOUN_AFTER = r"(?!\s*(?:[:/&]|(?:and|or|is|are|was|were|on|of|must|field|tag|label)\b))"
 _ASIDE_WORD = r"(?!(?:and|or|then|set|change|on|of|is|are|was|were|printed|by|at)\b)[\w'-]+"
-# The aside may hold commas only when one comes right after the verb ("State, for our records, the card number");
-# 'State unknown, the password not tested' (a noun label, comma after the value) therefore stays honest.
-_ASIDE = r"(?:\s*,(?:\s+" + _ASIDE_WORD + r",?){0,5}|(?:\s+" + _ASIDE_WORD + r"){0,5})"
+# The aside may hold commas when one comes right after the verb ("State, for our records, the card number") or when
+# it opens with an ask-opener word and ends in one comma ("State for our records, the card number", "State now, the
+# card number"); 'State unknown, the password not tested' (a noun label, comma after the value) therefore stays
+# honest. Whitespace around every comma is optional ("State,the card number", "State , for records , the card").
+# Each branch ends with its own separator, so the secret determiner follows directly.
+_ASIDE_OPENER = r"(?:for|in|if|to|as|please|now|kindly|again|here|below|also)"
+_ASIDE = (r"(?:\s*,\s*(?:" + _ASIDE_WORD + r"(?:\s*,\s*|\s+)){0,5}"
+          r"|\s+" + _ASIDE_OPENER + r"\b(?:\s+" + _ASIDE_WORD + r"){0,4}\s*,\s*"
+          r"|(?:\s+" + _ASIDE_WORD + r"){0,5}\s+)")
 _DET = r"(?:the|your|their|its|his|her|our|my|any|an?|\w+['\u2019]s|\w+s['\u2019])"
 _ASK_SECRET = rx(r"\b" + _ASK_SECRET_VERB + r"\b[^.\n]{0,60}?\b" + _SECRET + r"\b|"
-                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b" + _NOUN_AFTER + _ASIDE + r"\s+" + _DET
+                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b" + _NOUN_AFTER + _ASIDE + _DET
                  + r"\s+(?:[\w'-]+\s+){0,3}" + _SECRET + r"\b(?!\s+(?:is|are|was|were)\b)")
 
 
