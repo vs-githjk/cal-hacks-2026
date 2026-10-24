@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import sys
 import tempfile
@@ -80,6 +81,13 @@ def run_command(config_path: Path) -> str:
     return f"cd {shlex.quote(str(AGENTS))} && .venv/bin/python sellers/seller_agent.py --config {shlex.quote(str(config_path))}"
 
 
+ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{1,39}")  # fullmatch only: the schema's ^...$ lets a trailing newline through
+
+
+def _no_constant(name: str):
+    raise ValueError(f"{name} is not a JSON number")  # NaN, Infinity and -Infinity pass every <, > check, so refuse them at parse time
+
+
 def _errors(status: int, errors: list[dict]):
     return JSONResponse({"errors": errors}, status_code=status)
 
@@ -105,14 +113,16 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
         if not (request.headers.get("content-type") or "").lower().startswith("application/json"):
             return _one(415, "config", "send the config as application/json")
         try:
-            cfg = json.loads(await request.body())
-        except (ValueError, UnicodeDecodeError):
+            cfg = json.loads(await request.body(), parse_constant=_no_constant)
+        except (ValueError, UnicodeDecodeError, RecursionError):
             return _one(422, "config", "not valid JSON")
         errors: list[dict] = []
         try:
             norm = validate_config(cfg)
         except ConfigError as e:
             norm, errors = None, list(e.errors)
+        if norm is not None and not ID_RE.fullmatch(norm["id"]):
+            errors.append({"field": "id", "message": "must be 2 to 40 characters: lowercase letters, digits, - and _, starting with a letter or digit"})
         if isinstance(cfg, dict) and cfg.get("origin") == "LIVE":
             errors.append({"field": "origin", "message": "must be SIM: the Seller Kit cannot verify a real shop, so a shop it writes is SIM"})
         if errors:

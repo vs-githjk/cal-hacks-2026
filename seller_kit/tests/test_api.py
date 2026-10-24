@@ -203,6 +203,41 @@ def test_a_failing_or_empty_source_falls_back_to_sim_and_never_500s(custom):
         assert r.status_code == 200 and r.json() and all(n["origin"] == "SIM" for n in r.json())
 
 
+# ---- hostile bodies (review fix round 1)
+
+def _raw(client, text):
+    return client.post("/v1/sellers", content=text, headers={"content-type": "application/json"})
+
+
+@pytest.mark.parametrize("token", ["NaN", "Infinity", "-Infinity"])
+@pytest.mark.parametrize("spot", ["price", "floor", "discount"])
+def test_non_finite_numbers_are_refused_and_nothing_is_written(client, custom, spot, token):
+    text = json.dumps(good())
+    old = {"price": '"price": 1300.0', "floor": '"new": 1200.0', "discount": '"discount": 0.05'}[spot]
+    assert old in text
+    new = old.rsplit(":", 1)[0] + ": " + token
+    r = _raw(client, text.replace(old, new))
+    assert r.status_code == 422, r.text
+    assert fields(r) == {"config": "not valid JSON"}
+    assert not custom.exists() or list(custom.iterdir()) == []
+
+
+@pytest.mark.parametrize("bad_id", ["shop-a\n", "buyer\n", "shop-a\r\n"])
+def test_an_id_with_a_trailing_newline_is_refused(client, custom, bad_id):
+    r = client.post("/v1/sellers", json=good(id=bad_id))
+    assert r.status_code == 422, r.text
+    assert "id" in fields(r)
+    assert not custom.exists() or list(custom.iterdir()) == []
+    assert client.get("/v1/sellers").json() == []
+
+
+def test_deeply_nested_json_is_422_not_500(client, custom):
+    r = _raw(client, "[" * 5000 + "]" * 5000)
+    assert r.status_code == 422, r.text
+    assert fields(r) == {"config": "not valid JSON"}
+    assert not custom.exists() or list(custom.iterdir()) == []
+
+
 # ---- misc
 
 def test_health_and_cors(client):
