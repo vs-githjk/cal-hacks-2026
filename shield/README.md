@@ -181,8 +181,8 @@ quarantined. The unit tests use a fake classifier; the live prompt and default m
 The candidate filter is broad on purpose (#201): a sentence that names "your", "ur" or "the" secret with no verb
 ("Your password.", "Leave the password blank", "the PIN connector") is a candidate, and so are up to three sentences of
 one paragraph read as one ("Send. Your. Password."). Descriptive lines like these cost one classifier call each, or a
-quarantine with the classifier off. Blank-rendering fillers (U+2800, U+3164, U+FFA0, U+115F) count as a word gap, and a
-zero-width mark between words is read once more as a gap. 0 candidates on the 9,329 strings of demo/, data/mirror and
+quarantine with the classifier off. Invisible and blank-rendering marks (U+200B, U+2800, U+3164, U+FFA0, U+115F, ...) are
+dropped for every rule, so an in-word one glues the word back; the secret-ask filter reads them once more as word gaps. 0 candidates on the 9,329 strings of demo/, data/mirror and
 data/liar_pages (test_no_false_candidates_in_the_demo_the_mirror_snapshots_or_the_liar_pages).
 
 ## How a marketplace calls Shield (Armadin or any agent market)

@@ -13,13 +13,11 @@ from dataclasses import dataclass, field
 INVISIBLE = frozenset(
     "​‌‍‎‏⁠⁡⁢⁣⁤﻿­᠎"
     "‪‫‬‭‮⁦⁧⁨⁩"
-    # marks that render as nothing: combining grapheme joiner, variation selector 16, Mongolian FVS1, Khmer inherent
-    # vowel, tag space, Arabic letter mark
-    "឵͏️᠋󠀠؜"
+    # fillers and marks that render as nothing or a blank: Hangul fillers, braille blank, combining grapheme joiner,
+    # variation selector 16, Mongolian FVS1, Khmer inherent vowel, tag space, Arabic letter mark. Dropped, so an in-word
+    # one glues the word back for every rule ("instruc<U+2800>tions"); secret_ask reads them once more as word gaps.
+    "ㅤﾠ⠀ᅟ឵͏️᠋󠀠؜"
 )
-# Fillers that render as a BLANK (Hangul fillers, braille blank): a reader sees a word gap, so they become a space
-# ("send<U+2800>your<U+2800>password" reads as three words). They are still recorded as invisible.
-BLANKS = frozenset("ㅤﾠ⠀ᅟ")
 
 # Small, deliberate table: the look-alikes attackers actually use to dodge keyword filters.
 _CONFUSABLES = {
@@ -67,18 +65,10 @@ def make_doc(raw: str) -> Doc:
         if len(tok) == 1 and tok in INVISIBLE:
             invisible.append(m.start())
             continue
-        if len(tok) == 1 and tok in BLANKS:
-            invisible.append(m.start())
-            out.append(" ")
-            starts.append(m.start())
-            ends.append(m.end())
-            continue
         piece = html.unescape(tok) if len(tok) > 1 else tok
         for ch in unicodedata.normalize("NFKC", piece):
             if ch in INVISIBLE:
                 continue
-            if ch in BLANKS:
-                ch = " "
             for c in ch.lower():
                 out.append(_CONFUSABLES.get(c, c))
                 starts.append(m.start())
