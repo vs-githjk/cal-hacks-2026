@@ -908,7 +908,7 @@ const FIXED: { key: string; name: string }[] = [
   { key: "shield", name: "Bazaar Shield" },
   { key: "referee", name: "Referee" },
 ];
-const WORD: Partial<Record<Mark, string>> = { blocked: "Blocked", vetoed: "Vetoed", refused: "Refused", winner: "Winner" };
+const WORD: Partial<Record<Mark, string>> = { blocked: "Blocked", vetoed: "Vetoed", refused: "Refused", outranked: "Out", winner: "Winner" };
 
 interface Plate { key: string; name: string; origin: Origin; price: string | null; word: string | null; struck: boolean; prio: number; say?: string; sealed?: boolean }
 
@@ -1000,8 +1000,8 @@ export function Floor3D({ scene, beat, frozen, reducedMotion, selected, onPick, 
     for (const o of scene.offers) {
       if (!stage.actors[o.key]?.visible) continue;
       const mark = stage.marks[o.bidId] ?? "none";
-      const hard = mark === "blocked" || mark === "vetoed" || mark === "refused";
-      if (stage.crown && hard && selected !== o.key) continue;
+      const hard = mark === "blocked" || mark === "vetoed" || mark === "refused" || mark === "outranked";
+      if (hard && !focus.has(o.key) && selected !== o.key) continue; // only this round's elimination keeps its label; earlier ones are in the offers list
       out.push({ key: o.key, name: o.name, origin: o.origin, price: hard ? null : formatMoney(o.landed), word: WORD[mark] ?? null, struck: hard, prio: mark === "winner" || bubbles?.[o.key] ? 0 : focus.has(o.key) || selected === o.key ? 1 : 2, say: bubbles?.[o.key] || undefined });
     }
     return out;

@@ -159,59 +159,43 @@ function offersOf(results: readonly ResultRow[], bracket: Bracket | null, winner
     });
 }
 
-const MS = { arrive: 1800, gate: 1400, advocate: 1400, knockout: 1200, crown: 2200 } as const;
+const MS = { arrive: 1600, round: 1500, crown: 2200 } as const;
 
-/** The close as beats, straight from the bracket's stages: arrive, gate, advocate, one per knockout stage, crown. */
+/** The close as elimination rounds, from the referee's sealed ranking: arrive, one round per eliminated offer (Gate refusals, then
+ * advocate vetoes, then the ranked losers from the worst rank up to #2), then the crown. Presentation only: nobody bid live against anyone. */
 function beatsOf(bracket: Bracket, offers: readonly SceneOffer[], winner: string | null): Beat[] {
-  const place = new Map(offers.map((o, i) => [o.bidId, i]));
-  const byOffer = (ks: Knock[]) => [...ks].sort((a, b) => place.get(a.id)! - place.get(b.id)!);
-  const nameOf = (bidId: string) => bracket.entrants[bidId]?.name ?? bidId;
-  const knocksOf = (kind: "gate" | "advocate") => byOffer(bracket.stages.filter((s) => s.kind === kind).flatMap((s) => s.heats.flatMap((h) => h.knocked)));
-  /** "Alpha ahead of Beta", with each side's condition when both are known and differ: the referee ranks on a price adjusted for condition and returns. */
-  const pairing = (win: string, lose: string) => {
-    const [a, b] = [offers[place.get(win)!]?.condition ?? "", offers[place.get(lose)!]?.condition ?? ""];
-    return a && b && a !== b ? `${nameOf(win)}, ${a}, ahead of ${nameOf(lose)}, ${b}` : `${nameOf(win)} ahead of ${nameOf(lose)}`;
-  };
   const beats: Beat[] = [];
-
   const n = offers.length;
   beats.push({
     kind: "arrive", name: "Offers opened", focus: ["referee"], advancing: [], knocked: [],
     caption: `The round closed. ${n} sealed ${n === 1 ? "offer is" : "offers are"} opened.`, ms: MS.arrive,
   });
 
-  const gate = knocksOf("gate");
-  if (gate.length) {
-    const shield = gate.filter((k) => k.reasonCode === "shield_block").length;
-    beats.push({
-      kind: "gate", name: "Gate checks",
-      focus: [...(shield ? (["shield"] as const) : []), ...(shield < gate.length ? (["referee"] as const) : []), ...gate.map((k) => offerKey(k.id))],
-      advancing: [], knocked: gate,
-      caption: shield === gate.length ? `Bazaar Shield blocked ${plural(gate.length, "offer")}.` : `The referee refused ${plural(gate.length, "offer")} before ranking.`,
-      ms: MS.gate,
-    });
-  }
+  const stageIds = (kind: "gate" | "advocate") => new Set(bracket.stages.filter((s) => s.kind === kind).flatMap((s) => s.heats.flatMap((h) => h.knocked.map((k) => k.id))));
+  const gateIds = stageIds("gate");
+  const vetoIds = stageIds("advocate");
+  const gate = offers.filter((o) => gateIds.has(o.bidId));
+  // Shield blocks first, then the other refusals, each in offer order.
+  const shielded = gate.filter((o) => o.knock?.reasonCode === "shield_block");
+  const refused = gate.filter((o) => o.knock?.reasonCode !== "shield_block");
+  const vetoed = offers.filter((o) => vetoIds.has(o.bidId));
+  const losers = offers.filter((o) => o.rank !== null && o.bidId !== winner).sort((a, b) => b.rank! - a.rank!);
+  const winnerCondition = offers.find((o) => o.bidId === winner)?.condition ?? "";
 
-  const vetoed = knocksOf("advocate");
-  if (vetoed.length) {
-    const cited = vetoed.every((k) => k.sourceUrl);
-    beats.push({
-      kind: "advocate", name: "Advocate checks", focus: ["advocate", ...vetoed.map((k) => offerKey(k.id))], advancing: [], knocked: vetoed,
-      caption: !cited ? `The advocate vetoed ${plural(vetoed.length, "offer")}.`
-        : vetoed.length === 1 ? "The advocate vetoed 1 offer, with a cited source." : `The advocate vetoed ${vetoed.length} offers, each with a cited source.`,
-      ms: MS.advocate,
-    });
-  }
-
-  for (const stage of bracket.stages.filter((s) => s.kind === "knockout")) {
-    const advancing = stage.heats.flatMap((h) => (h.advances ? [h.advances] : []));
-    const knocked = stage.heats.flatMap((h) => h.knocked);
-    const real = stage.heats.filter((h) => !h.bye);
-    const only = real.length === 1 ? real[0]! : null;
-    beats.push({
-      kind: "knockout", name: stage.name, focus: [...advancing, ...knocked.map((k) => k.id)].map(offerKey), advancing, knocked,
-      caption: only ? `${stage.name}: the referee ranked ${pairing(only.advances!, only.knocked[0]!.id)}.` : `${stage.name}: the referee's ranking moves ${advancing.length} offers up.`,
-      ms: MS.knockout,
+  const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+  let i = 0;
+  const round = (o: SceneOffer, kind: Beat["kind"], lead: ActorKey[], knock: Knock, caption: (r: number) => string) => {
+    i += 1;
+    beats.push({ kind, name: `Round ${i}`, focus: [...lead, o.key], advancing: [], knocked: [knock], caption: caption(i), ms: MS.round });
+  };
+  for (const o of shielded) round(o, "gate", ["shield"], o.knock!, (r) => `Round ${r}: Bazaar Shield blocks ${o.name}.`);
+  for (const o of refused) round(o, "gate", ["referee"], o.knock!, (r) => `Round ${r}: ${o.name} is out, ${lower(o.knock!.reasonText)}.`);
+  for (const o of vetoed) round(o, "advocate", ["advocate"], o.knock!, (r) => `Round ${r}: the advocate vetoes ${o.name}${o.knock!.sourceUrl ? ", with a cited source" : ""}.`);
+  for (const o of losers) {
+    const knock: Knock = o.knock ?? { id: o.bidId, reasonCode: "outranked", reasonText: `Ranked #${o.rank} by the referee` };
+    round(o, "knockout", [], knock, (r) => {
+      const extra = o.condition && winnerCondition && o.condition !== winnerCondition ? ` Its ${o.condition} offer ranks below ${winnerCondition}.` : "";
+      return `Round ${r}: ${o.name} is out at ${formatMoney(o.landed)}, ranked #${o.rank}.${extra}`;
     });
   }
 
@@ -314,7 +298,7 @@ export interface Story {
   note: string | null; // a plain-words caveat for knockout beats
 }
 
-const KNOCKOUT_NOTE = "How the referee ranked the sealed bids: price adjusted for condition and returns. These were not live head-to-head bids.";
+const ROUND_NOTE = "Each round removes the weakest remaining offer by the referee's sealed ranking. Sellers did not bid against each other live.";
 
 /** Copy for a scene at a playback position (see docs/3d-arena/DESIGN.md, Copy). Playback state that belongs to another round is read as a fresh arrival. */
 export function storyFor(scene: ArenaScene, pb: Playback): Story {
@@ -346,6 +330,6 @@ export function storyFor(scene: ArenaScene, pb: Playback): Story {
     caption,
     stage: current?.name ?? null,
     step: total > 0 ? `${beat} of ${total}` : null,
-    note: current?.kind === "knockout" ? KNOCKOUT_NOTE : null,
+    note: current && current.kind !== "arrive" && current.kind !== "crown" ? ROUND_NOTE : null,
   };
 }

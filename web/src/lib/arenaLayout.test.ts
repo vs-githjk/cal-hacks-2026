@@ -129,7 +129,7 @@ test("other refusals read as Refused", () => {
   assert.equal(stageAt(s, 2).aim.shield, null, "the Shield only turns for its own blocks");
 });
 
-test("knockout advancers sit on tier 1 at radius 2.6; outranked offers dim in place with their cards", () => {
+test("knockout advancers sit on tier 1 at radius 2.6; an outranked offer is eliminated: it steps out, dims and drops its card", () => {
   const semi = stageAt(five(), SEMI);
   const seatC = seatOf(5, 2);
   for (const k of ["offer:a", "offer:b"]) {
@@ -145,14 +145,15 @@ test("knockout advancers sit on tier 1 at radius 2.6; outranked offers dim in pl
   const c = semi.actors["offer:c"]!;
   assert.equal(c.dim, true);
   assert.equal(c.tier, 0);
-  assert.ok(Math.abs(c.x - seatC.x) < 1e-9 && Math.abs(c.z - seatC.z) < 1e-9, "outranked stays on its seat");
-  assert.equal(semi.cards.c, "held");
+  assert.ok(Math.abs(radius(c) - 5.8) < 1e-9, "an outranked offer leaves the circle");
+  assert.ok(Math.abs(Math.atan2(c.x, c.z) - Math.atan2(seatC.x, seatC.z)) < 1e-9, "on its own bearing");
+  assert.equal(semi.cards.c, "dropped");
   assert.equal(semi.marks.c, "outranked");
   assert.equal(semi.cards.a, "held");
 
   const final = stageAt(five(), FINAL);
   assert.equal(final.actors["offer:a"]!.tier, 1);
-  assert.equal(final.actors["offer:b"]!.tier, 1, "b advanced earlier, so it stays on tier 1 when outranked");
+  assert.equal(final.actors["offer:b"]!.tier, 0, "b is eliminated in the final, so it steps out of the circle");
   assert.equal(final.actors["offer:b"]!.dim, true);
   assert.deepEqual([final.actors["offer:a"]!.x, final.actors["offer:a"]!.z], [pa.x, pa.z], "survivors do not reshuffle");
 });
@@ -168,7 +169,7 @@ test("at the crown the winner stands on tier 2 beside the buyer, the spot narrow
   assert.equal(s.actors.buyer!.dim, false);
   assert.ok(s.focus.includes("offer:a"));
   assert.deepEqual(s.rest, ["offer:a", "buyer"]);
-  assert.equal(s.cards.b, "held");
+  assert.equal(s.cards.b, "dropped");
   assert.equal(s.cards.d, "dropped");
   assert.equal(stageAt(five(), FINAL).crown, false);
 });

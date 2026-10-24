@@ -103,7 +103,10 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
         )
       : bubblesFrom(agentRows, nowSec * 1000, scene),
   );
-  const bubbles = useMemo(() => JSON.parse(bubbleKey) as Partial<Record<string, string>>, [bubbleKey]);
+  const bubbles = useMemo(() => {
+    const all = Object.entries(JSON.parse(bubbleKey) as Record<string, string>);
+    return Object.fromEntries(all.slice(sample ? 0 : -1).slice(0, 1)) as Partial<Record<string, string>>; // one bubble at a time
+  }, [bubbleKey, sample]);
 
   const story = storyFor(scene, view);
   const reveal = revealAt(scene, view.beat);
@@ -200,21 +203,21 @@ function StoryTop({ story, sample, deadline }: { story: Story; sample: boolean; 
 const BUTTON =
   "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#2B2A33]/15 bg-white px-4 text-[15px] font-medium text-[#2B2A33] shadow-[0_1px_2px_rgba(60,40,30,0.08)] hover:bg-[#F6F1EA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66] disabled:cursor-not-allowed disabled:opacity-50";
 
-const STEPS = ["Request", "Sealed bids", "Checks", "Reveal"] as const;
+const STEPS = ["Request", "Sealed bids", "Rounds", "Winner"] as const;
 
-/** Where the story is, from the scene and the beats applied: 0 request, 1 sealed bids, 2 checks, 3 reveal. */
+/** Where the story is, from the scene and the beats applied: 0 request, 1 sealed bids, 2 elimination rounds, 3 winner. */
 function stepOf(scene: ArenaScene, beat: number): number {
   if (scene.phase === "waiting") return 0;
   if (scene.phase === "open") return scene.sealedCount > 0 ? 1 : 0;
   if (scene.phase !== "closed" || beat === 0) return 1;
   const k = scene.beats[beat - 1]?.kind;
-  return k === "knockout" || k === "crown" ? 3 : 2;
+  return k === "crown" ? 3 : 2;
 }
 
-/** The first beat count that lands on step i (checks: the arrive beat; reveal: the first knockout or the crown). */
+/** The first beat count that lands on step i (rounds: the arrive beat; winner: the crown). */
 function seekFor(scene: ArenaScene, i: number): number {
   if (i <= 1) return 0;
-  const idx = scene.beats.findIndex((b) => (i === 2 ? b.kind === "arrive" : b.kind === "knockout" || b.kind === "crown"));
+  const idx = scene.beats.findIndex((b) => (i === 2 ? b.kind === "arrive" : b.kind === "crown"));
   return idx < 0 ? scene.beats.length : idx + 1;
 }
 

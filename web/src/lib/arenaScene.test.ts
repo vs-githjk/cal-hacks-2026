@@ -271,12 +271,14 @@ test("projection is pure: it does not touch its input", () => {
 
 // ---- beats
 
-test("beats for a full close: arrive, gate, advocate, Final, crown, in the bracket's order", () => {
+test("beats for a full close: arrive, one round per eliminated offer (gate, advocate, then ranked worst first), then the crown", () => {
   const s = projectArenaScene(closedRows());
   assert.deepEqual(s.beats.map((b) => [b.kind, b.name]), [
-    ["arrive", "Offers opened"], ["gate", "Gate checks"], ["advocate", "Advocate checks"], ["knockout", "Final"], ["crown", "Winner"],
+    ["arrive", "Offers opened"], ["gate", "Round 1"], ["gate", "Round 2"], ["advocate", "Round 3"], ["knockout", "Round 4"], ["crown", "Winner"],
   ]);
-  assert.deepEqual(s.beats.map((b) => b.ms), [1800, 1400, 1400, 1200, 2200]);
+  assert.deepEqual(s.beats.map((b) => b.ms), [1600, 1500, 1500, 1500, 1500, 2200]);
+  assert.deepEqual(s.beats.slice(1, 5).map((b) => b.knocked.map((k) => k.id)), [["b-shield"], ["b-floor"], ["b-veto"], ["b-second"]]);
+  assert.ok(s.beats.slice(1, 5).every((b) => b.advancing.length === 0 && b.knocked.length === 1));
 });
 
 test("arrive: focus is the referee and the caption counts the sealed offers opened, singular for one", () => {
@@ -288,74 +290,57 @@ test("arrive: focus is the referee and the caption counts the sealed offers open
   assert.equal(one.beats[0]!.caption, "The round closed. 1 sealed offer is opened.");
 });
 
-test("gate: Shield first, then the referee, then the knocked offers; the caption counts the refusals", () => {
-  const gate = projectArenaScene(closedRows()).beats[1]!;
-  assert.deepEqual(gate.focus, ["shield", "referee", offerKey("b-floor"), offerKey("b-shield")]);
-  assert.deepEqual(gate.knocked.map((k) => [k.id, k.reasonCode]), [["b-floor", "below_floor"], ["b-shield", "shield_block"]]);
-  assert.deepEqual(gate.advancing, []);
-  assert.equal(gate.caption, "The referee refused 2 offers before ranking.");
+test("round focus and captions: Shield, other refusal, veto and ranked each name who is out", () => {
+  const [, r1, r2, r3, r4] = projectArenaScene(closedRows()).beats;
+  assert.deepEqual(r1!.focus, ["shield", offerKey("b-shield")]);
+  assert.equal(r1!.caption, "Round 1: Bazaar Shield blocks Shield Co.");
+  assert.deepEqual(r2!.focus, ["referee", offerKey("b-floor")]);
+  assert.equal(r2!.caption, "Round 2: Floor Co is out, below this seller floor.");
+  assert.deepEqual(r3!.focus, ["advocate", offerKey("b-veto")]);
+  assert.equal(r3!.caption, "Round 3: the advocate vetoes Veto Co, with a cited source.");
+  assert.deepEqual(r4!.focus, [offerKey("b-second")]);
+  assert.equal(r4!.caption, "Round 4: Second Co is out at $1,247.02, ranked #2.");
+  assert.equal(r4!.knocked[0]!.reasonCode, "outranked");
+  assert.deepEqual(r1!.knocked.map((k) => k.reasonCode), ["shield_block"]);
 });
 
-test("gate: only Shield blocks give the Shield caption and no referee stop; only other refusals skip the Shield", () => {
-  const shieldOnly = projectArenaScene(rows({
-    rounds: [round({ state: "closed" })], results: [ranked("w", 1), result("x", { reasons: [SHIELD] }), result("y", { reasons: ["Bazaar Shield quarantine: shield.x"] })], events: [closedBy("s-w")],
-  }));
-  const g1 = shieldOnly.beats.find((b) => b.kind === "gate")!;
-  assert.deepEqual(g1.focus, ["shield", offerKey("x"), offerKey("y")]);
-  assert.equal(g1.caption, "Bazaar Shield blocked 2 offers.");
-  const floorOnly = projectArenaScene(rows({
-    rounds: [round({ state: "closed" })], results: [ranked("w", 1), result("x", { reasons: ["below this seller floor"] })], events: [closedBy("s-w")],
-  }));
-  const g2 = floorOnly.beats.find((b) => b.kind === "gate")!;
-  assert.deepEqual(g2.focus, ["referee", offerKey("x")]);
-  assert.equal(g2.caption, "The referee refused 1 offer before ranking.");
-});
-
-test("advocate: the advocate then the vetoed offers; 'each with a cited source' only when every veto has one", () => {
-  const adv = projectArenaScene(closedRows()).beats[2]!;
-  assert.deepEqual(adv.focus, ["advocate", offerKey("b-veto")]);
-  assert.deepEqual(adv.knocked.map((k) => [k.id, k.reasonCode]), [["b-veto", "advocate_veto"]]);
-  assert.equal(adv.caption, "The advocate vetoed 1 offer, with a cited source.");
-
-  const two = (sourceB: string) => projectArenaScene(rows({
+test("Shield blocks go before other refusals even when their bid ids sort the other way", () => {
+  const s = projectArenaScene(rows({
     rounds: [round({ state: "closed" })],
-    results: [ranked("w", 1), result("v1", { reasons: [VETO] }), result("v2", { reasons: [`Advocate veto (fit.psu_watts) [source: ${sourceB}]`] })],
+    results: [ranked("w", 1), result("a-floor", { reasons: ["below this seller floor"] }), result("z-shield", { reasons: [SHIELD] })],
     events: [closedBy("s-w")],
-  })).beats.find((b) => b.kind === "advocate")!;
-  assert.equal(two("https://specs.example.test/psu").caption, "The advocate vetoed 2 offers, each with a cited source.");
-  assert.equal(two("https://").caption, "The advocate vetoed 2 offers.");
+  }));
+  assert.deepEqual(s.beats.filter((b) => b.kind === "gate").map((b) => b.knocked[0]!.id), ["z-shield", "a-floor"]);
 });
 
-test("no gate beat when nothing was refused and no advocate beat when nothing was vetoed", () => {
+test("a veto caption drops 'with a cited source' when the knock has no usable source", () => {
+  const veto = (source: string) => projectArenaScene(rows({
+    rounds: [round({ state: "closed" })],
+    results: [ranked("w", 1), result("v", { persona: "Vee", reasons: ["Advocate veto (fit.psu_watts) [source: " + source + "]"] })],
+    events: [closedBy("s-w")],
+  })).beats.find((b) => b.kind === "advocate")!.caption;
+  assert.equal(veto("https://specs.example.test/psu"), "Round 1: the advocate vetoes Vee, with a cited source.");
+  assert.equal(veto("https://"), "Round 1: the advocate vetoes Vee.");
+});
+
+test("with nothing refused or vetoed the rounds are only the ranked losers", () => {
   const s = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results: [ranked("a", 1), ranked("b", 2)], events: [closedBy("s-a")] }));
   assert.deepEqual(s.beats.map((b) => b.kind), ["arrive", "knockout", "crown"]);
 });
 
-test("knockout with one real heat names the two offers; byes still advance; outranked offers are the knocked list", () => {
-  const results = [ranked("a", 1, 100, { persona: "Alpha" }), ranked("b", 2, 120, { persona: "Beta" }), ranked("c", 3, 130, { persona: "Gamma" })];
-  const s = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results, events: [closedBy("s-a")] }));
-  assert.deepEqual(s.beats.map((b) => b.name), ["Offers opened", "Semifinal", "Final", "Winner"]);
-  const [, semi, final] = s.beats;
-  assert.equal(semi!.caption, "Semifinal: the referee ranked Beta ahead of Gamma.");
-  assert.deepEqual(semi!.advancing, ["a", "b"]);
-  assert.deepEqual(semi!.knocked.map((k) => k.id), ["c"]);
-  assert.deepEqual(semi!.focus, [offerKey("a"), offerKey("b"), offerKey("c")]);
-  assert.equal(final!.caption, "Final: the referee ranked Alpha ahead of Beta.");
-  assert.deepEqual(final!.advancing, ["a"]);
-  assert.deepEqual(final!.knocked.map((k) => k.id), ["b"]);
-  assert.deepEqual(final!.focus, [offerKey("a"), offerKey("b")]);
+test("ranked losers go out worst rank first, each exactly once, and the winner is never knocked", () => {
+  const results = Array.from({ length: 6 }, (_, i) => ranked("b" + (i + 1), i + 1, 100 + i, { persona: "P" + (i + 1) }));
+  const s = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results, events: [closedBy("s-b1")] }));
+  const rounds = s.beats.filter((b) => b.kind === "knockout");
+  assert.deepEqual(rounds.map((b) => b.knocked[0]!.id), ["b6", "b5", "b4", "b3", "b2"]);
+  assert.deepEqual(rounds.map((b) => b.name), ["Round 1", "Round 2", "Round 3", "Round 4", "Round 5"]);
+  assert.equal(rounds[0]!.caption, "Round 1: P6 is out at $105, ranked #6.");
+  assert.equal(rounds[4]!.caption, "Round 5: P2 is out at $101, ranked #2.");
+  assert.ok(!knockedIds(s).includes("b1"));
+  assert.deepEqual(s.beats.map((b) => b.kind), ["arrive", ...rounds.map(() => "knockout"), "crown"]);
 });
 
-test("knockout with several heats says how many offers the ranking moves up", () => {
-  const results = Array.from({ length: 6 }, (_, i) => ranked(`b${i + 1}`, i + 1, 100 + i));
-  const s = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results, events: [closedBy("s-b1")] }));
-  const ko = s.beats.filter((b) => b.kind === "knockout");
-  assert.deepEqual(ko.map((b) => b.name), ["Quarterfinal", "Semifinal", "Final"]);
-  assert.equal(ko[0]!.caption, "Quarterfinal: the referee's ranking moves 4 offers up.");
-  assert.equal(ko[0]!.advancing.length, 4);
-  assert.equal(ko[1]!.caption, "Semifinal: the referee's ranking moves 2 offers up.");
-  assert.equal(ko[2]!.caption, "Final: the referee ranked Seller b1 ahead of Seller b2.");
-});
+
 
 test("crown: the winner and the buyer, the winner's price before sales tax, last beat", () => {
   const s = projectArenaScene(closedRows());
@@ -386,19 +371,28 @@ test("a round with 11 offers totals at most 12000 ms; the crown is last and adva
   assert.equal(s.beats.filter((b) => b.kind === "crown").length, 1);
 });
 
-test("a very long bracket is scaled down so the whole close still fits MAX_SEQUENCE_MS", () => {
+test("a very long field is scaled down so the whole close still fits MAX_SEQUENCE_MS", () => {
   const results = [
-    ...Array.from({ length: 38 }, (_, i) => ranked(`b${String(i + 1).padStart(2, "0")}`, i + 1, 900 + i)),
+    ...Array.from({ length: 38 }, (_, i) => ranked("b" + String(i + 1).padStart(2, "0"), i + 1, 900 + i)),
     result("x-shield", { reasons: [SHIELD] }),
     result("x-veto", { reasons: [VETO] }),
   ];
   const s = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results, events: [closedBy("s-b01")] }));
-  assert.equal(s.beats.filter((b) => b.kind === "knockout").length, 6);
+  assert.equal(s.beats.length, 1 + 39 + 1);
   const total = s.beats.reduce((n, b) => n + b.ms, 0);
   assert.ok(total <= MAX_SEQUENCE_MS, String(total));
   assert.ok(total > MAX_SEQUENCE_MS * 0.95, String(total)); // scaled, not collapsed
   assert.ok(s.beats.every((b) => Number.isInteger(b.ms) && b.ms > 0));
   assert.ok(s.beats.find((b) => b.kind === "crown")!.ms > s.beats.find((b) => b.kind === "knockout")!.ms);
+});
+
+test("every non-winner is knocked exactly once across the round beats, in gate, advocate, ranked order", () => {
+  const s = projectArenaScene(closedRows());
+  const ids = knockedIds(s);
+  assert.equal(ids.length, s.offers.length - 1);
+  assert.deepEqual([...ids].sort(), s.offers.filter((o) => o.outcome !== "winner").map((o) => o.bidId).sort());
+  assert.deepEqual(ids, ["b-shield", "b-floor", "b-veto", "b-second"]);
+  assert.ok(!ids.includes(s.winnerBidId!));
 });
 
 test("no bid is knocked twice across beats, and every knocked bid is an offer of this round", () => {
@@ -443,11 +437,14 @@ test("SAMPLES.gpu: a closed GPU round, five sellers, Byte Bros Outlet wins over 
   const veto = s.offers[4]!;
   assert.equal(veto.knock!.ruleId, "advocate.condition");
   assert.match(veto.sourceUrl!, /^https:\/\//);
-  assert.deepEqual(s.beats.map((b) => b.kind), ["arrive", "gate", "advocate", "knockout", "crown"]);
-  assert.equal(s.beats[1]!.caption, "The referee refused 2 offers before ranking.");
-  assert.equal(s.beats[3]!.caption, "Final: the referee ranked Byte Bros Outlet, new, ahead of ReNew Refurb, open-box.");
+  assert.deepEqual(s.beats.map((x) => x.kind), ["arrive", "gate", "gate", "advocate", "knockout", "crown"]);
+  assert.deepEqual(s.beats.map((x) => x.name), ["Offers opened", "Round 1", "Round 2", "Round 3", "Round 4", "Winner"]);
+  assert.equal(s.beats[1]!.caption, "Round 1: Bazaar Shield blocks Silicon Sally's Surplus.");
+  assert.equal(s.beats[2]!.caption, "Round 2: Bay Area PC Shop is out, below this seller floor.");
+  assert.equal(s.beats[3]!.caption, "Round 3: the advocate vetoes FlashDeal Frankie, with a cited source.");
+  assert.equal(s.beats[4]!.caption, "Round 4: ReNew Refurb is out at $1,247.02, ranked #2. Its open-box offer ranks below new.");
   assert.deepEqual(s.offers.map((o) => o.condition), ["new", "open-box", "open-box", "new", "new"]);
-  assert.equal(s.beats[4]!.caption, "Byte Bros Outlet wins at $1,299.99 before sales tax.");
+  assert.equal(s.beats[5]!.caption, "Byte Bros Outlet wins at $1,299.99 before sales tax.");
   assert.ok(s.offers.every((o) => o.origin === "SIM" && o.events.length > 0));
   assert.ok(sample.results.every((r) => r.origin === "SIM") && sample.events.every((e) => e.origin === "SIM") && sample.rounds.every((r) => r.origin === "SIM"));
 });
@@ -481,16 +478,16 @@ test("SAMPLES['gpu-open']: the same request, open, three sealed, 90 seconds, one
   assert.equal(SAMPLES.gpu.rounds[0]!.id !== r.id, true);
 });
 
-test("SAMPLES.ssd: three ranked sellers make a Semifinal with a bye and a Final", () => {
+test("SAMPLES.ssd: three ranked sellers make two rounds, worst first, then the crown", () => {
   const s = projectArenaScene(SAMPLES.ssd, { sample: true });
   assert.equal(s.phase, "closed");
   assert.equal(s.requestLabel, "NVMe SSD 2 TB");
   assert.deepEqual(s.offers.map((o) => o.sellerId), ["seller-a", "seller-b", "seller-c"]);
   assert.deepEqual(s.offers.map((o) => o.name), ["Seller A", "Seller B", "Seller C"]);
   assert.deepEqual(s.offers.map((o) => o.outcome), ["winner", "ranked", "ranked"]);
-  assert.deepEqual(s.beats.map((b) => b.name), ["Offers opened", "Semifinal", "Final", "Winner"]);
-  assert.equal(s.beats[1]!.caption, "Semifinal: the referee ranked Seller B ahead of Seller C.");
-  assert.deepEqual(s.beats[1]!.advancing, [s.offers[0]!.bidId, s.offers[1]!.bidId]);
+  assert.deepEqual(s.beats.map((b) => b.name), ["Offers opened", "Round 1", "Round 2", "Winner"]);
+  assert.equal(s.beats[1]!.caption, "Round 1: Seller C is out at $131, ranked #3.");
+  assert.equal(s.beats[2]!.caption, "Round 2: Seller B is out at $124.50, ranked #2.");
   assert.equal(s.winnerBidId, s.offers[0]!.bidId);
   assert.equal(SAMPLES.ssd.events.find((e) => e.kind === "auction_closed")!.sellerId, "seller-a");
 });
@@ -622,8 +619,8 @@ test("condition: each offer carries its first line's offered condition, or empty
   assert.deepEqual(s.offers.map((o) => o.condition), ["open-box", "", ""]);
 });
 
-test("a single-heat knockout between different conditions names both; the same or a missing condition keeps the plain caption", () => {
-  const final = (ca: string, cb: string) => projectArenaScene(rows({
+test("a ranked loser's caption adds the condition clause only when its condition and the winner's are both known and differ", () => {
+  const out = (ca: string, cb: string) => projectArenaScene(rows({
     rounds: [round({ state: "closed" })],
     results: [
       ranked("a", 1, 120, { persona: "Alpha", lines: [line({ offeredCondition: ca })] }),
@@ -631,10 +628,10 @@ test("a single-heat knockout between different conditions names both; the same o
     ],
     events: [closedBy("s-a")],
   })).beats.find((b) => b.kind === "knockout")!.caption;
-  assert.equal(final("new", "open-box"), "Final: the referee ranked Alpha, new, ahead of Beta, open-box.");
-  assert.equal(final("new", "new"), "Final: the referee ranked Alpha ahead of Beta.");
-  assert.equal(final("new", ""), "Final: the referee ranked Alpha ahead of Beta.");
-  assert.equal(final("", ""), "Final: the referee ranked Alpha ahead of Beta.");
+  assert.equal(out("new", "open-box"), "Round 1: Beta is out at $100, ranked #2. Its open-box offer ranks below new.");
+  assert.equal(out("new", "new"), "Round 1: Beta is out at $100, ranked #2.");
+  assert.equal(out("new", ""), "Round 1: Beta is out at $100, ranked #2.");
+  assert.equal(out("", "open-box"), "Round 1: Beta is out at $100, ranked #2.");
 });
 
 // ---- seek
@@ -690,23 +687,22 @@ test("story: a closed round at beat 0, mid close, and at the final frame", () =>
   const start = storyFor(CLOSED, pbAt(CLOSED, 0, { playing: true }));
   assert.equal(start.caption, "The round closed. The referee is opening the sealed offers.");
   assert.equal(start.hero, "RTX 5070 Ti");
-  assert.deepEqual([start.stage, start.step, start.note], [null, "0 of 5", null]);
+  assert.deepEqual([start.stage, start.step, start.note], [null, "0 of 6", null]);
 
   const mid = storyFor(CLOSED, pbAt(CLOSED, 2, { playing: true }));
   assert.equal(mid.caption, CLOSED.beats[1]!.caption);
-  assert.deepEqual([mid.stage, mid.step, mid.hero], ["Gate checks", "2 of 5", "RTX 5070 Ti"]);
+  assert.deepEqual([mid.stage, mid.step, mid.hero], ["Round 1", "2 of 6", "RTX 5070 Ti"]);
 
   const end = storyFor(CLOSED, pbAt(CLOSED, N));
   assert.equal(end.caption, "Winner Co wins at $1,299.99 before sales tax.");
   assert.equal(end.hero, "$1,299.99");
-  assert.deepEqual([end.stage, end.step], ["Winner", "5 of 5"]);
+  assert.deepEqual([end.stage, end.step], ["Winner", "6 of 6"]);
 });
 
-test("story: the knockout note shows during a knockout beat only", () => {
-  const note = "How the referee ranked the sealed bids: price adjusted for condition and returns. These were not live head-to-head bids.";
-  const ko = CLOSED.beats.findIndex((b) => b.kind === "knockout") + 1;
-  assert.ok(ko > 0);
-  for (let k = 0; k <= N; k++) assert.equal(storyFor(CLOSED, pbAt(CLOSED, k)).note, k === ko ? note : null, "beat " + k);
+test("story: the round note shows during every round beat and nowhere else", () => {
+  const note = "Each round removes the weakest remaining offer by the referee's sealed ranking. Sellers did not bid against each other live.";
+  assert.equal(N, 6);
+  for (let k = 0; k <= N; k++) assert.equal(storyFor(CLOSED, pbAt(CLOSED, k)).note, k >= 2 && k <= 5 ? note : null, "beat " + k);
 });
 
 test("story: status is Sample run for samples, Live round while a live close plays, Recorded round otherwise", () => {

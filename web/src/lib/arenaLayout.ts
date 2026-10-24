@@ -84,7 +84,7 @@ export function stageAt(scene: ArenaScene, beat: number): StageState {
   // What each bid has been through so far. The first knock wins; "outranked" is a valid offer ranking lower, not a refusal.
   const knocks = new Map<string, ReasonCode>();
   for (const x of applied) for (const k of x.knocked) if (!knocks.has(k.id)) knocks.set(k.id, k.reasonCode);
-  const hard = (id: string) => { const c = knocks.get(id); return c !== undefined && c !== "outranked"; };
+  const hard = (id: string) => knocks.has(id); // elimination rounds: anyone knocked, outranked included, steps out of the circle
   const advancedNow = new Set<string>();
   for (const x of applied) if (x.kind === "knockout") for (const id of x.advancing) advancedNow.add(id);
   // Seats on the advanced ring come from every knockout beat in the scene, so survivors never reshuffle between beats.
