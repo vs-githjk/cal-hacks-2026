@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
+import { AgentsTile } from "@/components/AgentsTile";
 import { BuyerScreen } from "@/components/screens";
 import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
@@ -61,6 +62,15 @@ function PairScreen() {
 }
 
 export default function BuyerPage() {
+  return (
+    <>
+      <BuyerGate />
+      <AgentsTile />
+    </>
+  );
+}
+
+function BuyerGate() {
   const conn = useSpacetimeDB();
   const [roles, rolesReady] = useTable(tables.myRole);
   const isBuyer = roles.some((r) => r.role === "buyer" && r.subjectId === DEMO_BUYER);

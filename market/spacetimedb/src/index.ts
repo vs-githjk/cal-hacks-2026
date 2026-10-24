@@ -98,6 +98,11 @@ export const record_loss_report = spacetimedb.reducer(
   (ctx, a) => m.recordLossReport(ctx, a),
 );
 
+export const record_agent_event = spacetimedb.reducer(
+  { agentName: t.string(), address: t.string(), text: t.string(), ts: t.string(), origin: t.string() },
+  (ctx, a) => m.recordAgentEvent(ctx, a),
+);
+
 export const record_payment = spacetimedb.reducer(
   { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string() },
   (ctx, a) => m.recordPayment(ctx, a),

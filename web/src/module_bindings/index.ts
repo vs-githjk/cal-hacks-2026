@@ -48,6 +48,7 @@ import PairSellerScreenReducer from "./pair_seller_screen_reducer";
 import PlaceBidReducer from "./place_bid_reducer";
 import PostGoalReducer from "./post_goal_reducer";
 import PostNeedReducer from "./post_need_reducer";
+import RecordAgentEventReducer from "./record_agent_event_reducer";
 import RecordApprovalReducer from "./record_approval_reducer";
 import RecordLossReportReducer from "./record_loss_report_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
@@ -62,6 +63,7 @@ import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import AgentEventRow from "./agent_event_table";
 import FloorEventRow from "./floor_event_table";
 import MyAllowanceRow from "./my_allowance_table";
 import MyBidsRow from "./my_bids_table";
@@ -82,6 +84,20 @@ import SellerNeedsRow from "./seller_needs_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  agentEvent: __table({
+    name: 'agent_event',
+    indexes: [
+      { accessor: 'address', name: 'agent_event_address_idx_btree', algorithm: 'btree', columns: [
+        'address',
+      ] },
+      { accessor: 'id', name: 'agent_event_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'agent_event_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AgentEventRow),
   floorEvent: __table({
     name: 'floor_event',
     indexes: [
@@ -231,6 +247,7 @@ const reducersSchema = __reducers(
   __reducerSchema("place_bid", PlaceBidReducer),
   __reducerSchema("post_goal", PostGoalReducer),
   __reducerSchema("post_need", PostNeedReducer),
+  __reducerSchema("record_agent_event", RecordAgentEventReducer),
   __reducerSchema("record_approval", RecordApprovalReducer),
   __reducerSchema("record_loss_report", RecordLossReportReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),

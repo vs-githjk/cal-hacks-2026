@@ -846,3 +846,28 @@ describe('b6 seller screen: pooled lot band, own loss reports, strategy diff', (
     expect(JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? String(x) : x))).not.toMatch(/800/);
   });
 });
+
+describe('#60 agent events for the Fetch agents tile', () => {
+  const ev = (over: Partial<Parameters<typeof m.recordAgentEvent>[1]> = {}) => ({
+    agentName: 'Tech Bazaar Buyer', address: 'agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8', text: 'Round open, 3 sellers invited', ts: '2026-10-24T08:00:00Z', origin: 'LIVE', ...over,
+  });
+
+  it('a seller, a buyer or a stranger cannot record an agent event', () => {
+    for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.recordAgentEvent(ctx, ev()))).toThrow(/not allowed/);
+    expect([...h.db.agentEvent.iter()]).toHaveLength(0);
+  });
+
+  it('the referee records one, public, with the given ts; an unknown origin is stored as SIM', () => {
+    run(REF, (ctx) => m.recordAgentEvent(ctx, ev()));
+    run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ origin: 'REAL', text: 'x' })));
+    const rows = [...h.db.agentEvent.iter()];
+    expect(rows[0]).toMatchObject({ agentName: 'Tech Bazaar Buyer', text: 'Round open, 3 sellers invited', origin: 'LIVE' });
+    expect(rows[0].ts.toDate().toISOString()).toBe('2026-10-24T08:00:00.000Z');
+    expect(rows[1].origin).toBe('SIM');
+  });
+
+  it('refuses an address that is not an agent address and a bad ts', () => {
+    expect(() => run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ address: '0xabc' })))).toThrow(/address/);
+    expect(() => run(REF, (ctx) => m.recordAgentEvent(ctx, ev({ ts: 'yesterday' })))).toThrow(/ts/);
+  });
+});

@@ -52,7 +52,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap: number }) {
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
   const refused = bids.filter((b) => b.recommendation === "refused").length;
   return (
-    <Card className="flex flex-col justify-between">
+    <Card hero className="flex flex-col justify-between">
       <div>
         <Label>{win ? "Best verified price" : "Hunting"}</Label>
         {win ? (
@@ -330,7 +330,7 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
           {items.slice(0, max).map((f) => (
             <li key={f.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(f.at)}</span>
-              <span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className={`mb-px block text-[11px] font-bold uppercase tracking-[0.06em] ${FEED_STYLE[f.kind]}`}>{f.title}</span>
                 {f.text} {f.origin && <OriginChip origin={f.origin} />}
               </span>

@@ -698,3 +698,15 @@ export function myLossReportsView(ctx: VCtx) {
   if (!r || (r.role !== 'seller' && r.role !== 'seller_screen')) return [];
   return [...ctx.db.lossReport.sellerId.filter(r.subjectId)];
 }
+
+// ---- #60: agent events for the Fetch agents tile ----
+
+/** Referee (the agents' relay) only: one line an agent sent. ts is ISO 8601 (empty means now); origin other than LIVE or MIRROR is stored as SIM. */
+export function recordAgentEvent(ctx: Ctx, a: { agentName: string; address: string; text: string; ts: string; origin: string }) {
+  requireRole(ctx, 'record_agent_event', ['referee']);
+  if (!/^agent1q[0-9a-z]{20,}$/.test(a.address)) throw new SenderError('address must be an agent1q... Agentverse address');
+  const at = a.ts ? Date.parse(a.ts) : ms(ctx.timestamp);
+  if (!Number.isFinite(at)) throw new SenderError('ts must be an ISO 8601 time');
+  const origin = a.origin === 'LIVE' || a.origin === 'MIRROR' ? a.origin : 'SIM';
+  ctx.db.agentEvent.insert({ id: 0n, agentName: a.agentName, address: a.address, text: a.text.slice(0, 280), ts: tsFromMs(at), origin });
+}

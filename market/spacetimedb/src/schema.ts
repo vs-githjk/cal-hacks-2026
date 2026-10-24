@@ -325,6 +325,19 @@ export const rejectedAttempt = table(
 );
 
 /** Every state change writes one. Labels never carry a buyer's cap, limit or goal text. */
+/** What each Fetch.ai agent said last, for the agents tile. Public: names, addresses and messages are public demo text. */
+export const agentEvent = table(
+  { name: 'agent_event', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    agentName: t.string(),
+    address: t.string().index('btree'),
+    text: t.string(),
+    ts: t.timestamp(),
+    origin: t.string(),
+  },
+);
+
 export const floorEvent = table(
   { name: 'floor_event', public: true },
   {
@@ -364,6 +377,6 @@ const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
-  round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,
+  round, roundResult, rejectedAttempt, floorEvent, agentEvent, persona, roundTimer,
 });
 export default spacetimedb;
