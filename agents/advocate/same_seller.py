@@ -1,4 +1,5 @@
 """Pure same-seller exclusion over already-ranked candidates."""
+import unicodedata
 from collections import defaultdict
 from collections.abc import Mapping
 from urllib.parse import urlsplit
@@ -24,7 +25,7 @@ def _stable_value(field, value):
 
 
 def _merchant_host(value):
-    if not isinstance(value, str) or any(ord(char) < 32 or ord(char) == 127 for char in value):
+    if not isinstance(value, str) or any(unicodedata.category(char) == "Cc" for char in value):
         return None
     try:
         parsed = urlsplit(value.strip())

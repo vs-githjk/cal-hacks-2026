@@ -205,6 +205,7 @@ def test_malformed_url_ports_are_ignored():
 def test_control_characters_userinfo_and_empty_ports_are_ignored():
     invalid_urls = (
         "https://merchant.example.org/item\r\n",
+        "https://merchant.example.org/item\u0080",
         "https://user@merchant.example.org/item",
         "https://merchant.example.org:/item",
     )
