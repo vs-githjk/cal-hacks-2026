@@ -30,14 +30,14 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 - Proof: `data/baselines/brightdata.py`, its tests in `data/tests/test_brightdata.py`, and [docs/changes/0330-D-brightdata.md](changes/0330-D-brightdata.md); no live result recorded.
 - Breaks without it: the savings tile loses its second source and reads "unverified".
 - Demo moment: the savings tile with two dated sources (shown with the beat 4 receipt).
-- Hard requirements (Bright Data is in progress): track text not yet read (prize text is in the guide or "coming soon"); owner posts it at kickoff. Meanwhile: Bright Data used for a real, named step (the second baseline and one blocked page), recorded in data/README.md.
+- Hard requirements (Bright Data is built, env-gated, not run live): track text not yet read (prize text is in the guide or "coming soon"); owner posts it at kickoff. Meanwhile: Bright Data used for a real, named step (the second baseline and one blocked page), recorded in data/README.md.
 
 **CRS** (built, env-gated, not run live; Lane A adapter, Lane D payee gate; credits in hand; Lane C supplies sandbox test identities)
 - Carries (built, env-gated, not run live: no key in the run): identity and fraud check on business sellers. Sandbox test identities only, band output, consent card; individual used-part sellers are not credit-checked (FCRA caution). The adapter is main's `agents/crs.py`; `pay/crs_gate.py` refuses a business payee without a fresh verified check, and nothing calls it before the charge yet.
 - Proof: `pay/crs_gate.py`, `pay/tests/test_crs_gate.py`, [docs/changes/0400-D-crs-payee.md](changes/0400-D-crs-payee.md); no live check recorded.
 - Breaks without it: unverified sellers bid, and the greyed-out seller beat disappears.
 - Demo moment: one business seller's bid is greyed out with the reason, inside beat 2.
-- Hard requirements (CRS is planned, not built): the CRS sandbox shown live (calhacks.crscreditapi.com or the CRS MCP server), provided test identities only; Best Identity and Fraud Innovation asks for protecting people or businesses from fraud; Best Financial AI Agent asks for an agent doing real work with CRS data through the API or MCP.
+- Hard requirements (CRS is built, env-gated, not run live): the CRS sandbox shown live (calhacks.crscreditapi.com or the CRS MCP server), provided test identities only; Best Identity and Fraud Innovation asks for protecting people or businesses from fraud; Best Financial AI Agent asks for an agent doing real work with CRS data through the API or MCP.
 
 **Armadin** (Lane D core, Lane C product layer, Lane A `/verify-agent`)
 - Carries: Bazaar Shield: `/v1/shield/screen`, `/verify-agent`, `/verify-mandate`, `/v1/check-claim`, rules as data, the attack corpus, a key and a `shield-bench` for any attack file. Signed verdict receipts are planned, not built.
@@ -98,7 +98,7 @@ Voice is the trust step: above the allowance, a call asks for a one-time word-pa
 
 **Phone for the call:** Photon SIP first (the team used it at LA Hacks and won its voice prize), with Cartesia over SIP. Anoop spikes it (decision Sat 09:00); the phone call (pay/voice_cartesia.py) is what runs today, the typed card is the fallback, and an in-browser Cartesia call is planned, not built. Do not buy Twilio before Photon is proven.
 
-**Credits in hand: Apify and CRS.** CRS is planned, not built. Anything else that costs money (Twilio, more Bright Data credits beyond the in progress smoke calls; Stripe is test mode and free) needs Vidyut's OK first.
+**Credits in hand: Apify and CRS.** CRS is built, env-gated, not run live. Anything else that costs money (Twilio, more Bright Data credits beyond the smoke calls; Stripe is test mode and free) needs Vidyut's OK first.
 
 ## MLH tracks and extras
 | Track | Status | Owner |

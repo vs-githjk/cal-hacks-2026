@@ -13,7 +13,7 @@ What it pins, over docs/PITCH.md, docs/REAL_VS_SIMULATED.md and docs/SPONSORS.md
   c. no em or en dash;
   d. the Cartesia section the track asks for (features used, setup, known limits) lives in SPONSORS.md;
   e. one goal price (under $1,300, winner $1,299.99 before sales tax) and no old $800 goal;
-  f. Bright Data carries one label everywhere, and Tiger is never called live or in progress while there is no code;
+  f. Bright Data, CRS and Tiger carry one label everywhere (built, env-gated, not run live: the code is on this branch), and Tiger is never called live;
   g. nothing is called real that is not built (the teammate purchase), and no doc cites demo/README.md as proof.
 """
 import re
@@ -26,7 +26,7 @@ DOCS = ["docs/PITCH.md", "docs/REAL_VS_SIMULATED.md", "docs/SPONSORS.md"]
 DASH_DOCS = DOCS + ["docs/README_CORRECTIONS.md"]
 
 CLAIM = re.compile(r"Bright Data|\bCRS\b|Tiger|3D floor|Hack the market|Interactive Cards|Claude")
-MARKER = re.compile(r"planned|not built|in progress|not configured|not called", re.I)
+MARKER = re.compile(r"planned|not built|in progress|not configured|not called|not run live", re.I)
 REF = re.compile(r"`([^`\s]+)`|\]\(([^)\s#]+)")
 DASHES = ("—", "–")
 FIGURE = re.compile(r"\d+ of \d+|\d+(?:\.\d+)?%")
@@ -122,22 +122,33 @@ def test_e_one_goal_price():
         assert "$800" not in read(doc)
 
 
-def test_f_bright_data_and_tiger_labels():
-    for doc in DOCS:
-        for n, line in lines(doc):
+STALE = ("is still a stub", "not on this branch", "no CRS code on this branch", "no code until", "night task T6 and not",
+         "planned, not built: key set", "Tiger Data is planned", "CRS is planned", "CRS seller stability check | planned")
+
+
+def test_f_bright_data_crs_and_tiger_are_built_env_gated_and_not_run_live():
+    """T6, T8, T13, T15 and T16 are on this branch: the docs say built, env-gated, not run live, never stub or planned."""
+    for doc in DOCS + ["docs/README_CORRECTIONS.md"]:
+        text = read(doc)
+        for old in STALE:
+            assert old not in text, f"{doc} still says {old!r}, but that code is on this branch"
+        for n, line in (lines(doc) if doc in DOCS else []):   # the corrections file only lists the checks, so it gets the stale-text check alone
             for seg in re.split(r"[.;]\s", line):
-                if "Bright Data" in seg and MARKER.search(seg):
-                    assert "in progress" in seg, f"{doc}:{n}: Bright Data must say 'in progress' (one label)"
-                    assert "planned" not in seg.lower(), f"{doc}:{n}: Bright Data is in progress, not planned"
-            for seg in re.split(r"[.;]\s", line):
+                if "Bright Data" in seg:
+                    assert "planned" not in seg.lower() and "in progress" not in seg, f"{doc}:{n}: Bright Data is built, not planned or in progress"
                 if re.search(r"\bTiger\b", seg):
-                    assert not re.search(r"\bLIVE\b", seg), f"{doc}:{n}: Tiger is not live, there is no code"
-                    assert "in progress" not in seg.lower(), f"{doc}:{n}: Tiger has no code: say planned, not built"
+                    assert not re.search(r"\bLIVE\b", seg), f"{doc}:{n}: Tiger has not been run live"
     sim = read("docs/REAL_VS_SIMULATED.md")
-    row = next(ln for ln in sim.splitlines() if ln.startswith("| Bright Data"))
-    assert "02:55" in row and "T6" in row, "the Bright Data row must date the smoke call and name task T6"
-    tig = next(ln for ln in sim.splitlines() if ln.startswith("| Tiger"))
-    assert "02:53" in tig and "T13" in tig, "the Tiger row must date the connection check and name task T13"
+    rows = {k: next(ln for ln in sim.splitlines() if ln.startswith(k)) for k in
+            ("| Bright Data", "| Seller stability and identity (CRS)", "| Tiger")}
+    for k, row in rows.items():
+        assert "built, env-gated, not run live (no key in the run)" in row, f"{k}: wrong label"
+    assert "02:55" in rows["| Bright Data"] and "data/baselines/brightdata.py" in rows["| Bright Data"] and "0330-D-brightdata.md" in rows["| Bright Data"]
+    assert "pay/crs_gate.py" in rows["| Seller stability and identity (CRS)"] and "0400-D-crs-payee.md" in rows["| Seller stability and identity (CRS)"]
+    assert "02:53" in rows["| Tiger"] and "data/tiger/store.py" in rows["| Tiger"] and "0500-D-tiger.md" in rows["| Tiger"]
+    for rel in ("data/baselines/brightdata.py", "pay/crs_gate.py", "data/tiger/store.py", "docs/changes/0330-D-brightdata.md",
+                "docs/changes/0400-D-crs-payee.md", "docs/changes/0500-D-tiger.md"):
+        assert (ROOT / rel).exists(), rel
 
 
 def test_g_nothing_is_real_that_is_not_built():

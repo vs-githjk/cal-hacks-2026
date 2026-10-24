@@ -2,7 +2,7 @@
 
 Written by night run 2, task T2, fix round 1 (Sat Oct 24, about 03:10 PDT). README.md is not edited on this branch (plan T2: the main session is rewriting it on main). Apply each block below to the new README, then check it against the Guidance section at the end. Every number is copied from the results file its row names; every state is checked against the code on `lane-d-night2`.
 
-Rulings the main session should confirm: (1) the Bright Data label is "in progress" and Tiger is "planned, not built" until night tasks T6 and T13 land (flip to LIVE only then); (2) the honesty sentence below stays in the top 24 lines.
+Rulings the main session should confirm: (1) Bright Data, CRS and Tiger carry one label, "built, env-gated, not run live (no key in the run)", now that night tasks T6, T8 and T13 are on this branch (a row says live only when a keyed run records a result); (2) the honesty sentence below stays in the top 24 lines.
 
 ## 1. Top of the README
 
@@ -41,7 +41,7 @@ Also: the Lot Wall, persona voices, the receiving-check photos and the seller de
 
 ## Status
 
-Updated with every merge. States: **planned**, **in progress**, **built** (the Code column names the files).
+Updated with every merge. States: **planned**, **in progress**, **built**, **built, not run live** (the Code column names the files).
 
 | Piece | State | Code |
 |---|---|---|
@@ -116,14 +116,14 @@ Voice is the trust step: above the allowance, a call asks for a one-time word-pa
 
 The two rows that change in the README table are below; the full working copy is docs/REAL_VS_SIMULATED.md.
 
-- Price history and baseline: "MIRROR or SIM. Dated sources where they work; a labelled seeded series where they do not. Bright Data is in progress (key set, one smoke call passed Sat 02:55; integration code is night task T6, not on this branch)."
-- CRS seller stability: "planned, not built. No CRS code on this branch; it goes through Abhinav's client (#121, #128)."
+- Price history and baseline: "MIRROR or SIM. Dated sources where they work; a labelled seeded series where they do not. Bright Data is built, env-gated and not run live (no key in the run; one smoke call passed Sat 02:55)."
+- CRS seller stability: "built, env-gated, not run live. The adapter is Abhinav's client (#121, #128); `pay/crs_gate.py` is the payee gate, not yet called before the charge."
 
 ## 7. Guidance: checks the README should keep passing
 
 The old `scripts/tests/test_readme_honesty.py` pinned these on README.md; it was renamed to `scripts/tests/test_docs_honesty.py` and now covers only the three docs. If the main session wants them on the README, keep them as a test on main:
 
-- every line naming Bright Data, CRS, Tiger, the 3D floor, "Hack the market", Interactive Cards or Claude links an existing repo file or says planned, not built, in progress or not configured;
+- every line naming Bright Data, CRS, Tiger, the 3D floor, "Hack the market", Interactive Cards or Claude links an existing repo file or says planned, not built, in progress, not configured or not run live;
 - the Numbers section quotes only numbers found in the results file named in the row, each row dated, and includes the "no headline lift" result;
 - the Status table header is exactly Piece, State, Code; a planned row names no existing file; a built row names only existing files;
 - one goal price: "under $1,300", "$1,299.99", "before sales tax", "shipping: not captured", no "$800";
