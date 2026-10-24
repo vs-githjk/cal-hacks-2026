@@ -23,7 +23,7 @@ def _tile(**kw) -> dict:
 def savings_tile() -> dict:
     from data.baselines import baseline, observations
     rows = observations()
-    at = max(r["observed_at"] for r in rows)
+    at = max((r["observed_at"] for r in rows), default=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     b = baseline("rtx 5070 ti", at, rows=rows)
     ok = b["status"] == "ok"
     why = "no verified purchase recorded yet" if ok else "no purchase has a confirmed dated baseline to compare against"

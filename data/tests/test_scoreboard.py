@@ -50,3 +50,23 @@ def test_voice_and_hyphenate_tiles_headline_the_first_run():  # #98
     assert h["detail"]["first_run"]["clean_false_flags"] == 2 and h["detail"]["first_run"]["clean"] == 7
     assert h["detail"]["after_fixes"]["planted_caught"] == 27
     assert v["origin"] == h["origin"] == "SIM"
+
+
+def test_savings_tile_survives_an_empty_baseline(monkeypatch):  # #73 item 3
+    import data.baselines
+    from data.scoreboard import savings_tile
+    monkeypatch.setattr(data.baselines, "observations", lambda: [])
+    t = savings_tile()
+    assert t["status"] == "none_yet" and t["value"] is None and t["count"] == 0
+    assert "None" not in t["display"] + t["note"] and "$" not in t["display"] + t["note"]
+    validate(build(), SCHEMA)
+
+
+def test_savings_tile_says_so_when_no_rows_match_the_sku(monkeypatch):
+    import data.baselines
+    from data.scoreboard import savings_tile
+    row = {"provider": "apify", "store": "bestbuy", "sku": "rtx 5080", "price": 999.0, "in_stock": True, "condition": "new",
+           "kind": "ask", "observed_at": "2026-10-24T05:08:00+00:00", "url": "https://bestbuy.example/x", "origin": "MIRROR"}
+    monkeypatch.setattr(data.baselines, "observations", lambda: [row])
+    t = savings_tile()
+    assert t["status"] == "none_yet" and "No reference (empty)" in t["note"] and "None" not in t["display"]
