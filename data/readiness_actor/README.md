@@ -8,14 +8,14 @@ It was built for [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), a m
 
 ## Real example (the default input)
 
-> **Not published on Apify yet.** The Actor runs from this folder today; the Apify Store page, the API call and the MCP tool below work once it is published.
+> **Not public on the Apify Store yet.** The Actor is on Apify but private; the Store page, the API call and the MCP tool below work for other accounts once it is made public.
 
-The default input is a real Canada Computers listing for an MSI RTX 5070 Ti. On its Product data from Oct 24 2026, the report is **WARNS: 0 block(s), 2 warning(s)**:
+The default input is a real Canada Computers listing for an MSI RTX 5070 Ti. An Apify run of this Actor on Oct 24 2026 (run `cmaUq7VR6HPKpCHMf`, LIVE fetch of the page) ended with **WARNS: 0 block(s), 2 warning(s); first: listing.returns_unknown**:
 
 - `listing.returns_unknown`: no return policy in the Product data, so an agent cannot compare returns across sellers.
 - `listing.shipping_unknown`: no shipping cost an agent can read, so it cannot compute a landed price.
 
-The price ($1,749.99 CAD), condition (new), stock (sold out) and model number were all readable. A page changes over time, so a run today may give a different answer.
+The page's JSON-LD gave the title, price ($1,749.99 CAD), condition (new), stock (sold out) and model number, so no other rule fired. A page changes over time, so a run today may give a different answer.
 
 ## What it checks
 
@@ -58,7 +58,7 @@ Each run also has Apify's run start event of $0.00005. A listing is charged only
 
 ## Use it from your code or an AI agent
 
-> **Not published on Apify yet.** The Actor runs from this folder today; the Apify Store page, the API call and the MCP tool below work once it is published.
+> **Not public on the Apify Store yet.** The Actor is on Apify but private; the Store page, the API call and the MCP tool below work for other accounts once it is made public.
 
 **API (one call, results in the response):**
 
