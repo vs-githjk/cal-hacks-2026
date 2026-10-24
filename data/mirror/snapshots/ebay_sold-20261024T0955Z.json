@@ -1,0 +1,108 @@
+[
+ {
+  "id": "ebay_sold:57d7e34aab49",
+  "category": "gpu",
+  "name": "MSI RTX 5070 Ti VANGUARD SOC LAUNCH EDITION 16GB Graphics Card",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1476.86,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/398090456865?nordt=true",
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "snapshot_date": "2026-10-24T09:55:10+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/398090456865?nordt=true",
+   "price": 1476.86,
+   "shipping": "125.94",
+   "sold_date": "2026-10-23"
+  }
+ },
+ {
+  "id": "ebay_sold:94f1f0b4c22d",
+  "category": "gpu",
+  "name": "Gigabyte GeForce RTX 5070 Ti WINDFORCE OC 16GB Graphics Card GV-N507TWF3OC-16GD",
+  "model_number": null,
+  "condition": "used",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1100.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/336858546672?nordt=true",
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "snapshot_date": "2026-10-24T09:55:10+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/336858546672?nordt=true",
+   "price": 1100.0,
+   "sold_date": "2026-10-23"
+  }
+ },
+ {
+  "id": "ebay_sold:10dbf14129b7",
+  "category": "gpu",
+  "name": "PNY VCG5070T16TFXPBW1-O GeForce RTX 5070 Ti Overclocked Triple Fan GPU, 16GB",
+  "model_number": null,
+  "condition": "open-box",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 640.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/127367946785?nordt=true",
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "snapshot_date": "2026-10-24T09:55:10+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/127367946785?nordt=true",
+   "price": 640.0,
+   "sold_date": "2026-10-23"
+  }
+ },
+ {
+  "id": "ebay_sold:e79d3912d2d0",
+  "category": "gpu",
+  "name": "MSI GAMING TRIO GeForce RTX 5070 Ti 16GB GDDR7 RGB DLSS 4 Ray Tracing",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 699.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/377588952801?nordt=true",
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "snapshot_date": "2026-10-24T09:55:10+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/377588952801?nordt=true",
+   "price": 699.0,
+   "sold_date": "2026-10-23"
+  }
+ },
+ {
+  "id": "ebay_sold:3d256f13df60",
+  "category": "gpu",
+  "name": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G Graphics Card Read",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 880.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/336859572616?nordt=true",
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "snapshot_date": "2026-10-24T09:55:10+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/336859572616?nordt=true",
+   "price": 880.0,
+   "sold_date": "2026-10-23"
+  }
+ }
+]
