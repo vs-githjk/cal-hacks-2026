@@ -171,12 +171,25 @@ def test_oversized_message_is_quarantined_fast_before_any_parsing():
     ("<a" + " x" * 50, 200), ("<div><!--", 2200),
 ])
 def test_adversarial_markup_at_the_cap_stays_fast(unit, count):
+    """The quadratic version took 0.7 to 54 s at the cap. A wall-clock bound alone flaked on shared CI runners (#199:
+    0.56 s against 0.5 s), so the test checks how the time GROWS: 4x the text must take well under 8x the time
+    (linear is about 4x, quadratic about 16x), best of 3 runs each, plus a generous ceiling."""
     import time
 
     payload = (unit * count)[:20000]
-    t = time.perf_counter()
-    out = screen(payload, {})
-    assert time.perf_counter() - t < 0.5, (unit, time.perf_counter() - t)  # the quadratic version took 0.7 to 54 s
+
+    def best(text):
+        runs = []
+        for _ in range(3):
+            t = time.perf_counter()
+            out = screen(text, {})
+            runs.append(time.perf_counter() - t)
+        return min(runs), out
+
+    small, _ = best(payload[:5000])
+    full, out = best(payload)
+    assert full < 2.0, (unit, full)
+    assert full < 8 * max(small, 0.005), (unit, small, full)   # the floor keeps a sub-millisecond small run from dividing noise
     assert out["verdict"] in ("allow", "quarantine", "block")
 
 
