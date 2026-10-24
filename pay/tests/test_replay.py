@@ -2,6 +2,7 @@
 import hashlib
 import os
 import threading
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -254,3 +255,50 @@ def test_retirement_requires_strict_request_body_matching_metadata(tmp_path, bod
     with pytest.raises(ValueError, match="RequestPayment"):
         store.retirement_attempt(mandate_hash="a" * 64, buyer_id="buyer-1", deal_id="deal-1",
             request_body=body, amount_cents=12345, currency="USD", payee="seller-1")
+
+
+def test_goal_call_budget_persists_by_buyer_and_parent_goal(tmp_path):
+    path = str(tmp_path / "goal-calls.sqlite")
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    first = "a" * 64
+    second = "b" * 64
+    store = NonceStore(path)
+    assert store.claim_goal_call("buyer-1", "parent-goal", first, now)
+    assert not store.claim_goal_call("buyer-1", "parent-goal", second, now + timedelta(minutes=29))
+    assert NonceStore(path).claim_goal_call("buyer-1", "parent-goal", second, now + timedelta(minutes=30))
+    assert not store.claim_goal_call("buyer-1", "parent-goal", first, now + timedelta(hours=1))
+    assert store.claim_goal_call("buyer-2", "parent-goal", first, now)
+    assert store.claim_goal_call("buyer-1", "another-goal", first, now)
+
+
+def test_goal_call_budget_denies_clock_rollback_and_bad_inputs():
+    store = NonceStore()
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert store.claim_goal_call("buyer-1", "goal-1", "a" * 64, now)
+    assert not store.claim_goal_call("buyer-1", "goal-1", "b" * 64, now - timedelta(seconds=1))
+    for args in (("", "goal-1", "c" * 64, now), ("buyer-1", "", "c" * 64, now),
+                 ("buyer-1", "goal-1", "not-a-hash", now),
+                 ("buyer-1", "goal-1", "c" * 64, now.replace(tzinfo=None)),
+                 ("buyer-1", "goal-1", "c" * 64,
+                  now.astimezone(timezone(timedelta(hours=1))))):
+        assert not store.claim_goal_call(*args)
+
+
+def test_goal_call_budget_two_connections_have_one_winner(tmp_path):
+    path = str(tmp_path / "goal-race.sqlite")
+    stores = [NonceStore(path), NonceStore(path)]
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    barrier, results = threading.Barrier(2), []
+
+    def claim(store, mandate_hash):
+        barrier.wait()
+        results.append(store.claim_goal_call("buyer", "parent", mandate_hash, now))
+
+    threads = [threading.Thread(target=claim, args=(stores[i], c * 64))
+               for i, c in enumerate(("a", "b"))]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted(results) == [False, True]
