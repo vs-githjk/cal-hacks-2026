@@ -28,18 +28,12 @@ SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
 # Agentverse profile, published on connect (README, short description, handle) for ASI:One discovery.
-PROFILE = dict(name="Tech Bazaar Buyer", seed=common.SEEDS["buyer"], port=8001,
-               readme_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "AGENTVERSE.md"),
-               description="Your buying agent for computer gear: give it a goal, it skips parts you own, makes "
-                           "seller agents bid in a sealed round, vetoes traps with a cited source, and pays only "
-                           "after you approve.",
-               handle=os.getenv("BUYER_AGENT_HANDLE", "techbazaarbuyer"))
-if os.getenv("BUYER_MAILBOX"):
-    if common.public_seed("buyer"):
-        sys.exit("Set BUYER_AGENT_SEED in agents/.env before going on Agentverse: the default seed is public.")
-    agent = Agent(**PROFILE, mailbox=True)
-else:
-    agent = Agent(**PROFILE, endpoint=["http://localhost:8001/submit"])
+agent = Agent(**common.agent_args(
+    "buyer", 8001, name="Tech Bazaar Buyer",
+    readme_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "AGENTVERSE.md"),
+    description="Your buying agent for computer gear: give it a goal, it skips parts you own, makes seller agents "
+                "bid in a sealed round, vetoes traps with a cited source, and pays only after you approve.",
+    handle=os.getenv("BUYER_AGENT_HANDLE", "techbazaarbuyer")))
 chat = Protocol(spec=chat_protocol_spec)
 pay = Protocol(spec=payment_protocol_spec, role="buyer")
 

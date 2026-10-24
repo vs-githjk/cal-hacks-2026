@@ -42,7 +42,10 @@ def persona_line(s: dict, total: float) -> str:
 def build(name: str) -> Agent:
     s = load_seller(name)
     port = PORTS[name]
-    agent = Agent(name=name, seed=common.SEEDS[name], port=port, endpoint=[f"http://localhost:{port}/submit"])
+    agent = Agent(**common.agent_args(
+        name, port, name=s['name'][:32], handle=f"techbazaar{name.replace('_', '')}",
+        description=f"Seller agent ({s['archetype']}) that bids in Tech Bazaar's sealed rounds for computer gear. "
+                    "Prices come from policy code, never below its floor. Listings are simulated (SIM)."))
 
     @agent.on_message(model=common.BidRequest)
     async def on_bid_request(ctx: Context, sender: str, msg: common.BidRequest):

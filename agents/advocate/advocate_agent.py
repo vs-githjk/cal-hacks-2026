@@ -7,8 +7,10 @@ from uagents import Agent, Context
 import common
 from advocate import checks, mock_data
 
-agent = Agent(name="quality_advocate", seed=common.SEEDS["advocate"], port=8003,
-              endpoint=["http://localhost:8003/submit"])
+agent = Agent(**common.agent_args(
+    "advocate", 8003, name="Tech Bazaar Quality Advocate", handle="techbazaaradvocate",
+    description="Argues for the buyer: checks every seller bid for fit (decided by code), condition claims against "
+                "the listing page, price history, CPSC recalls and seller record; vetoes traps with a cited source."))
 
 
 @agent.on_message(model=common.AdviceRequest, replies=common.AdviceReply)

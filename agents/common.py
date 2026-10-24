@@ -91,5 +91,17 @@ def public_seed(role: str) -> bool:
     return SEEDS[role].endswith("-dev")
 
 
+def agent_args(role: str, port: int, **profile) -> dict:
+    """Constructor args for an agent. AGENTS_MAILBOX=1 puts it on Agentverse (register once with
+    `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
+    readme_path, handle, published to Agentverse on connect."""
+    args = dict(seed=SEEDS[role], port=port, **profile)
+    if os.getenv("AGENTS_MAILBOX") or (role == "buyer" and os.getenv("BUYER_MAILBOX")):
+        if public_seed(role):
+            sys.exit(f"Set {role.upper()}_AGENT_SEED in agents/.env before going on Agentverse: the default seed is public.")
+        return {**args, "mailbox": True}
+    return {**args, "endpoint": [f"http://localhost:{port}/submit"]}
+
+
 def address(role: str) -> str:
     return Identity.from_seed(SEEDS[role], 0).address

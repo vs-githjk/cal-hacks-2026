@@ -9,11 +9,11 @@ Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 
 
 | Agent | Role | Agentverse address | Status |
 |---|---|---|---|
-| Tech Bazaar Buyer | Goal in ASI:One (Chat Protocol), ownership memory, sealed round, approval, Payment Protocol (buyer side) | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered on Agentverse (mailbox) |
-| quality_advocate | Checks each bid: fit (Lane C fit checker), condition claim vs listing page, price history, CPSC recall, seller record. At most 3 warnings, each with a source; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Local, Agentverse pending |
-| seller_1 (Byte Bros Outlet) | Seller agent: bids from its listings, price from policy code, never below floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Local, Agentverse pending |
-| seller_2 (Silicon Sally's Surplus) | Seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` | Local, Agentverse pending |
-| seller_3 (FlashDeal Frankie) | Seller agent; the planted trap (listed as new, the page says open box) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Local, Agentverse pending |
+| Tech Bazaar Buyer (@techbazaarbuyer) | Goal in ASI:One (Chat Protocol), ownership memory, sealed round, approval, Payment Protocol (buyer side) | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered on Agentverse (mailbox) |
+| Tech Bazaar Quality Advocate (@techbazaaradvocate) | Checks each bid: fit (Lane C fit checker), condition claim vs listing page, price history, CPSC recall, seller record. At most 3 warnings, each with a source; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered on Agentverse (mailbox) |
+| Byte Bros Outlet (@techbazaarseller1) | Seller agent: bids from its listings, price from policy code, never below floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered on Agentverse (mailbox) |
+| Silicon Sally's Surplus (@techbazaarseller2) | Seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` | Registered on Agentverse (mailbox) |
+| FlashDeal Frankie (@techbazaarseller3) | Seller agent; the planted trap (listed as new, the page says open box) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered on Agentverse (mailbox) |
 
 Addresses come from private seeds in `agents/.env` (never committed). Seller listings, prices and records are SIM (simulated, example.com links).
 
@@ -35,7 +35,7 @@ Put the keys and agent seeds in `agents/.env` (see the repo's `.env.example`; va
 .venv/Scripts/python buyer/buyer_agent.py
 ```
 
-For ASI:One, run the buyer in mailbox mode (`BUYER_MAILBOX=1`) and register it once with `python connect.py 8001`. Local web chat fallback: `python buyer/web_chat.py`, then open http://localhost:8080.
+For Agentverse and ASI:One, set `AGENTS_MAILBOX=1`, run each agent in its own process (sellers: `python sellers/seller_agent.py seller_1`, ports 8011 to 8013), and register each once with `python connect.py <port>` (8001 buyer, 8003 advocate, 8011 to 8013 sellers). Local web chat fallback: `python buyer/web_chat.py`, then open http://localhost:8080.
 
 ## Safety rules in code
 
