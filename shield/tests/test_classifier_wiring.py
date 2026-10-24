@@ -18,14 +18,14 @@ def no_network(monkeypatch):
 
 
 def test_default_model_is_haiku_and_shield_model_overrides(monkeypatch):
-    assert DEFAULT_MODEL == "claude-haiku-4-5"
+    assert DEFAULT_MODEL == "claude-haiku-5-5"
     monkeypatch.delenv("SHIELD_MODEL", raising=False)
-    assert ClaudeClassifier("k")._model == "claude-haiku-4-5"
+    assert ClaudeClassifier("k")._model == "claude-haiku-5-5"
     monkeypatch.setenv("SHIELD_MODEL", "claude-test-model")
     assert ClaudeClassifier("k")._model == "claude-test-model"
     assert ClaudeClassifier("k", model="explicit")._model == "explicit"  # an explicit argument beats the env
     monkeypatch.setenv("SHIELD_MODEL", "")
-    assert ClaudeClassifier("k")._model == "claude-haiku-4-5"  # blank means default
+    assert ClaudeClassifier("k")._model == "claude-haiku-5-5"  # blank means default
 
 
 def test_model_id_goes_into_the_request_body(monkeypatch):
