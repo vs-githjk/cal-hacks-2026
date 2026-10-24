@@ -1,0 +1,91 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "buyer_id": {
+   "type": "string"
+  },
+  "type": {
+   "type": "string",
+   "enum": [
+    "budget_cap",
+    "part_by_date",
+    "build_by_date"
+   ]
+  },
+  "items": {
+   "type": "array",
+   "items": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "category": {
+      "type": "string"
+     },
+     "description": {
+      "type": "string"
+     },
+     "sku_spec": {
+      "type": "string"
+     },
+     "model_number": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "category",
+     "description"
+    ]
+   }
+  },
+  "cap": {
+   "type": "number"
+  },
+  "deadline": {
+   "type": "string"
+  },
+  "state": {
+   "type": "string",
+   "enum": [
+    "ACTIVE",
+    "HUNTING",
+    "HOLD_FOR_CALL",
+    "DONE",
+    "EXPIRED",
+    "PAUSED"
+   ]
+  },
+  "reserved_amount": {
+   "type": "number"
+  },
+  "po_number": {
+   "type": "string"
+  },
+  "created_at": {
+   "type": "string"
+  },
+  "origin": {
+   "type": "string",
+   "enum": [
+    "LIVE",
+    "MIRROR",
+    "SIM"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "buyer_id",
+  "type",
+  "items",
+  "cap",
+  "deadline",
+  "state",
+  "reserved_amount",
+  "created_at",
+  "origin"
+ ]
+}

@@ -15,7 +15,14 @@
     "claim_checked",
     "verdict",
     "order_placed",
-    "delivery_checked"
+    "delivery_checked",
+    "goal_posted",
+    "goal_state",
+    "round_opened",
+    "approval_recorded",
+    "payment_recorded",
+    "loss_report",
+    "allowance_raised"
    ]
   },
   "ref_table": {
@@ -24,13 +31,13 @@
   "ref_id": {
    "type": "string"
   },
-  "supplier_id": {
-   "type": "string"
-  },
   "at": {
    "type": "string"
   },
   "label": {
+   "type": "string"
+  },
+  "seller_id": {
    "type": "string"
   }
  },

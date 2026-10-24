@@ -1,61 +1,22 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "SpecCard",
+ "description": "One part, normalized. attrs keys per category are listed in data/fit_checker/README.md. A missing attr means unknown; the fit checker answers uncertain, never a guess.",
  "type": "object",
  "properties": {
-  "id": {
-   "type": "string"
-  },
-  "sku_spec": {
-   "type": "string"
-  },
-  "item_name": {
-   "type": "string"
-  },
-  "grade": {
-   "type": "string"
-  },
-  "pack_size": {
-   "type": "string"
-  },
-  "case_count": {
-   "type": "number"
-  },
-  "unit": {
-   "type": "string"
-  },
-  "allowed_substitutes": {
-   "type": "array",
-   "items": {
-    "type": "string"
-   }
-  },
-  "photo_checks": {
-   "type": "array",
-   "items": {
-    "type": "string"
-   }
-  },
-  "source": {
-   "type": "string",
-   "enum": [
-    "live",
-    "mirror",
-    "simulated",
-    "sandbox",
-    "recorded"
-   ]
-  }
+  "id": {"type": "string"},
+  "category": {"type": "string", "enum": ["cpu", "motherboard", "memory", "gpu", "psu", "case", "cooler", "storage", "monitor", "peripheral", "laptop"]},
+  "name": {"type": "string"},
+  "model_number": {"type": "string"},
+  "condition": {"type": "string", "enum": ["new", "open-box", "refurbished", "used", "unknown"]},
+  "variant": {"type": "string"},
+  "attrs": {"type": "object"},
+  "price": {"type": "number"},
+  "currency": {"type": "string"},
+  "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]},
+  "source": {"type": "string", "description": "listing URL, actor id or dataset id"},
+  "snapshot_id": {"type": "string"},
+  "snapshot_date": {"type": "string"}
  },
- "required": [
-  "id",
-  "sku_spec",
-  "item_name",
-  "grade",
-  "pack_size",
-  "case_count",
-  "unit",
-  "allowed_substitutes",
-  "photo_checks",
-  "source"
- ]
+ "required": ["id", "category", "name", "attrs", "origin", "source"]
 }

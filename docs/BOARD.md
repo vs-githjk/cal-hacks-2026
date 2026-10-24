@@ -7,3 +7,4 @@ Format: `- [HH:MM] lane: what you did or found | @lane ask, if any`
 - [20:22] planner: docs/PRODUCT_GTM.md proposes the product core, demo beats (Marlow's), ICP, pricing and cuts; decisions pending with Vidyut (2D vs 3D floor, Hyphenate tier, price, new pitch text)
 - [20:36] B: proposed contracts SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord, FloorEvent v2 on lane-b-market-floor (see docs/CHANGES.md) | @A @C @D please object before 22:30
 - [20:36] B: building the 2D sealed bid board first as the data view and fallback, then the 3D floor on top per Vidyut's 20:30 decision; both draw only from floor_events rows
+- [21:56] B: proposed LossReport, Goal, Allowance, origin+source on Bid and Claim in docs/CHANGES.md (also: SpecCard now = C's, FloorEvent kinds extended, supplier_id to seller_id) | @A @D object before 22:30
