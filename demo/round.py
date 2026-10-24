@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional
 
 from demo.adapters import claim_checker
-from demo.common import SOURCE_OF, validate
+from demo.common import SOURCE_OF, money, validate
 from demo.pages import fixture_fetch
 from demo.sellers import Seller, make_bid
 from demo import advice
@@ -20,7 +20,31 @@ from demo.standins import market
 from shield.core import screen
 from shield.service import attack_type
 
-ARRIVAL_STEP_MS = 900  # seller i seals its bid at 300 + i * 900 ms on the sim clock (SIM clock, no sleeping)
+ARRIVAL_STEP_MS = 900  # seller i seals its bid at 300 + i * 900 ms on the sim clock (SIM clock, no sleeping), up to what fits
+FIRST_ARRIVAL_MS = 300
+SNIPE_MARGIN_MS = 100  # ordinary bids end this far before the snipe window opens
+
+
+def landed_note(seller: Seller, landed: float) -> str:
+    """How to read a landed price. Tax is never included; shipping is only counted when the listing states it,
+    and the words say so (the math uses 0 when it is not captured, the line never calls that free)."""
+    ship = "shipping: not captured" if not seller.shipping_captured else \
+        "shipping: free" if not seller.shipping else f"shipping: {money(seller.shipping)} included"
+    return f"{money(landed)} before sales tax, {ship}"
+
+
+def _fit_unknown(card: dict) -> bool:
+    return any(w["kind"] == "fit_unknown" for w in card["warnings"]) or card["fit"]["verdict"] == "uncertain"
+
+
+def pick_winner(ranked: list[dict], cards: list[dict]) -> Optional[dict]:
+    """Buyer rule, demo; to move into the advocate (issue for Abhinav): the cheapest surviving bid wins, but a bid
+    whose fit is not confirmed cannot win while a confirmed-fit bid is inside the cap (ranking only holds bids
+    inside the cap). With no confirmed fit left, the cheapest unconfirmed one may still win, with its caution."""
+    alive = [(r, c) for r, c in zip(ranked, cards) if c["recommendation"] != "veto"]
+    sure = [(r, c) for r, c in alive if not _fit_unknown(c)]
+    pick = sure or alive
+    return pick[0][0] if pick else None
 
 
 def _seller_text(seller: Seller, bid: dict) -> str:
@@ -65,9 +89,14 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
     # 1. sealed bids, in arrival order on the sim clock
     clock = market.new_auction(need["id"], 0, need.get("auction_window_s", 12))
     bids, sealed_at, arrivals = [], {}, []
+    # Ordinary sellers must all land before the snipe window so that only the learner's last-second bid extends the
+    # deadline. With many sellers a fixed step walks late arrivals into the window, so the step shrinks to fit.
+    ordinary = sum(1 for s in sellers if not s.learning)
+    free_ms = clock.deadline_ms - clock.config.snipe_window_s * 1000 - FIRST_ARRIVAL_MS - SNIPE_MARGIN_MS
+    step_ms = min(ARRIVAL_STEP_MS, free_ms // max(ordinary - 1, 1))
     for i, s in enumerate(sorted(sellers, key=lambda x: x.learning)):  # the learning seller bids last
         bid = make_bid(s, sealed_need, now, strategies.get(s.id))
-        t_ms = 300 + i * ARRIVAL_STEP_MS
+        t_ms = FIRST_ARRIVAL_MS + i * step_ms
         if s.learning:  # a last-second bid: shows the capped anti-snipe extension
             t_ms = clock.deadline_ms - 1400
         ok, clock, extended, why = market.try_bid(clock, t_ms)
@@ -119,7 +148,7 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
         cards.append(advice.advise(need, bid_by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs))
     for card in cards:
         validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")})
-    winner = next((r for r, c in zip(ranking["ranked"], cards) if c["recommendation"] != "veto"), None)
+    winner = pick_winner(ranking["ranked"], cards)
     for b in bids:
         validate("Bid", b)
     return {"round_id": f"round-{round_no}", "claim_check": {"label": label, "real": real}, "arrivals": arrivals,

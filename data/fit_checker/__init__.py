@@ -51,6 +51,18 @@ def ram_type(board, mem):
     return _r("fit.ram_type", PASS, f"{mt} matches", note=note)
 
 
+def ram_form(board, mem):
+    """DIMM vs SO-DIMM. A check only when a form is stated; one side stated and the other not is uncertain."""
+    bf, mf = board.get("memory_form"), mem.get("form")
+    if not bf and not mf:
+        return None
+    if not bf or not mf:
+        return _r("fit.ram_form", UNCERTAIN, "board or memory module form (DIMM or SO-DIMM) unknown")
+    if bf != mf:
+        return _r("fit.ram_form", FAIL, f"{mf} memory does not fit a {bf} board")
+    return _r("fit.ram_form", PASS, f"{mf} matches")
+
+
 def ram_slots(board, mem):
     modules, slots = mem.get("modules"), board.get("memory_slots")
     if not modules:
@@ -203,7 +215,7 @@ def check_fit(spec_cards):
     has = lambda *xs: all(x is not None for x in xs)
     checks = []
     if has(cpu, board): checks.append(cpu_socket(cpu, board))
-    if has(board, mem): checks += [ram_type(board, mem), ram_slots(board, mem)]
+    if has(board, mem): checks += [ram_type(board, mem), ram_form(board, mem), ram_slots(board, mem)]
     if psu is not None and (cpu is not None or gpu is not None): checks.append(psu_wattage(cpu, gpu, psu))
     if has(gpu, psu): checks.append(gpu_connectors(gpu, psu))
     if has(gpu, case): checks.append(gpu_length(gpu, case))

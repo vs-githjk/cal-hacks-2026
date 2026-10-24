@@ -115,3 +115,17 @@ def test_requisition_route_ignores_a_dept_field():
     c = client()
     r = c.post(f"{P}/requisitions", json={"requester": "vidyut", "dept": "art", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
     assert r["po"]["dept"] == "engineering"
+
+
+def test_cors_allows_only_the_local_web_origin_for_get_and_post():
+    c = client("moment")
+    ok = c.get(f"{P}/pos", headers={"Origin": "http://localhost:3100"})
+    assert ok.status_code == 200 and ok.headers["access-control-allow-origin"] == "http://localhost:3100"
+    assert c.get(f"{P}/pos", headers={"Origin": "http://127.0.0.1:3100"}).headers["access-control-allow-origin"] == "http://127.0.0.1:3100"
+    pre = c.options(f"{P}/demo/reset", headers={"Origin": "http://localhost:3100", "Access-Control-Request-Method": "POST"})
+    assert pre.status_code == 200 and "POST" in pre.headers["access-control-allow-methods"]
+    for bad in ("https://evil.example", "http://localhost.evil.example", "http://evil.example:3100"):
+        assert c.get(f"{P}/pos", headers={"Origin": bad}).headers.get("access-control-allow-origin") is None
+        assert c.options(f"{P}/demo/reset", headers={"Origin": bad, "Access-Control-Request-Method": "POST"}).status_code == 400
+    # no Origin header (the Python lanes) is untouched
+    assert "access-control-allow-origin" not in c.get(f"{P}/pos").headers

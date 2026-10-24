@@ -27,6 +27,7 @@ python3 -m uvicorn hyphenate.api:app --port 8789
 
 ## API (all under `/v1/hyphenate`)
 State is one in-memory company. `POST /demo/reset?story=moment|empty` loads the seeded story (default `moment`) or a blank studio. Identity is a claimed id in this sandbox (in production it comes from SSO). The server clock decides when things happen; a client-supplied `at` is honoured only in demo-clock mode (`HYPHENATE_DEMO_CLOCK=1`, or after `POST /demo/reset`, which turns it on for scripted stories), because a far-future `at` would age out vendor strictness and MIRROR freshness. `GET /health` reports `clock_mode`. Time never goes backwards (409).
+CORS: browsers on `http://localhost` or `http://127.0.0.1` (any port) may call GET and POST, nothing else; the web screen is `/hyphenate` in `web/` (set `NEXT_PUBLIC_HYPHENATE_URL` to point it at another API port).
 Every write returns `Outcome`: `{"ok": bool, "status": str, "decision_ids": [..], "decisions": [Decision..], "code"?: str, ...extra}`. A refused action is HTTP 200 with `ok:false`, a `code` and a decision that says why. 404 unknown id, 409 clock, 422 bad input, 413 body over 64 KB.
 
 | Route | Purpose |

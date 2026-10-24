@@ -1,0 +1,79 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "SellerConfig",
+ "description": "One seller of record's bidding setup. agents/sellers/factory.py adds the checks a schema cannot express (floor at or below price, floor present for every offered condition, http(s) URLs with a host).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["id", "name", "archetype", "origin", "pricing", "listings"],
+ "properties": {
+  "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,39}$", "description": "Lowercase slug; also the agent seed name and the config file name"},
+  "name": {"type": "string", "minLength": 1, "maxLength": 60},
+  "owner": {"type": "string", "maxLength": 60},
+  "archetype": {"type": "string", "minLength": 1, "maxLength": 200},
+  "origin": {"type": "string", "enum": ["SIM", "LIVE"]},
+  "port": {"type": "integer", "minimum": 1024, "maximum": 65535, "description": "Optional; the kit picks the next free port from 8016 when absent"},
+  "shipping": {"type": "number", "minimum": 0, "maximum": 1000, "description": "Flat shipping added to the bid total (default 0)"},
+  "pricing": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["mode"],
+   "properties": {
+    "mode": {"type": "string", "enum": ["fixed_margin", "discount"], "description": "fixed_margin: price = cost x (1 + margin_pct/100), listings carry cost. discount: price = list price x (1 - discount), listings carry price."},
+    "margin_pct": {"type": "number", "minimum": 0, "maximum": 500},
+    "discount": {"type": "number", "minimum": 0, "maximum": 0.9, "description": "Fraction off list price, 0.03 means 3 percent"}
+   }
+  },
+  "perks": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 120}},
+  "claims": {"type": "array", "maxItems": 10, "items": {"type": "string", "maxLength": 200}},
+  "listings": {
+   "type": "object",
+   "minProperties": 1,
+   "maxProperties": 50,
+   "description": "Keyed by canonical sku_spec (lowercase, for example \"rtx 5070 ti\")",
+   "additionalProperties": {"$ref": "#/$defs/listing"}
+  }
+ },
+ "$defs": {
+  "condition": {"type": "string", "enum": ["new", "open-box", "refurbished", "used"]},
+  "money": {"type": "number", "exclusiveMinimum": 0, "maximum": 100000},
+  "url": {"type": "string", "pattern": "^https?://[^\\s/]+", "maxLength": 500},
+  "listing": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["condition", "floor_by_condition", "listing_url"],
+   "properties": {
+    "condition": {"$ref": "#/$defs/condition", "description": "What the seller says it is offering (primary line)"},
+    "page_condition": {"$ref": "#/$defs/condition", "description": "What the listing page itself shows; defaults to condition"},
+    "variant": {"type": "string", "maxLength": 40, "description": "Default retail"},
+    "price": {"$ref": "#/$defs/money", "description": "List price (pricing.mode discount)"},
+    "cost": {"$ref": "#/$defs/money", "description": "Seller's cost (pricing.mode fixed_margin)"},
+    "floor_by_condition": {
+     "type": "object",
+     "minProperties": 1,
+     "propertyNames": {"$ref": "#/$defs/condition"},
+     "additionalProperties": {"$ref": "#/$defs/money"},
+     "description": "Lowest unit price the agent will ever bid, per condition it offers"
+    },
+    "listing_url": {"$ref": "#/$defs/url"},
+    "attrs": {"type": "object", "description": "Spec facts the fit checker reads (category, chipset, length_mm, wattage ...)"},
+    "alt_lines": {
+     "type": "array",
+     "maxItems": 3,
+     "description": "Further condition lines of the same SKU, bid as alternatives inside the same sealed bid",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition"],
+      "properties": {
+       "condition": {"$ref": "#/$defs/condition"},
+       "page_condition": {"$ref": "#/$defs/condition"},
+       "price": {"$ref": "#/$defs/money"},
+       "cost": {"$ref": "#/$defs/money"},
+       "listing_url": {"$ref": "#/$defs/url"}
+      }
+     }
+    }
+   }
+  }
+ }
+}

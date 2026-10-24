@@ -114,10 +114,10 @@ def test_beat2_a_real_mirror_seller_wins_on_a_real_line(run):
     b2 = b(run, 2)
     win = next(x for x in b2["bids"] if x["id"] == b2["winner"]["bid_id"])
     assert win["origin"] == "MIRROR" and win["lines"][b2["winner"]["line"]]["origin"] == "MIRROR"
-    assert win["lines"][b2["winner"]["line"]]["unit_price"] == 1249.99 and 1249.99 <= b(run, 1)["goal"]["cap"]
+    assert win["lines"][b2["winner"]["line"]]["unit_price"] == 1299.99 and 1299.99 <= b(run, 1)["goal"]["cap"]
     assert win["mirror_snapshot_id"].startswith("bestbuy-")
     card = next(c for c in b2["cards"] if c["bid_id"] == win["id"])
-    assert card["recommendation"] == "caution" and card["warnings"][0]["rule_id"] == "advocate.fit_unknown"  # length not captured: said, not guessed
+    assert card["recommendation"] == "buy" and card["fit"]["verdict"] == "pass"   # ASUS Prime, maker-spec 304 mm in a 305 mm case (test_demo_winner.py)
     assert all(s["origin"] == "SIM" for s in b2["sellers"] if s["id"] in {"shady-sam", "bargain-bin", "lowball", "fair-price-pc", "gadget-grove"})
 
 
@@ -137,7 +137,8 @@ def test_seller_model_one_seller_two_condition_lines_cheapest_allowed_line_is_pi
 def test_advice_compares_on_quality_adjusted_price_not_raw_price(run):
     ranked = b(run, 2)["ranking"]["ranked"]
     by = {r["seller_id"]: r for r in ranked}
-    assert by["gadget-grove"]["landed"] < by["best-buy"]["landed"] < by["fair-price-pc"]["landed"]
+    assert by["gadget-grove"]["landed"] < by["best-buy"]["landed"]
+    assert "fair-price-pc" not in by and any(d["seller_id"] == "fair-price-pc" for d in b(run, 2)["ranking"]["disqualified"])   # $1,329 is over the cap
     assert by["best-buy"]["adjusted"] < by["gadget-grove"]["adjusted"]    # open-box and unknown returns cost points
     assert [r["adjusted"] for r in ranked] == sorted(r["adjusted"] for r in ranked)
 
@@ -145,7 +146,7 @@ def test_advice_compares_on_quality_adjusted_price_not_raw_price(run):
 def test_beat2_incompatible_part_is_vetoed_by_the_fit_checker(run):
     card = next(c for c in b(run, 2)["cards"] if c["bid_id"].endswith("bargain-bin"))
     assert card["recommendation"] == "veto" and card["call_reason"]["rule_id"] == "fit.gpu_length"
-    assert "336 mm exceeds case clearance 305 mm" in card["warnings"][0]["text"]
+    assert card["warnings"][0]["text"] == "Does not fit: The card is longer than your case allows."
 
 
 def test_beat2_referee_rejects_a_bid_under_its_floor_before_ranking(run):
@@ -164,6 +165,15 @@ def test_beat2_sealing_and_anti_snipe(run):
     assert b2["clock"]["extensions"] == 1 and b2["clock"]["closed_ms"] == 17000
 
 
+def test_beat2_only_the_learners_last_second_bid_extends_the_deadline(run):
+    arrivals = b(run, 2)["arrivals"]
+    assert len(arrivals) >= 12   # the cadence must hold with the full seller list, not just the first five
+    extended = [a["seller_id"] for a in arrivals if a["extended"]]
+    assert extended == [arrivals[-1]["seller_id"]]
+    window_open = 12000 - 3000
+    assert all(a["at_ms"] < window_open for a in arrivals[:-1])
+
+
 def test_beat2_mirror_bids_over_the_cap_are_out_and_unknown_condition_is_not_guessed(run):
     out = {d["seller_id"]: d for d in b(run, 2)["ranking"]["disqualified"]}
     assert "over the goal cap" in " ".join(out["ebay-263900"]["reasons"]) and "ebay-442526" in out
@@ -180,7 +190,7 @@ def test_real_fit_checker_advocate_claim_check_and_shield_are_actually_called():
     from data.fit_checker import check_fit
     from shield.core import screen
     mod, how = adapters.advocate_checks()
-    assert how.startswith("REAL agents/advocate/checks.py") and mod.__file__.endswith("agents/advocate/checks.py")
+    assert how.startswith("REAL agents/advocate/checks.py") and Path(mod.__file__).as_posix().endswith("agents/advocate/checks.py")
     with mock.patch.object(mod, "check_fit", wraps=check_fit) as fit, mock.patch.object(mod, "advise", wraps=mod.advise) as adv, \
             mock.patch.object(mod, "call_reason", wraps=mod.call_reason) as cr, \
             mock.patch("demo.round.screen", wraps=screen) as sh, mock.patch("demo.beats.screen", wraps=screen) as sh3:
@@ -228,7 +238,7 @@ def test_beat4_mandate_is_above_the_allowance_and_binds_the_winner(run):
     assert m["amount"] == b(run, 2)["winner"]["landed"] > b1["allowance"]["per_purchase_limit"]
     assert m["within_allowance"] is False and m["payee"] == "best-buy@pay.example.test"
     assert m["tap_signature"] == b4["signature"]["headers"]["Signature"]
-    assert b4["call_script"]["stripped"] == [] and "one thousand two hundred forty nine dollars and ninety nine cents" in b4["call_script"]["deal_line"]
+    assert b4["call_script"]["stripped"] == [] and "one thousand two hundred ninety nine dollars and ninety nine cents" in b4["call_script"]["deal_line"]
     assert b4["advocate_reason"]["rule_id"] == "advocate.condition"
 
 
@@ -318,7 +328,7 @@ def test_beat5_learner_closes_the_gap_inside_its_floor_against_a_static_control(
     b5 = b(run, 5)
     assert b5["learner"]["round2_price"] < b5["learner"]["round1_price"] and b5["learner"]["above_floor"]
     assert b5["learner"]["round2_price"] >= b5["learner"]["floor"]
-    assert b5["control"] == {"round1_price": 1289.0, "round2_price": 1289.0, "unchanged": True}
+    assert b5["control"] == {"round1_price": 1329.0, "round2_price": 1329.0, "unchanged": True}
     assert b5["learning_seller"] == "gadget-grove" and b5["control_seller"] == "fair-price-pc"
     assert b5["round2"]["winner"]["seller_id"] == "gadget-grove" and b5["gap_closed"] is True
     assert b5["strategy"]["diff"] == {"price_step": {"from": 0.0, "to": 0.03}}

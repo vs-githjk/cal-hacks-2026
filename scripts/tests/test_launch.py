@@ -346,3 +346,28 @@ def test_mailbox_flag_sets_agent_env_only_when_asked(tmp_path):
     assert on["buyer"].extra_env["BUYER_MAILBOX"] == "1"
     assert on["advocate"].extra_env["ADVOCATE_MAILBOX"] == "1"
     assert on["sellers"].extra_env["SELLERS_MAILBOX"] == "1"
+
+
+# ---- seller kit service (:8791)
+
+def test_seller_kit_service_is_listed_with_a_health_check(tmp_path):
+    svcs = {s.name: s for s in L.build_services(make_args(), tmp_path)}
+    kit = svcs["seller-kit"]
+    assert kit.port == 8791 and kit.health_path == "/v1/health" and kit.group == "kit"
+    assert kit.cwd == tmp_path  # uvicorn imports seller_kit.api from the repo root
+    assert kit.cmd[1:4] == ["-m", "uvicorn", "seller_kit.api:app"] and "8791" in kit.cmd
+
+
+def test_seller_kit_port_is_preflight_checked(tmp_path):
+    a = make_args()
+    svcs = L.build_services(a, tmp_path)
+    checks = L.run_preflight(a, svcs, {}, "n", repo=tmp_path, home_bin=tmp_path / "nobin", which=lambda n: "/bin/x",
+                             can_import=lambda m: True, port_busy=lambda p: p == 8791)
+    assert [c for c in checks if c.name.startswith("port 8791")][0].ok is False
+
+
+def test_missing_fastapi_skips_seller_kit_with_the_fix(tmp_path):
+    svcs, checks = preflight(tmp_path, which=lambda n: "/bin/x", can_import=lambda m: m != "fastapi")
+    L.decide_skips(svcs, checks)
+    kit = {s.name: s for s in svcs}["seller-kit"]
+    assert "fastapi" in kit.skip_reason

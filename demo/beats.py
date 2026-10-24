@@ -6,7 +6,7 @@ from datetime import datetime
 from demo.adapters import advocate_checks
 from demo.common import MIRROR, PAGE_BASE, SIM, SITE, money, validate
 from demo.pages import read_page
-from demo.round import run_round
+from demo.round import landed_note, run_round
 from demo.sellers import Seller, all_sellers
 from shield.core import screen
 from shield.service import attack_type
@@ -46,6 +46,9 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
         alt = "  (alternatives, the market takes the cheapest allowed)" if len(b["lines"]) > 1 else ""
         say.line(b["origin"], f"{s.name}: " + " | ".join(_fmt_line(l) for l in b["lines"]) + alt, 0)
         say.line(b["origin"], f"{where}  {anchor.listing_url}", 2)
+        for w in b.get("withheld_lines", []):
+            say.line(b["origin"], f"withheld {w['model']} at {w['unit_price']:,.2f}: {w['reason']} (rule {w['rule_id']})", 2)
+            say.line(b["origin"], f"maker spec: {w['source_url']}", 3)
     arrival_ext = [a for a in res["arrivals"] if a["extended"]]
     say.blank()
     vis = res["visibility"]
@@ -101,10 +104,10 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
     say.blank()
     vetoed = [by_id[r["seller_id"]].name + f" ({money(r['landed'])}, {c['call_reason']['rule_id']})"
               for r, c in zip(res["ranking"]["ranked"], res["cards"]) if c["recommendation"] == "veto" and r["rank"] < w["rank"]]
-    say.line(winner_seller.origin, f"winner: {winner_seller.name} at {money(w['landed'])}; vetoed as cheaper: " + "; ".join(vetoed))
+    say.line(winner_seller.origin, f"winner: {winner_seller.name} at {landed_note(winner_seller, w['landed'])}; vetoed as cheaper: " + "; ".join(vetoed))
     return {"sellers": [_seller_artifact(s) for s in sellers], "skips": skips, **res,
             "veto_reason": res["cards"][0]["call_reason"] if res["cards"] and res["cards"][0]["recommendation"] == "veto" else None,
-            "winner_seller_id": w["seller_id"]}
+            "winner_seller_id": w["seller_id"], "winner_note": landed_note(winner_seller, w["landed"])}
 
 
 def _seller_artifact(s: Seller) -> dict:

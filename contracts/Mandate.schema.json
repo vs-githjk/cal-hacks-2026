@@ -51,7 +51,12 @@
   },
   "hash": {
    "type": "string",
-   "description": "sha256 hex over canonical JSON of deal_id, amount, currency, payee, tier_price, nonce, expires_at (sorted keys, no spaces)"
+   "description": "sha256 hex over canonical JSON of deal_id, amount, currency, payee, tier_price, nonce, expires_at, plus crs_check_id when present (sorted keys, no spaces)"
+  },
+  "crs_check_id": {
+   "type": "string",
+   "minLength": 1,
+   "description": "Optional. Id of the CRS check that cleared a business payee (pay.crs_gate.check_id). Enters the hash only when present."
   },
   "within_allowance": {
    "type": "boolean",

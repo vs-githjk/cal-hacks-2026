@@ -1,0 +1,4 @@
+# 0130-D allowance ladder: set_allowance reducer
+- New reducer `set_allowance(buyerId, perPurchaseLimit, periodLimit, period)`, buyer (own id) or referee only. The referee sets any limits up to the ladder's top step; the buyer can only lower their own (a raise comes from clean deliveries). Rule: `market/rules/allowance.ts setAllowance`. No new table (the `allowance` table and `my_allowance` view already exist); writes one `allowance_set` floor event.
+- `raiseOnCleanReceiving` now keeps a limit that was set above the next ladder step, so a clean delivery never lowers an allowance.
+- Does not touch `approval_code`, `loss_report`, `record_loss_report` or `my_loss_reports` (Vedant's PR #71). Bindings regenerated (additive: `set_allowance_reducer.ts`, index, types/reducers). Affects the bridge (sends it) and Lane B screens (no change needed).

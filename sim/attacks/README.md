@@ -8,3 +8,10 @@ Written by Lane C so Lane D does not grade its own rules. Frozen Fri Oct 23 22:4
   sha256 `d23877df0c9ec47bcc032199f3b2020d4b1dbaa24d53eb025ab367d62ecf6f73`
 
 Report block rate in three columns (dev, held-out, adaptive), never pooled, and never say "secure".
+
+## heldout2 (second blind set, sealed)
+`heldout2.jsonl` (20 seller-side attacks in new styles: multilingual, base64 and hex, markdown links, fake system tags, split fields, polite notes to the agent; plus 10 honest listings that look suspicious) was written by Lane C without reading Shield's rules or corpus. The file is gitignored and not committed; only its hash is: `HELDOUT2.sha256`. Lane D runs it once with `python3 -m sim.heldout2 --file <path>`; the first run is the blind number, later runs are marked not blind.
+
+## Status of the sealed sets
+- `heldout2`: **exposed (accidental push 2026-10-24), not blind.** The file was committed on a feature branch by mistake. Quote its results only as "not blind".
+- `heldout3`: replacement, written by Lane C without reading Shield's rules or corpus, with no overlap with heldout2. The file lives outside the repo (`/Users/anoopibrampur/calhacks/overnight/heldout3.jsonl`); only `HELDOUT3.sha256` is committed. Run it with `python3 -m sim.heldout2 --file <path> --seal sim/attacks/HELDOUT3.sha256 --out sim/RESULTS-heldout3.md`; the first run is the blind number.

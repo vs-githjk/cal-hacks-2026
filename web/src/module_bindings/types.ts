@@ -406,6 +406,19 @@ export type SellerNeedRow = __Infer<typeof SellerNeedRow>;
 export const SellerNeeds = __t.object("SellerNeeds", {});
 export type SellerNeeds = __Infer<typeof SellerNeeds>;
 
+export const StockHold = __t.object("StockHold", {
+  id: __t.u64(),
+  sellerId: __t.string(),
+  skuSpec: __t.string(),
+  condition: __t.string(),
+  qty: __t.f64(),
+  roundId: __t.string(),
+  bidId: __t.string(),
+  expiresAt: __t.timestamp(),
+  state: __t.string(),
+});
+export type StockHold = __Infer<typeof StockHold>;
+
 export const StrategyStep = __t.object("StrategyStep", {
   key: __t.string(),
   from: __t.string(),

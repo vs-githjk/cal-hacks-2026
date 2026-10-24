@@ -196,5 +196,168 @@
    "country": "us"
   },
   "finished_at": "2026-10-24T05:09:28.698Z"
+ },
+ {
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "RTX 5070 Ti",
+   "maxResults": 3,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "SGhUiwqz6jif5pagx",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 3,
+  "snapshot_id": "bestbuy-20261024T0851Z",
+  "fields": [
+   "condition",
+   "price",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 6
+ },
+ {
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "RTX 5070 Ti",
+   "maxProducts": 3,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "gkBRbRsZPgDmu6LuH",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-20261024T0852Z",
+  "fields": [],
+  "secs": 72,
+  "note": "no snapshot file (0 items returned)"
+ },
+ {
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "rtx 5070 ti"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "OXhhdlHNaRpwRdCAS",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "fields": [
+   "condition",
+   "date",
+   "price",
+   "seller",
+   "shipping",
+   "title",
+   "url"
+  ],
+  "secs": 7
+ },
+ {
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "RTX 5070 Ti",
+   "maxProducts": 3
+  },
+  "run_id": "gMUeEMMZRtdM99hWd",
+  "status": "SUCCEEDED",
+  "cost_usd": 5e-05,
+  "items": 3,
+  "snapshot_id": "bestbuy-20261024T0936Z",
+  "fields": [
+   "condition",
+   "model_number",
+   "price",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 4
+ },
+ {
+  "store": "newegg",
+  "actor": "kawsar/newegg-product-scraper",
+  "input": {
+   "productUrls": [
+    "https://www.newegg.com/p/pl?d=rtx+5070+ti"
+   ],
+   "maxItems": 3,
+   "maxPages": 1
+  },
+  "run_id": "mrvfkza2wVs80s8Bs",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 0,
+  "snapshot_id": "newegg-20261024T0936Z",
+  "fields": [],
+  "secs": 10
+ },
+ {
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "RTX 5070 Ti"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 3
+  },
+  "run_id": "UL50v8YifPbekhXsd",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 3,
+  "snapshot_id": "microcenter-20261024T0938Z",
+  "fields": [
+   "model_number",
+   "price",
+   "stock",
+   "title",
+   "url"
+  ],
+  "secs": 92
+ },
+ {
+  "store": "ebay_live",
+  "actor": "memo23/ebay-search-scraper-ppe",
+  "input": {
+   "searchQueries": [
+    "RTX 5070 Ti new"
+   ],
+   "mode": "active",
+   "maxItems": 8,
+   "detailedItems": false,
+   "includeSummary": false
+  },
+  "run_id": "PFWzXsSFAZnx8NygM",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 8,
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "fields": [
+   "condition",
+   "price",
+   "seller",
+   "shipping",
+   "shipping_type",
+   "stock",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 11
  }
 ]

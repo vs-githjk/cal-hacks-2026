@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { ALLOWANCE_LADDER } from "../config";
-import { decide, newAllowance, periodKey, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove } from "./allowance";
+import { decide, newAllowance, periodKey, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, setAllowance } from "./allowance";
 
 const MON = Date.parse("2026-10-19T12:00:00Z");
 const DAY = 24 * 3600_000;
@@ -72,5 +72,63 @@ describe("requester is never the approver", () => {
   it("allows a different approver, and a consumer buy with no separate requester", () => {
     expect(requesterMayApprove("seat-3", "lab-admin").ok).toBe(true);
     expect(requesterMayApprove("", "vidyut").ok).toBe(true);
+  });
+});
+
+describe("setAllowance (the buyer may only tighten; the referee sets up to the ladder's top)", () => {
+  const top = ALLOWANCE_LADDER[ALLOWANCE_LADDER.length - 1]!;
+  const fresh = newAllowance("vidyut", MON);
+  const req = (per: number, period: number, p: "week" | "month" = "week") => ({ per_purchase_limit: per, period_limit: period, period: p });
+
+  it("the referee can set Vidyut's demo allowance; the step is the highest ladder step it reaches", () => {
+    const r = setAllowance(fresh, req(250, 500), "referee", MON);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.allowance).toMatchObject({ per_purchase_limit: 250, period_limit: 500, ladder_step: 2, period: "week", updated_at: MON });
+  });
+
+  it("refuses negative, non-finite, per-buy above the period limit, an unknown period, and anything above the ladder's top", () => {
+    for (const bad of [req(-1, 100), req(NaN, 100), req(10, Infinity), req(200, 100), req(10, 100, "year" as never), req(top.per_purchase + 1, top.per_period), req(10, top.per_period + 1)]) {
+      const r = setAllowance(fresh, bad, "referee", MON);
+      expect(r.ok).toBe(false);
+    }
+  });
+
+  it("the buyer can lower a limit but never raise one, and cannot change the period (a fresh $0 allowance stays $0)", () => {
+    const a = raiseOnCleanReceiving(raiseOnCleanReceiving(fresh, MON), MON);
+    const lower = setAllowance(a, req(40, 100), "buyer", MON);
+    expect(lower.ok).toBe(true);
+    if (lower.ok) expect(lower.allowance).toMatchObject({ per_purchase_limit: 40, period_limit: 100, ladder_step: 0 });
+    expect(setAllowance(a, req(a.per_purchase_limit + 1, a.period_limit), "buyer", MON).ok).toBe(false);
+    expect(setAllowance(a, req(a.per_purchase_limit, a.period_limit + 1), "buyer", MON).ok).toBe(false);
+    expect(setAllowance(a, req(a.per_purchase_limit, a.period_limit, "month"), "buyer", MON).ok).toBe(false);
+    expect(setAllowance(fresh, req(50, 150), "buyer", MON).ok).toBe(false);
+  });
+
+  it("keeps what was already spent this period", () => {
+    const a = recordAutoSpend(raiseOnCleanReceiving(fresh, MON), 20, MON);
+    const r = setAllowance(a, req(30, 100), "buyer", MON + DAY);
+    expect(r.ok && r.allowance.spent_this_period).toBe(20);
+  });
+
+  it("a clean receiving step after a custom set never lowers a limit", () => {
+    const set = setAllowance(fresh, req(250, 500), "referee", MON);
+    if (!set.ok) throw new Error("setup");
+    const next = raiseOnCleanReceiving(set.allowance, MON);
+    expect(next.ladder_step).toBe(3);
+    expect(next.per_purchase_limit).toBe(Math.max(250, ALLOWANCE_LADDER[3]!.per_purchase));
+    expect(next.period_limit).toBe(Math.max(500, ALLOWANCE_LADDER[3]!.per_period));
+    const hi = setAllowance(fresh, req(top.per_purchase, 1000), "referee", MON);
+    if (!hi.ok) throw new Error("setup");
+    expect(raiseOnCleanReceiving(hi.allowance, MON).per_purchase_limit).toBe(top.per_purchase);
+  });
+
+  it("a clean receiving step keeps a lopsided hand-set limit (10 per buy, 1500 per period)", () => {
+    const set = setAllowance(fresh, req(10, 1500), "referee", MON);
+    if (!set.ok) throw new Error("setup");
+    expect(set.allowance.ladder_step).toBe(0);
+    const next = raiseOnCleanReceiving(set.allowance, MON);
+    expect(next.ladder_step).toBe(1);
+    expect(next.per_purchase_limit).toBe(ALLOWANCE_LADDER[1]!.per_purchase);
+    expect(next.period_limit).toBe(1500);
   });
 });

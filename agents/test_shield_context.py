@@ -252,3 +252,34 @@ def test_multisku_global_price_claim_is_checked_against_each_sku(monkeypatch):
 
 def test_advocate_reason_templates_stay_in_sync():
     assert checks.CALL_SUMMARIES.items() <= reasons.SUMMARIES.items()
+
+
+def _real_need_and_bids():
+    """The exact JSON the buyer sends: a Need from need_from_goal (consent: true), sealed, and real seller bids."""
+    from buyer.goal import need_from_goal
+    from buyer.logic import sealed
+    from sellers.policy import make_bid, seller
+    goal = {"buyer_id": "vidyut", "cap": 800, "deadline": "2026-11-01T23:59:00Z",
+            "items": [{"sku_spec": "rtx 4070 super 12gb", "quantity": 1, "part": "gpu"}]}
+    need = sealed(need_from_goal(goal))
+    bids = [b for b in (make_bid(need, seller(n)) for n in common.SELLERS) if b]
+    assert need["consent"] is True and bids
+    return need, bids
+
+
+@pytest.mark.parametrize("role", ["buyer", "unknown", "advocate"])
+def test_the_real_need_is_not_screened_as_a_spoof(role):
+    # Regression (T9 fix 1): shield.spoof.protocol matched the Need's required "consent": true field and
+    # blocked every BidRequest and AdviceRequest once the agents pointed at Shield v2.
+    need, bids = _real_need_and_bids()
+    advice_need = dict(need, owned={"psu": {"wattage": 750}, "case": {"max_gpu_length_mm": 330}})
+    for text in (json.dumps(need), json.dumps(advice_need) + json.dumps(bids)):
+        out = shield_screen(text, {"sender_role": role, "payee_of_record": None, "price_history": []}, classifier=None)
+        assert out["verdict"] == "allow", (role, out["rule_ids"])
+
+
+def test_real_seller_bids_are_allowed_from_a_seller():
+    _, bids = _real_need_and_bids()
+    for bid in bids:
+        out = shield_screen(json.dumps(bid), common.shield_context(common.address("seller_1")), classifier=None)
+        assert out["verdict"] == "allow", (bid["supplier_id"], out["rule_ids"])

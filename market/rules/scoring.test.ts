@@ -101,6 +101,18 @@ describe("rankBids", () => {
     expect(r.ranked.map((x) => x.bid.id)).toEqual([verified.id, early.id, late.id]);
   });
 
+  it("is deterministic: a full tie goes to the earlier bid time, then the lower seller id, whatever order the bids arrive in", () => {
+    const sameTime = { sealed_at: 500 };
+    const zed = mk("seller-z", 750, { ...sameTime, id: "bid-a" }); // lowest bid id, highest seller id
+    const abe = mk("seller-a", 750, { ...sameTime, id: "bid-z" });
+    const first = mk("seller-m", 750, { sealed_at: 400, id: "bid-m" });
+    const orders = [[zed, abe, first], [first, abe, zed], [abe, first, zed]];
+    for (const bids of orders) {
+      const r = rankBids(bids, { needItems: items });
+      expect(r.ranked.map((x) => x.bid.seller_id)).toEqual(["seller-m", "seller-a", "seller-z"]);
+    }
+  });
+
   it("computes landed price from the lines, not the seller's stated total", () => {
     const claimsLow = mk("seller-a", 780, { total_landed_price: 1 });
     const honest = mk("seller-b", 760);
@@ -256,5 +268,42 @@ describe("a line's quantity is stock available (qty_available)", () => {
     const only = mk("seller-b", 0, { lines: [{ sku_spec: GPU, unit_price: 200, quantity: 1 }] });
     const r2 = rankBids([only], { needItems: items, lineRejects: new Map([[only.id, ["no floor set for x"]]]) });
     expect(r2.disqualified[0]!.reasons.join(" ")).toMatch(/no floor set/);
+  });
+});
+
+describe("partial bids on a multi-item need (#136)", () => {
+  const GPU2 = "psu-750w";
+  const two = new Map<string, NeedItem>([
+    [GPU, need],
+    [GPU2, { sku_spec: GPU2, condition: "new", variant: "retail", quantity: 1, unit: "each" }],
+  ]);
+  const line = (sku: string, price: number) => ({ sku_spec: sku, unit_price: price, quantity: 1 });
+  const bidOf = (seller: string, lines: ReturnType<typeof line>[]) =>
+    mk(seller, 0, { lines, total_landed_price: lines.reduce((s, l) => s + l.unit_price, 0) });
+
+  it("a complete bid outranks a cheaper partial one, and the partial names what it misses", () => {
+    const partial = bidOf("seller-a", [line(GPU, 100)]);
+    const complete = bidOf("seller-b", [line(GPU, 100), line(GPU2, 100)]);
+    const r = rankBids([partial, complete], { needItems: two });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([complete.id, partial.id]);
+    expect(r.ranked[0]!.complete).toBe(true);
+    expect(r.ranked[1]).toMatchObject({ complete: false, missing: [GPU2], rank: 2 });
+  });
+
+  it("partial bids rank by score among themselves, below every complete bid", () => {
+    const p1 = bidOf("seller-a", [line(GPU, 300)]);
+    const p2 = bidOf("seller-b", [line(GPU2, 50)]);
+    const c1 = bidOf("seller-c", [line(GPU, 400), line(GPU2, 400)]);
+    const c2 = bidOf("seller-d", [line(GPU, 200), line(GPU2, 200)]);
+    const r = rankBids([p1, p2, c1, c2], { needItems: two });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([c2.id, c1.id, p2.id, p1.id]);
+  });
+
+  it("an all-complete set ranks as before", () => {
+    const a = mk("seller-a", 780);
+    const b = mk("seller-b", 760);
+    const r = rankBids([a, b], { needItems: items });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([b.id, a.id]);
+    expect(r.ranked.every((x) => x.complete && x.missing.length === 0)).toBe(true);
   });
 });
