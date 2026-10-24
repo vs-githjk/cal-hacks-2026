@@ -50,7 +50,7 @@ def test_public_hint_never_buys():
 
 
 def _deal():
-    m = payment.make_mandate("order-1", 589.0, SELLER, buyer_id="joe", within_allowance=False)
+    m = payment.make_mandate("order-1", 589.0, SELLER, buyer_id="vidyut", within_allowance=False)
     return m, {m["hash"]: {"answer": "approve", "source": "chat stub"}}, set()
 
 
@@ -72,7 +72,7 @@ def test_settle_rejects_other_payee_and_no_mandate():
 
 def test_settle_rejects_expired_mandate():
     m, approvals, used = _deal()
-    m_old = payment.make_mandate("order-2", 10.0, SELLER, buyer_id="joe", within_allowance=False,
+    m_old = payment.make_mandate("order-2", 10.0, SELLER, buyer_id="vidyut", within_allowance=False,
                                   now=datetime.now(timezone.utc) - timedelta(minutes=20))
     out = hunt.settle(payment.payment_request(m_old, SELLER), m_old, {m_old["hash"]: {"answer": "approve"}}, used)
     assert isinstance(out, RejectPayment) and "expired" in out.reason

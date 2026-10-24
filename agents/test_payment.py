@@ -8,7 +8,7 @@ SELLER = "agent1qseller"
 
 
 def setup():
-    m = payment.make_mandate("deal-1", 589.0, SELLER, buyer_id="joe", within_allowance=False)
+    m = payment.make_mandate("deal-1", 589.0, SELLER, buyer_id="vidyut", within_allowance=False)
     return m, payment.payment_request(m, SELLER), {m["hash"]: {"answer": "approve"}}, set()
 
 
