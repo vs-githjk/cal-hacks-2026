@@ -22,7 +22,7 @@ _WHERE = rx(r"\b" + _THEIRS + r"\s+(?:\w+\s+){0,2}?" + _DEVICE + r"\b|\bon\s+(?:
             r"(?:screen|display|phone|device|app|tablet)\b|\bonce\s+approved\b|\bafter\s+approving\b|\bwhen\s+(?:you|u)\s+approve\b"
             r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b|\bapproval\b|\bverification\b|\bpairing\b|\bone[-\s]time\b|\btwo[-\s]word\b|\b2[-\s]word\b|\bmagic\b|\bsecret\b")
 _ASK = rx(r"\?|\b(?:please|pls|plz)\b|\b(?:read|recite|tell|say|send|give|share|type|enter|repeat|spell|paste|text|dm|e-?mail|reply"
-          r"|respond|what|whats|which|show|echo|mirror|forward|provide|confirm|post|drop|put|need|want|let\s+(?:me|us)\s+know|aloud|out|message|ping|shoot"
+          r"|respond|what|whats|which|show|echo|mirror|wants|forward|provide|confirm|post|drop|put|need|want|let\s+(?:me|us)\s+know|aloud|out|message|ping|shoot"
           r"|whisper|relay|disclose|reveal|list|write|state|required|waiting|like|send\s+over|pass\s+(?:on|along))\b"
           r"|\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase)\s+needed\b")  # not a bare "needed": "no pairing code needed"
 # The approval itself or the buyer's own device: a code noun next to one of these is an ask even with no verb at all
@@ -34,6 +34,15 @@ _STRONG = rx(r"\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase|
 _REGULATORY = rx(r"\b(?:fcc|ce\s+mark|ul|rohs|regulatory|certif\w*|compliance|energy\s+star)\b")
 _BOOT = rx(r"\b(?:on|at|during)\s+boot\b|\bbios\b|\bpost\s+screen\b|\bboot\s+screen\b")
 _DESCRIBE = rx(r"\b(?:will\s+)?(?:shows?|displays?)\b")
+# ... and there "pairing", "verification" or "secret" alone is the hardware's own code, not the buyer's screen
+_WEAK_WHERE = rx(r"\b(?:pairing|verification|one[-\s]time|magic|secret)\b")
+# "BIOS update requires the approval code", "FCC certification requires your approval code": a requirement for the
+# approval code is an ask even in a hardware sentence
+_REQUIRE = rx(r"\b(?:requires?|needs|wants?)\b")
+# Typing a code into the buyer's own hardware sends it nowhere: "enter it on the keyboard", "type it to pair"
+_LOCAL_ENTRY = rx(r"\b(?:enter|type|input|key\s+in)\s+(?:it|them|this|that|the\s+(?:\w+\s+){0,2}?(?:pin|code|digits))\s+"
+                  r"(?:to\s+(?:connect|pair|unlock|finish)|(?:on|into|in|using)\s+(?:the\s+|your\s+)?(?:\w+\s+)?"
+                  r"(?:keyboard|headset|phone|device|speaker|monitor|tv|console|laptop|computer|controller|remote|keypad|settings))\b")
 # "tell me what your screen says", "what does the buyer's screen read": relaying the screen's text, no noun needed
 _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THEIRS + r"\s+" + _DEVICE +
             r"\b[^.!?]{0,15}?\b(?:says?|reads?|reading|shows?\s+(?:as\s+)?(?:the\s+)?(?:code|words?))\b"
@@ -41,6 +50,10 @@ _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THE
             r"|\b(?:what|tell\s+me|read\s+me)\b[^.!?]{0,30}?\bapproval\s+screen\b[^.!?]{0,15}?\b(?:says?|reads?|shows?)\b"
             r"|\bwhat\b[^.!?]{0,20}?\b(?:says?|reads?|shows?)\b[^.!?]{0,15}?\bapproval\s+screen\b")
 _SENTENCE = re.compile(r"[^.!?]+[.!?]*")
+
+
+def _blank(m):
+    return " " * len(m.group(0))
 
 
 def check(doc, ctx):
@@ -51,9 +64,11 @@ def check(doc, ctx):
         s = m.group(0)
         boot = _BOOT.search(s)
         noun = _NOUN.search(s)
-        strong = noun and _STRONG.search(s) and not _REGULATORY.search(s) and not boot
-        asks = _ASK.search(_DESCRIBE.sub(lambda d: " " * len(d.group(0)), s) if boot else s)
-        if strong or (noun and _WHERE.search(s) and asks) or _RELAY.search(s):
+        strong = noun and _STRONG.search(s) and ((not _REGULATORY.search(s) and not boot) or _REQUIRE.search(s))
+        a = _LOCAL_ENTRY.sub(_blank, s)
+        asks = _ASK.search(_DESCRIBE.sub(_blank, a) if boot else a)
+        where = _WHERE.search(_WEAK_WHERE.sub(_blank, s) if boot else s)
+        if strong or (noun and where and asks) or _RELAY.search(s):
             start = m.start() + len(s) - len(s.lstrip())
             yield doc.raw_span(start, m.end())
 
