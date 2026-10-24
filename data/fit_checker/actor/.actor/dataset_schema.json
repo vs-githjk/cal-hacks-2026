@@ -3,30 +3,112 @@
  "fields": {
   "type": "object",
   "properties": {
-   "build_id": {"type": "string", "description": "Which build this check belongs to"},
-   "build_verdict": {"type": "string", "enum": ["pass", "fail", "uncertain"], "description": "The whole build: any fail is fail, else any uncertain is uncertain"},
-   "rule_id": {"type": "string", "description": "The rule, for example fit.gpu_length"},
-   "verdict": {"type": "string", "enum": ["pass", "fail", "uncertain"], "description": "This rule's result. Unknown specs give uncertain, never a guess"},
-   "reason": {"type": "string", "description": "Plain explanation with the numbers used"},
-   "parts": {"type": "array", "description": "The parts this rule compared"},
-   "sources": {"type": "array", "description": "Maker spec pages behind the specs we filled in (empty when every spec came from your input)"}
+   "build_id": {
+    "type": "string",
+    "description": "Which build this check belongs to"
+   },
+   "build_verdict": {
+    "type": "string",
+    "enum": [
+     "pass",
+     "fail",
+     "uncertain"
+    ],
+    "description": "The whole build: any fail is fail, else any uncertain is uncertain"
+   },
+   "rule_id": {
+    "type": "string",
+    "description": "The rule, for example fit.gpu_length"
+   },
+   "verdict": {
+    "type": "string",
+    "enum": [
+     "pass",
+     "fail",
+     "uncertain"
+    ],
+    "description": "This rule's result. Unknown specs give uncertain, never a guess"
+   },
+   "reason": {
+    "type": "string",
+    "description": "Plain explanation with the numbers used"
+   },
+   "parts": {
+    "type": "array",
+    "description": "The parts this rule compared",
+    "items": {
+     "type": "string"
+    }
+   },
+   "sources": {
+    "type": "array",
+    "description": "Maker spec pages behind the specs we filled in (empty when every spec came from your input)",
+    "items": {
+     "type": "string"
+    }
+   },
+   "origin": {
+    "type": "string",
+    "description": "Where this row's numbers came from: MIRROR (dated maker data, Oct 24 2026) or your input"
+   }
   },
-  "required": ["build_id", "rule_id", "verdict", "reason"]
+  "required": [
+   "build_id",
+   "rule_id",
+   "verdict",
+   "reason"
+  ]
  },
  "views": {
   "checks": {
    "title": "Compatibility checks",
-   "transformation": {"fields": ["build_id", "verdict", "rule_id", "reason", "parts", "sources", "build_verdict"]},
+   "transformation": {
+    "fields": [
+     "build_id",
+     "verdict",
+     "rule_id",
+     "reason",
+     "parts",
+     "sources",
+     "origin",
+     "build_verdict"
+    ]
+   },
    "display": {
     "component": "table",
     "properties": {
-     "build_id": {"label": "Build", "format": "text"},
-     "verdict": {"label": "Result", "format": "text"},
-     "rule_id": {"label": "Rule", "format": "text"},
-     "reason": {"label": "Why", "format": "text"},
-     "parts": {"label": "Parts", "format": "array"},
-     "sources": {"label": "Maker sources", "format": "array"},
-     "build_verdict": {"label": "Build result", "format": "text"}
+     "build_id": {
+      "label": "Build",
+      "format": "text"
+     },
+     "verdict": {
+      "label": "Result",
+      "format": "text"
+     },
+     "rule_id": {
+      "label": "Rule",
+      "format": "text"
+     },
+     "reason": {
+      "label": "Why",
+      "format": "text"
+     },
+     "parts": {
+      "label": "Parts",
+      "format": "array"
+     },
+     "sources": {
+      "label": "Maker sources",
+      "format": "array"
+     },
+     "build_verdict": {
+      "label": "Build result",
+      "format": "text"
+     },
+     "origin": {
+      "label": "Numbers from",
+      "format": "text"
+     }
     }
    }
   }

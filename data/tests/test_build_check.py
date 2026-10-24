@@ -11,7 +11,16 @@ from pathlib import Path
 from data.fit_checker.build_check import check_build
 
 ACTOR = Path(__file__).resolve().parents[1] / "fit_checker" / "actor"
-DEMO = json.loads((ACTOR / ".actor" / "input_schema.json").read_text())["properties"]["parts"]["prefill"]
+SCHEMA = json.loads((ACTOR / ".actor" / "input_schema.json").read_text())["properties"]
+FORM = {k: v["prefill"] for k, v in SCHEMA.items() if "prefill" in v}  # what the Store form and the daily test run with
+DEMO = {"cpu": {"name": "AMD Ryzen 7 9700X", "vendor": "AMD", "socket": "AM5", "tdp_w": 65},
+        "motherboard": {"name": "Asus PRIME B650-PLUS WIFI", "socket": "AM5", "form_factor": "ATX", "memory_slots": 4},
+        "memory": {"name": "32GB (2x16GB) DDR5-6000", "type": "DDR5", "form": "DIMM", "modules": 2},
+        "gpu": {"name": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC"},
+        "psu": {"name": "Corsair RM750e", "wattage": 750, "form_factor": "ATX", "pcie_16pin": 1, "pcie_8pin": 3},
+        "case": {"name": "Fractal Design North", "max_gpu_length_mm": 355, "motherboard_form_factors": ["ATX", "Micro ATX", "Mini ITX"],
+                 "psu_form_factors": ["ATX"]},
+        "cooler": {"name": "Thermalright Peerless Assassin 120 SE"}}
 
 
 def by_rule(result):
@@ -112,7 +121,7 @@ def run(monkeypatch, inp, **kw):
 
 
 def test_a_run_writes_one_row_per_rule_and_a_summary(monkeypatch):
-    a = run(monkeypatch, {"parts": DEMO})
+    a = run(monkeypatch, FORM)
     assert len(a.rows) == 11 and all(r["build_id"] == "build-1" and r["build_verdict"] == "fail" for r in a.rows)
     assert a.status[-1][0].startswith("FAIL: cooler height") and a.status[-1][1] is True and a.kv["OUTPUT"]["builds"][0]["verdict"] == "fail"
 
@@ -234,3 +243,30 @@ def test_case_strings_and_zero_are_read_sensibly():
 def test_rows_say_where_their_numbers_came_from():
     r = check_build(DEMO)
     assert by_rule(r)["fit.cooler_height"]["origin"].startswith("MIRROR") and by_rule(r)["fit.ram_slots"]["origin"] == "your input"
+
+
+# #262: the main input is a form
+def test_the_form_default_is_the_demo_build_and_catches_the_cooler(monkeypatch):
+    mod = load_main(monkeypatch, None)
+    builds = mod.builds_from(FORM)
+    assert len(builds) == 1 and check_build(builds[0]["parts"])["summary"] == check_build(DEMO)["summary"]
+    assert check_build(builds[0]["parts"])["summary"].startswith("FAIL: cooler height 155 mm exceeds case clearance 145 mm")
+
+
+def test_the_json_build_overrides_the_form_part_by_part(monkeypatch):
+    mod = load_main(monkeypatch, None)
+    parts = mod.builds_from({**FORM, "parts": {"cooler": {"height_mm": 140}}})[0]["parts"]
+    assert parts["cooler"] == {"name": "Thermalright Peerless Assassin 120 SE", "height_mm": 140}
+    assert check_build(parts)["verdict"] == "pass"
+
+
+def test_a_spec_without_a_name_still_makes_the_part_and_an_empty_form_makes_no_build(monkeypatch):
+    mod = load_main(monkeypatch, None)
+    assert mod.builds_from({"psuWattage": 650})[0]["parts"] == {"psu": {"name": "", "wattage": 650}}
+    assert mod.builds_from({}) == [] and mod.builds_from({"cpu": "  "}) == []
+
+
+def test_every_form_field_is_mapped_to_a_part():
+    text = (ACTOR / "src" / "main.py").read_text()
+    for key in SCHEMA:
+        assert key in ("parts", "builds") or f'"{key}"' in text, key

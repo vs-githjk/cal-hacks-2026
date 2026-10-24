@@ -14,10 +14,39 @@ EVENT = "build-checked"
 STATE_KEY = "STATE_next_build"
 
 
+FORM_SPECS = {"cpuSocket": ("cpu", "socket"), "cpuVendor": ("cpu", "vendor"), "cpuTdpW": ("cpu", "tdp_w"),
+              "boardSocket": ("motherboard", "socket"), "boardFormFactor": ("motherboard", "form_factor"),
+              "boardMemorySlots": ("motherboard", "memory_slots"), "memoryType": ("memory", "type"), "memoryForm": ("memory", "form"),
+              "memoryModules": ("memory", "modules"), "gpuLengthMm": ("gpu", "length_mm"), "psuWattage": ("psu", "wattage"),
+              "psuFormFactor": ("psu", "form_factor"), "psu16pin": ("psu", "pcie_16pin"), "psu8pin": ("psu", "pcie_8pin"),
+              "caseMaxGpuLengthMm": ("case", "max_gpu_length_mm"), "caseMaxCoolerHeightMm": ("case", "max_cooler_height_mm"),
+              "caseBoardSizes": ("case", "motherboard_form_factors"), "casePsuSizes": ("case", "psu_form_factors"),
+              "coolerHeightMm": ("cooler", "height_mm")}
+FORM_PARTS = ("cpu", "motherboard", "memory", "gpu", "psu", "case", "cooler")
+
+
+def form_parts(inp: dict) -> dict:
+    """The form's part names and specs as a parts object. A spec without its part's name still makes that part."""
+    parts = {}
+    for cat in FORM_PARTS:
+        if isinstance(inp.get(cat), str) and inp[cat].strip():
+            parts.setdefault(cat, {})["name"] = inp[cat].strip()
+    for key, (cat, attr) in FORM_SPECS.items():
+        v = inp.get(key)
+        if v not in (None, "", []):
+            parts.setdefault(cat, {}).setdefault("name", "")
+            parts[cat][attr] = v
+    return parts
+
+
 def builds_from(inp: dict) -> list:
-    """The single build form plus any batch builds, each as {id, parts}."""
+    """The form build (with the advanced JSON build merged over it, part by part) plus any batch builds, each as {id, parts}."""
     inp = inp or {}
-    out = [{"id": "build-1", "parts": inp["parts"]}] if isinstance(inp.get("parts"), dict) and inp["parts"] else []
+    parts = form_parts(inp)
+    if isinstance(inp.get("parts"), dict):
+        for cat, given in inp["parts"].items():
+            parts[cat] = {**parts.get(cat, {}), **given} if isinstance(given, dict) and isinstance(parts.get(cat), dict) else given
+    out = [{"id": "build-1", "parts": parts}] if parts else []
     for i, b in enumerate(inp.get("builds") or [], 1):
         if isinstance(b, dict) and isinstance(b.get("parts"), dict):
             out.append({"id": str(b.get("id") or f"batch-{i}"), "parts": b["parts"]})
