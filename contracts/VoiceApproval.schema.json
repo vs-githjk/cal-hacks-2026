@@ -1,0 +1,95 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "mandate_id": {
+   "type": "string"
+  },
+  "mandate_hash": {
+   "type": "string"
+  },
+  "channel": {
+   "type": "string",
+   "enum": [
+    "browser",
+    "phone",
+    "typed"
+   ]
+  },
+  "code_issued_at": {
+   "type": "string",
+   "format": "date-time"
+  },
+  "code_expires_at": {
+   "type": "string",
+   "format": "date-time",
+   "description": "2 minutes after issue"
+  },
+  "code_hash": {
+   "type": "string",
+   "description": "sha256 of the word-pair code; the code itself is never stored or logged"
+  },
+  "attempts": {
+   "type": "integer",
+   "minimum": 0,
+   "maximum": 3
+  },
+  "amount_read_back": {
+   "type": "number"
+  },
+  "payee_read_back": {
+   "type": "string"
+  },
+  "result": {
+   "type": "string",
+   "enum": [
+    "approved",
+    "denied",
+    "expired",
+    "no_answer"
+   ]
+  },
+  "deny_reason": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "enum": [
+    null,
+    "wrong_code",
+    "no_code",
+    "expired",
+    "replay",
+    "cooldown",
+    "max_attempts",
+    "silence"
+   ]
+  },
+  "decided_at": {
+   "type": "string",
+   "format": "date-time"
+  },
+  "recording_ref": {
+   "type": [
+    "string",
+    "null"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "mandate_id",
+  "mandate_hash",
+  "channel",
+  "code_issued_at",
+  "code_expires_at",
+  "code_hash",
+  "attempts",
+  "result",
+  "decided_at"
+ ],
+ "additionalProperties": false
+}

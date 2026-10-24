@@ -1,0 +1,55 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "buyer_id": {
+   "type": "string"
+  },
+  "currency": {
+   "type": "string",
+   "enum": [
+    "USD"
+   ]
+  },
+  "per_purchase_limit": {
+   "type": "number",
+   "minimum": 0,
+   "description": "Starts at 0: every buy needs the call until trust grows"
+  },
+  "period_limit": {
+   "type": "number",
+   "minimum": 0
+  },
+  "period": {
+   "type": "string",
+   "enum": [
+    "week",
+    "month"
+   ]
+  },
+  "spent_this_period": {
+   "type": "number",
+   "minimum": 0
+  },
+  "ladder_step": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "Allowance ladder level, raised only by the buyer"
+  },
+  "updated_at": {
+   "type": "string",
+   "format": "date-time"
+  }
+ },
+ "required": [
+  "buyer_id",
+  "currency",
+  "per_purchase_limit",
+  "period_limit",
+  "period",
+  "spent_this_period",
+  "ladder_step",
+  "updated_at"
+ ],
+ "additionalProperties": false
+}
