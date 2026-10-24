@@ -425,3 +425,29 @@ def test_seller_agent_cli_refuses_a_bad_config_with_the_field_names(tmp_path):
                          capture_output=True, text=True, timeout=60, cwd=str(tmp_path))
     assert run.returncode != 0
     assert f"listings.{GPU_TI}.floor_by_condition.new" in run.stderr
+
+
+def test_custom_seller_seed_reads_only_the_agent_seed_name(monkeypatch):
+    monkeypatch.setenv("ACME_ONLY_SEED", "someone-elses-seed")
+    monkeypatch.delenv("ACME_ONLY_AGENT_SEED", raising=False)
+    try:
+        common.register_custom_seller("acme-only")
+        assert common.SEEDS["acme-only"] == "tech-bazaar-acme-only-dev"
+        common.SEEDS.pop("acme-only")
+        monkeypatch.setenv("ACME_ONLY_AGENT_SEED", "mine")
+        common.register_custom_seller("acme-only")
+        assert common.SEEDS["acme-only"] == "mine"
+    finally:
+        common.SEEDS.pop("acme-only", None)
+        common._CUSTOM_ENVS.pop("ACME_ONLY", None)
+
+
+def test_two_custom_roles_never_share_one_env_seed_name():
+    try:
+        common.register_custom_seller("acme-shop")
+        with pytest.raises(ValueError, match="same seed name"):
+            common.register_custom_seller("acme_shop")
+        assert "acme_shop" not in common.SEEDS
+    finally:
+        common.SEEDS.pop("acme-shop", None)
+        common._CUSTOM_ENVS.pop("ACME_SHOP", None)
