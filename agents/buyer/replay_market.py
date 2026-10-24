@@ -109,12 +109,13 @@ class ReplayMarketAdapter:
         self._originals = (self.buyer.business_now, self.buyer.crs.check_sellers,
                            self.buyer.common.screen, self.buyer.common.screen_bid)
         self._socket_originals = (socket.socket.connect, socket.socket.connect_ex,
-                                  socket.create_connection, socket.getaddrinfo)
+                                  socket.create_connection, socket.getaddrinfo,
+                                  socket.socket.sendto, getattr(socket.socket, "sendmsg", None))
         self.buyer.business_now = self.clock.now
         self.buyer.crs.check_sellers = self.checker.check_sellers
         self.buyer.common.screen = self.checker.screen
         self.buyer.common.screen_bid = self.checker.screen_bid
-        connect, connect_ex, create_connection, getaddrinfo = self._socket_originals
+        connect, connect_ex, create_connection, getaddrinfo, sendto, sendmsg = self._socket_originals
 
         def guarded_connect(sock, address):
             if _is_loopback_address(address):
@@ -136,10 +137,30 @@ class ReplayMarketAdapter:
                 return getaddrinfo(host, *args, **kwargs)
             return _deny_network(host)
 
+        def guarded_sendto(sock, *args, **kwargs):
+            address = kwargs.get("address")
+            if address is None and len(args) >= 2:
+                address = args[-1]
+            if _is_loopback_address(address):
+                return sendto(sock, *args, **kwargs)
+            return _deny_network(address)
+
+        def guarded_sendmsg(sock, *args, **kwargs):
+            address = kwargs.get("address")
+            if address is None and len(args) >= 4:
+                address = args[3]
+            if _is_loopback_address(address):
+                return sendmsg(sock, *args, **kwargs)
+            return _deny_network(address)
+
         self._network_guards = (guarded_connect, guarded_connect_ex,
-                                guarded_create_connection, guarded_getaddrinfo)
+                                guarded_create_connection, guarded_getaddrinfo,
+                                guarded_sendto, guarded_sendmsg)
         socket.socket.connect, socket.socket.connect_ex = guarded_connect, guarded_connect_ex
         socket.create_connection, socket.getaddrinfo = guarded_create_connection, guarded_getaddrinfo
+        socket.socket.sendto = guarded_sendto
+        if sendmsg is not None:
+            socket.socket.sendmsg = guarded_sendmsg
         self._entered = True
         return self
 
@@ -148,7 +169,10 @@ class ReplayMarketAdapter:
             (self.buyer.business_now, self.buyer.crs.check_sellers,
              self.buyer.common.screen, self.buyer.common.screen_bid) = self._originals
             (socket.socket.connect, socket.socket.connect_ex,
-             socket.create_connection, socket.getaddrinfo) = self._socket_originals
+             socket.create_connection, socket.getaddrinfo,
+             socket.socket.sendto, original_sendmsg) = self._socket_originals
+            if original_sendmsg is not None:
+                socket.socket.sendmsg = original_sendmsg
             for name in ("ROUND", "APPROVALS", "USED", "WEB_OUTBOX"):
                 target, snapshot = getattr(self.buyer, name), self._runtime_snapshot[name]
                 target.clear()

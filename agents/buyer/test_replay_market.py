@@ -316,6 +316,11 @@ def test_replay_context_blocks_outbound_socket_and_dns(replay_stack):
         socket.create_connection(("203.0.113.9", 443), timeout=0.01)
     with pytest.raises(replay.ReplayError, match="outbound network is disabled"):
         socket.getaddrinfo("example.com", 443)
+    with pytest.raises(replay.ReplayError, match="outbound network is disabled"):
+        socket.socket.sendto(object(), b"SIM probe", ("203.0.113.9", 443))
+    if hasattr(socket.socket, "sendmsg"):
+        with pytest.raises(replay.ReplayError, match="outbound network is disabled"):
+            socket.socket.sendmsg(object(), [b"SIM probe"], address=("203.0.113.9", 443))
 
 
 def test_replay_rejects_unmarked_provider(buyer):
@@ -330,3 +335,4 @@ def test_replay_rejects_unmarked_provider(buyer):
         ReplayMarketAdapter(clock=SimClock(), checker=FakeChecker(), provider=UnmarkedProvider(),
                             transport=SimTransport())
 
+\n
