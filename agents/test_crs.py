@@ -338,6 +338,23 @@ def test_to_crs_check_has_flat_sanitized_shape():
     assert absent["reason_codes"] == ["CRS_NOT_CONFIGURED"]
 
 
+@pytest.mark.parametrize(
+    "field,value",
+    [("stability", []), ("stability", {}), ("source", []),
+     ("source", {}), ("checked_at", {})],
+)
+def test_to_crs_check_rejects_malformed_fields(monkeypatch, tmp_path, field, value):
+    setup_profile(monkeypatch, tmp_path)
+    signal = {"supplier_id": "seller_1", "stability": "verified_stable",
+              "checked_at": NOW.isoformat(), "source": "sandbox"}
+    signal[field] = value
+    projected = crs.to_crs_check("seller_1", {"signal": signal})
+    assert projected["seller_id"] == "seller_1"
+    assert projected["verified"] is False
+    assert projected["reason_codes"] == ["CRS_INVALID"]
+    assert projected["origin"] == "SANDBOX"
+
+
 def test_configured_profile_empty_not_configured_is_not_absence(monkeypatch, tmp_path):
     setup_profile(monkeypatch, tmp_path, auth_stub=False)
     projected = crs.to_crs_check("seller_1", {"signal": None, "reason": crs.REASON_NOT_CONFIGURED})
