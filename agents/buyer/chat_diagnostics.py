@@ -85,11 +85,11 @@ class ChatDiagnostics:
         if key in self._pending:
             self._emit('send_result', msg=_opaque(key), status='failed', error=type(exc).__name__)
 
-    def ack_send_result(self, message_id: object, acknowledged_id: object, recipient: str,
-                        session: object, result: object = None, error: BaseException | None = None) -> None:
+    def ack_send_result(self, acknowledged_id: object, recipient: str, session: object,
+                        result: object = None, error: BaseException | None = None) -> None:
         if error is not None:
-            self._emit('ack_send_result', msg=_opaque(message_id), acknowledged=_opaque(acknowledged_id),
-                       to=_opaque(recipient), session=_opaque(session), status='failed',
+            self._emit('ack_send_result', acknowledged=_opaque(acknowledged_id), to=_opaque(recipient),
+                       session=_opaque(session), status='failed',
                        error=type(error).__name__)
             return
         raw = getattr(result, 'status', result)
@@ -97,8 +97,8 @@ class ChatDiagnostics:
         status = str(raw).lower()
         if status not in {'sent', 'delivered', 'failed'}:
             status = 'unknown'
-        self._emit('ack_send_result', msg=_opaque(message_id), acknowledged=_opaque(acknowledged_id),
-                   to=_opaque(recipient), session=_opaque(session), status=status)
+        self._emit('ack_send_result', acknowledged=_opaque(acknowledged_id), to=_opaque(recipient),
+                   session=_opaque(session), status=status)
 
     def acknowledged(self, message_id: object, sender: str) -> bool:
         self._expire()

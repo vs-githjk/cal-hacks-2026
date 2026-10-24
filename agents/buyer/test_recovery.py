@@ -59,6 +59,7 @@ class Context:
         self.logger = Mock()
         self.sent = []
         self.fail_to = fail_to
+        self.session = uuid4()
 
     async def send(self, to, message):
         if to == self.fail_to:
@@ -67,6 +68,10 @@ class Context:
 
     def owner_text(self):
         return '\n'.join(message.text() for to, message in self.sent if to == 'owner')
+
+
+def run_bounded(coro):
+    asyncio.run(asyncio.wait_for(coro, timeout=5))
 
 
 def card(**updates):
@@ -231,7 +236,7 @@ def test_round_waits_for_crs_and_discards_result_after_cancel(buyer, monkeypatch
         release.set()
         assert await task is False
         assert not buyer.ROUND
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_round_deadline_starts_only_after_crs_returns(buyer, monkeypatch):
@@ -249,7 +254,7 @@ def test_round_deadline_starts_only_after_crs_returns(buyer, monkeypatch):
         release.set()
         assert await task is True
         assert buyer.ROUND['phase'] == 'bidding' and buyer.ROUND['deadline'] > time.time()
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_expired_round_ignores_late_crs_result(buyer, monkeypatch):
@@ -270,7 +275,7 @@ def test_expired_round_ignores_late_crs_result(buyer, monkeypatch):
         assert await task is False
         assert buyer.ROUND['phase'] == 'done'
         assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_superseded_round_ignores_its_late_crs_result(buyer, monkeypatch):
@@ -294,7 +299,7 @@ def test_superseded_round_ignores_its_late_crs_result(buyer, monkeypatch):
         assert await old is False
         assert buyer.ROUND['phase'] == 'bidding'
         assert len([msg for _, msg in ctx.sent if isinstance(msg, buyer.common.BidRequest)]) == len(buyer.common.SELLERS)
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_buyer_output_shows_cached_crs_time_without_forwarding_profile(buyer, monkeypatch):
@@ -385,7 +390,7 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer,
             assert envelopes[-1].session == updated_session
             assert envelopes[-1].protocol_digest == buyer.chat.digest
 
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_web_followup_stays_in_web_queue(buyer):
@@ -464,7 +469,7 @@ def test_start_round_stops_before_old_summary_after_final_send_is_superseded(buy
         release.set()
         await task
         assert not any(to == 'new-owner' and isinstance(msg, buyer.ChatMessage) for to, msg in ctx.sent)
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_tick_failed_advice_send_does_not_fail_replacement_round(buyer):
@@ -491,7 +496,7 @@ def test_tick_failed_advice_send_does_not_fail_replacement_round(buyer):
         assert buyer.ROUND['round_token'] == 'new-token'
         assert buyer.ROUND['attempts'] == 0 and buyer.ROUND['phase'] == 'bidding'
         assert 'private endpoint detail' not in '\n'.join(str(c) for c in ctx.logger.method_calls)
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_restart_card_does_not_start_new_round_after_cancel_during_reply(buyer, monkeypatch):
@@ -513,7 +518,7 @@ def test_restart_card_does_not_start_new_round_after_cancel_during_reply(buyer, 
         release.set()
         await task
         assert not started_rounds
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_advice_send_failure_after_review_does_not_overwrite_decision(buyer, monkeypatch):
@@ -542,7 +547,7 @@ def test_advice_send_failure_after_review_does_not_overwrite_decision(buyer, mon
         await task
         assert buyer.ROUND['phase'] == 'decided' and buyer.ROUND['attempts'] == 0
         assert 'private endpoint detail' not in '\n'.join(str(c) for c in ctx.logger.method_calls)
-    asyncio.run(run())
+    run_bounded(run())
 
 
 def test_conclude_does_not_fail_expired_round_after_owner_send_await(buyer):
@@ -567,4 +572,4 @@ def test_conclude_does_not_fail_expired_round_after_owner_send_await(buyer):
         release.set()
         await task
         assert buyer.ROUND['phase'] == 'done' and buyer.ROUND['attempts'] == 0
-    asyncio.run(run())
+    run_bounded(run())
