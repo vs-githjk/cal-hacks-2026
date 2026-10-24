@@ -208,7 +208,8 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     # Only a real call is a voice approval. The scripted story is method sim_script, and its payment is always the SIM stub,
     # even if the run's own beat 4 made a Stripe test charge (#193). With --live-call, execute's charger replaces the stub.
     steps.append(Step("referee", "record_approval",
-                      {"mandate_hash": m["hash"], "method": "voice_code" if live_call else "sim_script", "approved_by": buyer_id},
+                      {"mandate_hash": m["hash"], "method": "voice_code" if live_call else "sim_script", "approved_by": buyer_id,
+                       "voice_approval_id": ""},   # #240: the call's VoiceApproval id, filled in by execute after an approved call
                       pause=True, gate="approval_call",
                       say=("a real phone call: the buyer says the code from the screen and 'approve'; the referee relays the verified code"
                            if live_call else
@@ -336,6 +337,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                         note(f"deny_approval not recorded ({e}); the hold expires by itself after 2 minutes")
                 break
             note(f"live call APPROVED (call {outcome['call_id']}): the referee records the approval, then the payment")
+            s = replace(s, args={**s.args, "voice_approval_id": outcome.get("voice_approval_id") or ""})
         client = clients[s.actor]
         t_call = clock()
         if s.close:
@@ -424,7 +426,11 @@ class DealGate:
             raise GateRefused(f"the market's rank 1 ({w['persona'] or w['seller_id']}) is not a bid this run placed, so there is no payee")
         if not (math.isfinite(w["landed"]) and w["landed"] > 0):
             raise GateRefused("the market's rank 1 has no usable landed price")
-        return {**w, "deal_id": f"deal-{w['bid_id']}", "amount": round(w["landed"], 2), "payee": seller["payee"], "origin": bid["origin"]}
+        if abs(w["landed"] * 100 - round(w["landed"] * 100)) > 1e-6 or round(w["landed"], 2) != w["landed"]:
+            # #240 wants the mandate at the landed price exactly, and the call reads the amount back in whole cents
+            raise GateRefused(f"the market's rank 1 landed price {w['landed']!r} is not a whole number of cents")
+        # #240: the mandate pays the winning seller id, at the winning landed price exactly (the market compares to 1e-9)
+        return {**w, "deal_id": f"deal-{w['bid_id']}", "amount": w["landed"], "payee": w["seller_id"], "origin": bid["origin"]}
 
     def prepare(self, referee: Any) -> dict:
         from pay.mandate import new_mandate
@@ -447,8 +453,8 @@ class DealGate:
         if s.reducer == "create_mandate":
             return replace(s, args={**s.args, "hash": m["hash"], "id": m["id"], "deal_id": m["deal_id"], "amount": m["amount"],
                                     "payee": m["payee"], "nonce": m["nonce"], "origin": m["origin"], "expiry_minutes": MANDATE_MINUTES},
-                           tag=m["origin"], say=f"mandate for the market's #1, {w['persona']}: {money(m['amount'])} to {m['payee']} "
-                                                f"(a SIM test address), {MANDATE_MINUTES} minutes")
+                           tag=m["origin"], say=f"mandate for the market's #1, {w['persona']}: {money(m['amount'])} to seller "
+                                                f"{m['payee']} (SIM payee, no real merchant is paid), {MANDATE_MINUTES} minutes")
         if s.reducer == "record_approval":
             return replace(s, args={**s.args, "mandate_hash": m["hash"]})
         if s.reducer == "record_payment":
@@ -500,8 +506,9 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
     from pay.replay import NonceStore
     from pay.voice_cartesia import CALL_CODE_TTL_S, run_approval_call
 
-    def outcome(approved: bool, reason: Optional[str], call_id: Optional[str] = None) -> dict:
-        return {"step": "approval_call", "approved": approved, "reason": reason, "call_id": call_id}
+    def outcome(approved: bool, reason: Optional[str], call_id: Optional[str] = None, voice_approval_id: Optional[str] = None) -> dict:
+        return {"step": "approval_call", "approved": approved, "reason": reason, "call_id": call_id,
+                "voice_approval_id": voice_approval_id}
 
     def to_screen(code: str) -> None:
         on_code(code, gate.show_code(code))
@@ -518,6 +525,9 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
                                 **timing)
         if not res.approved:
             return outcome(False, res.reason or "denied", res.call_id)
+        voice_id = str((res.record or {}).get("id") or "").strip()
+        if not voice_id:   # #240 keeps the VoiceApproval id on the approval row; an approval with none is not recorded
+            return outcome(False, "no_voice_approval_id: the call approved but left no VoiceApproval record", res.call_id)
         try:
             expect = gate.expect_now()
         except (GateRefused, RuntimeError, OSError, ValueError, KeyError, TypeError) as e:
@@ -525,7 +535,7 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
         guard = can_charge(mandate, deal_id=expect["deal_id"], amount=expect["amount"], payee=expect["payee"], store=store)
         if not guard:
             return outcome(False, f"can_charge: {guard.reason}", res.call_id)
-        return outcome(True, None, res.call_id)
+        return outcome(True, None, res.call_id, voice_id)
 
     return approve
 

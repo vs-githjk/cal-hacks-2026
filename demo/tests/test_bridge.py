@@ -167,7 +167,7 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     assert mand["hash"] == m["hash"] and mand["amount"] == 1299.99 and mand["payee"] == m["payee"]
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
-    assert appr == {"mandate_hash": m["hash"], "method": "sim_script", "approved_by": "vidyut"}
+    assert appr == {"mandate_hash": m["hash"], "method": "sim_script", "approved_by": "vidyut", "voice_approval_id": ""}
     pays = [s.args for s in steps if s.reducer == "record_payment"]
     assert len(pays) == 2 and pays[0] == pays[1] and pays[0]["payment_ref"] == run["beats"]["4"]["charge"]["id"]
 
@@ -296,7 +296,8 @@ def test_the_gate_builds_a_fresh_pending_mandate_from_the_markets_rank_one(run):
     gate = bridge.DealGate(run)
     m = gate.prepare(Fake([], "referee", rows=market_rows(run)))
     assert m["status"] == "pending" and m["hash"] != old["hash"]
-    assert (m["deal_id"], m["amount"], m["payee"], m["buyer_id"]) == (old["deal_id"], old["amount"], old["payee"], old["buyer_id"])
+    assert (m["deal_id"], m["amount"], m["buyer_id"]) == (old["deal_id"], old["amount"], old["buyer_id"])
+    assert m["payee"] == "best-buy"          # #240: the mandate pays the winning seller id, not a SIM test address
     steps = [gate.bind(x) for x in bridge.plan(run, delay=0, rounds=1, live_call=True)]
     assert next(x for x in steps if x.reducer == "create_mandate").args["hash"] == m["hash"]
     assert [x.args["mandate_hash"] for x in steps if x.reducer in ("record_approval", "record_payment")] == [m["hash"]] * 3
@@ -319,7 +320,7 @@ def test_h5_the_bridge_pays_the_markets_number_one_not_the_demos_winner(run):
         outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=live), clients(log, rows=rows), delay=0,
                                   say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0, approver=approver, deal_gate=gate)
         made = next(a for _, r, a in log if r == "create_mandate")
-        assert made["payee"] == gg["payee"] and made["deal_id"] == f"deal-{rows[0][2]}" and made["amount"] == rows[0][6]
+        assert made["payee"] == gg["id"] and made["deal_id"] == f"deal-{rows[0][2]}" and made["amount"] == rows[0][6]
         assert all(a["mandate_hash"] == made["hash"] for _, r, a in log if r in ("record_approval", "record_payment"))
         assert "record_payment" in [r for _, r, _ in log] and all(o["approved"] for o in outcomes)
 
@@ -448,7 +449,8 @@ def test_not_configured_denies_without_placing_a_call(run):
     approver = bridge.make_live_approver(gate, None, unconfigured="missing CARTESIA_API_KEY", buyer_name="Vidyut",
                                          on_code=lambda c, w: pytest.fail("no code is issued when nothing can be called"))
     log, outcomes = run_with(run, approver, gate)
-    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None}]
+    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None,
+                         "voice_approval_id": None}]
     kinds = [r for _, r, _ in log]
     assert "create_mandate" in kinds and "record_approval" not in kinds and "record_payment" not in kinds
 

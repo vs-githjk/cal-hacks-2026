@@ -422,7 +422,7 @@ def test_a_different_market_number_one_prints_divergence_before_the_beat_four_cu
     out = capsys.readouterr().out
     assert code == 0
     gg = next(x for x in run["beats"]["2"]["sellers"] if x["id"] == "gadget-grove")
-    assert next(a for _, r, a in log if r == "create_mandate")["payee"] == gg["payee"]    # #194: beat 4 pays the market's #1
+    assert next(a for _, r, a in log if r == "create_mandate")["payee"] == gg["id"]    # #194, #240: beat 4 pays the market's #1 by seller id
     assert out.index("DIVERGENCE") < out.index("BEAT 4 of 5")
     assert out.index("BEAT 2 of 5") < out.index("DIVERGENCE") < out.index("BEAT 3 of 5")
     assert any("not the demo's winner" in p for p in asked)         # --auto pauses once so the operator cannot miss it

@@ -103,7 +103,7 @@ listings in the snapshots run $1,239.99 to $1,489.00. One or two bids are real, 
 - **Gadget Grove (Vedant)** (a SIM seller, Vedant is the learner seller) is one seller with two condition lines, new and open-box. **Fair Price PC (SIM)** is the static control.
 - Honest Hal's page is used by beat 3 only (the clean control). At $789 his honest listing would undercut every real seller, so he does not bid in the market round.
 SIM listing prices (Bargain Bin, Lowball, Gadget Grove (Vedant), Fair Price PC) sit inside the real $1,200 to $1,300 band by construction; Sam's price is Lane C's page price ($789).
-Real merchants are never contacted or paid: the payee on a MIRROR seller is a SIM test address (`best-buy@pay.example.test`).
+Real merchants are never contacted or paid: the payee on a MIRROR seller is a SIM test address (`best-buy@pay.example.test`) in the offline run, and on the market (the bridge, #240) the mandate's payee is the winning seller's id (`best-buy`); no money reaches either.
 
 ## Seller model (LOCKED Fri 22:36)
 One seller agent per seller of record (Amazon direct is one agent, each eBay listing is its own because the snapshot has no seller handle). The lines of a bid are
