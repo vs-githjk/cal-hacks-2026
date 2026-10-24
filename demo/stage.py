@@ -117,12 +117,15 @@ def make_say(out: Narrator) -> Callable[[Step], None]:
 
 def default_make_clients(args, steps: list[Step], out: Narrator) -> dict[str, Any]:
     """The same identities bridge.py uses: buyer and referee tokens, one seller identity per demo seller (owner assign_role)."""
+    from demo import market_target
+    target = bridge.live_target(args)          # #295: local, or the shared market the Lane D env file names
+    out.note(market_target.describe(target))
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
-    from stdb import DB, Market
-    tokens = bridge.find_tokens_dir(args.tokens_dir)
+    from stdb import Market
+    tokens = bridge.find_tokens_dir(args.tokens_dir, target)
     out.note(f"tokens: {tokens}")
-    seller_tokens = ROOT / ".tokens"
-    seller_tokens.mkdir(exist_ok=True)
+    seller_tokens = market_target.tokens_dir(target)
+    seller_tokens.mkdir(parents=True, exist_ok=True)
     clients: dict[str, Any] = {"buyer": Market(token_file=str(tokens / bridge.BUYER_TOKEN)),
                                "referee": Market(token_file=str(tokens / bridge.REFEREE_TOKEN))}
     seller_ids = sorted({s.actor.split(":", 1)[1] for s in steps if s.actor.startswith("seller:")})
@@ -131,7 +134,7 @@ def default_make_clients(args, steps: list[Step], out: Narrator) -> dict[str, An
     if not args.no_assign_roles:
         import shutil
         spacetime = shutil.which("spacetime") or str(Path.home() / ".local" / "bin" / "spacetime")
-        bridge.assign_seller_roles(seller_ids, clients, spacetime, args.server, DB)
+        bridge.assign_seller_roles(seller_ids, clients, spacetime, target["server"], target["db"])
     return clients
 
 
@@ -219,7 +222,7 @@ def make_parser() -> argparse.ArgumentParser:
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
     ap.add_argument("--buyer-id", default=bridge.DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
-    ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
+    ap.add_argument("--server", default=None, help="spacetime -s server (default SPACETIMEDB_SERVER from the env or the Lane D env file, else local)")
     return ap
 
 
@@ -278,7 +281,14 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         # Startup only says where the call would go. The mandate the call judges is made when beat 4 starts (see play).
         approver, note = bridge.live_approver_for(args, run, gate, out)
         out.note(note)
-    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s local tech-bazaar \"SELECT code FROM pair_code\") and open /market before you start.")
+    from demo import market_target
+    from demo.run_demo import DEFAULT_ENV_FILE
+    try:
+        t = market_target.resolve(DEFAULT_ENV_FILE, {**os.environ, **({"SPACETIMEDB_SERVER": args.server} if args.server else {})})
+        server, db = t["server"], t["db"]
+    except market_target.TargetError:
+        server, db = args.server or "local", "tech-bazaar"
+    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s {server} {db} \"SELECT code FROM pair_code\") and open /market before you start.")
 
     try:
         clients = (make_clients or default_make_clients)(args, steps, out)

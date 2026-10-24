@@ -784,9 +784,24 @@ def assign_buyer_role(buyer_id: str, client: Any, spacetime: str, server: str, d
                    check=True, capture_output=True)
 
 
-def find_tokens_dir(explicit: Optional[str]) -> Path:
+def find_tokens_dir(explicit: Optional[str], target: Optional[dict] = None) -> Path:
+    """The referee and buyer tokens for this market. A market that is not local (#295) uses only its own folder,
+    .tokens/<db>@<host>/, so a local identity never signs a call on the shared market."""
+    from demo import market_target
+    if target is not None and not target["local"]:
+        own = market_target.tokens_dir(target)
+        if explicit and Path(explicit).resolve() != own.resolve():
+            raise SystemExit(f"--tokens-dir {explicit} is not this market's own folder {own}: "
+                             "local tokens are never used for another market")
+        if (own / REFEREE_TOKEN).exists() and (own / BUYER_TOKEN).exists():
+            return own
+        raise SystemExit(f"no {REFEREE_TOKEN} and {BUYER_TOKEN} for {market_target.describe(target)} in {own} "
+                         "(scripts/deploy_maincloud.sh creates them; local tokens are never used for another market)")
     cands = [Path(explicit)] if explicit else [Path(os.environ["BRIDGE_TOKENS_DIR"])] if os.environ.get("BRIDGE_TOKENS_DIR") else []
     cands += [ROOT / ".tokens", ROOT.parent / "lane-d-launcher" / ".tokens", ROOT.parent / "lane-d" / ".tokens"]
+    shared = [c for c in cands if market_target.is_market_tokens_dir(c)]
+    if shared:   # a shared market's tokens never sign a call on the local market either
+        raise SystemExit(f"{shared[0]} holds a shared market's tokens; the local market uses .tokens/")
     for c in cands:
         if (c / REFEREE_TOKEN).exists() and (c / BUYER_TOKEN).exists():
             return c
@@ -811,7 +826,7 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
     ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
-    ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
+    ap.add_argument("--server", default=None, help="spacetime -s server (default SPACETIMEDB_SERVER from the env or the Lane D env file, else local)")
     ap.add_argument("--bid-window", type=bid_window_arg, default=None,
                     help=f"seconds each sealed round stays open (at least {MIN_BID_WINDOW_S}); steps inside run faster to fit")
     args = ap.parse_args(argv)
@@ -895,13 +910,34 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
                               secret=env.get(vc.SECRET_ENV)), where
 
 
+def live_target(args) -> dict:
+    """#295: the market this run talks to, from --server, the env and the Lane D env file; exported for stdb.py."""
+    from demo import market_target
+    from demo.run_demo import DEFAULT_ENV_FILE
+    if getattr(args, "server", None):
+        os.environ["SPACETIMEDB_SERVER"] = args.server
+    try:
+        target = market_target.resolve(DEFAULT_ENV_FILE)
+    except market_target.TargetError as e:
+        raise SystemExit(f"market target refused: {e}") from None
+    if getattr(args, "server", None) and target["server"] != args.server:   # the env file wins, so a flag that differs is a conflict
+        raise SystemExit(f"--server {args.server} but the Lane D env file names {market_target.describe(target)}: "
+                         "change SPACETIMEDB_SERVER there, or drop --server")
+    market_target.export(target)
+    args.server = target["server"]
+    return target
+
+
 def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None) -> int:
+    from demo import market_target
+    target = live_target(args)
+    out.note(market_target.describe(target))
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
-    from stdb import Market   # the market's own bridge; reads SPACETIMEDB_HTTP and SPACETIMEDB_DB
-    tokens = find_tokens_dir(args.tokens_dir)
+    from stdb import Market   # the market's own bridge; reads SPACETIMEDB_HTTP and SPACETIMEDB_DB (set above)
+    tokens = find_tokens_dir(args.tokens_dir, target)
     out.note(f"tokens: {tokens}")
-    seller_tokens = ROOT / ".tokens"
-    seller_tokens.mkdir(exist_ok=True)
+    seller_tokens = market_target.tokens_dir(target)
+    seller_tokens.mkdir(parents=True, exist_ok=True)
     clients: dict[str, Any] = {"buyer": Market(token_file=str(tokens / BUYER_TOKEN)),
                                "referee": Market(token_file=str(tokens / REFEREE_TOKEN))}
     seller_ids = sorted({s.actor.split(":", 1)[1] for s in steps if s.actor.startswith("seller:")})
@@ -911,10 +947,9 @@ def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None
         clients[SECOND_ACTOR] = Market(token_file=str(seller_tokens / f"bridge-{SECOND_BUYER_ID}.json"))
     if not args.no_assign_roles:
         spacetime = shutil.which("spacetime") or str(Path.home() / ".local" / "bin" / "spacetime")
-        from stdb import DB
-        assign_seller_roles(seller_ids, clients, spacetime, args.server, DB)
+        assign_seller_roles(seller_ids, clients, spacetime, target["server"], target["db"])
         if SECOND_ACTOR in clients:
-            assign_buyer_role(SECOND_BUYER_ID, clients[SECOND_ACTOR], spacetime, args.server, DB)
+            assign_buyer_role(SECOND_BUYER_ID, clients[SECOND_ACTOR], spacetime, target["server"], target["db"])
     if args.reset:
         out.note("reset_demo (referee): clearing the demo tables")
         clients["referee"].call("reset_demo")

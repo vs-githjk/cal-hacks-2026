@@ -1,53 +1,174 @@
+import json
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from uagents_core.contrib.protocols.payment import Funds
 
 import payment
+from pay.approval import ApprovalService
+from pay.mandate import new_mandate
 
-SELLER = "agent1qseller"
-
-
-def setup():
-    m = payment.make_mandate("deal-1", 589.0, SELLER, buyer_id="vidyut", within_allowance=False)
-    return m, payment.payment_request(m, SELLER), {m["hash"]: {"answer": "approve"}}, set()
+NOW = datetime.now(timezone.utc).replace(microsecond=0)
 
 
-def test_commit_only_with_approval_row():
-    m, req, _, used = setup()
-    with pytest.raises(PermissionError, match="no approval"):
-        payment.commit(req, m, {}, used)
-    with pytest.raises(PermissionError, match="no approval"):
-        payment.commit(req, m, {m["hash"]: {"answer": "deny"}}, used)
+@pytest.fixture
+def checkout():
+    mandate = new_mandate(deal_id="deal-1", buyer_id="buyer-1", goal_id="goal-1", amount=79.99,
+                          payee="seller-1", now=NOW)
+    service = ApprovalService("test-secret-for-payment-commit")
+    session, code = service.issue(mandate, channel="phone", now=NOW)
+    session.start_call(now=NOW)
+    session.begin_listening(now=NOW)
+    session.recording_ref = "cartesia:ac_test"  # call evidence, as voice_cartesia records it
+    voice = session.approve(code + " approve", now=NOW + timedelta(seconds=1)).record
+    assert voice and voice["result"] == "approved"
+    tx = {"deal_id": "deal-1", "buyer_id": "buyer-1", "goal_id": "goal-1", "need_id": "need-1",
+          "bid_id": "bid-1", "phase": "submitted", "deal": {"id": "deal-1", "goal_id": "goal-1",
+          "need_id": "need-1", "bid_id": "bid-1", "amount": 79.99, "payee": "seller-1"},
+          "order": {"id": "order-1", "need_id": "need-1", "bid_id": "bid-1", "amount": 79.99,
+                    "approved_by": "buyer-1", "approval_id": "approval-1", "limit_checked": True,
+                    "idempotency_key": "mandate:" + mandate["hash"], "payment_ref": "", "status": "PENDING"},
+          "advocate_card": {"need_id": "need-1", "bid_id": "bid-1", "warnings": [],
+                            "recommendation": "buy", "wait_until": "", "call_reason": {"rule_id": "advocate.ok",
+                            "summary": "No problems found in the checks", "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
+                            "rule_id": "advocate.ok", "reason": "No problems found in the checks",
+                            "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
+          "mandate": mandate, "voice_approval": voice, "allowance_authorization": None,
+          "settlement": None,
+          "settlement_result": {"status": "charged", "charge_id": "pi_test_123", "mandate_hash": mandate["hash"], "origin": "SIM"},
+          "payment_ref": "pi_test_123", "mode": "SIM"}
+    req = payment.payment_request(mandate, "seller-1")
+    body = req.model_dump_json().encode("utf-8")
+    tx["settlement"] = {"message_id": "req:" + hashlib.sha256(b"buyer-1\n" + body).hexdigest(),
+        "request_sha256": hashlib.sha256(body).hexdigest(), "mandate_hash": mandate["hash"],
+        "deal_id": "deal-1", "buyer_id": "buyer-1", "amount_cents": 7999, "currency": "USD",
+        "payee": "seller-1", "idempotency_key": "mandate:" + mandate["hash"], "receipt_keyid": "shield-test"}
+    return tx, req
 
 
-def test_happy_path_then_replay_fails():
-    m, req, approvals, used = setup()
-    c = payment.commit(req, m, approvals, used)
-    assert c.reference == m["hash"] and c.funds.amount == "589.00"
-    with pytest.raises(PermissionError, match="replay"):
-        payment.commit(req, m, approvals, used)
+def test_commit_requires_real_approved_transaction_and_paid_stripe_result(checkout):
+    tx, req = checkout
+    result = payment.commit(req, tx, now=NOW)
+    assert result.transaction_id == "pi_test_123"
+    assert result.reference == tx["mandate"]["hash"]
+    assert result.funds.amount == "79.99"
 
 
-def test_altered_amount_or_payee_fails():
-    m, req, approvals, used = setup()
-    with pytest.raises(PermissionError, match="altered"):
-        payment.commit(req, {**m, "amount": 1.0}, approvals, used)
-    swapped = payment.payment_request(m, "agent1qattacker")
-    with pytest.raises(PermissionError, match="payee"):
-        payment.commit(swapped, m, approvals, used)
+@pytest.mark.parametrize("mode", ["SIM", "stripe_test"])
+def test_commit_accepts_settlement_mode_only_when_bound_to_transaction(checkout, mode):
+    tx, req = checkout
+    tx["mode"] = mode
+    tx["settlement"]["mode"] = mode
+    assert payment.commit(req, tx, now=NOW).transaction_id == "pi_test_123"
 
 
-def test_expired_fails():
-    m, req, approvals, used = setup()
-    later = datetime.now(timezone.utc) + timedelta(hours=1)
-    with pytest.raises(PermissionError, match="expired"):
-        payment.commit(req, m, approvals, used, now=later)
+@pytest.mark.parametrize("transaction_mode,settlement_mode", [
+    (None, None), ("LIVE", "LIVE"), ("SIM", "stripe_test"), ("stripe_test", "SIM"),
+])
+def test_commit_rejects_invalid_or_mismatched_settlement_mode(checkout, transaction_mode, settlement_mode):
+    tx, req = checkout
+    tx["mode"] = transaction_mode
+    tx["settlement"]["mode"] = settlement_mode
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
 
 
-def test_mandate_matches_contract_and_ttl():
-    import common
-    m, *_ = setup()
-    common.validate("Mandate", m)
-    created = datetime.strptime(m["created_at"], payment.TS)
-    assert (datetime.strptime(m["expires_at"], payment.TS) - created).total_seconds() <= 600
-    assert m["hash"] == payment.mandate_hash({**m, "amount": 589})  # 589.0 and 589 hash the same, as in pay.mandate
+def test_commit_accepts_exact_legacy_settlement_shape_without_mode(checkout):
+    tx, req = checkout
+    assert "mode" not in tx["settlement"]
+    assert payment.commit(req, tx, now=NOW).transaction_id == "pi_test_123"
+
+
+def test_commit_rejects_unrelated_settlement_fields(checkout):
+    tx, req = checkout
+    tx["settlement"]["untrusted"] = "extra"
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
+
+
+def test_commit_accepts_stored_allowance_authorization_without_fabricating_voice(checkout):
+    tx, req = checkout
+    tx["voice_approval"] = None
+    tx["mandate"]["within_allowance"] = True
+    tx["allowance_authorization"] = {"id": tx["mandate"]["approval_id"], "mandate_hash": tx["mandate"]["hash"],
+        "mandate_id": tx["mandate"]["id"], "deal_id": tx["deal_id"], "buyer_id": tx["buyer_id"],
+        "goal_id": tx["goal_id"], "amount": tx["mandate"]["amount"], "payee": tx["mandate"]["payee"],
+        "method": "allowance", "approved_at": NOW.isoformat()}
+    assert payment.commit(req, tx, now=NOW).transaction_id == "pi_test_123"
+    assert tx["voice_approval"] is None
+
+
+def test_commit_does_not_treat_market_typed_approval_as_voice_or_allowance(checkout):
+    tx, req = checkout
+    tx["voice_approval"] = None
+    tx["mandate"]["within_allowance"] = True
+    tx["allowance_authorization"] = {"id": tx["mandate"]["approval_id"],
+        "mandate_hash": tx["mandate"]["hash"], "mandate_id": tx["mandate"]["id"],
+        "deal_id": tx["deal_id"], "buyer_id": tx["buyer_id"], "goal_id": tx["goal_id"],
+        "amount": tx["mandate"]["amount"], "payee": tx["mandate"]["payee"],
+        "method": "typed", "approved_at": NOW.isoformat()}
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda tx: tx.update(voice_approval=None),
+    lambda tx: tx["voice_approval"].update(result="denied"),
+    lambda tx: tx["voice_approval"].update(mandate_hash="wrong"),
+    lambda tx: tx.update(settlement_result={"status": "uncertain", "charge_id": None}),
+    lambda tx: tx["settlement_result"].update(charge_id="mandate:" + tx["mandate"]["hash"]),
+    lambda tx: tx["settlement_result"].update(mandate_hash="wrong"),
+    lambda tx: tx["settlement"].update(request_sha256="wrong"),
+    lambda tx: tx["settlement"].update(message_id="req:wrong"),
+    lambda tx: tx.update(payment_ref="other"),
+    lambda tx: tx.update(phase="approved"),
+])
+def test_commit_refuses_unapproved_or_unpaid_or_mismatched_transaction(checkout, mutate):
+    tx, req = checkout
+    tx = json.loads(json.dumps(tx))
+    mutate(tx)
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
+
+
+@pytest.mark.parametrize("change", [
+    {"recipient": "attacker"}, {"reference": "other"}, {"description": "deal other"},
+    {"accepted_funds": []},
+    {"accepted_funds": [Funds(amount="79.98", currency="USD", payment_method="stripe")]},
+    {"accepted_funds": [Funds(amount="79.99", currency="EUR", payment_method="stripe")]},
+])
+def test_commit_refuses_payment_request_drift(checkout, change):
+    tx, req = checkout
+    values = req.model_dump()
+    values.update(change)
+    altered = type(req)(**values)
+    with pytest.raises(PermissionError):
+        payment.commit(altered, tx, now=NOW)
+
+
+def test_commit_refuses_expired_or_corrupt_mandate(checkout):
+    tx, req = checkout
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW.replace(year=2027))
+    tx["mandate"]["amount"] = 1
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
+
+
+def test_mandate_factory_delegates_to_canonical_builder(monkeypatch):
+    seen = {}
+
+    def fake(**kwargs):
+        seen.update(kwargs)
+        return {"hash": "canonical"}
+
+    monkeypatch.setattr(payment, "_new_mandate", fake)
+    assert payment.make_mandate("d", 12.5, "s", "b", True, goal_id="g", now=NOW) == {"hash": "canonical"}
+    assert seen["deal_id"] == "d" and seen["buyer_id"] == "b" and seen["goal_id"] == "g"
+
+
+@pytest.mark.parametrize("amount", ["sNaN", "1e999999"])
+def test_amount_parser_rejects_nonfinite_and_unbounded_decimal_without_crashing(amount):
+    assert payment._cents(amount) is None
