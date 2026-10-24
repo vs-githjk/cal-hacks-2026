@@ -1,0 +1,358 @@
+[
+ {
+  "name": "ASUS GeForce RTX 5070 Ti PRIME OC Graphics Card",
+  "brand": "ASUS",
+  "price": 1299.99,
+  "currency": "USD",
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "reviews": 20,
+  "rating": 4.8,
+  "featured_image": "https://www.bhphotovideo.com/images/fb/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti_1875968.jpg",
+  "images": [
+   "https://www.bhphotovideo.com/images/fb/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti_1875968.jpg",
+   "https://static.bhphoto.com/images/images500x500/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti_1738060668_1875968.jpg",
+   "https://static.bhphoto.com/images/images345x345/1738060668_1875968.jpg",
+   "https://static.bhphoto.com/images/images150x150/1738060668_1875968.jpg",
+   "https://static.bhphoto.com/images/smallimages/1738060668_1875968.jpg",
+   "https://www.bhphotovideo.com/images/images500x500/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti_1738060668_1875968.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1737967355_IMG_2417953.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1737967355_IMG_2417945.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1737967355_IMG_2417946.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1737967355_IMG_2417947.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1737967355_IMG_2417948.jpg"
+  ],
+  "description_text": "ASUS GeForce RTX 5070 Ti PRIME OC Graphics Card",
+  "url": "https://www.bhphotovideo.com/c/product/1875968-REG/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti.html",
+  "bitly_url": "https://bhpho.to/3ClrJaK",
+  "sku": 1875968,
+  "bhId": "AS5070TIO16G",
+  "mpn": "PRIME-RTX5070TI-O16GING",
+  "brand_series_model": "ASUS Prime GeForce RTX 5070 Ti OC",
+  "is_download": false,
+  "is_bh_kit": false,
+  "is_j_kit": false,
+  "is_gift_card": false,
+  "is_mfr_bundle": false,
+  "has_essential_kits": false,
+  "is_used": false,
+  "quantity": {
+   "maxSellQuantity": 3,
+   "minSellQuantity": 1,
+   "sellsInMultipleOf": 1
+  },
+  "buying_options": {
+   "tradeInType": "NONE"
+  },
+  "flags": {
+   "showQuickCompare": false,
+   "showRobotsMetaTag": false,
+   "showCallbackLink": true,
+   "showCompare": true,
+   "disableWriteAReview": false,
+   "disableQA": false
+  },
+  "condition_flags": {
+   "isBHExclusive": false,
+   "isEDUSpecial": false,
+   "isNewRelease": false,
+   "isNewArrival": false,
+   "isUsed": false,
+   "isRefurbished": false,
+   "isOpenBox": false,
+   "isFeatured": false,
+   "isBildDeal": false,
+   "isSoldInStudioOnly": false,
+   "isFlashDeal": false,
+   "checkRedirectToSimilar": false
+  },
+  "notes": {
+   "shouldShowStudentNote": false
+  },
+  "selling_points": [
+   "Boostable to 2527 MHz (OC)",
+   "8960 CUDA Cores",
+   "Blackwell Architecture",
+   "16GB of GDDR7 VRAM",
+   "256-Bit Memory Interface",
+   "DisplayPort 2.1 & HDMI 2.1",
+   "PCIe 5.0 x16 Interface",
+   "Axial Tech Triple-Fan Design"
+  ],
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  },
+  "stock_status": "IN_STOCK",
+  "stock_message": "Temporarily Out of Stock",
+  "store_info": {
+   "onStoreDisplay": "NO",
+   "availableForStorePurchase": true,
+   "storePickupMessageType": "AVAILABLE_IN_PICKUP_TIME",
+   "storePickupLongMessageType": "PICKUP",
+   "shouldShowStoreInfo": false,
+   "shouldShowStoreStockInfo": true,
+   "shouldShowStoreAddress": false,
+   "promoteStorePickup": false,
+   "showNjfScheduleChange": false
+  },
+  "leasing": {
+   "position": "BOTTOM"
+  },
+  "financing": {
+   "paymentCode": 412,
+   "minPaymentAmount": 599,
+   "financingTerm": 12,
+   "financingType": "DI",
+   "superscriptSymbol": "\u00a7",
+   "amountPerMonth": "$109",
+   "financingMsg": "12 Mos. Promo Financing"
+  },
+  "_source": "bhphotovideo.com"
+ },
+ {
+  "name": "ASUS GeForce RTX 5070 Ti ProArt OC Graphics Card",
+  "brand": "ASUS",
+  "price": 1399.99,
+  "currency": "USD",
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "reviews": 4,
+  "rating": 5,
+  "featured_image": "https://www.bhphotovideo.com/images/fb/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070_1936065.jpg",
+  "images": [
+   "https://www.bhphotovideo.com/images/fb/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070_1936065.jpg",
+   "https://static.bhphoto.com/images/images500x500/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070_1766754829_1936065.jpg",
+   "https://static.bhphoto.com/images/images345x345/1766754829_1936065.jpg",
+   "https://static.bhphoto.com/images/images150x150/1766754829_1936065.jpg",
+   "https://static.bhphoto.com/images/smallimages/1766754829_1936065.jpg",
+   "https://www.bhphotovideo.com/images/images500x500/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070_1766754829_1936065.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1766754826_IMG_2643474.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1766754826_IMG_2643475.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1766754826_IMG_2643476.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1766754826_IMG_2643477.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1766754826_IMG_2643478.jpg"
+  ],
+  "description_text": "ASUS GeForce RTX 5070 Ti ProArt OC Graphics Card",
+  "url": "https://www.bhphotovideo.com/c/product/1936065-REG/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070.html",
+  "bitly_url": "https://bhpho.to/4iYlz1f",
+  "sku": 1936065,
+  "bhId": "ASPAR507TO16",
+  "mpn": "PROART-RTX5070TI-O16G",
+  "brand_series_model": "ASUS ProArt GeForce RTX 5070 Ti OC Edition",
+  "is_download": false,
+  "is_bh_kit": false,
+  "is_j_kit": false,
+  "is_gift_card": false,
+  "is_mfr_bundle": false,
+  "has_essential_kits": false,
+  "is_used": false,
+  "quantity": {
+   "maxSellQuantity": 1,
+   "minSellQuantity": 1,
+   "sellsInMultipleOf": 1
+  },
+  "buying_options": {
+   "tradeInType": "NONE"
+  },
+  "flags": {
+   "showQuickCompare": false,
+   "showRobotsMetaTag": false,
+   "showCallbackLink": true,
+   "showCompare": true,
+   "disableWriteAReview": false,
+   "disableQA": false
+  },
+  "condition_flags": {
+   "isBHExclusive": false,
+   "isEDUSpecial": false,
+   "isNewRelease": false,
+   "isNewArrival": false,
+   "isUsed": false,
+   "isRefurbished": false,
+   "isOpenBox": false,
+   "isFeatured": false,
+   "isBildDeal": false,
+   "isSoldInStudioOnly": false,
+   "isFlashDeal": false,
+   "checkRedirectToSimilar": false
+  },
+  "notes": {
+   "shouldShowStudentNote": false
+  },
+  "selling_points": [
+   "2527 MHz Boost Speed (OC)",
+   "8960 CUDA Cores",
+   "Blackwell Architecture",
+   "16GB of GDDR7 VRAM",
+   "256-Bit Memory Interface",
+   "DisplayPort 2.1 | HDMI 2.1 | USB-C",
+   "PCIe 5.0 x16 Interface",
+   "Axial Tech Triple-Fan Design"
+  ],
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  },
+  "stock_status": "IN_STOCK",
+  "stock_message": "Temporarily Out of Stock",
+  "store_info": {
+   "onStoreDisplay": "NO",
+   "availableForStorePurchase": true,
+   "storePickupMessageType": "AVAILABLE_IN_PICKUP_TIME",
+   "storePickupLongMessageType": "PICKUP",
+   "shouldShowStoreInfo": false,
+   "shouldShowStoreStockInfo": true,
+   "shouldShowStoreAddress": false,
+   "promoteStorePickup": false,
+   "showNjfScheduleChange": false
+  },
+  "leasing": {
+   "position": "BOTTOM"
+  },
+  "financing": {
+   "paymentCode": 412,
+   "minPaymentAmount": 599,
+   "financingTerm": 12,
+   "financingType": "DI",
+   "superscriptSymbol": "\u00a7",
+   "amountPerMonth": "$117",
+   "financingMsg": "12 Mos. Promo Financing"
+  },
+  "_source": "bhphotovideo.com"
+ },
+ {
+  "name": "MSI GeForce RTX 5070 Ti VENTUS 3X OC Black 16G Graphics Card",
+  "brand": "MSI",
+  "price": 1189.95,
+  "currency": "USD",
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "reviews": 0,
+  "featured_image": "https://www.bhphotovideo.com/images/fb/msi_geforce_rtx_5070_ti_1963842.jpg",
+  "images": [
+   "https://www.bhphotovideo.com/images/fb/msi_geforce_rtx_5070_ti_1963842.jpg",
+   "https://static.bhphoto.com/images/images500x500/msi_geforce_rtx_5070_ti_1776949077_1963842.jpg",
+   "https://static.bhphoto.com/images/images345x345/1776949077_1963842.jpg",
+   "https://static.bhphoto.com/images/images150x150/1776949077_1963842.jpg",
+   "https://static.bhphoto.com/images/smallimages/1776949077_1963842.jpg",
+   "https://www.bhphotovideo.com/images/images500x500/msi_geforce_rtx_5070_ti_1776949077_1963842.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1776949077_IMG_2721367.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1776949077_IMG_2721368.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1776949077_IMG_2721369.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1776949077_IMG_2721370.jpg",
+   "https://static.bhphoto.com/images/multiple_images/images500x500/1776949077_IMG_2721371.jpg"
+  ],
+  "description_text": "MSI GeForce RTX 5070 Ti VENTUS 3X OC Black 16G Graphics Card",
+  "url": "https://www.bhphotovideo.com/c/product/1963842-REG/msi_geforce_rtx_5070_ti.html",
+  "bitly_url": "https://bhpho.to/3QGU41O",
+  "sku": 1963842,
+  "bhId": "MSR57T16V3OB",
+  "mpn": "RTX 5070 TI 16G VENTUS 3X OC BLACK",
+  "brand_series_model": "MSI GeForce RTX 5070 Ti 16G VENTUS 3X OC",
+  "is_download": false,
+  "is_bh_kit": false,
+  "is_j_kit": false,
+  "is_gift_card": false,
+  "is_mfr_bundle": false,
+  "has_essential_kits": false,
+  "is_used": false,
+  "quantity": {
+   "maxSellQuantity": 30,
+   "minSellQuantity": 1,
+   "sellsInMultipleOf": 1
+  },
+  "buying_options": {
+   "tradeInType": "NONE"
+  },
+  "flags": {
+   "showQuickCompare": false,
+   "showRobotsMetaTag": false,
+   "showCallbackLink": true,
+   "showCompare": true,
+   "disableWriteAReview": false,
+   "disableQA": false
+  },
+  "condition_flags": {
+   "isBHExclusive": false,
+   "isEDUSpecial": false,
+   "isNewRelease": false,
+   "isNewArrival": false,
+   "isUsed": false,
+   "isRefurbished": false,
+   "isOpenBox": false,
+   "isFeatured": false,
+   "isBildDeal": false,
+   "isSoldInStudioOnly": false,
+   "isFlashDeal": false,
+   "checkRedirectToSimilar": true
+  },
+  "notes": {
+   "shouldShowStudentNote": false
+  },
+  "selling_points": [
+   "2497 MHz Boost Clock Speed (OC)",
+   "8960 CUDA Cores",
+   "Blackwell Architecture",
+   "16GB of GDDR7 VRAM",
+   "256-Bit Memory Interface",
+   "DisplayPort 2.1 | HDMI 2.1",
+   "PCIe 5.0 x16 Interface",
+   "Triple TORX 5.0 Fan Cooler"
+  ],
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  },
+  "stock_status": "DYNAMIC",
+  "stock_message": "Temporarily Out of Stock",
+  "store_info": {
+   "onStoreDisplay": "NO",
+   "availableForStorePurchase": false,
+   "storePickupMessageType": "NO_MESSAGE",
+   "storePickupLongMessageType": "NO_MESSAGE",
+   "shouldShowStoreInfo": false,
+   "shouldShowStoreStockInfo": true,
+   "shouldShowStoreAddress": false,
+   "promoteStorePickup": false,
+   "showNjfScheduleChange": false
+  },
+  "leasing": {
+   "position": "BOTTOM"
+  },
+  "financing": {
+   "paymentCode": 412,
+   "minPaymentAmount": 599,
+   "financingTerm": 12,
+   "financingType": "DI",
+   "superscriptSymbol": "\u00a7",
+   "amountPerMonth": "$100",
+   "financingMsg": "12 Mos. Promo Financing"
+  },
+  "_source": "bhphotovideo.com"
+ }
+]
