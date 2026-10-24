@@ -52,16 +52,18 @@ def clients(log, fail=None, rows="market"):
 
 def test_order_follows_the_stage_story(steps):
     kinds = [s.reducer for s in steps if s.reducer != "set_floor"]
-    assert kinds[:4] == ["post_goal", "set_allowance", "post_need", "open_round"]
+    assert kinds[:5] == ["post_goal", "set_allowance", "post_need", "set_buyer_profile", "open_round"]
     assert kinds.index("place_bid") < kinds.index("attach_verdict") < kinds.index("attach_advocate_card") < kinds.index("close_round")
     tail = kinds[kinds.index("close_round") + 1:]
-    assert tail == ["attach_verdict", "create_mandate", "record_approval", "record_payment", "record_payment"]
+    assert tail[:5] == ["attach_verdict", "create_mandate", "record_approval", "record_payment", "record_payment"]
+    assert tail[5:] and set(tail[5:]) == {"record_loss_report"}          # #216: beat 5's loss reports close the one-round plan
 
 
 def test_each_reducer_is_called_by_the_role_it_demands(steps):
     allowed = {"post_goal": "buyer", "post_need": "buyer", "set_allowance": "referee", "open_round": "referee", "close_round": "referee",
                "attach_verdict": "referee", "attach_claim_check": "referee", "attach_advocate_card": "referee", "create_mandate": "referee",
-               "record_approval": "referee", "record_payment": "referee"}
+               "record_approval": "referee", "record_payment": "referee", "set_buyer_profile": "referee",
+               "record_loss_report": "referee", "record_agent_event": "referee"}
     for s in steps:
         if s.reducer in ("set_floor", "place_bid"):
             assert s.actor.startswith("seller:")
@@ -205,7 +207,7 @@ def test_close_retries_while_the_round_is_still_open_and_accepts_already_closed(
     sleeps = []
     bridge.execute(steps, clients(log, fail), delay=0, say=lambda s: None, sleep=sleeps.append, clock=lambda: 0.0)
     assert [r for _, r, _ in log].count("close_round") == 2 and 1.0 in sleeps
-    assert log[-1][1] == "record_payment"
+    assert log[-1][1] == "record_loss_report" and "record_payment" in [r for _, r, _ in log]
 
 
 def test_a_refused_reducer_stops_the_run(steps):
@@ -227,9 +229,9 @@ def test_divergence_is_reported_when_the_market_ranks_another_bid_first(run):
 
 def test_not_bridged_list_names_every_gap_and_no_secret():
     text = " ".join(bridge.NOT_BRIDGED)
-    for word in ("loss reports", "set_goal_state", "floors per condition"):
+    for word in ("set_goal_state", "floors per condition"):
         assert word in text
-    for fixed in ("buyer allowance", "set_allowance", "advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
+    for fixed in ("loss reports", "buyer name", "buyer allowance", "set_allowance", "advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
         assert fixed not in text, f"{fixed} is bridged now"
     assert "token" not in text.lower()
 
@@ -413,7 +415,7 @@ def test_live_call_approved_places_one_call_and_records_approval_then_payment(ru
     assert len(client.calls) == 1 and client.calls[0][0] == TO                       # exactly one call, to the configured number
     assert len(shown) == 1 and all(shown[0][0] not in str(v) for v in client.calls[0][1].values())   # the code is on screen only
     tail = [r for _, r, _ in log][[r for _, r, _ in log].index("create_mandate"):]
-    assert tail == ["create_mandate", "issue_approval_code", "record_approval", "record_payment", "record_payment"]
+    assert tail[:5] == ["create_mandate", "issue_approval_code", "record_approval", "record_payment", "record_payment"]
     assert outcomes[0]["approved"] is True and outcomes[0]["call_id"] == "call_1"
     assert gate.mandate["status"] == "approved"
 

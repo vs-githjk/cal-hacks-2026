@@ -160,12 +160,32 @@ def _host(url: str) -> Optional[str]:
     return host[4:] if host.startswith("www.") else host
 
 
+_LEET = str.maketrans("034579", "oeastg")   # "0fficial", "4pprove"; a "1" is tried as both i and l below
+_SINGLES = re.compile(r"(?<![a-z0-9])[a-z0-9](?: [a-z0-9](?![a-z0-9])){2,}")   # "a p p r o v e"
+
+
+def _steers(v: str, blocked: frozenset) -> bool:
+    """True when v holds a blocked word, also behind leetspeak ("Offic1al"), letter spacing ("a p p r o v e"), a split
+    ("of ficial") or a run-on ("alreadyagreed") (#237). The run-on and split check is for words of 7 or more letters,
+    so short words ("pin", "now") inside honest names ("Spinner", "Snowblind") stay allowed."""
+    low = _SINGLES.sub(lambda m: m.group(0).replace(" ", ""), v.lower())
+    for one in ("i", "l"):
+        folded = low.translate(_LEET).replace("1", one)
+        tokens = re.findall(r"[a-z]+", folded)
+        if set(tokens) & blocked:
+            return True
+        joined = "".join(tokens)
+        if any(len(w) >= 7 and w in joined for w in blocked):
+            return True
+    return False
+
+
 def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY_BLOCKED) -> Optional[str]:
     """The value when it is a short plain string that passes `pattern` and holds no steering word, else None."""
     if not isinstance(value, str):
         return None
     v = " ".join(value.split())
-    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & blocked:
+    if not pattern.fullmatch(v) or _steers(v, blocked):
         return None
     return v
 

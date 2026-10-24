@@ -100,16 +100,17 @@ def test_every_step_lands_in_exactly_one_beat_in_order(run):
     beats = stage.assign_beats(steps)
     assert sorted(beats) == [1, 2, 3, 4, 5]
     assert [s for n in sorted(beats) for s in beats[n]] == steps
-    assert [s.reducer for s in beats[1]] == ["post_goal", "set_allowance", "post_need"]
+    assert [s.reducer for s in beats[1]] == ["post_goal", "set_allowance", "post_need", "set_buyer_profile"]
     assert beats[2][0].reducer == "open_round" and beats[2][-1].reducer == "close_round"
     assert [s.reducer for s in beats[3]] == ["attach_verdict"]
     assert [s.reducer for s in beats[4]] == ["create_mandate", "record_approval", "record_payment", "record_payment"]
-    assert beats[5][0].reducer == "open_round" and beats[5][-1].reducer == "close_round"
+    assert beats[5][0].reducer == "record_loss_report" and beats[5][-1].reducer == "close_round"     # #216: reports, then round 2
+    assert "open_round" in [s.reducer for s in beats[5]]
 
 
-def test_one_round_plan_has_no_beat_five(run):
+def test_one_round_plan_has_only_the_loss_reports_in_beat_five(run):
     beats = stage.assign_beats(bridge.plan(run, delay=0, rounds=1))
-    assert sorted(beats) == [1, 2, 3, 4]
+    assert sorted(beats) == [1, 2, 3, 4, 5] and {s.reducer for s in beats[5]} == {"record_loss_report"}
 
 
 # ---------------------------------------------------------------- the auto run
@@ -438,7 +439,7 @@ def test_an_unreadable_market_ranking_stops_beat_four_with_nothing_paid(capsys):
     code, log, *_ = go(["--auto", "--step-delay", "0"], result_rows=None)     # the fake has no round_result
     out = capsys.readouterr().out
     assert "could not read round_result back (RuntimeError)" in out           # after beat 2: one note
-    assert code == 1 and "no mandate was made" in out and "Nothing was charged" in out
+    assert code == 1 and "no mandate was made" in out and "nothing was paid" in out and "Nothing was charged" not in out
     assert not any(r in ("create_mandate", "record_approval", "record_payment") for _, r, _ in log)
 
 
@@ -476,3 +477,13 @@ def test_a_bid_window_below_the_minimum_is_refused(bad):
         stage.main(["--dry-run", "--bid-window", bad])
     with pytest.raises(SystemExit):
         bridge.main(["--dry-run", "--bid-window", bad])
+
+
+
+def test_the_stop_line_says_nothing_was_paid_once():
+    """#222: the denial line already says nothing was paid; the stop line does not repeat it."""
+    import inspect
+    from demo import stage
+    src = inspect.getsource(stage)
+    i = src.index("STOPPED at beat {n}")
+    assert "Nothing was charged" not in src[i:i + 300]

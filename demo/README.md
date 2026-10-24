@@ -98,12 +98,14 @@ It wraps `bridge.py` (same reducers, same tokens, same live-call gate) and adds 
 5. **Live call.** `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. The mandate the call judges is made when beat 4 starts (a mandate lives 10 minutes, so a long wait at the Enter prompts cannot expire it). Retake by running again (it resets). The two-word code shows on /buyer (`issue_approval_code`); it prints as `SCREEN CODE` on this console only if the market refuses it. `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
 After beat 2 the runner reads the market's `round_result` back and prints its ranking; if the market's #1 is not the demo's winner it prints DIVERGENCE before beat 3, and `--auto` pauses once for Enter so the operator sees it before the beat 4 cue (the mandate that follows is the demo's winner).
 Exit codes: 0 all beats played, 1 refused or stopped (service down, market refusal, denial, `q`), 130 Ctrl-C. Open /buyer (paired as `vidyut`) and /market first; the console reminds you.
-The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2, the loss report itself is console only (NOT BRIDGED).
+The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2. Beat 5 opens with round 1's loss reports through `record_loss_report` (SIM rows: banded gap, reason and cited source, and the learner's strategy step and "what to change" line), so each seller's own screen shows its report (#216).
 
 The bridge sets Vidyut's standing allowance ($250 per buy, $500 a month, SIM) with the referee's `set_allowance` right after the goal, so /buyer shows it and the deal still needs the call. The market starts spending this period at $0 (the run's $120 spent is not bridged).
 
-Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, denied approval attempts, personas and the
-buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
+Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: goal state, denied approval attempts, seller personas,
+and a floor per seller, SKU and condition (the market keeps one floor per SKU). Bridged since #216: the buyer name (`set_buyer_profile`, SIM), loss reports
+(`record_loss_report`) and one SIM line per demo agent on the Fetch tile (`record_agent_event`, with the agents' own addresses from agents/common; no rows
+when agents/ cannot be loaded, and the run says so).
 
 ## Tags
 Every line that shows data carries one: **LIVE** (a real outside party right now; offline there is none, Stripe's test API with `bridge.py --live-call --stripe` after a real call is the only one),

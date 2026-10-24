@@ -148,11 +148,42 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
     return [opener, *seller_steps, *check_steps, closer]
 
 
+BUYER_NAME = "Vidyut"
+# #216: the names the Fetch tile shows for the demo's agents (#259); their lines in a stage run are the demo's, so SIM
+AGENT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Bazaar Advocate", "shield": "Bazaar Shield"}
+
+
+def demo_agent_addresses() -> dict:
+    """The agent1q addresses of the buyer, advocate and Shield agents, from agents/common (the same seeds the agents run
+    with). {} when agents/ cannot be loaded (no uagents): the Fetch tile then gets no rows and the run says so."""
+    # Loaded by path under its own name: a top-level "common" may already be demo/common.py when the stage runs as a
+    # script, and agents/ on sys.path would shadow other top-level names. Its import reads agents/.env (setdefault only).
+    import importlib.util
+    try:
+        spec = importlib.util.spec_from_file_location("tech_bazaar_agents_common", ROOT / "agents" / "common.py")
+        common = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(common)
+        return {role: common.address(role) for role in AGENT_NAMES}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _event(role: str, addresses: dict, text: str) -> Optional[Step]:
+    if role not in addresses:
+        return None
+    return Step("referee", "record_agent_event",
+                {"agent_name": AGENT_NAMES[role], "address": addresses[role], "text": text, "ts": "", "origin": SIM},
+                say=f"{AGENT_NAMES[role]} (SIM line on the Fetch tile): {text}")
+
+
 def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: int = 1,
          mandate: Optional[dict] = None, live_call: bool = False, two_buyers: bool = False,
-         bid_window: Optional[int] = None) -> list[Step]:
+         bid_window: Optional[int] = None, agent_addresses: Optional[dict] = None) -> list[Step]:
     """Map a demo run (demo.run_demo.run_all) to reducer calls, in the order the stage story tells it.
-    `mandate` (with `live_call`) replaces the run's beat-4 mandate with the pending one the real call will judge."""
+    `mandate` (with `live_call`) replaces the run's beat-4 mandate with the pending one the real call will judge.
+    `agent_addresses` ({role: agent1q...}) adds the Fetch tile lines; None or {} adds none."""
+    addresses = agent_addresses or {}
+    events: list[Optional[Step]] = []
     b = run["beats"]
     goal, need, b2 = b["1"]["goal"], b["1"]["need"], b["2"]
     sellers = {s["id"]: s for s in b2["sellers"]}
@@ -182,10 +213,21 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                                   "allowed_conditions": list(n.get("allowed_conditions") or []), "variant": n["variant"],
                                   "quantity": n["quantity"], "unit": n["unit"]}]},
                       pause=True, say=f"the need goes to sellers: {n['sku_spec']}, {' or '.join(n.get('allowed_conditions') or [n['condition']])}; the cap is withheld from them"))
+    # #216: the name /buyer shows (SIM: the demo's buyer), and the buyer agent's line on the Fetch tile
+    steps.append(Step("referee", "set_buyer_profile", {"buyer_id": buyer_id, "display_name": BUYER_NAME},
+                      say=f"/buyer shows the buyer's name: {BUYER_NAME} (SIM)"))
+    events.append(_event("buyer", addresses, f"Goal posted for {n['sku_spec']}; the need went to sellers, the cap stays sealed"))
+    steps += [e for e in events if e]
+    events.clear()
 
     # beat 2: the sealed round (Shield and claim checks attach before the close; the market ranks)
     steps += round_steps(round_no=1, need_id=need["id"], bids=b2["bids"], ranking=b2["ranking"], sellers=sellers, shield=b2["shield"],
                          claims=b2["claims"], cards=b2["cards"], delay=delay, pace=1.0, window_s=bid_window)
+
+    vetoes = sum(1 for c in b2["cards"] if c.get("recommendation") == "veto")
+    events.append(_event("advocate", addresses, f"Reviewed {len(b2['cards'])} bids: {vetoes} vetoed, each with a cited source"))
+    steps += [e for e in events if e]
+    events.clear()
 
     # beat 3: Shield blocks Shady Sam's injected re-post (after the close, as in the demo; Sam is already out on his claims)
     inj = b["3"]["injected"]
@@ -194,6 +236,9 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       {"bid_id": bid_id(sam, 1), "verdict": inj["verdict"], "rule_ids": list(inj["rule_ids"]), "origin": SIM},
                       pause=True, say=f"Bazaar Shield BLOCKS {sam['persona']}'s injected listing re-post "
                                       f"({len(inj['rule_ids'])} rules, {inj['latency_ms']} ms)"))
+    events.append(_event("shield", addresses, f"Blocked {sam['persona']}'s injected listing re-post ({len(inj['rule_ids'])} rules)"))
+    steps += [e for e in events if e]
+    events.clear()
 
     # beat 4: mandate, approval, payment (the deal is above the allowance set in beat 1, so it needs the call)
     m, win = (mandate if mandate is not None else b["4"]["mandate"]), b2["winner"]
@@ -222,7 +267,22 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     steps.append(Step("referee", "record_payment", dict(pay),
                       pause=True, say="the same payment again: the market's own idempotency refuses it and shows the refusal"))
 
-    # beat 5: round 2 with the learning seller's lowered price (loss reports have no reducer: NOT BRIDGED)
+    # beat 5 (#216): round 1's loss reports (banded gap, reason, cited source; the learner's strategy step and line). The
+    # reports come from the demo's own ranking, a SIM stand-in for the market's rules, so every row is SIM.
+    b5 = b["5"]
+    diff = [{"key": k, "from": str(v["from"]), "to": str(v["to"])} for k, v in ((b5.get("strategy") or {}).get("diff") or {}).items()]
+    for lr in b5.get("round1_loss_reports") or []:
+        learner = lr["seller_id"] == b5.get("learning_seller")
+        steps.append(Step("referee", "record_loss_report",
+                          {"id": lr["id"], "round_id": lr["round_id"], "seller_id": lr["seller_id"], "won": bool(lr["won"]),
+                           "gap_band": lr["gap_band"], "reason": lr["reason"], "source_url": lr["source_url"],
+                           "strategy_diff": diff if learner else [], "what_to_change": b5.get("what_to_change", "") if learner else "",
+                           "what_to_change_origin": SIM if learner else "", "origin": SIM},
+                          pause=learner, tag=SIM,
+                          say=f"loss report for {sellers.get(lr['seller_id'], {}).get('name', lr['seller_id'])}: {lr['gap_band']}, "
+                              f"{lr['reason']}" + (f"; what to change: {b5.get('what_to_change', '')}" if learner else "")))
+
+    # beat 5: round 2 with the learning seller's lowered price
     if rounds >= 2:
         r2 = b["5"]["round2"]
         steps += round_steps(round_no=2, need_id=need["id"], bids=r2["bids"], ranking=r2["ranking"], sellers=sellers,
@@ -275,11 +335,9 @@ def second_buyer_report(rows: list, round_id: str) -> list[str]:
 
 # What the market cannot take today (printed at the end of every run; mirrored in demo/README.md for Lane B).
 NOT_BRIDGED = [
-    "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 and the learner's lower open-box price now ranks, but the loss report itself is not on screen.",
     "goal state (HUNTING, HOLD_FOR_CALL, DONE): no set_goal_state reducer; the goal stays ACTIVE and reserved_amount stays 0.",
     "denied approval attempts (wrong code, no 'approve'): record_approval only logs a second approval; the denied tries are console only.",
-    "buyer name and seller personas: /buyer is hardcoded to the id vidyut and prints 'Buyer: Vidyut'; persona rows come only "
-    "from seed_demo (Seller A to C), so the 3D floor has no personas for the demo sellers.",
+    "seller personas: persona rows come only from seed_demo (Seller A to C), so the 3D floor has no personas for the demo sellers.",
     "seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor "
     "(issue #18 asks for a floor per seller, SKU and condition).",
 ]
@@ -363,7 +421,13 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                         continue
                     raise
         else:
-            client.call(s.reducer, **s.args)
+            try:
+                client.call(s.reducer, **s.args)
+            except RuntimeError:
+                if s.reducer == "record_payment" and s.args.get("mode") == "stripe_test":   # #208
+                    note(f"the market refused record_payment after Stripe test charge {s.args.get('payment_ref')}: "
+                         "find it in the Stripe test dashboard (it is idempotent on the mandate hash)")
+                raise
         if s.gate == "approval_call" and approver is not None:
             approved_and_recorded = True    # the approver said approved and the market took the approval row
         lag += clock() - t_call
@@ -416,12 +480,30 @@ class CrsRefused(GateRefused):
 
 
 def market_winner(rows: list, round_id: str = "round-1") -> Optional[dict]:
-    """The market's rank 1 in `round_id` from round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed, ...)."""
+    """The market's rank 1 in `round_id` from round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed,
+    reasons, lines, ...). `lines` are the lines the market picked (#216), [] when the row has none."""
     first = [r for r in rows if r[1] == round_id and r[5] == 1]
     if len(first) != 1:
         return None
     r = first[0]
-    return {"bid_id": r[2], "seller_id": r[3], "persona": r[4], "landed": float(r[6])}
+    lines = r[8] if len(r) > 8 and isinstance(r[8], list) else []
+    return {"bid_id": r[2], "seller_id": r[3], "persona": r[4], "landed": float(r[6]), "lines": lines}
+
+
+def _picked(cell: Any) -> Optional[tuple]:
+    """(offered_condition, unit_price) of one picked BidLine as SpacetimeDB returns it: a positional array
+    [sku_spec, offered_spec, offered_condition, unit_price, quantity] or an object. None when unreadable."""
+    try:
+        if isinstance(cell, dict):
+            cond = cell.get("offeredCondition", cell.get("offered_condition"))
+            price = cell.get("unitPrice", cell.get("unit_price"))
+        else:
+            cond, price = cell[2], cell[3]
+        if not isinstance(cond, str) or not cond:
+            return None   # an empty condition means the need's; the demo's own line is the safe fallback
+        return cond, float(price)
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
 
 
 class DealGate:
@@ -553,6 +635,10 @@ class DealGate:
         w = self.winner
         bid, seller = self.bids[w["bid_id"]], self.sellers[w["seller_id"]]
         line = bid["lines"][min(self.lines.get(w["seller_id"], 0), len(bid["lines"]) - 1)]
+        picked = _picked(w["lines"][0]) if w.get("lines") else None
+        if picked is not None:   # #216: the line the market picked, so the spoken condition matches the landed amount
+            line = next((x for x in bid["lines"] if x["offered_condition"] == picked[0]
+                         and abs(float(x["unit_price"]) - picked[1]) <= 0.005), line)
         facts = {"item": line.get("attrs", {}).get("chipset") or line["sku_spec"].upper(), "condition": line["offered_condition"],
                  "seller": seller["name"], "crs": "verified" if self.crs and self.crs.get("business") else "sim_seller"}
         if self.price is not None:
@@ -736,7 +822,7 @@ def main(argv: Optional[list] = None) -> int:
     run = run_all(say=Narrator(False))       # never a Stripe call here: this run builds the plan, before any round or call
     gate = DealGate(run)                     # beat 4's mandate is made from the market's rank 1 when beat 4 starts
     steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, live_call=args.live_call,
-                 two_buyers=args.two_buyers, bid_window=args.bid_window)
+                 two_buyers=args.two_buyers, bid_window=args.bid_window, agent_addresses=demo_agent_addresses())
     out = Narrator(True)
     out.note("Tech Bazaar screen bridge: demo beats (real lane code) -> existing SpacetimeDB reducers")
     out.note(f"{len(steps)} reducer calls, {args.step_delay} s between visible steps. Open /buyer (pair as {args.buyer_id}) and /market.")
