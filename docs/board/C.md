@@ -44,3 +44,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [02:15] #73.3: correction to the 00:09 line: the RTX 5070 Ti reference then was $1,254.99 from 6 in-stock retail asks (Amazon rows were removed in #59), not $1,279.99 from 8; savings tile no longer crashes on an empty or stale baseline
 - [02:59] #109 correction to the 01:53 line: the deduped baseline is $1,254.99 from 6 distinct listings, not $1,249.99 of 9 asks
 - [02:56] #126: claim check reads schema.org stock statuses explicitly (PreOrder, BackOrder, Discontinued etc. count as not available now) and warranty term (JSON-LD WarrantyPromise or 'N-year warranty' text); the public Actor is rebuilt after merge
+- [03:52] c2: 26 more parts confirmed on maker domains; maker-checked builds 12 -> 33 of 44, 33 of 33 correct, false OK 0 (all 44: 42 of 43, false OK 0); one value corrected (Corsair CV450 PCIe 8-pin 1 -> 2); checker not changed
