@@ -70,3 +70,12 @@ def test_savings_tile_says_so_when_no_rows_match_the_sku(monkeypatch):
     monkeypatch.setattr(data.baselines, "observations", lambda: [row])
     t = savings_tile()
     assert t["status"] == "none_yet" and "No reference (empty)" in t["note"] and "None" not in t["display"]
+
+
+def test_price_position_block_is_present_and_honest():  # #141
+    sb = build()
+    validate(sb, SCHEMA)
+    pp = sb["price_position"]
+    assert pp["origin"] == "MIRROR" and pp["sentence"] and "savings" not in pp["sentence"].lower()
+    if pp["status"] == "one_source":
+        assert "sold median" not in pp["sentence"]

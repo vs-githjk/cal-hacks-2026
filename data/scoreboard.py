@@ -144,10 +144,22 @@ def hyphenate_tile() -> dict:
                       "b24, k02 and k03 were fixed after it, so the rerun is not blind.")
 
 
+DEMO_WINNER = {"sku": "rtx 5070 ti", "price": 1299.99, "condition": "new"}  # ASUS Prime at Best Buy
+
+
+def position_block() -> dict:
+    """Where the demo winner's price sits among the dated listings we hold (data.baselines.position)."""
+    from data.baselines import observations
+    from data.baselines.position import price_position
+    rows = observations()
+    as_of = max((r["observed_at"] for r in rows), default=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    return price_position(DEMO_WINNER["sku"], DEMO_WINNER["price"], DEMO_WINNER["condition"], as_of, rows=rows)
+
+
 def build() -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile(),
-                                                voice_tile(), hyphenate_tile()]}
+                                                voice_tile(), hyphenate_tile()], "price_position": position_block()}
 
 
 if __name__ == "__main__":
