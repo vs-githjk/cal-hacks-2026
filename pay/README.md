@@ -141,3 +141,18 @@ if d.approved:
   record on approve.
 
 Run the tests from the repo root: `python3 -m pytest pay/tests/test_approval.py`.
+
+## Advocate call reason (a10: `pay/reasons.py`, route `POST /v1/advocate/reason` in `shield.api`)
+The call answers "why not the cheaper one?" only from a closed-schema reason. `reason_for({"rule_id", "source_url"})`
+(Anoop's fit or claim check, or Lane A's advocate verdict) returns exactly `{rule_id, summary, source_url}`:
+- `summary` is looked up by `rule_id` in the `SUMMARIES` table (mirrors `agents/advocate/checks.py CALL_SUMMARIES`
+  plus the other fit-checker ids and `claim.*`). It is never taken from the request, from seller text or from a model.
+- An unknown or malformed `rule_id` gets the generic template and the id `advocate.unknown`; the input id is not echoed.
+- A `source_url` that is not a plain http(s) link (no credentials, no spaces, at most 500 characters) is replaced by a
+  fixed fallback link. Every other request field is ignored.
+- The output goes into `pay.callscript.script_for(mandate, advocate_reason)` unchanged: tests feed every template through it
+  and assert nothing is stripped. If you add a template, `tests/test_reasons.py` fails until it passes the call script's allowlist.
+```
+curl -s localhost:8787/v1/advocate/reason -d '{"rule_id":"fit.gpu_length","source_url":"https://example.com/listing"}'
+```
+Lane A also renders the same table in code (`call_reason` in `agents/advocate/checks.py`); keep the two tables in step.
