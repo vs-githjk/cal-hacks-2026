@@ -32,7 +32,7 @@ def buyer(monkeypatch):
             Path, 'exists', lambda path: False if path.name == '.env' else exists(path)):
         module = importlib.import_module('buyer_agent')
     module.ROUND.clear()
-    module.STATE_DB = None
+    monkeypatch.setattr(module, 'STATE_DB', None)
     yield module
     module.ROUND.clear()
 
@@ -59,13 +59,13 @@ def test_startup_status_is_emitted_only_after_successful_recovery(buyer, monkeyp
     monkeypatch.setattr(buyer, 'recover_buyer_state', lambda: 0)
     for args, mailbox in (({'endpoint': ['http://localhost:8001/submit']}, False),
                           ({'mailbox': True}, True)):
-        buyer._AGENT_ARGS = args
+        monkeypatch.setattr(buyer, '_AGENT_ARGS', args)
         ctx = Context()
         asyncio.run(buyer.buyer_startup(ctx))
         assert status_logs(ctx, 'AGENT_STATUS') == [
             status.status_line('buyer', 'buyer', ADDRESS, mailbox=mailbox)]
 
-    buyer._AGENT_ARGS = {'endpoint': ['http://localhost:8001/submit']}
+    monkeypatch.setattr(buyer, '_AGENT_ARGS', {'endpoint': ['http://localhost:8001/submit']})
     monkeypatch.setattr(buyer, 'recover_buyer_state', lambda: (_ for _ in ()).throw(ValueError('private')))
     failed = Context()
     with pytest.raises(ValueError):
@@ -169,7 +169,7 @@ def test_bound_payment_request_and_successful_rejection_use_fixed_labels(buyer, 
     asyncio.run(buyer.on_request_payment(ctx, sender, request))
 
     assert any(isinstance(message, buyer.RejectPayment) for _, message in ctx.sent)
-    assert status.msg_line('buyer', 'seller_1', 'payment_request') in status_logs(ctx)
+    assert status.msg_line('buyer', 'seller_1', 'payment_request') not in status_logs(ctx)
     assert status.msg_line('buyer', 'seller_1', 'payment_reject') in status_logs(ctx)
 
 
@@ -204,16 +204,18 @@ def test_payment_commit_is_logged_after_successful_commit_send(buyer, monkeypatc
     monkeypatch.setitem(sys.modules, 'shield.receipt', receipt_module)
     from uagents_core.contrib.protocols.payment import CommitPayment, Funds
 
-    buyer.NONCE_STORE = object()
-    buyer.MERCHANT_SIM = SimpleNamespace(store=buyer.NONCE_STORE, keys={'tap': 'key'}, receipt_keys={'receipt': 'key'})
-    buyer.TAP_PRIVATE_KEY = FakePrivateKey()
-    buyer.SHIELD_RECEIPT_KEYS = {'receipt': 'key'}
+    nonce_store = object()
+    monkeypatch.setattr(buyer, 'NONCE_STORE', nonce_store)
+    monkeypatch.setattr(buyer, 'MERCHANT_SIM', SimpleNamespace(
+        store=nonce_store, keys={'tap': 'key'}, receipt_keys={'receipt': 'key'}))
+    monkeypatch.setattr(buyer, 'TAP_PRIVATE_KEY', FakePrivateKey())
+    monkeypatch.setattr(buyer, 'SHIELD_RECEIPT_KEYS', {'receipt': 'key'})
     buyer.ROUND['transaction'] = {
         'phase': 'approved', 'mode': 'SIM', 'buyer_id': 'owner', 'deal_id': 'deal-1', 'goal_id': 'goal-1',
         'mandate': mandate, 'deal': {'payee': sender, 'owner_sender': 'owner', 'id': 'deal-1'},
         'order': {'id': 'deal-1', 'status': 'ordered'},
     }
-    buyer.STATE_DB = object()
+    monkeypatch.setattr(buyer, 'STATE_DB', object())
     monkeypatch.setattr(buyer, '_configured_market_owner_matches', lambda _owner: True)
     market = Mock()
     market.purchase_status.return_value = {
@@ -233,6 +235,7 @@ def test_payment_commit_is_logged_after_successful_commit_send(buyer, monkeypatc
     asyncio.run(buyer.on_request_payment(ctx, sender, request))
 
     assert status.msg_line('buyer', 'seller_1', 'payment_commit') in status_logs(ctx)
+    assert status.msg_line('buyer', 'seller_1', 'payment_request') in status_logs(ctx)
     assert any(isinstance(message, CommitPayment) for _, message in ctx.sent)
 
 
@@ -244,7 +247,8 @@ def test_verified_payment_complete_logs_after_market_settlement_and_state_write(
     mandate.update(status='approved', approval_id='approval-1')
     deal = {'id': 'deal-1', 'goal_id': 'goal-1', 'need_id': 'need-1', 'bid_id': 'bid-1',
             'amount': 582, 'payee': sender, 'owner_sender': 'owner'}
-    order = {'id': 'deal-1', 'need_id': 'need-1', 'bid_id': 'bid-1', 'amount': 582}
+    order = {'id': 'deal-1', 'need_id': 'need-1', 'bid_id': 'bid-1', 'amount': 582,
+             'status': 'charged', 'payment_ref': 'charge-1', 'approval_id': 'approval-1'}
     request = buyer.payment.payment_request(mandate, recipient=sender)
     body_hash = buyer.hashlib.sha256(request.model_dump_json().encode('utf-8')).hexdigest()
     message_id = 'req:' + buyer.hashlib.sha256(b'buyer-1\n' + request.model_dump_json().encode('utf-8')).hexdigest()
@@ -259,13 +263,14 @@ def test_verified_payment_complete_logs_after_market_settlement_and_state_write(
     transaction = {
         'phase': 'submitted', 'buyer_id': 'buyer-1', 'deal_id': 'deal-1', 'goal_id': 'goal-1',
         'need_id': 'need-1', 'bid_id': 'bid-1', 'mandate': mandate, 'deal': deal, 'order': order,
-        'voice_approval': {'result': 'approved', 'mandate_hash': mandate['hash'], 'mandate_id': mandate['id']},
+        'voice_approval': {'id': 'approval-1', 'result': 'approved', 'mandate_hash': mandate['hash'],
+                           'mandate_id': mandate['id']},
         'settlement': settlement,
         'settlement_result': {'status': 'charged', 'charge_id': 'charge-1', 'mandate_hash': mandate['hash'], 'origin': 'SIM'},
         'payment_ref': 'charge-1', 'mode': 'SIM',
     }
     buyer.ROUND['transaction'] = transaction
-    buyer.STATE_DB = object()
+    monkeypatch.setattr(buyer, 'STATE_DB', object())
     monkeypatch.setattr(buyer, '_configured_market_owner_matches', lambda _owner: True)
     monkeypatch.setattr(buyer, 'nonce_store', lambda: SimpleNamespace(get_payment_attempt=lambda _hash: attempt))
     monkeypatch.setattr(buyer.buyer_state, 'load_transaction', lambda *_args: transaction)

@@ -1093,7 +1093,6 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
         ctx.logger.info("payment request did not match the approved seller and deal")
         return
     seller_id = SELLER_ADDRS[sender]
-    ctx.logger.info(status.msg_line("buyer", seller_id, "payment_request"))
     if not _configured_market_owner_matches(tx.get("deal", {}).get("owner_sender")):
         await ctx.send(sender, RejectPayment(reason="buyer owner is not configured"))
         ctx.logger.info(status.msg_line("buyer", seller_id, "payment_reject"))
@@ -1142,6 +1141,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
         if now_ts >= market_expiry or now_ts >= local_expiry or market_expiry > local_expiry:
             raise PermissionError("mandate_expired")
         # Persist the submitted boundary before MerchantSim can consume the nonce or charge.
+        ctx.logger.info(status.msg_line("buyer", seller_id, "payment_request"))
         tx["phase"] = "submitted"
         buyer_state.save_transaction(state_db(), tx)
         from buyer.checkout import settle_offer
