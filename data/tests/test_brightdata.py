@@ -257,3 +257,9 @@ import pytest  # noqa: E402
 ])
 def test_price_accepts_only_a_number_or_one_plain_dollar_amount(raw, want):
     assert bd._price(raw) == want, raw
+
+
+# #237 L3: a huge JSON int, Unicode digits and a price that rounds to 0 are unreadable, never an error or $0
+@pytest.mark.parametrize("raw", [10 ** 400, "$１２９９", "١٢٩٩", 0.001, "0.001", "$0.004"])
+def test_price_refuses_overflow_unicode_digits_and_zero(raw):
+    assert bd._price(raw) is None, raw
