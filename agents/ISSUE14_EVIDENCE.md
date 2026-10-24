@@ -39,3 +39,17 @@ Automatic recovery PASS: after browser reload, the same conversation visibly sho
 - Failed-tool recovery message in ASI:One: PASS, 00:06 PDT October 24. Automatic retry after restoration: PASS, reviewed bids visibly delivered.
 - Fresh-session goal-to-reviewed-bids run: PASS, 00:05 PDT October 24. Checkout was not exercised.
 - PR: [#54](https://github.com/vs-githjk/cal-hacks-2026/pull/54), which closes issue #14.
+
+## Issue #72 dated baseline: three consecutive fresh mailbox runs
+
+Observed October 24, 2026 (PDT), with UTC timestamps recorded from the operator's live UI. These are conservative observed upper bounds from goal submission to final UI visibility, not exact network latency. Each run used a fresh ASI:One chat, a `CANCEL` cleanup between runs, and a six-profile public metadata snapshot immediately before starting.
+
+| Run | Fresh chat | Goal sent (UTC) | Final visible (UTC) | Observed upper bound | Result |
+|---|---|---:|---:|---:|---|
+| 1 | [chat 35b9aa56](https://asi1.ai/chat/35b9aa56-c5a2-49b8-a5b4-8201f2fad2a1) | 09:18:29.714 | 09:19:00.849 | 31.135s | `need-8dbe9c3d`; three bids; Frankie veto/source; Sally $549.99 caution; Byte Bros $581.99 recommended, bid 3 |
+| 2 | [chat 97c2fb4a](https://asi1.ai/chat/97c2fb4a-e720-410e-b57c-8a3617cd25fd) | 09:21:11.432 | 09:21:47.005 | 35.573s | `need-ea5dd9b0`; same three-bid/veto/recommendation pattern |
+| 3 | [chat d682cd0c](https://asi1.ai/chat/d682cd0c-080d-4bc5-9200-5f8871dbb427) | 09:22:29.203 | 09:23:10.587 | 41.384s | `need-ce666c37`; same three-bid/veto/recommendation pattern |
+
+Frankie's cited veto source in all three runs was `https://example.com/sim/frankie/rtx-4070-super-12gb-deal`. The three runs are consecutive under-90-second UI observations without reload. The evidence retains the earlier stale-round prompt and the separate clean-chat attempt whose final was absent through 102.847 seconds and appeared only after a later reload at roughly 300 seconds; that earlier delay was not consistently reproduced and no code-fix claim follows from these observations.
+
+The six public metadata snapshots preceding these runs showed all six configured profiles active, with HTTP 200, Agent Chat Protocol 0.3.0, and both required badges. These snapshots establish public profile metadata only. The observed runtime was the existing `9680912` checkout; this section does not prove the new round-trace/CRS integration, checkout, approval, Stripe, or payment path. The final cleanup `CANCEL` was sent at 09:23:34.333 UTC, with visible acknowledgement still pending when this evidence was recorded.
