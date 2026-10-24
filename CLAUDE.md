@@ -1,4 +1,4 @@
-# Bidding Royale: rules for every coding agent in this repo
+# Tech Bazaar: rules for every coding agent in this repo
 
 Read first: docs/kickoff/00-shared.md (product, invariants, contracts, red-team amendments), then your lane prompt in docs/kickoff/ (A-agents, B-market-floor, C-data-truth, D-pay-trust).
 

@@ -1,45 +1,68 @@
-# Lane B: Market and screens (SpacetimeDB, Next.js, three.js, Cartesia voice UI)
-Paste 00-shared.md first, then this.
+# Lane B: Market and screens (Spacetime, Next.js, the Lot Wall, three.js)
 
-## PIVOT NOTE (Fri 21:00: restaurants to PC builders)
-**Vedant: your work on branch lane-b-market-floor carries over. Do not redo it.** Read it first: market/rules (sealing, floor, redaction, scoring, approval with idempotency, split-order optimizer, outcomes), the SpacetimeDB hello module (market/spacetimedb, scripts hello.mjs and hello.py), and your contract proposals (SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord, FloorEvent v2, Bid.lines[].offered_spec, OrderPlan.advocate).
-**What carries over unchanged:** sealing and anti-snipe, the floor price, redaction, approval-before-payment with idempotency (the voice yes from the Cartesia call is one more way to get an approval_id), the optimizer (subset enumeration plus minimum repair; free-shipping thresholds and shipping fees now do the work supplier minimums did), the two savings numbers kept separate, the SpacetimeDB module and its Node and Python call path, FloorEvent v2.
-**What to rename or adjust (domain terms only):**
-- types.ts: NeedItem `grade` becomes `condition` (new, open-box, refurbished, used) and `pack_size` becomes `variant` (retail or OEM, cooler included or not, model number); `unit` stays "each". SpecCard `grade`, `pack_size`, `case_count` follow (drop case_count or set it to 1). Add optional `attrs` (socket, chipset, ram_type, tdp_w, length_mm, height_mm, form_factor, connectors) so Lane C's fit checker can read SpecCards. `supplier_id` can stay in code; say "seller" in UI and docs.
-- scoring.ts: `checkLineSpec` keeps its logic, and also disqualifies a line whose offered condition is not allowed (an open-box part against a "new" need). Add `offered_condition` beside `offered_spec` (backward compatible).
-- SupplierTerms: keep `delivery_fee` and `free_delivery_over` (call them shipping in UI); `min_order_value` is usually 0 for PC sellers (keep the field); `cutoff_time` and `delivery_days` become ship-by time and estimated delivery days; add `return_window_days`. Add sales tax as a labelled line in landed price only if Lane C supplies it (optional, do not block on it).
-- outcomes.ts: `recallsBlocked` text says "openFDA food enforcement"; change to CPSC. `BASELINE_ORDERING_MINUTES_PER_WEEK = 90` is a kitchen assumption: rename to a per-build research-time assumption and set its value from interviews, not from the old 90. `creditsCaptured` becomes returns and refunds captured. `hoursSaved` wording: "hours of research and comparison".
-- **`ourFee` with `FEE_RATE = 0.15` and `FEE_CAP_PER_MONTH = 299` is a restaurant-era pricing model and pricing is an OPEN decision (see 00-shared.md).** Keep the function, move both numbers to config, and stop showing the fee on the builder screen until Vidyut rules.
-- Test fixtures use Sysco, romaine, onions and produce names (optimizer.test.ts and others): swap them for neutral PC names (Seller A, Seller B, a CPU, a board, a PSU, a keyboard). Keep every test's logic; the property tests still hold.
-- contracts: log the rename in docs/CHANGES.md (Need and SpecCard fields above, UsageRecord and Forecast renamed to DemandRecord and TrendSignal, owned by Lane C).
-**First 3 things to do now:**
-1. Make the renames above in one small PR (types, scoring, outcomes, fixtures, contracts) with all tests still green; post the SHA on docs/BOARD.md.
-2. Add a PC optimizer test: Seller A is cheapest on the CPU and board but its free-shipping threshold is missed; moving the keyboard to Seller A costs a little more per line and saves the shipping fee. The toggle "cheapest per line" versus "optimizer" must show this.
-3. Spacetime go or no-go at Fri 23:00 as planned (Convex fallback); then wire the builder view (post a brief, watch bids land live) to the module.
+**Owner: Vedant.** Paste 00-shared.md first, then this. You own `market/` and `web/`.
 
-## LOSS REPORTS AND THE BATTLE VIEW (Fri 21:15, core loop in 00-shared)
-When a round closes, the market emits a LossReport per seller: won or lost, the gap to the winner, and the reason code (price, fit, condition, delivery, record, or advocate veto with its source). Propose a LossReport contract and log it in docs/CHANGES.md. The floor shows the battle (bids landing, the veto, the winner) and a seller "learning curve" (win rate and gap over rounds). Done-check: 3 rounds in a row show a seller agent closing the gap.
+## SETUP (do this first)
+1. Your branch is `lane-b-market-floor`. Clone and switch (if the branch does not exist yet, create it with `git checkout -b lane-b-market-floor`): `git clone https://github.com/vs-githjk/cal-hacks-2026 && cd cal-hacks-2026 && git checkout lane-b-market-floor && git pull origin main`
+2. Copy `.env.example` to `.env` and fill only the keys this lane needs: SPACETIMEDB_URI, CARTESIA_API_KEY, CARTESIA_AGENT_ID (call screen and later persona voices). Ask Vidyut for values; never paste a key in chat, a doc or a commit, and never commit `.env`.
+3. You own `market/` and `web/`. Touch other lanes' folders only through `contracts/` (log changes in `docs/CHANGES.md`).
+4. Read `docs/kickoff/00-shared.md`, then this file.
+5. Open a PR to main per finished item, small and often. Never add Co-Authored-By.
+6. Details live in `docs/`, `contracts/` and the hub page: https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU
+7. Vedant, your branch already has commits: run `git pull origin main` and resolve any conflicts before you start new work.
 
-## GOALS TO SAT 10:00 (TALKABLE PROGRESS: the second round of sponsor and judge feedback)
-1. By Fri 22:30: the rename PR (condition, variant, attrs, CPSC wording, fee as config, neutral fixtures) is merged with all market/rules tests green. Done-check: test run output pasted on the board, SHA posted.
-2. By Fri 23:00: Spacetime go or no-go made and posted; the hello module is extended with needs, bids and orders tables. Done-check: a Need posted from Python shows in the web shell.
-3. By Sat 03:00: the builder view shows live bids landing, the split plan with both toggles, and the advocate card. Done-check: two laptops show the same auction.
-4. By Sat 07:00: the 3D floor shows a Need, sealed bids, a rejected bid and an order, each animation tied to a market row (click a character to see its row). Done-check: unplug the market and the floor goes still.
-5. By Sat 09:00: voice approval screen (in-browser call fallback first) and the seller dashboard with a demand trend panel fed by Lane C's series, labelled SIM where it is. Done-check: a screen recording of the call screen and the dashboard.
-6. By Sat 10:00: every screen has its LIVE, MIRROR or SIM badge and the footer RunMode. Done-check: Vidyut walks the screens and finds no unlabelled number.
+## Mission
 
-You own market/ and web/. Goal: one live shared market everyone sees, and the 3D floor as a view on top of it.
+One live shared market everyone sees, and the screens that make the five beats visible: the goal card and notification feed, the sealed round with origin badges, the review card with the word-pair code, and the seller's loss report. The Lot Wall is a later item, built only once the core loop works. Planned load: 11.0 h to Sat 10:00 (the tightest lane), 14.0 h to Sun 03:00 (25.0 h total, an equal share). Use the slip ladder early; do not wait for the gate. If you cannot finish an item, pass it back in the team chat and it moves to whoever is ahead.
 
-Tasks in order:
-1. SpacetimeDB module: tables for needs, bids, claims, verdicts, orders, personas, owned parts (read-only for you; Lane A owns the logic), voice approvals; reducers post_need, place_bid, counter, close_auction, attach_verdict, attach_claim_check, record_approval. Auction rule: sealed reverse auction with a deadline; best bid by landed price minus perks value, ties to verified claims, wrong spec or condition disqualifies. Unit-tested (done on your branch). If the module blocks you past Sat 00:00, fall back to Convex and tell the board.
-2. Builder web view: post a build brief, watch bids land live, see advocate warnings, see the split plan, approve (mirrors the ASI:One flow for the big screen). Leads with outcomes: hours of research saved, dollars saved, each with "how we computed this". Trust visible: signature verified, claims checked, seller stability verified, seller record.
-3. Voice approval UI (new, with Lane D): the call screen shows the deal being read, the live transcript, the yes or no answer and the recorded approval before payment. Fallback: in-browser voice call, labelled as such.
-4. Seller dashboard: orders won and lost with the reason (price, condition, shipping fee), demand and trend intelligence (anonymized aggregates with a minimum group size, categories and brands up or down, price points where demand went unfilled; fed by Lane C's trend series), wind-tunnel results, ledger summary, "cost of this auction".
-5. 3D Bidding Royale floor (three.js or react-three-fiber), built from the start: a market square with stalls; each seller agent is a rigged low-poly character (free CC0 characters with idle, haggle, cheer, sulk animations), speech bubbles show live bids, the advocate stands by the builder, the Shield guard drags blocked agents out. Every motion is driven by market state only (FloorEvent v2 traces to a row). About 8 characters on screen; 2D sprites are an emergency fallback only.
-6. Persona voices: each persona speaks its bid with its own Cartesia voice (cache audio per bid; mute toggle). Tier 1; the approval call is Tier 0 and shares the Cartesia setup.
-7. Receiving screen: photo of each delivered box, the spec it is checked against, accept or reject, and the seller's quality record updating live.
-8. Optional hardware terminal: camera scan plus a touch screen showing bids; fallback is a webcam scan in the browser.
-Done when: two laptops see the same auction and the same floor in real time, the floor never shows anything the market did not record, and the two judge toggles ("cheapest per line" versus "optimizer", "advocate off") work.
+## Vedant's existing lane-b work carries over
 
-## Decided Fri 20:30 (still holds)
-- Build the 3D floor from the start (Vidyut's call), drawn only from market state; 2D sprites only as an emergency fallback. The builder view, receiving screen and the two judge toggles still ship in Tier 0 or 1.
+Do not redo it. Branch `lane-b-market-floor`: market/rules (sealing and anti-snipe, floor, redaction, scoring, approval with idempotency, split-order optimizer, outcomes), the SpacetimeDB hello module and its Node and Python call path, your proposals SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord, FloorEvent v2. Finish the rename PR in the first hour inside b1: NeedItem `grade` becomes `condition` (new, open-box, refurbished, used), `pack_size` becomes `variant`; SpecCard gains `attrs` (socket, chipset, ram_type, tdp_w, length_mm, height_mm, form_factor, connectors) so Anoop's fit checker can read it; `recallsBlocked` says CPSC; fee numbers move to config (never hard-coded); fixtures use neutral names (Seller A, a CPU, a PSU); all tests stay green. Add `origin` (LIVE, MIRROR, SIM) and `source` to Bid and Claim. Post the SHA on docs/BOARD.md.
+
+## BUILD ORDER TO SAT 10:00 (11.0 h; start Fri 21:45)
+
+1. **b1 Spacetime reducers. 3.0 h, done by Sat 00:45.** Sealed round, floor enforced in the reducer, flat fee (never feeds ranking), approval-before-payment with idempotency on the mandate hash (the invariant: no payment row without an approval row for the same hash, tested in CI; Vidyut reviews). Includes the rename PR and the Fri 23:00 go or no-go (Convex fallback, post it). Done-check: a Need posted from Python shows in the web shell; the CI invariant test passes; the go or no-go line is on the board.
+2. **b2 Allowance ladder reducer (moved from D). 1.0 h, done by Sat 01:45.** Allowance starts at $0, so the first buy always calls; each clean receiving check raises it. Inside the allowance, small buys auto-approve with a receipt. For IT buyers, each seat has an allowance and the requester can never be the approver. Done-check: reducer tests: first buy requires a call; one clean receiving event raises the allowance; requester cannot approve.
+3. **b3 Goal state machine, reservation ledger, throttle, quote TTL. 2.0 h, done by Sat 03:45.** States ACTIVE, HUNTING, HOLD_FOR_CALL, DONE, EXPIRED, PAUSED; deadline passed means EXPIRED plus a notification. Budget reservation ledger (reserve before a deal is offered; release on EXPIRED or refund). Feed throttle: one event per class per 10 minutes plus a daily digest; only HOLD_FOR_CALL pushes. Call cooldown: 1 per goal per 30 min, 3 attempts per deal, then PAUSED; quiet hours 22:00 to 08:00. Quote TTL 10 min. Done-check: tests for each rule; two goals cannot reserve the same money; an expired goal notifies.
+4. **b4 LossReport with banding. 0.5 h, done by Sat 04:15.** Gap in bands (within 5, 10, 20 percent), reason as a category plus cited source, never thresholds or model details; rate limited per seller. Done-check: a closed round emits a LossReport per losing seller, with no raw numbers in it.
+5. **b5 Buyer screen. 2.0 h, done by Sat 06:15.** Goal card, notification feed, the review card with the word-pair code display and the written rule "goal cap is the ceiling to hunt under; allowance is what it may spend without a call", plus the card line "we never ask for anything but the code on this screen". A labelled typed-code fallback bound to the same mandate. Origin badges and the fit and veto reasons from Abhinav's AdvocateCard. Done-check: two laptops show the same round; a typed code approves the same mandate the call would.
+6. **b6 Seller screen. 1.0 h, done by Sat 07:15.** Every seller shown is a Fetch.ai uAgent (fully agentic). Pooled lot placeholder (SKU, quantity, ceiling band, deadline only), real requests, the loss report with strategy diff and Claude's "what to change". Done-check: a losing seller sees its banded gap and reason with the source link.
+7. **b7 Minimal 3D floor mirroring rows. 1.5 h, done by Sat 08:45.** Every motion traces to a market row (FloorEvent v2); click a character to see its row. About 8 characters. Done-check: unplug the market and the floor goes still.
+8. **08:45 to 10:00 (slack):** every screen has its LIVE, MIRROR or SIM badge and the footer RunMode; Vidyut walks the screens and finds no unlabelled number.
+
+## THEN TO SUN 03:00 (14.0 h; clock times are targets)
+
+Order: the five beats and Hyphenate first, then the Lot Wall and the extras once the core loop works (demo path green, Sat 14:00). The Lot Wall is never hardcoded.
+
+1. **b12 Fold in feedback, polish and demo path. 3.0 h, Sat 10:00 to 12:30 and Sat 14:30 to 15:00.** Fold in the Sat 10:00 sponsor and judge feedback, run the five-beat path on the deployed build (Vidyut checks the Sat 14:00 gate with what exists), screens at stage size.
+2. **b10 Hyphenate: PO, credit memo, audit page. 2.0 h, Sat 12:30 to 14:30 (gate Sat 16:00).** PO number field on the goal and the deal; the requester cannot approve (already in b2); a credit memo row written when the receiving check fails; the audit page is a filtered view of the event table showing for each call the data, rule or person behind it. Uses Anoop's `three_way_match` (c14, done 12:30). If the demo path is red at 14:00, stop and ship the slip form. Done-check: a seeded IT order shows PO, a failed match writes a credit memo, the audit page lists each step.
+3. **b13 Lot reducer with quantity tiers. 1.5 h, after Sat 14:00 green, Sat 15:00 to 16:30.** Pools by exact SKU and condition. Sellers bid a price ladder by quantity (1, 10, 25, 50). The lot closes at its deadline at the highest tier reached. Mandate binds the tier price reached and a max price; an unfilled pool falls to the lower tier and, if above the ceiling, to a call. Output shape is aggregate only (SKU, quantity, ceiling band, deadline), never a buyer name or goal text. Done-check: a test where requests pool and a bid slides to the next tier; a test that no buyer field appears in the seller-bound shape.
+4. **b8 Lot Wall view and split toggle (a later item). 3.0 h, Sat 16:30 to 19:30 (gate Sat 22:00).** Left Joe's universe (one card), right the wall of bricks (Joe's gold REAL, the rest grey SIM), the vertical price ladder with sealed bids sliding down tiers, each with its origin badge; a key folds the wall to one gold brick. Drawn from the lot reducer's rows and Anoop's wind-tunnel builders (SIM), never hand-typed. Stage line: "This is one real order, Joe's. When many orders pool, this is what a seller sees. One or two bids here are real, the rest are labelled simulated." Done-check: the wall steps through the tiers on live lot state; the badge counts match the rows.
+5. **b9 3D floor extras. 2.5 h, after Sat 14:00 only, Sat 19:30 to 22:00 (hard stop Sat 22:00).** Slip form: 2D row mirror.
+6. **b11 Persona voices. 2.0 h, after Sat 14:00 only, Sat 22:00 to 24:00.** Each persona speaks its bid with its own Cartesia voice, audio cached per bid, mute toggle. Slip form: text bubbles.
+7. Rolling to Sun 03:00: fixes from rehearsals.
+
+Coming later, or only if time remains after the agentic path: a real non-agent seller side. It is not in your list.
+
+## Slip ladder minimum forms (your items)
+
+- Lot Wall (Sat 22:00): a plain lot table with the tier ladder, read live from the lot reducer, no wall animation. Never a hardcoded picture.
+- Hyphenate (Sat 16:00): PO, three-way match and audit page on seeded data, labelled SIM.
+- 3D floor extras and persona voices (Sat 22:00): 2D row mirror plus text bubbles.
+
+## What you get and hand over
+
+- **From A (Abhinav):** Need and Goal writes, bids with origin, AdvocateCard JSON, goal events, strategy diffs and "what to change" lines, the CRS band for the greyed-out seller.
+- **From C (Anoop):** SpecCards, mirror snapshot ids, wind-tunnel builders for the wall, scoreboard queries, `three_way_match`.
+- **From D (Vidyut):** the Mandate shape and hash, the code words, VoiceApproval rows, the code display copy, Shield verdicts to show quarantine.
+- **To A:** reducers' tables and reducers (rounds, goals, lots), the feed API.
+- **To C:** FloorEvent rows, lot state, the scoreboard feed.
+- **To D:** the reducer invariant to review; the review card where the code appears; the call screen.
+
+## Sponsor hard requirements you own
+
+Spacetime (the portal's "AI systems coordinating in a persistent world state": every agent and screen shares one world; the floor and scoreboard subscribe to it; README says the Python bridge is the single point of failure and what the Convex fallback is). Hyphenate's PO, audit page and credit memo. The Cartesia call screen and review card (with Vidyut's core). The LIVE, MIRROR and SIM badges on every screen.
+
+## Sun 03:00 to 09:00
+
+Two hours on call for fixes, then sleep in shift. Anoop runs integration; take his merge order.

@@ -1,4 +1,4 @@
-# Bidding Royale architecture
+# Tech Bazaar architecture
 
 This is the design we are building at Cal Hacks 13.0. What is built so far is tracked in the README's [Status](../README.md#status) table; what is real versus simulated is in [REAL_VS_SIMULATED.md](REAL_VS_SIMULATED.md).
 
