@@ -100,6 +100,11 @@ def apply_loss(db: sqlite3.Connection, report: dict, seller_id: str) -> dict | N
 
         strategy = load_strategy(db, seller_id)
         updated, diff = update_strategy(strategy, report)
+        if (report["reason"] == "price"
+                and updated.get("price_step", 0.0) < strategy.get("price_step", 0.0)):
+            # A smaller later loss must not reverse an already learned price reduction.
+            updated = dict(strategy)
+            diff = {}
         updated = _strategy(json.dumps(updated, allow_nan=False))
         explanation = what_to_change(report, diff)
         db.execute("""INSERT INTO seller_learning_strategy (seller_id, strategy_json) VALUES (?, ?)
