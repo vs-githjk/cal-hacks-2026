@@ -40,6 +40,11 @@ COMPONENTS = ("@method", "@authority", "@path", "@query", "content-digest", "man
 MAX_SIGNATURE_TTL_SECONDS = 300
 DEFAULT_TTL_SECONDS = 60
 CLOCK_SKEW_SECONDS = 30
+ADMISSION_TAG = "techbazaar-seller-admission-v1"
+ADMISSION_COMPONENTS = ("@method", "@authority", "@path", "@query", "content-digest",
+                        "agent-address", "admission-audience")
+ADMISSION_NONCE_NAMESPACE = "seller-admission"
+MAX_ADMISSION_BODY_BYTES = 64 * 1024
 
 
 class TapKeyError(Exception):
@@ -201,6 +206,7 @@ _INPUT_RE = re.compile(r'(?P<label>[a-z0-9]+)=\((?P<inner>[^)]*)\)(?P<params>(?:
 _PARAM_RE = re.compile(r';([a-z]+)=(\d+|"[A-Za-z0-9_\-=.:+/]*")')
 _SIG_RE = re.compile(r'(?P<label>[a-z0-9]+)=:(?P<b64>[A-Za-z0-9+/]*={0,2}):')
 _DIGEST_RE = re.compile(r'sha-256=:(?P<b64>[A-Za-z0-9+/]*={0,2}):')
+_HEADER_NAME_RE = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]{1,128}\Z")
 
 
 def _parse_input(value: str):
@@ -317,4 +323,192 @@ def verify_request(
 
     if not store.consume(NS_TAP, f"{params['keyid']}:{params['nonce']}"):
         return _no("replayed_nonce", "this signed request was already used")
+    return _ok()
+
+
+def _admission_url_values(method: str, url: str, content_digest: str,
+                          agent_address: str, audience: str) -> dict[str, str]:
+    if not isinstance(method, str) or method.upper() != "POST":
+        raise ValueError("admission method must be POST")
+    if not isinstance(url, str):
+        raise ValueError("admission URL must be a string")
+    if (not url or len(url) > 8192 or any(char.isspace() or ord(char) < 0x20 or ord(char) == 0x7f
+                                           for char in url)):
+        raise ValueError("invalid admission URL")
+    split = urlsplit(url)
+    if (split.scheme not in ("http", "https") or not split.hostname or split.username is not None
+            or split.password is not None or split.fragment or split.netloc.endswith(":")
+            or any(char.isspace() for char in url)):
+        raise ValueError("invalid admission URL")
+    _ = split.port
+    values = _component_values(method, url, content_digest, "")
+    values.pop("mandate-hash")
+    values["agent-address"] = agent_address
+    values["admission-audience"] = audience
+    return values
+
+
+def _admission_header_value(value: str, limit: int) -> bool:
+    return len(value) <= limit and value.isascii() and all(ord(char) >= 0x20 and ord(char) != 0x7f
+                                                           for char in value)
+
+
+def _admission_params_string(created: int, expires: int, keyid: str, nonce: str) -> str:
+    inner = " ".join(f'"{component}"' for component in ADMISSION_COMPONENTS)
+    return (f'({inner});created={created};expires={expires};keyid="{keyid}";alg="{ALG}";'
+            f'nonce="{nonce}";tag="{ADMISSION_TAG}"')
+
+
+def sign_agent_request(
+    *,
+    method: str,
+    url: str,
+    body: bytes,
+    agent_address: str,
+    audience: str,
+    private_key: Ed25519PrivateKey,
+    now: Optional[datetime] = None,
+    ttl_seconds: int = DEFAULT_TTL_SECONDS,
+    nonce: Optional[str] = None,
+) -> dict[str, str]:
+    """Sign an agent-admission request; this fixed profile carries no payment fields or mandate."""
+    if (isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int)
+            or not 0 < ttl_seconds <= MAX_SIGNATURE_TTL_SECONDS):
+        raise ValueError(f"ttl_seconds must be 1..{MAX_SIGNATURE_TTL_SECONDS}")
+    if not isinstance(body, bytes) or not body or len(body) > MAX_ADMISSION_BODY_BYTES:
+        raise ValueError("admission body must be non-empty bytes within the size limit")
+    if (not isinstance(agent_address, str) or not agent_address or len(agent_address) > 256
+            or not _admission_header_value(agent_address, 256) or any(char.isspace() for char in agent_address)
+            or not isinstance(audience, str) or not audience or len(audience) > 2048
+            or not _admission_header_value(audience, 2048) or any(char.isspace() for char in audience)):
+        raise ValueError("agent address and audience are required")
+    if not isinstance(private_key, Ed25519PrivateKey):
+        raise ValueError("admission signing key must be Ed25519")
+    nonce = nonce or secrets.token_urlsafe(16)
+    if not isinstance(nonce, str) or not re.fullmatch(r"[A-Za-z0-9_\-=.:+/]{1,256}", nonce):
+        raise ValueError("invalid admission nonce")
+    created = int((now or datetime.now().astimezone()).timestamp())
+    expires = created + ttl_seconds
+    digest = _content_digest(body)
+    params = _admission_params_string(created, expires, key_id(private_key.public_key()), nonce)
+    values = _admission_url_values(method, url, digest, agent_address, audience)
+    signature = base64.b64encode(private_key.sign(_signature_base(ADMISSION_COMPONENTS, values, params))).decode()
+    return {
+        "Content-Digest": digest,
+        "Agent-Address": agent_address,
+        "Admission-Audience": audience,
+        "Signature-Input": f"{LABEL}={params}",
+        "Signature": f"{LABEL}=:{signature}:",
+    }
+
+
+def verify_agent_request(
+    *,
+    method: str,
+    url: str,
+    headers: Mapping[str, str],
+    body: bytes,
+    keys: Mapping[str, Ed25519PublicKey],
+    store: NonceStore,
+    actual_sender: str,
+    expected_audience: str,
+    now: Optional[datetime] = None,
+) -> Verdict:
+    """Verify the purpose-bound seller-admission profile without mandate or payment semantics."""
+    if (not isinstance(headers, Mapping) or not isinstance(body, bytes) or not body
+            or len(body) > MAX_ADMISSION_BODY_BYTES):
+        return _no("bad_request", "headers must be a mapping and body bytes")
+    if len(headers) > 64:
+        return _no("bad_header", "too many request headers")
+    h: dict[str, str] = {}
+    for name, value in headers.items():
+        if (not isinstance(name, str) or not isinstance(value, str) or not name.isascii()
+                or not _HEADER_NAME_RE.fullmatch(name)
+                or not _admission_header_value(value, 8192) or name.lower() in h):
+            return _no("duplicate_or_bad_header", "headers must have unique case-insensitive string names")
+        h[name.lower()] = value
+    if "mandate-hash" in h:
+        return _no("wrong_purpose", "admission requests do not carry Mandate-Hash")
+    for name in ("signature", "signature-input", "content-digest", "agent-address", "admission-audience"):
+        if not isinstance(h.get(name), str) or not h[name]:
+            return _no("missing_header", name)
+    if (not _admission_header_value(h["content-digest"], 128)
+            or not _admission_header_value(h["agent-address"], 256)
+            or not _admission_header_value(h["admission-audience"], 2048)
+            or not _admission_header_value(h["signature-input"], 4096)
+            or not _admission_header_value(h["signature"], 2048)):
+        return _no("bad_signature_input", "signature headers are too large")
+    if (not isinstance(actual_sender, str) or not actual_sender or len(actual_sender) > 256
+            or any(char.isspace() for char in actual_sender)
+            or not isinstance(expected_audience, str) or not expected_audience or len(expected_audience) > 2048
+            or any(char.isspace() for char in expected_audience)):
+        return _no("bad_binding", "actual sender and expected audience are required")
+    if h["agent-address"] != actual_sender:
+        return _no("sender_mismatch", "signed agent address does not match actual sender")
+    if h["admission-audience"] != expected_audience:
+        return _no("audience_mismatch", "signed audience does not match expected audience")
+    try:
+        values = _admission_url_values(method, url, h["content-digest"], h["agent-address"],
+                                       h["admission-audience"])
+    except (ValueError, TypeError, AttributeError):
+        return _no("bad_url", "invalid admission request URL or method")
+
+    try:
+        parsed = _parse_input(h["signature-input"])
+    except (ValueError, TypeError, OverflowError):
+        return _no("bad_signature_input", "cannot parse Signature-Input")
+    if parsed is None:
+        return _no("bad_signature_input", "cannot parse Signature-Input")
+    label, components, params, params_str = parsed
+    sig_m = _SIG_RE.fullmatch(h["signature"].strip())
+    if not sig_m or sig_m["label"] != label or label != LABEL:
+        return _no("bad_signature_input", "Signature label does not match Signature-Input")
+    if tuple(components) != ADMISSION_COMPONENTS:
+        return _no("bad_component_set", "signature must cover the exact admission component set")
+    if set(params) != {"created", "expires", "keyid", "alg", "nonce", "tag"}:
+        return _no("bad_signature_input", "signature parameters do not match the admission profile")
+    if params.get("alg") != ALG:
+        return _no("bad_alg", "alg must be ed25519")
+    if params.get("tag") != ADMISSION_TAG:
+        return _no("bad_tag", "signature purpose is not seller admission")
+    if any(not isinstance(params.get(p), int) for p in ("created", "expires")):
+        return _no("bad_signature_input", "created and expires are required")
+    for name in ("keyid", "nonce"):
+        if not isinstance(params.get(name), str) or not params[name]:
+            return _no("bad_signature_input", f"{name} is required")
+    if len(params["nonce"]) > 256:
+        return _no("bad_signature_input", "nonce is too long")
+    if not isinstance(keys, Mapping):
+        return _no("unknown_key", "admission keyring is unavailable")
+    public_key = keys.get(params["keyid"])
+    if not isinstance(public_key, Ed25519PublicKey):
+        return _no("unknown_key", "keyid is not pinned in the admission keyring")
+
+    try:
+        now_ts = int((now or datetime.now().astimezone()).timestamp())
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        return _no("bad_time", "invalid verifier time")
+    created, expires = params["created"], params["expires"]
+    if expires - created > MAX_SIGNATURE_TTL_SECONDS or expires <= created:
+        return _no("ttl_too_long", "signature lifetime is out of range")
+    if created > now_ts + CLOCK_SKEW_SECONDS:
+        return _no("signature_not_yet_valid", "created is in the future")
+    if now_ts >= expires:
+        return _no("signature_expired", "signature is past expires")
+    try:
+        digest_matches = hmac.compare_digest(h["content-digest"], _content_digest(body))
+    except TypeError:
+        return _no("bad_digest", "Content-Digest is malformed")
+    if not digest_matches:
+        return _no("digest_mismatch", "body does not match Content-Digest")
+    try:
+        public_key.verify(base64.b64decode(sig_m["b64"], validate=True),
+                          _signature_base(components, values, params_str))
+    except (InvalidSignature, binascii.Error, ValueError, TypeError):
+        return _no("bad_signature", "signature does not verify")
+    try:
+        if not store.consume(ADMISSION_NONCE_NAMESPACE, f"{params['keyid']}:{params['nonce']}"):
+            return _no("replayed_nonce", "this admission request was already used")
+    except Exception:
+        return _no("replay_store_error", "admission replay protection is unavailable")
     return _ok()
