@@ -10,7 +10,8 @@ import re
 from shield.rules.base import BLOCK, Rule, rx, seller_side
 
 _HONEST_CODE = rx(r"\b(?:error|fault|post|boot|beep|bios|qr|bar|promo|promotional|coupon|discount|tracking|zip|postal|area|"
-                  r"product|model|serial|part|sku|order|reference|confirmation\s+number|color|colour|source|access\s+point)\s+"
+                  r"product|model|serial|part|sku|order|reference|confirmation\s+number|color|colour|source|access\s+point"
+                  r"|delivery|pickup|pick-?up|locker|license|licence|activation|download|install(?:ation)?)\s+"
                   r"(?:codes?|numbers?|words?)\b")
 _NOUN = rx(r"\b(?:words?|codes?|phrase|passphrase|pass\s+phrase|pair|digits|numbers|letters|pin)\b")
 _DEVICE = r"(?:screen|display|device|phone|tablet|app|browser|monitor|laptop|computer)"
@@ -45,7 +46,8 @@ _CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|wor
            r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
 # A hardware pairing sentence ("enter the PIN on your phone to pair the headset") is the buyer typing a code into
 # their own device. It is skipped only when it names no approval credential and nothing sends the code to the seller.
-_HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
+_HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b"
+               r"|\b(?:courier|driver|carrier|parcel|package|locker)s?\b")   # a delivery code shown to the courier
 _TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
                 r"|give|what|whats|relay|whisper|aloud|include|list|write|form|notes?|comments?|portal|checkout|gift|listing"
                 r"|field|website|site|cart|account|seller'?s?|box|below|above|review|feedback|reply|instructions|q&a)\b"

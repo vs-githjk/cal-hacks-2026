@@ -12,8 +12,11 @@ _OWNER = r"(?:(?:your|ur|yr|(?:the\s+)?buyer'?s?|(?:the\s+)?owner'?s?|your\s+own
 _PRIVATE = (r"(?:spending\s+(?:limit|cap)|spend(?:ing)?\s+limit|budget|allowance|price\s+(?:cap|ceiling|limit)|max(?:imum)?"
             r"(?:\s+(?:price|budget|spend|bid|offer))?|(?:spending\s+)?cap|ceiling|limit|(?:home|street|shipping|mailing)\s+address"
             r"|address|full\s+name|legal\s+name|name|date\s+of\s+birth|phone\s+number|mobile\s+number|email\s+address)")
+# A part's own limits are fit questions, not the buyer's money: "your max GPU length", "your PSU wattage limit"
+_SPEC = (r"(?:gpu|psu|cpu|case|cooler|radiator|fan|ram|memory|wattage|watts?|power|length|height|width|depth|clearance|size"
+         r"|tdp|mm|speed|resolution|refresh|temp\w*|load|draw|slot|card|board|motherboard|monitor)")
 PATTERNS = [
-    rx(r"\b" + _ASK + r"\b[^.!?\n]{0,50}?" + _OWNER + r"(?:\w+\s+){0,2}?" + _PRIVATE + r"\b"),
+    rx(r"\b" + _ASK + r"\b[^.!?\n]{0,50}?" + _OWNER + r"(?:(?!" + _SPEC + r"\b)\w+\s+){0,2}?" + _PRIVATE + r"\b(?!\s+" + _SPEC + r"\b)"),
     rx(r"\bhow\s+(?:much|high|far)\s+(?:can|will|would|could|do)\s+(?:you|the\s+buyer|your\s+owner|they)\s+"
        r"(?:spend|pay|afford|go)\b"),
     rx(r"\bhow\s+much\s+(?:has|have|did)\s+(?:the\s+buyer|your\s+owner|you|they)\s+(?:approve|approved|authori[sz]ed?|set)\b"),
