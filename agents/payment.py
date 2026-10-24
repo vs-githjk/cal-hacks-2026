@@ -120,7 +120,16 @@ def commit(req: RequestPayment, transaction: Mapping[str, Any],
         "mandate_hash": mandate["hash"], "deal_id": transaction["deal_id"], "buyer_id": transaction["buyer_id"],
         "amount_cents": _cents(mandate["amount"]), "currency": mandate["currency"], "payee": mandate["payee"],
         "idempotency_key": "mandate:" + mandate["hash"]}
-    if (not isinstance(settlement, Mapping) or set(settlement) != set(expected_settlement) | {"receipt_keyid"}
+    legacy_keys = set(expected_settlement) | {"receipt_keyid"}
+    mode_keys = legacy_keys | {"mode"}
+    if isinstance(settlement, Mapping):
+        settlement_keys = set(settlement)
+        mode_binding_valid = (settlement_keys == legacy_keys or
+                              (settlement_keys == mode_keys and settlement.get("mode") in ("SIM", "stripe_test")
+                               and settlement.get("mode") == transaction.get("mode")))
+    else:
+        mode_binding_valid = False
+    if (not mode_binding_valid
             or not isinstance(settlement.get("receipt_keyid"), str) or not settlement["receipt_keyid"]
             or settlement["receipt_keyid"] == "not-submitted"
             or any(settlement.get(key) != value for key, value in expected_settlement.items())):

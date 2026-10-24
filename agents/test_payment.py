@@ -55,6 +55,38 @@ def test_commit_requires_real_approved_transaction_and_paid_stripe_result(checko
     assert result.funds.amount == "79.99"
 
 
+@pytest.mark.parametrize("mode", ["SIM", "stripe_test"])
+def test_commit_accepts_settlement_mode_only_when_bound_to_transaction(checkout, mode):
+    tx, req = checkout
+    tx["mode"] = mode
+    tx["settlement"]["mode"] = mode
+    assert payment.commit(req, tx, now=NOW).transaction_id == "pi_test_123"
+
+
+@pytest.mark.parametrize("transaction_mode,settlement_mode", [
+    (None, None), ("LIVE", "LIVE"), ("SIM", "stripe_test"), ("stripe_test", "SIM"),
+])
+def test_commit_rejects_invalid_or_mismatched_settlement_mode(checkout, transaction_mode, settlement_mode):
+    tx, req = checkout
+    tx["mode"] = transaction_mode
+    tx["settlement"]["mode"] = settlement_mode
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
+
+
+def test_commit_accepts_exact_legacy_settlement_shape_without_mode(checkout):
+    tx, req = checkout
+    assert "mode" not in tx["settlement"]
+    assert payment.commit(req, tx, now=NOW).transaction_id == "pi_test_123"
+
+
+def test_commit_rejects_unrelated_settlement_fields(checkout):
+    tx, req = checkout
+    tx["settlement"]["untrusted"] = "extra"
+    with pytest.raises(PermissionError):
+        payment.commit(req, tx, now=NOW)
+
+
 def test_commit_accepts_stored_allowance_authorization_without_fabricating_voice(checkout):
     tx, req = checkout
     tx["voice_approval"] = None

@@ -138,6 +138,9 @@ def test_settle_offer_signs_and_submits_exact_bytes_and_binding(tx, mode):
     assert result["settlement_result"]["origin"] == "SIM"
     assert result["settlement"]["mode"] == mode
     assert format_settlement_result(result).startswith(f"{mode} payment confirmed")
+    tx.update(phase="submitted", settlement=result["settlement"],
+              settlement_result=result["settlement_result"], payment_ref=result["settlement_result"]["charge_id"])
+    assert commit_payment(req, tx, now=NOW).transaction_id == result["settlement_result"]["charge_id"]
     assert seen["body"] == body and seen["message_id"] == message_id and seen["buyer_id"] == "buyer-1"
     verdict = verify_request(method=seen["method"], url=seen["url"], headers=seen["headers"], body=body,
         keys=keyring(private.public_key()), store=NonceStore(), now=NOW,
