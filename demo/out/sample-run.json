@@ -1,18 +1,18 @@
 {
   "artifacts": {
     "allowance": {
-      "buyer_id": "tony-stark",
+      "buyer_id": "vidyut",
       "currency": "USD",
       "ladder_step": 1,
       "per_purchase_limit": 250.0,
       "period": "month",
       "period_limit": 500.0,
       "spent_this_period": 120.0,
-      "updated_at": "2026-10-24T06:02:42Z"
+      "updated_at": "2026-10-24T07:51:18Z"
     },
     "approval_attempts": [
       {
-        "at": "2026-10-24T06:02:46Z",
+        "at": "2026-10-24T07:51:22Z",
         "decision": {
           "approved": false,
           "final": false,
@@ -20,11 +20,11 @@
           "state": "awaiting_code"
         },
         "label": "wrong code",
-        "said": "copper marble approve",
+        "said": "marble harbor approve",
         "try": 1
       },
       {
-        "at": "2026-10-24T06:03:17Z",
+        "at": "2026-10-24T07:51:53Z",
         "decision": {
           "approved": false,
           "final": false,
@@ -36,7 +36,7 @@
         "try": 2
       },
       {
-        "at": "2026-10-24T06:03:48Z",
+        "at": "2026-10-24T07:52:24Z",
         "decision": {
           "approved": true,
           "final": true,
@@ -52,14 +52,14 @@
       "amount_read_back": 1249.99,
       "attempts": 3,
       "channel": "browser",
-      "code_expires_at": "2026-10-24T06:04:42Z",
-      "code_hash": "b74d48a186f9431e6c8aace30d30daa2c0ecaf4cfa2449859b5eb93538cc3a1d",
-      "code_issued_at": "2026-10-24T06:02:42Z",
-      "decided_at": "2026-10-24T06:03:48Z",
+      "code_expires_at": "2026-10-24T07:53:18Z",
+      "code_hash": "0ccb731cad645b6b9b06a5c40d26c6e7a3cc31def83d8fd0bf67eca99d73a1ca",
+      "code_issued_at": "2026-10-24T07:51:18Z",
+      "decided_at": "2026-10-24T07:52:24Z",
       "deny_reason": null,
-      "id": "apr_1d9b9361127683c3",
-      "mandate_hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-      "mandate_id": "mnd_37c1665096e240dc",
+      "id": "apr_5ea778e9a55e07dc",
+      "mandate_hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+      "mandate_id": "mnd_3c3002cde930a20d",
       "payee_read_back": "best-buy@pay.example.test",
       "recording_ref": null,
       "result": "approved"
@@ -68,9 +68,9 @@
       {
         "claims": [],
         "decision_trace": "Amazon.com (sells direct): unknown 1,299.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-amazon-direct",
+        "id": "bid-need-vidyut-5070ti-amazon-direct",
         "lines": [
           {
             "attrs": {
@@ -88,7 +88,7 @@
           }
         ],
         "mirror_snapshot_id": "amazon-20261024T0509Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -104,9 +104,9 @@
           "new per the listing"
         ],
         "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-best-buy",
+        "id": "bid-need-vidyut-5070ti-best-buy",
         "lines": [
           {
             "attrs": {
@@ -124,7 +124,7 @@
           }
         ],
         "mirror_snapshot_id": "bestbuy-20261024T0508Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -140,9 +140,9 @@
           "new per the listing"
         ],
         "decision_trace": "eBay seller of item ...263900 (handle not captured): new 1,489.00 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-ebay-263900",
+        "id": "bid-need-vidyut-5070ti-ebay-263900",
         "lines": [
           {
             "attrs": {
@@ -160,7 +160,7 @@
           }
         ],
         "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -176,9 +176,9 @@
           "new per the listing"
         ],
         "decision_trace": "eBay seller of item ...442526 (handle not captured): new 1,399.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-ebay-442526",
+        "id": "bid-need-vidyut-5070ti-ebay-442526",
         "lines": [
           {
             "attrs": {
@@ -196,7 +196,7 @@
           }
         ],
         "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -212,9 +212,9 @@
           "open-box per the listing"
         ],
         "decision_trace": "eBay seller of item ...824742 (handle not captured): open-box 1,239.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-ebay-824742",
+        "id": "bid-need-vidyut-5070ti-ebay-824742",
         "lines": [
           {
             "attrs": {
@@ -232,7 +232,7 @@
           }
         ],
         "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -246,9 +246,9 @@
       {
         "claims": [],
         "decision_trace": "Micro Center: unknown 1,199.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-micro-center",
+        "id": "bid-need-vidyut-5070ti-micro-center",
         "lines": [
           {
             "attrs": {
@@ -266,7 +266,7 @@
           }
         ],
         "mirror_snapshot_id": "microcenter-20261024T0509Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -284,9 +284,9 @@
           "30-day returns"
         ],
         "decision_trace": "Shady Sam's Deals (SIM): new 757.44 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-shady-sam",
+        "id": "bid-need-vidyut-5070ti-shady-sam",
         "lines": [
           {
             "attrs": {
@@ -305,7 +305,7 @@
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "SIM",
         "perks": [
           "free shipping",
@@ -322,9 +322,9 @@
           "New, retail box"
         ],
         "decision_trace": "Bargain Bin Hardware (SIM): new 1,199.00 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-bargain-bin",
+        "id": "bid-need-vidyut-5070ti-bargain-bin",
         "lines": [
           {
             "attrs": {
@@ -343,7 +343,7 @@
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "SIM",
         "perks": [
           "free shipping",
@@ -358,9 +358,9 @@
       {
         "claims": [],
         "decision_trace": "Lowball Direct (SIM): new 1,090.00 (rogue agent ignored its floor); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": false,
-        "id": "bid-need-tony-stark-5070ti-lowball",
+        "id": "bid-need-vidyut-5070ti-lowball",
         "lines": [
           {
             "attrs": {
@@ -379,7 +379,7 @@
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "SIM",
         "perks": [
           "free shipping",
@@ -396,9 +396,9 @@
           "New, retail box"
         ],
         "decision_trace": "Fair Price PC (SIM): new 1,289.00 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-fair-price-pc",
+        "id": "bid-need-vidyut-5070ti-fair-price-pc",
         "lines": [
           {
             "attrs": {
@@ -417,7 +417,7 @@
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "SIM",
         "perks": [
           "free shipping",
@@ -435,9 +435,9 @@
           "Open-box, retail box"
         ],
         "decision_trace": "Gadget Grove (SIM): new 1,315.27 (list less discount); open-box 1,247.02 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-gadget-grove",
+        "id": "bid-need-vidyut-5070ti-gadget-grove",
         "lines": [
           {
             "attrs": {
@@ -471,7 +471,7 @@
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "SIM",
         "perks": [
           "free shipping",
@@ -486,18 +486,18 @@
     ],
     "call_script": {
       "approved_line": "Approved. One payment of one thousand two hundred forty nine dollars and ninety nine cents, written 1,249.99 dollars, to best-buy@pay.example.test. Nothing else is authorized",
-      "ask_line": "Say the two word code from your screen, then say approve. Anything else cancels this deal",
-      "deal_line": "This call is about one deal: one thousand two hundred forty nine dollars and ninety nine cents, written 1,249.99 dollars, to best-buy@pay.example.test",
+      "ask_line": "Please read me the two words on your screen, then say approve. Anything else cancels this deal",
+      "deal_line": "One purchase, from the seller named on your screen, for one thousand two hundred forty nine dollars and ninety nine cents",
       "denied_line": "Not approved. Nothing was paid",
       "opening": "I will only ask for the code on your screen, never a card number",
       "stripped": [],
-      "why_answer": "The advocate vetoed the cheaper one under rule advocate.condition. The listing page shows a different condition than the seller claims. The source is 127.0.0.1, and the link is on your screen. Nothing is paid until you say the code and approve"
+      "why_answer": "The advocate rejected the cheaper offer. The listing page shows a different condition than the seller claims. The source link is on your screen. Nothing is paid until you say the code and approve"
     },
     "charge": {
       "amount_cents": 124999,
       "currency": "usd",
-      "id": "ch_sim_aa27d82369bb",
-      "idempotency_key": "mandate:aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
+      "id": "ch_sim_ce1f572c4f87",
+      "idempotency_key": "mandate:ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
       "mode": "SIM stub",
       "object": "charge",
       "payment_method": "pm_card_visa (Stripe test card, not sent)",
@@ -505,12 +505,12 @@
     },
     "claims": [
       {
-        "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+        "bid_id": "bid-need-vidyut-5070ti-best-buy",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-        "id": "claim-bid-need-tony-stark-5070ti-best-buy-1",
+        "id": "claim-bid-need-vidyut-5070ti-best-buy-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "MIRROR",
@@ -519,12 +519,12 @@
         "text": "new per the listing"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+        "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
-        "id": "claim-bid-need-tony-stark-5070ti-ebay-263900-1",
+        "id": "claim-bid-need-vidyut-5070ti-ebay-263900-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "MIRROR",
@@ -533,12 +533,12 @@
         "text": "new per the listing"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+        "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
-        "id": "claim-bid-need-tony-stark-5070ti-ebay-442526-1",
+        "id": "claim-bid-need-vidyut-5070ti-ebay-442526-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "MIRROR",
@@ -547,12 +547,12 @@
         "text": "new per the listing"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+        "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-        "id": "claim-bid-need-tony-stark-5070ti-ebay-824742-1",
+        "id": "claim-bid-need-vidyut-5070ti-ebay-824742-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "MIRROR",
@@ -561,26 +561,26 @@
         "text": "open-box per the listing"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+        "bid_id": "bid-need-vidyut-5070ti-shady-sam",
         "check": "false",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
         "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-        "id": "claim-bid-need-tony-stark-5070ti-shady-sam-1",
+        "id": "claim-bid-need-vidyut-5070ti-shady-sam-1",
         "kind": "spec",
         "method": "fetched page, page listing JSON, condition rule",
         "origin": "SIM",
-        "reason": "claim says new; differs from the listing at 2026-10-24T06:02:42+00:00: the page shows open-box",
+        "reason": "claim says new; differs from the listing at 2026-10-24T07:51:18+00:00: the page shows open-box",
         "source": "simulated",
         "text": "BRAND NEW, factory sealed"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+        "bid_id": "bid-need-vidyut-5070ti-shady-sam",
         "check": "false",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
         "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-        "id": "claim-bid-need-tony-stark-5070ti-shady-sam-2",
+        "id": "claim-bid-need-vidyut-5070ti-shady-sam-2",
         "kind": "price",
         "method": "fetched page, page listing JSON, was_price rule",
         "origin": "SIM",
@@ -589,12 +589,12 @@
         "text": "was $1,099"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+        "bid_id": "bid-need-vidyut-5070ti-shady-sam",
         "check": "verified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
         "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-        "id": "claim-bid-need-tony-stark-5070ti-shady-sam-3",
+        "id": "claim-bid-need-vidyut-5070ti-shady-sam-3",
         "kind": "returns",
         "method": "fetched page, page listing JSON, return_days rule",
         "origin": "SIM",
@@ -603,12 +603,12 @@
         "text": "30-day returns"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+        "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
-        "id": "claim-bid-need-tony-stark-5070ti-bargain-bin-1",
+        "id": "claim-bid-need-vidyut-5070ti-bargain-bin-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "SIM",
@@ -617,12 +617,12 @@
         "text": "New, retail box"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+        "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
-        "id": "claim-bid-need-tony-stark-5070ti-fair-price-pc-1",
+        "id": "claim-bid-need-vidyut-5070ti-fair-price-pc-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "SIM",
@@ -631,12 +631,12 @@
         "text": "New, retail box"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+        "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
-        "id": "claim-bid-need-tony-stark-5070ti-gadget-grove-1",
+        "id": "claim-bid-need-vidyut-5070ti-gadget-grove-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "SIM",
@@ -645,12 +645,12 @@
         "text": "New, retail box"
       },
       {
-        "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+        "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
         "check": "unverified",
-        "checked_at": "2026-10-24T06:02:42+00:00",
+        "checked_at": "2026-10-24T07:51:18+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
-        "id": "claim-bid-need-tony-stark-5070ti-gadget-grove-2",
+        "id": "claim-bid-need-vidyut-5070ti-gadget-grove-2",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
         "origin": "SIM",
@@ -660,11 +660,11 @@
       }
     ],
     "goal": {
-      "buyer_id": "tony-stark",
+      "buyer_id": "vidyut",
       "cap": 1300.0,
-      "created_at": "2026-10-24T06:02:42Z",
+      "created_at": "2026-10-24T07:51:18Z",
       "deadline": "2026-10-30T23:59:00Z",
-      "id": "goal-tony-stark-5070ti",
+      "id": "goal-vidyut-5070ti",
       "items": [
         {
           "allowed_conditions": [
@@ -694,7 +694,7 @@
     },
     "loss_reports": [
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-amazon-direct",
         "reason": "condition",
@@ -704,7 +704,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within20",
         "id": "lr-round-1-ebay-263900",
         "reason": "price",
@@ -714,7 +714,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within20",
         "id": "lr-round-1-ebay-442526",
         "reason": "price",
@@ -724,7 +724,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-micro-center",
         "reason": "condition",
@@ -734,7 +734,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-shady-sam",
         "reason": "advocate_veto",
@@ -744,7 +744,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-bargain-bin",
         "reason": "fit",
@@ -754,7 +754,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-fair-price-pc",
         "reason": "price",
@@ -764,7 +764,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-gadget-grove",
         "reason": "price",
@@ -774,7 +774,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-1-ebay-824742",
         "reason": "price",
@@ -784,7 +784,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within10",
         "id": "lr-round-2-amazon-direct",
         "reason": "condition",
@@ -794,7 +794,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "over20",
         "id": "lr-round-2-ebay-263900",
         "reason": "price",
@@ -804,7 +804,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within20",
         "id": "lr-round-2-ebay-442526",
         "reason": "price",
@@ -814,7 +814,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-2-micro-center",
         "reason": "condition",
@@ -824,7 +824,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-2-shady-sam",
         "reason": "advocate_veto",
@@ -834,7 +834,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-2-bargain-bin",
         "reason": "fit",
@@ -844,7 +844,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-2-best-buy",
         "reason": "price",
@@ -854,7 +854,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-2-fair-price-pc",
         "reason": "price",
@@ -864,7 +864,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "gap_band": "within5",
         "id": "lr-round-2-ebay-824742",
         "reason": "price",
@@ -876,35 +876,35 @@
     ],
     "mandate": {
       "amount": 1249.99,
-      "approval_id": "apr_1d9b9361127683c3",
-      "buyer_id": "tony-stark",
-      "created_at": "2026-10-24T06:02:42Z",
+      "approval_id": "apr_5ea778e9a55e07dc",
+      "buyer_id": "vidyut",
+      "created_at": "2026-10-24T07:51:18Z",
       "currency": "USD",
-      "deal_id": "deal-bid-need-tony-stark-5070ti-best-buy",
-      "expires_at": "2026-10-24T06:12:42Z",
-      "goal_id": "goal-tony-stark-5070ti",
-      "hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-      "id": "mnd_37c1665096e240dc",
-      "nonce": "4ea8dd85e10325796e0ad891779f91c1",
+      "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
+      "expires_at": "2026-10-24T08:01:18Z",
+      "goal_id": "goal-vidyut-5070ti",
+      "hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+      "id": "mnd_3c3002cde930a20d",
+      "nonce": "5ffc50e973afbba54fc40336726fad66",
       "origin": "MIRROR",
       "payee": "best-buy@pay.example.test",
       "status": "used",
-      "tap_signature": "sig1=:9GyVqFsv5zR7OLI4KTk97r/0DAtsprdtaowwFJaWRN7h8YJJiFDYBC2csyqoaDCAbEEAi7tMFzZYtpQdwKdsDQ==:",
+      "tap_signature": "sig1=:GMEp8ZLR/AcgSL/ryYGbSOW9HM9MNpHmsdJFbxTo7AJUbqHUe6zpDCdCd40gsEP+pUIyEObYm+rRgZXqNMCyCQ==:",
       "tier_price": null,
       "within_allowance": false
     },
     "mandate_at_approval": {
       "amount": 1249.99,
-      "approval_id": "apr_1d9b9361127683c3",
-      "buyer_id": "tony-stark",
-      "created_at": "2026-10-24T06:02:42Z",
+      "approval_id": "apr_5ea778e9a55e07dc",
+      "buyer_id": "vidyut",
+      "created_at": "2026-10-24T07:51:18Z",
       "currency": "USD",
-      "deal_id": "deal-bid-need-tony-stark-5070ti-best-buy",
-      "expires_at": "2026-10-24T06:12:42Z",
-      "goal_id": "goal-tony-stark-5070ti",
-      "hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-      "id": "mnd_37c1665096e240dc",
-      "nonce": "4ea8dd85e10325796e0ad891779f91c1",
+      "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
+      "expires_at": "2026-10-24T08:01:18Z",
+      "goal_id": "goal-vidyut-5070ti",
+      "hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+      "id": "mnd_3c3002cde930a20d",
+      "nonce": "5ffc50e973afbba54fc40336726fad66",
       "origin": "MIRROR",
       "payee": "best-buy@pay.example.test",
       "status": "approved",
@@ -914,10 +914,10 @@
     },
     "need": {
       "auction_window_s": 12,
-      "buyer_id": "tony-stark",
+      "buyer_id": "vidyut",
       "consent": true,
       "delivery_window": "by 2026-10-30T23:59:00Z",
-      "id": "need-tony-stark-5070ti",
+      "id": "need-vidyut-5070ti",
       "items": [
         {
           "allowed_conditions": [
@@ -942,7 +942,7 @@
           "pcie_16pin": 1,
           "wattage": 750
         },
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "condition": "unknown",
         "id": "owned-psu",
         "item_name": "750 W PSU",
@@ -957,7 +957,7 @@
           "modules": 2,
           "type": "DDR5"
         },
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "condition": "unknown",
         "id": "owned-ram",
         "item_name": "32 GB DDR5",
@@ -970,7 +970,7 @@
         "attrs": {
           "max_gpu_length_mm": 305
         },
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "condition": "unknown",
         "id": "owned-case",
         "item_name": "mid-tower case",
@@ -1259,15 +1259,15 @@
       }
     },
     "signatures": {
-      "body_sha256_in_digest": "sha-256=:ERipIfL4AwMzaxOhAzoNYk+rcX/gFMysRAfnaeFuCKY=:",
+      "body_sha256_in_digest": "sha-256=:SNllEGM6hHcgpuUlJaDnDIfXUvzZW8maDucxbh7wB3o=:",
       "headers": {
-        "Content-Digest": "sha-256=:ERipIfL4AwMzaxOhAzoNYk+rcX/gFMysRAfnaeFuCKY=:",
-        "Mandate-Hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-        "Signature": "sig1=:9GyVqFsv5zR7OLI4KTk97r/0DAtsprdtaowwFJaWRN7h8YJJiFDYBC2csyqoaDCAbEEAi7tMFzZYtpQdwKdsDQ==:",
-        "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792821830;expires=1792821890;keyid=\"pw_24hPKt_e463D1Ur9opZMB-Yd29Vq4RvucWf_KBtc\";alg=\"ed25519\";nonce=\"Y-9sGppQI_TcWfpwjJFSnQ\";tag=\"agent-browser-auth\""
+        "Content-Digest": "sha-256=:SNllEGM6hHcgpuUlJaDnDIfXUvzZW8maDucxbh7wB3o=:",
+        "Mandate-Hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+        "Signature": "sig1=:GMEp8ZLR/AcgSL/ryYGbSOW9HM9MNpHmsdJFbxTo7AJUbqHUe6zpDCdCd40gsEP+pUIyEObYm+rRgZXqNMCyCQ==:",
+        "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792828346;expires=1792828406;keyid=\"DVXy2nY8wHoO2rsHaLczVnHm3qqdNmHWZbdiKuErNs8\";alg=\"ed25519\";nonce=\"O_CG0-gN8jtAyp_-e3OrCQ\";tag=\"agent-browser-auth\""
       },
       "key_source": "throwaway Ed25519 key in a temp dir (deleted after the run)",
-      "keyid": "pw_24hPKt_e463D1Ur9opZMB-Yd29Vq4RvucWf_KBtc",
+      "keyid": "DVXy2nY8wHoO2rsHaLczVnHm3qqdNmHWZbdiKuErNs8",
       "method": "POST",
       "url": "https://merchant-sim.example.test/v1/charge"
     },
@@ -1288,7 +1288,7 @@
     "verdicts": {
       "advocate_cards": [
         {
-          "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+          "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "call_reason": {
             "rule_id": "advocate.condition",
             "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
@@ -1316,7 +1316,7 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "veto",
           "wait_until": "",
           "warnings": [
@@ -1328,7 +1328,7 @@
               "text": "rtx 5070 ti is listed as new, the page says open box. The condition claim did not match the listing."
             },
             {
-              "checked_at": "2026-10-24T06:02:42+00:00",
+              "checked_at": "2026-10-24T07:51:18+00:00",
               "dollar_impact": 757.44,
               "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
               "kind": "price",
@@ -1339,7 +1339,7 @@
           ]
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "call_reason": {
             "rule_id": "fit.gpu_length",
             "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
@@ -1367,7 +1367,7 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "veto",
           "wait_until": "",
           "warnings": [
@@ -1381,7 +1381,7 @@
           ]
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "call_reason": {
             "rule_id": "advocate.fit_unknown",
             "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
@@ -1409,7 +1409,7 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "caution",
           "wait_until": "",
           "warnings": [
@@ -1423,7 +1423,7 @@
           ]
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "call_reason": {
             "rule_id": "advocate.ok",
             "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
@@ -1451,13 +1451,13 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "buy",
           "wait_until": "",
           "warnings": []
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "call_reason": {
             "rule_id": "advocate.ok",
             "source_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
@@ -1485,13 +1485,13 @@
           },
           "judged_condition": "open-box",
           "line": 1,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "buy",
           "wait_until": "",
           "warnings": []
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "call_reason": {
             "rule_id": "advocate.fit_unknown",
             "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
@@ -1519,7 +1519,7 @@
           },
           "judged_condition": "open-box",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "caution",
           "wait_until": "",
           "warnings": [
@@ -1541,11 +1541,11 @@
           "sender_role"
         ],
         "evidence_spans": [],
-        "latency_ms": 11.831,
+        "latency_ms": 11.743,
         "message_id": "msg-honest-hal-gpu-5070ti.html",
         "page": "honest-hal-gpu-5070ti.html",
         "reasons": [],
-        "request_id": "5f2d19a460aa483a9eaf21e3f0b5d0f7",
+        "request_id": "58c31ac167dd47c998fb791a57b23fc0",
         "rule_ids": [],
         "seller_id": "honest-hal",
         "sender_agent": "honest-hal",
@@ -1690,7 +1690,7 @@
             "text": "Pay to</dt><dd data-field=\"payee\">sam-payouts-7731@payout.example.test"
           }
         ],
-        "latency_ms": 15.47,
+        "latency_ms": 15.51,
         "message_id": "msg-shady-sam-gpu-5070ti-injected.html",
         "page": "shady-sam-gpu-5070ti-injected.html",
         "reasons": [
@@ -1704,7 +1704,7 @@
           "shield.payee.swap",
           "shield.price.contradiction"
         ],
-        "request_id": "ea5987122e6f4ce78dad54907e8b52b6",
+        "request_id": "ef3b363f3a5e4befba9727e60eae212c",
         "rule_ids": [
           "shield.exfil.send",
           "shield.hidden.instruction",
@@ -1726,7 +1726,7 @@
       "ranking": {
         "disqualified": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+            "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
             "condition": "unknown",
             "kind": "ineligible",
             "landed": 1299.99,
@@ -1737,7 +1737,7 @@
             "seller_id": "amazon-direct"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
             "condition": "new",
             "kind": "ineligible",
             "landed": 1489.0,
@@ -1748,7 +1748,7 @@
             "seller_id": "ebay-263900"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
             "condition": "new",
             "kind": "ineligible",
             "landed": 1399.99,
@@ -1759,7 +1759,7 @@
             "seller_id": "ebay-442526"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+            "bid_id": "bid-need-vidyut-5070ti-micro-center",
             "condition": "unknown",
             "kind": "ineligible",
             "landed": 1199.99,
@@ -1770,7 +1770,7 @@
             "seller_id": "micro-center"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-lowball",
+            "bid_id": "bid-need-vidyut-5070ti-lowball",
             "kind": "rejected",
             "reasons": [
               "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
@@ -1788,7 +1788,7 @@
                 "unit_price": 757.44
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "condition": "new",
             "landed": 757.44,
             "line": 0,
@@ -1807,7 +1807,7 @@
                 "unit_price": 1199.0
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+            "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
             "condition": "new",
             "landed": 1199.0,
             "line": 0,
@@ -1826,7 +1826,7 @@
                 "unit_price": 1249.99
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "condition": "new",
             "landed": 1249.99,
             "line": 0,
@@ -1845,7 +1845,7 @@
                 "unit_price": 1289.0
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
             "condition": "new",
             "landed": 1289.0,
             "line": 0,
@@ -1869,7 +1869,7 @@
                 "unit_price": 1247.02
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "condition": "open-box",
             "landed": 1247.02,
             "line": 1,
@@ -1888,7 +1888,7 @@
                 "unit_price": 1239.99
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "condition": "open-box",
             "landed": 1239.99,
             "line": 0,
@@ -1902,55 +1902,55 @@
       },
       "referee": [
         {
-          "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+          "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
           "passed": true,
           "reasons": [],
           "seller_id": "amazon-direct"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "passed": true,
           "reasons": [],
           "seller_id": "best-buy"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
           "passed": true,
           "reasons": [],
           "seller_id": "ebay-263900"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
           "passed": true,
           "reasons": [],
           "seller_id": "ebay-442526"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "passed": true,
           "reasons": [],
           "seller_id": "ebay-824742"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+          "bid_id": "bid-need-vidyut-5070ti-micro-center",
           "passed": true,
           "reasons": [],
           "seller_id": "micro-center"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+          "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "passed": true,
           "reasons": [],
           "seller_id": "shady-sam"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "passed": true,
           "reasons": [],
           "seller_id": "bargain-bin"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-lowball",
+          "bid_id": "bid-need-vidyut-5070ti-lowball",
           "passed": false,
           "reasons": [
             "rtx 5070 ti new: $1,090.00 is below this seller's floor"
@@ -1958,13 +1958,13 @@
           "seller_id": "lowball"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "passed": true,
           "reasons": [],
           "seller_id": "fair-price-pc"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "passed": true,
           "reasons": [],
           "seller_id": "gadget-grove"
@@ -1973,12 +1973,12 @@
       "shield": [
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+          "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
           "evidence_spans": [],
-          "latency_ms": 1.378,
-          "message_id": "msg-bid-need-tony-stark-5070ti-amazon-direct",
+          "latency_ms": 1.326,
+          "message_id": "msg-bid-need-vidyut-5070ti-amazon-direct",
           "reasons": [],
-          "request_id": "124fb8d0b35b48d3b4f823d12ac3ee4e",
+          "request_id": "701c2794e0374f268a3ebfbe6fef93f8",
           "rule_ids": [],
           "seller_id": "amazon-direct",
           "sender_agent": "amazon-direct",
@@ -1988,12 +1988,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "evidence_spans": [],
-          "latency_ms": 0.327,
-          "message_id": "msg-bid-need-tony-stark-5070ti-best-buy",
+          "latency_ms": 0.354,
+          "message_id": "msg-bid-need-vidyut-5070ti-best-buy",
           "reasons": [],
-          "request_id": "8458eee910984ec984c2a3ee441c79bb",
+          "request_id": "d4ba0eb2d6cd423899cc48345f66c642",
           "rule_ids": [],
           "seller_id": "best-buy",
           "sender_agent": "best-buy",
@@ -2003,12 +2003,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
           "evidence_spans": [],
-          "latency_ms": 0.412,
-          "message_id": "msg-bid-need-tony-stark-5070ti-ebay-263900",
+          "latency_ms": 0.408,
+          "message_id": "msg-bid-need-vidyut-5070ti-ebay-263900",
           "reasons": [],
-          "request_id": "8ae8106574b048e29e28489d356493d7",
+          "request_id": "9197a75d67e84429a5cc769642d0d857",
           "rule_ids": [],
           "seller_id": "ebay-263900",
           "sender_agent": "ebay-263900",
@@ -2018,12 +2018,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
           "evidence_spans": [],
-          "latency_ms": 0.397,
-          "message_id": "msg-bid-need-tony-stark-5070ti-ebay-442526",
+          "latency_ms": 0.399,
+          "message_id": "msg-bid-need-vidyut-5070ti-ebay-442526",
           "reasons": [],
-          "request_id": "9eb9a40d5ec44405832a07bfa390940d",
+          "request_id": "174f0ae9ab984e3c8cd05465a04b5bda",
           "rule_ids": [],
           "seller_id": "ebay-442526",
           "sender_agent": "ebay-442526",
@@ -2033,12 +2033,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "evidence_spans": [],
-          "latency_ms": 0.425,
-          "message_id": "msg-bid-need-tony-stark-5070ti-ebay-824742",
+          "latency_ms": 0.421,
+          "message_id": "msg-bid-need-vidyut-5070ti-ebay-824742",
           "reasons": [],
-          "request_id": "39e5db84e6cf4401a93c0209c458eb60",
+          "request_id": "c8c8de4ee2bc47ef82f8f2aead5ef700",
           "rule_ids": [],
           "seller_id": "ebay-824742",
           "sender_agent": "ebay-824742",
@@ -2048,12 +2048,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+          "bid_id": "bid-need-vidyut-5070ti-micro-center",
           "evidence_spans": [],
-          "latency_ms": 0.278,
-          "message_id": "msg-bid-need-tony-stark-5070ti-micro-center",
+          "latency_ms": 0.246,
+          "message_id": "msg-bid-need-vidyut-5070ti-micro-center",
           "reasons": [],
-          "request_id": "f76d6c48960743a084c1c86da5eb8543",
+          "request_id": "d3a3799ca71448d599d3528a737971e2",
           "rule_ids": [],
           "seller_id": "micro-center",
           "sender_agent": "micro-center",
@@ -2063,12 +2063,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+          "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "evidence_spans": [],
-          "latency_ms": 12.676,
-          "message_id": "msg-bid-need-tony-stark-5070ti-shady-sam",
+          "latency_ms": 12.837,
+          "message_id": "msg-bid-need-vidyut-5070ti-shady-sam",
           "reasons": [],
-          "request_id": "28e2bf0ee7554920ae858377f31d51f7",
+          "request_id": "61f87121adb041459868a48ec0f28739",
           "rule_ids": [],
           "seller_id": "shady-sam",
           "sender_agent": "shady-sam",
@@ -2078,12 +2078,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "evidence_spans": [],
-          "latency_ms": 0.391,
-          "message_id": "msg-bid-need-tony-stark-5070ti-bargain-bin",
+          "latency_ms": 0.378,
+          "message_id": "msg-bid-need-vidyut-5070ti-bargain-bin",
           "reasons": [],
-          "request_id": "59d809a72b8f4225b9a7553a9ac630ad",
+          "request_id": "ef78cfa5ac23428e8d9505ed95b6875f",
           "rule_ids": [],
           "seller_id": "bargain-bin",
           "sender_agent": "bargain-bin",
@@ -2093,12 +2093,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "evidence_spans": [],
-          "latency_ms": 0.381,
-          "message_id": "msg-bid-need-tony-stark-5070ti-fair-price-pc",
+          "latency_ms": 0.358,
+          "message_id": "msg-bid-need-vidyut-5070ti-fair-price-pc",
           "reasons": [],
-          "request_id": "7057d65f153b45cf89cd2550d316e1a7",
+          "request_id": "394237eeb0204c59ae05d8bb32109328",
           "rule_ids": [],
           "seller_id": "fair-price-pc",
           "sender_agent": "fair-price-pc",
@@ -2108,12 +2108,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "evidence_spans": [],
-          "latency_ms": 0.515,
-          "message_id": "msg-bid-need-tony-stark-5070ti-gadget-grove",
+          "latency_ms": 0.516,
+          "message_id": "msg-bid-need-vidyut-5070ti-gadget-grove",
           "reasons": [],
-          "request_id": "2991c6af8034482980004951ac4d167d",
+          "request_id": "a74703f02a3c4efd85bff64ed5bf2ac1",
           "rule_ids": [],
           "seller_id": "gadget-grove",
           "sender_agent": "gadget-grove",
@@ -2131,7 +2131,7 @@
             "unit_price": 1249.99
           }
         ],
-        "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+        "bid_id": "bid-need-vidyut-5070ti-best-buy",
         "condition": "new",
         "landed": 1249.99,
         "line": 0,
@@ -2147,21 +2147,21 @@
   "beats": {
     "1": {
       "allowance": {
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "currency": "USD",
         "ladder_step": 1,
         "per_purchase_limit": 250.0,
         "period": "month",
         "period_limit": 500.0,
         "spent_this_period": 120.0,
-        "updated_at": "2026-10-24T06:02:42Z"
+        "updated_at": "2026-10-24T07:51:18Z"
       },
       "goal": {
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "cap": 1300.0,
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "deadline": "2026-10-30T23:59:00Z",
-        "id": "goal-tony-stark-5070ti",
+        "id": "goal-vidyut-5070ti",
         "items": [
           {
             "allowed_conditions": [
@@ -2192,10 +2192,10 @@
       "goal_text": "RTX 5070 Ti that fits my case, under $1,300, by Friday, new or open-box",
       "need": {
         "auction_window_s": 12,
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "consent": true,
         "delivery_window": "by 2026-10-30T23:59:00Z",
-        "id": "need-tony-stark-5070ti",
+        "id": "need-vidyut-5070ti",
         "items": [
           {
             "allowed_conditions": [
@@ -2221,7 +2221,7 @@
             "pcie_16pin": 1,
             "wattage": 750
           },
-          "buyer_id": "tony-stark",
+          "buyer_id": "vidyut",
           "condition": "unknown",
           "id": "owned-psu",
           "item_name": "750 W PSU",
@@ -2236,7 +2236,7 @@
             "modules": 2,
             "type": "DDR5"
           },
-          "buyer_id": "tony-stark",
+          "buyer_id": "vidyut",
           "condition": "unknown",
           "id": "owned-ram",
           "item_name": "32 GB DDR5",
@@ -2249,7 +2249,7 @@
           "attrs": {
             "max_gpu_length_mm": 305
           },
-          "buyer_id": "tony-stark",
+          "buyer_id": "vidyut",
           "condition": "unknown",
           "id": "owned-case",
           "item_name": "mid-tower case",
@@ -2259,7 +2259,7 @@
         }
       ],
       "skip_lines": [
-        "skipped PSU line (psu 750w): Tony Stark already owns 750 W PSU, entry owned-psu, 'I have a 750 W PSU with a native 16-pin cable', told on 2026-10-15"
+        "skipped PSU line (psu 750w): Vidyut already owns 750 W PSU, entry owned-psu, 'I have a 750 W PSU with a native 16-pin cable', told on 2026-10-15"
       ]
     },
     "2": {
@@ -2357,9 +2357,9 @@
         {
           "claims": [],
           "decision_trace": "Amazon.com (sells direct): unknown 1,299.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-amazon-direct",
+          "id": "bid-need-vidyut-5070ti-amazon-direct",
           "lines": [
             {
               "attrs": {
@@ -2377,7 +2377,7 @@
             }
           ],
           "mirror_snapshot_id": "amazon-20261024T0509Z",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "MIRROR",
           "perks": [
             "free shipping"
@@ -2393,9 +2393,9 @@
             "new per the listing"
           ],
           "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-best-buy",
+          "id": "bid-need-vidyut-5070ti-best-buy",
           "lines": [
             {
               "attrs": {
@@ -2413,7 +2413,7 @@
             }
           ],
           "mirror_snapshot_id": "bestbuy-20261024T0508Z",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "MIRROR",
           "perks": [
             "free shipping"
@@ -2429,9 +2429,9 @@
             "new per the listing"
           ],
           "decision_trace": "eBay seller of item ...263900 (handle not captured): new 1,489.00 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-ebay-263900",
+          "id": "bid-need-vidyut-5070ti-ebay-263900",
           "lines": [
             {
               "attrs": {
@@ -2449,7 +2449,7 @@
             }
           ],
           "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "MIRROR",
           "perks": [
             "free shipping"
@@ -2465,9 +2465,9 @@
             "new per the listing"
           ],
           "decision_trace": "eBay seller of item ...442526 (handle not captured): new 1,399.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-ebay-442526",
+          "id": "bid-need-vidyut-5070ti-ebay-442526",
           "lines": [
             {
               "attrs": {
@@ -2485,7 +2485,7 @@
             }
           ],
           "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "MIRROR",
           "perks": [
             "free shipping"
@@ -2501,9 +2501,9 @@
             "open-box per the listing"
           ],
           "decision_trace": "eBay seller of item ...824742 (handle not captured): open-box 1,239.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "id": "bid-need-vidyut-5070ti-ebay-824742",
           "lines": [
             {
               "attrs": {
@@ -2521,7 +2521,7 @@
             }
           ],
           "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "MIRROR",
           "perks": [
             "free shipping"
@@ -2535,9 +2535,9 @@
         {
           "claims": [],
           "decision_trace": "Micro Center: unknown 1,199.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-micro-center",
+          "id": "bid-need-vidyut-5070ti-micro-center",
           "lines": [
             {
               "attrs": {
@@ -2555,7 +2555,7 @@
             }
           ],
           "mirror_snapshot_id": "microcenter-20261024T0509Z",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "MIRROR",
           "perks": [
             "free shipping"
@@ -2573,9 +2573,9 @@
             "30-day returns"
           ],
           "decision_trace": "Shady Sam's Deals (SIM): new 757.44 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-shady-sam",
+          "id": "bid-need-vidyut-5070ti-shady-sam",
           "lines": [
             {
               "attrs": {
@@ -2594,7 +2594,7 @@
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "SIM",
           "perks": [
             "free shipping",
@@ -2611,9 +2611,9 @@
             "New, retail box"
           ],
           "decision_trace": "Bargain Bin Hardware (SIM): new 1,199.00 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "id": "bid-need-vidyut-5070ti-bargain-bin",
           "lines": [
             {
               "attrs": {
@@ -2632,7 +2632,7 @@
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "SIM",
           "perks": [
             "free shipping",
@@ -2647,9 +2647,9 @@
         {
           "claims": [],
           "decision_trace": "Lowball Direct (SIM): new 1,090.00 (rogue agent ignored its floor); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": false,
-          "id": "bid-need-tony-stark-5070ti-lowball",
+          "id": "bid-need-vidyut-5070ti-lowball",
           "lines": [
             {
               "attrs": {
@@ -2668,7 +2668,7 @@
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "SIM",
           "perks": [
             "free shipping",
@@ -2685,9 +2685,9 @@
             "New, retail box"
           ],
           "decision_trace": "Fair Price PC (SIM): new 1,289.00 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "id": "bid-need-vidyut-5070ti-fair-price-pc",
           "lines": [
             {
               "attrs": {
@@ -2706,7 +2706,7 @@
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "SIM",
           "perks": [
             "free shipping",
@@ -2724,9 +2724,9 @@
             "Open-box, retail box"
           ],
           "decision_trace": "Gadget Grove (SIM): new 1,315.27 (list less discount); open-box 1,247.02 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T06:02:54Z",
+          "expires_at": "2026-10-24T07:51:30Z",
           "floor_check_passed": true,
-          "id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "id": "bid-need-vidyut-5070ti-gadget-grove",
           "lines": [
             {
               "attrs": {
@@ -2760,7 +2760,7 @@
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "origin": "SIM",
           "perks": [
             "free shipping",
@@ -2775,7 +2775,7 @@
       ],
       "cards": [
         {
-          "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+          "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "call_reason": {
             "rule_id": "advocate.condition",
             "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
@@ -2803,7 +2803,7 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "veto",
           "wait_until": "",
           "warnings": [
@@ -2815,7 +2815,7 @@
               "text": "rtx 5070 ti is listed as new, the page says open box. The condition claim did not match the listing."
             },
             {
-              "checked_at": "2026-10-24T06:02:42+00:00",
+              "checked_at": "2026-10-24T07:51:18+00:00",
               "dollar_impact": 757.44,
               "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
               "kind": "price",
@@ -2826,7 +2826,7 @@
           ]
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "call_reason": {
             "rule_id": "fit.gpu_length",
             "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
@@ -2854,7 +2854,7 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "veto",
           "wait_until": "",
           "warnings": [
@@ -2868,7 +2868,7 @@
           ]
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "call_reason": {
             "rule_id": "advocate.fit_unknown",
             "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
@@ -2896,7 +2896,7 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "caution",
           "wait_until": "",
           "warnings": [
@@ -2910,7 +2910,7 @@
           ]
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "call_reason": {
             "rule_id": "advocate.ok",
             "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
@@ -2938,13 +2938,13 @@
           },
           "judged_condition": "new",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "buy",
           "wait_until": "",
           "warnings": []
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "call_reason": {
             "rule_id": "advocate.ok",
             "source_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
@@ -2972,13 +2972,13 @@
           },
           "judged_condition": "open-box",
           "line": 1,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "buy",
           "wait_until": "",
           "warnings": []
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "call_reason": {
             "rule_id": "advocate.fit_unknown",
             "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
@@ -3006,7 +3006,7 @@
           },
           "judged_condition": "open-box",
           "line": 0,
-          "need_id": "need-tony-stark-5070ti",
+          "need_id": "need-vidyut-5070ti",
           "recommendation": "caution",
           "wait_until": "",
           "warnings": [
@@ -3025,15 +3025,15 @@
         "real": true
       },
       "claims": {
-        "bid-need-tony-stark-5070ti-amazon-direct": [],
-        "bid-need-tony-stark-5070ti-bargain-bin": [
+        "bid-need-vidyut-5070ti-amazon-direct": [],
+        "bid-need-vidyut-5070ti-bargain-bin": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+            "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
-            "id": "claim-bid-need-tony-stark-5070ti-bargain-bin-1",
+            "id": "claim-bid-need-vidyut-5070ti-bargain-bin-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "SIM",
@@ -3042,14 +3042,14 @@
             "text": "New, retail box"
           }
         ],
-        "bid-need-tony-stark-5070ti-best-buy": [
+        "bid-need-vidyut-5070ti-best-buy": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-            "id": "claim-bid-need-tony-stark-5070ti-best-buy-1",
+            "id": "claim-bid-need-vidyut-5070ti-best-buy-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "MIRROR",
@@ -3058,14 +3058,14 @@
             "text": "new per the listing"
           }
         ],
-        "bid-need-tony-stark-5070ti-ebay-263900": [
+        "bid-need-vidyut-5070ti-ebay-263900": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
-            "id": "claim-bid-need-tony-stark-5070ti-ebay-263900-1",
+            "id": "claim-bid-need-vidyut-5070ti-ebay-263900-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "MIRROR",
@@ -3074,14 +3074,14 @@
             "text": "new per the listing"
           }
         ],
-        "bid-need-tony-stark-5070ti-ebay-442526": [
+        "bid-need-vidyut-5070ti-ebay-442526": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
-            "id": "claim-bid-need-tony-stark-5070ti-ebay-442526-1",
+            "id": "claim-bid-need-vidyut-5070ti-ebay-442526-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "MIRROR",
@@ -3090,14 +3090,14 @@
             "text": "new per the listing"
           }
         ],
-        "bid-need-tony-stark-5070ti-ebay-824742": [
+        "bid-need-vidyut-5070ti-ebay-824742": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-            "id": "claim-bid-need-tony-stark-5070ti-ebay-824742-1",
+            "id": "claim-bid-need-vidyut-5070ti-ebay-824742-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "MIRROR",
@@ -3106,14 +3106,14 @@
             "text": "open-box per the listing"
           }
         ],
-        "bid-need-tony-stark-5070ti-fair-price-pc": [
+        "bid-need-vidyut-5070ti-fair-price-pc": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
-            "id": "claim-bid-need-tony-stark-5070ti-fair-price-pc-1",
+            "id": "claim-bid-need-vidyut-5070ti-fair-price-pc-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "SIM",
@@ -3122,14 +3122,14 @@
             "text": "New, retail box"
           }
         ],
-        "bid-need-tony-stark-5070ti-gadget-grove": [
+        "bid-need-vidyut-5070ti-gadget-grove": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
-            "id": "claim-bid-need-tony-stark-5070ti-gadget-grove-1",
+            "id": "claim-bid-need-vidyut-5070ti-gadget-grove-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "SIM",
@@ -3138,12 +3138,12 @@
             "text": "New, retail box"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "check": "unverified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
-            "id": "claim-bid-need-tony-stark-5070ti-gadget-grove-2",
+            "id": "claim-bid-need-vidyut-5070ti-gadget-grove-2",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
             "origin": "SIM",
@@ -3152,29 +3152,29 @@
             "text": "Open-box, retail box"
           }
         ],
-        "bid-need-tony-stark-5070ti-micro-center": [],
-        "bid-need-tony-stark-5070ti-shady-sam": [
+        "bid-need-vidyut-5070ti-micro-center": [],
+        "bid-need-vidyut-5070ti-shady-sam": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "check": "false",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
             "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-            "id": "claim-bid-need-tony-stark-5070ti-shady-sam-1",
+            "id": "claim-bid-need-vidyut-5070ti-shady-sam-1",
             "kind": "spec",
             "method": "fetched page, page listing JSON, condition rule",
             "origin": "SIM",
-            "reason": "claim says new; differs from the listing at 2026-10-24T06:02:42+00:00: the page shows open-box",
+            "reason": "claim says new; differs from the listing at 2026-10-24T07:51:18+00:00: the page shows open-box",
             "source": "simulated",
             "text": "BRAND NEW, factory sealed"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "check": "false",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
             "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-            "id": "claim-bid-need-tony-stark-5070ti-shady-sam-2",
+            "id": "claim-bid-need-vidyut-5070ti-shady-sam-2",
             "kind": "price",
             "method": "fetched page, page listing JSON, was_price rule",
             "origin": "SIM",
@@ -3183,12 +3183,12 @@
             "text": "was $1,099"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "check": "verified",
-            "checked_at": "2026-10-24T06:02:42+00:00",
+            "checked_at": "2026-10-24T07:51:18+00:00",
             "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
             "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-            "id": "claim-bid-need-tony-stark-5070ti-shady-sam-3",
+            "id": "claim-bid-need-vidyut-5070ti-shady-sam-3",
             "kind": "returns",
             "method": "fetched page, page listing JSON, return_days rule",
             "origin": "SIM",
@@ -3206,7 +3206,7 @@
       "ranking": {
         "disqualified": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+            "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
             "condition": "unknown",
             "kind": "ineligible",
             "landed": 1299.99,
@@ -3217,7 +3217,7 @@
             "seller_id": "amazon-direct"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
             "condition": "new",
             "kind": "ineligible",
             "landed": 1489.0,
@@ -3228,7 +3228,7 @@
             "seller_id": "ebay-263900"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
             "condition": "new",
             "kind": "ineligible",
             "landed": 1399.99,
@@ -3239,7 +3239,7 @@
             "seller_id": "ebay-442526"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+            "bid_id": "bid-need-vidyut-5070ti-micro-center",
             "condition": "unknown",
             "kind": "ineligible",
             "landed": 1199.99,
@@ -3250,7 +3250,7 @@
             "seller_id": "micro-center"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-lowball",
+            "bid_id": "bid-need-vidyut-5070ti-lowball",
             "kind": "rejected",
             "reasons": [
               "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
@@ -3268,7 +3268,7 @@
                 "unit_price": 757.44
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "condition": "new",
             "landed": 757.44,
             "line": 0,
@@ -3287,7 +3287,7 @@
                 "unit_price": 1199.0
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+            "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
             "condition": "new",
             "landed": 1199.0,
             "line": 0,
@@ -3306,7 +3306,7 @@
                 "unit_price": 1249.99
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "condition": "new",
             "landed": 1249.99,
             "line": 0,
@@ -3325,7 +3325,7 @@
                 "unit_price": 1289.0
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
             "condition": "new",
             "landed": 1289.0,
             "line": 0,
@@ -3349,7 +3349,7 @@
                 "unit_price": 1247.02
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "condition": "open-box",
             "landed": 1247.02,
             "line": 1,
@@ -3368,7 +3368,7 @@
                 "unit_price": 1239.99
               }
             ],
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "condition": "open-box",
             "landed": 1239.99,
             "line": 0,
@@ -3382,55 +3382,55 @@
       },
       "referee": [
         {
-          "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+          "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
           "passed": true,
           "reasons": [],
           "seller_id": "amazon-direct"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "passed": true,
           "reasons": [],
           "seller_id": "best-buy"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
           "passed": true,
           "reasons": [],
           "seller_id": "ebay-263900"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
           "passed": true,
           "reasons": [],
           "seller_id": "ebay-442526"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "passed": true,
           "reasons": [],
           "seller_id": "ebay-824742"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+          "bid_id": "bid-need-vidyut-5070ti-micro-center",
           "passed": true,
           "reasons": [],
           "seller_id": "micro-center"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+          "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "passed": true,
           "reasons": [],
           "seller_id": "shady-sam"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "passed": true,
           "reasons": [],
           "seller_id": "bargain-bin"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-lowball",
+          "bid_id": "bid-need-vidyut-5070ti-lowball",
           "passed": false,
           "reasons": [
             "rtx 5070 ti new: $1,090.00 is below this seller's floor"
@@ -3438,13 +3438,13 @@
           "seller_id": "lowball"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "passed": true,
           "reasons": [],
           "seller_id": "fair-price-pc"
         },
         {
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "passed": true,
           "reasons": [],
           "seller_id": "gadget-grove"
@@ -3719,12 +3719,12 @@
       "shield": [
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+          "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
           "evidence_spans": [],
-          "latency_ms": 1.378,
-          "message_id": "msg-bid-need-tony-stark-5070ti-amazon-direct",
+          "latency_ms": 1.326,
+          "message_id": "msg-bid-need-vidyut-5070ti-amazon-direct",
           "reasons": [],
-          "request_id": "124fb8d0b35b48d3b4f823d12ac3ee4e",
+          "request_id": "701c2794e0374f268a3ebfbe6fef93f8",
           "rule_ids": [],
           "seller_id": "amazon-direct",
           "sender_agent": "amazon-direct",
@@ -3734,12 +3734,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "evidence_spans": [],
-          "latency_ms": 0.327,
-          "message_id": "msg-bid-need-tony-stark-5070ti-best-buy",
+          "latency_ms": 0.354,
+          "message_id": "msg-bid-need-vidyut-5070ti-best-buy",
           "reasons": [],
-          "request_id": "8458eee910984ec984c2a3ee441c79bb",
+          "request_id": "d4ba0eb2d6cd423899cc48345f66c642",
           "rule_ids": [],
           "seller_id": "best-buy",
           "sender_agent": "best-buy",
@@ -3749,12 +3749,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
           "evidence_spans": [],
-          "latency_ms": 0.412,
-          "message_id": "msg-bid-need-tony-stark-5070ti-ebay-263900",
+          "latency_ms": 0.408,
+          "message_id": "msg-bid-need-vidyut-5070ti-ebay-263900",
           "reasons": [],
-          "request_id": "8ae8106574b048e29e28489d356493d7",
+          "request_id": "9197a75d67e84429a5cc769642d0d857",
           "rule_ids": [],
           "seller_id": "ebay-263900",
           "sender_agent": "ebay-263900",
@@ -3764,12 +3764,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
           "evidence_spans": [],
-          "latency_ms": 0.397,
-          "message_id": "msg-bid-need-tony-stark-5070ti-ebay-442526",
+          "latency_ms": 0.399,
+          "message_id": "msg-bid-need-vidyut-5070ti-ebay-442526",
           "reasons": [],
-          "request_id": "9eb9a40d5ec44405832a07bfa390940d",
+          "request_id": "174f0ae9ab984e3c8cd05465a04b5bda",
           "rule_ids": [],
           "seller_id": "ebay-442526",
           "sender_agent": "ebay-442526",
@@ -3779,12 +3779,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "evidence_spans": [],
-          "latency_ms": 0.425,
-          "message_id": "msg-bid-need-tony-stark-5070ti-ebay-824742",
+          "latency_ms": 0.421,
+          "message_id": "msg-bid-need-vidyut-5070ti-ebay-824742",
           "reasons": [],
-          "request_id": "39e5db84e6cf4401a93c0209c458eb60",
+          "request_id": "c8c8de4ee2bc47ef82f8f2aead5ef700",
           "rule_ids": [],
           "seller_id": "ebay-824742",
           "sender_agent": "ebay-824742",
@@ -3794,12 +3794,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+          "bid_id": "bid-need-vidyut-5070ti-micro-center",
           "evidence_spans": [],
-          "latency_ms": 0.278,
-          "message_id": "msg-bid-need-tony-stark-5070ti-micro-center",
+          "latency_ms": 0.246,
+          "message_id": "msg-bid-need-vidyut-5070ti-micro-center",
           "reasons": [],
-          "request_id": "f76d6c48960743a084c1c86da5eb8543",
+          "request_id": "d3a3799ca71448d599d3528a737971e2",
           "rule_ids": [],
           "seller_id": "micro-center",
           "sender_agent": "micro-center",
@@ -3809,12 +3809,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+          "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "evidence_spans": [],
-          "latency_ms": 12.676,
-          "message_id": "msg-bid-need-tony-stark-5070ti-shady-sam",
+          "latency_ms": 12.837,
+          "message_id": "msg-bid-need-vidyut-5070ti-shady-sam",
           "reasons": [],
-          "request_id": "28e2bf0ee7554920ae858377f31d51f7",
+          "request_id": "61f87121adb041459868a48ec0f28739",
           "rule_ids": [],
           "seller_id": "shady-sam",
           "sender_agent": "shady-sam",
@@ -3824,12 +3824,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+          "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "evidence_spans": [],
-          "latency_ms": 0.391,
-          "message_id": "msg-bid-need-tony-stark-5070ti-bargain-bin",
+          "latency_ms": 0.378,
+          "message_id": "msg-bid-need-vidyut-5070ti-bargain-bin",
           "reasons": [],
-          "request_id": "59d809a72b8f4225b9a7553a9ac630ad",
+          "request_id": "ef78cfa5ac23428e8d9505ed95b6875f",
           "rule_ids": [],
           "seller_id": "bargain-bin",
           "sender_agent": "bargain-bin",
@@ -3839,12 +3839,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "evidence_spans": [],
-          "latency_ms": 0.381,
-          "message_id": "msg-bid-need-tony-stark-5070ti-fair-price-pc",
+          "latency_ms": 0.358,
+          "message_id": "msg-bid-need-vidyut-5070ti-fair-price-pc",
           "reasons": [],
-          "request_id": "7057d65f153b45cf89cd2550d316e1a7",
+          "request_id": "394237eeb0204c59ae05d8bb32109328",
           "rule_ids": [],
           "seller_id": "fair-price-pc",
           "sender_agent": "fair-price-pc",
@@ -3854,12 +3854,12 @@
         },
         {
           "attack_type": "none",
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "evidence_spans": [],
-          "latency_ms": 0.515,
-          "message_id": "msg-bid-need-tony-stark-5070ti-gadget-grove",
+          "latency_ms": 0.516,
+          "message_id": "msg-bid-need-vidyut-5070ti-gadget-grove",
           "reasons": [],
-          "request_id": "2991c6af8034482980004951ac4d167d",
+          "request_id": "a74703f02a3c4efd85bff64ed5bf2ac1",
           "rule_ids": [],
           "seller_id": "gadget-grove",
           "sender_agent": "gadget-grove",
@@ -3907,7 +3907,7 @@
             "unit_price": 1249.99
           }
         ],
-        "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+        "bid_id": "bid-need-vidyut-5070ti-best-buy",
         "condition": "new",
         "landed": 1249.99,
         "line": 0,
@@ -3922,9 +3922,9 @@
           "new per the listing"
         ],
         "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T06:02:54Z",
+        "expires_at": "2026-10-24T07:51:30Z",
         "floor_check_passed": true,
-        "id": "bid-need-tony-stark-5070ti-best-buy",
+        "id": "bid-need-vidyut-5070ti-best-buy",
         "lines": [
           {
             "attrs": {
@@ -3942,7 +3942,7 @@
           }
         ],
         "mirror_snapshot_id": "bestbuy-20261024T0508Z",
-        "need_id": "need-tony-stark-5070ti",
+        "need_id": "need-vidyut-5070ti",
         "origin": "MIRROR",
         "perks": [
           "free shipping"
@@ -3965,11 +3965,11 @@
           "sender_role"
         ],
         "evidence_spans": [],
-        "latency_ms": 11.831,
+        "latency_ms": 11.743,
         "message_id": "msg-honest-hal-gpu-5070ti.html",
         "page": "honest-hal-gpu-5070ti.html",
         "reasons": [],
-        "request_id": "5f2d19a460aa483a9eaf21e3f0b5d0f7",
+        "request_id": "58c31ac167dd47c998fb791a57b23fc0",
         "rule_ids": [],
         "seller_id": "honest-hal",
         "sender_agent": "honest-hal",
@@ -4114,7 +4114,7 @@
             "text": "Pay to</dt><dd data-field=\"payee\">sam-payouts-7731@payout.example.test"
           }
         ],
-        "latency_ms": 15.47,
+        "latency_ms": 15.51,
         "message_id": "msg-shady-sam-gpu-5070ti-injected.html",
         "page": "shady-sam-gpu-5070ti-injected.html",
         "reasons": [
@@ -4128,7 +4128,7 @@
           "shield.payee.swap",
           "shield.price.contradiction"
         ],
-        "request_id": "ea5987122e6f4ce78dad54907e8b52b6",
+        "request_id": "ef3b363f3a5e4befba9727e60eae212c",
         "rule_ids": [
           "shield.exfil.send",
           "shield.hidden.instruction",
@@ -4159,21 +4159,21 @@
         "amount_read_back": 1249.99,
         "attempts": 3,
         "channel": "browser",
-        "code_expires_at": "2026-10-24T06:04:42Z",
-        "code_hash": "b74d48a186f9431e6c8aace30d30daa2c0ecaf4cfa2449859b5eb93538cc3a1d",
-        "code_issued_at": "2026-10-24T06:02:42Z",
-        "decided_at": "2026-10-24T06:03:48Z",
+        "code_expires_at": "2026-10-24T07:53:18Z",
+        "code_hash": "0ccb731cad645b6b9b06a5c40d26c6e7a3cc31def83d8fd0bf67eca99d73a1ca",
+        "code_issued_at": "2026-10-24T07:51:18Z",
+        "decided_at": "2026-10-24T07:52:24Z",
         "deny_reason": null,
-        "id": "apr_1d9b9361127683c3",
-        "mandate_hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-        "mandate_id": "mnd_37c1665096e240dc",
+        "id": "apr_5ea778e9a55e07dc",
+        "mandate_hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+        "mandate_id": "mnd_3c3002cde930a20d",
         "payee_read_back": "best-buy@pay.example.test",
         "recording_ref": null,
         "result": "approved"
       },
       "attempts": [
         {
-          "at": "2026-10-24T06:02:46Z",
+          "at": "2026-10-24T07:51:22Z",
           "decision": {
             "approved": false,
             "final": false,
@@ -4181,11 +4181,11 @@
             "state": "awaiting_code"
           },
           "label": "wrong code",
-          "said": "copper marble approve",
+          "said": "marble harbor approve",
           "try": 1
         },
         {
-          "at": "2026-10-24T06:03:17Z",
+          "at": "2026-10-24T07:51:53Z",
           "decision": {
             "approved": false,
             "final": false,
@@ -4197,7 +4197,7 @@
           "try": 2
         },
         {
-          "at": "2026-10-24T06:03:48Z",
+          "at": "2026-10-24T07:52:24Z",
           "decision": {
             "approved": true,
             "final": true,
@@ -4211,12 +4211,12 @@
       ],
       "call_script": {
         "approved_line": "Approved. One payment of one thousand two hundred forty nine dollars and ninety nine cents, written 1,249.99 dollars, to best-buy@pay.example.test. Nothing else is authorized",
-        "ask_line": "Say the two word code from your screen, then say approve. Anything else cancels this deal",
-        "deal_line": "This call is about one deal: one thousand two hundred forty nine dollars and ninety nine cents, written 1,249.99 dollars, to best-buy@pay.example.test",
+        "ask_line": "Please read me the two words on your screen, then say approve. Anything else cancels this deal",
+        "deal_line": "One purchase, from the seller named on your screen, for one thousand two hundred forty nine dollars and ninety nine cents",
         "denied_line": "Not approved. Nothing was paid",
         "opening": "I will only ask for the code on your screen, never a card number",
         "stripped": [],
-        "why_answer": "The advocate vetoed the cheaper one under rule advocate.condition. The listing page shows a different condition than the seller claims. The source is 127.0.0.1, and the link is on your screen. Nothing is paid until you say the code and approve"
+        "why_answer": "The advocate rejected the cheaper offer. The listing page shows a different condition than the seller claims. The source link is on your screen. Nothing is paid until you say the code and approve"
       },
       "can_charge_after": {
         "ok": true,
@@ -4229,8 +4229,8 @@
       "charge": {
         "amount_cents": 124999,
         "currency": "usd",
-        "id": "ch_sim_aa27d82369bb",
-        "idempotency_key": "mandate:aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
+        "id": "ch_sim_ce1f572c4f87",
+        "idempotency_key": "mandate:ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
         "mode": "SIM stub",
         "object": "charge",
         "payment_method": "pm_card_visa (Stripe test card, not sent)",
@@ -4239,17 +4239,17 @@
       "code_redacted": true,
       "deal": {
         "amount": 1249.99,
-        "deal_id": "deal-bid-need-tony-stark-5070ti-best-buy",
+        "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
         "payee": "best-buy@pay.example.test",
         "seller_id": "best-buy",
         "why_call": "$1,249.99 is over the $250.00 per-purchase allowance"
       },
       "goal_final": {
-        "buyer_id": "tony-stark",
+        "buyer_id": "vidyut",
         "cap": 1300.0,
-        "created_at": "2026-10-24T06:02:42Z",
+        "created_at": "2026-10-24T07:51:18Z",
         "deadline": "2026-10-30T23:59:00Z",
-        "id": "goal-tony-stark-5070ti",
+        "id": "goal-vidyut-5070ti",
         "items": [
           {
             "allowed_conditions": [
@@ -4279,7 +4279,7 @@
       },
       "goal_state_log": [
         {
-          "at": "2026-10-24T06:02:42Z",
+          "at": "2026-10-24T07:51:18Z",
           "state": "HUNTING"
         },
         {
@@ -4293,35 +4293,35 @@
       ],
       "mandate": {
         "amount": 1249.99,
-        "approval_id": "apr_1d9b9361127683c3",
-        "buyer_id": "tony-stark",
-        "created_at": "2026-10-24T06:02:42Z",
+        "approval_id": "apr_5ea778e9a55e07dc",
+        "buyer_id": "vidyut",
+        "created_at": "2026-10-24T07:51:18Z",
         "currency": "USD",
-        "deal_id": "deal-bid-need-tony-stark-5070ti-best-buy",
-        "expires_at": "2026-10-24T06:12:42Z",
-        "goal_id": "goal-tony-stark-5070ti",
-        "hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-        "id": "mnd_37c1665096e240dc",
-        "nonce": "4ea8dd85e10325796e0ad891779f91c1",
+        "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
+        "expires_at": "2026-10-24T08:01:18Z",
+        "goal_id": "goal-vidyut-5070ti",
+        "hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+        "id": "mnd_3c3002cde930a20d",
+        "nonce": "5ffc50e973afbba54fc40336726fad66",
         "origin": "MIRROR",
         "payee": "best-buy@pay.example.test",
         "status": "used",
-        "tap_signature": "sig1=:9GyVqFsv5zR7OLI4KTk97r/0DAtsprdtaowwFJaWRN7h8YJJiFDYBC2csyqoaDCAbEEAi7tMFzZYtpQdwKdsDQ==:",
+        "tap_signature": "sig1=:GMEp8ZLR/AcgSL/ryYGbSOW9HM9MNpHmsdJFbxTo7AJUbqHUe6zpDCdCd40gsEP+pUIyEObYm+rRgZXqNMCyCQ==:",
         "tier_price": null,
         "within_allowance": false
       },
       "mandate_at_approval": {
         "amount": 1249.99,
-        "approval_id": "apr_1d9b9361127683c3",
-        "buyer_id": "tony-stark",
-        "created_at": "2026-10-24T06:02:42Z",
+        "approval_id": "apr_5ea778e9a55e07dc",
+        "buyer_id": "vidyut",
+        "created_at": "2026-10-24T07:51:18Z",
         "currency": "USD",
-        "deal_id": "deal-bid-need-tony-stark-5070ti-best-buy",
-        "expires_at": "2026-10-24T06:12:42Z",
-        "goal_id": "goal-tony-stark-5070ti",
-        "hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-        "id": "mnd_37c1665096e240dc",
-        "nonce": "4ea8dd85e10325796e0ad891779f91c1",
+        "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
+        "expires_at": "2026-10-24T08:01:18Z",
+        "goal_id": "goal-vidyut-5070ti",
+        "hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+        "id": "mnd_3c3002cde930a20d",
+        "nonce": "5ffc50e973afbba54fc40336726fad66",
         "origin": "MIRROR",
         "payee": "best-buy@pay.example.test",
         "status": "approved",
@@ -4331,15 +4331,15 @@
       },
       "origin": "SIM",
       "signature": {
-        "body_sha256_in_digest": "sha-256=:ERipIfL4AwMzaxOhAzoNYk+rcX/gFMysRAfnaeFuCKY=:",
+        "body_sha256_in_digest": "sha-256=:SNllEGM6hHcgpuUlJaDnDIfXUvzZW8maDucxbh7wB3o=:",
         "headers": {
-          "Content-Digest": "sha-256=:ERipIfL4AwMzaxOhAzoNYk+rcX/gFMysRAfnaeFuCKY=:",
-          "Mandate-Hash": "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
-          "Signature": "sig1=:9GyVqFsv5zR7OLI4KTk97r/0DAtsprdtaowwFJaWRN7h8YJJiFDYBC2csyqoaDCAbEEAi7tMFzZYtpQdwKdsDQ==:",
-          "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792821830;expires=1792821890;keyid=\"pw_24hPKt_e463D1Ur9opZMB-Yd29Vq4RvucWf_KBtc\";alg=\"ed25519\";nonce=\"Y-9sGppQI_TcWfpwjJFSnQ\";tag=\"agent-browser-auth\""
+          "Content-Digest": "sha-256=:SNllEGM6hHcgpuUlJaDnDIfXUvzZW8maDucxbh7wB3o=:",
+          "Mandate-Hash": "ce1f572c4f87135c32e866f31ca89835c7ce49e8acb2a16314a7c626ccbb6924",
+          "Signature": "sig1=:GMEp8ZLR/AcgSL/ryYGbSOW9HM9MNpHmsdJFbxTo7AJUbqHUe6zpDCdCd40gsEP+pUIyEObYm+rRgZXqNMCyCQ==:",
+          "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792828346;expires=1792828406;keyid=\"DVXy2nY8wHoO2rsHaLczVnHm3qqdNmHWZbdiKuErNs8\";alg=\"ed25519\";nonce=\"O_CG0-gN8jtAyp_-e3OrCQ\";tag=\"agent-browser-auth\""
         },
         "key_source": "throwaway Ed25519 key in a temp dir (deleted after the run)",
-        "keyid": "pw_24hPKt_e463D1Ur9opZMB-Yd29Vq4RvucWf_KBtc",
+        "keyid": "DVXy2nY8wHoO2rsHaLczVnHm3qqdNmHWZbdiKuErNs8",
         "method": "POST",
         "url": "https://merchant-sim.example.test/v1/charge"
       },
@@ -4379,7 +4379,7 @@
       ],
       "round1_loss_reports": [
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-amazon-direct",
           "reason": "condition",
@@ -4389,7 +4389,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within20",
           "id": "lr-round-1-ebay-263900",
           "reason": "price",
@@ -4399,7 +4399,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within20",
           "id": "lr-round-1-ebay-442526",
           "reason": "price",
@@ -4409,7 +4409,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-micro-center",
           "reason": "condition",
@@ -4419,7 +4419,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-shady-sam",
           "reason": "advocate_veto",
@@ -4429,7 +4429,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-bargain-bin",
           "reason": "fit",
@@ -4439,7 +4439,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-fair-price-pc",
           "reason": "price",
@@ -4449,7 +4449,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-gadget-grove",
           "reason": "price",
@@ -4459,7 +4459,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T06:02:42Z",
+          "created_at": "2026-10-24T07:51:18Z",
           "gap_band": "within5",
           "id": "lr-round-1-ebay-824742",
           "reason": "price",
@@ -4474,9 +4474,9 @@
           {
             "claims": [],
             "decision_trace": "Amazon.com (sells direct): unknown 1,299.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-amazon-direct",
+            "id": "bid-need-vidyut-5070ti-amazon-direct",
             "lines": [
               {
                 "attrs": {
@@ -4494,7 +4494,7 @@
               }
             ],
             "mirror_snapshot_id": "amazon-20261024T0509Z",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "MIRROR",
             "perks": [
               "free shipping"
@@ -4510,9 +4510,9 @@
               "new per the listing"
             ],
             "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-best-buy",
+            "id": "bid-need-vidyut-5070ti-best-buy",
             "lines": [
               {
                 "attrs": {
@@ -4530,7 +4530,7 @@
               }
             ],
             "mirror_snapshot_id": "bestbuy-20261024T0508Z",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "MIRROR",
             "perks": [
               "free shipping"
@@ -4546,9 +4546,9 @@
               "new per the listing"
             ],
             "decision_trace": "eBay seller of item ...263900 (handle not captured): new 1,489.00 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-ebay-263900",
+            "id": "bid-need-vidyut-5070ti-ebay-263900",
             "lines": [
               {
                 "attrs": {
@@ -4566,7 +4566,7 @@
               }
             ],
             "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "MIRROR",
             "perks": [
               "free shipping"
@@ -4582,9 +4582,9 @@
               "new per the listing"
             ],
             "decision_trace": "eBay seller of item ...442526 (handle not captured): new 1,399.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-ebay-442526",
+            "id": "bid-need-vidyut-5070ti-ebay-442526",
             "lines": [
               {
                 "attrs": {
@@ -4602,7 +4602,7 @@
               }
             ],
             "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "MIRROR",
             "perks": [
               "free shipping"
@@ -4618,9 +4618,9 @@
               "open-box per the listing"
             ],
             "decision_trace": "eBay seller of item ...824742 (handle not captured): open-box 1,239.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-ebay-824742",
+            "id": "bid-need-vidyut-5070ti-ebay-824742",
             "lines": [
               {
                 "attrs": {
@@ -4638,7 +4638,7 @@
               }
             ],
             "mirror_snapshot_id": "ebay_live-20261024T0508Z",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "MIRROR",
             "perks": [
               "free shipping"
@@ -4652,9 +4652,9 @@
           {
             "claims": [],
             "decision_trace": "Micro Center: unknown 1,199.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-micro-center",
+            "id": "bid-need-vidyut-5070ti-micro-center",
             "lines": [
               {
                 "attrs": {
@@ -4672,7 +4672,7 @@
               }
             ],
             "mirror_snapshot_id": "microcenter-20261024T0509Z",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "MIRROR",
             "perks": [
               "free shipping"
@@ -4690,9 +4690,9 @@
               "30-day returns"
             ],
             "decision_trace": "Shady Sam's Deals (SIM): new 757.44 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-shady-sam",
+            "id": "bid-need-vidyut-5070ti-shady-sam",
             "lines": [
               {
                 "attrs": {
@@ -4711,7 +4711,7 @@
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "SIM",
             "perks": [
               "free shipping",
@@ -4728,9 +4728,9 @@
               "New, retail box"
             ],
             "decision_trace": "Bargain Bin Hardware (SIM): new 1,199.00 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-bargain-bin",
+            "id": "bid-need-vidyut-5070ti-bargain-bin",
             "lines": [
               {
                 "attrs": {
@@ -4749,7 +4749,7 @@
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "SIM",
             "perks": [
               "free shipping",
@@ -4764,9 +4764,9 @@
           {
             "claims": [],
             "decision_trace": "Lowball Direct (SIM): new 1,090.00 (rogue agent ignored its floor); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": false,
-            "id": "bid-need-tony-stark-5070ti-lowball",
+            "id": "bid-need-vidyut-5070ti-lowball",
             "lines": [
               {
                 "attrs": {
@@ -4785,7 +4785,7 @@
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "SIM",
             "perks": [
               "free shipping",
@@ -4802,9 +4802,9 @@
               "New, retail box"
             ],
             "decision_trace": "Fair Price PC (SIM): new 1,289.00 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-fair-price-pc",
+            "id": "bid-need-vidyut-5070ti-fair-price-pc",
             "lines": [
               {
                 "attrs": {
@@ -4823,7 +4823,7 @@
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "SIM",
             "perks": [
               "free shipping",
@@ -4841,9 +4841,9 @@
               "Open-box, retail box"
             ],
             "decision_trace": "Gadget Grove (SIM): new 1,275.82 (list less discount); open-box 1,209.61 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T06:02:54Z",
+            "expires_at": "2026-10-24T07:51:30Z",
             "floor_check_passed": true,
-            "id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "id": "bid-need-vidyut-5070ti-gadget-grove",
             "lines": [
               {
                 "attrs": {
@@ -4877,7 +4877,7 @@
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "origin": "SIM",
             "perks": [
               "free shipping",
@@ -4892,7 +4892,7 @@
         ],
         "cards": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "call_reason": {
               "rule_id": "advocate.condition",
               "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
@@ -4920,7 +4920,7 @@
             },
             "judged_condition": "new",
             "line": 0,
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "recommendation": "veto",
             "wait_until": "",
             "warnings": [
@@ -4932,7 +4932,7 @@
                 "text": "rtx 5070 ti is listed as new, the page says open box. The condition claim did not match the listing."
               },
               {
-                "checked_at": "2026-10-24T06:02:42+00:00",
+                "checked_at": "2026-10-24T07:51:18+00:00",
                 "dollar_impact": 757.44,
                 "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
                 "kind": "price",
@@ -4943,7 +4943,7 @@
             ]
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+            "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
             "call_reason": {
               "rule_id": "fit.gpu_length",
               "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
@@ -4971,7 +4971,7 @@
             },
             "judged_condition": "new",
             "line": 0,
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "recommendation": "veto",
             "wait_until": "",
             "warnings": [
@@ -4985,7 +4985,7 @@
             ]
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "call_reason": {
               "rule_id": "advocate.ok",
               "source_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
@@ -5013,13 +5013,13 @@
             },
             "judged_condition": "open-box",
             "line": 1,
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "recommendation": "buy",
             "wait_until": "",
             "warnings": []
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "call_reason": {
               "rule_id": "advocate.fit_unknown",
               "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
@@ -5047,7 +5047,7 @@
             },
             "judged_condition": "new",
             "line": 0,
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "recommendation": "caution",
             "wait_until": "",
             "warnings": [
@@ -5061,7 +5061,7 @@
             ]
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
             "call_reason": {
               "rule_id": "advocate.ok",
               "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
@@ -5089,13 +5089,13 @@
             },
             "judged_condition": "new",
             "line": 0,
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "recommendation": "buy",
             "wait_until": "",
             "warnings": []
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "call_reason": {
               "rule_id": "advocate.fit_unknown",
               "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
@@ -5123,7 +5123,7 @@
             },
             "judged_condition": "open-box",
             "line": 0,
-            "need_id": "need-tony-stark-5070ti",
+            "need_id": "need-vidyut-5070ti",
             "recommendation": "caution",
             "wait_until": "",
             "warnings": [
@@ -5139,7 +5139,7 @@
         ],
         "loss_reports": [
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within10",
             "id": "lr-round-2-amazon-direct",
             "reason": "condition",
@@ -5149,7 +5149,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "over20",
             "id": "lr-round-2-ebay-263900",
             "reason": "price",
@@ -5159,7 +5159,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within20",
             "id": "lr-round-2-ebay-442526",
             "reason": "price",
@@ -5169,7 +5169,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within5",
             "id": "lr-round-2-micro-center",
             "reason": "condition",
@@ -5179,7 +5179,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within5",
             "id": "lr-round-2-shady-sam",
             "reason": "advocate_veto",
@@ -5189,7 +5189,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within5",
             "id": "lr-round-2-bargain-bin",
             "reason": "fit",
@@ -5199,7 +5199,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within5",
             "id": "lr-round-2-best-buy",
             "reason": "price",
@@ -5209,7 +5209,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within5",
             "id": "lr-round-2-fair-price-pc",
             "reason": "price",
@@ -5219,7 +5219,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T06:02:42Z",
+            "created_at": "2026-10-24T07:51:18Z",
             "gap_band": "within5",
             "id": "lr-round-2-ebay-824742",
             "reason": "price",
@@ -5232,7 +5232,7 @@
         "ranking": {
           "disqualified": [
             {
-              "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+              "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
               "condition": "unknown",
               "kind": "ineligible",
               "landed": 1299.99,
@@ -5243,7 +5243,7 @@
               "seller_id": "amazon-direct"
             },
             {
-              "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+              "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
               "condition": "new",
               "kind": "ineligible",
               "landed": 1489.0,
@@ -5254,7 +5254,7 @@
               "seller_id": "ebay-263900"
             },
             {
-              "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+              "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
               "condition": "new",
               "kind": "ineligible",
               "landed": 1399.99,
@@ -5265,7 +5265,7 @@
               "seller_id": "ebay-442526"
             },
             {
-              "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+              "bid_id": "bid-need-vidyut-5070ti-micro-center",
               "condition": "unknown",
               "kind": "ineligible",
               "landed": 1199.99,
@@ -5276,7 +5276,7 @@
               "seller_id": "micro-center"
             },
             {
-              "bid_id": "bid-need-tony-stark-5070ti-lowball",
+              "bid_id": "bid-need-vidyut-5070ti-lowball",
               "kind": "rejected",
               "reasons": [
                 "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
@@ -5294,7 +5294,7 @@
                   "unit_price": 757.44
                 }
               ],
-              "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+              "bid_id": "bid-need-vidyut-5070ti-shady-sam",
               "condition": "new",
               "landed": 757.44,
               "line": 0,
@@ -5313,7 +5313,7 @@
                   "unit_price": 1199.0
                 }
               ],
-              "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+              "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
               "condition": "new",
               "landed": 1199.0,
               "line": 0,
@@ -5337,7 +5337,7 @@
                   "unit_price": 1209.61
                 }
               ],
-              "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+              "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
               "condition": "open-box",
               "landed": 1209.61,
               "line": 1,
@@ -5356,7 +5356,7 @@
                   "unit_price": 1249.99
                 }
               ],
-              "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+              "bid_id": "bid-need-vidyut-5070ti-best-buy",
               "condition": "new",
               "landed": 1249.99,
               "line": 0,
@@ -5375,7 +5375,7 @@
                   "unit_price": 1289.0
                 }
               ],
-              "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+              "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
               "condition": "new",
               "landed": 1289.0,
               "line": 0,
@@ -5394,7 +5394,7 @@
                   "unit_price": 1239.99
                 }
               ],
-              "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+              "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
               "condition": "open-box",
               "landed": 1239.99,
               "line": 0,
@@ -5408,55 +5408,55 @@
         },
         "referee": [
           {
-            "bid_id": "bid-need-tony-stark-5070ti-amazon-direct",
+            "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
             "passed": true,
             "reasons": [],
             "seller_id": "amazon-direct"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-best-buy",
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "passed": true,
             "reasons": [],
             "seller_id": "best-buy"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-263900",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
             "passed": true,
             "reasons": [],
             "seller_id": "ebay-263900"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-442526",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
             "passed": true,
             "reasons": [],
             "seller_id": "ebay-442526"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-ebay-824742",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "passed": true,
             "reasons": [],
             "seller_id": "ebay-824742"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-micro-center",
+            "bid_id": "bid-need-vidyut-5070ti-micro-center",
             "passed": true,
             "reasons": [],
             "seller_id": "micro-center"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-shady-sam",
+            "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "passed": true,
             "reasons": [],
             "seller_id": "shady-sam"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-bargain-bin",
+            "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
             "passed": true,
             "reasons": [],
             "seller_id": "bargain-bin"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-lowball",
+            "bid_id": "bid-need-vidyut-5070ti-lowball",
             "passed": false,
             "reasons": [
               "rtx 5070 ti new: $1,090.00 is below this seller's floor"
@@ -5464,13 +5464,13 @@
             "seller_id": "lowball"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-fair-price-pc",
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
             "passed": true,
             "reasons": [],
             "seller_id": "fair-price-pc"
           },
           {
-            "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "passed": true,
             "reasons": [],
             "seller_id": "gadget-grove"
@@ -5491,7 +5491,7 @@
               "unit_price": 1209.61
             }
           ],
-          "bid_id": "bid-need-tony-stark-5070ti-gadget-grove",
+          "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "condition": "open-box",
           "landed": 1209.61,
           "line": 1,
@@ -5545,7 +5545,7 @@
     "beat4_signature_valid_and_replay_fails": true,
     "beat5_learner_closes_gap_above_floor": true
   },
-  "generated_at": "2026-10-24T06:02:42Z",
+  "generated_at": "2026-10-24T07:51:18Z",
   "provenance": {
     "claim_check": {
       "label": "REAL data.claim_check (Lane C), offline via fixture fetch",
@@ -5554,7 +5554,7 @@
     "data": {
       "LIVE": "none offline; Stripe test API only with --stripe",
       "MIRROR": "data/mirror/snapshots (real, dated listings)",
-      "SIM": "Tony Stark, Sam, Hal (beat 3 page only), Bargain Bin, Gadget Grove, Lowball, Fair Price PC"
+      "SIM": "Vidyut, Sam, Hal (beat 3 page only), Bargain Bin, Gadget Grove, Lowball, Fair Price PC"
     },
     "real_code": [
       "agents/advocate/checks.py advise and call_reason (Lane A)",
@@ -5577,6 +5577,6 @@
       "merchant simulator (Lane C): verify_request is called directly": "demo/approval_flow.py"
     }
   },
-  "run_id": "run-20261024T060242Z",
+  "run_id": "run-20261024T075118Z",
   "schema": "tech-bazaar-demo-run/1"
 }
