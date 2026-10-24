@@ -223,7 +223,12 @@ class MerchantSim:
             time_ok = approved_at.tzinfo is not None and parse_ts(mandate["created_at"]) <= approved_at <= current + timedelta(seconds=5)
         except (AttributeError, KeyError, TypeError, ValueError):
             time_ok = False
-        return time_ok and all(allowance.get(k) == v for k, v in expected.items())
+        # within_allowance is not proof: the amount must fit the limits the record was checked against
+        per, period = _whole_cents(allowance.get("per_purchase_limit")), _whole_cents(allowance.get("period_limit"))
+        raw_spent, amount = allowance.get("spent_this_period"), _whole_cents(mandate.get("amount"))
+        spent = 0 if raw_spent == 0 and not isinstance(raw_spent, bool) else _whole_cents(raw_spent)
+        fits = None not in (per, period, spent, amount) and amount <= per and spent + amount <= period
+        return time_ok and fits and all(allowance.get(k) == v for k, v in expected.items())
 
     def _submit(self, out, mandate, attempt, charger):
         metadata = {"deal_id": attempt["deal_id"], "mandate_hash": attempt["mandate_hash"], "origin": "SIM"}
