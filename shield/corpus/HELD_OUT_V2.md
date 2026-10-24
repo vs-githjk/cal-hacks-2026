@@ -34,3 +34,12 @@ edited afterwards and never used to tune a rule. Rule work in T9 used only `dev.
 - It is a small sample: 38 attacks and 18 controls. One extra attack is about 2.6 points, so quote counts, not
   claims of coverage. Nothing here shows Shield is secure.
 - Every context uses `sender_role: "seller"`; three attacks carry `payee_of_record` and one carries `price_history`.
+
+## Correction (2026-10-24, T9 fix round 1)
+
+The freeze rule above is true of the FILE (it was hashed before any rule change and has not been edited), but not of
+the rules: rule work in T9 was not limited to `dev.jsonl`, `dev2.jsonl` and `evasion_probe.jsonl`. The "developer
+mode" exemption was written for `h2-c17`, and the T9 tests reuse wording from `h2-a12`, `h2-a19` and `h2-a23`. So
+the v2 "after" numbers in `RESULTS.md` are in-sample (tuned on this set) and cannot support claim C5. Only the
+"before" run is a clean measurement. This file is unchanged and the hash above still matches; a fresh set written
+by an agent that has not seen the rules or this set is needed for C5.

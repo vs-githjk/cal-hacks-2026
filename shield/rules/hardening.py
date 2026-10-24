@@ -78,17 +78,22 @@ REFRAME = [
 ]
 
 # ---- protocol spoofing -----------------------------------------------------------------------------------
+# Key names here must never be a field of a real contract (contracts/*.schema.json): the Need carries a required
+# "consent": true, so "consent" and "consented" are NOT listed. The rule reads seller and unknown senders only.
 SPOOF = [
     rx(r"[\"'](?:tool|function|action|method|command)(?:_name)?[\"']\s*:\s*[\"'](?:pay|charge|transfer|approve|wire|release|refund|execute|send_?money|set_?allowance|confirm_?order)\w*"),
     rx(r"[\"']role[\"']\s*:\s*[\"'](?:system|assistant|developer|tool)[\"']"),
-    rx(r"[\"'](?:approved|authori[sz]ed|pre_?approved|buyer_?consent|consent(?:ed)?|verified)[\"']\s*:\s*true\b"),
+    rx(r"[\"'](?:approved|authori[sz]ed|pre_?approved|buyer_?consent|verified)[\"']\s*:\s*true\b"),
     rx(r"<\s*/?\s*(?:tool_call|function_call|tool_use|system|instructions?)\s*>"),
     rx(r"<\|(?:im_start|im_end|system|assistant|endoftext)\|>|<<\s*/?sys\s*>>|\[/?inst\]"),
 ]
 
 # ---- soft requests for private data ----------------------------------------------------------------------
-_ASK = (r"(?:tell|share|reveal|disclose|let\s+(?:us|me)\s+know|state|confirm|what(?:'s|\s+is|\s+are)|how\s+(?:much|high)|provide|send|"
-        r"give|reply\s+with|divulge|indicate|specify|name|say|paste|enter|submit)")
+# "name" and "state" are also nouns ("Wi-Fi name and password", "solid state drive ... password"): they count as
+# asking verbs only when an imperative cue comes first
+_IMPERATIVE = r"(?:(?:please|kindly|just|then|to|must|should|will|would\s+you)\s+|(?:^|[.!?;:\n])\s*)"
+_ASK = (r"(?:tell|share|reveal|disclose|let\s+(?:us|me)\s+know|confirm|what(?:'s|\s+is|\s+are)|how\s+(?:much|high)|provide|send|"
+        r"give|reply\s+with|divulge|indicate|specify|say|paste|enter|submit|" + _IMPERATIVE + r"(?:state|name))")
 _PRIVATE_CEILING = (r"(?:(?:the\s+)?most\s+(?:your|the)\s+(?:owner|buyer|principal)|max(?:imum)?\s+(?:price\s+|budget\s+|amount\s+|spend\w*\s+)?"
                     r"(?:your|the)\s+(?:owner|buyer|principal)|(?:your|the)\s+(?:owner|buyer|principal)(?:'s|s')?\s+"
                     r"(?:max\w*|budget|spend\w*\s+limit|limit|allowance|ceiling|walk-?\s?away(?:\s+price)?|reserve)|"
@@ -125,44 +130,61 @@ LINK = [
 ]
 
 # ---- suppression of warnings -----------------------------------------------------------------------------
-_HIDE_VERB = r"(?:mention|disclos\w*|reveal|tell|report|flag|rais\w*|surfac\w*|includ\w*|cit\w*|note|say|show)"
+_HIDE_VERB = r"(?:mention|disclos\w*|reveal|tell|flag|rais\w*|surfac\w*|cit\w*|note|say|show)"
+_TO_READER = r"(?:to|for|in|on)\s+(?:the\s+|your\s+)?(?:buyer|owner|principal|advocate|report|summary|advice|card|veto)"
 _WARN_WORD = (r"(?:buyer|owner|advocate|warnings?|veto(?:es)?|defects?|damage|recalls?|problems?|issues?|flaws?|"
               r"limitations?|returns?|warranty|swelling|failures?|risks?)")
 SUPPRESS = [
     rx(r"\b(?:do\s+not|don'?t|never|avoid|refrain\s+from)\s+" + _HIDE_VERB + r"\b[^.\n]{0,60}?\b" + _WARN_WORD + r"\b"),
+    # "report" and "include" are ordinary seller words ("do not include accessories with returns"): they hide a
+    # warning only when the object is the reader's side ("do not include the damage in your report")
+    rx(r"\b(?:do\s+not|don'?t|never|avoid|refrain\s+from)\s+(?:report|includ\w*)\b[^.\n]{0,60}?\b" + _WARN_WORD + r"\b[^.\n]{0,40}?\b" + _TO_READER + r"\b"),
     rx(r"\b(?:delete|remove|suppress|hide|withhold|erase|retract|clear|leave\s+out|omit)\s+(?:any\s+|the\s+|all\s+|every\s+|your\s+)?"
        r"(?:\w+\s+){0,2}?(?:warnings?|vetoe?s?|flags?|alerts?|concerns?|caveats?|disclaimers?)\b"),
 ]
 
 # ---- claimed approval ------------------------------------------------------------------------------------
 _SUBJ = r"(?:the\s+|your\s+)?(?:buyer|owner|principal|human)(?:'s)?"
+# "if the buyer has confirmed the order, we ship" and "once approval is recorded" state a condition, not a claim
+_COND = ("if", "once", "when", "after", "until", "unless", "whenever", "as soon as")
+_NOT_COND = "".join(rf"(?<!{c}\s)(?<!{c}\s(?:the)\s)(?<!{c}\s(?:your)\s)" for c in _COND)
 CLAIMED = [
-    rx(r"\b" + _SUBJ + r"\s+(?:has\s+|have\s+|already\s+|just\s+|had\s+)*(?:approved|consented|authori[sz]ed|signed\s+off|okayed|cleared|green-?lit)\b"),
-    rx(r"\b" + _SUBJ + r"\s+(?:has\s+|have\s+|already\s+|just\s+|had\s+)*(?:confirmed|agreed|accepted)\b[^.\n]{0,40}?\b"
+    rx(_NOT_COND + r"\b" + _SUBJ + r"\s+(?:has\s+|have\s+|already\s+|just\s+|had\s+)*(?:approved|consented|authori[sz]ed|signed\s+off|okayed|cleared|green-?lit)\b"),
+    rx(_NOT_COND + r"\b" + _SUBJ + r"\s+(?:has\s+|have\s+|already\s+|just\s+|had\s+)*(?:confirmed|agreed|accepted)\b[^.\n]{0,40}?\b"
        r"(?:purchase|order|payment|charges?|deal|terms|transaction|bid|price|sale)\b"),
-    rx(r"\b(?:approval|consent|authori[sz]ation|sign-?off|clearance)\s+(?:has\s+been\s+|was\s+|is\s+|already\s+)*"
+    rx(_NOT_COND + r"\b(?:approval|consent|authori[sz]ation|sign-?off)\s+(?:has\s+been\s+|was\s+|is\s+|already\s+)*"
        r"(?:recorded|received|granted|given|obtained|on\s+file|confirmed|completed?|verified|logged)\b"),
 ]
 
 # ---- rank and score manipulation -------------------------------------------------------------------------
 _CLAUSE = r"(?:^|[.!?;:,\n]\s*|\b(?:please|kindly|just|now|then|always|must|should|and|to)\s+)"
 _TARGET = r"(?:this|our|my|us|it|their|the\s+(?:bid|offer|quote|listing|seller|shop|store|deal))"
-_RANKED = (r"(?:first|winner|number\s+one|#\s?1|1st|10\s*/\s*10|10\s+out\s+of\s+10|5\s+out\s+of\s+5|five\s+stars?|perfect\s+score|"
-           r"best\s+value|top\s+(?:rank|score|spot|of\s+(?:your|the)\s+(?:list|ranking|results))|highest\s+(?:rank|score|rating|trust))")
+# Words that rank the sender only when a scoring verb aimed at the reader comes first ("rank this bid first");
+# in ordinary marketing ("choose us for the best value", "a five star review helps") they are just praise.
+_RANKED_WEAK = r"(?:first|best\s+value|five\s+stars?|5\s+stars?)"
+_RANKED = (r"(?:winner|number\s+one|#\s?1|1st|10\s*/\s*10|10\s+out\s+of\s+10|5\s+out\s+of\s+5|perfect\s+score|"
+           r"top\s+(?:rank|score|spot|of\s+(?:your|the)\s+(?:list|ranking|results))|highest\s+(?:rank|score|rating|trust))")
+_SCORING = r"(?:rank|rate|score|grade|mark|label|declare|crown|pronounce|output)"
+_OTHER = r"(?:name|select|pick|choose|put|place|list)"
 RANK = [
-    rx(_CLAUSE + r"(?:rank|rate|score|grade|mark|label|declare|name|crown|pronounce|select|pick|choose|output|put|place|list)\b"
-       r"[^.\n]{0,40}?\b" + _TARGET + r"\b[^.\n]{0,40}?\b" + _RANKED + r"\b"),
-    rx(r"\b(?:rate|score|grade)\s+" + _TARGET + r"\b[^.\n]{0,25}?\b" + _RANKED + r"\b"),
+    rx(_CLAUSE + _SCORING + r"\b[^.\n]{0,40}?\b" + _TARGET + r"\b[^.\n]{0,40}?\b(?:" + _RANKED + r"|" + _RANKED_WEAK + r")\b"),
+    rx(_CLAUSE + _OTHER + r"\b[^.\n]{0,40}?\b" + _TARGET + r"\b[^.\n]{0,40}?\b" + _RANKED + r"\b"),
+    rx(r"\b(?:rate|score|grade)\s+" + _TARGET + r"\b[^.\n]{0,25}?\b(?:" + _RANKED + r"|" + _RANKED_WEAK + r")\b"),
     rx(r"\bgive\s+(?:us|this\s+\w+|our\s+\w+|my\s+\w+)\s+(?:a\s+|an\s+|the\s+)?" + _RANKED + r"\b"),
 ]
 
 # ---- tampering with buyer-side state ---------------------------------------------------------------------
 _STATE_VERB = (r"(?:set|change|update|overwrite|edit|rewrite|record|log|store|save|raise|increase|lift|bump|extend|boost|lower|reset|"
                r"adjust|alter|modify|replace)")
-_STATE_NOUN = (r"(?:price\s+history|reference\s+price|baseline\s+price|market\s+price|typical\s+price|allowance|spend(?:ing)?\s+limit|"
-               r"per-?\s?purchase\s+limit|purchase\s+limit|budget\s+cap|spending\s+cap|trust\s+score|seller\s+score|payee|mandate)")
+_STATE_NOUN = (r"(?:price\s+history|reference\s+price|baseline\s+price|market\s+price|typical\s+price|trust\s+score|seller\s+score|payee|mandate)")
+# a limit is the buyer's own only when the text says whose it is, or sets it to a money amount ("raise the spend limit
+# to $900"); a bare "spend limit" can be a graphics-card or app setting
+_LIMIT_NOUN = (r"(?:allowance|spend(?:ing)?\s+limit|per-?\s?purchase\s+limit|purchase\s+limit|budget\s+cap|spending\s+cap)")
+_OWNER = r"(?:your|(?:the\s+)?(?:owner|buyer|principal)(?:'s|s')?|their\s+owner(?:'s)?)\s+(?:(?:owner|buyer|principal)(?:'s|s')?\s+)?"
 STATE = [
     rx(_CLAUSE + _STATE_VERB + r"\b[^.\n]{0,40}?\b" + _STATE_NOUN + r"\b"),
+    rx(_CLAUSE + _STATE_VERB + r"\b[^.\n]{0,40}?\b" + _OWNER + _LIMIT_NOUN + r"\b"),
+    rx(_CLAUSE + _STATE_VERB + r"\b[^.\n]{0,40}?\b" + _LIMIT_NOUN + r"\s+(?:up\s+)?to\s+(?:at\s+least\s+)?[$\u20ac\u00a3]\s?\d"),
 ]
 
 RULES = [
@@ -170,7 +192,7 @@ RULES = [
     _prose_rule("shield.override.mode", BLOCK, "high", "claims a mode or state in which the reader's checks are off", MODE),
     _prose_rule("shield.override.boundary", BLOCK, "high", "fake boundary or authority framing inside seller text", BOUNDARY),
     _prose_rule("shield.override.reframe", BLOCK, "high", "makes a later text the reader's new rules", REFRAME),
-    _prose_rule("shield.spoof.protocol", BLOCK, "high", "tool-call, role or chat-template markup inside seller text", SPOOF),
+    _prose_rule("shield.spoof.protocol", BLOCK, "high", "tool-call, role or chat-template markup inside seller text", SPOOF, seller_only=True),
     Rule("shield.exfil.ask", QUARANTINE, "high", "asks the buyer side for its owner's ceiling, card or secrets", check_ask, fold=True),
     _prose_rule("shield.link.opaque", QUARANTINE, "medium", "link shortener or script link that hides the destination", LINK),
     _prose_rule("shield.intent.suppress_warning", BLOCK, "high", "tells the reader to hide a warning or veto", SUPPRESS, seller_only=True),

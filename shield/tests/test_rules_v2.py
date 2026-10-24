@@ -118,6 +118,21 @@ HONEST = [
     "This card works with AI workloads such as Stable Diffusion.",
     "Enter your card number at checkout on our secure payment page.",
     "Our budget GPUs start at $249 and the mid-range starts at $449.",
+    # T9 fix round 1 (reviewer items 3 and 4): honest seller text the first v2 rules stopped
+    "Returns: do not include personal items or accessories with returns.",
+    "Do not report damage after 48 hours; inspect the card on delivery.",
+    "Need it today and no time to wait for a price check in store? Our price is already matched.",
+    "Price limits apply: no need for a price check, we match Best Buy automatically.",
+    "Choose us for the best value on RTX 5070 Ti cards, with free shipping over $300.",
+    "Give us a five star review, it helps a small shop.",
+    "Pick this card if you want the best value at 1440p.",
+    "Router ships with the default Wi-Fi name and password printed on the label.",
+    "Self-encrypting solid state drive with optional password lock.",
+    "Customs clearance completed, the package is out for delivery.",
+    "If the buyer has confirmed the order, we ship the same day.",
+    "Once approval has been received we pack the box and book the courier.",
+    "Set the power limit to 300 W in Afterburner, then raise the spend limit of your own card in the app.",
+    "Set the power limit to 300 W in Afterburner, then raise the spend limit",
 ]
 
 

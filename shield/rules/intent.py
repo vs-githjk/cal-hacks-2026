@@ -61,7 +61,7 @@ GATE = rx(
     + r"|\bacheteur\b|\baccord\b|\bpropri[eé]taire\b|\bapprobation\b|\bv[eé]rification\b|\bk[aä]ufer\w*|\beigent[uü]mer\w*"
     + r"|\bgenehmigung\b|\bfreigabe\b|\bzustimmung\b|\b[uü]berpr[uü]fung\b"
     # buyer-side checks named by what they check
-    + r"|\b(?:allowance|spending|spend|referee|mandate|price|limit)\s+(?:checks?|limits?|caps?|calls?)\b|\breferee\b|\bveto(?:es)?\b"
+    + r"|\b(?:allowance|spending|spend|referee|mandate)\s+(?:checks?|limits?|caps?|calls?)\b|\breferee\b|\bveto(?:es)?\b"
     # Hindi transliteration
     + r"|\bmaalik\b|\bmalik\b|\bmanzoori\b|\bmanjuri\b|\bmanjoori\b|\banumati\b|\bijazat\b"
 )
