@@ -185,7 +185,7 @@ def _sim_seller(sid: str, name: str, lines: list[Line], **kw) -> Seller:
 def sim_sellers() -> list[Seller]:
     band = "SIM listing priced inside the real market band"
     sam = _sim_hosted("shady-sam", "Shady Sam's Deals (SIM)", 0.04, 0.89, lies=True)
-    # A card that is too long for Tony Stark's 305 mm case: the fit checker, not a model, vetoes it.
+    # A card that is too long for Vidyut's 305 mm case: the fit checker, not a model, vetoes it.
     bin_ = _sim_seller("bargain-bin", "Bargain Bin Hardware (SIM)",
                        [_sim_line("bargain-bin", "new", 1199.0, 1150.0, f"{band}, 5070 Ti with a 4-slot cooler", length_mm=336)])
     # The learning seller: honest and a little too high, with two condition lines (the seller-model demo).
