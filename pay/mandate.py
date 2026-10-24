@@ -1,6 +1,6 @@
 """Mandate: the one-deal, one-amount, one-payee, one-use authorization (contracts/Mandate.schema.json).
 
-The hash binds deal_id, amount, currency, payee, tier_price, nonce and expires_at. Stripe charge and
+The hash binds deal_id, buyer_id, amount, currency, payee, tier_price, nonce and expires_at. Stripe charge and
 TAP verification both check it. A charge needs status "approved" plus an approval_id (`can_charge`).
 Every check returns a Verdict with a stable machine reason, never free text from a model.
 """
@@ -17,7 +17,7 @@ from typing import Any, Mapping, Optional
 
 from pay.replay import NS_MANDATE, NonceStore
 
-HASH_FIELDS = ("deal_id", "amount", "currency", "payee", "tier_price", "nonce", "expires_at")
+HASH_FIELDS = ("deal_id", "buyer_id", "amount", "currency", "payee", "tier_price", "nonce", "expires_at")   # buyer_id: #186
 # Hashed only when present, so a mandate without it hashes exactly as it did before (T8: CRS check binding).
 OPTIONAL_HASH_FIELDS = ("crs_check_id",)
 MAX_TTL_SECONDS = 600
