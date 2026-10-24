@@ -13,11 +13,3 @@ export function formatMoney(x: number): string {
   const body = x % 1 ? `${dollars}.${String(cents % 100).padStart(2, "0")}` : dollars;
   return `${x < 0 ? "-" : ""}$${body}`;
 }
-
-/** The line under the typed-code box: pending, then the server's answer with the tries left beside it. */
-export function typedStatus(s: { locked: boolean; busy: boolean; msg: string; failures: number; left: number }): string {
-  if (s.locked) return "Typed approval is locked after too many wrong codes. Approve on the call.";
-  if (s.busy) return "Checking...";
-  const tries = s.failures > 0 ? `${s.left} tries left.` : "";
-  return [s.msg, tries].filter(Boolean).join(" ");
-}

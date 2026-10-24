@@ -1271,7 +1271,9 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
             return
         ROUND.update(transaction=tx, payment_commit=out, pending_hold=True, phase="submitted")
         await ctx.send(sender, out)
-        await tell_owner(ctx, f"A confirmed charge was submitted for {tx['deal_id']}; waiting for the seller acknowledgement.")
+        from buyer.checkout import format_settlement_result
+        await tell_owner(ctx, f"A confirmed charge was submitted for {tx['deal_id']}: {format_settlement_result(envelope)} "
+                              "Waiting for the seller acknowledgement.")
     except Exception as exc:
         if durable_charge_saved:
             # The charge is known and durable; delivery/notification errors cannot turn it
@@ -1411,7 +1413,9 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
         await tell_owner(ctx, "The seller acknowledgement arrived, but Market could not confirm settlement. This purchase remains held.")
         return
     try:
-        await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement.")
+        from buyer.checkout import format_settlement_result
+        await tell(ctx, owner, f"Done: purchase {tx['deal_id']} settled and recorded after seller acknowledgement. "
+                               f"Receipt: {format_settlement_result(tx)}")
     except Exception as exc:
         # The settled state is already durable. A failed owner notice must not relock it.
         ctx.logger.warning(f"Settlement notice failed after durable completion: {type(exc).__name__}")

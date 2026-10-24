@@ -106,6 +106,22 @@ def _mirror_bid_with_shipping(shipping):
     return make_bid(n, s)
 
 
+def test_a_mirror_card_with_no_model_number_still_makes_a_valid_bid(monkeypatch):
+    # #209 review: a None model_number failed Bid validation and raised in the seller handler
+    real = seller
+    def no_model(name):
+        s = real(name)
+        for c in s["mirror_listings"]:
+            c.pop("model_number", None)
+        return s
+    monkeypatch.setitem(globals(), "seller", no_model)
+    shipping = {"value": 0.0, "source": "https://www.bestbuy.com/shipping",
+                "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"}
+    bid = _mirror_bid_with_shipping(shipping)
+    assert "model_number" not in bid["lines"][0]
+    common.validate("Bid", bid)
+
+
 def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():
     shipping = {"value": 0.0, "source": "https://www.bestbuy.com/shipping",
                 "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"}
