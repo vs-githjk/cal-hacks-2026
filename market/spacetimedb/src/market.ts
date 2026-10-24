@@ -888,10 +888,14 @@ function sameSellerProof(bindingJson: string) {
   try { return JSON.parse(bindingJson || 'null'); } catch { return undefined; }
 }
 
-/** Referee-only proof that one eligible seller must be excluded for sharing trusted identity with a higher-ranked seller. */
+/**
+ * Referee attests the opaque reference identifies a pinned registry, mirror, or bound-state identity record/group.
+ * Never pass raw or hashed payee/owner values or seller-supplied claims; Market validates binding and shape, not ownership.
+ */
 export function attachSameSellerExclusion(
   ctx: Ctx,
-  a: { roundId: string; keptBidId: string; excludedBidId: string; keptBindingHash: string; excludedBindingHash: string },
+  a: { roundId: string; keptBidId: string; excludedBidId: string; keptBindingHash: string; excludedBindingHash: string;
+    identityEvidenceJson: { source: string; reference: string } },
 ) {
   requireRole(ctx, 'attach_same_seller_exclusion', ['referee']);
   const round = ctx.db.round.id.find(a.roundId);
@@ -912,9 +916,13 @@ export function attachSameSellerExclusion(
       || ranking.candidateHashes.get(a.excludedBidId) !== a.excludedBindingHash) {
     throw new SenderError('same-seller proof must bind eligible bids in current Market rank order');
   }
+  if (!validSameSellerIdentityEvidence(a.identityEvidenceJson, [a.keptBidId, a.excludedBidId, keptBid.sellerId, excludedBid.sellerId])) {
+    throw new SenderError('same-seller proof needs a trusted identity evidence reference');
+  }
   const proof = {
     keptBidId: a.keptBidId, keptSellerId: keptBid.sellerId, keptBindingHash: a.keptBindingHash,
     excludedBidId: a.excludedBidId, excludedSellerId: excludedBid.sellerId, excludedBindingHash: a.excludedBindingHash,
+    identityEvidenceJson: a.identityEvidenceJson,
     reason: SAME_SELLER_REASON,
   };
   const detail = `${SAME_SELLER_REASON.rule_id}: ${SAME_SELLER_REASON.summary}`;
@@ -928,6 +936,16 @@ export function attachSameSellerExclusion(
     ctx.db.bidCheck.id.update({ ...existing[0]!, ...row });
     for (const duplicate of existing.slice(1)) ctx.db.bidCheck.id.update({ ...duplicate, result: 'stale' });
   } else ctx.db.bidCheck.insert({ id: 0n, ...row });
+}
+
+function validSameSellerIdentityEvidence(value: unknown, candidateIds: string[]): value is { source: string; reference: string } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const evidence = value as Record<string, unknown>;
+  return Object.keys(evidence).length === 2 && Object.keys(evidence).every((key) => key === 'source' || key === 'reference')
+    && ['registry', 'mirror', 'bound_state'].includes(String(evidence.source))
+    && typeof evidence.reference === 'string'
+    && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(evidence.reference)
+    && !candidateIds.includes(evidence.reference);
 }
 
 /** Referee-only confirmation that a stale duplicate exclusion no longer applies after re-review. */
@@ -978,6 +996,7 @@ function validateSameSellerProofs(ctx: Ctx, ranking: ReviewRanking): Map<string,
       && proof?.reason?.summary === SAME_SELLER_REASON.summary
       && proof?.reason?.source_url === SAME_SELLER_REASON.source_url
       && keptBid && excludedBid && keptBid.sellerId === proof.keptSellerId && excludedBid.sellerId === proof.excludedSellerId
+      && validSameSellerIdentityEvidence(proof.identityEvidenceJson, [proof.keptBidId, proof.excludedBidId, proof.keptSellerId, proof.excludedSellerId])
       && keptBid.sellerId !== excludedBid.sellerId && keptRank && excludedRank && keptRank.rank < excludedRank.rank
       && ranking.candidateHashes.get(keptBid.id) === proof.keptBindingHash
       && ranking.candidateHashes.get(excludedBid.id) === proof.excludedBindingHash;
