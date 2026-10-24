@@ -1,7 +1,7 @@
 "use client";
 // The header and the run mode footer for every page.
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
@@ -16,27 +16,11 @@ const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/floor", label: "Floor" },
   { href: "/seller/seller-a", label: "Seller", match: "/seller" },
 ];
-const THEME_KEY = "tb_theme";
 
-/** Header: mark, pill nav, market status and a light or dark toggle. Also lights card borders under the pointer. */
+/** Header: mark, pill nav and market status. Also lights card borders under the pointer. */
 export function AppHeader() {
   const path = usePathname();
   const conn = useSpacetimeDB();
-  const [light, setLight] = useState(false);
-
-  useEffect(() => {
-    let saved = false;
-    try {
-      saved = localStorage.getItem(THEME_KEY) === "light";
-    } catch {
-      // Blocked storage: dark, the default.
-    }
-    setLight(saved);
-  }, []);
-  useEffect(() => {
-    document.documentElement.classList.toggle("light", light);
-  }, [light]);
-
   // One listener for the whole app: the card under the pointer gets --mx and --my for its lit border.
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -56,17 +40,6 @@ export function AppHeader() {
     window.addEventListener("pointermove", move, { passive: true });
     return () => window.removeEventListener("pointermove", move);
   }, []);
-
-  const flip = () => {
-    setLight((l) => {
-      try {
-        localStorage.setItem(THEME_KEY, l ? "dark" : "light");
-      } catch {
-        // Not remembered; still switches.
-      }
-      return !l;
-    });
-  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
@@ -91,17 +64,9 @@ export function AppHeader() {
           })}
         </div>
         <span className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:flex">
-          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-mint shadow-[0_0_10px_var(--mint)]" : "bg-coral"}`} aria-hidden />
+          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-ink shadow-[0_0_10px_var(--ink)]" : "border border-ink bg-transparent"}`} aria-hidden />
           {conn.isActive ? "market live" : "offline"}
         </span>
-        <button
-          type="button"
-          onClick={flip}
-          aria-label={light ? "Switch to dark" : "Switch to light"}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted hover:text-ink"
-        >
-          <span aria-hidden className="text-[15px] leading-none">{light ? "◐" : "◑"}</span>
-        </button>
       </nav>
     </header>
   );

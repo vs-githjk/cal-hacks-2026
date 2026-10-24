@@ -6,8 +6,8 @@ import type { Actor } from "@/lib/floor";
 
 export interface FloorRow { id: string; actor: string; kind: string; label: string; origin: string; at: Date; ref: string }
 
-const COLOR: Record<Actor["kind"], number> = { buyer: 0x4f46e5, advocate: 0x0e7a56, shield: 0x121417, referee: 0x475569, seller: 0x8a5a05 };
-const SELLER_BY_ORIGIN: Record<string, number> = { LIVE: 0x0e7a56, MIRROR: 0x0b5f9e, SIM: 0xb7791f };
+const COLOR: Record<Actor["kind"], number> = { buyer: 0xf5f5f5, advocate: 0xbdbdbd, shield: 0x3a3a3a, referee: 0x8c8c8c, seller: 0x6b6b6b };
+const SELLER_BY_ORIGIN: Record<string, number> = { LIVE: 0xffffff, MIRROR: 0xa8a8a8, SIM: 0x5e5e5e };
 const HOP_MS = 700;
 
 export function Floor3D({ actors, rows, frozen, onPick }: { actors: Actor[]; rows: FloorRow[]; frozen: boolean; onPick: (key: string) => void }) {
@@ -37,10 +37,10 @@ export function Floor3D({ actors, rows, frozen, onPick }: { actors: Actor[]; row
       const sun = new THREE.DirectionalLight(0xffffff, 1.2);
       sun.position.set(3, 8, 5);
       scene.add(sun);
-      const floor = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.1, 64), new THREE.MeshStandardMaterial({ color: 0xe3e5ea }));
+      const floor = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.1, 64), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
       floor.position.y = -0.05;
       scene.add(floor);
-      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.3, 48), new THREE.MeshStandardMaterial({ color: 0xc7c9d1 }));
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.3, 48), new THREE.MeshStandardMaterial({ color: 0x2c2c2c }));
       ring.position.y = 0.15;
       scene.add(ring);
 

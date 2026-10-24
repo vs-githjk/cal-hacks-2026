@@ -3,67 +3,37 @@
 @import "tailwindcss";
 
 
-/* Base: the team reference artifact (dark first). Light mode is the .light class on <html> (toggle in the header).
-   Old names stay as aliases (canvas, soft, coral) so every existing component keeps working. */
+/* Black and white, one constant theme (no light switch). Meaning never rides on hue: origin chips differ by
+   label and weight, vetoes keep their strikethrough and the word "Vetoed", winners keep their row fill. */
 :root {
-  --canvas: #06090f;
-  --canvas-2: #0a101a;
-  --panel: #0e1521;
-  --soft: #121a28;
-  --glass: rgba(13, 20, 32, 0.66);
-  --ink: #e9eef7;
-  --ink-2: #c3cbd9;
-  --muted: #8792a6;
-  --line: #1a2334;
-  --line-2: #26324a;
-  --accent: #6f8cff;
-  --accent-2: #a9bbff;
-  --accent-ink: #06090f;
-  --accent-soft: rgba(111, 140, 255, 0.14);
-  --coral: #ff7b5c; /* flare: vetoes, denials, errors */
-  --coral-soft: rgba(255, 123, 92, 0.14);
-  --mint: #3fe0a5;
-  --mint-soft: rgba(63, 224, 165, 0.13);
-  --amber: #f3c660;
-  --amber-soft: rgba(243, 198, 96, 0.14);
-  --sky: #5fb8ff;
-  --sky-soft: rgba(95, 184, 255, 0.14);
-  --slate: #9aa6bb;
-  --slate-soft: rgba(154, 166, 187, 0.12);
-  --grid: rgba(111, 140, 255, 0.1);
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  --canvas: #000000;
+  --canvas-2: #070707;
+  --panel: #0b0b0b;
+  --soft: #151515;
+  --glass: rgba(0, 0, 0, 0.72);
+  --ink: #f5f5f5;
+  --ink-2: #c8c8c8;
+  --muted: #8c8c8c;
+  --line: #1f1f1f;
+  --line-2: #333333;
+  --accent: #ffffff;
+  --accent-2: #e6e6e6;
+  --accent-ink: #000000;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --coral: #ffffff; /* flare: vetoes, denials, errors (read by the word and the strikethrough) */
+  --coral-soft: rgba(255, 255, 255, 0.12);
+  --mint: #ffffff; /* won, approved, live */
+  --mint-soft: rgba(255, 255, 255, 0.16);
+  --amber: #a6a6a6; /* SIM */
+  --amber-soft: rgba(255, 255, 255, 0.06);
+  --sky: #d9d9d9; /* MIRROR, source links */
+  --sky-soft: rgba(255, 255, 255, 0.1);
+  --slate: #8c8c8c;
+  --slate-soft: rgba(255, 255, 255, 0.07);
+  --grid: rgba(255, 255, 255, 0.05);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
   --radius: 16px;
   color-scheme: dark;
-}
-
-:root.light {
-  --canvas: #f2f4f9;
-  --canvas-2: #e9edf5;
-  --panel: #ffffff;
-  --soft: #f6f8fc;
-  --glass: rgba(255, 255, 255, 0.72);
-  --ink: #0e1320;
-  --ink-2: #2a3346;
-  --muted: #5d687c;
-  --line: #dfe4ee;
-  --line-2: #c9d1e0;
-  --accent: #3a54e3;
-  --accent-2: #2237b8;
-  --accent-ink: #ffffff;
-  --accent-soft: rgba(58, 84, 227, 0.1);
-  --coral: #c7441a;
-  --coral-soft: rgba(199, 68, 26, 0.1);
-  --mint: #0e7a56;
-  --mint-soft: rgba(14, 122, 86, 0.1);
-  --amber: #8a5a05;
-  --amber-soft: rgba(138, 90, 5, 0.1);
-  --sky: #0b5f9e;
-  --sky-soft: rgba(11, 95, 158, 0.1);
-  --slate: #5a6478;
-  --slate-soft: rgba(90, 100, 120, 0.1);
-  --grid: rgba(58, 84, 227, 0.12);
-  --shadow: 0 20px 50px rgba(20, 30, 60, 0.12);
-  color-scheme: light;
 }
 
 @theme inline {

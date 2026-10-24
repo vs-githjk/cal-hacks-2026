@@ -49,7 +49,7 @@ export default function Home() {
           </p>
           <h1 className="max-w-[16ch] text-[clamp(34px,5.5vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance">
             The refereed arena for{" "}
-            <span className="bg-gradient-to-r from-accent via-accent-2 to-sky bg-clip-text text-transparent">agent commerce.</span>
+            <span className="bg-gradient-to-r from-ink via-ink-2 to-muted bg-clip-text text-transparent">agent commerce.</span>
           </h1>
           <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
             Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
