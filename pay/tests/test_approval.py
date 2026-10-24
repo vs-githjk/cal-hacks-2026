@@ -630,10 +630,21 @@ def test_a_word_two_letters_off_is_wrong(deal):
 def test_close_spellings_never_turn_a_wrong_pair_into_a_right_one(deal):
     m, s, code = deal
     a, b = code.split()
-    assert not s.approve(f"{b}s {a}s approve", sec(8)).approved            # swapped stays wrong
+    d = s.approve(f"{b}s {a}s approve", sec(8))                            # swapped stays wrong
+    assert not d.approved and d.reason == "wrong_code"
     from pay.words import WORDS
     other = next(w for w in WORDS if w not in (a, b))
-    assert not s.approve(f"{other}s {b} approve", sec(9)).approved         # a different word stays wrong
+    d = s.approve(f"{other}s {b} approve", sec(8 + 31))                    # a different word stays wrong (after the cooldown)
+    assert not d.approved and d.reason == "wrong_code"
+
+
+@pytest.mark.parametrize("mark", ["\u200b", "\u2060", "\ufeff"])
+def test_invisible_characters_cannot_glue_a_split_code_word(deal, mark):
+    m, s, code = deal
+    a, b = code.split()
+    # without the guard "k<zwsp>oala" leaves "oala", one edit from "koala", and the pair would approve
+    d = s.approve(f"{a[0]}{mark}{a[1:]} {b} approve", sec(8))
+    assert not d.approved and d.reason == "wrong_code"
 
 
 def test_no_list_word_is_another_list_word_plus_s():
