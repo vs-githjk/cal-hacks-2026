@@ -78,3 +78,52 @@ def test_wording_never_calls_a_store_a_liar():
     for text, page, kind in (("Brand new", SAM_GPU_LIES, "spec"), ("was $1,099", SAM_GPU_LIES, "price"), ("$699", HAL_GPU, "price")):
         reason = check(text, page, kind=kind)["reason"].lower()
         assert "lie" not in reason and "liar" not in reason and "wrong" not in reason
+
+
+# review fixes (#9): malformed pages never crash, never "false"
+def page_with(body):
+    return lambda url: body
+
+
+def check_body(text, body, kind="price"):
+    return check_claim({"id": "c", "bid_id": "b", "text": text, "kind": kind, "evidence_url": BASE + "x.html"}, fetch=page_with(body))
+
+
+def assert_could_not_verify(out):
+    assert out["result"] == "unverified" and out["method"].startswith("could not verify"), out
+
+
+def test_bad_listing_json_is_unverified():
+    assert_could_not_verify(check_body("$789", b'<script type="application/json" id="listing">{not json</script>'))
+
+
+def test_json_ld_price_na_is_unverified():
+    ld = b'<script type="application/ld+json">{"@type": "Product", "offers": {"price": "N/A"}}</script>'
+    assert_could_not_verify(check_body("$789", ld))
+
+
+def test_string_body_is_unverified_or_read():
+    out = check_body("$789", '<script type="application/json" id="listing">{"price": 789.0}</script>')
+    assert out["result"] in ("verified", "unverified")
+
+
+def test_list_body_is_unverified():
+    assert_could_not_verify(check_body("$789", ["not", "bytes"]))
+
+
+def test_price_field_with_no_value_is_unverified():
+    for v in (b'""', b"null", b'"N/A"'):
+        assert check_body("$789", b'<script type="application/json" id="listing">{"price": ' + v + b"}</script>")["result"] == "unverified"
+
+
+def test_only_http_and_https_urls_are_fetched():
+    called = []
+    out = check_claim({"id": "c", "bid_id": "b", "text": "$789", "kind": "price", "evidence_url": "file:///etc/hosts"},
+                      fetch=lambda url: called.append(url) or b"")
+    assert_could_not_verify(out)
+    assert not called
+
+
+def test_not_in_stock_parses_as_out_of_stock():
+    assert parse_claim({"text": "Not in stock", "kind": "stock"}) == ("stock", False)
+    assert parse_claim({"text": "currently unavailable", "kind": "stock"}) == ("stock", False)

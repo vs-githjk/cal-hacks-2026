@@ -12,6 +12,6 @@ def test_fit_io_shape():
 
 
 def test_claim_io_shape():
-    out = check_claim({"id": "c1", "kind": "price", "text": "$749", "evidence_url": "https://example.test/p"})
+    out = check_claim({"id": "c1", "kind": "price", "text": "$749", "evidence_url": "https://example.test/p"}, fetch=lambda url: b"")
     assert out["result"] in {"verified", "unverified", "false"}
     assert {"evidence_url", "checked_at", "method"} <= out.keys()

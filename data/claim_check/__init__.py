@@ -13,7 +13,7 @@ import json
 import re
 import urllib.request
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from data.fit_checker.tables import MICROARCH_SOCKET
 
@@ -22,7 +22,7 @@ PATTERNS = [  # (field, regex, value from match); first match wins
     ("was_price", r"\bwas\s*\$?\s*([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(1))),
     ("socket", r"\bsocket\s*(AM\d|LGA\s?\d{3,4})", lambda m: m.group(1).replace(" ", "").upper()),
     ("return_days", r"(\d+)[- ]day returns?", lambda m: int(m.group(1))),
-    ("stock", r"\bout of stock\b", lambda m: False),
+    ("stock", r"\b(out of stock|not in stock|unavailable|sold out)\b", lambda m: False),
     ("stock", r"\bin stock\b", lambda m: True),
     ("condition", r"\bopen[- ]box\b", lambda m: "open-box"),
     ("condition", r"\brefurb", lambda m: "refurbished"),
@@ -37,6 +37,16 @@ def _num(s):
     return float(str(s).replace(",", ""))
 
 
+def _money(v):
+    """Page price -> float, or None when the page gives no usable number ("", null, "N/A")."""
+    if isinstance(v, bool) or v in (None, ""):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    m = re.search(r"\d[\d,]*\.?\d*", str(v))
+    return _num(m.group(0)) if m else None
+
+
 def parse_claim(claim):
     if claim.get("field"):
         return claim["field"], claim.get("value")
@@ -49,6 +59,8 @@ def parse_claim(claim):
 
 
 def default_fetch(url):
+    if urlparse(url).scheme not in ("http", "https"):
+        raise ValueError("only http and https URLs are fetched")
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=20) as r:
         return r.read()
@@ -70,7 +82,7 @@ def page_facts(html):
             offer = offer[0] if isinstance(offer, list) else offer
             cond = str(offer.get("itemCondition") or "").rsplit("/", 1)[-1]
             avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
-            facts = {"title": node.get("name"), "price": _num(offer["price"]) if offer.get("price") else None,
+            facts = {"title": node.get("name"), "price": _money(offer.get("price")),
                      "condition": LD_CONDITION.get(cond), "stock": avail or None}
             return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD"
     return {}, "no structured data"
@@ -107,7 +119,7 @@ def judge(field, value, facts, at, series):
         return ("verified", f"the page shows {page}") if page == value else \
             ("false", f"claim says {value}; differs from the listing at {at}: the page shows {page}")
     if field == "price":
-        page = facts.get("price")
+        page = _money(facts.get("price"))
         if page is None:
             return "unverified", "could not verify: the page states no price"
         return ("verified", f"the page shows ${page:,.2f}") if abs(page - value) < 0.01 else \
@@ -152,17 +164,29 @@ def judge(field, value, facts, at, series):
 def check_claim(claim, fetch=None, history=None):
     fetch = fetch or default_fetch
     url = claim.get("evidence_url") or ""
+    unverified = lambda why: {**out, "method": f"could not verify: {why}", "reason": "could not verify"}
     at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     out = {"result": "unverified", "evidence_url": url, "checked_at": at, "evidence_hash": ""}
     field, value = parse_claim(claim)
     if field is None:
-        return {**out, "method": "could not verify: claim text not recognized", "reason": "could not verify"}
+        return unverified("claim text not recognized")
+    if urlparse(url).scheme not in ("http", "https"):
+        return unverified("only http and https pages are checked")
     try:
         body = fetch(url)
     except Exception as e:  # unreachable or blocked page: never "false"
-        return {**out, "method": f"could not verify: page fetch failed ({type(e).__name__})", "reason": "could not verify"}
+        return unverified(f"page fetch failed ({type(e).__name__})")
+    if isinstance(body, str):
+        body = body.encode("utf-8")
+    if not isinstance(body, (bytes, bytearray)):
+        return unverified("page body was not text")
     out["evidence_hash"] = hashlib.sha256(body).hexdigest()
-    facts, source = page_facts(body.decode("utf-8", "replace"))
-    series = _history(url, facts, fetch, history) if field == "was_price" else None
-    result, reason = judge(field, value, facts, at, series)
+    try:  # a malformed page must not abort a batch or turn into "false"
+        facts, source = page_facts(body.decode("utf-8", "replace"))
+        series = _history(url, facts, fetch, history) if field == "was_price" else None
+        result, reason = judge(field, value, facts, at, series)
+    except (ValueError, TypeError, KeyError, AttributeError) as e:
+        return unverified(f"page could not be parsed ({type(e).__name__})")
+    if result == "unverified":
+        return {**out, "result": result, "method": f"could not verify: {source}, {field} rule", "reason": reason}
     return {**out, "result": result, "method": f"fetched page, {source}, {field} rule", "reason": reason}
