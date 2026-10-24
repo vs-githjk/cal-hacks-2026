@@ -50,6 +50,15 @@ export function sha256(text: string): string {
 
 const ms = (ts: Timestamp) => Number(ts.microsSinceUnixEpoch / 1000n);
 const tsFromMs = (x: number) => new Timestamp(BigInt(Math.round(x)) * 1000n);
+const cents = (amount: number) => {
+  const value = amount * 100;
+  const rounded = Math.round(value);
+  const ulp = value === 0 ? Number.MIN_VALUE : 2 ** (Math.floor(Math.log2(Math.abs(value))) - 52);
+  if (!Number.isFinite(value) || !Number.isSafeInteger(rounded) || 2 * ulp >= 0.5 || Math.abs(value - rounded) > 2 * ulp) {
+    throw new SenderError('composite purchase amounts must be safe whole cents');
+  }
+  return BigInt(rounded);
+};
 
 function event(ctx: Ctx, kind: string, refTable: string, refId: string, label: string, sellerId = '', origin = 'SIM') {
   ctx.db.floorEvent.insert({ id: 0n, kind, refTable, refId, sellerId, label, origin, at: ctx.timestamp });
@@ -242,6 +251,17 @@ export interface PostGoalArgs {
   items: { skuSpec: string; condition: string; variant: string; quantity: number; skippedOwnedPartId: string }[];
 }
 
+export function registerOwnedPart(ctx: Ctx, a: { id: string; buyerId: string; skuSpec: string }) {
+  requireRole(ctx, 'register_owned_part', ['buyer'], a.buyerId);
+  if (!a.id.trim() || !a.skuSpec.trim()) throw new SenderError('owned part id and SKU are required');
+  const old = ctx.db.ownedPart.id.find(a.id);
+  if (old) {
+    if (old.buyerId !== a.buyerId || old.skuSpec !== a.skuSpec) throw new SenderError('owned part ID is immutable');
+    return old;
+  }
+  return ctx.db.ownedPart.insert({ id: a.id, buyerId: a.buyerId, skuSpec: a.skuSpec, createdAt: ctx.timestamp });
+}
+
 export const GOAL_TYPES = ['budget_cap', 'part_by_date', 'build_by_date'];
 
 export function postGoal(ctx: Ctx, a: PostGoalArgs) {
@@ -256,18 +276,67 @@ export function insertGoal(ctx: Ctx, a: PostGoalArgs) {
   if (!(Number.isFinite(a.cap) && a.cap > 0)) throw new SenderError('goal cap must be a finite positive number');
   const deadlineMs = Date.parse(a.deadline);
   if (!/^\d{4}-\d{2}-\d{2}T/.test(a.deadline) || Number.isNaN(deadlineMs)) throw new SenderError('deadline must be an ISO datetime, for example 2026-10-30T23:59:00Z');
+  if (a.type === 'build_by_date' && (a.items.length < 1 || a.items.length > 3)) throw new SenderError('build goals need one to three parts');
   for (const i of a.items) {
     if (!(Number.isFinite(i.quantity) && i.quantity > 0)) throw new SenderError(`goal item ${i.skuSpec}: quantity must be a number above 0`);
+    if (i.skippedOwnedPartId) {
+      const owned = ctx.db.ownedPart.id.find(i.skippedOwnedPartId);
+      if (!owned || owned.buyerId !== a.buyerId || owned.skuSpec !== i.skuSpec) throw new SenderError('skipped owned part must belong to this buyer and match the exact SKU');
+    }
   }
+  if (a.type === 'build_by_date' && new Set(a.items.map((i) => i.skuSpec)).size !== a.items.length) throw new SenderError('build goal parts must have unique SKUs');
   allowanceFor(ctx, a.buyerId);
   ctx.db.goal.insert({
     id: a.id, buyerId: a.buyerId, type: a.type, cap: a.cap, deadline: tsFromMs(deadlineMs), state: 'ACTIVE', reservedAmount: 0,
     reservedDealId: '', reservedMandateHash: '',
-    poNumber: a.poNumber, origin: a.origin, createdAt: ctx.timestamp,
+    poNumber: a.poNumber, origin: a.origin, createdAt: ctx.timestamp, parentGoalId: '', parentPart: '',
   });
   for (const i of a.items) ctx.db.goalItem.insert({ id: 0n, goalId: a.id, ...i });
   ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: a.id, klass: 'state', text: 'Goal set. The agent is hunting.', push: false, at: ctx.timestamp });
   event(ctx, 'goal_posted', 'goal', a.id, 'A buyer set a goal', '', a.origin);
+  if (a.type === 'build_by_date') completeParentIfReady(ctx, a.id);
+}
+
+function goalNeedMatches(ctx: Ctx, goalId: string, needId: string, exactTerms = false) {
+  const key = (item: { skuSpec: string; condition: string; variant: string; quantity: number }) => JSON.stringify(
+    exactTerms ? [item.skuSpec, item.condition, item.variant, item.quantity] : [item.skuSpec, item.quantity],
+  );
+  const expected = [...ctx.db.goalItem.goalId.filter(goalId)].filter((item) => !item.skippedOwnedPartId).map(key).sort();
+  const covered = [...ctx.db.needItem.needId.filter(needId)].map(key).sort();
+  return expected.length === covered.length && expected.every((item, index) => item === covered[index]);
+}
+
+export function postChildGoal(ctx: Ctx, a: { id: string; parentGoalId: string; part: string }) {
+  const parent = ctx.db.goal.id.find(a.parentGoalId);
+  if (!parent) throw new SenderError('no parent build goal');
+  requireRole(ctx, 'post_child_goal', ['buyer'], parent.buyerId);
+  const items = [...ctx.db.goalItem.goalId.filter(parent.id)];
+  if (parent.type !== 'build_by_date') throw new SenderError('parent build goal cannot accept a child');
+  if (items.length < 1 || items.length > 3 || new Set(items.map((i) => i.skuSpec)).size !== items.length) throw new SenderError('parent build must contain one to three unique parts');
+  const part = items.find((i) => i.skuSpec === a.part);
+  if (!part || part.skippedOwnedPartId) throw new SenderError('child part must be an unskipped parent SKU');
+  const existing = ctx.db.goal.id.find(a.id);
+  if (existing) {
+    const existingItems = [...ctx.db.goalItem.goalId.filter(existing.id)];
+    if (existing.parentGoalId === parent.id && existing.parentPart === a.part && existing.buyerId === parent.buyerId &&
+      existing.type === 'part_by_date' && existing.cap === parent.cap && ms(existing.deadline) === ms(parent.deadline) &&
+      existing.origin === parent.origin && existingItems.length === 1 &&
+      existingItems[0]!.skuSpec === part.skuSpec && existingItems[0]!.condition === part.condition &&
+      existingItems[0]!.variant === part.variant && existingItems[0]!.quantity === part.quantity && !existingItems[0]!.skippedOwnedPartId) return existing.id;
+    throw new SenderError(`goal ${a.id} already exists with different child terms`);
+  }
+  if (!['ACTIVE', 'HUNTING'].includes(parent.state) || ms(ctx.timestamp) > ms(parent.deadline)) throw new SenderError('parent build goal cannot accept a child');
+  if ([...ctx.db.goal.parentGoalId.filter(parent.id)].some((g) => g.parentPart === a.part)) throw new SenderError('a child already exists for this parent part');
+  if ([...ctx.db.goal.parentGoalId.filter(parent.id)].length >= 3) throw new SenderError('parent build already has the maximum number of children');
+  const child: PostGoalArgs = {
+    id: a.id, buyerId: parent.buyerId, type: 'part_by_date', cap: parent.cap,
+    deadline: new Date(ms(parent.deadline)).toISOString(), poNumber: parent.poNumber, origin: parent.origin,
+    items: [{ skuSpec: part.skuSpec, condition: part.condition, variant: part.variant, quantity: part.quantity, skippedOwnedPartId: '' }],
+  };
+  insertGoal(ctx, child);
+  const saved = ctx.db.goal.id.find(a.id)!;
+  ctx.db.goal.id.update({ ...saved, parentGoalId: parent.id, parentPart: a.part });
+  return a.id;
 }
 
 const GOAL_STATES = ['ACTIVE', 'HUNTING', 'HOLD_FOR_CALL', 'PAUSED', 'EXPIRED'];
@@ -295,13 +364,42 @@ export function setGoalState(ctx: Ctx, a: { goalId: string; state: string; reser
 function reserveGoalInner(ctx: Ctx, goalId: string, dealId: string, mandateHash: string, amount: number) {
   const g = ctx.db.goal.id.find(goalId);
   if (!g) throw new SenderError('no goal for this buyer');
-  if (!(Number.isFinite(amount) && amount > 0 && amount <= g.cap)) throw new SenderError('reservation amount must be finite, positive, and within the goal cap');
+  if (!(Number.isFinite(amount) && amount > 0)) throw new SenderError('reservation amount must be finite and positive');
+  const amountCents = g.parentGoalId ? cents(amount) : undefined;
+  if (amountCents !== undefined ? amountCents > cents(g.cap) : amount > g.cap) throw new SenderError('reservation amount must be within the goal cap');
   if (!dealId || !mandateHash) throw new SenderError('reservation needs a deal ID and mandate hash');
   if (g.state === 'DONE' || g.state === 'EXPIRED' || g.state === 'PAUSED' || ms(ctx.timestamp) > ms(g.deadline)) throw new SenderError('goal cannot accept a new deal');
-  if (g.reservedAmount > 0) {
-    if (g.reservedAmount === amount && g.reservedDealId === dealId && g.reservedMandateHash === mandateHash) return g;
-    throw new SenderError('goal already has an active deal reservation');
+  const exactHold = g.reservedAmount > 0 && g.reservedAmount === amount && g.reservedDealId === dealId && g.reservedMandateHash === mandateHash;
+  if (g.reservedAmount > 0 && !exactHold) throw new SenderError('goal already has an active deal reservation');
+  if (g.type === 'build_by_date' && !g.parentGoalId) throw new SenderError('a build goal is budget-only; create a child part goal');
+  if (g.parentGoalId) {
+    const parent = ctx.db.goal.id.find(g.parentGoalId);
+    if (!parent || parent.type !== 'build_by_date' || parent.buyerId !== g.buyerId || !['ACTIVE', 'HUNTING'].includes(parent.state) || ms(ctx.timestamp) > ms(parent.deadline)) throw new SenderError('child parent is unavailable');
+    const parentPart = [...ctx.db.goalItem.goalId.filter(parent.id)].find((i) => i.skuSpec === g.parentPart && !i.skippedOwnedPartId);
+    const childItem = [...ctx.db.goalItem.goalId.filter(g.id)];
+    if (!parentPart || childItem.length !== 1 || childItem[0]!.skuSpec !== parentPart.skuSpec || childItem[0]!.condition !== parentPart.condition || childItem[0]!.variant !== parentPart.variant || childItem[0]!.quantity !== parentPart.quantity) throw new SenderError('child no longer matches its parent part');
+    let paid = 0n;
+    const capCents = cents(parent.cap);
+    const childIds = new Set([...ctx.db.goal.parentGoalId.filter(parent.id)].map((child) => child.id));
+    for (const md of ctx.db.mandate.iter()) {
+      if (!childIds.has(md.goalId)) continue;
+      const payment = ctx.db.payment.mandateHash.find(md.hash);
+      if (payment) {
+        if (payment.amount !== md.amount || md.buyerId !== parent.buyerId) throw new SenderError('child payment does not match its immutable mandate');
+        paid += cents(payment.amount);
+      }
+    }
+    let otherHolds = 0n;
+    for (const child of ctx.db.goal.parentGoalId.filter(parent.id)) {
+      if (child.id === g.id || child.reservedAmount <= 0) continue;
+      const paidHold = ctx.db.payment.mandateHash.find(child.reservedMandateHash);
+      if (!paidHold) otherHolds += cents(child.reservedAmount);
+    }
+    const currentPayment = exactHold && ctx.db.payment.mandateHash.find(mandateHash);
+    if (currentPayment && (currentPayment.amount !== amount || cents(currentPayment.amount) !== amountCents)) throw new SenderError('paid reservation amount is immutable');
+    if (paid + otherHolds + (currentPayment ? 0n : amountCents!) > capCents) throw new SenderError('parent build cap would be exceeded by paid spend, active holds, and this reservation');
   }
+  if (exactHold) return g;
   const other = [...ctx.db.goal.buyerId.filter(g.buyerId)].find((x) => x.id !== g.id && x.reservedAmount > 0);
   if (other) throw new SenderError('this buyer already has an active deal reservation');
   return ctx.db.goal.id.update({ ...g, reservedAmount: amount, reservedDealId: dealId, reservedMandateHash: mandateHash });
@@ -358,12 +456,29 @@ export function settleGoal(ctx: Ctx, a: { goalId: string; dealId: string; mandat
     throw new SenderError('goal was already settled to a different deal');
   }
   if (g.reservedDealId !== a.dealId || g.reservedMandateHash !== a.mandateHash || g.reservedAmount !== md.amount) throw new SenderError('payment does not match the active reservation');
-  const requested = [...ctx.db.goalItem.goalId.filter(g.id)].filter((i) => !i.skippedOwnedPartId).map((i) => `${i.skuSpec}|${i.quantity}`).sort();
   const need = md.needId ? ctx.db.need.id.find(md.needId) : undefined;
   if (!need || need.goalId !== g.id || need.buyerId !== buyerId) throw new SenderError('settlement need is not bound to this complete goal');
-  const covered = [...ctx.db.needItem.needId.filter(md.needId)].map((i) => `${i.skuSpec}|${i.quantity}`).sort();
-  if (requested.length !== covered.length || requested.some((x, i) => x !== covered[i])) throw new SenderError('a partial deal cannot complete the parent goal');
+  if (!goalNeedMatches(ctx, g.id, md.needId, !!g.parentGoalId)) throw new SenderError('a partial deal cannot complete the parent goal');
   ctx.db.goal.id.update({ ...g, state: 'DONE', reservedAmount: 0, reservedDealId: '', reservedMandateHash: '', poNumber: a.dealId });
+  if (g.parentGoalId) completeParentIfReady(ctx, g.parentGoalId);
+}
+
+function completeParentIfReady(ctx: Ctx, parentId: string) {
+  const parent = ctx.db.goal.id.find(parentId);
+  if (!parent || parent.type !== 'build_by_date') return;
+  const items = [...ctx.db.goalItem.goalId.filter(parent.id)];
+  if (!items.length || items.length > 3) return;
+  const children = [...ctx.db.goal.parentGoalId.filter(parent.id)];
+  const unskipped = items.filter((i) => !i.skippedOwnedPartId);
+  const skippedValid = items.filter((i) => i.skippedOwnedPartId).every((i) => {
+    const owned = ctx.db.ownedPart.id.find(i.skippedOwnedPartId);
+    return !!owned && owned.buyerId === parent.buyerId && owned.skuSpec === i.skuSpec;
+  });
+  const covered = children.length === unskipped.length && unskipped.every((i) => {
+    const matching = children.filter((c) => c.parentPart === i.skuSpec);
+    return matching.length === 1 && matching[0]!.state === 'DONE';
+  });
+  if (skippedValid && covered && parent.state !== 'DONE') ctx.db.goal.id.update({ ...parent, state: 'DONE' });
 }
 
 // ---------------------------------------------------------------- rounds
@@ -802,9 +917,7 @@ export function createMandate(
     const n = a.needId ? ctx.db.need.id.find(a.needId) : undefined;
     if (!n || n.goalId !== g.id || n.buyerId !== a.buyerId) throw new SenderError('mandate need is not bound to this buyer goal');
     if (n.spendLimit > g.cap) throw new SenderError('need cap is above the goal cap');
-    const expected = [...ctx.db.goalItem.goalId.filter(g.id)].filter((i) => !i.skippedOwnedPartId).map((i) => `${i.skuSpec}|${i.quantity}`).sort();
-    const covered = [...ctx.db.needItem.needId.filter(n.id)].map((i) => `${i.skuSpec}|${i.quantity}`).sort();
-    if (expected.length !== covered.length || expected.some((x, i) => x !== covered[i])) throw new SenderError('mandate need does not cover the complete goal');
+    if (!goalNeedMatches(ctx, g.id, n.id, !!g.parentGoalId)) throw new SenderError('mandate need does not cover the complete goal');
     reserveGoalInner(ctx, a.goalId, a.dealId, a.hash, a.amount);
     const current = ctx.db.goal.id.find(a.goalId)!;
     ctx.db.goal.id.update({ ...current, state: within ? 'HUNTING' : 'HOLD_FOR_CALL' });

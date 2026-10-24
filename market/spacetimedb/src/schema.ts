@@ -74,6 +74,8 @@ export const goal = table(
     createdAt: t.timestamp(),
     reservedDealId: t.string().default(''), // appended for in-place migration
     reservedMandateHash: t.string().default(''), // appended for in-place migration
+    parentGoalId: t.string().index('btree').default(''), // appended for parent/child build transactions
+    parentPart: t.string().default(''), // exact parent goalItem SKU; empty on root goals
   },
 );
 
@@ -401,10 +403,21 @@ export const roundTimer = table(
   },
 );
 
+/** Buyer-reported ownership projection for exact same-buyer Goal skips; not physical proof. */
+export const ownedPart = table(
+  { name: 'owned_part' },
+  {
+    id: t.string().primaryKey(),
+    buyerId: t.string().index('btree'),
+    skuSpec: t.string(),
+    createdAt: t.timestamp(),
+  },
+);
+
 const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, goalStepEvent, owner, role, pairCode, pairAttempt, buyerProfile, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
-  round, roundResult, rejectedAttempt, floorEvent, agentEvent, persona, roundTimer,
+  round, roundResult, rejectedAttempt, floorEvent, agentEvent, persona, roundTimer, ownedPart,
 });
 export default spacetimedb;

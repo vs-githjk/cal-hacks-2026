@@ -27,7 +27,9 @@
     "state": {"type": "string", "enum": ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "DONE", "EXPIRED", "PAUSED"]},
     "reserved_amount": {"type": "number"},
     "po_number": {"type": "string"},
-    "created_at": {"type": "string"}
+    "created_at": {"type": "string"},
+    "parent_goal_id": {"type": "string", "description": "Private local relation to the parent build goal; omitted on parent goals."},
+    "parent_part": {"type": "string", "description": "Exact SKU of the parent build item represented by this child; omitted on parent goals."}
   },
   "required": ["id", "buyer_id", "type", "items", "cap", "deadline", "state", "reserved_amount", "created_at"]
 }

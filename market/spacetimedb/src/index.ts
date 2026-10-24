@@ -42,6 +42,16 @@ export const post_goal = spacetimedb.reducer(
   (ctx, a) => m.postGoal(ctx, a),
 );
 
+export const register_owned_part = spacetimedb.reducer(
+  { id: t.string(), buyerId: t.string(), skuSpec: t.string() },
+  (ctx, a) => m.registerOwnedPart(ctx, a),
+);
+
+export const post_child_goal = spacetimedb.reducer(
+  { id: t.string(), parentGoalId: t.string(), part: t.string() },
+  (ctx, a) => m.postChildGoal(ctx, a),
+);
+
 export const open_round = spacetimedb.reducer({ roundId: t.string(), needId: t.string(), windowS: t.u32() }, (ctx, a) => m.openRound(ctx, a));
 
 export const place_bid = spacetimedb.reducer(

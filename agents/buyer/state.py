@@ -16,7 +16,7 @@ DEFAULT_DB_PATH = DEFAULT_STATE_DIR / "state.sqlite3"
 LEGACY_DB_PATH = Path(__file__).resolve().parents[1] / ".state.sqlite3"
 _CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 _GOAL_KEYS = {"id", "buyer_id", "type", "items", "cap", "deadline", "state", "reserved_amount",
-              "po_number", "created_at", "notes"}
+              "po_number", "created_at", "notes", "parent_goal_id", "parent_part"}
 _TRANSACTION_KEYS = {"deal_id", "buyer_id", "goal_id", "need_id", "bid_id", "phase", "deal", "order",
                      "advocate_card", "mandate", "voice_approval", "allowance_authorization",
                      "settlement", "settlement_result", "payment_ref", "mode"}
@@ -106,6 +106,8 @@ def _validate_goal(goal: dict) -> tuple[str, str]:
     if set(goal) - _GOAL_KEYS:
         raise ValueError("goal contains an unsupported field")
     _validate("Goal", goal)
+    if bool(goal.get("parent_goal_id")) != bool(goal.get("parent_part")):
+        raise ValueError("parent_goal_id and parent_part must be provided together")
     return _nonempty(goal["id"], "goal id"), _nonempty(goal["buyer_id"], "goal buyer_id")
 
 

@@ -81,6 +81,19 @@ def test_goals_and_transactions_survive_reopen_and_are_owner_bound(tmp_path):
     second.close()
 
 
+def test_goal_child_relation_fields_round_trip_and_must_be_paired(db):
+    child = goal("child-1", "buyer-a")
+    child.update(parent_goal_id="parent-1", parent_part="psu 750w")
+    state.save_goal(db, child)
+    assert state.load_goal(db, "child-1", "buyer-a")["parent_goal_id"] == "parent-1"
+    assert state.load_goal(db, "child-1", "buyer-a")["parent_part"] == "psu 750w"
+
+    unpaired = goal("child-2", "buyer-a")
+    unpaired["parent_goal_id"] = "parent-1"
+    with pytest.raises(ValueError):
+        state.save_goal(db, unpaired)
+
+
 def test_goal_and_transaction_ids_cannot_be_reassigned_to_another_owner(db):
     state.save_goal(db, goal("goal-1", "buyer-a"))
     state.save_transaction(db, transaction("deal-1", "buyer-a"))
