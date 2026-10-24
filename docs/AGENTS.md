@@ -1,0 +1,29 @@
+# AGENTS.md: shared memory for every coding agent on Tech Bazaar (teammates' Claude sessions included)
+Read this first. Append what you learn at the bottom (one line, `[HH:MM] agent: fact | why it matters`). Never delete others' lines.
+
+## Ground truth (read, do not re-derive)
+- Product: Tech Bazaar, "the refereed arena for agent commerce". Security API: Bazaar Shield. Scope: all computer gear. Five beats: goal set; sellers bid + advocate vetoes a trap with source; Shield blocks an injected listing live; two-way call approves above allowance; losing seller gets loss report and learns.
+- Decisions: (conductor file) (LOCKED wins; SUPERSEDED lines at the end override older ones). Idea: (conductor file) (rulings at top). Lane plans: repo docs/kickoff/*.md.
+- Repo: github.com/vs-githjk/cal-hacks-2026. Main clone (local path) (watcher uses it; do not leave it dirty). Lane D worktree (local path) (branch lane-d-pay-trust).
+- Only Vidyut and the conductor push to main. Teammates use PRs. Squash-merge on reviewer PASS.
+- Hub page: https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU (source (conductor file)). Survey: https://claude.ai/artifact/Mn4FGTUteLBhUiDJSRTvad.
+- Progress tracker: (conductor file) Review log: (conductor file)
+
+## Conventions (every agent)
+- Never Co-Authored-By. No secrets, no .env in git. No em or en dashes. Never "Visa settles" (Stripe test mode on a Visa test card + TAP-style signatures). Never call a real store a liar. Label everything LIVE, MIRROR or SIM.
+- Contract change: one NEW file in docs/changes/<HHMM>-<lane>-<topic>.md. Board lines: docs/board/<lane>.md. Never append to docs/CHANGES.md or docs/BOARD.md (frozen).
+- Python: use python3 (no `python` on PATH). Install nothing without Vidyut's OK. Spending (Apify runs, Twilio, purchases) needs Vidyut's OK; Apify and CRS credits are in hand.
+- Lane B tests need node_modules that are not installed; say so rather than claiming green.
+
+## Contracts on main (do not break)
+- SpecCard (C), Mandate, VoiceApproval, Allowance (D; Allowance = per_purchase_limit, period_limit, period, spent_this_period, ladder_step).
+- pay/: mandate_hash over deal_id, amount, currency, payee, tier_price, nonce, expires_at (sorted keys, no spaces). Merchant simulator must call pay.tap.verify_request with expected_mandate_hash; body carries the mandate under "mandate". Headers: Content-Digest, Mandate-Hash, Signature-Input, Signature.
+
+## Gotchas found in reviews (learn from these)
+- [22:07] Writes outside try after a paid API call lose the run; create output dirs first (C run_actors).
+- [22:11] Security checks must be required args, not optional; fail closed when a binding is missing (D can_charge, verify_request).
+- [22:20] Every SpacetimeDB reducer that moves money or judges bids must check the caller identity (B).
+- [22:20] Validate numeric inputs (quantity > 0, finite) before ranking (B).
+- [22:05] Reformatting a shared schema file causes needless conflicts; change only the lines you need.
+
+## Log
