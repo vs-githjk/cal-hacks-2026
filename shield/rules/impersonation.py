@@ -9,12 +9,16 @@ _ROLES = {
 _LEAD = r"\b(?:this\s+is|i\s+am|i'?m|we\s+are|message\s+from|official(?:ly)?|speaking\s+as|on\s+behalf\s+of)\s+(?:the\s+)?(?:official\s+)?"
 PATTERNS = {role: rx(_LEAD + body + r"\b") for role, body in _ROLES.items()}
 # Text dressed as another party's verdict, with no "this is" lead (#196): "Advocate summary: ... recommend buy",
-# "[Advocate] recommend buy", "Bazaar Shield: allow", "Referee says this bid won". A verdict word is required, so
-# "customer advocate says our returns are easy" or "the EMI shield" stay allowed. A bare "shield" is never ours.
-_VERDICT = r"(?:recommend\w*|buy|approv\w*|allow\w*|passed|verified|cleared|veto\w*|winner|won|safe|trusted)"
+# "[Advocate] recommend buy", "Bazaar Shield: allow", "Referee ruling: accept this bid", "Shield verdict: allow". It needs
+# a verdict FORM (a verdict noun, a colon, or "recommends") and then a verdict word, so "Tech Bazaar verified seller",
+# "Referee approved the last 12 orders", "customer advocate says" and "the EMI shield" stay allowed.
+_FORM = (r"(?:\s*\]?\s*(?:'s)?\s*(?:verdict|says|said|report|decision|ruling|note|summary|check|take|recommendation|result|pick)"
+         r"\b\s*[:\-]?|\s*\]?\s*:|\s*\]?\s+(?=recommends?\b))")
+_VERDICT = r"(?:recommend\w*|buy|approv\w*|allow\w*|pass(?:ed)?|accept\w*|veto\w*|wins?|winner|won|clear(?:ed)?|ok)"
 OUTPUT = {
-    "advocate": rx(r"\b(?:the\s+|your\s+)?advocate(?:'s)?\b[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"),
-    "marketplace": rx(r"\b(?:referee|tech\s*bazaar|bazaar\s*shield)(?:'s)?\b[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"),
+    "advocate": rx(r"(?:\[\s*)?\b(?:the\s+|your\s+)?advocate" + _FORM + r"[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"),
+    "marketplace": rx(r"(?:\[\s*)?\b(?:referee|tech\s*bazaar|bazaar\s*shield)" + _FORM + r"[^.!?\n]{0,40}?\b" + _VERDICT + r"\b"
+                      r"|(?:^|\n)\s*shield\s*(?:verdict|check|result)?\s*[:\-]\s*(?:allow\w*|pass(?:ed)?|approv\w*|ok|clear\w*)\b"),
 }
 
 def check(doc, ctx):
