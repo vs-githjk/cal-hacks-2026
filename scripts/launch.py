@@ -196,7 +196,7 @@ class Check:
 
 def run_preflight(a, services: list[Service], file_env: dict[str, str], env_note: str, *,
                   repo: Path = REPO, which=shutil.which, can_import=None, port_busy=None,
-                  owned_ports: set[int] | None = None, home_bin: Path | None = None) -> list[Check]:
+                  owned_ports: set[int] | None = None, home_bin: Path | None = None, agent_runner=None) -> list[Check]:
     can_import = can_import or (lambda mod: __import__("importlib.util").util.find_spec(mod) is not None)
     port_busy = port_busy or tcp_open
     owned_ports = owned_ports or set()
@@ -209,6 +209,16 @@ def run_preflight(a, services: list[Service], file_env: dict[str, str], env_note
     out.append(Check("uv", bool(uv), uv or "", UV_INSTALL))
     venv_ok = venv_python(repo).exists()
     out.append(Check("agents/.venv", venv_ok, "", "", auto="up creates it with uv and installs agents/requirements.txt"))
+    agent = next((s for s in services if s.group == "agents"), None)
+    if venv_ok and agent:
+        try:
+            probe = (agent_runner or subprocess.run)([str(venv_python(repo)), "-c", "import cryptography"],
+                                                     env=env_for(agent, file_env), capture_output=True, timeout=10)
+            crypto_ok = probe.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            crypto_ok = False
+        out.append(Check("agent deps (cryptography)", crypto_ok, "",
+                         auto="up syncs agents/requirements.txt when agent imports are missing"))
     node = which("node")
     out.append(Check("node", bool(node), node or "", NODE_INSTALL))
     out.append(Check("npm", bool(which("npm")), "", NODE_INSTALL))
@@ -565,7 +575,7 @@ def run_step(label: str, cmd: list[str], cwd: Path, env: dict[str, str], run_dir
         return False
 
 
-def ensure_agents_venv(repo: Path, run_dir: Path, env: dict[str, str]) -> str | None:
+def ensure_agents_venv(repo: Path, run_dir: Path, env: dict[str, str], *, probe_env: dict[str, str] | None = None) -> str | None:
     """Create agents/.venv with uv and install requirements. Returns an error string or None."""
     py = venv_python(repo)
     uv = find_uv()
@@ -575,10 +585,14 @@ def ensure_agents_venv(repo: Path, run_dir: Path, env: dict[str, str]) -> str | 
         if not run_step("uv venv agents/.venv", [uv, "venv", "--python", "3.12", "--no-python-downloads", str(repo / "agents" / ".venv")],
                         repo, env, run_dir, "setup-agents-venv"):
             return f"uv venv failed, see {log_path(run_dir, 'setup-agents-venv')}"
-    probe = subprocess.run([str(py), "-c", "import uagents, jsonschema"], capture_output=True)
-    if probe.returncode != 0:
+    try:
+        probe = subprocess.run([str(py), "-c", "import uagents, jsonschema, cryptography"],
+                               env=probe_env if probe_env is not None else env, capture_output=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        probe = None
+    if probe is None or probe.returncode != 0:
         if not uv:
-            return f"agents/.venv lacks uagents and uv is missing. Install: {UV_INSTALL}"
+            return f"agents/.venv lacks required imports and uv is missing. Install: {UV_INSTALL}"
         if not run_step("uv pip install -r agents/requirements.txt", [uv, "pip", "install", "--python", str(py), "-r",
                                                                        str(repo / "agents" / "requirements.txt")],
                         repo, env, run_dir, "setup-agents-install"):
@@ -658,7 +672,8 @@ def cmd_up(a, repo: Path = REPO) -> int:
     # setup that must happen before a service can start
     agents_err = None
     if any(s.group == "agents" and not s.skip_reason for s in services):
-        agents_err = ensure_agents_venv(repo, run_dir, run_env)
+        agent_service = next(s for s in services if s.group == "agents" and not s.skip_reason)
+        agents_err = ensure_agents_venv(repo, run_dir, run_env, probe_env=env_for(agent_service, file_env))
     web_err = ensure_npm(repo, "web", run_dir, run_env) if any(s.name == "web" and not s.skip_reason for s in services) else None
     stdb_ready = False
     if not agents_err and venv_python(repo).exists() and "SSL_CERT_FILE" not in os.environ:
