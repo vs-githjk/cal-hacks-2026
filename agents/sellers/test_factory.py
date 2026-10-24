@@ -185,15 +185,30 @@ def test_schema_file_is_a_valid_json_schema_and_accepts_good():
     Draft202012Validator(schema).validate(good())
 
 
-@pytest.mark.parametrize("sid", ["buyer", "advocate", "shield", "seller_1", "seller_5", "seller_12"])
+@pytest.mark.parametrize("sid", ["buyer", "advocate", "shield", "seller_1", "seller_5", "seller_12",
+                                 "seller-1", "seller-5", "seller-12", "seller-01"])
 def test_reserved_agent_ids_are_refused(sid):
     err = refused(dict(good(), id=sid), "id", "reserved for a Tech Bazaar agent")
     assert [e["field"] for e in err.errors] == ["id"]
 
 
 def test_similar_but_unreserved_ids_are_accepted():
-    for sid in ("seller-1", "seller_one", "myseller_1", "buyer-2", "shield_x"):
+    for sid in ("seller-one", "seller_one", "myseller_1", "my-seller-1", "buyer-2", "shield_x", "seller-1a"):
         assert validate_config(dict(good(), id=sid))["id"] == sid
+
+
+@pytest.mark.parametrize("sid", ["seller-1", "seller-5", "seller_1"])
+def test_hyphen_ids_never_read_a_built_in_sellers_seed(sid, monkeypatch):
+    """A hyphen id maps to the same env name as the built-in (seller-1 -> SELLER_1_AGENT_SEED), so it must be refused
+    by the factory and, even if a caller skips the factory, by register_custom_seller."""
+    monkeypatch.setenv("SELLER_1_AGENT_SEED", "reviewer-fake-seed-xyz")
+    monkeypatch.setenv("SELLER_5_AGENT_SEED", "reviewer-fake-seed-xyz")
+    before = dict(common.SEEDS)
+    with pytest.raises(ConfigError):
+        seller_from_config(dict(good(), id=sid))
+    with pytest.raises(ValueError, match="already a Tech Bazaar agent"):
+        common.register_custom_seller(sid)
+    assert common.SEEDS == before
 
 
 def test_catalog_sellers_may_use_their_reserved_ids():
@@ -379,6 +394,19 @@ def test_seller_agent_builds_a_custom_seller_from_a_config(monkeypatch):
     kwargs = ctor.call_args.kwargs
     assert kwargs["port"] == 9123 and kwargs["name"] == "Corner PC" and kwargs["seed"] == common.SEEDS["corner-pc"]
     assert "readme_path" not in kwargs and "SIM" in kwargs["description"]
+
+
+def test_seller_agent_build_refuses_seller_hyphen_1_and_never_signs_as_seller_1(monkeypatch):
+    """The reviewer's repro: SELLER_1_AGENT_SEED set, id 'seller-1' must not build an agent with seller_1's address."""
+    from unittest.mock import Mock, patch
+    import seller_agent
+    monkeypatch.setenv("SELLER_1_AGENT_SEED", "reviewer-fake-seed-xyz")
+    before = dict(common.SEEDS)
+    with patch.object(seller_agent, "Agent", return_value=Mock()) as ctor:
+        with pytest.raises(ConfigError, match="reserved"):
+            seller_agent.build("seller-1", dict(good(), id="seller-1", port=9124))
+    ctor.assert_not_called()
+    assert "seller-1" not in common.SEEDS and common.SEEDS == before
 
 
 def test_seller_agent_cli_refuses_a_bad_config_with_the_field_names(tmp_path):

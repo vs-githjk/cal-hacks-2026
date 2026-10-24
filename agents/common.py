@@ -194,6 +194,10 @@ def register_custom_seller(role: str) -> None:
     if role in SEEDS:
         raise ValueError(f"{role!r} is already a Tech Bazaar agent: a custom seller must not reuse its key")
     env = role.upper().replace("-", "_")
+    if env in {existing.upper() for existing in SEEDS}:
+        # 'seller-1' maps to SELLER_1_AGENT_SEED, the built-in seller_1's private seed.
+        raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env} belongs to a built-in agent, "
+                         "a custom seller must not reuse its key")
     SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
 
 
