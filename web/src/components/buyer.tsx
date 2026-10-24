@@ -15,7 +15,10 @@ export function GoalCard({ goal }: { goal: GoalView }) {
   const a = goal.allowance;
   return (
     <Card tactile>
-      <Label>Goal</Label>
+      <div className="flex items-start justify-between gap-2">
+        <Label>Goal</Label>
+        <StatePill state={goal.state} />
+      </div>
       <p className="mb-3 text-[22px] font-medium leading-[1.3] tracking-[-0.01em] text-balance">
         <q>{goal.text}</q>
       </p>
@@ -323,7 +326,7 @@ export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView;
         <label htmlFor="typed-code" className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
           Typed fallback (if the call fails): type the code to approve this same mandate
         </label>
-        <div className="flex gap-2">
+        <div className="flex min-w-0 gap-2">
           <input
             id="typed-code"
             value={code}
