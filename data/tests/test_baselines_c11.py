@@ -39,3 +39,13 @@ def test_saved_bright_data_rows_are_read_as_mirror_and_never_fetched(tmp_path, m
 def test_no_recorded_folder_means_no_bright_data_rows(tmp_path, monkeypatch):
     monkeypatch.setattr(b, "RECORDED", tmp_path / "missing")
     assert not [r for r in observations() if r["provider"] == "brightdata"]
+
+
+def test_a_saved_row_missing_a_field_baseline_reads_is_skipped(tmp_path, monkeypatch):  # review Low on #229
+    rows = [_bd_row(1249.99, "https://www.bestbuy.com/x")] + [{k: v for k, v in _bd_row(1, "https://www.bestbuy.com/y").items() if k != drop}
+                                                               for drop in ("sku", "kind", "store", "in_stock", "condition")]
+    (tmp_path / "brightdata-20261024.json").write_text(json.dumps(rows))
+    monkeypatch.setattr(b, "RECORDED", tmp_path)
+    got = [r for r in observations() if r["provider"] == "brightdata"]
+    assert [r["price"] for r in got] == [1249.99]
+    baseline("rtx 5070 ti", "2026-10-24T13:00:00+00:00", got)  # no KeyError

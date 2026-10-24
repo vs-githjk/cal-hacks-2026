@@ -26,6 +26,7 @@ SOLD_WINDOW = timedelta(days=30)
 MIN_OWNERS = 2
 RETAILER_OWNER = "retailer listings (Apify)"
 OWNERS = {"apify": RETAILER_OWNER, "apify-b": RETAILER_OWNER, "ebay-sold": "eBay sold"}  # two Actor families are still one data owner
+REQUIRED = ("observed_at", "url", "sku", "kind", "store", "condition")  # baseline() reads these (and in_stock) directly
 RECORDED = HERE / "recorded"  # saved Bright Data rows (brightdata-*.json), read if present; brightdata.py is never called here
 
 
@@ -68,7 +69,7 @@ def _recorded_brightdata() -> list[dict]:
     rows = []
     for f in sorted(RECORDED.glob("brightdata-*.json")) if RECORDED.is_dir() else []:
         for r in json.loads(f.read_text()):
-            if r.get("price") and r.get("observed_at") and r.get("url"):
+            if r.get("price") and all(r.get(k) not in (None, "") for k in REQUIRED) and isinstance(r.get("in_stock"), bool):
                 rows.append({**r, "provider": "brightdata", "origin": "MIRROR"})
     return rows
 
