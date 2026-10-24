@@ -37,8 +37,9 @@ PSU_750 = from_dataset("power-supply", {"name": "Corsair RM750e", "type": "ATX",
 PSU_850 = from_dataset("power-supply", {"name": "Corsair RM850x", "type": "ATX", "wattage": 850})
 
 NR200P = card("case", "Cooler Master MasterBox NR200P", type="Mini ITX Tower", psu_form_factors=["SFX", "SFX-L"], max_gpu_length_mm=330, max_cooler_height_mm=155)
-NORTH = card("case", "Fractal Design North", type="ATX Mid Tower", max_gpu_length_mm=355, max_cooler_height_mm=170)
-NH_D15 = card("cooler", "Noctua NH-D15", height_mm=165, sockets=["AM4", "AM5", "LGA1700", "LGA1851"])
+NORTH = card("case", "Fractal Design North", type="ATX Mid Tower", max_gpu_length_mm=355, max_cooler_height_mm=145)
+LANCOOL216 = card("case", "Lian Li Lancool 216", type="ATX Mid Tower", max_gpu_length_mm=392, max_cooler_height_mm=180)
+NH_D15 = card("cooler", "Noctua NH-D15", height_mm=168, sockets=["AM4", "AM5", "LGA1700", "LGA1851"])
 PA120 = card("cooler", "Thermalright Peerless Assassin 120 SE", height_mm=155, sockets=["AM4", "AM5", "LGA1700", "LGA1851"])
 SSD_990 = from_dataset("internal-hard-drive", {"name": "Samsung 990 Pro", "form_factor": "M.2-2280", "interface": "M.2 PCIe 4.0 X4"})
 
@@ -112,8 +113,8 @@ def test_4090_14900k_on_750w_fails():
     assert check_fit([I9_14900K, RTX4090_STRIX, PSU_750])["rule_id"] == "fit.psu_wattage"
 
 
-def test_16pin_gpu_on_psu_with_two_8pin_fails():
-    psu = card("psu", "old 850", wattage=850, form_factor="ATX", pcie_8pin=2, pcie_16pin=0)
+def test_16pin_gpu_on_psu_with_one_8pin_fails():
+    psu = card("psu", "old 850", wattage=850, form_factor="ATX", pcie_8pin=1, pcie_16pin=0)
     out = check_fit([R7_9800X3D, RTX5070TI, psu])
     assert rule(out, "fit.gpu_connectors")["verdict"] == "fail"
 
@@ -170,7 +171,7 @@ def test_nvme_on_am5_board_passes():
 
 # aggregation and safety
 def test_full_demo_build_passes():
-    out = check_fit([R7_9800X3D, B650, DDR5_6000, RTX5070TI, PSU_850, NORTH, PA120, SSD_990])
+    out = check_fit([R7_9800X3D, B650, DDR5_6000, RTX5070TI, PSU_850, LANCOOL216, PA120, SSD_990])
     connectors = rule(out, "fit.gpu_connectors")["verdict"]
     assert connectors == "uncertain"  # dataset PSU rows carry no connector counts
     assert out["verdict"] == "uncertain" and out["rule_id"] == "fit.gpu_connectors"
@@ -189,3 +190,32 @@ def test_empty_attrs_never_raise():
 def test_atx_psu_in_sfx_only_case_fails():
     out = check_fit([PSU_850, NR200P])
     assert out["verdict"] == "fail" and out["rule_id"] == "fit.psu_form_factor"
+
+
+# review fixes (Vidyut, Fri 22:00)
+def test_cpu_card_without_power_info_is_uncertain_not_gpu_only():
+    psu = card("psu", "1000 W", wattage=1000, form_factor="ATX")
+    gpu = card("gpu", "5090", chipset="RTX 5090", length_mm=304)
+    assert rule(check_fit([card("cpu"), gpu, psu]), "fit.psu_wattage")["verdict"] == "uncertain"
+
+
+def test_eatx_board_in_atx_mid_tower_by_type_is_uncertain():
+    board = card("motherboard", "EATX board", socket="AM5", form_factor="EATX")
+    case = card("case", "mid tower", type="ATX Mid Tower")
+    assert rule(check_fit([board, case]), "fit.form_factor")["verdict"] == "uncertain"
+
+
+def test_sfx_psu_in_atx_tower_is_uncertain():
+    sfx = card("psu", "SF750", wattage=750, form_factor="SFX")
+    assert rule(check_fit([sfx, NORTH]), "fit.psu_form_factor")["verdict"] == "uncertain"
+    listed = card("case", "atx case", type="ATX Mid Tower", psu_form_factors=["ATX"])
+    assert rule(check_fit([sfx, listed]), "fit.psu_form_factor")["verdict"] == "uncertain"
+
+
+def test_5070ti_adapter_needs_two_8pin_per_nvidia():
+    psu = card("psu", "850 two 8-pin", wattage=850, form_factor="ATX", pcie_8pin=2, pcie_16pin=0)
+    assert rule(check_fit([R7_9800X3D, RTX5070TI, psu]), "fit.gpu_connectors")["verdict"] == "pass"
+
+
+def test_pa120_does_not_fit_the_north():  # fractal-design.com: 145 mm cooler clearance
+    assert check_fit([PA120, NORTH])["rule_id"] == "fit.cooler_height"
