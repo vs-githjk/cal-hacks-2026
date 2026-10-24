@@ -6,7 +6,7 @@ export interface BuildStep { kind: StepKind; line: string; part?: string; with?:
 export interface BuildPick { seller: string; priceCents: number; name: string }
 export interface BuildResult {
   owned: Record<string, string>;
-  status: "locked" | "blocked";
+  status: "locked" | "blocked" | "open";
   totalCents: number;
   capCents: number;
   sellers: string[];
@@ -164,3 +164,17 @@ export const SAMPLE_BUILD: BuildResult = {
     }
   ]
 };
+
+/** The build as it stood after `upTo` steps: only parts already picked or swapped, the total so far, open until locked. */
+export function buildAt(b: BuildResult, upTo: number): BuildResult {
+  const shown = stepsUpTo(b, upTo);
+  const done = new Set(shown.filter((s) => s.kind === "pick" || s.kind === "swap").map((s) => s.part!));
+  const picks = Object.fromEntries(Object.entries(b.picks).filter(([k]) => done.has(k)));
+  const finished = shown.length === b.steps.length;
+  return {
+    ...b, picks, steps: shown,
+    status: finished ? b.status : "open",
+    totalCents: Object.values(picks).reduce((n, p) => n + p.priceCents, 0),
+    sellers: [...new Set(Object.values(picks).map((p) => p.seller))].sort(),
+  };
+}

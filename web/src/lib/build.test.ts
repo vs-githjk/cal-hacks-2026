@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { partRows, SAMPLE_BUILD, stepsUpTo } from "./build.ts";
+import { buildAt, partRows, SAMPLE_BUILD, stepsUpTo } from "./build.ts";
 
 test("partRows lists the six parts in plan order with the swapped board marked", () => {
   const rows = partRows(SAMPLE_BUILD);
@@ -24,4 +24,18 @@ test("stepsUpTo always keeps the plan line and stops at the end", () => {
   assert.equal(stepsUpTo(SAMPLE_BUILD, 0)[0].kind, "plan");
   assert.equal(stepsUpTo(SAMPLE_BUILD, 999).at(-1)!.kind, "locked");
   assert.ok(SAMPLE_BUILD.steps.every((s) => !/[–—]/.test(s.line)));
+});
+
+test("buildAt replays the build: parts lock as their step arrives, locked only at the end", () => {
+  const start = buildAt(SAMPLE_BUILD, 1);
+  assert.equal(start.status, "open");
+  assert.equal(start.totalCents, 0);
+  const clashAt = SAMPLE_BUILD.steps.findIndex((s) => s.kind === "clash") + 1;
+  const mid = buildAt(SAMPLE_BUILD, clashAt);
+  assert.deepEqual(Object.keys(mid.picks).sort(), ["cpu", "gpu"]);
+  assert.equal(partRows(mid).find((r) => r.part === "motherboard")!.state, "open");
+  const end = buildAt(SAMPLE_BUILD, SAMPLE_BUILD.steps.length);
+  assert.equal(end.status, "locked");
+  assert.equal(end.totalCents, SAMPLE_BUILD.totalCents);
+  assert.deepEqual(end.sellers, SAMPLE_BUILD.sellers);
 });

@@ -4,17 +4,19 @@
 import { partRows, PART_NAMES, type BuildResult } from "@/lib/build";
 import { Card, Label, OriginChip, Pill, Stat, money } from "./ui";
 
+const STATUS = { locked: ["done", "Build locked"], open: ["hunting", "Rounds running"], blocked: ["hold", "Blocked, nothing paid"] } as const;
+
 export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; origin?: string }) {
   const rows = partRows(b);
   const total = b.totalCents / 100;
   const cap = b.capCents / 100;
   return (
-    <Card stripe={b.status === "locked" ? "mint" : "amber"}>
+    <Card stripe={b.status === "locked" ? "mint" : b.status === "open" ? "ink" : "amber"}>
       <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
         <Label>Your build</Label>
         <div className="flex items-center gap-2">
           <OriginChip origin={origin} />
-          <Pill tone={b.status === "locked" ? "done" : "hold"}>{b.status === "locked" ? "Build locked" : "Blocked, nothing paid"}</Pill>
+          <Pill tone={STATUS[b.status][0]}>{STATUS[b.status][1]}</Pill>
         </div>
       </div>
       <dl className="mb-3 grid grid-cols-3 gap-2">
