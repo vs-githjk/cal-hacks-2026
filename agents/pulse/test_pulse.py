@@ -70,7 +70,7 @@ def test_a_failing_claude_call_falls_back_too():
 def test_a_bigger_step_is_clamped_to_the_bands_cap():
     n = note(lambda f: {"action": "lower_price", "step_pct": 20, "why": "lost_narrowly"}, report={**REPORT, "gap_band": "within5"})
     assert n["price_step"] == 0.03 and "about 3%" in n["what_to_change"]
-    n = note(lambda f: {"action": "lower_price", "step_pct": 15, "why": "lost_widely"}, report={**REPORT, "gap_band": "within10"})
+    n = note(lambda f: {"action": "lower_price", "step_pct": 15, "why": "lost_narrowly"}, report={**REPORT, "gap_band": "within10"})
     assert n["price_step"] == 0.07 and n["what_to_change_origin"] == "Claude" and "about 7%" in n["what_to_change"]
 
 
