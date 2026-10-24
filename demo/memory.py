@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,6 +46,14 @@ def _origin(value: Any) -> str:
     return v if v in ORIGINS else "SIM"
 
 
+def _num(x: Any) -> float:
+    """A finite number, or ValueError: an infinite cap or amount is never shown (nor sent as invalid JSON)."""
+    v = float(x)
+    if not math.isfinite(v):
+        raise ValueError(f"not a finite number: {x!r}")
+    return v
+
+
 def _money(x: float) -> str:
     return f"${x:,.2f}"
 
@@ -61,7 +70,7 @@ def from_demo_run(run: Any, ref: str) -> list[dict]:
     """Entries from one demo/run_demo.py JSON file. A file without the expected shape gives no rows."""
     try:
         return _demo_entries(run, ref)
-    except (AttributeError, KeyError, TypeError, ValueError):
+    except Exception:  # noqa: BLE001  (any odd shape or value, e.g. an overflowing number: no rows, never a 500)
         return []
 
 
@@ -72,22 +81,25 @@ def _demo_entries(run: dict, ref: str) -> list[dict]:
     goal = a.get("goal") or {}
     buyer = str(goal.get("buyer_id") or "")
     if goal:
-        items = [{"sku_spec": str(i["sku_spec"]), "condition": str(i.get("condition") or ""), "quantity": float(i.get("quantity", 1))}
+        items = [{"sku_spec": str(i["sku_spec"]), "condition": str(i.get("condition") or ""), "quantity": _num(i.get("quantity", 1))}
                  for i in goal.get("items") or []]
         text = str(goal.get("notes") or "").strip().strip("'\"")
         out.append(_entry(f"{ref}:goal:{goal['id']}", "goal", goal.get("created_at"), "SIM", "demo_run", ref, buyer, "",
-                          f"Goal: {text or ', '.join(i['sku_spec'] for i in items)} (cap {_money(float(goal['cap']))})",
-                          {"goal_id": str(goal["id"]), "items": items, "cap": float(goal["cap"]),
+                          f"Goal: {text or ', '.join(i['sku_spec'] for i in items)} (cap {_money(_num(goal['cap']))})",
+                          {"goal_id": str(goal["id"]), "items": items, "cap": _num(goal["cap"]),
                            "deadline": str(goal.get("deadline") or ""), "text": text}))
     sellers = {b["id"]: b["seller_id"] for b in a.get("bids") or []}
     names = {b["seller_id"]: b.get("persona") or b["seller_id"] for b in a.get("bids") or []}
     m, rec, charge = a.get("mandate") or {}, a.get("approval_record") or {}, a.get("charge") or {}
-    if m and rec.get("result") == "approved" and charge:
+    paid_cents = charge.get("amount_cents") if isinstance(charge, dict) else None
+    matches = (m and rec.get("mandate_hash") == m.get("hash") and charge.get("idempotency_key") == f"mandate:{m.get('hash')}"
+               and isinstance(paid_cents, int) and paid_cents == round(_num(m["amount"]) * 100))
+    if m and rec.get("result") == "approved" and charge and matches:   # approved, and charged for this mandate at its amount
         mode = str(charge.get("mode") or "").strip().lower()
         pay_mode = "sim" if mode.startswith("sim") else "stripe_test" if mode.startswith("stripe test") else "none"
         bid_id = str(m["deal_id"])[5:] if str(m["deal_id"]).startswith("deal-") else str(m["deal_id"])
         seller = sellers.get(bid_id, "")
-        amount = float(m["amount"])
+        amount = _num(m["amount"])
         out.append(_entry(f"{ref}:purchase:{m['id']}", "purchase", rec.get("decided_at"), "SIM", "demo_run", ref,
                           str(m.get("buyer_id") or buyer), seller,
                           f"Bought from {names.get(seller) or 'the winner'} for {_money(amount)} before tax (SIM payment, no money moved)",
@@ -149,12 +161,12 @@ def from_market(sql: Callable[[str], list], ref: str, stats: Optional[dict] = No
     out: list[dict] = []
     items: dict[str, list[dict]] = {}
     for gid, sku, cond, qty in _r("goal_item", 4):
-        items.setdefault(gid, []).append({"sku_spec": sku, "condition": cond, "quantity": float(qty or 1)})
+        items.setdefault(gid, []).append({"sku_spec": sku, "condition": cond, "quantity": _num(qty or 1)})
     for gid, buyer, cap, deadline, origin, at in _r("goal", 6):
         its = items.get(gid, [])
         out.append(_entry(f"{ref}:goal:{gid}", "goal", at, origin, "market", ref, buyer, "",
-                          f"Goal: {', '.join(i['sku_spec'] for i in its) or gid} (cap {_money(float(cap))})",
-                          {"goal_id": gid, "items": its, "cap": float(cap), "deadline": deadline}))
+                          f"Goal: {', '.join(i['sku_spec'] for i in its) or gid} (cap {_money(_num(cap))})",
+                          {"goal_id": gid, "items": its, "cap": _num(cap), "deadline": deadline}))
     bids = {r[0]: (r[1], r[2] or r[1]) for r in _r("bid", 3)}
     approvals = {r[0]: r[1] for r in _r("approval", 3)}
     payments = {r[0]: r for r in _r("payment", 5)}
@@ -162,12 +174,12 @@ def from_market(sql: Callable[[str], list], ref: str, stats: Optional[dict] = No
         if h not in payments:
             continue                                    # a mandate with no payment row is not a purchase
         _, ref_, paid, at, mode = payments[h]
-        if h not in approvals or abs(float(paid) - float(amount)) > 0.005:
+        if h not in approvals or not abs(float(paid) - float(amount)) <= 0.005:   # "not <=" also refuses nan
             stats["dropped"] = stats.get("dropped", 0) + 1   # paid with no approval row, or a different amount: not shown
             continue
         bid_id = deal[5:] if deal.startswith("deal-") else deal
         seller, name = bids.get(bid_id, ("", ""))
-        amt = float(amount)
+        amt = _num(amount)
         pay_mode = mode if mode in ("sim", "stripe_test") else "none"
         note = "Stripe test mode, no real money" if pay_mode == "stripe_test" else "SIM payment, no money moved"
         out.append(_entry(f"{ref}:purchase:{mid}", "purchase", at, "SIM", "market", ref, buyer, seller,
@@ -228,7 +240,7 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
             rows = [e for e in saved.get("entries") or [] if _well_formed(e)]
             state = "error" if saved.get("error") else "ok"
             dropped = int(saved.get("dropped") or 0) + len(saved.get("entries") or []) - len(rows)
-        except (OSError, ValueError, AttributeError, TypeError):
+        except Exception:  # noqa: BLE001  (bad JSON, deep nesting, an overflowing count: an error source, never a 500)
             rows, state, dropped = [], "error", 0
         entries += rows
         sources.append({"ref": newest.name, "kind": "market", "state": state, "sample": False, "rows": len(rows),
@@ -240,7 +252,7 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
         try:
             run = json.loads(f.read_text())
             ref = str(run.get("run_id") or f.stem)
-        except (OSError, ValueError, AttributeError):
+        except Exception:  # noqa: BLE001
             sources.append({"ref": f.name, "kind": "demo_run", "state": "error", "sample": False, "rows": 0})
             continue
         rows = from_demo_run(run, ref)

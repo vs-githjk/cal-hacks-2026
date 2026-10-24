@@ -229,3 +229,40 @@ def test_only_an_exact_mode_reads_as_stripe_test():
     run["artifacts"]["charge"]["mode"] = "Stripe LIVE latest"
     p = next(e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase")
     assert p["detail"]["payment_mode"] == "none" and p["origin"] == "SIM"
+
+
+
+# ---------------------------------------------------------------- #255 review 2
+
+@pytest.mark.parametrize("text", ['{"entries": [], "dropped": Infinity}', "[" * 100000])
+def test_hostile_snapshots_are_an_error_source_not_a_crash(tmp_path, text):
+    (tmp_path / "market-memory-20261024T1805Z.json").write_text(text)
+    out = M.load(tmp_path)
+    assert out["entries"] == [] and out["sources"][0]["state"] == "error"
+
+
+@pytest.mark.parametrize("cap", [10 ** 400, "1e400"])
+def test_an_overflowing_or_infinite_number_in_a_run_file_gives_no_rows(tmp_path, cap):
+    run = _sample()
+    run["artifacts"]["goal"]["cap"] = cap
+    (tmp_path / "run-a.json").write_text(json.dumps(run))
+    out = M.load(tmp_path)
+    assert out["entries"] == [] and json.dumps(out, allow_nan=False)
+
+
+@pytest.mark.parametrize("field,value", [("amount_cents", 1), ("idempotency_key", "mandate:other")])
+def test_a_demo_charge_for_another_amount_or_mandate_is_not_a_purchase(field, value):
+    run = _sample()
+    run["artifacts"]["charge"][field] = value
+    assert not [e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase"]
+
+
+def test_an_approval_for_another_mandate_is_not_a_purchase():
+    run = _sample()
+    run["artifacts"]["approval_record"]["mandate_hash"] = "other"
+    assert not [e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase"]
+
+
+def test_a_nan_payment_is_not_a_purchase():
+    t = dict(MARKET, payment=[['"h1"', '"ch_test_1"', "nan", "2026-10-24T18:02:05+00:00", '"sim"']])
+    assert not [e for e in M.from_market(fake_sql(t), "m") if e["kind"] == "purchase"]
