@@ -23,3 +23,4 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [10:15] #135 in PR #177 (stacked on #71) at ec5f4dd: safe URL parser and placeBid source check, Landed price label (no adjusted score on the row), per-identity pairing lock, first web tests (28) | ready for review
 - [10:55] #135 follow-ups on PR #177 at 4d45167: 10-char Crockford pairing code + code-wide throttle (soft, 20/10min, 60s wait), real adjusted_total/adjustment_reason persisted on round_result, PR-135 screenshots re-captured paired with live data | ready for review
 - [10:34] #123 bracket in PR #218 (stacked on #177): Gate, Heat 1, ranked 1v1, champion = round winner (tested), screenshots in web/docs/pr-123.
+- [10:37] #88 390 px evidence in PR #219 (stacked on #218): every page scrollWidth 390, screenshots in web/docs/pr-88; offline state not captured (port 3101 only).
