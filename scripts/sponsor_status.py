@@ -172,7 +172,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="One honest status line per sponsor integration.")
     ap.add_argument("--json", metavar="PATH", help="also write the rows as JSON (for the web app)")
     ap.add_argument("--crs-cache", metavar="PATH", help="the CRS adapter cache (default .cache/crs-signals.json)")
+    ap.add_argument("--env-file", metavar="PATH",
+                    help="the env file the bridge uses for the call (default ../lane-d/.env); Bright Data and Tiger keys are read "
+                         "from it when the process does not set them, and never printed")
     args = ap.parse_args(argv)
+    from demo.sponsors_live import load_sponsor_env   # #269: the same file and names as the live bridge run
+    from pay import voice_cartesia as vc
+    load_sponsor_env(Path(args.env_file) if args.env_file else vc.DEFAULT_ENV_FILE)
     rows = collect(crs_cache=Path(args.crs_cache) if args.crs_cache else None)
     print(render(rows))
     if args.json:

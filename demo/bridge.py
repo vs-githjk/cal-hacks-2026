@@ -309,6 +309,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                 outcomes.append({"step": "build_mandate", "approved": False, "reason": f"no_market_winner: {e}", "call_id": None})
                 note(f"beat 4 STOPPED: no mandate was made ({e}). No approval and no payment are recorded; nothing was paid")
                 break
+            for line in deal_gate.drain_notes():
+                note(line)
         if deal_gate is not None and deal_gate.mandate is not None:
             s = deal_gate.bind(s)
         if s.reducer == "record_payment" and charger is not None and approver is not None and approved_and_recorded:
@@ -324,6 +326,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
         if s.gate == "approval_call" and approver is not None:
             outcome = approver(s)
             outcomes.append(outcome)
+            for line in (deal_gate.drain_notes() if deal_gate is not None else []):
+                note(line)
             if not outcome["approved"]:
                 from pay.voice_cartesia import denial_line
                 line = denial_line(outcome["reason"])
@@ -414,6 +418,11 @@ class DealGate:
         self.winner: Optional[dict] = None
         self._referee: Any = None
         self.typed_approval_present: Callable[[], bool] = market_has_typed_approval
+        # #269, set by main on --live-call: the Bright Data re-check before the call and the Tiger Data write of the round
+        self.price_check: Optional[Callable[[dict], dict]] = None
+        self.tiger_writer: Optional[Callable[[list], dict]] = None
+        self.price: Optional[dict] = None
+        self._notes: list[str] = []
 
     def expectations(self, rows: list) -> dict:
         w = market_winner(rows, self.round_id)
@@ -429,11 +438,30 @@ class DealGate:
     def prepare(self, referee: Any) -> dict:
         from pay.mandate import new_mandate
         self._referee = referee
-        w = self.expectations(referee.sql("SELECT * FROM round_result"))
+        rows = referee.sql("SELECT * FROM round_result")
+        w = self.expectations(rows)
         self.winner = w
+        if self.tiger_writer is not None:   # #269: the round's prices to Tiger Data; never on the money path
+            from demo import sponsors_live as S
+            try:
+                res = self.tiger_writer(S.round_ticks([r for r in rows if r[1] == self.round_id], self.goal["items"][0]["sku_spec"]))
+            except Exception as e:  # noqa: BLE001
+                res = {"state": "error", "detail": type(e).__name__}
+            self._notes.append(S.tiger_note(res, self.round_id))
         self.mandate = new_mandate(deal_id=w["deal_id"], buyer_id=self.goal["buyer_id"], amount=w["amount"], payee=w["payee"],
                                    goal_id=self.goal["id"], within_allowance=False, origin=w["origin"])
         return self.mandate
+
+    def drain_notes(self) -> list[str]:
+        out, self._notes = self._notes, []
+        return out
+
+    def listing(self) -> tuple[dict, float, float]:
+        """The winner's listing for the live re-check: ({url, price}, quoted unit price, the goal's cap)."""
+        w = self.winner
+        bid = self.bids[w["bid_id"]]
+        line = bid["lines"][min(self.lines.get(w["seller_id"], 0), len(bid["lines"]) - 1)]
+        return {"url": line["listing_url"], "price": line["unit_price"]}, float(line["unit_price"]), float(self.goal["cap"])
 
     def expect_now(self) -> dict:
         """The market's rank 1 read again (after the call): what the charge must match."""
@@ -471,8 +499,12 @@ class DealGate:
         w = self.winner
         bid, seller = self.bids[w["bid_id"]], self.sellers[w["seller_id"]]
         line = bid["lines"][min(self.lines.get(w["seller_id"], 0), len(bid["lines"]) - 1)]
-        return {"item": line.get("attrs", {}).get("chipset") or line["sku_spec"].upper(), "condition": line["offered_condition"],
-                "seller": seller["name"]}
+        facts = {"item": line.get("attrs", {}).get("chipset") or line["sku_spec"].upper(), "condition": line["offered_condition"],
+                 "seller": seller["name"]}
+        if self.price is not None:
+            from demo.sponsors_live import is_live
+            facts["price"] = "live" if is_live(self.price) else "mirror"
+        return facts
 
     def show_code(self, code: str) -> Optional[str]:
         """issue_approval_code for this mandate: the code shows on the buyer's own /buyer screen. None when it did, else why not."""
@@ -512,6 +544,18 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
             return outcome(False, "no_mandate: the market's rank 1 was not read")
         if client is None:
             return outcome(False, f"not_configured: {unconfigured or 'no Cartesia client'}")
+        if gate.price_check is not None:   # #269: the winner's price, read live right before the call
+            from demo import recheck as R
+            from demo.sponsors_live import price_note
+            listing, quoted, cap = gate.listing()
+            try:
+                gate.price = gate.price_check(listing)
+            except Exception as e:  # noqa: BLE001
+                gate.price = {"state": "empty", "price": None, "fetched_at": None, "origin": "MIRROR", "detail": type(e).__name__}
+            gate._notes.append(price_note(gate.price, quoted))
+            stop = R.stop_reason(gate.price, quoted, cap)
+            if stop:
+                return outcome(False, f"price_recheck: {stop}")
         store = NonceStore()
         service = ApprovalService(secret=secret or _secrets.token_hex(16), store=store, code_ttl_seconds=CALL_CODE_TTL_S)
         res = run_approval_call(mandate, gate.reason(), client, service, deal=gate.facts(), buyer_name=buyer_name, on_code=to_screen,
@@ -642,7 +686,12 @@ def main(argv: Optional[list] = None) -> int:
         out.line(s.tag if s.tag in LIVE_TAGS else SIM, f"{who:<26}{s.reducer:<22}{s.say}")
 
     approver, client_note, charger = None, "", None
-    if args.live_call:
+    if args.live_call:   # #269: Bright Data and Tiger Data keys from the same env file as the call; values never printed
+        from pay import voice_cartesia as vc
+        from demo import sponsors_live as S
+        S.load_sponsor_env(args.env_file or vc.DEFAULT_ENV_FILE)
+        gate.price_check = S.price_recheck
+        gate.tiger_writer = S.write_round_ticks
         approver, client_note = live_approver_for(args, run, gate, out)
         out.note(client_note)
     if args.stripe:
