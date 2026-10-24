@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 PERMISSIONS = {
     "employee": {"request"},
     "dept_head": {"request", "approve", "reject"},
-    "controller": {"request", "approve", "reject", "close_period", "verify_bank_change"},
+    "controller": {"request", "approve", "reject", "close_period", "verify_bank_change", "release_payment"},
     "it_receiver": {"receive"},
     "vendor_admin": {"change_vendor_bank"},
     # the two seats Hyphenate fills: they prepare and match and pay what people approved; they approve nothing
