@@ -37,10 +37,10 @@ class Opener:
         return self.response
 
 
-def call(monkeypatch, opener):
+def call(monkeypatch, opener, *, api_key=None):
     monkeypatch.setattr(shield_caller.urllib.request, "build_opener", lambda *handlers: opener)
     return shield_caller.screen_message(shield_url=URL, message_id="m-1", sender_agent="agent-1",
-                                        text="GPU offer", context={"sender_role": "seller"})
+                                        text="GPU offer", context={"sender_role": "seller"}, api_key=api_key)
 
 
 def test_valid_response_matches_shield_contract_and_posts_exact_request(monkeypatch):
@@ -53,6 +53,25 @@ def test_valid_response_matches_shield_contract_and_posts_exact_request(monkeypa
         "context": {"sender_role": "seller"},
     }
     assert opener.request.get_method() == "POST"
+    assert opener.request.get_header("X-api-key") is None
+
+
+def test_explicit_api_key_is_sent_only_as_product_auth_header(monkeypatch):
+    opener = Opener(Response(b'{"verdict":"allow","rule_ids":[]}'))
+    assert call(monkeypatch, opener, api_key="test-key-123") == {"verdict": "allow", "rule_ids": []}
+    assert opener.request.get_header("X-api-key") == "test-key-123"
+    assert "test-key-123" not in repr(call(monkeypatch, Opener(Response(b"{}")), api_key="test-key-123"))
+
+
+@pytest.mark.parametrize("api_key", ["", "key with spaces", "bad\rkey", "bad\nkey",
+                                      "caf\N{LATIN SMALL LETTER E WITH ACUTE}", "bad\x7fkey", 5])
+def test_invalid_explicit_api_key_blocks_before_opener_without_echo(monkeypatch, api_key):
+    monkeypatch.setattr(shield_caller.urllib.request, "build_opener",
+                        lambda *args: pytest.fail("invalid API key must not open"))
+    result = shield_caller.screen_message(shield_url=URL, message_id="m", sender_agent="a", text="t",
+                                          context={}, api_key=api_key)
+    assert result == BLOCK
+    assert not api_key or repr(api_key).strip("'") not in repr(result)
 
 
 @pytest.mark.parametrize("body", [
