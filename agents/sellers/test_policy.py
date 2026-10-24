@@ -4,10 +4,13 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import common
+import policy
 from policy import make_bid, seller
 
 GPU, PSU, CASE = "rtx 4070 super 12gb", "psu 850w", "case"
@@ -89,17 +92,24 @@ def test_mirror_snapshot_offer_refuses_when_shipping_or_floor_is_unknown():
     assert make_bid(n, seller("seller_1")) is None
 
 
-def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():
+def _mirror_bid_with_shipping(shipping):
     s = seller("seller_1")
     card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
     card["listing"]["stock"] = True
     s["mirror_inputs"] = {card["id"]: {
-        "floor": {"value": 1200.0, "source": "https://seller.example/floor", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
-        "shipping": {"value": 0.0, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+        "floor": {"value": 1200.0, "source": "https://seller.example/floor",
+                  "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+        "shipping": shipping,
     }}
     n = need("rtx 5070 ti")
     n["source"] = "live"
-    bid = make_bid(n, s)
+    return make_bid(n, s)
+
+
+def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():
+    shipping = {"value": 0.0, "source": "https://www.bestbuy.com/shipping",
+                "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"}
+    bid = _mirror_bid_with_shipping(shipping)
     assert bid["origin"] == "MIRROR" and bid["seller_id"] == "seller_1"
     common.validate("Bid", bid)
     line = bid["lines"][0]
@@ -111,8 +121,52 @@ def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():
     assert line["floor_evidence"]["source"] == "https://seller.example/floor"
     assert "1200.0" not in json.dumps(bid)  # private floor input is never serialized
     assert line["shipping"] == 0.0
-    assert line["listing_id"] == card["id"]
+    assert line["shipping_evidence"] == {
+        "origin": "MIRROR", "source": "https://www.bestbuy.com/shipping",
+        "observed_at": "2026-10-24T05:00:00Z"}
+    assert line["listing_id"] == "bestbuy:9a072ed6c281"
     assert bid["total_landed_price"] == 1249.99
+
+
+@pytest.mark.parametrize("shipping", [
+    {"value": 0.0, "source": "javascript:alert(1)", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": 0.0, "source": "https://user:pass@www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": 0.0, "source": "https://bad host/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": 0.0, "source": "https://www.bestbuy.com/shipping\n.evil", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": 0.0, "source": "https://www.bestbuy.com:70000/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": 0.0, "source": "https://www.bestbuy.com:0/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": 0.0, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00", "origin": "MIRROR"},
+    {"value": float("inf"), "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": -0.01, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    {"value": True, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+])
+def test_mirror_offer_rejects_invalid_observed_shipping_evidence(shipping):
+    assert _mirror_bid_with_shipping(shipping) is None
+
+
+def test_mirror_listings_excludes_sold_history_filename(tmp_path, monkeypatch):
+    card = {"id": "fixture", "origin": "MIRROR", "category": "gpu", "price": 1.0,
+            "condition": "new", "source": "https://shop.example/item", "listing": {"stock": True}}
+    (tmp_path / "ebay_sold-20261024T0000Z.json").write_text(json.dumps([card]), encoding="utf-8")
+    (tmp_path / "ebay_live-20261024T0000Z.json").write_text(
+        json.dumps([{**card, "id": "live-fixture"}]), encoding="utf-8")
+    monkeypatch.setattr(policy, "SNAPSHOTS", tmp_path)
+    monkeypatch.setitem(policy.CATALOG, "mirror_assignments", {
+        "seller_1": {"ebay_sold": "Shop", "ebay_live": "Shop"}})
+
+    rows = policy._mirror_listings("seller_1")
+
+    assert [row["id"] for row in rows] == ["live-fixture"]
+
+
+def test_bid_schema_keeps_the_closed_sim_unobserved_zero_shipping_variant():
+    bid = make_bid(need(GPU), seller("seller_1"))
+    bid["lines"][0]["shipping_evidence"] = {
+        "origin": "SIM",
+        "source": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py",
+        "policy": "Shipping amount unobserved; zero is the existing SIM policy."}
+
+    common.validate("Bid", bid)
 
 
 def test_mirror_alternatives_must_share_seller_of_record_and_snapshot():
