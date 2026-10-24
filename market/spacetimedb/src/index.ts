@@ -44,6 +44,11 @@ export const post_goal = spacetimedb.reducer(
 
 export const open_round = spacetimedb.reducer({ roundId: t.string(), needId: t.string(), windowS: t.u32() }, (ctx, a) => m.openRound(ctx, a));
 
+export const open_knockout_round = spacetimedb.reducer(
+  { roundId: t.string(), needId: t.string(), stageWindowS: t.u32(), maxStages: t.u32() },
+  (ctx, a) => m.openKnockoutRound(ctx, a),
+);
+
 export const place_bid = spacetimedb.reducer(
   {
     id: t.string(), roundId: t.string(), persona: t.string(), lines: t.array(BidLine), statedTotal: t.f64(),
@@ -57,6 +62,8 @@ export const close_round = spacetimedb.reducer({ roundId: t.string() }, (ctx, a)
 export const close_round_on_deadline = spacetimedb.reducer({ onSchedule: roundTimer }, { timer: roundTimer.rowType }, (ctx, { timer }) =>
   m.closeRoundOnDeadline(ctx, timer.roundId),
 );
+
+export const close_stage = spacetimedb.reducer({ roundId: t.string() }, (ctx, a) => m.closeStage(ctx, a));
 
 export const attach_verdict = spacetimedb.reducer(
   { bidId: t.string(), verdict: t.string(), ruleIds: t.array(t.string()), origin: t.string() },
@@ -159,3 +166,8 @@ const DealRow = t.object('DealRow', {
 export const my_deals = spacetimedb.view({ name: 'my_deals', public: true }, t.array(DealRow), (ctx) => m.myDealsView(ctx));
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
 export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));
+
+const StandingRow = t.object('StandingRow', {
+  roundId: t.string(), stillIn: t.bool(), reason: t.string(), lastOfferSkuSpec: t.string(), lastOfferPrice: t.f64(),
+});
+export const my_standing = spacetimedb.view({ name: 'my_standing', public: true }, t.array(StandingRow), (ctx) => m.myStandingView(ctx));

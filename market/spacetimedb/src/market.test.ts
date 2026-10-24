@@ -1551,3 +1551,90 @@ describe('#191 approval and mandate holes', () => {
     for (const who of [BOB, A, STRANGER]) expect(m.myDealsView(h.viewContext(who) as any)).toHaveLength(0);
   });
 });
+
+// ============================================================================================
+// #336: sealed knockout rounds, up to maxStages best-and-final-offer stages.
+// ============================================================================================
+describe('#336 sealed knockout rounds', () => {
+  function openKnockout(maxStages = 3, stageWindowS = 15) {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(REF, (ctx) => m.openKnockoutRound(ctx, { roundId: 'round-1', needId: 'need-1', stageWindowS, maxStages }));
+  }
+
+  it('#336-1 deterministic knockout: the worst clean offer goes out each stage; champion before the last stage is an early finish', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' }));
+    const stage1 = [...h.db.roundResult.roundId.filter('round-1')].filter((x) => x.stage === 1);
+    expect(stage1.find((x) => x.sellerId === 'seller-a')!.status).toBe('knocked_out'); // highest price: last placed
+    expect(stage1.find((x) => x.sellerId === 'seller-b')!.status).toBe('advancing');
+    expect(stage1.find((x) => x.sellerId === 'seller-c')!.status).toBe('advancing');
+    expect(h.db.round.id.find('round-1')).toMatchObject({ stage: 2, state: 'open' });
+
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(740)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c2', [line(690)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' }));
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed'); // champion reached before stage 3 of 3
+    const stage2 = [...h.db.roundResult.roundId.filter('round-1')].filter((x) => x.stage === 2);
+    expect(stage2.find((x) => x.sellerId === 'seller-b')!.status).toBe('knocked_out');
+    expect(stage2.find((x) => x.sellerId === 'seller-c')).toMatchObject({ status: 'champion', rank: 1 });
+  });
+
+  it('#336-2 stage 2 refuses a non-survivor, a non-strictly-lower offer, and a second offer in the same stage', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' })); // seller-a knocked out
+    expect(() => run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a2', [line(600)])))).toThrow(/surviving/);
+    expect(() => run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(760)])))).toThrow(/strictly below/);
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(740)])));
+    expect(() => run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b3', [line(720)])))).toThrow(/one offer per seller per stage/);
+  });
+
+  it('#336-3 a floor break at stage 2 still knocks the seller out, even on the cheapest offer', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)]))); // seller-b floor (new) is 650
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' })); // seller-a knocked out
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(600)]))); // strictly lower than 760, but below its own floor
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c2', [line(690)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' }));
+    const stage2 = [...h.db.roundResult.roundId.filter('round-1')].filter((x) => x.stage === 2);
+    expect(stage2.find((x) => x.sellerId === 'seller-b')).toMatchObject({ status: 'knocked_out', reasons: ['below this seller floor'] });
+    expect(stage2.find((x) => x.sellerId === 'seller-c')!.status).toBe('champion');
+  });
+
+  it('#336-4 the only bidder breaking a rule ends the round with no deal; no mandate is possible', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a1', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' }));
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    const results = [...h.db.roundResult.roundId.filter('round-1')];
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ sellerId: 'seller-a', status: 'knocked_out' });
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'round-1:bid-a1', payee: 'seller-a', amount: 790 })))).toThrow(/rank 1/);
+  });
+
+  it("#336-5 my_standing shows only the seller's own round, never another seller's price", () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    const bStanding = m.myStandingView(h.viewContext(B) as any);
+    expect(bStanding).toEqual([{ roundId: 'round-1', stillIn: true, reason: '', lastOfferSkuSpec: GPU, lastOfferPrice: 760 }]);
+    expect(JSON.stringify(bStanding)).not.toContain('790'); // never seller A's price
+    const aStanding = m.myStandingView(h.viewContext(A) as any);
+    expect(aStanding[0]).toMatchObject({ lastOfferPrice: 790 });
+    expect(m.myStandingView(h.viewContext(STRANGER) as any)).toHaveLength(0);
+  });
+});

@@ -196,6 +196,8 @@ export const bid = table(
     source: t.string(),
     sealedAt: t.timestamp(),
     lineRejects: t.array(t.string()).default([]), // per line: '' or why it cannot be picked (no floor set)
+    // #336: which knockout stage this offer belongs to. 1 for every non-knockout round (unchanged behavior).
+    stage: t.u32().default(1),
   },
 );
 
@@ -304,6 +306,10 @@ export const round = table(
     sealedCount: t.u32(),
     closedAt: t.option(t.timestamp()),
     origin: t.string(),
+    // #336: knockout rounds. maxStages 1 (the default) means a plain sealed round: close_round behaves exactly as before.
+    stage: t.u32().default(1),
+    maxStages: t.u32().default(1),
+    stageWindowS: t.u32().default(0),
   },
 );
 
@@ -327,6 +333,9 @@ export const roundResult = table(
     // publish migrates in place.
     adjustedTotal: t.f64().default(0),
     adjustmentReason: t.string().default(''),
+    // #336: knockout rounds. stage 1 and status '' for every plain round_result (unchanged).
+    stage: t.u32().default(1),
+    status: t.string().default(''), // '' | knocked_out | advancing | champion
   },
 );
 
