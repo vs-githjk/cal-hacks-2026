@@ -58,7 +58,7 @@ def attacks_tile(now: str) -> dict:
                                       "missed": h["missed"], "false_blocks": h["false_blocks"]},
                          "dev": {"attacks": d["attacks"], "block_rate": d["block_rate"], "false_block_rate": d["false_block_rate"]},
                          "adaptive": b["adaptive"], "judge_attempts": {"count": 0, "status": "console not built yet"},
-                         "voice": {"status": "voice set written (sim/attacks/voice.jsonl), not yet run"}},
+                         "voice": {"see_tile": "voice_attacks"}},
                  note=f"Run at {now} (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. "
                       "Dev (what the rules were written against) is shown separately, never pooled. Never say secure.")
 
@@ -144,10 +144,24 @@ def hyphenate_tile() -> dict:
                       "b24, k02 and k03 were fixed after it, so the rerun is not blind.")
 
 
+DEMO_WINNER = {"sku": "rtx 5070 ti", "price": 1299.99, "condition": "new",  # ASUS Prime at Best Buy
+               "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"}
+
+
+def position_block() -> dict:
+    """Where the demo winner's price sits among the dated listings we hold (data.baselines.position)."""
+    from data.baselines import observations
+    from data.baselines.position import price_position
+    rows = observations()
+    as_of = max((r["observed_at"] for r in rows), default=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    return price_position(DEMO_WINNER["sku"], DEMO_WINNER["price"], DEMO_WINNER["condition"], as_of, rows=rows,
+                          subject_url=DEMO_WINNER["url"])
+
+
 def build() -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile(),
-                                                voice_tile(), hyphenate_tile()]}
+                                                voice_tile(), hyphenate_tile()], "price_position": position_block()}
 
 
 if __name__ == "__main__":

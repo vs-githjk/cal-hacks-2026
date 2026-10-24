@@ -52,11 +52,11 @@ def _raw_listings() -> list[dict]:
 
 def demo_listings() -> list[dict]:
     """Every 5070 Ti in the demo: MIRROR store listings (Apify snapshots) and the SIM sellers' stated lengths."""
-    from data.mirror.price_spread import load
+    from data.mirror.price_spread import latest_by_url, load
     from demo.sellers import sim_sellers
     out = []
     for store, cards in load().items():
-        for c in cards:
+        for c in latest_by_url(cards):  # one row per listing URL, latest snapshot wins
             if c["attrs"].get("chipset") == "RTX 5070 Ti":
                 out.append({"seller": store, "title": c["name"], "origin": "MIRROR", "price": c.get("price"),
                             "url": (c.get("listing") or {}).get("url") or c.get("source") or "",
