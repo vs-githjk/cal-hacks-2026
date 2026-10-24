@@ -201,6 +201,21 @@ const PurchaseStatusRow = t.object('PurchaseStatusRow', {
 export const my_purchase_status = spacetimedb.view(
   { name: 'my_purchase_status', public: true }, t.array(PurchaseStatusRow), (ctx) => m.myPurchaseStatusView(ctx),
 );
+const BidReviewRow = t.object('BidReviewRow', {
+  checkId: t.u64(), goalId: t.string(), needId: t.string(), roundId: t.string(), bidId: t.string(),
+  sellerId: t.string(), sellerName: t.string(), landed: t.f64(), bindingHash: t.string(), kind: t.string(),
+  result: t.string(), detail: t.string(), evidenceUrl: t.string(), origin: t.string(), at: t.timestamp(),
+  lineIndex: t.option(t.u32()), listingId: t.option(t.string()), listingHash: t.option(t.string()),
+});
+export const my_bid_reviews = spacetimedb.view(
+  { name: 'my_bid_reviews', public: true }, t.array(BidReviewRow), (ctx) => m.myBidReviewsView(ctx),
+);
+const BuyerRoundRow = t.object('BuyerRoundRow', {
+  roundId: t.string(), needId: t.string(), goalId: t.string(), state: t.string(), openedAt: t.timestamp(),
+});
+export const my_buyer_rounds = spacetimedb.view(
+  { name: 'my_buyer_rounds', public: true }, t.array(BuyerRoundRow), (ctx) => m.myBuyerRoundsView(ctx),
+);
 
 const PendingApprovalRow = t.object('PendingApprovalRow', {
   mandateHash: t.string(), mandateId: t.string(), amount: t.f64(), payee: t.string(), expiry: t.timestamp(), code: t.string(),

@@ -1350,6 +1350,126 @@ export function myPurchaseStatusView(ctx: VCtx) {
   });
 }
 
+type ReviewBinding = { bindingHash: string; lineIndex?: number; listingId?: string; listingHash?: string };
+
+function readReviewBinding(raw: string): ReviewBinding | undefined {
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const binding = value as Record<string, unknown>;
+    if (Object.keys(binding).length === 1 && /^[a-f0-9]{64}$/.test(String(binding.bindingHash ?? '')))
+      return { bindingHash: binding.bindingHash as string };
+    if (Object.keys(binding).length === 4 && /^[a-f0-9]{64}$/.test(String(binding.bindingHash ?? ''))
+        && Number.isInteger(binding.lineIndex) && (binding.lineIndex as number) >= 0
+        && typeof binding.listingId === 'string' && !!binding.listingId && binding.listingId.length <= 512
+        && typeof binding.listingHash === 'string' && /^[a-f0-9]{64}$/.test(binding.listingHash)) {
+      return { bindingHash: binding.bindingHash as string, lineIndex: binding.lineIndex as number,
+        listingId: binding.listingId, listingHash: binding.listingHash };
+    }
+    return undefined;
+  } catch { return undefined; }
+}
+
+function selectedClaimBinding(result: { rank: number; lines: unknown[]; lineMetaJson: string }, binding: ReviewBinding) {
+  if (result.rank === 0 || binding.lineIndex === undefined || !binding.listingId || !binding.listingHash) return false;
+  let selected: unknown;
+  try { selected = JSON.parse(result.lineMetaJson || '[]'); } catch { return false; }
+  if (!Array.isArray(selected) || selected.length !== result.lines.length) return false;
+  const seen = new Set<number>();
+  let matched = false;
+  for (const item of selected) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    const meta = item as Record<string, unknown>;
+    if (Object.keys(meta).length !== META_KEYS.length || Object.keys(meta).some((key) => !META_KEYS.includes(key))
+        || !Number.isInteger(meta.lineIndex) || (meta.lineIndex as number) < 0 || seen.has(meta.lineIndex as number)
+        || !(Number.isFinite(meta.shipping) && (meta.shipping as number) >= 0)
+        || typeof meta.listingId !== 'string' || !meta.listingId.trim() || meta.listingId.length > 512
+        || typeof meta.listingHash !== 'string' || !/^[a-f0-9]{64}$/.test(meta.listingHash)
+        || typeof meta.source !== 'string' || !meta.source.trim() || meta.source.length > 512
+        || typeof meta.snapshotId !== 'string' || meta.snapshotId.length > 256
+        || !meta.provenance || typeof meta.provenance !== 'object' || Array.isArray(meta.provenance)
+        || !meta.attrs || typeof meta.attrs !== 'object' || Array.isArray(meta.attrs)) return false;
+    const lineIndex = meta.lineIndex as number;
+    seen.add(lineIndex);
+    if (lineIndex === binding.lineIndex && meta.listingId === binding.listingId && meta.listingHash === binding.listingHash)
+      matched = true;
+  }
+  return matched;
+}
+
+/** Read-only buyer review rows from closed, owned rounds; sealed bid and metadata blobs stay private. */
+export function myBidReviewsView(ctx: VCtx) {
+  const buyerId = myBuyerId(ctx);
+  if (!buyerId) return [];
+  const out: { checkId: bigint; goalId: string; needId: string; roundId: string; bidId: string; sellerId: string;
+    sellerName: string; landed: number; bindingHash: string; kind: string; result: string; detail: string;
+    evidenceUrl: string; origin: string; at: Timestamp; lineIndex: number | undefined;
+    listingId: string | undefined; listingHash: string | undefined }[] = [];
+  const rounds = [...ctx.db.round.iter()].sort((a, b) => ms(a.openedAt) - ms(b.openedAt) || a.id.localeCompare(b.id));
+  for (const round of rounds) {
+    if (round.state !== 'closed') continue;
+    const need = ctx.db.need.id.find(round.needId);
+    const goal = need?.goalId ? ctx.db.goal.id.find(need.goalId) : undefined;
+    if (!need || need.buyerId !== buyerId || !goal || goal.buyerId !== buyerId
+        || need.goalId !== goal.id || !round.id || round.id.length > 128
+        || !need.id || need.id.length > 128 || !goal.id || goal.id.length > 128) continue;
+    const results = [...ctx.db.roundResult.roundId.filter(round.id)].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    for (const result of results) {
+      if (result.roundId !== round.id || !result.bidId || result.bidId.length > 128
+          || !result.sellerId || result.sellerId.length > 128 || !result.persona || result.persona.length > 128
+          || !Number.isFinite(result.landed)) continue;
+      const checks = [...ctx.db.bidCheck.bidId.filter(result.bidId)].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+      for (const check of checks) {
+        if (check.bidId !== result.bidId || !['shield', 'advocate', 'claim'].includes(check.kind)
+            || check.detail.length > 4096 || check.evidenceUrl.length > 2048
+            || !['SIM', 'MIRROR', 'LIVE'].includes(check.origin)) continue;
+        let bindingHash = '';
+        let lineIndex: number | undefined;
+        let listingId: string | undefined;
+        let listingHash: string | undefined;
+        if (check.kind === 'shield') {
+          if (!['allow', 'quarantine', 'block'].includes(check.result) || check.evidenceUrl) continue;
+        } else {
+          if (!/^[a-f0-9]{64}$/.test(result.bindingHash)) continue;
+          const binding = readReviewBinding(check.bindingJson || '');
+          if (!binding || binding.bindingHash !== result.bindingHash) continue;
+          if (check.kind === 'advocate') {
+            if (binding.lineIndex !== undefined || !['buy', 'caution', 'veto'].includes(check.result)) continue;
+          } else {
+            if (!['verified', 'unverified', 'false'].includes(check.result)
+                || !selectedClaimBinding(result, binding)) continue;
+            lineIndex = binding.lineIndex;
+            listingId = binding.listingId;
+            listingHash = binding.listingHash;
+          }
+          bindingHash = result.bindingHash;
+        }
+        out.push({
+          checkId: check.id, goalId: goal.id, needId: need.id, roundId: round.id, bidId: result.bidId,
+          sellerId: result.sellerId, sellerName: result.persona, landed: result.landed, bindingHash,
+          kind: check.kind, result: check.result, detail: check.detail, evidenceUrl: check.evidenceUrl,
+          origin: check.origin, at: check.at, lineIndex, listingId, listingHash,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/** Caller-owned Need/Goal round IDs only; no sealed bids, prices, or review details. */
+export function myBuyerRoundsView(ctx: VCtx) {
+  const buyerId = myBuyerId(ctx);
+  if (!buyerId) return [];
+  return [...ctx.db.round.iter()].flatMap((round) => {
+    if (!['open', 'review', 'closed'].includes(round.state)) return [];
+    const need = ctx.db.need.id.find(round.needId);
+    const goal = need?.goalId ? ctx.db.goal.id.find(need.goalId) : undefined;
+    if (!need || need.buyerId !== buyerId || !goal || goal.buyerId !== buyerId || need.goalId !== goal.id
+        || !round.id || round.id.length > 128 || !need.id || need.id.length > 128 || !goal.id || goal.id.length > 128) return [];
+    return [{ roundId: round.id, needId: need.id, goalId: goal.id, state: round.state, openedAt: round.openedAt }];
+  }).sort((a, b) => ms(a.openedAt) - ms(b.openedAt) || a.roundId.localeCompare(b.roundId));
+}
+
 // ---------------------------------------------------------------- demo operator
 
 export function resetDemoChecked(ctx: Ctx) {
