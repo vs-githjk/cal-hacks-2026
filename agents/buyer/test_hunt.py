@@ -87,3 +87,13 @@ def test_pick_best_prefers_asked_condition_over_cheaper_refurb():
     assert hunt.pick_best(bids, cards) == 3  # Byte Bros: new as asked; Sally only if nothing else is left
     assert hunt.pick_best(bids[:2], cards) == 2
     assert hunt.pick_best(bids[:1], cards) is None
+
+
+def test_command_only_whole_message_counts():
+    assert hunt.command("APPROVE 3") == ("approve", 3)
+    assert hunt.command("@techbazaarbuyer @techbazaarbuyer approve #3.") == ("approve", 3)
+    assert hunt.command("@techbazaarbuyer CANCEL") == ("cancel",)
+    recap = 'Quick recap: if you want bid #3, you say "APPROVE 3" yourself'
+    assert hunt.command(recap) is None
+    assert hunt.command("APPROVE 3 and also buy the PSU") is None
+    assert hunt.command("A GPU under $800") is None
