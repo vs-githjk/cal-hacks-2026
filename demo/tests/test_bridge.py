@@ -249,7 +249,13 @@ def test_stripe_is_rejected_before_local_demo_runs(monkeypatch, capsys):
 
     assert bridge.main(["--stripe"]) == 2
     assert called == []
-    assert "STOPPED" in capsys.readouterr().out
+    assert "verified checkout evidence" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as help_exit:
+        bridge.main(["--help"])
+    assert help_exit.value.code == 0
+    help_text = capsys.readouterr().out
+    assert "disabled pending verified checkout evidence" in help_text
+    assert "winner verification precedes every charge" not in help_text
 
 
 def test_round_mapping_publishes_exact_metadata_and_defers_bound_reviews():
@@ -393,6 +399,27 @@ def test_claim_check_binds_only_to_claims_original_listing_line():
                                    sellers={"seller-a": {"lines": [{"floor": 1}]}}, shield=[],
                                    claims={"bid-1": claims}, cards=[], delay=0, pace=1)
     assert not any(step.reducer == "attach_claim_check" for step in ambiguous)
+
+
+def test_published_gadget_grove_claims_each_have_the_selected_line_check_without_divergence(run):
+    b2 = run["beats"]["2"]
+    bid = next(bid for bid in b2["bids"] if bid["seller_id"] == "gadget-grove")
+    selected_index = bridge._entries(b2["ranking"])["gadget-grove"]["line"]
+    steps = bridge.plan(run, delay=0)
+    publish = next(step for step in steps if step.reducer == "place_bid" and step.args["id"] == bid["id"])
+    checks = [step.args for step in steps if step.reducer == "attach_claim_check" and step.args["bid_id"] == bid["id"]]
+
+    assert publish.args["claims"] == [check["claim"] for check in checks]
+    assert publish.args["claims"]
+    assert all((check["line_index"], check["listing_id"], check["listing_hash"])
+               == (selected_index, bid["lines"][selected_index].get("listing_id")
+                   or bid["lines"][selected_index]["listing_url"],
+                   bridge._line_metadata(bid, seller_shipping=bridge._seller_shipping("gadget-grove"))[selected_index]["listingHash"])
+               for check in checks)
+
+    winner = b2["winner"]
+    rows = [[1, "round-1", winner["bid_id"], winner["seller_id"], "local selected winner", 1, winner["landed"]]]
+    assert not any("DIVERGENCE" in line for line in bridge.compare_to_db(rows, run))
 
 
 def test_plan_binds_mandate_to_goal_and_need_and_has_no_synthetic_approval_or_payment():

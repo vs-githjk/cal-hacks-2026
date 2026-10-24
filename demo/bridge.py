@@ -115,6 +115,32 @@ def _seller_shipping(seller_id: str) -> float:
     return matches[0].shipping
 
 
+def _seller_fixture(seller_id: str) -> Any:
+    from demo.sellers import all_sellers
+
+    matches = [seller for seller in all_sellers()[0] if seller.id == seller_id]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _claim_line_index(bid: dict, claim: dict) -> Optional[int]:
+    """Map a claim to its original line using the seller fixture when URLs are shared."""
+    seller = _seller_fixture(bid["seller_id"])
+    if seller is not None:
+        matches = [i for i, fixture_claim in enumerate(seller.claims)
+                   if fixture_claim.get("text") == claim.get("text")
+                   and fixture_claim.get("evidence_url") == claim.get("evidence_url")]
+        if len(matches) == 1 and len(seller.claims) == len(seller.lines):
+            index = matches[0]
+            fixture_line = seller.lines[index]
+            bid_line = bid["lines"][index]
+            if (seller.claims[index]["evidence_url"] == fixture_line.listing_url
+                    and bid_line.get("listing_url") == fixture_line.listing_url
+                    and bid_line.get("offered_condition") == fixture_line.condition):
+                return index
+    matches = [i for i, line in enumerate(bid["lines"]) if line.get("listing_url") == claim.get("evidence_url")]
+    return matches[0] if len(matches) == 1 else None
+
+
 def bid_id(bid: dict, round_no: int) -> str:
     return bid["id"] if round_no == 1 else f"{bid['id']}-r{round_no}"
 
@@ -126,6 +152,18 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
     round_id = f"round-{round_no}"
     sku = bids[0]["lines"][0]["sku_spec"]
     entry = _entries(ranking)
+    claim_bindings: dict[str, list[dict]] = {}
+    for bid in bids:
+        selected_index = entry.get(bid["seller_id"], {}).get("line", 0)
+        seller_shipping = sellers[bid["seller_id"]].get("shipping")
+        for claim in claims.get(bid["id"], []):
+            line_index = _claim_line_index(bid, claim)
+            if line_index is None or line_index != selected_index:
+                continue
+            metadata = _line_metadata(bid, seller_shipping=seller_shipping)[line_index]
+            claim_bindings.setdefault(bid["id"], []).append({
+                "claim": claim, "line_index": line_index, "listing_id": metadata["listingId"],
+                "listing_hash": metadata["listingHash"]})
     seller_steps: list[Step] = []
     for bid in bids:
         sid = bid["seller_id"]
@@ -141,7 +179,8 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
             f"seller:{sid}", "place_bid",
             {"id": bid_id(bid, round_no), "round_id": round_id, "persona": bid["persona"],
              "lines": [_line(bid, i, sku) for i in range(len(bid["lines"]))],
-             "stated_total": placed["unit_price"] * placed["quantity"], "perks": list(bid["perks"]), "claims": list(bid["claims"]),
+             "stated_total": placed["unit_price"] * placed["quantity"], "perks": list(bid["perks"]),
+             "claims": [row["claim"]["text"] for row in claim_bindings.get(bid["id"], [])],
              "origin": bid["origin"], "source": placed["listing_url"], "seller_id": sid,
              "line_metadata": _line_metadata(bid, seller_shipping=seller.get("shipping"))},
             tag=bid["origin"], pause=True, pace=pace,
@@ -157,20 +196,13 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
                                 tag=SIM,
                                 say=f"Bazaar Shield (real shield.screen) on {bid['persona']}: {v['verdict']}"))
     for bid in bids:
-        selected_index = entry.get(bid["seller_id"], {}).get("line", 0)
-        for c in claims.get(bid["id"], []):
-            matching = [i for i, line in enumerate(bid["lines"]) if line.get("listing_url") == c.get("evidence_url")]
-            if len(matching) != 1:
-                continue  # ambiguous or missing evidence has no safe line binding
-            line_index = matching[0]
-            if line_index != selected_index:
-                continue  # the market's review candidate contains selected lines only
-            metadata = _line_metadata(bid, seller_shipping=sellers[bid["seller_id"]].get("shipping"))[line_index]
+        for row in claim_bindings.get(bid["id"], []):
+            c = row["claim"]
             check_steps.append(Step("referee", "attach_claim_check",
                                     {"bid_id": bid_id(bid, round_no), "claim": c["text"], "check": c["check"],
                                      "evidence_url": c["evidence_url"], "origin": c["origin"],
-                                     "line_index": line_index, "listing_id": metadata["listingId"],
-                                     "listing_hash": metadata["listingHash"]},
+                                     "line_index": row["line_index"], "listing_id": row["listing_id"],
+                                     "listing_hash": row["listing_hash"]},
                                     tag=c["origin"],
                                     say=f"claim check (real data.claim_check) on {bid['persona']}: {c['check']}: {c['text']}"))
     bid_of = {b["id"]: b for b in bids}
@@ -241,7 +273,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       tag=m["origin"], pause=True,
                       say=f"mandate for {wbid['persona']}: {money(m['amount'])} to {m['payee']} (a SIM test address)"))
 
-    # beat 5: round 2 with the learning seller's lowered price (loss reports have no reducer: NOT BRIDGED)
+    # beat 5: round 2 with the learning seller's lowered price (record_loss_report exists but is not wired here)
     if rounds >= 2:
         r2 = b["5"]["round2"]
         steps += round_steps(round_no=2, need_id=need["id"], bids=r2["bids"], ranking=r2["ranking"], sellers=sellers,
@@ -465,7 +497,7 @@ def main(argv: Optional[list] = None) -> int:
                     help="2 also plays beat 5's round 2 (default 1)")
     ap.add_argument("--reset", action="store_true", help="call reset_demo first (referee): wipes needs, goals, rounds; keeps roles and pair codes")
     ap.add_argument("--dry-run", action="store_true", help="print the reducer calls only")
-    ap.add_argument("--stripe", action="store_true", help="disabled until exact market winner verification precedes every charge")
+    ap.add_argument("--stripe", action="store_true", help="disabled pending verified checkout evidence; winner readback gate is enabled")
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
     ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
@@ -473,7 +505,7 @@ def main(argv: Optional[list] = None) -> int:
     args = ap.parse_args(argv)
 
     if args.stripe:
-        Narrator(True).note("STOPPED: --stripe is disabled until authoritative market winner verification is available before any charge.")
+        Narrator(True).note("STOPPED: winner readback is enforced; --stripe remains disabled pending verified checkout evidence.")
         return 2
 
     from demo.run_demo import run_all
