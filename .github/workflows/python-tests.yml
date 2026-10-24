@@ -17,6 +17,6 @@ jobs:
           python-version: "3.12"
       # Offline only: no secrets, so the Shield classifier and Stripe paths stay off.
       - name: Install
-        run: pip install -r agents/requirements.txt cryptography fastapi httpx uvicorn
+        run: pip install -r agents/requirements.txt cryptography fastapi httpx uvicorn psycopg2-binary
       - name: Test
         run: python -m pytest -q
