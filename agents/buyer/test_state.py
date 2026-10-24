@@ -42,7 +42,10 @@ def transaction(deal_id, buyer_id, phase="pending_approval"):
                         "expires_at": "2026-10-24T00:10:00Z", "hash": "a" * 64,
                         "within_allowance": False, "status": "pending", "origin": "SIM"},
             "advocate_card": {"need_id": "need-1", "bid_id": "bid-1", "warnings": [],
-                              "recommendation": "pick", "wait_until": ""}}
+                              "recommendation": "buy", "wait_until": "",
+                              "call_reason": {"rule_id": "advocate.ok", "summary": "The bid fits the goal.",
+                                              "source_url": "https://example.com/review"}}
+            }
 
 
 def test_owned_parts_round_trip_per_buyer_and_replace_same_kind(db):
