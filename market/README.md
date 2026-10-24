@@ -49,6 +49,44 @@ cd ../web && npm ci && npm run dev
 
 For a rehearsal, run or project the demo, not `npm run dev`: `npm run demo --prefix web` (`next build && next start -p 3100`) so the screen is a production build with no dev indicator or Insight badge.
 
+## Deploy to Maincloud (#293)
+
+One live market for every laptop: Abhinav's agents, Vidyut's bridge/call/pay Mac and the deployed web all point at the same hosted database instead of a local server each.
+
+`seed_demo` and `reset_demo` are already safe to run on a database that already has data (every insert in `seed_demo` is guarded by a `find` first; `reset_demo` never touches `role`, `owner` or `pair_code`, so a republish or a re-seed never breaks an open tab or a paired agent). `init` only ever sets the owner once, so republishing an existing database never changes who owns it. See `spacetimedb/src/market.test.ts`, describe block `#293 Maincloud`.
+
+**Vidyut runs this** (his `spacetime login` becomes the module owner, which the referee and buyer tokens depend on):
+
+```bash
+# once: log in (opens a browser; GitHub OAuth)
+spacetime login
+
+# publish the real database (from market/, --yes=all skips the breaking-change prompt on a schema change)
+spacetime publish --server maincloud -p ./spacetimedb --yes=all tech-bazaar
+
+# seed the demo data (SIM personas, the pair code, the buyer profile and goal); safe to re-run
+spacetime call -s maincloud tech-bazaar seed_demo
+
+# grant roles once (same script as local, pointed at maincloud)
+SPACETIMEDB_SERVER=maincloud SPACETIMEDB_DB=tech-bazaar python3 market/scripts/setup_roles.py
+```
+
+Env the web needs (Vercel, or any `.env` for a local client pointed at the hosted database):
+
+```
+NEXT_PUBLIC_SPACETIMEDB_URI=wss://maincloud.spacetimedb.com
+NEXT_PUBLIC_SPACETIMEDB_DB=tech-bazaar
+```
+
+Both default to local (`ws://127.0.0.1:3000`, `tech-bazaar`) when unset, so local dev is unaffected.
+
+Post-publish checks:
+1. `/market` loads and shows `MARKET LIVE` (not `offline`) within a few seconds.
+2. A test bid placed through `place_bid` (Python bridge or an agent) appears on `/market` without a refresh.
+3. `/buyer` pairs with the code from `spacetime sql -s maincloud tech-bazaar "SELECT code FROM pair_code WHERE buyer_id = 'vidyut'"`.
+
+Never publish the real `tech-bazaar` database from a throwaway identity, and never commit a token file (`.tokens/`, `~/.config/spacetime/cli.toml` stay local and gitignored).
+
 ## Who may call what (roles)
 
 Every state-changing reducer checks the caller first (`requireRole` in `spacetimedb/src/market.ts`). Roles live in a private `role` table: **buyer** (bound to a buyer_id), **seller** (bound to a seller_id) or **referee** (the market service, Shield and the advocate relay). Only the module **owner**, the identity that published it, grants roles. The deadline scheduler runs as the module itself.
