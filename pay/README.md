@@ -9,8 +9,8 @@ Tasks: docs/kickoff/D-pay-trust.md.
 - **Standalone checkout components:** `MerchantSim` can be constructed with a Stripe test-mode PaymentIntent charger,
   Shield signed allow receipt, TAP signing key, trusted approval lookup, and durable single-use attempt store. Offline
   tests use fake chargers and do not prove a live Stripe test charge. The buyer runtime does not bootstrap these
-  dependencies: its `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS`, and `SHIELD_PAYMENT_SCREEN` handles
-  start unset. Its payment handler accepts only `SIM` origin, so no live Stripe checkout is connected or claimed.
+  dependencies: its in-code handles `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS` (the keys the
+  `SHIELD_RECEIPT_PUBKEYS` env var names) and `SHIELD_PAYMENT_SCREEN` start unset. Its payment handler accepts only `SIM` origin, so no live Stripe checkout is connected or claimed.
   `SHIELD_PAYMENT_SCREEN` is an injected callback, distinct from the message-screening `SHIELD_URL`. Visa Intelligent
   Commerce remains unavailable. We never say "Visa settles": any eventual result would be a Stripe test charge on a
   Visa test card, and MerchantSim verifies the request signature.
