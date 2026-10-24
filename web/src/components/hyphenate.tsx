@@ -312,7 +312,7 @@ export function HyphenateScreen(p: HyphenateScreenProps) {
         </div>
       </div>
       <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
-        A simulated 40-person studio buying computer gear. The people, vendors, bills and bank record are SIM; price references are MIRROR. No model makes a control decision: every line below is a rule with its reason.
+        A simulated 40-person studio buying computer gear. The people, vendors, bills and bank record are SIM; price references are MIRROR. No model makes a control decision: every line below names the rule or the person that decided, with the reason.
       </p>
       {p.state === "loading" || (p.state === "ready" && !s) ? (
         <p className="text-muted">Connecting to Hyphenate...</p>
