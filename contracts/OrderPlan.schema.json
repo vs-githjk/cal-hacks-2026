@@ -85,6 +85,9 @@
     "sandbox",
     "recorded"
    ]
+  },
+  "advocate": {
+   "type": "boolean"
   }
  },
  "required": [

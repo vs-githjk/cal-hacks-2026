@@ -28,6 +28,9 @@
      },
      "quantity": {
       "type": "number"
+     },
+     "offered_spec": {
+      "type": "string"
      }
     },
     "required": [

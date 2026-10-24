@@ -13,3 +13,7 @@ venv/
 *.log
 .cache/
 target/
+.env.local
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
