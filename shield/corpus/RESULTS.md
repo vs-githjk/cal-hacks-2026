@@ -13,7 +13,7 @@ Run date: 2026-10-24. Command: `python3 -m shield.corpus.run_corpus --write`. Cl
 | post-freeze check (`fresh12.jsonl`, run once, not tuned) | 6 of 12 (50.0%) | 3 | 3 | no controls |
 
 False positives across ALL controls (dev 10 + dev2 15): 0.
-p95 latency per message: dev 26.91 ms, dev2 0.82 ms.
+p95 latency per message: dev 26.87 ms, dev2 0.84 ms.
 
 ## How to read these honestly
 
@@ -32,7 +32,7 @@ p95 latency per message: dev 26.91 ms, dev2 0.82 ms.
 - First runs, kept for the record: held-out 6 of 10 and post-freeze 6 of 12, both on 2026-10-23 before their misses
   were listed. The figures above are reruns, so they are no longer blind.
 - Misses on held-out: p08, p09, p10. Misses on the post-freeze check: f02, f03, f05, f06, f07, f08.
-  Known gaps of lexicon rules: a language outside English, Spanish, Hindi transliteration, French, German and Chinese, soft
+  Known gaps of lexicon rules: a language the rules do not cover (they cover English, Spanish, Hindi transliteration, French, German and Chinese), soft
   requests for private data (p08), shortened links (p09), instructions split across messages (p10), claims that a human
   already agreed with no approval word near them (f02), "pretend" and "let it through" phrasing (f03, f08), a payment
   sent to a named third party with no change word (f05), a claimed exemption with no approval word (f06), and a note

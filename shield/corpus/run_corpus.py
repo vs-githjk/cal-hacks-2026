@@ -108,7 +108,7 @@ p95 latency per message: dev {dev["p95_ms"]} ms, dev2 {dev2["p95_ms"]} ms.
 - First runs, kept for the record: held-out 6 of 10 and post-freeze 6 of 12, both on 2026-10-23 before their misses
   were listed. The figures above are reruns, so they are no longer blind.
 - Misses on held-out: {", ".join(probe["missed"]) or "none"}. Misses on the post-freeze check: {", ".join(fresh["missed"]) or "none"}.
-  Known gaps of lexicon rules: a language outside English, Spanish, Hindi transliteration, French, German and Chinese, soft
+  Known gaps of lexicon rules: a language the rules do not cover (they cover English, Spanish, Hindi transliteration, French, German and Chinese), soft
   requests for private data (p08), shortened links (p09), instructions split across messages (p10), claims that a human
   already agreed with no approval word near them (f02), "pretend" and "let it through" phrasing (f03, f08), a payment
   sent to a named third party with no change word (f05), a claimed exemption with no approval word (f06), and a note
