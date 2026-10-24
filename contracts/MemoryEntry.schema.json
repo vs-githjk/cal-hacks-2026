@@ -1,0 +1,68 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "MemoryEntry",
+ "description": "One row of the buyer's memory panel (#123, #189): a past goal, a purchase, a veto or a seller lesson. Read from demo run files and market rows; never invented. Purchases are SIM this weekend (no real money moves).",
+ "type": "object",
+ "properties": {
+  "id": {"type": "string", "minLength": 1},
+  "kind": {"type": "string", "enum": ["goal", "purchase", "veto", "lesson"]},
+  "at": {"type": "string", "description": "ISO 8601 time the row was made; empty when the source has none"},
+  "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]},
+  "source": {"type": "string", "enum": ["demo_run", "market"]},
+  "source_ref": {"type": "string", "description": "the run id, or market:<db> plus the snapshot time"},
+  "buyer_id": {"type": "string"},
+  "seller_id": {"type": "string"},
+  "summary": {"type": "string", "description": "one plain sentence for the panel"},
+  "detail": {"type": "object"}
+ },
+ "required": ["id", "kind", "at", "origin", "source", "source_ref", "buyer_id", "seller_id", "summary", "detail"],
+ "additionalProperties": false,
+ "allOf": [
+  {"if": {"properties": {"kind": {"const": "goal"}}}, "then": {"properties": {"detail": {
+   "type": "object",
+   "properties": {
+    "goal_id": {"type": "string"},
+    "items": {"type": "array", "items": {"type": "object", "properties": {
+     "sku_spec": {"type": "string"}, "condition": {"type": "string"}, "quantity": {"type": "number"}},
+     "required": ["sku_spec", "condition", "quantity"]}},
+    "cap": {"type": "number"},
+    "deadline": {"type": "string"},
+    "text": {"type": "string"}
+   },
+   "required": ["goal_id", "items", "cap", "deadline"]}}}},
+  {"if": {"properties": {"kind": {"const": "purchase"}}}, "then": {"properties": {"detail": {
+   "type": "object",
+   "properties": {
+    "mandate_id": {"type": "string"},
+    "deal_id": {"type": "string"},
+    "amount_before_tax": {"type": "number", "description": "the mandate amount; the market adds no sales tax"},
+    "currency": {"type": "string"},
+    "payee": {"type": "string"},
+    "approval_method": {"type": "string", "description": "voice_code, allowance, sim_script, or none"},
+    "payment_mode": {"type": "string", "enum": ["sim", "stripe_test", "none"]},
+    "payment_ref": {"type": "string"},
+    "listing_origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]}
+   },
+   "required": ["mandate_id", "deal_id", "amount_before_tax", "currency", "payee", "approval_method", "payment_mode",
+                "payment_ref", "listing_origin"]}}}},
+  {"if": {"properties": {"kind": {"const": "veto"}}}, "then": {"properties": {"detail": {
+   "type": "object",
+   "properties": {
+    "bid_id": {"type": "string"},
+    "rule_id": {"type": "string"},
+    "reason": {"type": "string"},
+    "source_url": {"type": "string"}
+   },
+   "required": ["bid_id", "rule_id", "reason", "source_url"]}}}},
+  {"if": {"properties": {"kind": {"const": "lesson"}}}, "then": {"properties": {"detail": {
+   "type": "object",
+   "properties": {
+    "round_id": {"type": "string"},
+    "won": {"type": "boolean"},
+    "reason": {"type": "string"},
+    "gap_band": {"type": "string", "enum": ["within5", "within10", "within20", "over20"]},
+    "what_to_change": {"type": "string"}
+   },
+   "required": ["round_id", "won", "reason", "gap_band", "what_to_change"]}}}}
+ ]
+}
