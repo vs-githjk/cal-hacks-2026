@@ -68,8 +68,13 @@ beforeEach(() => {
   grant(A, 'seller', 'seller-a');
   grant(B, 'seller', 'seller-b');
   grant(C, 'seller', 'seller-c');
-  run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, floor: 700 }));
-  run(B, (ctx) => m.setFloor(ctx, { skuSpec: GPU, floor: 650 }));
+  // Floors are per (seller, sku, condition). Open-box floors are low so they never bite by accident.
+  run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'new', floor: 700 }));
+  run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
+  run(B, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'new', floor: 650 }));
+  run(B, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
+  run(C, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'new', floor: 100 }));
+  run(C, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 100 }));
 });
 
 describe('post_need and redaction', () => {
@@ -119,10 +124,18 @@ describe('sealed round', () => {
 });
 
 describe('bid quantity', () => {
-  it.each([0, -1, NaN, Infinity, 2])('place_bid refuses quantity %s with a reason', (q) => {
+  it.each([0, -1, NaN, Infinity])('place_bid refuses qty_available %s with a reason', (q) => {
     setupRound();
-    expect(() => run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { quantity: q })])))).toThrow(/quantity/);
+    expect(() => run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { quantity: q })])))).toThrow(/qty_available/);
     expect(h.db.bid.id.find('bid-a')).toBeFalsy();
+  });
+
+  it('more stock than the need is accepted, and the line is priced for the need quantity only', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { quantity: 4 })])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()][0]).toMatchObject({ rank: 1, landed: 780 });
   });
 
   it('a bid with the need quantity is accepted and ranks', () => {
@@ -315,7 +328,7 @@ describe('SECURITY caller identity', () => {
     run(OWNER, (ctx) => m.seedDemoChecked(ctx));
     const code = h.db.pairCode.buyerId.find('joe')!.code;
     const screen = as('joe-laptop');
-    expect(() => run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code: 'wrong-code' }))).toThrow(/code/);
+    expect(run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code: 'wrong-code' }))).toMatchObject({ paired: false });
     expect(() => run(A, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code }))).toThrow(/not allowed/);
     run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code }));
     expect(m.myGoalsView(h.viewContext(screen) as any).length).toBe(1);
@@ -607,5 +620,111 @@ describe('record_payment mode (sim or stripe_test)', () => {
     ready();
     expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'visa' }))).toThrow(/mode/);
     expect([...h.db.payment.iter()]).toHaveLength(0);
+  });
+});
+
+describe('seller model: floor per condition and alternative lines', () => {
+  it('[new 300, open-box 260] on a need that allows only new: the round closes with 300 chosen', () => {
+    setupRound();
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(300), line(260, { offeredCondition: 'open-box' })])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const r = [...h.db.roundResult.iter()][0]!;
+    expect(r).toMatchObject({ rank: 1, landed: 300 });
+    expect(r.lines.map((l) => [l.offeredCondition || 'new', l.unitPrice])).toEqual([['new', 300]]);
+  });
+
+  it('a line below the floor for its condition rejects the whole bid, even when another line is fine', () => {
+    setupRound();
+    run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'open-box', floor: 600 }));
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(760), line(590, { offeredCondition: 'open-box' })])));
+    expect((m.myBidsView(h.viewContext(A) as any)[0] as any).rejectReason).toMatch(/open-box.*below this seller's floor/);
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()][0]!.rank).toBe(0);
+  });
+
+  it('a line with no floor set for its condition is skipped with the reason; another line can still win', () => {
+    setupRound();
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(200, { offeredCondition: 'refurbished' }), line(720)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(650, { offeredCondition: 'refurbished' })])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const res = [...h.db.roundResult.iter()];
+    expect(res.find((r) => r.bidId === 'bid-c')).toMatchObject({ rank: 1, landed: 720 });
+    expect(res.find((r) => r.bidId === 'bid-b')!.reasons.join(' ')).toMatch(/no floor set/);
+  });
+
+  it('set_floor takes a condition and refuses an unknown one', () => {
+    expect(() => run(A, (ctx) => m.setFloor(ctx, { skuSpec: GPU, condition: 'mint', floor: 10 }))).toThrow(/condition/);
+  });
+});
+
+// ============================================================================================
+// PAIR CODE ATTEMPT LIMIT: 5 failures lock a code (and a caller); only the owner reissues.
+// The code never appears in an error, event or notification.
+// ============================================================================================
+describe('pair code attempt limit', () => {
+  let code = '';
+  const tryPair = (who: Auth, c: string) => run(who, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code: c }));
+  beforeEach(() => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    code = h.db.pairCode.buyerId.find('joe')!.code;
+  });
+  const wrong = () => (code === '111111' ? '222222' : '111111');
+
+  it('5 wrong attempts lock the code; the caller sees its own failure count', () => {
+    const first = as('first-screen');
+    tryPair(first, wrong());
+    expect(m.myPairAttemptsView(h.viewContext(first) as any)[0]!.failures).toBe(1);
+    for (let i = 0; i < 4; i++) expect(tryPair(as(`screen-${i}`), wrong())).toMatchObject({ paired: false });
+    expect(h.db.pairCode.buyerId.find('joe')!.locked).toBe(true);
+  });
+
+  it('the correct code after the lock still fails', () => {
+    for (let i = 0; i < 5; i++) tryPair(as(`screen-${i}`), wrong());
+    const late = as('late-screen');
+    expect(() => tryPair(late, code)).toThrow(/locked/);
+    expect(m.myRoleView(h.viewContext(late) as any)).toHaveLength(0);
+  });
+
+  it('one caller is stopped after 5 failures even across different codes', () => {
+    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'bob' }));
+    const attacker = as('attacker');
+    for (let i = 0; i < 3; i++) run(attacker, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code: wrong() }));
+    for (let i = 0; i < 2; i++) run(attacker, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'bob', code: '000001' }));
+    const bobCode = h.db.pairCode.buyerId.find('bob')!.code;
+    expect(() => run(attacker, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'bob', code: bobCode }))).toThrow(/locked/);
+    expect(h.db.pairCode.buyerId.find('joe')!.locked).toBe(false);
+  });
+
+  it('the operator can reissue a fresh code that works', () => {
+    for (let i = 0; i < 5; i++) tryPair(as(`screen-${i}`), wrong());
+    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'joe' }));
+    const row = h.db.pairCode.buyerId.find('joe')!;
+    expect(row).toMatchObject({ locked: false, failedAttempts: 0 });
+    expect(tryPair(as('fresh-screen'), row.code)).toMatchObject({ paired: true });
+  });
+
+  it('a non-owner cannot reissue', () => {
+    for (const who of [REF, JOE, A, STRANGER]) {
+      expect(() => run(who, (ctx) => m.reissuePairCode(ctx, { buyerId: 'joe' }))).toThrow(/not allowed/);
+    }
+  });
+
+  it('a successful pair resets nothing for other codes', () => {
+    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'bob' }));
+    for (let i = 0; i < 3; i++) run(as(`b-${i}`), (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'bob', code: '000001' }));
+    tryPair(as('joe-screen'), code);
+    expect(h.db.pairCode.buyerId.find('bob')!.failedAttempts).toBe(3);
+  });
+
+  it('the code never appears in an error, a floor event or a notification', () => {
+    for (let i = 0; i < 5; i++) tryPair(as(`screen-${i}`), wrong());
+    let msg = '';
+    try { tryPair(as('x'), code); } catch (e) { msg = String(e); }
+    expect(msg).not.toContain(code);
+    const text = JSON.stringify([...h.db.floorEvent.iter()].map((e) => e.label)) + JSON.stringify([...h.db.notification.iter()].map((n) => n.text));
+    expect(text).not.toContain(code);
   });
 });

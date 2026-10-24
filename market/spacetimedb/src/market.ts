@@ -4,7 +4,7 @@
 import { SenderError, type InferSchema, type ReducerCtx, type ViewCtx, type AnonymousViewCtx } from 'spacetimedb/server';
 import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
-import { checkFloor, checkQuantity } from '../../rules/floor';
+import { checkFloorByCondition } from '../../rules/floor';
 import { rankBids } from '../../rules/scoring';
 import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
@@ -76,20 +76,59 @@ export function assignRole(ctx: Ctx, a: { identity: Identity; role: string; subj
   else ctx.db.role.insert({ identity: a.identity, role: a.role, subjectId: a.subjectId });
 }
 
-export function setFloor(ctx: Ctx, { skuSpec, floor }: { skuSpec: string; floor: number }) {
+const CONDITIONS = ['new', 'open-box', 'refurbished', 'used'];
+
+/** A seller's floor for one (sku_spec, condition). */
+export function setFloor(ctx: Ctx, { skuSpec, condition, floor }: { skuSpec: string; condition: string; floor: number }) {
   const me = requireRole(ctx, 'set_floor', ['seller']);
-  for (const f of ctx.db.sellerFloor.sellerId.filter(me.subjectId)) if (f.skuSpec === skuSpec) ctx.db.sellerFloor.id.delete(f.id);
-  ctx.db.sellerFloor.insert({ id: 0n, sellerId: me.subjectId, skuSpec, floor });
+  if (!CONDITIONS.includes(condition)) throw new SenderError(`condition must be one of ${CONDITIONS.join(', ')}`);
+  if (!(Number.isFinite(floor) && floor > 0)) throw new SenderError('floor must be a positive number');
+  for (const f of ctx.db.sellerFloor.sellerId.filter(me.subjectId)) {
+    if (f.skuSpec === skuSpec && f.condition === condition) ctx.db.sellerFloor.id.delete(f.id);
+  }
+  ctx.db.sellerFloor.insert({ id: 0n, sellerId: me.subjectId, skuSpec, floor, condition });
 }
 
 /** A browser screen takes the buyer role with the demo pairing code (SIM sign-in). */
+export const PAIR_MAX_FAILURES = 5;
+
+/**
+ * A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
+ * roll the count back). 5 failures lock the code, and 5 failures lock the caller across every code.
+ * The code itself never appears in a message.
+ */
 export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
   const cur = roleOf(ctx);
   if (cur && cur.role !== 'buyer') throw new SenderError(`not allowed: a ${cur.role} cannot pair as a buyer screen`);
   const want = ctx.db.pairCode.buyerId.find(buyerId);
-  if (!want || want.code !== code) throw new SenderError('wrong pairing code for this buyer');
+  if (!want) throw new SenderError('no pairing code issued for this buyer; ask the operator');
+  if (want.locked) throw new SenderError('pairing is locked after too many wrong codes; ask the operator for a new code');
+  const mine = ctx.db.pairAttempt.identity.find(ctx.sender);
+  if (mine && mine.failures >= PAIR_MAX_FAILURES) throw new SenderError('this screen is locked after too many wrong codes; ask the operator');
+  if (want.code !== code) {
+    const failed = want.failedAttempts + 1;
+    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: failed, locked: failed >= PAIR_MAX_FAILURES });
+    if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures: mine.failures + 1 });
+    else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures: 1 });
+    if (failed >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', buyerId, 'Screen pairing locked after too many wrong codes');
+    return { paired: false, reason: 'wrong pairing code' };
+  }
   if (cur) ctx.db.role.identity.update({ ...cur, subjectId: buyerId });
   else ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
+  return { paired: true, reason: '' };
+}
+
+/** Owner only: a fresh code for this buyer, unlocked, with its counter reset. */
+export function reissuePairCode(ctx: Ctx, { buyerId }: { buyerId: string }) {
+  requireRole(ctx, 'reissue_pair_code', ['owner']);
+  issuePairCode(ctx, buyerId);
+}
+
+export function issuePairCode(ctx: Ctx, buyerId: string) {
+  const code = String(ctx.random.integerInRange(100000, 999999));
+  const cur = ctx.db.pairCode.buyerId.find(buyerId);
+  if (cur) ctx.db.pairCode.buyerId.update({ buyerId, code, failedAttempts: 0, locked: false });
+  else ctx.db.pairCode.insert({ buyerId, code, failedAttempts: 0, locked: false });
 }
 
 // ---------------------------------------------------------------- allowance (D's shape, rules/allowance)
@@ -204,22 +243,33 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   const me = { sellerId: requireRole(ctx, 'place_bid', ['seller']).subjectId };
   const r = ctx.db.round.id.find(a.roundId);
   if (!r) throw new SenderError(`no round ${a.roundId}`);
-  const needQty = new Map([...ctx.db.needItem.needId.filter(r.needId)].map((i) => [i.skuSpec, i.quantity]));
-  const q = checkQuantity(a.lines.map((l) => ({ sku_spec: l.skuSpec, quantity: l.quantity })), needQty);
-  if (!q.ok) throw new SenderError(`bid refused: ${q.reasons.join('; ')}`);
+  if (!a.lines.length) throw new SenderError('a bid has at least one line');
+  const needCond = new Map([...ctx.db.needItem.needId.filter(r.needId)].map((i) => [i.skuSpec, i.condition]));
+  const condOf = (sku: string, offered: string) => offered || needCond.get(sku) || 'new';
+  for (const l of a.lines) {
+    // A line's quantity is its stock (qty_available): a finite number above 0. Whether it covers the
+    // need is decided at close, per line, so a short line just cannot be picked.
+    if (!(Number.isFinite(l.quantity) && l.quantity > 0)) {
+      throw new SenderError(`bid refused: ${l.skuSpec} ${condOf(l.skuSpec, l.offeredCondition)}: qty_available ${l.quantity} is not a number above 0`);
+    }
+  }
   if (ctx.db.bid.id.find(a.id)) throw new SenderError(`bid ${a.id} already exists`);
   for (const b of ctx.db.bid.roundId.filter(a.roundId)) if (b.sellerId === me.sellerId) throw new SenderError('one sealed bid per seller per round');
   const timing = tryBid(clockOf(r), ms(ctx.timestamp));
   if (!timing.accepted) throw new SenderError(timing.reason);
 
-  const floors: Record<string, number> = {};
-  for (const f of ctx.db.sellerFloor.sellerId.filter(me.sellerId)) floors[f.skuSpec] = f.floor;
-  const fc = checkFloor({ lines: a.lines.map((l) => ({ sku_spec: l.skuSpec, unit_price: l.unitPrice, quantity: l.quantity })) }, floors);
+  const floors = new Map<string, number>();
+  for (const f of ctx.db.sellerFloor.sellerId.filter(me.sellerId)) floors.set(`${f.skuSpec}|${f.condition}`, f.floor);
+  const fc = checkFloorByCondition(
+    a.lines.map((l) => ({ sku_spec: l.skuSpec, unit_price: l.unitPrice, quantity: l.quantity, offered_condition: (l.offeredCondition || undefined) as Condition | undefined })),
+    floors,
+    (l) => condOf(l.sku_spec, l.offered_condition ?? ''),
+  );
 
   ctx.db.bid.insert({
     id: a.id, roundId: a.roundId, needId: r.needId, sellerId: me.sellerId, bidder: ctx.sender, persona: a.persona, lines: a.lines,
     statedTotal: a.statedTotal, perks: a.perks, claims: a.claims, floorCheckPassed: fc.ok, rejectReason: fc.ok ? '' : fc.reasons.join('; '),
-    origin: a.origin, source: a.source, sealedAt: ctx.timestamp,
+    origin: a.origin, source: a.source, sealedAt: ctx.timestamp, lineRejects: fc.lineRejects,
   });
   const deadline = tsFromMs(timing.auction.deadline_ms);
   ctx.db.round.id.update({ ...r, sealedCount: r.sealedCount + 1, extensions: timing.auction.extensions, deadline });
@@ -338,8 +388,9 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   // The seller fee is deliberately not passed: it never feeds ranking (invariant 8).
   const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
+  const lineRejects = new Map(rows.map((b) => [b.id, b.lineRejects]));
   const ranked = rankBids(rows.map(toBid), {
-    needItems, rejections, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
+    needItems, rejections, lineRejects, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
   });
   const byId = new Map(rows.map((b) => [b.id, b]));
   for (const x of ranked.ranked) {
@@ -497,6 +548,12 @@ export function myGoalsView(ctx: VCtx) {
 
 export function myGoalItemsView(ctx: VCtx) {
   return myGoalsView(ctx).flatMap((g) => [...ctx.db.goalItem.goalId.filter(g.id)]);
+}
+
+/** This caller's failed pairing attempts, so a screen can say "wrong code" (never the code). */
+export function myPairAttemptsView(ctx: VCtx) {
+  const row = ctx.db.pairAttempt.identity.find(ctx.sender);
+  return row ? [row] : [];
 }
 
 export function myAllowanceView(ctx: VCtx) {
