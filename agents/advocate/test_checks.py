@@ -114,6 +114,22 @@ def test_same_seller_rule_uses_numeric_server_rank_when_rows_arrive_out_of_order
     assert exclusion["excluded_bid_id"] == "rank-two"
 
 
+@pytest.mark.parametrize("ranks", [
+    [None], [True], [0], [-1], ["1"], [1.5], [1, 1],
+])
+def test_same_seller_rule_rejects_invalid_server_ranks(ranks):
+    candidates = []
+    for index, rank in enumerate(ranks):
+        candidate = {"bid_id": f"bid-{index}", "seller_id": f"seller-{index}",
+                     "binding_hash": f"{index + 1:064x}"}
+        if rank is not None:
+            candidate["rank"] = rank
+        candidates.append(candidate)
+
+    with pytest.raises(ValueError, match="server rank"):
+        checks.same_seller_exclusions(candidates, {})
+
+
 def test_psu_too_small_vetoed():
     card = run([bid("b1", "seller_1", 590, attrs={**ATTRS, "chipset": "RX 7800 XT", "rec_psu_w": 850})])[0]
     assert card["recommendation"] == "veto" and card["warnings"][0]["kind"] == "fit"
