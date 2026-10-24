@@ -17,6 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import crs
 
+REAL_CHECK_SELLERS = crs.check_sellers
+REAL_ELIGIBLE = crs.eligible
+
 
 @pytest.fixture
 def buyer(monkeypatch):
@@ -332,25 +335,36 @@ def test_trusted_individual_output_uses_exemption_reason(buyer):
     assert 'Approved synthetic representative profile is unavailable' not in ctx.owner_text()
 
 
-def test_no_crs_config_notifies_once_and_labels_rows_unchecked(buyer, monkeypatch):
+def _approved_profile_without_auth(monkeypatch):
+    body = {"firstName": "Synthetic"}
+    monkeypatch.setattr(crs, "APPROVED_PERSONAS", {"official-a": crs._canonical_hash(body)})
+    monkeypatch.setattr(crs, "_profiles", lambda: {"seller_1": {
+        "seller_type": "business", "consent": True, "persona_ref": "official-a", "request": body}})
+    monkeypatch.setattr(crs, "_paths", lambda: (None, Path(__file__).with_name("missing-crs-cache-test.json")))
+
+
+def test_no_crs_config_winner_notifies_once_and_stays_unchecked(buyer, monkeypatch):
     monkeypatch.delenv('CRS_API_KEY', raising=False)
-    monkeypatch.delenv('CRS_TEST_IDENTITIES_PATH', raising=False)
-    importlib.reload(crs)
-    profile_path = Path(__file__).with_name('missing-crs-profiles-test.json')
-    cache_path = Path(__file__).with_name('missing-crs-cache-test.json')
-    monkeypatch.setattr(crs, '_paths', lambda: (profile_path, cache_path))
+    monkeypatch.delenv('CRS_USERNAME', raising=False)
+    monkeypatch.delenv('CRS_PASSWORD', raising=False)
+    monkeypatch.setattr(crs, 'check_sellers', REAL_CHECK_SELLERS)
+    monkeypatch.setattr(crs, 'eligible', REAL_ELIGIBLE)
+    _approved_profile_without_auth(monkeypatch)
     requests = []
 
     def no_network(*args, **kwargs):
         requests.append((args, kwargs))
         raise AssertionError('CRS must not call the provider without configuration')
 
-    monkeypatch.setattr(crs, 'urlopen', no_network)
+    monkeypatch.setattr(crs, '_open_request', no_network)
     checks = asyncio.run(crs.check_sellers(datetime.now(timezone.utc)))
-    assert checks == {}
+    assert checks['seller_1']['reason'] == crs.REASON_NOT_CONFIGURED
     assert requests == []
 
-    buyer.ROUND.update(phase='advice', seller_checks=checks, cards={})
+    buyer.ALLOWANCE = 0
+    buyer.ROUND.update(phase='advice', seller_checks=checks,
+                       cards={'bid-1': card()},
+                       bids=[dict(buyer.ROUND['bids'][0], supplier_id='seller_1')])
     ctx = Context()
     asyncio.run(buyer.conclude(ctx, reviewed=True))
     asyncio.run(buyer.conclude(ctx, reviewed=True))
@@ -358,7 +372,33 @@ def test_no_crs_config_notifies_once_and_labels_rows_unchecked(buyer, monkeypatc
     assert text.count('CRS not configured') == 1
     assert 'CRS: not configured' in text
     assert 'CRS: exempt' not in text
+    assert 'Reply APPROVE 1' in text
     assert not buyer.ROUND.get('order')
+
+
+def test_not_configured_row_does_not_relabel_configured_adverse_row(buyer, monkeypatch):
+    monkeypatch.delenv('CRS_API_KEY', raising=False)
+    monkeypatch.delenv('CRS_USERNAME', raising=False)
+    monkeypatch.delenv('CRS_PASSWORD', raising=False)
+    monkeypatch.setattr(crs, 'eligible', REAL_ELIGIBLE)
+    _approved_profile_without_auth(monkeypatch)
+    checks = {
+        'seller_1': {'signal': None, 'reason': crs.REASON_NOT_CONFIGURED},
+        'seller_2': {'signal': {'supplier_id': 'seller_2', 'stability': 'not_verified',
+                                'checked_at': '2026-10-24T08:00:00Z', 'source': 'sandbox'},
+                     'reason': crs.REASON_NOT_VERIFIED},
+    }
+    buyer.ROUND.update(phase='advice', seller_checks=checks,
+                       bids=[dict(buyer.ROUND['bids'][0], supplier_id='seller_1'),
+                             dict(buyer.ROUND['bids'][0], id='bid-2', supplier_id='seller_2', persona='Adverse')],
+                       cards={'bid-1': card(), 'bid-2': card(bid_id='bid-2')})
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    text = ctx.owner_text()
+    assert 'CRS: not configured - Seller eligibility was not verified.' in text
+    assert f'CRS: not_verified - {crs.REASON_NOT_VERIFIED}' in text
+    assert 'Deal found: Adverse' not in text
+    assert text.count('CRS not configured') == 1
 
 
 def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer, monkeypatch):
