@@ -1,0 +1,1913 @@
+{
+ "origin": "SIM",
+ "frozen": "2026-10-24T06:59Z",
+ "author": "Lane C (Anoop's session), blind: written without reading hyphenate/*.py or hyphenate/scenarios/*_cases.py",
+ "roles": {
+  "$requester": "Tony Stark, the requester",
+  "$dept_head": "head of the requester's department",
+  "$controller": "the controller",
+  "$receiver": "someone allowed to receive goods who is not the requester",
+  "$ap_clerk": "the AP clerk (a person, not an agent)",
+  "$vendor": "a verified vendor with completed orders",
+  "$vendor2": "a second verified vendor",
+  "$vendor_contact": "the vendor's own contact",
+  "$prev_invoice": "the invoice created by the previous step",
+  "$last_period": "the most recent closed or closable earlier period",
+  "$current_period": "the period the case's payments fall in"
+ },
+ "scoring": "Planted: caught if any step at or after caught_at_or_after_step is refused (ok false), held (invoice status not matched, matched_prepaid or paid, or any finding), or leaves the PO unapproved where approval was needed. Clean: no step refused or held and the last step succeeds.",
+ "cases": [
+  {
+   "id": "b01",
+   "title": "Short ship billed in full",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 3,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "SS-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 3,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "3 billed, 2 received"
+   }
+  },
+  {
+   "id": "b02",
+   "title": "Open-box received, billed as new",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "open-box",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "CN-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "condition received open-box, invoice says new at the new price"
+   }
+  },
+  {
+   "id": "b03",
+   "title": "Price drift 4 percent over PO",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "PD-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 129999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "invoice $1,299.99 vs PO $1,249.99"
+   }
+  },
+  {
+   "id": "b04",
+   "title": "Price drift just past materiality (0.6 percent)",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 100000,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "PD-2001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 100600,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "$6.00 over $1,000.00 is past the larger of $1 or 0.5 percent"
+   }
+  },
+  {
+   "id": "b05",
+   "title": "Duplicate invoice, same number reformatted",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "INV-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "inv 01001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 4,
+    "why": "same number ignoring case, punctuation and zeros"
+   }
+  },
+  {
+   "id": "b06",
+   "title": "Duplicate invoice under a new number",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "DUP-2001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "DUP-2002",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 4,
+    "why": "same vendor, PO, lines and total within 60 days"
+   }
+  },
+  {
+   "id": "b07",
+   "title": "Split billing: two invoices for the same received units",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "SP-3001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "SP-3002",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 4,
+    "why": "4 billed against 2 received across two invoices"
+   }
+  },
+  {
+   "id": "b08",
+   "title": "Split lines on one invoice exceed the PO",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "SP-4001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      },
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "two lines for one SKU add up to 3 against 2"
+   }
+  },
+  {
+   "id": "b09",
+   "title": "Vendor bank change right before payment",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "BC-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "bank_change",
+     "by": "$vendor_contact",
+     "new_account": "acct-new-7731"
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 5,
+    "why": "new unverified account the day before payment"
+   }
+  },
+  {
+   "id": "b10",
+   "title": "Bank change verified by the person who requested it",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "BC-2001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "bank_change",
+     "by": "$ap_clerk",
+     "new_account": "acct-new-8842"
+    },
+    {
+     "op": "bank_verify",
+     "by": "$ap_clerk"
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 5,
+    "why": "verification must come from a different person"
+   }
+  },
+  {
+   "id": "b11",
+   "title": "Remit-to differs from the verified vendor master",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "RT-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ],
+     "remit_to": "acct-unknown-5521"
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "invoice asks to be paid to an account not on file"
+   }
+  },
+  {
+   "id": "b12",
+   "title": "Requester approves their own PO",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve",
+     "by": "$requester"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 1,
+    "why": "a requester can never approve"
+   }
+  },
+  {
+   "id": "b13",
+   "title": "Department head approves above their $2,500 limit alone",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 3,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve",
+     "by": "$dept_head"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 3,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 2,
+    "why": "$3,749.97 needs the controller; receiving must not start on an unapproved PO"
+   }
+  },
+  {
+   "id": "b14",
+   "title": "Over budget with no controller override",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 40,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve",
+     "by": "$dept_head"
+    },
+    {
+     "op": "approve",
+     "by": "$controller"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 1,
+    "why": "$49,999.60 exceeds the department budget; the controller must give an explicit override"
+   }
+  },
+  {
+   "id": "b15",
+   "title": "Posting into a closed period",
+   "planted": true,
+   "steps": [
+    {
+     "op": "close_period",
+     "by": "$controller",
+     "period": "$last_period"
+    },
+    {
+     "op": "journal",
+     "period": "$last_period",
+     "lines": [
+      {
+       "account": "6100",
+       "debit": 500,
+       "credit": 0
+      },
+      {
+       "account": "1000",
+       "debit": 0,
+       "credit": 500
+      }
+     ],
+     "reason": "late bank fee"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 1,
+    "why": "a closed period refuses posting"
+   }
+  },
+  {
+   "id": "b16",
+   "title": "Credit memo, then the vendor re-bills the same error",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "open-box",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "CM-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "CM-1001R",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ],
+     "supersedes": "$prev_invoice"
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "the replacement invoice still bills open-box as new at the new price"
+   }
+  },
+  {
+   "id": "b17",
+   "title": "Partial receipt, invoice for the whole order",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 3,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "PR-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 3,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "1 of 3 received, 3 billed"
+   }
+  },
+  {
+   "id": "b18",
+   "title": "Invoice total does not add up",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "AR-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ],
+     "total": 134999
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "lines sum to $1,249.99, total says $1,349.99"
+   }
+  },
+  {
+   "id": "b19",
+   "title": "SKU swapped to a pricier model",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "SK-1001",
+     "lines": [
+      {
+       "sku": "rtx 5080",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "billed SKU is not the PO SKU"
+   }
+  },
+  {
+   "id": "b20",
+   "title": "Freight line not on the PO",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "FR-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      },
+      {
+       "sku": "freight",
+       "qty": 1,
+       "price": 4999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "an extra $49.99 line nobody ordered"
+   }
+  },
+  {
+   "id": "b21",
+   "title": "Sales tax line not on the PO",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "TX-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      },
+      {
+       "sku": "sales tax",
+       "qty": 1,
+       "price": 10937,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "an extra tax line; tax is not modeled, so this should be held for a person"
+   }
+  },
+  {
+   "id": "b22",
+   "title": "Receiving failed (damaged), invoice billed in full",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": false,
+       "reasons": [
+        "cracked shroud"
+       ]
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "DM-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "the only unit failed the receiving check"
+   }
+  },
+  {
+   "id": "b23",
+   "title": "Same invoice paid twice",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "PT-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 5,
+    "why": "second payment of a paid invoice"
+   }
+  },
+  {
+   "id": "b24",
+   "title": "PO priced far above the MIRROR market reference",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 160000,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve",
+     "by": "$dept_head"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 2,
+    "why": "$1,600 is more than 15 percent above the dated MIRROR median; needs the controller"
+   }
+  },
+  {
+   "id": "b25",
+   "title": "Invoice before anything was received",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "invoice",
+     "number": "NR-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 2,
+    "why": "billed with zero units received"
+   }
+  },
+  {
+   "id": "b26",
+   "title": "Closing a period with a payment that has no bank record",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "NB-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    },
+    {
+     "op": "close_period",
+     "by": "$controller",
+     "period": "$current_period"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 5,
+    "why": "every payment in a period needs a bank record"
+   }
+  },
+  {
+   "id": "b27",
+   "title": "Two-unit PO, one unit open-box, billed both as new",
+   "planted": true,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      },
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "open-box",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "MX-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "caught_at_or_after_step": 3,
+    "why": "one of two units is open-box"
+   }
+  },
+  {
+   "id": "k01",
+   "title": "One GPU, clean all the way to payment",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-1001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "matches PO, receipt and invoice"
+   }
+  },
+  {
+   "id": "k02",
+   "title": "Immaterial 50 cent variance",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-2001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 125049,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "$0.50 is under the $1 materiality floor"
+   }
+  },
+  {
+   "id": "k03",
+   "title": "Two partial deliveries, each billed after receipt",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 2,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-3001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-3002",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "cumulative quantities match"
+   }
+  },
+  {
+   "id": "k04",
+   "title": "Bank change verified by a different person, then paid",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-4001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "bank_change",
+     "by": "$ap_clerk",
+     "new_account": "acct-new-9953"
+    },
+    {
+     "op": "bank_verify",
+     "by": "$controller"
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "call-back verification by another person"
+   }
+  },
+  {
+   "id": "k05",
+   "title": "Open-box allowed and priced as open-box",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 114999,
+       "condition": "open-box",
+       "allowed": [
+        "new",
+        "open-box"
+       ]
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "open-box",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-5001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 114999,
+       "condition": "open-box"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "condition and price agree"
+   }
+  },
+  {
+   "id": "k06",
+   "title": "GPU and PSU on one PO, both billed correctly",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      },
+      {
+       "sku": "psu 850w",
+       "qty": 1,
+       "price": 12999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      },
+      {
+       "sku": "psu 850w",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "OK-6001",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      },
+      {
+       "sku": "psu 850w",
+       "qty": 1,
+       "price": 12999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "pay"
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "two SKUs, each matches"
+   }
+  },
+  {
+   "id": "k07",
+   "title": "Same invoice number from two different vendors",
+   "planted": false,
+   "steps": [
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "ACME-1",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "requisition",
+     "requester": "$requester",
+     "vendor": "$vendor2",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    },
+    {
+     "op": "approve_all"
+    },
+    {
+     "op": "receive",
+     "by": "$receiver",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "condition": "new",
+       "ok": true
+      }
+     ]
+    },
+    {
+     "op": "invoice",
+     "number": "ACME-1",
+     "lines": [
+      {
+       "sku": "rtx 5070 ti",
+       "qty": 1,
+       "price": 124999,
+       "condition": "new"
+      }
+     ]
+    }
+   ],
+   "expect": {
+    "clean": true,
+    "why": "a shared number across vendors is not a duplicate"
+   }
+  }
+ ]
+}
