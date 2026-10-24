@@ -7,6 +7,7 @@ Fit is Lane C's checker (data.fit_checker), run once per bid on the bid's parts 
 Fee fields are ignored: the advocate never sees a fee. Text rule: neutral wording ("did not match"), no en/em dashes.
 """
 import re
+from urllib.parse import urlsplit
 
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
@@ -56,7 +57,7 @@ def _warn(kind, text, url, dollars, rule_id=None):
     downgraded to a caution that says so; code-decided warnings fall back to the rule's own source."""
     if not url and kind in ("condition", "spec"):
         kind, text = "unsourced", text + " No listing link to cite, so this is a caution, not a veto."
-    url = url or CODE_SOURCES.get(kind) or CODE_SOURCES["unsourced"]
+    url = _safe_source_url(url) if url else CODE_SOURCES.get(kind) or CODE_SOURCES["unsourced"]
     return {"kind": kind, "rule_id": rule_id or f"advocate.{kind}",
             "text": text.replace("\u2014", ",").replace("\u2013", " to "),
             "source_url": url, "dollar_impact": round(float(dollars), 2)}
@@ -93,35 +94,19 @@ def _fit_warnings(bid, owned):
     url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""
     out = []
     if fails:
-        # the checker's reasons can carry seller attrs (e.g. chipset): shown only when plain, else the rule template
         rid = fails[0]["rule_id"]
-        why = "; ".join(c["reason"] for c in fails)
-        why = why if _plain(why) else CALL_SUMMARIES.get(rid, CALL_SUMMARIES["fit"])
-        out.append(_warn("fit", f"Does not fit: {why} (rule {rid}).", url, bid["total_landed_price"], rule_id=rid))
+        summary = CALL_SUMMARIES.get(rid, CALL_SUMMARIES["fit"])
+        out.append(_warn("fit", f"Does not fit: {summary}.", url, bid["total_landed_price"], rule_id=rid))
     elif unsure:
-        why = "; ".join(c["reason"] for c in unsure)
-        why = why if _plain(why) else CALL_SUMMARIES["advocate.fit_unknown"]
-        out.append(_warn("fit_unknown", f"Fit not confirmed: {why}.", url, 0))
-    notes = [n for n in fit["notes"] if _plain(n)]
-    if notes:
-        out.append(_warn("note", "; ".join(notes) + ".", url, 0))
+        out.append(_warn("fit_unknown", f"Fit not confirmed: {CALL_SUMMARIES['advocate.fit_unknown']}.", url, 0))
+    if fit["notes"]:
+        out.append(_warn("note", "The fit checker returned a non-blocking note.", url, 0))
     return out
 
 
 # #89: seller-supplied strings never reach card text. Conditions map to this closed set, item names come from the
 # buyer's own need, seller ids must match our pattern, and fit text comes from the rule templates.
 CONDITIONS = {"new", "open box", "refurbished", "used"}
-
-
-_BLOCKED = {"approve", "approved", "ignore", "instruction", "instructions", "system", "assistant", "prompt",
-            "pay", "payment", "send", "override", "code", "password"}
-
-
-def _plain(text) -> bool:
-    """A fit-checker note is shown only if it is short plain text with no steering words."""
-    t = str(text or "")
-    return (bool(re.fullmatch(r"[A-Za-z0-9 .,'%:/()-]{1,160}", t))
-            and not set(re.findall(r"[a-z]+", t.lower())) & _BLOCKED)
 
 
 def _cond(value) -> str:
@@ -204,10 +189,26 @@ def call_reason(warnings: list[dict], bid: dict) -> dict:
     if not ranked:
         url = bid["lines"][0].get("listing_url") if bid.get("lines") else None
         return {"rule_id": "advocate.ok", "summary": CALL_SUMMARIES["advocate.ok"],
-                "source_url": url or CODE_SOURCES["unsourced"]}
+                "source_url": _safe_source_url(url) if url else CODE_SOURCES["unsourced"]}
     w = ranked[0]
     rid = w["rule_id"] if w["rule_id"] in CALL_SUMMARIES else ("fit" if w["kind"] == "fit" else f"advocate.{w['kind']}")
-    return {"rule_id": rid, "summary": CALL_SUMMARIES[rid], "source_url": w["source_url"]}
+    return {"rule_id": rid, "summary": CALL_SUMMARIES[rid],
+            "source_url": _safe_source_url(w["source_url"])}
+
+
+def _safe_source_url(value: str) -> str:
+    """Keep valid public citation URLs unchanged; replace unsafe or malformed values."""
+    if not isinstance(value, str) or not value or any(char.isspace() for char in value):
+        return CODE_SOURCES["unsourced"]
+    try:
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return CODE_SOURCES["unsourced"]
+        parsed.port  # force malformed ports to fail closed
+    except (TypeError, ValueError):
+        return CODE_SOURCES["unsourced"]
+    return value
 
 
 def best_bid(bids: list[dict], cards: list[dict]):

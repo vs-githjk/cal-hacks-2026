@@ -27,6 +27,7 @@ from logic import decide, make_order, sealed
 
 ADVICE_TIMEOUT_S = 15
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE
+CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
 SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
@@ -380,21 +381,34 @@ async def conclude(ctx: Context, reviewed: bool):
     ROUND["phase"] = "decided"
     out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
     now_utc = datetime.now(timezone.utc)
+    seller_checks = ROUND.get("seller_checks", {})
+    not_configured_suppliers = {
+        b["supplier_id"] for b in bids
+        if crs.to_crs_check(b["supplier_id"], seller_checks.get(b["supplier_id"])).get("origin") == "NOT_CONFIGURED"
+    }
+    if not_configured_suppliers and not ROUND.get("crs_notice_sent"):
+        ROUND["crs_notice_sent"] = True
+        await tell_owner(ctx, CRS_NOT_CONFIGURED_NOTICE)
     eligible_suppliers = {b["supplier_id"] for b in bids
-                          if crs.eligible(b["supplier_id"], ROUND.get("seller_checks", {}).get(b["supplier_id"]), now_utc)}
+                          if crs.eligible(b["supplier_id"], seller_checks.get(b["supplier_id"]), now_utc)}
     for n, b in enumerate(bids, 1):
         card = cards.get(b["id"], {})
         rec = card.get("recommendation", "not reviewed")
         out.append(f"{n}. {b['persona']}: ${b['total_landed_price']:.2f} [{b['source']}]")
         check = ROUND.get("seller_checks", {}).get(b["supplier_id"], {})
         signal = check.get("signal")
-        reason = ("Trusted individual seller; CRS check exempt."
+        supplier_not_configured = b["supplier_id"] in not_configured_suppliers
+        reason = ("Seller eligibility was not verified."
+                  if supplier_not_configured
+                  else "Trusted individual seller; CRS check exempt."
                   if b["supplier_id"] in eligible_suppliers and not signal
                   else check.get("reason") or crs.REASON_UNAVAILABLE)
         if signal:
             status = f"CRS: {signal['stability']} - {reason}"
             if signal["source"] == "recorded":
                 status += f" (cached from CRS {signal['checked_at']})"
+        elif supplier_not_configured:
+            status = f"CRS: not configured - {reason}"
         else:
             status = f"CRS: {'exempt' if b['supplier_id'] in eligible_suppliers else 'ineligible'} - {reason}"
         out.append(f"   {status}")
@@ -442,7 +456,6 @@ async def conclude(ctx: Context, reviewed: bool):
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     await tell_owner(ctx, "\n".join(out))
-
 
 async def approve(ctx: Context, n: int):
     bids = ROUND.get("bids", [])
