@@ -27,3 +27,19 @@ def test_the_seal_file_holds_a_sha256_and_the_set_itself_is_not_committed():
     import subprocess
     tracked = subprocess.check_output(["git", "ls-files", "sim/attacks"], text=True)
     assert "heldout2.jsonl" not in tracked
+
+
+def test_runner_checks_a_given_seal_file(tmp_path):  # heldout3 uses its own seal and results file
+    f = write(tmp_path)
+    seal = tmp_path / "SEAL.sha256"
+    seal.write_text(f"{heldout2.sha256_of(f)}  set.jsonl\n")
+    section = heldout2.run(f, out=tmp_path / "R.md", screen_fn=lambda m, c: "block" if "ignore" in m else "allow", seal=seal)
+    assert "matches the sealed sha256" in section and "DOES NOT" not in section
+
+
+def test_the_heldout3_seal_is_committed_and_the_set_is_not_in_the_repo():
+    from pathlib import Path
+    root = Path(heldout2.__file__).resolve().parents[1]
+    seal = root / "sim" / "attacks" / "HELDOUT3.sha256"
+    assert len(seal.read_text().split()[0]) == 64
+    assert not list(root.rglob("heldout3.jsonl"))
