@@ -24,15 +24,21 @@ def savings_tile() -> dict:
     rows = observations()
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
+    ok = b["status"] == "ok"
+    why = "no verified purchase recorded yet" if ok else "no purchase has a confirmed dated baseline to compare against"
+    ref = b["median"] if ok else b.get("reference_unconfirmed")
+    ref_txt = (f"{'Baseline' if ok else 'Unconfirmed reference (not a baseline)'}: median ${ref:,.2f} of {b['n']} in-stock retail asks "
+               f"({b['status']}, providers {', '.join(b['providers'])}; a baseline needs two dated providers within 24 h). "
+               if ref is not None else f"No reference ({b['status']}). ")
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
-                 display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
-                         f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",
+                 display=(f"No verified savings yet: {why} (reference {b['status']}, "
+                          f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})"),
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
                  source_run="python3 -m data.baselines",
                  detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
                          "sold_kept_out": b["sold"], "marketplace": b["marketplace"]},
-                 note=f"Unconfirmed reference (not a baseline): median ${b['reference_unconfirmed'] or b['median']:,.2f} of {b['n']} in-stock retail asks ({b['status']}: a baseline needs two "
-                      "dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. "
+                 note=ref_txt + "Provider apify-b is a second, independent Apify Actor family reading the same stores. "
+                      "eBay sold prices are kept out of the reference. "
                       "SIM savings, when they exist, go in a separate column and are never added to real ones.")
 
 

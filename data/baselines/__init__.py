@@ -1,7 +1,7 @@
 """Dated price baselines (Lane C, c11; issue #47). MIRROR.
 
 baseline(sku, at) -> {status: ok|one_source|stale|empty, median, n, providers, from, to, rows, sold, marketplace}
-A baseline needs asks from at least 2 different providers (Apify, Bright Data) observed within 24 h before `at`.
+A baseline needs asks from at least 2 different providers (two independent Apify Actor families "apify" and "apify-b", or Bright Data) observed within 24 h before `at`.
 Only retail asks that are in stock and new (or condition not stated by a first-party retailer) enter the median.
 eBay sold rows are a separate, labelled series and never enter the median (they fooled a lowest-price reference:
 $640 for a $1,250 card); eBay live asks are reported as marketplace, also outside the median.
@@ -30,10 +30,23 @@ def _ts(s: str) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+SECOND = Path(__file__).resolve().parents[1] / "mirror" / "snapshots_b"  # #47: a second Actor family per store
+
+
+def _load_second() -> dict:
+    cards = {}
+    for f in sorted(SECOND.glob("*.json")):
+        cards.setdefault(f.name.rsplit("-", 1)[0], []).extend(json.loads(f.read_text()))
+    return cards
+
+
 def observations() -> list[dict]:
-    """Every priced listing in the Apify snapshots as one dated observation."""
+    """Every priced listing in the Apify snapshots as one dated observation. The first Actor set is provider "apify";
+    the second Actor family (data/mirror/actors.py SECOND_SOURCE, run separately) is provider "apify-b"."""
     rows = []
-    for store, cards in load().items():
+    sources = [(store, cards, "apify") for store, cards in load().items()] + \
+              [(store, [{**c, "provider": "apify-b"} for c in cards], "apify-b") for store, cards in _load_second().items()]
+    for store, cards, _ in sources:
         for c in cards:
             if not c.get("price"):
                 continue

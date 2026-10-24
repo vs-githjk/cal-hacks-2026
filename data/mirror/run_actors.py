@@ -1,5 +1,6 @@
 """Run each c1 actor once with a small input; save raw items, SpecCards and cost per run.
 python -m data.mirror.run_actors [store ...]
+python -m data.mirror.run_actors --second [store ...]   (second-source Actor family, #47: snapshots_b/, provider apify-b)
 python -m data.mirror.run_actors --renormalize   (rebuild snapshots from the logged runs; no new runs, no cost)   (reads APIFY_TOKEN from env or .env; never prints it)"""
 import json
 import os
@@ -17,7 +18,7 @@ try:
 except ImportError:
     CTX = ssl.create_default_context()
 
-from .actors import ACTORS
+from .actors import ACTORS, SECOND_SOURCE
 from .normalize import FIELDS, first, strip_private, to_spec_card
 
 HERE = Path(__file__).resolve().parent
@@ -40,11 +41,12 @@ def call(method, path, body=None, timeout=330):
         return json.loads(r.read())
 
 
-def run(store):
+def run(store, second=False):
     """Never raises: every outcome, including a paid run that broke later, comes back as a log record."""
-    actor, inp = ACTORS[store]
+    actor, inp = (SECOND_SOURCE if second else ACTORS)[store]
+    snaps, raw = ("snapshots_b", f"{store}-b") if second else ("snapshots", store)
     started = time.time()
-    rec = {"store": store, "actor": actor, "input": inp}
+    rec = {"store": store, "actor": actor, "input": inp, **({"family": "b"} if second else {})}
     try:
         r = call("POST", f"/acts/{actor.replace('/', '~')}/runs?waitForFinish=300&maxItems=10", inp)["data"]
         rec.update(run_id=r["id"], status=r["status"], cost_usd=r.get("usageTotalUsd"))
@@ -57,9 +59,9 @@ def run(store):
         items = call("GET", f"/datasets/{r['defaultDatasetId']}/items?clean=1&limit=10")
         now = datetime.now(timezone.utc)
         snap = f"{store}-{now:%Y%m%dT%H%MZ}"
-        (HERE / "raw" / f"{store}.json").write_text(json.dumps([strip_private(store, it) for it in items[:3]], indent=1))
+        (HERE / "raw" / f"{raw}.json").write_text(json.dumps([strip_private(store, it) for it in items[:3]], indent=1))
         cards = [to_spec_card(store, it, snap, now.isoformat(timespec="seconds")) for it in items]
-        (HERE / "snapshots" / f"{snap}.json").write_text(json.dumps(cards, indent=1))
+        (HERE / snaps / f"{snap}.json").write_text(json.dumps(cards, indent=1))
         rec.update(items=len(items), snapshot_id=snap,
                    fields=sorted(k for k in FIELDS if any(first(it, FIELDS[k]) not in (None, "") for it in items)))
     except Exception as e:  # a broken low-user actor is skipped, not retried; its cost stays in the log
@@ -70,7 +72,7 @@ def run(store):
 
 def renormalize():
     log = HERE / "runs.json"
-    latest = {r["store"]: r for r in json.loads(log.read_text())}
+    latest = {r["store"]: r for r in json.loads(log.read_text()) if not r.get("family")}
     for r in latest.values():
         if not r.get("run_id"):
             continue
@@ -81,7 +83,8 @@ def renormalize():
             (HERE / "snapshots" / f"{r['snapshot_id']}.json").write_text(json.dumps(cards, indent=1))
         r.update(cost_usd=round(run.get("usageTotalUsd") or 0, 5), items=len(items), finished_at=run["finishedAt"],
                  fields=sorted(k for k in FIELDS if any(first(it, FIELDS[k]) not in (None, "") for it in items)))
-    log.write_text(json.dumps(list(latest.values()), indent=1))
+    others = [r for r in json.loads(log.read_text()) if r.get("family")]
+    log.write_text(json.dumps(list(latest.values()) + others, indent=1))
     return list(latest.values())
 
 
@@ -90,11 +93,12 @@ if __name__ == "__main__":
         for r in renormalize():
             print(r["store"], r.get("items"), r.get("cost_usd"), r.get("fields"))
         sys.exit()
-    stores = sys.argv[1:] or list(ACTORS)
-    for d in ("raw", "snapshots"):
+    second = "--second" in sys.argv
+    stores = [a for a in sys.argv[1:] if a != "--second"] or list(SECOND_SOURCE if second else ACTORS)
+    for d in ("raw", "snapshots", "snapshots_b"):
         (HERE / d).mkdir(exist_ok=True)
     with ThreadPoolExecutor(4) as pool:  # free plan: max 5 concurrent runs
-        results = list(pool.map(run, stores))
+        results = list(pool.map(lambda s: run(s, second), stores))
     log = HERE / "runs.json"
     old = json.loads(log.read_text()) if log.exists() else []
     log.write_text(json.dumps(old + results, indent=1))

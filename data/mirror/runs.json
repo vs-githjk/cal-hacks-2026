@@ -196,5 +196,45 @@
    "country": "us"
   },
   "finished_at": "2026-10-24T05:09:28.698Z"
+ },
+ {
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "RTX 5070 Ti",
+   "maxResults": 3,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "SGhUiwqz6jif5pagx",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 3,
+  "snapshot_id": "bestbuy-20261024T0851Z",
+  "fields": [
+   "condition",
+   "price",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 6
+ },
+ {
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "RTX 5070 Ti",
+   "maxProducts": 3,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "gkBRbRsZPgDmu6LuH",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-20261024T0852Z",
+  "fields": [],
+  "secs": 72
  }
 ]

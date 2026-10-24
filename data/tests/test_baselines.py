@@ -45,5 +45,17 @@ def test_observations_older_than_24h_are_stale():
 
 def test_real_snapshots_load_as_retail_asks_and_sold_separately():
     rows = observations()
-    assert rows and all(r["origin"] == "MIRROR" and r["provider"] == "apify" for r in rows)
+    assert rows and all(r["origin"] == "MIRROR" and r["provider"] in ("apify", "apify-b") for r in rows)
     assert {r["kind"] for r in rows if r["store"] == "ebay_sold"} == {"sold"}
+
+
+def test_second_actor_family_rows_carry_their_own_provider():  # #47
+    rows = observations()
+    b_rows = [r for r in rows if r["provider"] == "apify-b"]
+    assert b_rows and all(r["origin"] == "MIRROR" and r["store"] == "bestbuy" for r in b_rows)
+
+
+def test_real_feed_has_a_two_provider_baseline():
+    rows = observations()
+    b = baseline("rtx 5070 ti", max(r["observed_at"] for r in rows), rows=rows)
+    assert b["status"] == "ok" and b["providers"] == ["apify", "apify-b"] and b["median"] is not None
