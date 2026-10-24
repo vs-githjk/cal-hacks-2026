@@ -31,7 +31,7 @@ The screen is a truth display before it is a show. Most of what it shows is Lane
 | 1 | Sentence in; planner splits it into 6 parts with budgets; PSU and case appear as owned | `plan()` output, step `plan` (per #344) | 0:00 to 0:10 |
 | 2 | Exploded PC: 8 slots around the chassis, 6 open, 2 owned and dimmed | `plan().parts`, `plan().owned` | 0:10 to 0:15 |
 | 3 | Six arenas run (sealed stages, vetoes, Shield blocks, champions lock) | `round`, `round_result` (per #363), advocate cards | 0:15 to 0:55 |
-| 4 | Lines check one by one as champions lock: grey to green, amber where unknown | fit checks (per #344 (ask)) | runs during 3 |
+| 4 | Lines check: grey to green, amber where unknown. Today the checks come from `resolve()`, after all rounds, so every line checks at once; one by one only if 13.2.1 adds a check per pick | fit checks (per #344 (ask)) | 0:55 |
 | 5 | Re-plan: a line goes red, the planner swaps the part, moves budget, the line goes green | steps `clash`, `swap`, `reallocate` (per #344) | 0:55 to 1:15 |
 | 6 | Budget bar settles under the cap; step `locked` | `resolve().total_cents`, step `locked` | 1:15 to 1:20 |
 | 7 | Zoom into the one approval call; total, number of sellers, the "why"; flips to approved | per #345 | 1:20 to 1:45 |
@@ -226,7 +226,7 @@ Important details:
 - `check.sources` are maker page URLs. `check.origin` is the check's label (MIRROR for dated maker data, SIM for fixture specs). Show both.
 - There is no `specs_used` field. The compared numbers live in `reason`; the per-spec provenance lives in `parts.{category}.maker_data`.
 
-Ask to #344 (13.1): include `checks` (the full `check_build` result) in `resolve()` and once more after each `swap`, so lines can turn green. Until it lands, the fallback is: lines touched by a `clash` or fit `knockout` turn red, every other line stays `unchecked`. **A line never turns green without a check row.**
+Ask to #344 (13.1): include `checks` (the full `check_build` result) in `resolve()` and once more after each `swap`, so lines can turn green. Until it lands, the fallback is: only lines named by a `clash` step turn red, every other line stays `unchecked`. A fit `knockout` is a bid that left the round (usually a clash with an owned part, like a card too long for the case); it shows on its BidRow, never on a line, because that bid is not in the build. **A line never turns green without a check row.**
 
 ### 4.4 Rounds (per #363)
 
@@ -238,7 +238,7 @@ Ask to #344 (13.1): include `checks` (the full `check_build` result) in `resolve
 | `floor_event` per knockout, e.g. `Seller knocked out (stage N)` | StepLog sub-line inside the ArenaPanel (not the main log) |
 | Bid price, seller label, origin | BidRow (per #345 for the build-round projection) |
 
-Sealed means: during a stage the UI shows that a bid arrived, not its price. Prices appear when the stage closes (per #363 the market never shows a seller another seller's price; the buyer screen shows prices after close).
+Sealed means: during a stage the UI shows that a bid arrived, not its price. Per #363 a seller never sees another seller's price. When the buyer screen may show prices (at stage close or at round close) is per #345; until then show prices at stage close.
 
 ### 4.5 Advocate card, one per bid (main: `agents/advocate/checks.py`; real-data parts per #287 (open), store rule per #324 (open))
 
@@ -311,7 +311,9 @@ Shared rule for every component: anything with a number has a source link and a 
 | waiting | round not open yet | same, muted | `Waiting for sellers` |
 | live | round open | outline `--line-2`, StageDots, bid count | `Stage 1 of 3, 4 sealed bids` |
 | stage closing | stage close | brief 300 ms flash of the bid rows | `Stage 1 closed, 2 knocked out` |
-| champion locked | `round_result.status = champion` and step `pick` | solid border `--ink`, lock icon, price and seller | `Locked: Micro Center, $1,249.99` |
+| round won | `round_result.status = champion` | border `--line-2`, trophy icon, price and seller | `Round won: Micro Center, $1,249.99` |
+| locked | planner step `pick` for this part | solid border `--ink`, lock icon | `Locked: Micro Center, $1,249.99` |
+| picked after re-plan | step `swap`; the new pick was not the round's champion | solid border `--ink`, lock icon, two-arrows icon | `Picked after re-plan: SellerY, $189` |
 | swapped | step `swap` for this part | old name struck through for `dwell-swap`, then the new name | `Swapped: socket clash` |
 | no deal | round ended with zero survivors | dashed `--fit-fail` border, cross icon | `No offer passed the checks` |
 | blocked | `status = blocked` with this part | as no deal, plus BlockedState | the blocked `step.line` |
@@ -338,6 +340,12 @@ Shared rule for every component: anything with a number has a source link and a 
 | `fit.form_factor` | motherboard | case | |
 | `fit.psu_form_factor` | psu | case | |
 | `fit.storage` | storage | motherboard | |
+
+- Which rules can turn a line red. A `clash` (per #344) is only between two **picked** parts. A conflict with an **owned** part (PSU, case) knocks that bid out of its round instead, so its line never goes red for the build:
+
+| Can clash between picks (red line, re-plan) | Owned part involved (per-bid knockout, BidRow only) |
+|---|---|
+| `fit.cpu_socket`, `fit.ram_type`, `fit.ram_slots`, `fit.cooler_socket`, `fit.storage`, `fit.psu_wattage` (CPU plus GPU load) | `fit.gpu_length`, `fit.cooler_height`, `fit.form_factor`, `fit.gpu_connectors`, `fit.psu_form_factor` (this one can run at `plan()` time) |
 
 - Line state = worst of its rules: any `fail` -> fail; else any `uncertain` -> uncertain; else every rule has a `pass` row -> pass; else unchecked. A pair with one pass and one rule not run yet is **unchecked**, with label `1 of 2 checked`.
 - Visual per state (colour + stroke + icon + word, always all four):
@@ -376,6 +384,7 @@ Shared rule for every component: anything with a number has a source link and a 
 | vetoed by advocate | strikethrough, AdvocateChip `Veto`, rule icon | headline = advocate `reason` (closed table) + source link |
 | blocked by Shield | strikethrough, shield icon, `Blocked by Shield` | Shield rule id and its closed reason; the seller's text is **not rendered** |
 | planner knockout | strikethrough, cross icon | `knockouts[].reason` (fit checker reason) or the `budget.over` plain words |
+| picked after re-plan | was `knocked_out` or `advancing` in the round, now the planner's pick: row fill `--soft`, lock and two-arrows icons | `Picked after re-plan` (mandate and receipt per 13.2.6) |
 
 - Never show seller-supplied listing text as a reason. The seller label is the seller's display name only.
 - Tap or Enter opens the AdvocateCard for this bid (desktop: expands under the row; phone: bottom sheet).
@@ -490,6 +499,7 @@ Sequence for one clash (steps per #344: `clash`, then `swap` or `blocked`, optio
 - One `clash` step with several parts in `with`: all those lines go red together in step 1, the banner reads `Clash: 2 rules fail` with both plain-words lines stacked, and one `swap` resolves them. Each line then re-checks on its own and turns green (or stays red) independently.
 - Two separate `clash` steps: play them one after the other in arrival order. While the first plays, the second line is already red (it is true), but it is not highlighted; the banner shows `1 more clash` on the right. After the first resolves, the second runs steps 1 to 4.
 - If a swap leaves a line red, that is a new clash; it queues like any other.
+- A fit `knockout` step does not play this sequence today (the bid just leaves; 4.3). If Lane A decides that a knockout of the tentative cheapest pick should play red, swap, green (13.2.8), use the same four steps with the owned part as the second endpoint.
 
 ### 6.3 Pointer and keyboard
 
@@ -573,7 +583,7 @@ Under `prefers-reduced-motion: reduce` every transition is instant (globals.css 
 - **More than 3 warnings.** The advocate already cuts to 3 (vetoes kept). The UI never adds more.
 - **Owned part with unknown spec** (case with no GPU clearance). Lines into it are `uncertain`, label `case GPU clearance unknown`.
 - **A real store's bid somehow ranks first.** It cannot (veto), but if a ComparisonCard bid ever appears as `champion`, render the slot as `no deal` and log an error. Never show a real store as a winner.
-- **Real SF GPU data for the recording** (305 mm case): MSI Ventus 3X PZ OC $1,249.99 (303 mm) fits; ASUS Prime $1,299.99, Prime OC $1,349.99 and ProArt $1,389.99 fit; ASUS TUF (329 mm) is the `fit.gpu_length` clash; ROG Strix has unknown length and never bids.
+- **Real SF GPU data for the recording** (305 mm case): MSI Ventus 3X PZ OC $1,249.99 (303 mm) fits; ASUS Prime $1,299.99, Prime OC $1,349.99 and ProArt $1,389.99 fit; ASUS TUF (329 mm) is the real `fit.gpu_length` trap, shown as a vetoed or knocked-out BidRow in the GPU arena (not a red line, since the case is owned); ROG Strix has unknown length and never bids.
 
 ---
 
@@ -641,7 +651,7 @@ Before merge, grep the UI for U+2014, U+2013, `secure`, `No problems found` and 
 - [ ] Tokens added to `globals.css` (3.1 to 3.4), no reuse of `--mint`, `--coral` or `--amber` for verdicts
 - [ ] TopBar: typing, planned, approved
 - [ ] BudgetBar: open, locked, moved, over cap, owned chips; phone compact
-- [ ] Slot and SlotRow: planned, waiting, live, stage closing, champion locked, swapped, no deal, blocked, owned
+- [ ] Slot and SlotRow: planned, waiting, live, stage closing, round won, locked, picked after re-plan, swapped, no deal, blocked, owned
 - [ ] CompatLine and CompatRow: unchecked, re-checking, pass, uncertain, fail; multi-rule pairs; power fork; labels and sources
 - [ ] ArenaPanel: StageDots, countdown, sealed rows, empty, no bids
 - [ ] BidRow: sealed, advancing, champion, out last place, advocate veto, Shield block, planner knockout
@@ -679,5 +689,6 @@ Before merge, grep the UI for U+2014, U+2013, `secure`, `No problems found` and 
 5. **[Vidyut, #345] Field names** for `build_id`, `checked_at`, re-check status, mandates, receipts, call state and the "why" lines (4.7).
 6. **[Vidyut, #345] Bid projection for build rounds**: seller label, price after close, origin, Shield result per bid.
 7. **[Vedant and Vidyut] Status colours.** The app is black and white on purpose. This spec adds a scoped green, red and amber set for fit lines only, always paired with icon, stroke and word. Confirm, or pick black and white strokes only (solid, dotted, dashed, heavy) and keep the icons.
-8. **[Vidyut] Which clash the recording shows.** Options: GPU too long for the case (`fit.gpu_length`, ASUS TUF 329 mm against 305 mm, real data) or socket clash (`fit.cpu_socket`, SIM parts). The GPU one is real MIRROR data, so it is the stronger choice.
+8. **[Vidyut and Abhinav] Which red line the recording shows.** Under the #344 contract the red, swap, green beat needs a clash between two picks, so the candidate is `fit.cpu_socket` (CPU and board, SIM parts). The real ASUS TUF length trap is a per-bid knockout or advocate veto in the GPU arena. If you want the real GPU data to drive the red line, Lane A must make a fit knockout of the tentative cheapest pick emit the red, swap, green sequence (6.2, last bullet).
+10. **[Vidyut and Vedant, #345 and #363] Mandate for a swapped pick.** `resolve()` tries offers cheapest first, so after a clash the new pick is a seller whose `round_result.status` is not `champion`. #363 says `create_mandate` reads only the `champion` row, so as written the swapped part cannot get a mandate or a receipt. Beat 5 breaks end to end unless the build path mandates the planner's `picks`, or the swap re-runs that part's round.
 9. **[Anoop] Per-part real listings and baselines** for CPU, board, RAM, SSD and cooler: next Lane C job. Until then those slots are SIM (8.2).
