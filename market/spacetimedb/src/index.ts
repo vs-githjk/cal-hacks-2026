@@ -109,6 +109,11 @@ export const deny_approval = spacetimedb.reducer(
   (ctx, a) => m.denyApproval(ctx, a),
 );
 
+export const record_supplier_signal = spacetimedb.reducer(
+  { supplierId: t.string(), stability: t.string(), checkedAt: t.string(), source: t.string() },
+  (ctx, a) => m.recordSupplierSignal(ctx, a),
+);
+
 export const record_payment = spacetimedb.reducer(
   { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string() },
   (ctx, a) => m.recordPayment(ctx, a),

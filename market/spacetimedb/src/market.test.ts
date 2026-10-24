@@ -1327,3 +1327,42 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect(Object.keys(holds()[0]!).sort()).toEqual(['bidId', 'condition', 'expiresAt', 'id', 'qty', 'roundId', 'sellerId', 'skuSpec', 'state']);
   });
 });
+
+// ============================================================================================
+// Lane B handoffs: CRS supplier signal (docs/changes/0033), partial bids (Lane C #136).
+// ============================================================================================
+describe('handoffs: supplier_signal and missing items', () => {
+  const sig = (over: Partial<Parameters<typeof m.recordSupplierSignal>[1]> = {}) =>
+    ({ supplierId: 'seller-a', stability: 'verified_stable', checkedAt: '2026-10-24T07:50:12Z', source: 'sandbox', ...over });
+
+  it('record_supplier_signal: referee only, bands only, one public row per seller (latest wins)', () => {
+    for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.recordSupplierSignal(ctx, sig()))).toThrow(/not allowed/);
+    run(REF, (ctx) => m.recordSupplierSignal(ctx, sig()));
+    run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ stability: 'not_verified', source: 'recorded' })));
+    expect([...h.db.supplierSignal.iter()]).toEqual([{ supplierId: 'seller-a', stability: 'not_verified', checkedAt: '2026-10-24T07:50:12Z', source: 'recorded' }]);
+  });
+
+  it('record_supplier_signal refuses an unknown band or source and an unparseable time', () => {
+    expect(() => run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ stability: 'stable' })))).toThrow(/stability/);
+    expect(() => run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ source: 'crs-raw' })))).toThrow(/source/);
+    expect(() => run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ checkedAt: 'yesterday' })))).toThrow(/checked_at/);
+    expect([...h.db.supplierSignal.iter()]).toHaveLength(0);
+  });
+
+  it('a partial bid on a multi-item need ranks with "missing: <items>" on its round_result row', () => {
+    const PSU = 'psu-850w-atx3';
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ items: [
+      { skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' },
+      { skuSpec: PSU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' },
+    ], spendLimit: 5000 })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    run(C, (ctx) => m.setFloorForCondition(ctx, { skuSpec: PSU, condition: 'new', floor: 50 }));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c', [line(780), { ...line(150), skuSpec: PSU }])));
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(760)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const res = [...h.db.roundResult.iter()];
+    expect(res.find((r) => r.bidId === 'bid-c')).toMatchObject({ rank: 1, reasons: [] });
+    expect(res.find((r) => r.bidId === 'bid-a')).toMatchObject({ rank: 2, reasons: [`missing: ${PSU}`] });
+  });
+});

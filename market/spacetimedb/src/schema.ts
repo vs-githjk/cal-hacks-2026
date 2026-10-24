@@ -396,10 +396,24 @@ export const roundTimer = table(
   },
 );
 
+/**
+ * CRS supplier signal (docs/changes/0033-A-crs-supplier-signal.md): the band only, per seller, written by the referee.
+ * Public so every screen can show it; never a raw CRS response or identity data.
+ */
+export const supplierSignal = table(
+  { name: 'supplier_signal', public: true },
+  {
+    supplierId: t.string().primaryKey(),
+    stability: t.string(), // verified_stable | caution | not_verified
+    checkedAt: t.string(), // the original check time (ISO); a recorded result keeps it
+    source: t.string(), // sandbox | recorded | live | mirror | simulated
+  },
+);
+
 const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
-  round, roundResult, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer,
+  round, roundResult, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer, supplierSignal,
 });
 export default spacetimedb;

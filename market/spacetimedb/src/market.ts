@@ -527,7 +527,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   for (const x of ranked.ranked) {
     const b = byId.get(x.bid.id)!;
     // The lines are the picked alternatives (the cheapest allowed line per SKU), the ones the rank is about.
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source });
+    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: x.complete ? [] : [`missing: ${x.missing.join(', ')}`], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source });
   }
   for (const d of ranked.disqualified) {
     const b = byId.get(d.bid.id)!;
@@ -867,4 +867,21 @@ export function myBuyerProfileView(ctx: VCtx) {
   const id = myBuyerId(ctx);
   const row = id ? ctx.db.buyerProfile.buyerId.find(id) : undefined;
   return row ? [row] : [];
+}
+
+// ---------------------------------------------------------------- CRS supplier signal (docs/changes/0033)
+
+export const CRS_BANDS = ['verified_stable', 'caution', 'not_verified'];
+export const CRS_SOURCES = ['sandbox', 'recorded', 'live', 'mirror', 'simulated'];
+
+/** Referee only (Lane A's CRS adapter, relayed): store a seller's band. One row per seller; the latest check replaces it. */
+export function recordSupplierSignal(ctx: Ctx, a: { supplierId: string; stability: string; checkedAt: string; source: string }) {
+  requireRole(ctx, 'record_supplier_signal', ['referee']);
+  if (!a.supplierId) throw new SenderError('supplier id required');
+  if (!CRS_BANDS.includes(a.stability)) throw new SenderError(`stability must be one of ${CRS_BANDS.join(', ')}`);
+  if (!CRS_SOURCES.includes(a.source)) throw new SenderError(`source must be one of ${CRS_SOURCES.join(', ')}`);
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(a.checkedAt) || Number.isNaN(Date.parse(a.checkedAt))) throw new SenderError('checked_at must be an ISO time');
+  const row = { supplierId: a.supplierId, stability: a.stability, checkedAt: a.checkedAt, source: a.source };
+  if (ctx.db.supplierSignal.supplierId.find(a.supplierId)) ctx.db.supplierSignal.supplierId.update(row);
+  else ctx.db.supplierSignal.insert(row);
 }
