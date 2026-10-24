@@ -73,6 +73,25 @@ def strip_private(store, item):
     return {k: v for k, v in item.items() if not k.lower().startswith("seller")}
 
 
+def landed(listing, price):
+    """Shipping, landed price and availability as text. Unknown shipping is None, never 0; a free-shipping condition is not free."""
+    ship = listing.get("shipping")
+    cost = None
+    if isinstance(ship, (int, float)) and not isinstance(ship, bool):
+        cost = float(ship)
+    elif isinstance(ship, str):
+        t = ship.strip()
+        if re.fullmatch(r"\$?\s*\d[\d,]*(\.\d+)?", t):
+            cost = float(t.replace("$", "").replace(",", ""))
+        elif re.search(r"\bfree\b", t, re.I) and not re.search(r"\b(over|orders?|min|minimum|when|with)\b|\$", t, re.I):
+            cost = 0.0
+    stock = listing.get("stock")
+    avail = ("in stock" if stock else "out of stock") if isinstance(stock, bool) else (str(stock) if stock not in (None, "") else None)
+    ok = cost is not None and price is not None
+    return {"shipping_cost": cost, "shipping_captured": cost is not None,
+            "landed_price": round(price + cost, 2) if ok else None, "availability": avail}
+
+
 def to_spec_card(store, item, snapshot_id, snapshot_date):
     item = strip_private(store, item)
     f = {k: first(item, paths) for k, paths in FIELDS.items()}
@@ -92,5 +111,5 @@ def to_spec_card(store, item, snapshot_id, snapshot_date):
         "condition": condition(f["condition"], title) if f["condition"] else "unknown",
         "attrs": attrs, "price": listing["price"], "currency": "USD", "origin": "MIRROR",
         "source": f["url"] or store, "snapshot_id": snapshot_id, "snapshot_date": snapshot_date,
-        "listing": {k: v for k, v in listing.items() if v is not None},
+        "listing": {**{k: v for k, v in listing.items() if v is not None}, **landed(listing, listing["price"])},
     }

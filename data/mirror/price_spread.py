@@ -5,6 +5,8 @@ import statistics
 import sys
 from pathlib import Path
 
+from .normalize import landed
+
 SNAPS = Path(__file__).resolve().parent / "snapshots"
 BASELINE_STORE = "ebay_sold"
 
@@ -14,6 +16,10 @@ def load():
     for f in sorted(SNAPS.glob("*.json")):
         store = f.name.rsplit("-", 1)[0]
         cards.setdefault(store, []).extend(json.loads(f.read_text()))
+    for cs in cards.values():
+        for c in cs:  # snapshots written before #117 are not rewritten: they gain the landed fields here
+            if "shipping_captured" not in c.get("listing", {}):
+                c.setdefault("listing", {}).update(landed(c["listing"], c.get("price")))
     return cards
 
 
