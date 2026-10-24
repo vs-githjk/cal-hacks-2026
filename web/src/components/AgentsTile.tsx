@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
-import { AGENTS, AGENTVERSE_URL, ASI_ONE_URL, nearestCorner, sampleRows, shortAddress, timeAgo, type AgentRow, type Corner } from "@/lib/agents";
+import { AGENTS, AGENTVERSE_URL, ASI_ONE_URL, clearCorner, nearestCorner, sampleRows, shortAddress, timeAgo, type AgentRow, type Corner } from "@/lib/agents";
 import { asOrigin } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 import { OriginChip } from "./ui";
@@ -32,7 +32,6 @@ function saveCorner(c: Corner) {
   }
 }
 
-const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
 export function AgentsTile() {
   const [agentEvents] = useTable(tables.agentEvent);
@@ -66,12 +65,14 @@ export function AgentsTile() {
   // Green only for a real agent write (LIVE or MIRROR) in the last 60 s; a SIM row never lights it.
   const fresh = agentEvents.some((e) => asOrigin(e.origin) !== "SIM" && now.getTime() - toDate(e.ts).getTime() < FRESH_MS);
 
-  // Never cover the hero number: if the tile sits over it, move to the other corner on the same side.
+  // Never cover the hero number. Runs on scroll, resize and open or close only (not on corner changes), skips phones
+  // (the tile is a bottom pill there), and picks a clear corner with a pure function, so it cannot flip back and forth.
   useEffect(() => {
     const check = () => {
-      const hero = document.querySelector("[data-hero]")?.getBoundingClientRect();
-      const me = tile.current?.getBoundingClientRect();
-      if (hero && me && overlaps(hero, me)) setCorner((c) => ((c[0] === "t" ? "b" : "t") + c[1]) as Corner);
+      if (window.innerWidth < 640) return;
+      const hero = document.querySelector("[data-hero]")?.getBoundingClientRect() ?? null;
+      const tileSize = open ? { w: 360, h: 320 } : { w: 220, h: 120 };
+      setCorner((c) => clearCorner(c, tileSize, { w: window.innerWidth, h: window.innerHeight }, hero));
     };
     check();
     window.addEventListener("scroll", check, { passive: true });
@@ -80,7 +81,7 @@ export function AgentsTile() {
       window.removeEventListener("scroll", check);
       window.removeEventListener("resize", check);
     };
-  }, [corner, open]);
+  }, [open]);
 
   const place: Record<Corner, string> = {
     tl: "sm:left-4 sm:top-[76px]",

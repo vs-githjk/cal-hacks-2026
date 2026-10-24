@@ -886,3 +886,21 @@ describe('#37 item 9 buyer display name', () => {
     expect(h.db.buyerProfile.buyerId.find('vidyut')?.displayName).toBe('Vidyut');
   });
 });
+
+describe('#108 demo seller personas and the ceiling band formatter', () => {
+  it('seed_demo writes persona rows for the bridge sellers, with the learner named Gadget Grove (Vedant), all SIM', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    const want: Record<string, string> = {
+      'gadget-grove': 'Gadget Grove (Vedant)', 'bargain-bin': 'Bargain Bin Hardware (SIM)', lowball: 'Lowball Direct (SIM)',
+      'fair-price-pc': 'Fair Price PC (SIM)', 'renew-refurb': 'ReNew Refurb (SIM)', 'shady-sam': "Shady Sam's Deals (SIM)",
+    };
+    for (const [id, name] of Object.entries(want)) expect(h.db.persona.sellerId.find(id)).toMatchObject({ name, origin: 'SIM' });
+  });
+
+  it('the ceiling band uses its own comma formatter (no Intl in the view)', () => {
+    expect(m.ceilingBand(800)).toBe('$500 to $1,000');
+    expect(m.ceilingBand(10_250)).toBe('$10,000 to $10,500');
+    expect(m.ceilingBand(1_234_567)).toBe('$1,234,500 to $1,235,000');
+    expect(m.ceilingBand(120)).toBe('under $500');
+  });
+});

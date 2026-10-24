@@ -546,7 +546,8 @@ export function recordReceiving(ctx: Ctx, a: RecordReceivingArgs) {
 // ---------------------------------------------------------------- views
 
 const CEILING_STEP = 500;
-const usd = (x: number) => `$${x.toLocaleString('en-US')}`;
+// A manual comma formatter: views run in the SpacetimeDB runtime, where Intl may be missing.
+const usd = (x: number) => `$${String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
 /** The buyer's ceiling as a $500 band ("$500 to $1,000"), never the number itself. */
 export function ceilingBand(limit: number): string {
   if (!(limit > 0)) return 'not set';

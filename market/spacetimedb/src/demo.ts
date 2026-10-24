@@ -14,6 +14,13 @@ export const DEMO = {
     { sellerId: 'seller-a', name: 'Seller A', archetype: 'refurbisher' },
     { sellerId: 'seller-b', name: 'Seller B', archetype: 'marketplace seller' },
     { sellerId: 'seller-c', name: 'Seller C', archetype: 'local PC shop' },
+    // The sellers demo/bridge.py bids as (names from demo/sellers.py and data/liar_pages/build.py), so screens show names, not ids.
+    { sellerId: 'gadget-grove', name: 'Gadget Grove (Vedant)', archetype: 'learner seller' },
+    { sellerId: 'bargain-bin', name: 'Bargain Bin Hardware (SIM)', archetype: 'marketplace seller' },
+    { sellerId: 'lowball', name: 'Lowball Direct (SIM)', archetype: 'rogue: bids under its floor' },
+    { sellerId: 'fair-price-pc', name: 'Fair Price PC (SIM)', archetype: 'local PC shop' },
+    { sellerId: 'renew-refurb', name: 'ReNew Refurb (SIM)', archetype: 'refurbisher' },
+    { sellerId: 'shady-sam', name: "Shady Sam's Deals (SIM)", archetype: 'planted trap' },
   ],
 };
 

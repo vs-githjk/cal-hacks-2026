@@ -57,3 +57,28 @@ export function timeAgo(at: Date | null, now: Date): string {
 export type Corner = "tl" | "tr" | "bl" | "br";
 /** The corner nearest a point in a viewport of w x h. */
 export const nearestCorner = (x: number, y: number, w: number, h: number): Corner => `${y < h / 2 ? "t" : "b"}${x < w / 2 ? "l" : "r"}` as Corner;
+
+export interface Box { left: number; top: number; right: number; bottom: number }
+
+// Where a corner puts the tile: 16 px from the sides, below the 60 px header (76), above the footer (48).
+const SIDE = 16, TOP = 76, BOTTOM = 48;
+
+export function cornerRect(c: Corner, tile: { w: number; h: number }, view: { w: number; h: number }): Box {
+  const left = c[1] === "l" ? SIDE : view.w - SIDE - tile.w;
+  const top = c[0] === "t" ? TOP : view.h - BOTTOM - tile.h;
+  return { left, top, right: left + tile.w, bottom: top + tile.h };
+}
+
+const hits = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * The corner to use so the tile never covers the hero number: the current one if it is clear, else the first clear one
+ * (same side first). If none is clear, keep the current one. Pure, so a second call returns the same answer: no flip loop.
+ */
+export function clearCorner(current: Corner, tile: { w: number; h: number }, view: { w: number; h: number }, hero: Box | null): Corner {
+  if (!hero || !hits(cornerRect(current, tile, view), hero)) return current;
+  const flipRow = ((current[0] === "t" ? "b" : "t") + current[1]) as Corner;
+  const flipCol = (current[0] + (current[1] === "l" ? "r" : "l")) as Corner;
+  const opposite = ((current[0] === "t" ? "b" : "t") + (current[1] === "l" ? "r" : "l")) as Corner;
+  return [flipRow, flipCol, opposite].find((c) => !hits(cornerRect(c, tile, view), hero)) ?? current;
+}
