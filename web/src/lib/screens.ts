@@ -40,9 +40,9 @@ export interface VetoView {
   seller: string;
   origin: Origin;
   landed: number;
-  claim: string; // what the seller said
-  finding: string; // what the page showed
-  ruleId: string;
+  claim?: string;
+  finding?: string;
+  ruleId?: string;
   sourceUrl: string;
   checkedAt: Date;
   checkOrigin: Origin;
@@ -50,16 +50,17 @@ export interface VetoView {
 
 export interface ShieldView {
   verdict: "block" | "quarantine" | "allow";
-  severity: string;
+  severity?: string;
   seller: string;
-  pageOrigin: Origin;
-  chars: number;
-  latencyMs: number;
-  evidence: { text: string; hit: boolean }[]; // spans; hit = highlighted
+  pageOrigin?: Origin;
+  chars?: number;
+  latencyMs?: number;
+  evidence?: { text: string; hit: boolean }[];
   ruleIds: string[];
   control?: { name: string; verdict: string; latencyMs: number };
-  version: string;
-  verdictOrigin: Origin;
+  version?: string;
+  verdictOrigin?: Origin;
+  scope?: "bid";
 }
 
 export interface ApprovalView {
@@ -90,21 +91,28 @@ export interface ReviewView {
 export const REVIEW_MAX_FAILURES = 5;
 
 export interface ReceiptView {
-  seller: string;
-  item: string;
-  condition: string;
+  seller?: string;
+  item?: string;
+  condition?: string;
   amount: number;
-  shipping: number;
+  shipping?: number;
   paymentMethod: string;
   chargeId: string;
-  chargeStatus: string; // e.g. "SIM stub, no money moved"
+  chargeStatus: string;
   paidAt: Date;
   mandateId: string;
   mandateHash: string;
   mandateExpires: Date;
   mandateOrigin: Origin;
-  signature: string;
-  replayRefused: boolean;
+  signature?: string;
+  replayRefused?: boolean;
+  dealId?: string;
+}
+
+export type PurchaseState = "pending_approval" | "approval_recorded" | "payment_recorded" | "settled" | "expired" | "retired" | "inconsistent";
+export interface PurchaseStatusView {
+  mandateHash: string; mandateId: string; dealId: string; amount: number; payee: string; expiry: Date;
+  origin: Origin; approvalMethod?: string; approvedAt?: Date; state: PurchaseState; receipt: ReceiptView | null;
 }
 
 export type FeedKind = "deal" | "bid" | "veto" | "block" | "progress";
@@ -272,6 +280,91 @@ export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRo
 }
 
 const ms = (ts: Timestamp) => Number(ts.microsSinceUnixEpoch / BigInt(1000));
+
+interface PurchaseStatusRow {
+  mandateHash: string; mandateId: string; dealId: string; goalId: string; needId: string; amount: number; payee: string;
+  expiry: Timestamp; origin: string; withinAllowance: boolean; retired: boolean; reservationMatches: boolean; settled: boolean;
+  approvalMethod?: string; approvedAt?: Timestamp; paymentRef?: string; paymentAmount?: number; paymentMode?: string; paidAt?: Timestamp;
+}
+
+const timestampDate = (value: Timestamp) => new Date(ms(value));
+const validPaymentModes = new Set(["sim", "stripe_test"]);
+
+function statusFor(row: PurchaseStatusRow, nowMs: number): PurchaseStatusView {
+  const hasAnyPayment = row.paymentRef !== undefined || row.paymentAmount !== undefined || row.paymentMode !== undefined || row.paidAt !== undefined;
+  const paymentValid = row.paymentRef !== undefined && Number.isFinite(row.paymentAmount) && row.paymentAmount === row.amount &&
+    row.paymentMode !== undefined && validPaymentModes.has(row.paymentMode) && row.paidAt !== undefined;
+  const inconsistent = (hasAnyPayment && !paymentValid) || (paymentValid && row.retired);
+  let state: PurchaseState;
+  let receipt: ReceiptView | null = null;
+  if (inconsistent) state = "inconsistent";
+  else if (paymentValid) {
+    state = row.settled ? "settled" : "payment_recorded";
+    receipt = {
+      amount: row.paymentAmount!, paymentMethod: row.paymentMode === "sim" ? "SIM, no money moved" : "Stripe test",
+      chargeId: row.paymentRef!, chargeStatus: row.paymentMode === "sim" ? "SIM, no money moved" : "Stripe test payment recorded",
+      paidAt: timestampDate(row.paidAt!), mandateId: row.mandateId, mandateHash: row.mandateHash,
+      mandateExpires: timestampDate(row.expiry), mandateOrigin: asOrigin(row.origin), dealId: row.dealId,
+    };
+  } else if (row.retired) state = "retired";
+  else if (ms(row.expiry) <= nowMs) state = "expired";
+  else if (row.approvalMethod) state = "approval_recorded";
+  else state = "pending_approval";
+  return {
+    mandateHash: row.mandateHash, mandateId: row.mandateId, dealId: row.dealId, amount: row.amount, payee: row.payee,
+    expiry: timestampDate(row.expiry), origin: asOrigin(row.origin), approvalMethod: row.approvalMethod,
+    approvedAt: row.approvedAt ? timestampDate(row.approvedAt) : undefined, state, receipt,
+  };
+}
+
+/** Select only the requested goal's exact active reservation or its own persisted mandate history. */
+export function purchaseFromRows(rows: readonly PurchaseStatusRow[], goalId: string, nowMs: number): PurchaseStatusView | null {
+  const owned = rows.filter((row) => row.goalId === goalId && Number.isFinite(row.amount));
+  const compareLatest = (a: PurchaseStatusRow, b: PurchaseStatusRow) => ms(b.expiry) - ms(a.expiry) || a.mandateHash.localeCompare(b.mandateHash);
+  const reserved = owned.filter((row) => row.reservationMatches).sort(compareLatest)[0];
+  const settled = owned.filter((row) => row.settled).sort(compareLatest)[0];
+  const selected = reserved ?? settled ?? [...owned].sort(compareLatest)[0];
+  return selected ? statusFor(selected, nowMs) : null;
+}
+
+interface BidReviewRow {
+  checkId: bigint; goalId: string; needId: string; roundId: string; bidId: string; sellerId: string; sellerName: string;
+  landed: number; bindingHash: string; kind: string; result: string; detail: string; evidenceUrl: string; origin: string; at: Timestamp;
+}
+
+function safeEvidenceUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password ? url.href : "";
+  } catch { return ""; }
+}
+
+/** Map exact owned, caller-selected round rows; no seller, candidate, or verdict is inferred. */
+export function reviewsFromRows(rows: readonly BidReviewRow[], goalId: string, roundId?: string): { veto: VetoView | null; shield: ShieldView | null } {
+  const matching = rows.filter((row) => row.goalId === goalId && (!roundId || row.roundId === roundId));
+  const latest = (kind: string) => matching.filter((row) => row.kind === kind).sort((a, b) => ms(b.at) - ms(a.at) || (a.checkId < b.checkId ? 1 : -1))[0];
+  const advocate = latest("advocate");
+  const veto = advocate?.result === "veto" ? {
+    seller: advocate.sellerName, origin: asOrigin(advocate.origin), landed: advocate.landed,
+    finding: advocate.detail, sourceUrl: safeEvidenceUrl(advocate.evidenceUrl),
+    checkedAt: timestampDate(advocate.at), checkOrigin: asOrigin(advocate.origin),
+  } : null;
+  const check = latest("shield");
+  const shield: ShieldView | null = check && ["allow", "quarantine", "block"].includes(check.result) ? {
+    verdict: check.result as ShieldView["verdict"], seller: check.sellerName, pageOrigin: asOrigin(check.origin),
+    ruleIds: check.detail.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 5), verdictOrigin: asOrigin(check.origin), scope: "bid",
+  } : null;
+  return { veto, shield };
+}
+
+interface GoalStepRow { stableId: string; goalId: string; klass: string; text: string; origin: string; at: Timestamp }
+
+export function stepFeedFromRows(rows: readonly GoalStepRow[], goalId: string): FeedItem[] {
+  return rows.filter((row) => row.goalId === goalId).map((row) => {
+    const kind: FeedKind = row.klass === "veto" ? "veto" : row.klass === "payment_recorded" ? "deal" : "progress";
+    return { key: row.stableId, at: timestampDate(row.at), kind, title: FEED_TITLE[kind], text: row.text, origin: asOrigin(row.origin) };
+  }).sort((a, b) => b.at.getTime() - a.at.getTime() || a.key.localeCompare(b.key));
+}
 
 export function roundFromRows(r: RoundRow, events: readonly EventRow[], results: readonly ResultRow[]): RoundView {
   const opened = ms(r.openedAt);
