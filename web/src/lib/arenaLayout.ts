@@ -29,7 +29,7 @@ export const ANON_MAX = 8; // anonymous sealed bidders drawn at most; the captio
 export const TIER_Y = [0, 0.22, 0.44] as const;
 export const TABLE = { x: 0, y: 0.5, z: 0.35 } as const; // the ledger table's center; its top is at y 0.56
 export const WINNER_SEAT = { x: 0.8, y: 0.44, z: -0.2 } as const;
-export const KNOCKED_RADIUS = 5.8;
+export const EXIT = { x: 0, z: -8.8 } as const; // beyond the arch at the back: where an eliminated seller walks out
 export const ADVANCED_RADIUS = 2.6;
 export const ENTRY_RADIUS = 6.4; // where a figure starts its walk in
 export const FIXED_KEYS = ["buyer", "advocate", "shield", "referee"] as const;
@@ -60,12 +60,6 @@ function advancedSeat(count: number, index: number): Seat {
   const t = count > 1 ? index / (count - 1) : 0.5;
   return polar(ADVANCED_RADIUS, rad(220 - 80 * t));
 }
-/** The same bearing, pulled in or out to `radius`. */
-function atRadius(seat: Seat, radius: number): Seat {
-  const k = seat.radius > 0 ? radius / seat.radius : 1;
-  return { x: seat.x * k, z: seat.z * k, yaw: seat.yaw, radius };
-}
-
 const pose = (x: number, y: number, z: number, yaw: number, tier: 0 | 1 | 2, o: Partial<Pose> = {}): Pose =>
   ({ x, y, z, yaw, pitch: 0, dim: false, visible: true, tier, ...o });
 
@@ -119,8 +113,8 @@ export function stageAt(scene: ArenaScene, beat: number): StageState {
         card = "lifted";
         mark = "winner";
       } else if (hard(o.bidId)) {
-        const back = atRadius(seat, KNOCKED_RADIUS);
-        p = pose(back.x, 0, back.z, back.yaw, 0, { dim: true, pitch: HEAD_DOWN });
+        // Eliminated: head down, facing the arch at the back, and gone from the stage (it walks out and fades).
+        p = pose(EXIT.x, 0, EXIT.z, Math.atan2(EXIT.x - seat.x, EXIT.z - seat.z), 0, { visible: false, dim: true, pitch: HEAD_DOWN });
         card = "dropped";
         mark = markFor(knocks.get(o.bidId)!);
       } else {

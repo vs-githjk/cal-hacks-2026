@@ -279,14 +279,36 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       ball.position.set(x, 3.24, z);
     }
     // Big planters on the floor at the front corners frame the shot.
-    for (const [x, z] of [[-6.4, 3.2], [6.4, 3.2], [-7.0, -1.0], [7.0, -1.0]] as const) {
-      const pot = add(new T.Mesh(new T.BoxGeometry(0.9, 0.7, 0.9), potMat));
-      pot.position.set(x, 0.35, z);
-      const lip = add(new T.Mesh(new T.BoxGeometry(0.96, 0.035, 0.96), M.gold), false, true);
-      lip.position.set(x, 0.715, z);
-      const soil = add(new T.Mesh(new T.BoxGeometry(0.8, 0.04, 0.8), soilMat), false, true);
-      soil.position.set(x, 0.725, z);
-      plant(x, z, 0.62, 1.6);
+    // The last two (scale 1.15) stand in the foreground so the front of the plaza is not bare.
+    for (const [x, z, s] of [[-6.4, 3.2, 1], [6.4, 3.2, 1], [-7.0, -1.0, 1], [7.0, -1.0, 1], [-4.7, 2.9, 1.15], [4.7, 2.9, 1.15]] as const) {
+      const pot = add(new T.Mesh(new T.BoxGeometry(0.9 * s, 0.7 * s, 0.9 * s), potMat));
+      pot.position.set(x, 0.35 * s, z);
+      const lip = add(new T.Mesh(new T.BoxGeometry(0.96 * s, 0.035, 0.96 * s), M.gold), false, true);
+      lip.position.set(x, 0.7 * s + 0.015, z);
+      const soil = add(new T.Mesh(new T.BoxGeometry(0.8 * s, 0.04, 0.8 * s), soilMat), false, true);
+      soil.position.set(x, 0.7 * s + 0.025, z);
+      plant(x, z, 0.62 * s, 1.6 * s);
+    }
+    // Foreground props: a stone bench on the left, a market crate stack on the right.
+    const bench = (x: number, z: number, ry: number) => {
+      const top = add(new T.Mesh(new T.BoxGeometry(1.7, 0.14, 0.55), capMat));
+      top.position.set(x, 0.5, z);
+      top.rotation.y = ry;
+      for (const sx of [-0.65, 0.65]) {
+        const leg = add(new T.Mesh(new T.BoxGeometry(0.2, 0.43, 0.5), wallMat));
+        leg.position.set(x + Math.cos(ry) * sx, 0.215, z - Math.sin(ry) * sx);
+        leg.rotation.y = ry;
+      }
+    };
+    bench(-3.0, 1.8, 0.2);
+    const crateMat = std(0xc9a679, 0.9);
+    for (const [x, y, z, s, ry] of [[3.2, 0.38, 2.4, 0.76, 0.3], [3.32, 1.0, 2.36, 0.5, -0.25]] as const) {
+      const crate = add(new T.Mesh(new T.BoxGeometry(s, s, s), crateMat));
+      crate.position.set(x, y, z);
+      crate.rotation.y = ry;
+      const band = add(new T.Mesh(new T.BoxGeometry(s + 0.02, 0.05, s + 0.02), M.gold), false, false);
+      band.position.set(x, y + s * 0.12, z);
+      band.rotation.y = ry;
     }
 
     const mkEnvelope = (): THREE.Group => {
@@ -465,6 +487,8 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
     const v3 = new T.Vector3();
     const pointFor = (k: string, st: StageState, out: THREE.Vector3) => {
       const p = st.actors[k];
+      const f = figs.get(k);
+      if (p && !p.visible && f && f.vis.vis >= 0.5) return out.set(f.vis.x, f.vis.y + 0.015, f.vis.z); // still on its seat: the light stays there while it leaves
       return p ? out.set(p.x, k === "referee" ? 0.455 : p.y + 0.015, p.z) : out.set(0, 0.015, 0);
     };
     const restPoint = (st: StageState, out: THREE.Vector3) => {
@@ -766,6 +790,8 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
           start = { ...to, x: to.x * k, z: to.z * k, y: 0, pitch: 0, dim: 0, vis: 0 };
           delay = 80 * arrive++;
           dur = Math.min(1600, Math.max(400, ms - 80 * (arriving - 1)));
+        } else if (f.kind === "offer" && from.vis >= 0.5 && to.vis < 0.5) {
+          delay = 200; dur = 1100; arc = 0.1; // eliminated: turns around and walks out through the arch while fading
         } else if (pose.tier !== f.tier) {
           arc = 0.5; dur = 500; delay = (b.kind === "crown" ? 150 : 0) + 80 * hop++;
         } else if (fi >= 0 && (b.kind === "gate" || b.kind === "advocate")) {

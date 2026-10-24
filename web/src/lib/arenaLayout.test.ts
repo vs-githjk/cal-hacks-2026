@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ArenaScene, Beat, Phase, SceneOffer } from "./arenaScene.ts";
 import type { Knock, ReasonCode } from "./bracket.ts";
-import { seatOf, stageAt } from "./arenaLayout.ts";
+import { EXIT, seatOf, stageAt } from "./arenaLayout.ts";
 
 const offer = (id: string, over: Partial<SceneOffer> = {}): SceneOffer => ({
   key: `offer:${id}`, bidId: id, rowRef: `round_result/${id}`, sellerId: id, name: id, origin: "SIM", landed: 100, product: "RTX 5070 Ti",
@@ -97,13 +97,15 @@ test("after arrive every offer is on its horseshoe seat with its card held and t
   assert.ok(xs[0]! < 0 && xs[4]! > 0);
 });
 
-test("knocked offers dim, step back to radius 5.8, lower their heads, and drop their cards", () => {
+test("knocked offers dim, lower their heads, face the arch, leave the stage at the exit, and drop their cards", () => {
   const gate = stageAt(five(), GATE);
   const d = gate.actors["offer:d"]!;
   assert.equal(d.dim, true);
-  assert.ok(Math.abs(radius(d) - 5.8) < 1e-9);
+  const seatD = seatOf(5, 3);
+  assert.deepEqual([d.x, d.z], [EXIT.x, EXIT.z], "it ends beyond the arch");
+  assert.ok(Math.abs(d.yaw - Math.atan2(EXIT.x - seatD.x, EXIT.z - seatD.z)) < 1e-9, "facing the way it walks");
   assert.ok(d.pitch > 0.2 && d.pitch < 0.22, "head down about 12 degrees");
-  assert.equal(d.visible, true);
+  assert.equal(d.visible, false);
   assert.equal(gate.cards.d, "dropped");
   assert.equal(gate.marks.d, "blocked");
   for (const k of ["offer:a", "offer:b", "offer:c", "offer:e"]) assert.equal(gate.actors[k]!.dim, false, k);
@@ -114,7 +116,8 @@ test("knocked offers dim, step back to radius 5.8, lower their heads, and drop t
 
   const adv = stageAt(five(), ADVOCATE);
   assert.equal(adv.actors["offer:e"]!.dim, true);
-  assert.ok(Math.abs(radius(adv.actors["offer:e"]!) - 5.8) < 1e-9);
+  assert.equal(adv.actors["offer:e"]!.visible, false);
+  assert.deepEqual([adv.actors["offer:e"]!.x, adv.actors["offer:e"]!.z], [EXIT.x, EXIT.z]);
   assert.equal(adv.cards.e, "dropped");
   assert.equal(adv.marks.e, "vetoed");
   assert.equal(adv.marks.d, "blocked", "earlier knocks stay knocked");
@@ -131,7 +134,6 @@ test("other refusals read as Refused", () => {
 
 test("knockout advancers sit on tier 1 at radius 2.6; an outranked offer is eliminated: it steps out, dims and drops its card", () => {
   const semi = stageAt(five(), SEMI);
-  const seatC = seatOf(5, 2);
   for (const k of ["offer:a", "offer:b"]) {
     const p = semi.actors[k]!;
     assert.equal(p.tier, 1, k);
@@ -145,8 +147,8 @@ test("knockout advancers sit on tier 1 at radius 2.6; an outranked offer is elim
   const c = semi.actors["offer:c"]!;
   assert.equal(c.dim, true);
   assert.equal(c.tier, 0);
-  assert.ok(Math.abs(radius(c) - 5.8) < 1e-9, "an outranked offer leaves the circle");
-  assert.ok(Math.abs(Math.atan2(c.x, c.z) - Math.atan2(seatC.x, seatC.z)) < 1e-9, "on its own bearing");
+  assert.equal(c.visible, false, "an outranked offer leaves the stage");
+  assert.deepEqual([c.x, c.z], [EXIT.x, EXIT.z]);
   assert.equal(semi.cards.c, "dropped");
   assert.equal(semi.marks.c, "outranked");
   assert.equal(semi.cards.a, "held");
@@ -203,7 +205,8 @@ test("11 offers get distinct seats on two staggered rows and never NaN", () => {
       for (const n of [p.x, p.y, p.z, p.yaw, p.pitch]) assert.ok(Number.isFinite(n), `${k} beat ${b}`);
       if (k.startsWith("offer:") && p.visible) seen.add(`${p.x.toFixed(4)},${p.z.toFixed(4)},${p.tier}`);
     }
-    if (b >= 1) assert.equal(seen.size, 11, `beat ${b} seats`);
+    if (b === 1) assert.equal(seen.size, 11, `beat ${b} seats`);
+    if (b >= 2) assert.equal(seen.size, 6, `beat ${b}: the five knocked offers have left`);
   }
   const radii = new Set(ids.map((id) => radius(stageAt(s, 1).actors[`offer:${id}`]!).toFixed(3)));
   assert.deepEqual([...radii].sort(), ["4.600", "5.200"]);
