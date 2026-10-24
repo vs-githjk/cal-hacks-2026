@@ -224,6 +224,30 @@ describe('migration-safe bid line metadata', () => {
     expect(m.reviewCandidatesView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
   });
 
+  it('binds requested quantity while preserving original stock quantity and one shipping charge', () => {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ items: [
+      { skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 2, unit: 'each' },
+    ] })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    run(A, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'new', floor: 1 }));
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('quantity-binding', [line(40, { quantity: 5 })])));
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'quantity-binding', lineMetaJson: JSON.stringify([{
+      lineIndex: 0, shipping: 12, listingId: 'https://example.test/gpu', listingHash: 'd'.repeat(64),
+      source: 'fixture', snapshotId: 'snapshot-1', provenance: { origin: 'SIM' }, attrs: {},
+    }]) }));
+    advance(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const selected = candidate('quantity-binding');
+    expect(selected.landed).toBe(92);
+    expect(JSON.parse(selected.linesJson)[0]).toMatchObject({ quantity: 5, sku_spec: GPU, unit_price: 40, shipping: 12 });
+    expect(selected.bindingHash).toBe(m.sha256(JSON.stringify({
+      roundId: selected.roundId, needId: selected.needId, bidId: selected.bidId, sellerId: selected.sellerId,
+      origin: 'SIM', landed: 92,
+      needItems: [{ sku_spec: GPU, condition: 'new', allowed_conditions: [], variant: 'retail', quantity: 2, unit: 'each' }],
+      lines: JSON.parse(selected.linesJson), lineMetaJson: selected.lineMetaJson,
+    })));
+  });
+
   it('hashes the exact selected slice and refuses a card bound to another candidate', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bound-card', [line(780)])));
@@ -231,7 +255,9 @@ describe('migration-safe bid line metadata', () => {
     const selected = candidate('bound-card');
     const expected = m.sha256(JSON.stringify({
       roundId: selected.roundId, needId: selected.needId, bidId: selected.bidId, sellerId: selected.sellerId,
-      origin: 'SIM', landed: selected.landed, lines: JSON.parse(selected.linesJson), lineMetaJson: selected.lineMetaJson,
+      origin: 'SIM', landed: selected.landed,
+      needItems: [{ sku_spec: GPU, condition: 'new', allowed_conditions: [], variant: 'retail', quantity: 1, unit: 'each' }],
+      lines: JSON.parse(selected.linesJson), lineMetaJson: selected.lineMetaJson,
     }));
     expect(selected.bindingHash).toBe(expected);
     run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bound-card', verdict: 'allow', ruleIds: [], origin: 'SIM' }));

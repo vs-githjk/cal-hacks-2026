@@ -611,7 +611,8 @@ function needItemsFor(ctx: { db: Ctx['db'] | VCtx['db'] }, needId: string) {
   return needItems;
 }
 
-function selectedCandidate(roundId: string, needId: string, b: BidRow, metadata: LineMeta[], picked: number[], landed: number) {
+function selectedCandidate(roundId: string, needId: string, b: BidRow, metadata: LineMeta[], picked: number[], landed: number,
+                           needItems: Map<string, NeedItem>) {
   const lines = picked.map((lineIndex) => {
     const line = b.lines[lineIndex]!;
     const meta = metadata[lineIndex]!;
@@ -625,7 +626,15 @@ function selectedCandidate(roundId: string, needId: string, b: BidRow, metadata:
   });
   const lineMetaJson = JSON.stringify(picked.map((i) => metadata[i]!));
   const linesJson = JSON.stringify(lines);
-  const bindingHash = sha256(JSON.stringify({ roundId, needId, bidId: b.id, sellerId: b.sellerId, origin: b.origin, landed, lines, lineMetaJson }));
+  // Bind the requested SKU/quantity/spec contract as well as the seller's available stock lines.
+  // The view keeps the original stock quantity for audit; consumers use Need.quantity to order.
+  const needBinding = [...needItems.values()].map((item) => ({
+    sku_spec: item.sku_spec, condition: item.condition,
+    allowed_conditions: [...(item.allowed_conditions ?? [])].sort(), variant: item.variant,
+    quantity: item.quantity, unit: item.unit,
+  })).sort((a, b) => a.sku_spec < b.sku_spec ? -1 : a.sku_spec > b.sku_spec ? 1 : 0);
+  const bindingHash = sha256(JSON.stringify({ roundId, needId, bidId: b.id, sellerId: b.sellerId, origin: b.origin,
+    landed, needItems: needBinding, lines, lineMetaJson }));
   return { linesJson, lineMetaJson, bindingHash };
 }
 
@@ -661,7 +670,7 @@ function reviewCandidates(ctx: { db: Ctx['db'] | VCtx['db'] }) {
       if (item.picked.length !== needItems.size) continue;
       const b = rows.find((row) => row.id === item.bid.id)!;
       const metadata = metas.get(b.id)!;
-      const selected = selectedCandidate(round.id, round.needId, b, metadata, item.picked, item.landed);
+      const selected = selectedCandidate(round.id, round.needId, b, metadata, item.picked, item.landed, needItems);
       out.push({ roundId: round.id, needId: round.needId, bidId: b.id, sellerId: b.sellerId, origin: b.origin,
         rank: item.rank, landed: item.landed, ...selected });
     }
@@ -721,7 +730,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       ? rankBids([toBid(b, parsedMeta.rows)], { needItems, lineRejects: new Map([[b.id, b.lineRejects]]), quality: MARKET_CONFIG.quality }).ranked[0]
       : undefined;
     const candidate = candidateRank && candidateRank.picked.length === needItems.size && parsedMeta.rows
-      ? selectedCandidate(roundId, r.needId, b, parsedMeta.rows, candidateRank.picked, candidateRank.landed)
+      ? selectedCandidate(roundId, r.needId, b, parsedMeta.rows, candidateRank.picked, candidateRank.landed, needItems)
       : undefined;
     if (candidateRank && candidateRank.picked.length !== needItems.size) reasons.push('bid does not cover every requested item');
     const bound = (check: typeof checks[number], line?: { line_index: number; listing_id: string; listing_hash: string }) => {
