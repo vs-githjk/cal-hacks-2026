@@ -302,7 +302,7 @@ export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView;
 
 export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
   if (!receipt) {
-    return <Card stripe="mint"><Label>Receipt</Label><p className="text-muted">No recorded payment for this goal.</p></Card>;
+    return <Card stripe="mint"><Label>Receipt</Label><p className="text-muted">No valid receipt is currently available for this goal.</p></Card>;
   }
   return (
     <Card stripe="mint">
