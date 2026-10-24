@@ -16,11 +16,17 @@ from typing import Any, Mapping, Optional
 from urllib.parse import urlsplit
 
 OPENING = "I will only ask for the code on your screen, never a card number"
+ASK = "Please read me the two words on your screen, then say approve. Anything else cancels this deal"
+SELLER_FALLBACK = "from the seller named on your screen"
+CONDITIONS = {"new": "new", "open box": "open box", "open-box": "open box", "open_box": "open box",
+              "refurbished": "refurbished", "used": "used"}
 ADVOCATE_KEYS = ("rule_id", "summary", "source_url")
 
 _RULE_ID_RE = re.compile(r"[a-z0-9][a-z0-9_.-]{0,63}")
 _SUMMARY_RE = re.compile(r"[A-Za-z0-9 .,%'-]{1,160}")
 _PAYEE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,79}")
+_ITEM_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9 .+/-]{0,59}")
+_SELLER_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9 .&'-]{0,39}")
 _HOST_RE = re.compile(r"[a-z0-9][a-z0-9.-]{0,98}[a-z0-9]")
 # Words a summary must not contain: they would steer the call, imitate the buyer or ask for secrets.
 _SUMMARY_BLOCKED = frozenset({
@@ -132,6 +138,11 @@ def clean_advocate_reason(reason: Any) -> tuple[dict[str, str], list[str]]:
     return kept, dropped
 
 
+def _speakable_host(host: str) -> bool:
+    """A raw IP or a local test page means nothing read aloud; the link stays on the screen."""
+    return not (host == "localhost" or host.endswith(".localhost") or re.fullmatch(r"[0-9.]+", host))
+
+
 def _host(url: str) -> Optional[str]:
     try:
         parts = urlsplit(url.strip())
@@ -141,6 +152,44 @@ def _host(url: str) -> Optional[str]:
     if parts.scheme not in ("http", "https") or not _HOST_RE.fullmatch(host) or ".." in host:
         return None
     return host[4:] if host.startswith("www.") else host
+
+
+def _plain(value: Any, pattern: "re.Pattern[str]") -> Optional[str]:
+    """The value when it is a short plain string that passes `pattern` and holds no steering word, else None."""
+    if not isinstance(value, str):
+        return None
+    v = " ".join(value.split())
+    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & _SUMMARY_BLOCKED:
+        return None
+    return v
+
+
+def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
+    """Context read aloud beside the amount: item, condition and the seller's NAME (never the payee id, which
+    stays bound in the mandate). `deal` is {item, condition, seller} from our own market record of the winning
+    bid. Each value must pass a strict allowlist; anything else is dropped and the script falls back to a
+    fixed phrase. Returns (kept, dropped field names)."""
+    kept: dict[str, str] = {}
+    dropped: list[str] = []
+    if deal is None:
+        return kept, dropped
+    if not isinstance(deal, Mapping):
+        return kept, ["deal"]
+    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller")]
+    for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
+        if key in deal:
+            v = _plain(deal[key], pattern)
+            if v is None:
+                dropped.append(key)
+            else:
+                kept[key] = v
+    if "condition" in deal:
+        c = CONDITIONS.get(str(deal["condition"]).strip().lower()) if isinstance(deal["condition"], str) else None
+        if c is None:
+            dropped.append("condition")
+        else:
+            kept["condition"] = c
+    return kept, dropped
 
 
 @dataclass(frozen=True)
@@ -156,44 +205,52 @@ class CallScript:
     stripped: tuple[str, ...] = field(default=())
 
     def spoken(self) -> str:
-        """What the agent says before it listens: opening, deal, ask."""
-        return ". ".join((self.opening, self.deal_line, self.ask_line)) + "."
+        """What the agent says before it listens: the deal first, then the no-card promise, then the ask."""
+        return ". ".join((self.deal_line, self.opening, self.ask_line)) + "."
 
     def full_text(self) -> str:
         """Every line the script can say, for audits and tests."""
-        return "\n".join((self.opening, self.deal_line, self.ask_line, self.why_answer,
+        return "\n".join((self.deal_line, self.opening, self.ask_line, self.why_answer,
                           self.approved_line, self.denied_line))
 
 
-def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None) -> CallScript:
+def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: Any = None) -> CallScript:
     """Build the call script for one mandate. Raises ScriptError when the amount or payee cannot be read back
-    safely. `advocate_reason` is the advocate's closed-schema dict; anything outside it is stripped."""
+    safely. `advocate_reason` is the advocate's closed-schema dict; anything outside it is stripped. `deal` is
+    optional {item, condition, seller name} for a natural read-back (see clean_deal_facts); the amount is read
+    once, in words, from the mandate, and the payee id is validated but never spoken."""
     amount = mandate.get("amount")
     payee = clean_payee(mandate.get("payee"))
     words, digits = amount_words(amount), amount_digits(amount)
-    deal = f"This call is about one deal: {words}, written {digits}, to {payee}"
-    ask = "Say the two word code from your screen, then say approve. Anything else cancels this deal"
+    facts, deal_dropped = clean_deal_facts(deal)
+    deal_line = (f"One {facts['item']}" if "item" in facts else "One purchase")
+    if "condition" in facts:
+        deal_line += f", {facts['condition']}"
+    deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
+    deal_line += f", for {words}"
     kept, dropped = clean_advocate_reason(advocate_reason)
     parts = []
-    if "rule_id" in kept:
-        parts.append(f"The advocate vetoed the cheaper one under rule {kept['rule_id'].replace('_', ' ')}")
+    if "rule_id" in kept or "summary" in kept:
+        parts.append("The advocate rejected the cheaper offer")
     else:
         parts.append("The advocate has no recorded reason for that")
     if "summary" in kept:
         parts.append(kept["summary"])
-    if "host" in kept:
+    if "host" in kept and _speakable_host(kept["host"]):
         parts.append(f"The source is {kept['host']}, and the link is on your screen")
+    elif "host" in kept:
+        parts.append("The source link is on your screen")
     else:
         parts.append("The source link is on your screen")
     why = ". ".join(parts) + ". Nothing is paid until you say the code and approve"
     return CallScript(
         opening=OPENING,
-        deal_line=deal,
-        ask_line=ask,
+        deal_line=deal_line,
+        ask_line=ASK,
         why_answer=why,
         approved_line=f"Approved. One payment of {words}, written {digits}, to {payee}. Nothing else is authorized",
         denied_line="Not approved. Nothing was paid",
         amount_read_back=amount,
         payee_read_back=payee,
-        stripped=tuple(dropped),
+        stripped=tuple(dropped + deal_dropped),
     )

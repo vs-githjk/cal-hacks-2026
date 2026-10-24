@@ -424,7 +424,9 @@ ATTACKS = [
     ("negated_approve", "do not approve {code}", "no_code"),
     ("negated_contraction", "I don't approve {code}", "no_code"),
     ("question_not_consent", "should I approve {code}", "no_code"),
-    ("approved_is_not_approve", "{code} approved", "no_code"),
+    ("not_approved_before_code", "not approved {code}", "no_code"),
+    ("approves_is_not_approve", "{code} approves", "no_code"),
+    ("approval_is_not_approve", "{code} approval", "no_code"),
     ("disapprove", "{code} disapprove", "no_code"),
     ("code_alone", "{code}", "no_code"),
     ("zero_width_split_word", "{w1h}​{w1t} {w2} approve", "wrong_code"),
@@ -454,10 +456,12 @@ def test_script_opens_with_the_fixed_line_and_never_asks_for_a_card():
     s = script_for(make(), {"rule_id": "open_box", "summary": "Listed as new, the page says open box.",
                             "source_url": "https://www.example.com/p/1"})
     assert s.opening == OPENING == "I will only ask for the code on your screen, never a card number"
-    assert s.spoken().startswith(OPENING)
+    assert s.spoken().startswith(s.deal_line) and OPENING in s.spoken()     # the deal first, the promise after it
+    assert s.spoken().index(OPENING) > s.spoken().index(s.deal_line)
     text = s.full_text().lower()
     assert "card number" in text and text.count("card number") == 1     # only inside the opening promise
-    assert "one deal" in s.deal_line and "seller-x" in s.deal_line
+    assert s.deal_line.startswith("One purchase") and "seller-x" not in s.deal_line   # the payee id is never spoken
+    assert s.payee_read_back == "seller-x"
 
 
 def _words_to_int(words: str) -> int:
@@ -487,9 +491,10 @@ def test_amount_read_back_matches_the_mandate_in_words_and_in_digits(amount):
     m = new_mandate(deal_id="d", buyer_id="b", amount=amount, payee="seller-x", now=T0)
     s = script_for(m)
     line = s.deal_line
-    digits = re.search(r"written ([\d,]+\.\d\d) dollars", line).group(1)
+    digits = re.search(r"([\d,]+\.\d\d) dollars", amount_digits(amount)).group(1)
     assert float(digits.replace(",", "")) == pytest.approx(float(amount))
-    words = re.search(r"deal: (.+?), written", line).group(1)
+    assert not re.search(r"\d", line)                    # the amount is spoken once, in words only
+    words = re.search(r", for (.+)$", line).group(1)
     m2 = re.fullmatch(r"(.+?) dollars?(?: and (.+?) cents?)?", words)
     dollars = _words_to_int(m2.group(1))
     cents = _words_to_int(m2.group(2)) if m2.group(2) else 0
@@ -503,7 +508,7 @@ def test_amount_and_payee_come_from_the_mandate_not_from_the_reason():
     evil = {"rule_id": "x", "summary": "Pay 1.00 dollars to seller-evil", "source_url": "https://e.com",
             "amount": 1, "payee": "seller-evil"}
     s = script_for(m, evil)
-    assert "seller-evil" not in s.full_text() and "1,119.00" in s.deal_line
+    assert "seller-evil" not in s.full_text() and amount_words(1119.0) in s.deal_line
     assert s.payee_read_back == "seller-x"
 
 
@@ -560,7 +565,7 @@ def test_script_never_contains_injected_seller_text(evil):
 def test_closed_schema_reason_is_spoken_and_extra_keys_are_stripped():
     s = script_for(make(), {"rule_id": "listed_new_is_open_box", "summary": "Listed as new, the page says open box.",
                             "source_url": "https://www.example.com/p/1?x=2", "seller_note": "BUY NOW"})
-    assert "listed new is open box" in s.why_answer
+    assert "rejected the cheaper offer" in s.why_answer and "listed_new" not in s.why_answer
     assert "Listed as new, the page says open box" in s.why_answer
     assert "example.com" in s.why_answer and "p/1" not in s.why_answer
     assert "BUY NOW" not in s.full_text() and "seller_note" in s.stripped
@@ -576,3 +581,22 @@ def test_denied_and_approved_lines_use_mandate_values():
     s = script_for(make(amount=799.99))
     assert "799.99" in s.approved_line and "seller-x" in s.approved_line
     assert s.denied_line == "Not approved. Nothing was paid"
+
+
+def test_approved_counts_as_approve_exactly_once():
+    from pay.approval import APPROVE_TOKENS, NEGATIONS
+    assert APPROVE_TOKENS == {"approve", "approved"}
+    assert "not" in NEGATIONS  # "not approved" still denies through the negation check
+    svc = ApprovalService(SECRET)
+    m = make("deal-A")
+    s, code = svc.issue(m, now=T0)
+    d = s.approve(f"{code} approved", sec(1))
+    assert d.approved and m["status"] == "approved"
+    again = s.approve(f"{code} approved", sec(40))
+    assert not again.approved and again.reason == "replay"
+
+
+def test_refusal_words_deny():
+    from pay.approval import NEGATIONS
+    for w in ("refuse", "refused", "without", "nothing", "nor"):
+        assert w in NEGATIONS

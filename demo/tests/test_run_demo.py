@@ -228,7 +228,7 @@ def test_beat4_mandate_is_above_the_allowance_and_binds_the_winner(run):
     assert m["amount"] == b(run, 2)["winner"]["landed"] > b1["allowance"]["per_purchase_limit"]
     assert m["within_allowance"] is False and m["payee"] == "best-buy@pay.example.test"
     assert m["tap_signature"] == b4["signature"]["headers"]["Signature"]
-    assert b4["call_script"]["stripped"] == [] and "1,249.99" in b4["call_script"]["deal_line"]
+    assert b4["call_script"]["stripped"] == [] and "one thousand two hundred forty nine dollars and ninety nine cents" in b4["call_script"]["deal_line"]
     assert b4["advocate_reason"]["rule_id"] == "advocate.condition"
 
 
