@@ -27,3 +27,9 @@ Total for the test round: about $0.17 of the $205 credit.
 - Return policy: no actor returned it in overview mode. Seller: only eBay and Amazon. Condition: only Best Buy and eBay; first-party stores leave it `unknown` (never guessed).
 - Newegg (keywords, then a search URL) and PCPartPicker both returned 0 items; low-use actors, skipped for now.
 - Prices are as listed at the snapshot time; show them with the MIRROR badge, URL and date. Do not compare them to a store's claims without a dated baseline (c11).
+
+## c3 claim check
+- `from data.claim_check import check_claim` (final I/O, adds `reason`). Rules: price, was price (vs dated price history), condition, stock, return window, socket (vs maker table). Unreadable page = unverified, never false.
+- Done-check (SIM, liar pages served on localhost): open box listed as new, fake was price and wrong socket all return false with evidence URLs; the honest page verifies. Saved in `claim_check/done_check.json`.
+- Real store pages: only schema.org JSON-LD is read so far; many stores block plain fetches, which returns unverified.
+- Apify Actor wrapper in `claim_check/actor/` (not yet run on the platform).

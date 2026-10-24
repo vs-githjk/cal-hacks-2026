@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OwnedPart",
+  "description": "Ownership memory (owner: Lane A). A part the buyer already has; the buyer agent never re-buys it unless asked and cites this entry when it skips a line.",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "buyer_id": {"type": "string"},
+    "sku_spec": {"type": "string", "description": "Normalized part, e.g. 'psu 750w'."},
+    "item_name": {"type": "string", "description": "What the buyer called it, e.g. 'Corsair RM750e'."},
+    "condition": {"type": "string", "enum": ["new", "open-box", "refurbished", "used", "unknown"]},
+    "acquired_on": {"type": "string", "description": "ISO date, or empty if the buyer did not say."},
+    "source": {"type": "string", "enum": ["bought_here", "told_by_user", "imported"]},
+    "attrs": {"type": "object", "description": "SpecCard attrs, e.g. {\"wattage_w\": 750} or {\"gpu_clearance_mm\": 330}."},
+    "notes": {"type": "string", "description": "The buyer's own words and when they said them; quoted on the card."}
+  },
+  "required": ["id", "buyer_id", "sku_spec", "item_name", "condition", "acquired_on", "source", "attrs", "notes"]
+}
