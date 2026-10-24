@@ -20,6 +20,7 @@ ACTOR = "anoopibrampur~tech-bazaar-claim-check"
 URL = f"https://api.apify.com/v2/acts/{ACTOR}/run-sync-get-dataset-items"
 TIMEOUT = 6.0  # docs/ARCHITECTURE.md: external calls time out after 4 to 6 seconds
 UNAVAILABLE = "claim check unavailable"
+PAID_BY_AGENT = "paid by agent via prepaid Apify token (x402 or MPP, agi.apify.com)"
 RESULTS = ("verified", "unverified", "false")
 
 
@@ -55,8 +56,13 @@ def _unavailable(claim, case, detail=""):
 def check_via_actor(claim: dict, post=None, timeout: float = TIMEOUT) -> dict:
     claim = claim if isinstance(claim, dict) else {}
     post = post or _http_post
-    token = os.environ.get("APIFY_TOKEN", "")
+    agent = os.environ.get("APIFY_AGENT_TOKEN", "")  # #270: a prepaid token the agent bought itself (x402 or MPP at agi.apify.com)
+    token = agent or os.environ.get("APIFY_TOKEN", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
+    return {**_check(claim, post, timeout, headers), "paid_by": PAID_BY_AGENT if agent else "our Apify account"}
+
+
+def _check(claim: dict, post, timeout: float, headers: dict) -> dict:
     try:
         status, rows = post(f"{URL}?timeout={max(1, math.ceil(timeout))}", {"claims": [claim]}, headers, timeout)
     except Slow:

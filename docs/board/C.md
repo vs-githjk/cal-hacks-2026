@@ -80,3 +80,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - 09:29 #175: normalize.landed reads eBay '+$N delivery|shipping'; 3 eBay rows now have landed prices; demo winner unchanged. PR open.
 - 11:03 #205: Apify Actor fallbacks (down, slow 6 s, quota 402/429, empty) all give unverified + 'claim check unavailable', one call, no retry; row in REAL_VS_SIMULATED. PR open.
 - 11:01 #204 (c11): baselines read saved Bright Data rows if present (never call it); tests for dated rows with URLs and source labels, two owners on the demo item, feed date range. PR open.
+- 12:44 #270 Tier A: scripts/apify_agent_pay_probe.py reached all 5 Apify 402 pay walls (x402 + MPP prepaid tokens, proxied runs of both Actors), reached not paid; Tier B script scripts/apify_agent_pay.py tested with fakes only. PR open.

@@ -159,3 +159,25 @@ def test_rows_for_one_claim_that_disagree_are_unverified():
 
 def test_identical_duplicate_rows_are_fine():
     assert check_via_actor(CLAIM, post=fake(status=201, rows=[OK, dict(OK)])[0])["result"] == "verified"
+
+
+# #270 step 3: an agent's own prepaid token
+def test_an_agent_token_is_used_and_the_result_says_the_agent_paid(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "apify_api_OURS")
+    monkeypatch.setenv("APIFY_AGENT_TOKEN", "apify_api_AGENT")
+    seen = []
+
+    def post(url, body, headers, timeout):
+        seen.append(headers)
+        return 201, [OK]
+    out = check_via_actor(CLAIM, post=post)
+    assert seen[0] == {"Authorization": "Bearer apify_api_AGENT"} and out["paid_by"].startswith("paid by agent")
+    assert out["result"] == "verified" and "apify_api_AGENT" not in repr(out)
+
+
+def test_without_an_agent_token_our_account_pays_and_says_so(monkeypatch):
+    monkeypatch.delenv("APIFY_AGENT_TOKEN", raising=False)
+    monkeypatch.setenv("APIFY_TOKEN", "apify_api_OURS")
+    seen = []
+    out = check_via_actor(CLAIM, post=lambda url, body, headers, timeout: seen.append(headers) or (201, [OK]))
+    assert seen[0] == {"Authorization": "Bearer apify_api_OURS"} and out["paid_by"] == "our Apify account"
