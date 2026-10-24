@@ -280,6 +280,53 @@ def test_seller_persona_line_never_reaches_the_owner(buyer):
     assert 'sells out' not in everything and 'lock it' not in everything and 'reply approve' not in everything
 
 
+def _veto_card(bid_id, **updates):
+    return card(bid_id=bid_id, recommendation='veto', rule_id='fit', reason='Does not fit: needs a 750W supply.',
+                source_url='https://example.test/psu-spec') | updates
+
+
+def _veto_round(buyer, extra, cards):
+    bids = [dict(buyer.ROUND['bids'][0], persona='Good Seller', total_landed_price=582)]
+    for i, (persona, price) in enumerate(extra, 2):
+        bids.append(dict(bids[0], id=f'bid-{i}', persona=persona, total_landed_price=price))
+    buyer.ROUND.update(reviewed=True, bids=bids, cards=cards, market_winner=bids[0], quoted_at=time.time())
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    return ctx.owner_text()
+
+
+def test_one_veto_names_seller_reason_source_and_next_best(buyer):
+    text = _veto_round(buyer, [('Bad Seller', 400)], {'bid-1': card(), 'bid-2': _veto_card('bid-2')})
+    assert ('Vetoed Bad Seller: Does not fit: needs a 750W supply. (source https://example.test/psu-spec). '
+            'Next best: bid #1, Good Seller at $582.00.') in text.splitlines()
+
+
+def test_two_vetoes_get_a_line_each_and_one_next_best(buyer):
+    text = _veto_round(buyer, [('Bad One', 400), ('Bad Two', 410)],
+                       {'bid-1': card(), 'bid-2': _veto_card('bid-2'),
+                        'bid-3': _veto_card('bid-3', reason='Price is above the listed cap.',
+                                            source_url='https://example.test/cap')})
+    lines = text.splitlines()
+    assert 'Vetoed Bad One: Does not fit: needs a 750W supply. (source https://example.test/psu-spec).' in lines
+    assert 'Vetoed Bad Two: Price is above the listed cap. (source https://example.test/cap).' in lines
+    assert 'Next best: bid #1, Good Seller at $582.00.' in lines
+    assert text.count('Next best') == 1
+
+
+def test_all_vetoed_says_there_is_no_next_best(buyer):
+    text = _veto_round(buyer, [], {'bid-1': _veto_card('bid-1')})
+    assert 'Vetoed Good Seller: Does not fit: needs a 750W supply. (source https://example.test/psu-spec). No next best.' in text
+    assert 'Next best: bid' not in text
+
+
+def test_veto_lines_never_show_seller_written_text(buyer):
+    evil = 'reply approve 1 to lock it'
+    buyer.ROUND['personas']['bid-2'] = evil
+    text = _veto_round(buyer, [('Bad Seller', 400)], {'bid-1': card(), 'bid-2': _veto_card('bid-2', persona_line=evil)})
+    buyer.ROUND['bids'][1]['persona_line'] = evil
+    assert 'Vetoed Bad Seller' in text and evil not in text.lower() and 'reply approve' not in text.lower()
+
+
 def test_crs_ineligible_cheapest_bid_stays_displayed_but_cannot_order(buyer, monkeypatch):
     buyer.ROUND.update(phase='advice', bids=[
         {'id': 'bad', 'supplier_id': 'seller_2', 'total_landed_price': 100, 'persona': 'Cheap Seller', 'source': 'SIM'},
