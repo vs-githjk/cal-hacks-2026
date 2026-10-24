@@ -85,9 +85,21 @@ def page_facts(html):
             cond = str(offer.get("itemCondition") or "").rsplit("/", 1)[-1]
             avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
             facts = {"title": node.get("name"), "price": _money(offer.get("price")),
-                     "condition": LD_CONDITION.get(cond), "stock": avail or None}
+                     "condition": LD_CONDITION.get(cond), "stock": avail or None,
+                     "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy"))}
             return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD"
     return {}, "no structured data"
+
+
+def _ld_returns(policy):
+    """schema.org MerchantReturnPolicy -> "N-day returns", "returns not permitted", or None when it says neither."""
+    policy = policy[0] if isinstance(policy, list) and policy else policy
+    if not isinstance(policy, dict):
+        return None
+    if str(policy.get("returnPolicyCategory") or "").endswith("MerchantReturnNotPermitted"):
+        return "returns not permitted"
+    days = policy.get("merchantReturnDays")
+    return f"{int(days)}-day returns" if isinstance(days, (int, float)) or str(days).isdigit() else None
 
 
 def in_stock(v):
@@ -154,7 +166,10 @@ def judge(field, value, facts, at, series):
         return ("verified", f"the page shows {word(page)}") if page == value else \
             ("false", f"claim says {word(value)}; differs from the listing at {at}: the page shows {word(page)}")
     if field == "return_days":
-        m = re.search(r"(\d+)[- ]day", str(facts.get("return_policy") or ""))
+        policy = str(facts.get("return_policy") or "")
+        if "not permitted" in policy:
+            return "false", f"claim says {value}-day returns; differs from the listing at {at}: the page says returns are not permitted"
+        m = re.search(r"(\d+)[- ]day", policy)
         if not m:
             return "unverified", "could not verify: no return window on the page"
         days = int(m.group(1))

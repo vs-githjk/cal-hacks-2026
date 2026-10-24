@@ -166,3 +166,24 @@ def test_private_ranges_are_refused_before_connecting():
         with pytest.raises(ValueError, match="address not allowed"):
             guarded_get("http://shop.example/x", resolve=lambda h, ip=ip: [ip], request=lambda *a: calls.append(a))
         assert calls == [], ip
+
+
+FIX = __import__("pathlib").Path(__file__).resolve().parents[1] / "claim_check" / "fixtures"
+
+
+def fixture_check(text, name):
+    return check_claim({"text": text, "kind": "returns", "evidence_url": f"https://store.example/{name}"},
+                       fetch=lambda url: (FIX / url.rsplit("/", 1)[1]).read_bytes())
+
+
+def test_returns_read_from_json_ld_merchant_return_policy():  # #73 item 6
+    assert fixture_check("30-day returns", "sim-return-policy.html")["result"] == "false"
+    assert fixture_check("15-day returns", "sim-return-policy.html")["result"] == "verified"
+    out = fixture_check("30-day returns", "sim-no-returns.html")
+    assert out["result"] == "false" and "not permitted" in out["reason"]
+
+
+def test_real_page_without_a_return_policy_stays_unverified():
+    out = fixture_check("30-day returns", "mirror-canadacomputers-269441.html")
+    assert out["result"] == "unverified"
+    assert fixture_check("$1,749.99", "mirror-canadacomputers-269441.html")["result"] == "verified"  # saved page still parses
