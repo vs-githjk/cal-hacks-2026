@@ -7,6 +7,7 @@ import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
 import { OriginChip, clock } from "@/components/ui";
 import { DotPattern } from "@/components/ui/dot-pattern";
+import { ScoreboardTiles } from "@/components/scoreboard";
 import { asOrigin, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
@@ -98,6 +99,7 @@ export default function Home() {
         </section>
       )}
 
+      <ScoreboardTiles />
       <section aria-label="Screens" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {ROUTES.map((t) => (
           <Link
