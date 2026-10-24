@@ -28,6 +28,8 @@ SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
 if os.getenv("BUYER_MAILBOX"):
+    if common.public_seed("buyer"):
+        sys.exit("Set BUYER_AGENT_SEED in agents/.env before going on Agentverse: the default seed is public.")
     agent = Agent(name="tech_bazaar_buyer", seed=common.SEEDS["buyer"], port=8001, mailbox=True)
 else:
     agent = Agent(name="tech_bazaar_buyer", seed=common.SEEDS["buyer"], port=8001,
@@ -330,7 +332,8 @@ async def place_order(ctx: Context, n: int, approved_by: str, approval_id: str) 
     bid = ROUND["bids"][n - 1]
     order = common.validate("Order", make_order(ROUND["need"], bid, approved_by, approval_id))
     seller = common.address(bid["supplier_id"])
-    m = payment.make_mandate(deal_id=order["id"], amount=order["amount"], payee=seller, max_price=ROUND["goal"]["cap"])
+    m = payment.make_mandate(deal_id=order["id"], amount=order["amount"], payee=seller, buyer_id=ROUND["need"]["buyer_id"],
+                             within_allowance=approved_by == "auto", goal_id=ROUND["goal"]["id"])
     # STUB approval row: the chat APPROVE (or the allowance) stands in until Lane D's VoiceApproval writes it.
     source = "auto under allowance" if approved_by == "auto" else "chat stub until Lane D VoiceApproval"
     APPROVALS[m["hash"]] = {"answer": "approve", "source": source}
@@ -341,7 +344,7 @@ async def place_order(ctx: Context, n: int, approved_by: str, approval_id: str) 
     await ctx.send(seller, common.OrderPlaced(order_json=json.dumps(order), mandate_json=json.dumps(m)))
     who = "Auto-ordered" if approved_by == "auto" else "Approved and ordered"
     return (f"{who} #{n}: {order['id']}, ${order['amount']:.2f} from {bid['persona']}. "
-            f"Asked the seller to request payment (mandate cap ${m['amount']:.2f}, expires {m['expiry'][:16]}Z). "
+            f"Asked the seller to request payment (mandate cap ${m['amount']:.2f}, expires {m['expires_at']}). "
             f"No money has moved.")
 
 

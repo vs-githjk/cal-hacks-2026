@@ -14,6 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = ROOT / "contracts"
 sys.path.insert(0, str(ROOT))  # so agents can import other lanes' code, e.g. `from data.fit_checker import check_fit`
 
+# Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
+_ENV = Path(__file__).resolve().parent / ".env"
+if _ENV.exists():
+    for _line in _ENV.read_text(encoding="utf-8").splitlines():
+        _k, _, _v = _line.partition("=")
+        if _k.strip() and not _k.lstrip().startswith("#") and _v.strip():
+            os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+
 
 def validate(contract: str, obj: dict) -> dict:
     """Raise if obj breaks contracts/<contract>.schema.json; return obj."""
@@ -75,6 +83,12 @@ SEEDS = {
     "advocate": os.getenv("ADVOCATE_AGENT_SEED", "tech-bazaar-advocate-dev"),
     **{s: os.getenv(f"{s.upper()}_AGENT_SEED", f"tech-bazaar-{s}-dev") for s in SELLERS},
 }
+
+
+def public_seed(role: str) -> bool:
+    """The dev defaults above are in the public repo, so anyone could sign as that agent.
+    Never put an agent on Agentverse with one; set <ROLE>_AGENT_SEED in agents/.env first."""
+    return SEEDS[role].endswith("-dev")
 
 
 def address(role: str) -> str:

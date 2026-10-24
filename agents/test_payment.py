@@ -8,7 +8,7 @@ SELLER = "agent1qseller"
 
 
 def setup():
-    m = payment.make_mandate("deal-1", 589.0, SELLER, max_price=800)
+    m = payment.make_mandate("deal-1", 589.0, SELLER, buyer_id="joe", within_allowance=False)
     return m, payment.payment_request(m, SELLER), {m["hash"]: {"answer": "approve"}}, set()
 
 
@@ -42,3 +42,12 @@ def test_expired_fails():
     later = datetime.now(timezone.utc) + timedelta(hours=1)
     with pytest.raises(PermissionError, match="expired"):
         payment.commit(req, m, approvals, used, now=later)
+
+
+def test_mandate_matches_contract_and_ttl():
+    import common
+    m, *_ = setup()
+    common.validate("Mandate", m)
+    created = datetime.strptime(m["created_at"], payment.TS)
+    assert (datetime.strptime(m["expires_at"], payment.TS) - created).total_seconds() <= 600
+    assert m["hash"] == payment.mandate_hash({**m, "amount": 589})  # 589.0 and 589 hash the same, as in pay.mandate
