@@ -252,3 +252,48 @@ def test_closed_schema_still_holds_with_a_same_seller_veto():
     veto = next(c for c in cards if c["recommendation"] == "veto")
     assert set(veto["call_reason"]) == {"rule_id", "summary", "source_url"}
     assert veto["call_reason"]["summary"] == checks.CALL_SUMMARIES["advocate.same_seller"]
+
+
+# #115: an unconfirmed fit cannot beat a confirmed one (305 mm case)
+CASE305 = {"psu": {"wattage": 750, "pcie_8pin": 2}, "case": {"max_gpu_length_mm": 305}}
+NEED115 = {**NEED, "owned": CASE305, "spend_limit": 1400}
+
+
+def run115(bids, owned=CASE305):
+    return checks.advise({**NEED115, "owned": owned}, bids, mock_data.BASELINE, mock_data.RECORDS, [], owned)
+
+
+def test_unknown_fit_vetoed_when_a_confirmed_fit_is_in_cap():
+    asus = bid("b1", "seller_1", 1299.99, attrs={**ATTRS, "length_mm": 304})
+    ebay = bid("b2", "seller_2", 1239.99, attrs={"category": "gpu", "chipset": "RTX 4070 SUPER"})
+    msi = bid("b3", "seller_3", 1350, attrs={**ATTRS, "length_mm": 338})
+    cards = run115([asus, ebay, msi])
+    assert cards[0]["recommendation"] != "veto"
+    assert cards[1]["recommendation"] == "veto" and cards[1]["rule_id"] == "advocate.fit_unknown"
+    assert cards[1]["source_url"] == "https://example.com/listing/b2"
+    assert any(w["rule_id"] == "advocate.fit_unconfirmed" for w in cards[1]["warnings"])
+    assert cards[2]["recommendation"] == "veto" and cards[2]["rule_id"] == "fit.gpu_length"
+    assert checks.best_bid([asus, ebay, msi], cards)["id"] == "b1"
+
+
+def test_unknown_fit_stays_caution_without_a_confirmed_fit():
+    unk = {"category": "gpu", "chipset": "RTX 4070 SUPER"}
+    cards = run115([bid("b1", "seller_1", 1300, attrs=unk), bid("b2", "seller_2", 1240, attrs=unk)])
+    assert [c["recommendation"] for c in cards] == ["caution", "caution"]
+
+
+def test_confirmed_fit_over_cap_does_not_veto_unknown():
+    asus = bid("b1", "seller_1", 1500, attrs={**ATTRS, "length_mm": 304})  # over the 1400 cap
+    ebay = bid("b2", "seller_2", 1239.99, attrs={"category": "gpu", "chipset": "RTX 4070 SUPER"})
+    assert run115([asus, ebay])[1]["recommendation"] == "caution"
+
+
+def test_fit_unconfirmed_veto_speaks_the_fit_unknown_template():
+    asus = bid("b1", "seller_1", 1299.99, attrs={**ATTRS, "length_mm": 304})
+    ebay = bid("b2", "seller_2", 1239.99, attrs={"category": "gpu", "chipset": "RTX 4070 SUPER"})
+    card = run115([asus, ebay])[1]
+    assert card["recommendation"] == "veto"
+    assert any(w["rule_id"] == "advocate.fit_unconfirmed" for w in card["warnings"])
+    assert "advocate.fit_unconfirmed" not in checks.CALL_SUMMARIES
+    assert card["call_reason"]["rule_id"] == "advocate.fit_unknown"
+    assert card["call_reason"]["summary"] == checks.CALL_SUMMARIES["advocate.fit_unknown"]
