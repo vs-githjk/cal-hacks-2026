@@ -275,3 +275,42 @@ def test_honest_gpu_text_is_not_a_candidate(text):
 ])
 def test_the_connector_and_brand_exclusions_do_not_hide_a_real_ask(text):
     assert secret_ask.candidates(make_doc(text)), text
+
+
+# --- fix round: widened verbs, patterns and nouns ------------------------------------------------------------
+WIDE_ASKS = [
+    "send me your password", "what's your PIN?", "reply with the OTP", "Provide your CVV", "Enter your seed phrase",
+    "Read me the code we texted you", "Share your passcode",
+    # verb forms
+    "Sending your password helps", "She shares the seed phrase", "Typing your PIN is needed", "Paste your API key here",
+    "Submit the verification code", "Verify your password", "Reveal the private key", "Confirm your CVV",
+    "Texting us your passcode works", "Entering your security code", "Providing your login details",
+    # patterns
+    "what is your password", "Whats your PIN", "What’s your passcode", "I need your password", "We need your OTP",
+    "needs your card number", "Your password?", "Your PIN?", "your login?",
+    # nouns
+    "Send your login", "Share your credentials", "Give us your credentials", "Send the verification code",
+    "Read me the code you just received", "Tell me the code that was sent to you", "Send the 2FA code",
+    "Send me the auth code", "Share the login code",
+    # obfuscation
+    "send me your pass word", "send me your pass-word", "send me your p a s s w o r d", "Send your pass_word",
+    "send me your pass phrase", "Send your pa55word", "send me your PASS word", "Send your <i>pass</i>word",
+    "Send your pass\u200bword",
+]
+WIDE_HONEST = [
+    "password protected BIOS reset included", "comes with a 6-pin adapter", "share of the market",
+    "Ships fast. Great card.", "Read the manual first.", "Type: dual fan.", "Text me for photos.",
+    "Reply within one day.", "Provide proof of purchase on request.", "Confirm the box is sealed.",
+    "Enter the draw to win", "Your order", "What is your best price?", "Your offer?", "We need your address",
+    "The code is in the manual.", "Login page not included.", "Send a bank wire.",
+]
+
+
+@pytest.mark.parametrize("text", WIDE_ASKS)
+def test_widened_asks_are_candidates(text):
+    assert secret_ask.candidates(make_doc(text)), text
+
+
+@pytest.mark.parametrize("text", WIDE_HONEST)
+def test_widened_filter_still_leaves_plain_listing_text_alone(text):
+    assert not secret_ask.candidates(make_doc(text)), text
