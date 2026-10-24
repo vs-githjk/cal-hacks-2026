@@ -90,7 +90,7 @@ def test_every_finding_says_what_an_agent_sees_and_how_to_fix_it():
     r = check_page("https://shop.example/x", page(price=None, condition=None, returns=None, mpn=None), now=NOW)
     for f in r["findings"]:
         assert f["severity"] in ("blocks", "warns") and f["what_an_agent_sees"] and f["fix"] and f["source_url"]
-        assert "—" not in f["what_an_agent_sees"] + f["fix"] and "–" not in f["what_an_agent_sees"] + f["fix"]
+        assert "\u2014" not in f["what_an_agent_sees"] + f["fix"] and "\u2013" not in f["what_an_agent_sees"] + f["fix"]
 
 
 @pytest.mark.parametrize("err", [OSError("down"), ValueError("private address"), TimeoutError()])
@@ -666,7 +666,7 @@ BOT_WALLS = {
 def test_a_bot_wall_page_is_unreadable_and_not_charged(monkeypatch, name):
     r = check_page("https://shop.example/wall", BOT_WALLS[name], now=NOW)
     assert r["status"] == "unreadable" and r["findings"] == [] and r["error"] == "bot_wall", r["summary"]
-    assert "bot check" in r["summary"] and "—" not in r["summary"] and "–" not in r["summary"]
+    assert "bot check" in r["summary"] and "\u2014" not in r["summary"] and "\u2013" not in r["summary"]
     monkeypatch.setitem(PAGES, "https://shop.example/wall", BOT_WALLS[name])
     a, _ = run(monkeypatch, {"listingUrls": ["https://shop.example/wall"]})
     assert a.rows[0]["status"] == "unreadable" and a.charges == []
