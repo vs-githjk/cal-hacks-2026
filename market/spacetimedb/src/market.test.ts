@@ -395,6 +395,258 @@ describe('goal reservation and settlement', () => {
   });
 });
 
+describe('parent build child transactions', () => {
+  const psu = 'psu-750w';
+  const tower = 'case-mid-tower';
+  const parentArgs = (over: Partial<m.PostGoalArgs> = {}) => goalArgs({
+    id: 'parent-build', type: 'build_by_date', cap: 1000,
+    items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+      { skuSpec: psu, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: 'owned-psu' },
+      { skuSpec: tower, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ], ...over,
+  });
+  const registerOwned = (buyerId = 'vidyut', id = 'owned-psu', skuSpec = psu) =>
+    run(buyerId === 'vidyut' ? VIDYUT : BOB, (ctx) => (m as any).registerOwnedPart(ctx, { id, buyerId, skuSpec }));
+  const postParent = () => run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs()));
+  const postChild = (id: string, part: string, auth: Auth = VIDYUT) =>
+    run(auth, (ctx) => (m as any).postChildGoal(ctx, { id, parentGoalId: 'parent-build', part }));
+  const postChildNeed = (id: string, goalId: string, skuSpec: string) => run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({
+    id, goalId, spendLimit: 1000,
+    items: [{ skuSpec, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }],
+  })));
+
+  it('projects buyer-owned parts immutably and binds a skipped Goal item to exact buyer and SKU', () => {
+    registerOwned();
+    registerOwned();
+    expect([...(h.db as any).ownedPart.iter()]).toHaveLength(1);
+    expect(() => registerOwned('bob', 'owned-psu', psu)).toThrow(/owned part/i);
+    expect(() => run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: 'owned-psu' },
+    ] })))).toThrow(/owned part.*SKU/i);
+    postParent();
+    expect([...h.db.goalItem.goalId.filter('parent-build')].find((item) => item.skuSpec === psu))
+      .toMatchObject({ skippedOwnedPartId: 'owned-psu' });
+  });
+
+  it('creates only unique children for the buyer and exact unskipped parent items', () => {
+    registerOwned();
+    postParent();
+    postChild('child-gpu', GPU);
+    expect(h.db.goal.id.find('child-gpu')).toMatchObject({ buyerId: 'vidyut', parentGoalId: 'parent-build', parentPart: GPU, cap: 1000 });
+    expect([...h.db.goalItem.goalId.filter('child-gpu')]).toMatchObject([
+      { skuSpec: GPU, quantity: 1, skippedOwnedPartId: '' },
+    ]);
+    expect(() => postChild('child-gpu-duplicate', GPU)).toThrow(/already has a child|duplicate|a child already exists/i);
+    expect(() => postChild('child-psu', psu)).toThrow(/skipped|owned/i);
+    expect(() => postChild('child-other-buyer', tower, BOB)).toThrow(/not allowed|buyer/i);
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-wrong-condition', goalId: 'child-gpu', spendLimit: 1000,
+      items: [{ skuSpec: GPU, condition: 'used', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }] })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'wrong-condition', id: 'wrong-condition', amount: 500,
+      goalId: 'child-gpu', needId: 'need-wrong-condition' })))).toThrow(/complete goal/i);
+  });
+
+  it('retries an identical child ID idempotently without allowing a second ID for the same part', () => {
+    registerOwned();
+    postParent();
+    expect(postChild('child-gpu', GPU)).toBe('child-gpu');
+    expect(postChild('child-gpu', GPU)).toBe('child-gpu');
+    expect(() => postChild('child-gpu-again', GPU)).toThrow(/child already exists/i);
+    expect([...h.db.goal.parentGoalId.filter('parent-build')]).toHaveLength(1);
+  });
+
+  it('blocks child creation and new reservations while the parent is paused or expired', () => {
+    registerOwned();
+    postParent();
+    postChild('child-gpu', GPU);
+    run(VIDYUT, (ctx) => m.setGoalState(ctx, { goalId: 'parent-build', state: 'PAUSED', reservedAmount: 0 }));
+    expect(postChild('child-gpu', GPU)).toBe('child-gpu');
+    expect(() => postChild('child-paused', GPU)).toThrow(/parent build goal/i);
+    run(VIDYUT, (ctx) => m.setGoalState(ctx, { goalId: 'parent-build', state: 'ACTIVE', reservedAmount: 0 }));
+    postChildNeed('need-gpu', 'child-gpu', GPU);
+    run(VIDYUT, (ctx) => ctx.db.goal.id.update({ ...ctx.db.goal.id.find('parent-build')!, deadline: new Timestamp(T0.microsSinceUnixEpoch - 1n) }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ goalId: 'child-gpu', needId: 'need-gpu' })))).toThrow(/parent is unavailable/i);
+    expect(h.db.goal.id.find('child-gpu')!.reservedAmount).toBe(0);
+  });
+
+  it('keeps confirmed child payments in the parent cap and settles the parent only on full coverage', () => {
+    registerOwned();
+    postParent();
+    postChild('child-gpu', GPU);
+    postChild('child-case', tower);
+    postChildNeed('need-gpu', 'child-gpu', GPU);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'gpu-hash', id: 'gpu-mandate', dealId: 'gpu-deal', amount: 600,
+      payee: 'seller-a', goalId: 'child-gpu', needId: 'need-gpu' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'gpu-hash', method: 'typed_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'gpu-hash', paymentRef: 'pi-gpu', amount: 600, mode: 'sim' }));
+    run(REF, (ctx) => m.reserveGoal(ctx, { goalId: 'child-gpu', dealId: 'gpu-deal', mandateHash: 'gpu-hash', amount: 600 }));
+    expect(() => run(REF, (ctx) => m.reserveGoal(ctx, { goalId: 'child-gpu', dealId: 'gpu-deal', mandateHash: 'gpu-hash', amount: 601 }))).toThrow(/reservation must match/i);
+    expect(() => run(REF, (ctx) => m.reserveGoal(ctx, { goalId: 'child-gpu', dealId: 'other-deal', mandateHash: 'gpu-hash', amount: 600 }))).toThrow(/reservation must match/i);
+    expect(h.db.payment.mandateHash.find('gpu-hash')).toMatchObject({ amount: 600, paymentRef: 'pi-gpu' });
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'child-gpu', dealId: 'gpu-deal', mandateHash: 'gpu-hash', paymentRef: 'pi-gpu' }));
+    expect(h.db.goal.id.find('parent-build')!.state).not.toBe('DONE');
+
+    postChildNeed('need-case', 'child-case', tower);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'case-hash', id: 'case-mandate', dealId: 'case-deal',
+      amount: 401, payee: 'seller-b', goalId: 'child-case', needId: 'need-case' })))).toThrow(/parent.*cap/i);
+    expect(h.db.mandate.hash.find('case-hash')).toBeFalsy();
+    expect(h.db.goal.id.find('child-case')!.reservedAmount).toBe(0);
+
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'case-hash', id: 'case-mandate', dealId: 'case-deal', amount: 400,
+      payee: 'seller-b', goalId: 'child-case', needId: 'need-case' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'case-hash', method: 'typed_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'case-hash', paymentRef: 'pi-case', amount: 400, mode: 'sim' }));
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'child-case', dealId: 'case-deal', mandateHash: 'case-hash', paymentRef: 'pi-case' }));
+    expect(h.db.goal.id.find('parent-build')).toMatchObject({ state: 'DONE', reservedAmount: 0 });
+    expect(h.db.goal.id.find('child-gpu')).toMatchObject({ state: 'DONE', poNumber: 'gpu-deal' });
+    expect(h.db.goal.id.find('child-case')).toMatchObject({ state: 'DONE', poNumber: 'case-deal' });
+    expect(postChild('child-gpu', GPU)).toBe('child-gpu');
+    expect(() => postChild('child-gpu', tower)).toThrow(/different child terms/i);
+    expect(h.db.goal.id.find('child-gpu')).toMatchObject({ state: 'DONE', poNumber: 'gpu-deal', parentPart: GPU });
+    expect(() => run(VIDYUT, (ctx) => m.setGoalState(ctx, { goalId: 'parent-build', state: 'DONE', reservedAmount: 0 }))).toThrow(/goal state/i);
+  });
+
+  it('counts other unpaid child holds before accepting a new child reservation', () => {
+    registerOwned();
+    postParent();
+    postChild('child-gpu', GPU);
+    postChild('child-case', tower);
+    postChildNeed('need-case', 'child-case', tower);
+    run(VIDYUT, (ctx) => ctx.db.goal.id.update({ ...ctx.db.goal.id.find('child-gpu')!, state: 'HOLD_FOR_CALL',
+      reservedAmount: 700, reservedDealId: 'other-deal', reservedMandateHash: 'other-hash' }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'new-hash', id: 'new-mandate', dealId: 'new-deal', amount: 301,
+      goalId: 'child-case', needId: 'need-case' })))).toThrow(/parent.*cap/i);
+    expect(h.db.mandate.hash.find('new-hash')).toBeFalsy();
+    expect(h.db.goal.id.find('child-case')!.reservedAmount).toBe(0);
+  });
+
+  it('adds paid spend, another child hold, and the proposal in safe cents', () => {
+    const monitor = 'monitor-27-inch';
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+      { skuSpec: tower, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+      { skuSpec: monitor, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    postChild('child-gpu', GPU);
+    postChild('child-case', tower);
+    postChild('child-monitor', monitor);
+    postChildNeed('need-gpu', 'child-gpu', GPU);
+    postChildNeed('need-case', 'child-case', tower);
+    postChildNeed('need-monitor', 'child-monitor', monitor);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'gpu-hash', id: 'gpu-mandate', dealId: 'gpu-deal', amount: 500, goalId: 'child-gpu', needId: 'need-gpu' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'gpu-hash', method: 'typed_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'gpu-hash', paymentRef: 'pi-gpu', amount: 500, mode: 'sim' }));
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'child-gpu', dealId: 'gpu-deal', mandateHash: 'gpu-hash', paymentRef: 'pi-gpu' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'case-hash', id: 'case-mandate', dealId: 'case-deal', amount: 300, goalId: 'child-case', needId: 'need-case' })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'monitor-hash', id: 'monitor-mandate', dealId: 'monitor-deal', amount: 201, goalId: 'child-monitor', needId: 'need-monitor' })))).toThrow(/parent.*cap/i);
+    expect(h.db.goal.id.find('child-monitor')!.reservedAmount).toBe(0);
+  });
+
+  it('accepts ordinary floating arithmetic in cents and rejects subcent composite values', () => {
+    registerOwned();
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ cap: 100 })));
+    postChild('child-gpu', GPU);
+    postChild('child-case', tower);
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-gpu', goalId: 'child-gpu', spendLimit: 100 })));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-case', goalId: 'child-case', spendLimit: 100,
+      items: [{ skuSpec: tower, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }] })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'subcent', id: 'subcent', amount: 0.301, goalId: 'child-gpu', needId: 'need-gpu' })))).toThrow(/whole cents/i);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'cents', id: 'cents', amount: 0.1 + 0.2, goalId: 'child-gpu', needId: 'need-gpu' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'cents', method: 'typed_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'cents', paymentRef: 'pi-cents', amount: 0.1 + 0.2, mode: 'sim' }));
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'child-gpu', dealId: 'round-1:bid-a', mandateHash: 'cents', paymentRef: 'pi-cents' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'triple-cents', id: 'triple-cents', amount: 19.95 * 3,
+      goalId: 'child-case', needId: 'need-case' })));
+  });
+
+  it('accepts 0.1 + 0.2 at an exact 0.30 parent cap', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ cap: 0.30, items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    postChild('child-gpu', GPU);
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-gpu', goalId: 'child-gpu', spendLimit: 0.30 })));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'float-total', id: 'float-total', amount: 0.1 + 0.2,
+      goalId: 'child-gpu', needId: 'need-gpu' })));
+    expect(h.db.goal.id.find('child-gpu')).toMatchObject({ reservedAmount: 0.1 + 0.2, reservedMandateHash: 'float-total' });
+  });
+
+  it('allows a paid 0.10 child and a proposed 0.20 child under a 0.30 parent cap', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ cap: 0.30, items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+      { skuSpec: tower, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    postChild('child-gpu', GPU);
+    postChild('child-case', tower);
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-gpu', goalId: 'child-gpu', spendLimit: 0.30 })));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-case', goalId: 'child-case', spendLimit: 0.30,
+      items: [{ skuSpec: tower, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }] })));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'ten-cents', id: 'ten-cents', amount: 0.10,
+      goalId: 'child-gpu', needId: 'need-gpu' })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'ten-cents', method: 'typed_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'ten-cents', paymentRef: 'pi-ten-cents', amount: 0.10, mode: 'sim' }));
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, { goalId: 'child-gpu', dealId: 'round-1:bid-a', mandateHash: 'ten-cents', paymentRef: 'pi-ten-cents' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'twenty-cents', id: 'twenty-cents', amount: 0.20,
+      goalId: 'child-case', needId: 'need-case' })));
+    expect(h.db.goal.id.find('child-case')).toMatchObject({ reservedAmount: 0.20, reservedMandateHash: 'twenty-cents' });
+  });
+
+  it('matches child Need terms without delimiter collisions', () => {
+    const parentSku = 'gpu|new';
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ id: 'delimiter-parent', type: 'build_by_date', cap: 100, items: [
+      { skuSpec: parentSku, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    run(VIDYUT, (ctx) => m.postChildGoal(ctx, { id: 'delimiter-child', parentGoalId: 'delimiter-parent', part: parentSku }));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'delimiter-need', goalId: 'delimiter-child', spendLimit: 100,
+      items: [{ skuSpec: 'gpu', condition: 'new', allowedConditions: [], variant: 'new|retail', quantity: 1, unit: 'each' }] })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'delimiter-hash', id: 'delimiter-mandate', amount: 10,
+      goalId: 'delimiter-child', needId: 'delimiter-need' })))).toThrow(/complete goal/i);
+    expect(h.db.mandate.hash.find('delimiter-hash')).toBeFalsy();
+  });
+
+  it('rejects a parent cap whose cents exceed the safe integer range', () => {
+    registerOwned();
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ cap: Number.MAX_SAFE_INTEGER, items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    postChild('child-gpu', GPU);
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-gpu', goalId: 'child-gpu', spendLimit: Number.MAX_SAFE_INTEGER })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'unsafe', id: 'unsafe', amount: 1, goalId: 'child-gpu', needId: 'need-gpu' })))).toThrow(/whole cents/i);
+  });
+
+  it('rejects amounts whose binary precision cannot distinguish cents', () => {
+    registerOwned();
+    const amount = (2 ** 50) / 100;
+    const cap = amount - 1;
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ cap, items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })));
+    postChild('child-gpu', GPU);
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-gpu', goalId: 'child-gpu', spendLimit: cap })));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'ambiguous', id: 'ambiguous', amount,
+      goalId: 'child-gpu', needId: 'need-gpu' })))).toThrow(/whole cents/i);
+  });
+
+  it('does not allow more than three unique parent items or spoofing parent DONE at creation', () => {
+    expect(() => run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ items: [
+      ...parentArgs().items,
+      { skuSpec: 'monitor-27-inch', condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' },
+    ] })))).toThrow(/three|3|items/i);
+    registerOwned();
+    run(VIDYUT, (ctx) => m.postGoal(ctx, { ...parentArgs(), state: 'DONE' } as any));
+    expect(h.db.goal.id.find('parent-build')!.state).toBe('ACTIVE');
+  });
+
+  it('marks an all-owned build DONE only after validating each same-buyer SKU assertion', () => {
+    registerOwned();
+    registerOwned('vidyut', 'owned-gpu', GPU);
+    run(VIDYUT, (ctx) => m.postGoal(ctx, parentArgs({ items: [
+      { skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: 'owned-gpu' },
+      { skuSpec: psu, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: 'owned-psu' },
+    ] })));
+    expect(h.db.goal.id.find('parent-build')!.state).toBe('DONE');
+  });
+});
+
 describe('sealed round', () => {
   it('before close a seller sees only its own bid; the public result table is empty', () => {
     setupRound();
