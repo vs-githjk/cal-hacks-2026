@@ -88,6 +88,7 @@ export interface MarketScreenProps {
 
 export function MarketScreen(p: MarketScreenProps) {
   const c = p.originCounts;
+  const mixLabel = originMixLabel(c);
   const s = p.sample ?? {};
   return (
     <div className="grid gap-3.5">
@@ -98,7 +99,7 @@ export function MarketScreen(p: MarketScreenProps) {
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}
           {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}
-          {originMixLabel(c) && <span className="font-mono text-[12px]">{originMixLabel(c)}</span>}
+          {mixLabel && <span className="font-mono text-[12px]">{mixLabel}</span>}
         </div>
       </div>
       <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">

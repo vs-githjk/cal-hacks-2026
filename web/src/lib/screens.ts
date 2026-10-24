@@ -340,9 +340,12 @@ export function originCounts(items: readonly { origin: Origin }[]): { LIVE: numb
   return c;
 }
 
-/** The honest origin mix as "12 MIRROR · 6 SIM" (zero counts dropped); "" when every count is 0. */
+/** The honest origin mix as "18 bids · 12 MIRROR · 6 SIM" (zero counts dropped from the breakdown); "" when every count is 0. */
 export function originMixLabel(c: { LIVE: number; MIRROR: number; SIM: number }): string {
-  return (["LIVE", "MIRROR", "SIM"] as const).filter((o) => c[o] > 0).map((o) => `${c[o]} ${o}`).join(" · ");
+  const total = c.LIVE + c.MIRROR + c.SIM;
+  if (total === 0) return "";
+  const breakdown = (["LIVE", "MIRROR", "SIM"] as const).filter((o) => c[o] > 0).map((o) => `${c[o]} ${o}`).join(" · ");
+  return `${total} bid${total === 1 ? "" : "s"} · ${breakdown}`;
 }
 
 /**

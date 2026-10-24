@@ -102,10 +102,26 @@ test("originCounts counts each origin", () => {
   assert.deepEqual(originCounts([{ origin: "SIM" }, { origin: "LIVE" }, { origin: "SIM" }]), { LIVE: 1, MIRROR: 0, SIM: 2 });
 });
 
-test("#167 originMixLabel shows the honest mix, dropping zero counts, instead of a single misleading chip", () => {
-  assert.equal(originMixLabel({ LIVE: 0, MIRROR: 12, SIM: 6 }), "12 MIRROR · 6 SIM");
-  assert.equal(originMixLabel({ LIVE: 1, MIRROR: 0, SIM: 0 }), "1 LIVE");
+test("#213 originMixLabel names the noun and totals the bids, dropping zero counts from the breakdown", () => {
+  assert.equal(originMixLabel({ LIVE: 0, MIRROR: 12, SIM: 6 }), "18 bids · 12 MIRROR · 6 SIM");
+  assert.equal(originMixLabel({ LIVE: 1, MIRROR: 0, SIM: 0 }), "1 bid · 1 LIVE");
   assert.equal(originMixLabel({ LIVE: 0, MIRROR: 0, SIM: 0 }), "");
+});
+
+test("#213 origin mix counts round.arrivals (one per bid), not seller lines (one per condition line, alt and refused included)", () => {
+  const rows = [
+    result({ lines: [{ offeredCondition: "new", unitPrice: 1200 }, { offeredCondition: "open-box", unitPrice: 1100 }], landed: 1100, origin: "MIRROR" }),
+  ];
+  const events = [
+    event({ kind: "round_opened", refTable: "round", refId: "round-1", label: "Sealed round open for 6 s" }),
+    event({ id: 2n, kind: "bid_sealed", refId: "bid-a", sellerId: "fair-price-pc", origin: "MIRROR", at: ts(T0 + 1000) }),
+  ];
+  const r = round();
+  const lines = linesFromRows(rows, events, r);
+  assert.equal(lines.length, 2, "sanity: the bid's two condition lines both show in the seller table");
+  assert.equal(originCounts(lines).MIRROR, 2, "seller lines double count a two-line bid, the bug");
+  const roundView = roundFromRows(r, events, rows);
+  assert.equal(originCounts(roundView.arrivals).MIRROR, 1, "the round's arrivals count the bid once, the fix's data source");
 });
 
 test("#167 clusterArrivals keeps every arrival, merging a dense run into one cluster", () => {
