@@ -45,6 +45,7 @@ def approved_record(tx):
     session, code = service.issue(copy.deepcopy(tx["mandate"]), channel="phone", now=NOW)
     session.start_call(now=NOW)
     session.begin_listening(now=NOW)
+    session.recording_ref = "cartesia:ac_test"  # call evidence, as voice_cartesia records it
     return session.approve(code + " approve", now=NOW + timedelta(seconds=1)).record
 
 
