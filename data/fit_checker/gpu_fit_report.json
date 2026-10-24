@@ -308,6 +308,22 @@
    "note": "model not identifiable from listing"
   },
   {
+   "seller": "microcenter",
+   "title": "NVIDIA GeForce RTX 5070 Ti Solid Core Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+   "origin": "MIRROR",
+   "price": 1499.99,
+   "url": "https://www.microcenter.com/product/702482/zotac-nvidia-geforce-rtx-5070-ti-solid-core-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "listed_length_mm": null,
+   "model": null,
+   "maker_length_mm": null,
+   "length_used_mm": null,
+   "source": null,
+   "confidence": null,
+   "fits_305": null,
+   "fits_340": null,
+   "note": "model not identifiable from listing"
+  },
+  {
    "seller": "shady-sam",
    "title": "hosted SIM page shady-sam-gpu-5070ti-lies.html, listed at 789.00",
    "origin": "SIM",

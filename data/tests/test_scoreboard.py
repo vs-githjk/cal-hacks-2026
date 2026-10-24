@@ -70,3 +70,20 @@ def test_savings_tile_says_so_when_no_rows_match_the_sku(monkeypatch):
     monkeypatch.setattr(data.baselines, "observations", lambda: [row])
     t = savings_tile()
     assert t["status"] == "none_yet" and "No reference (empty)" in t["note"] and "None" not in t["display"]
+
+
+def test_price_position_block_is_present_and_honest():  # #141
+    sb = build()
+    validate(sb, SCHEMA)
+    pp = sb["price_position"]
+    assert pp["origin"] == "MIRROR" and pp["sentence"] and "savings" not in pp["sentence"].lower()
+    if pp["status"] == "one_source":
+        assert "sold median" not in pp["sentence"]
+
+def test_no_tile_says_not_yet_run_while_its_own_tile_exists():  # #73: stale voice text
+    sb = build()
+    ids = {t["id"] for t in sb["tiles"]}
+    assert "voice_attacks" in ids
+    for t in sb["tiles"]:
+        assert "not yet run" not in json.dumps(t.get("detail", {})) + t["note"], t["id"]
+    assert next(t for t in sb["tiles"] if t["id"] == "attacks_blocked")["detail"]["voice"] == {"see_tile": "voice_attacks"}

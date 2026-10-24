@@ -18,7 +18,7 @@
   "condition": "new",
   "openBoxCondition": null,
   "source": "bestbuy",
-  "scrapedAt": "2026-10-24T05:08:39.235356+00:00"
+  "scrapedAt": "2026-10-24T09:36:32.962714+00:00"
  },
  {
   "skuId": "6618884",
@@ -39,7 +39,7 @@
   "condition": "new",
   "openBoxCondition": null,
   "source": "bestbuy",
-  "scrapedAt": "2026-10-24T05:08:39.332270+00:00"
+  "scrapedAt": "2026-10-24T09:36:33.050022+00:00"
  },
  {
   "skuId": "6614742",
@@ -60,6 +60,6 @@
   "condition": "new",
   "openBoxCondition": null,
   "source": "bestbuy",
-  "scrapedAt": "2026-10-24T05:08:39.369960+00:00"
+  "scrapedAt": "2026-10-24T09:36:33.072291+00:00"
  }
 ]
