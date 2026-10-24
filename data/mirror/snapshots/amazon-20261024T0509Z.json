@@ -1,0 +1,68 @@
+[
+ {
+  "id": "amazon:259611133ddb",
+  "category": "gpu",
+  "name": "PNY NVIDIA GeForce RTX\u2122 5070 Ti OC Triple-Fan Graphics Card",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": null,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0DXL7GSYC",
+  "snapshot_id": "amazon-20261024T0509Z",
+  "snapshot_date": "2026-10-24T05:09:04.454Z",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0DXL7GSYC",
+   "stock": false
+  }
+ },
+ {
+  "id": "amazon:4fee6f8bb602",
+  "category": "gpu",
+  "name": "ASUS TUF Gaming GeForce RTX 5070 Ti 16GB GDDR7 OC Edition Graphics Card",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1389.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0DS6WTXGP",
+  "snapshot_id": "amazon-20261024T0509Z",
+  "snapshot_date": "2026-10-24T05:09:04.454Z",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0DS6WTXGP",
+   "price": 1389.99,
+   "shipping": "November 15 - 24",
+   "seller": "Amazon.com",
+   "stock": true
+  }
+ },
+ {
+  "id": "amazon:64f4178656b4",
+  "category": "gpu",
+  "name": "PNY NVIDIA GeForce RTX\u2122 5070 Ti Epic-X RGB\u2122 OC Triple-Fan Graphics Card",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0DXL8NFLF",
+  "snapshot_id": "amazon-20261024T0509Z",
+  "snapshot_date": "2026-10-24T05:09:04.454Z",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0DXL8NFLF",
+   "price": 1299.99,
+   "shipping": "November 14 - December 3",
+   "seller": "Amazon.com",
+   "stock": true
+  }
+ }
+]

@@ -1,13 +1,21 @@
 """Run each c1 actor once with a small input; save raw items, SpecCards and cost per run.
-python -m data.mirror.run_actors [store ...]   (reads APIFY_TOKEN from env or .env; never prints it)"""
+python -m data.mirror.run_actors [store ...]
+python -m data.mirror.run_actors --renormalize   (rebuild snapshots from the logged runs; no new runs, no cost)   (reads APIFY_TOKEN from env or .env; never prints it)"""
 import json
 import os
+import ssl
 import sys
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import certifi
+    CTX = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    CTX = ssl.create_default_context()
 
 from .actors import ACTORS
 from .normalize import FIELDS, first, to_spec_card
@@ -28,7 +36,7 @@ def token():
 def call(method, path, body=None, timeout=330):
     req = urllib.request.Request(API + path, method=method, data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Authorization": f"Bearer {token()}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
         return json.loads(r.read())
 
 
@@ -56,7 +64,28 @@ def run(store):
             "snapshot_id": snap, "input": inp}
 
 
+def renormalize():
+    log = HERE / "runs.json"
+    latest = {r["store"]: r for r in json.loads(log.read_text())}
+    for r in latest.values():
+        if not r.get("run_id"):
+            continue
+        run = call("GET", f"/actor-runs/{r['run_id']}")["data"]
+        items = call("GET", f"/datasets/{run['defaultDatasetId']}/items?clean=1&limit=10")
+        cards = [to_spec_card(r["store"], it, r["snapshot_id"], run["finishedAt"]) for it in items]
+        if cards:
+            (HERE / "snapshots" / f"{r['snapshot_id']}.json").write_text(json.dumps(cards, indent=1))
+        r.update(cost_usd=round(run.get("usageTotalUsd") or 0, 5), items=len(items), finished_at=run["finishedAt"],
+                 fields=sorted(k for k in FIELDS if any(first(it, FIELDS[k]) not in (None, "") for it in items)))
+    log.write_text(json.dumps(list(latest.values()), indent=1))
+    return list(latest.values())
+
+
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--renormalize"]:
+        for r in renormalize():
+            print(r["store"], r.get("items"), r.get("cost_usd"), r.get("fields"))
+        sys.exit()
     stores = sys.argv[1:] or list(ACTORS)
     with ThreadPoolExecutor(4) as pool:  # free plan: max 5 concurrent runs
         results = list(pool.map(run, stores))

@@ -4,16 +4,16 @@ import hashlib
 import re
 
 FIELDS = {
-    "title": ["title", "name", "productName", "product.title"],
+    "title": ["title", "name", "productTitle", "productName", "product.title"],
     "url": ["url", "productUrl", "link", "itemUrl", "product.url"],
     "price": ["price.value", "price.current", "currentPrice", "salePrice", "price", "soldPrice", "priceValue", "offerPrice"],
     "was_price": ["originalPrice", "listPrice", "wasPrice", "regularPrice", "price.was", "strikethroughPrice"],
     "shipping": ["shipping", "shippingPrice", "shippingCost", "delivery", "shippingInfo"],
     "condition": ["condition", "itemCondition", "conditionName"],
-    "seller": ["seller.name", "seller", "sellerName", "soldBy", "seller.username", "store"],
+    "seller": ["seller.name", "seller", "sellerName", "sellerUsername", "soldBy", "seller.username", "store"],
     "return_policy": ["returnPolicy", "returns", "returnsAccepted"],
-    "stock": ["stock", "availability", "inStock", "stockStatus", "isAvailable", "available"],
-    "model_number": ["modelNumber", "model", "mpn", "sku", "itemNumber"],
+    "stock": ["stock", "availability", "stock_availability", "inStock", "in_stock", "stockStatus", "isAvailable", "available"],
+    "model_number": ["modelNumber", "mpn", "model", "sku", "itemNumber"],
     "date": ["soldDate", "endedAt", "dateSold"],
 }
 CONDITIONS = [("open box", "open-box"), ("open-box", "open-box"), ("refurb", "refurbished"),
@@ -52,7 +52,7 @@ def condition(v, title=""):
 
 
 def attrs_from_title(title):
-    t = title or ""
+    t = re.sub(r"[\u2122\u00ae]", "", title or "")
     m = re.search(r"\b(RTX|RX|GTX)\s?(\d{4})\s?(Ti SUPER|Ti|SUPER|XTX|XT|GRE)?\b", t, re.I)
     if m:
         chip = f"{m.group(1).upper()} {m.group(2)}" + (f" {m.group(3).replace('ti', 'Ti').replace('super', 'SUPER')}" if m.group(3) else "")
