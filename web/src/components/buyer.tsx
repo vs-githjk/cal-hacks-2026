@@ -5,9 +5,9 @@
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { DotPattern } from "@/components/ui/dot-pattern";
-import { REVIEW_MAX_FAILURES, type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
+import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
-import { commas, typedStatus } from "@/lib/money";
+import { commas } from "@/lib/money";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
@@ -184,7 +184,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       </Td>
                       <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
                       <Td right className={struck}>{b.adjusted === null ? "·" : b.won ? <b>{money(b.adjusted)}</b> : money(b.adjusted)}</Td>
-                      <Td><Verdict kind={REC[b.recommendation].kind}>{REC[b.recommendation].text}</Verdict></Td>
+                      <Td><Verdict kind={b.heldBack ? "caution" : REC[b.recommendation].kind}>{b.heldBack ? "Held back" : REC[b.recommendation].text}</Verdict></Td>
                       <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
                     </motion.tr>
                     {expanded && (
@@ -225,8 +225,8 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
   return (
     <Card stripe="coral">
       <Label>Advocate veto</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">Cheapest bid vetoed: {veto.seller}, {money(veto.landed)}</h3>
-      <p className="text-[14px]">Listed as "{veto.claim}". {veto.finding}</p>
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">Bid vetoed: {veto.seller}{veto.landed ? `, ${money(veto.landed)}` : ""}</h3>
+      <p className="text-[14px]">{veto.claim ? <>Listed as &quot;{veto.claim}&quot;. </> : null}{veto.finding}</p>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
         <dt className="text-muted">Rule</dt><dd><Code>{veto.ruleId}</Code></dd>
         <dt className="text-muted">Source</dt><dd className="min-w-0"><SourceLink href={veto.sourceUrl} /></dd>
@@ -248,18 +248,25 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
         {blocked ? "Blocked before the advocate saw it" : "Allowed"}
       </div>
       <p className="mt-1.5 text-[13px] text-muted">
-        {blocked ? "Injected listing" : "Listing"} from {shield.seller} · {commas(shield.chars)} chars · {shield.latencyMs.toFixed(1)} ms · severity {shield.severity}
+        {[
+          `${blocked ? "Injected listing" : "Listing"} from ${shield.seller}`,
+          shield.chars !== undefined && `${commas(shield.chars)} chars`,
+          shield.latencyMs !== undefined && `${shield.latencyMs.toFixed(1)} ms`,
+          shield.severity && `severity ${shield.severity}`,
+        ].filter(Boolean).join(" · ")}
       </p>
-      <div className="mt-2.5 overflow-hidden rounded-[10px] border border-line bg-soft px-3 py-2.5 font-mono text-[12px] leading-[1.5] [overflow-wrap:anywhere]">
-        {shield.evidence.map((e, i) => (e.hit ? <mark key={i} className="rounded-[3px] bg-coral-soft px-0.5 text-coral">{e.text}</mark> : <span key={i}>{e.text}</span>))}
-      </div>
+      {shield.evidence.length > 0 && (
+        <div className="mt-2.5 overflow-hidden rounded-[10px] border border-line bg-soft px-3 py-2.5 font-mono text-[12px] leading-[1.5] [overflow-wrap:anywhere]">
+          {shield.evidence.map((e, i) => (e.hit ? <mark key={i} className="rounded-[3px] bg-coral-soft px-0.5 text-coral">{e.text}</mark> : <span key={i}>{e.text}</span>))}
+        </div>
+      )}
       <div className="mt-2.5 flex flex-wrap gap-1.5">
         {shield.ruleIds.slice(0, 5).map((r) => <span key={r} className="rounded-md border border-line px-1.5 py-0.5 font-mono text-[11px] text-muted">{r}</span>)}
         {shield.ruleIds.length > 5 && <span className="rounded-md border border-line px-1.5 py-0.5 font-mono text-[11px] text-muted">+{shield.ruleIds.length - 5} more</span>}
       </div>
       <p className="mt-2 text-[13px] text-muted">
         {shield.control && <>Control page ({shield.control.name}, same SKU) {shield.control.verdict} in {shield.control.latencyMs.toFixed(1)} ms. </>}
-        <OriginChip origin={shield.pageOrigin} /> page, <OriginChip origin={shield.verdictOrigin} /> verdict from {shield.version}.
+        <OriginChip origin={shield.pageOrigin} /> page, <OriginChip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.
       </p>
     </Card>
   );
@@ -273,13 +280,19 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
   return (
     <Card stripe="amber">
       <Label>Approval call</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">{money(approval.amount)} is above your {money(approval.allowance)} allowance, so it called</h3>
-      <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-        <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{approval.wordPair}</span>
-        <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
-      </div>
-      <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
-      <p className="mt-1.5 text-[14px]">You asked "why not the cheaper one?" It answered: {approval.whyAnswer}</p>
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">
+        {approval.within ? `${money(approval.amount)} to ${approval.payee}, within your allowance` : `${money(approval.amount)} is above your ${money(approval.allowance)} allowance, so it called`}
+      </h3>
+      {approval.wordPair && (
+        <>
+          <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
+            <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{approval.wordPair}</span>
+            <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
+          </div>
+          <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
+        </>
+      )}
+      {approval.whyAnswer && <p className="mt-1.5 text-[14px]">You asked &quot;why not the cheaper one?&quot; It answered: {approval.whyAnswer}</p>}
       <p className="mt-1.5 text-[13px] text-muted">{CAP_RULE}</p>
       <ol className="mt-2.5 grid gap-1.5 text-[13px]">
         {approval.attempts.map((a, i) => (
@@ -296,12 +309,8 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
 
 export const CAP_RULE = "Goal cap is the ceiling to hunt under. Allowance is what it may spend without a call.";
 
-/** Live b5 review card: the word pair issued for this exact mandate, and a labelled typed fallback bound to the same mandate. */
-export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView; allowance: number | null; onTyped: (code: string) => Promise<string> }) {
-  const [code, setCode] = useState("");
-  const [msg, setMsg] = useState("");
-  const [busy, setBusy] = useState(false);
-  const left = REVIEW_MAX_FAILURES - review.failures;
+/** Live b5 review card: the word pair issued for this exact mandate. Only the phone call approves (#191, LOCKED): no typed fallback. */
+export function ReviewCard({ review, allowance }: { review: ReviewView; allowance: number | null }) {
   return (
     <Card stripe="amber">
       <Label>Review and approve</Label>
@@ -315,39 +324,7 @@ export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView;
         <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{review.code}</span>
         <small className="text-[12px] text-muted">one-time code for this mandate, this screen only</small>
       </div>
-      <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
-      <form
-        className="mt-3 grid gap-1.5"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setMsg("");
-          setMsg(await onTyped(code.trim()));
-          setBusy(false);
-          setCode("");
-        }}
-      >
-        <label htmlFor="typed-code" className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
-          Typed fallback (if the call fails): type the code to approve this same mandate
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="typed-code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            disabled={review.locked || busy}
-            autoComplete="off"
-            placeholder="two words"
-            className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-soft px-3 font-mono"
-          />
-          <button disabled={review.locked || busy || !code.trim()} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink disabled:opacity-50">
-            Approve
-          </button>
-        </div>
-        <p className="text-[13px] text-muted" aria-live="polite">
-          {typedStatus({ locked: review.locked, busy, msg, failures: review.failures, left })}
-        </p>
-      </form>
+      <p className="text-[13px] font-semibold">Say this code on the call. Only the call approves; nothing on this screen can.</p>
       <p className="mt-1 text-[13px] text-muted">{CAP_RULE}</p>
     </Card>
   );
@@ -363,20 +340,20 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="motion-safe:animate-[pop_.4s_ease-out] inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-mint text-[13px] font-bold text-mint-soft" aria-hidden>✓</span>
         <h3 className="m-0 text-[17px] font-semibold tracking-[-0.01em]">Paid under a signed mandate</h3>
-        <OriginChip origin="SIM" label={receipt.chargeStatus} />
+        <OriginChip origin={receipt.chargeOrigin ?? "SIM"} label={receipt.chargeStatus} />
       </div>
       <div className="mt-2 grid gap-3.5 md:grid-cols-2">
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 text-[14px] tabular-nums">
-          <div>{receipt.seller} · {receipt.item} · {receipt.condition}</div><div>{money(receipt.amount)}</div>
-          <div className="text-muted">Shipping</div><div className="text-muted">{money(receipt.shipping)}</div>
-          <div className="border-t border-line pt-2 text-[18px] font-bold">Charged</div><div className="border-t border-line pt-2 text-[18px] font-bold">{money(receipt.amount + receipt.shipping)}</div>
+          <div>{[receipt.seller, receipt.item, receipt.condition].filter(Boolean).join(" · ")}</div><div>{money(receipt.amount)}</div>
+          {receipt.shipping !== undefined && <><div className="text-muted">Shipping</div><div className="text-muted">{money(receipt.shipping)}</div></>}
+          <div className="border-t border-line pt-2 text-[18px] font-bold">Charged</div><div className="border-t border-line pt-2 text-[18px] font-bold">{money(receipt.amount + (receipt.shipping ?? 0))}</div>
           <div className="text-[13px] text-muted">{receipt.paymentMethod} · {receipt.chargeId}</div><div className="text-[13px] text-muted">{clock(receipt.paidAt)}</div>
         </dl>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
           <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]"><Code>{receipt.mandateId}</Code> · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
           <dt className="text-muted">Hash</dt><dd><Code>{receipt.mandateHash.slice(0, 8)}…{receipt.mandateHash.slice(-6)}</Code></dd>
-          <dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd>
-          <dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> same mandate sent twice; second charge rejected</> : "not tested"}</dd>
+          {receipt.signature && <><dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd></>}
+          {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> same mandate sent twice; second charge rejected</> : "not tested"}</dd></>}
           <dt className="text-muted">Allowance</dt><dd>unchanged until the receiving check passes</dd>
         </dl>
       </div>

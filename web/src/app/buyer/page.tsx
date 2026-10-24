@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { BuyerScreen } from "@/components/screens";
-import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
+import { asSim, bidsFromRows, dealFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows, shieldFromRows, vetoFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
 
 // Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
@@ -85,41 +85,34 @@ function BuyerView() {
   const [notes] = useTable(tables.myNotifications);
   const [pending] = useTable(tables.myPendingApprovals);
   const [profiles] = useTable(tables.myBuyerProfile);
-  const approveTyped = useReducer(reducers.approveTyped);
+  const [checks] = useTable(tables.myBidChecks);
+  const [deals] = useTable(tables.myDeals);
 
   const goal = useMemo(() => goalFromRows(goals, goalItems, allowances[0]), [goals, goalItems, allowances]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
   const sim = liveBids.length === 0;
   const review = useMemo(() => reviewFromRows(pending), [pending]);
+  const roundId = latestRound(rounds)?.id;
+  const veto = useMemo(() => vetoFromRows(checks, results, roundId), [checks, results, roundId]);
+  const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);
+  const deal = useMemo(() => dealFromRows(deals, goal?.allowance?.perPurchase ?? null, results), [deals, goal, results]);
   const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
-  // A wrong code is counted in my_pending_approvals (failures); a match records the approval and the row leaves the view.
-  const onTyped = async (mandateHash: string, code: string) => {
-    if (!code) return "Type the two words shown above.";
-    try {
-      await approveTyped({ mandateHash, code });
-      return "If it matched, this card disappears and the approval is recorded.";
-    } catch (err) {
-      return err instanceof Error ? err.message : "Approval failed";
-    }
-  };
-
-  // veto, shield, approval and receipt rows (bid_check, mandate, approval, payment) are not public yet: those cards show the SIM sample.
+  // #191-5: veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows the SIM sample only while its row is missing.
   return (
     <BuyerScreen
       connecting={!goalsReady || !eventsReady}
       goal={goal}
       bids={sim ? asSim(sample.rankedBids) : liveBids}
-      veto={asSim(sample.veto)}
-      shield={asSim(sample.shield)}
-      approval={asSim(sample.approval)}
+      veto={veto ?? asSim(sample.veto)}
+      shield={shield ?? asSim(sample.shield)}
+      approval={deal.approval ?? asSim(sample.approval)}
       review={review}
-      onTyped={onTyped}
-      receipt={asSim(sample.receipt)}
+      receipt={deal.receipt ?? asSim(sample.receipt)}
       feed={feed}
       buyerName={profiles[0]?.displayName || "Buyer"}
       revealKey={closeKey}
-      sample={{ bids: sim, veto: true, shield: true, approval: !review, receipt: true }}
+      sample={{ bids: sim, veto: !veto, shield: !shield, approval: !review && !deal.approval, receipt: !deal.receipt }}
     />
   );
 }

@@ -16,7 +16,6 @@ export interface BuyerScreenProps {
   approval: ApprovalView | null;
   /** A live mandate waiting for this buyer; when present it replaces the sample approval card. */
   review?: ReviewView | null;
-  onTyped?: (mandateHash: string, code: string) => Promise<string>;
   receipt: ReceiptView | null;
   feed: FeedItem[];
   /** From the market (my_buyer_profile); the page falls back to the buyer id. */
@@ -57,8 +56,8 @@ export function BuyerScreen(p: BuyerScreenProps) {
           <div className="grid gap-3.5 lg:grid-cols-3">
             <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
             <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-            {p.review && p.onTyped ? (
-              <ReviewCard review={p.review} allowance={p.goal.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
+            {p.review ? (
+              <ReviewCard review={p.review} allowance={p.goal.allowance?.perPurchase ?? null} />
             ) : (
               <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>
             )}
