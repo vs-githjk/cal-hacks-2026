@@ -96,19 +96,27 @@ def our_brands(line: dict, titles: dict | None = None) -> set[str]:
     return _brands_in(line.get("sku_spec")) | _brands_in((titles or {}).get(line.get("listing_url") or "", ""))
 
 
+def seller_names_brand(line: dict) -> bool:
+    """True when a seller field (attrs.brand or vendor, offered spec, name, listing URL) names a brand. Used only to word the
+    unverified note; a seller field is never an input to the recall lookup (#355)."""
+    attrs = line.get("attrs") or {}
+    if any(isinstance(attrs.get(k), str) and attrs[k].strip() for k in ("brand", "vendor")):
+        return True
+    return bool(_brands_in(f"{line.get('offered_spec') or ''} {attrs.get('name') or ''} {(line.get('listing_url') or '').replace('/', ' ')}"))
+
+
 def brands_of(line: dict, titles: dict | None = None) -> tuple[set[str], str | None]:
-    """-> (brands to look up, a note when the seller's brand disagrees). Our brand comes from the SKU spec and from our own
-    listing row for the bid's listing URL; the seller's words (attrs.brand or vendor, offered spec, name, URL) can only ADD a
-    lookup, never replace ours, so a seller-set brand is never a way past the recall check (#291)."""
+    """-> (brands to look up, a note when the seller's brand disagrees). The lookup uses ONLY our brands: the SKU spec and our
+    own listing row for the bid's listing URL (#355). The seller's words (attrs.brand or vendor, offered spec, name, URL) never
+    add or replace a lookup, so a seller-set brand is never a way past, or an input to, the recall check (#291, #355)."""
     attrs = line.get("attrs") or {}
     ours = our_brands(line, titles)
     seller_set = {_norm(attrs[k]) for k in ("brand", "vendor") if isinstance(attrs.get(k), str) and attrs[k].strip()}
-    theirs = _brands_in(f"{line.get('offered_spec') or ''} {attrs.get('name') or ''} {(line.get('listing_url') or '').replace('/', ' ')}")
     note = None
     if ours and seller_set and not seller_set & ours:
         note = (f"The seller's brand field does not match our listing data ({', '.join(sorted(ours))}); "  # #89: seller text never reaches a card
                 f"the recall check used {', '.join(sorted(ours))}.")
-    return ours | theirs | seller_set, note
+    return ours, note
 
 
 def brand_of(line: dict) -> str | None:
@@ -149,14 +157,14 @@ def recalls_for_bids(bids, fetch=None, now=None, cache_dir=None, rows=None, budg
             brands, note = brands_of(line, titles)
             if note:
                 notes.append(_note("advocate.brand_mismatch", note))
-            if not brands:
+            if not brands and seller_names_brand(line):  # #330, #355: only the seller named a brand; never look it up, never echo it
+                notes.append(_note("advocate.recall_unverified",
+                                   f"Recall check for {sku} is unverified: brand not confirmed from our data, so no recall "
+                                   "lookup was made.", "https://www.cpsc.gov/Recalls"))
+            elif not brands:
                 notes.append(_note("advocate.recall_unverified",
                                    f"Recall check unavailable for {sku} (unverified): no brand given, so no recall lookup was made.",
                                    "https://www.cpsc.gov/Recalls"))
-            elif not our_brands(line, titles) & set(BRANDS):  # #330: only the seller named a brand, so the lookup is theirs, not ours
-                notes.append(_note("advocate.recall_unverified",
-                                   f"Recall check for {sku} is unverified: brand not confirmed from our data, so the recall "
-                                   "lookup used the seller's brand only.", "https://www.cpsc.gov/Recalls"))
             for brand in brands:
                 wanted.setdefault((sku, brand), []).append(bid.get("id"))
     by_brand = {}

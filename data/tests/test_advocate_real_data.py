@@ -165,7 +165,16 @@ def test_the_price_check_needs_the_baseline_call(rd, monkeypatch, tmp_path):  # 
 NEED_4070 = {"id": "need-1", "items": [{"sku_spec": "rtx 4070 super 12gb", "condition": "new", "quantity": 1}], "owned": {}}
 
 
-def bid_4070(bid_id="b1", brand="MSI", price=599.0, url="https://www.microcenter.com/product/1/x"):
+def url_4070(brand):  # our own listing row per brand, so the brand is confirmed from our data (#355: the lookup uses ours only)
+    return f"https://www.microcenter.com/product/{brand.lower()}/x"
+
+
+ROWS_4070 = ROWS + [{**row("microcenter", 599.0, url=url_4070(b)), "sku": "rtx 4070 super 12gb", "title": f"{b} GeForce RTX 4070 Super 12G"}
+                    for b in ("MSI", "ASUS", "Gigabyte", "Zotac")]
+
+
+def bid_4070(bid_id="b1", brand="MSI", price=599.0, url=None):
+    url = url or url_4070(brand or "none")
     attrs = {"category": "gpu", "chipset": "RTX 4070 Super"}
     if brand is not None:
         attrs["brand"] = brand
@@ -178,7 +187,7 @@ def cpsc_item(title, name, url="https://www.cpsc.gov/Recalls/2026/sim"):  # SIM 
     return {"Title": f"{title} (SIM fixture)", "RecallDate": "2026-09-01T00:00:00", "URL": url, "Products": [{"Name": name}], "Manufacturers": []}
 
 
-def advise_4070(rd, bids, items, tmp_path, rows=ROWS, need=NEED_4070, **kw):
+def advise_4070(rd, bids, items, tmp_path, rows=ROWS_4070, need=NEED_4070, **kw):
     fetch = kw.pop("fetch", lambda url: json.dumps(items).encode())
     base, records, recalls, notes = rd.real_data.advice_inputs(need, bids, as_of=AT, rows=rows, fetch=fetch, cache_dir=tmp_path)
     return rd.real_data.with_notes(rd.checks.advise(need, bids, base, records, recalls, owned={}), notes)
@@ -219,11 +228,12 @@ def test_a_seller_set_brand_never_dodges_the_recall_check(rd, tmp_path):  # prob
     assert "generic" not in note["text"].lower() and "msi" in note["text"]  # the seller's own string is never echoed
 
 
-def test_a_seller_brand_in_the_sku_spec_is_ours_and_a_different_attr_brand_only_adds_a_lookup(rd, tmp_path):
+def test_a_brand_in_the_sku_spec_is_ours_and_a_different_seller_brand_never_adds_a_lookup(rd, tmp_path):  # #355 item 2
     b = bid_4070(brand="Generic")
     b["lines"][0]["sku_spec"] = "msi rtx 4070 super 12gb"
+    b["lines"][0]["offered_spec"] = "ASUS RTX 4070 Super"  # seller text naming a known brand is still the seller's
     brands, note = rd.real_data.brands_of(b["lines"][0])
-    assert brands == {"msi", "generic"} and note and "the recall check used msi" in note
+    assert brands == {"msi"} and note and "the recall check used msi" in note
 
 
 def test_an_unverified_check_never_says_no_problems_found(rd, tmp_path):  # probe 4: the spoken reason
@@ -257,7 +267,7 @@ def test_slow_lookups_run_in_parallel_and_stop_at_the_budget(rd, tmp_path):  # p
         return b"[]"
     bids = [bid_4070(f"b{i}", brand) for i, brand in enumerate(["MSI", "ASUS", "Gigabyte", "Zotac"])]
     t0 = time.monotonic()
-    found, notes = rd.real_data.recalls_for_bids(bids, fetch=slow, cache_dir=tmp_path, rows=ROWS, budget_s=0.3)
+    found, notes = rd.real_data.recalls_for_bids(bids, fetch=slow, cache_dir=tmp_path, rows=ROWS_4070, budget_s=0.3)
     took = time.monotonic() - t0
     release.set()
     assert took < 2 and found == [] and len([n for n in notes if "no CPSC answer within 0.3 s" in n["text"]]) == 4
@@ -291,21 +301,28 @@ def test_a_brand_only_the_seller_names_is_unverified_never_no_problems_found(rd,
     seen = []
     fetch = lambda u: seen.append(u) or json.dumps(MSI_5070TI_RECALL if "MSI" in u.upper() else []).encode()
     card = advise(rd, [bid(1275.0, brand="Generic", url="https://shop.example/not-in-our-rows")], fetch=fetch, cache_dir=tmp_path)[0]
-    assert seen and not any("MSI" in u.upper() for u in seen)  # the only lookup was the seller's brand
+    assert seen == []  # #355 item 2: a seller-only brand is never looked up
     assert card["rule_id"] == "advocate.unverified" and card["reason"] == "Some checks could not run"
     note = next(w for w in card["warnings"] if w["rule_id"] == "advocate.recall_unverified")
     assert "brand not confirmed from our data" in note["text"] and "generic" not in note["text"].lower()  # #89: never echoed
     assert "No problems found" not in json.dumps(card)
 
 
-def test_a_known_brand_only_the_seller_names_is_still_unconfirmed(rd, tmp_path):  # #330 item 1: seller "MSI", URL not ours
-    card = advise(rd, [bid(1275.0, brand="MSI", url="https://shop.example/not-in-our-rows")], fetch=lambda u: b"[]", cache_dir=tmp_path)[0]
-    assert card["rule_id"] == "advocate.unverified"
-    assert any("brand not confirmed from our data" in w["text"] for w in card["warnings"])
+def test_a_known_brand_only_the_seller_names_is_still_unconfirmed_and_never_looked_up(rd, tmp_path):  # #330 item 1, #355 item 2
+    seen = []
+    b = bid(1275.0, brand="MSI", url="https://shop.example/msi-rtx-5070-ti")  # seller brand and seller URL both say MSI; neither is ours
+    b["lines"][0]["offered_spec"] = "MSI GeForce RTX 5070 Ti"
+    card = advise(rd, [b], fetch=lambda u: seen.append(u) or json.dumps(MSI_5070TI_RECALL).encode(), cache_dir=tmp_path)[0]
+    assert seen == [] and card["rule_id"] == "advocate.unverified" and card["recommendation"] != "veto"
+    note = next(w for w in card["warnings"] if w["rule_id"] == "advocate.recall_unverified")
+    assert "brand not confirmed from our data" in note["text"] and "no recall lookup was made" in note["text"]
+    assert "msi" not in note["text"].lower()  # the seller's string is never echoed
 
 
-def test_a_brand_our_rows_confirm_is_no_unverified_note(rd, tmp_path):  # #330 item 1: the confirmed path stays advocate.ok
-    card = advise(rd, [bid(1275.0, brand="Generic")], fetch=lambda u: b"[]", cache_dir=tmp_path)[0]
+def test_a_brand_our_rows_confirm_is_looked_up_with_no_unverified_note(rd, tmp_path):  # #330 item 1, #355 item 2
+    seen = []
+    card = advise(rd, [bid(1275.0, brand="Generic")], fetch=lambda u: seen.append(u) or b"[]", cache_dir=tmp_path)[0]
+    assert seen and all("MSI" in u.upper() and "GENERIC" not in u.upper() for u in seen)  # our row's brand, never the seller's
     assert not any("brand not confirmed" in w["text"] for w in card["warnings"])
     assert card["rule_id"] == "advocate.ok"
 
