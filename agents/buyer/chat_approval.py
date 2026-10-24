@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import re
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -10,10 +11,23 @@ from typing import Any
 from pay.approval import CODE_TTL_SECONDS, ApprovalError
 from pay.mandate import parse_ts
 from pay.voice_cartesia import VoiceResult
+from uagents_core.types import DeliveryStatus, MsgStatus
 
 from . import checkout
 
 _CALL_UNAVAILABLE = {"quiet_hours", "not_configured", "unavailable"}
+
+
+def format_approval_result(result: VoiceResult, deal_id: str) -> str:
+    """Fixed, private owner-facing approval outcome; approval is not payment confirmation."""
+    if result.approved and isinstance(result.record, Mapping) and result.record.get("result") == "approved":
+        return f"Approval confirmed for deal {deal_id}. Payment is not confirmed by this approval."
+    reason = result.reason or "approval_unavailable"
+    if reason.startswith(("no_answer", "no_transcript", "no_buyer_speech", "dial_no_answer")):
+        return f"No answer for deal {deal_id}; approval was not granted."
+    reason_code = reason.split(":", 1)[0]
+    safe_reason = reason_code if re.fullmatch(r"[a-z][a-z0-9_]{0,39}", reason_code) else "approval_unavailable"
+    return f"Approval not granted for deal {deal_id} (reason: {safe_reason})."
 
 
 async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_owner: str,
@@ -28,20 +42,13 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
     """
     if not isinstance(sender, str) or not sender or sender != bound_owner:
         return VoiceResult(False, "wrong_owner")
-    try:
-        tx, mandate, deal = checkout._bound_transaction(transaction, approval_phase=True)
-    except (ValueError, PermissionError):
-        return VoiceResult(False, "transaction_invalid")
-    if mandate.get("within_allowance") is True:
-        return VoiceResult(False, "voice_approval_not_required")
-
     loop = asyncio.get_running_loop()
 
     async def send(text: str) -> None:
         result = send_private(text)
         if inspect.isawaitable(result):
-            await result
-        elif result is False:
+            result = await result
+        if result is False or (isinstance(result, MsgStatus) and result.status != DeliveryStatus.DELIVERED):
             raise RuntimeError
 
     def send_from_worker(text: str, timeout: float) -> None:
@@ -76,6 +83,21 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
                 return answer[1]
         return None
 
+    async def finish(result: VoiceResult, deal_id: str) -> VoiceResult:
+        try:
+            await send(format_approval_result(result, deal_id))
+        except Exception:
+            return VoiceResult(False, "private_result_delivery_failed", attempts=result.attempts)
+        return result
+
+    try:
+        tx, mandate, deal = checkout._bound_transaction(transaction, approval_phase=True)
+    except (ValueError, PermissionError):
+        return await finish(VoiceResult(False, "transaction_invalid"), "this deal")
+    deal_id = tx["deal_id"]
+    if mandate.get("within_allowance") is True:
+        return await finish(VoiceResult(False, "voice_approval_not_required"), deal_id)
+
     try:
         try:
             ready, unavailable_reason = call_ready()
@@ -91,28 +113,28 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
             try:
                 session, code = service.issue(mandate, channel="browser")
             except ApprovalError as error:
-                return VoiceResult(False, error.reason)
+                return await finish(VoiceResult(False, error.reason), deal_id)
             session.expires_at = min(session.expires_at,
                                      session.issued_at + timedelta(seconds=CODE_TTL_SECONDS))
             try:
                 await send(f"One-time approval code: {code}")
             except Exception:
                 session.silence()
-                return VoiceResult(False, "private_code_delivery_failed")
+                return await finish(VoiceResult(False, "private_code_delivery_failed"), deal_id)
             while not session.terminal:
                 typed = await typed_wait(session, prompt=False)
                 if typed is None:
                     break
                 decision = session.approve_typed(typed)
                 if decision.final:
-                    return VoiceResult(decision.approved, decision.reason, record=decision.record,
-                                       attempts=session.attempts)
+                    return await finish(VoiceResult(decision.approved, decision.reason, record=decision.record,
+                                                    attempts=session.attempts), deal_id)
             if not session.terminal and datetime.now(timezone.utc) >= session.expires_at:
                 decision = session.approve_typed("", now=session.expires_at)
             else:
                 decision = session.silence()
-            return VoiceResult(False, decision.reason or "no_answer", record=decision.record,
-                               attempts=session.attempts)
+            return await finish(VoiceResult(False, decision.reason or "no_answer", record=decision.record,
+                                            attempts=session.attempts), deal_id)
 
         prompt_sent = False
 
@@ -138,12 +160,13 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
                 return None
 
         try:
-            return await asyncio.to_thread(checkout.approve_offer, tx, client, service,
+            result = await asyncio.to_thread(checkout.approve_offer, tx, client, service,
                 on_code=on_code, buyer_name=buyer_name, typed_input=typed_input)
+            return await finish(result, deal_id)
         except PermissionError:
-            return VoiceResult(False, "private_code_delivery_failed")
+            return await finish(VoiceResult(False, "private_code_delivery_failed"), deal_id)
     except Exception:
-        return VoiceResult(False, "private_approval_unavailable")
+        return await finish(VoiceResult(False, "private_approval_unavailable"), deal_id)
 
 
 def format_settlement_result(envelope: Mapping[str, Any]) -> str:

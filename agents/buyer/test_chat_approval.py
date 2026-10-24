@@ -7,6 +7,7 @@ from agents.buyer.chat_approval import approve_in_chat, format_settlement_result
 from pay.approval import ApprovalService, code_hash
 from pay.mandate import new_mandate
 from pay.replay import NonceStore
+from uagents_core.types import DeliveryStatus, MsgStatus
 
 OWNER = "owner-authenticated-address"
 
@@ -65,24 +66,33 @@ class FakeVoiceClient:
 
 
 class PrivateChat:
-    def __init__(self, fail_code=False):
+    def __init__(self, fail_code=False, false_code=False, status_code=None):
         self.messages = []
         self.fail_code = fail_code
+        self.false_code = false_code
+        self.status_code = status_code
         self.code = None
 
     async def send_private(self, text):
         if self.fail_code and text.startswith("One-time approval code:"):
             raise RuntimeError("private channel failed")
+        if self.false_code and text.startswith("One-time approval code:"):
+            return False
+        if self.status_code is not None and text.startswith("One-time approval code:"):
+            return MsgStatus(status=self.status_code, detail="offline", destination="owner",
+                             endpoint="offline", session="chat-test")
         self.messages.append(text)
         if text.startswith("One-time approval code:"):
             self.code = text.split(": ", 1)[1].split(".", 1)[0]
+        return None
 
 
 def invoke(tx, service, client, private, **overrides):
     async def send_private(text):
-        await private.send_private(text)
+        result = await private.send_private(text)
         if text.startswith("One-time approval code:"):
             client.code = private.code
+        return result
 
     async def call():
         async def no_typed(_owner, _deal, _hash, _timeout):
@@ -103,9 +113,10 @@ def test_voice_approval_uses_real_generated_code_only_in_private_owner_message()
 
     # The code is set after the private callback runs, just before the fake call is read.
     async def capture_send(text):
-        await private.send_private(text)
+        result = await private.send_private(text)
         if text.startswith("One-time approval code:"):
             client.code = private.code
+        return result
 
     async def run_captured():
         return await approve_in_chat(tx, sender=OWNER, bound_owner=OWNER,
@@ -122,6 +133,7 @@ def test_voice_approval_uses_real_generated_code_only_in_private_owner_message()
     assert private.code not in repr(client.variables) and private.code not in repr(result)
     assert private.code not in " ".join(m for m in private.messages if m != code_message)
     assert client.calls == 1
+    assert private.messages[-1] == "Approval confirmed for deal deal-chat. Payment is not confirmed by this approval."
 
 
 @pytest.mark.parametrize("transcript,expected", [("deny", "denied"), ("approve", "approved")])
@@ -137,6 +149,11 @@ def test_explicit_voice_decision_is_final_without_typed_fallback(transcript, exp
     result = invoke(tx, service, client, private, wait_for_typed=should_not_wait)
     assert ("approved" if result.approved else "denied") == expected
     assert not waited
+    final = private.messages[-1]
+    assert ("Approval confirmed" if expected == "approved"
+            else f"reason: {result.reason.split(':', 1)[0]}") in final
+    if expected == "approved":
+        assert "Payment is not confirmed" in final
 
 
 def test_voice_no_answer_can_use_same_code_and_session_for_typed_fallback():
@@ -160,6 +177,7 @@ def test_voice_no_answer_without_typed_reply_stays_denied():
     result = invoke(tx, service, client, private)
     assert not result.approved and result.record["result"] == "no_answer"
     assert result.reason == "no_answer:dial_no_answer" and service.channels == ["phone"]
+    assert private.messages[-1] == "No answer for deal deal-chat; approval was not granted."
 
 
 def test_quiet_hours_uses_one_browser_session_and_same_typed_code_with_expiry():
@@ -227,6 +245,30 @@ def test_wrong_owner_and_private_delivery_failure_never_dial_or_fallback():
     result = invoke(tx, service, client, private, wait_for_typed=never_wait)
     assert not result.approved and result.reason == "private_code_delivery_failed"
     assert service.issued[0].terminal and client.calls == 0 and not waited
+
+
+def test_async_false_private_delivery_is_terminal_and_never_dials_or_falls_back():
+    tx, service, private, client = transaction(), FakeApprovalService(), PrivateChat(false_code=True), FakeVoiceClient()
+    waited = []
+
+    async def never_wait(*_args):
+        waited.append(True)
+        return (OWNER, private.code)
+
+    result = invoke(tx, service, client, private, wait_for_typed=never_wait)
+    assert not result.approved and result.reason == "private_code_delivery_failed"
+    assert service.issued[0].terminal and client.calls == 0 and not waited
+    assert not any(message.startswith("One-time approval code:") for message in private.messages)
+    assert private.messages[-1] == "Approval not granted for deal deal-chat (reason: private_code_delivery_failed)."
+
+
+def test_async_failed_sdk_status_private_delivery_is_terminal_and_never_dials():
+    tx, service, private, client = (transaction(), FakeApprovalService(),
+                                    PrivateChat(status_code=DeliveryStatus.FAILED), FakeVoiceClient())
+    result = invoke(tx, service, client, private)
+    assert not result.approved and result.reason == "private_code_delivery_failed"
+    assert service.issued[0].terminal and client.calls == 0
+    assert private.messages[-1] == "Approval not granted for deal deal-chat (reason: private_code_delivery_failed)."
 
 
 def test_foreign_typed_reply_does_not_use_or_consume_the_owner_approval():
