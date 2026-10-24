@@ -126,10 +126,11 @@ export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; 
   return { paired: true, reason: '' };
 }
 
-/** Owner only: a fresh code for this buyer, unlocked, with its counter reset. */
+/** Owner only: a fresh code for this buyer, unlocked, with its counter reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
 export function reissuePairCode(ctx: Ctx, { buyerId }: { buyerId: string }) {
   requireRole(ctx, 'reissue_pair_code', ['owner']);
   issuePairCode(ctx, buyerId);
+  for (const row of [...ctx.db.pairAttempt.iter()]) ctx.db.pairAttempt.identity.delete(row.identity);
 }
 
 export function issuePairCode(ctx: Ctx, buyerId: string) {
@@ -255,6 +256,8 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   const needCond = new Map([...ctx.db.needItem.needId.filter(r.needId)].map((i) => [i.skuSpec, i.condition]));
   const condOf = (sku: string, offered: string) => offered || needCond.get(sku) || 'new';
   for (const l of a.lines) {
+    // A seller has one sealed bid per round, so a line for a SKU the need does not have is refused here, not at close.
+    if (!needCond.has(l.skuSpec)) throw new SenderError(`bid refused: ${l.skuSpec}: not part of this need`);
     // A line's quantity is its stock (qty_available): a finite number above 0. Whether it covers the
     // need is decided at close, per line, so a short line just cannot be picked.
     if (!(Number.isFinite(l.quantity) && l.quantity > 0)) {

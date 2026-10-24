@@ -106,6 +106,15 @@ describe('sealed round', () => {
     expect(h.db.round.id.find('round-1')?.sealedCount).toBe(2);
   });
 
+  it('refuses a line whose SKU the need does not have, stores no bid, and the seller can still bid', () => {
+    setupRound();
+    expect(() => run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780), { ...line(10), skuSpec: 'junk' }])))).toThrow('bid refused: junk: not part of this need');
+    expect(h.db.bid.id.find('bid-a')).toBeFalsy();
+    expect(h.db.round.id.find('round-1')?.sealedCount).toBe(0);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a2', [line(780)])));
+    expect(h.db.round.id.find('round-1')?.sealedCount).toBe(1);
+  });
+
   it('a bid in the last seconds extends the deadline (anti-snipe)', () => {
     setupRound(15);
     const before = h.db.round.id.find('round-1')!.deadline.microsSinceUnixEpoch;
@@ -714,6 +723,14 @@ describe('pair code attempt limit', () => {
     const row = h.db.pairCode.buyerId.find('vidyut')!;
     expect(row).toMatchObject({ locked: false, failedAttempts: 0 });
     expect(tryPair(as('fresh-screen'), row.code)).toMatchObject({ paired: true });
+  });
+
+  it('reissue unlocks the same screen that locked itself; it pairs with the new code', () => {
+    const screen = as('stage-screen');
+    for (let i = 0; i < 5; i++) tryPair(screen, wrong());
+    expect(() => tryPair(screen, code)).toThrow(/locked/);
+    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }));
+    expect(tryPair(screen, h.db.pairCode.buyerId.find('vidyut')!.code)).toMatchObject({ paired: true });
   });
 
   it('a non-owner cannot reissue', () => {
