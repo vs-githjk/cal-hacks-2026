@@ -60,7 +60,7 @@ def test_send_result_logs_only_closed_status_and_exception_type():
 def test_ack_send_logs_correlation_and_closed_transport_status_only():
     lines = []
     diag = ChatDiagnostics(lines.append, clock=lambda: 1.0, now=lambda: '2026-10-24T09:00:00Z')
-    diag.ack_send_result('ack-id', 'private-inbound-id', 'private-owner', 'private-session',
+    diag.ack_send_result('private-inbound-id', 'private-owner', 'private-session',
                          result=type('Status', (), {'status': 'delivered', 'detail': 'private detail'})())
     text = '\n'.join(lines)
     assert 'event=ack_send_result' in text and 'status=delivered' in text

@@ -115,9 +115,9 @@ async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
     try:
         result = await ctx.send(sender, ack)
     except Exception as exc:
-        CHAT_DIAG.ack_send_result(ack.msg_id, msg.msg_id, sender, ctx.session, error=exc)
+        CHAT_DIAG.ack_send_result(msg.msg_id, sender, ctx.session, error=exc)
         raise
-    CHAT_DIAG.ack_send_result(ack.msg_id, msg.msg_id, sender, ctx.session, result=result)
+    CHAT_DIAG.ack_send_result(msg.msg_id, sender, ctx.session, result=result)
     command = hunt.command(msg.text().strip())
     if ROUND.get("owner") == sender and command:
         ROUND["owner_context"] = ctx
