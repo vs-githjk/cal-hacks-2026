@@ -1,5 +1,5 @@
 """Bounded GPU/PSU/case feasibility checks for an upstream selected build snapshot."""
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, DecimalException
 import json
 from numbers import Real
 
@@ -14,8 +14,11 @@ def _nonnegative_cents(value):
     if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
         return None
     try:
-        cents = Decimal(str(value)) * 100
-    except (InvalidOperation, TypeError, ValueError):
+        amount = Decimal(str(value))
+        if not amount.is_finite() or amount < 0:
+            return None
+        cents = amount * 100
+    except (DecimalException, OverflowError, TypeError, ValueError):
         return None
     if not cents.is_finite() or cents < 0 or cents != cents.to_integral_value():
         return None
@@ -111,7 +114,7 @@ def _selected_part(part, goal_item, candidate):
         return None, "selected line does not have quantity 1 available"
     try:
         available_ok = Decimal(str(available)).is_finite() and available >= 1
-    except (InvalidOperation, OverflowError, TypeError, ValueError):
+    except (DecimalException, OverflowError, TypeError, ValueError):
         available_ok = False
     if not available_ok:
         return None, "selected line does not have quantity 1 available"
@@ -145,7 +148,7 @@ def _selected_part(part, goal_item, candidate):
         return None, "landed quote needs explicit nonnegative shipping, tax, and positive landed cents"
     try:
         unit_cents = _cents(line.get("unit_price"))
-    except (ScriptError, TypeError):
+    except (DecimalException, OverflowError, ScriptError, TypeError):
         unit_cents = None
     if unit_cents is None or landed != unit_cents + shipping + tax:
         return None, "landed cents do not equal the selected line price plus explicit shipping and tax"

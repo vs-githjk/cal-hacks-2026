@@ -1,6 +1,8 @@
 import os
 import sys
 from copy import deepcopy
+from decimal import Decimal
+from fractions import Fraction
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -173,6 +175,25 @@ def test_owned_psu_is_skipped_only_for_matching_owned_record_and_card():
 def test_invalid_cap_money_is_blocked(bad):
     goal = build_goal(cap=bad)
     assert plan_build(goal, selected_for(goal), [], {}, 1000)["status"] == "blocked"
+
+
+def test_extreme_finite_cap_returns_blocked_without_decimal_overflow():
+    huge = Decimal("1e1000000")
+    goal = build_goal(cap=huge)
+    assert plan_build(goal, selected_for(goal), [], {}, huge)["status"] == "blocked"
+
+
+def test_extreme_finite_unit_price_returns_blocked_without_decimal_overflow():
+    goal = build_goal()
+    selected = selected_for(goal, unit_prices={"gpu": Decimal("1e1000000"), "psu": 120, "case": 90})
+    assert plan_build(goal, selected, [], {}, 1000)["status"] == "blocked"
+
+
+def test_non_decimal_quantity_conversion_failure_blocks():
+    goal = build_goal()
+    selected = selected_for(goal)
+    selected["gpu"]["line"]["qty_available"] = Fraction(3, 2)
+    assert plan_build(goal, selected, [], {}, 1000)["status"] == "blocked"
 
 
 @pytest.mark.parametrize("bad", [True, float("nan"), float("inf"), -1, 1.001])
