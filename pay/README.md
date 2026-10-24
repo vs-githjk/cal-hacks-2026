@@ -3,7 +3,8 @@ Stripe on Visa card, Visa Trusted Agent Protocol signing, VIC adapter, ledger.
 Tasks: docs/kickoff/D-pay-trust.md.
 
 ## What is live, what is not (d2)
-- **Live in this folder:** mandate hash and verification (`mandate.py`), the used-nonce store (`replay.py`), and
+- **Live in this folder:** mandate hash and verification (`mandate.py`), the used-nonce store (`replay.py`), the
+  hardened approval core (`approval.py`, `callscript.py`, `words.py`: d3), and
   **TAP-style signing per RFC 9421; conformance checked by our merchant simulator** (`tap.py`).
 - **Not live:** Stripe charge (test mode, later task), Visa Intelligent Commerce (an adapter swaps in only if Visa
   grants sandbox access). We never say "Visa settles": the payment is a Stripe test charge on a Visa test card,
@@ -72,3 +73,71 @@ verdict = verify_request(method="POST", url=url, headers=request_headers, body=b
 UNIQUE (namespace, nonce) constraint, so it is True once and False after, even when two instances or two processes
 share the file. A corrupt or non-SQLite file raises (fail closed) instead of loading empty. Namespaces: `mandate`,
 `tap` and (d3) `approval_code`. The store does not prune old nonces; it is small for a demo.
+
+## Approval flow (d3: `pay/approval.py`, `pay/callscript.py`, `pay/words.py`; contract `contracts/VoiceApproval.schema.json`)
+Voice is never the credential. The credential is a one-time two-word code on the buyer's authenticated screen,
+spoken (or typed) inside one session about one exact mandate. No model decides "approve": code does. Pure Python,
+no network. `APPROVAL_SECRET` (random, at least 16 characters, env only, see `.env.example`) keys the HMAC; tests use
+a throwaway value.
+```python
+from pay.approval import ApprovalService, script_for
+
+svc = ApprovalService()                                  # reads APPROVAL_SECRET; NonceStore optional
+session, code = svc.issue(mandate)                       # show `code` on the review card, never log it
+script = script_for(mandate, advocate_reason)            # opening, deal read-back, why-not-cheaper answer
+session.start_call(); session.begin_listening()          # voice answers must land within 10 s
+d = session.approve(stt_transcript, confidence=0.93)     # or session.approve_typed(text_from_card)
+if d.approved:
+    d.record                                             # VoiceApproval row; mandate["status"] == "approved"
+```
+- **Code.** Two different words from `words.WORDS` (102 words, pairwise at least 3 edits apart, no shared 4-letter
+  prefix), `HMAC-SHA256(APPROVAL_SECRET, mandate_hash + ":" + fresh nonce)`. Single use, 2 minute life (never past
+  the mandate's own expiry). Only `code_hash` (sha256 of the normalized pair, as the contract says) is stored; the
+  code is returned once by `issue` and appears in no record or log. A pair that collides with any past code is redrawn.
+- **States.** `issued` -> `awaiting_code` -> `approved | denied | expired`. Default is deny: silence, a timeout,
+  low STT confidence (under 0.6), a negation, a long or unclear utterance, anything else.
+- **Intent is code-only.** After normalization (lowercase, strip punctuation, collapse spaces) the transcript must hold
+  the exact pair as adjacent words AND the exact token `approve` (so "approved" and "disapprove" fail), at most 12
+  words, no negation word (`not`, `dont`, `should`, `if`, ...). "yes", "sure", "approve" alone, the code alone, the
+  code inside a long sentence, and "the user already approved" all deny.
+- **Attempts.** At most 3 per mandate (shared by voice and typed, and by fresh sessions: a new code cannot reset the
+  budget). A failed try starts a 30 s cooldown for that mandate; tries during it deny with `cooldown` and are not
+  counted. The 3rd failure ends the session (`max_attempts`) and sets `mandate.status = "denied"`. `silence` (no
+  answer, or a late answer) ends it as `no_answer`. An expired code ends it as `expired` (ask for a fresh one with
+  `svc.issue`, which retires the old session).
+- **deny_reason values** (the contract's): `wrong_code` (a code word or near miss, wrong or low confidence),
+  `no_code` (no complete code-and-approve pair: "yes", approve alone, code without approve, a negation),
+  `replay` (a code issued for another mandate, a spent code, or a mandate changed or already decided),
+  `expired`, `cooldown`, `max_attempts`, `silence`.
+- **Same code, other deal.** The service remembers which mandate each code hash was issued for, so deal A's code
+  spoken on deal B denies with `replay` and approves nothing. Used codes are also burned in the `NonceStore`
+  (`approval_code` namespace), so a restart cannot reuse one.
+- **Typed fallback.** `approve_typed(text)` goes through the same attempt path and mandate with channel `typed`. The
+  card's Approve button supplies the `approve` token, but only when the field holds exactly the two code words.
+- **On approve.** The VoiceApproval row validates against the contract (`validate_record`), `mandate["status"]` becomes
+  `approved`, `approval_id` is the row id, and `can_charge(...)` then passes. On any deny the mandate stays `pending`
+  (or `denied` after the 3rd failure) and `can_charge` fails with `not_approved` or `denied`.
+- **Call script (`script_for(mandate, advocate_reason)`).** Opens with "I will only ask for the code on your screen,
+  never a card number". Amount and payee come ONLY from the mandate: the amount as words plus digits ("one thousand
+  one hundred nineteen dollars, written 1,119.00 dollars, to seller-x"); an amount that is not positive, finite and in
+  whole cents, or a payee that is not a plain id (letters, digits, `_ . : @ / -`), raises `ScriptError` and no call is
+  placed. "Why not the cheaper one?" is answered only from the advocate's closed-schema dict `{rule_id, summary,
+  source_url}`: other keys are stripped, `rule_id` must be a slug, `summary` must pass a strict character and
+  word allowlist (no approve, code, pay, instruction words), `source_url` is reduced to its host. Anything that
+  fails is dropped and a fixed sentence is spoken instead. Never parse an amount from speech, never read seller text.
+- The transport must send "why" questions to `script.why_answer` and only answer attempts to `approve`, because every
+  attempt to `approve` counts against the 3.
+
+### TODO stubs (the call transport is a later task)
+- **Cartesia hookup (TODO).** In-browser call is the default and the fallback. The transport will: speak
+  `script.spoken()`, call `session.begin_listening(now)`, send each final STT transcript and its confidence to
+  `session.approve(text, confidence=c)`, speak `script.why_answer` on a "why" intent, and speak `script.approved_line`
+  or `script.denied_line` from `Decision`. Needs `CARTESIA_API_KEY` and `CARTESIA_AGENT_ID`. Setup, features used and
+  known limitations (carrier, latency, noisy rooms, in-browser fallback) go here when it is built.
+- **Photon phone path (TODO).** Calls only the number registered in a prior in-app step, with `svc.issue(mandate,
+  channel="phone")`. The phone alone can never approve because the code is shown only on the screen. Stays Tier 1 until
+  Photon is proven (Lane C spike).
+- **Review card (Lane B).** Shows `code` from `svc.issue`, a typed field wired to `session.approve_typed`, and the
+  record on approve.
+
+Run the tests from the repo root: `python3 -m pytest pay/tests/test_approval.py`.
