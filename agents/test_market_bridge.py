@@ -49,29 +49,31 @@ def test_missing_role_token_fails_before_market_constructor():
     assert constructed == []
 
 
-def test_coordinator_posts_private_goal_need_then_opens_separate_referee_round():
+def test_coordinator_posts_goal_need_then_opens_a_separate_referee_round():
     goal = {"id": "goal-1", "type": "part_by_date", "cap": 900, "deadline": "2026-10-30T00:00:00Z",
             "items": [{"sku_spec": "gpu", "condition": "new", "variant": "retail", "quantity": 1}]}
     need = {"id": "need-1", "delivery_window": "by Friday", "spend_limit": 900, "consent": True,
             "auction_window_s": 12, "items": [{"sku_spec": "gpu", "condition": "new", "variant": "retail",
-                                                       "quantity": 1, "unit": "each"}]}
+                                                   "quantity": 1, "unit": "each"}]}
     buyer_client = FakeMarket(sql_rows=[[{"id": "goal-1", "buyerId": "vidyut", "cap": 900}]])
     buyer = MarketBridge("buyer", client=buyer_client)
     buyer.post_goal(goal, buyer_id="vidyut")
     buyer.post_need(need, buyer_id="vidyut", goal_id="goal-1")
     referee_client = FakeMarket()
-    referee = MarketBridge("referee", client=referee_client)
-    referee.open_round("need-1", "need-1", 12)
+    MarketBridge("referee", client=referee_client).open_round("round-1", "need-1", 12)
     assert buyer_client.calls[0][0] == "post_goal"
     assert buyer_client.calls[0][1]["cap"] == 900
     assert buyer_client.calls[1][0] == "post_need"
     assert buyer_client.calls[1][1]["items"][0]["allowed_conditions"] == ["new"]
-    assert referee_client.calls == [("open_round", {"round_id": "need-1", "need_id": "need-1", "window_s": 12})]
+    assert referee_client.calls == [("open_round", {"round_id": "round-1", "need_id": "need-1", "window_s": 12})]
 
 
-def test_market_reducer_roles_are_not_interchangeable():
+def test_role_and_rule_id_validation_fail_closed():
     with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
         MarketBridge("buyer", client=FakeMarket()).open_round("r", "n", 12)
+    with pytest.raises(MarketBridgeError, match="market_review_invalid"):
+        MarketBridge("referee", client=FakeMarket()).attach_verdict(
+            bid_id="b", verdict="allow", rule_ids=["x" * 129])
 
 
 def test_publish_bid_sets_original_index_metadata_then_reads_back_canonical_value():

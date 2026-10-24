@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import crs
+from advocate.checks import CALL_SUMMARIES
 
 REAL_CHECK_SELLERS = crs.check_sellers
 REAL_ELIGIBLE = crs.eligible
@@ -79,7 +80,14 @@ def run_bounded(coro):
 
 
 def card(**updates):
-    return dict(need_id='need-1', bid_id='bid-1', warnings=[], recommendation='buy', wait_until='') | updates
+    reason = CALL_SUMMARIES['advocate.ok']
+    source = 'https://example.test/advocate'
+    return dict(need_id='need-1', bid_id='bid-1', warnings=[], claim_checks=[], recommendation='buy',
+                wait_until='', call_reason={'rule_id': 'advocate.ok', 'summary': reason, 'source_url': source},
+                rule_id='advocate.ok', reason=reason, source_url=source) | updates
+
+
+VALID_GOAL = 'a new GPU under $800 by Friday'
 
 
 @pytest.mark.parametrize('payload', ['{', '[]', '{}', '[1]', json.dumps([card(need_id='old')]),
@@ -444,7 +452,7 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer,
         bid = dict(buyer.ROUND['bids'][0])
         buyer.ROUND.clear()
         with patch('uagents.context.dispatcher.contains', return_value=False):
-            await buyer.on_chat(owner_ctx, owner, buyer.ChatMessage(content=[buyer.TextContent(text='GPU under $800')]))
+            await buyer.on_chat(owner_ctx, owner, buyer.ChatMessage(content=[buyer.TextContent(text=VALID_GOAL)]))
             buyer.ROUND.update(phase='advice', bids=[bid])
             await buyer.on_advice(advocate_ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
                 cards_json=json.dumps([card(need_id=buyer.ROUND['need']['id'])])))
@@ -505,7 +513,7 @@ def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase,
     ctx = Context()
     buyer.ROUND.update(owner='alice', owner_context=object(), phase=phase,
                        goal={'id': 'old-goal', 'state': state}, order=None)
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     assert buyer.ROUND['owner'] == 'bob'
     assert buyer.ROUND['goal']['buyer_id'] == 'bob'
     assert buyer.ROUND['goal']['id'] != 'old-goal'
@@ -540,7 +548,7 @@ def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch
     buyer.ROUND.update(owner='alice', owner_context=object(), phase='done',
                        goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     current_need = buyer.ROUND['need']['id']
     monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'allow'})
     monkeypatch.setattr(buyer.common, 'validate', lambda contract, payload: payload)
@@ -572,7 +580,7 @@ def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(buyer, mo
     ctx = Context()
     old_need_id = buyer.ROUND['need']['id']
     asyncio.run(buyer.handle_text(ctx, 'owner', 'CANCEL'))
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     assert old_need_id in buyer.ROUND['retired_need_ids']
     monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'block', 'reasons': ['injection']})
     bid = {'id': 'old-bid', 'need_id': old_need_id, 'persona': 'Seller', 'lines': [],
@@ -590,7 +598,7 @@ def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, 
     ctx = Context()
     buyer.ROUND['need']['id'] = 'alice-need'
     buyer.ROUND.update(owner='alice', phase='done', goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     current_need = buyer.ROUND['need']['id']
     buyer.ROUND.update(phase='advice', bids=[{'id': 'bob-bid'}], attempts=0)
     screened = []
@@ -685,7 +693,7 @@ def test_start_round_stops_before_old_summary_after_final_send_is_superseded(buy
 
         ctx = PausedLastSeller()
         buyer.ROUND.clear()
-        task = asyncio.create_task(buyer.handle_text(ctx, 'old-owner', 'GPU under $800'))
+        task = asyncio.create_task(buyer.handle_text(ctx, 'old-owner', VALID_GOAL))
         await started.wait()
         buyer.ROUND.clear()
         buyer.ROUND.update(owner='new-owner', owner_context=ctx, round_token='replacement',

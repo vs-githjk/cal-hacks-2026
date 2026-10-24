@@ -223,6 +223,22 @@ class MarketBridge:
             raise MarketBridgeError("bid_readback_ambiguous")
         return _project(rows[0], _BID_COLUMNS)
 
+    @staticmethod
+    def _same_bid(row: Mapping[str, Any] | None, *, bid_id: str, round_id: str, seller_id: str,
+                  persona: str, lines: list[dict[str, Any]], stated_total: float, perks: Sequence[str],
+                  claims: Sequence[str], origin: str, source: str) -> bool:
+        if not row:
+            return False
+        try:
+            stored_lines = _normalized_lines(row.get("lines"))
+        except MarketBridgeError:
+            return False
+        return (row.get("id") == bid_id and row.get("round_id") == round_id and row.get("seller_id") == seller_id
+                and row.get("persona") == persona and stored_lines == lines
+                and _finite(row.get("stated_total"), "stated_total") == stated_total
+                and _decode(row.get("perks")) == list(perks) and _decode(row.get("claims")) == list(claims)
+                and row.get("origin") == origin and row.get("source") == source)
+
     def post_goal(self, goal: Mapping[str, Any], *, buyer_id: str) -> None:
         """Persist the buyer's parsed goal without sending its cap to sellers."""
         if self.role != "buyer" or not isinstance(goal, Mapping):
@@ -262,18 +278,22 @@ class MarketBridge:
                           "unit": item.get("unit", "each")})
         if not items:
             raise MarketBridgeError("need_items_invalid")
+        window = _finite(need.get("auction_window_s"), "auction_window", minimum=1)
+        if int(window) != window:
+            raise MarketBridgeError("invalid_auction_window")
         self._call("post_need", id=need_id, buyer_id=_safe_id(buyer_id, "buyer_id"), goal_id=_safe_id(goal_id, "goal_id"),
                    delivery_window=need.get("delivery_window", ""),
                    spend_limit=_finite(need.get("spend_limit"), "spend_limit", minimum=0.000000001),
-                   consent=bool(need.get("consent", True)),
-                   auction_window_s=int(_finite(need.get("auction_window_s"), "auction_window", minimum=1)),
-                   origin="SIM", items=items)
+                   consent=bool(need.get("consent", True)), auction_window_s=int(window), origin="SIM", items=items)
 
     def open_round(self, round_id: str, need_id: str, window_s: int) -> None:
         if self.role != "referee":
             raise MarketBridgeError("market_role_mismatch")
+        window = _finite(window_s, "auction_window", minimum=1)
+        if int(window) != window:
+            raise MarketBridgeError("invalid_auction_window")
         self._call("open_round", round_id=_safe_id(round_id, "round_id"), need_id=_safe_id(need_id, "need_id"),
-                   window_s=int(_finite(window_s, "auction_window", minimum=1)))
+                   window_s=int(window))
 
     def round_status(self, round_id: str) -> dict[str, Any]:
         round_id = _safe_id(round_id, "round_id")
@@ -293,24 +313,12 @@ class MarketBridge:
     def attach_verdict(self, *, bid_id: str, verdict: str, rule_ids: Sequence[str], origin: str = "SIM") -> None:
         if self.role != "referee" or verdict not in {"allow", "quarantine", "block"}:
             raise MarketBridgeError("market_review_invalid")
+        if (not isinstance(rule_ids, (list, tuple)) or len(rule_ids) > 32
+                or any(not isinstance(rule, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", rule)
+                       for rule in rule_ids)):
+            raise MarketBridgeError("market_review_invalid")
         self._call("attach_verdict", bid_id=_safe_id(bid_id, "bid_id"), verdict=verdict,
-                   rule_ids=[str(rule)[:128] for rule in rule_ids[:32]], origin=origin)
-
-    @staticmethod
-    def _same_bid(row: Mapping[str, Any] | None, *, bid_id: str, round_id: str, seller_id: str,
-                  persona: str, lines: list[dict[str, Any]], stated_total: float, perks: Sequence[str],
-                  claims: Sequence[str], origin: str, source: str) -> bool:
-        if not row:
-            return False
-        try:
-            stored_lines = _normalized_lines(row.get("lines"))
-        except MarketBridgeError:
-            return False
-        return (row.get("id") == bid_id and row.get("round_id") == round_id and row.get("seller_id") == seller_id
-                and row.get("persona") == persona and stored_lines == lines
-                and _finite(row.get("stated_total"), "stated_total") == stated_total
-                and _decode(row.get("perks")) == list(perks) and _decode(row.get("claims")) == list(claims)
-                and row.get("origin") == origin and row.get("source") == source)
+                   rule_ids=list(rule_ids), origin=origin)
 
     def publish_bid(self, *, bid_id: str, round_id: str, seller_id: str, persona: str, lines: Sequence[Mapping[str, Any]],
                     line_metadata: Sequence[Mapping[str, Any]], stated_total: float = 0.0,

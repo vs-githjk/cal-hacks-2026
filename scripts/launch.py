@@ -155,7 +155,8 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
     shield_url = f"http://{HOST}:{a.shield_port}"
     py = str(venv_python(repo))
     mb = getattr(a, "mailbox", False)
-    agent_env = lambda flag: {"SHIELD_URL": shield_url, **({flag: "1"} if mb else {})}  # noqa: E731
+    mailbox_value = "1" if mb else ""
+    agent_env = lambda flag: {"SHIELD_URL": shield_url, "AGENTS_MAILBOX": mailbox_value, flag: mailbox_value}  # noqa: E731
     mode = "Agentverse mailbox" if mb else "local mode, not Agentverse mailbox"
     return [
         Service("market-stdb", a.stdb_port, [find_tool("spacetime") or "spacetime", "start", "--listen-addr", f"{HOST}:{a.stdb_port}"], repo / "market",
@@ -170,6 +171,8 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
                 group="agents", extra_env=agent_env("ADVOCATE_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("buyer", 8001, [py, "buyer/buyer_agent.py"], repo / "agents", health="tcp", wait=90, group="agents",
                 extra_env=agent_env("BUYER_MAILBOX"), note=f"{mode}; port fixed in code"),
+        Service("shield-client", 8004, [py, "shield_client.py"], repo / "agents", health="tcp", wait=90, group="agents",
+                extra_env=agent_env("SHIELD_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("web", a.web_port,
                 [shutil.which("node") or "node", str(repo / "web" / "node_modules" / "next" / "dist" / "bin" / "next"),
                  "dev", "-p", str(a.web_port)], repo / "web", wait=150, env_filter="web",
@@ -772,9 +775,9 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--shield-port", type=int, default=8787)
     p.add_argument("--web-port", type=int, default=3100)
     p.add_argument("--stdb-port", type=int, default=3000, help="SpacetimeDB listen port")
-    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, web)")
+    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, shield-client, web)")
     p.add_argument("--mailbox", action="store_true",
-                   help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX); register each once with agents/connect.py <port>")
+                   help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX, SHIELD_MAILBOX); register each once with agents/connect.py <port>")
     p.add_argument("--strict", action="store_true", help="status: also exit 1 when a service is SKIPPED")
     return p
 
