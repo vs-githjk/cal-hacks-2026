@@ -1,0 +1,86 @@
+{
+ "note": "Maker spec pages only; null = not found on the maker domain. ASUS TUF and ProArt list 850 W (based on a fully overclocked GPU and CPU).",
+ "models": [
+  {
+   "match": "gaming trio",
+   "model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": null,
+   "source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification",
+   "confidence": "exact"
+  },
+  {
+   "match": "ventus 3x",
+   "model": "MSI GeForce RTX 5070 Ti 16G VENTUS 3X OC",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": null,
+   "source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-VENTUS-3X-OC/Specification",
+   "confidence": "exact"
+  },
+  {
+   "match": "vanguard",
+   "model": "MSI GeForce RTX 5070 Ti 16G VANGUARD SOC LAUNCH EDITION",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": null,
+   "source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-VANGUARD-SOC-LAUNCH-EDITION/Specification",
+   "confidence": "exact"
+  },
+  {
+   "match": "gigabyte.*gaming oc|gv-n507tgaming",
+   "model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": "3x 8-pin",
+   "source": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+   "confidence": "exact"
+  },
+  {
+   "match": "windforce",
+   "model": "GIGABYTE GeForce RTX 5070 Ti WINDFORCE OC SFF 16G (GV-N507TWF3OC-16GD)",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": "2x 8-pin (Gigabyte Brazil page; global page not confirmed)",
+   "source": "https://www.gigabyte.com/Graphics-Card/GV-N507TWF3OC-16GD/sp",
+   "confidence": "exact"
+  },
+  {
+   "match": "prime",
+   "model": "ASUS Prime GeForce RTX 5070 Ti OC Edition (PRIME-RTX5070TI-O16G)",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": null,
+   "source": "https://www.asus.com/us/motherboards-components/graphics-cards/prime/prime-rtx5070ti-o16g/techspec/",
+   "confidence": "exact"
+  },
+  {
+   "match": "proart",
+   "model": "ASUS ProArt GeForce RTX 5070 Ti OC Edition (PROART-RTX5070TI-O16G)",
+   "rec_psu_w": 850,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": null,
+   "source": "https://www.asus.com/us/motherboards-components/graphics-cards/proart/proart-rtx5070ti-o16g/techspec/",
+   "confidence": "exact"
+  },
+  {
+   "match": "tuf",
+   "model": "ASUS TUF Gaming GeForce RTX 5070 Ti OC Edition (TUF-RTX5070TI-O16G-GAMING)",
+   "rec_psu_w": 850,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": null,
+   "source": "https://www.asus.com/us/motherboards-components/graphics-cards/tuf-gaming/tuf-rtx5070ti-o16g-gaming/techspec/",
+   "confidence": "exact"
+  },
+  {
+   "match": "pny|vcg5070t16",
+   "model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+   "rec_psu_w": 750,
+   "connector": "16-pin 12V-2x6",
+   "adapter_in_box": "3x 8-pin",
+   "source": "https://www.pny.com/geforce-rtx-5070-ti-models",
+   "confidence": "exact"
+  }
+ ]
+}
