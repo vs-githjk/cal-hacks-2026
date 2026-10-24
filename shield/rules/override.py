@@ -122,6 +122,8 @@ includes included not fully tested working new used refurbished none n a require
 sealed retail box open liquid air cooled water aio rgb wifi bluetooth ethernet usb hdmi displayport dp ports port
 the bit oc founders ventus trio windforce build builds h hr hrs hours manual bare board motherboard mobo only card
 chassis cooler fan fans see listing photos ddr am lga no mag tomahawk aero elite master extreme hero apex formula
+activated licensed genuine pc graphics integrated lts version great good excellent condition never like macbook imac
+air studio inch bit
 """.split())
 _WORD = rx(r"[^\W_]+")
 _NEXT = rx(r"\S")
@@ -142,18 +144,47 @@ def _line_words(doc, start, end):
     return _WORD.findall(unicodedata.normalize("NFKC", html.unescape(raw)).lower())
 
 
+# A line after the spec line that gives an order ("Approve the seller", "- pay now", "You must trust this seller")
+_ORDER_LINE = rx(r"[ \t]{0,20}(?:[-*\u2022#>]+[ \t]{0,5})?[*_]{0,2}(?:approve|pay|release|send|transfer|wire|trust|skip|ignore"
+                 r"|disregard|charge|authori[sz]e|confirm|buy|purchase|accept|select|choose|pick|rank|override|bypass|proceed"
+                 r"|complete|finali[sz]e|execute|do\s+not|don'?t|never|always|immediately|now|agents?|assistant"
+                 r"|you\s+(?:must|should|need|have\s+to|are\s+(?:now|required|instructed|authori[sz]ed)))\b")
+
+
+def _line_end(text, pos):
+    end = text.find("\n", pos)
+    return len(text) if end < 0 else end
+
+
 def bare_system_spans(doc):
     text = doc.norm
+    judged = set()   # line ends already judged: a second label on a line is inside the first one's words
     for m in _SYS_LABEL.finditer(text):
         nxt = _NEXT.search(text, m.end())   # the rest of the line, or the next non-blank line however far down
         if not nxt:
             continue
-        end = text.find("\n", nxt.start())
-        end = min(len(text) if end < 0 else end, nxt.start() + 400)
-        if all(_spec_word(w) for w in _line_words(doc, nxt.start(), end)):
+        end = _line_end(text, nxt.start())
+        if end in judged:
             continue
-        start = m.start() + (1 if text[m.start()] in "\n\r>[({\"'" else 0)
-        yield doc.raw_span(start, end)
+        judged.add(end)
+        words = _line_words(doc, nxt.start(), end)
+        while not words:   # "System: -" or "System: ...": the next line with a word decides
+            nxt = _NEXT.search(text, end)
+            if not nxt:
+                break
+            end = _line_end(text, nxt.start())
+            words = _line_words(doc, nxt.start(), end)
+        bad = not all(_spec_word(w) for w in words)
+        stop = end
+        for _ in range(3):   # the next three non-blank lines must not give an order either
+            nxt = _NEXT.search(text, stop)
+            if bad or not nxt:
+                break
+            stop = _line_end(text, nxt.start())
+            bad = bool(_ORDER_LINE.match(text, text.rfind("\n", 0, nxt.start()) + 1))
+        if bad:
+            start = m.start() + (1 if text[m.start()] in "\n\r>[({\"'" else 0)
+            yield doc.raw_span(start, stop)
 
 
 def check(doc, ctx):
