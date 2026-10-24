@@ -79,14 +79,22 @@ def test_settle_rejects_expired_mandate():
 
 
 def test_pick_best_prefers_asked_condition_over_cheaper_refurb():
-    bids = [{"id": "frankie", "total_landed_price": 528}, {"id": "sally", "total_landed_price": 550},
-            {"id": "byte", "total_landed_price": 582}]
+    bids = [{"id": "frankie", "supplier_id": "seller_1", "total_landed_price": 528},
+            {"id": "sally", "supplier_id": "seller_2", "total_landed_price": 550},
+            {"id": "byte", "supplier_id": "seller_3", "total_landed_price": 582}]
     cards = {"frankie": {"recommendation": "veto", "warnings": [{"kind": "condition"}]},
              "sally": {"recommendation": "caution", "warnings": [{"kind": "spec"}, {"kind": "fit_unknown"}]},
              "byte": {"recommendation": "caution", "warnings": [{"kind": "fit_unknown"}]}}
-    assert hunt.pick_best(bids, cards) == 3  # Byte Bros: new as asked; Sally only if nothing else is left
-    assert hunt.pick_best(bids[:2], cards) == 2
-    assert hunt.pick_best(bids[:1], cards) is None
+    assert hunt.pick_best(bids, cards, {"seller_1", "seller_2", "seller_3"}) == 3  # Byte Bros: new as asked; Sally only if nothing else is left
+    assert hunt.pick_best(bids[:2], cards, {"seller_1", "seller_2"}) == 2
+    assert hunt.pick_best(bids[:1], cards, {"seller_1"}) is None
+
+
+def test_pick_best_skips_cheapest_crs_ineligible_bid():
+    bids = [{"id": "cheap", "supplier_id": "seller_1", "total_landed_price": 10},
+            {"id": "eligible", "supplier_id": "seller_2", "total_landed_price": 20}]
+    cards = {bid["id"]: {"recommendation": "buy"} for bid in bids}
+    assert hunt.pick_best(bids, cards, {"seller_2"}) == 2
 
 
 def test_command_only_whole_message_counts():
