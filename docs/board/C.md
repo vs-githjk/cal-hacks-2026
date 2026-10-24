@@ -80,3 +80,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - 09:29 #175: normalize.landed reads eBay '+$N delivery|shipping'; 3 eBay rows now have landed prices; demo winner unchanged. PR open.
 - 11:03 #205: Apify Actor fallbacks (down, slow 6 s, quota 402/429, empty) all give unverified + 'claim check unavailable', one call, no retry; row in REAL_VS_SIMULATED. PR open.
 - 11:01 #204 (c11): baselines read saved Bright Data rows if present (never call it); tests for dated rows with URLs and source labels, two owners on the demo item, feed date range. PR open.
+- 13:03 #283 T3: advocate and buyer price against the dated baseline (agents/advocate/real_data.py); stale or failed baseline or recall lookup is a labelled unverified note. PR open.

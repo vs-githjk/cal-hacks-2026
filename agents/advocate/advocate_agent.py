@@ -7,7 +7,7 @@ from uagents import Agent, Context
 
 import common
 import status
-from advocate import checks, mock_data
+from advocate import checks, real_data
 
 agent = Agent(**common.agent_args(
     "advocate", 8003, name="Tech Bazaar Quality Advocate", handle="techbazaaradvocate",
@@ -34,8 +34,8 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
         ctx.logger.warning(f"shield {verdict['verdict']} from {sender}: {verdict['reasons']}")
         return
     need, bids = json.loads(msg.need_json), json.loads(msg.bids_json)
-    cards = checks.advise(need, bids, mock_data.BASELINE, mock_data.RECORDS, mock_data.RECALLS,
-                          owned=need.get("owned", {}))
+    baseline, records, recalls, notes = real_data.advice_inputs(need, bids)  # dated baseline, CPSC; unverified lookups become notes
+    cards = real_data.with_notes(checks.advise(need, bids, baseline, records, recalls, owned=need.get("owned", {})), notes)
     for c in cards:
         common.validate("AdvocateCard", c)
     ctx.logger.info(status.msg_line("advocate", "buyer", "advice"))

@@ -22,10 +22,12 @@ import hunt
 from chat_trace import round_trace
 import payment
 import status
-from advocate.mock_data import BASELINE
+from advocate.real_data import shield_baseline
 from chat_diagnostics import ChatDiagnostics
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
 from logic import advice_need_for, decide, make_order, sealed
+
+BASELINE = shield_baseline()  # real dated price where we hold data, labelled SIM rows for the rest
 
 ADVICE_TIMEOUT_S = 15
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE
