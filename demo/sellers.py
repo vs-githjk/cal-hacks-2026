@@ -29,6 +29,8 @@ SELLER_OF_RECORD = {  # snapshot file prefix -> seller of record for listings th
     "bestbuy": "Best Buy",
     "microcenter": "Micro Center",
     "bh": "B&H Photo",
+    "amazon": "Amazon.com",   # label only: Amazon listings are split by who the listing says sells it
+    "ebay_live": "eBay",
 }
 
 
