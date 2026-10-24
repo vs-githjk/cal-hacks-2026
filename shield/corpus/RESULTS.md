@@ -13,7 +13,7 @@ Run date: 2026-10-23. Command: `python3 -m shield.corpus.run_corpus --write`. Cl
 | post-freeze check (`fresh12.jsonl`, run once, not tuned) | 6 of 12 (50.0%) | 3 | 3 | no controls |
 
 False positives across ALL controls (dev 10 + dev2 15): 0.
-p95 latency per message: dev 23.58 ms, dev2 0.53 ms.
+p95 latency per message: dev 23.48 ms, dev2 0.53 ms.
 
 ## How to read these honestly
 
