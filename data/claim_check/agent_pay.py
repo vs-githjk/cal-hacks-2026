@@ -1,4 +1,4 @@
-"""An AI agent pays Apify for one claim-check run with stablecoin, no Apify account (Lane C, issue #270, Tier B).
+"""An AI agent pays Apify for one claim-check run with stablecoin, no Apify account (Lane C, issue #270, Tier B; in data/claim_check, not scripts/, per #276).
 
 SPENDS REAL MONEY. Run it only on the machine whose wallet Vidyut approved ($5 to $10).
 
@@ -7,15 +7,15 @@ Run steps, in order:
        awal (Coinbase, x402 on Base):  npx awal auth login <email>; npx awal auth verify <otp>; npx awal balance
        mppx (MPP on Tempo):            npm i -g mppx; mppx account create; mppx account view   (fund USDC.e or pathUSD)
        pay.sh (Solana, x402):          npm install -g @solana/pay; pay setup; pay whoami       (fund USDC or USDT)
-  1. Free check that the pay wall answers:   python3 scripts/apify_agent_pay_probe.py
-  2. Pay and run:                            python3 scripts/apify_agent_pay.py --payer awal --amount 5
+  1. Free check that the pay wall answers:   python3 -m data.claim_check.agent_pay_probe
+  2. Pay and run:                            python3 -m data.claim_check.agent_pay --payer awal --amount 5
      It shows what it will spend and asks you to type PAY. Then it:
        a. buys a prepaid, spend-capped Apify token for --amount USD at agi.apify.com through the payer CLI;
        b. saves the token as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); it never prints it, only its last 4 characters;
        c. prints the token's balance (GET https://agi.apify.com/prepaid-tokens/balance);
        d. runs the claim-check Actor once on the demo listing with that token;
        e. prints the balance again and the run id, and writes data/claim_check/agent_pay_run.json labelled LIVE.
-  3. A rerun with the token already saved skips the purchase:   python3 scripts/apify_agent_pay.py --token-from-env
+  3. A rerun with the token already saved skips the purchase:   python3 -m data.claim_check.agent_pay --token-from-env
 
 The script never reads, prints or stores a wallet key. The payer CLI holds the wallet and signs the 402 challenge
 (awal signs in by email, mppx keeps its account in the OS keychain, pay.sh uses the OS keystore), so a key never passes
@@ -37,7 +37,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 AGI = "https://agi.apify.com"
 API = "https://api.apify.com/v2"
 ACTOR = "anoopibrampur~tech-bazaar-claim-check"

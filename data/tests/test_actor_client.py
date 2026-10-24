@@ -181,3 +181,22 @@ def test_without_an_agent_token_our_account_pays_and_says_so(monkeypatch):
     seen = []
     out = check_via_actor(CLAIM, post=lambda url, body, headers, timeout: seen.append(headers) or (201, [OK]))
     assert seen[0] == {"Authorization": "Bearer apify_api_OURS"} and out["paid_by"] == "our Apify account"
+
+
+# review fixes (#274)
+@pytest.mark.parametrize("url", ["http://user@/x", "http://:80/x", "https://@/", "http://[::1"])
+def test_a_url_without_a_host_is_unverified(url):
+    assert check_via_actor(CLAIM, post=fake(status=201, rows=[{**OK, "evidence_url": url}])[0])["result"] == "unverified"
+
+
+@pytest.mark.parametrize("other", [{"evidence_hash": "different"}, {"evidence_url": "https://www.bestbuy.com/site/other"}])
+def test_duplicate_rows_must_agree_on_page_and_hash_too(other):
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[OK, {**OK, **other}])[0])
+    assert out["result"] == "unverified" and "disagree" in out["method"]
+
+
+def test_a_boolean_id_never_matches_a_numeric_claim_id():
+    claim = {**CLAIM, "id": 1}
+    out = check_via_actor(claim, post=fake(status=201, rows=[{**OK, "id": True}])[0])
+    assert out["result"] == "unverified" and out["method"].startswith(f"{UNAVAILABLE}: empty")
+    assert check_via_actor(claim, post=fake(status=201, rows=[{**OK, "id": 1}])[0])["result"] == "verified"

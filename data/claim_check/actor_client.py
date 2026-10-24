@@ -96,18 +96,22 @@ def _http_url(url) -> bool:
         u = urlparse(url)
     except ValueError:
         return False
-    return u.scheme in ("http", "https") and bool(u.netloc)
+    try:
+        host = u.hostname  # "http://user@/x" and "http://:80/x" have a netloc but no host
+    except ValueError:
+        return False
+    return u.scheme in ("http", "https") and bool(host)
 
 
 def _read(claim: dict, rows: list) -> dict:
     """Only rows naming this claim's id count. Rows that disagree, or a verdict without its own http(s) page and page hash,
     are unverified."""
     cid = claim.get("id")
-    mine = [r for r in rows if isinstance(r, dict) and cid is not None and r.get("id") == cid]
-    if not mine:
+    mine = [r for r in rows if isinstance(r, dict) and cid is not None and type(r.get("id")) is type(cid) and r.get("id") == cid]
+    if not mine:  # the id must match in value and type, so True never matches a claim id of 1
         return _unavailable(claim, "empty", "no row for this claim")
-    if len({str(r.get("result")) for r in mine}) > 1:
-        return _unavailable(claim, "error", "rows for this claim disagree")
+    if len({(repr(r.get("result")), repr(r.get("evidence_url")), repr(r.get("evidence_hash"))) for r in mine}) > 1:
+        return _unavailable(claim, "error", "rows for this claim disagree")  # same verdict, page and hash, or none of them
     row = mine[0]
     if row.get("result") not in RESULTS:
         return _unavailable(claim, "error", "row has no valid result")
