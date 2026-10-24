@@ -13,6 +13,10 @@ from dataclasses import dataclass, field
 INVISIBLE = frozenset(
     "​‌‍‎‏⁠⁡⁢⁣⁤﻿­᠎"
     "‪‫‬‭‮⁦⁧⁨⁩"
+    # fillers and marks that render as nothing or a blank: Hangul fillers, braille blank, combining grapheme joiner,
+    # variation selector 16, Mongolian FVS1, Khmer inherent vowel, tag space, Arabic letter mark. Dropped, so an in-word
+    # one glues the word back for every rule ("instruc<U+2800>tions"); secret_ask reads them once more as word gaps.
+    "ㅤﾠ⠀ᅟ឵͏️᠋󠀠؜"
 )
 
 # Small, deliberate table: the look-alikes attackers actually use to dodge keyword filters.
