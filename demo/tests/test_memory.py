@@ -266,3 +266,17 @@ def test_an_approval_for_another_mandate_is_not_a_purchase():
 def test_a_nan_payment_is_not_a_purchase():
     t = dict(MARKET, payment=[['"h1"', '"ch_test_1"', "nan", "2026-10-24T18:02:05+00:00", '"sim"']])
     assert not [e for e in M.from_market(fake_sql(t), "m") if e["kind"] == "purchase"]
+
+
+
+@pytest.mark.parametrize("change", ["failed_charge", "no_hash"])
+def test_a_failed_charge_or_a_mandate_with_no_hash_is_not_a_purchase(change):
+    run = _sample()
+    a = run["artifacts"]
+    if change == "failed_charge":
+        a["charge"]["status"] = "failed"
+    else:
+        a["mandate"]["hash"] = None
+        a["approval_record"]["mandate_hash"] = None
+        a["charge"]["idempotency_key"] = "mandate:None"
+    assert not [e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase"]

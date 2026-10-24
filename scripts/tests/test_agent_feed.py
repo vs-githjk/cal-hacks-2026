@@ -455,3 +455,22 @@ def test_memory_endpoint_with_nothing_recorded_says_so(tmp_path):
     from fastapi.testclient import TestClient
     body = TestClient(F.create_app(tmp_path / "run", memory_dir=tmp_path / "none")).get("/v1/memory").json()
     assert body == {"entries": [], "sources": [], "note": "no demo runs or market snapshots recorded yet"}
+
+
+
+@pytest.mark.parametrize("where", ["summary", "notes", "run_id"])
+def test_memory_endpoint_survives_a_lone_surrogate(tmp_path, where):
+    import json as _json
+    from fastapi.testclient import TestClient
+    sample = _json.loads((SCRIPTS.parent / "demo" / "out" / "sample-run.json").read_text())
+    if where == "summary":
+        (tmp_path / "market-memory-1.json").write_text(_json.dumps({"entries": [
+            {"id": "x", "kind": "goal", "at": "1", "origin": "SIM", "summary": "\ud800", "detail": {}}]}))
+    elif where == "notes":
+        sample["artifacts"]["goal"]["notes"] = "\ud800"
+        (tmp_path / "run-1.json").write_text(_json.dumps(sample))
+    else:
+        sample["run_id"] = "\ud800"
+        (tmp_path / "run-1.json").write_text(_json.dumps(sample))
+    r = TestClient(F.create_app(tmp_path / "run", memory_dir=tmp_path)).get("/v1/memory")
+    assert r.status_code == 200 and "entries" in r.json()

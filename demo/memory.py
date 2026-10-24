@@ -92,7 +92,8 @@ def _demo_entries(run: dict, ref: str) -> list[dict]:
     names = {b["seller_id"]: b.get("persona") or b["seller_id"] for b in a.get("bids") or []}
     m, rec, charge = a.get("mandate") or {}, a.get("approval_record") or {}, a.get("charge") or {}
     paid_cents = charge.get("amount_cents") if isinstance(charge, dict) else None
-    matches = (m and rec.get("mandate_hash") == m.get("hash") and charge.get("idempotency_key") == f"mandate:{m.get('hash')}"
+    matches = (m and m.get("hash") and rec.get("mandate_hash") == m.get("hash")
+               and str(charge.get("status") or "").lower().startswith("succeeded") and charge.get("idempotency_key") == f"mandate:{m.get('hash')}"
                and isinstance(paid_cents, int) and paid_cents == round(_num(m["amount"]) * 100))
     if m and rec.get("result") == "approved" and charge and matches:   # approved, and charged for this mandate at its amount
         mode = str(charge.get("mode") or "").strip().lower()
@@ -221,6 +222,14 @@ def snapshot(sql: Callable[[str], list], out_dir: Path, *, db: str, now: Optiona
 
 # ---------------------------------------------------------------- what GET /v1/memory returns
 
+def _encodable(x: Any) -> bool:
+    try:
+        json.dumps(x, ensure_ascii=False, allow_nan=True).encode("utf-8")
+        return True
+    except (UnicodeEncodeError, ValueError, TypeError, RecursionError):
+        return False
+
+
 def _well_formed(e: Any) -> bool:
     return (isinstance(e, dict) and all(isinstance(e.get(k), str) for k in ("id", "kind", "at", "origin", "summary"))
             and e["origin"] in ORIGINS and isinstance(e.get("detail"), dict))
@@ -263,6 +272,8 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
         return {"entries": [], "sources": [], "note": EMPTY_NOTE}
     seen, unique = set(), []
     for e in entries:
+        if not _encodable(e):
+            continue                                    # a lone surrogate would make the JSON response fail
         if e["id"] not in seen:
             seen.add(e["id"])
             unique.append(e)
@@ -271,7 +282,8 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
         unique = [e for e in unique if e["kind"] == kind]
     if limit is not None:
         unique = unique[:max(0, limit)]
-    return {"entries": unique, "sources": sources, "note": ""}
+    return {"entries": unique, "sources": [x if _encodable(x) else {**x, "ref": "(unreadable name)"} for x in sources],
+            "note": ""}
 
 
 def main(argv: Optional[list] = None) -> int:
