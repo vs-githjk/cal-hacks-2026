@@ -28,3 +28,13 @@ def test_honest_states_today():
     assert tiles["attacks_blocked"]["detail"]["held_out"]["attacks"] == 20
     assert tiles["attacks_blocked"]["value"] == tiles["attacks_blocked"]["detail"]["held_out"]["block_rate"]  # held-out, never pooled
     assert tiles["fit_accuracy"]["detail"]["false_ok"] == 0
+
+
+def test_every_date_range_runs_forwards():
+    for t in build()["tiles"]:
+        assert t["date_range"]["from"][:10] <= t["date_range"]["to"][:10], (t["id"], t["date_range"])
+
+
+def test_learning_claim_always_shows_the_untrained_learner():
+    tile = next(t for t in build()["tiles"] if t["id"] == "learning_lift")
+    assert "untrained" in tile["note"]

@@ -46,11 +46,11 @@ def attacks_tile(now: str) -> dict:
                          "dev": {"attacks": d["attacks"], "block_rate": d["block_rate"], "false_block_rate": d["false_block_rate"]},
                          "adaptive": b["adaptive"], "judge_attempts": {"count": 0, "status": "console not built yet"},
                          "voice": {"status": "voice set written (sim/attacks/voice.jsonl), not yet run"}},
-                 note="Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. "
+                 note=f"Run at {now} (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. "
                       "Dev (what the rules were written against) is shown separately, never pooled. Never say secure.")
 
 
-def fit_tile() -> dict:
+def fit_tile(now: str) -> dict:
     data = json.loads(eval_builds.BUILDS.read_text())
     full, checked = eval_builds.score(), eval_builds.score(only_checked=True)
     when = data.get("frozen", "")[:10]
@@ -58,7 +58,7 @@ def fit_tile() -> dict:
                  value=round(checked["correct"] / checked["decided"], 4) if checked["decided"] else None, unit="ratio",
                  display=f"{checked['correct']} of {checked['decided']} right on maker-checked builds; "
                          f"{full['correct']} of {full['decided']} on all; {len(full['false_ok'])} false OK",
-                 count=checked["n"], date_range={"from": when, "to": "2026-10-23"}, origin="SIM",
+                 count=checked["n"], date_range={"from": when, "to": now[:10]}, origin="SIM",
                  source_run="python3 -m data.fit_checker.eval_builds",
                  detail={"checked": {"n": checked["n"], "correct": checked["correct"], "decided": checked["decided"]},
                          "all": {"n": full["n"], "correct": full["correct"], "decided": full["decided"], "uncertain": full["uncertain"]},
@@ -72,7 +72,8 @@ def learning_tile() -> dict:
     w = json.loads(pick.read_text())
     L = w["learning"]
     arch = L["per_archetype"]
-    rows = "; ".join(f"{a}: learner {v['learner']:.2f} vs median control {v['control_median']:.2f}" for a, v in arch.items())
+    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}"
+                     for a, v in arch.items())
     return _tile(id="learning_lift", title="Seller learning lift", status="measured" if L["quotable"] else "not_quotable",
                  value=None, unit="points",
                  display=("No lift to quote: the learner beats the fair control on "
@@ -85,7 +86,7 @@ def learning_tile() -> dict:
 
 def build() -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(), learning_tile()]}
+    return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile()]}
 
 
 if __name__ == "__main__":
