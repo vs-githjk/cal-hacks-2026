@@ -165,6 +165,15 @@ def test_beat2_sealing_and_anti_snipe(run):
     assert b2["clock"]["extensions"] == 1 and b2["clock"]["closed_ms"] == 17000
 
 
+def test_beat2_only_the_learners_last_second_bid_extends_the_deadline(run):
+    arrivals = b(run, 2)["arrivals"]
+    assert len(arrivals) >= 12   # the cadence must hold with the full seller list, not just the first five
+    extended = [a["seller_id"] for a in arrivals if a["extended"]]
+    assert extended == [arrivals[-1]["seller_id"]]
+    window_open = 12000 - 3000
+    assert all(a["at_ms"] < window_open for a in arrivals[:-1])
+
+
 def test_beat2_mirror_bids_over_the_cap_are_out_and_unknown_condition_is_not_guessed(run):
     out = {d["seller_id"]: d for d in b(run, 2)["ranking"]["disqualified"]}
     assert "over the goal cap" in " ".join(out["ebay-263900"]["reasons"]) and "ebay-442526" in out

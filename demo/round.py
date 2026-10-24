@@ -20,7 +20,9 @@ from demo.standins import market
 from shield.core import screen
 from shield.service import attack_type
 
-ARRIVAL_STEP_MS = 900  # seller i seals its bid at 300 + i * 900 ms on the sim clock (SIM clock, no sleeping)
+ARRIVAL_STEP_MS = 900  # seller i seals its bid at 300 + i * 900 ms on the sim clock (SIM clock, no sleeping), up to what fits
+FIRST_ARRIVAL_MS = 300
+SNIPE_MARGIN_MS = 100  # ordinary bids end this far before the snipe window opens
 
 
 def landed_note(seller: Seller, landed: float) -> str:
@@ -87,9 +89,14 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
     # 1. sealed bids, in arrival order on the sim clock
     clock = market.new_auction(need["id"], 0, need.get("auction_window_s", 12))
     bids, sealed_at, arrivals = [], {}, []
+    # Ordinary sellers must all land before the snipe window so that only the learner's last-second bid extends the
+    # deadline. With many sellers a fixed step walks late arrivals into the window, so the step shrinks to fit.
+    ordinary = sum(1 for s in sellers if not s.learning)
+    free_ms = clock.deadline_ms - clock.config.snipe_window_s * 1000 - FIRST_ARRIVAL_MS - SNIPE_MARGIN_MS
+    step_ms = min(ARRIVAL_STEP_MS, free_ms // max(ordinary - 1, 1))
     for i, s in enumerate(sorted(sellers, key=lambda x: x.learning)):  # the learning seller bids last
         bid = make_bid(s, sealed_need, now, strategies.get(s.id))
-        t_ms = 300 + i * ARRIVAL_STEP_MS
+        t_ms = FIRST_ARRIVAL_MS + i * step_ms
         if s.learning:  # a last-second bid: shows the capped anti-snipe extension
             t_ms = clock.deadline_ms - 1400
         ok, clock, extended, why = market.try_bid(clock, t_ms)
