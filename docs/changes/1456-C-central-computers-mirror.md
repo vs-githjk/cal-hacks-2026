@@ -13,12 +13,13 @@ MIRROR: real Central Computers listing captured Oct 24 21:12 UTC via Apify. Cent
 - `agents/sellers/policy.py`: `mirror_seller("central_computers_sf", clearance_mm=None)` and `make_bid` now honour a MIRROR
   seller: `origin` MIRROR, `source` the listing URL, the seller's own `mirror_snapshot_id`, additive keys `mirror_label` and
   `withheld_lines`, `qty_available` on the line. SIM sellers' bids are unchanged (tested).
-- `agents/advocate/checks.py`: a condition of `unknown` (offered or page) is now an `unverified` caution with rule_id
-  `advocate.unsourced` (existing summary, so pay/reasons.py needs no change). It is never shown as new and is no longer a
-  mismatch veto or a "you asked for new" spec caution. Stated conditions keep the old checks.
+- `agents/advocate/checks.py`: when neither side states a concrete condition (offered and page both `unknown` or
+  missing) the line is an `unverified` caution with rule_id `advocate.unsourced`. It is never shown as new. One
+  concrete side against an unstated or different other side keeps the mismatch veto (corrected in #333, see
+  1545-C-mirror-not-orderable.md). The store's bid itself is a `mirror_not_orderable` veto (#333).
 - `data/baselines`: the rows are observations (store `centralcomputers`, kind ask) but stay OUT of the retail median
   (`LOCAL_STORE`, not in `RETAIL`): a bid must not move the baseline it is judged against. The median at 21:30 UTC is
-  unchanged at $1,259.99.
+  unchanged at $1,259.99. #333: `hyphenate/engine.py` `mirror_refs` now skips these rows too (it had read all 12).
 - `data/fit_checker/gpu_lengths.json`: two maker rows ahead of the family matches: MSI VENTUS 3X PZ OC (303 mm) and the
   non-OC ASUS PRIME-RTX5070TI-16G (304 mm). ROG Strix stays unknown.
 - `demo/sellers.py` (Lane D, one line): `load_offers` skips a snapshot prefix that has no `SELLER_OF_RECORD` entry, so the
