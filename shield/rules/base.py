@@ -19,6 +19,7 @@ class Rule:
     severity: str  # low | medium | high | critical
     describe: str
     check: Callable[[Doc, Mapping], Iterable[tuple[int, int]]]  # returns raw-offset spans
+    fold: bool = False  # also run on the folded views (leetspeak, spacing, accents undone); prose rules only
 
 
 def finditer_spans(doc: Doc, patterns: Iterable["re.Pattern[str]"]):
