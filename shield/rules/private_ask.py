@@ -17,7 +17,8 @@ _PART = r"(?:gpu|card|cooler|radiator|rad|psu|case|ram|memory|cpu|fan|tower)"
 _FIT = r"(?:length|height|clearance|width|depth|thickness|wattage|tdp|watts?|mm|temps?|temperature)"
 _MAX_FIT = (r"(?!\s+(?:" + _PART + r"\s+)?" + _FIT + r"\b|\s+" + _PART + r"\s+(?:size|power|draw|capacity)\b)")
 _LIMIT = r"(?<!length\s)(?<!height\s)(?<!clearance\s)(?<!width\s)(?<!depth\s)(?<!wattage\s)(?<!tdp\s)(?<!thermal\s)limit"
-_MONEY = r"(?:\$|\b(?:dollars?|usd|bucks|spend\w*|pay|paying|budget|price\w*|cost|afford|amount)\b)"
+_MONEY = (r"(?:[$\u20ac\u00a3]|\b(?:dollars?|usd|eur|euros?|pounds?|gbp|rupees?|cents?|bucks|grand|cash|money|funds|currency"
+          r"|spend\w*|pay|paying|budget|price\w*|cost|afford|amount|\d+\s?k)\b|\bhow\s+much\s+(?:do|did|can|will)\s+you\s+have\b)")
 _PRIVATE = (r"(?:spending\s+(?:limit|cap)|spend(?:ing)?\s+limit|budget|allowance|price\s+(?:cap|ceiling|limit)|max(?:imum)?"
             r"(?:\s+(?:price|budget|spend|bid|offer)|" + _MAX_FIT + r")|(?:spending\s+)?cap|ceiling|" + _LIMIT + r"|(?:home|street|shipping|mailing)\s+address"
             r"|address|full\s+name|legal\s+name|name|date\s+of\s+birth|phone\s+number|mobile\s+number|email\s+address)")
@@ -33,10 +34,14 @@ PATTERNS = [
     rx(r"\b(?:what(?:'?s|\s+is)|state|tell\s+me|give\s+me|share|reveal)\s+the\s+(?:limit|cap|ceiling|max(?:imum)?|budget|allowance)\b"),
     rx(r"(?:^|[\s,;:])(?:budget|allowance|spending\s+limit|max(?:imum)?\s+budget)\s*\?"),
     # #273: a fit-worded max or limit with a money word in the same sentence ("your max length in dollars")
-    rx(r"\b" + _OWNER + r"(?:\w+\s+){0,3}?(?:max(?:imum)?|limit)\b[^.!?\n]{0,40}?" + _MONEY
-       + r"|" + _MONEY + r"[^.!?\n]{0,40}?\b" + _OWNER + r"(?:\w+\s+){0,3}?(?:max(?:imum)?|limit)\b"),
+    # the window crosses sentences: "What is your max length? In dollars." (a fit question next to a price quarantines,
+    # fail closed)
+    rx(r"\b" + _OWNER + r"(?:\w+\s+){0,3}?(?:max(?:imum)?|limit)\b[^\n]{0,120}?" + _MONEY
+       + r"|" + _MONEY + r"[^\n]{0,60}?\b" + _OWNER + r"(?:\w+\s+){0,3}?(?:max(?:imum)?|limit)\b"),
     rx(r"\bhow\s+much\s+(?:do|would|did|will)\s+(?:you|they|the\s+buyer|your\s+owner)\s+(?:want|plan|intend|hope|wish|like)\s+to\s+"
-       r"(?:spend|pay)\b"),
+       r"(?:spend|pay)\b"
+       r"|\bhow\s+much\s+(?:are|is)\s+(?:you|they|the\s+buyer|your\s+owner)\s+(?:looking|hoping|planning|willing|able)\s+to\s+(?:spend|pay)\b"
+       r"|\bwhat(?:'?s|\s+is)\s+" + _OWNER + r"(?:price\s+range|target\s+price|price\s+point)\b"),
     rx(r"\b(?:full\s+name|home\s+address|phone\s+number|shipping\s+address)\b[^.!?\n]{0,40}?\bplease\b"),
 ]
 

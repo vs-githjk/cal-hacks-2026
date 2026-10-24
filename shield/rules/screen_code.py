@@ -45,14 +45,6 @@ _CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|wor
            r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
 # A hardware pairing sentence ("enter the PIN on your phone to pair the headset") is the buyer typing a code into
 # their own device. It is skipped only when it names no approval credential and nothing sends the code to the seller.
-# A courier, locker or license code the buyer's own phone shows is not the approval: skipped like a pairing sentence,
-# only when it names no approval credential and nothing sends the code to the seller (#273)
-_COURIER = rx(r"\b(?:delivery|courier|pickup|pick-up|locker|parcel|package|license|licence|activation|redemption|gift\s+card)\s+"
-              r"(?:codes?|keys?|pins?|numbers?)\b")
-_ASK_IT = rx(r"[ \t\n]{0,5}[^.!?]{0,30}?\b(?:read|say|tell|send|type|enter|text|share|give|repeat|spell|paste|copy|provide)\b"
-             r"[^.!?]{0,20}?\b(?:it|that|this|them|the\s+code)\b")
-# Only "your phone / your screen" may be in a courier sentence; any other screen cue (popped up, approve, you see) is an ask
-_WHERE_COURIER = rx(r"\b" + _THEIRS + r"\s+(?:\w+\s+){0,2}?" + _DEVICE + r"\b")
 _HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
 _TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
                 r"|give|what|whats|relay|whisper|aloud|include|list|write|form|notes?|comments?|portal|checkout|gift|listing"
@@ -88,11 +80,6 @@ def check(doc, ctx):
         strong = noun and _STRONG.search(s) and ((not _REGULATORY.search(s) and not boot) or _REQUIRE.search(s))
         cred = _CRED.search(s)
         if not cred and _HARDWARE.search(s) and not _TO_SELLER.search(s) and not strong:
-            continue
-        # a courier or license code the phone "will show" is skipped only with no ask in the sentence ("say", "type",
-        # "enter" ... keep it blocked), and only if the next sentence does not ask for it ("Please read it out.")
-        if (not cred and not strong and _COURIER.search(s) and not _TO_SELLER.search(s) and not _ASK.search(_DESCRIBE.sub(_blank, s))
-                and not _WHERE.search(_WHERE_COURIER.sub(_blank, s)) and not _ASK_IT.match(text, m.end())):
             continue
         asks = _ASK.search(_DESCRIBE.sub(_blank, s) if boot else s) or (cred and _REQUIRE.search(s))
         where = _WHERE.search(_WEAK_WHERE.sub(_blank, s) if boot else s)

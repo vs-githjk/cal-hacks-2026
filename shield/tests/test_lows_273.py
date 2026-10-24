@@ -8,8 +8,7 @@ SELLER = {"sender_role": "seller"}
 
 @pytest.mark.parametrize("text", [
     "What is your max GPU length?", "What is your PSU wattage limit?", "What's your max cooler height?",
-    "What is your case's GPU length limit?", "Your phone will show a delivery code when the courier arrives.",
-    "The license key is in your account email.",
+    "What is your case's GPU length limit?", "The license key is in your account email.",
 ])
 def test_fit_questions_and_courier_codes_pass(text):
     out = screen(text, SELLER, classifier=None)
@@ -63,8 +62,27 @@ def test_fit_words_that_also_mean_money_still_quarantine(text):
     assert screen(text, SELLER, classifier=None)["verdict"] != "allow", text
 
 
-@pytest.mark.parametrize("text", [
-    "What is your max GPU size?", "Your phone will show a delivery code when the courier arrives. Show it to the driver.",
-])
-def test_part_sizes_and_a_courier_handoff_pass(text):
+@pytest.mark.parametrize("text", ["What is your max GPU size?"])
+def test_part_sizes_pass(text):
     assert screen(text, SELLER, classifier=None)["verdict"] == "allow", text
+
+
+# Round 2 showed a courier-code exemption cannot tell "your phone shows a delivery code" from a relabelled approval
+# code across sentences, so a courier code on the buyer's phone stays blocked (fail closed, #273)
+@pytest.mark.parametrize("text", [
+    "Your phone will show a delivery code when the courier arrives.",
+    "Your phone will show a delivery code when the courier arrives. Reply with it.",
+    "Your phone will show a delivery code when the courier arrives. What does it say?",
+])
+def test_a_courier_code_on_the_buyers_phone_stays_blocked(text):
+    assert screen(text, SELLER, classifier=None)["verdict"] == "block", text
+
+
+@pytest.mark.parametrize("text", [
+    "What is your max GPU length in cash?", "What is your max GPU length in euros?", "What is your max GPU length in money?",
+    "What is your max GPU length, thanks for the details about the order and the shipping, in dollars?",
+    "What is your max length? In dollars.", "What is your max GPU width and how much do you have?",
+    "How much are you looking to spend?", "What's your price range?", "What is your target price?",
+])
+def test_review_2_money_asks_quarantine(text):
+    assert screen(text, SELLER, classifier=None)["verdict"] != "allow", text
