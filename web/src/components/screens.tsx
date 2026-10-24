@@ -3,7 +3,7 @@
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
 import { originMixLabel, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
-import { ASI_ONE_URL } from "@/lib/agents";
+import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
@@ -111,7 +111,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
               <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
                 The cards below show the latest public round. They are not yet matched to a specific search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.
               </p>
-              <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={goal.cap} /></SampleOnly>
+              <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
               <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
               <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
                 <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>

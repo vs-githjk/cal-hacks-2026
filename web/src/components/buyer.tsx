@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
-import { commas } from "@/lib/money";
+import { commas, underCap } from "@/lib/money";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
@@ -52,7 +52,7 @@ export function StatePill({ state }: { state: GoalView["state"] }) {
 }
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */
-export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap: number }) {
+export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | null }) {
   const win = bids.find((b) => b.won);
   const vetoed = bids.filter((b) => b.recommendation === "veto").length;
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
@@ -94,7 +94,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap: number }) {
         <Row k="Cheaper bids vetoed with a source" v={String(vetoed)} />
         <Row k="Ineligible (condition unknown, over cap)" v={String(ineligible)} />
         <Row k="Refused by the referee (below floor)" v={String(refused)} />
-        {win && <Row k="Under your cap by" v={money(cap - win.landed)} />}
+        {win && underCap(cap, win.landed) !== null && <Row k="Under your cap by" v={money(underCap(cap, win.landed)!)} />}
       </div>
     </Card>
   );
