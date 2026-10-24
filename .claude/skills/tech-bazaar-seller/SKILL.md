@@ -53,7 +53,7 @@ python3 ${CLAUDE_SKILL_DIR}/seller_kit_client.py /tmp/tech-bazaar-answers.json
 
 - The client talks to the Seller Kit at `http://127.0.0.1:8791`. Set `SELLER_KIT_URL` or pass `--url` if it runs elsewhere. `--needs` lists open needs the shop could bid on, each labelled LIVE, MIRROR or SIM.
 - **Success** (exit 0): it prints the config path and a run command. Show both to the owner exactly as printed. Do not run the command yourself unless the owner asks.
-- **Refused** (exit 1): it lists each bad field and says nothing was saved. Tell the owner in plain words what is wrong, ask for the right value, update the answers file, send again. Do not change a value the owner did not give you. If the id is taken, ask whether to pick another name or overwrite (`--replace`).
+- **Refused** (exit 1): it lists each bad field and says nothing was saved. Tell the owner in plain words what is wrong, ask for the right value, update the answers file, send again. Do not change a value the owner did not give you. If the id is taken, ask the owner for another shop name. Only the Tech Bazaar operator can replace an existing shop (it needs the operator token), so do not offer `--replace`.
 - **Kit not running** (exit 2): say so plainly. Nothing was saved. The kit starts with the Tech Bazaar stack (`python3 scripts/launch.py up` in the repo). On claude.ai (no access to the owner's machine) give the owner the `--dry-run` output to keep and send from a computer where the kit runs.
 
 ## 4. Explain what happens next
