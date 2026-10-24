@@ -7,9 +7,9 @@ Your buying agent for computer gear. Tell it a goal; it remembers what you alrea
 
 ## What to ask
 
-- "A GPU for 1440p that fits my case and PSU, under $800, by Friday. I already own a 750 W PSU and a mid-tower case with 330 mm GPU clearance."
-- "Build me a GPU, PSU and case under $1200 by Sunday."
-- "A 850 W PSU under $150."
+- "A new GPU for 1440p that fits my case and PSU, under $800, by Friday. I already own a 750 W PSU and a mid-tower case with 330 mm GPU clearance."
+- "Build me a new GPU, PSU and case under $1200 by Sunday."
+- "A new 850 W PSU under $150 by Monday."
 
 Then reply `APPROVE <number>` to order the bid it recommends.
 
