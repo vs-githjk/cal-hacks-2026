@@ -12,6 +12,8 @@ Branch: `codex/lane-a-replay-driver`, based on `080bcd5fc413b57ccced4ec2cbbc0667
 
 The runner opens `agents.buyer.state.open_state(state_path)` only for a dedicated `.state` path distinct from `DEFAULT_DB_PATH`, keeps the SQLite connection on its creating thread, and closes it after the run. It does not run startup recovery or create a goal/transaction. Rows are deep-copied before dispatch and passed with all original fields intact. Reports include derived row/provider counts and time bounds, a canonical digest of the `rows` argument (explicitly not a source-file SHA), safe event summaries with matching run/buyer/goal IDs, and no callback text or state path.
 
+Before dispatch or opening state, each row's provenance URL is validated as an absolute HTTP(S) URL with a host and valid port; userinfo and whitespace/control characters are rejected. The original URL string is preserved, including its query, without normalization.
+
 The dispatcher was not supplied. Tests use a clearly named SIM test callback to verify only runner scheduling, event-contract validation, and state isolation; these tests do not prove a production hunt, market selection, deadline transition, or quote-expiry callback. Provider/CRS/model and payment/approval/settlement execution remains outside this driver, and the driver has no client or service dependencies. The actual Market adapter must be supplied and reviewed before production replay claims or integration.
 
 ## Input evidence at this base
@@ -36,5 +38,13 @@ $env:PYTHONPATH='C:\Users\abhin\AppData\Local\Packages\PythonSoftwareFoundation.
 ```
 
 Result: **50 passed in 5.18s**. The 3-day synthetic SIM clock advances without sleeping and the test enforces a sub-60-second ceiling. Network and MerchantSim/charger sentinels are enabled in the driver-only test. `git diff --check` passed.
+
+After adding provenance URL validation, the focused replay URL cases were rerun separately:
+
+```powershell
+& 'C:\Users\abhin\CAL_HACKS_13\cal-hacks-2026\agents\.venv\Scripts\python.exe' -B -m pytest -p no:cacheprovider --basetemp 'C:\Users\abhin\CAL_HACKS_13\lane-a-replay-driver\.pytest-tmp-url-final' agents/buyer/test_replay.py -k 'provenance'
+```
+
+Result: **6 passed, 28 deselected in 0.65s**. This targeted run covers five invalid URL forms (including missing host, credentials, newline, and invalid port) and one query-preservation case; it does not rerun the unchanged state suite.
 
 Windows required normal pytest temp ACL permissions; no sandbox protections were disabled.

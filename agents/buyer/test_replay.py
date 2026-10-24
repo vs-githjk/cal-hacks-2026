@@ -129,6 +129,33 @@ def test_new_feed_fields_and_provider_labels_are_preserved(tmp_path):
     assert report["source_counts"] == {"ebay-sold": 1}
 
 
+@pytest.mark.parametrize("url", [
+    "javascript:alert(1)", "https:///missing-host", "https://user:pass@shop.example/listing",
+    "https://shop.example/listing\n?item=1", "https://shop.example:bad/listing",
+])
+def test_invalid_provenance_urls_reject_before_dispatch(tmp_path, url):
+    calls = []
+    bad_row = {**rows()[0], "url": url}
+    state_path = tmp_path / ".state" / "bad-url.sqlite3"
+    with pytest.raises(ValueError):
+        asyncio.run(run_replay([bad_row], scenario(), sim_dispatch(calls), SimClock(), state_path))
+    assert calls == [] and not state_path.parent.exists()
+
+
+def test_valid_provenance_query_is_preserved_without_rewriting(tmp_path):
+    original = {**rows()[0], "url": "https://shop.example/listing?sku=gpu&condition=new"}
+    captured = []
+    async def capture(event, *, now, db, scenario):
+        captured.append(event["row"])
+        return {"next_wakeup_at": None, "events": [summary(now, scenario)]}
+    state_path = tmp_path / ".state" / "query-url.sqlite3"
+    sc = scenario()
+    seed_state(state_path, sc)
+    asyncio.run(run_replay([original], sc, capture, SimClock(), state_path))
+    assert captured[0]["url"] == original["url"]
+    assert original["url"] == "https://shop.example/listing?sku=gpu&condition=new"
+
+
 def test_isolated_protected_state_persists_and_reopens(tmp_path):
     path = tmp_path / ".state" / "private-run.sqlite3"
     sc = scenario()

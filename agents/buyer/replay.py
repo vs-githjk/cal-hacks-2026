@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Awaitable, Callable
+from urllib.parse import urlsplit
 
 from agents.buyer import state
 
@@ -28,6 +29,22 @@ _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\Z")
 
 class ReplayError(ValueError):
     """Invalid replay input, schedule, state, or callback contract."""
+
+
+def _provenance_url(value: Any) -> None:
+    """Require an absolute HTTP(S) provenance URL without normalizing its bytes."""
+    if (not isinstance(value, str) or not value or len(value) > 4096
+            or any(char.isspace() or ord(char) < 0x20 or ord(char) == 0x7F for char in value)):
+        raise ReplayError("row provenance URL is invalid")
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+    except ValueError:
+        raise ReplayError("row provenance URL is invalid") from None
+    authority = parts.netloc.rsplit("@", 1)[-1]
+    if (parts.scheme.lower() not in ("http", "https") or not parts.netloc or not parts.hostname
+            or parts.username is not None or parts.password is not None or authority.endswith(":")):
+        raise ReplayError("row provenance URL is invalid")
 
 
 def _utc(value: Any, label: str) -> datetime:
@@ -76,6 +93,7 @@ def _rows(values: Any, input_origin: str) -> tuple[list[dict], list[datetime], s
         for name in ("provider", "store", "sku", "kind", "url", "snapshot_id", "origin"):
             if not isinstance(row.get(name), str) or not row[name]:
                 raise ReplayError("replay row is missing required provenance")
+        _provenance_url(row["url"])
         if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", row["provider"]):
             raise ReplayError("row provider is invalid")
         if row["origin"] != input_origin:
