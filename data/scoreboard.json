@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T11:56:01+00:00",
+ "generated_at": "2026-10-24T15:54:58+00:00",
  "tiles": [
   {
    "detail": {
@@ -33,8 +33,8 @@
      "note": "eBay sold, mixed condition, 30-day window: never blended into the ask median"
     },
     "marketplace": {
-     "n": 3,
-     "median": 1399.99
+     "n": 11,
+     "median": 1349.99
     }
    },
    "id": "verified_savings",
@@ -97,12 +97,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T11:56:01+00:00",
-    "to": "2026-10-24T11:56:01+00:00"
+    "from": "2026-10-24T15:54:58+00:00",
+    "to": "2026-10-24T15:54:58+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T11:56:01+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T15:54:58+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
@@ -278,7 +278,7 @@
   "sku": "rtx 5070 ti",
   "price": 1299.99,
   "condition": "new",
-  "as_of": "2026-10-24T09:55:10+00:00",
+  "as_of": "2026-10-24T12:17:26+00:00",
   "rank": 1,
   "of_n": 2,
   "stores": [
