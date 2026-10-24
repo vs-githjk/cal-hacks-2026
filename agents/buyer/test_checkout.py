@@ -12,7 +12,7 @@ from pay.approval import ApprovalService
 from pay.mandate import new_mandate
 from pay.tap import keyring, verify_request
 from pay.replay import NonceStore
-from agents.payment import commit as commit_payment, payment_request
+from agents.payment import _authorized, commit as commit_payment, payment_request
 from pay.approval import VOICE_CODE_TTL_SECONDS
 from pay.merchant_sim import MerchantSim
 from shield.receipt import sign_allow_receipt
@@ -53,6 +53,15 @@ def set_approved(tx):
     tx["phase"] = "approved"
 
 
+def test_approve_offer_rejects_falsey_non_callable_clock(tx):
+    class Falsey:
+        def __bool__(self):
+            return False
+
+    with pytest.raises(ValueError, match="callable"):
+        checkout.approve_offer(tx, object(), object(), on_code=lambda _code: None, now=Falsey())
+
+
 def test_approve_offer_uses_stored_transaction_reason_and_private_callback(monkeypatch, tx):
     seen = {}
     record = approved_record(tx)
@@ -74,6 +83,57 @@ def test_approve_offer_uses_stored_transaction_reason_and_private_callback(monke
                               "source_url": tx["advocate_card"]["source_url"]}
     assert seen["mandate"]["hash"] == tx["mandate"]["hash"]
     assert tx["mandate"]["status"] == "pending"  # adapter never mutates stored state
+
+
+def test_approve_offer_threads_business_clock_to_voice_and_bound_checks(monkeypatch, tx):
+    from pay.voice_cartesia import VoiceResult
+
+    clock = lambda: NOW
+    seen = {}
+
+    def runner(_mandate, _reason, _client, _service, **kwargs):
+        seen.update(kwargs)
+        return VoiceResult(False, "no_answer")
+
+    monkeypatch.setattr(checkout, "run_approval_call", runner)
+    result = checkout.approve_offer(tx, object(), object(), on_code=lambda _code: None, now=clock)
+    assert not result.approved
+    assert callable(seen["now"]) and seen["now"]() == NOW
+
+
+def test_bound_transaction_checks_mandate_at_injected_business_time(tx):
+    expired = NOW + timedelta(hours=1)
+    with pytest.raises(ValueError, match="expired"):
+        checkout._bound_transaction(tx, approval_phase=True, now=expired)
+
+
+def test_payment_allowance_authorization_uses_injected_business_time(tx):
+    tx["mandate"]["within_allowance"] = True
+    approved_at = NOW + timedelta(days=1)
+    tx["allowance_authorization"] = {
+        "id": "allowance-1", "mandate_hash": tx["mandate"]["hash"],
+        "mandate_id": tx["mandate"]["id"], "deal_id": tx["deal_id"], "buyer_id": tx["buyer_id"],
+        "goal_id": tx["goal_id"], "amount": tx["mandate"]["amount"], "payee": tx["mandate"]["payee"],
+        "method": "allowance", "approved_at": approved_at.isoformat(),
+    }
+    tx["mandate"].update(status="approved", approval_id="allowance-1")
+    assert _authorized(tx, tx["mandate"], now=approved_at + timedelta(seconds=1))
+
+
+def test_settle_offer_uses_same_business_time_for_expiry_before_merchant(tx):
+    set_approved(tx)
+    called = []
+
+    class Merchant:
+        def handle(self, **_kwargs):
+            called.append(True)
+            return {}
+
+    with pytest.raises(ValueError, match="expired"):
+        checkout.settle_offer(tx, payment_request(tx["mandate"], "seller-1"), Merchant(),
+            receipt={"receipt_id": "r", "keyid": "k"}, message_id="unused",
+            tap_private_key=Ed25519PrivateKey.generate(), now=NOW + timedelta(hours=1))
+    assert not called
 
 
 @pytest.mark.parametrize("mutation", [
@@ -164,6 +224,8 @@ def test_settle_offer_rejects_request_drift_before_merchant(tx, change):
 
 
 def test_300_second_voice_approval_passes_adapter_merchant_and_commit(tx, tmp_path):
+    tx["mode"] = "SIM"
+
     class FakeVoiceClient:
         approval_call_to = "+14155550123"
 
