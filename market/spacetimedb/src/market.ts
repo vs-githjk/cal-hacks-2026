@@ -6,6 +6,7 @@ import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
 import { checkFloor, checkQuantity } from '../../rules/floor';
 import { rankBids } from '../../rules/scoring';
+import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
 import { authorizePayment } from '../../rules/approval';
@@ -121,7 +122,7 @@ function saveAllowance(ctx: Ctx, a: Allowance) {
 export interface PostNeedArgs {
   id: string; buyerId: string; goalId: string; deliveryWindow: string; spendLimit: number; consent: boolean;
   auctionWindowS: number; origin: string;
-  items: { skuSpec: string; condition: string; variant: string; quantity: number; unit: string }[];
+  items: { skuSpec: string; condition: string; allowedConditions: string[]; variant: string; quantity: number; unit: string }[];
 }
 
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
@@ -243,6 +244,41 @@ export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; ch
   event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
 }
 
+export const ADVOCATE_RECOMMENDATIONS = ['buy', 'caution', 'veto'];
+
+/**
+ * The advocate relay (referee) attaches Lane A's card for one bid. A veto disqualifies the bid in the
+ * round result with the rule, the text and the cited source; the buyer's feed gets a veto line. The
+ * public floor event names the rule only: never the seller, the text or a price.
+ */
+export function attachAdvocateCard(
+  ctx: Ctx,
+  a: { bidId: string; recommendation: string; ruleId: string; text: string; sourceUrl: string; origin: string },
+) {
+  requireRole(ctx, 'attach_advocate_card', ['referee']);
+  if (!ADVOCATE_RECOMMENDATIONS.includes(a.recommendation)) throw new SenderError(`recommendation must be one of ${ADVOCATE_RECOMMENDATIONS.join(', ')}`);
+  const b = ctx.db.bid.id.find(a.bidId);
+  if (!b) throw new SenderError(`no bid ${a.bidId}`);
+  const veto = a.recommendation === 'veto';
+  if (veto && !a.sourceUrl) throw new SenderError('an advocate veto must cite a source');
+  if (veto && (!a.ruleId || !a.text)) throw new SenderError('an advocate veto needs a rule id and a text');
+  if (ctx.db.round.id.find(b.roundId)?.state === 'closed') throw new SenderError('round already closed; a card can no longer change its ranking');
+  ctx.db.bidCheck.insert({
+    id: 0n, bidId: a.bidId, kind: 'advocate', result: a.recommendation, detail: `${a.ruleId}: ${a.text}`, evidenceUrl: a.sourceUrl,
+    origin: a.origin, at: ctx.timestamp,
+  });
+  event(ctx, 'advocate_card', 'bid_check', a.bidId, veto ? `Advocate veto (${a.ruleId})` : `Advocate: ${a.recommendation}`, '', a.origin);
+  if (veto) {
+    const n = ctx.db.need.id.find(b.needId);
+    if (n) {
+      ctx.db.notification.insert({
+        id: 0n, buyerId: n.buyerId, goalId: n.goalId, klass: 'veto',
+        text: `Your advocate vetoed ${b.persona}: ${a.text} (${a.ruleId}). Source: ${a.sourceUrl}`, push: false, at: ctx.timestamp,
+      });
+    }
+  }
+}
+
 type BidRow = ReturnType<Ctx["db"]["bid"]["iter"]> extends Iterable<infer R> ? R : never;
 
 const toBid = (b: BidRow): Bid => ({
@@ -281,7 +317,10 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
 
   const needItems = new Map<string, NeedItem>();
   for (const i of ctx.db.needItem.needId.filter(r.needId)) {
-    needItems.set(i.skuSpec, { sku_spec: i.skuSpec, condition: i.condition as Condition, variant: i.variant, quantity: i.quantity, unit: i.unit });
+    needItems.set(i.skuSpec, {
+      sku_spec: i.skuSpec, condition: i.condition as Condition, allowed_conditions: i.allowedConditions as Condition[],
+      variant: i.variant, quantity: i.quantity, unit: i.unit,
+    });
   }
   const rows = [...ctx.db.bid.roundId.filter(roundId)];
   const rejections = new Map<string, string[]>();
@@ -293,20 +332,24 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       if (c.kind === 'shield' && c.result !== 'allow') reasons.push(`Bazaar Shield ${c.result}: ${c.detail}`);
       if (c.kind === 'claim' && c.result === 'false') reasons.push(`claim did not match the page: ${c.detail}`);
       if (c.kind === 'claim' && c.result === 'verified') verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
+      if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
     }
     if (reasons.length) rejections.set(b.id, reasons);
   }
   // The seller fee is deliberately not passed: it never feeds ranking (invariant 8).
-  const ranked = rankBids(rows.map(toBid), { needItems, rejections, verifiedClaims: (b) => verified.get(b.id) ?? 0 });
+  const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
+  const ranked = rankBids(rows.map(toBid), {
+    needItems, rejections, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
+  });
   const byId = new Map(rows.map((b) => [b.id, b]));
   for (const x of ranked.ranked) {
     const b = byId.get(x.bid.id)!;
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: b.lines, origin: b.origin, source: b.source });
+    // The lines are the picked alternatives (the cheapest allowed line per SKU), the ones the rank is about.
+    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source });
   }
   for (const d of ranked.disqualified) {
     const b = byId.get(d.bid.id)!;
-    const landed = b.lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source });
+    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
   const top = ranked.ranked[0];
@@ -361,8 +404,16 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
 }
 
 /** INVARIANT-1: no payment row without an approval row for the same mandate hash. */
-export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: string; amount: number }) {
+export const PAYMENT_MODES: Record<string, { label: string; origin: string }> = {
+  sim: { label: 'Payment recorded (SIM stub, no money moved)', origin: 'SIM' },
+  stripe_test: { label: 'Payment recorded (Stripe test mode)', origin: 'LIVE' },
+};
+
+/** `mode` says how the money moved, so the label is honest: sim (our stub) or stripe_test (Stripe's test API). */
+export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: string; amount: number; mode: string }) {
   requireRole(ctx, 'record_payment', ['referee']);
+  const mode = PAYMENT_MODES[a.mode];
+  if (!mode) throw new SenderError(`payment mode must be one of ${Object.keys(PAYMENT_MODES).join(', ')}`);
   const md = ctx.db.mandate.hash.find(a.mandateHash);
   if (!md) throw new SenderError('no mandate with that hash');
   const ap = ctx.db.approval.mandateHash.find(a.mandateHash);
@@ -371,8 +422,8 @@ export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: st
   const auth = authorizePayment({ amount: a.amount, limit_checked: true, approval_id: String(ap.id) }, md.amount);
   if (!auth.ok) throw new SenderError(auth.reasons.join('; '));
   if (ctx.db.payment.mandateHash.find(a.mandateHash)) return rejected(ctx, 'payment', a.mandateHash, 'second payment for the same mandate refused');
-  ctx.db.payment.insert({ id: 0n, mandateHash: a.mandateHash, paymentRef: a.paymentRef, amount: a.amount, at: ctx.timestamp });
-  event(ctx, 'payment_recorded', 'payment', a.mandateHash, 'Payment recorded (Stripe test mode)', md.payee, 'SIM');
+  ctx.db.payment.insert({ id: 0n, mandateHash: a.mandateHash, paymentRef: a.paymentRef, amount: a.amount, at: ctx.timestamp, mode: a.mode });
+  event(ctx, 'payment_recorded', 'payment', a.mandateHash, mode.label, md.payee, mode.origin);
 }
 
 // ---------------------------------------------------------------- receiving check
