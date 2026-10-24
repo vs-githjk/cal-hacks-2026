@@ -13,6 +13,7 @@ RULES = [
     private_ask.RULE,
     encoded.RULE,
     impersonation.RULE,
+    impersonation.OUTPUT_RULE,
     *intent.RULES,
 ]
 RULES_BY_ID = {r.id: r for r in RULES}

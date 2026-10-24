@@ -7,13 +7,23 @@ from shield.rules.base import seller_side, QUARANTINE, Rule, finditer_spans, rx
 
 _ASK = (r"(?:reply\s+with|respond\s+with|send|tell|give|share|provide|confirm|state|enter|type|include|post|dm|e-?mail"
         r"|let\s+(?:me|us)\s+know|what(?:'?s|\s+is|\s+are|\s+was)|disclose|reveal|list)")
-_OWNER = r"(?:(?:your|ur|the\s+buyer'?s?|the\s+owner'?s?|your\s+owner'?s?|their)\s+)"   # not a bare "the": "confirm the approved budget with your owner" is the buyer's own line
-_PRIVATE = (r"(?:spending\s+(?:limit|cap)|spend(?:ing)?\s+limit|budget|allowance|price\s+(?:cap|ceiling|limit)|max(?:imum)?\s+"
-            r"(?:price|budget|spend|bid|offer)|(?:spending\s+)?cap|ceiling|limit|home\s+address|street\s+address|"
-            r"full\s+name|legal\s+name|date\s+of\s+birth|phone\s+number|mobile\s+number|email\s+address)")
+# Not a bare "the": "confirm the approved budget with your owner" is the buyer's own line (test_rules CLEAN).
+_OWNER = r"(?:(?:your|ur|yr|(?:the\s+)?buyer'?s?|(?:the\s+)?owner'?s?|your\s+owner'?s?|their)\s+)"
+_PRIVATE = (r"(?:spending\s+(?:limit|cap)|spend(?:ing)?\s+limit|budget|allowance|price\s+(?:cap|ceiling|limit)|max(?:imum)?"
+            r"(?:\s+(?:price|budget|spend|bid|offer))?|(?:spending\s+)?cap|ceiling|limit|(?:home|street|shipping|mailing)\s+address"
+            r"|address|full\s+name|legal\s+name|name|date\s+of\s+birth|phone\s+number|mobile\s+number|email\s+address)")
 PATTERNS = [
     rx(r"\b" + _ASK + r"\b[^.!?\n]{0,50}?" + _OWNER + r"(?:\w+\s+){0,2}?" + _PRIVATE + r"\b"),
-    rx(r"\bhow\s+much\s+(?:can|will|would|could|do)\s+(?:you|the\s+buyer|your\s+owner|they)\s+(?:spend|pay|afford|go\s+up\s+to)\b"),
+    rx(r"\bhow\s+(?:much|high|far)\s+(?:can|will|would|could|do)\s+(?:you|the\s+buyer|your\s+owner|they)\s+"
+       r"(?:spend|pay|afford|go)\b"),
+    rx(r"\bhow\s+much\s+(?:has|have|did)\s+(?:the\s+buyer|your\s+owner|you|they)\s+(?:approve|approved|authori[sz]ed?|set)\b"),
+    rx(r"\bwhat\s+(?:are|is)\s+(?:you|the\s+buyer|your\s+owner|they)\s+willing\s+to\s+(?:pay|spend)\b"),
+    rx(r"\bhow\s+much\s+(?:the\s+buyer|your\s+owner|you|they)\s+(?:has|have|had|can|will|would|could)\s+"
+       r"(?:approved?|authori[sz]ed?|set|spend|pay|afford)\b"),
+    rx(r"\b(?:what'?s|what\s+is|tell\s+me)\s+the\s+max(?:imum)?\s+(?:you|they|the\s+buyer)\s+(?:can|will|would)\b"),
+    rx(r"\b(?:what(?:'?s|\s+is)|state|tell\s+me|give\s+me|share|reveal)\s+the\s+(?:limit|cap|ceiling|max(?:imum)?|budget|allowance)\b"),
+    rx(r"(?:^|[\s,;:])(?:budget|allowance|spending\s+limit|max(?:imum)?\s+budget)\s*\?"),
+    rx(r"\b(?:full\s+name|home\s+address|phone\s+number|shipping\s+address)\b[^.!?\n]{0,40}?\bplease\b"),
 ]
 
 
