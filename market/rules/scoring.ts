@@ -3,11 +3,14 @@
 import type { MarketConfig } from "../config";
 import type { Bid, BidLine, NeedItem, Result } from "./types";
 import { round2 } from "./types";
+import { checkQuantity } from "./floor";
 
 export function checkLineSpec(line: BidLine, needItems: Map<string, NeedItem>): Result {
   const item = needItems.get(line.sku_spec);
   if (!item) return { ok: false, reasons: [`${line.sku_spec}: not part of this goal`] };
   const reasons: string[] = [];
+  const q = checkQuantity([line], new Map([[item.sku_spec, item.quantity]]));
+  if (!q.ok) reasons.push(...q.reasons);
   const offered = line.offered_spec ?? line.sku_spec;
   if (offered !== item.sku_spec) reasons.push(`variant: offered ${offered}, goal asks for ${item.sku_spec}`);
   const cond = line.offered_condition ?? item.condition;

@@ -4,12 +4,13 @@
 import { SenderError, type InferSchema, type ReducerCtx, type ViewCtx, type AnonymousViewCtx } from 'spacetimedb/server';
 import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
-import { checkFloor } from '../../rules/floor';
+import { checkFloor, checkQuantity } from '../../rules/floor';
 import { rankBids } from '../../rules/scoring';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
 import { authorizePayment } from '../../rules/approval';
 import type { Bid, Condition, NeedItem, Origin } from '../../rules/types';
+import { resetDemo, seedDemo } from './demo';
 
 type S = InferSchema<typeof spacetimedb>;
 type Ctx = ReducerCtx<S>;
@@ -30,31 +31,63 @@ function rejected(ctx: Ctx, kind: string, refId: string, reason: string) {
   event(ctx, `${kind}_rejected`, 'rejected_attempt', refId, reason);
 }
 
-const sellerOf = (ctx: { db: Ctx['db'] | VCtx['db']; sender: Identity }) => ctx.db.sellerIdentity.identity.find(ctx.sender);
+// ---------------------------------------------------------------- identities and roles
+// Every state-changing reducer calls requireRole first. One place decides who may act.
 
-// ---------------------------------------------------------------- identities
+export type RoleName = 'buyer' | 'seller' | 'referee';
+type Allowed = RoleName | 'owner' | 'scheduler';
+const ROLES: RoleName[] = ['buyer', 'seller', 'referee'];
 
-export function registerSeller(ctx: Ctx, { sellerId }: { sellerId: string }) {
-  if (!sellerId) throw new SenderError('seller id required');
-  const existing = ctx.db.sellerIdentity.sellerId.find(sellerId);
-  if (existing && !existing.identity.isEqual(ctx.sender)) throw new SenderError(`${sellerId} is already registered to another agent`);
-  if (ctx.db.buyerSession.identity.find(ctx.sender)) throw new SenderError('a buyer screen cannot register as a seller');
-  if (!existing) ctx.db.sellerIdentity.insert({ identity: ctx.sender, sellerId });
+const roleOf = (ctx: { db: Ctx['db'] | VCtx['db']; sender: Identity }) => ctx.db.role.identity.find(ctx.sender);
+const isOwner = (ctx: Ctx) => {
+  const o = ctx.db.owner.id.find(0);
+  return !!o && o.identity.isEqual(ctx.sender);
+};
+
+/**
+ * Throws "not allowed" unless the caller holds one of the allowed roles. For buyer and seller
+ * roles, `subjectId` (when given) must match the role's buyer_id or seller_id.
+ */
+export function requireRole(ctx: Ctx, what: string, allowed: Allowed[], subjectId?: string) {
+  if (allowed.includes('owner') && isOwner(ctx)) return { role: 'owner', subjectId: '' };
+  if (allowed.includes('scheduler') && ctx.sender.isEqual(ctx.identity)) return { role: 'scheduler', subjectId: '' };
+  const r = roleOf(ctx);
+  if (r && allowed.includes(r.role as RoleName)) {
+    const bound = r.role === 'buyer' || r.role === 'seller';
+    if (!bound || subjectId === undefined || r.subjectId === subjectId) return { role: r.role, subjectId: r.subjectId };
+    throw new SenderError(`not allowed: ${what} for ${subjectId}; this ${r.role} acts only for ${r.subjectId}`);
+  }
+  throw new SenderError(`not allowed: ${what} needs ${allowed.join(' or ')}; caller is ${r ? `${r.role} ${r.subjectId}` : 'unregistered'}`);
+}
+
+/** Lifecycle: the publishing identity becomes the owner, once. */
+export function init(ctx: Ctx) {
+  if (!ctx.db.owner.id.find(0)) ctx.db.owner.insert({ id: 0, identity: ctx.sender });
+}
+
+export function assignRole(ctx: Ctx, a: { identity: Identity; role: string; subjectId: string }) {
+  requireRole(ctx, 'assign_role', ['owner']);
+  if (!ROLES.includes(a.role as RoleName)) throw new SenderError(`role must be one of ${ROLES.join(', ')}`);
+  if (!a.subjectId) throw new SenderError('subject id required (buyer_id, seller_id, or a name for the referee)');
+  const cur = ctx.db.role.identity.find(a.identity);
+  if (cur) ctx.db.role.identity.update({ ...cur, role: a.role, subjectId: a.subjectId });
+  else ctx.db.role.insert({ identity: a.identity, role: a.role, subjectId: a.subjectId });
 }
 
 export function setFloor(ctx: Ctx, { skuSpec, floor }: { skuSpec: string; floor: number }) {
-  const me = sellerOf(ctx);
-  if (!me) throw new SenderError('only a registered seller may set its floor');
-  for (const f of ctx.db.sellerFloor.sellerId.filter(me.sellerId)) if (f.skuSpec === skuSpec) ctx.db.sellerFloor.id.delete(f.id);
-  ctx.db.sellerFloor.insert({ id: 0n, sellerId: me.sellerId, skuSpec, floor });
+  const me = requireRole(ctx, 'set_floor', ['seller']);
+  for (const f of ctx.db.sellerFloor.sellerId.filter(me.subjectId)) if (f.skuSpec === skuSpec) ctx.db.sellerFloor.id.delete(f.id);
+  ctx.db.sellerFloor.insert({ id: 0n, sellerId: me.subjectId, skuSpec, floor });
 }
 
-/** Demo sign-in for a buyer screen (SIM). A registered seller identity can never open one. */
-export function openBuyerSession(ctx: Ctx, { buyerId }: { buyerId: string }) {
-  if (sellerOf(ctx)) throw new SenderError('a seller agent cannot open a buyer session');
-  const cur = ctx.db.buyerSession.identity.find(ctx.sender);
-  if (cur) ctx.db.buyerSession.identity.update({ ...cur, buyerId });
-  else ctx.db.buyerSession.insert({ identity: ctx.sender, buyerId });
+/** A browser screen takes the buyer role with the demo pairing code (SIM sign-in). */
+export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
+  const cur = roleOf(ctx);
+  if (cur && cur.role !== 'buyer') throw new SenderError(`not allowed: a ${cur.role} cannot pair as a buyer screen`);
+  const want = ctx.db.pairCode.buyerId.find(buyerId);
+  if (!want || want.code !== code) throw new SenderError('wrong pairing code for this buyer');
+  if (cur) ctx.db.role.identity.update({ ...cur, subjectId: buyerId });
+  else ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
 }
 
 // ---------------------------------------------------------------- needs and goals
@@ -66,6 +99,7 @@ export interface PostNeedArgs {
 }
 
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
+  requireRole(ctx, 'post_need', ['buyer'], a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');
   ctx.db.need.insert({
@@ -76,20 +110,31 @@ export function postNeed(ctx: Ctx, a: PostNeedArgs) {
   event(ctx, 'need_posted', 'need', a.id, `New request: ${a.items.length} item(s)`, '', a.origin);
 }
 
+/** Lane A's Goal contract; deadline is an ISO datetime. */
 export interface PostGoalArgs {
-  id: string; buyerId: string; type: string; text: string; cap: number; deadlineMinutes: number; poNumber: string; origin: string;
-  items: { category: string; description: string; skuSpec: string; modelNumber: string }[];
+  id: string; buyerId: string; type: string; cap: number; deadline: string; poNumber: string; origin: string;
+  items: { skuSpec: string; condition: string; variant: string; quantity: number; skippedOwnedPartId: string }[];
 }
 
 export const GOAL_TYPES = ['budget_cap', 'part_by_date', 'build_by_date'];
 
 export function postGoal(ctx: Ctx, a: PostGoalArgs) {
+  requireRole(ctx, 'post_goal', ['buyer'], a.buyerId);
+  insertGoal(ctx, a);
+}
+
+/** No role check: callers are postGoal (gated) and seedDemo (gated). */
+export function insertGoal(ctx: Ctx, a: PostGoalArgs) {
   if (!GOAL_TYPES.includes(a.type)) throw new SenderError(`goal type must be one of ${GOAL_TYPES.join(', ')}`);
   if (ctx.db.goal.id.find(a.id)) throw new SenderError(`goal ${a.id} already exists`);
   if (!(a.cap > 0)) throw new SenderError('goal cap must be positive');
+  const deadlineMs = Date.parse(a.deadline);
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(a.deadline) || Number.isNaN(deadlineMs)) throw new SenderError('deadline must be an ISO datetime, for example 2026-10-30T23:59:00Z');
+  for (const i of a.items) {
+    if (!(Number.isFinite(i.quantity) && i.quantity > 0)) throw new SenderError(`goal item ${i.skuSpec}: quantity must be a number above 0`);
+  }
   ctx.db.goal.insert({
-    id: a.id, buyerId: a.buyerId, type: a.type, text: a.text, cap: a.cap,
-    deadline: tsFromMs(ms(ctx.timestamp) + a.deadlineMinutes * 60_000), state: 'ACTIVE', reservedAmount: 0,
+    id: a.id, buyerId: a.buyerId, type: a.type, cap: a.cap, deadline: tsFromMs(deadlineMs), state: 'ACTIVE', reservedAmount: 0,
     poNumber: a.poNumber, origin: a.origin, createdAt: ctx.timestamp,
   });
   for (const i of a.items) ctx.db.goalItem.insert({ id: 0n, goalId: a.id, ...i });
@@ -111,6 +156,7 @@ function scheduleClose(ctx: Ctx, roundId: string, at: Timestamp) {
 }
 
 export function openRound(ctx: Ctx, { roundId, needId, windowS }: { roundId: string; needId: string; windowS: number }) {
+  requireRole(ctx, 'open_round', ['referee']);
   const n = ctx.db.need.id.find(needId);
   if (!n) throw new SenderError(`no need ${needId}`);
   if (ctx.db.round.id.find(roundId)) throw new SenderError(`round ${roundId} already exists`);
@@ -126,10 +172,12 @@ export interface PlaceBidArgs {
 }
 
 export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
-  const me = sellerOf(ctx);
-  if (!me) throw new SenderError('only a registered seller may bid');
+  const me = { sellerId: requireRole(ctx, 'place_bid', ['seller']).subjectId };
   const r = ctx.db.round.id.find(a.roundId);
   if (!r) throw new SenderError(`no round ${a.roundId}`);
+  const needQty = new Map([...ctx.db.needItem.needId.filter(r.needId)].map((i) => [i.skuSpec, i.quantity]));
+  const q = checkQuantity(a.lines.map((l) => ({ sku_spec: l.skuSpec, quantity: l.quantity })), needQty);
+  if (!q.ok) throw new SenderError(`bid refused: ${q.reasons.join('; ')}`);
   if (ctx.db.bid.id.find(a.id)) throw new SenderError(`bid ${a.id} already exists`);
   for (const b of ctx.db.bid.roundId.filter(a.roundId)) if (b.sellerId === me.sellerId) throw new SenderError('one sealed bid per seller per round');
   const timing = tryBid(clockOf(r), ms(ctx.timestamp));
@@ -152,6 +200,7 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
 }
 
 export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; ruleIds: string[]; origin: string }) {
+  requireRole(ctx, 'attach_verdict', ['referee']);
   if (!['allow', 'quarantine', 'block'].includes(a.verdict)) throw new SenderError('verdict must be allow, quarantine or block');
   if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'shield', result: a.verdict, detail: a.ruleIds.join(', '), evidenceUrl: '', origin: a.origin, at: ctx.timestamp });
@@ -159,6 +208,7 @@ export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; rul
 }
 
 export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; check: string; evidenceUrl: string; origin: string }) {
+  requireRole(ctx, 'attach_claim_check', ['referee']);
   if (!['verified', 'unverified', 'false'].includes(a.check)) throw new SenderError('check must be verified, unverified or false');
   if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'claim', result: a.check, detail: a.claim, evidenceUrl: a.evidenceUrl, origin: a.origin, at: ctx.timestamp });
@@ -178,7 +228,18 @@ const toBid = (b: BidRow): Bid => ({
   mirror_snapshot_id: '', decision_trace: '', expires_at: '', origin: b.origin as Origin, source: b.source, sealed_at: ms(b.sealedAt),
 });
 
-export function closeRound(ctx: Ctx, { roundId }: { roundId: string }, { fromTimer = false } = {}) {
+export function closeRound(ctx: Ctx, { roundId }: { roundId: string }) {
+  requireRole(ctx, 'close_round', ['referee']);
+  return closeRoundInner(ctx, roundId, false);
+}
+
+/** Body of the scheduled reducer: only the module itself (the scheduler) may run it. */
+export function closeRoundOnDeadline(ctx: Ctx, roundId: string) {
+  requireRole(ctx, 'close_round_on_deadline (the deadline scheduler)', ['scheduler']);
+  return closeRoundInner(ctx, roundId, true);
+}
+
+function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const r = ctx.db.round.id.find(roundId);
   if (!r) throw new SenderError(`no round ${roundId}`);
   if (r.state === 'closed') {
@@ -231,6 +292,7 @@ export function createMandate(
   ctx: Ctx,
   a: { hash: string; id: string; dealId: string; buyerId: string; amount: number; payee: string; expiryMinutes: number; nonce: string; origin: string },
 ) {
+  requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
   ctx.db.mandate.insert({
     hash: a.hash, id: a.id, dealId: a.dealId, buyerId: a.buyerId, amount: a.amount, payee: a.payee,
@@ -240,8 +302,12 @@ export function createMandate(
 }
 
 export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string }) {
+  requireRole(ctx, 'record_approval', ['buyer', 'referee']);
   const md = ctx.db.mandate.hash.find(a.mandateHash);
   if (!md) throw new SenderError('no mandate with that hash');
+  // Only the mandate's own buyer, or the referee relaying that buyer's verified code.
+  requireRole(ctx, 'record_approval', ['buyer', 'referee'], md.buyerId);
+  if (a.approvedBy !== md.buyerId) throw new SenderError(`approvedBy must be the mandate's buyer (${md.buyerId})`);
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp });
@@ -250,6 +316,7 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
 
 /** INVARIANT-1: no payment row without an approval row for the same mandate hash. */
 export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: string; amount: number }) {
+  requireRole(ctx, 'record_payment', ['referee']);
   const md = ctx.db.mandate.hash.find(a.mandateHash);
   if (!md) throw new SenderError('no mandate with that hash');
   const ap = ctx.db.approval.mandateHash.find(a.mandateHash);
@@ -284,7 +351,13 @@ export function myBidsView(ctx: VCtx) {
 }
 
 function myBuyerId(ctx: VCtx) {
-  return ctx.db.buyerSession.identity.find(ctx.sender)?.buyerId;
+  const r = roleOf(ctx);
+  return r?.role === 'buyer' ? r.subjectId : undefined;
+}
+
+export function myRoleView(ctx: VCtx) {
+  const r = roleOf(ctx);
+  return r ? [r] : [];
 }
 
 export function myGoalsView(ctx: VCtx) {
@@ -299,4 +372,16 @@ export function myGoalItemsView(ctx: VCtx) {
 export function myNotificationsView(ctx: VCtx) {
   const id = myBuyerId(ctx);
   return id ? [...ctx.db.notification.buyerId.filter(id)] : [];
+}
+
+// ---------------------------------------------------------------- demo operator
+
+export function resetDemoChecked(ctx: Ctx) {
+  requireRole(ctx, 'reset_demo', ['owner', 'referee']);
+  resetDemo(ctx);
+}
+
+export function seedDemoChecked(ctx: Ctx) {
+  requireRole(ctx, 'seed_demo', ['owner', 'referee']);
+  seedDemo(ctx);
 }

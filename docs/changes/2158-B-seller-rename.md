@@ -1,0 +1,1 @@
+B (moved from docs/CHANGES.md, first written 21:58): SupplierTerms renamed SellerTerms; supplier_id becomes seller_id in SellerTerms, OrderPlan, QualityRecord and Persona (term map). SupplierSignal is D's and is left alone.

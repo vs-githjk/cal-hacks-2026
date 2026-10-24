@@ -15,10 +15,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install
-        run: npm ci --prefix market && npm ci --prefix market/spacetimedb
-      # Includes INVARIANT-1 (no payment without an approval for the same mandate hash).
-      - name: Rules and reducer tests
-        run: npm test --prefix market
+      # The same command as market/README.md. postinstall also installs market/spacetimedb.
+      # Includes INVARIANT-1 and the SECURITY caller-identity tests.
+      - name: Install and test
+        run: npm ci --prefix market && npm test --prefix market
       - name: Type check
         run: npm run typecheck --prefix market

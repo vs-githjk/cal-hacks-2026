@@ -1,0 +1,2 @@
+B: contracts/Goal.schema.json is now Lane A's (commit a6bdf6f on origin/agents) field for field: items[{sku_spec, condition, variant, quantity, skipped_owned_part_id}], deadline as an ISO string, no text or origin. B's 21:56 Goal draft is withdrawn. The market's goal tables and post_goal follow it; the market keeps an internal origin column for the badge, not in the contract.
+B: contracts/Allowance.schema.json is D's (per_purchase_limit, period_limit, period, spent_this_period, ladder_step). B's 21:56 Allowance draft is withdrawn; the b2 reducer uses D's shape.

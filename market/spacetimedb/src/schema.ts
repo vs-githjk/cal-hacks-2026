@@ -19,11 +19,13 @@ export const NeedItemArg = t.object('NeedItemArg', {
   unit: t.string(),
 });
 
+/** Lane A's Goal.items[] (contracts/Goal.schema.json). */
 export const GoalItemArg = t.object('GoalItemArg', {
-  category: t.string(),
-  description: t.string(),
   skuSpec: t.string(),
-  modelNumber: t.string(),
+  condition: t.string(),
+  variant: t.string(),
+  quantity: t.f64(),
+  skippedOwnedPartId: t.string(),
 });
 
 // ---- private: buyer side ----
@@ -61,13 +63,12 @@ export const goal = table(
     id: t.string().primaryKey(),
     buyerId: t.string().index('btree'),
     type: t.string(),
-    text: t.string(),
     cap: t.f64(),
     deadline: t.timestamp(),
     state: t.string(),
     reservedAmount: t.f64(),
     poNumber: t.string(),
-    origin: t.string(),
+    origin: t.string(), // market-internal, for the badge; not in the Goal contract
     createdAt: t.timestamp(),
   },
 );
@@ -77,10 +78,11 @@ export const goalItem = table(
   {
     id: t.u64().primaryKey().autoInc(),
     goalId: t.string().index('btree'),
-    category: t.string(),
-    description: t.string(),
     skuSpec: t.string(),
-    modelNumber: t.string(),
+    condition: t.string(),
+    variant: t.string(),
+    quantity: t.f64(),
+    skippedOwnedPartId: t.string(),
   },
 );
 
@@ -97,17 +99,20 @@ export const notification = table(
   },
 );
 
-/** Which identity is looking at which buyer's screen (demo sign-in, labelled SIM). */
-export const buyerSession = table(
-  { name: 'buyer_session' },
-  { identity: t.identity().primaryKey(), buyerId: t.string() },
+// ---- private: who may do what ----
+/** The identity that published the module; only it assigns roles. Set once in init. */
+export const owner = table({ name: 'owner' }, { id: t.u32().primaryKey(), identity: t.identity() });
+
+/** One role per identity: buyer (subject = buyer_id), seller (subject = seller_id) or referee. */
+export const role = table(
+  { name: 'role' },
+  { identity: t.identity().primaryKey(), role: t.string(), subjectId: t.string().index('btree') },
 );
 
+/** Demo pairing code per buyer, so a browser screen can take the buyer role (SIM sign-in). */
+export const pairCode = table({ name: 'pair_code' }, { buyerId: t.string().primaryKey(), code: t.string() });
+
 // ---- private: seller side ----
-export const sellerIdentity = table(
-  { name: 'seller_identity' },
-  { identity: t.identity().primaryKey(), sellerId: t.string().unique() },
-);
 
 export const sellerFloor = table(
   { name: 'seller_floor' },
@@ -278,8 +283,8 @@ export const roundTimer = table(
 );
 
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, buyerSession,
-  sellerIdentity, sellerFloor, bid, bidCheck,
+  need, needItem, goal, goalItem, notification, owner, role, pairCode,
+  sellerFloor, bid, bidCheck,
   mandate, approval, payment,
   round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,
 });

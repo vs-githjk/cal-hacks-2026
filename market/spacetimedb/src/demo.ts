@@ -2,14 +2,13 @@
 // (or market/scripts/sim_sellers.mjs, SIM) place them through place_bid like anyone else.
 import type { InferSchema, ReducerCtx } from 'spacetimedb/server';
 import type spacetimedb from './schema';
-import { postGoal } from './market';
+import { insertGoal } from './market';
 
 type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
 export const DEMO = {
   buyerId: 'joe',
   goalId: 'goal-joe-gpu',
-  goalText: 'a GPU for 1440p that fits my case and PSU, under $800, by Friday',
   sellers: [
     { sellerId: 'seller-a', name: 'Seller A', archetype: 'refurbisher' },
     { sellerId: 'seller-b', name: 'Seller B', archetype: 'marketplace seller' },
@@ -18,7 +17,7 @@ export const DEMO = {
 };
 
 export function resetDemo(ctx: Ctx) {
-  // Identities and buyer screen sessions survive a reset so open tabs and agents keep working.
+  // Roles, the owner and pairing codes survive a reset so open tabs and agents keep working.
   const db = ctx.db;
   for (const r of [...db.need.iter()]) db.need.id.delete(r.id);
   for (const r of [...db.needItem.iter()]) db.needItem.id.delete(r.id);
@@ -45,11 +44,16 @@ export function seedDemo(ctx: Ctx) {
       ctx.db.persona.insert({ sellerId: s.sellerId, name: s.name, archetype: s.archetype, voiceId: '', modelUrl: '', origin: 'SIM' });
     }
   }
+  if (!ctx.db.pairCode.buyerId.find(DEMO.buyerId)) {
+    const code = String(ctx.random.integerInRange(100000, 999999));
+    ctx.db.pairCode.insert({ buyerId: DEMO.buyerId, code });
+  }
   if (!ctx.db.goal.id.find(DEMO.goalId)) {
-    postGoal(ctx, {
-      id: DEMO.goalId, buyerId: DEMO.buyerId, type: 'part_by_date', text: DEMO.goalText, cap: 800,
-      deadlineMinutes: 60 * 24 * 3, poNumber: '', origin: 'SIM',
-      items: [{ category: 'gpu', description: 'GPU for 1440p that fits the case and PSU Joe owns', skuSpec: '', modelNumber: '' }],
+    // "a GPU for 1440p that fits my case and PSU, under $800, by Friday", as Lane A parses it.
+    const deadline = new Date(Number(ctx.timestamp.microsSinceUnixEpoch / 1000n) + 3 * 24 * 3600_000).toISOString();
+    insertGoal(ctx, {
+      id: DEMO.goalId, buyerId: DEMO.buyerId, type: 'part_by_date', cap: 800, deadline, poNumber: '', origin: 'SIM',
+      items: [{ skuSpec: 'gpu-rtx5070ti-retail', condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' }],
     });
   }
 }

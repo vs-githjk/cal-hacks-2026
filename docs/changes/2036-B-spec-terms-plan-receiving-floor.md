@@ -1,0 +1,1 @@
+B (moved from docs/CHANGES.md, first written 20:36 to 20:38): proposed SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord and FloorEvent v2 (kind enum, ref_table, ref_id, label; every floor animation traces to a row). Bid.lines[] gained optional offered_spec; OrderPlan gained optional advocate (boolean). SpecCard was later replaced by C's schema (21:45).

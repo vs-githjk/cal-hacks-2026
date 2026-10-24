@@ -45,6 +45,13 @@ describe("checkLineSpec", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reasons[0]).toContain(GPU_OEM);
   });
+  it("rejects a quantity of 0, -1, NaN, Infinity or one that differs from the goal line", () => {
+    for (const q of [0, -1, NaN, Infinity, 2]) {
+      const r = checkLineSpec({ sku_spec: GPU, unit_price: 1, quantity: q }, items);
+      expect(r.ok, String(q)).toBe(false);
+      if (!r.ok) expect(r.reasons.join(" ")).toMatch(/quantity/);
+    }
+  });
   it("rejects a line the goal did not ask for", () => {
     expect(checkLineSpec({ sku_spec: "cpu-x", unit_price: 1, quantity: 1 }, items).ok).toBe(false);
   });
@@ -66,6 +73,15 @@ describe("rankBids", () => {
     const r = rankBids([trap, good], { needItems: items });
     expect(r.ranked.map((x) => x.bid.id)).toEqual([good.id]);
     expect(r.disqualified[0]!.bid.id).toBe(trap.id);
+  });
+
+  it("a zero or negative quantity bid cannot rank first; a valid bid still ranks", () => {
+    const zero = mk("seller-b", 700, { lines: [{ sku_spec: GPU, unit_price: 700, quantity: 0 }] });
+    const neg = mk("seller-c", 700, { lines: [{ sku_spec: GPU, unit_price: 700, quantity: -1 }] });
+    const good = mk("seller-a", 780);
+    const r = rankBids([zero, neg, good], { needItems: items });
+    expect(r.ranked.map((x) => x.bid.id)).toEqual([good.id]);
+    expect(r.disqualified.map((d) => d.bid.id).sort()).toEqual([zero.id, neg.id].sort());
   });
 
   it("applies rejections from other checks (floor, CPSC recall, claim check, Shield)", () => {
