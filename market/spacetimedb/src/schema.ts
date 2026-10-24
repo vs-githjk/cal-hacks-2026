@@ -112,7 +112,18 @@ export const role = table(
 );
 
 /** Demo pairing code per buyer, so a browser screen can take the buyer role (SIM sign-in). */
-export const pairCode = table({ name: 'pair_code' }, { buyerId: t.string().primaryKey(), code: t.string() });
+export const pairCode = table(
+  { name: 'pair_code' },
+  {
+    buyerId: t.string().primaryKey(),
+    code: t.string(),
+    failedAttempts: t.u32().default(0), // appended last so a publish migrates in place
+    locked: t.bool().default(false),
+  },
+);
+
+/** Failed pairing attempts per caller, across every code. */
+export const pairAttempt = table({ name: 'pair_attempt' }, { identity: t.identity().primaryKey(), failures: t.u32() });
 
 // ---- private: seller side ----
 
@@ -123,6 +134,7 @@ export const sellerFloor = table(
     sellerId: t.string().index('btree'),
     skuSpec: t.string(),
     floor: t.f64(),
+    condition: t.string().default('*'), // per (seller, sku, condition); '*' means any condition; appended last
   },
 );
 
@@ -145,6 +157,7 @@ export const bid = table(
     origin: t.string(),
     source: t.string(),
     sealedAt: t.timestamp(),
+    lineRejects: t.array(t.string()).default([]), // per line: '' or why it cannot be picked (no floor set)
   },
 );
 
@@ -322,7 +335,7 @@ export const roundTimer = table(
 );
 
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, owner, role, pairCode,
+  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,

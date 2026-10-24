@@ -45,12 +45,13 @@ describe("checkLineSpec", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reasons[0]).toContain(GPU_OEM);
   });
-  it("rejects a quantity of 0, -1, NaN, Infinity or one that differs from the goal line", () => {
-    for (const q of [0, -1, NaN, Infinity, 2]) {
+  it("rejects qty_available of 0, -1, NaN or Infinity; more stock than the need is fine", () => {
+    for (const q of [0, -1, NaN, Infinity]) {
       const r = checkLineSpec({ sku_spec: GPU, unit_price: 1, quantity: q }, items);
       expect(r.ok, String(q)).toBe(false);
-      if (!r.ok) expect(r.reasons.join(" ")).toMatch(/quantity/);
+      if (!r.ok) expect(r.reasons.join(" ")).toMatch(/qty_available/);
     }
+    expect(checkLineSpec({ sku_spec: GPU, unit_price: 1, quantity: 2 }, items).ok).toBe(true);
   });
   it("rejects a line the goal did not ask for", () => {
     expect(checkLineSpec({ sku_spec: "cpu-x", unit_price: 1, quantity: 1 }, items).ok).toBe(false);
@@ -229,5 +230,31 @@ describe("quality-adjusted price", () => {
     const ebay = mk("ebay", 1240, { lines: [ln(1240, "open-box")] });
     const bestBuy = mk("best-buy", 1250);
     expect(rankBids([bestBuy, ebay], { needItems: itemsOk }).ranked[0]!.bid.seller_id).toBe("ebay");
+  });
+});
+
+describe("a line's quantity is stock available (qty_available)", () => {
+  const two: NeedItem = { ...need, quantity: 2 };
+  const items2 = new Map([[GPU, two]]);
+  it("4 in stock for a need of 1 is eligible and costs 1 times the price", () => {
+    const r = rankBids([mk("seller-a", 300, { lines: [{ sku_spec: GPU, unit_price: 300, quantity: 4 }] })], { needItems: items });
+    expect(r.ranked[0]!.landed).toBe(300);
+  });
+  it("a line with less stock than the need is not eligible; a line with enough is picked and priced per need quantity", () => {
+    const b = mk("seller-a", 0, { lines: [{ sku_spec: GPU, unit_price: 250, quantity: 1 }, { sku_spec: GPU, unit_price: 310, quantity: 4 }] });
+    expect(rankBids([b], { needItems: items2 }).ranked[0]!.landed).toBe(620);
+  });
+  it("when no line has enough stock the bid is out, with a reason naming qty_available", () => {
+    const r = rankBids([mk("seller-a", 250, { lines: [{ sku_spec: GPU, unit_price: 250, quantity: 1 }] })], { needItems: items2 });
+    expect(r.ranked).toHaveLength(0);
+    expect(r.disqualified[0]!.reasons.join(" ")).toMatch(/qty_available 1 is below the 2 needed/);
+  });
+  it("a line rejected by the floor check (no floor set) is not eligible; the next allowed line is picked", () => {
+    const b = mk("seller-a", 0, { lines: [{ sku_spec: GPU, unit_price: 200, quantity: 1 }, { sku_spec: GPU, unit_price: 300, quantity: 1 }] });
+    const r = rankBids([b], { needItems: items, lineRejects: new Map([[b.id, [`no floor set for ${GPU} new`, ""]]]) });
+    expect(r.ranked[0]!.landed).toBe(300);
+    const only = mk("seller-b", 0, { lines: [{ sku_spec: GPU, unit_price: 200, quantity: 1 }] });
+    const r2 = rankBids([only], { needItems: items, lineRejects: new Map([[only.id, ["no floor set for x"]]]) });
+    expect(r2.disqualified[0]!.reasons.join(" ")).toMatch(/no floor set/);
   });
 });

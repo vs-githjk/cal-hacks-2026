@@ -1,6 +1,6 @@
 """Beat 1: Vidyut's goal and ownership memory. SIM stand-in for Lane A's agents/buyer/goal.py.
 
-Same shapes as the Goal, OwnedPart and Need contracts on main (contracts/). The persona is SIM: nothing here is a real buyer. The one derived fact that is NOT
+Same shapes as the Goal, OwnedPart and Need contracts on main (contracts/). The goal text and owned parts are scripted SIM data. The one derived fact that is NOT
 invented comes from real code: the PSU the RTX 5070 Ti needs is read from data.fit_checker.tables.GPU_POWER.
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 
 
 def vidyut_owned_parts(now: datetime) -> list[dict]:
-    """What Vidyut told the agent earlier (SIM persona). Attrs are SpecCard attrs the fit checker reads."""
+    """What Vidyut told the agent earlier (scripted SIM data). Attrs are SpecCard attrs the fit checker reads."""
     when = utc_iso(now - timedelta(days=9))
     told = lambda text: f"'{text}', told on {when[:10]}"
     parts = [
@@ -120,7 +120,7 @@ def run_beat1(now: datetime, say) -> dict:
     say.line(SIM, f'Vidyut: "{GOAL_TEXT}"')
     say.line(SIM, f"Goal {goal['id']}: {goal['type']}, cap {money(goal['cap'])}, deadline {goal['deadline']}, "
                   f"conditions {'/'.join(goal['items'][0]['allowed_conditions'])}, state {goal['state']}")
-    say.line(SIM, "Ownership memory (told by Vidyut, persona is SIM):")
+    say.line(SIM, "Ownership memory (told by Vidyut, scripted SIM data):")
     for o in owned:
         say.line(SIM, f"{o['id']}: {o['item_name']}  attrs {o['attrs']}", 1)
     for s in skip_lines(goal, owned):

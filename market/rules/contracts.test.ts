@@ -39,3 +39,33 @@ describe("Lane A compatibility", () => {
     expect(bid(rest)).toBe(false);
   });
 });
+
+// Seller model on #57's shapes: condition is the deprecated alias of allowed_conditions; bid lines
+// are alternatives with condition and qty_available (offered_condition and quantity stay as aliases).
+describe("Need items: condition or a non-empty allowed_conditions", () => {
+  const needWith = (item: Record<string, unknown>) => ({ ...laneANeed(), items: [item] });
+  it("accepts allowed_conditions alone", () => {
+    expect(need(needWith({ sku_spec: "gpu", allowed_conditions: ["new", "open-box"], variant: "retail", quantity: 1, unit: "each" })), JSON.stringify(need.errors)).toBe(true);
+  });
+  it("accepts condition with an empty allowed_conditions (Lane D bridge)", () => {
+    expect(need(needWith({ sku_spec: "gpu", condition: "new", allowed_conditions: [], variant: "retail", quantity: 1, unit: "each" }))).toBe(true);
+  });
+  it("rejects neither, an empty list alone, or an unknown condition", () => {
+    expect(need(needWith({ sku_spec: "gpu", variant: "retail", quantity: 1, unit: "each" }))).toBe(false);
+    expect(need(needWith({ sku_spec: "gpu", allowed_conditions: [], variant: "retail", quantity: 1, unit: "each" }))).toBe(false);
+    expect(need(needWith({ sku_spec: "gpu", allowed_conditions: ["mint"], variant: "retail", quantity: 1, unit: "each" }))).toBe(false);
+  });
+});
+
+describe("Bid lines: condition and qty_available", () => {
+  const bidWith = (lines: Record<string, unknown>[]) => ({ ...laneABid(), lines });
+  it("accepts two alternative lines for one SKU in the new shape", () => {
+    expect(bid(bidWith([
+      { sku_spec: "gpu", condition: "new", unit_price: 300, qty_available: 2 },
+      { sku_spec: "gpu", condition: "open-box", unit_price: 260, qty_available: 1 },
+    ])), JSON.stringify(bid.errors)).toBe(true);
+  });
+  it("rejects a line with no quantity of either name", () => {
+    expect(bid(bidWith([{ sku_spec: "gpu", condition: "new", unit_price: 300 }]))).toBe(false);
+  });
+});

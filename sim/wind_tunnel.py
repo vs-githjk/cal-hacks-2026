@@ -4,7 +4,7 @@
 
 Learning arm (benign builders only): parametric buyers from real part data (maker-checked PSUs and cases in
 data/fit_builds.json) run sealed rounds through demo.round.run_round (real Shield, claim check, fit checker and
-advocate) against every demo seller plus a second, field-median control. The learner (Gadget Grove) updates its price
+advocate) against every demo seller plus a second, field-median control. The learner (Gadget Grove (Vedant), a SIM seller) updates its price
 step with demo.learning.update_strategy (a Lane D SIM stand-in, price step only; not Abhinav's a7 strategy) from its own
 loss reports on TRAINING builders only, then is frozen and meets the frozen controls (sim/CONTROL.md) on builders from
 HELD-OUT archetypes. A headline lift is printed only when the learner beats the field-median control on at least

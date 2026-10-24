@@ -17,7 +17,8 @@ need, rnd = f"need-{run}", f"round-{run}"
 
 
 def line(price, condition=""):
-    return [{"sku_spec": GPU, "offered_spec": "", "offered_condition": condition, "unit_price": price, "quantity": 1}]
+    # quantity is the line's stock (qty_available); lines in one bid are alternatives, never summed
+    return {"sku_spec": GPU, "offered_spec": "", "offered_condition": condition, "unit_price": price, "quantity": 1}
 
 
 def refused(who, reducer, **args):
@@ -32,12 +33,13 @@ vidyut.call("post_need", id=need, buyer_id="vidyut", goal_id="goal-vidyut-gpu", 
          consent=True, auction_window_s=WINDOW, origin="SIM",
          items=[{"sku_spec": GPU, "condition": "new", "allowed_conditions": ["new"], "variant": "retail", "quantity": 1, "unit": "each"}])
 ref.call("open_round", round_id=rnd, need_id=need, window_s=WINDOW)
-for s, floor in [("seller-a", 700), ("seller-b", 650), ("seller-c", 690)]:
-    agent[s].call("set_floor", sku_spec=GPU, floor=floor)
-bids = {"seller-a": (780, ""), "seller-b": (699, "open-box"), "seller-c": (745, "")}
-for s, (price, cond) in bids.items():
+for s, cond, floor in [("seller-a", "new", 250), ("seller-a", "open-box", 200), ("seller-b", "open-box", 600), ("seller-c", "new", 690)]:
+    agent[s].call("set_floor_for_condition", sku_spec=GPU, condition=cond, floor=floor)
+# Seller A offers new 300 and open-box 260 for one SKU; the need allows only new, so 300 must be chosen.
+bids = {"seller-a": [line(300, "new"), line(260, "open-box")], "seller-b": [line(699, "open-box")], "seller-c": [line(745, "new")]}
+for s, lines in bids.items():
     agent[s].call("place_bid", id=f"{rnd}-{s}", round_id=rnd, persona={"seller-a": "Seller A", "seller-b": "Seller B", "seller-c": "Seller C"}[s],
-                  lines=line(price, cond), stated_total=price, perks=[], claims=[], origin="SIM", source="sim:demo_round")
+                  lines=lines, stated_total=0, perks=[], claims=[], origin="SIM", source="sim:demo_round")
 print("seller-a sees:", [r[0] for r in agent["seller-a"].sql("SELECT * FROM my_bids")])
 print("seller-a open_round:", refused("seller-a", "open_round", round_id="x", need_id=need, window_s=5))
 print("seller-a attach_verdict on seller-c:", refused("seller-a", "attach_verdict", bid_id=f"{rnd}-seller-c", verdict="block", rule_ids=["x"], origin="SIM"))
