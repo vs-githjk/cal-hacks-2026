@@ -85,7 +85,11 @@ def test_b_a_too_long_listing_that_does_bid_is_vetoed_citing_the_maker_spec(b2):
     card = card_of(b2, "ebay-824742")      # the eBay open-box Gigabyte Gaming OC, 342 mm
     assert card["recommendation"] == "veto"
     warn = next(w for w in card["warnings"] if w["rule_id"] == "fit.gpu_length")
-    assert "342 mm exceeds case clearance 305 mm" in warn["text"] and warn["source_url"] == GIGABYTE_SPEC
+    # main #121 closed the advocate warning text (a rule template, no numbers); the 342/305 numbers reach the veto
+    # through the card's own fit checks, which carry the fit checker's reason.
+    assert warn["text"].startswith("Does not fit") and warn["source_url"] == GIGABYTE_SPEC
+    length = next(c for c in card["fit"]["checks"] if c["rule_id"] == "fit.gpu_length")
+    assert length["verdict"] == "fail" and "342 mm exceeds case clearance 305 mm" in length["reason"]
     assert b2["winner"]["seller_id"] != "ebay-824742"
 
 
