@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from pay import voice_cartesia as vc
-from pay.approval import ApprovalError, ApprovalService
+from pay.approval import CODE_TTL_SECONDS, VOICE_CODE_TTL_SECONDS, ApprovalError, ApprovalService
 from pay.mandate import can_charge, new_mandate
 from pay.replay import NonceStore
 from pay.voice_cartesia import (CartesiaClient, CartesiaError, NumberNotAllowed, assert_clean, build_variables,
@@ -82,6 +82,11 @@ def _ticker():
         t[0] += 1.0
         return t[0]
     return clock
+
+
+def test_voice_and_shared_approval_ttl_match_while_browser_default_stays_shorter():
+    assert vc.CALL_CODE_TTL_S == VOICE_CODE_TTL_SECONDS == 300
+    assert CODE_TTL_SECONDS == 120
 
 
 def other_pair(code):

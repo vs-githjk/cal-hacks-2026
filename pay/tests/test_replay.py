@@ -1,4 +1,5 @@
 """d2 used-nonce store tests."""
+import hashlib
 import os
 import threading
 
@@ -75,3 +76,151 @@ def test_two_instances_second_cannot_reuse_what_the_first_consumed(tmp_path):
 def test_empty_nonce_refused():
     with pytest.raises(ValueError):
         NonceStore().consume(NS_TAP, "")
+
+
+def attempt(**overrides):
+    return {"mandate_hash": "a" * 64, "buyer_id": "buyer-1", "deal_id": "deal-1",
+            "request_sha256": "b" * 64, "amount_cents": 12345, "currency": "USD", "payee": "seller-1",
+            "idempotency_key": "mandate:" + "a" * 64, "message_id": "req:one", "receipt_keyid": "key-1",
+            "phase": "submitted", **overrides}
+
+
+def test_attempt_and_mandate_nonce_are_claimed_atomically(tmp_path):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    row = attempt()
+    assert store.start_payment_attempt(row, "nonce-1")
+    assert store.seen(NS_MANDATE, "nonce-1")
+    assert store.get_payment_attempt(row["mandate_hash"])["phase"] == "submitted"
+    assert not store.start_payment_attempt(row, "nonce-1")
+
+
+def test_attempt_claim_race_across_store_connections_has_one_winner(tmp_path):
+    path = str(tmp_path / "attempts.sqlite")
+    stores = [NonceStore(path), NonceStore(path)]
+    row = attempt()
+    barrier, wins = threading.Barrier(2), []
+
+    def claim(store):
+        barrier.wait()
+        wins.append(store.start_payment_attempt(row, "nonce-1"))
+
+    threads = [threading.Thread(target=claim, args=(store,)) for store in stores]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(wins) == [False, True]
+
+
+def test_uncertain_attempt_can_only_be_claimed_by_same_buyer_and_deal(tmp_path):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    row = attempt()
+    store.start_payment_attempt(row, "nonce-1")
+    assert store.finish_payment_attempt(row["mandate_hash"], "uncertain", reason="timeout")
+    assert store.claim_uncertain_attempt("other-deal", "buyer-1", row["mandate_hash"]) is None
+    claimed = store.claim_uncertain_attempt("deal-1", "buyer-1", row["mandate_hash"])
+    assert claimed["phase"] == "reconciling" and claimed["idempotency_key"] == row["idempotency_key"]
+
+
+def test_submitted_attempt_recovers_as_uncertain_without_retry(tmp_path):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    row = attempt()
+    store.start_payment_attempt(row, "nonce-1")
+    assert store.recover_submitted_attempts() == 1
+    assert store.get_payment_attempt(row["mandate_hash"])["phase"] == "uncertain"
+
+
+def test_unsubmitted_retirement_consumes_nonce_and_is_idempotent(tmp_path):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    row = store.retirement_attempt(mandate_hash="a" * 64, buyer_id="buyer-1", deal_id="deal-1",
+        request_body=b'{"reference":"x"}', amount_cents=12345, currency="USD", payee="seller-1")
+    assert row["message_id"] == "req:" + hashlib.sha256(b"buyer-1\n" + b'{"reference":"x"}').hexdigest()
+    assert row["receipt_keyid"] == "not-submitted"
+    assert store.retire_unsubmitted_attempt(row, "nonce-1") is True
+    saved = store.get_payment_attempt(row["mandate_hash"])
+    assert saved["phase"] == "refused" and saved["reason"] == "retired_before_submission"
+    assert store.seen(NS_MANDATE, "nonce-1")
+    assert store.retire_unsubmitted_attempt(row, "nonce-1") is True
+    assert store.consume(NS_MANDATE, "nonce-2") is True
+    assert store.retire_unsubmitted_attempt(row, "nonce-2") is False
+
+
+def test_retirement_is_not_proven_by_other_refused_attempt(tmp_path):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    submitted = attempt()
+    assert store.start_payment_attempt(submitted, "nonce-1")
+    assert store.finish_payment_attempt(submitted["mandate_hash"], "refused", reason="attempt_binding_mismatch")
+    retirement = {**submitted, "receipt_keyid": "not-submitted", "phase": "refused"}
+    assert store.retire_unsubmitted_attempt(retirement, "nonce-1") is False
+
+
+def test_generic_attempt_finish_cannot_forge_retirement_proof(tmp_path):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    submitted = attempt(receipt_keyid="not-submitted")
+    assert store.start_payment_attempt(submitted, "nonce-1")
+    with pytest.raises(ValueError, match="only atomic retirement"):
+        store.finish_payment_attempt(submitted["mandate_hash"], "refused",
+                                     reason="retired_before_submission")
+    retirement = {**submitted, "phase": "refused"}
+    assert store.retire_unsubmitted_attempt(retirement, "nonce-1") is False
+
+
+@pytest.mark.parametrize("phase", ["submitted", "reconciling", "uncertain", "charged"])
+def test_retirement_refuses_every_attempt_that_may_have_reached_charger(tmp_path, phase):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    submitted = attempt()
+    assert store.start_payment_attempt(submitted, "nonce-1")
+    if phase == "uncertain":
+        assert store.finish_payment_attempt(submitted["mandate_hash"], "uncertain", reason="timeout")
+    elif phase == "reconciling":
+        assert store.finish_payment_attempt(submitted["mandate_hash"], "uncertain", reason="timeout")
+        assert store.claim_uncertain_attempt("deal-1", "buyer-1", submitted["mandate_hash"])
+    elif phase == "charged":
+        assert store.finish_payment_attempt(submitted["mandate_hash"], "charged", charge_id="pi_test_cached")
+    retirement = {**submitted, "receipt_keyid": "not-submitted", "phase": "refused"}
+    assert store.retire_unsubmitted_attempt(retirement, "nonce-1") is False
+
+
+def test_retirement_and_submission_race_has_one_terminal_winner(tmp_path):
+    path = str(tmp_path / "attempts.sqlite")
+    stores = [NonceStore(path), NonceStore(path)]
+    submission = attempt()
+    retirement = {**submission, "receipt_keyid": "not-submitted", "phase": "refused"}
+    barrier, outcomes = threading.Barrier(2), {}
+
+    def submit():
+        barrier.wait()
+        outcomes["submit"] = stores[0].start_payment_attempt(submission, "nonce-1")
+
+    def retire():
+        barrier.wait()
+        outcomes["retire"] = stores[1].retire_unsubmitted_attempt(retirement, "nonce-1")
+
+    threads = [threading.Thread(target=submit), threading.Thread(target=retire)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+    assert all(not thread.is_alive() for thread in threads)
+    assert outcomes["submit"] != outcomes["retire"]
+    saved = stores[0].get_payment_attempt(submission["mandate_hash"])
+    assert saved["phase"] == ("submitted" if outcomes["submit"] else "refused")
+    if saved["phase"] == "refused":
+        assert saved["reason"] == "retired_before_submission"
+
+
+@pytest.mark.parametrize("field,value", [("buyer_id", "other"), ("request_sha256", "c" * 64),
+                                          ("receipt_keyid", "key-1")])
+def test_retirement_rejects_changed_identity_or_receipt_binding(tmp_path, field, value):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    row = store.retirement_attempt(mandate_hash="a" * 64, buyer_id="buyer-1", deal_id="deal-1",
+        request_body=b'{"reference":"x"}', amount_cents=12345, currency="USD", payee="seller-1")
+    changed = {**row, field: value}
+    assert store.retire_unsubmitted_attempt(row, "nonce-1")
+    if field == "buyer_id":
+        assert store.retire_unsubmitted_attempt(changed, "nonce-1") is False
+    elif field == "request_sha256":
+        assert store.retire_unsubmitted_attempt(changed, "nonce-1") is False
+    else:
+        with pytest.raises(ValueError):
+            store.retire_unsubmitted_attempt(changed, "nonce-1")
