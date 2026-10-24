@@ -125,9 +125,9 @@ def test_claude_classifier_builds_request_without_network(monkeypatch):
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     clf = ClaudeClassifier("test-key-not-real")
-    assert clf.classify("hi " * 5000, {}) == "SUSPICIOUS"
+    assert clf.classify("hi " * 9000, {}) == "SUSPICIOUS"          # 27,000 chars: cut to the 20,000-char window (#196)
     assert seen["url"].startswith("https://api.anthropic.com/") and seen["timeout"] <= 2
-    assert seen["body"]["max_tokens"] <= 10 and len(seen["body"]["messages"][0]["content"]) < 4100
+    assert seen["body"]["max_tokens"] <= 10 and len(seen["body"]["messages"][0]["content"]) < 20100
     assert seen["hdr"]["x-api-key"] == "test-key-not-real"
 
 
