@@ -43,6 +43,7 @@ def runtime(monkeypatch, tmp_path):
     with patch("uagents.Agent", return_value=fake_agent), patch.object(
             Path, "exists", lambda path: False if path.name == ".env" else path_exists(path)):
         buyer = importlib.import_module("buyer_agent")
+    fake_agent.address = buyer.common.address("buyer")
     monkeypatch.setattr(buyer, "ALLOWANCE", 0)
     monkeypatch.setattr(buyer, "business_now", lambda: NOW)
     monkeypatch.setattr(buyer.crs, "eligible", lambda _supplier, check, _now: bool(check and check.get("eligible")))
@@ -578,9 +579,11 @@ def test_completepayment_rejects_mismatch_then_accepts_exact_late_ack(runtime):
     tx["order"]["status"] = "charged"
     state.save_transaction(db, tx)
     buyer.ROUND.update(transaction=tx, pending_hold=True)
-    buyer.MARKET_BUYER.purchase_status.return_value = {
+    paid_status = {
         "approval_method": "typed_code", "retired": False, "reservation_matches": True,
         "payment_ref": "ch_simulated_runtime", "payment_mode": "sim", "payment_amount": 582.0}
+    buyer.MARKET_BUYER.purchase_status.side_effect = [
+        {"payment_ref": None, "payment_mode": None, "payment_amount": None}, paid_status]
     buyer.MARKET_BUYER.settle_goal.return_value = {"settled": True}
     buyer.business_now = lambda: NOW + timedelta(hours=1)
     wrong = Context()
@@ -600,6 +603,53 @@ def test_completepayment_rejects_mismatch_then_accepts_exact_late_ack(runtime):
     buyer.MARKET_REFEREE.record_payment.assert_called_once_with(
         mandate_hash=tx["mandate"]["hash"], payment_ref="ch_simulated_runtime",
         amount=tx["mandate"]["amount"], mode="sim")
+
+
+def test_exact_ack_skips_duplicate_market_payment_record(runtime):
+    buyer, db = runtime
+    tx, charger = charged_transaction(buyer, db)
+
+    asyncio.run(buyer.on_complete(Context(), tx["mandate"]["payee"],
+        CompletePayment(transaction_id="ch_simulated_runtime")))
+
+    assert state.load_transaction(db, tx["deal_id"], tx["buyer_id"])["phase"] == "settled"
+    buyer.MARKET_REFEREE.record_payment.assert_not_called()
+    buyer.MARKET_BUYER.settle_goal.assert_called_once()
+    assert len(charger.calls) == 1
+
+
+@pytest.mark.parametrize(("initial", "expected", "transition_from", "final", "accepted"), [
+    ("open", "review", "open", "review", True),
+    ("review", "closed", "review", "closed", True),
+    ("open", "review", "open", "open", False),
+    ("review", "closed", "review", "review", False),
+])
+def test_market_scheduler_races_require_confirmed_round_transition(
+        runtime, initial, expected, transition_from, final, accepted):
+    from market_bridge import MarketBridge, MarketBridgeError
+    buyer, _db = runtime
+
+    class RacingMarketClient:
+        identity = "referee-test"
+        state = initial
+
+        def sql(self, _query):
+            return [{"id": "round-1", "need_id": "need-1", "state": self.state,
+                     "deadline": None, "review_deadline": None}]
+
+        def call(self, _reducer, **_kwargs):
+            self.state = final
+            raise RuntimeError("scheduler changed round concurrently")
+
+    referee = MarketBridge("referee", client=RacingMarketClient())
+    if accepted:
+        status = buyer._ensure_market_round_state(
+            referee, "round-1", expected=expected, transition_from=transition_from)
+        assert status["state"] == expected
+    else:
+        with pytest.raises(MarketBridgeError):
+            buyer._ensure_market_round_state(
+                referee, "round-1", expected=expected, transition_from=transition_from)
 
 
 def charged_transaction(buyer, db):
