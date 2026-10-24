@@ -66,9 +66,17 @@ def test_b_200_maps_to_leads_that_are_not_bids(monkeypatch):
     assert dict(req.url.params) == {"dataset_id": "gd_ltppk50q18kdw67omz", "format": "json", "include_errors": "true",
                                     "type": "discover_new", "discover_by": "keyword"}
     body = json.loads(req.content)
-    assert body["input"] == [{"keyword": "rtx 5070 ti", "country": "US"}]
+    assert body == {"input": [{"keyword": "rtx 5070 ti", "country": "US"}], "limit_per_input": 10}  # the cost cap
     assert req.headers["authorization"] == f"Bearer {KEY}"
     assert bd.status()["last_result"] == "ok" and bd.status()["last_call"] == "2026-10-24T12:00:00+00:00"
+
+
+def test_b2_limit_is_sent_and_clamped_to_at_least_one(monkeypatch):
+    monkeypatch.setenv("BRIGHT_DATA_API_KEY", KEY)
+    for asked, sent in ((3, 3), (0, 1)):
+        fake = Fake(httpx.Response(200, json=[{"url": NEWEGG}]))
+        disc.discover("rtx 5070 ti", limit=asked, client=fake.client(), now=NOW)
+        assert json.loads(fake.requests[0].content)["limit_per_input"] == sent
 
 
 def test_c_429_stops_after_one_request_and_cools_down(monkeypatch):
@@ -89,6 +97,7 @@ def test_d_untrusted_records_are_dropped_or_cleaned(monkeypatch):
         {"url": "javascript:alert(1)", "title": "x"},
         {"url": "ftp://files.example.com/gpu"},
         {"url": "not a url"},
+        {"url": "https://xn--bestbuy-xyz.com/p"},  # bad punycode host: reading .host raises InvalidCodepoint
         {"url": NEWEGG, "error": "dead page", "error_code": "dead_page"},
         {"url": NEWEGG, "warning": "no results", "warning_code": "no_results"},
         {"url": 5},

@@ -34,11 +34,12 @@ def _store(url: str) -> str | None:
     """A known retailer's short name, else the bare host. None when the url is not plain http(s) with a host."""
     try:
         u = httpx.URL(url)
+        raw_host = u.host  # decodes punycode lazily: a bad IDN host raises here (idna errors are ValueErrors)
     except (httpx.InvalidURL, ValueError):
         return None
-    if u.scheme not in ("http", "https") or not u.host:
+    if u.scheme not in ("http", "https") or not raw_host:
         return None
-    host = re.sub(r"^www\.", "", u.host.lower())
+    host = re.sub(r"^www\.", "", raw_host.lower())
     return next((s for h, s in bd.HOSTS.items() if host == h or host.endswith("." + h)), host)
 
 
