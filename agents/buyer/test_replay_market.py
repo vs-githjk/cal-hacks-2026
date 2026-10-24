@@ -1,7 +1,9 @@
 import asyncio
+import copy
 import importlib
 import json
 import sys
+import socket
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -10,7 +12,7 @@ import pytest
 
 from agents.buyer import replay, state
 from agents.buyer.replay import run_replay
-from agents.buyer.replay_market import ReplayMarketAdapter, SimTransport
+from agents.buyer.replay_market import ReplayMarketAdapter, SimProvider, SimTransport
 
 
 T0 = datetime(2026, 10, 24, 5, 0, tzinfo=timezone.utc)
@@ -28,8 +30,8 @@ class SimClock:
         self.value = value
 
 
-def scenario(until, origin="MIRROR"):
-    return {"run_id": "run-1", "buyer_id": "buyer-1", "goal_id": "goal-1", "mode": "SIM",
+def scenario(until, origin="MIRROR", buyer_id="buyer-1"):
+    return {"run_id": "run-1", "buyer_id": buyer_id, "goal_id": "goal-1", "mode": "SIM",
             "transport": "SIM", "input_origin": origin, "until": until}
 
 
@@ -40,8 +42,8 @@ def row(at, *, kind="ask", price=100.0, origin="MIRROR"):
             "origin": origin}
 
 
-def seed_goal(path, buyer, *, deadline, goal_state="ACTIVE"):
-    goal, _ = buyer.parse_goal("a new RTX 4070 Super under $800 by 2026-10-28", "buyer-1", T0)
+def seed_goal(path, buyer, *, deadline, goal_state="ACTIVE", buyer_id="buyer-1"):
+    goal, _ = buyer.parse_goal("a new RTX 4070 Super under $800 by 2026-10-28", buyer_id, T0)
     goal.update(id="goal-1", deadline=deadline.isoformat(), state=goal_state)
     db = state.open_state(path)
     try:
@@ -104,7 +106,7 @@ class FakeChecker:
         return {"verdict": "allow", "reasons": [], "rule_ids": []}
 
 
-class FakeProvider:
+class FakeProvider(SimProvider):
     def __init__(self, *, bids=True):
         self.include_bids = bids
         self.seen = []
@@ -239,4 +241,92 @@ def test_actual_tick_expires_goal_at_virtual_deadline(tmp_path, replay_stack):
     assert "goal_expired" in [event["kind"] for event in report["events"]]
     assert "EXPIRED" in " ".join(msg.text() for _, msg in transport.sent if hasattr(msg, "text"))
     assert not any(type(msg).__name__ in {"RequestPayment", "CommitPayment"} for _, msg in transport.sent)
+
+
+def test_first_observation_after_goal_deadline_expires_before_starting_round(tmp_path, replay_stack):
+    buyer, provider, transport, adapter, clock = replay_stack
+    state_path = tmp_path / ".state" / "already-expired.sqlite3"
+    seed_goal(state_path, buyer, deadline=T0 + timedelta(seconds=30))
+
+    report = asyncio.run(run_replay([row(T0 + timedelta(seconds=31))],
+                                    scenario(T0 + timedelta(seconds=40)), adapter, clock, state_path))
+
+    assert buyer.ROUND["goal"]["state"] == "EXPIRED"
+    assert provider.seen == []
+    assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in transport.sent)
+    assert "goal_expired" in [event["kind"] for event in report["events"]]
+    db = state.open_state(state_path)
+    try:
+        assert state.load_goal(db, "goal-1", "buyer-1")["state"] == "EXPIRED"
+    finally:
+        db.close()
+
+
+def test_sequential_adapters_restore_mutable_buyer_runtime_globals(tmp_path, buyer, monkeypatch):
+    from common import BidReply, AdviceReply, address
+
+    buyer.APPROVALS["existing"] = {"phase": "pending_approval"}
+    buyer.USED.add("existing-mandate")
+    buyer.WEB_OUTBOX.append("existing web reply")
+    initial_round = copy.deepcopy(buyer.ROUND)
+    initial_approvals = copy.deepcopy(buyer.APPROVALS)
+    initial_used = set(buyer.USED)
+    initial_outbox = list(buyer.WEB_OUTBOX)
+    initial_diag = copy.deepcopy(buyer.CHAT_DIAG.__dict__)
+
+    for index in (1, 2):
+        checker, provider, transport = FakeChecker(), FakeProvider(bids=False), SimTransport()
+        provider.sender, provider.message, provider.advice_message = address("seller_1"), BidReply, AdviceReply
+        clock = SimClock()
+        adapter = ReplayMarketAdapter(clock=clock, checker=checker, provider=provider, transport=transport)
+        state_path = tmp_path / ".state" / f"sequential-{index}.sqlite3"
+        seed_goal(state_path, buyer, deadline=T0 + timedelta(seconds=30))
+        with adapter:
+            asyncio.run(run_replay([row(T0 + timedelta(seconds=1))], scenario(T0 + timedelta(minutes=1)),
+                                   adapter, clock, state_path))
+        assert buyer.ROUND == initial_round
+        assert buyer.APPROVALS == initial_approvals
+        assert buyer.USED == initial_used
+        assert buyer.WEB_OUTBOX == initial_outbox
+        assert buyer.CHAT_DIAG.__dict__ == initial_diag
+
+
+def test_reserved_web_owner_is_rejected_before_state_or_transport_changes(tmp_path, replay_stack):
+    buyer, provider, transport, adapter, clock = replay_stack
+    state_path = tmp_path / ".state" / "web-owner.sqlite3"
+    seed_goal(state_path, buyer, deadline=T0 + timedelta(days=1), buyer_id="web")
+
+    with pytest.raises(replay.ReplayError, match="SIM dispatch failed"):
+        asyncio.run(run_replay([row(T0 + timedelta(seconds=1))],
+                               scenario(T0 + timedelta(minutes=1), buyer_id="web"), adapter, clock, state_path))
+
+    assert not transport.sent
+    assert provider.seen == []
+    db = state.open_state(state_path)
+    try:
+        assert state.load_goal(db, "goal-1", "web")["state"] == "ACTIVE"
+    finally:
+        db.close()
+
+
+def test_replay_context_blocks_outbound_socket_and_dns(replay_stack):
+    _, _, _, _, _ = replay_stack
+
+    with pytest.raises(replay.ReplayError, match="outbound network is disabled"):
+        socket.create_connection(("203.0.113.9", 443), timeout=0.01)
+    with pytest.raises(replay.ReplayError, match="outbound network is disabled"):
+        socket.getaddrinfo("example.com", 443)
+
+
+def test_replay_rejects_unmarked_provider(buyer):
+    class UnmarkedProvider:
+        def bids(self, *args):
+            return []
+
+        def review(self, *args):
+            return None
+
+    with pytest.raises(replay.ReplayError, match="explicit SimProvider"):
+        ReplayMarketAdapter(clock=SimClock(), checker=FakeChecker(), provider=UnmarkedProvider(),
+                            transport=SimTransport())
 

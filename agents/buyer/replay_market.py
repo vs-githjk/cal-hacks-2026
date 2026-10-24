@@ -5,7 +5,10 @@ ROUND restoration still depends on the Market startup hook.
 """
 from __future__ import annotations
 
+import copy
 import importlib
+import ipaddress
+import socket
 import sys
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta, timezone
@@ -25,6 +28,16 @@ class SimTransport:
     async def send(self, recipient: str, message: Any):
         self.sent.append((recipient, message))
         return None
+
+
+class SimProvider:
+    """Allowlisted provider base for deterministic replay-only bid and review fixtures."""
+
+    def bids(self, listing: Mapping[str, Any], need: Mapping[str, Any], now: datetime):
+        raise NotImplementedError
+
+    def review(self, request: Any, now: datetime):
+        raise NotImplementedError
 
 
 class _Context:
@@ -68,6 +81,8 @@ class ReplayMarketAdapter:
         for method in ("bids", "review"):
             if not callable(getattr(provider, method, None)):
                 raise ReplayError(f"SIM provider requires {method}()")
+        if not isinstance(provider, SimProvider):
+            raise ReplayError("replay provider must be an explicit SimProvider")
         self.buyer = _buyer_agent()
         if not callable(getattr(self.buyer, "business_now", None)):
             raise ReplayError("buyer business_now() clock seam is required")
@@ -79,33 +94,96 @@ class ReplayMarketAdapter:
     def __enter__(self):
         if self._entered:
             raise ReplayError("replay adapter is already active")
+        if self.buyer.ROUND:
+            raise ReplayError("SIM replay requires an empty volatile buyer ROUND")
+        try:
+            self._runtime_snapshot = {
+                "ROUND": copy.deepcopy(self.buyer.ROUND),
+                "APPROVALS": copy.deepcopy(self.buyer.APPROVALS),
+                "USED": copy.deepcopy(self.buyer.USED),
+                "WEB_OUTBOX": copy.deepcopy(self.buyer.WEB_OUTBOX),
+                "CHAT_DIAG": copy.deepcopy(self.buyer.CHAT_DIAG.__dict__),
+            }
+        except Exception as exc:
+            raise ReplayError(f"buyer runtime globals cannot be isolated: {type(exc).__name__}") from None
         self._originals = (self.buyer.business_now, self.buyer.crs.check_sellers,
                            self.buyer.common.screen, self.buyer.common.screen_bid)
+        self._socket_originals = (socket.socket.connect, socket.socket.connect_ex,
+                                  socket.create_connection, socket.getaddrinfo)
         self.buyer.business_now = self.clock.now
         self.buyer.crs.check_sellers = self.checker.check_sellers
         self.buyer.common.screen = self.checker.screen
         self.buyer.common.screen_bid = self.checker.screen_bid
+        connect, connect_ex, create_connection, getaddrinfo = self._socket_originals
+
+        def guarded_connect(sock, address):
+            if _is_loopback_address(address):
+                return connect(sock, address)
+            return _deny_network(address)
+
+        def guarded_connect_ex(sock, address):
+            if _is_loopback_address(address):
+                return connect_ex(sock, address)
+            return _deny_network(address)
+
+        def guarded_create_connection(address, *args, **kwargs):
+            if _is_loopback_address(address):
+                return create_connection(address, *args, **kwargs)
+            return _deny_network(address)
+
+        def guarded_getaddrinfo(host, *args, **kwargs):
+            if _is_loopback_address(host):
+                return getaddrinfo(host, *args, **kwargs)
+            return _deny_network(host)
+
+        self._network_guards = (guarded_connect, guarded_connect_ex,
+                                guarded_create_connection, guarded_getaddrinfo)
+        socket.socket.connect, socket.socket.connect_ex = guarded_connect, guarded_connect_ex
+        socket.create_connection, socket.getaddrinfo = guarded_create_connection, guarded_getaddrinfo
         self._entered = True
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        (self.buyer.business_now, self.buyer.crs.check_sellers,
-         self.buyer.common.screen, self.buyer.common.screen_bid) = self._originals
-        self._entered = False
+        try:
+            (self.buyer.business_now, self.buyer.crs.check_sellers,
+             self.buyer.common.screen, self.buyer.common.screen_bid) = self._originals
+            (socket.socket.connect, socket.socket.connect_ex,
+             socket.create_connection, socket.getaddrinfo) = self._socket_originals
+            for name in ("ROUND", "APPROVALS", "USED", "WEB_OUTBOX"):
+                target, snapshot = getattr(self.buyer, name), self._runtime_snapshot[name]
+                target.clear()
+                if isinstance(target, dict):
+                    target.update(snapshot)
+                elif isinstance(target, set):
+                    target.update(snapshot)
+                else:
+                    target.extend(snapshot)
+            self.buyer.CHAT_DIAG.__dict__.clear()
+            self.buyer.CHAT_DIAG.__dict__.update(self._runtime_snapshot["CHAT_DIAG"])
+            self._started = False
+        finally:
+            self._entered = False
         return False
 
     async def __call__(self, event: Mapping[str, Any], *, now: datetime, db, scenario: Mapping[str, Any]) -> dict:
         if not self._entered:
             raise ReplayError("replay adapter must be used as a context manager")
+        if scenario.get("buyer_id") == self.buyer.WEB:
+            raise ReplayError("SIM replay does not support the reserved WEB owner")
         if self.clock.now() != now:
             raise ReplayError("buyer business clock does not match replay time")
         starting = not self._started
+        before_goal_state = None
         if starting:
+            persisted_goal = state.load_goal(db, scenario["goal_id"], scenario["buyer_id"])
+            before_goal_state = persisted_goal.get("state") if persisted_goal else None
             await self._start(db, scenario)
 
         buyer = self.buyer
         round_state = buyer.ROUND
-        before_phase, before_goal_state = round_state.get("phase"), round_state.get("goal", {}).get("state")
+        before_phase = round_state.get("phase")
+        if not starting:
+            before_goal_state = round_state.get("goal", {}).get("state")
         before_round_token = round_state.get("round_token")
         events = []
         if event.get("kind") == "observation":
@@ -146,7 +224,7 @@ class ReplayMarketAdapter:
         else:
             raise ReplayError("unsupported replay event")
 
-        if starting:
+        if starting and self._round_started:
             events.insert(0, "round_started")
         if round_state.get("goal", {}).get("state") == "EXPIRED" and before_goal_state != "EXPIRED":
             events.append("goal_expired")
@@ -161,23 +239,29 @@ class ReplayMarketAdapter:
         buyer = self.buyer
         if buyer.ROUND:
             raise ReplayError("SIM replay requires an empty volatile buyer ROUND")
+        self._round_started = False
         state.recover_on_start(db)
         goal = state.load_goal(db, scenario["goal_id"], scenario["buyer_id"])
         if goal is None:
             raise ReplayError("scenario goal is not present for the requested buyer")
         owned = state.load_owned_parts(db, scenario["buyer_id"])
         buyer.ROUND.update(owner=scenario["buyer_id"], owner_context=self.ctx, goal=goal, owned=owned,
-                           bids=[], personas={}, cards={}, attempts=0, last_sent={}, retired_need_ids=[])
+                           bids=[], personas={}, cards={}, attempts=0, last_sent={}, retired_need_ids=[],
+                           phase="done")
         if goal["state"] in {"PAUSED", "EXPIRED", "DONE", "HOLD_FOR_CALL"}:
-            buyer.ROUND["phase"] = "done"
+            pass
         else:
+            await buyer.tick(self.ctx)
+            if goal["state"] == "EXPIRED":
+                self._started = True
+                return
             need = buyer.need_from_goal(goal)
             buyer.ROUND["need"] = need
             if not need["items"]:
                 buyer.set_state("DONE")
                 buyer.ROUND["phase"] = "done"
             else:
-                await buyer.start_round(self.ctx, need)
+                self._round_started = await buyer.start_round(self.ctx, need) is not False
         self._started = True
 
     def _next_wakeup(self) -> datetime | None:
@@ -194,3 +278,19 @@ class ReplayMarketAdapter:
             candidates.append(datetime.fromtimestamp(round_state["deadline"], timezone.utc)
                               + timedelta(microseconds=1))
         return min((when for when in candidates if when > self.clock.now()), default=None)
+
+
+def _deny_network(*args, **kwargs):
+    raise ReplayError("outbound network is disabled during SIM replay")
+
+
+def _is_loopback_address(address: Any) -> bool:
+    host = address[0] if isinstance(address, tuple) and address else address
+    if not isinstance(host, str):
+        return False
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
