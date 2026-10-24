@@ -1,34 +1,85 @@
-"""An AI agent pays Apify for one claim-check run with stablecoin, no Apify account (Lane C, issue #270, Tier B; in data/claim_check, not scripts/, per #276).
+"""An AI agent pays Apify for one claim-check run with stablecoin, no Apify account (Lane C, issues #270, #342; in data/claim_check, not scripts/, per #276).
 
-SPENDS REAL MONEY. Run it only on the machine whose wallet Vidyut approved ($5 to $10).
+SPENDS REAL MONEY. Run it only on the machine whose wallet Vidyut approved. Cap: $1 to $10 per run (--amount).
+Terms (agi.apify.com/AGENTS.md): minimum $1, the token balance is a hard spend cap, the token expires 14 days after
+purchase, and unused balance is not refunded.
 
-Run steps, in order:
-  0. Fund a wallet that the payer CLI controls, then sign in to it:
-       awal (Coinbase, x402 on Base):  npx awal auth login <email>; npx awal auth verify <otp>; npx awal balance
-       mppx (MPP on Tempo):            npm i -g mppx; mppx account create; mppx account view   (fund USDC.e or pathUSD)
-       pay.sh (Solana, x402):          npm install -g @solana/pay; pay setup; pay whoami       (fund USDC or USDT)
-  1. Free check that the pay wall answers:   python3 -m data.claim_check.agent_pay_probe
-  2. Pay and run:                            python3 -m data.claim_check.agent_pay --payer awal --amount 5
-     It shows what it will spend and asks you to type PAY. Then it:
-       a. buys a prepaid, spend-capped Apify token for --amount USD at agi.apify.com through the payer CLI;
-       b. saves the token as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); it never prints it, only its last 4 characters;
-       c. prints the token's balance (GET https://agi.apify.com/prepaid-tokens/balance);
-       d. runs the claim-check Actor once on the demo listing with that token;
-       e. prints the balance again and the run id, and writes data/claim_check/agent_pay_run.json. The receipt is labelled
-          LIVE only when this run paid and the Actor run SUCCEEDED (with "payment unverified by balance" when the
-          balance could not be read or did not drop); otherwise it says why it is not LIVE.
-     If anything fails once money may have been spent (the payer CLI exits non-zero, times out, or the run request
-     fails), a token it printed is still saved, and a NOT LIVE receipt says what is known and what failed (#329).
-  3. A rerun with the token already saved skips the purchase:   python3 -m data.claim_check.agent_pay --token-from-env
-     (its receipt is never LIVE: nothing was paid in that run).
+RUNBOOK (from the repo root; pick ONE payer: awal or mppx)
 
-A human types PAY every time; no flag skips the prompt, so an agent cannot spend on its own. The $1 to $10 cap is per run.
+1. Set up and fund the wallet (one time). The payer CLI holds the wallet; this script never sees a key.
+   awal (Coinbase Agentic Wallet, x402, USDC on Base):
+       npx awal auth login <email>          sign in
+       npx awal auth verify <otp>           confirm the code from the email
+       npx awal show                        funding UI: add USDC on Base (or: npx awal address)
+       npx awal balance                     check the USDC balance
+     Fund: at least --amount in USDC on Base, plus a little ETH on Base (about 0.000001 ETH) for the
+     one-time wallet deployment gas on the first payment.
+   mppx (MPP, USDC.e or pathUSD on Tempo):
+       npm i -g mppx
+       mppx account create                  the account lives in the OS keychain
+       mppx account view                    prints the address to fund
+     Fund: at least --amount in USDC.e or pathUSD on Tempo mainnet, plus a little extra for the network
+     fee (Apify does not sponsor it).
+   (pay.sh, x402 on Solana, also works: npm install -g @solana/pay; pay setup; pay whoami; fund USDC or USDT.)
 
-The script never reads, prints or stores a wallet key. The payer CLI holds the wallet and signs the 402 challenge
-(awal signs in by email, mppx keeps its account in the OS keychain, pay.sh uses the OS keystore), so a key never passes
-through this code or a command line. Terms (agi.apify.com/AGENTS.md): minimum $1, the token is a hard spend cap, it expires
-after 14 days, and unused balance is not refunded.
+2. Note the wallet balance BEFORE:  npx awal balance   or   mppx account view
+   Expect at least --amount (default $5) plus the fee money from step 1.
+
+3. Free check that the pay wall answers (no payment, no key, no token):
+       python3 -m data.claim_check.agent_pay_probe
+   Expect "reached, not paid" and HTTP 402 for x402 and mpp prepaid-tokens at $5.00. If not, stop.
+
+4. Pay and run (pick one):
+       python3 -m data.claim_check.agent_pay --payer awal --amount 5
+       python3 -m data.claim_check.agent_pay --payer mppx --amount 5
+   It shows what it will spend and asks you to type PAY (anything else stops it, nothing paid). Then:
+     a. the payer CLI buys a prepaid Apify token at agi.apify.com:
+          awal: npx awal x402 pay <agi url> --max-amount <amount in USDC units, 5000000 = $5>
+          mppx: mppx <agi url>   (the amount is in the URL; mppx takes no separate cap)
+     b. saves it as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); prints only its last 4 characters;
+     c. prints the token balance before the run (expect about --amount, e.g. $5);
+     d. runs the claim-check Actor once on the demo listing (waits up to 120 s);
+     e. prints the token balance after (expect a little less: the run's metered cost) and the run id,
+        and writes the receipt data/claim_check/agent_pay_run.json (token masked, no secret in it).
+
+5. Note the wallet balance AFTER (same command as step 2). Expect it down by --amount (plus the network fee).
+
+6. Read the receipt label (printed, and "label" in data/claim_check/agent_pay_run.json) and act:
+   LIVE
+       Paid in this run, the Actor run SUCCEEDED, and the token balance dropped. Done: share the run id and receipt.
+   LIVE (payment unverified by balance)
+       Paid and the run SUCCEEDED, but the balance could not be read or did not drop yet. Check it later with
+       GET https://agi.apify.com/prepaid-tokens/balance (Bearer APIFY_AGENT_TOKEN); do not pay again.
+   NOT LIVE: paid, but the Actor run did not succeed (<status>)
+       Money is spent and the token is saved. Do not pay again: fix the cause (status_message in the receipt), then
+       rerun with the saved token: python3 -m data.claim_check.agent_pay --token-from-env
+   NOT LIVE: paid, but the run request failed (<error>)
+       Token saved. A run may have started: check the Apify console, then rerun with --token-from-env.
+   NOT LIVE: payment may have happened, no token returned (payer exit <code>)
+   NOT LIVE: payment may have happened, the payer CLI timed out
+   NOT LIVE: payment may have happened, the payer CLI failed (<error>)
+       Payment may have happened: check the wallet and .env. Compare the wallet balance with step 2. If .env has
+       APIFY_AGENT_TOKEN, rerun with --token-from-env. If the wallet dropped and there is no token, do not pay
+       again; keep the receipt (it holds the payer output, tokens masked) and ask Apify. If the wallet did not
+       drop, nothing was paid and step 4 can be retried.
+   NOT LIVE: no payment in this run (saved token)
+   NOT LIVE: no payment in this run, and the run request failed (<error>)
+       A --token-from-env rerun; never LIVE because nothing was paid in that run. The earlier paid receipt stands.
+   FAKE (test)
+       Only from the tests (fakes); never from a real run.
+   No receipt, and a message "Not paid: you did not type PAY." or "The payer CLI for <payer> is not installed
+   (see step 1). Nothing was paid." means nothing was spent: fix and repeat step 4.
+   The exit code is 0 only when the Actor run SUCCEEDED.
+
+7. A rerun with the token already saved skips the purchase (never LIVE):
+       python3 -m data.claim_check.agent_pay --token-from-env
+
+A human types PAY every time; no flag skips the prompt, so an agent cannot spend on its own. The $1 to $10 cap is
+per run. The script never reads, prints or stores a wallet key: the payer CLI holds the wallet and signs the 402
+challenge (awal signs in by email, mppx keeps its account in the OS keychain, pay.sh uses the OS keystore).
 """
+# Sources checked 2026-10-24 for step 1 and the terms: https://agi.apify.com/AGENTS.md,
+# https://docs.apify.com/integrations/x402.md (awal, USDC plus a little ETH on Base), https://docs.apify.com/integrations/mpp.md (mppx on Tempo).
 from __future__ import annotations
 
 import argparse

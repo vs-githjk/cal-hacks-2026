@@ -233,3 +233,51 @@ def test_the_env_file_is_never_world_readable_even_for_a_moment(tmp_path, monkey
     env.chmod(0o644)
     pay_mod.save_token(env, TOKEN)  # an existing, wider .env is tightened too
     assert stat.S_IMODE(env.stat().st_mode) == 0o600 and env.read_text().count("APIFY_AGENT_TOKEN=") == 1
+
+
+def test_help_is_the_paid_run_runbook_and_spends_nothing(capsys, monkeypatch):
+    """#342: --help is the 18:30 runbook. It names every step and every receipt label with its next action,
+    and it exits before any network call, payer CLI or prompt."""
+    def boom(*a, **kw):
+        raise AssertionError("--help must not touch the network, a payer CLI or the prompt")
+    monkeypatch.setattr(pay_mod, "http", boom)
+    monkeypatch.setattr(pay_mod, "shell", boom)
+    monkeypatch.setattr(pay_mod, "run", boom)
+    monkeypatch.setattr("builtins.input", boom)
+    with pytest.raises(SystemExit) as e:
+        pay_mod.main(["--help"])
+    assert e.value.code == 0
+    text = capsys.readouterr().out
+    for step in ("type PAY", "python3 -m data.claim_check.agent_pay_probe",
+                 "python3 -m data.claim_check.agent_pay --payer awal --amount 5",
+                 "python3 -m data.claim_check.agent_pay --payer mppx --amount 5",
+                 "python3 -m data.claim_check.agent_pay --token-from-env",
+                 "npx awal auth login", "npx awal balance", "npm i -g mppx", "mppx account create", "mppx account view",
+                 "data/claim_check/agent_pay_run.json", "$1 to $10", "mode 600", "BEFORE", "AFTER"):
+        assert step in text, step
+    labels = {  # each receipt label the code can write, and the next action the runbook gives for it
+        "LIVE\n": "share the run id",
+        "LIVE (payment unverified by balance)": "do not pay again",
+        "NOT LIVE: paid, but the Actor run did not succeed": "--token-from-env",
+        "NOT LIVE: paid, but the run request failed": "check the Apify console",
+        "NOT LIVE: payment may have happened, no token returned": "check the wallet and .env",
+        "NOT LIVE: payment may have happened, the payer CLI timed out": "check the wallet and .env",
+        "NOT LIVE: payment may have happened, the payer CLI failed": "check the wallet and .env",
+        "NOT LIVE: no payment in this run (saved token)": "never LIVE",
+        "NOT LIVE: no payment in this run, and the run request failed": "never LIVE",
+        "FAKE (test)": "never from a real run",
+    }
+    for label, action in labels.items():
+        assert label in text, label
+        assert action in text[text.index(label):], (label, action)
+    assert pay_mod.MAYBE_PAID.rstrip(".").lower() in text.lower()
+    assert "–" not in text and "—" not in text
+
+
+def test_every_not_live_label_the_code_writes_is_in_the_help():
+    import inspect
+    import re
+    found = re.findall(r'"(NOT LIVE: [^"({]+)', inspect.getsource(pay_mod))
+    assert len(found) >= 6
+    for label in found:
+        assert label.strip().rstrip(",") in pay_mod.__doc__, label
