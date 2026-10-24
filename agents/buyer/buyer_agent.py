@@ -182,7 +182,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
             await tell(ctx, sender, "An order is already placed; its payment status is unresolved. "
                                     "A new goal cannot replace it yet.")
         return
-    if ROUND.get("phase") in ("checking", "bidding", "advice", "requote"):
+    if not terminal and ROUND.get("phase") in ("checking", "bidding", "advice", "requote"):
         if not ROUND.get("told_busy"):  # once per round: ASI:One rate-limits bursts of replies
             ROUND["told_busy"] = True
             await tell(ctx, sender, "A sealed round is already running; results soon.")
@@ -311,14 +311,29 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
     reasons = blocked_reasons(sender, msg.cards_json, common.shield_context(sender))
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
+    raw = None
+    try:
+        raw = json.loads(msg.cards_json)
+    except Exception:
+        pass
+    cards = None
+    if isinstance(raw, list) and raw:
+        try:
+            cards = [common.validate("AdvocateCard", c) for c in raw]
+        except Exception:
+            cards = None
+    current_bid_ids = {b["id"] for b in ROUND.get("bids", [])}
+    if (cards and need_id and len({c["need_id"] for c in cards}) == 1
+            and cards[0]["need_id"] != need_id and not current_bid_ids.intersection(c["bid_id"] for c in cards)):
+        ctx.logger.info("stale advocate reply ignored")
+        return
     if reasons:
         await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
     try:
-        raw = json.loads(msg.cards_json)
         if not isinstance(raw, list):
             raise ValueError("expected a list of review cards")
-        cards = [common.validate("AdvocateCard", c) for c in raw]
+        cards = cards or [common.validate("AdvocateCard", c) for c in raw]
         if (not cards or len(cards) != len(ROUND["bids"])
                 or {c["bid_id"] for c in cards} != {b["id"] for b in ROUND["bids"]}
                 or any(c["need_id"] != ROUND["need"]["id"]

@@ -492,7 +492,8 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
     assert buyer.ROUND['owner_context'] is owner_context
 
 
-@pytest.mark.parametrize(('phase', 'state'), [('done', 'ACTIVE'), ('decided', 'DONE')])
+@pytest.mark.parametrize(('phase', 'state'), [
+    ('done', 'ACTIVE'), ('decided', 'DONE'), ('bidding', 'EXPIRED'), ('advice', 'PAUSED')])
 def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase, state):
     ctx = Context()
     buyer.ROUND.update(owner='alice', owner_context=object(), phase=phase,
@@ -502,6 +503,18 @@ def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase,
     assert buyer.ROUND['goal']['buyer_id'] == 'bob'
     assert buyer.ROUND['goal']['id'] != 'old-goal'
     assert buyer.ROUND['phase'] == 'bidding'
+
+
+def test_foreign_busy_notice_resets_for_a_new_round(buyer):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', phase='bidding', told_foreign_busy=True)
+    asyncio.run(buyer.start_round(ctx, dict(buyer.ROUND['need'])))
+    assert not buyer.ROUND['told_foreign_busy']
+    ctx.sent.clear()
+    for _ in range(2):
+        asyncio.run(buyer.handle_text(ctx, 'bob', 'hello'))
+    assert [message.text() for to, message in ctx.sent if to == 'bob'] == [
+        'A buyer session is active. Try again later.']
 
 
 def test_malformed_new_sender_goal_preserves_terminal_owner(buyer):
@@ -531,6 +544,23 @@ def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch
     assert buyer.ROUND['owner'] == 'bob' and buyer.ROUND['need']['id'] == current_need
     assert buyer.ROUND['phase'] == 'bidding'
     assert all(bid['id'] != 'old-bid' for bid in buyer.ROUND['bids'])
+
+
+def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, monkeypatch):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', phase='done', goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    current_need = buyer.ROUND['need']['id']
+    buyer.ROUND.update(phase='advice', bids=[{'id': 'bob-bid'}], attempts=0)
+    screened = []
+    monkeypatch.setattr(buyer, 'blocked_reasons', lambda *args: screened.append(args) or 'stale reply blocked')
+    ctx.sent.clear()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card(need_id='alice-need', bid_id='alice-bid')]))))
+    assert buyer.ROUND['owner'] == 'bob' and buyer.ROUND['need']['id'] == current_need
+    assert buyer.ROUND['phase'] == 'advice' and buyer.ROUND['attempts'] == 0
+    assert screened
+    assert not ctx.sent
 
 
 def test_ordered_round_cannot_be_cleared_by_cancel_or_new_goal(buyer):
