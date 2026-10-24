@@ -33,20 +33,26 @@ def _endpoint(url: str) -> str:
 
 
 def screen_message(*, shield_url: str, message_id: str, sender_agent: str, text: str,
-                   context: Mapping[str, object], timeout: float = 2.0) -> dict:
-    """POST to the exact Shield screen endpoint; any transport/schema failure returns a fixed block."""
+                   context: Mapping[str, object], timeout: float = 2.0,
+                   api_key: str | None = None) -> dict:
+    """POST to Shield core, or to the keyed product API when an explicit API key is supplied."""
     try:
         if (not all(isinstance(v, str) and v for v in (message_id, sender_agent))
                 or not isinstance(text, str) or not isinstance(context, Mapping)
                 or isinstance(timeout, bool) or not isinstance(timeout, (int, float))
                 or not math.isfinite(timeout) or timeout <= 0):
             return dict(BLOCK, rule_ids=list(BLOCK["rule_ids"]))
+        if api_key is not None and (not isinstance(api_key, str) or not api_key or len(api_key) > 4096
+                                    or any(ord(char) < 0x21 or ord(char) > 0x7E for char in api_key)):
+            return dict(BLOCK, rule_ids=list(BLOCK["rule_ids"]))
         endpoint = _endpoint(shield_url)
         body = json.dumps({"message_id": message_id, "sender_agent": sender_agent,
                            "text": text, "context": dict(context)},
                           ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
-        request = urllib.request.Request(endpoint, data=body, headers={"Content-Type": "application/json"},
-                                         method="POST")
+        headers = {"Content-Type": "application/json"}
+        if api_key is not None:
+            headers["X-API-Key"] = api_key
+        request = urllib.request.Request(endpoint, data=body, headers=headers, method="POST")
         opener = urllib.request.build_opener(_NoRedirect())
         with opener.open(request, timeout=timeout) as response:
             if response.status != 200:
