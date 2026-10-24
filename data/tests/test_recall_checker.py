@@ -47,7 +47,7 @@ def test_a_product_with_no_recall_is_none_and_says_us_cpsc_only(tmp_path):
 
 def test_a_product_word_is_a_lead_but_a_generic_word_is_not(tmp_path):
     assert check("Soundcore Motion 300", "Anker", "anker", tmp_path)["possible"][0]["match_on"] == "product name soundcore"
-    assert check("Wireless Power Bank", "Anker", "anker", tmp_path)["status"] == "none"  # "power bank" alone is generic
+    assert check("Wireless Power Bank", "Anker", "anker", tmp_path)["status"] in ("possible", "unverified")  # #302: generic is never "none"
 
 
 def test_the_brand_must_be_a_whole_word():  # Anker's CPSC search also returns Trankerloop bath seats
@@ -88,3 +88,64 @@ def test_sizes_are_product_lines_not_models():
 def test_the_gpu_recall_check_still_works_after_the_shared_lookup_refactor(tmp_path):
     r = recalls_for("ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", "ASUS", fetch=serve("asus"), now=NOW, cache_dir=tmp_path)
     assert r["status"] == "none"
+
+
+# --- #302 probes ---------------------------------------------------------------------------------------------------
+def fake(items):
+    return lambda url: json.dumps(items).encode()
+
+
+def item(title, desc="", products=(), upcs=(), makers=()):  # SIM fixtures, not real recalls
+    return {"Title": title, "Description": desc, "RecallDate": "2026-01-01T00:00:00", "URL": "https://www.cpsc.gov/Recalls/2026/sim",
+            "Products": [{"Name": n, "Model": m} for n, m in products], "ProductUPCs": [{"UPC": u} for u in upcs],
+            "Manufacturers": [{"Name": m} for m in makers], "Hazards": [], "Remedies": []}
+
+
+def test_a_brand_with_no_product_is_unverified_never_none(tmp_path):  # probe 1
+    r = check("", "Anker", "anker", tmp_path)
+    assert r["status"] == "unverified" and r["summary"].startswith("UNVERIFIED: no model")
+
+
+def test_a_generic_only_name_is_possible_on_a_category_match(tmp_path):  # probe 1: the real fixture has "Anker Power Banks Recalled"
+    r = check("Anker Power Bank", "Anker", "anker", tmp_path)
+    assert r["status"] == "possible" and r["matches"] == [] and r["possible"][0]["match_on"].startswith("product category")
+
+
+def test_a_generic_only_name_with_no_category_match_is_unverified(tmp_path):
+    r = check_product("Gaming Mouse", "Anker", fetch=fake([item("Anker Recalls Power Banks", products=[("Anker power bank", "A1263")])]),
+                      now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "unverified"
+
+
+def test_a_model_named_only_in_the_description_is_possible_not_recalled(tmp_path):  # probe 2
+    rec = item("Anker Recalls Chargers", desc="Model A1229 is NOT affected.", products=[("Anker charger", "B77")])
+    r = check_product("Charger A1229", "Anker", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "possible" and r["matches"] == [] and "description only" in r["possible"][0]["match_on"]
+
+
+def test_a_model_in_the_product_model_field_is_recalled(tmp_path):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")])
+    assert check_product("Charger B77", "Anker", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)["status"] == "recalled"
+
+
+def test_a_upc_a_matches_the_same_code_listed_as_ean_13(tmp_path):  # probe 3
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["0841234567890"])
+    r = check_product("Charger", "Anker", upc="841234567890", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled" and r["matches"][0]["match_on"] == "UPC 841234567890"
+
+
+def test_a_upc_match_needs_no_brand_text(tmp_path):  # probe 4
+    rec = item("Power Banks Recalled Due to Fire Hazard", products=[("power bank", "X1")], upcs=["841234567890"])
+    r = check_product("Power Bank", "Anker", upc="841234567890", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled"
+
+
+def test_a_non_dict_products_entry_does_not_crash(tmp_path):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")])
+    rec["Products"].append("junk")
+    assert check_product("Charger B77", "Anker", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)["status"] == "recalled"
+
+
+def test_sizes_and_clock_speeds_are_not_model_tokens():
+    model, _ = _tokens("Galaxy S24 Ultra 256GB 2.4GHz 128G", "Samsung")
+    assert model == {"s24"}

@@ -7,12 +7,15 @@ check_product(product, brand, upc=None, fetch=None, now=None, cache_dir=None) ->
 
 Data: the U.S. Consumer Product Safety Commission's public recall API (saferproducts.gov), searched by brand and cached
 per brand for 24 hours (data.recalls.brand_items). How a recall is matched, strictest first:
-  recalled  the brand (as a whole word) AND either the UPC, or a model token from the product name (letters and digits,
-            such as A1263, Note7 or B650E-F), appears in the recall's title, product names, models or description;
-  possible  the brand AND a product-line number (digits only, such as 10000 or 5070) or a distinctive product word (such
-            as Soundcore or iPhone, never a generic word like "power bank"): a lead to check, never called a match;
-  none      the API answered and nothing of that brand matched;
-  unverified no brand given, or the lookup failed. Never "none" on a failure.
+  recalled  the UPC is listed on the recall (compared without leading zeros, so UPC-A and EAN-13 agree; no brand text
+            needed), OR the brand (as a whole word) AND a model token from the product name (letters and digits, such as
+            A1263, Note7 or B650E-F) appears in the recall's title, product names or models;
+  possible  the brand AND a product-line number (digits only, such as 10000 or 5070), a distinctive product word (such as
+            Soundcore or iPhone), a model token found only in the recall's description (which may say "NOT affected"), or,
+            for a name of generic words only ("Power Bank"), every one of those words in the recall: a lead, never a match;
+  none      the API answered and nothing of that brand matched a model, line or product word we were given;
+  unverified no brand given, no product to match (no model, line or product word, and no category hit), or the lookup
+            failed. Never "none" on a failure or on a brand alone.
 "none" covers U.S. CPSC recalls only; it does not mean the product was never recalled anywhere.
 """
 from __future__ import annotations
@@ -25,7 +28,7 @@ from data.recalls import API, brand_in, brand_items
 GENERIC = {"power", "bank", "banks", "pro", "max", "plus", "mini", "ultra", "wireless", "portable", "charger", "charging", "smart",
            "phone", "black", "white", "edition", "series", "model", "with", "and", "for", "the", "new", "case", "cable", "battery",
            "speaker", "headphones", "laptop", "tablet", "watch", "camera", "monitor", "keyboard", "mouse", "gaming", "graphics", "card"}
-UNIT = re.compile(r"^(\d+)(gb|tb|mb|mah|wh|w|v|hz|mm|cm|in|inch|k|p|ft|m)$")  # 16GB, 10000mAh, 65W: a size, not a model
+UNIT = re.compile(r"^(\d+)(gb|tb|mb|g|mah|wh|w|v|hz|ghz|mhz|mm|cm|in|inch|k|p|ft|m)$")  # 16GB, 10000mAh, 65W: a size, not a model
 
 
 def _names(product: str, brand: str) -> set[str]:
@@ -56,10 +59,32 @@ def _word(token: str, text: str) -> bool:
     return bool(re.search(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", text))
 
 
-def _text(item: dict) -> str:
-    prods = item.get("Products") or []
-    parts = [item.get("Title"), item.get("Description")] + [p.get("Name") for p in prods] + [p.get("Model") for p in prods]
+STOP = {"with", "and", "for", "the", "new"}
+
+
+def _prods(item: dict) -> list[dict]:
+    return [p for p in item.get("Products") or [] if isinstance(p, dict)]
+
+
+def _names_text(item: dict) -> str:
+    """Title, product names and models: the only places a model hit counts as recalled (#302)."""
+    prods = _prods(item)
+    parts = [item.get("Title")] + [p.get("Name") for p in prods] + [p.get("Model") for p in prods]
     return " ".join(str(p) for p in parts if p).lower()
+
+
+def _text(item: dict) -> str:
+    return (_names_text(item) + " " + str(item.get("Description") or "")).lower()
+
+
+def _generic_hit(product: str, brand: str, text: str) -> bool:
+    """Every generic word of a generic-only name ("Power Bank") is in the recall, singular or plural."""
+    words = [w for w in re.findall(r"[a-z]+", product.lower()) if w in GENERIC and w not in STOP and w not in brand.lower().split()]
+    return bool(words) and all(_word(w, text) or _word(w + "s", text) or (w.endswith("s") and _word(w[:-1], text)) for w in words)
+
+
+def _upc(v) -> str:
+    return re.sub(r"\D", "", str(v or "")).lstrip("0")
 
 
 def _upcs(item: dict) -> set[str]:
@@ -67,7 +92,7 @@ def _upcs(item: dict) -> set[str]:
     for u in item.get("ProductUPCs") or []:
         v = u.get("UPC") if isinstance(u, dict) else u
         if v:
-            out.add(re.sub(r"\D", "", str(v)))
+            out.add(_upc(v))
     return out
 
 
@@ -77,7 +102,7 @@ def _first(item: dict, key: str) -> str:
 
 
 def _recall(item: dict, match_on: str) -> dict:
-    prods = item.get("Products") or []
+    prods = _prods(item)
     return {"title": item.get("Title"), "date": str(item.get("RecallDate") or "")[:10], "url": item.get("URL"),
             "products": [p.get("Name") for p in prods if p.get("Name")], "hazard": _first(item, "Hazards"),
             "remedy": _first(item, "Remedies"), "units": next((p.get("NumberOfUnits") for p in prods if p.get("NumberOfUnits")), None),
@@ -93,6 +118,7 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
     now = now or datetime.now(timezone.utc)
     product, brand = str(product or "").strip(), str(brand or "").strip()
     upc_digits = re.sub(r"\D", "", str(upc or ""))
+    upc_key = upc_digits.lstrip("0")
     out = {"product": product, "brand": brand, "upc": upc_digits or None, "status": "unverified", "matches": [], "possible": [],
            "checked_at": now.isoformat(timespec="seconds"), "source_url": None, "searched": None, "origin": "MIRROR"}
     if not brand:
@@ -107,18 +133,28 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
     out["searched"] = f"CPSC recalls for brand {brand}, read {out['checked_at'][:10]}"
     model, line = _tokens(product, brand)
     names = _names(product, brand)
+    generic_only = not (model or line or names)
     for item in items:
-        if not isinstance(item, dict) or not _brand_of(item, brand):
+        if not isinstance(item, dict):
             continue
-        text = _text(item)
-        hit_upc = upc_digits and upc_digits in _upcs(item)
-        hit_model = sorted(t for t in model if _word(t, text))
+        if upc_key and upc_key in _upcs(item):  # a listed UPC is this product, whatever the recall's text says about brands
+            out["matches"].append(_recall(item, f"UPC {upc_digits}"))
+            continue
+        if not _brand_of(item, brand):
+            continue
+        named, text = _names_text(item), _text(item)
+        hit_model = sorted(t for t in model if _word(t, named))
+        desc_model = sorted(t for t in model if _word(t, text))  # a description hit may be "Model A1229 is NOT affected"
         hit_line = sorted(t for t in line if _word(t, text))
         hit_name = sorted(t for t in names if _word(t, text))
-        if hit_upc or hit_model:
-            out["matches"].append(_recall(item, f"UPC {upc_digits}" if hit_upc else f"model {hit_model[0].upper()}"))
+        if hit_model:
+            out["matches"].append(_recall(item, f"model {hit_model[0].upper()}"))
+        elif desc_model:
+            out["possible"].append(_recall(item, f"model {desc_model[0].upper()} in the recall description only"))
         elif hit_line or hit_name:
             out["possible"].append(_recall(item, f"product line {hit_line[0]}" if hit_line else f"product name {hit_name[0]}"))
+        elif generic_only and _generic_hit(product, brand, text):
+            out["possible"].append(_recall(item, f"product category {' '.join(w for w in product.lower().split() if w in GENERIC)}"))
     for key in ("matches", "possible"):
         out[key].sort(key=lambda r: r["date"], reverse=True)
     if out["matches"]:
@@ -129,6 +165,10 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
         out["status"] = "possible"
         out["summary"] = (f"POSSIBLE: {len(out['possible'])} CPSC recall(s) of {brand} on the same product line or product name, but none names "
                           f"this model; check the recall page and your model number")
+    elif generic_only and not upc_key:  # a brand alone (or only generic words) never earns "none": nothing was matched against
+        out["status"] = "unverified"
+        out["summary"] = (f"UNVERIFIED: no model, product line or product name given for {brand}, so no recall could be ruled out "
+                          "(add the model number or UPC and run again)")
     else:
         out["status"] = "none"
         out["summary"] = f"NONE: no CPSC recall of {brand} matches {product or 'this product'} ({out['searched']}); U.S. CPSC recalls only"

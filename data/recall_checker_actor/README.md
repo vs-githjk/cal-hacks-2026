@@ -24,11 +24,12 @@ Press **Start** with the default form. Here is what it returned, as a dated samp
 ## How matching works
 
 1. The search is by **brand** (required). The brand must appear as a whole word: a search for "Anker" also returns a recall of "Trankerloop" bath seats, and that is never matched to Anker.
-2. **Model tokens** from your product name (letters and digits, such as `A1263`, `Note7`, `B650E-F`) or your **UPC** must appear in the recall's title, product names, models or description for **recalled**.
-3. **Product-line numbers** (digits only, such as `10000`) and **distinctive product words** (such as `Soundcore` or `PowerCore`, never generic words like "power bank") give **possible**.
-4. Sizes like `10000mAh`, `65W` or `16GB` are read as product lines, never as model numbers.
+2. **Recalled** needs your **UPC** listed on the recall (leading zeros are ignored, so a 12-digit UPC-A matches the same code listed as a 13-digit EAN-13), or a **model token** from your product name (letters and digits, such as `A1263`, `Note7`, `B650E-F`) in the recall's title, product names or model numbers.
+3. **Possible** is a lead, never a match: a **product-line number** (digits only, such as `10000`), a **distinctive product word** (such as `Soundcore` or `PowerCore`), a model named only in the recall's description (which may say "this model is NOT affected"), or, for a name made only of generic words like "Power Bank", every one of those words in the recall.
+4. Sizes like `10000mAh`, `65W`, `16GB` or `2.4GHz` are read as product lines or ignored, never as model numbers.
+5. A brand with no model, product line or product word is **unverified** and free: nothing was matched, so it can never say "none".
 
-Add the model number for the most precise answer. Without one, the best you can get is "possible".
+Add the model number or UPC for the most precise answer. Without one, the best you can get is "possible".
 
 ## Input
 
@@ -63,20 +64,20 @@ One dataset row per product:
 
 ## Pricing
 
-**$0.002 per product checked** (pay per event), and Apify platform usage is included.
+**$0.002 per product checked** (pay per event, configured in the Apify Console, not in this repo), and Apify platform usage is included.
 
 | You check | You pay |
 |---|---|
 | 1 product | $0.002 |
 | 100 products | $0.20 |
 | 1,000 products | $2.00 |
-| A product with no brand, or a failed lookup (unverified) | free |
+| A product with no brand, no model or product name, or a failed lookup (unverified) | free |
 
 Each run also has Apify's run start event of $0.00005. A product is charged only when CPSC answered, and it is charged before its row is delivered. When your spending limit is reached, the run stops and the status line says how many products were not checked. A restarted run never charges a product twice.
 
 ## Agents can pay per call (experimental)
 
-An AI agent with a stablecoin wallet and **no Apify account** can pay for this Actor itself, through [Apify's Agent General Interface](https://agi.apify.com/AGENTS.md). The agent buys a prepaid, spend-capped token by paying an HTTP 402 challenge: x402 takes USDC on Base, or USDC or USDT on Solana, and MPP takes USDC.e or pathUSD on Tempo. It then runs this Actor with `Authorization: Bearer <token>`. This works because the Actor uses limited permissions.
+This is an Apify platform feature, not something this Actor's code sets up, and we have reached its pay wall but not paid through it yet. An AI agent with a stablecoin wallet and **no Apify account** can pay for this Actor itself, through [Apify's Agent General Interface](https://agi.apify.com/AGENTS.md). The agent buys a prepaid, spend-capped token by paying an HTTP 402 challenge: x402 takes USDC on Base, or USDC or USDT on Solana, and MPP takes USDC.e or pathUSD on Tempo. It then runs this Actor with `Authorization: Bearer <token>`. This works because the Actor uses limited permissions.
 
 ## Use it from an AI agent or your code
 
@@ -101,7 +102,9 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~electronics-recall-che
 
 **Why does it say "possible" instead of "recalled"?** Because the recall does not name your model. A recall of "PowerCore 10000 A1263" is not a recall of the A1229. We show it as a lead, with the recall page, so you can compare model and serial numbers yourself.
 
-**How fresh is the data?** Each run reads CPSC live. Answers are cached per brand for 24 hours within a run's container, and `checked_at` says when the answer was read.
+**How fresh is the data?** Each answer is a dated read of the CPSC API, cached per brand for 24 hours within a run's container (MIRROR); `checked_at` says when it was read.
+
+**Can it miss a recall?** Yes. The search asks CPSC for recalls whose product name contains your brand, so a recall whose product names leave the brand out is never fetched. Adding the UPC does not change the search, only the matching.
 
 **What does it fetch?** Only the CPSC recall API (saferproducts.gov). It never visits store pages, so it is fast and never blocked.
 
