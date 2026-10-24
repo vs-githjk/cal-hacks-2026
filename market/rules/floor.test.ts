@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkFloor, checkQuantity } from "./floor";
+import { checkFloor, checkFloorByCondition, floorKey } from "./floor";
 
 // SIM fixture: a GPU and a PSU.
 const lines = [
@@ -35,24 +35,37 @@ describe("floor", () => {
   });
 });
 
-describe("checkQuantity", () => {
-  const need = new Map([["gpu-rtx5070ti-retail", 1], ["psu-850w-atx3", 2]]);
-  it("accepts quantities equal to the need line", () => {
-    expect(checkQuantity([{ sku_spec: "gpu-rtx5070ti-retail", quantity: 1 }, { sku_spec: "psu-850w-atx3", quantity: 2 }], need)).toEqual({ ok: true });
+describe("floor per (seller, sku_spec, condition)", () => {
+  const GPU = "gpu-rtx5070ti-retail";
+  const floors = new Map([
+    [floorKey(GPU, "new"), 290],
+    [floorKey(GPU, "open-box"), 250],
+  ]);
+  const cond = (l: { offered_condition?: string }) => (l.offered_condition ?? "new") as "new";
+  const L = (offered_condition: "new" | "open-box" | "refurbished", unit_price: number, quantity = 2) => ({ sku_spec: GPU, offered_condition, unit_price, quantity });
+
+  it("checks each line against the floor for its own condition", () => {
+    expect(checkFloorByCondition([L("new", 300), L("open-box", 260)], floors, cond)).toEqual({ ok: true, reasons: [], lineRejects: ["", ""] });
+    expect(checkFloorByCondition([L("new", 260)], floors, cond).ok).toBe(false);
   });
-  it("rejects 0, -1, NaN and Infinity with a reason", () => {
-    for (const q of [0, -1, NaN, Infinity]) {
-      const r = checkQuantity([{ sku_spec: "gpu-rtx5070ti-retail", quantity: q }], need);
-      expect(r.ok, String(q)).toBe(false);
-      if (!r.ok) expect(r.reasons[0]).toMatch(/quantity/);
-    }
-  });
-  it("rejects a quantity that differs from the need line", () => {
-    const r = checkQuantity([{ sku_spec: "psu-850w-atx3", quantity: 1 }], need);
+
+  it("any line below its floor rejects the whole bid with the reason, so a seller cannot hide one", () => {
+    const r = checkFloorByCondition([L("new", 300), L("open-box", 240)], floors, cond);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reasons[0]).toContain("asks for 2");
+    expect(r.reasons.join(" ")).toMatch(/open-box.*below this seller's floor/);
   });
-  it("rejects a line the need does not have", () => {
-    expect(checkQuantity([{ sku_spec: "case-atx-mid", quantity: 1 }], need).ok).toBe(false);
+
+  it("a line with no floor set for its condition is rejected on its own; the bid stands", () => {
+    const r = checkFloorByCondition([L("new", 300), L("refurbished", 220)], floors, cond);
+    expect(r.ok).toBe(true);
+    expect(r.lineRejects).toEqual(["", `no floor set for ${GPU} refurbished`]);
+  });
+
+  it("qty_available must be a finite number above 0: 0, -1, NaN and Infinity reject the bid", () => {
+    for (const q of [0, -1, NaN, Infinity]) {
+      const r = checkFloorByCondition([L("new", 300, q)], floors, cond);
+      expect(r.ok, String(q)).toBe(false);
+      expect(r.reasons.join(" ")).toMatch(/qty_available/);
+    }
   });
 });
