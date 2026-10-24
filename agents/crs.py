@@ -2,15 +2,20 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import sys
 import tempfile
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
-ENDPOINT = "https://api-sandbox.stitchcredit.com/api/transunion/identity-manager-verification/basic"
+DEFAULT_BASE_URL = "https://api-sandbox.stitchcredit.com/api"
+LOGIN_PATH = "/users/login"
+ENDPOINT_PATH = "/transunion/identity-manager-verification/basic"
+ENDPOINT = f"{DEFAULT_BASE_URL}{ENDPOINT_PATH}"
 CACHE_MAX_AGE = timedelta(hours=24)
 REASON_VERIFIED = "Synthetic representative identity verified by CRS sandbox."
 REASON_CAUTION = "CRS sandbox returned a fraud alert; additional proof is required."
@@ -18,6 +23,36 @@ REASON_NOT_VERIFIED = "CRS sandbox could not verify the synthetic representative
 REASON_UNAVAILABLE = "CRS sandbox check unavailable; a current recorded result may be used."
 REASON_CONSENT = "Seller consent is missing or withdrawn."
 REASON_PROFILE = "Approved synthetic representative profile is unavailable."
+REASON_NOT_CONFIGURED = "CRS not configured."
+REASON_CODES = {
+    "verified_stable": ("CRS_IDENTITY_VERIFIED",),
+    "caution": ("CRS_STEP_UP_REQUIRED",),
+    "not_verified": ("CRS_IDENTITY_NOT_VERIFIED",),
+}
+_LOG = logging.getLogger(__name__)
+
+
+class CrsAuthError(RuntimeError):
+    """Sanitized authentication failure; details never leave the adapter."""
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = build_opener(_NoRedirect())
+urlopen = _NO_REDIRECT_OPENER.open
+
+
+class _AuthState:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.token = None
+        self.failed = False
+
+
+_auth_state = _AuthState()
 
 # SHA-256 of canonical JSON request bodies from the official CRS 1.1.2 persona file.
 # Bodies stay in the operator's private config; only these non-identifying pins are committed.
@@ -140,7 +175,12 @@ def _cached(supplier_id, profile, now, cache):
 
 def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
     """Fail-closed gate using current trusted consent/profile and a fresh sandbox signal."""
-    profile = _profiles().get(supplier_id)
+    profiles = _profiles()
+    profile = profiles.get(supplier_id)
+    missing_auth = not _configured()
+    empty_not_configured = _is_empty_not_configured(check)
+    if (missing_auth or not profiles) and empty_not_configured:
+        return True
     if isinstance(profile, dict) and profile.get("seller_type") == "individual":
         return True
     if not isinstance(profile, dict) or profile.get("consent") is not True or _approved(profile) is None:
@@ -168,10 +208,116 @@ def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
     return timedelta(0) <= age <= CACHE_MAX_AGE
 
 
+def to_crs_check(supplier_id: str, check: dict | None) -> dict:
+    """Project the legacy result into the issue #128 flat CRS check shape."""
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    signal = check.get("signal") if isinstance(check, dict) else None
+    stability = signal.get("stability") if isinstance(signal, dict) else None
+    reason = check.get("reason") if isinstance(check, dict) else None
+    if not isinstance(stability, str) or stability not in REASON_CODES:
+        not_configured = (_is_empty_not_configured(check) and
+                          (not _configured() or not _profiles()))
+        return {
+            "seller_id": supplier_id,
+            "product": "tu_identity",
+            "verified": False,
+            "reason_codes": ["CRS_NOT_CONFIGURED" if not_configured else
+                             ("CRS_UNAVAILABLE" if reason == REASON_UNAVAILABLE else "CRS_INVALID")],
+            "origin": "NOT_CONFIGURED" if not_configured else "SANDBOX",
+            "checked_at": now,
+        }
+    source = signal.get("source")
+    if (signal.get("supplier_id") != supplier_id or
+            not isinstance(source, str) or source not in {"sandbox", "recorded"}):
+        return {"seller_id": supplier_id, "product": "tu_identity", "verified": False,
+                "reason_codes": ["CRS_INVALID"], "origin": "SANDBOX", "checked_at": now}
+    try:
+        _utc(signal["checked_at"])
+    except (KeyError, ValueError, TypeError, OverflowError):
+        return {"seller_id": supplier_id, "product": "tu_identity", "verified": False,
+                "reason_codes": ["CRS_INVALID"], "origin": "SANDBOX", "checked_at": now}
+    origin = {"sandbox": "SANDBOX", "recorded": "CACHED"}.get(source, "NOT_CONFIGURED")
+    result = {
+        "seller_id": supplier_id,
+        "product": "tu_identity",
+        "verified": stability == "verified_stable",
+        "reason_codes": list(REASON_CODES[stability]),
+        "origin": origin,
+        "checked_at": signal.get("checked_at"),
+    }
+    persona_id = check.get("persona_ref") if isinstance(check, dict) else None
+    if isinstance(persona_id, str) and persona_id:
+        result["persona_id"] = persona_id
+    return result
+
+
+def _is_empty_not_configured(check) -> bool:
+    if check is None or check == {}:
+        return True
+    return (isinstance(check, dict) and set(check) == {"signal", "reason"} and
+            check.get("signal") is None and check.get("reason") == REASON_NOT_CONFIGURED)
+
+
+def _open_request(request):
+    return urlopen(request, timeout=4)
+
+
+def _base_url():
+    return (os.environ.get("CRS_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+
+
+def _configured():
+    return bool(os.environ.get("CRS_API_KEY") or
+                (os.environ.get("CRS_USERNAME") and os.environ.get("CRS_PASSWORD")))
+
+
+def _login():
+    username, password = os.environ.get("CRS_USERNAME"), os.environ.get("CRS_PASSWORD")
+    if not username or not password:
+        raise CrsAuthError(REASON_NOT_CONFIGURED)
+    request = Request(f"{_base_url()}{LOGIN_PATH}", data=json.dumps({
+        "username": username, "password": password}).encode("utf-8"), headers={
+            "Content-Type": "application/json"}, method="POST")
+    with _open_request(request) as result:
+        if result.status != 200:
+            raise CrsAuthError("CRS authentication failed")
+        payload = json.loads(result.read())
+    token = payload.get("token") if isinstance(payload, dict) else None
+    if not isinstance(token, str) or not token:
+        raise CrsAuthError("CRS authentication failed")
+    return token
+
+
+def _get_token():
+    """Return one cached process token, permanently latching failed login."""
+    global _auth_state
+    preissued = os.environ.get("CRS_API_KEY")
+    if preissued:
+        return preissued
+    if not _configured():
+        raise CrsAuthError(REASON_NOT_CONFIGURED)
+    with _auth_state.lock:
+        if _auth_state.token:
+            return _auth_state.token
+        if _auth_state.failed:
+            raise CrsAuthError("CRS authentication failed")
+        try:
+            _auth_state.token = _login()
+            return _auth_state.token
+        except CrsAuthError:
+            _auth_state.failed = True
+            _LOG.warning("CRS authentication failed; using sanitized fallback if available")
+            raise
+        except Exception:
+            _auth_state.failed = True
+            _LOG.warning("CRS authentication failed; using sanitized fallback if available")
+            raise CrsAuthError("CRS authentication failed") from None
+
+
 def _request(body, token):
-    req = Request(ENDPOINT, data=json.dumps(body).encode("utf-8"), headers={
+    req = Request(f"{_base_url()}{ENDPOINT_PATH}", data=json.dumps(body).encode("utf-8"), headers={
         "Authorization": f"Bearer {token}", "Content-Type": "application/json"}, method="POST")
-    with urlopen(req, timeout=4) as result:
+    with _open_request(req) as result:
         if result.status != 200:
             raise ValueError("CRS request failed")
         payload = json.loads(result.read())
@@ -211,7 +357,9 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
     _issued_personas.clear()
     _, cache_path = _paths()
     profiles, cache = _profiles(), _cache_read(cache_path)
-    token = os.environ.get("CRS_API_KEY")
+    token = None
+    auth_failed = False
+    auth_attempted = False
     results = {}
     for supplier_id, profile in profiles.items():
         if not isinstance(supplier_id, str) or not supplier_id:
@@ -226,6 +374,15 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
         if body is None:
             results[supplier_id] = {"signal": None, "reason": REASON_PROFILE}
             continue
+        if not _configured():
+            results[supplier_id] = {"signal": None, "reason": REASON_NOT_CONFIGURED}
+            continue
+        if not auth_attempted:
+            auth_attempted = True
+            try:
+                token = await asyncio.to_thread(_get_token)
+            except CrsAuthError:
+                auth_failed = True
         if token:
             try:
                 raw = await asyncio.to_thread(_request, body, token)
@@ -242,8 +399,9 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
                 results[supplier_id] = result
                 continue
             except Exception:
+                auth_failed = True
                 pass
-        cached = _cached(supplier_id, profile, now, cache)
+        cached = _cached(supplier_id, profile, now, cache) if auth_failed else None
         if cached is not None:
             _issued_personas[id(cached)] = (cached, profile["persona_ref"], _canonical_hash(cached["signal"]))
             results[supplier_id] = cached
@@ -261,8 +419,9 @@ def main():
         parser.error("--live is required to make a sandbox request")
     import common  # existing agent module loads agents/.env without overriding process variables
     profiles = _profiles()
-    if not profiles or not os.environ.get("CRS_API_KEY"):
-        print(json.dumps({"status": "unavailable", "reason": REASON_UNAVAILABLE}))
+    if not profiles or not _configured():
+        reason = REASON_NOT_CONFIGURED if not _configured() else REASON_PROFILE
+        print(json.dumps({"status": "unavailable", "reason": reason}))
         return 2
     now = datetime.now(timezone.utc)
     results = asyncio.run(check_sellers(now))

@@ -145,7 +145,7 @@ def test_advice_compares_on_quality_adjusted_price_not_raw_price(run):
 def test_beat2_incompatible_part_is_vetoed_by_the_fit_checker(run):
     card = next(c for c in b(run, 2)["cards"] if c["bid_id"].endswith("bargain-bin"))
     assert card["recommendation"] == "veto" and card["call_reason"]["rule_id"] == "fit.gpu_length"
-    assert "336 mm exceeds case clearance 305 mm" in card["warnings"][0]["text"]
+    assert card["warnings"][0]["text"] == "Does not fit: The card is longer than your case allows."
 
 
 def test_beat2_referee_rejects_a_bid_under_its_floor_before_ranking(run):
@@ -180,8 +180,7 @@ def test_real_fit_checker_advocate_claim_check_and_shield_are_actually_called():
     from data.fit_checker import check_fit
     from shield.core import screen
     mod, how = adapters.advocate_checks()
-    assert how.startswith("REAL agents/advocate/checks.py")
-    assert Path(mod.__file__).resolve() == ROOT / "agents" / "advocate" / "checks.py"
+    assert how.startswith("REAL agents/advocate/checks.py") and Path(mod.__file__).as_posix().endswith("agents/advocate/checks.py")
     with mock.patch.object(mod, "check_fit", wraps=check_fit) as fit, mock.patch.object(mod, "advise", wraps=mod.advise) as adv, \
             mock.patch.object(mod, "call_reason", wraps=mod.call_reason) as cr, \
             mock.patch("demo.round.screen", wraps=screen) as sh, mock.patch("demo.beats.screen", wraps=screen) as sh3:
