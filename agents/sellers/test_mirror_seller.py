@@ -3,6 +3,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -76,8 +78,10 @@ def test_one_305_mm_round_shows_the_mirror_bid_unverified_and_fitting():
     bids = [b for b in (make_bid(need(), seller(n)) for n in common.SELLERS) if b] + [cc_bid(305)]
     cards = {c["bid_id"]: c for c in checks.advise(dict(need(), owned=CASE_305), bids, {}, {}, [], CASE_305)}
     card = cards["bid-need-308-central_computers_sf"]
-    assert card["recommendation"] == "caution"  # condition unverified; fit confirmed, so no veto
+    # condition unverified and fit confirmed, but the store never joined: shown for comparison, never orderable (#333)
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.mirror_not_orderable"
     kinds = [w["kind"] for w in card["warnings"]]
+    assert "mirror_not_orderable" in kinds
     assert "unverified" in kinds and "fit" not in kinds and "fit_unknown" not in kinds and "condition" not in kinds
     assert card["source_url"].startswith("https://www.centralcomputer.com/")
     text = json.dumps(card).lower()
@@ -110,3 +114,73 @@ def test_a_card_of_unknown_length_cannot_win_a_305_mm_round():
     for clearance in (None, 305):
         assert mirror_seller("central_computers_sf", clearance)["listings"][SKU]["attrs"]["length_mm"] is not None
     assert mirror_seller("central_computers_sf", 305)["listings"][SKU]["attrs"]["length_mm"] <= 305
+
+
+# #333 item 1: a real store that never joined is shown for comparison only. It never wins, is never ordered,
+# never gets a mandate and is never paid, even when it is the cheapest bid and every other check passes.
+from data.mirror import central_computers, not_partners  # noqa: E402
+
+NOT_ORDERABLE = "Shown for comparison, cannot be bought here."
+
+
+def _cheapest_cc_round():
+    """A 305 mm round where the Central Computers bid ($1,249.99, fits) is the cheapest; seller_4 ($1,271.10) fits too."""
+    cc, sim = cc_bid(305), make_bid(need(), seller("seller_4"))
+    assert cc["total_landed_price"] < sim["total_landed_price"]
+    n = dict(need(), owned=CASE_305, in_cap_bid_ids=[cc["id"], sim["id"]])
+    return cc, sim, checks.advise(n, [cc, sim], {}, {}, [], CASE_305)
+
+
+def test_the_registry_names_this_store_and_its_label():
+    assert central_computers.SELLER_ID in not_partners.SELLERS and central_computers.STORE in not_partners.STORES
+    assert not_partners.SELLERS[central_computers.SELLER_ID] == LABEL == central_computers.LABEL
+    bid = cc_bid()
+    assert bid["orderable"] is False and not not_partners.orderable(bid)
+    # the registry decides, not the bid: dropping the flag does not make it orderable
+    assert not not_partners.orderable({k: v for k, v in bid.items() if k != "orderable"})
+    assert not_partners.orderable(make_bid(need(), seller("seller_4"))) and not not_partners.orderable(None)
+
+
+def test_the_advocate_vetoes_a_mirror_bid_even_when_it_is_the_cheapest():
+    cc, sim, cards = _cheapest_cc_round()
+    card = cards[0]
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.mirror_not_orderable"
+    assert card["reason"] == checks.CALL_SUMMARIES["advocate.mirror_not_orderable"]
+    [w] = [w for w in card["warnings"] if w["kind"] == "mirror_not_orderable"]
+    assert NOT_ORDERABLE in w["text"] and w["source_url"].startswith("https://www.centralcomputer.com/")
+    assert cards[1]["recommendation"] != "veto"
+    assert checks.best_bid([cc, sim], cards)["id"] == sim["id"]
+    assert checks.best_bid([cc], cards[:1]) is None  # alone, the round has no winner
+
+
+def test_the_veto_holds_without_the_bid_flag():
+    cc = {k: v for k, v in cc_bid(305).items() if k != "orderable"}
+    card = checks.advise(dict(need(), owned=CASE_305), [cc], {}, {}, [], CASE_305)[0]
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.mirror_not_orderable"
+
+
+def test_pick_best_refuses_a_mirror_bid_even_if_its_card_says_buy():
+    from buyer import hunt
+    cc, sim = cc_bid(305), make_bid(need(), seller("seller_4"))
+    cards = {cc["id"]: {"recommendation": "buy"}, sim["id"]: {"recommendation": "buy"}}
+    suppliers = {cc["supplier_id"], sim["supplier_id"]}
+    assert hunt.pick_best([cc, sim], cards, suppliers) == 2
+    assert hunt.pick_best([cc], cards, suppliers) is None
+    assert not hunt.orderable(cc) and hunt.orderable(sim)
+
+
+def test_mirror_seller_is_none_for_an_unknown_store_and_leaves_sys_path_alone():
+    before = list(sys.path)
+    assert mirror_seller("no_such_store") is None
+    mirror_seller("central_computers_sf")
+    mirror_seller("central_computers_sf", 305)
+    assert sys.path == before
+
+
+@pytest.mark.parametrize("quantity,bids", [(1, True), (3, True), (4, False), (5, False)])
+def test_no_bid_for_more_units_than_the_store_has(quantity, bids):
+    n = dict(need(), items=[dict(need()["items"][0], quantity=quantity)])
+    bid = make_bid(n, mirror_seller("central_computers_sf"))  # 3 in stock at the SF store
+    assert (bid is not None) == bids
+    if bid:
+        assert bid["lines"][0]["quantity"] == quantity <= bid["lines"][0]["qty_available"] == 3

@@ -11,17 +11,19 @@ from urllib.parse import urlsplit
 
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
+from data.mirror import not_partners
 
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
-VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller"}
+VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller", "mirror_not_orderable"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
 CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unconfirmed": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
                 "note": f"{REPO}/data/fit_checker/README.md", "same_seller": f"{REPO}/agents/advocate/checks.py", "record": f"{REPO}/agents/advocate/checks.py",
-                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py"}
+                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py",
+                "mirror_not_orderable": f"{REPO}/data/mirror/not_partners.py"}
 
 # Closed-schema reason for the voice call: summary comes only from this table, never from seller text or a model.
 # Every summary must pass pay.callscript.clean_advocate_reason (tested).
@@ -35,6 +37,7 @@ CALL_SUMMARIES = {
     "advocate.same_seller": "Another bid in this round comes from the same seller",
     "advocate.unsourced": "A claim on this bid could not be checked against its listing",
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
+    "advocate.mirror_not_orderable": "This store is shown for comparison only and cannot be bought from here",
     "fit.gpu_length": "The card is longer than your case allows",
     "fit.psu_wattage": "Your power supply is below what this card needs",
     "fit.gpu_connectors": "Your power supply lacks the connectors this card needs",
@@ -115,7 +118,7 @@ UNSTATED = {"unknown", "not stated", "unverified"}  # the listing page gives no 
 
 def _cond(value) -> str:
     v = _norm(value)
-    return v if v in CONDITIONS else "an unrecognized condition"
+    return v if v in CONDITIONS else "not stated" if v in UNSTATED else "an unrecognized condition"
 
 
 def _item(sku, wanted) -> str:
@@ -135,8 +138,9 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
 
         offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
         # #308: a page that does not state the condition (MIRROR Central Computers) proves nothing either way.
-        # It is unverified: a caution, never shown or treated as new, and never a mismatch veto against a real store.
-        unstated = UNSTATED & {offered, page}
+        # It is unverified (a caution, never shown or treated as new) only when neither side states anything concrete.
+        # #333: one concrete side against an unstated or different other side is still a mismatch veto, as before.
+        unstated = bool(UNSTATED & {offered, page}) and {offered, page} <= UNSTATED | {""}
 
         # an honest offer of a different condition than asked for: caution, not a veto
         asked = _norm((wanted or {}).get(line["sku_spec"]))
@@ -168,6 +172,12 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
     if rec and rec["record"] != "good":
         out.append(_warn("record", f"{_seller(bid['supplier_id'])} has a '{_norm(rec['record'])}' record.",
                          rec.get("source_url", ""), 0))
+
+    # #333: a real store we mirror that never joined is shown for comparison only. Never orderable, so a veto.
+    if not not_partners.orderable(bid):
+        url = (bid.get("lines") or [{}])[0].get("listing_url", "")
+        out.append(_warn("mirror_not_orderable", f"{not_partners.NOT_ORDERABLE} This MIRROR listing is from a real "
+                         "store that never joined, so it is never ordered, charged or paid.", url, 0))
 
     if not bid.get("floor_check_passed", True):
         out.append(_warn("floor", "Bid did not pass the price floor check; the price may not hold.", FLOOR_URL, 0))

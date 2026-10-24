@@ -114,3 +114,19 @@ def test_the_stage_round_does_not_pick_the_store_up_by_itself():
     from demo.sellers import load_offers
     offers, _ = load_offers()
     assert offers and not [o for o in offers if o["prefix"] == "centralcomputers"]
+
+
+def test_the_store_rows_stay_out_of_the_hyphenate_retail_median():
+    """#333 item 3: the change note says these rows are kept out of the retail median; hyphenate's mirror_refs too."""
+    import shutil
+    import tempfile
+
+    from data.mirror import not_partners
+    from hyphenate.engine import NOT_IN_MEDIAN, SNAP_DIR, mirror_refs
+
+    assert cc.STORE in not_partners.STORES == NOT_IN_MEDIAN == baselines.LOCAL_STORE
+    with tempfile.TemporaryDirectory() as without:
+        for path in cc.SNAPSHOT.parent.glob("*.json"):
+            if not path.name.startswith(f"{cc.STORE}-"):
+                shutil.copy(path, without)
+        assert mirror_refs(SNAP_DIR)["RTX-5070-TI"] == mirror_refs(without)["RTX-5070-TI"]

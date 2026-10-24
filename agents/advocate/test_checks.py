@@ -340,7 +340,8 @@ def test_price_caution_only_bid_is_not_a_confirmed_fit():
 
 
 # #308: a page that does not state the condition (Central Computers, MIRROR) is unverified, never new
-@pytest.mark.parametrize("offered,page", [("unknown", "unknown"), ("new", "unknown"), ("unknown", None)])
+@pytest.mark.parametrize("offered,page", [("unknown", "unknown"), ("unknown", None), (None, "unknown"),
+                                          ("", "not stated")])
 def test_an_unknown_condition_is_unverified_never_shown_or_treated_as_new(offered, page):
     import json
     card = run([bid("b1", "seller_1", 590, offered=offered, page=page)])[0]
@@ -357,3 +358,26 @@ def test_a_stated_condition_still_gets_the_old_checks():
     assert run([bid("b1", "seller_1", 590, offered="new", page="new")])[0]["recommendation"] == "buy"
     assert run([bid("b1", "seller_1", 540, offered="new", page="open-box")])[0]["recommendation"] == "veto"
 
+
+
+# #333 item 2: an unstated side never turns a real mismatch into a caution. One concrete side against a different
+# (or unstated) other side keeps main's condition veto; only "nothing concrete on either side" is unverified.
+@pytest.mark.parametrize("offered,page", [("new", "unknown"), ("unknown", "used"), ("unknown", "new"),
+                                          ("open-box", "not stated"), ("unverified", "refurbished")])
+def test_one_concrete_side_against_an_unstated_side_is_still_a_mismatch_veto(offered, page):
+    card = run([bid("b1", "seller_1", 590, offered=offered, page=page)])[0]
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.condition"
+    assert "condition" in {w["kind"] for w in card["warnings"]}
+    assert "unverified" not in {w["kind"] for w in card["warnings"]}
+
+
+# #333 item 1: a bid from a mirrored store that never joined is a veto, whatever its other checks say
+def test_a_bid_from_a_store_that_never_joined_is_vetoed_as_not_orderable():
+    from data.mirror import not_partners
+    b = dict(bid("b1", "seller_1", 590), supplier_id="central_computers_sf", origin="MIRROR")
+    card = run([b, bid("b2", "seller_2", 640)])[0]
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.mirror_not_orderable"
+    assert not_partners.NOT_ORDERABLE in card["warnings"][0]["text"]
+    assert checks.best_bid([b], [card]) is None
+    flagged = dict(bid("b3", "seller_3", 590), orderable=False)
+    assert run([flagged])[0]["recommendation"] == "veto"

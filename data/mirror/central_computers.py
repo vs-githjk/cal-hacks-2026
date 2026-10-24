@@ -12,6 +12,9 @@ Rules (tested in data/tests/test_central_computers.py):
 - Condition stays "unknown": the pages do not state it, so it is unverified, never "new".
 - Length comes from the maker spec table (data/fit_checker/gpu_lengths.json), never a guess. A card whose length is
   unknown, or over the buyer's clearance when one is given, is never bid, so it cannot win a 305 mm round.
+- Never orderable (#333): the store never agreed to sell here, so its bid is shown for comparison and can never win,
+  be approved, get a mandate, be charged or be paid (data/mirror/not_partners.py, enforced on every money path).
+- Never more units than the SF store's own stock figure.
 """
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ import json
 from pathlib import Path
 
 from data.fit_checker.gpu_lengths import fits, listing_length
+from data.mirror import not_partners
 
 SNAPSHOT_ID = "centralcomputers-20261024T2112Z"
 SNAPSHOT = Path(__file__).resolve().parent / "snapshots" / f"{SNAPSHOT_ID}.json"
@@ -29,8 +33,7 @@ SKU = "rtx 5070 ti"
 IN_STOCK_SF = "in_stock_sf_store"
 FLOOR_OF_LIST = 0.93
 CASE_CLEARANCE_MM = 305   # Vidyut's case in the demo
-LABEL = ("MIRROR: real Central Computers listing captured Oct 24 21:12 UTC via Apify. "
-         "Central Computers is not a partner.")
+LABEL = not_partners.SELLERS[SELLER_ID]   # code-owned; the store never joined, so its bids are never orderable (#333)
 
 
 def rows() -> list[dict]:
@@ -92,7 +95,8 @@ def seller(clearance_mm: int | None = None) -> dict | None:
              f"Maker length {pick['length_mm']} mm.")
     return {"id": SELLER_ID, "name": NAME, "owner": None,
             "archetype": "real San Francisco PC store, bid from its public listings (MIRROR, not a partner)",
-            "origin": "MIRROR", "discount": 0.0, "margin_pct": None, "shipping": 0.0,
+            "origin": "MIRROR", "orderable": False, "seller_of_record": "Central Computers",
+            "mirror_snapshot_date": pick["snapshot_date"], "discount": 0.0, "margin_pct": None, "shipping": 0.0,
             "perks": [f"{qty} in stock at the SF store, 837 Howard St (store's own figure)"], "claims": [],
             "mirror_snapshot_id": SNAPSHOT_ID, "mirror_label": LABEL, "trace_prefix": trace,
             "withheld": [{k: w[k] for k in ("model_number", "price", "length_mm", "reason", "listing_url")} for w in withheld],
