@@ -62,7 +62,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
-from pay.approval import APPROVE_TOKEN, ApprovalError, ApprovalService, Decision, normalize
+from pay.approval import APPROVE_TOKENS, ApprovalError, ApprovalService, Decision, normalize
 from pay.callscript import CallScript, ScriptError, script_for
 from pay.words import WORD_SET
 
@@ -305,7 +305,7 @@ def _could_be_a_guess(text: str) -> bool:
     """False for "hello" or "why not the cheaper one": no code word and no "approve", so it cannot be an attempt
     and must not burn one of the three tries. Never makes anything pass; only skips counting."""
     tokens = set(normalize(text).split())
-    return bool(tokens & WORD_SET) or APPROVE_TOKEN in tokens
+    return bool(tokens & WORD_SET) or bool(APPROVE_TOKENS & tokens)
 
 
 def _parse_ts(s: Any) -> Optional[datetime]:

@@ -424,7 +424,9 @@ ATTACKS = [
     ("negated_approve", "do not approve {code}", "no_code"),
     ("negated_contraction", "I don't approve {code}", "no_code"),
     ("question_not_consent", "should I approve {code}", "no_code"),
-    ("approved_is_not_approve", "{code} approved", "no_code"),
+    ("not_approved_before_code", "not approved {code}", "no_code"),
+    ("approves_is_not_approve", "{code} approves", "no_code"),
+    ("approval_is_not_approve", "{code} approval", "no_code"),
     ("disapprove", "{code} disapprove", "no_code"),
     ("code_alone", "{code}", "no_code"),
     ("zero_width_split_word", "{w1h}​{w1t} {w2} approve", "wrong_code"),
@@ -576,3 +578,16 @@ def test_denied_and_approved_lines_use_mandate_values():
     s = script_for(make(amount=799.99))
     assert "799.99" in s.approved_line and "seller-x" in s.approved_line
     assert s.denied_line == "Not approved. Nothing was paid"
+
+
+def test_approved_counts_as_approve_exactly_once():
+    from pay.approval import APPROVE_TOKENS, NEGATIONS
+    assert APPROVE_TOKENS == {"approve", "approved"}
+    assert "not" in NEGATIONS  # "not approved" still denies through the negation check
+    svc = ApprovalService(SECRET)
+    m = make("deal-A")
+    s, code = svc.issue(m, now=T0)
+    d = s.approve(f"{code} approved", sec(1))
+    assert d.approved and m["status"] == "approved"
+    again = s.approve(f"{code} approved", sec(40))
+    assert not again.approved and again.reason == "replay"
