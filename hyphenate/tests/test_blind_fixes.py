@@ -55,6 +55,17 @@ def test_identical_invoice_with_no_new_receipt_is_still_held_as_a_possible_dupli
     assert a.status == "matched" and b.status == "held" and b.data["codes"] == ["possible_duplicate"]
 
 
+
+def test_a_receipt_that_accepted_nothing_billed_does_not_clear_a_look_alike():
+    # review of PR #56: a rejected-only or other-SKU receipt between two identical bills must not count as new goods
+    for middle in ([{"sku": "RTX-5070-TI", "qty": 1, "condition": "new", "serials": ["z"], "ok": False}], [{"sku": "NOPE", "qty": 1}]):
+        eng, pid = approved_po(lines=[gpu(qty=4, price=500.0)])
+        eng.receive(pid, by="happy", at=T("10-08"), lines=[{"sku": "RTX-5070-TI", "qty": 3, "condition": "new", "serials": list("abc")}])
+        a = eng.invoice(po_id=pid, number="LK-1", date="2026-10-09", at=T("10-09"), lines=[{"sku": "RTX-5070-TI", "qty": 1, "price": 500.0}])
+        eng.receive(pid, by="happy", at=T("10-09"), lines=middle)
+        b = eng.invoice(po_id=pid, number="LK-2", date="2026-10-10", at=T("10-10"), lines=[{"sku": "RTX-5070-TI", "qty": 1, "price": 500.0}])
+        assert a.status == "matched" and b.status == "held" and "possible_duplicate" in b.data["codes"]
+
 def test_immaterial_variance_is_info_not_a_finding_and_is_still_booked_and_paid():
     eng, pid = approved_po(lines=[gpu(qty=1)])
     received(eng, pid, qty=1)

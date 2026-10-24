@@ -99,7 +99,10 @@ class PayablesMixin:
                 continue
             same = sorted((l["sku"], l["qty"], l["unit"]) for l in o["lines"]) == sig and o["total"] == stated
             days = abs((parse_ts(at) - parse_ts(o["received_at"])).days)
-            new_goods = any(self.receipts[r]["seq"] > o["seq"] for r in po["receipts"])  # goods arrived after the earlier bill: this bill covers them
+            # goods of a billed SKU accepted after the earlier bill: this bill covers them (a rejected-only or other-SKU receipt does not)
+            billed = {l["sku"] for l in o["lines"]}
+            new_goods = any(self.receipts[r]["seq"] > o["seq"] and any(l["accepted"] and l["sku"] in billed for l in self.receipts[r]["lines"])
+                            for r in po["receipts"])
             if same and days <= self.policy.duplicate_window_days and not new_goods:
                 findings.append(Finding("possible_duplicate", "", f"same vendor, PO, lines and total as {o['id']} ({o['number']}) received {days} day(s) earlier"))
                 break
