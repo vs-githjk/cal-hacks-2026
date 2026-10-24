@@ -116,6 +116,13 @@ def test_recovery_notice_is_not_suppressed_by_progress_throttle(buyer):
     assert 'next round' in ctx.owner_text()
 
 
+def test_buyer_business_clock_is_replaceable_without_changing_transport_timeouts(buyer, monkeypatch):
+    frozen = datetime(2026, 10, 24, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(buyer, 'business_now', lambda: frozen)
+    assert buyer.business_now() == frozen
+    assert buyer.business_now().timestamp() == frozen.timestamp()
+
+
 def test_shield_blocked_review_retries(buyer, monkeypatch):
     monkeypatch.setattr(buyer, 'blocked_reasons', lambda *a: 'injection')
     ctx = Context()

@@ -52,6 +52,11 @@ USED: set = set()  # mandate hashes already committed (replay guard)
 CHAT_DIAG = ChatDiagnostics(print)
 
 
+def business_now() -> datetime:
+    """Injectable UTC business clock; transport and diagnostic timeouts stay real-time."""
+    return datetime.now(timezone.utc)
+
+
 class WebIn(Model):
     text: str
 
@@ -92,7 +97,7 @@ def blocked_reasons(sender: str, text: str, context: dict | None = None) -> str 
 
 async def emit(ctx: Context, cls: str, text: str):
     """Step event: at most one per class per goal per 10 minutes reaches the owner; the rest are only logged."""
-    now = time.time()
+    now = business_now().timestamp()
     if hunt.should_emit(ROUND.setdefault("last_sent", {}), cls, now):
         ROUND["last_sent"][cls] = now
         if cls == "progress to goal":  # between rounds, nothing else is coming soon: send it now
@@ -238,13 +243,13 @@ async def start_round(ctx: Context, need: dict | None = None):
                  phase="checking", deadline=0, round_token=token)
     set_state("HUNTING")
     try:
-        checks = await crs.check_sellers(datetime.now(timezone.utc))
+        checks = await crs.check_sellers(business_now())
     except Exception:
         ctx.logger.warning("CRS checks failed; business sellers will be ineligible for this round.")
         checks = {}
     if ROUND.get("round_token") != token or ROUND.get("phase") != "checking" or ROUND.get("need") is not need:
         return False
-    ROUND.update(seller_checks=checks, phase="bidding", deadline=time.time() + need["auction_window_s"])
+    ROUND.update(seller_checks=checks, phase="bidding", deadline=business_now().timestamp() + need["auction_window_s"])
     for s in common.SELLERS:
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]:
             return False
@@ -266,7 +271,7 @@ async def fail_round(ctx: Context, why: str, *, always_notify: bool = False):
         await tell_owner(ctx, f"{why} That was {ROUND['attempts']} rounds without a deal, so I paused this goal. "
                               f"Send your goal again to restart.")
         return
-    ROUND.update(phase="waiting", next_round_at=time.time() + hunt.RETRY_S)
+    ROUND.update(phase="waiting", next_round_at=business_now().timestamp() + hunt.RETRY_S)
     text = (f"{why} Still hunting: next round in {hunt.RETRY_S}s "
             f"(attempt {ROUND['attempts']} of {hunt.MAX_ATTEMPTS}).")
     if always_notify:
@@ -305,7 +310,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
     if reasons:
         await tell_owner(ctx, f"Shield blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
         return
-    if ROUND.get("phase") not in ("bidding", "requote") or time.time() > ROUND["deadline"]:
+    if ROUND.get("phase") not in ("bidding", "requote") or business_now().timestamp() > ROUND["deadline"]:
         ctx.logger.info("late or stray bid ignored")
         return
     try:
@@ -375,8 +380,8 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
 @agent.on_interval(period=1.0)
 async def tick(ctx: Context):
     CHAT_DIAG.expire()
-    now = time.time()
-    if ROUND.get("goal") and hunt.expired(ROUND["goal"]):
+    now = business_now().timestamp()
+    if ROUND.get("goal") and hunt.expired(ROUND["goal"], now=business_now()):
         set_state("EXPIRED")
         ROUND["phase"] = "done"
         ROUND["round_token"] = uuid4().hex
@@ -426,7 +431,7 @@ async def conclude(ctx: Context, reviewed: bool):
     need, bids, cards = ROUND["need"], ROUND["bids"], ROUND["cards"]
     ROUND["phase"] = "decided"
     out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
-    now_utc = datetime.now(timezone.utc)
+    now_utc = business_now()
     seller_checks = ROUND.get("seller_checks", {})
     not_configured_suppliers = {
         b["supplier_id"] for b in bids
@@ -515,11 +520,11 @@ async def approve(ctx: Context, n: int):
         await tell_owner(ctx, f"Bid #{n} is unreviewed, vetoed, or CRS-ineligible; not ordering it. Cancel or wait for a reviewed round.")
     elif bids[n - 1]["total_landed_price"] > ROUND["need"]["spend_limit"]:
         await tell_owner(ctx, f"Bid #{n} is over your cap; not ordering it.")
-    elif time.time() - ROUND["quoted_at"] > hunt.QUOTE_TTL_S:
+    elif business_now().timestamp() - ROUND["quoted_at"] > hunt.QUOTE_TTL_S:
         await restart_card(ctx, f"Bid #{n}'s quote is older than {hunt.QUOTE_TTL_S // 60} minutes.")
     else:
         # Re-read the price just before committing: ask the winning seller to quote the same Need again.
-        ROUND.update(phase="requote", pick=n, deadline=time.time() + ADVICE_TIMEOUT_S)
+        ROUND.update(phase="requote", pick=n, deadline=business_now().timestamp() + ADVICE_TIMEOUT_S)
         await ctx.send(common.address(bids[n - 1]["supplier_id"]),
                        common.BidRequest(need_json=json.dumps(sealed(ROUND["need"]))))
 
@@ -529,7 +534,7 @@ async def on_requote(ctx: Context, fresh: dict):
     old = ROUND["bids"][n - 1]
     if fresh["supplier_id"] != old["supplier_id"]:
         return
-    if not hunt.quote_still_good(old["total_landed_price"], fresh["total_landed_price"], ROUND["quoted_at"], time.time()):
+    if not hunt.quote_still_good(old["total_landed_price"], fresh["total_landed_price"], ROUND["quoted_at"], business_now().timestamp()):
         await restart_card(ctx, f"Bid #{n}'s price moved from ${old['total_landed_price']:.2f} to "
                                 f"${fresh['total_landed_price']:.2f} (or its quote expired).")
         return
@@ -545,7 +550,7 @@ def eligible_for_order(n: int) -> bool:
     return (ROUND.get("reviewed", False) and card.get("need_id") == ROUND["need"]["id"]
             and card.get("recommendation") in ("buy", "caution")
             and crs.eligible(bid["supplier_id"], ROUND.get("seller_checks", {}).get(bid["supplier_id"]),
-                             datetime.now(timezone.utc)))
+                             business_now()))
 
 
 async def place_order(ctx: Context, n: int, approved_by: str, approval_id: str) -> str:
