@@ -28,4 +28,6 @@ export default __t.row({
   },
   origin: __t.string(),
   source: __t.string(),
+  lineMetaJson: __t.string().name("line_meta_json"),
+  bindingHash: __t.string().name("binding_hash"),
 });

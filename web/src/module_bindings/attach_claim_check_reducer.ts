@@ -16,4 +16,8 @@ export default {
   check: __t.string(),
   evidenceUrl: __t.string(),
   origin: __t.string(),
+  bindingHash: __t.string(),
+  lineIndex: __t.u32(),
+  listingId: __t.string(),
+  listingHash: __t.string(),
 };

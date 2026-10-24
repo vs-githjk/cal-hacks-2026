@@ -20,4 +20,5 @@ export default __t.row({
   sealedCount: __t.u32().name("sealed_count"),
   closedAt: __t.option(__t.timestamp()).name("closed_at"),
   origin: __t.string(),
+  reviewDeadline: __t.option(__t.timestamp()).name("review_deadline"),
 });

@@ -17,4 +17,5 @@ export default {
   text: __t.string(),
   sourceUrl: __t.string(),
   origin: __t.string(),
+  bindingHash: __t.string(),
 };

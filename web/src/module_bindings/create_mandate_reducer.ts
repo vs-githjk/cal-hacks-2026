@@ -21,4 +21,6 @@ export default {
   nonce: __t.string(),
   requestedBy: __t.string(),
   origin: __t.string(),
+  goalId: __t.string(),
+  needId: __t.string(),
 };

@@ -21,4 +21,8 @@ export default __t.row({
   poNumber: __t.string().name("po_number"),
   origin: __t.string(),
   createdAt: __t.timestamp().name("created_at"),
+  reservedDealId: __t.string().name("reserved_deal_id"),
+  reservedMandateHash: __t.string().name("reserved_mandate_hash"),
+  parentGoalId: __t.string().name("parent_goal_id"),
+  parentPart: __t.string().name("parent_part"),
 });
