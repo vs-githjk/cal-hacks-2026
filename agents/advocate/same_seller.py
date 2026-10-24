@@ -8,7 +8,7 @@ MARKETPLACE_DOMAINS = {
     "amazon.com", "ebay.com", "bestbuy.com", "newegg.com", "microcenter.com", "bhphotovideo.com",
 }
 IGNORED_DOMAINS = {"example.com", "github.com", "cpsc.gov"}
-URL_FIELDS = ("listing_url", "evidence_url", "source_url")
+IDENTITY_URL_FIELDS = ("listing_urls", "evidence_urls")
 REASON = {
     "rule_id": "advocate.same_seller",
     "summary": "This seller shares trusted identity evidence with a higher-ranked seller",
@@ -27,6 +27,7 @@ def _merchant_host(value):
         parsed = urlsplit(value.strip())
         if parsed.scheme.lower() not in ("http", "https") or not parsed.hostname:
             return None
+        _ = parsed.port
         host = parsed.hostname.lower()
         if host.endswith("."):
             host = host[:-1]
@@ -42,29 +43,26 @@ def _merchant_host(value):
     return host
 
 
-def _evidence_hosts(candidate):
-    sources = [candidate]
-    lines = candidate.get("lines", [])
-    if isinstance(lines, list):
-        sources.extend(line for line in lines if isinstance(line, Mapping))
-    return {
-        host
-        for source in sources
-        for field in URL_FIELDS
-        if (host := _merchant_host(source.get(field)))
-    }
+def _seller_id(candidate):
+    supplier_id, seller_id = candidate.get("supplier_id"), candidate.get("seller_id")
+    if supplier_id is not None and seller_id is not None and supplier_id != seller_id:
+        raise ValueError("candidate supplier_id and seller_id differ")
+    seller_id = supplier_id if supplier_id is not None else seller_id
+    if not isinstance(seller_id, str) or not seller_id.strip():
+        raise ValueError("candidate seller_id must be a nonempty string")
+    return seller_id
 
 
 def exclude_same_seller(candidates, trusted_identity_by_seller):
     """Keep the first ranked seller in each trusted shared-identity component."""
     candidates = list(candidates)
+    candidate_seller_ids = []
     seller_ids = []
     for candidate in candidates:
         if not isinstance(candidate, Mapping):
             raise ValueError("candidate must be a mapping")
-        seller_id = candidate.get("supplier_id")
-        if not isinstance(seller_id, str) or not seller_id.strip():
-            raise ValueError("candidate supplier_id must be a nonempty string")
+        seller_id = _seller_id(candidate)
+        candidate_seller_ids.append(seller_id)
         if seller_id not in seller_ids:
             seller_ids.append(seller_id)
 
@@ -84,15 +82,20 @@ def exclude_same_seller(candidates, trusted_identity_by_seller):
     by_identity = defaultdict(list)
     for seller_id in seller_ids:
         identity = trusted_identity_by_seller.get(seller_id, {}) if isinstance(trusted_identity_by_seller, Mapping) else {}
-        if not isinstance(identity, Mapping) or identity.get("provenance") not in TRUSTED_PROVENANCE:
+        provenance = identity.get("provenance") if isinstance(identity, Mapping) else None
+        if not isinstance(provenance, str) or provenance not in TRUSTED_PROVENANCE:
             continue
         for field in ("payee", "owner"):
             value = _stable_value(identity.get(field))
             if value:
                 by_identity[(field, value)].append(seller_id)
-    for candidate in candidates:
-        for host in _evidence_hosts(candidate):
-            by_identity[("host", host)].append(candidate["supplier_id"])
+        for field in IDENTITY_URL_FIELDS:
+            urls = identity.get(field)
+            if isinstance(urls, (list, tuple)):
+                for url in urls:
+                    host = _merchant_host(url)
+                    if host:
+                        by_identity[("host", host)].append(seller_id)
     for matching_sellers in by_identity.values():
         for seller_id in matching_sellers[1:]:
             union(matching_sellers[0], seller_id)
@@ -104,12 +107,12 @@ def exclude_same_seller(candidates, trusted_identity_by_seller):
     for component in components.values():
         if len(component) < 2:
             continue
-        winner = next(c["supplier_id"] for c in candidates if c["supplier_id"] in component)
+        winner = next(seller_id for seller_id in candidate_seller_ids if seller_id in component)
         for seller_id in component:
             if seller_id != winner:
                 excluded[seller_id] = winner
 
-    kept = [c for c in candidates if c["supplier_id"] not in excluded]
+    kept = [c for c, seller_id in zip(candidates, candidate_seller_ids) if seller_id not in excluded]
     exclusions = []
     for seller_id in seller_ids:
         if seller_id in excluded:
