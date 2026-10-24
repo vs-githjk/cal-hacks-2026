@@ -41,13 +41,17 @@ _T2S = str.maketrans(
 _FR_ACTION = (r"(?:approuvez|validez|ignorez|oubliez|autorisez|payez|accordez|transf[eé]rez"
               r"|(?:approuve|valide|paie|paye|ignore|oublie|autorise)\s+(?:ce|cet|cette|le|la|les|l'|tes|vos|tout|imm[eé]diatement|maintenant)"
               # #263: an infinitive order ("approuver le paiement") or a bare "approuve" ending the line
-              r"|(?:approuver|payer|ignorer|oublier|autoriser|transf[eé]rer|valider\s+le\s+paiement)\b"
+              r"|(?:approuver|ignorer|oublier|autoriser|transf[eé]rer)\b"
+              r"|payer\s+(?:maintenant|imm[eé]diatement|tout\s+de\s+suite|ce\s+vendeur|le\s+vendeur)\b"
+              r"|valider\s+le\s+paiement\b(?!\s+[aà]\s+la\s+livraison)"
               r"|(?<!et )(?<!et\t)approuve(?=[ \t]*(?:[.!\n]|$)))")   # "teste et approuve" is a spec line
 _DE_ACTION = (r"(?:genehmige|genehmigen\s+sie|bezahle|bezahlen\s+sie|zahle|zahlen\s+sie|[uü]berweise|[uü]berweisen\s+sie"
               r"|vergiss|vergessen\s+sie|ignoriere|ignorieren\s+sie|gib\s+frei|geben\s+sie\s+frei|akzeptiere|best[aä]tige"
               # #263: the infinitive order ("Zahlung freigeben")
               r"|genehmigen|bezahlen|zahlen|[uü]berweisen|ignorieren|vergessen|freigeben|akzeptieren)\b")
-_ZH_ACTION = r"(?:批准|忽略|无视|跳过|放行|同意付款|(?:付款|转账)(?=给|到|吧|[。！!\n]|$))"
+# 付款 and 转账 are orders unless a delay or description word follows: "付款后48小时内发货", "转账请备注订单号" (#263).
+# After 请 ("请付款后释放") they are always orders.
+_ZH_ACTION = r"(?:批准|忽略|无视|跳过|放行|同意付款|请(?:立即|马上|立刻|直接|现在)?(?:付款|转账)|(?:付款|转账)(?!后|之后|以后|前|之前|时|方式|请|成功|完成|记录|凭证|截图|信息|备注|账号|账户))"
 _FR_NOUN = r"(?:instructions?|consignes?|r[eè]gles?|directives?|messages?|ordres?)"
 _DE_NOUN = r"(?:anweisungen|anweisung|instruktionen|regeln|befehle|vorgaben|anordnungen)"
 _ZH_NOUN = r"(?:指令|指示|规则|规定|提示词?|设定|限制|命令|要求|说明(?!书)|内容)"
@@ -77,7 +81,8 @@ I18N_PATTERNS = [
     rx(r"\b(?:note|message|avis|consigne|instruction)s?\s+(?:aux|pour\s+les|[aà]\s+tous\s+les|[aà]\s+l'|pour\s+l')\s*(?:\w+\s+){0,2}?"
        r"(?:agents?|assistants?|bots?|ia)\b"
        # "Note aux agents de transport" is a note to delivery staff (#263)
-       r"(?!\s+(?:de\s+(?:transport|livraison|voyage|s[eé]curit[eé]|nettoyage|service|maintenance|quai)|immobiliers?|commerciaux))"),
+       r"(?!\s+(?:de\s+(?:transport|livraison|voyage|s[eé]curit[eé]|nettoyage|service|maintenance|quai)|immobiliers?|commerciaux)"
+       r"(?![^\n]{0,120}?" + _FR_ACTION + r"))"),
     # de: ignore the previous instructions, forget your rules, you are now, from now on, new instructions, note to agents
     rx(r"\b(?:ignorier(?:e|en|t)?|missacht(?:e|en|et)?)\s+(?:sie\s+)?(?:bitte\s+)?(?:alle\s+|s[aä]mtliche\s+)?(?:deine\s+|die\s+|ihre\s+|meine\s+)?"
        r"(?:(?:vorherige|bisherige|obige|fr[uü]here|vorige|vorangegangene|alte)n?\s+)?" + _DE_NOUN + r"\b"),
@@ -90,11 +95,12 @@ I18N_PATTERNS = [
        r"|\bvergiss\s+alles\s+(?:davor|vorher|bisherige|oben)"
        r"|\bignorier(?:e|en)\s+(?:sie\s+)?alles\s+(?:davor|vorher|bisherige|oben)"
        # "Vergiss die Anweisungen zur Montage nicht" reminds, it does not order (#263)
-       r")(?![^.!?\n]{0,60}\bnicht\b)"),
+       r")(?![^.!?\n,;]{0,40}\bnicht[ \t]*(?:[.!?\n]|$))"),
     rx(r"(?:\b(?:du\s+bist|sie\s+sind)\s+(?:jetzt|nun|ab\s+sofort|ab\s+jetzt|von\s+(?:nun|jetzt)\s+an)"
        r"|\b(?:ab\s+sofort|ab\s+jetzt|jetzt|nun|von\s+(?:nun|jetzt)\s+an)\s+(?:bist\s+du|sind\s+sie))\s+"
        r"(?:(?:ein|eine|einer|der|die|im|kein|keine)\s+(?:\w+\s+){0,2}?(?:assistent\w*|agent\w*|ki|bot|modell|roboter)\b"
-       r"|frei\b|dan\b|ohne\s+(?:regeln|einschr[aä]nkungen|grenzen|filter))"),
+       r"|frei\b|dan\b|ohne\s+(?:regeln|einschr[aä]nkungen|grenzen|filter)"
+       r"|im\s+(?:entwickler|debug|admin|dan)[\w-]*modus\b)"),
     rx(r"\b(?:ab\s+(?:jetzt|sofort)|von\s+(?:nun|jetzt)\s+an)\s+"
        r"(?:(?:ignorierst|vergisst|genehmigst|bezahlst|gehorchst|musst|sollst)\s+du"
        r"|(?:ignorieren|vergessen|genehmigen|gehorchen)\s+sie)\b"),
@@ -109,7 +115,7 @@ I18N_PATTERNS = [
        r"|(?:忘记|忘掉|忽略|无视)(?:之前|以前|上面|以上|前面)的?一切"),
     rx(r"(?:(?:你|您)(?:现在|从现在起|从现在开始|从此)|(?:现在|从现在起|从现在开始|从此)[,，]?\s*(?:你|您))(?:是|就是|扮演|成为)"
        r"[^。！？\n]{0,10}?(?:助手|ai|机器人|模型|代理|没有限制|不受限制|不受任何限制|无限制|没有规则|dan|开发者模式|开发模式|调试模式)"
-       r"|(?:你|您)是(?:一个|一名)?(?:没有|不受|无)(?:任何)?(?:限制|规则|约束)的"),
+       r"|(?:你|您)是(?:一个|一名)?(?:没有|不受|无)(?:任何)?(?:限制|规则|约束)的(?:ai|助手|机器人|模型|代理|智能体)"),
     rx(r"(?:从(?:现在|今天|此刻)(?:起|开始)[,，]?\s*(?:你|您)(?:只|必须|要|将|应该|就)?"
        r"(?:听|服从|批准|同意|忽略|无视|跳过|执行|遵守|扮演))"),
     rx(r"新的?(?:指令|指示|命令)\s*[:：]"),
