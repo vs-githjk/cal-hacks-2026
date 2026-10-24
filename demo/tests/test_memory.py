@@ -280,3 +280,66 @@ def test_a_failed_charge_or_a_mandate_with_no_hash_is_not_a_purchase(change):
         a["approval_record"]["mandate_hash"] = None
         a["charge"]["idempotency_key"] = "mandate:None"
     assert not [e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase"]
+
+
+# ---------------------------------------------------------------- #273 Lows from #255
+
+@pytest.mark.parametrize("change", ["cents_true", "zero", "negative", "mandate_id", "payee", "amount_read_back", "read_back_bool"])
+def test_a_purchase_needs_real_cents_a_positive_amount_and_the_read_back_of_this_mandate(change):
+    run = _sample()
+    a = run["artifacts"]
+    m, rec, ch = a["mandate"], a["approval_record"], a["charge"]
+    if change == "cents_true":
+        m["amount"], ch["amount_cents"] = 0.01, True
+    elif change in ("zero", "negative"):
+        amt = 0 if change == "zero" else -5
+        m["amount"], rec["amount_read_back"], ch["amount_cents"] = amt, amt, amt * 100
+    elif change == "mandate_id":
+        rec["mandate_id"] = "mnd_other"
+    elif change == "payee":
+        rec["payee_read_back"] = "shady-sam@pay.example.test"
+    elif change == "amount_read_back":
+        rec["amount_read_back"] = 999.0
+    else:
+        rec["amount_read_back"] = True
+    assert not [e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase"], change
+
+
+def test_the_sample_run_is_still_a_purchase():
+    assert [e for e in M.from_demo_run(_sample(), "r") if e["kind"] == "purchase"]
+
+
+@pytest.mark.parametrize("amount", ["0", "-5"])
+def test_a_market_purchase_for_zero_or_less_is_dropped(amount):
+    t = dict(MARKET, mandate=[['"h1"', '"mnd_1"', '"deal-bid-1"', '"vidyut"', amount, '"best-buy@pay.example.test"', '"MIRROR"']],
+             payment=[['"h1"', '"ch_test_1"', amount, "2026-10-24T18:02:05+00:00", '"sim"']])
+    stats = {}
+    assert not [e for e in M.from_market(fake_sql(t), "m", stats) if e["kind"] == "purchase"] and stats["dropped"] == 1
+
+
+def test_infinity_in_a_snapshot_detail_drops_the_row_not_a_null(tmp_path):
+    good = M.from_market(fake_sql(MARKET), "m")
+    bad = {**good[0], "id": "m:goal:inf", "detail": {"cap": float("inf")}}
+    (tmp_path / "market-memory-20261024T1805Z.json").write_text(json.dumps({"entries": good + [bad], "error": None}))
+    out = M.load(tmp_path)
+    assert "m:goal:inf" not in {e["id"] for e in out["entries"]} and json.dumps(out, allow_nan=False)
+
+
+def test_an_oversized_snapshot_or_run_file_is_an_error_source(tmp_path, monkeypatch):
+    monkeypatch.setattr(M, "MAX_FILE_BYTES", 100)
+    (tmp_path / "market-memory-20261024T1805Z.json").write_text(json.dumps({"entries": [], "error": None, "pad": "x" * 200}))
+    (tmp_path / "run-a.json").write_text(json.dumps(_sample()))
+    out = M.load(tmp_path)
+    assert out["entries"] == [] and {s["state"] for s in out["sources"]} == {"error"}
+
+
+def test_a_hanging_market_read_stops_at_the_budget(tmp_path):
+    clock, calls = [0.0], []
+
+    def slow_sql(query):   # every query "takes" 30 s
+        calls.append(query)
+        clock[0] += 30
+        return []
+    path = M.snapshot(slow_sql, tmp_path, db="t", now="20261024T1805Z", budget_s=30, clock=lambda: clock[0])
+    saved = json.loads(path.read_text())
+    assert len(calls) == 1 and saved["entries"] == [] and "TimeoutError" in saved["error"]

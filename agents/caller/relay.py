@@ -7,11 +7,27 @@ no screen to show the code on (the code goes only to the buyer's own screen), or
 """
 from __future__ import annotations
 
+import json
 import secrets as _secrets
+import threading
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 MARKET_MODULE = Path(__file__).resolve().parents[2] / "market" / "spacetimedb" / "src" / "index.ts"
+MAX_REQUEST_CHARS = 20000          # Shield's own cap: a longer request is refused, never screened in part
+MAX_REQUEST_BODY_BYTES = 60 * 1024  # under Shield's 64 KB body cap, with room for the context (#298)
+_SEEN_LOCK = threading.Lock()       # on_call runs handle in worker threads: the one-call check and add are one step (#298)
+
+
+def precheck(sender: str, text: str, *, buyer_address: str) -> Optional[str]:
+    """The refusal reason before any Shield call, or None (#298). The sender is checked first, so a stranger costs no
+    Shield call. A request whose JSON body would pass Shield's 64 KB cap is too_large, not "shield_blocked": non-ASCII
+    text is sent escaped, up to 12 bytes a character."""
+    if sender != buyer_address:
+        return "not_the_buyer"
+    if len(text) > MAX_REQUEST_CHARS or len(json.dumps(text)) > MAX_REQUEST_BODY_BYTES:
+        return "too_large"
+    return None
 
 
 def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:
@@ -44,13 +60,14 @@ def handle(sender: str, request: Any, *, buyer_address: str, client: Any, show_c
     ok = verify(mandate)
     if not ok:
         return _no(f"bad_mandate: {ok.reason}")
-    if mandate["hash"] in seen:
-        return _no("already_called")                # one call per mandate, ever
-    if client is None:
-        return _no(f"not_configured: {unconfigured or 'no Cartesia client'}")
-    if show_code is None:
-        return _no("no_screen: the code has nowhere safe to show")
-    seen.add(mandate["hash"])                     # burned even if the call fails: never a second call for it
+    with _SEEN_LOCK:
+        if mandate["hash"] in seen:
+            return _no("already_called")            # one call per mandate, ever
+        if client is None:
+            return _no(f"not_configured: {unconfigured or 'no Cartesia client'}")
+        if show_code is None:
+            return _no("no_screen: the code has nowhere safe to show")
+        seen.add(mandate["hash"])                 # burned even if the call fails: never a second call for it
     service = ApprovalService(secret=secret or _secrets.token_hex(16), store=NonceStore(), code_ttl_seconds=CALL_CODE_TTL_S)
     try:
         res = (run or run_approval_call)(mandate, request.get("reason"), client, service, deal=request.get("deal"),
