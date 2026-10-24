@@ -42,7 +42,7 @@ Automatic recovery PASS: after browser reload, the same conversation visibly sho
 
 ## Issue #72 dated baseline: three consecutive fresh mailbox runs
 
-Observed October 24, 2026 (PDT), with UTC timestamps recorded from the operator's live UI. These are conservative observed upper bounds from goal submission to final UI visibility, not exact network latency. Each run used a fresh ASI:One chat, a `CANCEL` cleanup between runs, and a six-profile public metadata snapshot immediately before starting.
+Observed October 24, 2026 (PDT), with UTC timestamps recorded from the operator's live UI. These are conservative observed upper bounds from goal submission to final UI visibility, not exact network latency. Each run used a fresh ASI:One chat, a `CANCEL` cleanup between runs, and a six-profile public metadata check before starting.
 
 | Run | Fresh chat | Goal sent (UTC) | Final visible (UTC) | Observed upper bound | Result |
 |---|---|---:|---:|---:|---|
@@ -50,6 +50,6 @@ Observed October 24, 2026 (PDT), with UTC timestamps recorded from the operator'
 | 2 | [chat 97c2fb4a](https://asi1.ai/chat/97c2fb4a-e720-410e-b57c-8a3617cd25fd) | 09:21:11.432 | 09:21:47.005 | 35.573s | `need-ea5dd9b0`; same three-bid/veto/recommendation pattern |
 | 3 | [chat d682cd0c](https://asi1.ai/chat/d682cd0c-080d-4bc5-9200-5f8871dbb427) | 09:22:29.203 | 09:23:10.587 | 41.384s | `need-ce666c37`; same three-bid/veto/recommendation pattern |
 
-Frankie's cited veto source in all three runs was `https://example.com/sim/frankie/rtx-4070-super-12gb-deal`. The three runs are consecutive under-90-second UI observations without reload. The evidence retains the earlier stale-round prompt and the separate clean-chat attempt whose final was absent through 102.847 seconds and appeared only after a later reload at roughly 300 seconds; that earlier delay was not consistently reproduced and no code-fix claim follows from these observations.
+Frankie's cited veto source in all three runs was `https://example.com/sim/frankie/rtx-4070-super-12gb-deal`. The three runs are consecutive under-90-second UI observations without reload. The evidence retains the earlier stale-round prompt and the [separate clean-chat attempt](https://asi1.ai/chat/9cee3d95-2200-4a0a-943e-fa7c94d73f4c) whose final was absent through 102.847 seconds and appeared only after a later reload at roughly 300 seconds; that earlier delay was not consistently reproduced and no code-fix claim follows from these observations.
 
-The six public metadata snapshots preceding these runs showed all six configured profiles active, with HTTP 200, Agent Chat Protocol 0.3.0, and both required badges. These snapshots establish public profile metadata only. The observed runtime was the existing `9680912` checkout; this section does not prove the new round-trace/CRS integration, checkout, approval, Stripe, or payment path. The final cleanup `CANCEL` was sent at 09:23:34.333 UTC, with visible acknowledgement still pending when this evidence was recorded.
+The public metadata checks before each run showed all six configured profiles active, with HTTP 200, Agent Chat Protocol 0.3.0, and both required badges. These snapshots establish public profile metadata only. The observed runtime was the existing `9680912` checkout; this section does not prove the new round-trace/CRS integration, checkout, approval, Stripe, or payment path. The final cleanup `CANCEL` was sent at 09:23:34.333 UTC, with visible acknowledgement still pending when this evidence was recorded.
