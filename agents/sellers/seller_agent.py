@@ -44,8 +44,12 @@ def build(name: str) -> Agent:
     port = PORTS[name]
     agent = Agent(**common.agent_args(
         name, port, name=s['name'][:32], handle=f"techbazaar{name.replace('_', '')}",
+        readme_path=str(Path(__file__).with_name(f"AGENTVERSE-{name}.md")),
         description=f"Seller agent ({s['archetype']}) that bids in Tech Bazaar's sealed rounds for computer gear. "
                     "Prices come from policy code, never below its floor. Listings are simulated (SIM)."))
+    common.include_profile_chat(agent, f"I am {s['name']}, a Tech Bazaar SIM seller. I bid on structured sealed "
+                                "rounds using policy prices. Send buying goals to @techbazaarbuyer; "
+                                "this chat cannot place orders or approve purchases.")
 
     @agent.on_message(model=common.BidRequest)
     async def on_bid_request(ctx: Context, sender: str, msg: common.BidRequest):

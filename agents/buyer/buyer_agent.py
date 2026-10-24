@@ -67,7 +67,7 @@ async def tell_owner(ctx: Context, text: str):
     two chat messages (ack and result) instead of five: ASI:One rate-limits bursts (HTTP 429)."""
     if ROUND.get("owner"):
         pending = ROUND.pop("events", [])
-        await tell(ctx, ROUND["owner"], "\n".join(pending + [text]))
+        await tell(ROUND.get("owner_context") or ctx, ROUND["owner"], "\n".join(pending + [text]))
 
 
 def blocked_reasons(sender: str, text: str) -> str | None:
@@ -99,6 +99,8 @@ def set_state(state: str):
 @chat.on_message(ChatMessage)
 async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
     await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
+    if ROUND.get("owner") == sender and hunt.command(msg.text().strip()):
+        ROUND["owner_context"] = ctx
     await handle_text(ctx, sender, msg.text().strip())
 
 
@@ -166,7 +168,9 @@ async def handle_text(ctx: Context, sender: str, text: str):
     goal = apply_owned(goal, owned)
     need = need_from_goal(goal)
     ROUND.clear()
-    ROUND.update(owner=sender, goal=goal, owned=owned, need=need, bids=[], personas={}, cards={},
+    # Async seller/advocate callbacks must reply on the owner's Chat Protocol session.
+    ROUND.update(owner=sender, owner_context=ctx if sender != WEB else None,
+                 goal=goal, owned=owned, need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={})
     out = skip_lines(goal, owned)
     if not need["items"]:
@@ -184,15 +188,16 @@ async def handle_text(ctx: Context, sender: str, text: str):
 async def start_round(ctx: Context, need: dict | None = None):
     """Open a sealed round. A retry gets a fresh Need id so stale bids from the last round cannot count."""
     need = need or need_from_goal(ROUND["goal"])
-    ROUND.update(need=need, bids=[], personas={}, cards={}, order=None, mandate=None,
+    ROUND.update(need=need, bids=[], personas={}, cards={}, reviewed=False, order=None, mandate=None,
                  phase="bidding", deadline=time.time() + need["auction_window_s"])
     set_state("HUNTING")
     for s in common.SELLERS:
         await ctx.send(common.address(s), common.BidRequest(need_json=json.dumps(sealed(need))))
 
 
-async def fail_round(ctx: Context, why: str):
+async def fail_round(ctx: Context, why: str, *, always_notify: bool = False):
     """No eligible bid this round: retry every RETRY_S until the deadline, PAUSED after MAX_ATTEMPTS."""
+    ROUND["reviewed"] = False
     ROUND["attempts"] = ROUND.get("attempts", 0) + 1
     state = hunt.after_failed_round(ROUND["attempts"])
     set_state(state)
@@ -202,8 +207,12 @@ async def fail_round(ctx: Context, why: str):
                               f"Send your goal again to restart.")
         return
     ROUND.update(phase="waiting", next_round_at=time.time() + hunt.RETRY_S)
-    await emit(ctx, "progress to goal", f"{why} Still hunting: next round in {hunt.RETRY_S}s "
-                                        f"(attempt {ROUND['attempts']} of {hunt.MAX_ATTEMPTS}).")
+    text = (f"{why} Still hunting: next round in {hunt.RETRY_S}s "
+            f"(attempt {ROUND['attempts']} of {hunt.MAX_ATTEMPTS}).")
+    if always_notify:
+        await tell_owner(ctx, text)
+    else:
+        await emit(ctx, "progress to goal", text)
 
 
 async def restart_card(ctx: Context, why: str):
@@ -240,19 +249,25 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
 
 @agent.on_message(common.AdviceReply)
 async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
-    if sender != common.address("advocate"):
+    if sender != common.address("advocate") or ROUND.get("phase") != "advice":
         return
     reasons = blocked_reasons(sender, msg.cards_json)
     if reasons:
-        await tell_owner(ctx, f"Shield blocked the advocate's reply: {reasons}")
-        return
-    if ROUND.get("phase") != "advice":
+        await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
     try:
-        cards = [common.validate("AdvocateCard", c) for c in json.loads(msg.cards_json)]
+        raw = json.loads(msg.cards_json)
+        if not isinstance(raw, list):
+            raise ValueError("expected a list of review cards")
+        cards = [common.validate("AdvocateCard", c) for c in raw]
+        if (not cards or len(cards) != len(ROUND["bids"])
+                or {c["bid_id"] for c in cards} != {b["id"] for b in ROUND["bids"]}
+                or any(c["need_id"] != ROUND["need"]["id"]
+                       or c["recommendation"] not in ("buy", "caution", "veto") for c in cards)):
+            raise ValueError("expected one current review per bid, with buy, caution or veto")
     except Exception as e:
-        await tell_owner(ctx, f"Advocate reply was malformed ({e}); showing bids without review.")
-        await conclude(ctx, reviewed=False)
+        ctx.logger.warning(f"invalid advocate reply: {e}")
+        await fail_round(ctx, "The advocate's review was invalid or incomplete. Nothing ordered.", always_notify=True)
         return
     ROUND["cards"] = {c["bid_id"]: c for c in cards}
     await conclude(ctx, reviewed=True)
@@ -284,14 +299,21 @@ async def tick(ctx: Context):
         ROUND["deadline"] = now + ADVICE_TIMEOUT_S
         # The advocate sees the owned parts for fit checks, but not the cap.
         advice_need = dict(sealed(ROUND["need"]), owned=owned_attrs(ROUND["owned"]))
-        await ctx.send(common.address("advocate"), common.AdviceRequest(
-            need_json=json.dumps(advice_need), bids_json=json.dumps(ROUND["bids"])))
+        try:
+            await ctx.send(common.address("advocate"), common.AdviceRequest(
+                need_json=json.dumps(advice_need), bids_json=json.dumps(ROUND["bids"])))
+        except Exception as e:
+            ctx.logger.warning(f"advocate request failed: {e}")
+            await fail_round(ctx, "I could not reach the advocate for a review. Nothing ordered.", always_notify=True)
     elif ROUND.get("phase") == "advice" and now > ROUND["deadline"]:
-        await tell_owner(ctx, "The advocate did not reply in time; bids below are NOT reviewed.")
-        await conclude(ctx, reviewed=False)
+        await fail_round(ctx, "The advocate did not reply in time. Nothing ordered.", always_notify=True)
 
 
 async def conclude(ctx: Context, reviewed: bool):
+    if not reviewed:
+        await fail_round(ctx, "The advocate has not completed its review. Nothing ordered.", always_notify=True)
+        return
+    ROUND["reviewed"] = True
     need, bids, cards = ROUND["need"], ROUND["bids"], ROUND["cards"]
     ROUND["phase"] = "decided"
     out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
@@ -335,6 +357,8 @@ async def approve(ctx: Context, n: int):
         await tell_owner(ctx, f"Already ordered: {ROUND['order']['id']}.")
     elif ROUND.get("phase") != "decided" or not 1 <= n <= len(bids):
         await tell_owner(ctx, f"No bid #{n} is waiting for approval.")
+    elif not eligible_for_order(n):
+        await tell_owner(ctx, f"Bid #{n} is unreviewed or vetoed; not ordering it. Cancel or wait for a reviewed round.")
     elif bids[n - 1]["total_landed_price"] > ROUND["need"]["spend_limit"]:
         await tell_owner(ctx, f"Bid #{n} is over your cap; not ordering it.")
     elif time.time() - ROUND["quoted_at"] > hunt.QUOTE_TTL_S:
@@ -359,7 +383,15 @@ async def on_requote(ctx: Context, fresh: dict):
     await tell_owner(ctx, await place_order(ctx, n, approved_by="owner", approval_id=f"chat-{uuid4().hex[:8]}"))
 
 
+def eligible_for_order(n: int) -> bool:
+    card = ROUND.get("cards", {}).get(ROUND["bids"][n - 1]["id"], {})
+    return (ROUND.get("reviewed", False) and card.get("need_id") == ROUND["need"]["id"]
+            and card.get("recommendation") in ("buy", "caution"))
+
+
 async def place_order(ctx: Context, n: int, approved_by: str, approval_id: str) -> str:
+    if not eligible_for_order(n):
+        return f"Bid #{n} is unreviewed or vetoed; not ordering it."
     bid = ROUND["bids"][n - 1]
     order = common.validate("Order", make_order(ROUND["need"], bid, approved_by, approval_id))
     seller = common.address(bid["supplier_id"])
