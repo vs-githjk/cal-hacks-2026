@@ -76,3 +76,12 @@ def test_a_tie_at_rank_one_is_said_and_names_the_other_listing():
     assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE)["tied_with"] == []
     assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE)["sentence"].startswith("Cheapest fitting")
     assert not price_position(SKU, 1349.0, "new", AS_OF, rows=rows)["sentence"].startswith("Tied")
+
+
+def test_unknown_length_listings_change_the_sentence_at_rank_one():  # #155
+    rows = BASE + [row("newegg", 1000.0, "NVIDIA GeForce RTX 5070 Ti 16GB"), row("bh", 1100.0, "NVIDIA GeForce RTX 5070 Ti OC", url="https://bh.example/u2")]
+    out = price_position(SKU, 1299.99, "new", AS_OF, rows=rows)
+    assert out["unknown_fit"] == 2 and out["rank"] == 1
+    assert "cheapest of the listings we can confirm fit; 2 of unknown length not counted" in out["sentence"]
+    assert "Cheapest" not in out["sentence"]
+    assert price_position(SKU, 1500.0, "new", AS_OF, rows=rows)["sentence"].startswith("4th cheapest")  # not rank 1: unchanged

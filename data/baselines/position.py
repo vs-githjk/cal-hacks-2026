@@ -55,8 +55,12 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
         same = same[1:]
     tied_with = [{"store": r["store"], "url": r.get("url")} for r in same] if rank == 1 else []
     where = "Tied cheapest" if tied_with else "Cheapest" if rank == 1 else f"{_ordinal(rank)} cheapest"
-    sentence = f"{where} fitting {condition} card of {of_n} listing{'s' * (of_n != 1)} at {len(stores)} store{'s' * (len(stores) != 1)}, {_day(as_of)}" if of_n else \
-        f"No fitting {condition} listings held, {_day(as_of)}"
+    counted = f"{of_n} {condition} listing{'s' * (of_n != 1)} at {len(stores)} store{'s' * (len(stores) != 1)}, {_day(as_of)}"
+    if of_n and rank == 1 and unknown_fit:  # some listings could not be length-checked: say what was and was not counted
+        sentence = f"{'Tied' if tied_with else 'Priced'} as the cheapest of the listings we can confirm fit; {unknown_fit} of unknown length not counted ({counted})"
+    else:
+        sentence = f"{where} fitting {condition} card of {counted.replace(' ' + condition + ' ', ' ', 1)}" if of_n else \
+            f"No fitting {condition} listings held, {_day(as_of)}"
     if of_n and status == "ok" and sold_median is not None:
         if price < sold_median:
             sentence += f" and ${sold_median - price:,.2f} under the 30-day eBay sold median (mixed condition, n = {sold_n})"
