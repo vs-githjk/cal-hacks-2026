@@ -212,11 +212,14 @@ def test_payment_commit_is_logged_after_successful_commit_send(buyer, monkeypatc
     monkeypatch.setattr(buyer, 'SHIELD_RECEIPT_KEYS', {'receipt': 'key'})
     buyer.ROUND['transaction'] = {
         'phase': 'approved', 'mode': 'SIM', 'buyer_id': 'owner', 'deal_id': 'deal-1', 'goal_id': 'goal-1',
-        'mandate': mandate, 'deal': {'payee': sender, 'owner_sender': 'owner', 'id': 'deal-1'},
+        'supplier_id': 'seller_1', 'seller_type': 'individual', 'crs_check': None,
+        'mandate': mandate,
+        'deal': {'payee': sender, 'owner_sender': 'owner', 'id': 'deal-1', 'supplier_id': 'seller_1'},
         'order': {'id': 'deal-1', 'status': 'ordered'},
     }
     monkeypatch.setattr(buyer, 'STATE_DB', object())
     monkeypatch.setattr(buyer, '_configured_market_owner_matches', lambda _owner: True)
+    monkeypatch.setattr(buyer.crs, '_profiles', lambda: {'seller_1': {'seller_type': 'individual'}})
     market = Mock()
     market.purchase_status.return_value = {
         'approval_method': 'typed_code', 'retired': False, 'reservation_matches': True,
