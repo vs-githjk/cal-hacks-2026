@@ -58,19 +58,24 @@ def _fit_fails(build, part, spec):
 def resolve(p, offers):
     """Pick one offer per part, cheapest first, from each round's offers {part: [{seller, price_cents, spec, source?}]}.
 
-    An offer that breaks a fit rule or its part's budget is knocked out with the reason; a clash with a part already
-    picked (a CPU socket against the board) is a red line, and the next offer that fits is the swap.
+    An offer that breaks a fit rule is knocked out with the reason; a clash with a part already picked (a CPU socket
+    against the board) is a red line, and the next offer that fits is the swap. An offer over its part's budget is
+    taken when the cap still covers the cheapest offer of every open part (the overage moves from those parts),
+    otherwise it is knocked out. After each pick the rest of the cap is split again over the open parts.
     """
     owned = p["owned"]
     budgets = {x["part"]: x["budget_cents"] for x in p["parts"]}
     build = {k: _spec(k, {"spec": v}) for k, v in owned.items()}
-    picks, knockouts, steps = {}, [], list(p["steps"])
-    for part in budgets:
+    picks, knockouts, steps, spent = {}, [], list(p["steps"]), 0
+    parts = list(budgets)
+    for part in parts:
         clashed = None
         for offer in sorted(offers.get(part) or [], key=lambda o: o["price_cents"]):
             spec, price, seller = _spec(part, offer), offer["price_cents"], offer.get("seller", "?")
-            if price > budgets[part]:
-                reason = f"{dollars(price)} is over the {dollars(budgets[part])} {NAMES[part]} budget"
+            later = parts[parts.index(part) + 1:]
+            floor = sum(min((o["price_cents"] for o in offers.get(k) or []), default=0) for k in later)
+            if price > budgets[part] and spent + price + floor > p["cap_cents"]:
+                reason = f"{dollars(price)} is over the {dollars(budgets[part])} {NAMES[part]} budget and the cap leaves no room"
                 knockouts.append({"part": part, "seller": seller, "rule_id": "budget.over", "reason": reason})
                 steps.append({"kind": "knockout", "part": part, "line": f"{NAMES[part]}: {seller} out, {reason}."})
                 continue
@@ -88,11 +93,17 @@ def resolve(p, offers):
                     steps.append({"kind": "knockout", "part": part, "rule_id": c["rule_id"],
                                   "line": f"{NAMES[part]}: {seller} out, {c['reason']}."})
                 continue
+            over = price - budgets[part]
             picks[part] = {"seller": seller, "price_cents": price, "spec": spec, "source": offer.get("source", "")}
             build[part] = spec
             kind = "swap" if clashed else "pick"
             steps.append({"kind": kind, "part": part, "line": (f"Swapped the {NAMES[part]} to {spec['name']} "
                           if clashed else f"{NAMES[part]}: {spec['name']} ") + f"from {seller}, {dollars(price)}."})
+            if over > 0:
+                steps.append({"kind": "reallocate", "part": part, "line": f"{NAMES[part]} is {dollars(over)} over its "
+                              f"{dollars(budgets[part])} budget; moved {dollars(over)} from the parts still open."})
+            spent += price
+            budgets.update(split(p["cap_cents"] - spent, later))  # savings and overage both move to the open parts
             break
         else:
             steps.append({"kind": "blocked", "part": part, "line": f"No {NAMES[part]} offer fits and stays in budget. Nothing was paid."})

@@ -1,6 +1,6 @@
 import pytest
 
-from agents.buyer.planner import plan, resolve
+from agents.buyer.planner import plan, resolve, split
 
 OWNED = {"psu": {"name": "750 W PSU", "wattage": 750, "form_factor": "ATX", "pcie_16pin": 1},
          "case": {"name": "Owned case", "max_gpu_length_mm": 305, "max_cooler_height_mm": 160,
@@ -73,3 +73,20 @@ def test_no_board_fits_blocks_and_pays_nothing():
     r = resolve(plan(200_000, OWNED), offers(boards))
     assert r["status"] == "blocked" and "motherboard" not in r["picks"]
     assert r["steps"][-1]["line"].endswith("Nothing was paid.")
+
+
+def test_over_budget_board_triggers_reallocation():
+    boards = [offer("B&H", 149, name="B760 board", **{**AM5, "socket": "LGA1700"}), offer("B&H", 189, name="B650 board", **AM5)]
+    p = plan(200_000, OWNED)
+    r = resolve(p, offers(boards))
+    assert [s["kind"] for s in r["steps"] if s.get("part") == "motherboard"] == ["clash", "swap", "reallocate"]
+    assert r["status"] == "locked" and r["total_cents"] == 198_800 <= p["cap_cents"]
+    # the board's overage (and the GPU and CPU savings) moved to the parts still open
+    left = split(200_000 - (1249 + 279 + 189) * 100, ["memory", "storage", "cooler"])
+    assert r["budgets"]["memory"] == left["memory"]
+
+
+def test_over_budget_with_no_room_under_the_cap_is_knocked_out():
+    r = resolve(plan(200_000, OWNED), {**offers(), "gpu": [offer("Best Buy", 1650, name="RTX 5080", chipset="RTX 5080", length_mm=300)]})
+    assert r["status"] == "blocked" and r["knockouts"][0]["rule_id"] == "budget.over"
+    assert "cap leaves no room" in r["knockouts"][0]["reason"]
