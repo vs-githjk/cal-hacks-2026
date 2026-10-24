@@ -100,6 +100,8 @@ def _fit_warnings(bid, owned):
         out.append(_warn("fit", f"Does not fit: {summary}.", url, bid["total_landed_price"], rule_id=rid))
     elif unsure:
         out.append(_warn("fit_unknown", f"Fit not confirmed: {CALL_SUMMARIES['advocate.fit_unknown']}.", url, 0))
+    elif checks:  # explicit positive signal (internal, stripped in advise): a relevant check ran and all passed
+        out.append(_warn("fit_ok", "", url, 0))
     if fit["notes"]:
         out.append(_warn("note", "The fit checker returned a non-blocking note.", url, 0))
     return out
@@ -245,12 +247,12 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
             warnings.append(_warn("same_seller", f"Same seller as {kept['supplier_id']}: shares {key_type}. "
                                   f"Seller ids: {bid['supplier_id']} and {kept['supplier_id']}.",
                                   (kept.get("lines") or [{}])[0].get("listing_url", ""), 0))
-        staged.append((bid, warnings))
+        staged.append((bid, [w for w in warnings if w["kind"] != "fit_ok"], any(w["kind"] == "fit_ok" for w in warnings)))
     # #115: a bid inside the cap with a confirmed fit outranks any bid whose fit is unknown
     # a bid vetoed for any other reason is not a confirmed fit; a missing id list never vetoes
     confirmed = in_cap is not None and any(
-        b["id"] in in_cap and not ({"fit", "fit_unknown"} | VETO_KINDS) & {w["kind"] for w in ws} for b, ws in staged)
-    for bid, warnings in staged:
+        b["id"] in in_cap and ok and not VETO_KINDS & {w["kind"] for w in ws} for b, ws, ok in staged)
+    for bid, warnings, _ in staged:
         if confirmed and any(w["kind"] == "fit_unknown" for w in warnings) and not any(w["kind"] == "fit" for w in warnings):
             url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""
             warnings.append(_warn("fit_unconfirmed", "Fit not confirmed, and another offer in your cap has a confirmed fit.",

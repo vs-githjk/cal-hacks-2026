@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pytest
 
 from common import validate
-from logic import decide, make_order, mandate, sealed
+from logic import advice_need_for, decide, make_order, mandate, sealed
 
 NEED = {"id": "need-x", "buyer_id": "b", "items": [], "delivery_window": "by Friday", "spend_limit": 900.0,
         "consent": True, "auction_window_s": 12, "source": "live"}
@@ -48,3 +48,10 @@ def test_order_and_mandate():
     m = mandate(a, "sup-1")
     assert m["amount_cap"] == 512.5 and m["payee"] == "sup-1" and m["single_use"]
     assert m["idempotency_key"] == a["idempotency_key"]
+
+
+def test_missing_spend_limit_fails_closed():
+    need = {k: v for k, v in NEED.items() if k != "spend_limit"}
+    assert advice_need_for(need, {}, [bid(100)])["in_cap_bid_ids"] == []
+    assert decide(need, bid(100), auto_limit=500) == "over_limit"
+    assert decide({**NEED, "spend_limit": None}, bid(100), auto_limit=500) == "over_limit"
