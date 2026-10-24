@@ -101,7 +101,7 @@ Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" t
 
 ## CRS sandbox setup (Issue #15)
 
-`CRS_API_KEY` is the sandbox bearer token returned by the official CRS login. The adapter does not log in or retry credentials. Put the token in `agents/.env`. Set `CRS_TEST_IDENTITIES_PATH` there to an absolute path for a private operator JSON file outside the repository. The file has this shape; `request` must contain the exact body for the named persona from the official CRS Cal Hacks package version 1.1.2:
+Set `CRS_USERNAME` and `CRS_PASSWORD` in the private `agents/.env`; optionally set `CRS_BASE_URL` (default `https://api-sandbox.stitchcredit.com/api`). The adapter posts JSON credentials to `/users/login` once per process, caches the returned bearer token, rejects redirects, and permanently latches a failed login without retrying. Missing credentials perform zero network requests and override any old cache with `CRS not configured`. `CRS_API_KEY` remains a legacy bearer-token override for existing offline callers. Set `CRS_TEST_IDENTITIES_PATH` there to an absolute path for a private operator JSON file outside the repository. The file has this shape; `request` must contain the exact body for the named persona from the official CRS Cal Hacks package version 1.1.2:
 
 ```json
 {
@@ -126,6 +126,6 @@ Lane A hands off the existing `SupplierSignal` fields (`supplier_id`, `stability
 .\agents\.venv\Scripts\python.exe -B agents/crs.py --live
 ```
 
-The equivalent command where `python3` is the configured interpreter is `python3 agents/crs.py --live`. Missing token or profile configuration yields no CRS pass.
+The equivalent command where `python3` is the configured interpreter is `python3 agents/crs.py --live`. Missing login credentials or profile configuration yields no CRS pass.
 
 Live sandbox proof: the CRS login returned HTTP 200, and the operator-approved official synthetic representative mapping was `seller_1=P01`, `seller_2=P02`, `seller_3=P12`. Three adapter calls returned valid responses at `2026-10-24T07:50:12Z`: sellers 1 and 2 were `verified_stable` and eligible; seller 3 was `not_verified` and blocked. A separate cache fallback check returned the same dated results as `recorded` with zero additional CRS calls. Credentials and tokens remain in ignored local runtime configuration. The result verifies representative identity only. Issue owner acceptance of this scope and Lane B's shared market/UI enforcement remain pending.
