@@ -68,7 +68,7 @@ export interface Disqualified {
 /** What a line costs for this need: unit price times the NEED quantity (the line's quantity is stock). */
 const needQty = (l: BidLine, needItems: Map<string, NeedItem>) => needItems.get(l.sku_spec)?.quantity ?? l.quantity;
 const costFor = (needItems: Map<string, NeedItem>) => (l: BidLine) => {
-  const c = l.unit_price * needQty(l, needItems);
+  const c = l.unit_price * needQty(l, needItems) + (l.shipping ?? 0);
   return Number.isFinite(c) ? c : Infinity;
 };
 
@@ -80,6 +80,9 @@ function pickLines(bid: Bid, needItems: Map<string, NeedItem>, lineRejects: stri
   const picked: number[] = [];
   const reasons: string[] = [];
   const cheapestAny: number[] = [];
+  for (const sku of needItems.keys()) {
+    if (!bySku.has(sku)) reasons.push(`${sku}: bid does not cover requested item`);
+  }
   for (const idx of bySku.values()) {
     const checked = idx.map((i) => ({
       i,
@@ -103,7 +106,7 @@ function qualityAdjusted(bid: Bid, picked: BidLine[], needItems: Map<string, Nee
   const returns = returnsDays(bid.perks) >= w.min_returns_days ? 0 : w.no_returns_adj;
   return picked.reduce((s, l) => {
     const cond = l.offered_condition ?? needItems.get(l.sku_spec)?.condition ?? "new";
-    return s + l.unit_price * needQty(l, needItems) * (1 + (w.condition_adj[cond] ?? 0) + returns);
+    return s + l.unit_price * needQty(l, needItems) * (1 + (w.condition_adj[cond] ?? 0) + returns) + (l.shipping ?? 0);
   }, 0);
 }
 

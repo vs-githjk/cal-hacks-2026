@@ -296,6 +296,7 @@ export const PendingApprovalRow = __t.object("PendingApprovalRow", {
   failures: __t.u32(),
   locked: __t.bool(),
   issuedAt: __t.timestamp(),
+  codeExpiresAt: __t.timestamp(),
   origin: __t.string(),
 });
 export type PendingApprovalRow = __Infer<typeof PendingApprovalRow>;

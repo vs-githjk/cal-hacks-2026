@@ -111,7 +111,9 @@ def normalize(supplier_id: str, response: dict, checked_at: str) -> dict:
 
 def _paths():
     profile = os.environ.get("CRS_TEST_IDENTITIES_PATH")
-    return Path(profile) if profile else None, Path(__file__).resolve().parents[1] / ".cache" / "crs-signals.json"
+    cache = os.environ.get("CRS_SIGNAL_CACHE_PATH")
+    return (Path(profile) if profile else None,
+            Path(cache) if cache else Path(__file__).resolve().parents[1] / ".cache" / "crs-signals.json")
 
 
 def _profiles():

@@ -20,5 +20,6 @@ export default __t.row({
   failures: __t.u32(),
   locked: __t.bool(),
   issuedAt: __t.timestamp().name("issued_at"),
+  codeExpiresAt: __t.timestamp().name("code_expires_at"),
   origin: __t.string(),
 });

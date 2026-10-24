@@ -15,6 +15,13 @@ from buyer import hunt
 NOW = datetime(2026, 10, 24, 8, tzinfo=timezone.utc)
 
 
+def test_optional_signal_cache_path_override(monkeypatch, tmp_path):
+    cache_path = tmp_path / "shared-sanitized-signals.json"
+    monkeypatch.delenv("CRS_TEST_IDENTITIES_PATH", raising=False)
+    monkeypatch.setenv("CRS_SIGNAL_CACHE_PATH", str(cache_path))
+    assert crs._paths() == (None, cache_path)
+
+
 @pytest.fixture
 def tmp_path():
     cache = Path(__file__).resolve().parents[1] / ".cache"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { AgentsTile } from "@/components/AgentsTile";
@@ -88,14 +88,20 @@ function BuyerView() {
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [notes] = useTable(tables.myNotifications);
   const [pending] = useTable(tables.myPendingApprovals);
+  const [clock, setClock] = useState(() => Date.now());
   const [profiles] = useTable(tables.myBuyerProfile);
   const approveTyped = useReducer(reducers.approveTyped);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const goal = useMemo(() => goalFromRows(goals, goalItems, allowances[0]), [goals, goalItems, allowances]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
   const sim = liveBids.length === 0;
-  const review = useMemo(() => reviewFromRows(pending), [pending]);
+  const review = useMemo(() => reviewFromRows(pending), [pending, clock]);
   // A wrong code is counted in my_pending_approvals (failures); a match records the approval and the row leaves the view.
   const onTyped = async (mandateHash: string, code: string) => {
     if (!code) return "Type the two words shown above.";

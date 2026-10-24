@@ -72,6 +72,8 @@ export const goal = table(
     poNumber: t.string(),
     origin: t.string(), // market-internal, for the badge; not in the Goal contract
     createdAt: t.timestamp(),
+    reservedDealId: t.string().default(''), // appended for in-place migration
+    reservedMandateHash: t.string().default(''), // appended for in-place migration
   },
 );
 
@@ -97,6 +99,20 @@ export const notification = table(
     klass: t.string(), // deal_found | bid_in | veto | progress | state
     text: t.string(),
     push: t.bool(),
+    at: t.timestamp(),
+  },
+);
+
+/** Private buyer progress events; stableId makes caller retries idempotent. */
+export const goalStepEvent = table(
+  { name: 'goal_step_event' },
+  {
+    stableId: t.string().primaryKey(),
+    buyerId: t.string().index('btree'),
+    goalId: t.string(),
+    klass: t.string(),
+    text: t.string(),
+    origin: t.string(),
     at: t.timestamp(),
   },
 );
@@ -187,6 +203,7 @@ export const bid = table(
     source: t.string(),
     sealedAt: t.timestamp(),
     lineRejects: t.array(t.string()).default([]), // per line: '' or why it cannot be picked (no floor set)
+    lineMetaJson: t.string().default('[]'), // appended migration-safe metadata keyed by original line index
   },
 );
 
@@ -202,6 +219,7 @@ export const bidCheck = table(
     evidenceUrl: t.string(),
     origin: t.string(),
     at: t.timestamp(),
+    bindingJson: t.string().default(''), // append-only binding to the selected original bid lines
   },
 );
 
@@ -221,6 +239,10 @@ export const mandate = table(
     withinAllowance: t.bool(), // true: auto-approved inside the allowance; false: needs the call
     requestedBy: t.string(), // who asked for the buy (IT seat); empty for a consumer's own buy
     origin: t.string(),
+    goalId: t.string().default(''),
+    needId: t.string().default(''),
+    retired: t.bool().default(false), // appended: terminal no-charge retirement proof was accepted
+    retirementAttemptId: t.string().default(''), // exact local req:<sha256> attempt; appended for migration safety
   },
 );
 
@@ -290,10 +312,11 @@ export const round = table(
     openedAt: t.timestamp(),
     deadline: t.timestamp(),
     extensions: t.u32(),
-    state: t.string(), // open | closed
+    state: t.string(), // open | review | closed
     sealedCount: t.u32(),
     closedAt: t.option(t.timestamp()),
     origin: t.string(),
+    reviewDeadline: t.option(t.timestamp()).default(undefined),
   },
 );
 
@@ -312,6 +335,7 @@ export const roundResult = table(
     lines: t.array(BidLine),
     origin: t.string(),
     source: t.string(),
+    lineMetaJson: t.string().default('[]'), // selected metadata; original indexes stay bound for review/evidence
   },
 );
 
@@ -377,7 +401,7 @@ export const roundTimer = table(
 );
 
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, approvalCode, lossReport,
+  need, needItem, goal, goalItem, notification, goalStepEvent, owner, role, pairCode, pairAttempt, buyerProfile, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, agentEvent, persona, roundTimer,
