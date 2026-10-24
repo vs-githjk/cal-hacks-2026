@@ -1,6 +1,10 @@
 """shield.override.instruction: text that tries to replace the reading agent's instructions."""
 from shield.rules.base import BLOCK, Rule, finditer_spans, rx
 
+# What an honest "System:" spec line starts with (#250): an OS, a CPU or GPU maker, a number, or a build word
+_SPEC_START = (r"(?:windows|win\s?1[01]|linux|ubuntu|fedora|debian|mint|mac\s?os|macos|chrome\s?os|steam\s?os|amd|intel|ryzen"
+               r"|core\s+(?:i\d|ultra)|apple|nvidia|geforce|radeon|arm|x86|\d+|prebuilt|pre-built|custom|gaming|desktop|laptop"
+               r"|tower|mini|compatible|kompatibel|requirements?|none|n/a)\b")
 PATTERNS = [
     rx(r"\bignore\s+(?:all\s+|any\s+|every\s+)?(?:of\s+)?(?:your\s+|the\s+|my\s+)?"
        r"(?:previous|prior|above|earlier|preceding|former)\s+"
@@ -13,9 +17,8 @@ PATTERNS = [
     # so a spec line ("System: Windows 11 Home") passes (#250)
     rx(r"(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}(?:system[ \t]{0,5}(?:prompt|message|note|override)|assistant|developer)[ \t]{0,5}[:\]]"
        r"|(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}system[ \t]{0,5}\][ \t]{0,5}"
-       r"|(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}system[ \t]{0,5}:[ \t]{0,5}(?:\w+[ \t]+){0,2}?"
-       r"(?:approve|ignore|disregard|forget|override|bypass|skip|pay|charge|send|transfer|release|confirm|accept|grant|you|always"
-       r"|do\s+not|don'?t|must|act|stop|cancel|buy|choose|select|pick)\b"),
+       # a bare "System:" (a line break after it too) is a label unless what follows reads as a spec: fail closed
+       r"|(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}system[ \t]{0,5}:\s{0,5}(?=\S)(?!" + _SPEC_START + r")"),
     rx(r"\byou\s+are\s+now\s+(?:a|an|the|in|my|acting|operating|unrestricted|free|dan|no\s+longer)\b"),
     rx(r"\bfrom\s+now\s+on,?\s+(?:you|ignore|always|only)\b"),
     rx(r"\bpretend\s+(?:to\s+be|you\s+are)\b"),
