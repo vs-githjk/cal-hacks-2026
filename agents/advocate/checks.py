@@ -8,6 +8,7 @@ Fee fields are ignored: the advocate never sees a fee. Text rule: neutral wordin
 """
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
+from urllib.parse import urlsplit, urlunsplit
 
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
@@ -93,12 +94,14 @@ def _fit_warnings(bid, owned):
     url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""
     out = []
     if fails:
-        out.append(_warn("fit", f"Does not fit: {'; '.join(c['reason'] for c in fails)} (rule {fails[0]['rule_id']}).",
+        rid = fails[0]["rule_id"]
+        summary = CALL_SUMMARIES.get(rid, CALL_SUMMARIES["fit"])
+        out.append(_warn("fit", f"Does not fit: {summary}.",
                          url, bid["total_landed_price"], rule_id=fails[0]["rule_id"]))
     elif unsure:
-        out.append(_warn("fit_unknown", f"Fit not confirmed: {'; '.join(c['reason'] for c in unsure)}.", url, 0))
+        out.append(_warn("fit_unknown", f"{CALL_SUMMARIES['advocate.fit_unknown']}.", url, 0))
     if fit["notes"]:
-        out.append(_warn("note", "; ".join(fit["notes"]) + ".", url, 0))
+        out.append(_warn("note", "The fit checker returned a non-blocking note.", url, 0))
     return out
 
 
@@ -178,10 +181,21 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence
     return out
 
 
+def _line_indices(bid):
+    lines = bid.get("lines", [])
+    explicit = ["line_index" in line for line in lines]
+    if any(explicit) and not all(explicit):
+        raise ValueError("selected line index must be present on every selected line")
+    indices = [line["line_index"] for line in lines] if all(explicit) and lines else list(range(len(lines)))
+    if any(isinstance(i, bool) or not isinstance(i, int) or i < 0 for i in indices) or len(set(indices)) != len(indices):
+        raise ValueError("selected line index must be a unique nonnegative integer")
+    return indices
+
+
 def _claim_checks(bid, evidence):
     """Bounded normalized evidence, suitable for the market's attach_claim_check hook."""
     checks = []
-    for index, line in enumerate(bid.get("lines", [])):
+    for index, line in zip(_line_indices(bid), bid.get("lines", [])):
         condition = line.get("offered_condition")
         if condition not in {"new", "open-box", "refurbished", "used"}:
             continue
@@ -200,10 +214,10 @@ def _claim_checks(bid, evidence):
         else:
             check = evidence.get((url, condition), {}) if isinstance(evidence, dict) else {}
             result = check.get("result") if check.get("result") in {"verified", "false", "unverified"} else "unverified"
-            source = check.get("method", "independent claim check")
+            source = _check_source(check.get("method", "independent claim check"))
         row = {"bid_id": bid["id"], "line_index": index, "listing_id": line.get("listing_id", ""),
                "sku_spec": line.get("sku_spec", ""), "field": "condition", "value": condition,
-               "result": result, "evidence_url": check.get("evidence_url", url),
+               "result": result, "evidence_url": _safe_source_url(check.get("evidence_url", url)),
                "evidence_hash": check.get("evidence_hash", ""), "checked_at": check.get("checked_at", ""),
                "source": source, "origin": origin}
         checks.append(row)
@@ -225,7 +239,9 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
         warnings = sorted(warnings, key=lambda w: -w["dollar_impact"])[:MAX_WARNINGS]
         cards.append({"need_id": need["id"], "bid_id": bid["id"], "warnings": warnings,
                       "claim_checks": _claim_checks(bid, evidence),
-                      "recommendation": rec, "wait_until": "", "call_reason": reason})
+                      "recommendation": rec, "wait_until": "", "call_reason": reason,
+                      "rule_id": reason["rule_id"], "reason": reason["summary"],
+                      "source_url": reason["source_url"]})
     return cards
 
 
@@ -236,11 +252,51 @@ def call_reason(warnings: list[dict], bid: dict) -> dict:
                     key=lambda w: (w["kind"] not in VETO_KINDS, -w["dollar_impact"]))
     if not ranked:
         url = bid["lines"][0].get("listing_url") if bid.get("lines") else None
+        source = url or CODE_SOURCES["unsourced"]
         return {"rule_id": "advocate.ok", "summary": CALL_SUMMARIES["advocate.ok"],
-                "source_url": url or CODE_SOURCES["unsourced"]}
+                "source_url": _safe_source_url(source)}
     w = ranked[0]
     rid = w["rule_id"] if w["rule_id"] in CALL_SUMMARIES else ("fit" if w["kind"] == "fit" else f"advocate.{w['kind']}")
-    return {"rule_id": rid, "summary": CALL_SUMMARIES[rid], "source_url": w["source_url"]}
+    return {"rule_id": rid, "summary": CALL_SUMMARIES[rid], "source_url": _safe_source_url(w["source_url"])}
+
+
+def _safe_source_url(value: str) -> str:
+    try:
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password:
+            return CODE_SOURCES["unsourced"]
+        host = parsed.hostname.lower() + (f":{parsed.port}" if parsed.port else "")
+        return urlunsplit((parsed.scheme, host, parsed.path[:200], "", ""))[:240]
+    except (ValueError, TypeError):
+        return CODE_SOURCES["unsourced"]
+
+
+def _check_source(value: str) -> str:
+    """Collapse checker adapter text to fixed provenance labels; never pass page prose onward."""
+    if not isinstance(value, str):
+        return "independent claim check"
+    lowered = value.lower()
+    if lowered.startswith("sim fixture"):
+        return "SIM fixture page_condition (repository-owned control)"
+    if lowered.startswith("fetched page"):
+        return "independent listing page check"
+    if lowered.startswith("could not verify"):
+        return "independent listing check unavailable"
+    return "independent claim check"
+
+
+def validate_safety_card(card: dict) -> None:
+    """Refuse any safety fields that diverge from the deterministic rule/template decision."""
+    reason = card.get("call_reason")
+    if not isinstance(reason, dict) or set(reason) != {"rule_id", "summary", "source_url"}:
+        raise ValueError("AdvocateCard call_reason must use the closed safety shape")
+    rule_id = reason["rule_id"]
+    if (card.get("recommendation") not in {"buy", "caution", "veto"}
+            or CALL_SUMMARIES.get(rule_id) != reason["summary"]
+            or card.get("rule_id") != rule_id or card.get("reason") != reason["summary"]
+            or card.get("source_url") != reason["source_url"]
+            or _safe_source_url(reason["source_url"]) != reason["source_url"]):
+        raise ValueError("AdvocateCard safety mirrors must match the code-owned canonical reason")
 
 
 def best_bid(bids: list[dict], cards: list[dict]):

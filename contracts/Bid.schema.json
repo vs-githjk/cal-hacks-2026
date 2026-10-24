@@ -28,6 +28,8 @@
      "shipping": {"type": "number", "minimum": 0,
        "description": "Flat shipping for this line at its quantity; market adds it once. Omitted only for legacy bids."},
      "listing_id": {"type": "string"},
+     "line_index": {"type": "integer", "minimum": 0,
+       "description": "Original zero-based Bid.lines index assigned by the market when selecting this line for review."},
      "quantity": {
       "type": "number",
       "exclusiveMinimum": 0,
@@ -60,7 +62,10 @@
      "model_number": {"type": "string"},
      "snapshot_id": {"type": "string"},
      "snapshot_date": {"type": "string"},
-     "floor_evidence": {"type": "object"},
+     "floor_evidence": {"type": "object",
+       "properties": {"origin": {"type": "string", "const": "MIRROR"}, "source": {"type": "string"}, "observed_at": {"type": "string"}},
+       "required": ["origin", "source", "observed_at"], "additionalProperties": false,
+       "description": "Public floor evidence provenance only; the numeric private floor is excluded."},
      "shipping_evidence": {"type": "object"}
     },
     "required": [

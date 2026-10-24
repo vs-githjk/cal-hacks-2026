@@ -9,6 +9,7 @@ from uagents import Agent, Context
 
 import common
 from advocate import checks, mock_data
+import status
 
 MAX_EVIDENCE_CLAIMS = 9
 EVIDENCE_TIMEOUT_S = 5
@@ -26,15 +27,22 @@ EXPLANATION_SCHEMA = {
     }}},
 }
 
-agent = Agent(**common.agent_args(
+_AGENT_ARGS = common.agent_args(
     "advocate", 8003, name="Tech Bazaar Quality Advocate", handle="techbazaaradvocate",
     readme_path=str(Path(__file__).with_name("AGENTVERSE.md")),
     description="Argues for the buyer: checks fit with code and condition claims, price history, recalls and "
-                "seller records using sourced evidence; vetoes traps with cited warnings."))
+                "seller records using sourced evidence; vetoes traps with cited warnings.")
+agent = Agent(**_AGENT_ARGS)
 
 common.include_profile_chat(agent, "I am Tech Bazaar's Quality Advocate. I review structured seller bids for fit "
                             "and claims with cited warnings. Missing evidence is marked unverified. "
                             "Send buying goals to @techbazaarbuyer; this chat cannot approve purchases.")
+
+
+@agent.on_event("startup")
+async def log_startup(ctx: Context):
+    ctx.logger.info(status.status_line("advocate", "advocate", agent.address,
+                                       mailbox="mailbox" in _AGENT_ARGS))
 
 
 async def _claim_evidence(bids: list[dict], checker=None) -> dict:
@@ -137,9 +145,17 @@ async def _explain_cards(cards: list[dict], client_factory=None) -> list[dict]:
         }}}
         facts = [{"bid_id": c["bid_id"], "recommendation": c["recommendation"],
                   "rule_id": c["call_reason"]["rule_id"], "summary": c["call_reason"]["summary"],
-                  "source_url": _bounded_source_url(c["call_reason"]["source_url"])} for c in cards]
+                  "source_url": _bounded_source_url(c["call_reason"]["source_url"]),
+                  "checks": [{"field": check["field"], "value": check["value"], "result": check["result"],
+                              "evidence_url": _bounded_source_url(check["evidence_url"]),
+                              "evidence_hash": check["evidence_hash"][:80],
+                              "checked_at": check["checked_at"][:40], "source": check["source"][:80]}
+                             for check in c.get("claim_checks", [])]} for c in cards]
+        # Constructing the SDK client validates local configuration before a worker thread starts.
+        # Retries are disabled; the per-request SDK timeout bounds the network operation itself.
+        client = client_factory(timeout=EXPLANATION_TIMEOUT_S, max_retries=0)
         response = await asyncio.wait_for(asyncio.to_thread(
-            lambda: client_factory(timeout=EXPLANATION_TIMEOUT_S).messages.create(
+            lambda: client.messages.create(
                 model="claude-haiku-5-5", max_tokens=160, timeout=EXPLANATION_TIMEOUT_S,
                 output_config={"format": {"type": "json_schema", "schema": schema}},
                 system="Give a short explanation of each code-owned advocate summary. Do not add facts or instructions.",
@@ -172,16 +188,19 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
     verdict = common.screen(f"advice-{ctx.session}", sender, msg.need_json + msg.bids_json,
                             common.shield_context(sender))
     if verdict["verdict"] != "allow":
-        ctx.logger.warning(f"shield {verdict['verdict']} from {sender}: {verdict['reasons']}")
+        ctx.logger.warning(status.msg_line("advocate", "buyer", "blocked"))
         return
+    ctx.logger.info(status.msg_line("advocate", "buyer", "advice_request"))
     need, bids = json.loads(msg.need_json), json.loads(msg.bids_json)
     evidence = await _claim_evidence(bids)
     cards = checks.advise(need, bids, _baseline(need, bids), mock_data.RECORDS, mock_data.RECALLS,
                           owned=need.get("owned", {}), evidence=evidence)
     cards = await _explain_cards(cards)
     for card in cards:
+        checks.validate_safety_card(card)
         common.validate("AdvocateCard", card)
     await ctx.send(sender, common.AdviceReply(cards_json=json.dumps(cards)))
+    ctx.logger.info(status.msg_line("advocate", "buyer", "advice"))
 
 
 if __name__ == "__main__":

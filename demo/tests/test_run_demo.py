@@ -110,6 +110,23 @@ def test_beat2_cheapest_eligible_bid_is_vetoed_with_a_cited_source(run):
     assert b2["winner"]["seller_id"] == "best-buy" and b2["winner_seller_id"] == "best-buy"
 
 
+def test_demo_advice_emits_closed_advocate_card_with_matching_safety_mirrors():
+    from demo.advice import advise
+
+    need = {"id": "need-test", "items": [{"sku_spec": "rtx 5070 ti", "condition": "new",
+                                             "allowed_conditions": ["new"], "quantity": 1}]}
+    bid = {"id": "bid-test", "seller_id": "seller_1", "lines": [{"sku_spec": "rtx 5070 ti",
+            "unit_price": 100, "quantity": 1, "offered_condition": "new", "listing_url": "https://shop.example/gpu",
+            "attrs": {"category": "gpu", "length_mm": 250}, "origin": "SIM"}]}
+    card = advise(need, bid, {"line": 0, "landed": 100}, [], {})
+    projection = {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until",
+                                        "claim_checks", "call_reason", "rule_id", "reason", "source_url")}
+    from demo.common import validate
+    validate("AdvocateCard", projection)
+    assert card["rule_id"] == card["call_reason"]["rule_id"]
+    assert card["reason"] == card["call_reason"]["summary"]
+
+
 def test_beat2_a_real_mirror_seller_wins_on_a_real_line(run):
     b2 = b(run, 2)
     win = next(x for x in b2["bids"] if x["id"] == b2["winner"]["bid_id"])
@@ -335,7 +352,9 @@ def test_every_artifact_validates_against_its_contract(run):
              ("Mandate", a["mandate_at_approval"]), ("VoiceApproval", a["approval_record"])]
     pairs += [("OwnedPart", o) for o in a["owned_parts"]] + [("Bid", x) for x in a["bids"]] + [("Claim", c) for c in a["claims"]]
     pairs += [("LossReport", r) for r in a["loss_reports"]]
-    pairs += [("AdvocateCard", {k: c[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")}) for c in a["verdicts"]["advocate_cards"]]
+    pairs += [("AdvocateCard", {k: c[k] for k in ("need_id", "bid_id", "warnings", "recommendation",
+                                                    "wait_until", "claim_checks", "call_reason",
+                                                    "rule_id", "reason", "source_url")}) for c in a["verdicts"]["advocate_cards"]]
     shield = a["verdicts"]["shield"] + [a["verdicts"]["injected_listing"], a["verdicts"]["control_listing"]]
     pairs += [("ShieldVerdict", {k: s[k] for k in ("message_id", "sender_agent", "verdict", "reasons", "attack_type", "latency_ms")}) for s in shield]
     assert len(pairs) > 40
