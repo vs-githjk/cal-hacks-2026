@@ -213,6 +213,26 @@ def test_quiet_hours_uses_one_browser_session_and_same_typed_code_with_expiry():
     assert "starting the call" not in " ".join(private.messages).lower()
 
 
+def test_phone_call_rate_limited_uses_real_private_typed_approval():
+    tx = transaction()
+    service = ApprovalService("chat-rate-limit-test-secret-123456", store=NonceStore())
+    private = PrivateChat()
+    client = FakeVoiceClient()
+
+    async def typed(owner, _deal, _mandate_hash, _timeout):
+        return owner, private.code
+
+    async def run():
+        return await approve_in_chat(tx, sender=OWNER, bound_owner=OWNER,
+            send_private=private.send_private, call_ready=lambda: (False, "rate_limited"),
+            wait_for_typed=typed, client=client, service=service)
+
+    result = asyncio.run(run())
+    assert result.approved and result.record["channel"] == "typed"
+    assert "rate_limited" in " ".join(private.messages)
+    assert client.calls == 0
+
+
 def test_chat_approval_uses_injected_business_clock_for_session_issue():
     tx, service, private, client = transaction(), FakeApprovalService(), PrivateChat(), FakeVoiceClient()
     issued_at = datetime.fromisoformat(tx["mandate"]["created_at"].replace("Z", "+00:00"))

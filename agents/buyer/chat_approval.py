@@ -15,7 +15,7 @@ from uagents_core.types import DeliveryStatus, MsgStatus
 
 from . import checkout
 
-_CALL_UNAVAILABLE = {"quiet_hours", "not_configured", "unavailable"}
+_CALL_UNAVAILABLE = {"quiet_hours", "not_configured", "rate_limited", "unavailable"}
 
 
 def format_approval_result(result: VoiceResult, deal_id: str) -> str:
