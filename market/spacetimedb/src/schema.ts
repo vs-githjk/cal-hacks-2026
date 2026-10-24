@@ -122,6 +122,32 @@ export const pairCode = table(
   },
 );
 
+/** The one-time word-pair code Lane D's approval service issued for a mandate that needs the buyer's call. Private: only the mandate's buyer sees it (my_pending_approvals). */
+export const approvalCode = table(
+  { name: 'approval_code' },
+  { mandateHash: t.string().primaryKey(), buyerId: t.string().index('btree'), code: t.string(), failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp() },
+);
+
+/** LossReport contract, plus the seller's strategy diff and Claude's one line. Private: each seller sees only its own (my_loss_reports). */
+export const StrategyStep = t.object('StrategyStep', { key: t.string(), from: t.string(), to: t.string() });
+export const lossReport = table(
+  { name: 'loss_report' },
+  {
+    id: t.string().primaryKey(),
+    roundId: t.string(),
+    sellerId: t.string().index('btree'),
+    won: t.bool(),
+    gapBand: t.string(), // within5 | within10 | within20 | over20
+    reason: t.string(), // price | fit | condition | delivery | record | advocate_veto
+    sourceUrl: t.string(),
+    strategyDiff: t.array(StrategyStep),
+    whatToChange: t.string(),
+    whatToChangeOrigin: t.string(),
+    origin: t.string(),
+    createdAt: t.timestamp(),
+  },
+);
+
 /** Failed pairing attempts per caller, across every code. */
 export const pairAttempt = table({ name: 'pair_attempt' }, { identity: t.identity().primaryKey(), failures: t.u32() });
 
@@ -335,7 +361,7 @@ export const roundTimer = table(
 );
 
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt,
+  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,

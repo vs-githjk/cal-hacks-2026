@@ -34,21 +34,26 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import ApproveTypedReducer from "./approve_typed_reducer";
 import AssignRoleReducer from "./assign_role_reducer";
 import AttachAdvocateCardReducer from "./attach_advocate_card_reducer";
 import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
 import CloseRoundReducer from "./close_round_reducer";
 import CreateMandateReducer from "./create_mandate_reducer";
+import IssueApprovalCodeReducer from "./issue_approval_code_reducer";
 import OpenRoundReducer from "./open_round_reducer";
 import PairBuyerScreenReducer from "./pair_buyer_screen_reducer";
+import PairSellerScreenReducer from "./pair_seller_screen_reducer";
 import PlaceBidReducer from "./place_bid_reducer";
 import PostGoalReducer from "./post_goal_reducer";
 import PostNeedReducer from "./post_need_reducer";
 import RecordApprovalReducer from "./record_approval_reducer";
+import RecordLossReportReducer from "./record_loss_report_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
 import RecordReceivingReducer from "./record_receiving_reducer";
 import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
+import ReissueSellerScreenCodeReducer from "./reissue_seller_screen_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
 import SetFloorReducer from "./set_floor_reducer";
@@ -62,8 +67,10 @@ import MyAllowanceRow from "./my_allowance_table";
 import MyBidsRow from "./my_bids_table";
 import MyGoalItemsRow from "./my_goal_items_table";
 import MyGoalsRow from "./my_goals_table";
+import MyLossReportsRow from "./my_loss_reports_table";
 import MyNotificationsRow from "./my_notifications_table";
 import MyPairAttemptsRow from "./my_pair_attempts_table";
+import MyPendingApprovalsRow from "./my_pending_approvals_table";
 import MyRoleRow from "./my_role_table";
 import PersonaRow from "./persona_table";
 import RejectedAttemptRow from "./rejected_attempt_table";
@@ -164,6 +171,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyGoalsRow),
+  myLossReports: __table({
+    name: 'my_loss_reports',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyLossReportsRow),
   myNotifications: __table({
     name: 'my_notifications',
     indexes: [
@@ -178,6 +192,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyPairAttemptsRow),
+  myPendingApprovals: __table({
+    name: 'my_pending_approvals',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyPendingApprovalsRow),
   myRole: __table({
     name: 'my_role',
     indexes: [
@@ -196,21 +217,26 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("approve_typed", ApproveTypedReducer),
   __reducerSchema("assign_role", AssignRoleReducer),
   __reducerSchema("attach_advocate_card", AttachAdvocateCardReducer),
   __reducerSchema("attach_claim_check", AttachClaimCheckReducer),
   __reducerSchema("attach_verdict", AttachVerdictReducer),
   __reducerSchema("close_round", CloseRoundReducer),
   __reducerSchema("create_mandate", CreateMandateReducer),
+  __reducerSchema("issue_approval_code", IssueApprovalCodeReducer),
   __reducerSchema("open_round", OpenRoundReducer),
   __reducerSchema("pair_buyer_screen", PairBuyerScreenReducer),
+  __reducerSchema("pair_seller_screen", PairSellerScreenReducer),
   __reducerSchema("place_bid", PlaceBidReducer),
   __reducerSchema("post_goal", PostGoalReducer),
   __reducerSchema("post_need", PostNeedReducer),
   __reducerSchema("record_approval", RecordApprovalReducer),
+  __reducerSchema("record_loss_report", RecordLossReportReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),
   __reducerSchema("record_receiving", RecordReceivingReducer),
   __reducerSchema("reissue_pair_code", ReissuePairCodeReducer),
+  __reducerSchema("reissue_seller_screen_code", ReissueSellerScreenCodeReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
   __reducerSchema("set_floor", SetFloorReducer),
@@ -231,10 +257,14 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_goal_items": Omit<typeof tablesSchema.schemaType.tables["myGoalItems"], "accessorName"> & { readonly accessorName: "my_goal_items" };
     /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
     readonly "my_goals": Omit<typeof tablesSchema.schemaType.tables["myGoals"], "accessorName"> & { readonly accessorName: "my_goals" };
+    /** @deprecated Use `myLossReports` instead. This alias will be removed in the next major version. */
+    readonly "my_loss_reports": Omit<typeof tablesSchema.schemaType.tables["myLossReports"], "accessorName"> & { readonly accessorName: "my_loss_reports" };
     /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
     readonly "my_notifications": Omit<typeof tablesSchema.schemaType.tables["myNotifications"], "accessorName"> & { readonly accessorName: "my_notifications" };
     /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
     readonly "my_pair_attempts": Omit<typeof tablesSchema.schemaType.tables["myPairAttempts"], "accessorName"> & { readonly accessorName: "my_pair_attempts" };
+    /** @deprecated Use `myPendingApprovals` instead. This alias will be removed in the next major version. */
+    readonly "my_pending_approvals": Omit<typeof tablesSchema.schemaType.tables["myPendingApprovals"], "accessorName"> & { readonly accessorName: "my_pending_approvals" };
     /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
     readonly "my_role": Omit<typeof tablesSchema.schemaType.tables["myRole"], "accessorName"> & { readonly accessorName: "my_role" };
     /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
@@ -261,8 +291,10 @@ const tableAccessorAliases = {
   "my_bids": "myBids",
   "my_goal_items": "myGoalItems",
   "my_goals": "myGoals",
+  "my_loss_reports": "myLossReports",
   "my_notifications": "myNotifications",
   "my_pair_attempts": "myPairAttempts",
+  "my_pending_approvals": "myPendingApprovals",
   "my_role": "myRole",
   "seller_needs": "sellerNeeds",
 } as const;
@@ -293,10 +325,14 @@ export type DbView = __DbViewBase & {
   readonly "my_goal_items": __DbViewBase["myGoalItems"];
   /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
   readonly "my_goals": __DbViewBase["myGoals"];
+  /** @deprecated Use `myLossReports` instead. This alias will be removed in the next major version. */
+  readonly "my_loss_reports": __DbViewBase["myLossReports"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __DbViewBase["myNotifications"];
   /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
   readonly "my_pair_attempts": __DbViewBase["myPairAttempts"];
+  /** @deprecated Use `myPendingApprovals` instead. This alias will be removed in the next major version. */
+  readonly "my_pending_approvals": __DbViewBase["myPendingApprovals"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __DbViewBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
@@ -313,10 +349,14 @@ export type Tables = __TablesBase & {
   readonly "my_goal_items": __TablesBase["myGoalItems"];
   /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
   readonly "my_goals": __TablesBase["myGoals"];
+  /** @deprecated Use `myLossReports` instead. This alias will be removed in the next major version. */
+  readonly "my_loss_reports": __TablesBase["myLossReports"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __TablesBase["myNotifications"];
   /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
   readonly "my_pair_attempts": __TablesBase["myPairAttempts"];
+  /** @deprecated Use `myPendingApprovals` instead. This alias will be removed in the next major version. */
+  readonly "my_pending_approvals": __TablesBase["myPendingApprovals"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __TablesBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */

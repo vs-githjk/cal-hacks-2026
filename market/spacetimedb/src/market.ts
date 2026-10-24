@@ -36,9 +36,10 @@ function rejected(ctx: Ctx, kind: string, refId: string, reason: string) {
 // ---------------------------------------------------------------- identities and roles
 // Every state-changing reducer calls requireRole first. One place decides who may act.
 
-export type RoleName = 'buyer' | 'seller' | 'referee';
+// seller_screen: a browser paired to one seller's own screen. Read-only: no reducer allows it.
+export type RoleName = 'buyer' | 'seller' | 'referee' | 'seller_screen';
 type Allowed = RoleName | 'owner' | 'scheduler';
-const ROLES: RoleName[] = ['buyer', 'seller', 'referee'];
+const ROLES: RoleName[] = ['buyer', 'seller', 'referee', 'seller_screen'];
 
 const roleOf = (ctx: { db: Ctx['db'] | VCtx['db']; sender: Identity }) => ctx.db.role.identity.find(ctx.sender);
 const isOwner = (ctx: Ctx) => {
@@ -108,8 +109,22 @@ export const PAIR_MAX_FAILURES = 5;
 export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
   const cur = roleOf(ctx);
   if (cur && cur.role !== 'buyer') throw new SenderError(`not allowed: a ${cur.role} cannot pair as a buyer screen`);
-  const want = ctx.db.pairCode.buyerId.find(buyerId);
-  if (!want) throw new SenderError('no pairing code issued for this buyer; ask the operator');
+  return pairWithCode(ctx, buyerId, code, 'buyer', buyerId);
+}
+
+/** A browser screen takes the read-only seller_screen role for one seller with that seller's code. Same limits as the buyer pairing. */
+export function pairSellerScreen(ctx: Ctx, { sellerId, code }: { sellerId: string; code: string }) {
+  const cur = roleOf(ctx);
+  if (cur && cur.role !== 'seller_screen') throw new SenderError(`not allowed: a ${cur.role} cannot pair as a seller screen`);
+  return pairWithCode(ctx, sellerScreenKey(sellerId), code, 'seller_screen', sellerId);
+}
+
+const sellerScreenKey = (sellerId: string) => `seller:${sellerId}`;
+
+function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subjectId: string) {
+  const cur = roleOf(ctx);
+  const want = ctx.db.pairCode.buyerId.find(key);
+  if (!want) throw new SenderError('no pairing code issued for this screen; ask the operator');
   if (want.locked) throw new SenderError('pairing is locked after too many wrong codes; ask the operator for a new code');
   const mine = ctx.db.pairAttempt.identity.find(ctx.sender);
   if (mine && mine.failures >= PAIR_MAX_FAILURES) throw new SenderError('this screen is locked after too many wrong codes; ask the operator');
@@ -118,11 +133,11 @@ export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; 
     ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: failed, locked: failed >= PAIR_MAX_FAILURES });
     if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures: mine.failures + 1 });
     else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures: 1 });
-    if (failed >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', buyerId, 'Screen pairing locked after too many wrong codes');
+    if (failed >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', key, 'Screen pairing locked after too many wrong codes');
     return { paired: false, reason: 'wrong pairing code' };
   }
-  if (cur) ctx.db.role.identity.update({ ...cur, subjectId: buyerId });
-  else ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
+  if (cur) ctx.db.role.identity.update({ ...cur, subjectId });
+  else ctx.db.role.insert({ identity: ctx.sender, role, subjectId });
   return { paired: true, reason: '' };
 }
 
@@ -130,6 +145,13 @@ export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; 
 export function reissuePairCode(ctx: Ctx, { buyerId }: { buyerId: string }) {
   requireRole(ctx, 'reissue_pair_code', ['owner']);
   issuePairCode(ctx, buyerId);
+  for (const row of [...ctx.db.pairAttempt.iter()]) ctx.db.pairAttempt.identity.delete(row.identity);
+}
+
+/** Owner only: a fresh code for one seller's screen (stored under "seller:<id>"), with every screen lock cleared. */
+export function reissueSellerScreenCode(ctx: Ctx, { sellerId }: { sellerId: string }) {
+  requireRole(ctx, 'reissue_seller_screen_code', ['owner']);
+  issuePairCode(ctx, sellerScreenKey(sellerId));
   for (const row of [...ctx.db.pairAttempt.iter()]) ctx.db.pairAttempt.identity.delete(row.identity);
 }
 
@@ -523,8 +545,17 @@ export function recordReceiving(ctx: Ctx, a: RecordReceivingArgs) {
 
 // ---------------------------------------------------------------- views
 
+const CEILING_STEP = 500;
+const usd = (x: number) => `$${x.toLocaleString('en-US')}`;
+/** The buyer's ceiling as a $500 band ("$500 to $1,000"), never the number itself. */
+export function ceilingBand(limit: number): string {
+  if (!(limit > 0)) return 'not set';
+  const lo = Math.floor(limit / CEILING_STEP) * CEILING_STEP;
+  return lo === 0 ? `under ${usd(CEILING_STEP)}` : `${usd(lo)} to ${usd(lo + CEILING_STEP)}`;
+}
+
 export function sellerNeedsView(ctx: VCtx | AVCtx) {
-  const out: { roundId: string; needId: string; skuSpec: string; condition: string; variant: string; quantity: number; unit: string; deliveryWindow: string; deadline: Timestamp }[] = [];
+  const out: { roundId: string; needId: string; skuSpec: string; condition: string; variant: string; quantity: number; unit: string; deliveryWindow: string; deadline: Timestamp; ceilingBand: string; origin: string }[] = [];
   for (const r of ctx.db.round.iter()) {
     if (r.state !== 'open') continue;
     const n = ctx.db.need.id.find(r.needId);
@@ -532,7 +563,7 @@ export function sellerNeedsView(ctx: VCtx | AVCtx) {
     const items = [...ctx.db.needItem.needId.filter(n.id)].map((i) => ({ sku_spec: i.skuSpec, condition: i.condition as Condition, variant: i.variant, quantity: i.quantity, unit: i.unit }));
     const v = sellerView({ id: n.id, items, delivery_window: n.deliveryWindow }, '');
     for (const i of v.items) {
-      out.push({ roundId: r.id, needId: v.need_id, skuSpec: i.sku_spec, condition: i.condition, variant: i.variant, quantity: i.quantity, unit: i.unit, deliveryWindow: v.delivery_window, deadline: r.deadline });
+      out.push({ roundId: r.id, needId: v.need_id, skuSpec: i.sku_spec, condition: i.condition, variant: i.variant, quantity: i.quantity, unit: i.unit, deliveryWindow: v.delivery_window, deadline: r.deadline, ceilingBand: ceilingBand(n.spendLimit), origin: n.origin });
     }
   }
   return out;
@@ -588,4 +619,82 @@ export function resetDemoChecked(ctx: Ctx) {
 export function seedDemoChecked(ctx: Ctx) {
   requireRole(ctx, 'seed_demo', ['owner', 'referee']);
   seedDemo(ctx);
+}
+
+// ---- b5: approval code on the buyer screen, typed fallback ----
+
+export const APPROVAL_MAX_FAILURES = 5;
+const normCode = (x: string) => x.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Referee (Lane D's approval relay) only: store the word pair it issued for a mandate that still needs the buyer's call. */
+export function issueApprovalCode(ctx: Ctx, { mandateHash, code }: { mandateHash: string; code: string }) {
+  requireRole(ctx, 'issue_approval_code', ['referee']);
+  const md = ctx.db.mandate.hash.find(mandateHash);
+  if (!md) throw new SenderError('no mandate with that hash');
+  if (ctx.db.approval.mandateHash.find(mandateHash)) throw new SenderError('mandate already approved; no code needed');
+  if (!normCode(code)) throw new SenderError('empty code');
+  const row = { mandateHash, buyerId: md.buyerId, code: normCode(code), failures: 0, locked: false, issuedAt: ctx.timestamp };
+  if (ctx.db.approvalCode.mandateHash.find(mandateHash)) ctx.db.approvalCode.mandateHash.update(row);
+  else ctx.db.approvalCode.insert(row);
+}
+
+/**
+ * The typed fallback: the mandate's own buyer types the code shown on its screen. A match records the same approval the call
+ * would (method typed_code) for that exact mandate. A miss returns { approved: false } without throwing, so it is counted; 5 lock it.
+ * The code never appears in a message.
+ */
+export function approveTyped(ctx: Ctx, { mandateHash, code }: { mandateHash: string; code: string }) {
+  const md = ctx.db.mandate.hash.find(mandateHash);
+  if (!md) throw new SenderError('no mandate with that hash');
+  requireRole(ctx, 'approve_typed', ['buyer'], md.buyerId);
+  const ac = ctx.db.approvalCode.mandateHash.find(mandateHash);
+  if (!ac) throw new SenderError('no code issued for this mandate yet; wait for the call');
+  if (ac.locked) throw new SenderError('typed approval is locked after too many wrong codes; approve on the call');
+  if (normCode(code) !== ac.code) {
+    const failures = ac.failures + 1;
+    ctx.db.approvalCode.mandateHash.update({ ...ac, failures, locked: failures >= APPROVAL_MAX_FAILURES });
+    return { approved: false, reason: 'wrong code' };
+  }
+  recordApproval(ctx, { mandateHash, method: 'typed_code', approvedBy: md.buyerId });
+  return { approved: true, reason: '' };
+}
+
+/** This buyer's mandates still waiting for approval, with the code to show on this screen only. */
+export function myPendingApprovalsView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  if (!id) return [];
+  return [...ctx.db.approvalCode.buyerId.filter(id)].flatMap((ac) => {
+    const md = ctx.db.mandate.hash.find(ac.mandateHash);
+    if (!md || ctx.db.approval.mandateHash.find(ac.mandateHash)) return [];
+    return [{
+      mandateHash: md.hash, mandateId: md.id, amount: md.amount, payee: md.payee, expiry: md.expiry, code: ac.code,
+      failures: ac.failures, locked: ac.locked, issuedAt: ac.issuedAt, origin: md.origin,
+    }];
+  });
+}
+
+// ---- b6: loss reports ----
+
+export const GAP_BANDS = ['within5', 'within10', 'within20', 'over20'];
+export const LOSS_REASONS = ['price', 'fit', 'condition', 'delivery', 'record', 'advocate_veto'];
+
+export interface LossReportArgs {
+  id: string; roundId: string; sellerId: string; won: boolean; gapBand: string; reason: string; sourceUrl: string;
+  strategyDiff: { key: string; from: string; to: string }[]; whatToChange: string; whatToChangeOrigin: string; origin: string;
+}
+
+/** Referee only: a seller's loss report (banded gap, reason category, source), with its strategy diff and "what to change" when present. */
+export function recordLossReport(ctx: Ctx, a: LossReportArgs) {
+  requireRole(ctx, 'record_loss_report', ['referee']);
+  if (!GAP_BANDS.includes(a.gapBand)) throw new SenderError(`gap_band must be one of ${GAP_BANDS.join(', ')}`);
+  if (!LOSS_REASONS.includes(a.reason)) throw new SenderError(`reason must be one of ${LOSS_REASONS.join(', ')}`);
+  if (ctx.db.lossReport.id.find(a.id)) throw new SenderError(`loss report ${a.id} already exists`);
+  ctx.db.lossReport.insert({ ...a, createdAt: ctx.timestamp });
+}
+
+/** A seller (agent or its paired screen) sees only its own loss reports. */
+export function myLossReportsView(ctx: VCtx) {
+  const r = roleOf(ctx);
+  if (!r || (r.role !== 'seller' && r.role !== 'seller_screen')) return [];
+  return [...ctx.db.lossReport.sellerId.filter(r.subjectId)];
 }

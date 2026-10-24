@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, allowance, bid, goal, goalItem, notification, pairAttempt, role, roundTimer } from './schema';
+import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, StrategyStep, allowance, bid, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -15,6 +15,10 @@ export const pair_buyer_screen = spacetimedb.reducer({ buyerId: t.string(), code
   m.pairBuyerScreen(ctx, a);
 });
 export const reissue_pair_code = spacetimedb.reducer({ buyerId: t.string() }, (ctx, a) => m.reissuePairCode(ctx, a));
+export const pair_seller_screen = spacetimedb.reducer({ sellerId: t.string(), code: t.string() }, (ctx, a) => {
+  m.pairSellerScreen(ctx, a);
+});
+export const reissue_seller_screen_code = spacetimedb.reducer({ sellerId: t.string() }, (ctx, a) => m.reissueSellerScreenCode(ctx, a));
 export const set_floor = spacetimedb.reducer({ skuSpec: t.string(), floor: t.f64() }, (ctx, a) => m.setFloor(ctx, a));
 export const set_floor_for_condition = spacetimedb.reducer(
   { skuSpec: t.string(), condition: t.string(), floor: t.f64() },
@@ -81,6 +85,19 @@ export const record_approval = spacetimedb.reducer(
   (ctx, a) => m.recordApproval(ctx, a),
 );
 
+export const issue_approval_code = spacetimedb.reducer({ mandateHash: t.string(), code: t.string() }, (ctx, a) => m.issueApprovalCode(ctx, a));
+export const approve_typed = spacetimedb.reducer({ mandateHash: t.string(), code: t.string() }, (ctx, a) => {
+  m.approveTyped(ctx, a);
+});
+
+export const record_loss_report = spacetimedb.reducer(
+  {
+    id: t.string(), roundId: t.string(), sellerId: t.string(), won: t.bool(), gapBand: t.string(), reason: t.string(), sourceUrl: t.string(),
+    strategyDiff: t.array(StrategyStep), whatToChange: t.string(), whatToChangeOrigin: t.string(), origin: t.string(),
+  },
+  (ctx, a) => m.recordLossReport(ctx, a),
+);
+
 export const record_payment = spacetimedb.reducer(
   { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string() },
   (ctx, a) => m.recordPayment(ctx, a),
@@ -99,7 +116,7 @@ export const seed_demo = spacetimedb.reducer((ctx) => m.seedDemoChecked(ctx));
 
 const SellerNeedRow = t.object('SellerNeedRow', {
   roundId: t.string(), needId: t.string(), skuSpec: t.string(), condition: t.string(), variant: t.string(),
-  quantity: t.f64(), unit: t.string(), deliveryWindow: t.string(), deadline: t.timestamp(),
+  quantity: t.f64(), unit: t.string(), deliveryWindow: t.string(), deadline: t.timestamp(), ceilingBand: t.string(), origin: t.string(),
 });
 
 export const seller_needs = spacetimedb.anonymousView({ name: 'seller_needs', public: true }, t.array(SellerNeedRow), (ctx) => m.sellerNeedsView(ctx));
@@ -110,3 +127,10 @@ export const my_role = spacetimedb.view({ name: 'my_role', public: true }, t.arr
 export const my_pair_attempts = spacetimedb.view({ name: 'my_pair_attempts', public: true }, t.array(pairAttempt.rowType), (ctx) => m.myPairAttemptsView(ctx));
 export const my_allowance = spacetimedb.view({ name: 'my_allowance', public: true }, t.array(allowance.rowType), (ctx) => m.myAllowanceView(ctx));
 export const my_notifications = spacetimedb.view({ name: 'my_notifications', public: true }, t.array(notification.rowType), (ctx) => m.myNotificationsView(ctx));
+
+const PendingApprovalRow = t.object('PendingApprovalRow', {
+  mandateHash: t.string(), mandateId: t.string(), amount: t.f64(), payee: t.string(), expiry: t.timestamp(), code: t.string(),
+  failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp(), origin: t.string(),
+});
+export const my_pending_approvals = spacetimedb.view({ name: 'my_pending_approvals', public: true }, t.array(PendingApprovalRow), (ctx) => m.myPendingApprovalsView(ctx));
+export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));

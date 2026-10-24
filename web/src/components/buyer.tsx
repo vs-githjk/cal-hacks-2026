@@ -1,7 +1,9 @@
+"use client";
 // web/src/components/buyer.tsx
 // Cards for the buyer screen. Each takes a view model from lib/screens.ts; none reads SpacetimeDB directly,
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
-import type { ApprovalView, FeedItem, GoalView, RankedBid, ReceiptView, ShieldView, VetoView } from "@/lib/screens";
+import { useState } from "react";
+import { REVIEW_MAX_FAILURES, type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
@@ -33,7 +35,6 @@ export function GoalCard({ goal }: { goal: GoalView }) {
       {goal.skipped.map((s) => (
         <p key={s} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the PSU.</b> {s}</p>
       ))}
-      <p className="mt-2.5 text-[13px] text-muted">The cap is the ceiling to hunt under. The allowance is what it may spend without a call. Above it, it calls.</p>
     </Card>
   );
 }
@@ -211,7 +212,9 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
         <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{approval.wordPair}</span>
         <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
       </div>
-      <p className="text-[14px]">You asked "why not the cheaper one?" It answered: {approval.whyAnswer}</p>
+      <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
+      <p className="mt-1.5 text-[14px]">You asked "why not the cheaper one?" It answered: {approval.whyAnswer}</p>
+      <p className="mt-1.5 text-[13px] text-muted">{CAP_RULE}</p>
       <ol className="mt-2.5 grid gap-1.5 text-[13px]">
         {approval.attempts.map((a, i) => (
           <li key={i} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-2.5">
@@ -221,6 +224,64 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
           </li>
         ))}
       </ol>
+    </Card>
+  );
+}
+
+export const CAP_RULE = "Goal cap is the ceiling to hunt under. Allowance is what it may spend without a call.";
+
+/** Live b5 review card: the word pair issued for this exact mandate, and a labelled typed fallback bound to the same mandate. */
+export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView; allowance: number | null; onTyped: (code: string) => Promise<string> }) {
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const left = REVIEW_MAX_FAILURES - review.failures;
+  return (
+    <Card stripe="amber">
+      <Label>Review and approve</Label>
+      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">
+        {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
+      </h3>
+      <p className="text-[13px] text-muted">
+        Mandate <Code>{review.mandateId}</Code> · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
+      </p>
+      <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
+        <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{review.code}</span>
+        <small className="text-[12px] text-muted">one-time code for this mandate, this screen only</small>
+      </div>
+      <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
+      <form
+        className="mt-3 grid gap-1.5"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setMsg(await onTyped(code.trim()));
+          setBusy(false);
+          setCode("");
+        }}
+      >
+        <label htmlFor="typed-code" className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
+          Typed fallback (if the call fails): type the code to approve this same mandate
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="typed-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            disabled={review.locked || busy}
+            autoComplete="off"
+            placeholder="two words"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-soft px-3 font-mono"
+          />
+          <button disabled={review.locked || busy || !code.trim()} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink disabled:opacity-50">
+            Approve
+          </button>
+        </div>
+        <p className="text-[13px] text-muted" aria-live="polite">
+          {review.locked ? "Typed approval is locked after too many wrong codes. Approve on the call." : msg || (review.failures > 0 ? `${left} tries left.` : "")}
+        </p>
+      </form>
+      <p className="mt-1 text-[13px] text-muted">{CAP_RULE}</p>
     </Card>
   );
 }
