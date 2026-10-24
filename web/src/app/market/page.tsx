@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
+import { AgentsTile } from "@/components/AgentsTile";
 import { MarketScreen } from "@/components/screens";
 import { asSim, eventsFromRows, goalFromRows, latestRound, linesFromRows, originCounts, roundFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
@@ -25,16 +26,19 @@ export default function MarketPage() {
 
   // Loss reports and the learning diff have no market table yet (Lane A owns them): SIM sample.
   return (
-    <MarketScreen
-      connecting={!roundsReady || !eventsReady}
-      round={sim ? asSim(sample.round) : round}
-      cap={sim ? sample.goal.cap : cap}
-      lines={shownLines}
-      lossReports={asSim(sample.lossReports)}
-      learning={asSim(sample.learning)}
-      events={floor}
-      originCounts={originCounts(shownLines)}
-      sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
-    />
+    <>
+      <MarketScreen
+        connecting={!roundsReady || !eventsReady}
+        round={sim ? asSim(sample.round) : round}
+        cap={sim ? sample.goal.cap : cap}
+        lines={shownLines}
+        lossReports={asSim(sample.lossReports)}
+        learning={asSim(sample.learning)}
+        events={floor}
+        originCounts={originCounts(shownLines)}
+        sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
+      />
+      <AgentsTile />
+    </>
   );
 }

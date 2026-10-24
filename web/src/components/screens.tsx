@@ -1,12 +1,11 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import type { ApprovalView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
-import { AgentFeed, ApprovalCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
+import type { ApprovalView, ReviewView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
+import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { OriginChip, Pill, SampleOnly } from "./ui";
 
-export const BUYER_NAME = "Vidyut"; // the real buyer (locked Sat 00:52). Real sign-in replaces this.
 
 export interface BuyerScreenProps {
   goal: GoalView | null;
@@ -14,8 +13,13 @@ export interface BuyerScreenProps {
   veto: VetoView | null;
   shield: ShieldView | null;
   approval: ApprovalView | null;
+  /** A live mandate waiting for this buyer; when present it replaces the sample approval card. */
+  review?: ReviewView | null;
+  onTyped?: (mandateHash: string, code: string) => Promise<string>;
   receipt: ReceiptView | null;
   feed: FeedItem[];
+  /** From the market (my_buyer_profile); the page falls back to the buyer id. */
+  buyerName: string;
   connecting?: boolean;
   /** Cards fed from lib/sample.ts; each shows a SIM sample chip. */
   sample?: { bids?: boolean; veto?: boolean; shield?: boolean; approval?: boolean; receipt?: boolean };
@@ -28,7 +32,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
         <div className="flex items-center gap-2.5 text-[18px] font-bold tracking-[-0.01em]">Buyer</div>
         <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
-          <span>{BUYER_NAME}</span>
+          <span>{p.buyerName}</span>
           {p.goal && <StatePill state={p.goal.state} />}
         </div>
       </div>
@@ -50,7 +54,11 @@ export function BuyerScreen(p: BuyerScreenProps) {
           <div className="grid gap-3.5 lg:grid-cols-3">
             <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
             <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-            <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>
+            {p.review && p.onTyped ? (
+              <ReviewCard review={p.review} allowance={p.goal.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
+            ) : (
+              <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>
+            )}
           </div>
           <div className="grid gap-3.5 lg:grid-cols-[8fr_4fr]">
             <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>

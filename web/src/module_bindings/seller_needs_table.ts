@@ -20,4 +20,6 @@ export default __t.row({
   unit: __t.string(),
   deliveryWindow: __t.string().name("delivery_window"),
   deadline: __t.timestamp(),
+  ceilingBand: __t.string().name("ceiling_band"),
+  origin: __t.string(),
 });
