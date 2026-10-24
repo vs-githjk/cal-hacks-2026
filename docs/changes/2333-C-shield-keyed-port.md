@@ -1,0 +1,2 @@
+Shield runs as two apps. The core (`shield.api:app`, port 8787, Lane D) stays keyless for our own agents. The keyed product app (`shield.product:create_product_app --factory`, port 8788, Lane C) needs `X-API-Key` (or Bearer) on every /v1 call except health and docs.
+`GET /v1/usage` on 8788 returns billable calls (status below 400) and refused calls by status. Affects anyone pointing an outside caller (Armadin, judges' console) at Shield: use 8788 with a key.
