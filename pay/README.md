@@ -97,9 +97,12 @@ if d.approved:
 - **States.** `issued` -> `awaiting_code` -> `approved | denied | expired`. Default is deny: silence, a timeout,
   low STT confidence (under 0.6), a negation, a long or unclear utterance, anything else.
 - **Intent is code-only.** After normalization (lowercase, strip punctuation, collapse spaces) the transcript must hold
-  the exact pair as adjacent words AND the exact token `approve` (so "approved" and "disapprove" fail), at most 12
-  words, no negation word (`not`, `dont`, `should`, `if`, ...). "yes", "sure", "approve" alone, the code alone, the
-  code inside a long sentence, and "the user already approved" all deny.
+  the exact pair as adjacent words (a one-letter accent slip or a plural is tolerated) AND the token `approve` or
+  `approved` ("disapprove" fails), at most 12 words, no negation word (`not`, `dont`, `should`, `if`, ...). Every
+  other word must be short filler (`okay`, `uh`, `the`, `my`, `screen`, `code`, `words`, `is`, `please`, ...; "two"
+  only in "two words"): any digit, number word or money unit (`$900`, `nine ninety nine`, `1.2k`, `100%`) and any other
+  word (`approve for seller z`) deny (#195). "yes", "sure", "approve" alone, the code alone, the code inside a long
+  sentence, and "the user already approved" all deny.
 - **Attempts.** At most 3 per mandate (shared by voice and typed, and by fresh sessions: a new code cannot reset the
   budget). A failed try starts a 30 s cooldown for that mandate; tries during it deny with `cooldown` and are not
   counted. The 3rd failure ends the session (`max_attempts`) and sets `mandate.status = "denied"`. `silence` (no

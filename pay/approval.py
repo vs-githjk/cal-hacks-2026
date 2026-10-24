@@ -42,12 +42,22 @@ MAX_ATTEMPTS = 3
 COOLDOWN_SECONDS = 30
 LISTEN_WINDOW_SECONDS = 10
 MAX_TOKENS = 12
-# A spoken amount is not consent to this deal's amount ("<code> approve nine hundred dollars" must not approve a
-# $1,249.99 mandate). Only money units, or "hundred"/"thousand" not followed by "percent", count, so ordinary speech
-# ("the two words on my screen are ...", "a hundred percent", "100% sure", "it's 12:30") still works. This catches a
-# spoken different amount, not every possible phrasing; the real money control is the signed mandate hash.
-MONEY_UNITS = frozenset({"dollar", "dollars", "bucks", "cent", "cents"})
-MAGNITUDES = frozenset({"hundred", "thousand"})
+# Consent is the code, "approve" or "approved", and filler, nothing else (#195, red team M1). Any digit, number word or
+# money unit denies ("<code> approve $900", "nine ninety nine", "1.2k"), and so does any other word ("approve for seller
+# z"): a spoken amount or payee is never consent to this mandate's. "two" counts as filler only in "two word(s)", as the
+# real call of Oct 24 00:08 said ("the two words from my screen are ..."). The money control is still the signed mandate.
+MONEY_UNITS = frozenset({"dollar", "dollars", "buck", "bucks", "cent", "cents", "usd", "grand", "k"})
+NUMBER_WORDS = frozenset({
+    "zero", "oh", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve",
+    "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty", "forty",
+    "fourty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand", "million", "billion", "half",
+    "quarter", "point", "percent", "dozen",
+})
+FILLER = frozenset({
+    "okay", "ok", "uh", "um", "umm", "er", "erm", "hmm", "so", "yes", "yeah", "yep", "sure", "alright", "right", "well",
+    "hello", "hi", "hey", "the", "a", "my", "code", "codes", "word", "words", "is", "are", "its", "it", "from", "on",
+    "screen", "says", "i", "please", "and", "that", "thats", "this", "here",
+})
 MIN_CONFIDENCE = 0.6
 APPROVE_TOKEN = "approve"
 APPROVE_TOKENS = frozenset({APPROVE_TOKEN, "approved"})  # speech-to-text often hears "approve" as "approved"; exactly these two
@@ -346,8 +356,10 @@ class ApprovalSession:
             return "no_code"
         if NEGATIONS & set(tokens):
             return "no_code"
-        if MONEY_UNITS & set(tokens) or any(t in MAGNITUDES and tokens[i + 1:i + 2] != ["percent"] for i, t in enumerate(tokens)):
-            return "no_code"                   # an amount was spoken; consent must be the code and "approve" only
+        two_words = {i for i, t in enumerate(tokens) if t == "two" and tokens[i + 1:i + 2] in (["words"], ["word"])}
+        if any(any(c.isdigit() for c in t) for t in tokens) or MONEY_UNITS & set(tokens) or any(
+                t in NUMBER_WORDS and i not in two_words for i, t in enumerate(tokens)):
+            return "no_code"                   # a number was spoken; consent must be the code and "approve" only
         words = [_as_code_word(t) for t in tokens]
         pair_hashes = [hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest()
                        for a, b in zip(words, words[1:]) if a in WORD_SET and b in WORD_SET]
@@ -360,6 +372,8 @@ class ApprovalSession:
             return "wrong_code" if any(_code_like(t) for t in tokens) else "no_code"
         if not APPROVE_TOKENS & set(tokens):
             return "no_code"                   # the code alone is not consent
+        if any(w not in WORD_SET and w not in APPROVE_TOKENS and w not in FILLER and i not in two_words for i, w in enumerate(words)):
+            return "no_code"                   # any other word (a payee, a term, a condition) is not consent to this mandate
         if not svc.store.consume(NS_CODE, self.code_hash):
             return "replay"                    # single use
         return None
