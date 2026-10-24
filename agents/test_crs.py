@@ -111,7 +111,7 @@ def test_missing_token_returns_safe_unavailable_without_request(monkeypatch, tmp
     monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(AssertionError("called")))
     result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
     assert result == {"signal": None, "reason": crs.REASON_NOT_CONFIGURED}
-    assert not crs.eligible("seller_1", result, NOW)
+    assert crs.eligible("seller_1", result, NOW)
 
 
 def test_request_uses_fixed_sandbox_endpoint_and_requires_http_200(monkeypatch):
@@ -338,6 +338,21 @@ def test_to_crs_check_has_flat_sanitized_shape():
     assert absent["reason_codes"] == ["CRS_NOT_CONFIGURED"]
 
 
+def test_configured_profile_empty_not_configured_is_not_absence(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path, auth_stub=False)
+    projected = crs.to_crs_check("seller_1", {"signal": None, "reason": crs.REASON_NOT_CONFIGURED})
+    assert projected["origin"] == "SANDBOX"
+    assert projected["reason_codes"] == ["CRS_INVALID"]
+
+
+@pytest.mark.parametrize("malformed", [[], False, 0, {"signal": {}}])
+def test_malformed_empty_check_never_looks_not_configured(monkeypatch, tmp_path, malformed):
+    setup_profile(monkeypatch, tmp_path, auth_stub=False)
+    projected = crs.to_crs_check("seller_1", malformed)
+    assert projected["origin"] == "SANDBOX"
+    assert projected["reason_codes"] == ["CRS_INVALID"]
+
+
 def test_absent_crs_config_is_nonblocking_but_adverse_check_denies(monkeypatch, tmp_path):
     setup_profile(monkeypatch, tmp_path, auth_stub=False)
     monkeypatch.delenv("CRS_API_KEY", raising=False)
@@ -345,9 +360,12 @@ def test_absent_crs_config_is_nonblocking_but_adverse_check_denies(monkeypatch, 
     monkeypatch.delenv("CRS_PASSWORD", raising=False)
     check = asyncio.run(crs.check_sellers(NOW))["seller_1"]
     eligible_suppliers = {"seller_1"} if crs.eligible("seller_1", check, NOW) else set()
-    assert eligible_suppliers == set()
+    assert eligible_suppliers == {"seller_1"}
     bids = [{"id": "cheap", "supplier_id": "seller_1", "total_landed_price": 10}]
-    assert hunt.pick_best(bids, {"cheap": {"recommendation": "buy"}}, eligible_suppliers) is None
+    assert hunt.pick_best(bids, {"cheap": {"recommendation": "buy"}}, eligible_suppliers) == 1
+    monkeypatch.setenv("CRS_USERNAME", "configured-user")
+    monkeypatch.setenv("CRS_PASSWORD", "configured-password")
+    assert not crs.eligible("seller_1", check, NOW)
     monkeypatch.setattr(crs, "_paths", lambda: (None, tmp_path / "cache.json"))
     assert crs.eligible("seller_1", None, NOW)
     adverse = {"signal": {"supplier_id": "seller_1", "stability": "not_verified",
