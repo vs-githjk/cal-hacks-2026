@@ -25,6 +25,7 @@ shot-*.png
 .tokens/
 
 # buyer state is private and shared with pay.replay.NonceStore
+agents/.state/
 agents/.state.sqlite3
 agents/.state.sqlite3-journal
 agents/.state.sqlite3-wal

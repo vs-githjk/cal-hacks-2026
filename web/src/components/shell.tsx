@@ -23,7 +23,7 @@ export function AppHeader() {
   return (
     <header className="border-b border-line bg-panel">
       <nav className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 py-2">
-        <Link href="/" className="mr-3 inline-flex min-h-11 items-center gap-2.5 text-[18px] font-bold tracking-[-0.01em]">
+        <Link href="/" className="mr-1 inline-flex min-h-11 shrink-0 items-center gap-2.5 whitespace-nowrap text-[18px] font-bold tracking-[-0.01em] sm:mr-3">
           <span className="relative inline-block h-[22px] w-[22px] rounded-[7px] bg-accent" aria-hidden>
             <span className="absolute inset-1.5 rounded-[3px] bg-accent-ink opacity-90" />
           </span>
@@ -31,6 +31,7 @@ export function AppHeader() {
         </Link>
         {link("/buyer", "Buyer")}
         {link("/market", "Market")}
+        {link("/floor", "Floor")}
       </nav>
     </header>
   );

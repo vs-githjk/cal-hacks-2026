@@ -1,0 +1,3 @@
+B (#60): new public table agent_event {id, agent_name, address (indexed), text, ts, origin} and a referee only reducer record_agent_event(agent_name, address, text, ts, origin). address must be an agent1q... Agentverse address; ts is ISO 8601 (empty means now); text is cut at 280 characters; any origin other than LIVE or MIRROR is stored as SIM. reset_demo clears it.
+The Fetch agents tile (web/src/components/AgentsTile.tsx, on /buyer and /market) shows each agent's last agent_event row; with none at all it shows SIM sample rows. Its green dot means a LIVE or MIRROR agent_event in the last 60 s.
+Ask: Lane A call record_agent_event from the buyer, advocate and seller handlers (through the referee token), origin LIVE for a real agent message.
