@@ -121,6 +121,25 @@ def test_a_shop_with_no_returns_never_gets_a_public_N_day_returns_perk(returns):
     assert any(returns in p for p in cfg["perks"])  # the owner's words are still shown
 
 
+@pytest.mark.parametrize("returns", [
+    "no returns, 90-day limited warranty",
+    "90-day manufacturer warranty",
+    "90-day parts and labor warranty",
+    "90 days parts and labor guarantee",
+    "90-day limited warranty covers defects",
+    "90-day warranty on all parts",
+    "90-day limited warranty, no returns",
+])
+def test_a_warranty_or_guarantee_count_with_words_between_is_never_read_as_returns_days(returns):
+    """Parked T3 finding: only 'warranty' right after the count was skipped, so any word in between ('limited',
+    'manufacturer', 'parts and labor') let the market read '90-day returns' and drop the no-returns penalty."""
+    cfg = client.build_config(answers(returns=returns))
+    assert client._return_days(returns) == 0
+    assert market_returns_days(cfg["perks"]) == 0, cfg["perks"]
+    assert not any(re.search(r"\d+-day returns", p) for p in cfg["perks"]), cfg["perks"]
+    assert any(returns in p for p in cfg["perks"])
+
+
 def test_nine_perks_and_a_returns_answer_still_fit_the_ten_perk_limit():
     nine = [f"perk {i}" for i in range(9)]
     cfg = client.build_config(answers(returns="30 days", perks=nine))
