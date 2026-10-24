@@ -1,0 +1,34 @@
+{
+ "origin": "SIM (Stripe test mode)",
+ "run_at": "2026-10-24T06:02:07+00:00",
+ "cases": [
+  {
+   "case": "valid mandate",
+   "status": "charged",
+   "reason": "ok",
+   "charge_id": "pi_3UTy1r1tmrTT0UUY1Blf0ShU",
+   "mandate_hash": "bcada270fcc9418012a4544fc4ba3c63a3cdc8ea5f7b6a1aad60634829e79b2b"
+  },
+  {
+   "case": "replayed request",
+   "status": "refused",
+   "reason": "replayed_mandate",
+   "charge_id": null,
+   "mandate_hash": "bcada270fcc9418012a4544fc4ba3c63a3cdc8ea5f7b6a1aad60634829e79b2b"
+  },
+  {
+   "case": "replayed mandate, fresh signature",
+   "status": "refused",
+   "reason": "replayed_mandate",
+   "charge_id": null,
+   "mandate_hash": "bcada270fcc9418012a4544fc4ba3c63a3cdc8ea5f7b6a1aad60634829e79b2b"
+  },
+  {
+   "case": "altered amount",
+   "status": "refused",
+   "reason": "digest_mismatch",
+   "charge_id": null,
+   "mandate_hash": "bcada270fcc9418012a4544fc4ba3c63a3cdc8ea5f7b6a1aad60634829e79b2b"
+  }
+ ]
+}
