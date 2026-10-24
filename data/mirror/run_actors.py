@@ -58,7 +58,7 @@ def run(store):
 
 if __name__ == "__main__":
     stores = sys.argv[1:] or list(ACTORS)
-    with ThreadPoolExecutor(8) as pool:
+    with ThreadPoolExecutor(4)  # free plan: max 5 concurrent runs as pool:
         results = list(pool.map(run, stores))
     log = HERE / "runs.json"
     old = json.loads(log.read_text()) if log.exists() else []
