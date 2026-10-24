@@ -2,6 +2,7 @@
 
 POST /v1/shield/screen          screen one message (also at /screen for Lane A's agents)
 POST /v1/shield/verify-mandate  verify a signed payment request against its mandate
+POST /v1/advocate/reason       advocate verdict in, closed-schema call reason out (a10, templates only)
 POST /v1/shield/verify-agent    check an agent address, claimed role and seller of record against the registry
 GET  /v1/shield/rules           the rule ids
 GET  /v1/shield/health
@@ -86,6 +87,10 @@ def create_app(keys: Optional[Mapping] = None, store: Optional[NonceStore] = Non
     @app.post("/v1/shield/verify-agent")
     def verify_agent_route(payload: dict[str, Any] = Body(...)):
         return service.handle_verify_agent(payload, registry)
+
+    @app.post("/v1/advocate/reason")
+    def advocate_reason_route(payload: dict[str, Any] = Body(...)):
+        return service.handle_advocate_reason(payload)
 
     @app.get("/v1/shield/rules")
     def rules_route():

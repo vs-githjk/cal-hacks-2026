@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from pay.replay import NonceStore
 from pay.tap import keyring
+from pay.reasons import reason_for
 from shield.agent import verify_agent
 from shield.core import screen
 from shield.registry import Registry, load_registry
@@ -82,6 +83,11 @@ def handle_verify_agent(payload: Any, registry: Registry) -> dict:
     log.info("verify-agent sha256=%s verdict=%s rules=%s latency_ms=%s", digest, out["verdict"],
              ",".join(out["rule_ids"]) or "-", out["latency_ms"])
     return _legacy(out, {"sender_agent": addr if isinstance(addr, str) else "unknown", "message_id": out["request_id"]})
+
+
+def handle_advocate_reason(payload: Any) -> dict:
+    """a10: {rule_id, source_url} in, closed schema {rule_id, summary, source_url} out; summary from a template."""
+    return reason_for(payload)
 
 
 def registry_from_env() -> Registry:
