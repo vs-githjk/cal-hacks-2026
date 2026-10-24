@@ -199,3 +199,56 @@ def test_valid_listing_url_query_and_fragment_are_preserved_exactly():
     assert card["warnings"][0]["source_url"] == listing_url
     assert card["source_url"] == listing_url
     assert card["call_reason"]["source_url"] == listing_url
+
+
+# ---- #145: shill sellers count as one seller -------------------------------------------------
+def shill_bid(bid_id, seller, price, payee=None, owner=None, url=None):
+    b = bid(bid_id, seller, price)
+    if url:
+        b["lines"][0]["listing_url"] = url
+    return {**b, **({"payee": payee} if payee else {}), **({"owner": owner} if owner else {})}
+
+
+def test_same_payee_groups_two_sellers_and_the_cheaper_one_stays():
+    bids = [shill_bid("b1", "seller_1", 560, payee="pay@x.example.test"), shill_bid("b2", "seller_2", 540, payee=" PAY@x.example.test "),
+            shill_bid("b3", "seller_4", 600, payee="other@y.example.test")]
+    cards = {c["bid_id"]: c for c in run(bids)}
+    assert cards["b1"]["recommendation"] == "veto" and cards["b1"]["rule_id"] == "advocate.same_seller"
+    assert cards["b2"]["recommendation"] == "buy" and cards["b3"]["recommendation"] == "buy"
+    w = cards["b1"]["warnings"][0]
+    assert w["kind"] == "same_seller" and "seller_1" in w["text"] and "seller_2" in w["text"] and "shares payee" in w["text"]
+    assert checks.best_bid(bids, list(cards.values()))["id"] == "b2"
+    assert cards["b1"]["reason"] == checks.CALL_SUMMARIES["advocate.same_seller"]
+
+
+def test_two_ebay_sellers_with_different_payees_are_not_grouped():
+    bids = [shill_bid("b1", "ebay-1", 560, payee="a@pay.example.test", url="https://www.ebay.com/itm/1"),
+            shill_bid("b2", "ebay-2", 540, payee="b@pay.example.test", url="https://www.ebay.com/itm/2")]
+    assert checks._group_shills(bids) == {}
+
+
+def test_one_owner_running_two_agents_is_grouped():
+    bids = [shill_bid("b1", "seller_1", 560, owner="Sam"), shill_bid("b2", "seller_2", 540, owner="sam")]
+    g = checks._group_shills(bids)
+    assert set(g) == {"b1"} and g["b1"][0]["id"] == "b2" and g["b1"][1] == "owner"
+
+
+def test_a_shared_non_marketplace_host_groups_but_one_seller_with_two_bids_does_not():
+    shop = "https://shop.corner-pc.net/gpu"
+    assert set(checks._group_shills([shill_bid("b1", "s1", 560, url=shop + "/1"), shill_bid("b2", "s2", 540, url=shop + "/2")])) == {"b1"}
+    assert checks._group_shills([shill_bid("b1", "s1", 560, payee="p@x.test"), shill_bid("b2", "s1", 540, payee="p@x.test")]) == {}
+
+
+def test_the_current_demo_run_groups_nothing():
+    import json
+    from pathlib import Path
+    run_file = Path(common.__file__).resolve().parents[1] / "demo" / "out" / "sample-run.json"
+    bids = json.loads(run_file.read_text())["artifacts"]["bids"]
+    assert len(bids) >= 8 and checks._group_shills(bids) == {}
+
+
+def test_closed_schema_still_holds_with_a_same_seller_veto():
+    cards = run([shill_bid("b1", "seller_1", 560, owner="Sam"), shill_bid("b2", "seller_2", 540, owner="Sam")])
+    veto = next(c for c in cards if c["recommendation"] == "veto")
+    assert set(veto["call_reason"]) == {"rule_id", "summary", "source_url"}
+    assert veto["call_reason"]["summary"] == checks.CALL_SUMMARIES["advocate.same_seller"]
