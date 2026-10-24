@@ -120,9 +120,11 @@ export interface RoundView {
   sealedCount: number;
   state: "open" | "closed";
   origin: Origin;
-  arrivals: { label: string; atMs: number; origin: Origin; refused: boolean }[];
+  arrivals: Arrival[];
   seenBeforeClose: { buyer: number; public: number };
 }
+
+export interface Arrival { label: string; atMs: number; origin: Origin; refused: boolean }
 
 export interface SellerLine {
   seller: string;
@@ -336,6 +338,29 @@ export function originCounts(items: readonly { origin: Origin }[]): { LIVE: numb
   const c = { LIVE: 0, MIRROR: 0, SIM: 0 };
   for (const i of items) c[i.origin]++;
   return c;
+}
+
+/** The honest origin mix as "12 MIRROR · 6 SIM" (zero counts dropped); "" when every count is 0. */
+export function originMixLabel(c: { LIVE: number; MIRROR: number; SIM: number }): string {
+  return (["LIVE", "MIRROR", "SIM"] as const).filter((o) => c[o] > 0).map((o) => `${c[o]} ${o}`).join(" · ");
+}
+
+/**
+ * Group a round's arrivals (sorted by atMs, as roundFromRows gives them) into clusters no two of which land
+ * within gapFrac of the track, so a dense run of near-simultaneous bids draws as one marker, never a pile of
+ * overlapping dots or labels. Every arrival stays in exactly one cluster: none are dropped.
+ */
+export function clusterArrivals(arrivals: readonly Arrival[], totalMs: number, gapFrac = 0.03): Arrival[][] {
+  if (!arrivals.length) return [];
+  const minGap = gapFrac * totalMs;
+  const clusters: Arrival[][] = [[arrivals[0]!]];
+  for (let i = 1; i < arrivals.length; i++) {
+    const a = arrivals[i]!;
+    const cur = clusters[clusters.length - 1]!;
+    if (a.atMs - cur[cur.length - 1]!.atMs < minGap) cur.push(a);
+    else clusters.push([a]);
+  }
+  return clusters;
 }
 
 interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; code: string; failures: number; locked: boolean; origin: string }
