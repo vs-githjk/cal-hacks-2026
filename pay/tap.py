@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import base64
 import binascii
+import csv
 import hashlib
 import hmac
 import json
 import os
 import re
 import secrets
+import subprocess
 from datetime import datetime
 from typing import Any, Mapping, Optional
 from urllib.parse import urlsplit
@@ -88,8 +90,30 @@ def generate_keypair(path: str) -> Ed25519PublicKey:
     pem = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
                             serialization.NoEncryption())
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "wb") as f:
-        f.write(pem)
+    try:
+        if os.name == "nt":
+            identity = subprocess.run(["whoami", "/user", "/fo", "csv", "/nh"], capture_output=True,
+                                      text=True, check=True, timeout=5).stdout.strip()
+            rows = list(csv.reader(identity.splitlines()))
+            sid = rows[0][-1] if rows and rows[0] else ""
+            if not sid.startswith("S-1-"):
+                raise OSError("could not identify current Windows user for private key ACL")
+            for args in (["/reset"], ["/inheritance:r"], ["/grant:r", f"*{sid}:(F)"]):
+                result = subprocess.run(["icacls", path, *args], capture_output=True, text=True, timeout=10)
+                if result.returncode:
+                    raise OSError("could not restrict TAP private key permissions")
+        with os.fdopen(fd, "wb") as f:
+            f.write(pem)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        raise
     return key.public_key()
 
 

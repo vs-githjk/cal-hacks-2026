@@ -180,7 +180,8 @@ def test_real_fit_checker_advocate_claim_check_and_shield_are_actually_called():
     from data.fit_checker import check_fit
     from shield.core import screen
     mod, how = adapters.advocate_checks()
-    assert how.startswith("REAL agents/advocate/checks.py") and mod.__file__.endswith("agents/advocate/checks.py")
+    assert how.startswith("REAL agents/advocate/checks.py")
+    assert Path(mod.__file__).resolve() == ROOT / "agents" / "advocate" / "checks.py"
     with mock.patch.object(mod, "check_fit", wraps=check_fit) as fit, mock.patch.object(mod, "advise", wraps=mod.advise) as adv, \
             mock.patch.object(mod, "call_reason", wraps=mod.call_reason) as cr, \
             mock.patch("demo.round.screen", wraps=screen) as sh, mock.patch("demo.beats.screen", wraps=screen) as sh3:

@@ -13,6 +13,7 @@ Nothing global is ever installed: the only installs are a project-local `uv` ven
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 import re
@@ -132,8 +133,9 @@ def env_for(svc: Service, file_env: dict[str, str]) -> dict[str, str]:
     return env
 
 
-def venv_python(repo: Path) -> Path:
-    return repo / "agents" / ".venv" / "bin" / "python"
+def venv_python(repo: Path, platform: str | None = None) -> Path:
+    windows = (platform or os.name) == "nt"
+    return repo / "agents" / ".venv" / ("Scripts" if windows else "bin") / ("python.exe" if windows else "python")
 
 
 def find_uv() -> str | None:
@@ -169,7 +171,8 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
         Service("buyer", 8001, [py, "buyer/buyer_agent.py"], repo / "agents", health="tcp", wait=90, group="agents",
                 extra_env=agent_env("BUYER_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("web", a.web_port,
-                ["npm", "exec", "--no-install", "--", "next", "dev", "-p", str(a.web_port)], repo / "web", wait=150, env_filter="web",
+                [shutil.which("node") or "node", str(repo / "web" / "node_modules" / "next" / "dist" / "bin" / "next"),
+                 "dev", "-p", str(a.web_port)], repo / "web", wait=150, env_filter="web",
                 group="web", extra_env={"NEXT_TELEMETRY_DISABLED": "1"},
                 defaults={"NEXT_PUBLIC_SPACETIMEDB_URI": f"ws://{HOST}:{a.stdb_port}",
                                         "NEXT_PUBLIC_SPACETIMEDB_DB": "tech-bazaar"}),
@@ -283,7 +286,15 @@ def http_ok(port: int, path: str, timeout: float = 2.0, max_status: int = 500) -
 
 
 def proc_start_marker(pid: int) -> str | None:
-    """`ps lstart` of the pid, used to tell our process from a reused pid. None when the pid is gone."""
+    """Stable process-creation marker, used to distinguish a reused PID."""
+    if os.name == "nt":
+        handle = _win_open_process(pid, 0x1000 | 0x00100000)
+        if not handle:
+            return None
+        try:
+            return _win_marker_from_handle(handle)
+        finally:
+            _win_kernel32().CloseHandle(handle)
     try:
         r = subprocess.run(["ps", "-o", "lstart=", "-p", str(pid)], capture_output=True, text=True,
                            env={**os.environ, "LC_ALL": "C"}, timeout=5)
@@ -296,6 +307,42 @@ def proc_start_marker(pid: int) -> str | None:
 def pid_is_ours(rec: dict) -> bool:
     pid = rec.get("pid")
     return bool(pid) and rec.get("lstart") is not None and proc_start_marker(pid) == rec.get("lstart")
+
+
+def _win_open_process(pid: int, access: int):
+    return _win_kernel32().OpenProcess(access, False, pid)
+
+
+def _win_kernel32():
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.GetProcessTimes.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.FILETIME),
+                                         ctypes.POINTER(wintypes.FILETIME), ctypes.POINTER(wintypes.FILETIME),
+                                         ctypes.POINTER(wintypes.FILETIME))
+    kernel32.GetProcessTimes.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
+    kernel32.TerminateProcess.restype = wintypes.BOOL
+    kernel32.GenerateConsoleCtrlEvent.argtypes = (wintypes.DWORD, wintypes.DWORD)
+    kernel32.GenerateConsoleCtrlEvent.restype = wintypes.BOOL
+    return kernel32
+
+
+def _win_marker_from_handle(handle) -> str | None:
+    from ctypes import wintypes
+    created, exited, kernel, user = wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME(), wintypes.FILETIME()
+    kernel32 = _win_kernel32()
+    if not kernel32.GetProcessTimes(handle, ctypes.byref(created), ctypes.byref(exited),
+                                   ctypes.byref(kernel), ctypes.byref(user)):
+        return None
+    if kernel32.WaitForSingleObject(handle, 0) != 0x00000102:
+        return None
+    return str((created.dwHighDateTime << 32) | created.dwLowDateTime)
 
 
 class PidFile:
@@ -327,33 +374,63 @@ def start_process(svc: Service, env: dict[str, str], run_dir: Path) -> dict:
     lp = log_path(run_dir, svc.name)
     lp.parent.mkdir(parents=True, exist_ok=True)
     with open(lp, "wb") as lf:
+        options = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
+                   else {"start_new_session": True})
         p = subprocess.Popen(svc.cmd, cwd=svc.cwd, env=env, stdin=subprocess.DEVNULL, stdout=lf, stderr=subprocess.STDOUT,
-                             start_new_session=True)
+                             **options)
     return {"state": "running", "pid": p.pid, "lstart": proc_start_marker(p.pid), "port": svc.port,
             "health": svc.health, "health_path": svc.health_path, "log": str(lp), "note": svc.note, "group": svc.group}
 
 
 def stop_record(rec: dict, grace: float = 6.0) -> str:
-    """Stop the process group of a record, only if the pid is still the process we started."""
+    """Stop only the process we started; never signal an unverified descendant."""
     pid = rec.get("pid")
     if not pid:
         return "nothing to stop"
     if not pid_is_ours(rec):
         return f"pid {pid} is gone (or reused by something else), left alone"
-    try:
-        os.killpg(pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return f"pid {pid} already gone"
+    if os.name == "nt":
+        handle = _win_open_process(pid, 0x1000 | 0x00100000)
+        if not handle:
+            return f"pid {pid} could not be reopened for ownership verification; left alone"
+        kernel32 = _win_kernel32()
+        try:
+            if _win_marker_from_handle(handle) != rec.get("lstart"):
+                return f"pid {pid} changed identity or is gone, left alone"
+            # The process handle stays open while the event is sent, preventing PID reuse.
+            kernel32.GenerateConsoleCtrlEvent(1, pid)
+        finally:
+            kernel32.CloseHandle(handle)
+    else:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return f"pid {pid} already gone"
     deadline = time.time() + grace
     while time.time() < deadline:
         if not pid_is_ours(rec):
             return f"stopped pid {pid}"
         time.sleep(0.15)
+    if os.name == "nt":
+        handle = _win_open_process(pid, 0x1000 | 0x0001 | 0x00100000)
+        if handle:
+            kernel32 = _win_kernel32()
+            try:
+                if _win_marker_from_handle(handle) != rec.get("lstart"):
+                    return f"pid {pid} changed identity, left alone"
+                if not kernel32.TerminateProcess(handle, 1):
+                    return f"pid {pid} did not stop; left descendants untouched"
+                if kernel32.WaitForSingleObject(handle, 5000) != 0:
+                    return f"pid {pid} termination is pending; left descendants untouched"
+            finally:
+                kernel32.CloseHandle(handle)
+            return f"terminated verified process pid {pid}; descendants were not signalled"
+        return f"pid {pid} could not be reopened for ownership verification; no further action taken"
     try:
         os.killpg(pid, signal.SIGKILL)
     except ProcessLookupError:
         pass
-    return f"killed pid {pid} (did not exit in {grace:.0f}s)"
+    return f"killed process group {pid} (did not exit in {grace:.0f}s)"
 
 
 # ---------------------------------------------------------------- status
