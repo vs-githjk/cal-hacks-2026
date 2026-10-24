@@ -49,6 +49,7 @@ export const Bid = __t.object("Bid", {
   origin: __t.string(),
   source: __t.string(),
   sealedAt: __t.timestamp(),
+  lineRejects: __t.array(__t.string()),
 });
 export type Bid = __Infer<typeof Bid>;
 
@@ -149,6 +150,9 @@ export type MyGoals = __Infer<typeof MyGoals>;
 export const MyNotifications = __t.object("MyNotifications", {});
 export type MyNotifications = __Infer<typeof MyNotifications>;
 
+export const MyPairAttempts = __t.object("MyPairAttempts", {});
+export type MyPairAttempts = __Infer<typeof MyPairAttempts>;
+
 export const MyRole = __t.object("MyRole", {});
 export type MyRole = __Infer<typeof MyRole>;
 
@@ -204,9 +208,17 @@ export const Owner = __t.object("Owner", {
 });
 export type Owner = __Infer<typeof Owner>;
 
+export const PairAttempt = __t.object("PairAttempt", {
+  identity: __t.identity(),
+  failures: __t.u32(),
+});
+export type PairAttempt = __Infer<typeof PairAttempt>;
+
 export const PairCode = __t.object("PairCode", {
   buyerId: __t.string(),
   code: __t.string(),
+  failedAttempts: __t.u32(),
+  locked: __t.bool(),
 });
 export type PairCode = __Infer<typeof PairCode>;
 
@@ -304,6 +316,7 @@ export const SellerFloor = __t.object("SellerFloor", {
   sellerId: __t.string(),
   skuSpec: __t.string(),
   floor: __t.f64(),
+  condition: __t.string(),
 });
 export type SellerFloor = __Infer<typeof SellerFloor>;
 

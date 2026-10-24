@@ -8,6 +8,8 @@ import { fmtMoney, fmtTime, toDate } from "@/lib/stdb";
 
 // Demo persona (SIM). Real sign-in replaces this.
 const DEMO_BUYER = "joe";
+// Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
+const PAIR_MAX_FAILURES = 5;
 
 const GOAL_TYPE: Record<string, string> = {
   budget_cap: "Budget cap",
@@ -46,8 +48,11 @@ const CLASS_STYLE: Record<FeedClass, string> = {
 /** A screen sees Joe's goal only after pairing with the demo code (SIM sign-in). */
 function PairScreen() {
   const pair = useReducer(reducers.pairBuyerScreen);
+  const [attempts] = useTable(tables.myPairAttempts);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [tried, setTried] = useState(false);
+  const failures = attempts[0]?.failures ?? 0;
   return (
     <section className="panel mx-auto max-w-md p-6">
       <h1 className="mb-2 text-lg font-semibold">Pair this screen with Joe</h1>
@@ -61,6 +66,7 @@ function PairScreen() {
           setError("");
           try {
             await pair({ buyerId: DEMO_BUYER, code: code.trim() });
+            setTried(true);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Pairing failed");
           }
@@ -76,6 +82,13 @@ function PairScreen() {
         <button className="rounded-lg bg-[var(--accent)] px-4 py-2 font-medium text-white">Pair</button>
       </form>
       {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
+      {!error && tried && failures > 0 && (
+        <p className="mt-3 text-sm text-rose-700 dark:text-rose-300">
+          {failures >= PAIR_MAX_FAILURES
+            ? "Too many wrong codes. This screen is locked; ask the operator for a new code."
+            : `That code did not match. ${PAIR_MAX_FAILURES - failures} tries left before pairing locks.`}
+        </p>
+      )}
     </section>
   );
 }

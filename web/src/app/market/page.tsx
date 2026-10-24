@@ -48,6 +48,10 @@ export default function MarketPage() {
                             <td className="py-1 pr-3 font-semibold">{x.rank ? `#${x.rank}` : "out"}</td>
                             <td className="pr-3">{x.persona || x.sellerId}</td>
                             <td className="pr-3">{fmtMoney(x.landed)}</td>
+                            <td className="pr-3 text-[var(--muted)]">
+                              {(x.rank ? "picked " : "offered ") +
+                                x.lines.map((l) => `${l.offeredCondition || "as asked"} at ${fmtMoney(l.unitPrice)}`).join(", ")}
+                            </td>
                             <td className="pr-3 text-rose-700 dark:text-rose-300">{x.reasons.join("; ")}</td>
                             <td>
                               <OriginBadge origin={x.origin} />
