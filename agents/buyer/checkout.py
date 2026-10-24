@@ -17,6 +17,21 @@ from pay.voice_cartesia import VoiceResult, run_approval_call
 _CARD_SCHEMA = Path(__file__).resolve().parents[2] / "contracts" / "AdvocateCard.schema.json"
 
 
+def _utc_now(value: datetime | None = None) -> datetime:
+    current = datetime.now(timezone.utc) if value is None else value
+    if (not isinstance(current, datetime) or current.tzinfo is None
+            or current.utcoffset() != timedelta(0)):
+        raise ValueError("business time must be timezone-aware UTC")
+    return current.astimezone(timezone.utc)
+
+
+def _clock_now(clock: Callable[[], datetime] | None) -> Callable[[], datetime]:
+    source = (lambda: datetime.now(timezone.utc)) if clock is None else clock
+    if not callable(source):
+        raise ValueError("business clock must be callable")
+    return lambda: _utc_now(source())
+
+
 def _cents(value: Any) -> int | None:
     try:
         from decimal import Decimal, InvalidOperation, Overflow
@@ -31,7 +46,9 @@ def _cents(value: Any) -> int | None:
         return None
 
 
-def _bound_transaction(transaction: Mapping[str, Any], *, approval_phase: bool) -> tuple[dict, dict, dict]:
+def _bound_transaction(transaction: Mapping[str, Any], *, approval_phase: bool,
+                       now: datetime | None = None) -> tuple[dict, dict, dict]:
+    now = _utc_now(now)
     if not isinstance(transaction, Mapping):
         raise ValueError("stored transaction is unavailable")
     tx = dict(transaction)
@@ -58,7 +75,7 @@ def _bound_transaction(transaction: Mapping[str, Any], *, approval_phase: bool) 
     except Exception:
         raise ValueError("stored AdvocateCard is invalid") from None
     try:
-        if mandate_hash(mandate) != mandate.get("hash") or not verify_mandate(mandate):
+        if mandate_hash(mandate) != mandate.get("hash") or not verify_mandate(mandate, now=now):
             raise ValueError
     except (ValueError, TypeError, KeyError):
         raise ValueError("stored mandate is invalid or expired") from None
@@ -69,7 +86,7 @@ def _bound_transaction(transaction: Mapping[str, Any], *, approval_phase: bool) 
             raise PermissionError("mandate has no trusted approval")
         voice = tx.get("voice_approval")
         if isinstance(voice, Mapping):
-            if not approved_voice_record_matches(dict(voice), dict(mandate)):
+            if not approved_voice_record_matches(dict(voice), dict(mandate), now=now):
                 raise PermissionError("VoiceApproval does not authorize this mandate")
         else:
             allow = tx.get("allowance_authorization")
@@ -79,7 +96,7 @@ def _bound_transaction(transaction: Mapping[str, Any], *, approval_phase: bool) 
             try:
                 approved_at = datetime.fromisoformat(allow["approved_at"].replace("Z", "+00:00"))
                 allowance_time_ok = (approved_at.tzinfo is not None and parse_ts(mandate["created_at"]) <= approved_at
-                                     <= datetime.now(timezone.utc) + timedelta(seconds=5))
+                    <= now + timedelta(seconds=5))
             except (AttributeError, KeyError, TypeError, ValueError):
                 allowance_time_ok = False
             if (not isinstance(allow, Mapping) or mandate.get("within_allowance") is not True
@@ -99,13 +116,15 @@ def _advocate_reason(card: Mapping[str, Any]) -> dict | None:
 
 def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
                   on_code: Callable[[str], Any], buyer_name: str = "Vidyut",
-                  typed_input: Callable[[Any], str | None] | None = None) -> VoiceResult:
+                  typed_input: Callable[[Any], str | None] | None = None,
+                  now: Callable[[], datetime] | None = None) -> VoiceResult:
     """Run the existing real voice approval flow for one stored pending transaction.
 
     `on_code` must privately deliver to the authenticated owner/session bound by the caller. This
     adapter never logs or returns the code and refuses async callbacks that were not awaited.
     """
-    tx, mandate, deal = _bound_transaction(transaction, approval_phase=True)
+    business_clock = _clock_now(now)
+    tx, mandate, deal = _bound_transaction(transaction, approval_phase=True, now=business_clock())
     if not callable(on_code):
         raise ValueError("private owner code delivery callback is required")
 
@@ -125,9 +144,9 @@ def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
 
     result = run_approval_call(mandate, _advocate_reason(tx["advocate_card"]), client, service,
                                deal=deal, buyer_name=buyer_name, on_code=private_delivery,
-                               typed_input=typed_input)
+                               typed_input=typed_input, now=business_clock)
     record = result.record
-    if result.approved and not approved_voice_record_matches(record, mandate):
+    if result.approved and not approved_voice_record_matches(record, mandate, now=business_clock()):
         return VoiceResult(False, "approval_record_mismatch", call_id=result.call_id,
                            end_reason=result.end_reason, attempts=result.attempts, trace=result.trace)
     return result
@@ -138,7 +157,8 @@ def settle_offer(transaction: Mapping[str, Any], request_payment: Any, merchant_
                  merchant_url: str = "https://merchant.sim.test/v1/charge",
                  now: datetime | None = None) -> dict:
     """Submit exact protocol bytes to MerchantSim after validating the stored approval binding."""
-    tx, mandate, _deal = _bound_transaction(transaction, approval_phase=False)
+    now = _utc_now(now)
+    tx, mandate, _deal = _bound_transaction(transaction, approval_phase=False, now=now)
     if not isinstance(receipt, Mapping) or not receipt or not isinstance(message_id, str) or not message_id:
         raise PermissionError("a Shield allow receipt and stable message id are required")
     try:

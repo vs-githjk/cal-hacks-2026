@@ -180,6 +180,16 @@ def test_voice_no_answer_without_typed_reply_stays_denied():
     assert private.messages[-1] == "No answer for deal deal-chat; approval was not granted."
 
 
+def test_chat_approval_rejects_falsey_non_callable_clock():
+    class Falsey:
+        def __bool__(self):
+            return False
+
+    tx, service, private, client = transaction(), FakeApprovalService(), PrivateChat(), FakeVoiceClient()
+    result = invoke(tx, service, client, private, now=Falsey())
+    assert not result.approved and result.reason == "transaction_invalid"
+
+
 def test_quiet_hours_uses_one_browser_session_and_same_typed_code_with_expiry():
     tx, service, private = transaction(), FakeApprovalService(code_ttl_seconds=300), PrivateChat()
     client = FakeVoiceClient()
@@ -201,6 +211,16 @@ def test_quiet_hours_uses_one_browser_session_and_same_typed_code_with_expiry():
     assert 0 < observed[0][3] <= 120
     assert client.calls == 0 and any("quiet_hours" in message for message in private.messages)
     assert "starting the call" not in " ".join(private.messages).lower()
+
+
+def test_chat_approval_uses_injected_business_clock_for_session_issue():
+    tx, service, private, client = transaction(), FakeApprovalService(), PrivateChat(), FakeVoiceClient()
+    issued_at = datetime.fromisoformat(tx["mandate"]["created_at"].replace("Z", "+00:00"))
+    clock = lambda: issued_at
+
+    result = invoke(tx, service, client, private, call_ready=lambda: (False, "quiet_hours"), now=clock)
+    assert not result.approved
+    assert service.issued[0].issued_at == issued_at
 
 
 def test_typed_code_expiration_returns_no_approval_and_does_not_issue_new_code():
