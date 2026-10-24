@@ -389,6 +389,8 @@ async def conclude(ctx: Context, reviewed: bool):
     if not_configured_suppliers and not ROUND.get("crs_notice_sent"):
         ROUND["crs_notice_sent"] = True
         await tell_owner(ctx, CRS_NOT_CONFIGURED_NOTICE)
+        if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
+            return
     eligible_suppliers = {b["supplier_id"] for b in bids
                           if crs.eligible(b["supplier_id"], seller_checks.get(b["supplier_id"]), now_utc)}
     for n, b in enumerate(bids, 1):

@@ -643,3 +643,37 @@ def test_conclude_does_not_fail_expired_round_after_owner_send_await(buyer):
         await task
         assert buyer.ROUND['phase'] == 'done' and buyer.ROUND['attempts'] == 0
     run_bounded(run())
+
+
+def test_conclude_stops_after_crs_notice_if_owner_cancels_and_starts_new_goal(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+
+        class PauseNotice(Context):
+            async def send(self, to, message):
+                if (isinstance(message, buyer.ChatMessage) and message.content
+                        and message.content[0].text == buyer.CRS_NOT_CONFIGURED_NOTICE):
+                    started.set()
+                    await release.wait()
+                await super().send(to, message)
+
+        monkeypatch.setattr(crs, 'to_crs_check', lambda *a: {'origin': 'NOT_CONFIGURED'})
+        picked = []
+        monkeypatch.setattr(buyer.hunt, 'pick_best', lambda *a: picked.append(True))
+        buyer.ROUND.update(round_token='old-token', phase='advice', need={'id': 'old-need', 'spend_limit': 800},
+                           bids=[dict(buyer.ROUND['bids'][0])], seller_checks={})
+        ctx = PauseNotice()
+        task = asyncio.create_task(buyer.conclude(ctx, reviewed=True))
+        await asyncio.wait_for(started.wait(), timeout=5)
+        # Same state transition as CANCEL followed immediately by a replacement goal.
+        buyer.ROUND.clear()
+        buyer.ROUND.update(round_token='new-token', phase='bidding', need={'id': 'new-need'},
+                           goal={'id': 'new-goal', 'state': 'HUNTING'}, bids=[], attempts=0)
+        release.set()
+        await asyncio.wait_for(task, timeout=5)
+        assert not picked
+        assert buyer.ROUND['round_token'] == 'new-token'
+        assert buyer.ROUND['need']['id'] == 'new-need'
+        assert buyer.ROUND['phase'] == 'bidding'
+
+    run_bounded(run())
