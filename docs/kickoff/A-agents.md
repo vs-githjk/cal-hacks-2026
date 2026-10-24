@@ -5,7 +5,7 @@
 ## SETUP (do this first)
 1. Your branch is `lane-a-agents`. Clone and switch (if the branch does not exist yet, create it with `git checkout -b lane-a-agents`): `git clone https://github.com/vs-githjk/cal-hacks-2026 && cd cal-hacks-2026 && git checkout lane-a-agents && git pull origin main`
 2. Copy `.env.example` to `.env` and fill only the keys this lane needs: ANTHROPIC_API_KEY, AGENTVERSE_API_KEY, ASI1_API_KEY, CRS_API_KEY, SPACETIMEDB_URI, STRIPE_SECRET_KEY (agent side of the Payment Protocol test). Ask Vidyut for values; never paste a key in chat, a doc or a commit, and never commit `.env`.
-3. You own `agents/`. Touch other lanes' folders only through `contracts/` (log changes in `docs/CHANGES.md`).
+3. You own `agents/`. Touch other lanes' folders only through `contracts/` (log changes in `a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`)`).
 4. Read `docs/kickoff/00-shared.md`, then this file.
 5. Open a PR to main per finished item, small and often. Never add Co-Authored-By.
 6. Details live in `docs/`, `contracts/` and the hub page: https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU
@@ -20,7 +20,7 @@ From Fetch.ai's Cal Hacks hackpack: register at least one agent on Agentverse; i
 
 ## BUILD ORDER TO SAT 10:00 (10.25 h; start Fri 21:45)
 
-Take the rest of Fri 21:30 to 21:45 to read the contracts and post OwnedPart and Goal proposals in docs/CHANGES.md (frozen Fri 22:30).
+Take the rest of Fri 21:30 to 21:45 to read the contracts and post OwnedPart and Goal proposals in a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`) (frozen Fri 22:30).
 
 1. **a1 Buyer uAgent, ASI:One door, web chat fallback, ownership memory. 3.0 h, done by Sat 00:45.** Chat Protocol (`uagents_core.contrib.protocols.chat`), registered on Agentverse. A message with a goal and specs becomes a Need and a Goal row on Vedant's screen. OwnedPart store: "I already own a 750 W PSU and a mid-tower with 330 mm GPU clearance" becomes entries; the Need drops or flags owned lines and the card says "you already own X (your note, time)". Rules: never re-buy unless asked; cite the entry; a stated rule only for "how long it will last", never a guess; conflicts (DDR4 kit, DDR5 board) go to Anoop's fit checker. The local web chat fallback is rehearsed too. Done-check: a teammate types the goal in ASI:One and the Goal row appears; a unit test and one ASI:One transcript show the PSU line skipped with the entry cited.
 2. **a2 Advocate with closed schema, veto, cited reason. 2.0 h, done by Sat 02:45.** Claude with a closed output schema (never free text into the money path). AdvocateCard from: fit by Anoop's code (socket, length, PSU wattage; the model never decides fit), condition and price claims from the claim-check Actor against the live page, recalls via the CPSC API, seller record. At most 3 warnings, each with a `source_url`. It can veto the cheapest bid, holds its ground when pushed, and never sees the fee. Mock Anoop's checker and Actor until they land. Done-check: the AdvocateCard JSON for the vetoed bid has a `source_url` on every warning, and the same input returns the same fit verdict.
