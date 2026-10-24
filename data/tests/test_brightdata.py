@@ -83,6 +83,7 @@ def test_b2_availability_words_and_price_strings(monkeypatch):
         fake = Fake(httpx.Response(200, json=[record(price="$1,299.99", availability=word)]))
         rows = bd.observations(client=fake.client(), now=NOW, urls=[ASUS_BB])
         assert rows[0]["price"] == 1299.99 and rows[0]["in_stock"] is expect, word
+        assert rows[0]["availability"] == word, word   # the raw value rides along
 
 
 def test_c_202_polls_at_most_three_times_then_slow(monkeypatch, clean):

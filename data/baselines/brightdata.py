@@ -117,12 +117,20 @@ def _price(v) -> float | None:
     return round(p, 2) if math.isfinite(p) and p > 0 else None
 
 
+def stock_state(availability) -> str:
+    """'in' (a recognised in-stock word), 'out' (a recognised sold-out word) or 'unknown' (missing, empty or any other
+    string: the live Best Buy wording is not confirmed, so an unread page is never called sold out)."""
+    a = re.sub(r"[^a-z]", "", str(availability or "").lower())
+    if any(w in a for w in ("outofstock", "soldout", "unavailable", "notavailable", "preorder", "comingsoon", "backorder", "discontinued")):
+        return "out"
+    if a and ("instock" in a or "available" in a or "limitedstock" in a):
+        return "in"
+    return "unknown"
+
+
 def _in_stock(availability) -> bool:
     """Unknown or unreadable availability is NOT in stock, so it can never enter a median or win a bid."""
-    a = re.sub(r"[^a-z]", "", str(availability or "").lower())
-    if not a or any(w in a for w in ("outofstock", "soldout", "unavailable", "notavailable", "preorder", "comingsoon", "backorder", "discontinued")):
-        return False
-    return "instock" in a or "available" in a or "limitedstock" in a
+    return stock_state(availability) == "in"
 
 
 def _rows_from(records, target: dict, store_info: dict, now: datetime, snapshot_id: str | None) -> list[dict]:
@@ -134,7 +142,8 @@ def _rows_from(records, target: dict, store_info: dict, now: datetime, snapshot_
         if price is None:
             continue
         rows.append({"provider": "brightdata", "store": target["store"], "sku": target.get("sku", DEFAULT_SKU), "price": price,
-                     "in_stock": _in_stock(rec.get("availability")), "condition": "new", "kind": "ask",
+                     "in_stock": _in_stock(rec.get("availability")),
+                     "availability": rec["availability"] if isinstance(rec.get("availability"), str) else None, "condition": "new", "kind": "ask",
                      "observed_at": _iso(now), "url": target["url"], "snapshot_id": snapshot_id, "origin": "LIVE",
                      "title": rec.get("title") if isinstance(rec.get("title"), str) else None,
                      "retailer_sku": str(rec["sku"]) if rec.get("sku") not in (None, "") else None,

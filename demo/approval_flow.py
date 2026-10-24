@@ -100,13 +100,18 @@ def _signing_key(env: Mapping[str, str], tmp: str):
     return load_private_key(path), note + "throwaway Ed25519 key in a temp dir (deleted after the run)"
 
 
-def _live_recheck(b1: dict, b2: dict, bid: dict, win: dict, seller: dict, say, recheck_fn: Optional[Callable]) -> tuple[dict, Optional[str]]:
+def _live_recheck(b1: dict, b2: dict, bid: dict, win: dict, seller: dict, say, recheck_fn: Optional[Callable],
+                  enabled: bool = True) -> tuple[dict, Optional[str]]:
     """Ask Bright Data what the winning listing costs now, print one honest line, return (result, stop reason or None).
     Not configured, slow or empty keep the quoted MIRROR price and say so; only an out of stock page or a rise above
-    the quote stops the call (demo/recheck.py)."""
+    the quote stops the call (demo/recheck.py). enabled=False (the bridge, which does not handle a stopped beat 4 yet)
+    makes no fetch and returns {state: skipped}."""
     line = bid["lines"][win["line"]]
     listing = {"url": line["listing_url"], "price": float(line["unit_price"]), "cap": float(b1["goal"]["cap"]),
                "snapshot_date": seller["lines"][win["line"]].get("snapshot_date", "")}
+    if not enabled:
+        say.line(MIRROR, f"Live re-check: off in this run, using the MIRROR price from {(listing['snapshot_date'] or '')[:10] or 'an earlier date'}")
+        return recheck_mod.skipped(), None
     if recheck_fn is not None or recheck_mod.will_fetch():
         say.line(LIVE, "fetching live price through Bright Data (up to a minute)...")
     res = (recheck_fn or recheck_mod.recheck)(listing)
@@ -117,6 +122,9 @@ def _live_recheck(b1: dict, b2: dict, bid: dict, win: dict, seller: dict, say, r
     elif state in ("slow", "empty"):
         why = "no answer in time" if state == "slow" else f"nothing readable ({res.get('detail', 'empty')})"
         say.line(MIRROR, f"Live re-check: {why}, so the quoted MIRROR price from {dated} stands ({money(listing['price'])})")
+    elif state == "stock_unknown":
+        say.line(MIRROR, f"Live re-check: price {money(res['price'])} read through Bright Data at {recheck_mod.clock(res)}, but stock could not "
+                         f"be read ({recheck_mod.raw_text(res)}), so stock stays unverified (MIRROR)")
     else:
         stock = "in stock" if state != "out_of_stock" else "OUT OF STOCK"
         say.line(LIVE, f"Live re-check through Bright Data: {money(res['price'])}, {stock}, {recheck_mod.clock(res)}")
@@ -127,7 +135,7 @@ def _live_recheck(b1: dict, b2: dict, bid: dict, win: dict, seller: dict, say, r
 
 
 def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, env: Optional[Mapping[str, str]] = None,
-              stripe_test: Optional[Callable] = None, recheck_fn: Optional[Callable] = None) -> dict:
+              stripe_test: Optional[Callable] = None, recheck_fn: Optional[Callable] = None, recheck_enabled: bool = True) -> dict:
     env = os.environ if env is None else env
     t0 = now.replace(microsecond=0)
     bid, win = b2["winner_bid"], b2["winner"]
@@ -145,7 +153,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     states = [{"state": "HUNTING", "at": b1["goal"]["created_at"]}, {"state": "HOLD_FOR_CALL", "reserved_amount": amount}]
     if not call:
         raise RuntimeError("the demo deal fits inside the allowance; nothing to approve on a call")
-    live_check, stop = _live_recheck(b1, b2, bid, win, seller, say, recheck_fn)
+    live_check, stop = _live_recheck(b1, b2, bid, win, seller, say, recheck_fn, recheck_enabled)
     if stop:
         say.line(LIVE, f"call NOT placed: {stop}")
         return {"deal": {"deal_id": f"deal-{bid['id']}", "amount": amount, "payee": payee, "seller_id": seller["id"], "why_call": why_call},

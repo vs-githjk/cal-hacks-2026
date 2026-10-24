@@ -4,7 +4,8 @@ recheck() asks Bright Data (data.baselines.brightdata, one scrape of the winner'
 winning listing costs NOW. The answer is LIVE at fetch time only. With no key, or when the live price cannot be read,
 the quoted MIRROR price stays and says so: nothing is guessed and no price is invented.
 
-States: ok (same price, in stock) | price_changed | out_of_stock | slow | empty | not_configured. `detail` carries the
+States: ok (same price, in stock) | price_changed | out_of_stock | stock_unknown (price read, availability missing or
+unrecognised: never called sold out) | slow | empty | not_configured | skipped (live re-check off in this run). `detail` carries the
 brightdata reason (blocked, not_active, error, budget, ...) when a fetch returned nothing, so it is never hidden.
 stop_reason() turns a result into the one sentence that stops the call, or None when the call may go on.
 """
@@ -56,20 +57,36 @@ def recheck(listing: dict, *, fetch: Optional[Callable] = None, status: Optional
         return out
     r = mine[0]
     price = float(r["price"])
-    state = "out_of_stock" if not r.get("in_stock") else \
-        "ok" if abs(price - float(listing["price"])) < CENT else "price_changed"
+    raw = r.get("availability")
+    if r.get("in_stock"):
+        state = "ok" if abs(price - float(listing["price"])) < CENT else "price_changed"
+    elif brightdata.stock_state(raw) == "out":
+        state = "out_of_stock"
+    else:
+        state = "stock_unknown"   # in_stock is False for a missing or unrecognised availability too: say so, do not stop on it
     return {"state": state, "price": price, "fetched_at": r.get("observed_at") or now.isoformat(), "origin": LIVE,
-            "quoted": float(listing["price"])}
+            "quoted": float(listing["price"]), "availability": raw if isinstance(raw, str) else None}
+
+
+def skipped() -> dict:
+    """The result when the live re-check is switched off (bridge, stage and rehearse stay offline)."""
+    return {"state": "skipped", "price": None, "fetched_at": None, "origin": MIRROR}
+
+
+def raw_text(result: dict) -> str:
+    """The availability value as read, for the stock_unknown line: short, one line, 'no value' when empty."""
+    v = " ".join(str(result.get("availability") or "").split())[:40]
+    return f"'{v}'" if v else "no value"
 
 
 def stop_reason(result: dict, quoted: float, cap: float) -> Optional[str]:
     """The reason the call must not be placed, or None. Out of stock stops it. A live price above the quote stops it
-    (the mandate is for the quoted amount) and the line says when it is also above the cap. A cheaper live price does
-    not stop it."""
+    (the mandate is for the quoted amount), also when the stock could not be read, and the line says when it is also
+    above the cap. A cheaper live price does not stop it. Unreadable stock alone does not stop it."""
     state, price = result.get("state"), result.get("price")
     if state == "out_of_stock":
         return f"the winning listing is out of stock now ({money(price)} live)"
-    if state == "price_changed" and price is not None and price > quoted + CENT:
+    if state in ("price_changed", "stock_unknown") and price is not None and price > quoted + CENT:
         if price > cap + CENT:
             return f"the live price rose to {money(price)}, above the {money(cap)} cap (quoted {money(quoted)})"
         return f"the live price rose to {money(price)} from the quoted {money(quoted)}, and the mandate covers only the quote"
