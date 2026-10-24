@@ -156,9 +156,13 @@ AGENT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Bazaar Advocate", "shi
 def demo_agent_addresses() -> dict:
     """The agent1q addresses of the buyer, advocate and Shield agents, from agents/common (the same seeds the agents run
     with). {} when agents/ cannot be loaded (no uagents): the Fetch tile then gets no rows and the run says so."""
+    # Loaded by path under its own name: a top-level "common" may already be demo/common.py when the stage runs as a
+    # script, and agents/ on sys.path would shadow other top-level names. Its import reads agents/.env (setdefault only).
+    import importlib.util
     try:
-        sys.path.insert(0, str(ROOT / "agents"))
-        import common  # noqa: PLC0415
+        spec = importlib.util.spec_from_file_location("tech_bazaar_agents_common", ROOT / "agents" / "common.py")
+        common = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(common)
         return {role: common.address(role) for role in AGENT_NAMES}
     except Exception:  # noqa: BLE001
         return {}
@@ -492,7 +496,9 @@ def _picked(cell: Any) -> Optional[tuple]:
             price = cell.get("unitPrice", cell.get("unit_price"))
         else:
             cond, price = cell[2], cell[3]
-        return str(cond), float(price)
+        if not isinstance(cond, str) or not cond:
+            return None   # an empty condition means the need's; the demo's own line is the safe fallback
+        return cond, float(price)
     except (TypeError, ValueError, IndexError, KeyError):
         return None
 

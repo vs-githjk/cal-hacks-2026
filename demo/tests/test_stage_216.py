@@ -115,3 +115,16 @@ def test_market_winner_reads_the_picked_lines_column():
     row = (1, "round-1", "bid-1", "best-buy", "Best Buy", 1, 1299.99, [], [["rtx 5070 ti", "", "new", 1299.99, 1.0]], "MIRROR", "demo")
     assert bridge.market_winner([row])["lines"] == [["rtx 5070 ti", "", "new", 1299.99, 1.0]]
     assert bridge.market_winner([row[:8]])["lines"] == []
+
+
+def test_the_agent_addresses_load_when_the_stage_runs_as_a_script():
+    """`python demo/stage.py` puts demo/ first on sys.path, where demo/common.py is a top-level "common" (#316 review)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    out = subprocess.run([sys.executable, str(root / "demo" / "stage.py"), "--dry-run"], capture_output=True, text=True, timeout=180,
+                         cwd=root)
+    assert out.returncode == 0 and out.stdout.count("record_agent_event") == 3, out.stdout[-500:]
+    assert "Fetch tile: no agent rows" not in out.stdout
