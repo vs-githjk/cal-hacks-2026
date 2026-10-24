@@ -181,7 +181,7 @@ export function setAllowanceChecked(ctx: Ctx, a: SetAllowanceArgs) {
   );
   if (!r.ok) throw new SenderError(`set_allowance refused: ${r.reasons.join('; ')}`);
   saveAllowance(ctx, r.allowance);
-  event(ctx, 'allowance_set', 'allowance', a.buyerId, `An allowance was set (step ${r.allowance.ladder_step})`, '', 'SIM');
+  event(ctx, 'allowance_set', 'allowance', a.buyerId, 'A buyer allowance was set', '', 'SIM');
 }
 
 // ---------------------------------------------------------------- needs and goals

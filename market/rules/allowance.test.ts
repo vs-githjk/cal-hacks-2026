@@ -121,4 +121,14 @@ describe("setAllowance (the buyer may only tighten; the referee sets up to the l
     if (!hi.ok) throw new Error("setup");
     expect(raiseOnCleanReceiving(hi.allowance, MON).per_purchase_limit).toBe(top.per_purchase);
   });
+
+  it("a clean receiving step keeps a lopsided hand-set limit (10 per buy, 1500 per period)", () => {
+    const set = setAllowance(fresh, req(10, 1500), "referee", MON);
+    if (!set.ok) throw new Error("setup");
+    expect(set.allowance.ladder_step).toBe(0);
+    const next = raiseOnCleanReceiving(set.allowance, MON);
+    expect(next.ladder_step).toBe(1);
+    expect(next.per_purchase_limit).toBe(ALLOWANCE_LADDER[1]!.per_purchase);
+    expect(next.period_limit).toBe(1500);
+  });
 });

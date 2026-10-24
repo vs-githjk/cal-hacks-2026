@@ -465,6 +465,13 @@ describe('b2 allowance ladder', () => {
     expect(h.db.allowance.buyerId.find('bob')).toBeFalsy();
   });
 
+  it('set_allowance: the public floor event label never carries a ladder step or a dollar amount', () => {
+    setAllow(REF, 'vidyut', 250, 500);
+    const labels = events().filter((e) => e.kind === 'allowance_set').map((e) => e.label);
+    expect(labels).toHaveLength(1);
+    for (const l of labels) expect(l).not.toMatch(/step|\d|\$/i);
+  });
+
   it('set_allowance: only the buyer (for their own id) or the referee may call it; a seller, a stranger and another buyer cannot', () => {
     setAllow(REF, 'vidyut', 250, 500);
     expect(() => setAllow(A, 'vidyut', 1, 1)).toThrow(/not allowed/);
