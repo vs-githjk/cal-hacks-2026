@@ -156,11 +156,31 @@ def web_drain() -> WebOut:
     return WebOut(replies=out)
 
 
+def round_finished() -> bool:
+    """True once the round is done, expired, paused or ordered and nothing is awaiting approval or settlement."""
+    if ROUND.get("phase") == "decided" and not ROUND.get("order"):
+        return False  # a deal waits for the owner's approval
+    m = ROUND.get("mandate")
+    if ROUND.get("order") and m and m.get("hash") not in USED:
+        try:
+            if datetime.strptime(m["expires_at"], payment.TS).replace(tzinfo=timezone.utc) >= datetime.now(timezone.utc):
+                return False  # payment still to be requested and committed
+        except (KeyError, ValueError):
+            return False
+    state = (ROUND.get("goal") or {}).get("state")
+    return ROUND.get("phase") == "done" or state in ("DONE", "EXPIRED", "PAUSED")
+
+
 async def handle_text(ctx: Context, sender: str, text: str):
     # Single buyer deployment: no sender other than the owner of the active round sees its state.
     if ROUND.get("owner") and sender != ROUND["owner"]:
-        await tell(ctx, sender, "A buyer session is active. Try again later.")
-        return
+        if round_finished():
+            ROUND.clear()  # release the gate: this sender starts a fresh round below
+        else:
+            if not ROUND.get("told_foreign"):  # once per round
+                ROUND["told_foreign"] = True
+                await tell(ctx, sender, "A buyer session is active. Try again later.")
+            return
     cmd = hunt.command(text)
     if cmd and cmd[0] == "approve" and ROUND.get("owner") == sender:
         await approve(ctx, cmd[1])
