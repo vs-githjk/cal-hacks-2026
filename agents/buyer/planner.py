@@ -35,7 +35,7 @@ def plan(cap_cents, owned=None):
     budgets = split(cap_cents, parts)
     have = set(parts) | set(owned)
     rules = [r for r, need in RULE_PARTS.items() if set(need) <= have]
-    line = "Plan: " + ", ".join(f"{NAMES[p]} ~{dollars(budgets[p])}" for p in parts) + "."
+    line = "Plan: " + ", ".join(f"{NAMES[p]} ~${round(budgets[p] / 100):,}" for p in parts) + "."
     if owned:
         line += " Your " + " and ".join(NAMES.get(p, p) for p in owned) + " stay."
     return {"cap_cents": cap_cents, "owned": owned, "parts": [{"part": p, "budget_cents": budgets[p]} for p in parts],
