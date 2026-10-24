@@ -14,12 +14,12 @@ Everything a shop created here is labelled SIM (simulated). The Seller Kit canno
 Ask in this order. Skip what the owner already told you. Never invent an answer: if the owner does not know a number, ask again or leave it out.
 
 1. **Store.** Shop name, owner name, and one line on what kind of shop it is ("local shop, fair prices").
-2. **What you sell.** For each part: the model (for example "RTX 5070 Ti" or "750W PSU"), its condition (new, open-box, refurbished or used), and a link to the listing page (an http or https address).
+2. **What you sell.** One entry per part (a part sold in two conditions is still one entry, see step 4). For each part: the model (for example "RTX 5070 Ti" or "750W PSU"), its condition (new, open-box, refurbished or used), and a link to the listing page (an http or https address).
 3. **Price.** Ask which way the owner thinks about price, then record exactly one:
    - You know your cost and want a margin: pricing `fixed_margin`, `margin_pct`, and a `cost` for each part.
    - You have a list price and will take some off: pricing `discount`, `discount_pct` (0 for none), and a `price` for each part.
 4. **Floor.** "What is the lowest price you would ever accept for it, in each condition you sell?" This is the number the agent will never bid under. Record it as `floor` (one condition) or `floors` (several conditions). If the owner also sells another condition of the same part, record it under `also` with its own price or cost.
-5. **Returns and extras.** Returns policy in the owner's words (`returns`), flat `shipping` if any, `perks` (free pickup, warranty) and `claims` (only things the shop will stand behind, for example "new, sealed").
+5. **Returns and extras.** Returns policy in the owner's words (`returns`; include the number of days, for example "30 days", because the market ranks on it), flat `shipping` if any, `perks` (free pickup, warranty) and `claims` (only things the shop will stand behind, for example "new, sealed").
 6. **Spec facts (optional).** `attrs` such as category, chipset, length_mm or wattage help the buyer's fit check, but only if the owner knows them. Never guess them.
 
 Read the answers back in a short list and ask "Is this right?" before sending.
@@ -60,7 +60,7 @@ python3 ${CLAUDE_SKILL_DIR}/seller_kit_client.py /tmp/tech-bazaar-answers.json
 
 Say this in the owner's terms, briefly, and only what is true today:
 
-- **Sealed rounds.** A buyer's need opens a round. Every seller agent bids without seeing the others. A bid in the last 3 seconds adds 5 seconds, at most twice. When the round closes, bids rank on landed price (price plus shipping), lowest first, with a fixed tiebreak. The same bids always rank the same way.
+- **Sealed rounds.** A buyer's need opens a round. Every seller agent bids without seeing the others. A bid in the last 3 seconds adds 5 seconds, at most twice. When the round closes, bids rank on quality-adjusted landed price, lowest first: condition, a 30-day returns policy and perks all count, so they are not decoration. Ties go to the bid with more verified claims, then the earlier bid. The same bids always rank the same way. A bid under the floor, over the buyer's cap, blocked by Shield or vetoed by the advocate is taken out, and its reason is shown.
 - **Your floor holds.** The agent never bids under the floor for a condition. It can bid above it, and a bid over the buyer's cap is dropped. The buyer's cap stays private to the buyer.
 - **Losing teaches.** A losing seller gets the gap and the reason, and can lower its price next round, never under its floor. This is built in the simulation today.
 - **The fee (proposed, not final).** The idea is 3 percent on a sale that is verified and delivered, capped at $25. Nothing is charged for listing, bidding or losing. This is a proposal Vidyut has not locked, so say "proposed" every time. The fee never changes how bids rank.

@@ -83,6 +83,12 @@ def _pricing(p: Any) -> Any:
     return out
 
 
+def _return_days(text: Any) -> int:
+    """The first day count in the owner's returns answer ('30 days, no restocking fee' -> 30), or 0."""
+    m = re.search(r"(\d+)\s*-?\s*days?", str(text), re.I)
+    return int(m.group(1)) if m else 0
+
+
 def _listing(item: dict) -> dict:
     ls: dict[str, Any] = {}
     for key in ("condition", "page_condition", "variant", "price", "cost", "attrs"):
@@ -122,14 +128,26 @@ def build_config(answers: Any) -> dict:
     perks = list(answers.get("perks") or [])
     if answers.get("returns"):
         perks.append(f"returns: {answers['returns']}")
+        days = _return_days(answers["returns"])
+        if days and not any(re.search(rf"\b{days}[- ]day returns?", str(p), re.I) for p in perks):
+            perks.append(f"{days}-day returns")  # the market reads return days only in this form (market/rules/scoring.ts)
     if perks:
         cfg["perks"] = perks
     if answers.get("claims"):
         cfg["claims"] = list(answers["claims"])
     listings: dict[str, Any] = {}
-    for item in answers.get("items") or []:
+    seen: dict[Any, tuple[int, dict]] = {}
+    for n, item in enumerate(answers.get("items") or [], 1):
         if isinstance(item, dict):
-            listings[_sku(item.get("sku", ""))] = _listing(item)
+            key = _sku(item.get("sku", ""))
+            if key in seen:
+                m, first = seen[key]
+                raise ClientError(
+                    f"item {m} (sku {first.get('sku')!r}, condition {first.get('condition')!r}) and item {n} (sku {item.get('sku')!r}, "
+                    f"condition {item.get('condition')!r}) are the same part. One part can have only one entry. Put the extra "
+                    f"condition under 'also' on item {m}, with its own lowest price in 'floors' ({{condition: floor}}).")
+            seen[key] = (n, item)
+            listings[key] = _listing(item)
     cfg["listings"] = listings
     return cfg
 

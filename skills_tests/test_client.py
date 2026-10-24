@@ -79,6 +79,56 @@ def test_build_config_makes_a_sim_seller_config_from_owner_answers():
     assert cfg["claims"] == ["new, sealed"]
 
 
+def market_returns_days(perks):
+    """The market's own reading of return days: the regex is taken from market/rules/scoring.ts so a change there fails here."""
+    src = (REPO / "market" / "rules" / "scoring.ts").read_text(encoding="utf-8")
+    m = re.search(r"const returnsDays = .*?/(\(\\d\+\)[^/]*)/i\.exec", src)
+    assert m, "returnsDays regex not found in scoring.ts"
+    rx = re.compile(m.group(1), re.I)
+    return max([0] + [int(g.group(1)) for p in perks if (g := rx.search(p))])
+
+
+@pytest.mark.parametrize("returns,days", [
+    ("30 days, no restocking fee", 30), ("14-day returns", 14), ("7 day money back", 7), ("30days", 30),
+    ("no returns", 0), ("store credit only", 0), ("0 days", 0),
+])
+def test_a_returns_answer_with_a_day_count_reaches_the_market_as_N_day_returns(returns, days):
+    cfg = client.build_config(answers(returns=returns, perks=["free local pickup"]))
+    assert market_returns_days(cfg["perks"]) == days, cfg["perks"]
+    assert f"returns: {returns}" in cfg["perks"] and "free local pickup" in cfg["perks"]  # owner's wording kept
+
+
+def test_the_day_count_perk_is_not_added_twice_when_the_owner_already_gave_it():
+    cfg = client.build_config(answers(returns="30 days", perks=["30-day returns"]))
+    assert [p for p in cfg["perks"] if "30-day returns" in p.lower()] == ["30-day returns"]
+
+
+def test_the_real_kit_keeps_the_day_count_perk_so_a_30_day_shop_is_not_penalised(tmp_path):
+    custom = tmp_path / "custom"
+    client.post_config(client.build_config(answers()), "http://127.0.0.1:8791", transport=real_api_transport(custom))
+    written = json.loads((custom / "corner-pc.json").read_text(encoding="utf-8"))
+    assert market_returns_days(written["perks"]) == 30
+
+
+def test_two_items_with_the_same_part_are_refused_not_silently_merged():
+    first = {"sku": "RTX 5070 Ti", "condition": "new", "cost": 1100, "floor": 1150, "url": "https://example.com/a"}
+    second = {"sku": "rtx  5070 ti", "condition": "open-box", "cost": 900, "floor": 950, "url": "https://example.com/b"}
+    with pytest.raises(client.ClientError) as e:
+        client.build_config(answers(items=[first, second]))
+    msg = str(e.value)
+    assert "item 1" in msg and "item 2" in msg and "RTX 5070 Ti" in msg and "rtx  5070 ti" in msg
+    assert "also" in msg and "floors" in msg
+
+
+def test_the_cli_reports_a_repeated_part_as_bad_input_and_calls_nothing(tmp_path):
+    item = answers()["items"][0]
+    f = tmp_path / "a.json"
+    f.write_text(json.dumps(answers(items=[item, dict(item, condition="open-box")])))
+    rec, out, err = Recorder(), io.StringIO(), io.StringIO()
+    code = client.main([str(f)], transport=rec, stdout=out, stderr=err)
+    assert code == 1 and rec.calls == [] and "also" in err.getvalue() and "Traceback" not in err.getvalue()
+
+
 def test_discount_percent_becomes_the_fraction_the_kit_reads():
     cfg = client.build_config(answers(pricing={"mode": "discount", "discount_pct": 5},
                                       items=[{"sku": "psu 750w", "condition": "new", "price": 99.99, "floor": 89,
