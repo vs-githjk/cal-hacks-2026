@@ -88,6 +88,29 @@ def test_duplicate_is_idempotent_across_reopen(tmp_path):
     reopened.close()
 
 
+def test_price_step_never_decreases_after_a_larger_loss_across_reopen(tmp_path):
+    path = tmp_path / ".state" / "state.sqlite3"
+    first = open_learning_state(path)
+    high_loss = report(id="loss-high", gap_band="over20")
+    applied_high = apply_loss(first, high_loss, "seller-a")
+    assert applied_high["strategy"] == {"price_step": 0.25}
+    first.close()
+
+    reopened = open_learning_state(path)
+    small_loss = report(id="loss-small", gap_band="within5")
+    applied_small = apply_loss(reopened, small_loss, "seller-a")
+    assert applied_small["strategy"] == {"price_step": 0.25}
+    assert applied_small["diff"] == {}
+    assert "3%" not in applied_small["what_to_change"]
+    assert load_strategy(reopened, "seller-a") == {"price_step": 0.25}
+    assert _counts(reopened) == (1, 2)
+
+    repeated = apply_loss(reopened, small_loss, "seller-a")
+    assert repeated is None
+    assert load_strategy(reopened, "seller-a") == {"price_step": 0.25}
+    reopened.close()
+
+
 def test_existing_report_id_cannot_be_reassigned(db):
     apply_loss(db, report(), "seller-a")
     with pytest.raises(ValueError, match="different seller"):

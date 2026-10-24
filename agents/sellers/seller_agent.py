@@ -14,7 +14,9 @@ from uagents_core.contrib.protocols.payment import CommitPayment, CompletePaymen
 
 import common
 import payment
+from market_bridge import MarketBridge
 from agents.buyer import checkout, state
+from agents.sellers import learning
 from pay.mandate import mandate_hash
 from pay.replay import NonceStore
 from policy import make_bid, seller as load_seller
@@ -22,6 +24,76 @@ from shield.receipt import parse_unique_json
 
 PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013}
 _CHARGE_ID = re.compile(r"(?:pi|ch)_[A-Za-z0-9_]{1,128}\Z")
+_MARKET_SELLER_SUBJECT = {"seller_1": "seller-a", "seller_2": "seller-b", "seller_3": "seller-c"}
+
+
+def _learned_price_step(name: str, db_path=None) -> float:
+    seller_id = _MARKET_SELLER_SUBJECT[name]
+    token_file = os.environ.get(f"SPACETIMEDB_{seller_id.replace('-', '_').upper()}_TOKEN_FILE")
+    try:
+        market = MarketBridge("seller", token_file=token_file) if token_file else None
+    except Exception:
+        market = None
+
+    db = learning.open_learning_state(db_path or state.DEFAULT_DB_PATH)
+    try:
+        if market is not None:
+            try:
+                reports = market.my_loss_reports()
+            except Exception:
+                reports = []
+            if isinstance(reports, list):
+                for report in reports:
+                    try:
+                        learning.apply_loss(db, report, seller_id)
+                    except (TypeError, ValueError):
+                        continue
+        return learning.load_strategy(db, seller_id)["price_step"]
+    finally:
+        db.close()
+
+
+def _make_bid_with_learning(need: dict, seller: dict, name: str, db_path=None) -> dict | None:
+    price_step = _learned_price_step(name, db_path)
+    bid_seller = seller
+    base_discount = seller.get("discount")
+    if (need.get("source") not in ("live", "mirror") and isinstance(base_discount, (int, float))
+            and not isinstance(base_discount, bool) and 0 <= base_discount < 1):
+        bid_seller = dict(seller)
+        bid_seller["discount"] = 1 - (1 - base_discount) * (1 - price_step)
+    return make_bid(need, bid_seller)
+
+
+def _market_bid(bid: dict, seller: dict) -> None:
+    subject = _MARKET_SELLER_SUBJECT[bid["supplier_id"]]
+    token_file = os.environ.get(f"SPACETIMEDB_{subject.replace('-', '_').upper()}_TOKEN_FILE")
+    if not token_file:
+        raise ValueError("seller Market identity is not configured")
+    market = MarketBridge("seller", token_file=token_file)
+    metadata = []
+    for index, line in enumerate(bid["lines"]):
+        origin = line.get("origin", bid["origin"])
+        source = line.get("source", bid["source"])
+        listing_id = line.get("listing_id") or line.get("listing_url")
+        if not isinstance(listing_id, str) or not listing_id or not isinstance(source, str) or not source:
+            raise ValueError("listing evidence is incomplete")
+        listing_hash = hashlib.sha256(json.dumps(line, sort_keys=True, separators=(",", ":"),
+                                                 ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+        metadata.append({"lineIndex": index,
+                         "shipping": line.get("shipping", seller["shipping"] if origin == "SIM" and index == 0 else 0.0),
+                         "listingId": listing_id, "listingHash": listing_hash, "source": source,
+                         "snapshotId": line.get("snapshot_id", bid.get("mirror_snapshot_id", "")),
+                         "provenance": {"origin": origin, "source": source,
+                                        **({"seller_of_record": line["seller_of_record"]}
+                                           if isinstance(line.get("seller_of_record"), str) else {}),
+                                        **({"listing_url": line["listing_url"]}
+                                           if isinstance(line.get("listing_url"), str)
+                                           and len(line["listing_url"]) <= 512 else {})},
+                         "attrs": line.get("attrs", {})})
+    market.publish_bid(bid_id=bid["id"], round_id=f"round-{bid['need_id']}", seller_id=subject,
+                       persona=bid["persona"], lines=bid["lines"], line_metadata=metadata,
+                       stated_total=bid["total_landed_price"], perks=bid["perks"], claims=bid["claims"],
+                       origin=bid["origin"], source=bid["source"])
 
 
 def _read_transaction(db_path, deal_id: str, buyer_id: str) -> dict | None:
@@ -172,7 +244,12 @@ def build(name: str) -> Agent:
         if verdict["verdict"] != "allow":
             ctx.logger.warning(f"ignored BidRequest from {sender}: {verdict['reasons']}")
             return
-        bid = make_bid(json.loads(msg.need_json), s)
+        need = json.loads(msg.need_json)
+        try:
+            bid = _make_bid_with_learning(need, s, name)
+        except Exception as exc:
+            ctx.logger.warning(f"seller learning unavailable: {type(exc).__name__}")
+            bid = make_bid(need, s)
         if bid is None:
             return
         common.validate("Bid", bid)
