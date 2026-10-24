@@ -96,7 +96,7 @@ never message bodies.
 
 | Rule id | Action | What it catches |
 |---|---|---|
-| `shield.override.instruction` | block | "ignore previous instructions", "system:", "you are now ...", "note to shopping agents", and similar; the same phrasings in French, German and Chinese (a "système :" or "系统：" label only with an action after it, so spec lines pass) |
+| `shield.override.instruction` | block | "ignore previous instructions", "system:", "you are now ...", "note to shopping agents", and similar; the same phrasings in French, German and Chinese, Simplified and Traditional (a "système :" or "系统：" label only with an imperative after it, so a French, German or Chinese spec line passes; the English "System:" label still blocks a spec line, #250) |
 | `shield.hidden.instruction` | block | CSS-hidden elements or HTML comments that carry an instruction, a money push or an exfil request |
 | `shield.hidden.text` | quarantine | hidden elements with other text, or 3 or more zero-width and bidi characters |
 | `shield.payee.swap` | quarantine | a payee or payout address that differs from `payee_of_record` |
@@ -213,8 +213,8 @@ Before the generalization the rules stopped 0 of the 10 probe rows.
 - Rules are keyword, lexicon and structure checks. Wording with no lexicon word, a language outside English,
   Spanish and Hindi transliteration (French, German and Chinese are covered for the override phrasings only:
   ignore previous instructions, you are now, from now on, system:, new instructions), soft requests for private data, shortened links, claims with no action word,
-  or an instruction split over several messages still gets through (see `RESULTS.md`: the held-out probe is
-  stopped 6 of 10 with a caveat, the post-freeze check 6 of 12). The classifier is the planned answer for
+  or an instruction split over several messages still gets through (see `RESULTS.md`: the held-out probe was
+  stopped 6 of 10 on its first run, with a caveat, and 7 of 10 since #187, no longer blind; the post-freeze check 6 of 12). The classifier is the planned answer for
   ambiguous text but is unproven here.
 - Intent rules trade recall for false positives: a seller text that says it is the buyer ("as the buyer of
   record ... I accept") is quarantined by design when `sender_role` is `seller`.
