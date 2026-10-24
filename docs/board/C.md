@@ -53,6 +53,7 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [04:03] #141 update: price position line now counts a first-party retailer's unstated condition as new (as baseline() does) and labels the sold median mixed condition: ""
 - [04:03] #141 update: the winner is tied with the Micro Center ASUS Prime at $1,299.99, so the line reads: "Tied cheapest fitting new card of 2 listings at 2 stores, Oct 24 (30-day eBay sold median, mixed condition: $880.00, n = 5)"
 - [04:00] #140: none found, 28 real listings scanned (8 files, rules: condition, was_price, stock); only 2 title claims were judgeable (two eBay 'NEW' titles, both consistent with their own condition field), no titles state a was price or stock; written to data/claim_check/real_catches.json (catches: []) for Lane D's veto beat; the scanner is proven on a labelled fixture, no listing was edited
+- [03:48] c14: three-way match built: data.three_way.three_way_match(po, listing, delivery) -> match, mismatch (price_differs, condition_page, condition_delivered, claim_false, quantity_short, delivery_failed) or unverified (never match with a missing source); pure function, for Vedant's Hyphenate audit page and Lane A's advocate
 - [04:05] scoreboard: the attacks tile no longer says the voice set is not yet run; it points to the voice_attacks tile
 - [04:06] c15 slip form: data/timeseries.py, plain SQLite queries over the price feed and wind-tunnel rounds (price_series, latest_per_listing, daily_min, win_rates); python3 -m data.timeseries prints them; Tiger Data not used, no account was set up
 - [03:56] #136 item 1: partial bids never rank above complete ones (market/rules/scoring.ts: Ranked.complete and Ranked.missing, docs/changes note); Lane B UI can show 'missing' for a partial bid
@@ -62,3 +63,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [04:30] #141 update: when some fitting-length unknowns exist the winner line says so: "Tied as the cheapest of the listings we can confirm fit; 1 of unknown length not counted (2 new listings at 2 stores, Oct 24)"
 - [04:30] #140 update: none found, 28 snapshot rows (20 distinct listings) scanned; counts now name distinct listings
 - [04:30] #140 correction to the line above: with the 09:36 to 09:55 refreshes included the scan covers 34 snapshot rows, 21 distinct listings; still none found
+- [04:31] c14 update: three_way_match also names quantity_over (delivered more than the PO: "delivered 3 of 2")
