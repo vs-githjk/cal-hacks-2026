@@ -29,6 +29,12 @@ describe("priceLossReports", () => {
     expect(priceLossReports("r", rows, evidence)).toEqual([]);
   });
 
+  it("skips unsupported canonical origins instead of coercing them to SIM", () => {
+    const rows = [ranked("w", 100, 1), ranked("l", 105, 2)];
+    const evidence = new Map([["l-2", { origin: "UNKNOWN", pickedListingUrls: ["https://shop.example/l"] }]]);
+    expect(priceLossReports("r", rows, evidence)).toEqual([]);
+  });
+
   it("falls back to legacy listing URLs only when provenance has no listing URL", () => {
     const final = [ranked("w", 100, 1), ranked("legacy", 105, 2), ranked("bad", 110, 3)];
     const evidence = new Map([

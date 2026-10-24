@@ -19,7 +19,7 @@ export function priceLossReports(
     if (!row.complete || !Number.isFinite(row.score) || row.score <= winner.score || reported.has(row.bid.seller_id)) continue;
     reported.add(row.bid.seller_id);
     const evidence = evidenceByBid.get(row.bid.id);
-    if (!evidence) continue;
+    if (!evidence || !["SIM", "MIRROR", "LIVE"].includes(evidence.origin)) continue;
     const sourceUrl = evidence.pickedListingUrls.find(isSafeHttpUrl);
     if (!sourceUrl) continue;
     const gap = ((row.score - winner.score) / winner.score) * 100;
@@ -30,7 +30,7 @@ export function priceLossReports(
       reason: "price", sourceUrl, strategyDiff: [],
       whatToChange: "Compare your selected listing with the winning offer and review your next bid.",
       whatToChangeOrigin: "SIM template",
-      origin: evidence.origin === "LIVE" || evidence.origin === "MIRROR" ? evidence.origin : "SIM",
+      origin: evidence.origin,
     });
   }
   return reports;

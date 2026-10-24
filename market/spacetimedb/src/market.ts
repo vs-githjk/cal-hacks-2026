@@ -1078,9 +1078,8 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
         ? [typeof provenance.listing_url === 'string' ? provenance.listing_url : '']
         : [meta.listingId];
     });
-    const origin = row.picked.map((index) => metadata[index]?.provenance.origin)
-      .find((value): value is string => typeof value === 'string') ?? b.origin;
-    evidenceByBid.set(b.id, { origin, pickedListingUrls });
+    // Report origin follows the sealed bid; selected listing provenance supplies evidence URLs only.
+    evidenceByBid.set(b.id, { origin: b.origin, pickedListingUrls });
   }
   for (const report of priceLossReports(roundId, ranked.ranked, evidenceByBid)) {
     if (!ctx.db.lossReport.id.find(report.id)) ctx.db.lossReport.insert({ ...report, createdAt: ctx.timestamp });
