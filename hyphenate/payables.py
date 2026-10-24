@@ -17,7 +17,9 @@ HOLD_RULE = {"possible_duplicate": "match.duplicate", "remit_to_mismatch": "matc
 
 
 def _norm(number: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", str(number).lower().lstrip("0") or "0")
+    """Invoice numbers compare without case, punctuation or leading zeros: 'INV-0042', 'inv 42' and 'Inv42' are one number."""
+    s = re.sub(r"[^a-z0-9]", "", str(number).lower())
+    return re.sub(r"(?<=[a-z])0+(?=\d)|^0+(?=\d)", "", s)
 
 
 class PayablesMixin:
@@ -390,6 +392,24 @@ class PayablesMixin:
                     actor={"kind": "person", "id": by}, codes=("bank_verified",),
                     evidence=[{"type": "vendor", "id": vendor_id, "detail": f"change by {ch.by if ch else 'n/a'} on {ch.at[:10] if ch else 'n/a'}"}])
         return Outcome(True, "verified", [d], {"vendor": v.to_dict()})
+
+    # ----- manual journal (a person, with a reason; the ledger still refuses anything unbalanced or locked) -----
+    def manual_journal(self, *, by: str, at: str, date: str, lines: list, reason: str, refs: list) -> Outcome:
+        at = self._now(at)
+        subj = f"journal:{by}:{at}"
+        denied = self._need(by, "manual_journal", at, "manual_journal", subj)
+        if denied:
+            return denied
+        try:
+            did = f"dec_{len(self.audit.decisions) + 1:04d}"
+            e = self.ledger.post(date=date, lines=lines, reason=reason, refs=[*refs, f"decision:{did}"], by=by, at=at)
+        except LedgerError as ex:
+            d = self._d(at, "manual_journal", subj, "denied", f"the ledger refused {self.people[by].name}'s entry: {ex.message}", rule="close.period", codes=(ex.code,),
+                        evidence=[{"type": "person", "id": by, "detail": "attempted by"}])
+            return Outcome(False, "denied", [d], {"code": ex.code})
+        d = self._d(at, "manual_journal", subj, "posted", f"{self.people[by].name} posted {e.id}: {reason}", rule="close.period", actor={"kind": "person", "id": by},
+                    evidence=[{"type": "journal_entry", "id": e.id, "detail": e.period}], codes=("manual",))
+        return Outcome(True, "posted", [d], {"entry": e.to_dict()})
 
     # ----- period close -----
     def close_period(self, period: str, *, by: str, at: str) -> Outcome:

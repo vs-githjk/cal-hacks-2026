@@ -163,6 +163,8 @@ class Company:
         f |= {f"vendor_bank_verified:{v.id}:{str(v.bank_verified).lower()}" for v in self.vendors.values()}
         for v, bal in self.ledger.party_balances("2100").items():
             f.add(f"accrual_open:{v}:{bal}")
+        for v, bal in self.ledger.party_balances("1300").items():
+            f.add(f"vendor_credit:{v}:{bal}")
         f |= {f"payment_corrected:{p['id']}" for p in self.payments.values() if p.get("bank_corrected")}
         f |= {f"po_approved_by:{p['id']}:{a['by']}" for p in self.pos.values() for a in p["approvals"]}
         return f
