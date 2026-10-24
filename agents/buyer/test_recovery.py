@@ -4,6 +4,7 @@ import importlib
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -329,6 +330,35 @@ def test_trusted_individual_output_uses_exemption_reason(buyer):
         cards_json=json.dumps([card()]))))
     assert 'CRS: exempt - Trusted individual seller; CRS check exempt.' in ctx.owner_text()
     assert 'Approved synthetic representative profile is unavailable' not in ctx.owner_text()
+
+
+def test_no_crs_config_notifies_once_and_labels_rows_unchecked(buyer, monkeypatch):
+    monkeypatch.delenv('CRS_API_KEY', raising=False)
+    monkeypatch.delenv('CRS_TEST_IDENTITIES_PATH', raising=False)
+    importlib.reload(crs)
+    profile_path = Path(__file__).with_name('missing-crs-profiles-test.json')
+    cache_path = Path(__file__).with_name('missing-crs-cache-test.json')
+    monkeypatch.setattr(crs, '_paths', lambda: (profile_path, cache_path))
+    requests = []
+
+    def no_network(*args, **kwargs):
+        requests.append((args, kwargs))
+        raise AssertionError('CRS must not call the provider without configuration')
+
+    monkeypatch.setattr(crs, 'urlopen', no_network)
+    checks = asyncio.run(crs.check_sellers(datetime.now(timezone.utc)))
+    assert checks == {}
+    assert requests == []
+
+    buyer.ROUND.update(phase='advice', seller_checks=checks, cards={})
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    text = ctx.owner_text()
+    assert text.count('CRS not configured') == 1
+    assert 'CRS: not configured' in text
+    assert 'CRS: exempt' not in text
+    assert not buyer.ROUND.get('order')
 
 
 def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer, monkeypatch):

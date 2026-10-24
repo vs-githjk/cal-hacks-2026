@@ -26,6 +26,7 @@ from logic import decide, make_order, sealed
 
 ADVICE_TIMEOUT_S = 15
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE
+CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
 SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
@@ -335,6 +336,10 @@ async def conclude(ctx: Context, reviewed: bool):
     ROUND["phase"] = "decided"
     out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
     now_utc = datetime.now(timezone.utc)
+    crs_not_configured = _crs_not_configured(ROUND.get("seller_checks", {}))
+    if crs_not_configured and not ROUND.get("crs_notice_sent"):
+        ROUND["crs_notice_sent"] = True
+        await tell_owner(ctx, CRS_NOT_CONFIGURED_NOTICE)
     eligible_suppliers = {b["supplier_id"] for b in bids
                           if crs.eligible(b["supplier_id"], ROUND.get("seller_checks", {}).get(b["supplier_id"]), now_utc)}
     for n, b in enumerate(bids, 1):
@@ -343,13 +348,17 @@ async def conclude(ctx: Context, reviewed: bool):
         out.append(f"{n}. {b['persona']}: ${b['total_landed_price']:.2f} [{b['source']}]")
         check = ROUND.get("seller_checks", {}).get(b["supplier_id"], {})
         signal = check.get("signal")
-        reason = ("Trusted individual seller; CRS check exempt."
+        reason = ("Seller eligibility was not verified."
+                  if crs_not_configured
+                  else "Trusted individual seller; CRS check exempt."
                   if b["supplier_id"] in eligible_suppliers and not signal
                   else check.get("reason") or crs.REASON_UNAVAILABLE)
         if signal:
             status = f"CRS: {signal['stability']} - {reason}"
             if signal["source"] == "recorded":
                 status += f" (cached from CRS {signal['checked_at']})"
+        elif crs_not_configured:
+            status = f"CRS: not configured - {reason}"
         else:
             status = f"CRS: {'exempt' if b['supplier_id'] in eligible_suppliers else 'ineligible'} - {reason}"
         out.append(f"   {status}")
@@ -383,6 +392,25 @@ async def conclude(ctx: Context, reviewed: bool):
         out.append(f"Your allowance is ${ALLOWANCE:.0f}, so this needs your call. Reply APPROVE {best} to order bid #{best} "
                    f"(quote good for {hunt.QUOTE_TTL_S // 60} minutes).")
     await tell_owner(ctx, "\n".join(out))
+
+
+def _crs_not_configured(checks: dict | None) -> bool:
+    """Recognize absent CRS configuration only with an empty or clean result."""
+    if not isinstance(checks, dict):
+        return False
+    configured = getattr(crs, "_configured", None)
+    configured = configured() if callable(configured) else None
+    profiles = getattr(crs, "_profiles", None)
+    profiles = profiles() if callable(profiles) else None
+    if configured is not False and profiles not in (None, {}):
+        return False
+    if not checks:
+        return True
+    project = getattr(crs, "to_crs_check", None)
+    if not callable(project):
+        return False
+    return all(project(supplier_id, check).get("origin") == "NOT_CONFIGURED"
+               for supplier_id, check in checks.items())
 
 
 async def approve(ctx: Context, n: int):
