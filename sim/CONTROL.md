@@ -7,7 +7,7 @@ from its own loss reports (banded gap, never a rival's price), clamped at its fl
 Known asymmetry, stated up front: the learner also carries an open-box line and the control does not, so builders who
 accept open box can favor the learner for reasons other than learning. The runner reports an untrained-learner
 column (price_step 0) so the lift from learning alone is visible.
-Neither seller's definition may change after a run is recorded in sim/RESULTS.md.
+Neither seller's definition may change after a run is recorded in a sim/RESULTS-<tag>.md.
 
 ## Second control (added Fri Oct 23 23:30 PDT for issue #34, written before the rerun)
 **Median Market PC** (`median-market-pc`, SIM, defined in `sim/wind_tunnel.py`, not in demo/): one new line, list $1,248.50,
