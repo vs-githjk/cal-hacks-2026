@@ -8,7 +8,7 @@ import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, cl
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
-export function GoalCard({ goal }: { goal: GoalView }) {
+export function GoalCard({ goal, readOnlyCheckout = false }: { goal: GoalView; readOnlyCheckout?: boolean }) {
   const a = goal.allowance;
   return (
     <Card>
@@ -27,7 +27,7 @@ export function GoalCard({ goal }: { goal: GoalView }) {
         <Stat
           label="Allowance per buy"
           value={a ? money(a.perPurchase) : money(0)}
-          sub={a && a.perPurchase > 0 ? `${money(a.spent)} of ${money(a.periodLimit)} this ${a.period}, step ${a.ladderStep}` : "every buy calls you first"}
+          sub={a && a.perPurchase > 0 ? `${money(a.spent)} of ${money(a.periodLimit)} this ${a.period}, step ${a.ladderStep}` : readOnlyCheckout ? "no automatic allowance recorded" : "every buy calls you first"}
         />
         <Stat label="Deadline" value={goal.deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} />
         <Stat label="Reserved" value={money(goal.reserved)} sub={goal.state === "DONE" ? "released after payment" : undefined} />
@@ -197,7 +197,8 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
   );
 }
 
-export function PurchaseCard({ purchase }: { purchase: PurchaseStatusView }) {
+export function PurchaseCard({ purchase }: { purchase: PurchaseStatusView | null }) {
+  if (!purchase) return <Card stripe="amber"><Label>Checkout status</Label><p className="text-muted">No recorded mandate or payment is currently available.</p></Card>;
   const labels: Record<PurchaseStatusView["state"], string> = {
     pending_approval: "Approval pending", approval_recorded: "Approval recorded", payment_recorded: "Payment recorded",
     settled: "Purchase settled", expired: "Mandate expired", retired: "Mandate retired", inconsistent: "Payment record needs review",
@@ -317,7 +318,7 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
           <div className="text-[13px] text-muted">{receipt.paymentMethod} · {receipt.chargeId}</div><div className="text-[13px] text-muted">{clock(receipt.paidAt)}</div>
         </dl>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
-          <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]"><Code>{receipt.mandateId}</Code> · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
+          <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]"><Code>{receipt.mandateId}</Code> · expires {clock(receipt.mandateExpires)} · mandate origin {receipt.mandateOrigin}</dd>
           <dt className="text-muted">Hash</dt><dd><Code>{receipt.mandateHash.slice(0, 8)}…{receipt.mandateHash.slice(-6)}</Code></dd>
           {receipt.signature && <><dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd></>}
           {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <Verdict kind="veto">Refused</Verdict> : "Not refused"}</dd></>}
