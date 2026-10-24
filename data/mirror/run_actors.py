@@ -73,11 +73,12 @@ def run(store, second=False):
 
 
 def renormalize():
+    """Re-read each store's latest real run (one with a run_id). A SKIPPED or ERROR record never replaces a real run,
+    and every record stays in the log."""
     log = HERE / "runs.json"
-    latest = {r["store"]: r for r in json.loads(log.read_text()) if not r.get("family")}
+    records = json.loads(log.read_text())
+    latest = {r["store"]: r for r in records if not r.get("family") and r.get("run_id")}
     for r in latest.values():
-        if not r.get("run_id"):
-            continue
         run = call("GET", f"/actor-runs/{r['run_id']}")["data"]
         items = call("GET", f"/datasets/{run['defaultDatasetId']}/items?clean=1&limit=10")
         cards = [to_spec_card(r["store"], it, r["snapshot_id"], run["finishedAt"]) for it in items]
@@ -85,9 +86,13 @@ def renormalize():
             (HERE / "snapshots" / f"{r['snapshot_id']}.json").write_text(json.dumps(cards, indent=1))
         r.update(cost_usd=round(run.get("usageTotalUsd") or 0, 5), items=len(items), finished_at=run["finishedAt"],
                  fields=sorted(k for k in FIELDS if any(first(it, FIELDS[k]) not in (None, "") for it in items)))
-    others = [r for r in json.loads(log.read_text()) if r.get("family")]
-    log.write_text(json.dumps(list(latest.values()) + others, indent=1))
+    log.write_text(json.dumps(records, indent=1))
     return list(latest.values())
+
+
+def describe(r):
+    """One CLI line per record: the skip or error reason when there is one, else the status."""
+    return f"{r['store']} {r.get('error') or r['status']} {r.get('items')} {r.get('cost_usd')} {r.get('fields')}"
 
 
 if __name__ == "__main__":
@@ -105,4 +110,4 @@ if __name__ == "__main__":
     old = json.loads(log.read_text()) if log.exists() else []
     log.write_text(json.dumps(old + results, indent=1))
     for r in results:
-        print(r["store"], r["status"], r.get("items"), r.get("cost_usd"), r.get("fields"))
+        print(describe(r))
