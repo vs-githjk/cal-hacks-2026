@@ -79,7 +79,11 @@ def run_bounded(coro):
 
 
 def card(**updates):
-    return dict(need_id='need-1', bid_id='bid-1', warnings=[], recommendation='buy', wait_until='') | updates
+    return dict(need_id='need-1', bid_id='bid-1', warnings=[], recommendation='buy', wait_until='',
+                claim_checks=[], rule_id='advocate.ok', reason='No problems found in the checks',
+                source_url='https://example.com/advocate',
+                call_reason=dict(rule_id='advocate.ok', summary='No problems found in the checks',
+                                 source_url='https://example.com/advocate')) | updates
 
 
 @pytest.mark.parametrize('payload', ['{', '[]', '{}', '[1]', json.dumps([card(need_id='old')]),
