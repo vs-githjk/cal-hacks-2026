@@ -30,14 +30,19 @@ UP = [{"service": "market-stdb", "label": "UP"}, {"service": "web", "label": "UP
 class Fake:
     """A client that records every reducer call and prints it, so the cue / call order shows in the console text."""
 
-    def __init__(self, log, name, fail=None):
-        self.log, self.name, self.fail = log, name, fail or {}
+    def __init__(self, log, name, fail=None, rows=None):
+        self.log, self.name, self.fail, self.rows = log, name, fail or {}, rows
 
     def call(self, reducer, **args):
         self.log.append((self.name, reducer, args))
         print(f"CALL {self.name} {reducer}")
         if reducer in self.fail:
             raise RuntimeError(self.fail[reducer])
+
+    def sql(self, query):
+        if self.rows is None:
+            raise RuntimeError("no round_result in this fake")
+        return self.rows
 
 
 class Time:
@@ -54,17 +59,19 @@ class Time:
         return self.t
 
 
-def go(argv, *, rows=UP, fail=None, inputs=None, log=None):
+def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows=None, on_ask=None):
     log = [] if log is None else log
     clk = Time()
     asked = []
 
     def make_clients(args, steps, out):
         names = ["buyer", "referee"] + sorted({s.actor for s in steps if s.actor.startswith("seller:")})
-        return {n: Fake(log, n, fail) for n in names}
+        return {n: Fake(log, n, fail, result_rows) for n in names}
 
     def ask(prompt):
         asked.append(prompt)
+        if on_ask is not None:
+            on_ask(prompt)
         if inputs is None:
             return ""
         if not inputs:
@@ -310,3 +317,107 @@ def test_the_stage_source_has_no_dashes_or_attribution():
     from pathlib import Path
     text = Path(stage.__file__).read_text(encoding="utf-8")
     assert "\u2014" not in text and "\u2013" not in text and "Co-Authored" not in text
+
+
+# ---------------------------------------------------------------- the mandate is made when beat 4 starts
+
+class SkewedClock:
+    """pay.voice_cartesia and pay.mandate read the wall clock through their own `datetime`; this moves both together."""
+
+    def __init__(self, monkeypatch):
+        import datetime as dt
+        from pay import mandate as pm, voice_cartesia as vc
+        skew = self
+        skew.minutes = 0
+
+        class DT(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return dt.datetime.now(tz) + dt.timedelta(minutes=skew.minutes)
+
+        monkeypatch.setattr(vc, "datetime", DT)
+        monkeypatch.setattr(pm, "datetime", DT)
+
+
+def test_live_call_mandate_is_made_at_beat_four_so_a_long_wait_does_not_expire_it(monkeypatch, capsys):
+    from pay import voice_cartesia as vc
+    clock = SkewedClock(monkeypatch)
+
+    class Client:
+        approval_call_to = "+15550000000"
+
+    dialled = []
+
+    def blocked_dial(client, variables):
+        dialled.append(variables)
+        raise vc.CartesiaError("test: dial blocked")      # reaching this line means the gate let the call through
+
+    monkeypatch.setattr(vc.CartesiaClient, "from_env", classmethod(lambda cls, env: Client()))
+    monkeypatch.setattr(vc, "place_call", blocked_dial)
+    judged = []
+    real = bridge.make_live_approver
+
+    def spy(mandate, *a, **k):
+        judged.append(mandate)
+        return real(mandate, *a, **k)
+
+    monkeypatch.setattr(bridge, "make_live_approver", spy)
+
+    def wait_at_beat_one(prompt):
+        if "beat 1" in prompt:
+            clock.minutes = 11        # judges walk up, the recorder is being set up: longer than any mandate lives
+
+    code, log, *_ = go(["--live-call", "--step-delay", "0"], on_ask=wait_at_beat_one)
+    out = capsys.readouterr().out
+    assert len(dialled) == 1, "the gate refused before dialling"
+    assert "(expired)" not in out and "call_failed" in out and code == 1       # the blocked dial is the only denial
+    created = next(a for _, r, a in log if r == "create_mandate")
+    assert judged[-1]["hash"] == created["hash"]                             # the gate judged the mandate the market got
+    assert "record_approval" not in reducers(log) and "record_payment" not in reducers(log)
+
+
+def test_live_call_startup_does_not_make_the_call_mandate(monkeypatch):
+    made = []
+    real = bridge.fresh_pending_mandate
+    monkeypatch.setattr(bridge, "fresh_pending_mandate", lambda m: made.append(1) or real(m))
+    patch_live(monkeypatch, Approver(True))
+    asked_when = []
+    go(["--live-call", "--step-delay", "0"], on_ask=lambda prompt: asked_when.append(len(made)))
+    assert asked_when and set(asked_when[:3]) == {0}      # nothing made while the operator is still at the beat 1 to 3 prompts
+    assert len(made) == 1                                 # exactly one, at beat 4
+
+
+# ---------------------------------------------------------------- round 1 read-back
+
+def result_rows(run, first_seller_id):
+    win = run["beats"]["2"]["winner"]["seller_id"]
+    return [("rr-1", "round-1", "b1", first_seller_id, "Winner Co", 1, 124999, []),
+            ("rr-2", "round-1", "b2", "other-2" if first_seller_id == win else win, "Second Co", 2, 130000, [])]
+
+
+def test_beat_two_reads_the_market_ranking_back_and_says_when_it_agrees(run, capsys):
+    win = run["beats"]["2"]["winner"]["seller_id"]
+    code, *_ = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, win))
+    out = capsys.readouterr().out
+    assert code == 0 and "market ranking (round 1)" in out and "market and demo agree" in out and "DIVERGENCE" not in out
+
+
+def test_a_different_market_number_one_prints_divergence_before_the_beat_four_cue(run, capsys):
+    code, log, clk, asked = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, "someone-else"))
+    out = capsys.readouterr().out
+    assert code == 0
+    assert out.index("DIVERGENCE") < out.index("BEAT 4 of 5")
+    assert out.index("BEAT 2 of 5") < out.index("DIVERGENCE") < out.index("BEAT 3 of 5")
+    assert any("not the demo's winner" in p for p in asked)         # --auto pauses once so the operator cannot miss it
+
+
+def test_agreement_does_not_add_a_pause(run):
+    win = run["beats"]["2"]["winner"]["seller_id"]
+    _, _, _, asked = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, win))
+    assert asked == []
+
+
+def test_an_unreadable_market_ranking_is_one_note_not_a_stop(capsys):
+    code, *_ = go(["--auto", "--step-delay", "0"])     # the fake has no round_result
+    out = capsys.readouterr().out
+    assert code == 0 and "could not read round_result back (RuntimeError)" in out

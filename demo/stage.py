@@ -145,10 +145,29 @@ def announce(out: Narrator, n: int, total: int, live_call: bool) -> None:
     out.note("=" * 70)
 
 
+def report_round_one(clients: dict[str, Any], run: dict, out: Narrator) -> bool:
+    """After round 1 closes: read the market's own ranking back (the bridge does the same after its run) and print it, so a
+    different #1 shows as DIVERGENCE before the narrator reads the beat 4 cue. Returns True on a divergence. Reading back is a
+    courtesy: a failure is one note, not a stop."""
+    try:
+        rows = clients["referee"].sql("SELECT * FROM round_result")
+        lines = bridge.compare_to_db(rows, run)
+    except Exception as e:
+        out.note(f"could not read round_result back ({type(e).__name__})")
+        return False
+    for line in lines:
+        out.note(line)
+    return any(line.startswith("DIVERGENCE") for line in lines)
+
+
 def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, delays: dict[int, float], step_delay: float,
          approver: Optional[Callable[[Step], dict]], live_call: bool, out: Narrator, say: Callable[[Step], None],
-         input_fn: Callable[[str], str], sleep: Callable[[float], None], clock: Callable[[], float]) -> int:
-    """Cue, then Enter (or the reading delay), then the beat. Returns 0 when every beat played, 1 when stopped."""
+         input_fn: Callable[[str], str], sleep: Callable[[float], None], clock: Callable[[], float],
+         run: Optional[dict] = None,
+         live_refresh: Optional[Callable[[], tuple[list[Step], Callable[[Step], dict]]]] = None) -> int:
+    """Cue, then Enter (or the reading delay), then the beat. Returns 0 when every beat played, 1 when stopped.
+    `live_refresh` (with --live-call) returns beat 4's steps and approver for a mandate made when beat 4 starts: a mandate lives
+    10 minutes, and the wait at the beat 1 to 3 prompts must not use it up. `run` turns on the round 1 read-back after beat 2."""
     total = max(beats)
     for n in sorted(beats):
         announce(out, n, total, live_call)
@@ -164,6 +183,9 @@ def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, d
             if answer.strip().lower() in ("q", "quit"):
                 out.note(f"STOPPED before beat {n} (q)")
                 return 1
+        if n == 4 and live_refresh is not None:
+            fresh_steps, approver = live_refresh()
+            beats = {**beats, 4: fresh_steps}
         outcomes = bridge.execute(beats[n], clients, delay=step_delay, say=say, sleep=sleep, clock=clock,
                                   approver=approver, note=out.note)
         if outcomes and not outcomes[-1]["approved"]:
@@ -171,6 +193,11 @@ def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, d
             out.note(f"STOPPED at beat {n}: the approval call did not approve ({outcomes[-1]['reason']}). Nothing was charged and "
                      "no payment is recorded. Run again to retake.")
             return 1
+        if n == 2 and run is not None and report_round_one(clients, run, out) and auto:
+            try:
+                input_fn("  The market's #1 is not the demo's winner. Press Enter to continue anyway (Ctrl-C stops): ")
+            except EOFError:
+                pass
     return 0
 
 
@@ -207,8 +234,7 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
     say = make_say(out)
 
     run = run_all(say=Narrator(False))
-    live_mandate = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"]) if args.live_call else None
-    steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, mandate=live_mandate, live_call=args.live_call)
+    steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, live_call=args.live_call)
     beats = assign_beats(steps)
 
     out.note("Tech Bazaar stage runner: five beats, real lane code, existing SpacetimeDB reducers")
@@ -239,10 +265,16 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
     else:
         out.note(f"services: {sum(r.get('label') == 'UP' for r in rows)}/{len(rows)} up")
 
-    approver, note = None, ""
+    approver, live_refresh = None, None
     if args.live_call:
-        approver, note = bridge.live_approver_for(args, run, live_mandate, out)
+        # Startup only says where the call would go. The mandate the call judges is made when beat 4 starts (see play).
+        approver, note = bridge.live_approver_for(args, run, run["beats"]["4"]["mandate"], out)
         out.note(note)
+
+        def live_refresh() -> tuple[list[Step], Callable[[Step], dict]]:
+            fresh = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"])
+            new_steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, mandate=fresh, live_call=True)
+            return assign_beats(new_steps)[4], bridge.live_approver_for(args, run, fresh, out)[0]
     out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s local tech-bazaar \"SELECT code FROM pair_code\") and open /market before you start.")
 
     try:
@@ -251,7 +283,8 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         clients["referee"].call("reset_demo")
         sleep(1)
         code = play(beats, clients, auto=args.auto, delays=delays, step_delay=args.step_delay, approver=approver,
-                    live_call=args.live_call, out=out, say=say, input_fn=input_fn, sleep=sleep, clock=clock)
+                    live_call=args.live_call, out=out, say=say, input_fn=input_fn, sleep=sleep, clock=clock,
+                    run=run, live_refresh=live_refresh)
     except KeyboardInterrupt:
         out.blank()
         out.note("STOPPED (Ctrl-C). Nothing more will be written; run again to reset and retake.")
