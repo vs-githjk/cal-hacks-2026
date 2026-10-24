@@ -68,6 +68,10 @@ function beginReview() {
   }
 }
 
+const setTestBidMeta = (seller: Auth, bidId: string, listingId: string, provenance: Record<string, string>) => run(seller, (ctx) => m.setBidLineMeta(ctx, {
+  bidId, lineMetaJson: JSON.stringify([{ lineIndex: 0, shipping: 0, listingId, listingHash: 'a'.repeat(64), source: 'fixture', snapshotId: 'snap', provenance, attrs: {} }]),
+}));
+
 const candidate = (bidId: string) => m.reviewCandidatesView(h.viewContext(REF) as any).find((row) => row.bidId === bidId)!;
 
 function attachOrdinaryReviewChecks() {
@@ -238,6 +242,37 @@ describe('same-seller review exclusions', () => {
       ['kept-bid', 1], ['excluded-bid', 0],
     ]);
     expect([...h.db.roundResult.iter()].find((row) => row.bidId === 'excluded-bid')!.reasons.join(' ')).toMatch(/same.seller/i);
+  });
+
+  it('creates a single bounded report from the post-exclusion ranking and selected SIM listing provenance', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('kept-bid', [line(700)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('excluded-bid', [line(735)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('loss-bid', [line(770)])));
+    setTestBidMeta(A, 'kept-bid', 'SIM:seller_a:sku', { origin: 'SIM', listing_url: 'https://shop.example/winner' });
+    setTestBidMeta(B, 'excluded-bid', 'SIM:seller_b:sku', { origin: 'SIM', listing_url: 'https://shop.example/excluded' });
+    setTestBidMeta(C, 'loss-bid', 'SIM:seller_c:sku', { origin: 'SIM', listing_url: 'https://shop.example/loss?q=public#listing' });
+    beginReview();
+    attachOrdinaryReviewChecks();
+    attachSameSeller('kept-bid', 'excluded-bid');
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+
+    expect([...h.db.lossReport.iter()]).toMatchObject([{
+      id: 'loss:round-1:seller-c', roundId: 'round-1', sellerId: 'seller-c', won: false,
+      gapBand: 'within10', reason: 'price', sourceUrl: 'https://shop.example/loss?q=public#listing', origin: 'SIM',
+    }]);
+    expect(JSON.stringify([...h.db.lossReport.iter()], (_, value) => typeof value === 'bigint' ? String(value) : value)).not.toMatch(/700|735|770/);
+  });
+
+  it('uses legacy listingId evidence only when selected provenance has no listing_url field', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('winner', [line(700)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('legacy-loser', [line(735)])));
+    setTestBidMeta(A, 'winner', 'SIM:seller_a:sku', { origin: 'SIM', listing_url: 'https://shop.example/winner' });
+    setTestBidMeta(B, 'legacy-loser', 'https://shop.example/legacy', { origin: 'SIM' });
+    closeReadyRound();
+    expect([...h.db.lossReport.iter()]).toMatchObject([{ sellerId: 'seller-b', sourceUrl: 'https://shop.example/legacy' }]);
   });
 
   it('reopens review and marks stale proofs when a verified-count tie changes the winner order', () => {
