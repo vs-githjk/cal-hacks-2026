@@ -121,7 +121,14 @@ def test_a_request_over_the_char_or_body_cap_is_too_large_not_shield_blocked(tex
 def test_two_threads_with_the_same_mandate_place_one_call():
     import threading
 
-    m, seen, results = mandate(), set(), []
+    import time
+
+    class SlowSet(set):   # widens the check-then-add window, so the test fails without the lock
+        def __contains__(self, item):
+            time.sleep(0.05)
+            return super().__contains__(item)
+
+    m, seen, results = mandate(), SlowSet(), []
     clients = [FakeCartesia(lambda code: f"{code} approve") for _ in range(8)]
     barrier = threading.Barrier(len(clients))
 
