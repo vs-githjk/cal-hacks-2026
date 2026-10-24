@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from pay.mandate import (
+    format_ts,
     HASH_FIELDS,
     MandateError,
     can_charge,
@@ -337,3 +338,27 @@ def test_buyer_id_expectation():
     assert guard(m, buyer_id="buyer-1").ok
     r = guard(m, buyer_id="buyer-2")
     assert not r.ok and r.reason == "buyer_mismatch"
+
+
+# ---------- fix 5: expires_at is capped against the clock, not only against created_at ----------
+
+def _long_lived(created_offset_min=55, ttl_min=60):
+    """A mandate whose expires_at is an hour out, with created_at edited (it is not hashed) so the
+    created-to-expires gap looks like 5 minutes."""
+    m = make()
+    m["expires_at"] = format_ts(NOW + timedelta(minutes=ttl_min))
+    m["created_at"] = format_ts(NOW + timedelta(minutes=created_offset_min))
+    m["hash"] = mandate_hash(m)
+    return approved(m)
+
+
+def test_editing_created_at_cannot_bypass_the_ttl_cap():
+    m = _long_lived()
+    assert verify(m, NOW).reason == "ttl_too_long"
+    assert guard(m, NOW).reason == "ttl_too_long"
+
+
+def test_expires_at_exactly_ten_minutes_out_is_allowed_and_one_second_more_is_not():
+    m = make()  # created NOW, expires NOW + 10 min
+    assert verify(m, NOW).ok
+    assert verify(m, NOW - timedelta(seconds=1)).reason == "ttl_too_long"

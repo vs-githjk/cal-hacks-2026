@@ -26,7 +26,8 @@ mark_used(m, store=store, deal_id="deal-A", amount=1119.00, payee="seller-x")   
 - `mandate_hash(m)` is sha256 hex over canonical JSON (sorted keys, no spaces) of `deal_id, amount, currency, payee,
   tier_price, nonce, expires_at`. Other fields (status, approval_id, buyer_id, tap_signature) are not hashed.
   A whole-number float and an int hash the same (1119.0 and 1119).
-- `new_mandate` draws a random 128-bit nonce and sets `expires_at` at most 10 minutes out (default 10).
+- `new_mandate` draws a random 128-bit nonce and sets `expires_at` at most 10 minutes out (default 10). Checks cap both `expires_at - created_at` and
+  `expires_at - now` at 10 minutes (`ttl_too_long`), because `created_at` is not hashed.
 - `can_charge` refuses unless the mandate is valid, unexpired, status `approved`, has a non-blank `approval_id`,
   matches the expected deal, amount and payee (keyword-required on `can_charge` and `mark_used`, as is `store`;
   `buyer_id` is optional), and its nonce is unused. Pass it only a mandate loaded from the server's own approval

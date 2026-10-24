@@ -220,8 +220,9 @@ def _positive_amount(v: Any) -> Optional[Any]:
     return n if n is not None and n > 0 else None
 
 
-def _integrity(m: Mapping[str, Any]) -> Optional[Verdict]:
-    """Schema, hash and ttl cap: the checks that do not depend on the clock or status."""
+def _integrity(m: Mapping[str, Any], now: datetime) -> Optional[Verdict]:
+    """Schema, amount, hash and ttl cap. created_at is not hashed, so the cap is checked twice: expires_at
+    minus created_at, and expires_at against the clock (an edited created_at cannot stretch the quote)."""
     errors = validate_schema(m)
     if errors:
         return _no("schema_invalid", errors[0])
@@ -235,6 +236,8 @@ def _integrity(m: Mapping[str, Any]) -> Optional[Verdict]:
         return _no("schema_invalid", str(e))
     if expires - created > timedelta(seconds=MAX_TTL_SECONDS):
         return _no("ttl_too_long", "expires_at is more than 10 minutes after created_at")
+    if expires - now > timedelta(seconds=MAX_TTL_SECONDS):
+        return _no("ttl_too_long", "expires_at is more than 10 minutes from now")
     return None
 
 
@@ -252,10 +255,11 @@ def _status_and_expiry(m: Mapping[str, Any], now: datetime) -> Optional[Verdict]
 def verify(m: Mapping[str, Any], now: Optional[datetime] = None) -> Verdict:
     """Valid if the schema and hash hold, the ttl cap holds, and it is unexpired, unused and not denied.
     Says nothing about approval: use `can_charge` before moving money."""
-    bad = _integrity(m)
+    now = _now(now)
+    bad = _integrity(m, now)
     if bad is not None:
         return bad
-    bad = _status_and_expiry(m, _now(now))
+    bad = _status_and_expiry(m, now)
     return bad if bad is not None else _ok()
 
 
@@ -291,13 +295,14 @@ def can_charge(
 
     `m` must only be a mandate loaded from the server's own approval row. The hash does not cover
     `status` or `approval_id`, so a mandate taken from a request body proves nothing about approval."""
-    bad = _integrity(m)
+    now = _now(now)
+    bad = _integrity(m, now)
     if bad is not None:
         return bad
     bad = _expectations(m, deal_id, amount, payee, buyer_id)
     if bad is not None:
         return bad
-    bad = _status_and_expiry(m, _now(now))
+    bad = _status_and_expiry(m, now)
     if bad is not None:
         return bad
     if m["status"] != "approved":
