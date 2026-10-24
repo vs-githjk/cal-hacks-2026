@@ -1,0 +1,257 @@
+import asyncio
+import hashlib
+import json
+import shutil
+import uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import crs
+import pytest
+
+
+NOW = datetime(2026, 10, 24, 8, tzinfo=timezone.utc)
+
+
+@pytest.fixture
+def tmp_path():
+    cache = Path(__file__).resolve().parents[1] / ".cache"
+    cache.mkdir(exist_ok=True)
+    path = cache / f"crs-test-{uuid.uuid4().hex}"
+    path.mkdir()
+    try:
+        yield path
+    finally:
+        if path.resolve().parent == cache.resolve():
+            shutil.rmtree(path)
+
+
+def response(codes=()):
+    return {"addOnProducts": [{"idManagerVerification": {"messages": [{"code": c} for c in codes]}}]}
+
+
+def test_normalize_bands_and_rejects_bad_responses():
+    assert crs.normalize("seller_1", response(), NOW.isoformat())["stability"] == "verified_stable"
+    assert crs.normalize("seller_1", response(["2401"]), NOW.isoformat())["stability"] == "caution"
+    for codes in (["2101"], ["2401", "2101"], ["9999"]):
+        assert crs.normalize("seller_1", response(codes), NOW.isoformat())["stability"] == "not_verified"
+    for malformed in ({}, {"addOnProducts": [{"idManagerVerification": {}}]},
+                      {"addOnProducts": [{"idManagerVerification": {"messages": ""}}]}):
+        assert crs.normalize("seller_1", malformed, NOW.isoformat())["stability"] == "not_verified"
+
+
+def test_normalize_has_only_contract_fields_and_no_provider_data():
+    raw = response()
+    raw["privateCanary"] = "secret-name-123"
+    signal = crs.normalize("seller_1", raw, NOW.isoformat())
+    assert set(signal) == {"supplier_id", "stability", "checked_at", "source"}
+    assert "secret-name-123" not in json.dumps(signal)
+    assert crs.normalize("seller_1", {**response(), "errorMessages": ["private"]}, NOW.isoformat())["stability"] == "not_verified"
+    assert crs.normalize("seller_1", {**response(), "messages": ["private"]}, NOW.isoformat())["stability"] == "not_verified"
+
+
+def setup_profile(monkeypatch, tmp_path, *, seller_type="business", consent=True, persona="official-a", body=None):
+    body = body or {"firstName": "Synthetic"}
+    digest = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    profile_path = tmp_path / "private.json"
+    profile_path.write_text(json.dumps({"sellers": {"seller_1": {
+        "seller_type": seller_type, "consent": consent, "persona_ref": persona,
+        "request": body,
+    }}}), encoding="utf-8")
+    monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(profile_path))
+    monkeypatch.setattr(crs, "_paths", lambda: (profile_path, tmp_path / "cache.json"))
+    monkeypatch.setattr(crs, "APPROVED_PERSONAS", {"official-a": digest})
+    return body
+
+
+def test_unapproved_or_unconsented_profiles_make_no_request(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setenv("CRS_API_KEY", "test-token")
+    monkeypatch.setattr(crs, "_request", lambda *args: calls.append(args))
+    body = {"firstName": "Synthetic"}
+    for values in ({"consent": False}, {"seller_type": "individual"}, {"persona": "unknown"}):
+        opts = {"seller_type": "business", "consent": True, "persona": "official-a", "body": body}
+        opts.update(values)
+        setup_profile(monkeypatch, tmp_path, **opts)
+        asyncio.run(crs.check_sellers(NOW))
+    setup_profile(monkeypatch, tmp_path, body=body)
+    profile_path = tmp_path / "private.json"
+    profile = json.loads(profile_path.read_text())
+    profile["sellers"]["seller_1"]["request"] = {"firstName": "changed"}
+    profile_path.write_text(json.dumps(profile))
+    asyncio.run(crs.check_sellers(NOW))
+    assert calls == []
+
+
+def test_malformed_profile_file_and_unhashable_persona_fail_closed(monkeypatch, tmp_path):
+    path = tmp_path / "private.json"
+    path.write_text("[]")
+    monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(path))
+    monkeypatch.setattr(crs, "_paths", lambda: (path, tmp_path / "cache.json"))
+    assert asyncio.run(crs.check_sellers(NOW)) == {}
+    setup_profile(monkeypatch, tmp_path)
+    profile = json.loads(path.read_text())
+    profile["sellers"]["seller_1"]["persona_ref"] = []
+    path.write_text(json.dumps(profile))
+    assert asyncio.run(crs.check_sellers(NOW))["seller_1"]["signal"] is None
+
+
+def test_missing_token_returns_safe_unavailable_without_request(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.delenv("CRS_API_KEY", raising=False)
+    monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(AssertionError("called")))
+    result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert result == {"signal": None, "reason": crs.REASON_UNAVAILABLE}
+    assert not crs.eligible("seller_1", result, NOW)
+
+
+def test_request_uses_fixed_sandbox_endpoint_and_requires_http_200(monkeypatch):
+    class Reply:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(response()).encode()
+
+    calls = []
+    def opened(req, timeout):
+        calls.append((req.full_url, req.get_method(), req.get_header("Authorization"), timeout))
+        return Reply()
+
+    monkeypatch.setattr(crs, "urlopen", opened)
+    assert crs._request({"firstName": "Synthetic"}, "token") == response()
+    assert calls == [(crs.ENDPOINT, "POST", "Bearer token", 4)]
+
+    class ErrorReply(Reply):
+        status = 201
+
+    monkeypatch.setattr(crs, "urlopen", lambda *args, **kwargs: ErrorReply())
+    with pytest.raises(ValueError):
+        crs._request({"firstName": "Synthetic"}, "token")
+
+
+def test_live_response_and_cached_fallback_preserve_original_time(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_API_KEY", "private-token-canary")
+    monkeypatch.setattr(crs, "_request", lambda body, token: response())
+    fresh = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert fresh["signal"]["source"] == "sandbox"
+    assert crs.eligible("seller_1", fresh, NOW)
+    monkeypatch.delenv("CRS_API_KEY")
+    monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(OSError("private provider text")))
+    old = asyncio.run(crs.check_sellers(NOW + timedelta(hours=1)))["seller_1"]
+    assert old["signal"]["source"] == "recorded"
+    assert old["signal"]["checked_at"] == fresh["signal"]["checked_at"]
+    assert crs.eligible("seller_1", old, NOW + timedelta(hours=1))
+    assert "private-token-canary" not in json.dumps(old)
+    assert "private provider text" not in json.dumps(old)
+
+
+def test_invalid_cache_entries_never_grant_fallback(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.delenv("CRS_API_KEY", raising=False)
+    cache_path = tmp_path / "cache.json"
+    valid = {"persona_ref": "official-a", "signal": {
+        "supplier_id": "seller_1", "stability": "verified_stable",
+        "checked_at": NOW.isoformat(), "source": "sandbox"}, "reason": crs.REASON_VERIFIED}
+    variants = [None, "{broken", {**valid, "persona_ref": "official-b"},
+                {**valid, "signal": {**valid["signal"], "checked_at": (NOW - timedelta(hours=25)).isoformat()}},
+                {**valid, "signal": {**valid["signal"], "checked_at": (NOW + timedelta(seconds=1)).isoformat()}}]
+    for entry in variants:
+        cache_path.write_text("{bad" if entry == "{broken" else json.dumps({"seller_1": entry}) if entry else "{}")
+        result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+        assert result["signal"] is None
+
+
+def test_invalid_cache_is_never_eligible(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_API_KEY", "test-token")
+    monkeypatch.setattr(crs, "_request", lambda *args: response())
+    expired = asyncio.run(crs.check_sellers(NOW - timedelta(hours=25)))["seller_1"]
+    assert not crs.eligible("seller_1", expired, NOW)
+    future = asyncio.run(crs.check_sellers(NOW + timedelta(seconds=1)))["seller_1"]
+    assert not crs.eligible("seller_1", future, NOW)
+    fresh = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    fresh["signal"]["supplier_id"] = "seller_2"
+    assert not crs.eligible("seller_1", fresh, NOW)
+
+
+def test_simulated_fixture_never_grants_eligibility(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    signal = json.loads((Path(crs.__file__).parent / "fixtures" / "crs_signals.json").read_text())[0]
+    result = {"signal": signal, "reason": crs.REASON_VERIFIED}
+    assert not crs.eligible("seller_1", result, NOW)
+
+
+def test_eligibility_rejects_persona_remap(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_API_KEY", "test-token")
+    monkeypatch.setattr(crs, "_request", lambda *args: response())
+    check = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert crs.eligible("seller_1", check, NOW)
+    profile_path = tmp_path / "private.json"
+    profile = json.loads(profile_path.read_text())
+    second_body = {"firstName": "Another synthetic profile"}
+    second_digest = hashlib.sha256(json.dumps(second_body, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    monkeypatch.setattr(crs, "APPROVED_PERSONAS", {"official-a": crs._canonical_hash({"firstName": "Synthetic"}),
+                                                     "official-b": second_digest})
+    profile["sellers"]["seller_1"]["persona_ref"] = "official-b"
+    profile["sellers"]["seller_1"]["request"] = second_body
+    profile_path.write_text(json.dumps(profile))
+    assert not crs.eligible("seller_1", check, NOW)
+
+
+def test_trusted_individual_is_exempt_without_crs_call(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path, seller_type="individual")
+    monkeypatch.setenv("CRS_API_KEY", "test-token")
+    calls = []
+    monkeypatch.setattr(crs, "_request", lambda *args: calls.append(args))
+    result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert result["signal"] is None
+    assert crs.eligible("seller_1", result, NOW)
+    assert calls == []
+
+
+def test_failed_check_preserves_old_cache_but_fresh_adverse_replaces(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_API_KEY", "token")
+    monkeypatch.setattr(crs, "_request", lambda *args: response())
+    old = asyncio.run(crs.check_sellers(NOW))["seller_1"]["signal"]
+    cache_path = tmp_path / "cache.json"
+    monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(OSError("secret")))
+    asyncio.run(crs.check_sellers(NOW + timedelta(minutes=2)))
+    assert json.loads(cache_path.read_text())["seller_1"]["signal"] == old
+    monkeypatch.setattr(crs, "_request", lambda *args: response(["2101"]))
+    adverse = asyncio.run(crs.check_sellers(NOW + timedelta(minutes=3)))["seller_1"]["signal"]
+    assert adverse["stability"] == "not_verified"
+    assert json.loads(cache_path.read_text())["seller_1"]["signal"] == adverse
+
+
+def test_http_200_error_payload_is_unavailable_and_does_not_replace_cache(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_API_KEY", "token")
+    monkeypatch.setattr(crs, "_request", lambda *args: response())
+    good = asyncio.run(crs.check_sellers(NOW))["seller_1"]["signal"]
+    for field in ("errorMessages", "messages"):
+        monkeypatch.setattr(crs, "_request", lambda *args: {field: ["private vendor detail"], **response()})
+        result = asyncio.run(crs.check_sellers(NOW + timedelta(minutes=1)))["seller_1"]
+        assert result["signal"]["source"] == "recorded"
+        assert json.loads((tmp_path / "cache.json").read_text())["seller_1"]["signal"] == good
+        assert "private vendor detail" not in json.dumps(result)
+
+
+def test_cache_write_failure_keeps_fresh_signal_and_emits_fixed_warning(monkeypatch, tmp_path, capsys):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_API_KEY", "token-canary")
+    monkeypatch.setattr(crs, "_request", lambda *args: response())
+    monkeypatch.setattr(crs, "_cache_write", lambda *args: (_ for _ in ()).throw(OSError("secret")))
+    result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert result["signal"]["source"] == "sandbox"
+    warning = capsys.readouterr().err
+    assert warning.strip() == "CRS result cache could not be saved."
+    assert "secret" not in warning and "token-canary" not in warning

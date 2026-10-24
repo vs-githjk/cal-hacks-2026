@@ -14,6 +14,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import crs
+
 
 @pytest.fixture
 def buyer(monkeypatch):
@@ -28,6 +30,12 @@ def buyer(monkeypatch):
             Path, 'exists', lambda p: False if p.name == '.env' else exists(p)):
         module = importlib.import_module('buyer_agent')
     monkeypatch.setattr(module, 'ALLOWANCE', 1000)
+    async def checks(now):
+        return {'seller_1': {'eligible': True, 'signal': {'supplier_id': 'seller_1', 'stability': 'verified_stable',
+                                        'checked_at': '2026-10-24T08:00:00Z', 'source': 'sandbox'},
+                            'reason': 'Synthetic representative identity verified by CRS sandbox.'}}
+    monkeypatch.setattr(crs, 'check_sellers', checks)
+    monkeypatch.setattr(crs, 'eligible', lambda supplier_id, check, now: bool(check and check.get('eligible')))
     monkeypatch.setattr(module, 'blocked_reasons', lambda *a: None)
     module.ROUND.clear()
     module.APPROVALS.clear()
@@ -38,6 +46,9 @@ def buyer(monkeypatch):
         bids=[{'id': 'bid-1', 'supplier_id': 'seller_1', 'total_landed_price': 582,
                'persona': 'Seller', 'source': 'SIM'}],
         cards={}, personas={}, owned=[], attempts=0, last_sent={})
+    module.ROUND['seller_checks'] = {'seller_1': {'eligible': True, 'signal': {
+        'supplier_id': 'seller_1', 'stability': 'verified_stable', 'checked_at': '2026-10-24T08:00:00Z',
+        'source': 'sandbox'}, 'reason': 'Synthetic representative identity verified by CRS sandbox.'}}
     yield module
     module.ROUND.clear()
     module.APPROVALS.clear()
@@ -145,6 +156,179 @@ def test_complete_review_preserves_manual_requote_and_auto_order(buyer, monkeypa
         asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND['bids'][0])))
     assert buyer.ROUND['order']['amount'] == 582
     assert buyer.ROUND['goal']['state'] == 'DONE'
+
+
+def test_crs_ineligible_cheapest_bid_stays_displayed_but_cannot_order(buyer, monkeypatch):
+    buyer.ROUND.update(phase='advice', bids=[
+        {'id': 'bad', 'supplier_id': 'seller_2', 'total_landed_price': 100, 'persona': 'Cheap Seller', 'source': 'SIM'},
+        dict(buyer.ROUND['bids'][0], id='good', total_landed_price=200, persona='Verified Seller')],
+        seller_checks={'seller_1': buyer.ROUND['seller_checks']['seller_1'],
+                       'seller_2': {'signal': None, 'reason': 'Seller consent is missing or withdrawn.'}})
+    cards = [card(need_id='need-1', bid_id='bad'), card(need_id='need-1', bid_id='good')]
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps(cards))))
+    assert len(buyer.ROUND['bids']) == 2
+    assert buyer.ROUND['order']['bid_id'] == 'good'
+    assert not any(isinstance(msg, buyer.common.OrderPlaced) and to == buyer.common.address('seller_2')
+                   for to, msg in ctx.sent)
+    assert 'Cheap Seller' in ctx.owner_text() and 'consent is missing' in ctx.owner_text()
+
+
+def test_crs_failure_reason_uses_received_bids_only(buyer):
+    buyer.ROUND.update(phase='advice', bids=[
+        {'id': 'bad', 'supplier_id': 'seller_2', 'total_landed_price': 100, 'persona': 'Cheap Seller', 'source': 'SIM'}],
+        seller_checks={'seller_1': buyer.ROUND['seller_checks']['seller_1'],
+                       'seller_2': {'signal': None, 'reason': 'Seller consent is missing or withdrawn.'}})
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card(need_id='need-1', bid_id='bad')]))))
+    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    assert 'No seller passed the CRS eligibility check' in ctx.owner_text()
+
+
+def test_crs_ineligible_rejects_approve_auto_order_and_requote(buyer):
+    buyer.ROUND.update(phase='decided', reviewed=True, seller_checks={'seller_1': {'signal': None, 'reason': 'unavailable'}},
+                       cards={'bid-1': card()}, quoted_at=time.time())
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, 'owner', 'APPROVE 1'))
+    result = asyncio.run(buyer.place_order(ctx, 1, approved_by='auto', approval_id='auto-1'))
+    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
+    assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
+    assert 'CRS' in result or 'CRS' in ctx.owner_text()
+    buyer.ROUND.update(phase='requote', pick=1)
+    asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND['bids'][0])))
+    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
+
+
+def test_bid_sender_cannot_claim_another_supplier(buyer):
+    buyer.ROUND.update(phase='bidding', deadline=time.time() + 60)
+    bid = {'id': 'borrowed', 'need_id': 'need-1', 'persona': 'Seller', 'lines': [],
+           'total_landed_price': 50, 'perks': [], 'claims': [], 'floor_check_passed': True,
+           'mirror_snapshot_id': '', 'decision_trace': '', 'expires_at': '', 'source': 'SIM',
+           'origin': 'SIM', 'supplier_id': 'seller_2'}
+    ctx = Context()
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(bid), persona_line='Seller')))
+    assert all(item['id'] != 'borrowed' for item in buyer.ROUND['bids'])
+    assert not buyer.ROUND.get('seller_checks', {}).get('seller_2')
+
+
+def test_round_waits_for_crs_and_discards_result_after_cancel(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        async def slow_checks(now):
+            started.set()
+            await release.wait()
+            return {'seller_1': buyer.ROUND['seller_checks']['seller_1']}
+        monkeypatch.setattr(crs, 'check_sellers', slow_checks)
+        need = dict(buyer.ROUND['need'])
+        task = asyncio.create_task(buyer.start_round(Context(), need))
+        await started.wait()
+        assert buyer.ROUND['phase'] == 'checking' and buyer.ROUND['deadline'] == 0
+        buyer.ROUND.clear()
+        release.set()
+        assert await task is False
+        assert not buyer.ROUND
+    asyncio.run(run())
+
+
+def test_round_deadline_starts_only_after_crs_returns(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        async def slow_checks(now):
+            started.set()
+            await release.wait()
+            return buyer.ROUND['seller_checks']
+        monkeypatch.setattr(crs, 'check_sellers', slow_checks)
+        need = dict(buyer.ROUND['need'])
+        task = asyncio.create_task(buyer.start_round(Context(), need))
+        await started.wait()
+        assert buyer.ROUND['phase'] == 'checking' and buyer.ROUND['deadline'] == 0
+        release.set()
+        assert await task is True
+        assert buyer.ROUND['phase'] == 'bidding' and buyer.ROUND['deadline'] > time.time()
+    asyncio.run(run())
+
+
+def test_expired_round_ignores_late_crs_result(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        async def slow_checks(now):
+            started.set()
+            await release.wait()
+            return buyer.ROUND['seller_checks']
+        monkeypatch.setattr(crs, 'check_sellers', slow_checks)
+        need = dict(buyer.ROUND['need'])
+        ctx = Context()
+        task = asyncio.create_task(buyer.start_round(ctx, need))
+        await started.wait()
+        buyer.ROUND['goal']['deadline'] = '2000-01-01T00:00:00Z'
+        await buyer.tick(ctx)
+        release.set()
+        assert await task is False
+        assert buyer.ROUND['phase'] == 'done'
+        assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
+    asyncio.run(run())
+
+
+def test_superseded_round_ignores_its_late_crs_result(buyer, monkeypatch):
+    async def run():
+        started, release = asyncio.Event(), asyncio.Event()
+        calls = 0
+        async def checks(now):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                started.set()
+                await release.wait()
+            return buyer.ROUND['seller_checks']
+        monkeypatch.setattr(crs, 'check_sellers', checks)
+        need = dict(buyer.ROUND['need'])
+        ctx = Context()
+        old = asyncio.create_task(buyer.start_round(ctx, need))
+        await started.wait()
+        assert await buyer.start_round(ctx, need) is True
+        release.set()
+        assert await old is False
+        assert buyer.ROUND['phase'] == 'bidding'
+        assert len([msg for _, msg in ctx.sent if isinstance(msg, buyer.common.BidRequest)]) == len(buyer.common.SELLERS)
+    asyncio.run(run())
+
+
+def test_buyer_output_shows_cached_crs_time_without_forwarding_profile(buyer, monkeypatch):
+    check = {'eligible': True, 'signal': {'supplier_id': 'seller_1', 'stability': 'verified_stable',
+             'checked_at': '2026-10-24T08:00:00-07:00', 'source': 'recorded'},
+             'reason': 'Synthetic representative identity verified by CRS sandbox.'}
+    bid = dict(buyer.ROUND['bids'][0])
+    seller_ctx = Context()
+    asyncio.run(buyer.start_round(seller_ctx, dict(buyer.ROUND['need'])))
+    seller_requests = [msg for _, msg in seller_ctx.sent if isinstance(msg, buyer.common.BidRequest)]
+    assert len(seller_requests) == len(buyer.common.SELLERS)
+    buyer.ROUND.update(phase='bidding', seller_checks={'seller_1': check}, deadline=time.time() - 1,
+                       bids=[bid])
+    ctx = Context()
+    asyncio.run(buyer.tick(ctx))
+    request = next(msg for _, msg in ctx.sent if isinstance(msg, buyer.common.AdviceRequest))
+    assert all('CRS' not in msg.need_json and 'persona_ref' not in msg.need_json for msg in seller_requests)
+    assert 'CRS' not in request.need_json and 'persona_ref' not in request.need_json
+    assert 'CRS' not in request.bids_json and 'persona_ref' not in request.bids_json
+    buyer.ROUND['phase'] = 'advice'
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card()]))))
+    text = ctx.owner_text()
+    assert 'CRS: verified_stable' in text and 'cached from CRS 2026-10-24T08:00:00-07:00' in text
+
+
+def test_trusted_individual_output_uses_exemption_reason(buyer):
+    buyer.ROUND.update(phase='advice', seller_checks={'seller_1': {
+        'eligible': True, 'signal': None, 'reason': crs.REASON_PROFILE}}, cards={})
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card()]))))
+    assert 'CRS: exempt - Trusted individual seller; CRS check exempt.' in ctx.owner_text()
+    assert 'Approved synthetic representative profile is unavailable' not in ctx.owner_text()
 
 
 def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer, monkeypatch):
