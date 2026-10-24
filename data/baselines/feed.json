@@ -1,10 +1,11 @@
 {
  "origin": "MIRROR",
  "from": "2026-10-24T05:08:39.627Z",
- "to": "2026-10-24T09:38:02+00:00",
+ "to": "2026-10-24T09:55:10+00:00",
  "providers": [
   "apify",
-  "apify-b"
+  "apify-b",
+  "ebay-sold"
  ],
  "rows": [
   {
@@ -16,6 +17,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:39.627Z",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
    "snapshot_id": "bestbuy-20261024T0508Z",
    "origin": "MIRROR"
@@ -29,6 +31,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:39.627Z",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
    "snapshot_id": "bestbuy-20261024T0508Z",
    "origin": "MIRROR"
@@ -42,6 +45,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:39.627Z",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
    "snapshot_id": "bestbuy-20261024T0508Z",
    "origin": "MIRROR"
@@ -55,6 +59,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:40.689Z",
+   "sold_date": null,
    "url": "https://www.bhphotovideo.com/c/product/1875968-REG/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti.html",
    "snapshot_id": "bh-20261024T0508Z",
    "origin": "MIRROR"
@@ -68,6 +73,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:40.689Z",
+   "sold_date": null,
    "url": "https://www.bhphotovideo.com/c/product/1936065-REG/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070.html",
    "snapshot_id": "bh-20261024T0508Z",
    "origin": "MIRROR"
@@ -81,12 +87,13 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:40.689Z",
+   "sold_date": null,
    "url": "https://www.bhphotovideo.com/c/product/1963842-REG/msi_geforce_rtx_5070_ti.html",
    "snapshot_id": "bh-20261024T0508Z",
    "origin": "MIRROR"
   },
   {
-   "provider": "apify",
+   "provider": "ebay-sold",
    "store": "ebay_sold",
    "sku": "rtx 5070 ti",
    "price": 1476.86,
@@ -94,12 +101,13 @@
    "condition": "new",
    "kind": "sold",
    "observed_at": "2026-10-24T05:08:55.929Z",
+   "sold_date": "2026-10-23",
    "url": "https://www.ebay.com/itm/398090456865?nordt=true",
    "snapshot_id": "ebay_sold-20261024T0508Z",
    "origin": "MIRROR"
   },
   {
-   "provider": "apify",
+   "provider": "ebay-sold",
    "store": "ebay_sold",
    "sku": "rtx 5070 ti",
    "price": 1100.0,
@@ -107,12 +115,13 @@
    "condition": "used",
    "kind": "sold",
    "observed_at": "2026-10-24T05:08:55.929Z",
+   "sold_date": "2026-10-23",
    "url": "https://www.ebay.com/itm/336858546672?nordt=true",
    "snapshot_id": "ebay_sold-20261024T0508Z",
    "origin": "MIRROR"
   },
   {
-   "provider": "apify",
+   "provider": "ebay-sold",
    "store": "ebay_sold",
    "sku": "rtx 5070 ti",
    "price": 640.0,
@@ -120,12 +129,13 @@
    "condition": "open-box",
    "kind": "sold",
    "observed_at": "2026-10-24T05:08:55.929Z",
+   "sold_date": "2026-10-23",
    "url": "https://www.ebay.com/itm/127367946785?nordt=true",
    "snapshot_id": "ebay_sold-20261024T0508Z",
    "origin": "MIRROR"
   },
   {
-   "provider": "apify",
+   "provider": "ebay-sold",
    "store": "ebay_sold",
    "sku": "rtx 5070 ti",
    "price": 699.0,
@@ -133,12 +143,13 @@
    "condition": "new",
    "kind": "sold",
    "observed_at": "2026-10-24T05:08:55.929Z",
+   "sold_date": "2026-10-23",
    "url": "https://www.ebay.com/itm/377588952801?nordt=true",
    "snapshot_id": "ebay_sold-20261024T0508Z",
    "origin": "MIRROR"
   },
   {
-   "provider": "apify",
+   "provider": "ebay-sold",
    "store": "ebay_sold",
    "sku": "rtx 5070 ti",
    "price": 880.0,
@@ -146,6 +157,7 @@
    "condition": "unknown",
    "kind": "sold",
    "observed_at": "2026-10-24T05:08:55.929Z",
+   "sold_date": "2026-10-23",
    "url": "https://www.ebay.com/itm/336859572616?nordt=true",
    "snapshot_id": "ebay_sold-20261024T0508Z",
    "origin": "MIRROR"
@@ -159,6 +171,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:59.160Z",
+   "sold_date": null,
    "url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
    "snapshot_id": "ebay_live-20261024T0508Z",
    "origin": "MIRROR"
@@ -172,6 +185,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:59.160Z",
+   "sold_date": null,
    "url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
    "snapshot_id": "ebay_live-20261024T0508Z",
    "origin": "MIRROR"
@@ -185,6 +199,7 @@
    "condition": "open-box",
    "kind": "ask",
    "observed_at": "2026-10-24T05:08:59.160Z",
+   "sold_date": null,
    "url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
    "snapshot_id": "ebay_live-20261024T0508Z",
    "origin": "MIRROR"
@@ -198,6 +213,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:09:04.454Z",
+   "sold_date": null,
    "url": "https://www.amazon.com/dp/B0DS6WTXGP",
    "snapshot_id": "amazon-20261024T0509Z",
    "origin": "MIRROR"
@@ -211,6 +227,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:09:04.454Z",
+   "sold_date": null,
    "url": "https://www.amazon.com/dp/B0DXL8NFLF",
    "snapshot_id": "amazon-20261024T0509Z",
    "origin": "MIRROR"
@@ -224,6 +241,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:09:29.655Z",
+   "sold_date": null,
    "url": "https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card",
    "snapshot_id": "microcenter-20261024T0509Z",
    "origin": "MIRROR"
@@ -237,6 +255,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:09:29.655Z",
+   "sold_date": null,
    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
    "snapshot_id": "microcenter-20261024T0509Z",
    "origin": "MIRROR"
@@ -250,6 +269,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T05:09:29.655Z",
+   "sold_date": null,
    "url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
    "snapshot_id": "microcenter-20261024T0509Z",
    "origin": "MIRROR"
@@ -263,6 +283,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T08:51:32+00:00",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
    "snapshot_id": "bestbuy-20261024T0851Z",
    "origin": "MIRROR"
@@ -276,6 +297,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T08:51:32+00:00",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
    "snapshot_id": "bestbuy-20261024T0851Z",
    "origin": "MIRROR"
@@ -289,6 +311,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T08:51:32+00:00",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
    "snapshot_id": "bestbuy-20261024T0851Z",
    "origin": "MIRROR"
@@ -302,6 +325,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T09:36:33+00:00",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
    "snapshot_id": "bestbuy-20261024T0936Z",
    "origin": "MIRROR"
@@ -315,6 +339,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T09:36:33+00:00",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
    "snapshot_id": "bestbuy-20261024T0936Z",
    "origin": "MIRROR"
@@ -328,6 +353,7 @@
    "condition": "new",
    "kind": "ask",
    "observed_at": "2026-10-24T09:36:33+00:00",
+   "sold_date": null,
    "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
    "snapshot_id": "bestbuy-20261024T0936Z",
    "origin": "MIRROR"
@@ -341,6 +367,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T09:38:02+00:00",
+   "sold_date": null,
    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
    "snapshot_id": "microcenter-20261024T0938Z",
    "origin": "MIRROR"
@@ -354,6 +381,7 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T09:38:02+00:00",
+   "sold_date": null,
    "url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
    "snapshot_id": "microcenter-20261024T0938Z",
    "origin": "MIRROR"
@@ -367,8 +395,79 @@
    "condition": "unknown",
    "kind": "ask",
    "observed_at": "2026-10-24T09:38:02+00:00",
+   "sold_date": null,
    "url": "https://www.microcenter.com/product/702482/zotac-nvidia-geforce-rtx-5070-ti-solid-core-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
    "snapshot_id": "microcenter-20261024T0938Z",
+   "origin": "MIRROR"
+  },
+  {
+   "provider": "ebay-sold",
+   "store": "ebay_sold",
+   "sku": "rtx 5070 ti",
+   "price": 1476.86,
+   "in_stock": true,
+   "condition": "new",
+   "kind": "sold",
+   "observed_at": "2026-10-24T09:55:10+00:00",
+   "sold_date": "2026-10-23",
+   "url": "https://www.ebay.com/itm/398090456865?nordt=true",
+   "snapshot_id": "ebay_sold-20261024T0955Z",
+   "origin": "MIRROR"
+  },
+  {
+   "provider": "ebay-sold",
+   "store": "ebay_sold",
+   "sku": "rtx 5070 ti",
+   "price": 1100.0,
+   "in_stock": true,
+   "condition": "used",
+   "kind": "sold",
+   "observed_at": "2026-10-24T09:55:10+00:00",
+   "sold_date": "2026-10-23",
+   "url": "https://www.ebay.com/itm/336858546672?nordt=true",
+   "snapshot_id": "ebay_sold-20261024T0955Z",
+   "origin": "MIRROR"
+  },
+  {
+   "provider": "ebay-sold",
+   "store": "ebay_sold",
+   "sku": "rtx 5070 ti",
+   "price": 640.0,
+   "in_stock": true,
+   "condition": "open-box",
+   "kind": "sold",
+   "observed_at": "2026-10-24T09:55:10+00:00",
+   "sold_date": "2026-10-23",
+   "url": "https://www.ebay.com/itm/127367946785?nordt=true",
+   "snapshot_id": "ebay_sold-20261024T0955Z",
+   "origin": "MIRROR"
+  },
+  {
+   "provider": "ebay-sold",
+   "store": "ebay_sold",
+   "sku": "rtx 5070 ti",
+   "price": 699.0,
+   "in_stock": true,
+   "condition": "new",
+   "kind": "sold",
+   "observed_at": "2026-10-24T09:55:10+00:00",
+   "sold_date": "2026-10-23",
+   "url": "https://www.ebay.com/itm/377588952801?nordt=true",
+   "snapshot_id": "ebay_sold-20261024T0955Z",
+   "origin": "MIRROR"
+  },
+  {
+   "provider": "ebay-sold",
+   "store": "ebay_sold",
+   "sku": "rtx 5070 ti",
+   "price": 880.0,
+   "in_stock": true,
+   "condition": "unknown",
+   "kind": "sold",
+   "observed_at": "2026-10-24T09:55:10+00:00",
+   "sold_date": "2026-10-23",
+   "url": "https://www.ebay.com/itm/336859572616?nordt=true",
+   "snapshot_id": "ebay_sold-20261024T0955Z",
    "origin": "MIRROR"
   }
  ]
