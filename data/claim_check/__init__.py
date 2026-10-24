@@ -28,7 +28,13 @@ PATTERNS = [  # (field, regex, value from match); first match per field, every f
     ("condition", r"\bnew\b", lambda m: "new"),
     ("price", None, None),  # see _price: a $ amount next to over/save/off/fee/shipping is not the price
 ]
-NOT_PRICE = re.compile(r"(over|save|saves|saving|off|fee|fees|shipping|ship|under)\W*$|^\W*(off|fee|fees|shipping)\b", re.I)
+# A keyword attaches only to its own amount: directly before the $ (spaces only, no comma or colon between) or directly
+# after it. "off" and "fee" follow their amount ("$50 off"), so "$50 off $749" keeps $749 as the price.
+NOT_PRICE_BEFORE = re.compile(r"\b(over|save|saves|saving|under|shipping|ship)\s*$", re.I)
+NOT_PRICE_AFTER = re.compile(r"^\s*(off|fee|fees)\b", re.I)
+# Amounts that are not the item price but say something about the offer: the claim's price is then unverified.
+OFFER_BEFORE = re.compile(r"\b(orders? of|up to|rebate|coupon|gift card|credit)\s*$", re.I)
+OFFER_AFTER = re.compile(r"^\s*(or more|gift card|rebate|coupon|credit|back)\b", re.I)
 
 LD_CONDITION = {"NewCondition": "new", "UsedCondition": "used", "RefurbishedCondition": "refurbished", "DamagedCondition": "used"}
 
@@ -48,15 +54,18 @@ def _money(v):
 
 
 def _price(text):
-    """The claimed price, or None when the text gives more than one candidate amount; absent when there is none."""
-    amounts = []
+    """(amount,) for the claimed price; (None,) when it is ambiguous (two different amounts, or an offer amount such as a
+    gift card or an order minimum); () when no amount is the price."""
+    amounts, offer = [], False
     for m in re.finditer(r"\$\s?([\d,]+(?:\.\d+)?)", text):
-        if NOT_PRICE.search(text[max(0, m.start() - 14):m.start()]) or NOT_PRICE.search(text[m.end():m.end() + 10]):
-            continue
-        amounts.append(_num(m.group(1)))
-    if not amounts:
-        return ()
-    return (amounts[0],) if len(set(amounts)) == 1 else (None,)
+        before, after = text[:m.start()], text[m.end():]
+        if OFFER_BEFORE.search(before) or OFFER_AFTER.search(after):
+            offer = True
+        elif not (NOT_PRICE_BEFORE.search(before) or NOT_PRICE_AFTER.search(after)):
+            amounts.append(_num(m.group(1)))
+    if offer or len(set(amounts)) > 1:
+        return (None,)
+    return (amounts[0],) if amounts else ()
 
 
 def parse_claims(claim):
@@ -139,7 +148,7 @@ def judge(field, value, facts, at, series):
         return ("verified", f"the page shows {page}") if page == value else \
             ("false", f"claim says {value}; differs from the listing at {at}: the page shows {page}")
     if field == "price" and value is None:
-        return "unverified", "could not verify: the claim states more than one price"
+        return "unverified", "could not verify: the claim states more than one amount (another price, or an offer such as a gift card or order minimum)"
     if field == "price":
         page = _money(facts.get("price"))
         if page is None:

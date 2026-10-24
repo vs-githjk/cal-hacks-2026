@@ -24,10 +24,8 @@ def savings_tile() -> dict:
     rows = observations()
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
-    # No purchase has a confirmed dated baseline until baseline() says ok; even then the tile stays none_yet until a
-    # verified purchase exists (none recorded yet), so the status follows the data instead of being typed in.
-    purchases = []  # verified purchases with a dated baseline: none recorded yet
-    status = "measured" if b["status"] == "ok" and purchases else "none_yet"
+    # Always none_yet for now: no verified purchase is recorded anywhere yet, so there is nothing to measure savings on.
+    status = "none_yet"
     return _tile(id="verified_savings", title="Dated verified savings", status=status, value=None, unit="USD",
                  display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
                          f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",

@@ -180,4 +180,17 @@ def test_two_price_amounts_make_the_price_unverified():
     from data.claim_check import parse_claims
     assert dict(parse_claims({"text": "$789 or $749 with trade-in"}))["price"] is None
     out = check("$789 or $749 with trade-in", HAL_GPU, kind="price")
-    assert out["result"] == "unverified" and "more than one" in out["reason"]
+    assert out["result"] == "unverified" and "more than one amount" in out["reason"]
+
+
+def test_a_false_price_beside_shipping_or_off_words_is_still_false():  # #106
+    for text in ("New RTX 5070 Ti, free shipping, $749", "Payoff price new $749", "Free shipping, new $749",
+                 "Free shipping: $749 new", "New $749 shipping included", "$50 off $749 new"):
+        out = check(text, HAL_GPU, kind="price")
+        assert out["result"] == "false" and "$749.00" in out["reason"], text
+
+
+def test_non_price_amounts_beside_offer_words_are_unverified_not_false():
+    for text in ("New, free shipping on orders of $35 or more", "New, includes $50 gift card", "New, save up to $50",
+                 "New, $25 rebate", "New, $10 coupon"):
+        assert check(text, HAL_GPU)["result"] == "unverified", text
