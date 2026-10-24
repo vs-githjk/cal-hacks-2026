@@ -1,4 +1,5 @@
 import sys
+import copy
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -39,6 +40,15 @@ def test_below_floor_price_is_raised_to_floor():
     assert bid["floor_check_passed"] and "floor" in bid["decision_trace"]
 
 
+def test_sim_offer_refuses_nonfinite_price_or_nonpositive_quantity():
+    s = copy.deepcopy(seller("seller_1"))
+    s["listings"][GPU]["price"] = float("nan")
+    assert make_bid(need(GPU), s) is None
+    n = need(GPU)
+    n["items"][0]["quantity"] = 0
+    assert make_bid(n, seller("seller_1")) is None
+
+
 def test_partial_bid_and_none():
     bid = make_bid(need(GPU, CASE), seller("seller_3"))  # seller_3 has no case
     assert [l["sku_spec"] for l in bid["lines"]] == [GPU]
@@ -51,7 +61,8 @@ def test_trap_listing_claims_new_but_page_says_open_box():
     assert line["offered_condition"] == "new" and line["page_condition"] == "open-box"
     assert line["listing_url"].startswith("https://example.com/")
     assert line["attrs"]["length_mm"] > 0
-    cheapest = min((make_bid(need(GPU), seller(n))["lines"][0]["unit_price"], n) for n in common.SELLERS)
+    cheapest = min((make_bid(need(GPU), seller(n))["lines"][0]["unit_price"], n)
+                   for n in ("seller_1", "seller_3"))
     assert cheapest[1] == "seller_3"
 
 
@@ -59,3 +70,73 @@ def test_total_includes_shipping():
     s = seller("seller_2")
     bid = make_bid(need(PSU), s)
     assert bid["total_landed_price"] == round(bid["lines"][0]["unit_price"] + s["shipping"], 2)
+    assert sum(line["unit_price"] * line["quantity"] + line["shipping"] for line in bid["lines"]) == bid["total_landed_price"]
+
+
+def test_mirror_snapshot_offer_refuses_when_shipping_or_floor_is_unknown():
+    n = need("rtx 5070 ti")
+    n["source"] = "live"
+    assert make_bid(n, seller("seller_1")) is None
+
+
+def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():
+    s = seller("seller_1")
+    card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
+    card["listing"]["stock"] = True
+    s["mirror_inputs"] = {card["id"]: {
+        "floor": {"value": 1200.0, "source": "https://seller.example/floor", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+        "shipping": {"value": 0.0, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    }}
+    n = need("rtx 5070 ti")
+    n["source"] = "live"
+    bid = make_bid(n, s)
+    assert bid["origin"] == "MIRROR" and bid["seller_id"] == "seller_1"
+    common.validate("Bid", bid)
+    line = bid["lines"][0]
+    assert line["unit_price"] == 1249.99
+    assert line["listing_url"].startswith("https://www.bestbuy.com/")
+    assert (line["snapshot_id"], line["snapshot_date"], line["seller_of_record"]) == (
+        "bestbuy-20261024T0508Z", "2026-10-24T05:08:39.627Z", "Best Buy")
+    assert line["model_number"] == "G507T-16GTC"
+    assert line["floor_evidence"]["source"] == "https://seller.example/floor"
+    assert line["shipping"] == 0.0
+    assert line["listing_id"] == card["id"]
+    assert bid["total_landed_price"] == 1249.99
+
+
+def test_mirror_alternatives_must_share_seller_of_record_and_snapshot():
+    s = seller("seller_1")
+    card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
+    card["listing"]["stock"] = True
+    second = dict(card, id="bestbuy:other", seller_of_record="Other Seller")
+    s["mirror_listings"] = [card, second]
+    term = {"value": 0.0, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"}
+    floor = {**term, "value": 1200.0, "source": "https://seller.example/floor"}
+    s["mirror_inputs"] = {row["id"]: {"floor": floor, "shipping": term} for row in (card, second)}
+    n = need("rtx 5070 ti")
+    n["source"] = "live"
+    assert make_bid(n, s) is None
+
+
+def test_mirror_offer_does_not_ignore_allowed_conditions():
+    s = seller("seller_1")
+    card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
+    card["listing"]["stock"] = True
+    s["mirror_inputs"] = {card["id"]: {
+        "floor": {"value": 1200.0, "source": "https://seller.example/floor", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+        "shipping": {"value": 0.0, "source": "https://www.bestbuy.com/shipping", "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"},
+    }}
+    n = need("rtx 5070 ti")
+    n["items"][0]["allowed_conditions"] = ["open-box"]
+    assert make_bid(n, s) is None
+
+
+def test_unknown_condition_snapshot_rows_are_not_seller_offers():
+    assert all(c["condition"] != "unknown" for c in seller("seller_1")["mirror_listings"])
+
+
+def test_sim_refurbished_offer_requires_an_allowed_condition():
+    n = need(GPU)
+    n["items"][0]["allowed_conditions"] = ["new", "refurbished"]
+    bid = make_bid(n, seller("seller_2"))
+    assert bid["lines"][0]["offered_condition"] == "refurbished"

@@ -21,10 +21,15 @@
       "type": "string"
      },
      "unit_price": {
-      "type": "number"
+      "type": "number",
+      "exclusiveMinimum": 0
      },
+     "shipping": {"type": "number", "minimum": 0,
+       "description": "Flat shipping for this line at its quantity; market adds it once. Omitted only for legacy bids."},
+     "listing_id": {"type": "string"},
      "quantity": {
-      "type": "number"
+      "type": "number",
+      "exclusiveMinimum": 0
      },
      "offered_spec": {
       "type": "string"
@@ -38,14 +43,22 @@
        "used",
        "unknown"
       ]
-     }
+     },
+     "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]},
+     "source": {"type": "string"},
+     "seller_of_record": {"type": "string"},
+     "model_number": {"type": "string"},
+     "snapshot_id": {"type": "string"},
+     "snapshot_date": {"type": "string"},
+     "floor_evidence": {"type": "object"},
+     "shipping_evidence": {"type": "object"}
     },
     "required": [
      "sku_spec",
      "unit_price",
      "quantity"
     ]
-   }
+     }
   },
   "total_landed_price": {
    "type": "number"
@@ -92,7 +105,8 @@
   "supplier_id": {
    "type": "string",
    "description": "Deprecated alias of seller_id, still sent by Lane A; the market reads it as seller_id"
-  }
+  },
+  "seller_of_record": {"type": "string", "description": "Merchant named by the MIRROR listing; not the registered agent or payment payee."}
  },
  "required": [
   "id",
@@ -120,5 +134,14 @@
     "supplier_id"
    ]
   }
- ]
+ ],
+ "allOf": [{
+  "if": {"properties": {"origin": {"const": "MIRROR"}}, "required": ["origin"]},
+  "then": {
+   "required": ["seller_of_record"],
+   "properties": {"lines": {"items": {"required": ["offered_condition", "shipping", "listing_id",
+                                                       "seller_of_record", "snapshot_id", "snapshot_date",
+                                                       "floor_evidence", "shipping_evidence"]}}}
+  }
+ }]
 }
