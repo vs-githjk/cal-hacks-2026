@@ -8,7 +8,7 @@ keyless for our own agents. Serve the keyed API with:
 Every /v1 call needs `X-API-Key: <key>` or `Authorization: Bearer <key>`, except health and the docs
 (/docs, /openapi.json). A key-less or unknown key gets 401, over the limit gets 429. The meter stores the key's
 hash, caller name, endpoint, status and time: never a key and never a message body (invariant 10). The pricing
-unit is one metered call; the price is set after a design partner.
+unit is one successful (status below 400) call; the price is set after a design partner.
 """
 from __future__ import annotations
 
@@ -81,9 +81,21 @@ class Meter:
             self._db.execute("INSERT INTO usage VALUES (?, ?, ?, ?, ?)", (_hash(key), caller, endpoint, status, time.time()))
 
     def counts(self, key: str) -> dict:
+        """Billable calls by endpoint: only responses below 400 count (a 401, 413, 422 or 429 is never billed)."""
         with self._lock:
-            rows = self._db.execute("SELECT endpoint, COUNT(*) FROM usage WHERE key_hash = ? GROUP BY endpoint", (_hash(key),))
+            rows = self._db.execute("SELECT endpoint, COUNT(*) FROM usage WHERE key_hash = ? AND status < 400 GROUP BY endpoint",
+                                    (_hash(key),))
             return dict(rows.fetchall())
+
+    def refused(self, key: str) -> dict:
+        """Calls that were not billed, by endpoint and status."""
+        out: dict = {}
+        with self._lock:
+            for endpoint, status, n in self._db.execute(
+                    "SELECT endpoint, status, COUNT(*) FROM usage WHERE key_hash = ? AND status >= 400 GROUP BY endpoint, status",
+                    (_hash(key),)):
+                out.setdefault(endpoint, {})[str(status)] = n
+        return out
 
 
 class RateLimit:
@@ -129,7 +141,7 @@ def create_product_app(keys: Optional[KeyStore] = None, meter: Optional[Meter] =
         caller = keys.caller(key)
         if caller is None:
             return JSONResponse({"detail": "missing or unknown API key"}, status_code=401)
-        if not limit.allow(_hash(key)):
+        if path != "/v1/usage" and not limit.allow(_hash(key)):  # reading your own usage is never rate limited
             meter.record(key, caller, path, 429)
             return JSONResponse({"detail": "rate limit exceeded"}, status_code=429, headers={"Retry-After": "60"})
         request.state.caller, request.state.key = caller, key
@@ -140,8 +152,8 @@ def create_product_app(keys: Optional[KeyStore] = None, meter: Optional[Meter] =
 
     @app.get("/v1/usage")
     def usage(request: Request):
-        """Your own metered calls by endpoint (the pricing unit)."""
-        return {"caller": request.state.caller, "calls": meter.counts(request.state.key)}
+        """Your own billable calls by endpoint (the pricing unit: one successful call), plus refused calls by status."""
+        return {"caller": request.state.caller, "calls": meter.counts(request.state.key), "refused": meter.refused(request.state.key)}
 
     return app
 

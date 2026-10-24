@@ -74,3 +74,13 @@ def test_bench_never_counts_api_errors_as_blocks(tmp_path):
                  json.dumps({"id": "a1", "label": "attack", "message": "bad", "context": {}}) + "\n")
     out = bench({"api": f}, screen_fn=lambda m, c: ERROR)
     assert out["api"]["errors"] == ["c1", "a1"] and out["api"]["false_block_rate"] is None and out["api"]["block_rate"] is None
+
+
+def test_only_successful_calls_are_billable(tmp_path):
+    client, key, _ = app_with(tmp_path, per_minute=1)
+    h = {"X-API-Key": key}
+    assert client.post("/v1/shield/screen", json=MSG, headers=h).status_code == 200
+    assert client.post("/v1/shield/screen", json=MSG, headers=h).status_code == 429
+    usage = client.get("/v1/usage", headers=h).json()
+    assert usage["calls"] == {"/v1/shield/screen": 1}
+    assert usage["refused"] == {"/v1/shield/screen": {"429": 1}}

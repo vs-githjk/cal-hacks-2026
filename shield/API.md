@@ -17,15 +17,16 @@ curl -s -X POST http://127.0.0.1:8788/v1/shield/screen -H "X-API-Key: $KEY" -H "
 Returns `{verdict: allow|quarantine|block, rule_ids, severity, evidence_spans, latency_ms, request_id, version}`.
 **Treat any non-200 as block.** No key or an unknown key: 401. Over the limit (default 60 per minute per key,
 `SHIELD_RATE_PER_MINUTE`): 429 with Retry-After. Also: `/v1/shield/verify-mandate`, `/v1/shield/verify-agent`,
-`/v1/shield/rules`, and `/v1/usage` (your own metered calls by endpoint; one call is the pricing unit, price set after
-a design partner). Python: `from shield.client import ShieldClient` (fails closed on any error).
+`/v1/shield/rules`, and `/v1/usage` (your own billable calls by endpoint, plus refused calls by status; the pricing unit is
+one successful call, status below 400, and the price is set after a design partner; refused calls are never billed). Python: `from shield.client import ShieldClient` (fails closed on any error).
 
 ## Measure it (shield-bench)
-`python3 -m shield.bench` (local rules) or `--url http://127.0.0.1:8788 --key $KEY` (through the API), `--extra your.jsonl`
+`python3 -m shield.bench` (local rules) or `--url http://127.0.0.1:8788 --key $KEY` (through the API; dev plus held_out
+is 70 calls, so start the server with `SHIELD_RATE_PER_MINUTE=200` or the bench hits 429s, which it counts as errors), `--extra your.jsonl`
 to credit your own attacks. Columns are never pooled: dev (what the rules were written against), held_out (Lane C,
 written before the rules froze), adaptive (generated after the freeze). API errors are counted, never scored as blocks.
 
-Last run (SIM corpora, rules only, Oct 24): dev 30/30 stopped, 0 of 10 clean blocked; **held_out 12/20 stopped (60%),
+Last run (SIM corpora, rules only, Fri Oct 23 PDT): dev 30/30 stopped, 0 of 10 clean blocked; **held_out 12/20 stopped (60%),
 2 of 10 clean blocked (20%)**; adaptive not run yet. Never call it "secure".
 
 Privacy: the meter stores key hashes, caller name, endpoint, status and time; never keys, never message bodies.
