@@ -33,3 +33,6 @@ Total for the test round: about $0.17 of the $205 credit.
 - Done-check (SIM, liar pages served on localhost): open box listed as new, fake was price and wrong socket all return false with evidence URLs; the honest page verifies. Saved in `claim_check/done_check.json`.
 - Real store pages: only schema.org JSON-LD is read so far; many stores block plain fetches, which returns unverified.
 - Apify Actor wrapper in `claim_check/actor/` (not yet run on the platform).
+
+## c11 baselines
+- `python3 -m data.baselines` writes `data/baselines/feed.json` (recorded price feed, MIRROR, dated) and prints the RTX 5070 Ti reference. `baseline(sku, at)` needs two dated providers within 24 h; until Bright Data is approved it reports `one_source`. Retail, in-stock, new or unstated asks only; eBay sold and eBay live are separate series, never in the median.
