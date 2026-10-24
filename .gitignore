@@ -30,3 +30,6 @@ shot-*.png
 
 # local launcher state (scripts/launch.py)
 .run/
+
+# Lane C sealed set (second blind held-out): only its sha256 is committed
+sim/attacks/heldout2.jsonl
