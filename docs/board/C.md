@@ -40,3 +40,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [01:50] #98: scoreboard tiles voice_attacks (9 of 10 first run, 10 of 10 after fix in detail) and hyphenate_blind (26 of 27, 2 of 7 clean false flags); parsed from the committed results files, SIM; contract enum extended (docs/changes)
 - [01:47] #96: maker spec lengths for every demo 5070 Ti (data/fit_checker/gpu_lengths.json, sources on msi/gigabyte/asus/pny); MSI Gaming Trio OC is 338 mm: too long for 305, fits 340. Report only, demo case unchanged
 - [02:40] #118: ASUS Prime 5070 Ti at Best Buy re-snapshotted 09:36Z (02:36 PDT): $1,299.99, availability not captured (null), unchanged from $1,299.99 at 05:08Z; one run per store, cost bestbuy $0.00005, newegg $0 (0 items), microcenter $0.05
+- [02:59] #118 refresh ran on the Apify FREE plan (no card); cost bestbuy $0.00005, newegg $0, microcenter $0.05
