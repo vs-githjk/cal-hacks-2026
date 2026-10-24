@@ -326,3 +326,13 @@ def test_static_setup_warning_surfaces_in_status(run_dir, started):
     buf = io.StringIO()
     L.cmd_status(run_dir, out=buf)
     assert "WARNING module tech-bazaar is not published" in buf.getvalue()
+
+
+def test_up_only_keeps_records_of_other_live_services():
+    live = {"buyer": {"pid": 123, "lstart": "x", "state": "running"}}
+    state = L.carry_live({"services": {}}, live)
+    assert state["services"]["buyer"]["pid"] == 123
+
+
+def test_pid_without_start_marker_is_not_ours():
+    assert L.pid_is_ours({"pid": os.getpid(), "lstart": None}) is False

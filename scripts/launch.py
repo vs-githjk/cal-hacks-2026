@@ -34,7 +34,7 @@ HOST = "127.0.0.1"
 SPACETIME_INSTALL = "curl -sSf https://install.spacetimedb.com | sh"
 UV_INSTALL = "curl -LsSf https://astral.sh/uv/install.sh | sh   (or: brew install uv)"
 NODE_INSTALL = "brew install node"
-SHIELD_DEPS_FIX = "python3 -m pip install fastapi uvicorn"
+SHIELD_DEPS_FIX = "inside a venv: python3 -m pip install fastapi uvicorn"
 
 # Names we report as present or missing. The list is read from .env.example at run time, this is the fallback.
 FALLBACK_KEY_NAMES = ["ANTHROPIC_API_KEY", "AGENTVERSE_API_KEY", "STRIPE_SECRET_KEY", "APPROVAL_SECRET"]
@@ -292,7 +292,7 @@ def proc_start_marker(pid: int) -> str | None:
 
 def pid_is_ours(rec: dict) -> bool:
     pid = rec.get("pid")
-    return bool(pid) and proc_start_marker(pid) == rec.get("lstart")
+    return bool(pid) and rec.get("lstart") is not None and proc_start_marker(pid) == rec.get("lstart")
 
 
 class PidFile:
@@ -523,6 +523,13 @@ def wait_ready(svc: Service, rec: dict, deadline: float) -> tuple[bool, str]:
     return False, f"no health answer after {svc.wait:.0f}s"
 
 
+def carry_live(state: dict, live: dict) -> dict:
+    """Keep records of running services that this `up` did not select (`--only`), so `down` still stops them."""
+    for n, r in live.items():
+        state["services"].setdefault(n, r)
+    return state
+
+
 def cmd_up(a, repo: Path = REPO) -> int:
     run_dir = Path(a.run_dir).resolve()
     pf = PidFile(run_dir)
@@ -542,7 +549,7 @@ def cmd_up(a, repo: Path = REPO) -> int:
     print_preflight(checks)
     decide_skips(services, checks)
 
-    state: dict = {"started_at": time.strftime("%Y-%m-%d %H:%M:%S"), "services": {}}
+    state: dict = carry_live({"started_at": time.strftime("%Y-%m-%d %H:%M:%S"), "services": {}}, live)
     run_env = dict(os.environ)
     if shutil.which("node"):
         run_env["PATH"] = str(Path(shutil.which("node")).parent) + os.pathsep + run_env.get("PATH", "")
