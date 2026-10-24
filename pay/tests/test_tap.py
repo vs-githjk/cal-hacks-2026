@@ -195,8 +195,8 @@ def test_forged_request_does_not_burn_the_real_nonce(priv, keys):
     assert check(keys, h, body, store).ok
 
 
-def test_replay_survives_restart_with_json_store(priv, keys, tmp_path):
-    p = str(tmp_path / "n.json")
+def test_replay_survives_restart_with_file_store(priv, keys, tmp_path):
+    p = str(tmp_path / "n.db")
     m, body, h = signed(priv)
     assert check(keys, h, body, NonceStore(p)).ok
     assert check(keys, h, body, NonceStore(p)).reason == "replayed_nonce"

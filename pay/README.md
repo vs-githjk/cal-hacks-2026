@@ -66,6 +66,7 @@ verdict = verify_request(method="POST", url=url, headers=request_headers, body=b
   gitignored. Nothing in this folder reads `.env`.
 
 ## Replay (`pay/replay.py`)
-`NonceStore(path=None)`: in memory, plus an optional JSON file written atomically on every use, so a restart does
-not forget. `consume(namespace, nonce)` is True once, False after. A corrupt file raises (fail closed) instead of
-loading empty. Namespaces: `mandate` and `tap`. The store does not prune old nonces; it is small for a demo.
+`NonceStore(path=None)`: SQLite (stdlib), in memory or in a file. `consume(namespace, nonce)` is one INSERT against a
+UNIQUE (namespace, nonce) constraint, so it is True once and False after, even when two instances or two processes
+share the file. A corrupt or non-SQLite file raises (fail closed) instead of loading empty. Namespaces: `mandate`,
+`tap` and (d3) `approval_code`. The store does not prune old nonces; it is small for a demo.
