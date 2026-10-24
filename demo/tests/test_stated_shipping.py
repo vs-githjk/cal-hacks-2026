@@ -89,3 +89,37 @@ def test_c_withheld_lines_name_each_listing_once():
     for s in sellers:
         urls = [w["listing_url"] for w in s.withheld]
         assert len(urls) == len(set(urls)), s.id
+
+
+# #188: the demo reads delivery cost with the data lane's anchored rule (data.mirror.normalize.landed)
+import pytest  # noqa: E402
+
+from demo.sellers import stated_shipping  # noqa: E402
+
+
+@pytest.mark.parametrize("text", [
+    "+C $12.99 delivery",                       # not USD
+    "+$12.99 delivery or free over $35",        # conditional
+    "Free shipping on orders over $35",         # conditional free is not free
+])
+def test_foreign_or_conditional_delivery_text_is_not_a_cost(text):
+    assert stated_shipping({"shipping": text}) is None
+    s = seller_of(1299.00, text)
+    assert s.shipping_captured is False
+
+
+def test_the_demo_and_the_data_lane_agree_on_every_snapshot_listing():
+    from data.mirror.normalize import landed
+    offers, _ = load_offers()
+    for o in offers:
+        listing = o["listing"]
+        if isinstance(listing.get("shipping_cost"), (int, float)) and not isinstance(listing.get("shipping_cost"), bool):
+            continue                                 # a numeric field wins in both
+        assert stated_shipping(listing) == landed(listing, None)["shipping_cost"], listing.get("shipping")
+
+
+def test_the_demo_winner_is_still_the_asus_prime_at_best_buy():
+    from demo.common import Narrator
+    from demo.run_demo import run_all
+    b2 = run_all(say=Narrator(False))["beats"]["2"]
+    assert b2["winner"]["seller_id"] == "best-buy" and b2["winner"]["landed"] == 1299.99
