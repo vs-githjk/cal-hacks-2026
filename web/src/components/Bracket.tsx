@@ -5,12 +5,11 @@
 // (each step is one referee decision), and under reduced motion the final bracket shows at once.
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { useTable } from "spacetimedb/react";
+import { tables } from "@/module_bindings";
+import { latestRound } from "@/lib/screens";
 import { buildBracket, roundWinner, type Bracket as BracketData, type Entrant, type Heat, type Knock, type Stage } from "@/lib/bracket";
 import { Card, Label, OriginChip, SourceLink, Verdict, money } from "./ui";
-
-interface RoundRow { id: string; state: string }
-type ResultRows = Parameters<typeof buildBracket>[0];
-type EventRows = Parameters<typeof roundWinner>[2];
 
 const STEP_MS = 900; // per stage; a 16 entrant field (7 stages) stays under 7 s
 
@@ -33,9 +32,15 @@ const CODE_LABEL: Record<Knock["reasonCode"], string> = {
   outranked: "Outranked",
 };
 
-export function Bracket({ round, results, events }: { round: RoundRow | undefined; results: ResultRows; events: EventRows }) {
+/** Reads its own tables so it never draws from a half-loaded round (results arrive after the round row). */
+export function Bracket() {
+  const [rounds, roundsReady] = useTable(tables.round);
+  const [results, resultsReady] = useTable(tables.roundResult);
+  const [events, eventsReady] = useTable(tables.floorEvent);
+  const ready = roundsReady && resultsReady && eventsReady;
+  const round = latestRound(rounds);
   const built = useMemo((): { b: BracketData } | { error: string } | null => {
-    if (!round || round.state !== "closed") return null;
+    if (!ready || !round || round.state !== "closed") return null;
     try {
       const b = buildBracket(results, round.id);
       if (b.champion !== roundWinner(results, round.id, events)) return { error: "the bracket champion is not the round winner" };
@@ -43,20 +48,22 @@ export function Bracket({ round, results, events }: { round: RoundRow | undefine
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, [round, results, events]);
+  }, [ready, round, results, events]);
 
   return (
     <div className="mt-3.5">
       <Card>
         <Label>Bidding Royale · Vidyut&apos;s round{round ? ` · ${round.id}` : ""}</Label>
-        {!round ? (
+        {!ready ? (
+          <p className="text-muted">Connecting...</p>
+        ) : !round ? (
           <p className="text-muted">No round yet. The bracket draws from the referee&apos;s decisions when a round closes.</p>
         ) : !built ? (
           <p className="text-muted">Bids are sealed. The bracket draws when the referee closes the round.</p>
         ) : "error" in built ? (
           <p className="text-coral">Bracket not shown: {built.error}.</p>
         ) : (
-          <BracketView b={built.b} />
+          <BracketView key={`${built.b.roundId}:${results.length}`} b={built.b} />
         )}
       </Card>
     </div>
@@ -92,7 +99,7 @@ function BracketView({ b }: { b: BracketData }) {
           <span className="text-muted">Stage {Math.min(shown, total)} of {total}</span>
         </div>
       )}
-      <ol className="grid gap-3.5 lg:auto-cols-[minmax(210px,1fr)] lg:grid-flow-col lg:overflow-x-auto lg:pb-1">
+      <ol className="grid gap-3.5 lg:auto-cols-[minmax(0,1fr)] lg:grid-flow-col">
         {b.stages.map((s, i) =>
           i < shown ? (
             <motion.li
@@ -120,7 +127,7 @@ function BracketView({ b }: { b: BracketData }) {
 
 function StageColumn({ stage, b }: { stage: Stage; b: BracketData }) {
   return (
-    <section className="grid content-start gap-2">
+    <section className="grid min-w-0 content-start gap-2">
       <header>
         <h3 className="text-[14px] font-semibold">{stage.name}</h3>
         <p className="text-[12px] text-muted">{STAGE_NOTE[stage.kind]}</p>
@@ -173,10 +180,10 @@ function HeatCard({ heat, b }: { heat: Heat; b: BracketData }) {
 
 function EntrantLine({ e, out }: { e: Entrant; out?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-0.5 py-0.5">
-      <span className={`flex min-w-0 items-center gap-1.5 text-[13px] ${out ? "text-muted line-through decoration-1" : "font-semibold"}`}>
-        {e.rank && <span className="font-mono text-[11px] text-muted">#{e.rank}</span>}
-        <span className="truncate">{e.name}</span>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 py-0.5">
+      <span className={`min-w-0 break-words text-[13px] ${out ? "text-muted" : "font-semibold"}`}>
+        {e.rank && <span className="mr-1 font-mono text-[11px] text-muted">#{e.rank}</span>}
+        <span className={out ? "line-through decoration-1" : ""}>{e.name}</span>{" "}
         <OriginChip origin={e.origin} />
       </span>
       <span className="font-mono text-[12px] tabular-nums">{money(e.adjusted ?? e.landed)}</span>
@@ -189,7 +196,7 @@ function KnockoutReason({ k }: { k: Knock }) {
     <div className="mt-1 grid gap-0.5 text-[12px]">
       <span className="flex flex-wrap items-center gap-1.5">
         <Verdict kind={k.reasonCode === "outranked" ? "out" : "veto"}>{CODE_LABEL[k.reasonCode]}</Verdict>
-        <span className="font-mono text-[11px] text-muted">{k.ruleId ?? k.reasonCode}</span>
+        <span className="break-all font-mono text-[11px] text-muted">{k.ruleId ?? k.reasonCode}</span>
       </span>
       <span className="break-words text-muted">{k.reasonText}</span>
       {k.sourceUrl && <SourceLink href={k.sourceUrl} />}
@@ -200,10 +207,9 @@ function KnockoutReason({ k }: { k: Knock }) {
 function Champion({ e }: { e: Entrant }) {
   return (
     <div className="rounded-[10px] border-l-4 border-l-mint bg-mint-soft px-3 py-2.5">
-      <div className="flex flex-wrap items-center gap-1.5 text-[15px] font-semibold">
-        <span className="min-w-0 break-words">{e.name}</span>
-        <OriginChip origin={e.origin} />
-      </div>
+      <p className="min-w-0 break-words text-[15px] font-semibold">
+        {e.name} <OriginChip origin={e.origin} />
+      </p>
       <dl className="mt-1.5 grid gap-0.5 text-[13px]">
         <div className="flex justify-between gap-2"><dt className="text-muted">Landed, before sales tax</dt><dd className="font-mono tabular-nums">{money(e.landed)}</dd></div>
         <div className="flex justify-between gap-2"><dt className="text-muted">Adjusted</dt><dd className="font-mono tabular-nums">{money(e.adjusted ?? e.landed)}</dd></div>

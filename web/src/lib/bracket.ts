@@ -55,7 +55,9 @@ function knockFor(id: string, reason: string): Knock {
   const v = code === "advocate_veto" ? VETO.exec(reason) : null;
   if (!v) return { id, reasonCode: code, reasonText: reason };
   const src = v[2] ? safeUrl(v[2]) : null;
-  return { id, reasonCode: code, reasonText: `Advocate veto (${v[1]})`, ruleId: v[1], ...(src ? { sourceUrl: src } : {}) };
+  // close_round writes the card detail in the parens: "fit.gpu_length" or "fit.gpu_length: The card is longer ...".
+  const rule = /^[\w.]+/.exec(v[1]!)?.[0];
+  return { id, reasonCode: code, reasonText: `Advocate veto (${v[1]})`, ...(rule ? { ruleId: rule } : {}), ...(src ? { sourceUrl: src } : {}) };
 }
 
 /** Seed order for a field of `size` (a power of 2): 1 v size, then the halves, so the top seeds meet last. */

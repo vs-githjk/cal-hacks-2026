@@ -38,7 +38,7 @@ export default function MarketPage() {
         originCounts={originCounts(shownLines)}
         sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
       />
-      <Bracket round={r} results={results} events={events} />
+      <Bracket />
     </>
   );
 }

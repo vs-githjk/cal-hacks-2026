@@ -68,6 +68,14 @@ test("Heat 1 knocks out advocate vetoes with the rule id and source", () => {
   });
 });
 
+test("a live veto with detail in the parens keeps the rule id alone and the full detail as text", () => {
+  const rows = [row({ bidId: "v", reasons: ["Advocate veto (fit.gpu_length: The card is longer than your case allows) [source: https://www.gigabyte.com/x]"] })];
+  const k = buildBracket(rows, "round-1").stages[1]!.heats[0]!.knocked[0]!;
+  assert.equal(k.ruleId, "fit.gpu_length");
+  assert.equal(k.reasonText, "Advocate veto (fit.gpu_length: The card is longer than your case allows)");
+  assert.equal(k.sourceUrl, "https://www.gigabyte.com/x");
+});
+
 test("every knocked entrant carries a reason_code drawn from the round's own data", () => {
   const rows = sampleRound();
   const b = buildBracket(rows, "round-1");
