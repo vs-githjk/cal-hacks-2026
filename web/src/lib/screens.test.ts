@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { purchaseFromRows, reviewsFromRows, stepFeedFromRows } from "./screens";
+import { buyerFeedFromRows, purchaseFromRows, reviewsFromRows, selectBuyerRound, stepFeedFromRows } from "./screens";
 import { PurchaseCard, ReceiptCard, ShieldCard, VetoCard } from "../components/buyer";
 import { BuyerScreen } from "../components/screens";
-import { buyerFeedFromRows, selectBuyerRound } from "../app/buyer/page";
 
 const ts = (ms: number) => ({ microsSinceUnixEpoch: BigInt(ms) * 1000n });
 const purchase = (overrides: Record<string, unknown> = {}) => ({

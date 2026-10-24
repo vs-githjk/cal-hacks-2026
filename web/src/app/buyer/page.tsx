@@ -2,39 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
-import type { Timestamp } from "spacetimedb";
 import { reducers, tables } from "@/module_bindings";
 import { AgentsTile } from "@/components/AgentsTile";
 import { BuyerScreen } from "@/components/screens";
-import { bidsFromRows, feedFromRows, goalFromRows, latestGoal, purchaseFromRows, reviewsFromRows, stepFeedFromRows } from "@/lib/screens";
+import { bidsFromRows, buyerFeedFromRows, goalFromRows, latestGoal, purchaseFromRows, reviewsFromRows, selectBuyerRound } from "@/lib/screens";
 
 // Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
 const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;
-
-interface BuyerRoundRow { goalId: string; roundId: string; openedAt: Timestamp }
-interface BuyerStepRow { stableId: string; goalId: string; klass: string; text: string; origin: string; at: Timestamp }
-interface BuyerNotificationRow { id: bigint; goalId: string; klass: string; text: string; at: Timestamp }
-
-export function selectBuyerRound(rows: readonly BuyerRoundRow[], goalId: string): BuyerRoundRow | null {
-  return [...rows].filter((row) => row.goalId === goalId).sort((a, b) => {
-    if (a.openedAt.microsSinceUnixEpoch !== b.openedAt.microsSinceUnixEpoch) {
-      return a.openedAt.microsSinceUnixEpoch > b.openedAt.microsSinceUnixEpoch ? -1 : 1;
-    }
-    return a.roundId.localeCompare(b.roundId);
-  })[0] ?? null;
-}
-
-export function buyerFeedFromRows(steps: readonly BuyerStepRow[], notifications: readonly BuyerNotificationRow[], goalId: string) {
-  const ownedSteps = new Map<string, BuyerStepRow>();
-  for (const row of steps) if (row.goalId === goalId && !ownedSteps.has(row.stableId)) ownedSteps.set(row.stableId, row);
-  const ownedNotifications = new Map<string, BuyerNotificationRow>();
-  for (const row of notifications) if (row.goalId === goalId && !ownedNotifications.has(String(row.id))) ownedNotifications.set(String(row.id), row);
-  const stepItems = stepFeedFromRows([...ownedSteps.values()], goalId).map((item) => ({ ...item, key: `step-${item.key}` }));
-  const notificationItems = feedFromRows([], [...ownedNotifications.values()]).map((item) => ({ ...item, key: `notification-${item.key.slice(1)}` }));
-  return [...stepItems, ...notificationItems].sort((a, b) => b.at.getTime() - a.at.getTime() || a.key.localeCompare(b.key));
-}
 
 /** A screen sees Vidyut's goal only after pairing with the demo code (SIM sign-in). */
 function PairScreen() {
