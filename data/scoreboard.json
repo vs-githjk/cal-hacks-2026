@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T11:18:31+00:00",
+ "generated_at": "2026-10-24T11:29:46+00:00",
  "tiles": [
   {
    "detail": {
@@ -97,12 +97,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T11:18:31+00:00",
-    "to": "2026-10-24T11:18:31+00:00"
+    "from": "2026-10-24T11:29:46+00:00",
+    "to": "2026-10-24T11:29:46+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T11:18:31+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T11:29:46+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
