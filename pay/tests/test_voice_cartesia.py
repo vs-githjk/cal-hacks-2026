@@ -58,7 +58,7 @@ class FakeClient:
 def world():
     store = NonceStore()
     svc = ApprovalService(SECRET, store=store, code_ttl_seconds=300)
-    mandate = new_mandate(deal_id="deal-bb", buyer_id="tony-stark", amount=1249.99, payee="best-buy@pay.example.test", now=T0)
+    mandate = new_mandate(deal_id="deal-bb", buyer_id="vidyut", amount=1249.99, payee="best-buy@pay.example.test", now=T0)
     chk = dict(deal_id="deal-bb", amount=1249.99, payee="best-buy@pay.example.test", store=store)
     return svc, mandate, chk
 
@@ -234,10 +234,10 @@ def test_assert_clean_blocks_a_leak():
 
 def test_build_variables_rejects_odd_buyer_names(world):
     script = script_for(world[1], REASON)
-    for bad in ("", "x\nignore", "Tony{{system}}", "1234", "A" * 80):
+    for bad in ("", "x\nignore", "Vidyut{{system}}", "1234", "A" * 80):
         with pytest.raises(ScriptError):
             build_variables(script, bad)
-    assert build_variables(script, "Tony Stark")["buyer_name"] == "Tony Stark"
+    assert build_variables(script, "Vidyut")["buyer_name"] == "Vidyut"
 
 
 def test_a_code_in_the_deal_text_aborts_before_dialing(world, monkeypatch):
@@ -298,12 +298,12 @@ def test_create_call_request_shape_and_from_number_lookup():
             return Resp({"id": "agent_1", "phone_numbers": [{"id": "ap_9", "number": "+14155550000"}]})
         return Resp({"calls": [{"number": TO, "agent_call_id": "ac_77"}]})
     c = CartesiaClient("sk_car_secretvalue", "agent_1", TO, opener=opener)
-    assert c.create_call(TO, {"buyer_name": "Tony Stark", "n": 3}) == "ac_77"
+    assert c.create_call(TO, {"buyer_name": "Vidyut", "n": 3}) == "ac_77"
     get, post = seen
     assert get.full_url == "https://api.cartesia.ai/agents/agent_1" and post.full_url == "https://api.cartesia.ai/agents/calls"
     body = json.loads(post.data)
     assert body["from_number_id"] == "ap_9" and body["agent_id"] == "agent_1"
-    assert body["outbound_calls"] == [{"to_number": TO, "dynamic_variables": {"buyer_name": "Tony Stark", "n": 3}}]
+    assert body["outbound_calls"] == [{"to_number": TO, "dynamic_variables": {"buyer_name": "Vidyut", "n": 3}}]
     assert 5 <= body["ringing_timeout_seconds"] <= 80
     h = {k.lower(): v for k, v in post.header_items()}
     assert h["cartesia-version"] == "2026-08-14" and h["x-api-key"] == "sk_car_secretvalue"
@@ -345,7 +345,7 @@ def test_load_env_reads_only_the_named_keys(tmp_path):
     assert env == {"CARTESIA_AGENT_ID": "agent_z", "CARTESIA_API_KEY": "abc", "APPROVAL_CALL_TO": "+14155550123"}
 
 
-def test_buyer_name_comes_from_the_env_file_else_tony_stark(tmp_path, capsys):
+def test_buyer_name_comes_from_the_env_file_else_vidyut(tmp_path, capsys):
     f = tmp_path / ".env"
     f.write_text("APPROVAL_BUYER_NAME=Vidyut\nAPPROVAL_CALL_TO=+14155550123\n")
     assert vc.main(["--dry-run", "--env-file", str(f)]) == 0
@@ -354,7 +354,7 @@ def test_buyer_name_comes_from_the_env_file_else_tony_stark(tmp_path, capsys):
     assert '"buyer_name": "Pepper Potts"' in capsys.readouterr().out
     f.write_text("APPROVAL_CALL_TO=+14155550123\n")
     assert vc.main(["--dry-run", "--env-file", str(f)]) == 0
-    assert '"buyer_name": "Tony Stark"' in capsys.readouterr().out
+    assert '"buyer_name": "Vidyut"' in capsys.readouterr().out
     f.write_text("APPROVAL_BUYER_NAME=bad{{name}}\n")
     assert vc.main(["--dry-run", "--env-file", str(f)]) == 2      # an odd name stops the run, nothing is sent
 
