@@ -115,6 +115,36 @@ def test_d_check_just_inside_24_hours_is_allowed():
     assert payee_ok(ok, business=True, now=NOW).ok
 
 
+# crs.py normalize() writes datetime.isoformat() with the "+00:00" swapped for "Z", so a real check carries
+# microseconds ("2026-10-24T07:59:12.345678Z"). That is the shape production emits and it must clear.
+def test_d_a_real_check_with_a_microsecond_timestamp_is_allowed():
+    real = check(checked_at=(NOW - timedelta(hours=1, microseconds=345678)).isoformat().replace("+00:00", "Z"))
+    assert "." in real["checked_at"] and real["checked_at"].endswith("Z")
+    v = payee_ok(real, business=True, now=NOW)
+    assert v.ok and v.reason == "ok"
+
+
+def test_d_microsecond_timestamps_still_expire_and_still_refuse_the_future():
+    old = check(checked_at="2026-10-23T08:59:59.999999Z")
+    assert payee_ok(old, business=True, now=NOW).reason == "crs_expired"
+    future = check(checked_at="2026-10-24T11:00:00.000001Z")
+    assert payee_ok(future, business=True, now=NOW).reason == "crs_future"
+
+
+@pytest.mark.parametrize("bad", [
+    "2026-10-24T08:00:00.Z",
+    "2026-10-24T08:00:00.1234567890Z",
+    "2026-10-24T08:00:00.123+00:00",
+    "2026-10-24T08:00:00,123Z",
+    "2026-10-24T08:00:00.12aZ",
+    "2026-10-24T08:00:00.123456",
+    "2026-10-24T08:00:00.123456Z\n",
+])
+def test_d_malformed_fractional_timestamps_are_still_refused(bad):
+    v = payee_ok(check(checked_at=bad), business=True, now=NOW)
+    assert not v.ok and v.reason == "crs_malformed"
+
+
 def test_d_check_dated_in_the_future_is_refused():
     future = check(checked_at=ts(NOW + timedelta(hours=2)))
     v = payee_ok(future, business=True, now=NOW)

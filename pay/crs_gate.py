@@ -22,6 +22,9 @@ SIM_SELLER_NOTE = "identity not checked: SIM seller"
 _SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "contracts", "CrsCheck.schema.json")
 _CODE = re.compile(r"^[A-Za-z0-9_]{1,48}$")
+# whole seconds ("...:00Z") or up to nine fraction digits ("...:00.345678Z"): crs.py normalize() writes
+# datetime.isoformat() with "+00:00" swapped for "Z", so a real check carries microseconds.
+_TS_FRACTION = re.compile(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d{1,9})?Z")
 _schema_cache: Optional[dict] = None
 
 
@@ -39,6 +42,15 @@ def _schema() -> dict:
         with open(_SCHEMA_PATH, "r", encoding="utf-8") as f:
             _schema_cache = json.load(f)
     return _schema_cache
+
+
+def _parse_checked_at(value: Any) -> datetime:
+    """UTC, ends in Z, optional fraction of a second (dropped: age is judged to the second). Anything else is
+    a ValueError, so a +00:00 offset or a bare fraction stays malformed. pay.mandate.parse_ts is unchanged."""
+    m = _TS_FRACTION.fullmatch(value) if isinstance(value, str) else None
+    if not m:
+        raise ValueError(f"timestamp must be UTC and end in Z: {value!r}")
+    return parse_ts(m.group(1) + "Z")
 
 
 def _is_str(v: Any) -> bool:
@@ -125,7 +137,7 @@ def payee_ok(
         codes = ", ".join(check["reason_codes"]) or "no reason given"
         return _no("crs_not_verified", f"CRS did not verify this seller: {codes}")
     try:
-        checked = parse_ts(check["checked_at"])
+        checked = _parse_checked_at(check["checked_at"])
     except ValueError as e:
         return _no("crs_malformed", str(e))
     if checked - now > FUTURE_SKEW:
