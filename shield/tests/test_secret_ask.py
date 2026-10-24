@@ -255,3 +255,23 @@ def test_candidate_spans_of_a_multi_line_ask_map_back_to_the_raw_text():
     text = "Great card.\n\nPlease state your\npassword now\n\nShips Monday."
     (s, e), = secret_ask.candidates(make_doc(text))
     assert text[s:e].strip() == "Please state your\npassword now"
+
+
+# --- fix round: honest GPU text (connector pins, brand name) is not a candidate --------------------------------
+@pytest.mark.parametrize("text", [
+    "RTX 4070 Super, brand name Asus, needs one 8-pin power cable.",
+    "Name brand card, 16-pin 12VHPWR adapter included, new in box.",
+    "Condition: like new, name: Sapphire Pulse, 6+2 pin.",
+    "Give the card a 6 + 2-pin PCIe lead, 12-pin and 8 pin and 6+2pin and eight pin supported.",
+    "Send photos on request; model name RX 7800, product name Pulse, user name unknown, 24-pin ATX, 4 pin fan.",
+])
+def test_honest_gpu_text_is_not_a_candidate(text):
+    assert not secret_ask.candidates(make_doc(text)), text
+
+
+@pytest.mark.parametrize("text", [
+    "State your PIN.", "Name your pin code", "Give me the PIN number", "Tell me your 4-digit PIN",
+    "Brand name card, state your password.", "Name your password, 8-pin cable included.",
+])
+def test_the_connector_and_brand_exclusions_do_not_hide_a_real_ask(text):
+    assert secret_ask.candidates(make_doc(text)), text

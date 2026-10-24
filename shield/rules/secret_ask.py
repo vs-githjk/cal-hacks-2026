@@ -31,6 +31,11 @@ _SECRET = rx(
 )
 # A sentence ends at . ! ? ; or a blank line. A single line break (\n, \r\n, U+2028) is just a space, so a
 # verb on one line still meets its noun on the next.
+# Honest hardware and label text that looks like a secret noun or a verb. Blanked (same length) before matching.
+# A connector "pin" has a count in front: 8-pin, 16 pin, 6+2 pin, 6 + 2-pin, eight pin.
+_CONNECTOR_PIN = rx(r"\b(?:\d+|four|six|eight|ten|twelve|sixteen)(?:\s*\+\s*\d+)?[\s-]*pins?\b")
+# "name" as a noun, not the verb: brand name, model name, product name, user name, "name brand".
+_NAME_NOUN = rx(r"\b(?:brand|model|product|user|item|company|trade|manufacturer)[\s-]+names?\b|\bname[\s-]+brand\b")
 _SENTENCE = re.compile(r"(?:(?!\n\s*\n|\r\s*\r|\u2029)[^.!?;])+")
 # Simple HTML tags and comment markers become blanks of the same length, so spans still map back to the raw text.
 _MARKUP = re.compile(r"</?[a-z][^<>]{0,200}>|<!--|-->", re.IGNORECASE)
@@ -48,7 +53,8 @@ def candidates(doc) -> list[tuple[int, int]]:
         prose = _MARKUP.sub(_blank, view.norm)
         for m in _SENTENCE.finditer(prose):
             # the whole sentence goes to the classifier: a window around the match could cut the real ask
-            if _VERB.search(m.group(0)) and _SECRET.search(m.group(0)):
+            seg = m.group(0)
+            if _VERB.search(_NAME_NOUN.sub(_blank, seg)) and _SECRET.search(_CONNECTOR_PIN.sub(_blank, seg)):
                 found.append(view.raw_span(m.start(), m.end()))
     merged: list[tuple[int, int]] = []
     for s, e in sorted(found):
