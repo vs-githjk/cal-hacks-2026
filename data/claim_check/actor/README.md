@@ -15,6 +15,8 @@ On real store pages, against the page's schema.org Product JSON-LD:
 - **Warranty** term in months, from the page's JSON-LD `warranty` (WarrantyPromise duration) or a plain "N-year warranty" in the product description; a list of promises counts only when they agree, and values outside 0 to 120 whole months come back `unverified`
 - **Returns** window, only when the page's JSON-LD states a schema.org `hasMerchantReturnPolicy` (days, or returns not permitted). None of the store pages we could fetch on Oct 24 publish one, so on those a returns claim comes back `unverified`.
 
+A was-price claim is judged only against price history from our own dated captures (never against anything on the page being checked); without our captures of that URL it is `unverified`.
+
 Not checked on real store pages yet: was-price and socket claims are only checked on our SIM test pages (their listing JSON); on real store pages they come back `unverified`. Shipping is not checked at all yet. The Actor has no price-history input.
 
 ## Input
