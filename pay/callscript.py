@@ -170,6 +170,12 @@ def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY
     return v
 
 
+CRS_LINES = {
+    "verified": "The seller was checked with CRS and verified",
+    "sim_seller": "This is a simulated seller, not checked with CRS",
+}
+
+
 def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
     """Context read aloud beside the amount: item, condition and the seller's NAME (never the payee id, which
     stays bound in the mandate). `deal` is {item, condition, seller} from our own market record of the winning
@@ -181,7 +187,7 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
         return kept, dropped
     if not isinstance(deal, Mapping):
         return kept, ["deal"]
-    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller")]
+    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "crs")]
     for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
         if key in deal:
             v = _plain(deal[key], pattern, _FACTS_BLOCKED)
@@ -189,6 +195,12 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
                 dropped.append(key)
             else:
                 kept[key] = v
+    if "crs" in deal:   # our own CRS result (#257), a fixed phrase per value; nothing the seller wrote is read
+        line = CRS_LINES.get(deal["crs"]) if isinstance(deal["crs"], str) else None
+        if line is None:
+            dropped.append("crs")
+        else:
+            kept["crs"] = line
     if "condition" in deal:
         c = CONDITIONS.get(str(deal["condition"]).strip().lower()) if isinstance(deal["condition"], str) else None
         if c is None:
@@ -234,6 +246,8 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
         deal_line += f", {facts['condition']}"
     deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
     deal_line += f", for {words}"
+    if "crs" in facts:
+        deal_line += f". {facts['crs']}"
     kept, dropped = clean_advocate_reason(advocate_reason)
     parts = []
     if "rule_id" in kept or "summary" in kept:

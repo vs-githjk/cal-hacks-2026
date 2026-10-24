@@ -17,6 +17,7 @@ LOGIN_PATH = "/users/login"
 ENDPOINT_PATH = "/transunion/identity-manager-verification/basic"
 ENDPOINT = f"{DEFAULT_BASE_URL}{ENDPOINT_PATH}"
 CACHE_MAX_AGE = timedelta(hours=24)
+PAYEE_TTL = timedelta(minutes=10)   # #257: one check per payee at the payment gate, reused for this long
 REASON_VERIFIED = "Synthetic representative identity verified by CRS sandbox."
 REASON_CAUTION = "CRS sandbox returned a fraud alert; additional proof is required."
 REASON_NOT_VERIFIED = "CRS sandbox could not verify the synthetic representative identity."
@@ -352,8 +353,9 @@ def _cache_write(path, data):
             pass
 
 
-async def check_sellers(now: datetime) -> dict[str, dict]:
-    """Check only configured, consented, business profiles; cache contains sanitized signals only."""
+async def check_sellers(now: datetime, only: set[str] | None = None) -> dict[str, dict]:
+    """Check only configured, consented, business profiles; cache contains sanitized signals only.
+    `only` limits the check to these supplier ids (check_payee asks for one)."""
     _issued_personas.clear()
     _, cache_path = _paths()
     profiles, cache = _profiles(), _cache_read(cache_path)
@@ -363,6 +365,8 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
     results = {}
     for supplier_id, profile in profiles.items():
         if not isinstance(supplier_id, str) or not supplier_id:
+            continue
+        if only is not None and supplier_id not in only:
             continue
         if not isinstance(profile, dict) or profile.get("seller_type") != "business":
             results[supplier_id] = {"signal": None, "reason": REASON_PROFILE}
@@ -408,6 +412,32 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
         else:
             results[supplier_id] = {"signal": None, "reason": REASON_UNAVAILABLE}
     return results
+
+
+_payee_cache: dict[str, tuple[datetime, dict]] = {}
+
+
+def is_business(supplier_id: str) -> bool:
+    """A payee is a business only when its approved profile says so; every other payee is a SIM seller."""
+    profile = _profiles().get(supplier_id)
+    return isinstance(profile, dict) and profile.get("seller_type") == "business"
+
+
+async def check_payee(supplier_id: str, now: datetime) -> dict:
+    """#257: one CRS check of the payee at the payment gate, cached per payee for PAYEE_TTL.
+    Returns {"business", "check", "cached"}: `check` is the CrsCheck (pay.crs_gate judges it) for a business payee,
+    None for a SIM seller (no business profile, so no request). A transport failure is never cached."""
+    hit = _payee_cache.get(supplier_id)
+    if hit is not None and now < hit[0]:
+        return {**hit[1], "cached": True}
+    if not is_business(supplier_id):
+        outcome = {"business": False, "check": None}
+    else:
+        legacy = (await check_sellers(now, only={supplier_id})).get(supplier_id)
+        outcome = {"business": True, "check": to_crs_check(supplier_id, legacy)}
+    if outcome["check"] is None or "CRS_UNAVAILABLE" not in outcome["check"]["reason_codes"]:
+        _payee_cache[supplier_id] = (now + PAYEE_TTL, outcome)
+    return {**outcome, "cached": False}
 
 
 def main():
