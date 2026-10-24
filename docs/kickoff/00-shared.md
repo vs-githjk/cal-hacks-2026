@@ -150,6 +150,9 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 - Every bid, claim, number and screen carries LIVE, MIRROR or SIM. SIM numbers are never added to real ones; they sit in separate columns. docs/REAL_VS_SIMULATED.md exists from hour one and is updated whenever a thing changes status.
 - Claims use tense by status: present tense only for built; say "mocked" or "planned" plainly, or cut it.
 
+## Seller model (LOCKED Fri 22:36)
+One seller agent per SELLER OF RECORD: whoever takes the money and ships. Amazon selling directly is one agent; each third-party merchant on Amazon is its own agent; Newegg, a local shop, a brand's own store are each one agent. One agent may bid several condition lines (new, open-box, refurbished, bundle) for the same SKU inside one sealed bid. Every listing normalizes to one canonical SKU (MPN or UPC) in SpecCard. The advocate ranks on quality-adjusted landed price (condition, warranty, returns, seller record); the buyer's goal sets which conditions are allowed. Manufacturers bid only when they sell direct.
+
 ## Invariants (never break these)
 1. No payment row without an approval row for the same mandate hash. A reducer invariant, tested in CI (Vedant writes it, Vidyut reviews). Idempotency key on the mandate hash: a second approval is rejected and shown.
 2. Voice is never the credential. The credential is a one-time word-pair code on the buyer's authenticated screen, spoken inside a call about one exact mandate. The model never decides "approve"; code does. Default deny.
