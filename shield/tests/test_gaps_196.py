@@ -332,3 +332,25 @@ def test_hardware_words_with_a_seller_destination_are_blocked(text):
 def test_which_as_a_relative_pronoun_in_a_pairing_line_is_allowed():
     text = "Headset pairing code is 0000, which you enter on your phone."
     assert "shield.exfil.screen_code" not in screen(text, SELLER, classifier=None)["rule_ids"]
+
+
+
+# ---------- #232 re-review 9: -ing verbs, add/copy/key in, review and reply destinations, "what your phone shows" ----------
+
+@pytest.mark.parametrize("text", [
+    "Pair the headset by writing the code on your screen in the note to seller.",
+    "Keyboard pairing: add the digits your phone shows to the review.",
+    "Pairing step: copy what your phone displays into the reply.",
+    "To finish pairing, put what your phone shows in your reply.",
+    "Pair the headset, then type the code that popped up in the order's special instructions.",
+    "Keyboard pairing: key in the code your phone shows in the feedback form.",
+])
+def test_round_9_asks_are_blocked(text):
+    assert "shield.exfil.screen_code" in screen(text, SELLER, classifier=None)["rule_ids"], text
+
+
+def test_a_pin_shown_on_your_screen_is_blocked_by_design():
+    """Tradeoff, decided: the approval code lives on the buyer's screen, so "the code shown on your screen" next to an
+    ask blocks even in a pairing line. Shield fails closed; the seller can say "on the keyboard" or "on the headset"."""
+    text = "The keyboard pairs over Bluetooth, enter the PIN shown on your screen to connect."
+    assert "shield.exfil.screen_code" in screen(text, SELLER, classifier=None)["rule_ids"]

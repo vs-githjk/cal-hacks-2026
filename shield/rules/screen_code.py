@@ -22,7 +22,8 @@ _WHERE = rx(r"\b" + _THEIRS + r"\s+(?:\w+\s+){0,2}?" + _DEVICE + r"\b|\bon\s+(?:
             r"(?:screen|display|phone|device|app|tablet)\b|\bonce\s+approved\b|\bafter\s+approving\b|\bwhen\s+(?:you|u)\s+approve\b"
             r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b|\bapproval\b|\bverification\b|\bpairing\b|\bone[-\s]time\b|\btwo[-\s]word\b|\b2[-\s]word\b|\bmagic\b|\bsecret\b")
 _ASK = rx(r"\?|\b(?:please|pls|plz)\b|\b(?:read|recite|tell|say|send|give|share|type|enter|repeat|spell|paste|text|dm|e-?mail|reply"
-          r"|respond|what|whats|which|show|echo|mirror|wants|input|include|insert|fill\s+in|forward|provide|confirm|post|drop|put|need|want|let\s+(?:me|us)\s+know|aloud|out|message|ping|shoot"
+          r"|respond|what|whats|which|show|echo|mirror|wants|input|include|insert|fill\s+in|add|copy|key\s+in"
+          r"|writing|typing|entering|putting|sending|pasting|adding|copying|sharing|reading|telling|forward|provide|confirm|post|drop|put|need|want|let\s+(?:me|us)\s+know|aloud|out|message|ping|shoot"
           r"|whisper|relay|disclose|reveal|list|write|state|required|waiting|like|send\s+over|pass\s+(?:on|along))\b"
           r"|\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase)\s+needed\b")  # not a bare "needed": "no pairing code needed"
 # The approval itself or the buyer's own device: a code noun next to one of these is an ask even with no verb at all
@@ -47,8 +48,8 @@ _CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|wor
 _HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
 _TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
                 r"|give|what|whats|relay|whisper|aloud|include|list|write|form|notes?|comments?|portal|checkout|gift|listing"
-                r"|field|website|site|cart|account|seller'?s?|box|below|above)\b"
-                r"|\b(?:order|delivery|shipping)\s+(?:notes?|comments?|instructions|form|field|message)\b"
+                r"|field|website|site|cart|account|seller'?s?|box|below|above|review|feedback|reply|instructions|q&a)\b"
+                r"|\b(?:order|delivery|shipping)(?:'s)?\s+(?:\w+\s+)?(?:notes?|comments?|instructions|form|field|message)\b"
                 # the code's source is the buyer's screen or someone else's device: never the buyer's own headset
                 r"|\b(?:on|from|off|in)\s+(?:your|ur|the\s+buyer'?s?|the\s+owner'?s?|your\s+owner'?s?)\s+(?:\w+\s+)?screen\b"
                 r"|\b(?:the\s+buyer'?s?|the\s+owner'?s?|your\s+owner'?s?|your\s+buyer'?s?)\s+(?:\w+\s+){0,2}?" + _DEVICE + r"\b")
@@ -57,7 +58,10 @@ _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THE
             r"\b[^.!?]{0,15}?\b(?:says?|reads?|reading|shows?\s+(?:as\s+)?(?:the\s+)?(?:code|words?))\b"
             r"|\bwhat(?:'?s|\s+is)\s+(?:on|in)\s+" + _THEIRS + r"\s+" + _DEVICE + r"\b"
             r"|\b(?:what|tell\s+me|read\s+me)\b[^.!?]{0,30}?\bapproval\s+screen\b[^.!?]{0,15}?\b(?:says?|reads?|shows?)\b"
-            r"|\bwhat\b[^.!?]{0,20}?\b(?:says?|reads?|shows?)\b[^.!?]{0,15}?\bapproval\s+screen\b")
+            r"|\bwhat\b[^.!?]{0,20}?\b(?:says?|reads?|shows?)\b[^.!?]{0,15}?\bapproval\s+screen\b"
+            # "copy what your phone displays into the reply", "put what your phone shows in your reply"
+            r"|\b(?:copy|put|paste|type|enter|write|send|add|include)\b[^.!?]{0,20}?\bwhat\s+" + _THEIRS + r"\s+"
+            + _DEVICE + r"\s+(?:shows?|displays?|says?|reads?)\b")
 _SENTENCE = re.compile(r"[^.!?]+[.!?]*")
 
 
