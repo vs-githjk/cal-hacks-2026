@@ -18,7 +18,7 @@ def checkout():
     mandate = new_mandate(deal_id="deal-1", buyer_id="buyer-1", goal_id="goal-1", amount=79.99,
                           payee="seller-1", now=NOW)
     service = ApprovalService("test-secret-for-payment-commit")
-    session, code = service.issue(mandate, now=NOW)
+    session, code = service.issue(mandate, channel="phone", now=NOW)
     session.start_call(now=NOW)
     session.begin_listening(now=NOW)
     voice = session.approve(code + " approve", now=NOW + timedelta(seconds=1)).record

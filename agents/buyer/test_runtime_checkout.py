@@ -426,9 +426,10 @@ def approved_transaction(buyer, db):
     store = NonceStore(str(state.DEFAULT_DB_PATH))
     service = ApprovalService("runtime-checkout-approval-secret", store=store,
                               code_ttl_seconds=VOICE_CODE_TTL_SECONDS)
-    session, code = service.issue(mandate, now=NOW)
+    session, code = service.issue(mandate, channel="phone", now=NOW)
     session.start_call(now=NOW)
-    decision = session.approve_typed(code, now=NOW + timedelta(seconds=1))
+    session.begin_listening(now=NOW)
+    decision = session.approve(code + " approve", now=NOW + timedelta(seconds=1))
     assert decision.approved and decision.record
     order = {"id": mandate["deal_id"], "need_id": need_id, "bid_id": bid_id,
              "amount": mandate["amount"], "approved_by": "owner", "approval_id": decision.record["id"],
@@ -524,6 +525,26 @@ def test_wrong_seller_and_request_drift_never_reach_charger(runtime):
     assert any(isinstance(message, RejectPayment) for _, message in drift_ctx.sent)
     assert not any(isinstance(message, CommitPayment) for ctx in (wrong_sender, drift_ctx)
                    for _, message in ctx.sent)
+
+
+@pytest.mark.parametrize("channel", ["typed", "browser"])
+def test_stored_approved_transaction_with_non_phone_approval_is_rejected_and_never_charged(runtime, channel):
+    buyer, db = runtime
+    tx, _service = approved_transaction(buyer, db)
+    tx["voice_approval"] = {**tx["voice_approval"], "channel": channel}
+    state.save_transaction(db, tx)
+    buyer.ROUND.update(transaction=tx)
+    request, _body, message_id, receipt, receipt_key = payment_material(buyer, tx)
+    charger = FakeCharger()
+    configure_merchant(buyer, db, tx, receipt_key, charger)
+    install_shield_screen(buyer, receipt, message_id)
+    ctx = Context()
+
+    asyncio.run(buyer.on_request_payment(ctx, tx["mandate"]["payee"], request))
+
+    assert not charger.calls
+    assert any(isinstance(message, RejectPayment) for _, message in ctx.sent)
+    assert not any(isinstance(message, CommitPayment) for _, message in ctx.sent)
 
 
 def test_invalid_shield_receipt_never_reaches_charger(runtime):

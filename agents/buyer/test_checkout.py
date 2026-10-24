@@ -42,7 +42,7 @@ def tx():
 
 def approved_record(tx):
     service = ApprovalService("checkout-test-secret-987654321", code_ttl_seconds=VOICE_CODE_TTL_SECONDS)
-    session, code = service.issue(copy.deepcopy(tx["mandate"]), now=NOW)
+    session, code = service.issue(copy.deepcopy(tx["mandate"]), channel="phone", now=NOW)
     session.start_call(now=NOW)
     session.begin_listening(now=NOW)
     return session.approve(code + " approve", now=NOW + timedelta(seconds=1)).record

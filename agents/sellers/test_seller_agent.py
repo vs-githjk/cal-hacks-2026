@@ -78,7 +78,7 @@ def approved_transaction(*, expired=False, allowance=False):
             "method": "allowance", "approved_at": created.isoformat()}
     else:
         approval_service = ApprovalService("seller-agent-test-secret-123456", store=NonceStore())
-        session, code = approval_service.issue(mandate, now=created)
+        session, code = approval_service.issue(mandate, channel="phone", now=created)
         session.start_call(now=created)
         session.begin_listening(now=created)
         record = session.approve(code + " approve", now=created + timedelta(seconds=1)).record
