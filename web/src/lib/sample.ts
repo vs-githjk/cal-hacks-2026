@@ -28,7 +28,7 @@ export const rankedBids: RankedBid[] = [
   { rank: 2, seller: "Bargain Bin Hardware", origin: "SIM", condition: "new", landed: 1199, adjusted: 1199, recommendation: "veto", why: "336 mm card, your case allows 305 mm (fit.gpu_length)", won: false },
   { rank: 3, seller: "Best Buy", origin: "MIRROR", condition: "new", landed: 1249.99, adjusted: 1274.99, recommendation: "caution", why: "Fit not confirmed from the listing; PSU and connector pass.", sourceUrl: "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085", won: true },
   { rank: 4, seller: "Fair Price PC", origin: "SIM", condition: "new", landed: 1289, adjusted: 1289, recommendation: "buy", why: "All checks pass", won: false },
-  { rank: 5, seller: "Gadget Grove", origin: "SIM", condition: "open-box", altLines: [{ condition: "new", unitPrice: 1315.27 }], landed: 1247.02, adjusted: 1296.9, recommendation: "buy", why: "Cheapest allowed line is open-box; adjusted for condition", won: false },
+  { rank: 5, seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "open-box", altLines: [{ condition: "new", unitPrice: 1315.27 }], landed: 1247.02, adjusted: 1296.9, recommendation: "buy", why: "Cheapest allowed line is open-box; adjusted for condition", won: false },
   { rank: 6, seller: "eBay seller ...824742", origin: "MIRROR", condition: "open-box", landed: 1239.99, adjusted: 1314.39, recommendation: "caution", why: "Fit not confirmed; open-box adjustment", won: false },
   { rank: null, seller: "Micro Center", origin: "MIRROR", condition: "unknown", landed: 1199.99, adjusted: null, recommendation: "ineligible", why: "Snapshot states no condition; the advocate will not guess", won: false },
   { rank: null, seller: "Amazon.com (sells direct)", origin: "MIRROR", condition: "unknown", landed: 1299.99, adjusted: null, recommendation: "ineligible", why: "Snapshot states no condition", won: false },
@@ -134,15 +134,15 @@ export const round: RoundView = {
     { label: "Bargain Bin", atMs: 6600, origin: "SIM", refused: false },
     { label: "Lowball", atMs: 7500, origin: "SIM", refused: true },
     { label: "Fair Price", atMs: 8400, origin: "SIM", refused: false },
-    { label: "Gadget Grove", atMs: 10600, origin: "SIM", refused: false },
+    { label: "Gadget Grove (Vedant)", atMs: 10600, origin: "SIM", refused: false },
   ],
   seenBeforeClose: { buyer: 0, public: 0 },
 };
 
 export const sellerLines: SellerLine[] = [
   { seller: "Best Buy", origin: "MIRROR", condition: "new", landed: 1249.99, referee: "passed", outcome: { kind: "won", rank: 3 } },
-  { seller: "Gadget Grove", origin: "SIM", condition: "new", landed: 1315.27, referee: "passed", outcome: { kind: "alt", note: "not the cheapest allowed line" } },
-  { seller: "Gadget Grove", origin: "SIM", condition: "open-box", landed: 1247.02, referee: "passed", outcome: { kind: "ranked", rank: 5 } },
+  { seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "new", landed: 1315.27, referee: "passed", outcome: { kind: "alt", note: "not the cheapest allowed line" } },
+  { seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "open-box", landed: 1247.02, referee: "passed", outcome: { kind: "ranked", rank: 5 } },
   { seller: "eBay seller ...824742", origin: "MIRROR", condition: "open-box", landed: 1239.99, referee: "passed", outcome: { kind: "ranked", rank: 6 } },
   { seller: "Fair Price PC", origin: "SIM", condition: "new", landed: 1289, referee: "passed", outcome: { kind: "ranked", rank: 4 } },
   { seller: "Bargain Bin Hardware", origin: "SIM", condition: "new", landed: 1199, referee: "passed", outcome: { kind: "veto", rank: 2, note: "336 mm > 305 mm" } },
@@ -155,7 +155,7 @@ export const sellerLines: SellerLine[] = [
 ];
 
 export const lossReports: LossReport[] = [
-  { seller: "Gadget Grove", origin: "SIM", gapBand: "within5", reason: "price", sourceUrl: "https://example.com/sim/gadget-grove/rtx-5070-ti" },
+  { seller: "Gadget Grove (Vedant)", origin: "SIM", gapBand: "within5", reason: "price", sourceUrl: "https://example.com/sim/gadget-grove/rtx-5070-ti" },
   { seller: "Fair Price PC", origin: "SIM", gapBand: "within5", reason: "price", sourceUrl: "https://example.com/sim/fair-price-pc/rtx-5070-ti" },
   { seller: "eBay ...824742", origin: "MIRROR", gapBand: "within5", reason: "price", sourceUrl: "https://www.ebay.com/itm/800825824742" },
   { seller: "Amazon.com", origin: "MIRROR", gapBand: "within5", reason: "condition", sourceUrl: "https://www.amazon.com/dp/B0DXL8NFLF" },
@@ -167,7 +167,7 @@ export const lossReports: LossReport[] = [
 ];
 
 export const learning: LearningView = {
-  seller: "Gadget Grove",
+  seller: "Gadget Grove (Vedant)",
   origin: "SIM",
   whatToChange: "You lost on price by less than 5 percent. Lower your price by about 3%, and keep it above your floor.",
   whatToChangeOrigin: "SIM template",

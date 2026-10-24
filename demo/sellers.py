@@ -11,7 +11,7 @@ market band ($1,200 to $1,300 at the retailers on Oct 24) so one real seller can
 Lane C's and shows $789, so he is the "too good to be true" trap. Honest Hal's page is used by beat 3 only: at $789
 his honest listing would undercut every real seller, so he does not bid in the market round.
 Seller model (LOCKED): the lines of one bid are ALTERNATIVES for the same SKU; the market takes the cheapest line
-whose condition the goal allows. Gadget Grove (SIM) carries two lines, new and open-box.
+whose condition the goal allows. Gadget Grove (Vedant, a SIM seller) carries two lines, new and open-box.
 """
 from __future__ import annotations
 
@@ -190,7 +190,7 @@ def sim_sellers() -> list[Seller]:
                        [_sim_line("bargain-bin", "new", 1199.0, 1150.0, f"{band}, 5070 Ti with a 4-slot cooler", length_mm=336)])
     # The learning seller: honest and a little too high, with two condition lines (the seller-model demo).
     # It adjusts after its first loss report.
-    grove = _sim_seller("gadget-grove", "Gadget Grove (SIM)", [
+    grove = _sim_seller("gadget-grove", "Gadget Grove (Vedant)", [
         _sim_line("gadget-grove", "new", 1349.0, 1230.0, f"{band}, honest card and 303 mm", discount=0.025),
         _sim_line("gadget-grove", "open-box", 1279.0, 1190.0, f"{band}, open-box line of the same card", discount=0.025)],
         learning=True)

@@ -7,7 +7,7 @@ import { BuyerScreen } from "@/components/screens";
 import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
 
-// Demo persona (SIM). Real sign-in replaces this.
+// Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
 const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;
@@ -24,7 +24,7 @@ function PairScreen() {
     <section className="card mx-auto max-w-md p-6">
       <h1 className="mb-2 text-lg font-semibold">Pair this screen with Vidyut</h1>
       <p className="mb-4 text-sm text-muted">
-        Vidyut is a demo persona (SIM). Enter the pairing code from the demo operator. Sellers can never pair.
+        Enter the pairing code from the demo operator. Sellers can never pair.
       </p>
       <form
         className="flex gap-2"

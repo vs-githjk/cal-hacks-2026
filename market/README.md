@@ -54,7 +54,7 @@ Every state-changing reducer checks the caller first (`requireRole` in `spacetim
 ```bash
 # once per database, as the owner (the spacetime CLI identity): creates agent tokens in .tokens/ (gitignored)
 python3 market/scripts/setup_roles.py
-# the buyer screen pairing code for Vidyut (demo persona, SIM)
+# the buyer screen pairing code for Vidyut
 spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"
 ```
 
