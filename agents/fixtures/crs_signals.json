@@ -1,0 +1,5 @@
+[
+  {"supplier_id":"seller_1","stability":"verified_stable","checked_at":"2026-10-24T08:00:00Z","source":"simulated"},
+  {"supplier_id":"seller_2","stability":"verified_stable","checked_at":"2026-10-24T08:00:00Z","source":"simulated"},
+  {"supplier_id":"seller_3","stability":"not_verified","checked_at":"2026-10-24T08:00:00Z","source":"simulated"}
+]
