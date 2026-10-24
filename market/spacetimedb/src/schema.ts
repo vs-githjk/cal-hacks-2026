@@ -213,9 +213,9 @@ export const bidCheck = table(
   {
     id: t.u64().primaryKey().autoInc(),
     bidId: t.string().index('btree'),
-    kind: t.string(), // shield | claim | advocate
-    result: t.string(), // allow|quarantine|block, verified|unverified|false, or buy|caution|veto
-    detail: t.string(), // advocate: the rule id, then the text
+    kind: t.string(), // shield | claim | advocate | same_seller
+    result: t.string(), // shield: allow|quarantine|block; claim: verified|unverified|false; advocate: buy|caution|veto; same_seller: excluded|stale|cleared
+    detail: t.string(), // advocate: rule id and text; same_seller: fixed rule id and summary
     evidenceUrl: t.string(),
     origin: t.string(),
     at: t.timestamp(),

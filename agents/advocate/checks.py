@@ -11,6 +11,7 @@ from datetime import datetime
 from urllib.parse import urlsplit
 
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
+from advocate.same_seller import exclude_same_seller
 from data.fit_checker import check_fit
 
 PRICE_TOLERANCE = 0.10
@@ -376,3 +377,36 @@ def best_bid(bids: list[dict], cards: list[dict]):
     vetoed = {c["bid_id"] for c in cards if c["recommendation"] == "veto"}
     ok = [b for b in bids if b["id"] not in vetoed]
     return min(ok, key=lambda b: b["total_landed_price"]) if ok else None
+
+
+def same_seller_exclusions(eligible_candidates: list[dict], trusted_identity_by_seller: dict) -> list[dict]:
+    """Build bound exclusion calls from the referee's already-ranked eligible candidates."""
+    candidates = list(eligible_candidates)
+    candidate_rows = []
+    first_by_seller = {}
+    seen_bid_ids = set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise ValueError("eligible candidate must be a mapping")
+        bid_id, seller_id, binding_hash = (candidate.get("bid_id"), candidate.get("seller_id"), candidate.get("binding_hash"))
+        if (not isinstance(bid_id, str) or not bid_id.strip() or bid_id in seen_bid_ids
+                or not isinstance(seller_id, str) or not seller_id.strip()
+                or not isinstance(binding_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", binding_hash)):
+            raise ValueError("eligible candidate needs unique bid and seller ids plus a SHA-256 binding")
+        seen_bid_ids.add(bid_id)
+        first_by_seller.setdefault(seller_id, candidate)
+        candidate_rows.append({"bid_id": bid_id, "seller_id": seller_id})
+
+    _, seller_exclusions = exclude_same_seller(candidate_rows, trusted_identity_by_seller)
+    out = []
+    for exclusion in seller_exclusions:
+        kept = first_by_seller[exclusion["kept_seller_id"]]
+        for candidate in candidates:
+            if candidate["seller_id"] == exclusion["excluded_seller_id"]:
+                out.append({
+                    "kept_bid_id": kept["bid_id"], "kept_seller_id": kept["seller_id"],
+                    "kept_binding_hash": kept["binding_hash"], "excluded_bid_id": candidate["bid_id"],
+                    "excluded_seller_id": candidate["seller_id"], "excluded_binding_hash": candidate["binding_hash"],
+                    "reason": dict(exclusion["reason"]),
+                })
+    return out

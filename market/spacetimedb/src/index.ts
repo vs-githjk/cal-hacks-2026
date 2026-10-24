@@ -78,6 +78,15 @@ export const attach_advocate_card = spacetimedb.reducer(
   (ctx, a) => m.attachAdvocateCard(ctx, a),
 );
 
+export const attach_same_seller_exclusion = spacetimedb.reducer(
+  { roundId: t.string(), keptBidId: t.string(), excludedBidId: t.string(), keptBindingHash: t.string(), excludedBindingHash: t.string() },
+  (ctx, a) => m.attachSameSellerExclusion(ctx, a),
+);
+export const clear_same_seller_exclusion = spacetimedb.reducer(
+  { roundId: t.string(), excludedBidId: t.string() },
+  (ctx, a) => m.clearSameSellerExclusion(ctx, a),
+);
+
 export const create_mandate = spacetimedb.reducer(
   {
     hash: t.string(), id: t.string(), dealId: t.string(), buyerId: t.string(), amount: t.f64(), payee: t.string(),
@@ -180,5 +189,8 @@ const ReviewCandidateRow = t.object('ReviewCandidateRow', {
   linesJson: t.string(), lineMetaJson: t.string(), bindingHash: t.string(),
 });
 export const review_candidates = spacetimedb.view({ name: 'review_candidates', public: true }, t.array(ReviewCandidateRow), (ctx) => m.reviewCandidatesView(ctx));
+export const eligible_review_candidates = spacetimedb.view(
+  { name: 'eligible_review_candidates', public: true }, t.array(ReviewCandidateRow), (ctx) => m.eligibleReviewCandidatesView(ctx),
+);
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
 export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));
