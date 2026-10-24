@@ -144,7 +144,8 @@ def hyphenate_tile() -> dict:
                       "b24, k02 and k03 were fixed after it, so the rerun is not blind.")
 
 
-DEMO_WINNER = {"sku": "rtx 5070 ti", "price": 1299.99, "condition": "new"}  # ASUS Prime at Best Buy
+DEMO_WINNER = {"sku": "rtx 5070 ti", "price": 1299.99, "condition": "new",  # ASUS Prime at Best Buy
+               "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"}
 
 
 def position_block() -> dict:
@@ -153,7 +154,8 @@ def position_block() -> dict:
     from data.baselines.position import price_position
     rows = observations()
     as_of = max((r["observed_at"] for r in rows), default=datetime.now(timezone.utc).isoformat(timespec="seconds"))
-    return price_position(DEMO_WINNER["sku"], DEMO_WINNER["price"], DEMO_WINNER["condition"], as_of, rows=rows)
+    return price_position(DEMO_WINNER["sku"], DEMO_WINNER["price"], DEMO_WINNER["condition"], as_of, rows=rows,
+                          subject_url=DEMO_WINNER["url"])
 
 
 def build() -> dict:

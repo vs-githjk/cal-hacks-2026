@@ -25,7 +25,8 @@ def _day(ts: str) -> str:
     return f"{d:%b} {d.day}"
 
 
-def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_length_mm: int = 305, rows: list[dict] | None = None) -> dict:
+def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_length_mm: int = 305, rows: list[dict] | None = None,
+                   subject_url: str | None = None) -> dict:
     rows = observations() if rows is None else rows
     t = _ts(as_of)
     live = [r for r in rows if r["sku"] == sku and r["kind"] == "ask" and r["store"] in RETAIL and r["in_stock"]
@@ -49,7 +50,11 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
     b = baseline(sku, as_of, rows=rows)
     sold_median, sold_n = b["sold"].get("median"), b["sold"].get("n")
     status = b["status"] if b["status"] in ("ok", "one_source") else "one_source"
-    where = "Cheapest" if rank == 1 else f"{_ordinal(rank)} cheapest"
+    same = sorted((r for r in fitting if abs(r["price"] - price) <= 0.01 and r.get("url") != subject_url), key=lambda r: (r["store"], r.get("url") or ""))
+    if subject_url is None and same:  # the subject is one of the equal-priced listings: the others tie with it
+        same = same[1:]
+    tied_with = [{"store": r["store"], "url": r.get("url")} for r in same] if rank == 1 else []
+    where = "Tied cheapest" if tied_with else "Cheapest" if rank == 1 else f"{_ordinal(rank)} cheapest"
     sentence = f"{where} fitting {condition} card of {of_n} listing{'s' * (of_n != 1)} at {len(stores)} store{'s' * (len(stores) != 1)}, {_day(as_of)}" if of_n else \
         f"No fitting {condition} listings held, {_day(as_of)}"
     if of_n and status == "ok" and sold_median is not None:
@@ -60,5 +65,5 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
     return {"sku": sku, "price": price, "condition": condition, "as_of": as_of, "rank": rank if of_n else None, "of_n": of_n,
             "stores": stores, "cheapest_fitting": {"price": cheapest["price"], "store": cheapest["store"], "url": cheapest.get("url")} if cheapest else None,
             "snapshot_dates": sorted({r["observed_at"][:10] for r in fitting}), "sold_median": sold_median, "sold_n": sold_n,
-            "unknown_fit": unknown_fit, "too_long": too_long, "max_gpu_length_mm": max_gpu_length_mm,
+            "tied_with": tied_with, "unknown_fit": unknown_fit, "too_long": too_long, "max_gpu_length_mm": max_gpu_length_mm,
             "status": status, "sentence": sentence, "origin": "MIRROR"}

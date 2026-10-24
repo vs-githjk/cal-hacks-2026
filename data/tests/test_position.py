@@ -66,3 +66,13 @@ def test_unknown_condition_at_a_first_party_retailer_counts_as_new_only_for_new(
     assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + [mc])["of_n"] == 4
     assert price_position(SKU, 1299.99, "open-box", AS_OF, rows=BASE + [mc])["of_n"] == 0
     assert price_position(SKU, 1299.99, "open-box", AS_OF, rows=BASE + [mc])["rank"] is None
+
+
+def test_a_tie_at_rank_one_is_said_and_names_the_other_listing():
+    rows = BASE + [row("microcenter", 1299.99, ASUS, url="https://microcenter.example/prime")]
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url="https://bestbuy.example/1299.99", rows=rows)
+    assert out["rank"] == 1 and out["sentence"].startswith("Tied cheapest fitting new card of 4 listings at 3 stores")
+    assert out["tied_with"] == [{"store": "microcenter", "url": "https://microcenter.example/prime"}]
+    assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE)["tied_with"] == []
+    assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE)["sentence"].startswith("Cheapest fitting")
+    assert not price_position(SKU, 1349.0, "new", AS_OF, rows=rows)["sentence"].startswith("Tied")
