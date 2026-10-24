@@ -192,7 +192,7 @@ def test_an_agent_token_is_used_and_the_result_says_the_agent_paid(monkeypatch):
         seen.append(headers)
         return 201, [OK]
     out = check_via_actor(CLAIM, post=post)
-    assert seen[0] == {"Authorization": "Bearer apify_api_AGENT"} and out["paid_by"].startswith("paid by agent")
+    assert seen[0] == {"Authorization": "Bearer apify_api_AGENT"} and out["paid_by"] == "using a prepaid agent token (set in the env)"
     assert out["result"] == "verified" and "apify_api_AGENT" not in repr(out)
 
 

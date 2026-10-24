@@ -28,14 +28,14 @@ def fake_apify(before=5.0, after=4.99, run_status="SUCCEEDED"):
 
 
 def args(**kw):
-    return argparse.Namespace(**{"payer": "awal", "amount": 5.0, "token_from_env": False, "yes": False, **kw})
+    return argparse.Namespace(**{"payer": "awal", "amount": 5.0, "token_from_env": False, **kw})
 
 
-def run_paid(tmp_path, send, sh=None, answer="PAY", **kw):
+def run_paid(tmp_path, send, sh=None, answer="PAY", live=False, **kw):
     printed = []
     r = pay_mod.run(args(**kw), send=send, sh=sh or (lambda cmd: (0, json.dumps({"token": TOKEN, "remainingBalanceUsd": 5}))),
                     ask=lambda prompt: answer, sleep=lambda s: None, out=printed.append,
-                    env_file=tmp_path / ".env", receipt_file=tmp_path / "agent_pay_run.json", live=False)
+                    env_file=tmp_path / ".env", receipt_file=tmp_path / "agent_pay_run.json", live=live)
     return r, printed
 
 
@@ -105,3 +105,37 @@ def test_a_token_is_read_from_the_payer_json_or_text():
     assert pay_mod.token_from_output('noise\n{"token": "apify_api_abc123", "remainingBalanceUsd": 5}\n') == "apify_api_abc123"
     assert pay_mod.token_from_output("minted apify_api_xyz789 ok") == "apify_api_xyz789"
     assert pay_mod.token_from_output("no token here") is None
+
+
+@pytest.mark.parametrize("flag", ["--yes", "-y", "--no-confirm", "--force"])
+def test_no_flag_skips_the_pay_prompt(flag):
+    with pytest.raises(SystemExit):
+        pay_mod.main([flag, "--amount", "5"])  # argparse rejects it before anything runs
+
+
+def test_the_prompt_is_asked_even_if_a_caller_sets_yes(tmp_path):
+    send, calls = fake_apify()
+    with pytest.raises(SystemExit, match="Not paid"):
+        run_paid(tmp_path, send, answer="", yes=True)
+    assert calls == []
+
+
+def test_a_failed_run_is_never_labelled_live(tmp_path):
+    send, _ = fake_apify(run_status="FAILED")
+    r, _ = run_paid(tmp_path, send, live=True)
+    assert r["label"] != "LIVE" and r["label"].startswith("NOT LIVE") and "FAILED" in r["label"]
+
+
+def test_a_rerun_with_a_saved_token_is_never_labelled_live(tmp_path, monkeypatch):
+    monkeypatch.delenv("APIFY_AGENT_TOKEN", raising=False)
+    (tmp_path / ".env").write_text(f"APIFY_AGENT_TOKEN={TOKEN}\n")
+    send, _ = fake_apify()
+    r, _ = run_paid(tmp_path, send, live=True, token_from_env=True)
+    assert r["label"] != "LIVE" and "no payment in this run" in r["label"]
+
+
+def test_only_a_paid_succeeded_run_is_live(tmp_path):
+    send, _ = fake_apify()
+    r, _ = run_paid(tmp_path, send, live=True)
+    assert r["label"] == "LIVE"
+    assert json.loads((tmp_path / "agent_pay_run.json").read_text())["label"] == "LIVE"

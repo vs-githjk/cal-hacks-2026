@@ -14,8 +14,12 @@ Run steps, in order:
        b. saves the token as APIFY_AGENT_TOKEN in .env (gitignored, file mode 600); it never prints it, only its last 4 characters;
        c. prints the token's balance (GET https://agi.apify.com/prepaid-tokens/balance);
        d. runs the claim-check Actor once on the demo listing with that token;
-       e. prints the balance again and the run id, and writes data/claim_check/agent_pay_run.json labelled LIVE.
+       e. prints the balance again and the run id, and writes data/claim_check/agent_pay_run.json. The receipt is labelled
+          LIVE only when this run paid and the Actor run SUCCEEDED; otherwise it says why it is not LIVE.
   3. A rerun with the token already saved skips the purchase:   python3 -m data.claim_check.agent_pay --token-from-env
+     (its receipt is never LIVE: nothing was paid in that run).
+
+A human types PAY every time; no flag skips the prompt, so an agent cannot spend on its own. The $1 to $10 cap is per run.
 
 The script never reads, prints or stores a wallet key. The payer CLI holds the wallet and signs the 402 challenge
 (awal signs in by email, mppx keeps its account in the OS keychain, pay.sh uses the OS keystore), so a key never passes
@@ -120,11 +124,23 @@ def balance(send, token: str) -> float | None:
     return data.get("remainingBalanceUsd") if status == 200 and isinstance(data, dict) else None
 
 
+def label_for(live: bool, paid_now: bool, run_status: str | None) -> str:
+    """LIVE only for a real run that paid in this run and whose Actor run SUCCEEDED (#290)."""
+    if not live:
+        return "FAKE (test)"
+    if not paid_now:
+        return "NOT LIVE: no payment in this run (saved token)"
+    if run_status != "SUCCEEDED":
+        return f"NOT LIVE: paid, but the Actor run did not succeed ({run_status or 'no status'})"
+    return "LIVE"
+
+
 def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_file: Path | None = None,
         receipt_file: Path | None = None, live: bool = True) -> dict:
     env_file = env_file or ROOT / ".env"
     receipt_file = receipt_file or ROOT / "data" / "claim_check" / "agent_pay_run.json"
-    receipt = {"label": "LIVE" if live else "FAKE (test)", "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    paid_now = False
+    receipt = {"label": None, "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                "actor": ACTOR.replace("~", "/"), "input": DEMO_INPUT}
     if args.token_from_env:
         token = read_token(env_file)
@@ -138,13 +154,14 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
         url = f"{AGI}/protocols/{'mpp' if args.payer == 'mppx' else 'x402'}/prepaid-tokens?amount={args.amount:g}&currency=usd"
         out(f"About to spend ${args.amount:.2f} of real stablecoin ({protocol}, via {args.payer}) for a prepaid Apify token.")
         out("Terms: the token is a hard spend cap, expires in 14 days, and unused balance is not refunded.")
-        if not args.yes and ask("Type PAY to continue: ").strip() != "PAY":
+        if ask("Type PAY to continue: ").strip() != "PAY":  # always asked; there is no flag that skips it (#290)
             raise SystemExit("Not paid: you did not type PAY.")
         code, stdout = sh(cmd(url, args.amount))
         token = token_from_output(stdout)
         if code != 0 or not token:
             raise SystemExit(f"The payer CLI did not return a token (exit {code}). Nothing was saved; check its own output above.")
         save_token(env_file, token)
+        paid_now = True
         receipt["paid_via"] = f"{protocol} via {args.payer}"
         receipt["amount_usd"] = args.amount
         out(f"a. Bought a prepaid token {mask(token)}; saved as APIFY_AGENT_TOKEN in {env_file.name} (mode 600).")
@@ -169,6 +186,7 @@ def run(args, send=http, sh=shell, ask=input, sleep=time.sleep, out=print, env_f
     if before is not None and after is not None:
         receipt["spent_usd"] = round(before - after, 5)
     out(f"e. Balance after the run: ${after} (spent ${receipt.get('spent_usd')}); run id {receipt['run_id']}")
+    receipt["label"] = label_for(live, paid_now, receipt.get("run_status"))
     receipt_file.write_text(json.dumps(receipt, indent=1) + "\n")
     out(f"Receipt written to {receipt_file.relative_to(ROOT) if receipt_file.is_relative_to(ROOT) else receipt_file} ({receipt['label']}).")
     return receipt
@@ -179,7 +197,6 @@ def main(argv=None) -> int:
     ap.add_argument("--payer", choices=sorted(PAYERS), default="awal", help="the wallet CLI that pays the 402 challenge (default awal)")
     ap.add_argument("--amount", type=float, default=5.0, help=f"USD to prepay, {MIN_USD} to {MAX_USD} (default 5)")
     ap.add_argument("--token-from-env", action="store_true", help="skip the purchase and use a saved APIFY_AGENT_TOKEN")
-    ap.add_argument("--yes", action="store_true", help="do not ask for confirmation (for the orchestrator)")
     args = ap.parse_args(argv)
     r = run(args)
     return 0 if r.get("run_status") == "SUCCEEDED" else 1

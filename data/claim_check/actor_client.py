@@ -20,7 +20,7 @@ ACTOR = "anoopibrampur~tech-bazaar-claim-check"
 URL = f"https://api.apify.com/v2/acts/{ACTOR}/run-sync-get-dataset-items"
 TIMEOUT = 6.0  # docs/ARCHITECTURE.md: external calls time out after 4 to 6 seconds
 UNAVAILABLE = "claim check unavailable"
-PAID_BY_AGENT = "paid by agent via prepaid Apify token (x402 or MPP, agi.apify.com)"
+PAID_BY_AGENT = "using a prepaid agent token (set in the env)"  # #290: an env var, not proof of a paid run
 RESULTS = ("verified", "unverified", "false")
 
 
