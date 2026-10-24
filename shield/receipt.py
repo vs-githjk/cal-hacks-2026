@@ -77,6 +77,8 @@ def verify_allow_receipt(receipt: Any, keys: Mapping[str, Ed25519PublicKey], *, 
                          amount_cents: int, currency: str, payee: str,
                          now: datetime | None = None) -> Verdict:
     """Pure verification: no nonce store, I/O or caller-provided purchase authority."""
+    if not isinstance(keys, Mapping) or not keys:
+        return _no("receipt_unknown_key")
     if not isinstance(receipt, Mapping) or set(receipt) != _FIELDS:
         return _no("receipt_schema_invalid")
     try:
