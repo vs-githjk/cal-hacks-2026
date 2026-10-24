@@ -141,7 +141,7 @@ def announce(out: Narrator, n: int, total: int, live_call: bool) -> None:
     out.note(f"BEAT {n} of {total}: {TITLES[n]}")
     out.note(f"SAY THIS: {cue_for(n, live_call)}")
     if n == 4 and live_call:
-        out.note("(the two-word code prints below as SCREEN CODE on this console; /buyer cannot show it yet)")
+        out.note("(the two-word code shows on /buyer; only if the market refuses it does it print below as SCREEN CODE)")
     out.note("=" * 70)
 
 
@@ -163,11 +163,10 @@ def report_round_one(clients: dict[str, Any], run: dict, out: Narrator) -> bool:
 def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, delays: dict[int, float], step_delay: float,
          approver: Optional[Callable[[Step], dict]], live_call: bool, out: Narrator, say: Callable[[Step], None],
          input_fn: Callable[[str], str], sleep: Callable[[float], None], clock: Callable[[], float],
-         run: Optional[dict] = None,
-         live_refresh: Optional[Callable[[], tuple[list[Step], Callable[[Step], dict]]]] = None) -> int:
+         run: Optional[dict] = None, deal_gate: Optional[bridge.DealGate] = None) -> int:
     """Cue, then Enter (or the reading delay), then the beat. Returns 0 when every beat played, 1 when stopped.
-    `live_refresh` (with --live-call) returns beat 4's steps and approver for a mandate made when beat 4 starts: a mandate lives
-    10 minutes, and the wait at the beat 1 to 3 prompts must not use it up. `run` turns on the round 1 read-back after beat 2."""
+    `deal_gate` makes beat 4's mandate when beat 4 starts, from the market's rank 1: a mandate lives 10 minutes, and the wait
+    at the beat 1 to 3 prompts must not use it up. `run` turns on the round 1 read-back after beat 2."""
     total = max(beats)
     for n in sorted(beats):
         announce(out, n, total, live_call)
@@ -183,14 +182,12 @@ def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, d
             if answer.strip().lower() in ("q", "quit"):
                 out.note(f"STOPPED before beat {n} (q)")
                 return 1
-        if n == 4 and live_refresh is not None:
-            fresh_steps, approver = live_refresh()
-            beats = {**beats, 4: fresh_steps}
         outcomes = bridge.execute(beats[n], clients, delay=step_delay, say=say, sleep=sleep, clock=clock,
-                                  approver=approver, note=out.note)
+                                  approver=approver, note=out.note, deal_gate=deal_gate)
         if outcomes and not outcomes[-1]["approved"]:
             out.blank()
-            out.note(f"STOPPED at beat {n}: the approval call did not approve ({outcomes[-1]['reason']}). Nothing was charged and "
+            what = "no mandate was made" if outcomes[-1]["step"] == "build_mandate" else "the approval call did not approve"
+            out.note(f"STOPPED at beat {n}: {what} ({outcomes[-1]['reason']}). Nothing was charged and "
                      "no payment is recorded. Run again to retake.")
             return 1
         if n == 2 and run is not None and report_round_one(clients, run, out) and auto:
@@ -265,16 +262,12 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
     else:
         out.note(f"services: {sum(r.get('label') == 'UP' for r in rows)}/{len(rows)} up")
 
-    approver, live_refresh = None, None
+    gate = bridge.DealGate(run)     # beat 4's mandate: made when beat 4 starts, from the market's own rank 1
+    approver = None
     if args.live_call:
         # Startup only says where the call would go. The mandate the call judges is made when beat 4 starts (see play).
-        approver, note = bridge.live_approver_for(args, run, run["beats"]["4"]["mandate"], out)
+        approver, note = bridge.live_approver_for(args, run, gate, out)
         out.note(note)
-
-        def live_refresh() -> tuple[list[Step], Callable[[Step], dict]]:
-            fresh = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"])
-            new_steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, mandate=fresh, live_call=True)
-            return assign_beats(new_steps)[4], bridge.live_approver_for(args, run, fresh, out)[0]
     out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s local tech-bazaar \"SELECT code FROM pair_code\") and open /market before you start.")
 
     try:
@@ -284,7 +277,7 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         sleep(1)
         code = play(beats, clients, auto=args.auto, delays=delays, step_delay=args.step_delay, approver=approver,
                     live_call=args.live_call, out=out, say=say, input_fn=input_fn, sleep=sleep, clock=clock,
-                    run=run, live_refresh=live_refresh)
+                    run=run, deal_gate=gate)
     except KeyboardInterrupt:
         out.blank()
         out.note("STOPPED (Ctrl-C). Nothing more will be written; run again to reset and retake.")

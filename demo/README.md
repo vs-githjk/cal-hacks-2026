@@ -53,13 +53,15 @@ buyer-2 sets the same goal and the same sellers bid again, each with one unit. T
 python3 demo/bridge.py --live-call --reset                 # beat 4 places ONE real Cartesia call; names read from pay.voice_cartesia's env file
 python3 demo/bridge.py --live-call --env-file /path/to/.env --dry-run   # says where the call would go; no network, no call
 ```
-At the approval beat the bridge builds a fresh pending mandate (same deal, amount and payee as beat 4), sends it to the market with `create_mandate`, then runs
-`pay.voice_cartesia.run_approval_call` for that mandate: one call to `APPROVAL_CALL_TO` only, the two-word code printed as `SCREEN CODE` (the same code the call judges),
-three tries. Only an approved call, plus a `pay.mandate.can_charge` pass, makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
+When beat 4 starts the bridge reads the market's own `round_result` and takes rank 1 (not the demo's winner): a fresh pending mandate for exactly that
+bid's deal, landed amount and seller's payee, 10 minutes (`MANDATE_MINUTES`), sent with `create_mandate`. No single readable rank 1, or a #1 that is not a bid
+this run placed, stops the run there with no mandate and nothing paid; this holds for the scripted run too. With `--live-call` it then runs
+`pay.voice_cartesia.run_approval_call` for that mandate: one call to `APPROVAL_CALL_TO` only, the two-word code sent to /buyer with `issue_approval_code`
+(the same code the call judges; printed as `SCREEN CODE` only if the market refuses it), three tries. After the call the market is read again, and only an
+approved call plus a `pay.mandate.can_charge` pass against the market's rank 1 makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
 answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
 `--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). Without `--live-call` the approval is
-SIM scripted (`record_approval` method `sim_script`, never `voice_code`) and the payment is the SIM stub. The market has no place to show the code yet, so it is
-on the operator console (see NOT BRIDGED); tests use a fake client and place no call.
+SIM scripted (`record_approval` method `sim_script`, never `voice_code`) and the payment is the SIM stub. Tests use a fake client and place no call.
 
 ## Stage runner (`demo/stage.py`): one command for the video and the room
 ```
@@ -74,7 +76,7 @@ It wraps `bridge.py` (same reducers, same tokens, same live-call gate) and adds 
 2. **Reset.** `reset_demo` (referee), which keeps roles and pair codes, then the beats.
 3. **Five beats, in order.** 1 goal and need, 2 sealed round (open to close), 3 Shield blocks the injected listing, 4 mandate, approval, payment, 5 round 2 with the learner's lower price. Before each beat the console prints `BEAT n of 5` and one **SAY THIS** line for the narrator.
 4. **Pacing.** Without `--auto` it waits for Enter before each beat (`q` stops). With `--auto` it waits `--delays` seconds between a beat's cue and the beat (five numbers, default `7,8,6,9,8`, time to say the line); `--step-delay` (default 2) is the pause between visible steps inside a beat, as in the bridge.
-5. **Live call.** `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. The mandate the call judges is made when beat 4 starts (a mandate lives 10 minutes, so a long wait at the Enter prompts cannot expire it). Retake by running again (it resets). The two-word code prints as `SCREEN CODE` on this console (see NOT BRIDGED). `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
+5. **Live call.** `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. The mandate the call judges is made when beat 4 starts (a mandate lives 10 minutes, so a long wait at the Enter prompts cannot expire it). Retake by running again (it resets). The two-word code shows on /buyer (`issue_approval_code`); it prints as `SCREEN CODE` on this console only if the market refuses it. `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
 After beat 2 the runner reads the market's `round_result` back and prints its ranking; if the market's #1 is not the demo's winner it prints DIVERGENCE before beat 3, and `--auto` pauses once for Enter so the operator sees it before the beat 4 cue (the mandate that follows is the demo's winner).
 Exit codes: 0 all beats played, 1 refused or stopped (service down, market refusal, denial, `q`), 130 Ctrl-C. Open /buyer (paired as `vidyut`) and /market first; the console reminds you.
 The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2, the loss report itself is console only (NOT BRIDGED).
