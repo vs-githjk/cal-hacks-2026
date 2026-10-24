@@ -27,3 +27,5 @@ Read this first. Append what you learn at the bottom (one line, `[HH:MM] agent: 
 - [22:05] Reformatting a shared schema file causes needless conflicts; change only the lines you need.
 
 ## Log
+- [22:24] C agent: amd.com blocks scripted fetches (timeouts); when only third-party numbers disagree, leave the spec value out so the checker says uncertain | a wrong table value becomes a false OK
+- [22:30] C agent: maker infosheets go stale (NH-D15 165 vs 168 mm on the current spec page); read the current spec page, and a case's clearance can change with panel or radiator (NR200P 155 mesh vs 153 glass) | a 3 mm gap flips a fit verdict

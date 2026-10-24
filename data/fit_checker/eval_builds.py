@@ -8,9 +8,11 @@ from . import check_fit
 BUILDS = Path(__file__).resolve().parent.parent / "fit_builds.json"
 
 
-def score():
+def score(only_checked=False):
     rows = []
     for b in json.loads(BUILDS.read_text())["builds"]:
+        if only_checked and not b.get("hand_checked"):
+            continue
         out = check_fit(b["parts"])
         rows.append({"id": b["id"], "truth": b["truth"], "verdict": out["verdict"], "rule_id": out["rule_id"]})
     decided = [r for r in rows if r["verdict"] != "uncertain"]
@@ -24,10 +26,10 @@ def score():
     }
 
 
-def markdown(s):
+def markdown(s, label="frozen set in data/fit_builds.json"):
     pct = lambda a, b: f"{100 * a / b:.0f}%" if b else "n/a"
     lines = [
-        f"- builds: {s['n']} (SIM, frozen set in data/fit_builds.json)",
+        f"- builds: {s['n']} (SIM, {label})",
         f"- decided (pass or fail): {s['decided']}, correct {s['correct']} ({pct(s['correct'], s['decided'])})",
         f"- uncertain: {s['uncertain']}",
         f"- **false OK (said fits, does not): {len(s['false_ok'])}**",
@@ -40,3 +42,4 @@ def markdown(s):
 
 if __name__ == "__main__":
     print(markdown(score()))
+    print(markdown(score(only_checked=True), "subset whose every part was confirmed on a maker page"))
