@@ -7,6 +7,7 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AssignRoleReducer from "../assign_role_reducer";
+import AttachAdvocateCardReducer from "../attach_advocate_card_reducer";
 import AttachClaimCheckReducer from "../attach_claim_check_reducer";
 import AttachVerdictReducer from "../attach_verdict_reducer";
 import CloseRoundReducer from "../close_round_reducer";
@@ -24,6 +25,7 @@ import SeedDemoReducer from "../seed_demo_reducer";
 import SetFloorReducer from "../set_floor_reducer";
 
 export type AssignRoleParams = __Infer<typeof AssignRoleReducer>;
+export type AttachAdvocateCardParams = __Infer<typeof AttachAdvocateCardReducer>;
 export type AttachClaimCheckParams = __Infer<typeof AttachClaimCheckReducer>;
 export type AttachVerdictParams = __Infer<typeof AttachVerdictReducer>;
 export type CloseRoundParams = __Infer<typeof CloseRoundReducer>;

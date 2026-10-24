@@ -1,0 +1,22 @@
+name: python-tests
+
+on:
+  pull_request:
+    paths: ["agents/**", "contracts/**", "data/**", "demo/**", "pay/**", "shield/**", "sim/**", "scripts/**", "hyphenate/**", ".github/workflows/python-tests.yml"]
+  push:
+    branches: [main]
+    paths: ["agents/**", "contracts/**", "data/**", "demo/**", "pay/**", "shield/**", "sim/**", "scripts/**", "hyphenate/**", ".github/workflows/python-tests.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Offline only: no secrets, so the Shield classifier and Stripe paths stay off.
+      - name: Install
+        run: pip install -r agents/requirements.txt cryptography fastapi httpx uvicorn
+      - name: Test
+        run: python -m pytest -q

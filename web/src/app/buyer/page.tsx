@@ -101,7 +101,7 @@ function BuyerScreen() {
     const fromEvents = events
       .map((e) => ({ key: `e${e.id}`, at: e.at, cls: classify(e.kind, e.label), text: e.label, origin: e.origin }))
       .filter((x): x is typeof x & { cls: FeedClass } => x.cls !== null);
-    const fromNotes = notes.map((n) => ({ key: `n${n.id}`, at: n.at, cls: "progress" as FeedClass, text: n.text, origin: "SIM" }));
+    const fromNotes = notes.map((n) => ({ key: `n${n.id}`, at: n.at, cls: (n.klass === "veto" ? "veto" : "progress") as FeedClass, text: n.text, origin: "SIM" }));
     return [...fromEvents, ...fromNotes].sort((a, b) => (a.at.microsSinceUnixEpoch < b.at.microsSinceUnixEpoch ? 1 : -1));
   }, [events, notes]);
 

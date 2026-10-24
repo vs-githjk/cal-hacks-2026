@@ -31,7 +31,7 @@ let OWNER: Auth, REF: Auth, JOE: Auth, BOB: Auth, A: Auth, B: Auth, C: Auth, STR
 const needArgs = (over: Partial<m.PostNeedArgs> = {}): m.PostNeedArgs => ({
   id: 'need-1', buyerId: 'joe', goalId: 'goal-1', deliveryWindow: 'by Friday', spendLimit: 800, consent: true,
   auctionWindowS: 15, origin: 'SIM',
-  items: [{ skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, unit: 'each' }], ...over,
+  items: [{ skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }], ...over,
 });
 
 function setupRound(windowS = 15) {
@@ -190,7 +190,7 @@ describe('INVARIANT-1 approval before payment', () => {
 
   it('INVARIANT-1: a payment without an approval row for the same hash is refused and no payment row exists', () => {
     mk();
-    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780 }))).toThrow(/no approval/);
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'sim' }))).toThrow(/no approval/);
     expect([...h.db.payment.iter()]).toHaveLength(0);
   });
 
@@ -198,14 +198,14 @@ describe('INVARIANT-1 approval before payment', () => {
     mk();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', dealId: 'd2', amount: 10, payee: 'seller-b', nonce: 'n2' })));
     run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h2', method: 'typed_code', approvedBy: 'joe' }));
-    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780 }))).toThrow(/no approval/);
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/no approval/);
   });
 
   it('INVARIANT-1: with an approval, one payment is recorded; the amount must equal the mandate', () => {
     mk();
     run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'joe' }));
-    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 781 }))).toThrow(/amount/);
-    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780 }));
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 781, mode: 'sim' }))).toThrow(/amount/);
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'sim' }));
     expect([...h.db.payment.iter()]).toHaveLength(1);
   });
 
@@ -214,8 +214,8 @@ describe('INVARIANT-1 approval before payment', () => {
     run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'joe' }));
     run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
     expect([...h.db.approval.iter()]).toHaveLength(1);
-    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_1', amount: 780 }));
-    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_2', amount: 780 }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_1', amount: 780, mode: 'sim' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_2', amount: 780, mode: 'sim' }));
     expect([...h.db.payment.iter()]).toHaveLength(1);
     expect([...h.db.rejectedAttempt.iter()].map((r) => r.kind)).toEqual(['approval', 'payment']);
   });
@@ -241,7 +241,8 @@ describe('SECURITY caller identity', () => {
     ['attach_claim_check', (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM' })],
     ['create_mandate', (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h9' }))],
     ['record_approval', (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' })],
-    ['record_payment', (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780 })],
+    ['record_payment', (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' })],
+    ['attach_advocate_card', (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'x', sourceUrl: 'https://x', origin: 'SIM' })],
     ['assign_role', (ctx) => m.assignRole(ctx, { identity: ctx.sender, role: 'referee', subjectId: 'market' })],
     ['reset_demo', (ctx) => m.resetDemoChecked(ctx)],
     ['seed_demo', (ctx) => m.seedDemoChecked(ctx)],
@@ -279,7 +280,7 @@ describe('SECURITY caller identity', () => {
     expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }))).toThrow(/not allowed/);
     expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'seller-a' }))).toThrow(/not allowed/);
     run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
-    expect(() => run(A, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780 }))).toThrow(/not allowed/);
+    expect(() => run(A, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/not allowed/);
     expect([...h.db.payment.iter()]).toHaveLength(0);
   });
 
@@ -332,7 +333,7 @@ describe('every state change writes a floor event', () => {
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
     run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
-    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780 }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
     expect(events().slice(n0).map((e) => e.kind)).toEqual([
       'bid_sealed', 'verdict', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
     ]);
@@ -365,7 +366,7 @@ describe('b2 allowance ladder', () => {
   const paidDeal = (hash: string, amount: number) => {
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash, id: `m-${hash}`, amount, nonce: hash })));
     if (!h.db.approval.mandateHash.find(hash)) run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'typed_code', approvedBy: 'joe' }));
-    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: hash, paymentRef: `pi_${hash}`, amount }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: hash, paymentRef: `pi_${hash}`, amount, mode: 'sim' }));
   };
   let n = 0;
   const receive = (who: Auth, hash: string, result = 'accepted') =>
@@ -420,7 +421,7 @@ describe('b2 allowance ladder', () => {
     expect(h.db.approval.mandateHash.find('small')!.method).toBe('allowance');
     expect(allowance()!.spentThisPeriod).toBe(per);
     expect([...h.db.notification.buyerId.filter('joe')].some((n) => n.text.includes('within your allowance'))).toBe(true);
-    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'small', paymentRef: 'pi_small', amount: per }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'small', paymentRef: 'pi_small', amount: per, mode: 'sim' }));
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'big', id: 'm-big', amount: per + 1, nonce: 'b' })));
     expect(h.db.mandate.hash.find('big')!.withinAllowance).toBe(false);
     expect(h.db.approval.mandateHash.find('big')).toBeFalsy();
@@ -436,5 +437,175 @@ describe('b2 allowance ladder', () => {
     run(JOE, (ctx) => m.postGoal(ctx, goalArgs()));
     expect(m.myAllowanceView(h.viewContext(JOE) as any)).toHaveLength(1);
     expect(m.myAllowanceView(h.viewContext(A) as any)).toHaveLength(0);
+  });
+});
+
+// ============================================================================================
+// Lane D #37: advocate veto, allowed conditions, alternative lines, the cap, payment mode.
+// ============================================================================================
+describe('attach_advocate_card (the advocate relay, referee only)', () => {
+  const veto = { recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'The card is longer than your case allows', sourceUrl: 'https://example.com/spec', origin: 'SIM' };
+  const closeIt = () => {
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    return [...h.db.roundResult.iter()];
+  };
+
+  it('a veto takes the cheapest bid out of the result with the cited reason, and the next bid ranks first', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(700)])));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', ...veto }));
+    const res = closeIt();
+    const b = res.find((r) => r.bidId === 'bid-b')!;
+    expect(b.rank).toBe(0);
+    expect(b.reasons.join(' ')).toMatch(/advocate veto/i);
+    expect(b.reasons.join(' ')).toContain('fit.gpu_length');
+    expect(b.reasons.join(' ')).toContain('The card is longer than your case allows');
+    expect(b.reasons.join(' ')).toContain('https://example.com/spec');
+    expect(res.find((r) => r.bidId === 'bid-a')!.rank).toBe(1);
+  });
+
+  it('a caution or buy card is recorded and does not disqualify', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { ...veto, bidId: 'bid-a', recommendation: 'caution', ruleId: 'advocate.fit_unknown' }));
+    const res = closeIt();
+    expect(res[0]!.rank).toBe(1);
+    expect([...h.db.bidCheck.iter()].map((c) => [c.kind, c.result])).toEqual([['advocate', 'caution']]);
+  });
+
+  it('writes a floor event without the seller or the text, and a veto line on the buyer feed', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    const n0 = events().length;
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }));
+    const e = events().slice(n0);
+    expect(e.map((x) => x.kind)).toEqual(['advocate_card']);
+    expect(e[0]!.label).toMatch(/veto/);
+    expect(e[0]!.sellerId).toBe('');
+    const feed = m.myNotificationsView(h.viewContext(JOE) as any);
+    const v = feed.filter((n: any) => n.klass === 'veto');
+    expect(v).toHaveLength(1);
+    expect(v[0]!.text).toContain('The card is longer than your case allows');
+    expect(v[0]!.text).toContain('https://example.com/spec');
+    expect(m.myNotificationsView(h.viewContext(BOB) as any).filter((n: any) => n.klass === 'veto')).toHaveLength(0);
+  });
+
+  it('a veto must cite a source, the recommendation must be known, and the bid must exist', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, sourceUrl: '' }))).toThrow(/source/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto, recommendation: 'maybe' }))).toThrow(/recommendation/);
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'nope', ...veto }))).toThrow(/no bid/);
+    expect([...h.db.bidCheck.iter()]).toHaveLength(0);
+  });
+
+  it('refuses a card for a round that has already closed', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    closeIt();
+    expect(() => run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }))).toThrow(/closed/);
+  });
+
+  it('SECURITY: a buyer cannot attach a card either', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    expect(() => run(JOE, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }))).toThrow(/not allowed/);
+  });
+});
+
+describe('allowed conditions, alternative lines and the cap at close', () => {
+  const openBoxNeed = () =>
+    needArgs({ items: [{ skuSpec: GPU, condition: 'new', allowedConditions: ['new', 'open-box'], variant: 'retail', quantity: 1, unit: 'each' }] });
+  const setup = (over: Partial<m.PostNeedArgs> = {}) => {
+    run(JOE, (ctx) => m.postNeed(ctx, { ...openBoxNeed(), ...over }));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+  };
+  const closeIt = () => {
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    return [...h.db.roundResult.iter()];
+  };
+
+  it('post_need stores allowed_conditions on the need item', () => {
+    setup();
+    expect([...h.db.needItem.iter()][0]!.allowedConditions).toEqual(['new', 'open-box']);
+  });
+
+  it('an open-box bid is ranked when the need allows new or open-box, and out when it does not', () => {
+    setup();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { offeredCondition: 'open-box' })])));
+    expect(closeIt().find((r) => r.bidId === 'bid-a')!.rank).toBe(1);
+  });
+
+  it('a new-only need still rejects the open-box bid', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780, { offeredCondition: 'open-box' })])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()][0]!.reasons.join(' ')).toMatch(/condition: offered open-box/);
+  });
+
+  it('a bid with two condition lines ranks on the cheapest allowed line, not the sum', () => {
+    setup();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(900, { offeredCondition: 'new' }), line(760, { offeredCondition: 'open-box' })])));
+    const r = closeIt()[0]!;
+    expect(r.rank).toBe(1);
+    expect(r.landed).toBe(760);
+    expect(r.lines.map((l: any) => l.unitPrice)).toEqual([760]);
+  });
+
+  it('a bid over the buyer cap is out with over_cap and the public reason never states the cap', () => {
+    setup({ spendLimit: 800 });
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(850)])));
+    const res = closeIt();
+    expect(res.find((r) => r.bidId === 'bid-a')!.rank).toBe(1);
+    const over = res.find((r) => r.bidId === 'bid-b')!;
+    expect(over.rank).toBe(0);
+    expect(over.reasons.join(' ')).toMatch(/over_cap/);
+    expect(JSON.stringify(res.map((r) => r.reasons))).not.toContain('800');
+    expect(over.landed).toBe(850);
+  });
+
+  it('ranks on quality-adjusted price: a no-returns open-box bid loses to a slightly dearer new bid with returns', () => {
+    setup();
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-a', [line(760, { offeredCondition: 'open-box' })]), perks: ['free shipping'] }));
+    run(B, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-b', [line(780)]), perks: ['30-day returns'] }));
+    const res = closeIt();
+    expect(res.find((r) => r.bidId === 'bid-b')!.rank).toBe(1);
+    expect(res.find((r) => r.bidId === 'bid-a')!.rank).toBe(2);
+  });
+});
+
+describe('record_payment mode (sim or stripe_test)', () => {
+  const ready = () => {
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
+    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'joe' }));
+  };
+  const last = () => events().filter((e) => e.kind === 'payment_recorded').pop()!;
+
+  it('a SIM payment is labelled as a SIM stub, never as Stripe test mode', () => {
+    ready();
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'ch_sim_1', amount: 780, mode: 'sim' }));
+    expect(last().label).toMatch(/SIM/);
+    expect(last().label).not.toMatch(/Stripe/);
+    expect(last().origin).toBe('SIM');
+    expect(h.db.payment.mandateHash.find('h1')!.mode).toBe('sim');
+  });
+
+  it('a Stripe test payment says Stripe test mode and is tagged LIVE', () => {
+    ready();
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'stripe_test' }));
+    expect(last().label).toMatch(/Stripe test mode/);
+    expect(last().origin).toBe('LIVE');
+    expect(h.db.payment.mandateHash.find('h1')!.mode).toBe('stripe_test');
+  });
+
+  it('refuses an unknown mode and writes nothing', () => {
+    ready();
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'visa' }))).toThrow(/mode/);
+    expect([...h.db.payment.iter()]).toHaveLength(0);
   });
 });

@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import AssignRoleReducer from "./assign_role_reducer";
+import AttachAdvocateCardReducer from "./attach_advocate_card_reducer";
 import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
 import CloseRoundReducer from "./close_round_reducer";
@@ -186,6 +187,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("assign_role", AssignRoleReducer),
+  __reducerSchema("attach_advocate_card", AttachAdvocateCardReducer),
   __reducerSchema("attach_claim_check", AttachClaimCheckReducer),
   __reducerSchema("attach_verdict", AttachVerdictReducer),
   __reducerSchema("close_round", CloseRoundReducer),

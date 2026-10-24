@@ -2,7 +2,8 @@
 
 Voice is never the credential. The credential is a two-word code shown on the buyer's authenticated screen
 and spoken (or typed) inside one session about one exact mandate. No model decides "approve": `approve`
-passes only when the normalized transcript holds the exact word pair AND the token "approve". Everything
+passes only when the normalized transcript holds the exact word pair AND the token "approve" or "approved"
+(nothing else counts: not "approves", "approval" or "disapprove"). Everything
 else, including silence, a timeout, low speech-to-text confidence and anything unclear, denies.
 
 Flow:
@@ -43,11 +44,12 @@ LISTEN_WINDOW_SECONDS = 10
 MAX_TOKENS = 12
 MIN_CONFIDENCE = 0.6
 APPROVE_TOKEN = "approve"
+APPROVE_TOKENS = frozenset({APPROVE_TOKEN, "approved"})  # speech-to-text often hears "approve" as "approved"; exactly these two
 # Any of these anywhere in the utterance means "no" (or "not sure"): deny.
 NEGATIONS = frozenset({
     "no", "not", "nope", "nah", "dont", "never", "cant", "cannot", "wont", "didnt", "isnt", "wasnt",
     "shouldnt", "stop", "cancel", "deny", "denied", "decline", "reject", "wait", "hold", "should", "would",
-    "could", "can", "if", "whether", "maybe", "unless",
+    "could", "can", "if", "whether", "maybe", "unless", "refuse", "refused", "without", "nothing", "nor",
 })
 
 STATES = ("issued", "awaiting_code", "approved", "denied", "expired")
@@ -91,6 +93,17 @@ def _within(a: str, b: str, limit: int = 2) -> bool:
             cur.append(min(prev[j] + 1, cur[-1] + 1, prev[j - 1] + (x != y)))
         prev = cur
     return prev[-1] <= limit
+
+
+def _as_code_word(token: str) -> str:
+    """Map a heard token to the list word one edit away, so an accent or a speech-to-text spelling ("orchid's"
+    normalizes to "orchids", "sunsat", "orchd") still counts. List words are at least 3 edits apart, so at most
+    one is that close. The pair still has to be this deal's two words in order; two edits let ordinary words
+    in ("zipper" is two from "copper"), so the limit stays at one."""
+    if token in WORD_SET or len(token) < 4:
+        return token
+    near = [w for w in WORDS if _within(token, w, 1)]
+    return near[0] if len(near) == 1 else token
 
 
 def _code_like(token: str) -> bool:
@@ -262,7 +275,7 @@ class ApprovalSession:
 
     def approve(self, transcript_text: Any, now: Optional[datetime] = None, *,
                 confidence: Optional[float] = None) -> Decision:
-        """One spoken attempt. Approves only on the exact word pair plus the token "approve" in the same
+        """One spoken attempt. Approves only on the exact word pair plus the token "approve" or "approved" in the same
         utterance. `confidence` is the speech-to-text confidence; below 0.6 counts as a mismatch."""
         return self._attempt(transcript_text, _now_utc(now), confidence, self._voice_channel())
 
@@ -302,7 +315,10 @@ class ApprovalSession:
             if not tokens:
                 return self._finish(now, "denied", "no_answer", "silence")
             self._listen_deadline = None
-            reason = self._judge(tokens, confidence)
+            # speech-to-text never emits invisible format characters; text carrying them is an injection, and
+            # the close-spelling match below must not glue a split word back together
+            hidden = isinstance(text, str) and any(unicodedata.category(c) == "Cf" for c in text)
+            reason = "wrong_code" if hidden else self._judge(tokens, confidence)
             svc._attempts[self.mandate_hash] = svc.attempts_used(self.mandate_hash) + 1
             self.attempts += 1
             if reason is None:
@@ -316,7 +332,7 @@ class ApprovalSession:
             return Decision(False, reason, self.state, False)
 
     def _judge(self, tokens: list[str], confidence: Optional[float]) -> Optional[str]:
-        """None when the utterance is the right code plus "approve"; else the deny reason."""
+        """None when the utterance is the right code plus "approve" or "approved"; else the deny reason."""
         svc = self._svc
         if confidence is not None and not (isinstance(confidence, (int, float)) and confidence >= MIN_CONFIDENCE):
             return "wrong_code"
@@ -324,8 +340,9 @@ class ApprovalSession:
             return "no_code"
         if NEGATIONS & set(tokens):
             return "no_code"
+        words = [_as_code_word(t) for t in tokens]
         pair_hashes = [hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest()
-                       for a, b in zip(tokens, tokens[1:]) if a in WORD_SET and b in WORD_SET]
+                       for a, b in zip(words, words[1:]) if a in WORD_SET and b in WORD_SET]
         own = any(hmac.compare_digest(h, self.code_hash) for h in pair_hashes)
         if not own:
             for h in pair_hashes:
@@ -333,7 +350,7 @@ class ApprovalSession:
                 if owner is not None and owner != self.mandate_hash:
                     return "replay"            # a code issued for another deal
             return "wrong_code" if any(_code_like(t) for t in tokens) else "no_code"
-        if APPROVE_TOKEN not in tokens:
+        if not APPROVE_TOKENS & set(tokens):
             return "no_code"                   # the code alone is not consent
         if not svc.store.consume(NS_CODE, self.code_hash):
             return "replay"                    # single use

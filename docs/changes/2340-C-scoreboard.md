@@ -1,0 +1,2 @@
+New contract `contracts/Scoreboard.schema.json` (Lane C, issue #31): `{generated_at, tiles[]}`, four tiles (verified_savings, attacks_blocked, fit_accuracy, learning_lift), each with status (measured, not_quotable, none_yet), value (null when not trustworthy), display line, count, date_range, origin LIVE/MIRROR/SIM, source_run and note.
+Producer: `python3 -m data.scoreboard` writes `data/scoreboard.json`. Consumer: Lane B's scoreboard view. Render `display` and the origin badge; never show `value` when it is null.
