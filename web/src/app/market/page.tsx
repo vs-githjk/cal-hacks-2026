@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { MarketScreen } from "@/components/screens";
+import { Bracket } from "@/components/Bracket";
 import { asSim, eventsFromRows, goalFromRows, latestRound, linesFromRows, originCounts, roundFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
 
@@ -37,6 +38,7 @@ export default function MarketPage() {
         originCounts={originCounts(shownLines)}
         sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
       />
+      <Bracket round={r} results={results} events={events} />
     </>
   );
 }
