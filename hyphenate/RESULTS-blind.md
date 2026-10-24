@@ -1,9 +1,9 @@
 # Hyphenate blind planted-error results (SIM)
 
 Run 2026-10-24T07:01:38+00:00 UTC with `python3 -m hyphenate.scenarios.blind_run --write`, public API only, blank studio per case.
-Cases: `hyphenate/scenarios/blind_cases.json`, frozen 2026-10-24T06:59Z and committed before any run (sha256 `c593d98d4083c960a4ad0601464d990b0c41cde6b19b174851c083cc262490f8`). Written by Lane C without reading hyphenate/*.py or the existing case files. No engine code was changed.
+Cases: `hyphenate/scenarios/blind_cases.json`, frozen 2026-10-24T06:59Z and committed before any run (sha256 `c593d98d4083c960a4ad0601464d990b0c41cde6b19b174851c083cc262490f8`). Written by Lane C without reading hyphenate/*.py or the existing case files. No engine code was changed for this first run (see the after-fixes section at the end).
 
-**Planted: 26 of 27 caught, 1 missed, 0 stopped before the planted step, 0 runner errors. Clean: 5 of 7 passed, 2 false flags, 0 runner errors.**
+**FIRST BLIND RUN, BEFORE ANY FIX (headline, unchanged): Planted: 26 of 27 caught, 1 missed, 0 stopped before the planted step, 0 runner errors. Clean: 5 of 7 passed, 2 false flags, 0 runner errors.**
 
 | case | planted | result | where | codes |
 |---|---|---|---|---|
@@ -56,3 +56,16 @@ Cases: `hyphenate/scenarios/blind_cases.json`, frozen 2026-10-24T06:59Z and comm
 - b24: missed. The $1,600.00 PO routed to the department head only: route flags and evidence were empty, so no MIRROR reference was consulted for 'rtx 5070 ti' in the blank studio (the README says a PO over 15 percent above a fresh MIRROR reference routes to the controller). Worth checking the SKU-to-reference lookup and freshness in the empty story.
 - k02: false flag by the frozen rule only: the invoice was matched and paid; the finding was the informational price_variance_immaterial. Lane D may treat this as correct behavior; it is reported, not re-scored.
 - k03: real false flag: after two partial deliveries, the second correct invoice (same lines and total as the first) was held as possible_duplicate and payment was refused. The duplicate rule (same vendor, PO, lines, total within 60 days) does not account for cumulative partial receipts.
+
+<!-- AFTER-FIXES -->
+## After fixes (Lane D, 2026-10-24): b24, k02 and k03 are NOT blind any more
+
+The headline above is the original first blind run (26/27 planted, 2/7 false flags) and is kept as it was. After reading it the engine was changed for the three cases below, so those three cases can no longer be called blind; the other 31 cases were not looked at beyond their results. Same runner, same frozen `blind_cases.json` (unedited), re-run with `python3 -m hyphenate.scenarios.blind_run`: **27/27 planted caught, 7/7 clean passed.** Dev 41/41 planted and 0/9 false flags, held-out 11/11 and 0/3: no change in the held-out result.
+
+| case | what was wrong | what changed | judgement |
+|---|---|---|---|
+| b24 | A $1,600 PO for 'rtx 5070 ti' went to the department head only. Cause: the MIRROR lookup matched the SKU exactly (`RTX-5070-TI`), so the typed spelling 'rtx 5070 ti' found no reference. | The lookup normalizes SKU spelling (case, spaces, punctuation). The route decision now records the trust reason ("For market_price I believed mirror (...) over seller_claim (...), because ..."). Threshold unchanged at 15 percent above the median (the README and the case key both say 15). | real miss, fixed |
+| k03 | The second correct invoice after two partial receipts was held as `possible_duplicate` and payment refused. | A look-alike invoice (same vendor, PO, lines and total) is only a duplicate suspect if no goods were received after the earlier bill; cumulative quantities were already right. With no new receipt it is still held (D40). | real false flag, fixed |
+| k02 | A 50 cent variance (under the $1 floor) was matched, booked to variance and paid, but the invoice listed it as a finding, and this runner scores any finding as flagged. | The behaviour was already right (not a hold). Informational items now go to the invoice's `info` list; `findings` holds only what needs a person. | partly a scoring artefact: the engine did not hold it before; the change is how it is reported, not what it does |
+
+b13 (department head approves $3,749.97 alone): confirmed intended. The approve step is itself refused (`above_authority`, ok false), so the PO stays unapproved and the later receive is refused (`po_not_open`). The case expected the approve step to succeed and to be caught at receiving; refusing at the earliest control is the stronger behaviour, and the runner counts it as caught at step 2 because step 2 is also refused.

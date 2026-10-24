@@ -1,4 +1,4 @@
-# Hyphenate results (SIM), run 2026-10-23
+# Hyphenate results (SIM), run 2026-10-24
 
 All numbers below come from `python3 -m hyphenate.scenarios.run --heldout --write`. The company, vendors, invoices and bank records are SIM; MIRROR price references come from `data/mirror/snapshots`; no model makes any control decision. The author wrote both sets: the held-out set was written after the dev set was frozen and was run once before this file was written (see the sha256 below), so it is a fair but not an independent test.
 
@@ -6,14 +6,16 @@ All numbers below come from `python3 -m hyphenate.scenarios.run --heldout --writ
 
 | set | planted caught | clean controls with a false flag | decisions written | decisions explainable |
 |---|---|---|---|---|
-| dev (47 cases) | 39/39 | 0/8 | 364 | 364 |
+| dev (50 cases) | 41/41 | 0/9 | 391 | 391 |
 | held-out (14 cases) | 11/11 | 0/3 | 118 | 118 |
 
 Held-out history, stated plainly: the set was committed (sha256 `a1957e37c2d3...`) and run once before RESULTS.md existed: 10/11 planted, 0/3 false flags. The one non-catch, H06, was a crash from my own scripting mistake (the case moved the clock backwards: a bank change at 08:00 after an invoice at 09:00), not an engine miss. I fixed only that timestamp in the case (the key and the engine were not touched) and re-ran: the numbers in the table are from that corrected file.
 
 Changes after the PR #40 review: three faults the reviewer found were fixed in the engine and added to the dev set as D37 (invoice splits one SKU over two lines), D38 (requester charges another department) and D39 (strict vendor with a department-head requester). D10 now uses an art-department requester because cross-department requests are refused. The held-out cases were not edited and their results did not change.
 
-dev_cases.py sha256 `4edec08509953b1d3bc1034e1678c310f6f953c3c192ebddd666f324da2ee274`
+Changes after the blind run (Lane C, issue #45; first blind result 26/27 planted, 2/7 false flags, in RESULTS-blind.md): the MIRROR reference lookup now ignores SKU spelling and records the trust reason (D41); a second identical invoice after a new receipt is not a duplicate (C09, D40 keeps the no-new-receipt case held); an informational variance moved from `findings` to `info`. D40, D41 and C09 were added to dev for these. The blind cases b24, k02 and k03 are therefore no longer blind. Held-out results did not change.
+
+dev_cases.py sha256 `355732a0703e5d33aaabd300d147abd82d5cc6ee0882cb5a94c96ea38fd0755a`
 heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f1501f4eec`
 
 ## By planted fault
@@ -34,6 +36,7 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | cross_department_charge | 1/1 |
 | delegate_approval | 1/1 |
 | duplicate_invoice | 2/2 |
+| duplicate_invoice_lookalike | 1/1 |
 | duplicate_serial | 1/1 |
 | duplicate_signature | 1/1 |
 | mandate_amount_tamper | 1/1 |
@@ -47,6 +50,7 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | prepaid_short_delivery | 1/1 |
 | prepaid_wrong_condition | 1/1 |
 | price_above_market | 1/1 |
+| price_above_market_sku_spelling | 1/1 |
 | price_below_market | 1/1 |
 | price_drift | 2/2 |
 | receiver_not_independent | 1/1 |
@@ -122,6 +126,8 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | D37 | split_invoice_lines | yes | caught | ok |
 | D38 | cross_department_charge | yes | caught | ok |
 | D39 | strict_vendor_peer_signature | yes | caught | ok |
+| D40 | duplicate_invoice_lookalike | yes | caught | ok |
+| D41 | price_above_market_sku_spelling | yes | caught | ok |
 | C01 | clean_control | control | clean_ok | ok |
 | C02 | clean_control | control | clean_ok | ok |
 | C03 | clean_control | control | clean_ok | ok |
@@ -129,6 +135,7 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | C05 | clean_control | control | clean_ok | ok |
 | C06 | clean_control | control | clean_ok | ok |
 | C07 | clean_control | control | clean_ok | ok |
+| C09 | clean_control | control | clean_ok | ok |
 | C08 | clean_control | control | clean_ok | ok |
 
 ### Held-out

@@ -194,6 +194,8 @@ def main():
         w = r["where"]
         print(f"{r['id']:<4} {r['verdict']:<14} {r['title'][:52]:<52} {('step ' + str(w['step']) + ' ' + w['op'] + ' ' + ','.join(w['codes'])) if w else ''}")
     if "--write" in sys.argv:
+        if OUT.exists() and "AFTER-FIXES" in OUT.read_text() and "--force" not in sys.argv:
+            sys.exit("RESULTS-blind.md has an AFTER-FIXES section that keeps the original first-run headline; refusing to overwrite it (use --force)")
         OUT.write_text(markdown(results, data["frozen"], sha))
 
 
