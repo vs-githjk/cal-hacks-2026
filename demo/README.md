@@ -35,9 +35,12 @@ It runs `run_all` (this folder's real lane code), then writes each step through 
 one seller identity per demo seller: `set_floor`, `place_bid`). Needs `referee.json` and `buyer-joe.json` from `market/scripts/setup_roles.py` (auto-found in `.tokens/` or the launcher's) and the
 local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `joe` with
 `spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. Tony Stark is the SIM persona but the DB buyer id is `joe`, the only id /buyer pairs with.
-Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: the advocate veto (no reducer, so the market ranks the vetoed Bargain Bin first and the
-console prints a DIVERGENCE), `allowed_conditions` and alternative lines (open-box bids show as out), the goal cap in the ranking, loss reports, goal state, buyer allowance, denied approval
-attempts, personas and the buyer name, the payment label, and the footer's hardcoded "mock" labels.
+The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real card for each bid (a veto cites its source and disqualifies the bid at the close), the need carries
+`allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
+(`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its
+reason, and a DIVERGENCE line if its #1 is not the demo's winner.
+Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, buyer allowance, denied approval attempts, personas and the
+buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
 
 ## Tags
 Every line that shows data carries one: **LIVE** (a real outside party right now; offline there is none, Stripe's test API with `--stripe` is the only one),

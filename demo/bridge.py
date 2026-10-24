@@ -7,8 +7,8 @@ step by step, so /buyer and /market on the web app show Tony Stark's round live.
     python3 demo/bridge.py --dry-run             # print the reducer calls, touch nothing
 
 Every write goes through an EXISTING reducer with the role token that reducer demands: the buyer token posts the
-goal and the need, the referee token opens and closes rounds and attaches Shield and claim-check results and moves the
-money records, and each seller line bids with its own seller identity. No role gate is bypassed. The only owner
+goal and the need, the referee token opens and closes rounds and attaches Shield, claim-check and advocate results and moves
+the money records, and each seller line bids with its own seller identity. No role gate is bypassed. The only owner
 action is setup: `assign_role` (what market/scripts/setup_roles.py does) for the demo's seller identities.
 
 What the market has no reducer or column for is NOT faked: the console prints it as NOT BRIDGED at the end and
@@ -71,8 +71,9 @@ def bid_id(bid: dict, round_no: int) -> str:
 
 
 def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict, sellers: dict, shield: list[dict],
-                claims: dict, delay: float, pace: float) -> list[Step]:
-    """open_round, every seller's floor and sealed bid in arrival order, then the Shield and claim-check results."""
+                claims: dict, cards: list[dict], delay: float, pace: float) -> list[Step]:
+    """open_round, every seller's floor and sealed bid in arrival order, then the Shield, claim-check and advocate results.
+    A bid carries ALL its condition lines (alternatives for one SKU); the market picks the cheapest allowed one."""
     round_id = f"round-{round_no}"
     sku = bids[0]["lines"][0]["sku_spec"]
     entry = _entries(ranking)
@@ -81,15 +82,16 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
         sid = bid["seller_id"]
         idx = entry.get(sid, {}).get("line", 0)
         seller = sellers[sid]
-        placed = bid["lines"][idx]
-        floor = seller["lines"][idx]["floor"]
-        alts = f" (bid carries the picked line only; the demo's alternatives: " + " | ".join(
+        placed = bid["lines"][idx]                       # the line the demo picked: its price and listing are the bid's headline
+        floor = min(l["floor"] for l in seller["lines"])   # the market keeps one floor per SKU; the lowest never blocks a line
+        alts = f" (alternatives, the market picks the cheapest allowed: " + " | ".join(
             f"{l['offered_condition']} {l['unit_price']:,.2f}" for l in bid["lines"]) + ")" if len(bid["lines"]) > 1 else ""
         seller_steps.append(Step(f"seller:{sid}", "set_floor", {"sku_spec": sku, "floor": floor}, tag=bid["origin"],
                                  say=f"{bid['persona']} sets a private floor"))
         seller_steps.append(Step(
             f"seller:{sid}", "place_bid",
-            {"id": bid_id(bid, round_no), "round_id": round_id, "persona": bid["persona"], "lines": [_line(bid, idx, sku)],
+            {"id": bid_id(bid, round_no), "round_id": round_id, "persona": bid["persona"],
+             "lines": [_line(bid, i, sku) for i in range(len(bid["lines"]))],
              "stated_total": placed["unit_price"] * placed["quantity"], "perks": list(bid["perks"]), "claims": list(bid["claims"]),
              "origin": bid["origin"], "source": placed["listing_url"]},
             tag=bid["origin"], pause=True, pace=pace,
@@ -111,6 +113,16 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
                                      "evidence_url": c["evidence_url"], "origin": c["origin"]},
                                     tag=c["origin"], pause=True, pace=pace,
                                     say=f"claim check (real data.claim_check) on {bid['persona']}: {c['check']}: {c['text']}"))
+    bid_of = {b["id"]: b for b in bids}
+    for c in cards:        # the advocate's real card for every bid it judged; a veto disqualifies it at the close
+        bid = bid_of[c["bid_id"]]
+        why = c["call_reason"]
+        check_steps.append(Step("referee", "attach_advocate_card",
+                                {"bid_id": bid_id(bid, round_no), "recommendation": c["recommendation"], "rule_id": why["rule_id"],
+                                 "text": why["summary"], "source_url": why["source_url"], "origin": bid["origin"]},
+                                tag=bid["origin"], pause=c["recommendation"] == "veto", pace=pace,
+                                say=f"advocate (Lane A checks.advise) on {bid['persona']}: {c['recommendation'].upper()} "
+                                    f"{why['rule_id']}: {why['summary']}"))
     paused = sum(s.pace for s in [*seller_steps, *check_steps] if s.pause)
     window = max(MIN_WINDOW_S, math.ceil(paused * delay) + 6)
     opener = Step("referee", "open_round", {"round_id": round_id, "need_id": need_id, "window_s": window}, window_s=window,
@@ -141,13 +153,14 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       {"id": need["id"], "buyer_id": buyer_id, "goal_id": goal["id"], "delivery_window": need["delivery_window"],
                        "spend_limit": need["spend_limit"], "consent": need["consent"], "auction_window_s": need["auction_window_s"],
                        "origin": SIM,
-                       "items": [{"sku_spec": n["sku_spec"], "condition": n["condition"], "variant": n["variant"],
+                       "items": [{"sku_spec": n["sku_spec"], "condition": n["condition"],
+                                  "allowed_conditions": list(n.get("allowed_conditions") or []), "variant": n["variant"],
                                   "quantity": n["quantity"], "unit": n["unit"]}]},
-                      pause=True, say=f"the need goes to sellers: {n['sku_spec']}, {n['condition']}; the cap is withheld from them"))
+                      pause=True, say=f"the need goes to sellers: {n['sku_spec']}, {' or '.join(n.get('allowed_conditions') or [n['condition']])}; the cap is withheld from them"))
 
     # beat 2: the sealed round (Shield and claim checks attach before the close; the market ranks)
     steps += round_steps(round_no=1, need_id=need["id"], bids=b2["bids"], ranking=b2["ranking"], sellers=sellers, shield=b2["shield"],
-                         claims=b2["claims"], delay=delay, pace=1.0)
+                         claims=b2["claims"], cards=b2["cards"], delay=delay, pace=1.0)
 
     # beat 3: Shield blocks Shady Sam's injected re-post (after the close, as in the demo; Sam is already out on his claims)
     inj = b["3"]["injected"]
@@ -169,39 +182,32 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     steps.append(Step("referee", "record_approval", {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": buyer_id},
                       pause=True, say="the call approves on the third try (wrong code, no 'approve', then right): "
                                       "the referee relays the verified code"))
-    steps.append(Step("referee", "record_payment", {"mandate_hash": m["hash"], "payment_ref": ch["id"], "amount": m["amount"]},
-                      pause=True, tag=SIM if ch["mode"] != "Stripe test mode" else "LIVE",
+    pay_mode = "stripe_test" if ch["mode"] == "Stripe test mode" else "sim"
+    pay = {"mandate_hash": m["hash"], "payment_ref": ch["id"], "amount": m["amount"], "mode": pay_mode}
+    steps.append(Step("referee", "record_payment", dict(pay), pause=True, tag="LIVE" if pay_mode == "stripe_test" else SIM,
                       say=f"payment recorded: {ch['id']} ({ch['mode']})"))
-    steps.append(Step("referee", "record_payment", {"mandate_hash": m["hash"], "payment_ref": ch["id"], "amount": m["amount"]},
+    steps.append(Step("referee", "record_payment", dict(pay),
                       pause=True, say="the same payment again: the market's own idempotency refuses it and shows the refusal"))
 
     # beat 5: round 2 with the learning seller's lowered price (loss reports have no reducer: NOT BRIDGED)
     if rounds >= 2:
         r2 = b["5"]["round2"]
         steps += round_steps(round_no=2, need_id=need["id"], bids=r2["bids"], ranking=r2["ranking"], sellers=sellers,
-                             shield=b2["shield"], claims=b2["claims"], delay=delay, pace=0.5)
+                             shield=b2["shield"], claims=b2["claims"], cards=r2["cards"], delay=delay, pace=0.5)
     return steps
 
 
 # What the market cannot take today (printed at the end of every run; mirrored in demo/README.md for Lane B).
 NOT_BRIDGED = [
-    "advocate veto (Lane A checks.advise): no reducer or table, so Shady Sam's condition and price vetoes and Bargain Bin's fit veto "
-    "are not on screen; the market ranks the vetoed Bargain Bin first. Needs attach_advocate_card(bid_id, recommendation, rule_id, "
-    "text, source_url, origin) that disqualifies a veto.",
-    "allowed_conditions (new or open-box): need_item.condition is one string and rankBids disqualifies any other offered condition, "
-    "so the real open-box bids (eBay, Gadget Grove) show as out. Needs need_item.allowed_conditions and checkLineSpec/rankBids to read it.",
-    "alternative lines per bid: rankBids sums a bid's lines, so Gadget Grove's two alternative lines cannot both be placed; the bridge "
-    "places only the picked line.",
-    "goal cap in the ranking: need.spend_limit is stored but rankBids ignores it, so the two over-cap eBay bids stay ranked.",
-    "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 but the market disqualifies the open-box learner, so it shows nothing new.",
+    "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 and the learner's lower open-box price now ranks, but the loss report itself is not on screen.",
     "goal state (HUNTING, HOLD_FOR_CALL, DONE): no set_goal_state reducer; the goal stays ACTIVE and reserved_amount stays 0.",
     "buyer allowance: no set_allowance reducer, so /buyer shows the market's fresh $0 allowance, not Tony Stark's $250 per purchase "
     "(the deal still correctly needs the call).",
     "denied approval attempts (wrong code, no 'approve'): record_approval only logs a second approval; the denied tries are console only.",
     "buyer persona name and seller personas: /buyer is hardcoded to the id joe and prints 'Joe (demo persona)'; persona rows come only "
     "from seed_demo (Seller A to C), so the 3D floor has no personas for the demo sellers.",
-    "payment label: record_payment always labels the event 'Stripe test mode' even for the SIM stub charge (origin is SIM).",
-    "footer: RunModeFooter hardcodes Advocate, Shield, Claim check and Payments as 'mock'.",
+    "seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor "
+    "(issue #18 asks for a floor per seller, SKU and condition).",
 ]
 
 
@@ -239,15 +245,20 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
 
 def compare_to_db(rows: list, run: dict) -> list[str]:
     """Lines saying whether the market's round-1 ranking matches the demo's. Rows are round_result rows in table order:
-    id, round_id, bid_id, seller_id, persona, rank, landed, ... (round-1 only)."""
+    id, round_id, bid_id, seller_id, persona, rank, landed, reasons, ... (round-1 only)."""
     b2 = run["beats"]["2"]
     demo_win = next(s for s in b2["sellers"] if s["id"] == b2["winner"]["seller_id"])["name"]
     r1 = sorted((r for r in rows if r[1] == "round-1"), key=lambda r: (r[5] or 99, r[4]))
     ranked = [r for r in r1 if r[5]]
     out = [f"market ranking (round 1): " + ", ".join(f"#{r[5]} {r[4]} {money(r[6])}" for r in ranked)]
+    for r in (r for r in r1 if not r[5]):
+        reasons = r[7] if len(r) > 7 and isinstance(r[7], list) else []
+        out.append(f"market OUT: {r[4]} {money(r[6])}: " + ("; ".join(reasons) or "no reason given"))
     if ranked and ranked[0][3] != b2["winner"]["seller_id"]:
-        out.append(f"DIVERGENCE: the demo's winner is {demo_win}; the market ranks {ranked[0][4]} first because the advocate's "
-                   f"veto has no reducer (see NOT BRIDGED). The mandate that follows is the demo's winner, not the market's #1.")
+        out.append(f"DIVERGENCE: the demo's winner is {demo_win}; the market ranks {ranked[0][4]} first. "
+                   f"The mandate that follows is the demo's winner, not the market's #1.")
+    elif not ranked:
+        out.append("DIVERGENCE: the market ranked no bid.")
     else:
         out.append(f"market and demo agree on the winner: {demo_win}")
     return out
@@ -274,7 +285,7 @@ def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(description="Play the demo beats into the running SpacetimeDB market so /buyer and /market show them")
     ap.add_argument("--step-delay", type=float, default=2.0, help="seconds between visible steps (default 2)")
     ap.add_argument("--rounds", type=int, choices=[1, 2], default=1,
-                    help="2 also plays beat 5's round 2 (default 1: the market disqualifies the open-box learner, so round 2 shows nothing new)")
+                    help="2 also plays beat 5's round 2 (default 1)")
     ap.add_argument("--reset", action="store_true", help="call reset_demo first (referee): wipes needs, goals, rounds; keeps roles and pair codes")
     ap.add_argument("--dry-run", action="store_true", help="print the reducer calls only")
     ap.add_argument("--stripe", action="store_true", help="Stripe TEST charge in beat 4 (sk_test_ key only), as run_demo.py --stripe")
@@ -308,7 +319,7 @@ def main(argv: Optional[list] = None) -> int:
         return 0
 
     if not args.stripe:
-        out.note("WARNING: /market labels this SIM payment stub 'Stripe test mode' (market.ts:375, Lane B #37). Use --stripe for a recorded take.")
+        out.note("Payment is the SIM stub: /market labels it 'SIM stub, no money moved'. Use --stripe for a Stripe TEST charge.")
     try:
         return _run_live(args, steps, run, out, say)
     except (OSError, subprocess.CalledProcessError) as e:
