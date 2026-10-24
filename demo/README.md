@@ -24,6 +24,21 @@ The charge happens after `can_charge` passes at charge time, never before: one `
 the PaymentIntent id and status. A refused call prints Stripe's error type and code, not the request. Without `--stripe` the charge is a SIM stub.
 This is not Visa settlement: it is a Stripe test charge on a Visa test card under a TAP-style signed mandate.
 
+## Screen bridge (`demo/bridge.py`): watch the run on /buyer and /market
+```
+python3 demo/bridge.py --step-delay 2 --reset   # about 90 s; --reset calls reset_demo first (keeps roles and pair codes)
+python3 demo/bridge.py --dry-run                # the reducer calls, nothing written
+python3 -m pytest demo/tests/test_bridge.py     # mapping with a fake client, no network
+```
+It runs `run_all` (this folder's real lane code), then writes each step through the market's EXISTING reducers with the role token each one demands
+(buyer: `post_goal`, `post_need`; referee: `open_round`, `attach_verdict`, `attach_claim_check`, `close_round`, `create_mandate`, `record_approval`, `record_payment`;
+one seller identity per demo seller: `set_floor`, `place_bid`). Needs `referee.json` and `buyer-joe.json` from `market/scripts/setup_roles.py` (auto-found in `.tokens/` or the launcher's) and the
+local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `joe` with
+`spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. Tony Stark is the SIM persona but the DB buyer id is `joe`, the only id /buyer pairs with.
+Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: the advocate veto (no reducer, so the market ranks the vetoed Bargain Bin first and the
+console prints a DIVERGENCE), `allowed_conditions` and alternative lines (open-box bids show as out), the goal cap in the ranking, loss reports, goal state, buyer allowance, denied approval
+attempts, personas and the buyer name, the payment label, and the footer's hardcoded "mock" labels.
+
 ## Tags
 Every line that shows data carries one: **LIVE** (a real outside party right now; offline there is none, Stripe's test API with `--stripe` is the only one),
 **MIRROR** (our agent acting on a real, dated listing from `data/mirror/snapshots`), **SIM** (anything we generated). Real code that runs on SIM data is still

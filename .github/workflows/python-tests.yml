@@ -2,10 +2,10 @@ name: python-tests
 
 on:
   pull_request:
-    paths: ["agents/**", "contracts/**", "data/**", "demo/**", "pay/**", "shield/**", "sim/**", ".github/workflows/python-tests.yml"]
+    paths: ["agents/**", "contracts/**", "data/**", "demo/**", "pay/**", "shield/**", "sim/**", "scripts/**", "hyphenate/**", ".github/workflows/python-tests.yml"]
   push:
     branches: [main]
-    paths: ["agents/**", "contracts/**", "data/**", "demo/**", "pay/**", "shield/**", "sim/**", ".github/workflows/python-tests.yml"]
+    paths: ["agents/**", "contracts/**", "data/**", "demo/**", "pay/**", "shield/**", "sim/**", "scripts/**", "hyphenate/**", ".github/workflows/python-tests.yml"]
 
 jobs:
   test:

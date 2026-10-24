@@ -1,4 +1,4 @@
-"""FastAPI app for Hyphenate (Lane D). Run: python3 -m uvicorn hyphenate.api:app --port 8788
+"""FastAPI app for Hyphenate (Lane D). Run: python3 -m uvicorn hyphenate.api:app --port 8789
 
 All routes live under /v1/hyphenate. State is one in-memory simulated company (Pixel Forge Games, SIM) so Lane B can render
 pages: POST /v1/hyphenate/demo/reset loads the seeded story, ?story=empty gives a blank studio. Every write returns

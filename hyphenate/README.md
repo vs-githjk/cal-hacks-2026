@@ -7,7 +7,7 @@ Tony Stark is the requester (same persona as the Tech Bazaar demo). The studio, 
 python3 -m hyphenate.demo                     # the moment, narrated (add --json for structure)
 python3 -m hyphenate.scenarios.run --heldout  # planted errors: dev and held-out, caught/missed (add --write to refresh RESULTS.md)
 python3 -m pytest hyphenate -q                # 61 tests, under a second
-python3 -m uvicorn hyphenate.api:app --port 8788
+python3 -m uvicorn hyphenate.api:app --port 8789
 ```
 
 ## What is in code (controls, not prompts)
