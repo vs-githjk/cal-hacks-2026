@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { purchaseFromRows, reviewsFromRows, stepFeedFromRows } from "./screens";
 import { PurchaseCard, ReceiptCard, ShieldCard, VetoCard } from "../components/buyer";
 import { BuyerScreen } from "../components/screens";
+import { buyerFeedFromRows, selectBuyerRound } from "../app/buyer/page";
 
 const ts = (ms: number) => ({ microsSinceUnixEpoch: BigInt(ms) * 1000n });
 const purchase = (overrides: Record<string, unknown> = {}) => ({
@@ -118,6 +119,38 @@ describe("stepFeedFromRows", () => {
     expect(feed.map((item) => item.key)).toEqual(["s2", "s1"]);
     expect(feed[1]).toMatchObject({ kind: "veto", text: "Rule found", origin: "LIVE" });
     expect(feed[0]).toMatchObject({ kind: "deal", text: "SIM payment" });
+  });
+});
+
+describe("buyer page selection and feed composition", () => {
+  it("selects only the latest owned round with a deterministic tie break", () => {
+    const rounds = [
+      { goalId: "goal-a", roundId: "older", openedAt: ts(1_000), needId: "n1", state: "closed" },
+      { goalId: "goal-a", roundId: "tie-z", openedAt: ts(2_000), needId: "n2", state: "closed" },
+      { goalId: "goal-b", roundId: "foreign", openedAt: ts(9_000), needId: "nf", state: "closed" },
+      { goalId: "goal-a", roundId: "tie-a", openedAt: ts(2_000), needId: "n3", state: "open" },
+    ];
+    expect(selectBuyerRound(rounds as never, "goal-a")?.roundId).toBe("tie-a");
+    expect(selectBuyerRound(rounds as never, "missing")).toBeNull();
+  });
+
+  it("composes only goal-scoped steps and notifications and deduplicates by their stable IDs", () => {
+    const steps = [
+      { stableId: "step-1", goalId: "goal-a", klass: "progress", text: "one", origin: "LIVE", at: ts(1_000) },
+      { stableId: "step-1", goalId: "goal-a", klass: "progress", text: "duplicate", origin: "LIVE", at: ts(1_000) },
+      { stableId: "step-x", goalId: "goal-b", klass: "progress", text: "foreign", origin: "SIM", at: ts(2_000) },
+      { stableId: "step-2", goalId: "goal-a", klass: "payment_recorded", text: "paid", origin: "SIM", at: ts(3_000) },
+    ];
+    const notes = [
+      { id: 7n, goalId: "goal-a", klass: "state", text: "note", push: false, at: ts(2_000) },
+      { id: 7n, goalId: "goal-a", klass: "state", text: "duplicate note", push: false, at: ts(2_000) },
+      { id: 8n, goalId: "goal-b", klass: "state", text: "foreign note", push: false, at: ts(4_000) },
+    ];
+    const feed = buyerFeedFromRows(steps as never, notes as never, "goal-a");
+    expect(feed.map((item) => item.key)).toEqual(["step-step-2", "notification-7", "step-step-1"]);
+    expect(feed.some((item) => item.text === "foreign" || item.text === "foreign note" || item.text === "duplicate note")).toBe(false);
+    expect(feed[0]).toMatchObject({ kind: "deal", origin: "SIM", text: "paid" });
+    expect(feed[2]).toMatchObject({ kind: "progress", origin: "LIVE", text: "one" });
   });
 });
 

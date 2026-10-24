@@ -2,16 +2,39 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
+import type { Timestamp } from "spacetimedb";
 import { reducers, tables } from "@/module_bindings";
 import { AgentsTile } from "@/components/AgentsTile";
 import { BuyerScreen } from "@/components/screens";
-import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
-import * as sample from "@/lib/sample";
+import { bidsFromRows, feedFromRows, goalFromRows, latestGoal, purchaseFromRows, reviewsFromRows, stepFeedFromRows } from "@/lib/screens";
 
 // Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
 const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;
+
+interface BuyerRoundRow { goalId: string; roundId: string; openedAt: Timestamp }
+interface BuyerStepRow { stableId: string; goalId: string; klass: string; text: string; origin: string; at: Timestamp }
+interface BuyerNotificationRow { id: bigint; goalId: string; klass: string; text: string; at: Timestamp }
+
+export function selectBuyerRound(rows: readonly BuyerRoundRow[], goalId: string): BuyerRoundRow | null {
+  return [...rows].filter((row) => row.goalId === goalId).sort((a, b) => {
+    if (a.openedAt.microsSinceUnixEpoch !== b.openedAt.microsSinceUnixEpoch) {
+      return a.openedAt.microsSinceUnixEpoch > b.openedAt.microsSinceUnixEpoch ? -1 : 1;
+    }
+    return a.roundId.localeCompare(b.roundId);
+  })[0] ?? null;
+}
+
+export function buyerFeedFromRows(steps: readonly BuyerStepRow[], notifications: readonly BuyerNotificationRow[], goalId: string) {
+  const ownedSteps = new Map<string, BuyerStepRow>();
+  for (const row of steps) if (row.goalId === goalId && !ownedSteps.has(row.stableId)) ownedSteps.set(row.stableId, row);
+  const ownedNotifications = new Map<string, BuyerNotificationRow>();
+  for (const row of notifications) if (row.goalId === goalId && !ownedNotifications.has(String(row.id))) ownedNotifications.set(String(row.id), row);
+  const stepItems = stepFeedFromRows([...ownedSteps.values()], goalId).map((item) => ({ ...item, key: `step-${item.key}` }));
+  const notificationItems = feedFromRows([], [...ownedNotifications.values()]).map((item) => ({ ...item, key: `notification-${item.key.slice(1)}` }));
+  return [...stepItems, ...notificationItems].sort((a, b) => b.at.getTime() - a.at.getTime() || a.key.localeCompare(b.key));
+}
 
 /** A screen sees Vidyut's goal only after pairing with the demo code (SIM sign-in). */
 function PairScreen() {
@@ -81,53 +104,50 @@ function BuyerGate() {
 
 function BuyerView() {
   const [goals, goalsReady] = useTable(tables.myGoals);
-  const [goalItems] = useTable(tables.myGoalItems);
-  const [allowances] = useTable(tables.myAllowance);
-  const [rounds] = useTable(tables.round);
-  const [results] = useTable(tables.roundResult);
+  const [goalItems, goalItemsReady] = useTable(tables.myGoalItems);
+  const [allowances, allowancesReady] = useTable(tables.myAllowance);
+  const [results, resultsReady] = useTable(tables.roundResult);
   const [events, eventsReady] = useTable(tables.floorEvent);
-  const [notes] = useTable(tables.myNotifications);
-  const [pending] = useTable(tables.myPendingApprovals);
+  const [notes, notesReady] = useTable(tables.myNotifications);
+  const [purchaseRows, purchaseReady] = useTable(tables.myPurchaseStatus);
+  const [reviewRows, reviewsReady] = useTable(tables.myBidReviews);
+  const [buyerRounds, buyerRoundsReady] = useTable(tables.myBuyerRounds);
+  const [stepEvents, stepEventsReady] = useTable(tables.myGoalStepEvents);
   const [clock, setClock] = useState(() => Date.now());
-  const [profiles] = useTable(tables.myBuyerProfile);
-  const approveTyped = useReducer(reducers.approveTyped);
+  const [profiles, profilesReady] = useTable(tables.myBuyerProfile);
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
-  const goal = useMemo(() => goalFromRows(goals, goalItems, allowances[0]), [goals, goalItems, allowances]);
-  const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
-  const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
-  const sim = liveBids.length === 0;
-  const review = useMemo(() => reviewFromRows(pending), [pending, clock]);
-  // A wrong code is counted in my_pending_approvals (failures); a match records the approval and the row leaves the view.
-  const onTyped = async (mandateHash: string, code: string) => {
-    if (!code) return "Type the two words shown above.";
-    try {
-      await approveTyped({ mandateHash, code });
-      return "Sent. If it matched, this card turns into the receipt.";
-    } catch (err) {
-      return err instanceof Error ? err.message : "Approval failed";
-    }
-  };
+  const goalRow = useMemo(() => goalsReady ? latestGoal(goals) : undefined, [goals, goalsReady]);
+  const goal = useMemo(() => goalsReady && goalItemsReady && allowancesReady ? goalFromRows(goals, goalItems, allowances[0]) : null,
+    [goals, goalItems, allowances, goalsReady, goalItemsReady, allowancesReady]);
+  const buyerRound = useMemo(() => goalRow && buyerRoundsReady ? selectBuyerRound(buyerRounds, goalRow.id) : null, [buyerRounds, buyerRoundsReady, goalRow]);
+  const liveBids = useMemo(() => resultsReady && eventsReady ? bidsFromRows(results, events, buyerRound?.roundId) : [],
+    [results, resultsReady, events, eventsReady, buyerRound]);
+  const { veto, shield } = useMemo(() => goalRow && buyerRound && reviewsReady
+    ? reviewsFromRows(reviewRows, goalRow.id, buyerRound.roundId)
+    : { veto: null, shield: null }, [reviewRows, reviewsReady, goalRow, buyerRound]);
+  const purchase = useMemo(() => goalRow && purchaseReady ? purchaseFromRows(purchaseRows, goalRow.id, clock) : null,
+    [purchaseRows, purchaseReady, goalRow, clock]);
+  const feed = useMemo(() => goalRow && stepEventsReady && notesReady
+    ? buyerFeedFromRows(stepEvents, notes, goalRow.id)
+    : [], [goalRow, stepEvents, stepEventsReady, notes, notesReady]);
 
-  // veto, shield, approval and receipt rows (bid_check, mandate, approval, payment) are not public yet: those cards show the SIM sample.
   return (
     <BuyerScreen
-      connecting={!goalsReady || !eventsReady}
+      connecting={!goalsReady || !goalItemsReady || !allowancesReady || !resultsReady || !eventsReady || !notesReady || !purchaseReady || !reviewsReady || !buyerRoundsReady || !stepEventsReady || !profilesReady}
       goal={goal}
-      bids={sim ? asSim(sample.rankedBids) : liveBids}
-      veto={asSim(sample.veto)}
-      shield={asSim(sample.shield)}
-      approval={asSim(sample.approval)}
-      review={review}
-      onTyped={onTyped}
-      receipt={asSim(sample.receipt)}
+      bids={liveBids}
+      veto={veto}
+      shield={shield}
+      approval={null}
+      purchase={purchase}
+      receipt={purchase?.receipt ?? null}
       feed={feed}
       buyerName={profiles[0]?.displayName || DEMO_BUYER}
-      sample={{ bids: sim, veto: true, shield: true, approval: !review, receipt: true }}
     />
   );
 }
