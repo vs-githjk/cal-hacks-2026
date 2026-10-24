@@ -39,7 +39,7 @@ check "the module answers" "spacetime sql -s $SERVER $DB 'SELECT * FROM owner' >
 run spacetime call -s "$SERVER" "$DB" seed_demo
 check "seed_demo made the pair code" "spacetime sql -s $SERVER $DB 'SELECT code FROM pair_code' | grep -q ."
 
-mkdir -p "$TOKENS"
+run mkdir -p "$TOKENS"
 run env SPACETIMEDB_SERVER="$SERVER" SPACETIMEDB_HTTP="$HTTP" SPACETIMEDB_DB="$DB" \
   python3 market/scripts/setup_roles.py "$TOKENS"
 check "the referee and buyer tokens exist" "test -s $TOKENS/referee.json && test -s $TOKENS/buyer-vidyut.json"

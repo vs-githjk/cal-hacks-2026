@@ -67,8 +67,9 @@ def export(target: dict) -> None:
     os.environ["SPACETIMEDB_DB"] = target["db"]
 
 
-def tokens_dir(target: dict, root: Path = ROOT) -> Path:
+def tokens_dir(target: dict, root: Optional[Path] = None) -> Path:
     """The folder for this market's role tokens: .tokens/ for the local market, .tokens/<db>@<host>/ for any other."""
+    root = root or ROOT
     if target["local"]:
         return root / ".tokens"
     return root / ".tokens" / f"{target['db']}@{urlsplit(target['http']).hostname}"

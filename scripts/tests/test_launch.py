@@ -371,3 +371,49 @@ def test_missing_fastapi_skips_seller_kit_with_the_fix(tmp_path):
     L.decide_skips(svcs, checks)
     kit = {s.name: s for s in svcs}["seller-kit"]
     assert "fastapi" in kit.skip_reason
+
+
+# ---------- #295: --maincloud starts no local SpacetimeDB and checks the env file names a shared market ----------
+
+MAINCLOUD_ENV = {"SPACETIMEDB_SERVER": "maincloud", "SPACETIMEDB_HTTP": "https://maincloud.spacetimedb.com",
+                 "SPACETIMEDB_DB": "tech-bazaar", "NEXT_PUBLIC_SPACETIMEDB_URI": "wss://maincloud.spacetimedb.com",
+                 "NEXT_PUBLIC_SPACETIMEDB_DB": "tech-bazaar"}
+
+
+def test_maincloud_mode_starts_no_local_market(tmp_path):
+    assert "market-stdb" in {s.name for s in L.build_services(make_args(), tmp_path)}
+    assert "market-stdb" not in {s.name for s in L.build_services(make_args(maincloud=True), tmp_path)}
+
+
+def test_maincloud_check_passes_only_for_a_shared_market_the_web_also_points_at(monkeypatch):
+    for k in ("SPACETIMEDB_SERVER", "SPACETIMEDB_HTTP", "SPACETIMEDB_DB"):
+        monkeypatch.delenv(k, raising=False)
+    assert L.maincloud_check(MAINCLOUD_ENV).ok
+    assert not L.maincloud_check({}).ok                                                     # local
+    assert not L.maincloud_check({**MAINCLOUD_ENV, "NEXT_PUBLIC_SPACETIMEDB_URI": "ws://127.0.0.1:3000"}).ok
+    assert not L.maincloud_check({**MAINCLOUD_ENV, "NEXT_PUBLIC_SPACETIMEDB_DB": "other"}).ok
+    assert not L.maincloud_check({**MAINCLOUD_ENV, "SPACETIMEDB_HTTP": "http://maincloud.spacetimedb.com"}).ok
+
+
+def test_a_failed_maincloud_check_skips_every_service(tmp_path, monkeypatch):
+    for k in ("SPACETIMEDB_SERVER", "SPACETIMEDB_HTTP", "SPACETIMEDB_DB"):
+        monkeypatch.delenv(k, raising=False)
+    a = make_args(maincloud=True)
+    svcs = L.build_services(a, tmp_path)
+    checks = L.run_preflight(a, svcs, {"ANTHROPIC_API_KEY": SECRET}, "n", repo=tmp_path, which=lambda n: "/x/" + n,
+                             can_import=lambda m: True, port_busy=lambda p: False, home_bin=tmp_path / "nobin")
+    L.decide_skips(svcs, checks)
+    assert svcs and all(s.skip_reason and s.skip_reason.startswith("--maincloud") for s in svcs)
+
+
+def test_the_deploy_script_dry_run_calls_nothing_and_never_deletes_data():
+    import subprocess
+
+    script = Path(__file__).resolve().parents[1] / "deploy_maincloud.sh"
+    code = "\n".join(l for l in script.read_text().splitlines() if not l.lstrip().startswith("#"))
+    assert "--delete-data" not in code and "--yes=all" not in code
+    out = subprocess.run(["sh", str(script)], capture_output=True, text=True, timeout=30, env={"PATH": "/usr/bin:/bin"})
+    assert out.returncode == 0 and "dry run" in out.stdout and "+ spacetime publish -s maincloud" in out.stdout
+    bad = subprocess.run(["sh", str(script)], capture_output=True, text=True, timeout=30,
+                         env={"PATH": "/usr/bin:/bin", "SPACETIMEDB_DB": "Bad DB"})
+    assert bad.returncode == 2
