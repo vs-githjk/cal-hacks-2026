@@ -23,6 +23,16 @@ EXPECT = {"deal_id": DEAL, "amount": AMOUNT, "payee": PAYEE}
 STATES = ["pending", "denied", "expired_status", "expired_clock", "used", "approved_nonce_spent"]
 APPROVAL_IDS = [None, "", "   ", "appr-1", "voice-7f3a"]
 BUYERS = [None, BUYER]
+# Every (state, approval_id) that must be refused: each non-approved state with every approval_id, plus "approved" with a
+# missing or blank approval_id (the one state that reaches the approval_id check).
+CASES = [(s, a) for s in STATES for a in APPROVAL_IDS] + [("approved", a) for a in (None, "", "   ")]
+REASON = {"pending": "not_approved", "denied": "denied", "expired_status": "expired", "expired_clock": "expired",
+          "used": "already_used", "approved_nonce_spent": "replayed_mandate", "approved": "no_approval_id"}
+
+
+def expected_reason(state, approval_id):
+    blank = approval_id is None or not approval_id.strip()
+    return "no_approval_id" if state == "approved_nonce_spent" and blank else REASON[state]
 
 
 def mandate_in(state, approval_id):
@@ -41,17 +51,14 @@ def mandate_in(state, approval_id):
 
 
 @pytest.mark.parametrize("buyer", BUYERS)
-@pytest.mark.parametrize("approval_id", APPROVAL_IDS)
-@pytest.mark.parametrize("state", STATES)
+@pytest.mark.parametrize("state, approval_id", CASES)
 def test_can_charge_refuses_every_state_that_is_not_approved(state, approval_id, buyer):
     m, store, when = mandate_in(state, approval_id)
     v = can_charge(m, when, store=store, buyer_id=buyer, **EXPECT)
-    assert not v, (state, approval_id)
-    assert v.reason in ("not_approved", "no_approval_id", "denied", "expired", "already_used", "replayed_mandate"), v.reason
+    assert not v and v.reason == expected_reason(state, approval_id), (state, approval_id, v.reason)
 
 
-@pytest.mark.parametrize("approval_id", APPROVAL_IDS)
-@pytest.mark.parametrize("state", STATES)
+@pytest.mark.parametrize("state, approval_id", CASES)
 def test_mark_used_refuses_and_spends_nothing(state, approval_id):
     m, store, when = mandate_in(state, approval_id)
     spent_before = store.seen(NS_MANDATE, m["nonce"])
@@ -78,24 +85,32 @@ class FakeStripe:
         return {"id": f"pi_test_{len(self.calls)}", "status": "succeeded"}
 
 
-@pytest.mark.parametrize("approval_id", APPROVAL_IDS)
-@pytest.mark.parametrize("state", STATES)
-def test_the_merchant_sim_never_charges_a_mandate_that_is_not_approved(state, approval_id):
+def sim_handle(m, store, when):
+    """A validly signed charge request for `m` through MerchantSim; returns (result, stripe calls)."""
     priv = Ed25519PrivateKey.generate()
-    m, store, when = mandate_in(state, approval_id)
     stripe = FakeStripe()
     sim = MerchantSim(keys=keyring(priv.public_key()), store=store, approvals={DEAL: dict(m)}.get, charger=stripe)
     body = json.dumps({"deal_id": DEAL, "mandate": m}).encode()
     headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=when)
-    out = sim.handle(method="POST", url=URL, headers=headers, body=body, now=when)
-    assert out["status"] == "refused" and stripe.calls == [], (state, approval_id, out["reason"])
+    return sim.handle(method="POST", url=URL, headers=headers, body=body, now=when), stripe.calls
+
+
+@pytest.mark.parametrize("state, approval_id", CASES)
+def test_the_merchant_sim_never_charges_a_mandate_that_is_not_approved(state, approval_id):
+    m, store, when = mandate_in(state, approval_id)
+    out, calls = sim_handle(m, store, when)
+    # refused for the state itself, not for a broken signature (verify_request sees a spent nonce before can_charge does)
+    want = "replayed_mandate" if state == "approved_nonce_spent" else expected_reason(state, approval_id)
+    assert out["status"] == "refused" and out["reason"] == want and calls == [], out
 
 
 def test_an_approved_mandate_with_an_approval_id_still_charges():
-    """The positive control: the refusals above are about the state, not a broken fixture."""
+    """The positive controls: the refusals above are about the state, not a broken fixture."""
     m, store, when = mandate_in("approved_nonce_spent", "appr-1")
     assert not can_charge(m, when, store=store, **EXPECT)
     assert can_charge(m, when, store=NonceStore(), buyer_id=BUYER, **EXPECT)
+    out, calls = sim_handle(m, NonceStore(), when)
+    assert out["status"] == "charged" and calls == [129999]
 
 
 # ---------- buyer_id is bound by the hash ----------

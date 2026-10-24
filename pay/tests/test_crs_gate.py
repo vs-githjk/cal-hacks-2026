@@ -224,7 +224,7 @@ def test_a_the_adapters_verified_check_binds_to_a_mandate():
 
 
 # (f) existing hashes unchanged
-def test_f_mandate_without_crs_check_id_hashes_exactly_as_before():
+def test_f_mandate_without_crs_check_id_hashes_as_if_the_field_did_not_exist():
     m = {"deal_id": "deal-crs", "amount": 1299.99, "currency": "USD", "payee": "seller-grace-nakamura",
          "tier_price": None, "nonce": "00112233445566778899aabbccddeeff", "expires_at": "2026-10-24T09:10:00Z"}
     # value of the #186 hash format (buyer_id bound, here absent so null); the pre-T8 value was 84c5c04e...a427
