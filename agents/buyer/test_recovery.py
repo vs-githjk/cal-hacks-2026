@@ -546,6 +546,39 @@ def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch
     assert all(bid['id'] != 'old-bid' for bid in buyer.ROUND['bids'])
 
 
+def test_shield_blocked_retired_bid_does_not_notify_current_owner(buyer, monkeypatch):
+    buyer.ROUND.update(owner='bob', retired_need_ids=['old-need'], phase='bidding', deadline=time.time() + 60)
+    before = dict(buyer.ROUND)
+    monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'block', 'reasons': ['injection']})
+    bid = {'id': 'old-bid', 'need_id': 'old-need', 'persona': 'Seller', 'lines': [],
+           'total_landed_price': 500, 'perks': [], 'claims': [], 'floor_check_passed': True,
+           'mirror_snapshot_id': '', 'decision_trace': '', 'expires_at': '', 'source': 'sandbox',
+           'origin': 'SIM', 'supplier_id': 'seller_1'}
+    ctx = Context()
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(bid), persona_line='Seller')))
+    assert buyer.ROUND == before
+    assert not ctx.sent
+
+
+def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(buyer, monkeypatch):
+    ctx = Context()
+    old_need_id = buyer.ROUND['need']['id']
+    asyncio.run(buyer.handle_text(ctx, 'owner', 'CANCEL'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    assert old_need_id in buyer.ROUND['retired_need_ids']
+    monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'block', 'reasons': ['injection']})
+    bid = {'id': 'old-bid', 'need_id': old_need_id, 'persona': 'Seller', 'lines': [],
+           'total_landed_price': 500, 'perks': [], 'claims': [], 'floor_check_passed': True,
+           'mirror_snapshot_id': '', 'decision_trace': '', 'expires_at': '', 'source': 'sandbox',
+           'origin': 'SIM', 'supplier_id': 'seller_1'}
+    ctx.sent.clear()
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(bid), persona_line='Seller')))
+    assert buyer.ROUND['owner'] == 'bob'
+    assert not ctx.sent
+
+
 def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, monkeypatch):
     ctx = Context()
     buyer.ROUND['need']['id'] = 'alice-need'

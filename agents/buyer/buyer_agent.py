@@ -165,7 +165,12 @@ async def handle_text(ctx: Context, sender: str, text: str):
         if ROUND.get("order"):
             await tell_owner(ctx, "An order has already been placed; CANCEL cannot reverse it. Nothing was canceled.")
             return
+        retired_need_ids = list(ROUND.get("retired_need_ids", []))
+        need_id = ROUND.get("need", {}).get("id")
+        if need_id and need_id not in retired_need_ids:
+            retired_need_ids = (retired_need_ids + [need_id])[-RETIRED_NEED_HISTORY:]
         ROUND.clear()
+        ROUND["retired_need_ids"] = retired_need_ids
         await tell(ctx, sender, "Cancelled. Nothing ordered. Send a new goal when you are ready.")
         return
     if ROUND.get("phase") == "decided" and not ROUND.get("order") and not terminal:
@@ -284,6 +289,15 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
     if sender not in SELLER_ADDRS:
         ctx.logger.info("bid from unregistered sender ignored")
         return
+    bid = None
+    try:
+        bid = common.validate("Bid", json.loads(msg.bid_json))
+    except Exception:
+        pass
+    if (bid and bid["need_id"] in ROUND.get("retired_need_ids", [])
+            and bid.get("supplier_id") == SELLER_ADDRS[sender]):
+        ctx.logger.info("stale bid ignored")
+        return
     verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, BASELINE)
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
@@ -295,7 +309,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
         ctx.logger.info("late or stray bid ignored")
         return
     try:
-        bid = common.validate("Bid", json.loads(msg.bid_json))
+        bid = bid or common.validate("Bid", json.loads(msg.bid_json))
     except Exception as exc:
         ctx.logger.warning(f"invalid bid dropped: {type(exc).__name__}")
         return
