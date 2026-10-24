@@ -11,13 +11,21 @@ def test_the_default_is_the_local_market():
     assert t == {"server": "local", "http": "http://127.0.0.1:3000", "db": "tech-bazaar", "local": True}
 
 
-def test_the_env_file_names_maincloud_and_the_process_env_wins(tmp_path):
+def test_the_env_file_names_maincloud_and_wins_over_the_process_env(tmp_path):
     f = tmp_path / ".env"
     f.write_text("# comment\nSPACETIMEDB_SERVER=maincloud\nSPACETIMEDB_HTTP='https://maincloud.spacetimedb.com'\n"
                  "SPACETIMEDB_DB=tech-bazaar\nSTRIPE_SECRET_KEY=not-read\n")
     t = T.resolve(f, {})
     assert t["server"] == "maincloud" and not t["local"] and t["http"] == "https://maincloud.spacetimedb.com"
-    assert T.resolve(f, {"SPACETIMEDB_DB": "tech-bazaar-test"})["db"] == "tech-bazaar-test"
+    assert T.resolve(f, {"SPACETIMEDB_DB": "tech-bazaar-test"})["db"] == "tech-bazaar"   # as scripts/launch.py: the file wins
+    assert T.resolve(tmp_path / "missing", {"SPACETIMEDB_DB": "tech-bazaar-test"})["db"] == "tech-bazaar-test"
+
+
+def test_export_lines_in_the_env_file_are_read(tmp_path):
+    f = tmp_path / ".env"
+    f.write_text("export SPACETIMEDB_SERVER=maincloud\nexport SPACETIMEDB_HTTP=https://maincloud.spacetimedb.com\n")
+    t = T.resolve(f, {})
+    assert t["server"] == "maincloud" and not t["local"]
 
 
 @pytest.mark.parametrize("env, why", [
@@ -28,6 +36,11 @@ def test_the_env_file_names_maincloud_and_the_process_env_wins(tmp_path):
     ({**MAIN, "SPACETIMEDB_HTTP": "ftp://x"}, "plain"),
     ({"SPACETIMEDB_SERVER": "local", "SPACETIMEDB_HTTP": "https://maincloud.spacetimedb.com"}, "same market"),
     ({**MAIN, "SPACETIMEDB_SERVER": "bad server!"}, "server"),
+    ({**MAIN, "SPACETIMEDB_HTTP": "https://evil.example.com"}, "is not maincloud.spacetimedb.com"),
+    ({**MAIN, "SPACETIMEDB_SERVER": "https://a.example.com", "SPACETIMEDB_HTTP": "https://b.example.com"}, "different hosts"),
+    ({**MAIN, "SPACETIMEDB_HTTP": "https://maincloud.spacetimedb.com:99999"}, "does not parse"),
+    ({**MAIN, "SPACETIMEDB_HTTP": "https://maincloud.spacetimedb.com/?db=x"}, "plain"),
+    ({**MAIN, "SPACETIMEDB_HTTP": "https://maincloud.spacetimedb.com/#x"}, "plain"),
 ])
 def test_a_target_that_does_not_parse_is_refused(env, why):
     with pytest.raises(T.TargetError, match=why):
@@ -49,6 +62,24 @@ def test_tokens_are_per_market_and_a_shared_market_never_uses_the_local_tokens(t
     for name in (bridge.REFEREE_TOKEN, bridge.BUYER_TOKEN):
         (own / name).write_text("{}")
     assert bridge.find_tokens_dir(None, main) == own
+    assert bridge.find_tokens_dir(str(own), main) == own
+    with pytest.raises(SystemExit, match="not this market's own folder"):   # an explicit local dir is refused too
+        bridge.find_tokens_dir(str(tmp_path / ".tokens"), main)
+    monkeypatch.setenv("BRIDGE_TOKENS_DIR", str(tmp_path / ".tokens"))
+    assert bridge.find_tokens_dir(None, main) == own                        # the env dir never replaces the market's own
+
+
+def test_the_local_market_never_signs_with_a_shared_markets_tokens(tmp_path, monkeypatch):
+    monkeypatch.setattr(T, "ROOT", tmp_path)
+    own = tmp_path / ".tokens" / "tech-bazaar@maincloud.spacetimedb.com"
+    own.mkdir(parents=True)
+    for name in (bridge.REFEREE_TOKEN, bridge.BUYER_TOKEN):
+        (own / name).write_text("{}")
+    with pytest.raises(SystemExit, match="shared market's tokens"):
+        bridge.find_tokens_dir(str(own), T.resolve(None, {}))
+    monkeypatch.setenv("BRIDGE_TOKENS_DIR", str(own))
+    with pytest.raises(SystemExit, match="shared market's tokens"):
+        bridge.find_tokens_dir(None, None)
 
 
 def test_export_sets_what_stdb_reads(monkeypatch):

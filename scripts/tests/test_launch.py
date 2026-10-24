@@ -282,6 +282,9 @@ def test_web_note_when_market_not_running(run_dir):
     st = {"services": {"web": {"state": "running", "note": ""}, "market-stdb": {"state": "skipped"}}}
     L.web_note(st)
     assert "no live data" in st["services"]["web"]["note"]
+    st = {"maincloud": True, "services": {"web": {"state": "running", "note": ""}}}   # #295: no local market on purpose
+    L.web_note(st)
+    assert st["services"]["web"]["note"] == ""
 
 
 def test_addresses_parsed_from_log(tmp_path):

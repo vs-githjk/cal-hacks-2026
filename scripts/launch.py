@@ -494,6 +494,8 @@ def exit_code(rows: list[dict], strict: bool = False) -> int:
 def web_note(rows_state: dict) -> None:
     """Be honest that the web screens have no live data when the market is not running."""
     sv = rows_state.get("services", {})
+    if rows_state.get("maincloud"):   # #295: the market is on Maincloud, not a local market-stdb service
+        return
     if "web" in sv and sv["web"].get("state") == "running" and sv.get("market-stdb", {}).get("state") != "running":
         sv["web"]["note"] = "market is not running: the screens load but show no live data (the SpacetimeDB socket will not connect)"
 
@@ -605,6 +607,8 @@ def cmd_up(a, repo: Path = REPO) -> int:
     decide_skips(services, checks)
 
     state: dict = carry_live({"started_at": time.strftime("%Y-%m-%d %H:%M:%S"), "services": {}}, live)
+    if getattr(a, "maincloud", False):
+        state["maincloud"] = True
     run_env = dict(os.environ)
     if shutil.which("node"):
         run_env["PATH"] = str(Path(shutil.which("node")).parent) + os.pathsep + run_env.get("PATH", "")

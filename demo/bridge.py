@@ -778,13 +778,19 @@ def find_tokens_dir(explicit: Optional[str], target: Optional[dict] = None) -> P
     .tokens/<db>@<host>/, so a local identity never signs a call on the shared market."""
     from demo import market_target
     if target is not None and not target["local"]:
-        own = Path(explicit) if explicit else market_target.tokens_dir(target)
+        own = market_target.tokens_dir(target)
+        if explicit and Path(explicit).resolve() != own.resolve():
+            raise SystemExit(f"--tokens-dir {explicit} is not this market's own folder {own}: "
+                             "local tokens are never used for another market")
         if (own / REFEREE_TOKEN).exists() and (own / BUYER_TOKEN).exists():
             return own
         raise SystemExit(f"no {REFEREE_TOKEN} and {BUYER_TOKEN} for {market_target.describe(target)} in {own} "
                          "(scripts/deploy_maincloud.sh creates them; local tokens are never used for another market)")
     cands = [Path(explicit)] if explicit else [Path(os.environ["BRIDGE_TOKENS_DIR"])] if os.environ.get("BRIDGE_TOKENS_DIR") else []
     cands += [ROOT / ".tokens", ROOT.parent / "lane-d-launcher" / ".tokens", ROOT.parent / "lane-d" / ".tokens"]
+    shared = [c for c in cands if market_target.is_market_tokens_dir(c)]
+    if shared:   # a shared market's tokens never sign a call on the local market either
+        raise SystemExit(f"{shared[0]} holds a shared market's tokens; the local market uses .tokens/")
     for c in cands:
         if (c / REFEREE_TOKEN).exists() and (c / BUYER_TOKEN).exists():
             return c

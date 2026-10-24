@@ -281,9 +281,14 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         # Startup only says where the call would go. The mandate the call judges is made when beat 4 starts (see play).
         approver, note = bridge.live_approver_for(args, run, gate, out)
         out.note(note)
-    db = os.environ.get("SPACETIMEDB_DB", "tech-bazaar")
-    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s {args.server or os.environ.get('SPACETIMEDB_SERVER', 'local')} {db} "
-             "\"SELECT code FROM pair_code\") and open /market before you start.")
+    from demo import market_target
+    from demo.run_demo import DEFAULT_ENV_FILE
+    try:
+        t = market_target.resolve(DEFAULT_ENV_FILE, {**os.environ, **({"SPACETIMEDB_SERVER": args.server} if args.server else {})})
+        server, db = t["server"], t["db"]
+    except market_target.TargetError:
+        server, db = args.server or "local", "tech-bazaar"
+    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s {server} {db} \"SELECT code FROM pair_code\") and open /market before you start.")
 
     try:
         clients = (make_clients or default_make_clients)(args, steps, out)

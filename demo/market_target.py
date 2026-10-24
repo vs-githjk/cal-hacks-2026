@@ -1,7 +1,8 @@
 """Which SpacetimeDB market the bridge, the stage and the rehearsal talk to (#295): local by default, Maincloud when the
 Lane D env file says so.
 
-Three names, read from the process environment first and then from the Lane D env file (never overriding the process):
+Three names, read from the process environment and then the Lane D env file, which wins (the same precedence as
+scripts/launch.py gives its children):
   SPACETIMEDB_SERVER  the `spacetime -s` server: "local" (default), "maincloud", or an http(s) URL
   SPACETIMEDB_HTTP    the HTTP API the Python clients call (market/scripts/stdb.py): default http://127.0.0.1:3000
   SPACETIMEDB_DB      the database name (default tech-bazaar)
@@ -24,6 +25,7 @@ DEFAULTS = {"SPACETIMEDB_SERVER": "local", "SPACETIMEDB_HTTP": "http://127.0.0.1
 _DB = re.compile(r"[a-z0-9][a-z0-9-]{0,63}")
 _SERVER = re.compile(r"[a-z0-9][a-z0-9.-]{0,63}")
 _LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+MAINCLOUD_HOST = "maincloud.spacetimedb.com"   # `spacetime -s maincloud` talks only to this host
 
 
 class TargetError(ValueError):
@@ -35,23 +37,41 @@ def _file_values(env_file: Optional[Path]) -> dict:
         return {}
     out = {}
     for line in Path(env_file).expanduser().read_text(encoding="utf-8", errors="replace").splitlines():
-        k, sep, v = line.strip().partition("=")
-        if sep and k.strip() in NAMES and not line.lstrip().startswith("#"):
+        line = line.strip()
+        if line.startswith("export "):        # as scripts/launch.py reads it
+            line = line[7:].lstrip()
+        k, sep, v = line.partition("=")
+        if sep and k.strip() in NAMES and not line.startswith("#"):
             out[k.strip()] = v.strip().strip('"').strip("'")
     return out
 
 
 def resolve(env_file: Optional[Path] = None, environ: Mapping[str, str] = os.environ) -> dict:
     """{server, http, db, local} for this run, or TargetError."""
-    vals = {**DEFAULTS, **{k: v for k, v in _file_values(env_file).items() if v}, **{k: environ[k] for k in NAMES if environ.get(k)}}
+    vals = {**DEFAULTS, **{k: environ[k] for k in NAMES if environ.get(k)}, **{k: v for k, v in _file_values(env_file).items() if v}}
     server, http, db = vals["SPACETIMEDB_SERVER"].strip(), vals["SPACETIMEDB_HTTP"].strip().rstrip("/"), vals["SPACETIMEDB_DB"].strip()
     if not _DB.fullmatch(db):
         raise TargetError(f"SPACETIMEDB_DB {db[:40]!r} is not a database name (lowercase letters, digits and -)")
-    parts = urlsplit(http)
-    if parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.path not in ("", "/"):
+    try:
+        parts = urlsplit(http)
+        parts.port                          # raises on a bad port
+    except ValueError:
+        raise TargetError("SPACETIMEDB_HTTP does not parse as a URL") from None
+    if (parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.path not in ("", "/")
+            or parts.query or parts.fragment):
         raise TargetError("SPACETIMEDB_HTTP must be a plain http(s) origin, like https://maincloud.spacetimedb.com")
-    if not (_SERVER.fullmatch(server) or urlsplit(server).scheme in ("http", "https")):
-        raise TargetError(f"SPACETIMEDB_SERVER {server[:40]!r} is not a server name or URL")
+    if _SERVER.fullmatch(server):
+        if server == "maincloud" and parts.hostname != MAINCLOUD_HOST:
+            raise TargetError(f"SPACETIMEDB_SERVER is maincloud but SPACETIMEDB_HTTP is not {MAINCLOUD_HOST}")
+    else:
+        try:
+            shost = urlsplit(server).hostname if urlsplit(server).scheme in ("http", "https") else None
+        except ValueError:
+            shost = None
+        if shost is None:
+            raise TargetError(f"SPACETIMEDB_SERVER {server[:40]!r} is not a server name or URL")
+        if shost != parts.hostname:
+            raise TargetError("SPACETIMEDB_SERVER and SPACETIMEDB_HTTP name different hosts: set both to the same market")
     local = server == "local" and parts.hostname in _LOCAL_HOSTS
     if not local and parts.scheme != "https":
         raise TargetError("a market that is not local must be reached over https (SPACETIMEDB_HTTP)")
@@ -73,6 +93,11 @@ def tokens_dir(target: dict, root: Optional[Path] = None) -> Path:
     if target["local"]:
         return root / ".tokens"
     return root / ".tokens" / f"{target['db']}@{urlsplit(target['http']).hostname}"
+
+
+def is_market_tokens_dir(path) -> bool:
+    """True for a .tokens/<db>@<host>/ folder, which belongs to a shared market."""
+    return "@" in Path(path).name
 
 
 def describe(target: dict) -> str:
