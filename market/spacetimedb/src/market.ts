@@ -104,7 +104,8 @@ export const PAIR_MAX_FAILURES = 5;
 
 /**
  * A browser screen takes the buyer role with the demo pairing code (SIM sign-in). A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
- * roll the count back). 5 failures lock the code, and 5 failures lock the caller across every code.
+ * roll the count back). 5 failures lock that caller (identity) across every code; the code itself only counts failures for the
+ * operator, so a stranger's misses can never lock the owner's screen out.
  * The code itself never appears in a message.
  */
 export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
@@ -130,11 +131,11 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   const mine = ctx.db.pairAttempt.identity.find(ctx.sender);
   if (mine && mine.failures >= PAIR_MAX_FAILURES) throw new SenderError('this screen is locked after too many wrong codes; ask the operator');
   if (want.code !== code) {
-    const failed = want.failedAttempts + 1;
-    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: failed, locked: failed >= PAIR_MAX_FAILURES });
-    if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures: mine.failures + 1 });
-    else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures: 1 });
-    if (failed >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', key, 'Screen pairing locked after too many wrong codes');
+    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: want.failedAttempts + 1 });
+    const failures = (mine?.failures ?? 0) + 1;
+    if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures });
+    else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures });
+    if (failures >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', key, 'A screen is locked after too many wrong codes');
     return { paired: false, reason: 'wrong pairing code' };
   }
   if (cur) ctx.db.role.identity.update({ ...cur, subjectId });
@@ -285,6 +286,10 @@ export function openRound(ctx: Ctx, { roundId, needId, windowS }: { roundId: str
   event(ctx, 'round_opened', 'round', roundId, `Sealed round open for ${windowS} s`, '', n.origin);
 }
 
+// A bid source is a listing URL or a plain label ("sim:fixture"). Anything starting like a URL must have a host, so "https://"
+// alone never reaches a screen. A regex, not new URL(): the module runtime may lack it.
+const sourceOk = (s: string) => !/^https?:/i.test(s) || /^https?:\/\/[^\s/?#]+[^\s]*$/i.test(s);
+
 export interface PlaceBidArgs {
   id: string; roundId: string; persona: string; lines: Line[]; statedTotal: number; perks: string[]; claims: string[];
   origin: string; source: string;
@@ -295,6 +300,7 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   const r = ctx.db.round.id.find(a.roundId);
   if (!r) throw new SenderError(`no round ${a.roundId}`);
   if (!a.lines.length) throw new SenderError('a bid has at least one line');
+  if (!sourceOk(a.source)) throw new SenderError('source looks like a URL but has no host (send a full http(s) URL or a plain label)');
   const needCond = new Map([...ctx.db.needItem.needId.filter(r.needId)].map((i) => [i.skuSpec, i.condition]));
   const condOf = (sku: string, offered: string) => offered || needCond.get(sku) || 'new';
   for (const l of a.lines) {

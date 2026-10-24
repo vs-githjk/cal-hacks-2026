@@ -19,7 +19,9 @@ from uagents_core.contrib.protocols.payment import (CancelPayment, CompletePayme
 import common
 import crs
 import hunt
+from chat_trace import round_trace
 import payment
+import status
 from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
@@ -59,13 +61,22 @@ class WebOut(Model):
     replies: list[str]
 
 
+def log_msg(ctx: Context, frm: str, to: str, kind: str):
+    ctx.logger.info(status.msg_line(frm, to, kind))
+
+
+@agent.on_event("startup")
+async def announce(ctx: Context):
+    ctx.logger.info(status.status_line("buyer", "buyer", agent.address, mailbox=common.mailbox_on("buyer")))
+
+
 async def tell(ctx: Context, to: str, text: str):
     if to == WEB:
         WEB_OUTBOX.append(text)
     else:
         msg = ChatMessage(content=[TextContent(text=text)])
         CHAT_DIAG.send_started(msg.msg_id, to, ctx.session, ROUND.get("need", {}).get("id", ""))
-        ctx.logger.info("AGENT_MSG name=buyer to=owner text=reply to owner")
+        log_msg(ctx, "buyer", "owner", "reply")
         try:
             result = await ctx.send(to, msg)
         except Exception as exc:
@@ -146,11 +157,31 @@ def web_drain() -> WebOut:
     return WebOut(replies=out)
 
 
+def round_finished() -> bool:
+    """True once the round is done, expired, paused or ordered and nothing is awaiting approval or settlement."""
+    if ROUND.get("phase") == "decided" and not ROUND.get("order"):
+        return False  # a deal waits for the owner's approval
+    m = ROUND.get("mandate")
+    if ROUND.get("order") and m and m.get("hash") not in USED:
+        try:
+            if datetime.strptime(m["expires_at"], payment.TS).replace(tzinfo=timezone.utc) >= datetime.now(timezone.utc):
+                return False  # payment still to be requested and committed
+        except (KeyError, ValueError):
+            return False
+    state = (ROUND.get("goal") or {}).get("state")
+    return ROUND.get("phase") == "done" or state in ("DONE", "EXPIRED", "PAUSED")
+
+
 async def handle_text(ctx: Context, sender: str, text: str):
     # Single buyer deployment: no sender other than the owner of the active round sees its state.
     if ROUND.get("owner") and sender != ROUND["owner"]:
-        await tell(ctx, sender, "A buyer session is active. Try again later.")
-        return
+        if round_finished():
+            ROUND.clear()  # release the gate: this sender starts a fresh round below
+        else:
+            if not ROUND.get("told_foreign"):  # once per round
+                ROUND["told_foreign"] = True
+                await tell(ctx, sender, "A buyer session is active. Try again later.")
+            return
     cmd = hunt.command(text)
     if cmd and cmd[0] == "approve" and ROUND.get("owner") == sender:
         await approve(ctx, cmd[1])
@@ -196,6 +227,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
     ROUND.update(owner=sender, owner_context=ctx if sender != WEB else None,
                  goal=goal, owned=owned, need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={})
+    log_msg(ctx, "owner", "buyer", "goal")
     out = skip_lines(goal, owned)
     if not need["items"]:
         set_state("DONE")
@@ -231,10 +263,12 @@ async def start_round(ctx: Context, need: dict | None = None):
         checks = {}
     if ROUND.get("round_token") != token or ROUND.get("phase") != "checking" or ROUND.get("need") is not need:
         return False
-    ROUND.update(seller_checks=checks, phase="bidding", deadline=time.time() + need["auction_window_s"])
-    for s in live_sellers():
+    asked = live_sellers()
+    ROUND.update(seller_checks=checks, asked=asked, phase="bidding", deadline=time.time() + need["auction_window_s"])
+    for s in asked:
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]:
             return False
+        log_msg(ctx, "buyer", s, "bid_request")
         await ctx.send(common.address(s), common.BidRequest(need_json=json.dumps(sealed(need))))
         if (ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]
                 or ROUND.get("phase") != "bidding"):
@@ -300,6 +334,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
         await on_requote(ctx, bid)
         return
     ROUND["bids"].append(bid)
+    log_msg(ctx, SELLER_ADDRS[sender], "buyer", "bid")
     ROUND["personas"][bid["id"]] = msg.persona_line
     await emit(ctx, "bid in", f"Bid in: {bid['persona']} at ${bid['total_landed_price']:.2f} (sealed round still open).")
 
@@ -362,6 +397,7 @@ async def tick(ctx: Context):
         # The advocate sees the owned parts for fit checks, but not the cap.
         advice_need = dict(sealed(ROUND["need"]), owned=owned_attrs(ROUND["owned"]))
         token, need_id = ROUND.get("round_token"), ROUND.get("need", {}).get("id")
+        log_msg(ctx, "buyer", "advocate", "advice_request")
         try:
             await ctx.send(common.address("advocate"), common.AdviceRequest(
                 need_json=json.dumps(advice_need), bids_json=json.dumps(ROUND["bids"])))
@@ -427,6 +463,8 @@ async def conclude(ctx: Context, reviewed: bool):
         for w in card.get("warnings", [])[:3]:
             out.append(f"   ! {w['text']} (source: {w['source_url']})")
     best = hunt.pick_best(bids, cards, eligible_suppliers)
+    asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
+    out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
     vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
     if vetoed:
         await emit(ctx, "veto", f"Advocate vetoed {len(vetoed)} bid(s): {', '.join(vetoed)}.")
@@ -481,6 +519,7 @@ async def approve(ctx: Context, n: int):
     else:
         # Re-read the price just before committing: ask the winning seller to quote the same Need again.
         ROUND.update(phase="requote", pick=n, deadline=time.time() + ADVICE_TIMEOUT_S)
+        log_msg(ctx, "buyer", bids[n - 1]["supplier_id"], "bid_request")
         await ctx.send(common.address(bids[n - 1]["supplier_id"]),
                        common.BidRequest(need_json=json.dumps(sealed(ROUND["need"]))))
 
@@ -524,6 +563,7 @@ async def place_order(ctx: Context, n: int, approved_by: str, approval_id: str) 
     ROUND["goal"].update(state="DONE", po_number=order["id"])
     ctx.logger.info("order prepared")
     ctx.logger.info("mandate prepared")
+    log_msg(ctx, "buyer", bid["supplier_id"], "order")
     await ctx.send(seller, common.OrderPlaced(order_json=json.dumps(order), mandate_json=json.dumps(m)))
     who = "Auto-ordered" if approved_by == "auto" else "Approved and ordered"
     return (f"{who} #{n}: {order['id']}, ${order['amount']:.2f} from {bid['persona']}. "
@@ -536,8 +576,10 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
     if sender not in SELLER_ADDRS:
         ctx.logger.info("payment request from unregistered sender ignored")
         return
+    log_msg(ctx, SELLER_ADDRS[sender], "buyer", "payment_request")
     reasons = blocked_reasons(sender, req.model_dump_json(), common.shield_context(sender, payee_of_record=sender))
     if reasons:
+        log_msg(ctx, "buyer", SELLER_ADDRS[sender], "payment_reject")
         await ctx.send(sender, RejectPayment(reason=f"blocked by Shield: {reasons}"))
         await tell_owner(ctx, f"Shield blocked a payment request from {SELLER_ADDRS[sender]}: {reasons}")
         return
@@ -545,6 +587,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
     if m and sender != m["payee"]:
         m = None  # only the mandate's payee may ask for its payment
     out = hunt.settle(req, m, APPROVALS, USED)
+    log_msg(ctx, "buyer", SELLER_ADDRS[sender], "payment_reject" if isinstance(out, RejectPayment) else "payment_commit")
     await ctx.send(sender, out)
     if isinstance(out, RejectPayment):
         await tell_owner(ctx, f"Payment request from {SELLER_ADDRS[sender]} rejected: {out.reason}. No money moved.")
@@ -556,6 +599,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
 
 @pay.on_message(CompletePayment)
 async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
+    log_msg(ctx, SELLER_ADDRS.get(sender, "seller"), "buyer", "payment_complete")
     ctx.logger.info("seller completion acknowledgement received")
 
 

@@ -29,7 +29,6 @@ export interface RankedBid {
   condition: string;
   altLines?: { condition: string; unitPrice: number }[]; // the other condition lines the same seller bid
   landed: number;
-  adjusted: number | null; // quality-adjusted; null when not ranked
   recommendation: Recommendation;
   why: string;
   sourceUrl?: string;
@@ -151,7 +150,8 @@ export interface FloorEventView { key: string; at: Date; kind: string; label: st
 // ---- Row to view mapping (see docs/design/2026-10-23-web/README.md). Plain row shapes so this stays testable.
 
 import type { Timestamp } from "spacetimedb";
-import { formatMoney } from "./money";
+import { formatMoney } from "./money.ts";
+import { safeUrl } from "./url.ts";
 
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 export const asOrigin = (o: string): Origin => (o === "LIVE" || o === "MIRROR" ? o : "SIM");
@@ -238,10 +238,9 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         condition: cond(picked?.offeredCondition ?? ""),
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
-        adjusted: ranked ? r.landed : null, // quality-adjusted score is not on round_result yet; landed is shown in both columns
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
         why: r.reasons.join("; ") || card?.label || "",
-        sourceUrl: /^https?:\/\//.test(r.source) ? r.source : undefined,
+        sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
         rowRef: `round_result/${r.id}`,
       };
