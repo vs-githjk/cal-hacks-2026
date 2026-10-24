@@ -86,6 +86,21 @@ def test_goal_and_transaction_ids_cannot_be_reassigned_to_another_owner(db):
     assert state.load_transaction(db, "deal-1", "buyer-a")["buyer_id"] == "buyer-a"
 
 
+def test_load_rejects_state_rows_whose_payload_disagrees_with_indexed_columns(db):
+    state.remember_owned(db, "buyer-a", [owned("buyer-a", "psu 750w", "PSU")])
+    state.save_transaction(db, transaction("deal-1", "buyer-a"))
+    db.execute("UPDATE owned_parts SET kind='gpu' WHERE buyer_id='buyer-a'")
+    db.execute("UPDATE transactions SET phase='submitted' WHERE deal_id='deal-1'")
+    db.commit()
+
+    with pytest.raises(ValueError):
+        state.load_owned_parts(db, "buyer-a")
+    with pytest.raises(ValueError):
+        state.load_transaction(db, "deal-1", "buyer-a")
+    with pytest.raises(ValueError):
+        state.recover_on_start(db)
+
+
 @pytest.mark.parametrize("bad", [
     {"context": object()}, {"approval_code": "CANARY"}, {"password": "secret"},
     {"api_key": "secret"}, {"voice_approval": {"code": "CANARY"}},
