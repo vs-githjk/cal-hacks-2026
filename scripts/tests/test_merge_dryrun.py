@@ -141,4 +141,4 @@ def test_script_never_names_a_ref_writing_or_checkout_command() -> None:
     text = SCRIPT.read_text()
     for banned in ("git merge ", "git checkout", "git switch", "git reset", "update-ref", "git push", "git rebase", "git commit "):
         assert banned not in text, banned
-    assert "—" not in text and "–" not in text
+    assert chr(0x2014) not in text and chr(0x2013) not in text
