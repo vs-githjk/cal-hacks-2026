@@ -91,15 +91,33 @@ def page_facts(html):
     return {}, "no structured data"
 
 
-def _ld_returns(policy):
-    """schema.org MerchantReturnPolicy -> "N-day returns", "returns not permitted", or None when it says neither."""
-    policy = policy[0] if isinstance(policy, list) and policy else policy
+def _return_days(days):
+    """Finite, non-negative, whole-number days only (a bool, Infinity, -30 or 14.5 is not a policy)."""
+    if isinstance(days, str) and days.strip().isdigit():
+        days = int(days)
+    if isinstance(days, bool) or not isinstance(days, (int, float)):
+        return None
+    if isinstance(days, float) and (days != days or days in (float("inf"), float("-inf")) or days != int(days)):
+        return None
+    return int(days) if days >= 0 else None
+
+
+def _one_return_policy(policy):
     if not isinstance(policy, dict):
         return None
     if str(policy.get("returnPolicyCategory") or "").endswith("MerchantReturnNotPermitted"):
         return "returns not permitted"
-    days = policy.get("merchantReturnDays")
-    return f"{int(days)}-day returns" if isinstance(days, (int, float)) or str(days).isdigit() else None
+    days = _return_days(policy.get("merchantReturnDays"))
+    return None if days is None else f"{days}-day returns"
+
+
+def _ld_returns(policy):
+    """schema.org MerchantReturnPolicy -> "N-day returns", "returns not permitted", or None when it says neither.
+    A list of policies counts only when every one agrees (we do not guess which country applies)."""
+    if isinstance(policy, list):
+        found = {_one_return_policy(p) for p in policy}
+        return found.pop() if len(found) == 1 else None
+    return _one_return_policy(policy)
 
 
 def in_stock(v):
@@ -202,7 +220,7 @@ def check_claim(claim, fetch=None, history=None):
         facts, source = page_facts(body.decode("utf-8", "replace"))
         results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history) if f == "was_price" else None))
                    for f, v in fields]
-    except (ValueError, TypeError, KeyError, AttributeError) as e:
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")
     rank = {"false": 0, "unverified": 1, "verified": 2}  # the worst field decides: one false part makes the claim false
     result = min((r for _, r, _ in results), key=rank.get)
