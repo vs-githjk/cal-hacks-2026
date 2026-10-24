@@ -11,6 +11,7 @@ import os
 import sys
 from datetime import date
 
+from shield.classifier import SUSPICIOUS_RULE, UNAVAILABLE_RULE, ClaudeClassifier
 from shield.core import screen
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,7 @@ PROBE = os.path.join(HERE, "evasion_probe.jsonl")  # HELD-OUT: frozen, never edi
 DEV2 = os.path.join(HERE, "dev2.jsonl")
 FRESH = os.path.join(HERE, "fresh12.jsonl")  # written after the rules froze, run once, not tuned
 RESULTS = os.path.join(HERE, "RESULTS.md")
+ENV_FILE = os.path.join(HERE, "..", "..", ".env")  # repo root; read only for the names in ENV_NAMES
 
 
 def load(path: str) -> list[dict]:
@@ -26,12 +28,15 @@ def load(path: str) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def run(path: str) -> dict:
+def run(path: str, classifier=None) -> dict:
+    """Run one corpus. `classifier=None` is rules only (the default, deterministic, no network)."""
     rows = load(path)
     lat, missed, wrong_rule, fp_ids, per_rule = [], [], [], [], {}
-    blocked = quarantined = attacks = controls = 0
+    blocked = quarantined = attacks = controls = clf_suspicious = clf_unavailable = 0
     for r in rows:
-        out = screen(r["message"], r.get("context"), classifier=None)
+        out = screen(r["message"], r.get("context"), classifier=classifier)
+        clf_suspicious += SUSPICIOUS_RULE in out["rule_ids"]
+        clf_unavailable += UNAVAILABLE_RULE in out["rule_ids"]
         lat.append(out["latency_ms"])
         if r["label"] == "attack":
             attacks += 1
@@ -57,6 +62,7 @@ def run(path: str) -> dict:
         "false_positives": len(fp_ids), "false_positive_rate": len(fp_ids) / controls if controls else 0.0,
         "false_positive_ids": fp_ids, "missed": missed, "wrong_rule": wrong_rule,
         "p95_ms": round(p95, 2), "per_rule": dict(sorted(per_rule.items())),
+        "clf_suspicious": clf_suspicious, "clf_unavailable": clf_unavailable,
     }
 
 
@@ -133,7 +139,59 @@ def _line(name: str, st: dict) -> str:
     return f"{name}: stopped {st['stopped']}/{st['attacks']} (block {st['blocked']}, quarantine {st['quarantined']}){fp}"
 
 
-def main(argv: list[str]) -> int:
+ENV_NAMES = ("ANTHROPIC_API_KEY", "SHIELD_CLASSIFIER", "SHIELD_MODEL")
+
+
+def load_dotenv(path: str, env: dict) -> None:
+    """Copy ENV_NAMES from a KEY=VALUE file into `env` without overriding a name that is already set.
+    Nothing is printed, and no other name in the file is read into `env`."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip().removeprefix("export ").strip()
+        val = val.strip().strip("'\"")
+        if key in ENV_NAMES and val and not env.get(key):
+            env[key] = val
+
+
+def make_classifier(env: dict):
+    return ClaudeClassifier(env["ANTHROPIC_API_KEY"], model=env.get("SHIELD_MODEL") or None)
+
+
+def classifier_main(env_file: str) -> int:
+    """Live run with the optional classifier. Only when ANTHROPIC_API_KEY and SHIELD_CLASSIFIER=1 are set
+    (environment or the repo .env). The key is never printed. Reads no network otherwise."""
+    env = dict(os.environ)
+    load_dotenv(env_file, env)
+    if not (env.get("ANTHROPIC_API_KEY") and env.get("SHIELD_CLASSIFIER") == "1"):
+        print("classifier not enabled: set ANTHROPIC_API_KEY and SHIELD_CLASSIFIER=1 (environment or a .env file in "
+              "the repo root). No network call was made.")
+        return 0
+    clf = make_classifier(env)
+    print(f"classifier LIVE, model {env.get('SHIELD_MODEL') or ClaudeClassifier('x')._model} (unverified until it answers)")
+    unavailable = 0
+    for name, path in (("dev", DEV), ("dev2", DEV2), ("held-out (evasion probe)", PROBE), ("post-freeze check", FRESH)):
+        rules_only, with_clf = run(path), run(path, classifier=clf)
+        unavailable += with_clf["clf_unavailable"]
+        fp = f", false positives {rules_only['false_positives']} -> {with_clf['false_positives']} of {with_clf['controls']}" if with_clf["controls"] else ""
+        print(f"{name}: stopped {rules_only['stopped']} -> {with_clf['stopped']} of {with_clf['attacks']}{fp}; "
+              f"classifier suspicious {with_clf['clf_suspicious']}, classifier unavailable {with_clf['clf_unavailable']}")
+    if unavailable:
+        print(f"WARNING: {unavailable} classifier calls were unavailable (timeout, error or an unknown model id). "
+              "Those are quarantines by fail-closed design, NOT classifier catches; do not quote them as recall.")
+    return 0
+
+
+def main(argv: list[str], env_file: str = ENV_FILE) -> int:
+    if "--classifier" in argv:
+        return classifier_main(env_file)
     dev, dev2, probe, fresh = run(DEV), run(DEV2), run(PROBE), run(FRESH)
     print(_line("dev", dev) + f", p95 {dev['p95_ms']} ms")
     print(_line("dev2", dev2))

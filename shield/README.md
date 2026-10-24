@@ -22,7 +22,7 @@ Environment (names only, no values in git):
 | `SHIELD_TAP_PUBKEYS` | comma-separated base64 raw Ed25519 public keys that may sign payment requests. Empty means every `verify-mandate` call fails with `unknown_key` |
 | `SHIELD_NONCE_DB` | path of the SQLite nonce store (default in memory; set a file so a restart cannot replay) |
 | `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` | both required to switch the optional Claude classifier on. Off by default |
-| `SHIELD_CLASSIFIER_MODEL` | classifier model id (default `claude-haiku-4-5`, not exercised live here) |
+| `SHIELD_MODEL` | classifier model id. Default `claude-haiku-4-5`, **unverified until a live call answers**: if the id is wrong every call is `unavailable` (a fail-closed quarantine) and the run prints a WARNING |
 
 ## API
 
