@@ -41,3 +41,4 @@ Every coding agent: at the start of each session and after each finished task, r
 - Blocked? Comment on the issue with what you need; do not wait silently.
 - GitHub logins: Abhinav = Abh-129 (lane-a), Vedant = vedantshirvi (lane-b), Anoop = AnoopIbrampur (lane-c), Vidyut = vs-githjk (lane-d).
 - [23:28] lane-d hyphenate: a lowest-price MIRROR reference was fooled by data/mirror ebay_sold snapshots ($640 for a $1,250 card, sold history not asking price); use the median of retail listings and skip *sold* files | any price check built on snapshots must exclude sold-history
+- [09:32] Codex learning: validate seller LossReports as an exact closed field set, use the shared updater and protected buyer state file, and keep strategy plus receipt in one BEGIN IMMEDIATE transaction | prevents open-schema data leakage and partial dedupe
