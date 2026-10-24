@@ -81,6 +81,7 @@ def approved_transaction(*, expired=False, allowance=False):
         session, code = approval_service.issue(mandate, channel="phone", now=created)
         session.start_call(now=created)
         session.begin_listening(now=created)
+        session.recording_ref = "cartesia:ac_test"  # call evidence, as voice_cartesia records it
         record = session.approve(code + " approve", now=created + timedelta(seconds=1)).record
         approval_id = record["id"]
         mandate.update(status="approved", approval_id=approval_id)
