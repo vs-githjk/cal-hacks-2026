@@ -13,9 +13,11 @@ unit is one successful (status below 400) call; the price is set after a design 
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import os
 import secrets
+import socket
 import sqlite3
 import sys
 import threading
@@ -23,11 +25,13 @@ import time
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
+from urllib.parse import urlparse
 
-from fastapi import Request
+from fastapi import Body, Request
 from fastapi.responses import JSONResponse
 
+from data.claim_check import check_claim, default_fetch
 from shield.api import create_app
 
 HOME = Path(os.environ.get("SHIELD_PRODUCT_HOME", Path.home() / ".bazaar-shield"))  # outside the repo
@@ -116,6 +120,24 @@ class RateLimit:
             return True
 
 
+def public_fetch(url: str, fetch: Callable[[str], bytes] = default_fetch) -> bytes:
+    """Fetch a caller-supplied URL only if every address it resolves to is public: never localhost, private, link-local
+    (cloud metadata) or reserved ranges. Raises ValueError otherwise, which the claim check reports as could not verify.
+    DNS rebinding between this check and the fetch is not covered (said plainly)."""
+    host = urlparse(url).hostname
+    if not host:
+        raise ValueError("no host")
+    try:
+        addrs = {info[4][0] for info in socket.getaddrinfo(host, None)}
+    except socket.gaierror as e:
+        raise ValueError(f"cannot resolve {host}") from e
+    for a in addrs:
+        ip = ipaddress.ip_address(a.split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            raise ValueError("address not allowed")
+    return fetch(url)
+
+
 def _key_from(request: Request) -> Optional[str]:
     key = request.headers.get("x-api-key")
     auth = request.headers.get("authorization", "")
@@ -125,8 +147,10 @@ def _key_from(request: Request) -> Optional[str]:
 
 
 def create_product_app(keys: Optional[KeyStore] = None, meter: Optional[Meter] = None,
-                       per_minute: int = int(os.environ.get("SHIELD_RATE_PER_MINUTE", DEFAULT_PER_MINUTE))):
+                       per_minute: int = int(os.environ.get("SHIELD_RATE_PER_MINUTE", DEFAULT_PER_MINUTE)),
+                       claim_fetch: Optional[Callable[[str], bytes]] = None):
     keys, meter, limit = keys or KeyStore(), meter or Meter(), RateLimit(per_minute)
+    claim_fetch = claim_fetch or public_fetch
     app = create_app()
     app.title = "Bazaar Shield API"
     app.description = ("Screen agent-to-agent commerce messages for prompt injection, payee swaps and other attacks. "
@@ -149,6 +173,12 @@ def create_product_app(keys: Optional[KeyStore] = None, meter: Optional[Meter] =
         if path != "/v1/usage":
             meter.record(key, caller, path, response.status_code)
         return response
+
+    @app.post("/v1/check-claim")
+    def check_claim_route(claim: dict[str, Any] = Body(...)):
+        """Check one seller claim against its live page: verified, unverified or false, with evidence URL, time,
+        method, page hash and a neutral reason. A page we cannot or may not read is unverified, never false."""
+        return check_claim(claim, fetch=claim_fetch)
 
     @app.get("/v1/usage")
     def usage(request: Request):

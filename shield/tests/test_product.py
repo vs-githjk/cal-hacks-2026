@@ -84,3 +84,46 @@ def test_only_successful_calls_are_billable(tmp_path):
     usage = client.get("/v1/usage", headers=h).json()
     assert usage["calls"] == {"/v1/shield/screen": 1}
     assert usage["refused"] == {"/v1/shield/screen": {"429": 1}}
+
+
+# #46: /v1/check-claim on the keyed app (no network in tests)
+def claim_app(tmp_path, fetch):
+    keys = KeyStore(tmp_path / "keys.json")
+    key = keys.new("claims-test")
+    return TestClient(create_product_app(keys=keys, meter=Meter(tmp_path / "m.sqlite"), claim_fetch=fetch)), key
+
+
+PAGE = b'<script type="application/json" id="listing">{"price": 789.0, "condition": "open-box"}</script>'
+CLAIM = {"id": "c1", "bid_id": "b1", "text": "Brand new", "kind": "spec", "evidence_url": "https://shop.example.com/p/1"}
+
+
+def test_check_claim_needs_a_key(tmp_path):
+    client, _ = claim_app(tmp_path, lambda url: PAGE)
+    assert client.post("/v1/check-claim", json=CLAIM).status_code == 401
+
+
+def test_check_claim_returns_the_claim_check_result_and_is_metered(tmp_path):
+    client, key = claim_app(tmp_path, lambda url: PAGE)
+    r = client.post("/v1/check-claim", json=CLAIM, headers={"X-API-Key": key})
+    assert r.status_code == 200 and r.json()["result"] == "false" and "open-box" in r.json()["reason"]
+    assert client.get("/v1/usage", headers={"X-API-Key": key}).json()["calls"] == {"/v1/check-claim": 1}
+
+
+def test_check_claim_never_fetches_internal_addresses(tmp_path):
+    from shield.product import public_fetch
+    fetched = []
+    for url in ("http://127.0.0.1:8787/v1/shield/health", "http://localhost/admin", "http://169.254.169.254/latest/meta-data",
+                "http://10.0.0.5/", "http://[::1]/"):
+        try:
+            public_fetch(url, fetch=lambda u: fetched.append(u) or PAGE)
+        except ValueError:
+            pass
+    assert fetched == []
+
+
+def test_check_claim_on_internal_url_is_unverified_not_an_error(tmp_path):
+    keys = KeyStore(tmp_path / "keys.json")
+    key = keys.new("x")
+    client = TestClient(create_product_app(keys=keys, meter=Meter(tmp_path / "m.sqlite")))  # default (guarded) fetch
+    r = client.post("/v1/check-claim", json=dict(CLAIM, evidence_url="http://127.0.0.1:8788/v1/usage"), headers={"X-API-Key": key})
+    assert r.status_code == 200 and r.json()["result"] == "unverified"
