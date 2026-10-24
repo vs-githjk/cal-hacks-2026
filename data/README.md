@@ -23,6 +23,15 @@ Run: `python -m data.mirror.run_actors [store ...]`; rebuild SpecCards from logg
 | amazon | `junglee/Amazon-crawler` | 3 | 0.015 | price, seller, shipping, stock, title, url | works |
 | pcpartpicker | `lulzasaur/pcpartpicker-scraper` | 0 | 0.0002 | - | returned 0 items, skipped |
 
+Second source (provider apify-b, #47):
+
+| store | actor | items | cost this run (USD) | status |
+|---|---|---|---|---|
+| bestbuy | `axlymxp/bestbuy-scraper` | 3 | 0 | used |
+| microcenter | `fortuitous_pirate/microcenter-scraper` | 0 | 0.02 | returned 0 items, no snapshot file |
+
+apify-b re-checks listings the first set already has (Best Buy only); the baseline counts each listing URL once.
+
 Total for the test round: about $0.17 of the $205 credit.
 - Return policy: no actor returned it in overview mode. Seller: only eBay and Amazon. Condition: only Best Buy and eBay; first-party stores leave it `unknown` (never guessed).
 - Newegg (keywords, then a search URL) and PCPartPicker both returned 0 items; low-use actors, skipped for now.
