@@ -23,6 +23,7 @@
      },
      "allowed_conditions": {
       "type": "array",
+      "description": "Conditions the buyer accepts. condition is the deprecated alias, read as [condition] when this is empty or absent.",
       "items": {
        "type": "string",
        "enum": ["new", "open-box", "refurbished", "used"]
@@ -40,10 +41,13 @@
     },
     "required": [
      "sku_spec",
-     "condition",
      "variant",
      "quantity",
      "unit"
+    ],
+    "anyOf": [
+     {"required": ["condition"]},
+     {"required": ["allowed_conditions"], "properties": {"allowed_conditions": {"minItems": 1}}}
     ]
    }
   },

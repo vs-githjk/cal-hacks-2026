@@ -13,6 +13,7 @@
   },
   "lines": {
    "type": "array",
+   "description": "Alternatives per SKU, not a basket: for each need item the market picks the cheapest line with an allowed condition and enough qty_available, and never sums a line with its alternatives.",
    "items": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -24,7 +25,15 @@
       "type": "number"
      },
      "quantity": {
+      "type": "number",
+      "description": "Deprecated alias of qty_available"
+     },
+     "qty_available": {
       "type": "number"
+     },
+     "condition": {
+      "type": "string",
+      "enum": ["new", "open-box", "refurbished", "used"]
      },
      "offered_spec": {
       "type": "string"
@@ -42,8 +51,11 @@
     },
     "required": [
      "sku_spec",
-     "unit_price",
-     "quantity"
+     "unit_price"
+    ],
+    "anyOf": [
+     {"required": ["qty_available"]},
+     {"required": ["quantity"]}
     ]
    }
   },
