@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Screen bridge: play the demo beats (real lane code, demo/run_demo.py) into the running SpacetimeDB market,
-step by step, so /buyer and /market on the web app show Tony Stark's round live.
+step by step, so /buyer and /market on the web app show Vidyut's round live.
 
     python3 demo/bridge.py                       # one run, 2 s between steps, against the local market
     python3 demo/bridge.py --step-delay 3 --reset  # slower, and wipe the demo tables first (reset_demo)
@@ -33,8 +33,8 @@ if str(ROOT) not in sys.path:
 
 from demo.common import MIRROR, SIM, Narrator, money  # noqa: E402
 
-DB_BUYER_ID = "joe"          # the id /buyer pairs with (web DEMO_BUYER) and the only one with a pairing code
-BUYER_TOKEN, REFEREE_TOKEN = "buyer-joe.json", "referee.json"
+DB_BUYER_ID = "vidyut"          # the id /buyer pairs with (web DEMO_BUYER) and the only one with a pairing code
+BUYER_TOKEN, REFEREE_TOKEN = "buyer-vidyut.json", "referee.json"
 MANDATE_MINUTES = 30
 MIN_WINDOW_S = 6
 LIVE_TAGS = {"MIRROR", "SIM", "LIVE"}
@@ -139,7 +139,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     sellers = {s["id"]: s for s in b2["sellers"]}
     steps: list[Step] = []
 
-    # beat 1: Tony Stark's goal and need (the buyer token posts both, for its own buyer id)
+    # beat 1: Vidyut's goal and need (the buyer token posts both, for its own buyer id)
     conds = goal["items"][0].get("allowed_conditions") or [goal["items"][0]["condition"]]
     items = [{"sku_spec": i["sku_spec"], "condition": " or ".join(conds) if i["part"] == "gpu" else i["condition"],
               "variant": i["variant"], "quantity": i["quantity"], "skipped_owned_part_id": i.get("skipped_owned_part_id", "")}
@@ -147,7 +147,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     steps.append(Step("buyer", "post_goal",
                       {"id": goal["id"], "buyer_id": buyer_id, "type": goal["type"], "cap": goal["cap"], "deadline": goal["deadline"],
                        "po_number": "", "origin": SIM, "items": items},
-                      pause=True, say=f"Tony Stark (SIM persona, DB buyer id {buyer_id}) sets a goal: {b['1']['goal_text']}"))
+                      pause=True, say=f"Vidyut (SIM persona, DB buyer id {buyer_id}) sets a goal: {b['1']['goal_text']}"))
     n = need["items"][0]
     steps.append(Step("buyer", "post_need",
                       {"id": need["id"], "buyer_id": buyer_id, "goal_id": goal["id"], "delivery_window": need["delivery_window"],
@@ -201,10 +201,10 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
 NOT_BRIDGED = [
     "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 and the learner's lower open-box price now ranks, but the loss report itself is not on screen.",
     "goal state (HUNTING, HOLD_FOR_CALL, DONE): no set_goal_state reducer; the goal stays ACTIVE and reserved_amount stays 0.",
-    "buyer allowance: no set_allowance reducer, so /buyer shows the market's fresh $0 allowance, not Tony Stark's $250 per purchase "
+    "buyer allowance: no set_allowance reducer, so /buyer shows the market's fresh $0 allowance, not Vidyut's $250 per purchase "
     "(the deal still correctly needs the call).",
     "denied approval attempts (wrong code, no 'approve'): record_approval only logs a second approval; the denied tries are console only.",
-    "buyer persona name and seller personas: /buyer is hardcoded to the id joe and prints 'Joe (demo persona)'; persona rows come only "
+    "buyer persona name and seller personas: /buyer is hardcoded to the id vidyut and prints 'Vidyut (demo persona)'; persona rows come only "
     "from seed_demo (Seller A to C), so the 3D floor has no personas for the demo sellers.",
     "seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor "
     "(issue #18 asks for a floor per seller, SKU and condition).",
@@ -278,7 +278,7 @@ def find_tokens_dir(explicit: Optional[str]) -> Path:
     for c in cands:
         if (c / REFEREE_TOKEN).exists() and (c / BUYER_TOKEN).exists():
             return c
-    raise SystemExit("no tokens dir with referee.json and buyer-joe.json (run market/scripts/setup_roles.py, or pass --tokens-dir)")
+    raise SystemExit("no tokens dir with referee.json and buyer-vidyut.json (run market/scripts/setup_roles.py, or pass --tokens-dir)")
 
 
 def main(argv: Optional[list] = None) -> int:
@@ -289,8 +289,8 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--reset", action="store_true", help="call reset_demo first (referee): wipes needs, goals, rounds; keeps roles and pair codes")
     ap.add_argument("--dry-run", action="store_true", help="print the reducer calls only")
     ap.add_argument("--stripe", action="store_true", help="Stripe TEST charge in beat 4 (sk_test_ key only), as run_demo.py --stripe")
-    ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-joe.json (default: auto-detect)")
-    ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default joe, the id /buyer pairs with)")
+    ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
+    ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
     ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
     args = ap.parse_args(argv)
@@ -302,7 +302,7 @@ def main(argv: Optional[list] = None) -> int:
     out = Narrator(True)
     out.note("Tech Bazaar screen bridge: demo beats (real lane code) -> existing SpacetimeDB reducers")
     out.note(f"{len(steps)} reducer calls, {args.step_delay} s between visible steps. Open /buyer (pair as {args.buyer_id}) and /market.")
-    out.note("Persona: Tony Stark (SIM). Tags: [MIRROR] real dated listing, [SIM] generated by us.")
+    out.note("Persona: Vidyut (SIM). Tags: [MIRROR] real dated listing, [SIM] generated by us.")
 
     def say(s: Step) -> None:
         who = "buyer" if s.actor == "buyer" else "referee" if s.actor == "referee" else s.actor.replace("seller:", "seller ")

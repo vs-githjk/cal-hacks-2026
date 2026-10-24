@@ -6,7 +6,7 @@ Artifact (two directions, real sample-run data): https://claude.ai/artifact/RSXz
 Hash links: `#ledger` (A), `#arena` (B). Each direction has a theme toggle and a 390 px phone toggle.
 
 ## Brief
-Buyer screen = Tony Stark's goal, ranked bids with quality-adjusted landed price, the advocate's veto with source, the Shield block, the approval with the word-pair code, the receipt. Market screen = the referee's floor: sealed round timeline, bids per seller line (new vs open-box as alternatives), events feed, loss reports. Readable from 3 m; works at 1280 and on a phone. Every price and seller carries LIVE / MIRROR / SIM.
+Buyer screen = Vidyut's goal, ranked bids with quality-adjusted landed price, the advocate's veto with source, the Shield block, the approval with the word-pair code, the receipt. Market screen = the referee's floor: sealed round timeline, bids per seller line (new vs open-box as alternatives), events feed, loss reports. Readable from 3 m; works at 1280 and on a phone. Every price and seller carries LIVE / MIRROR / SIM.
 
 ## Recommendation: A "Ledger"
 Calm white canvas, the app's existing indigo accent, one serif hero number per screen, thin rules, semantic tints only where they mean something (mint good, coral veto or block, amber caution or call, slate out). Three type sizes carry the hierarchy, which is what reads on a projector. B "Arena" (dark, amber, mono scoreboard, five-beat stepper) is the louder option; the stepper is worth stealing for the demo video, and dark canvases wash out on a cheap projector, so A is the safer judge-facing choice. Both directions are in the artifact.
@@ -21,16 +21,16 @@ Calm white canvas, the app's existing indigo accent, one serif hero number per s
 | `code/components/ui.tsx` | `web/src/components/ui.tsx` (new) | `OriginBadge` (now `OriginChip`, same contract: unknown origin renders as SIM) plus Card, Label, Pill, Stat, Tag, Verdict, Code, SourceLink, `money`, `clock` |
 | `code/components/buyer.tsx` | `web/src/components/buyer.tsx` (new) | the inline JSX in `app/buyer/page.tsx` (`BuyerScreen` body) |
 | `code/components/market.tsx` | `web/src/components/market.tsx` (new) | the inline JSX in `app/market/page.tsx` |
-| `code/components/screens.tsx` | `web/src/components/screens.tsx` (new) | page bodies: `BuyerScreen`, `MarketScreen`; `BUYER_NAME = "Tony Stark"` |
+| `code/components/screens.tsx` | `web/src/components/screens.tsx` (new) | page bodies: `BuyerScreen`, `MarketScreen`; `BUYER_NAME = "Vidyut"` |
 | `code/data/types.ts` | `web/src/lib/screens.ts` (new) | view models the components take |
-| `code/data/sample.ts` | `web/src/lib/sample.ts` (new) | Tony Stark's run, every number from `demo/out/sample-run.json` |
+| `code/data/sample.ts` | `web/src/lib/sample.ts` (new) | Vidyut's run, every number from `demo/out/sample-run.json` |
 | `screens/*.png` | reference | 1280 and 390 renders of the artifact (design-only) |
 
 `code/_check/` and `code/tsconfig.check.json` are the type-check harness only; do not copy them.
 
 ## How to mount
 
-`app/buyer/page.tsx` keeps `PairScreen` and the role check. Change `DEMO_BUYER` to `"tony-stark"` (the market seed must post the goal for that buyer id) and replace the `BuyerScreen` function with:
+`app/buyer/page.tsx` keeps `PairScreen` and the role check. Change `DEMO_BUYER` to `"vidyut"` (the market seed must post the goal for that buyer id) and replace the `BuyerScreen` function with:
 
 ```tsx
 import { BuyerScreen } from "@/components/screens";

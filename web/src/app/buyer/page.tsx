@@ -7,7 +7,7 @@ import { OriginBadge } from "@/components/OriginBadge";
 import { fmtMoney, fmtTime, toDate } from "@/lib/stdb";
 
 // Demo persona (SIM). Real sign-in replaces this.
-const DEMO_BUYER = "joe";
+const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;
 
@@ -45,7 +45,7 @@ const CLASS_STYLE: Record<FeedClass, string> = {
   progress: "text-[var(--muted)]",
 };
 
-/** A screen sees Joe's goal only after pairing with the demo code (SIM sign-in). */
+/** A screen sees Vidyut's goal only after pairing with the demo code (SIM sign-in). */
 function PairScreen() {
   const pair = useReducer(reducers.pairBuyerScreen);
   const [attempts] = useTable(tables.myPairAttempts);
@@ -55,9 +55,9 @@ function PairScreen() {
   const failures = attempts[0]?.failures ?? 0;
   return (
     <section className="panel mx-auto max-w-md p-6">
-      <h1 className="mb-2 text-lg font-semibold">Pair this screen with Joe</h1>
+      <h1 className="mb-2 text-lg font-semibold">Pair this screen with Vidyut</h1>
       <p className="mb-4 text-sm text-[var(--muted)]">
-        Joe is a demo persona (SIM). Enter the pairing code from the demo operator. Sellers can never pair.
+        Vidyut is a demo persona (SIM). Enter the pairing code from the demo operator. Sellers can never pair.
       </p>
       <form
         className="flex gap-2"
@@ -126,7 +126,7 @@ function BuyerScreen() {
       <section className="panel p-5">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Goal</h1>
-          <span className="text-xs text-[var(--muted)]">Buyer: Joe (demo persona)</span>
+          <span className="text-xs text-[var(--muted)]">Buyer: Vidyut (demo persona)</span>
         </div>
 
         {!goalsReady ? (

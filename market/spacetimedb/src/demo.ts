@@ -1,4 +1,4 @@
-// Demo data, all labelled SIM. Joe is a labelled demo persona. Bids are not seeded: seller agents
+// Demo data, all labelled SIM. Vidyut is a labelled demo persona. Bids are not seeded: seller agents
 // (or market/scripts/sim_sellers.mjs, SIM) place them through place_bid like anyone else.
 import type { InferSchema, ReducerCtx } from 'spacetimedb/server';
 import type spacetimedb from './schema';
@@ -7,8 +7,8 @@ import { insertGoal, issuePairCode } from './market';
 type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
 export const DEMO = {
-  buyerId: 'joe',
-  goalId: 'goal-joe-gpu',
+  buyerId: 'vidyut',
+  goalId: 'goal-vidyut-gpu',
   sellers: [
     { sellerId: 'seller-a', name: 'Seller A', archetype: 'refurbisher' },
     { sellerId: 'seller-b', name: 'Seller B', archetype: 'marketplace seller' },

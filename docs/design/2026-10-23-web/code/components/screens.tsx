@@ -6,7 +6,7 @@ import { AgentFeed, ApprovalCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, 
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { OriginChip, Pill } from "./ui";
 
-export const BUYER_NAME = "Tony Stark"; // demo persona (SIM). Real sign-in replaces this. Never Joe.
+export const BUYER_NAME = "Vidyut"; // demo persona (SIM). Real sign-in replaces this.
 
 export interface BuyerScreenProps {
   goal: GoalView | null;

@@ -23,7 +23,7 @@ HERE = Path(__file__).resolve().parent
 CASES = HERE / "blind_cases.json"
 OUT = HERE.parent / "RESULTS-blind.md"
 H = "/v1/hyphenate"
-ROLES = {"$requester": "tony", "$dept_head": "rhodey", "$controller": "pepper", "$receiver": "happy",
+ROLES = {"$requester": "vidyut", "$dept_head": "rhodey", "$controller": "pepper", "$receiver": "happy",
          "$ap_clerk": "maria", "$vendor_contact": "maria", "$vendor": "gadget-grove", "$vendor2": "bargain-bin"}
 NEED_TO_PERSON = {"dept_head": "rhodey", "controller": "pepper"}
 GOOD_INVOICE = ("matched", "matched_prepaid", "paid")

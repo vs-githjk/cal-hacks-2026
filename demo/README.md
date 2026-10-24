@@ -32,9 +32,9 @@ python3 -m pytest demo/tests/test_bridge.py     # mapping with a fake client, no
 ```
 It runs `run_all` (this folder's real lane code), then writes each step through the market's EXISTING reducers with the role token each one demands
 (buyer: `post_goal`, `post_need`; referee: `open_round`, `attach_verdict`, `attach_claim_check`, `close_round`, `create_mandate`, `record_approval`, `record_payment`;
-one seller identity per demo seller: `set_floor`, `place_bid`). Needs `referee.json` and `buyer-joe.json` from `market/scripts/setup_roles.py` (auto-found in `.tokens/` or the launcher's) and the
-local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `joe` with
-`spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. Tony Stark is the SIM persona but the DB buyer id is `joe`, the only id /buyer pairs with.
+one seller identity per demo seller: `set_floor`, `place_bid`). Needs `referee.json` and `buyer-vidyut.json` from `market/scripts/setup_roles.py` (auto-found in `.tokens/` or the launcher's) and the
+local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `vidyut` with
+`spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. The buyer is Vidyut and the persona data is labelled SIM; the DB buyer id is `vidyut`, the only id /buyer pairs with.
 The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real card for each bid (a veto cites its source and disqualifies the bid at the close), the need carries
 `allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
 (`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its
@@ -48,7 +48,7 @@ Every line that shows data carries one: **LIVE** (a real outside party right now
 tagged SIM; each beat header says which code is real. SIM and MIRROR numbers are never added together.
 
 ## The story the numbers tell (round 1)
-Tony Stark's goal: an RTX 5070 Ti that fits his case, **under $1,300**, by Friday, new or open-box. The cap matches the real market: the in-stock real
+Vidyut's goal: an RTX 5070 Ti that fits the case, **under $1,300**, by Friday, new or open-box. The cap matches the real market: the in-stock real
 listings in the snapshots run $1,239.99 to $1,489.00. One or two bids are real, the rest are labelled simulated:
 - **Best Buy (MIRROR) wins at $1,249.99**, its real new listing. The advocate marks it CAUTION: the snapshot has no card length, so fit is "not confirmed", said and not guessed.
 - One more real bid is inside the cap (an eBay seller, open-box $1,239.99, ranked last). The other real listings are over the cap or state no condition (Micro Center, Amazon), and are out.
@@ -70,7 +70,7 @@ Quality-adjustment weights (open-box +4 percent, no returns +2, caution record +
 ## Real vs stand-in, per beat
 | Beat | REAL code and data | Stand-in (SIM) | Honest notes |
 |---|---|---|---|
-| 1 Goal | PSU need read from `data.fit_checker.tables.GPU_POWER`; contracts **Goal, OwnedPart, Need, Allowance** from `contracts/` (all on main, `demo/contracts_pending/` is deleted) | `demo/goal.py`: the persona (Tony Stark, SIM) and goal parsing with `allowed_conditions` | `agents/buyer/goal.py` is real and pure (it loads without uagents through the same shim as the advocate) but is hardcoded to `rtx 4070 super 12gb` and one condition, so it cannot parse this goal; not used |
+| 1 Goal | PSU need read from `data.fit_checker.tables.GPU_POWER`; contracts **Goal, OwnedPart, Need, Allowance** from `contracts/` (all on main, `demo/contracts_pending/` is deleted) | `demo/goal.py`: the persona (Vidyut, SIM) and goal parsing with `allowed_conditions` | `agents/buyer/goal.py` is real and pure (it loads without uagents through the same shim as the advocate) but is hardcoded to `rtx 4070 super 12gb` and one condition, so it cannot parse this goal; not used |
 | 2 Sealed round | **`agents/advocate/checks.py` (Lane A) `advise`, `call_reason`, `CALL_SUMMARIES`**; `data.fit_checker`; **`data.claim_check.check_claim` (Lane C), offline via a fixture fetch of `data/liar_pages/site`**; `shield.screen` on every seller's text; MIRROR bids from real snapshots; Shady Sam read from Lane C's hosted page | `demo/sellers.py` bid policy (MIRROR agents bid from real listings; Lane A's `agents/sellers/policy.py` uses its own catalog); `demo/standins/market.py` (sealing, floor, scoring: Python mirror of `market/rules`); glue in `demo/advice.py` | See "How the real advocate is loaded" below. The glue feeds the advocate only the picked line, and turns false claim-check results into warnings (the advocate does not read them yet). Price-history baseline, seller records and CPSC recalls are empty here (no data for this SKU, feed needs network) |
 | 3 Shield | `shield.screen` on Lane C's `shady-sam-gpu-5070ti-injected.html`; blocked, rule ids and evidence spans printed; clean page as control; verdict validated as the `ShieldVerdict` contract | none (the page is SIM, the screening is real) | Beat 2's screen passes only the payee of record; beat 3 also passes the price history |
 | 4 Approval | all of `pay/`: `new_mandate`, `script_for` (closed-schema reason), `ApprovalService`, `can_charge`, `sign_request` and `verify_request` (RFC 9421 Ed25519, TAP-style), `mark_used`, replay and an edited amount both fail; **Stripe test mode with `--stripe`** (see above) | call transport (transcripts typed by the runner, no Cartesia); the sim clock (+31 s per retry, no sleeping); the merchant (the runner calls `verify_request` directly) | The charge is a SIM stub unless `--stripe` and an `sk_test_` key |

@@ -281,7 +281,7 @@ def test_stripe_charge_test_sends_the_key_only_in_the_header_and_returns_no_key(
         seen["auth"], seen["idem"], seen["body"], seen["url"] = req.get_header("Authorization"), req.get_header("Idempotency-key"), req.data.decode(), req.full_url
         return Resp(json.dumps({"id": "pi_1", "object": "payment_intent", "amount": 77322, "currency": "usd", "status": "succeeded"}).encode())
     from pay.mandate import idempotency_key, new_mandate
-    m = new_mandate(deal_id="deal-t", buyer_id="tony-stark", amount=773.22, payee="honest-hal@pay.example.test")
+    m = new_mandate(deal_id="deal-t", buyer_id="vidyut", amount=773.22, payee="honest-hal@pay.example.test")
     out = stripe_charge_test(m, key, urlopen=fake_urlopen)
     assert seen["auth"] == f"Bearer {key}" and key not in seen["body"] and key not in json.dumps(out)
     assert seen["idem"] == idempotency_key(m) == out["idempotency_key"] and "pm_card_visa" in seen["body"] and "amount=77322" in seen["body"]

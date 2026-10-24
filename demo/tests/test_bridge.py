@@ -53,35 +53,35 @@ def test_each_reducer_is_called_by_the_role_it_demands(steps):
     # a seller only ever bids as itself
     for s in steps:
         if s.reducer == "set_floor" or s.reducer == "place_bid":
-            assert s.args.get("id", "").replace("bid-need-tony-stark-5070ti-", "") in ("", s.actor.split(":")[1])
+            assert s.args.get("id", "").replace("bid-need-vidyut-5070ti-", "") in ("", s.actor.split(":")[1])
 
 
-def test_goal_and_need_are_tony_starks_and_withhold_nothing_new(steps):
+def test_goal_and_need_are_vidyuts_and_withhold_nothing_new(steps):
     goal = steps[0].args
-    assert goal["buyer_id"] == "joe" and goal["cap"] == 1300 and goal["origin"] == "SIM"
+    assert goal["buyer_id"] == "vidyut" and goal["cap"] == 1300 and goal["origin"] == "SIM"
     assert goal["items"][0]["condition"] == "new or open-box"
     assert any(i["skipped_owned_part_id"] == "owned-psu" for i in goal["items"])
     need = steps[1].args
     assert need["spend_limit"] == 1300 and need["items"][0]["sku_spec"] == "rtx 5070 ti" and len(need["items"]) == 1
     assert need["items"][0]["condition"] == "new" and need["items"][0]["allowed_conditions"] == ["new", "open-box"]
-    assert "Tony Stark" in steps[0].say
+    assert "Vidyut" in steps[0].say
 
 
 def test_bids_carry_origin_picked_line_and_floor(run, steps):
     bids = {s.args["id"]: s for s in steps if s.reducer == "place_bid"}
     assert len(bids) == len(run["beats"]["2"]["bids"])
-    best = bids["bid-need-tony-stark-5070ti-best-buy"].args
+    best = bids["bid-need-vidyut-5070ti-best-buy"].args
     assert best["origin"] == "MIRROR" and best["lines"][0]["unit_price"] == 1249.99
     assert best["lines"][0]["offered_condition"] == "new" and best["source"].startswith("https://www.bestbuy.com")
-    sim = bids["bid-need-tony-stark-5070ti-shady-sam"].args
+    sim = bids["bid-need-vidyut-5070ti-shady-sam"].args
     assert sim["origin"] == "SIM"
-    gg = bids["bid-need-tony-stark-5070ti-gadget-grove"].args     # two alternative lines: BOTH are placed, the market picks one
+    gg = bids["bid-need-vidyut-5070ti-gadget-grove"].args     # two alternative lines: BOTH are placed, the market picks one
     assert [(l["offered_condition"], l["unit_price"]) for l in gg["lines"]] == [("new", 1315.27), ("open-box", 1247.02)]
     assert gg["stated_total"] == 1247.02 and gg["source"].startswith("https://example.com/sim/gadget-grove")
     floors = {s.actor: s.args["floor"] for s in steps if s.reducer == "set_floor"}
     assert floors["seller:lowball"] > 1090.0          # the referee floor rejection is the market's, not ours
     assert floors["seller:gadget-grove"] == 1190.0    # one floor per SKU: the lowest of its two condition lines
-    lowball = bids["bid-need-tony-stark-5070ti-lowball"].args
+    lowball = bids["bid-need-vidyut-5070ti-lowball"].args
     assert lowball["lines"][0]["unit_price"] < floors["seller:lowball"]
 
 
@@ -98,7 +98,7 @@ def test_shield_and_claim_results_come_from_the_real_run(run, steps):
 def test_advocate_cards_are_the_real_cards_and_every_veto_cites_its_source(run, steps):
     cards = [s.args for s in steps if s.reducer == "attach_advocate_card"]
     assert len(cards) == len(run["beats"]["2"]["cards"])
-    by = {c["bid_id"].replace("bid-need-tony-stark-5070ti-", ""): c for c in cards}
+    by = {c["bid_id"].replace("bid-need-vidyut-5070ti-", ""): c for c in cards}
     assert by["shady-sam"]["recommendation"] == "veto" and by["shady-sam"]["rule_id"] == "advocate.condition"
     assert by["shady-sam"]["source_url"].endswith("shady-sam-gpu-5070ti-lies.html")
     assert by["bargain-bin"]["recommendation"] == "veto" and by["bargain-bin"]["rule_id"] == "fit.gpu_length"
@@ -128,9 +128,9 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     m = run["beats"]["4"]["mandate"]
     mand = next(s for s in steps if s.reducer == "create_mandate").args
     assert mand["hash"] == m["hash"] and mand["amount"] == 1249.99 and mand["payee"] == m["payee"]
-    assert mand["buyer_id"] == "joe" and mand["requested_by"] == ""
+    assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
-    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "joe"}
+    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut"}
     pays = [s.args for s in steps if s.reducer == "record_payment"]
     assert len(pays) == 2 and pays[0] == pays[1] and pays[0]["payment_ref"] == run["beats"]["4"]["charge"]["id"]
 

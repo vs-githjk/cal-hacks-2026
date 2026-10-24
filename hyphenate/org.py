@@ -46,10 +46,10 @@ class Policy:
 
 
 def standard_people() -> list:
-    """Pixel Forge Games, a 40-person game studio (SIM). Tony Stark is the requester, as in the Tech Bazaar demo."""
+    """Pixel Forge Games, a 40-person game studio (SIM). Vidyut is the requester, as in the Tech Bazaar demo."""
     return [
-        Person("tony", "Tony Stark", "employee", "engineering"),
-        Person("tony-assistant", "Pepper's Assistant", "employee", "engineering", acts_for=("tony",)),
+        Person("vidyut", "Vidyut", "employee", "engineering"),
+        Person("vidyut-assistant", "Pepper's Assistant", "employee", "engineering", acts_for=("vidyut",)),
         Person("jess", "Jess Drew", "employee", "art"),
         Person("rhodey", "James Rhodes", "dept_head", "engineering"),
         Person("kara", "Kara Danvers", "dept_head", "art"),

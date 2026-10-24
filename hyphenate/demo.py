@@ -23,8 +23,8 @@ def run_story(eng: Engine = None) -> dict:
         return out
 
     gpu = {"sku": "RTX-5070-TI", "desc": "MSI GeForce RTX 5070 Ti 16GB (MIRROR-priced)", "qty": 3, "price": 1249.99, "condition": "new", "allowed": ["new"], "min_qty": 2}
-    po = step("Tony requests 3 GPUs", eng.request(requester="tony", vendor_id="bestbuy", lines=[gpu], at=D("10-24 09"), justification="render farm, 3 nodes")).data["po"]["id"]
-    step("Tony tries to approve his own PO", eng.approve(po, by="tony", at=D("10-24 10")))
+    po = step("Vidyut requests 3 GPUs", eng.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu], at=D("10-24 09"), justification="render farm, 3 nodes")).data["po"]["id"]
+    step("Vidyut tries to self-approve the PO", eng.approve(po, by="vidyut", at=D("10-24 10")))
     step("Rhodes (department head) tries; the PO is above his limit", eng.approve(po, by="rhodey", at=D("10-24 11")))
     rej = step("Pepper (controller) says no, ceiling $2,600", eng.reject(po, by="pepper", at=D("10-24 12"), reason="quarter budget, ceiling $2,600", max_amount=2600))
     po2 = rej.data["replan"]["child"]
@@ -62,7 +62,7 @@ def main(argv=None) -> int:
     print("Pixel Forge Games (SIM). MIRROR price reference from data/mirror/snapshots. No model makes any control decision.\n")
     for s in r["steps"]:
         print(f"[{'ok ' if s['ok'] else 'NO '}] {s['label']:<72} -> {s['status']}")
-    print("\nTHE MOMENT: invoice match on the order Tony's controller re-planned")
+    print("\nTHE MOMENT: invoice match on the order Vidyut's controller re-planned")
     print(r["explain"]["text"])
     print(f"\nTrial balance balanced: {r['trial_balance']['balanced']}; invariant problems: {r['invariants'] or 'none'}")
     return 0 if not r["invariants"] else 1

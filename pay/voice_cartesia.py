@@ -74,7 +74,7 @@ KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV = (
     "CARTESIA_API_KEY", "CARTESIA_AGENT_ID", "APPROVAL_CALL_TO", "CARTESIA_PHONE_NUMBER_ID", "APPROVAL_SECRET",
     "APPROVAL_BUYER_NAME")
 ENV_NAMES = (KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV)
-DEFAULT_BUYER_NAME = "Tony Stark"
+DEFAULT_BUYER_NAME = "Vidyut"
 DEFAULT_ENV_FILE = Path(__file__).resolve().parents[2] / "lane-d" / ".env"   # main lane-d checkout, gitignored
 
 RINGING_TIMEOUT_S = 30
@@ -400,7 +400,7 @@ def run_approval_call(mandate: dict, advocate_reason: Any, client, service: Appr
 # ---------- CLI ----------
 
 def _demo_deal() -> dict:
-    """Tony Stark's mandate for the Best Buy deal, built exactly as demo/approval_flow.run_beat4 builds it."""
+    """Vidyut's mandate for the Best Buy deal, built exactly as demo/approval_flow.run_beat4 builds it."""
     from demo.common import Narrator
     from demo.run_demo import run_all
     from pay.mandate import new_mandate
@@ -422,7 +422,7 @@ def _demo_deal() -> dict:
 def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(description="Beat 4 over a real Cartesia phone call (calls only APPROVAL_CALL_TO)")
     ap.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE, help="where the CARTESIA_* names are read from")
-    ap.add_argument("--demo", action="store_true", help="place the real call for Tony Stark's Best Buy mandate")
+    ap.add_argument("--demo", action="store_true", help="place the real call for Vidyut's Best Buy mandate")
     ap.add_argument("--dry-run", action="store_true", help="print the variables that would be sent; no network, no call")
     ap.add_argument("--check", action="store_true", help="read-only: GET the agent and print the HTTP outcome")
     ap.add_argument("--buyer-name", default=None, help=f"default: {NAME_ENV} from the env file, else {DEFAULT_BUYER_NAME}")

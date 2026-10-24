@@ -50,16 +50,16 @@ Each component has a deterministic core in code (tested), a model only where per
 - **Pricing:** OPEN, Vidyut decides. The old test (15% of verified savings capped at $299 a month) was written for a restaurant buying weekly. Recommended option: builders free; sellers pay a small success fee only on a won, approved order; a paid demand-insights plan for sellers and brands tested in interviews. The research file has no sourced fee rates, so every rate is an assumption. Comparable data products exist (Keepa API from about EUR 49 a month, Similarweb small-business average about $12.4 thousand a year, both reported, not verified); nobody found sells "demand we saw but could not fill at your price", so its value is a hypothesis.
 - **The one metric to prove:** verified dollars saved or scams and misfits avoided per request, each with a source and method. Report results that show no effect.
 
-## 4. The 90-second demo (Tony Stark the upgrader)
+## 4. The 90-second demo (Vidyut the upgrader)
 
 Two screens, same state: ASI:One on a phone and the builder view on a laptop, with the 3D floor as the second view. Every price is filled live by Lane C and carries a LIVE, MIRROR or SIM badge; none is typed by hand.
 
 | Time | Screen | Beat |
 |---|---|---|
-| 0 to 10 s | ASI:One | Tony Stark (a labelled demo persona) already owns a rig the agent remembers. He asks for a GPU that fits his case and PSU plus a 32 GB DDR5 kit, up to his allowance. "You already own a 750 W PSU, skip it" (memory entry cited). No chat window beyond the request. |
+| 0 to 10 s | ASI:One | Vidyut (a labelled demo persona) already owns a rig the agent remembers. Vidyut asks for a GPU that fits the case and PSU plus a 32 GB DDR5 kit, up to the allowance. "You already own a 750 W PSU, skip it" (memory entry cited). No chat window beyond the request. |
 | 10 to 30 s | Builder view and floor | Sealed round opens to marketplace, used and SIM sellers. Bids reveal at the deadline. |
 | 30 to 55 s | Builder view | The cheapest bid is vetoed with sources (does not fit, or used sold as new, or a price far below the used baseline). A "was" price is flagged: "the price claim did not match the price history". Shield quarantines a planted payee swap. The optimizer split beats cheapest-per-line once shipping is counted (toggle shown once). |
-| 55 to 75 s | Phone | The deal is above the allowance, so the Cartesia agent calls, reads the parts, price, verdict and savings, and Tony Stark says yes. The recorded answer appears, then the Stripe test charge on a Visa test card with the verified signature. A smaller deal inside the allowance auto-approves with a receipt. |
+| 55 to 75 s | Phone | The deal is above the allowance, so the Cartesia agent calls, reads the parts, price, verdict and savings, and Vidyut says yes. The recorded answer appears, then the Stripe test charge on a Visa test card with the verified signature. A smaller deal inside the allowance auto-approves with a receipt. |
 | 75 to 90 s | Phone camera, then seller dashboard | Delivery photo check; a reject updates the seller record. Switch to the seller dashboard: demand this week, why bids were lost, where demand went unfilled (SIM plus MIRROR badges). |
 
 **Numbers safe to put on screen:** computed from the demo's own data with "how computed"; a context strip using only the sourced facts in the research file (GPU street prices against launch prices, DDR5 at $375 minimum, the $44.5 billion market), each with its source. Never on screen: research time, incompatibility rate, return rate, any claim that a big-box retailer bid, any wording that a real store lied.
