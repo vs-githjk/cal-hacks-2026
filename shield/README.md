@@ -96,7 +96,7 @@ never message bodies.
 
 | Rule id | Action | What it catches |
 |---|---|---|
-| `shield.override.instruction` | block | "ignore previous instructions", "system:", "you are now ...", "note to shopping agents", and similar; the same phrasings in French, German and Chinese, Simplified and Traditional (a "système :" or "系统：" label only with an imperative after it, so a French, German or Chinese spec line passes; the English "System:" label still blocks a spec line, #250) |
+| `shield.override.instruction` | block | "ignore previous instructions", "system:", "you are now ...", "note to shopping agents", and similar; the same phrasings in French, German and Chinese, Simplified and Traditional (a "système :" or "系统：" label only with an imperative after it, so a French, German or Chinese spec line passes; a bare English "System:" passes only when the rest of its line, or the next non-blank line, is all spec words: an OS, a maker or product line, a model number, a unit or a build word. Any other word blocks, so a product line missing from the word list is a false positive, fail closed, #250) |
 | `shield.hidden.instruction` | block | CSS-hidden elements or HTML comments that carry an instruction, a money push or an exfil request |
 | `shield.hidden.text` | quarantine | hidden elements with other text, or 3 or more zero-width and bidi characters |
 | `shield.payee.swap` | quarantine | a payee or payout address that differs from `payee_of_record` |
