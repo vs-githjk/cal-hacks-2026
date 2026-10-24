@@ -1,0 +1,63 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "CrsCheck",
+ "description": "One CRS identity and fraud check of a seller, as a band only. Never carries raw report fields (scores, SSN, addresses): additionalProperties is false on purpose. Emitted by the CRS adapter (Lane A, #15); consumed by pay.crs_gate.",
+ "type": "object",
+ "properties": {
+  "seller_id": {
+   "type": "string",
+   "minLength": 1
+  },
+  "verified": {
+   "type": "boolean",
+   "description": "True only when the check passed. A blocked or failed check is false."
+  },
+  "reason_codes": {
+   "type": "array",
+   "description": "Short machine codes for why a check failed (for example risk_score_high, email_new). Empty when verified.",
+   "items": {
+    "type": "string",
+    "pattern": "^[a-z0-9_]{1,48}$"
+   },
+   "maxItems": 16
+  },
+  "product": {
+   "type": "string",
+   "enum": [
+    "fraud_finder",
+    "tu_identity"
+   ]
+  },
+  "persona_id": {
+   "type": "string",
+   "description": "CRS sandbox test persona, for example P19. Sandbox identities only."
+  },
+  "checked_at": {
+   "type": "string",
+   "format": "date-time",
+   "description": "UTC, ends in Z. A check older than 24 hours no longer clears a business payee."
+  },
+  "request_id": {
+   "type": "string",
+   "description": "CRS RequestID response header, when there is one."
+  },
+  "origin": {
+   "type": "string",
+   "enum": [
+    "SANDBOX",
+    "CACHED",
+    "NOT_CONFIGURED"
+   ],
+   "description": "NOT_CONFIGURED means no CRS credentials: the check never ran and never clears a payee."
+  }
+ },
+ "required": [
+  "seller_id",
+  "verified",
+  "reason_codes",
+  "product",
+  "checked_at",
+  "origin"
+ ],
+ "additionalProperties": false
+}
