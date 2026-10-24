@@ -45,9 +45,46 @@ spacetime generate --lang typescript --out-dir ../web/src/module_bindings --modu
 cd ../web && npm ci && npm run dev
 ```
 
-`spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes.
+`spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes. WARNING: this wipes all rounds, bids and results -- fine against a local or test database, never against a live market with real data.
 
 For a rehearsal, run or project the demo, not `npm run dev`: `npm run demo --prefix web` (`next build && next start -p 3100`) so the screen is a production build with no dev indicator or Insight badge.
+
+## Deploy to Maincloud (#293)
+
+One live market for every laptop: Abhinav's agents, Vidyut's bridge/call/pay Mac and the deployed web all point at the same hosted database instead of a local server each.
+
+`seed_demo` and `reset_demo` are idempotent to re-run (every insert in `seed_demo` is guarded by a `find` first; `reset_demo` never touches `role`, `owner` or `pair_code`, so a republish or a re-seed never breaks an open tab or a paired agent). `init` only ever sets the owner once, so republishing an existing database never changes who owns it. See `spacetimedb/src/market.test.ts`, describe block `#293 Maincloud`.
+
+WARNING: `reset_demo` deletes every need, goal, bid, mandate, approval, approval code, allowance spend record, persona and floor event, plus every round, round result and payment. Only `role`, `owner` and `pair_code` survive. It is NOT safe to run on a live market with real rounds: never run it after a real payment has gone through. Only run it on a fresh deployment or a test database.
+
+**Vidyut runs this** (his `spacetime login` becomes the module owner, which the referee and buyer tokens depend on):
+
+```bash
+# once: log in (opens a browser; GitHub OAuth)
+spacetime login
+
+# dry run first (prints every step, calls nothing); then for real
+sh scripts/deploy_maincloud.sh
+sh scripts/deploy_maincloud.sh --go
+```
+
+`deploy_maincloud.sh` publishes (no `--yes=all`, so a schema change that would need a data wipe stops with spacetime's own error instead of silently clearing the shared market), calls `seed_demo`, and grants roles (same `setup_roles.py` as local, pointed at maincloud).
+
+Env the web needs (Vercel, or any `.env` for a local client pointed at the hosted database):
+
+```
+NEXT_PUBLIC_SPACETIMEDB_URI=wss://maincloud.spacetimedb.com
+NEXT_PUBLIC_SPACETIMEDB_DB=tech-bazaar
+```
+
+Both default to local (`ws://127.0.0.1:3000`, `tech-bazaar`) when unset, so local dev is unaffected.
+
+Post-publish checks:
+1. `/market` loads and shows `MARKET LIVE` (not `offline`) within a few seconds.
+2. A test bid placed through `place_bid` (Python bridge or an agent) appears on `/market` without a refresh.
+3. `/buyer` pairs with the code from `spacetime sql -s maincloud tech-bazaar "SELECT code FROM pair_code WHERE buyer_id = 'vidyut'"`.
+
+Never publish the real `tech-bazaar` database from a throwaway identity, and never commit a token file (`.tokens/`, `~/.config/spacetime/cli.toml` stay local and gitignored).
 
 ## Who may call what (roles)
 

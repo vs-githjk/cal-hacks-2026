@@ -6,6 +6,7 @@ import type { InferSchema } from 'spacetimedb/server';
 import spacetimedb from './schema';
 import * as mod from './index';
 import * as m from './market';
+import { DEMO } from './demo';
 
 const T0 = new Timestamp(1_761_300_000_000_000n);
 let conn = 1n;
@@ -1415,6 +1416,68 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     twoBuyerRounds();
     close('round-1');
     expect(Object.keys(holds()[0]!).sort()).toEqual(['bidId', 'condition', 'expiresAt', 'id', 'qty', 'roundId', 'sellerId', 'skuSpec', 'state']);
+  });
+});
+
+describe('#293 Maincloud: seed, reset and init stay safe on an already-live database', () => {
+  it('init run again (a republish) never replaces the owner identity', () => {
+    const before = h.db.owner.id.find(0)!.identity;
+    run(OWNER, (ctx) => m.init(ctx));
+    run(STRANGER, (ctx) => m.init(ctx)); // even if a different identity publishes, the first owner sticks
+    expect(h.db.owner.id.find(0)!.identity.isEqual(before)).toBe(true);
+  });
+
+  it('seed_demo run twice never throws and never duplicates personas, the pair code, the profile or the goal', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    const codeAfterFirst = h.db.pairCode.buyerId.find('vidyut')!.code;
+    expect(() => run(OWNER, (ctx) => m.seedDemoChecked(ctx))).not.toThrow();
+    expect([...h.db.persona.iter()]).toHaveLength(DEMO.sellers.length);
+    expect([...h.db.pairCode.iter()].filter((r) => r.buyerId === 'vidyut')).toHaveLength(1);
+    expect(h.db.pairCode.buyerId.find('vidyut')!.code).toBe(codeAfterFirst); // no fresh code on a second seed
+    expect([...h.db.buyerProfile.iter()]).toHaveLength(1);
+    expect([...h.db.goal.iter()].filter((g) => g.id === DEMO.goalId)).toHaveLength(1);
+  });
+
+  it('reset_demo run twice in a row never throws, on an already-empty database', () => {
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect(() => run(OWNER, (ctx) => m.resetDemoChecked(ctx))).not.toThrow();
+  });
+
+  it('reset_demo never touches roles, the owner or pair codes, so open tabs and agents keep working across a reset', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    const refIdentity = idOf(REF);
+    run(OWNER, (ctx) => m.assignRole(ctx, { identity: refIdentity, role: 'referee', subjectId: 'market' }));
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    const code = h.db.pairCode.buyerId.find('vidyut')!.code;
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect(h.db.owner.id.find(0)).toBeTruthy();
+    expect(h.db.role.identity.find(refIdentity)).toMatchObject({ role: 'referee', subjectId: 'market' });
+    expect(h.db.pairCode.buyerId.find('vidyut')?.code).toBe(code);
+    expect([...h.db.need.iter()]).toHaveLength(0); // the reset itself still clears demo state
+    expect([...h.db.bid.iter()]).toHaveLength(0);
+  });
+
+  it('#313 reset_demo clears mandates, approvals, approval codes, allowance spend, personas and floor events (the full deletion list)', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    const w = win();
+    mint(mandateArgs({ dealId: w.dealId, payee: w.payee, amount: w.amount }));
+    run(REF, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code: 'alpha bravo' }));
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
+    expect([...h.db.mandate.iter()]).not.toHaveLength(0);
+    expect([...h.db.approval.iter()]).not.toHaveLength(0);
+    expect([...h.db.approvalCode.iter()]).not.toHaveLength(0);
+    expect([...h.db.allowance.iter()]).not.toHaveLength(0);
+    expect([...h.db.persona.iter()]).not.toHaveLength(0);
+    expect([...h.db.floorEvent.iter()]).not.toHaveLength(0);
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+    expect([...h.db.approval.iter()]).toHaveLength(0);
+    expect([...h.db.approvalCode.iter()]).toHaveLength(0);
+    expect([...h.db.allowance.iter()]).toHaveLength(0);
+    expect([...h.db.persona.iter()]).toHaveLength(0);
+    expect([...h.db.floorEvent.iter()]).toHaveLength(1); // only the 'reset' event itself
   });
 });
 
