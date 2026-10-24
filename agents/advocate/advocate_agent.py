@@ -45,8 +45,12 @@ async def log_startup(ctx: Context):
                                        mailbox="mailbox" in _AGENT_ARGS))
 
 
-async def _claim_evidence(bids: list[dict], checker=None) -> dict:
-    """Check at most nine condition claims; every omitted, malformed, or failed check stays unverified."""
+async def _claim_evidence(bids: list[dict], checker=None, *, trusted_sim_fixture: bool = False) -> dict:
+    """Check at most nine condition claims; every omitted, malformed, or failed check stays unverified.
+
+    Only a code/test-owned SIM fixture may skip independent fetching. A LIVE or MIRROR bid is checked using
+    its root origin even if one seller-controlled line contradicts it; checks.advise then rejects that mismatch.
+    """
     from data.claim_check.fetch import guarded_get
     if checker is None:
         from data.claim_check import check_claim
@@ -59,8 +63,15 @@ async def _claim_evidence(bids: list[dict], checker=None) -> dict:
             url = line.get("listing_url") or ""
             key = (url, condition)
             evidence[key] = {"result": "unverified"}
-            origin = line.get("origin") or bid.get("origin")
-            if (len(claims) < MAX_EVIDENCE_CLAIMS and origin in {"MIRROR", "LIVE"}
+            root_origin = bid.get("origin") or line.get("origin")
+            if root_origin == "simulated":
+                root_origin = "SIM"
+            line_origin = line.get("origin")
+            if line_origin == "simulated":
+                line_origin = "SIM"
+            if trusted_sim_fixture and root_origin == "SIM" and (line_origin or root_origin) == "SIM":
+                continue
+            if (len(claims) < MAX_EVIDENCE_CLAIMS and root_origin in {"MIRROR", "LIVE", "SIM"}
                     and condition in {"new", "open-box", "refurbished", "used"}
                     and isinstance(url, str) and url.startswith(("http://", "https://"))):
                 claims.append((key, {"field": "condition", "value": condition, "evidence_url": url}))
@@ -193,8 +204,12 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
     ctx.logger.info(status.msg_line("advocate", "buyer", "advice_request"))
     need, bids = json.loads(msg.need_json), json.loads(msg.bids_json)
     evidence = await _claim_evidence(bids)
-    cards = checks.advise(need, bids, _baseline(need, bids), mock_data.RECORDS, mock_data.RECALLS,
-                          owned=need.get("owned", {}), evidence=evidence)
+    try:
+        cards = checks.advise(need, bids, _baseline(need, bids), mock_data.RECORDS, mock_data.RECALLS,
+                              owned=need.get("owned", {}), evidence=evidence)
+    except ValueError:
+        ctx.logger.warning(status.msg_line("advocate", "buyer", "blocked"))
+        return
     cards = await _explain_cards(cards)
     for card in cards:
         checks.validate_safety_card(card)

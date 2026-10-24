@@ -41,7 +41,7 @@ def fit_display(bid: dict, owned_attrs: dict) -> dict:
 def advise(need: dict, bid: dict, entry: dict, claims: list[dict], owned_attrs: dict) -> dict:
     """One AdvocateCard for a bid, judged on the line the market picked (`entry`, from market.rank_bids)."""
     mod, _ = advocate_checks()
-    sel = bid["lines"][entry["line"]]
+    sel = {**bid["lines"][entry["line"]], "line_index": entry["line"]}
     one = {**bid, "lines": [sel], "supplier_id": bid["seller_id"], "total_landed_price": entry["landed"]}
     item = dict(need["items"][0])
     if sel["offered_condition"] in (item.get("allowed_conditions") or []):

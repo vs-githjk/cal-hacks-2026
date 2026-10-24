@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import common
-from advocate import advocate_agent
+from advocate import advocate_agent, checks
 
 
 def run(coro):
@@ -118,7 +118,7 @@ def test_invalid_model_output_falls_back_without_changing_veto(monkeypatch):
     assert result["explanation"]["text"] == card["call_reason"]["summary"]
 
 
-def test_claim_adapter_checks_mirror_assertions_and_never_fetches_sim_urls():
+def test_claim_adapter_keeps_fixture_sim_unverified_when_explicitly_trusted():
     seen = []
     def check_claim(claim, fetch):
         seen.append(claim)
@@ -131,7 +131,7 @@ def test_claim_adapter_checks_mirror_assertions_and_never_fetches_sim_urls():
                                          "page_condition": "open-box", "listing_url": "https://example.com/sim/item"}]},
     ]
 
-    evidence = run(advocate_agent._claim_evidence(bids, checker=check_claim))
+    evidence = run(advocate_agent._claim_evidence(bids, checker=check_claim, trusted_sim_fixture=True))
 
     assert len(seen) == 1
     assert seen[0] == {"field": "condition", "value": "new", "evidence_url": "https://store.example/item"}
@@ -139,18 +139,33 @@ def test_claim_adapter_checks_mirror_assertions_and_never_fetches_sim_urls():
     assert evidence[("https://example.com/sim/item", "new")]["result"] == "unverified"
 
 
-def test_on_advice_keeps_sim_fixture_trap_veto_with_independent_checks_enabled(monkeypatch):
+def test_claim_adapter_independently_checks_untrusted_sim_by_default():
+    seen = []
+    url = "https://example.com/sim/item"
+    bid = {"origin": "SIM", "lines": [{"sku_spec": "gpu", "offered_condition": "new",
+           "origin": "SIM", "page_condition": "new", "listing_url": url}]}
+    def check_claim(claim, fetch):
+        seen.append(claim)
+        return {"result": "false", "evidence_url": url, "method": "fetched page JSON-LD"}
+    evidence = run(advocate_agent._claim_evidence([bid], checker=check_claim))
+    assert seen == [{"field": "condition", "value": "new", "evidence_url": url}]
+    assert evidence[(url, "new")]["result"] == "false"
+
+
+def test_on_advice_uses_independent_sim_claim_evidence_not_seller_page(monkeypatch):
     need = {"id": "n1", "items": [{"sku_spec": "gpu", "condition": "new", "quantity": 1}]}
     bid = {"id": "b1", "need_id": "n1", "supplier_id": "seller_1", "origin": "SIM",
            "total_landed_price": 120, "floor_check_passed": True,
            "lines": [{"sku_spec": "gpu", "unit_price": 120, "quantity": 1, "offered_condition": "new",
                       "page_condition": "open-box", "listing_url": "https://example.com/sim/gpu"}]}
     monkeypatch.setattr(advocate_agent.common, "screen", lambda *a, **k: {"verdict": "allow", "reasons": []})
-    async def empty_evidence(_bids):
-        return {}
+    async def independent_evidence(_bids):
+        url = "https://example.com/sim/gpu"
+        return {(url, "new"): {"result": "false", "evidence_url": url, "checked_at": "2026-10-24T05:00:00Z",
+                                 "evidence_hash": "abc", "method": "fetched page JSON-LD"}}
     async def no_model(cards):
         return cards
-    monkeypatch.setattr(advocate_agent, "_claim_evidence", empty_evidence)
+    monkeypatch.setattr(advocate_agent, "_claim_evidence", independent_evidence)
     monkeypatch.setattr(advocate_agent, "_explain_cards", no_model)
     ctx = Context()
     msg = common.AdviceRequest(need_json=json.dumps(need), bids_json=json.dumps([bid]))
@@ -160,7 +175,41 @@ def test_on_advice_keeps_sim_fixture_trap_veto_with_independent_checks_enabled(m
 
     assert card["recommendation"] == "veto"
     assert card["claim_checks"][0]["result"] == "false"
-    assert card["claim_checks"][0]["source"].startswith("SIM fixture")
+    assert card["claim_checks"][0]["source"] == "independent claim check"
+
+
+def test_live_root_checks_sim_line_then_rejects_mixed_provenance():
+    seen = []
+    url = "https://shop.example/item"
+    bid = {"id": "mixed", "origin": "LIVE", "lines": [{"sku_spec": "gpu", "offered_condition": "new",
+           "page_condition": "new", "origin": "SIM", "listing_url": url}]}
+    def check_claim(claim, fetch):
+        seen.append(claim)
+        return {"result": "false", "evidence_url": url, "checked_at": "2026-10-24T05:00:00Z",
+                "evidence_hash": "abc", "method": "fetched page JSON-LD"}
+    evidence = run(advocate_agent._claim_evidence([bid], checker=check_claim))
+    assert seen == [{"field": "condition", "value": "new", "evidence_url": url}]
+    assert evidence[(url, "new")]["result"] == "false"
+    with pytest.raises(ValueError, match="origin"):
+        checks.advise({"id": "n1", "items": [{"sku_spec": "gpu", "condition": "new", "quantity": 1}]},
+                      [bid], {}, {}, [], evidence=evidence)
+
+
+def test_on_advice_returns_no_card_for_mixed_origin_bid(monkeypatch):
+    need = {"id": "n1", "items": [{"sku_spec": "gpu", "condition": "new", "quantity": 1}]}
+    bid = {"id": "mixed", "need_id": "n1", "supplier_id": "seller_1", "origin": "LIVE",
+           "total_landed_price": 120, "floor_check_passed": True,
+           "lines": [{"sku_spec": "gpu", "unit_price": 120, "quantity": 1, "offered_condition": "new",
+                      "page_condition": "new", "origin": "SIM", "listing_url": "https://shop.example/item"}]}
+    monkeypatch.setattr(advocate_agent.common, "screen", lambda *a, **k: {"verdict": "allow", "reasons": []})
+    async def empty_evidence(_bids):
+        return {}
+    monkeypatch.setattr(advocate_agent, "_claim_evidence", empty_evidence)
+    ctx = Context()
+    msg = common.AdviceRequest(need_json=json.dumps(need), bids_json=json.dumps([bid]))
+    run(advocate_agent.on_advice(ctx, "buyer-address", msg))
+    assert ctx.sent == []
+    assert any("AGENT_MSG" in str(args) and "message blocked by Shield" in str(args) for args in ctx.logs)
 
 
 def test_claim_adapter_checks_live_and_returns_normalized_checked_evidence():

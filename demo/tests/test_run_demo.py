@@ -16,6 +16,7 @@ from unittest import mock
 import pytest
 
 from demo import adapters, run_demo
+from demo.advice import advise as demo_advise
 from demo.approval_flow import STRIPE_ENV, stripe_charge_test
 from demo.common import Narrator, schema_errors
 from pay.callscript import clean_advocate_reason
@@ -341,6 +342,22 @@ def test_beat5_learner_closes_the_gap_inside_its_floor_against_a_static_control(
     assert b5["strategy"]["diff"] == {"price_step": {"from": 0.0, "to": 0.03}}
     assert next(r for r in b5["round2"]["loss_reports"] if r["seller_id"] == "fair-price-pc")["gap_band"] == "within5"
     assert "SIM template" in b5["what_to_change_origin"]
+
+
+def test_demo_advice_preserves_original_selected_line_index():
+    need = {"id": "n1", "items": [{"sku_spec": "rtx 5070 ti", "condition": "new",
+                                     "allowed_conditions": ["new", "open-box"], "quantity": 1}]}
+    attrs = {"category": "gpu", "chipset": "RTX 5070 Ti", "length_mm": 303}
+    bid = {"id": "b1", "seller_id": "sim-seller", "origin": "SIM", "total_landed_price": 100,
+           "lines": [
+               {"sku_spec": "rtx 5070 ti", "unit_price": 110, "quantity": 1, "offered_condition": "new",
+                "page_condition": "new", "origin": "SIM", "listing_url": "https://example.com/new", "attrs": attrs},
+               {"sku_spec": "rtx 5070 ti", "unit_price": 100, "quantity": 1, "offered_condition": "open-box",
+                "page_condition": "open-box", "origin": "SIM", "listing_url": "https://example.com/open-box", "attrs": attrs},
+           ]}
+    card = demo_advise(need, bid, {"line": 1, "landed": 100}, [], {})
+    assert card["line"] == 1
+    assert card["claim_checks"][0]["line_index"] == 1
 
 
 # ---------- contracts ----------

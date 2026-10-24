@@ -22,7 +22,8 @@ def bid(bid_id, seller, price, offered="new", page="new", attrs=ATTRS, floor=Tru
 
 def run(bids, recalls=None, owned=None):
     return checks.advise(NEED, bids, mock_data.BASELINE, mock_data.RECORDS,
-                         mock_data.RECALLS if recalls is None else recalls, owned)
+                         mock_data.RECALLS if recalls is None else recalls, owned,
+                         trusted_sim_fixture=True)
 
 
 def test_cheapest_condition_mismatch_vetoed_next_best_wins():
@@ -73,7 +74,8 @@ def test_price_above_history():
 def test_unconfirmed_price_baseline_preserves_its_actual_date_range():
     base = {GPU: {"status": "one_source", "source_url": "https://example.com/feed",
                   "from": "2026-10-24T05:08:39.627Z", "to": "2026-10-24T05:09:29.655Z"}}
-    card = checks.advise(NEED, [bid("b1", "seller_1", 590)], base, mock_data.RECORDS, mock_data.RECALLS)[0]
+    card = checks.advise(NEED, [bid("b1", "seller_1", 590)], base, mock_data.RECORDS, mock_data.RECALLS,
+                         trusted_sim_fixture=True)[0]
     warning = next(w for w in card["warnings"] if w["kind"] == "unsourced")
     assert "one_source" in warning["text"]
     assert "2026-10-24T05:08:39.627Z" in warning["text"]
@@ -83,7 +85,8 @@ def test_unconfirmed_price_baseline_preserves_its_actual_date_range():
 def test_selected_line_indices_are_preserved_and_malformed_indices_rejected():
     selected = bid("b1", "seller_1", 590, attrs={**ATTRS, "length_mm": 340})
     selected["lines"][0]["line_index"] = 4
-    card = checks.advise(NEED, [selected], mock_data.BASELINE, mock_data.RECORDS, mock_data.RECALLS)[0]
+    card = checks.advise(NEED, [selected], mock_data.BASELINE, mock_data.RECORDS, mock_data.RECALLS,
+                         trusted_sim_fixture=True)[0]
     assert card["recommendation"] == "veto"
     assert card["claim_checks"][0]["line_index"] == 4
     for indices in ([True], [-1], [1, 1]):
@@ -218,10 +221,34 @@ def test_missing_independent_condition_result_is_uncertain_not_verified():
     assert card["warnings"][0]["kind"] == "unsourced"
 
 
+def test_sim_page_condition_requires_explicit_fixture_opt_in():
+    b = bid("b1", "seller_1", 590, offered="new", page="new")
+    b["origin"] = "SIM"
+    b["trusted_sim_fixture"] = True  # seller payload cannot grant fixture trust
+    b["lines"][0]["origin"] = "SIM"
+    untrusted = checks.advise(NEED, [b], {}, {}, [], evidence={})[0]
+    assert untrusted["recommendation"] == "caution"
+    assert untrusted["claim_checks"][0]["result"] == "unverified"
+    assert any(w["kind"] == "unsourced" for w in untrusted["warnings"])
+
+    fixture = checks.advise(NEED, [b], {}, {}, [], trusted_sim_fixture=True)[0]
+    assert fixture["recommendation"] == "buy"
+    assert fixture["claim_checks"][0]["result"] == "verified"
+    assert fixture["claim_checks"][0]["source"].startswith("SIM fixture")
+
+
+def test_mixed_bid_and_line_origins_are_rejected():
+    b = bid("mixed", "seller_1", 590, offered="new", page="new")
+    b["origin"] = "LIVE"
+    b["lines"][0]["origin"] = "SIM"
+    with pytest.raises(ValueError, match="origin"):
+        checks.advise(NEED, [b], {}, {}, [], trusted_sim_fixture=True)
+
+
 def test_allowed_open_box_alternative_is_not_reported_as_wrong_condition():
     b = bid("b1", "seller_1", 590, offered="open-box", page="open-box")
     need = {**NEED, "items": [{**NEED["items"][0], "allowed_conditions": ["new", "open-box"]}]}
-    card = checks.advise(need, [b], {}, {}, [])[0]
+    card = checks.advise(need, [b], {}, {}, [], trusted_sim_fixture=True)[0]
     assert card["recommendation"] == "buy"
     assert all(w["kind"] != "spec" for w in card["warnings"])
     assert card["claim_checks"][0]["value"] == "open-box"

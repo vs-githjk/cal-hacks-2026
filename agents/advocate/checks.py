@@ -55,6 +55,21 @@ def _norm(s) -> str:
     return " ".join(str(s or "").lower().replace("-", " ").replace("_", " ").split())
 
 
+def _line_origin(bid, line):
+    bid_origin = bid.get("origin")
+    line_origin = line.get("origin")
+    bid_origin = "SIM" if bid_origin == "simulated" else bid_origin
+    line_origin = "SIM" if line_origin == "simulated" else line_origin
+    allowed = {"LIVE", "MIRROR", "SIM"}
+    if bid_origin is not None and bid_origin not in allowed:
+        raise ValueError("bid origin is not recognized")
+    if line_origin is not None and line_origin not in allowed:
+        raise ValueError("line origin is not recognized")
+    if bid_origin and line_origin and bid_origin != line_origin:
+        raise ValueError("bid and line origins must match")
+    return line_origin or bid_origin or "SIM"
+
+
 CONDITIONS = {"new", "open box", "refurbished", "used"}
 _BASELINE_STATES = {"ok", "one_source", "stale", "empty"}
 
@@ -139,7 +154,8 @@ def _fit_warnings(bid, owned):
     return out
 
 
-def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence=None):
+def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence=None,
+                   trusted_sim_fixture=False):
     out = _fit_warnings(bid, owned)
     for line in bid["lines"]:
         raw_sku = line["sku_spec"]
@@ -155,12 +171,10 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence
             out.append(_warn("spec", f"This offer is {_cond(condition)}, outside the allowed conditions for {sku}.", url, 0))
 
         offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
-        origin = line.get("origin") or bid.get("origin", "SIM")
-        if origin == "simulated":
-            origin = "SIM"
-        if origin == "SIM":
+        origin = _line_origin(bid, line)
+        if origin == "SIM" and trusted_sim_fixture:
             # These repository-owned fixture pages are deterministic control cases.
-            # Never treat seller-supplied page_condition on LIVE/MIRROR as evidence.
+            # This opt-in is code/test-owned, never read from a Bid field.
             if offered and page and offered != page:
                 out.append(_warn("condition", f"{sku} is listed as {_cond(offered)}, the page says {_cond(page)}. "
                                  "The condition claim did not match the listing.", url, total))
@@ -228,18 +242,16 @@ def _line_indices(bid):
     return indices
 
 
-def _claim_checks(bid, evidence, wanted=None):
+def _claim_checks(bid, evidence, wanted=None, trusted_sim_fixture=False):
     """Bounded normalized evidence, suitable for the market's attach_claim_check hook."""
     checks = []
     for index, line in zip(_line_indices(bid), bid.get("lines", [])):
         condition = line.get("offered_condition")
         if condition not in {"new", "open-box", "refurbished", "used"}:
             continue
-        origin = line.get("origin") or bid.get("origin", "SIM")
-        if origin == "simulated":
-            origin = "SIM"
+        origin = _line_origin(bid, line)
         url = line.get("listing_url") or ""
-        if origin == "SIM":
+        if origin == "SIM" and trusted_sim_fixture:
             page = line.get("page_condition")
             if page not in {"new", "open-box", "refurbished", "used"}:
                 result, source = "unverified", "SIM fixture has no condition fixture"
@@ -252,7 +264,8 @@ def _claim_checks(bid, evidence, wanted=None):
             if not isinstance(check, dict):
                 check = {}
             result = check.get("result") if check.get("result") in {"verified", "false", "unverified"} else "unverified"
-            source = _check_source(check.get("method", "independent claim check"))
+            source = ("independent claim check" if origin == "SIM"
+                      else _check_source(check.get("method", "independent claim check")))
         listing_id = line.get("listing_id", "")
         listing_id = listing_id if isinstance(listing_id, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", listing_id) else ""
         row = {"bid_id": bid["id"], "line_index": index, "listing_id": listing_id,
@@ -267,18 +280,24 @@ def _claim_checks(bid, evidence, wanted=None):
 
 
 def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls: list[dict],
-           owned: dict | None = None, evidence: dict | None = None) -> list[dict]:
+           owned: dict | None = None, evidence: dict | None = None, *,
+           trusted_sim_fixture: bool = False) -> list[dict]:
     owned = owned if owned is not None else need.get("owned", {})
     wanted = {i["sku_spec"]: i for i in need.get("items", [])}
+    for bid in bids:
+        for line in bid.get("lines", []):
+            _line_origin(bid, line)
     cards = []
     for bid in bids:
-        warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted, evidence)
+        warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted, evidence,
+                                  trusted_sim_fixture=trusted_sim_fixture)
         kinds = {w["kind"] for w in warnings}  # decided before truncation so a veto is never hidden
         rec = "veto" if kinds & VETO_KINDS else "caution" if kinds - INFO_KINDS else "buy"
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
         warnings = sorted(warnings, key=lambda w: -w["dollar_impact"])[:MAX_WARNINGS]
         cards.append({"need_id": need["id"], "bid_id": bid["id"], "warnings": warnings,
-                      "claim_checks": _claim_checks(bid, evidence, wanted),
+                      "claim_checks": _claim_checks(bid, evidence, wanted,
+                                                     trusted_sim_fixture=trusted_sim_fixture),
                       "recommendation": rec, "wait_until": "", "call_reason": reason,
                       "rule_id": reason["rule_id"], "reason": reason["summary"],
                       "source_url": reason["source_url"]})
