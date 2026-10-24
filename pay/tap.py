@@ -27,7 +27,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from pay.mandate import Verdict, mandate_hash
-from pay.replay import NS_TAP, NonceStore
+from pay.mandate import verify as verify_mandate
+from pay.replay import NS_MANDATE, NS_TAP, NonceStore
 
 KEY_ENV = "VISA_TAP_PRIVATE_KEY_PATH"
 TAG = "agent-browser-auth"
@@ -209,7 +210,10 @@ def verify_request(
 
     `expected_mandate_hash`: the hash the merchant holds for this deal; a signed request for another deal
     fails. `mandate`: the mandate to bind; default is body["mandate"] when the body is a JSON object that
-    has one. The nonce is recorded only after every other check passes, so a forged request cannot burn it."""
+    has one. With neither `expected_mandate_hash` nor a mandate the request is bound to nothing and fails
+    with `unbound_mandate`. A mandate that is present must also pass `mandate.verify` (schema, hash, ttl,
+    expiry, status) and its nonce must not be spent in `store`. The nonce is recorded only after every other
+    check passes, so a forged request cannot burn it."""
     h = {k.lower(): v for k, v in headers.items()}
     for name in ("signature", "signature-input", "content-digest", "mandate-hash"):
         if not isinstance(h.get(name), str) or not h[name].strip():
@@ -271,6 +275,9 @@ def verify_request(
             parsed_body = None
         if isinstance(parsed_body, dict) and "mandate" in parsed_body:
             mandate = parsed_body["mandate"]
+    if mandate is None and expected_mandate_hash is None:
+        return _no("unbound_mandate", "request carries no mandate and no expected mandate hash")
+    current = now or datetime.now().astimezone()
     if mandate is not None:
         try:
             recomputed = mandate_hash(mandate)
@@ -278,6 +285,11 @@ def verify_request(
             return _no("mandate_hash_mismatch", "mandate in the request is malformed")
         if recomputed != mand_hash or mandate.get("hash") != mand_hash:
             return _no("mandate_hash_mismatch", "mandate fields do not match the signed hash")
+        live = verify_mandate(mandate, current)
+        if not live:
+            return live
+        if store.seen(NS_MANDATE, mandate["nonce"]):
+            return _no("replayed_mandate", "this mandate was already charged")
 
     if not store.consume(NS_TAP, f"{params['keyid']}:{params['nonce']}"):
         return _no("replayed_nonce", "this signed request was already used")

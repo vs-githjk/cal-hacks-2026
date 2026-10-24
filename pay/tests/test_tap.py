@@ -334,3 +334,67 @@ def test_signature_must_cover_query(priv, keys):
     h2["Signature-Input"] = h["Signature-Input"].replace(' "@query"', "")
     r = check(keys, h2, body)
     assert not r.ok and r.reason == "bad_component_set"
+
+
+# ---------- fix 2: bound, live, unused mandate ----------
+
+def test_request_with_no_expected_hash_and_no_mandate_fails_closed(priv, keys):
+    m = mandate()
+    body = json.dumps({"amount": m["amount"], "payee": m["payee"]}).encode()  # no "mandate" key
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=NOW)
+    r = check(keys, headers, body)
+    assert not r.ok and r.reason == "unbound_mandate"
+
+
+def test_unbound_request_does_not_burn_its_nonce(priv, keys):
+    m = mandate()
+    body = json.dumps({"amount": m["amount"]}).encode()
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=NOW)
+    store = NonceStore()
+    assert check(keys, headers, body, store).reason == "unbound_mandate"
+    assert check(keys, headers, body, store, expected_mandate_hash=m["hash"]).ok
+
+
+def test_expected_hash_alone_binds_the_request(priv, keys):
+    m = mandate()
+    body = json.dumps({"amount": m["amount"]}).encode()
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=NOW)
+    assert check(keys, headers, body, expected_mandate_hash=m["hash"]).ok
+
+
+def test_expired_mandate_re_signed_with_a_fresh_nonce_fails(priv, keys):
+    m = mandate()  # created NOW, expires NOW + 10 min
+    later = NOW + timedelta(minutes=11)
+    body = body_for(m)
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=later)
+    r = check(keys, headers, body, now=later)
+    assert not r.ok and r.reason == "expired"
+
+
+def test_used_mandate_status_re_signed_with_a_fresh_nonce_fails(priv, keys):
+    m = mandate()
+    m["status"] = "used"
+    _, body, headers = signed(priv, m)
+    r = check(keys, headers, body)
+    assert not r.ok and r.reason == "already_used"
+
+
+def test_mandate_nonce_already_spent_fails_even_with_a_fresh_request_nonce(priv, keys):
+    from pay.replay import NS_MANDATE
+    m = mandate()
+    store = NonceStore()
+    assert store.consume(NS_MANDATE, m["nonce"])  # the mandate was charged once already
+    _, body, headers = signed(priv, m)
+    r = check(keys, headers, body, store)
+    assert not r.ok and r.reason == "replayed_mandate"
+    _, body2, headers2 = signed(priv, m)  # fresh signature nonce, same mandate
+    assert check(keys, headers2, body2, store).reason == "replayed_mandate"
+
+
+def test_denied_mandate_fails_and_explicit_mandate_argument_is_verified_too(priv, keys):
+    m = mandate()
+    m["status"] = "denied"
+    body = b"{}"
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=NOW)
+    r = check(keys, headers, body, mandate=m)
+    assert not r.ok and r.reason == "denied"

@@ -59,7 +59,9 @@ verdict = verify_request(method="POST", url=url, headers=request_headers, body=b
 - `verify_request` fails with a reason: `missing_header`, `bad_signature_input`, `bad_component_set`, `bad_alg`,
   `bad_tag`, `unknown_key`, `ttl_too_long`, `signature_not_yet_valid`, `signature_expired`, `digest_mismatch`
   (body changed), `bad_signature` (method, host, path, digest or hash header changed), `mandate_mismatch`,
-  `mandate_hash_mismatch`, `replayed_nonce`. The nonce is recorded only after every other check passes, so a
+  `mandate_hash_mismatch`, `unbound_mandate` (neither an expected hash nor a mandate in the body), `replayed_nonce`,
+  plus every `mandate.verify` reason (`expired`, `already_used`, `denied`, ...) and `replayed_mandate` (the mandate nonce
+  is already spent in the store). The nonce is recorded only after every other check passes, so a
   forged request cannot burn a real one. Signatures live at most 300 s (default 60 s).
 - Keys: set `VISA_TAP_PRIVATE_KEY_PATH` to an Ed25519 PEM kept outside the repo. `generate_keypair(path)` writes a
   new one (mode 0600, never overwrites) for dev and tests; tests use a throwaway key in a temp dir. `*.pem` is
