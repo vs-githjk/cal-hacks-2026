@@ -15,7 +15,6 @@ from shield.classifier import UNAVAILABLE_RULE, default_classifier, run_classifi
 from shield.rules import RULES
 from shield.rules import secret_ask
 from shield.rules.base import BLOCK, QUARANTINE, SEVERITY_ORDER
-from shield.rules.intent import _role_allows_agent_rule as _seller_side
 from shield.text import make_doc
 
 ERROR_RULE = "shield.error"
@@ -38,6 +37,15 @@ def _verdict(verdict: str, rule_ids: list[str], severity: str, spans: list[dict]
         "request_id": request_id,
         "version": VERSION,
     }
+
+
+_BUYER_SIDE = frozenset({"buyer", "advocate", "marketplace"})
+
+
+def _seller_side(ctx: Mapping) -> bool:
+    """Secret asks are checked for every sender except the buyer's own side. The role is trimmed and lowercased; only
+    buyer, advocate and marketplace skip the check, so "seller_agent", "vendor", "Seller " and a missing role get it."""
+    return str((ctx or {}).get("sender_role") or "").strip().lower() not in _BUYER_SIDE
 
 
 def _as_text(message: Any) -> str:
