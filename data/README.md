@@ -33,6 +33,11 @@ Second source (provider apify-b, #47):
 apify-b re-checks listings the first set already has (Best Buy only); the baseline counts each listing URL once.
 
 Total for the test round: about $0.17 of the $205 credit.
+
+Central Computers (SF), #308: `compass/crawler-google-places` run 6SmKVMYDvJoTjqxwh found the SF stores, and
+`apify/website-content-crawler` runs K0YOWTRV573VJkfis and xu69poHiWFOfd54LI read the store's RTX 50 series page; about $0.21 in all.
+12 RTX 5070 Ti rows in `mirror/snapshots/centralcomputers-20261024T2112Z.json` (no `runs.json` record, so `--renormalize` never rewrites it).
+Condition is `unknown` (the pages do not say); per-store stock is the store's own figure. Central Computers is not a partner.
 - Return policy: no actor returned it in overview mode. Seller: only eBay and Amazon. Condition: only Best Buy and eBay; first-party stores leave it `unknown` (never guessed).
 - Newegg (keywords, then a search URL) and PCPartPicker both returned 0 items; low-use actors, skipped for now.
 - Prices are as listed at the snapshot time; show them with the MIRROR badge, URL and date. Do not compare them to a store's claims without a dated baseline (c11).
