@@ -166,3 +166,18 @@ def test_private_ranges_are_refused_before_connecting():
         with pytest.raises(ValueError, match="address not allowed"):
             guarded_get("http://shop.example/x", resolve=lambda h, ip=ip: [ip], request=lambda *a: calls.append(a))
         assert calls == [], ip
+
+
+def test_shipping_threshold_dollars_are_not_read_as_the_price():  # #99: never a false flag on an honest page
+    from data.claim_check import parse_claims
+    assert dict(parse_claims({"text": "New RTX 5070 Ti, free shipping over $35"})) == {"condition": "new"}
+    for text in ("Save $50 today, new", "$20 off, new", "New, $5 fee"):
+        assert "price" not in dict(parse_claims({"text": text})), text
+    assert check("New RTX 5070 Ti, free shipping over $35", HAL_GPU)["result"] == "verified"
+
+
+def test_two_price_amounts_make_the_price_unverified():
+    from data.claim_check import parse_claims
+    assert dict(parse_claims({"text": "$789 or $749 with trade-in"}))["price"] is None
+    out = check("$789 or $749 with trade-in", HAL_GPU, kind="price")
+    assert out["result"] == "unverified" and "more than one" in out["reason"]
