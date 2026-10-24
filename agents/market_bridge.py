@@ -27,6 +27,7 @@ _META_KEYS = ("lineIndex", "shipping", "listingId", "listingHash", "source", "sn
 _BID_COLUMNS = ("id", "round_id", "seller_id", "persona", "lines", "stated_total", "perks", "claims", "origin", "source", "line_meta_json")
 _RESULT_COLUMNS = ("bid_id", "seller_id", "rank", "landed", "reasons", "lines", "line_meta_json", "origin", "source", "binding_hash")
 _CANDIDATE_COLUMNS = ("round_id", "need_id", "bid_id", "seller_id", "origin", "rank", "landed", "lines_json", "line_meta_json", "binding_hash")
+_LINE_COLUMNS = ("sku_spec", "offered_spec", "offered_condition", "unit_price", "quantity")
 
 
 class MarketBridgeError(RuntimeError):
@@ -153,6 +154,8 @@ def _normalized_lines(raw: Any) -> list[dict[str, Any]]:
         raise MarketBridgeError("bid_readback_invalid")
     normalized = []
     for line in lines:
+        if isinstance(line, (list, tuple)) and len(line) == len(_LINE_COLUMNS):
+            line = dict(zip(_LINE_COLUMNS, line))
         if not isinstance(line, Mapping):
             raise MarketBridgeError("bid_readback_invalid")
         normalized.append({
@@ -383,9 +386,11 @@ class MarketBridge:
         row = _project(rows[0], ("id", "need_id", "state", "deadline", "review_deadline"))
         if row.get("id") != round_id or row.get("state") not in {"open", "review", "closed"}:
             raise MarketBridgeError("round_readback_invalid")
-        for field in ("deadline", "review_deadline"):
-            if row.get(field) is not None:
-                row[field] = _timestamp_iso(row[field])
+        if row.get("deadline") is not None:
+            row["deadline"] = _timestamp_iso(row["deadline"])
+        if row.get("review_deadline") is not None:
+            value = _option_value(row["review_deadline"])
+            row["review_deadline"] = _timestamp_iso(value) if value is not None else None
         return row
 
     def close_round(self, round_id: str) -> None:
@@ -404,29 +409,23 @@ class MarketBridge:
         self._call("attach_verdict", bid_id=_safe_id(bid_id, "bid_id"), verdict=verdict,
                    rule_ids=list(rule_ids), origin=origin)
 
-    def loss_reports(self) -> list[dict[str, Any]]:
+    def my_loss_reports(self) -> list[dict[str, Any]]:
         """Read only reports addressed to this authenticated seller through its private view."""
         if self.role != "seller":
             raise MarketBridgeError("loss_reports_role_mismatch")
-        columns = ("id", "round_id", "seller_id", "won", "gap_band", "reason", "source_url",
-                   "strategy_diff", "what_to_change", "what_to_change_origin", "origin", "created_at")
+        columns = ("id", "round_id", "seller_id", "won", "gap_band", "reason", "source_url", "created_at")
         rows = self._sql("SELECT " + ", ".join(columns) + " FROM my_loss_reports")
         output = []
         for raw in rows:
             row = _project(raw, columns)
             row["created_at"] = _timestamp_iso(row.get("created_at"))
             if (any(not isinstance(row.get(key), str) or not row[key] for key in
-                    ("id", "round_id", "seller_id", "source_url", "what_to_change", "what_to_change_origin"))
+                    ("id", "round_id", "seller_id", "source_url", "created_at"))
                     or not isinstance(row.get("won"), bool)
                     or row.get("gap_band") not in {"within5", "within10", "within20", "over20"}
                     or row.get("reason") not in {"price", "fit", "condition", "delivery", "record", "advocate_veto"}
-                    or row.get("origin") not in {"SIM", "MIRROR", "LIVE"}
-                    or not isinstance(row.get("strategy_diff"), list)):
+                    or row.get("won") is not False):
                 raise MarketBridgeError("loss_report_readback_invalid")
-            for step in row["strategy_diff"]:
-                if (not isinstance(step, Mapping) or set(step) != {"key", "from", "to"}
-                        or any(not isinstance(step.get(key), str) for key in ("key", "from", "to"))):
-                    raise MarketBridgeError("loss_report_readback_invalid")
             output.append(row)
         return output
 
@@ -673,9 +672,9 @@ class MarketBridge:
         if not isinstance(binding_hash, str) or not _HASH.fullmatch(binding_hash):
             raise MarketBridgeError("winner_binding_missing")
         reasons = _decode(winner.get("reasons"))
-        lines = _decode(winner.get("lines"))
+        lines = _normalized_lines(winner.get("lines"))
         metadata = _decode(winner.get("line_meta_json"))
-        if reasons != [] or not isinstance(lines, list) or not isinstance(metadata, list) or len(lines) != len(metadata):
+        if reasons != [] or not isinstance(metadata, list) or len(lines) != len(metadata):
             raise MarketBridgeError("winner_readback_invalid")
         if len(lines) != len(expected):
             return None
@@ -683,7 +682,7 @@ class MarketBridge:
         seen: set[str] = set()
         total_cents = 0
         for bid_line, meta in zip(lines, metadata):
-            if not isinstance(bid_line, Mapping) or not isinstance(meta, Mapping):
+            if not isinstance(meta, Mapping):
                 raise MarketBridgeError("winner_line_invalid")
             sku = _field(bid_line, "sku_spec")
             if sku not in expected or sku in seen:

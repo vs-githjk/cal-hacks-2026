@@ -159,13 +159,30 @@ def _review_candidates(referee_market, round_id: str) -> list[dict]:
     return selected
 
 
+def _ensure_market_round_state(referee_market, round_id: str, *, expected: str, transition_from: str) -> dict:
+    status = referee_market.round_status(round_id)
+    if status.get("state") == expected:
+        return status
+    if status.get("state") != transition_from:
+        raise MarketBridgeError("market_round_transition_invalid")
+    try:
+        referee_market.close_round(round_id)
+    except MarketBridgeError:
+        # The scheduler may have completed this exact transition after our read.
+        status = referee_market.round_status(round_id)
+        if status.get("state") != expected:
+            raise
+    else:
+        status = referee_market.round_status(round_id)
+    if status.get("state") != expected:
+        raise MarketBridgeError("market_round_transition_unconfirmed")
+    return status
+
+
 def _begin_market_review() -> list[dict]:
     _buyer_market, referee_market = market_clients()
     round_id = ROUND["market_round_id"]
-    referee_market.close_round(round_id)
-    status = referee_market.round_status(round_id)
-    if status.get("state") != "review":
-        raise MarketBridgeError("market_review_not_open")
+    _ensure_market_round_state(referee_market, round_id, expected="review", transition_from="open")
     for bid_id, check in ROUND.get("screened_bids", {}).items():
         referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
                                       rule_ids=check["rule_ids"], origin=check["origin"])
@@ -221,10 +238,7 @@ async def _finish_market_round(ctx: Context):
         reviewed_cards = ROUND.get("cards", {})
         buyer_market, referee_market = market_clients()
         round_id = ROUND["market_round_id"]
-        referee_market.close_round(round_id)
-        status = referee_market.round_status(round_id)
-        if status.get("state") != "closed":
-            raise MarketBridgeError("market_close_readback_invalid")
+        _ensure_market_round_state(referee_market, round_id, expected="closed", transition_from="review")
         winner = buyer_market.authoritative_winner(round_id, ROUND["need"]["items"])
         if winner is None:
             ROUND["market_winner"] = None
@@ -709,6 +723,15 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
 async def tick(ctx: Context):
     CHAT_DIAG.expire()
     now = business_now().timestamp()
+    goal = ROUND.get("goal")
+    transaction = ROUND.get("transaction")
+    tx_phase = transaction.get("phase") if isinstance(transaction, dict) else None
+    goal_state = goal.get("state") if isinstance(goal, dict) else None
+    if (goal_state in {"DONE", "EXPIRED", "PAUSED"} or ROUND.get("pending_hold")
+            or tx_phase in {"pending_approval", "paused", "approved", "submitted", "uncertain"}):
+        # A purchase hold is governed by its durable transaction and exact seller ACK,
+        # not the original hunt deadline. Terminal goals are never re-expired or restarted.
+        return
     if ROUND.get("goal") and hunt.expired(ROUND["goal"], now=business_now()):
         set_state("EXPIRED")
         ROUND["phase"] = "done"
@@ -1219,11 +1242,16 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
                 or order.get("id") != deal.get("id")
                 or order.get("need_id") != tx.get("need_id") or order.get("bid_id") != tx.get("bid_id")
                 or payment._cents(order.get("amount")) != payment._cents(mandate.get("amount"))
-                or mandate.get("status") != "approved" or not mandate.get("approval_id")
+                or not mandate.get("approval_id")
                 or not isinstance(tx.get("voice_approval"), dict)
                 or tx["voice_approval"].get("result") != "approved"
                 or tx["voice_approval"].get("mandate_hash") != mandate.get("hash")
                 or tx["voice_approval"].get("mandate_id") != mandate.get("id")
+                or tx["voice_approval"].get("id") != mandate.get("approval_id")
+                or order.get("approval_id") != mandate.get("approval_id")
+                or order.get("status") != "charged" or order.get("payment_ref") != msg.transaction_id
+                or payment._cents(deal.get("amount")) != payment._cents(mandate.get("amount"))
+                or result.get("status") != "charged"
                 or tx.get("mode") != (settlement or {}).get("mode")):
             raise ValueError("durable purchase does not match the exact charged deal")
         attempt = nonce_store().get_payment_attempt(mandate["hash"])
@@ -1254,17 +1282,27 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
                 or result.get("charge_id") != msg.transaction_id or result.get("mandate_hash") != mandate["hash"]
                 or result.get("origin") != "SIM"):
             raise ValueError("durable charge attempt does not match the seller acknowledgement")
-        _buyer_market, referee_market = market_clients()
+        buyer_market, referee_market = market_clients()
         mode = {"SIM": "sim", "stripe_test": "stripe_test"}.get(settlement.get("mode"))
         if mode is None:
             raise MarketBridgeError("settlement_mode_invalid")
-        referee_market.record_payment(mandate_hash=mandate["hash"],
-            payment_ref=msg.transaction_id, amount=mandate["amount"], mode=mode)
-        buyer_market, _ = market_clients()
         payment_status = buyer_market.purchase_status(mandate["hash"])
+        expected_cents = payment._cents(mandate["amount"])
+        if payment_status.get("payment_ref") is None:
+            if (payment_status.get("payment_mode") is not None
+                    or payment_status.get("payment_amount") is not None
+                    or payment_status.get("settled") is True):
+                raise MarketBridgeError("market_payment_readback_mismatch")
+            referee_market.record_payment(mandate_hash=mandate["hash"],
+                payment_ref=msg.transaction_id, amount=mandate["amount"], mode=mode)
+            payment_status = buyer_market.purchase_status(mandate["hash"])
+        elif (payment_status.get("payment_ref") != msg.transaction_id
+                or payment_status.get("payment_mode") != mode
+                or payment._cents(payment_status.get("payment_amount")) != expected_cents):
+            raise MarketBridgeError("market_payment_readback_mismatch")
         if (payment_status.get("payment_ref") != msg.transaction_id
                 or payment_status.get("payment_mode") != mode
-                or payment._cents(payment_status.get("payment_amount")) != payment._cents(mandate["amount"])):
+                or payment._cents(payment_status.get("payment_amount")) != expected_cents):
             raise MarketBridgeError("market_payment_readback_mismatch")
         settled = buyer_market.settle_goal(goal_id=tx["goal_id"], deal_id=tx["deal_id"],
             mandate_hash=mandate["hash"], payment_ref=msg.transaction_id)
@@ -1280,13 +1318,18 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
         goal.update(state="DONE", po_number=tx["deal_id"], reserved_amount=0)
         buyer_state.save_goal(state_db(), goal)
         buyer_state.save_transaction(state_db(), tx)
-        ROUND.update(transaction=tx, pending_hold=False, phase="done", order=None, mandate=None,
+        ROUND.update(transaction=tx, goal=goal, pending_hold=False, phase="done", order=None, mandate=None,
                      payment_commit=None)
-        await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement.")
     except Exception as exc:
         ctx.logger.warning(f"Settlement readback failed: {type(exc).__name__}")
         ROUND.update(pending_hold=True, phase="uncertain")
         await tell_owner(ctx, "The seller acknowledgement arrived, but Market could not confirm settlement. This purchase remains held.")
+        return
+    try:
+        await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement.")
+    except Exception as exc:
+        # The settled state is already durable. A failed owner notice must not relock it.
+        ctx.logger.warning(f"Settlement notice failed after durable completion: {type(exc).__name__}")
 
 
 @pay.on_message(CancelPayment)
