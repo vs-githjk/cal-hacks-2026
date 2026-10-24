@@ -133,3 +133,12 @@ def test_page_saying_not_in_stock_does_not_verify_an_in_stock_claim():
     for text in ("Not in stock", "Currently unavailable", "Sold out", "Out of stock", "OutOfStock"):
         body = b'<script type="application/json" id="listing">{"stock": "' + text.encode() + b'"}</script>'
         assert check_body("in stock", body, kind="stock")["result"] == "false", text
+
+
+def test_default_fetch_is_the_ssrf_guarded_fetch():
+    import pytest
+    from data.claim_check import default_fetch
+    from data.claim_check.fetch import guarded_get
+    assert default_fetch is guarded_get
+    with pytest.raises(ValueError):
+        default_fetch("http://169.254.169.254/latest/meta-data/")

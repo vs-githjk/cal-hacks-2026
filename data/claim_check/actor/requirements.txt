@@ -1,1 +1,3 @@
 apify>=2,<3
+pydantic>=2.8,<2.12  # newer pydantic breaks crawlee import (default and default_factory)
+browserforge<1.2.4  # newer browserforge drops DATA_FILES, which crawlee imports
