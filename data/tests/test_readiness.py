@@ -225,3 +225,154 @@ def test_the_bundled_actor_code_runs_on_its_own(tmp_path):
             f"print(check_page('https://x.example/p', open({str(ACTOR.parent / 'claim_check' / 'fixtures' / 'mirror-canadacomputers-269441.html')!r}).read())['status'])")
     out = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, cwd=tmp_path)
     assert out.stdout.strip() == "warns", out.stderr
+
+
+# --- #317: a bad page never reads as ready, and no page can hang or crash the check ------------------------------------
+def raw_page(product_json: str) -> str:
+    return f'<html><script type="application/ld+json">{product_json}</script></html>'
+
+
+def product_of(html: str) -> dict:
+    return json.loads(html.split(">", 2)[2].rsplit("</script>", 1)[0])
+
+
+def with_price(raw: str) -> str:
+    """page() with offers.price replaced by raw JSON text (so 1e400 and NaN reach the parser as written)."""
+    return page(price=123456.5).replace("123456.5", raw)
+
+
+@pytest.mark.parametrize("raw", ["0", "-5", "1e400", "-1e400", "NaN", "Infinity", "[1]", '{"a": 1}', '"1.749,99"', '"1,749.99"',
+                                 '"$5"', '"0"', '"-5"', '"abc"', '"nan"', '"1e400"', "true", '""', "null"])
+def test_a_bad_price_blocks(raw):
+    r = check_page("https://shop.example/x", with_price(raw), now=NOW)
+    assert r["status"] == "blocks" and "listing.price_unreadable" in rules(r) and "price" not in r["facts_read"], raw
+
+
+@pytest.mark.parametrize("raw,value", [("299.99", 299.99), ("5", 5.0), ('"299.99"', 299.99), ('" 1749 "', 1749.0)])
+def test_a_plain_price_is_read(raw, value):
+    r = check_page("https://shop.example/x", with_price(raw), now=NOW)
+    assert r["status"] == "ready" and r["facts_read"]["price"] == value
+
+
+def test_an_adversarial_script_soup_finishes_fast():
+    import time
+    from data.claim_check import page_facts
+    for soup in ("<script x application/ld+json" * 70_000, "<script " * 250_000 + ">", "<script application/ld+json>" * 72_000,
+                 '<script type="application/json" id="listing">' * 45_000, "<SCRIPT x application/ld+json>" + "</scrip" * 300_000):
+        assert len(soup) >= 2_000_000
+        t = time.monotonic()
+        r = check_page("https://shop.example/x", soup, now=NOW)
+        try:
+            page_facts(soup)
+        except ValueError:
+            pass
+        assert time.monotonic() - t < 2 and r["status"] != "ready"
+
+
+def test_script_blocks_are_still_found_in_any_case_and_with_other_attributes():
+    html = page().replace('<script type="application/ld+json">', '<SCRIPT nonce="ab" TYPE="Application/LD+JSON">').replace("</script>", "</SCRIPT >")
+    assert check_page("https://shop.example/m27q", html, now=NOW)["status"] == "ready"
+
+
+@pytest.mark.parametrize("html", [raw_page("[" * 100_000 + "]" * 100_000), raw_page('{"a":' * 100_000 + "1" + "}" * 100_000),
+                                  '<script type="application/json" id="listing">' + "[" * 100_000 + "]" * 100_000 + "</script>",
+                                  '<script type="application/json" id="listing">[1]</script>',
+                                  '<script type="application/json" id="listing">"x"</script>',
+                                  '<script type="application/json" id="listing">{bad</script>'])
+def test_a_page_that_cannot_be_parsed_is_unreadable_never_ready(html):
+    r = check_page("https://shop.example/x", html, now=NOW)
+    assert r["status"] == "unreadable" and r["findings"] == [] and r["summary"].startswith("UNREADABLE")
+    assert check_listing("https://shop.example/x", fetch=lambda u: html.encode(), now=NOW)["status"] == "unreadable"
+
+
+@pytest.mark.parametrize("listing", ["[1]", '"x"', "7", "[" * 100_000 + "]" * 100_000])
+def test_page_facts_handles_listing_json_that_is_not_an_object(listing):
+    from data.claim_check import check_claim
+    html = f'<script type="application/json" id="listing">{listing}</script>'
+    r = check_claim({"text": "In stock", "evidence_url": "https://shop.example/x"}, fetch=lambda u: html.encode())
+    assert r["result"] == "unverified"
+
+
+def test_the_full_product_node_wins_over_a_bare_one_first():
+    bare = {"@context": "https://schema.org/", "@type": "Product", "name": "SIM breadcrumb"}
+    alone = check_page("https://shop.example/m27q", page(), now=NOW)
+    both = check_page("https://shop.example/m27q", raw_page(json.dumps(bare)) + page(), now=NOW)
+    graph = check_page("https://shop.example/m27q", raw_page(json.dumps({"@graph": [bare, product_of(page())]})), now=NOW)
+    assert both["status"] == graph["status"] == alone["status"] == "ready" and both["facts_read"] == graph["facts_read"] == alone["facts_read"]
+
+
+def test_the_product_whose_url_is_the_page_wins():
+    other, mine = product_of(page(name="SIM Other Monitor", price=10)), product_of(page())
+    mine["url"] = "https://shop.example/m27q"
+    r = check_page("https://shop.example/m27q", raw_page(json.dumps([other, mine])), now=NOW)
+    assert r["facts_read"]["price"] == 299.99 and r["facts_read"]["title"] == "SIM 27in Monitor M27Q"
+
+
+@pytest.mark.parametrize("name", [["SIM 27in Monitor"], {"a": "SIM"}, 5, "", "  "])
+def test_a_name_that_is_not_text_is_not_ready(name):
+    r = check_page("https://shop.example/x", page(name="NAMEHERE").replace('"NAMEHERE"', json.dumps(name)), now=NOW)
+    assert r["status"] != "ready" and "listing.name_unreadable" in rules(r) and "title" not in r["facts_read"]
+
+
+@pytest.mark.parametrize("avail", [5, ["https://schema.org/InStock"], {"a": 1}, "https://schema.org/Banana", "InStockish", True])
+def test_an_availability_that_is_not_a_schema_org_value_is_not_ready(avail):
+    r = check_page("https://shop.example/x", page(availability="AVAIL").replace('"https://schema.org/AVAIL"', json.dumps(avail)), now=NOW)
+    assert r["status"] != "ready" and "listing.stock_unknown" in rules(r) and "stock" not in r["facts_read"]
+
+
+@pytest.mark.parametrize("avail", ["https://schema.org/InStock", "http://schema.org/InStock", "InStock", "schema:InStock",
+                                   "https://schema.org/LimitedAvailability"])
+def test_schema_org_availability_values_are_read(avail):
+    r = check_page("https://shop.example/x", page(availability="AVAIL").replace('"https://schema.org/AVAIL"', json.dumps(avail)), now=NOW)
+    assert r["status"] == "ready"
+
+
+@pytest.mark.parametrize("t,ok", [(["Product", "Thing"], True), ("https://schema.org/Product", True), ("Product", True),
+                                  ("NotAProduct", False), (["Thing"], False), ({"Product": 1}, False), (5, False), ("ProductCollection", False)])
+def test_only_a_real_product_type_is_read(t, ok):
+    r = check_page("https://shop.example/m27q", page().replace('"@type": "Product"', '"@type": ' + json.dumps(t)), now=NOW)
+    assert (r["status"] == "ready") is ok and (r["read_from"] == "page JSON-LD") is ok
+
+
+def test_a_restarted_run_summary_counts_the_listings_from_before_the_restart(monkeypatch):
+    urls = [REAL_URL, "https://shop.example/ok", "https://shop.example/bare", "https://shop.example/gone"]
+    actor = FakeActor({"listingUrls": urls})
+    # the first run delivered two rows (warns, ready) and saved its counts, then the container died before OUTPUT was written
+    actor.kv["STATE_next_listing"] = {"index": 2, "paid": False, "counts": {"blocks": 0, "warns": 1, "ready": 1, "unreadable": 0}}
+    a, _ = run(monkeypatch, None, actor=actor)
+    assert a.status[-1][0] == "4 listing(s): 1 blocks, 1 warns, 1 ready, 1 unreadable" and len(a.rows) == 2
+    assert a.kv["OUTPUT"]["checked"] == 4
+
+
+def test_the_state_saves_running_counts(monkeypatch):
+    a, _ = run(monkeypatch, {"listingUrls": [REAL_URL, "https://shop.example/ok"]})
+    assert a.kv["STATE_next_listing"]["counts"] == {"blocks": 0, "warns": 1, "ready": 1, "unreadable": 0}
+
+
+def test_the_readme_says_it_is_not_published_yet():
+    assert (ACTOR / "README.md").read_text().count("Not published on Apify yet") >= 2
+
+
+def test_a_slow_drip_body_hits_the_overall_deadline():
+    from data.claim_check import fetch as guarded
+    clock = [0.0]
+
+    class Drip:  # one byte every 10 s: never one socket timeout, but far past the overall deadline
+        def read1(self, n):
+            clock[0] += 10
+            return b"x"
+    with pytest.raises(ValueError, match="deadline"):
+        guarded._read_body(Drip(), None, 1000, end=30.0, clock=lambda: clock[0])
+    assert clock[0] <= 40
+
+
+def test_a_redirect_chain_past_the_overall_deadline_stops():
+    from data.claim_check import fetch as guarded
+    clock = [0.0]
+
+    def request(scheme, host, port, path, ip, timeout):
+        assert timeout <= 30
+        clock[0] += 12
+        return 302, {"location": "/next"}, None
+    with pytest.raises(ValueError, match="deadline"):
+        guarded.guarded_get("https://shop.example/x", resolve=lambda h: ["93.184.216.34"], request=request, clock=lambda: clock[0])

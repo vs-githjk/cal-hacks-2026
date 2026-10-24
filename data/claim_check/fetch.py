@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import time
 from urllib.parse import urlparse
 
 MAX_PAGE_BYTES = 2 * 1024 * 1024  # a listing page larger than 2 MB is refused (could not verify)
 MAX_REDIRECTS = 3
+DEADLINE_S = 30.0  # the whole fetch (every hop and the body), so a server that drips bytes cannot hold a run open
 UA = "TechBazaar-claim-check/0.1 (hackathon research)"
 CGNAT = ipaddress.ip_network("100.64.0.0/10")
 
@@ -42,16 +44,52 @@ def _request(scheme: str, host: str, port: int, path: str, ip: str, timeout: flo
         conn.sock = sock
     conn.request("GET", path, headers={"Host": host, "User-Agent": UA})
     r = conn.getresponse()
-    return r.status, {k.lower(): v for k, v in r.getheaders()}, r.read
+    return r.status, {k.lower(): v for k, v in r.getheaders()}, _BodyReader(r, conn.sock)
+
+
+def _past_deadline() -> ValueError:
+    return ValueError("page fetch passed the overall deadline")
+
+
+def _read_body(resp, sock, n: int, end: float, clock=time.monotonic) -> bytes:
+    """Up to n bytes, a chunk at a time, stopping with ValueError once clock() passes end (a socket timeout alone resets
+    on every byte, so one byte every few seconds would never trip it)."""
+    chunks, got = [], 0
+    while got < n:
+        left = end - clock()
+        if left <= 0:
+            raise _past_deadline()
+        if sock is not None:
+            sock.settimeout(left)
+        chunk = resp.read1(min(65536, n - got))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        got += len(chunk)
+    if clock() > end:
+        raise _past_deadline()
+    return b"".join(chunks)
+
+
+class _BodyReader:
+    """What _request returns as its reader: guarded_get reads it under the overall deadline. Called plainly, read(n)."""
+    def __init__(self, resp, sock):
+        self.resp, self.sock = resp, sock
+
+    def __call__(self, n: int, end: float | None = None, clock=time.monotonic) -> bytes:
+        return _read_body(self.resp, self.sock, n, clock() + DEADLINE_S if end is None else end, clock)
 
 
 def guarded_get(url: str, *, resolve=_resolve, request=_request, max_bytes: int = MAX_PAGE_BYTES,
-                max_redirects: int = MAX_REDIRECTS, timeout: float = 15.0) -> bytes:
+                max_redirects: int = MAX_REDIRECTS, timeout: float = 15.0, deadline: float = DEADLINE_S,
+                clock=time.monotonic) -> bytes:
     """Fetch a caller-supplied URL safely: http(s) only; every hop's host is resolved and EVERY address must be public
     (no localhost, private, link-local or cloud metadata, CGNAT, reserved, multicast); we connect to the checked IP
     itself, so DNS cannot change between check and connect; redirects are followed by hand and re-checked; the body
-    is capped at max_bytes. Any refusal raises ValueError, which the claim check reports as could not verify."""
+    is capped at max_bytes; the whole fetch must finish within `deadline` seconds. Any refusal raises ValueError, which the
+    claim check reports as could not verify."""
     from urllib.parse import urljoin
+    end = clock() + deadline
     for _ in range(max_redirects + 1):
         p = urlparse(url)
         if p.scheme not in ("http", "https") or not p.hostname:
@@ -61,7 +99,10 @@ def guarded_get(url: str, *, resolve=_resolve, request=_request, max_bytes: int 
             raise ValueError("address not allowed")
         port = p.port or (443 if p.scheme == "https" else 80)
         path = (p.path or "/") + (f"?{p.query}" if p.query else "")
-        status, headers, read = request(p.scheme, p.hostname, port, path, ips[0], timeout)
+        left = end - clock()
+        if left <= 0:
+            raise _past_deadline()
+        status, headers, read = request(p.scheme, p.hostname, port, path, ips[0], min(timeout, left))
         if status in (301, 302, 303, 307, 308):
             if not headers.get("location"):
                 raise ValueError("redirect without a location")
@@ -69,7 +110,9 @@ def guarded_get(url: str, *, resolve=_resolve, request=_request, max_bytes: int 
             continue
         if status != 200:
             raise ValueError(f"http {status}")
-        body = read(max_bytes + 1)
+        body = read(max_bytes + 1, end, clock) if isinstance(read, _BodyReader) else read(max_bytes + 1)
+        if clock() > end:
+            raise _past_deadline()
         if len(body) > max_bytes:
             raise ValueError(f"page too large (over {max_bytes} bytes)")
         return body

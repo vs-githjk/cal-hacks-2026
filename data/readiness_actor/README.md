@@ -8,6 +8,8 @@ It was built for [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), a m
 
 ## Real example (the default input)
 
+> **Not published on Apify yet.** The Actor runs from this folder today; the Apify Store page, the API call and the MCP tool below work once it is published.
+
 The default input is a real Canada Computers listing for an MSI RTX 5070 Ti. On its Product data from Oct 24 2026, the report is **WARNS: 0 block(s), 2 warning(s)**:
 
 - `listing.returns_unknown`: no return policy in the Product data, so an agent cannot compare returns across sellers.
@@ -20,15 +22,16 @@ The price ($1,749.99 CAD), condition (new), stock (sold out) and model number we
 | Rule | Severity | What an agent sees |
 |---|---|---|
 | `listing.no_structured_data` | blocks | No schema.org Product data, so price, stock and condition are guesses from page text |
-| `listing.price_unreadable` | blocks | Product data with no price |
+| `listing.price_unreadable` | blocks | Product data with no price an agent can read: it must be a number above 0, or plain digits such as "1749.99" (no currency sign, no thousands separator) |
 | `claim.*` | blocks | A title claim (such as "NEW" or "in stock") that the page's own data contradicts |
 | `listing.condition_unknown` | warns | No item condition, so new and used look the same |
-| `listing.stock_unknown` | warns | No availability, so an agent cannot tell if it ships now |
+| `listing.stock_unknown` | warns | No availability (a schema.org value such as https://schema.org/InStock), so an agent cannot tell if it ships now |
+| `listing.name_unreadable` | warns | No product name as plain text |
 | `listing.shipping_unknown` | warns | No shipping cost as a number, so no landed price |
 | `listing.returns_unknown` | warns | No return policy in the Product data |
 | `listing.model_unknown` | warns | No mpn, gtin or sku, so the exact model cannot be matched to maker specs |
 
-The facts come from the page's schema.org Product JSON-LD. A page with no structured data gets one finding, `listing.no_structured_data`, since nothing else can be read reliably.
+The facts come from the page's schema.org Product JSON-LD. A page with no structured data gets one finding, `listing.no_structured_data`, since nothing else can be read reliably. When several Product blocks are on a page, the one whose `url` or `@id` is the page is read, else the first with `offers`. A page whose data cannot be parsed is **unreadable** (free).
 
 **What it does not do:** it does not compare your price with other stores, and it does not check whether a part fits a buyer's build. Our dated price data covers too few products to be fair to every seller, so a price verdict would mostly say "no data".
 
@@ -54,6 +57,8 @@ One dataset row per listing: `status`, `summary`, the counts of `blocks` and `wa
 Each run also has Apify's run start event of $0.00005. A listing is charged only when its page was read, and it is charged before its row is delivered. When your spending limit is reached, the run stops and the status line says how many listings were not checked. A restarted run never charges a listing twice.
 
 ## Use it from your code or an AI agent
+
+> **Not published on Apify yet.** The Actor runs from this folder today; the Apify Store page, the API call and the MCP tool below work once it is published.
 
 **API (one call, results in the response):**
 

@@ -4,12 +4,14 @@
     check_page(url, html, now=None)         -> the same, for a page already fetched
 
 status: "blocks" (an agent would skip the listing), "warns" (an agent cannot confirm something), "ready" (no findings), or
-"unreadable" (the page could not be fetched; nothing is known). Findings are {rule_id, severity, what_an_agent_sees,
+"unreadable" (the page could not be fetched or parsed; nothing is known). Findings are {rule_id, severity, what_an_agent_sees,
 source_url, fix}, worded as what a shopping agent sees, never what the seller did.
 
-What is read: the page's schema.org Product JSON-LD (data.claim_check.page_facts plus shipping and currency here). Then:
-  page checks   no Product structured data (blocks), no price (blocks), no condition (warns), no return policy (warns),
-                no model identifier (mpn, gtin or sku) an agent can match to maker specs (warns);
+What is read: the page's schema.org Product JSON-LD (data.claim_check.page_facts and ld_product: the Product whose @id or
+url is the page, else the first with offers), with price, name and availability re-checked strictly here. Then:
+  page checks   no Product structured data (blocks), no price that is a finite number > 0 or a plain numeric string
+                (blocks), no name as text (warns), no condition (warns), no return policy (warns), no model identifier
+                (mpn, gtin or sku) an agent can match to maker specs (warns), availability not a schema.org value (warns);
   seller_report title claims against the page's own data (blocks), and shipping and stock stated (warns).
 The seller_report GPU fit rows are not run: they warn when OUR maker table lacks a model, which is not the seller's to fix.
 The dated retail price band is not used here: it is a 24 h window over our own captures, so it would be stale for a run on a
@@ -17,31 +19,43 @@ later day. Each page is fetched once, live, with data.claim_check.fetch.guarded_
 """
 from __future__ import annotations
 
-import json
+import math
 import re
 from datetime import datetime, timezone
 
-from data.claim_check import page_facts
+from data.claim_check import ld_offer as _offer, ld_product, page_facts
 from data.seller_report import _finding, findings_for
 
-def _ld_product(html: str) -> dict:
-    """The first schema.org Product node, or {}."""
-    for block in re.findall(r"<script[^>]+application/ld\+json[^>]*>(.*?)</script>", html, re.S | re.I):
-        try:
-            data = json.loads(block)
-        except ValueError:
-            continue
-        nodes = data if isinstance(data, list) else data.get("@graph", [data]) if isinstance(data, dict) else []
-        for node in nodes:
-            if isinstance(node, dict) and "Product" in str(node.get("@type")):
-                return node
-    return {}
+PLAIN_PRICE = re.compile(r"[0-9]+(\.[0-9]+)?")
+# schema.org ItemAvailability values (https://schema.org/ItemAvailability), by their lower-case name
+ITEM_AVAILABILITY = {v.lower(): v for v in ("InStock", "InStoreOnly", "OnlineOnly", "LimitedAvailability", "OutOfStock", "SoldOut",
+                                            "Discontinued", "PreOrder", "PreSale", "BackOrder", "MadeToOrder", "Reserved")}
 
 
-def _offer(product: dict) -> dict:
-    offer = product.get("offers") or {}
-    offer = offer[0] if isinstance(offer, list) and offer else offer
-    return offer if isinstance(offer, dict) else {}
+def _plain_price(v):
+    """A price an agent can read without guessing: a finite number > 0, or a plain numeric string ("299.99"), else None.
+    "1.749,99", "1,749.99", "$5", [1], {"a": 1}, NaN, 1e400, 0 and -5 are not (#317)."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, str):
+        if not PLAIN_PRICE.fullmatch(v.strip()):
+            return None
+        v = v.strip()
+    elif not isinstance(v, (int, float)):
+        return None
+    try:
+        v = float(v)
+    except (OverflowError, ValueError):
+        return None
+    return v if math.isfinite(v) and v > 0 else None
+
+
+def _availability(v):
+    """A schema.org ItemAvailability name ("InStock") from "https://schema.org/InStock", "schema:InStock" or "InStock", else None."""
+    if not isinstance(v, str):
+        return None
+    name = re.sub(r"^(https?://schema\.org/|schema:)", "", v.strip(), flags=re.I)
+    return ITEM_AVAILABILITY.get(name.lower())
 
 
 IDS = ("mpn", "gtin", "gtin8", "gtin12", "gtin13", "gtin14", "sku")
@@ -78,6 +92,9 @@ def _page_findings(url: str, facts: dict, how: str, product: dict | None = None)
                          "the price, stock or condition without guessing from the page text.", url,
                          "Add a schema.org Product block (JSON-LD) with offers: price, priceCurrency, availability and itemCondition.")]
     out = []
+    if not facts.get("title"):
+        out.append(_finding("listing.name_unreadable", "warns", "The Product data has no name an agent can read as text, so it "
+                            "cannot match the listing to what a shopper asked for.", url, "Put the product name as plain text in name."))
     if facts.get("price") is None:
         out.append(_finding("listing.price_unreadable", "blocks", "The Product data has no price an agent can read.", url,
                             "Put the price as a number in offers.price, with offers.priceCurrency."))
@@ -103,14 +120,31 @@ def _summary(status: str, findings: list[dict]) -> str:
     return f"{status.upper()}: {n_b} block(s), {n_w} warning(s); first: {lead['rule_id']}"
 
 
+def _unreadable(url: str, at: str, why: str, error: str) -> dict:
+    return {"url": url, "status": "unreadable", "summary": f"UNREADABLE: {why} ({error})", "findings": [], "facts_read": {},
+            "read_from": None, "checked_at": at, "origin": "LIVE", "error": error}
+
+
 def check_page(url: str, html: str, now: datetime | None = None) -> dict:
+    """Any parse failure (bad listing JSON, JSON nested too deeply, anything unexpected) is "unreadable", never "ready"."""
     at = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
     try:
-        facts, how = page_facts(html)
-    except (ValueError, TypeError, AttributeError):
-        facts, how = {}, "no structured data"
-    product = _ld_product(html) if how == "page JSON-LD" else None
+        return _check_page(url, html, at)
+    except Exception as e:  # RecursionError included: we do not know what the page says
+        return _unreadable(url, at, "the page could not be parsed", type(e).__name__)
+
+
+def _check_page(url: str, html: str, at: str) -> dict:
+    facts, how = page_facts(html, url)
+    product = ld_product(html, url) if how == "page JSON-LD" else None
     offer = _offer(product) if product else {}
+    if how != "no structured data":  # read the raw values ourselves: the claim check is lenient where an agent is not
+        facts = dict(facts)
+        facts["price"] = _plain_price(offer.get("price") if product is not None else facts.get("price"))
+        title = product.get("name") if product is not None else facts.get("title")
+        facts["title"] = title.strip() if isinstance(title, str) and title.strip() else None
+        if product is not None:
+            facts["stock"] = _availability(offer.get("availability"))
     findings = _page_findings(url, facts, how, product)
     if how != "no structured data":
         findings += findings_for(_card(url, facts, offer, at), None, [])
@@ -139,6 +173,5 @@ def check_listing(url: str, fetch=None, now: datetime | None = None) -> dict:
         body = fetch(url)
         html = body.decode("utf-8", "replace") if isinstance(body, (bytes, bytearray)) else str(body)
     except Exception as e:  # blocked, down, too large, not public: we do not know, so never "ready"
-        return {"url": url, "status": "unreadable", "summary": f"UNREADABLE: the page could not be fetched ({type(e).__name__})",
-                "findings": [], "facts_read": {}, "read_from": None, "checked_at": at, "origin": "LIVE", "error": type(e).__name__}
+        return _unreadable(url, at, "the page could not be fetched", type(e).__name__)
     return check_page(url, html, now=now)
