@@ -5,7 +5,7 @@
 ## SETUP (do this first)
 1. Your branch is `lane-b-market-floor`. Clone and switch (if the branch does not exist yet, create it with `git checkout -b lane-b-market-floor`): `git clone https://github.com/vs-githjk/cal-hacks-2026 && cd cal-hacks-2026 && git checkout lane-b-market-floor && git pull origin main`
 2. Copy `.env.example` to `.env` and fill only the keys this lane needs: SPACETIMEDB_URI, CARTESIA_API_KEY, CARTESIA_AGENT_ID (call screen and later persona voices). Ask Vidyut for values; never paste a key in chat, a doc or a commit, and never commit `.env`.
-3. You own `market/` and `web/`. Touch other lanes' folders only through `contracts/` (log changes in `docs/CHANGES.md`).
+3. You own `market/` and `web/`. Touch other lanes' folders only through `contracts/` (log changes in `a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`)`).
 4. Read `docs/kickoff/00-shared.md`, then this file.
 5. Open a PR to main per finished item, small and often. Never add Co-Authored-By.
 6. Details live in `docs/`, `contracts/` and the hub page: https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU
@@ -17,7 +17,7 @@ One live shared market everyone sees, and the screens that make the five beats v
 
 ## Vedant's existing lane-b work carries over
 
-Do not redo it. Branch `lane-b-market-floor`: market/rules (sealing and anti-snipe, floor, redaction, scoring, approval with idempotency, split-order optimizer, outcomes), the SpacetimeDB hello module and its Node and Python call path, your proposals SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord, FloorEvent v2. Finish the rename PR in the first hour inside b1: NeedItem `grade` becomes `condition` (new, open-box, refurbished, used), `pack_size` becomes `variant`; SpecCard gains `attrs` (socket, chipset, ram_type, tdp_w, length_mm, height_mm, form_factor, connectors) so Anoop's fit checker can read it; `recallsBlocked` says CPSC; fee numbers move to config (never hard-coded); fixtures use neutral names (Seller A, a CPU, a PSU); all tests stay green. Add `origin` (LIVE, MIRROR, SIM) and `source` to Bid and Claim. Post the SHA on docs/BOARD.md.
+Do not redo it. Branch `lane-b-market-floor`: market/rules (sealing and anti-snipe, floor, redaction, scoring, approval with idempotency, split-order optimizer, outcomes), the SpacetimeDB hello module and its Node and Python call path, your proposals SpecCard, SupplierTerms, OrderPlan, ReceivingEvent, QualityRecord, FloorEvent v2. Finish the rename PR in the first hour inside b1: NeedItem `grade` becomes `condition` (new, open-box, refurbished, used), `pack_size` becomes `variant`; SpecCard gains `attrs` (socket, chipset, ram_type, tdp_w, length_mm, height_mm, form_factor, connectors) so Anoop's fit checker can read it; `recallsBlocked` says CPSC; fee numbers move to config (never hard-coded); fixtures use neutral names (Seller A, a CPU, a PSU); all tests stay green. Add `origin` (LIVE, MIRROR, SIM) and `source` to Bid and Claim. Post the SHA on docs/board/<your lane>.md.
 
 ## BUILD ORDER TO SAT 10:00 (11.0 h; start Fri 21:45)
 

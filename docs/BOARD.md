@@ -1,3 +1,4 @@
+# Board history (frozen at Fri 22:30). New lines go in docs/board/<your lane>.md
 # Team board (one line per post, newest at the bottom)
 Format: `- [HH:MM] lane: what you did or found | @lane ask, if any`
 
