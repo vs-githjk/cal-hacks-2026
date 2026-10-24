@@ -173,7 +173,7 @@ def test_claim_adapter_checks_live_and_returns_normalized_checked_evidence():
     from advocate.checks import _claim_checks
 
     row = _claim_checks(bid, evidence)[0]
-    assert row == {"bid_id": "bid-live", "line_index": 0, "listing_id": "", "sku_spec": "gpu",
+    assert row == {"bid_id": "bid-live", "line_index": 0, "listing_id": "", "sku_spec": "this item",
                    "field": "condition", "value": "new", "result": "verified",
                    "evidence_url": "https://shop.example/gpu", "evidence_hash": "sha256:abc",
                    "checked_at": "2026-10-24T05:00:00Z", "source": "independent claim check", "origin": "LIVE"}

@@ -22,12 +22,21 @@ PATTERNS = [  # (field, regex, value from match); first match per field, every f
     ("return_days", r"(\d+)[- ]day returns?", lambda m: int(m.group(1))),
     ("stock", r"\b(out of stock|not in stock|unavailable|sold out)\b", lambda m: False),
     ("stock", r"\bin stock\b", lambda m: True),
+    ("warranty_months", r"(\d+)[- ]?(year|yr|month|mo)s?\b[- ]?(?:limited\s+)?warranty", lambda m: _warranty_months(int(m.group(1)), m.group(2))),
     ("condition", r"\bopen[- ]box\b", lambda m: "open-box"),
     ("condition", r"\brefurb", lambda m: "refurbished"),
     ("condition", r"\b(used|pre-owned)\b", lambda m: "used"),
     ("condition", r"\bnew\b", lambda m: "new"),
-    ("price", r"\$\s?([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(1))),
+    ("price", None, None),  # see _price: a $ amount next to over/save/off/fee/shipping is not the price
 ]
+# A keyword attaches only to its own amount: directly before the $ (spaces only, no comma or colon between) or directly
+# after it. "off" and "fee" follow their amount ("$50 off"), so "$50 off $749" keeps $749 as the price.
+NOT_PRICE_BEFORE = re.compile(r"\b(over|save|saves|saving|under|shipping|ship)\s*$", re.I)
+NOT_PRICE_AFTER = re.compile(r"^\s*(off|fee|fees)\b", re.I)
+# Amounts that are not the item price but say something about the offer: the claim's price is then unverified.
+OFFER_BEFORE = re.compile(r"\b(orders? of|up to|rebate|coupon|gift card|credit)\s*$", re.I)
+OFFER_AFTER = re.compile(r"^\s*(or more|gift card|rebate|coupon|credit|back)\b", re.I)
+
 LD_CONDITION = {"NewCondition": "new", "UsedCondition": "used", "RefurbishedCondition": "refurbished", "DamagedCondition": "used"}
 
 
@@ -45,6 +54,21 @@ def _money(v):
     return _num(m.group(0)) if m else None
 
 
+def _price(text):
+    """(amount,) for the claimed price; (None,) when it is ambiguous (two different amounts, or an offer amount such as a
+    gift card or an order minimum); () when no amount is the price."""
+    amounts, offer = [], False
+    for m in re.finditer(r"\$\s?([\d,]+(?:\.\d+)?)", text):
+        before, after = text[:m.start()], text[m.end():]
+        if OFFER_BEFORE.search(before) or OFFER_AFTER.search(after):
+            offer = True
+        elif not (NOT_PRICE_BEFORE.search(before) or NOT_PRICE_AFTER.search(after)):
+            amounts.append(_num(m.group(1)))
+    if offer or len(set(amounts)) > 1:
+        return (None,)
+    return (amounts[0],) if amounts else ()
+
+
 def parse_claims(claim):
     """Every field the claim states, in PATTERNS order. A "was $X" amount is not also read as the current price."""
     if claim.get("field"):
@@ -52,6 +76,10 @@ def parse_claims(claim):
     text = claim.get("text") or ""
     found = {}
     for field, rx, val in PATTERNS:
+        if field == "price":
+            for v in _price(text):
+                found.setdefault("price", v)
+            continue
         m = re.search(rx, text, re.I)
         if m and field not in found:
             found[field] = val(m)
@@ -71,7 +99,12 @@ from .fetch import guarded_get as default_fetch  # noqa: E402  (http(s) only, pu
 def page_facts(html):
     m = re.search(r'<script type="application/json" id="listing">(.*?)</script>', html, re.S)
     if m:
-        return json.loads(m.group(1)), "page listing JSON"
+        data = json.loads(m.group(1))
+        if isinstance(data, dict) and "warranty_months" not in data:
+            wm = _text_warranty(data.get("warranty"), data.get("description"))
+            if wm is not None:
+                data["warranty_months"] = wm
+        return data, "page listing JSON"
     for block in re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', html, re.S):
         try:
             data = json.loads(block)
@@ -85,15 +118,87 @@ def page_facts(html):
             cond = str(offer.get("itemCondition") or "").rsplit("/", 1)[-1]
             avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
             facts = {"title": node.get("name"), "price": _money(offer.get("price")),
-                     "condition": LD_CONDITION.get(cond), "stock": avail or None}
+                     "condition": LD_CONDITION.get(cond), "stock": avail or None,
+                     "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
+                     "warranty_months": _ld_warranty(node.get("warranty") or offer.get("warranty"))
+                     if (node.get("warranty") or offer.get("warranty")) else _text_warranty(node.get("description"))}
             return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD"
     return {}, "no structured data"
+
+
+def _return_days(days):
+    """Finite, non-negative, whole-number days only (a bool, Infinity, -30 or 14.5 is not a policy)."""
+    if isinstance(days, str) and days.strip().isdigit():
+        days = int(days)
+    if isinstance(days, bool) or not isinstance(days, (int, float)):
+        return None
+    if isinstance(days, float) and (days != days or days in (float("inf"), float("-inf")) or days != int(days)):
+        return None
+    return int(days) if days >= 0 else None
+
+
+def _one_return_policy(policy):
+    if not isinstance(policy, dict):
+        return None
+    if str(policy.get("returnPolicyCategory") or "").endswith("MerchantReturnNotPermitted"):
+        return "returns not permitted"
+    days = _return_days(policy.get("merchantReturnDays"))
+    return None if days is None else f"{days}-day returns"
+
+
+def _warranty_months(n, unit):
+    """N years or months -> whole months, or None when out of range (finite, non-negative, whole, at most 120 months)."""
+    n = _return_days(n)
+    if n is None:
+        return None
+    months = n * 12 if str(unit).lower().startswith(("y", "ann")) else n if str(unit).lower().startswith(("m", "mon")) else None
+    return months if months is not None and months <= 120 else None
+
+
+def _one_warranty(w):
+    d = w.get("durationOfWarranty") if isinstance(w, dict) else None
+    if not isinstance(d, dict):
+        return None
+    return _warranty_months(d.get("value"), d.get("unitCode") or d.get("unitText"))
+
+
+def _ld_warranty(w):
+    """schema.org WarrantyPromise -> months. A list counts only when every promise agrees."""
+    if isinstance(w, list):
+        found = {_one_warranty(x) for x in w}
+        return found.pop() if len(found) == 1 else None
+    return _one_warranty(w)
+
+
+def _text_warranty(*texts):
+    for t in texts:
+        m = re.search(PATTERNS[next(i for i, p in enumerate(PATTERNS) if p[0] == "warranty_months")][1], str(t or ""), re.I)
+        if m:
+            return _warranty_months(int(m.group(1)), m.group(2))
+    return None
+
+
+def _ld_returns(policy):
+    """schema.org MerchantReturnPolicy -> "N-day returns", "returns not permitted", or None when it says neither.
+    A list of policies counts only when every one agrees (we do not guess which country applies)."""
+    if isinstance(policy, list):
+        found = {_one_return_policy(p) for p in policy}
+        return found.pop() if len(found) == 1 else None
+    return _one_return_policy(policy)
+
+
+SCHEMA_AVAILABLE = {"instock", "limitedavailability", "onlineonly", "instoreonly"}
+SCHEMA_UNAVAILABLE = {"outofstock", "soldout", "discontinued", "preorder", "presale", "backorder"}  # not available now
 
 
 def in_stock(v):
     if isinstance(v, bool):
         return v
     s = str(v).lower()
+    if s.replace(" ", "") in SCHEMA_AVAILABLE:
+        return True
+    if s.replace(" ", "") in SCHEMA_UNAVAILABLE:
+        return False
     if re.search(r"out of stock|outofstock|not in stock|unavailable|sold out|soldout", s) or s.startswith("0 "):
         return False  # negations first: "not in stock" contains "in stock"
     if "in stock" in s or "instock" in s or re.match(r"\d+ (units|in stock|remaining)", s):
@@ -120,6 +225,8 @@ def judge(field, value, facts, at, series):
             return "unverified", "could not verify: the page states no condition"
         return ("verified", f"the page shows {page}") if page == value else \
             ("false", f"claim says {value}; differs from the listing at {at}: the page shows {page}")
+    if field == "price" and value is None:
+        return "unverified", "could not verify: the claim states more than one amount (another price, or an offer such as a gift card or order minimum)"
     if field == "price":
         page = _money(facts.get("price"))
         if page is None:
@@ -151,10 +258,21 @@ def judge(field, value, facts, at, series):
         if page is None:
             return "unverified", "could not verify: stock not stated on the page"
         word = lambda b: "in stock" if b else "out of stock"
-        return ("verified", f"the page shows {word(page)}") if page == value else \
-            ("false", f"claim says {word(value)}; differs from the listing at {at}: the page shows {word(page)}")
+        raw = str(facts.get("stock"))
+        shown = f"{raw} (not available now)" if raw.lower().replace(" ", "") in SCHEMA_UNAVAILABLE - {"outofstock", "soldout"} else word(page)
+        return ("verified", f"the page shows {shown}") if page == value else \
+            ("false", f"claim says {word(value)}; differs from the listing at {at}: the page shows {shown}")
+    if field == "warranty_months":
+        page = facts.get("warranty_months")
+        if page is None:
+            return "unverified", "could not verify: no warranty term on the page"
+        return ("verified", f"the page shows a {page}-month warranty") if page == value else \
+            ("false", f"claim says {value} months of warranty; differs from the listing at {at}: the page shows {page} months")
     if field == "return_days":
-        m = re.search(r"(\d+)[- ]day", str(facts.get("return_policy") or ""))
+        policy = str(facts.get("return_policy") or "")
+        if "not permitted" in policy:
+            return "false", f"claim says {value}-day returns; differs from the listing at {at}: the page says returns are not permitted"
+        m = re.search(r"(\d+)[- ]day", policy)
         if not m:
             return "unverified", "could not verify: no return window on the page"
         days = int(m.group(1))
@@ -187,7 +305,7 @@ def check_claim(claim, fetch=None, history=None):
         facts, source = page_facts(body.decode("utf-8", "replace"))
         results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history) if f == "was_price" else None))
                    for f, v in fields]
-    except (ValueError, TypeError, KeyError, AttributeError) as e:
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")
     rank = {"false": 0, "unverified": 1, "verified": 2}  # the worst field decides: one false part makes the claim false
     result = min((r for _, r, _ in results), key=rank.get)

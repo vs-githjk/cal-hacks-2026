@@ -41,3 +41,4 @@ Every coding agent: at the start of each session and after each finished task, r
 - Blocked? Comment on the issue with what you need; do not wait silently.
 - GitHub logins: Abhinav = Abh-129 (lane-a), Vedant = vedantshirvi (lane-b), Anoop = AnoopIbrampur (lane-c), Vidyut = vs-githjk (lane-d).
 - [23:28] lane-d hyphenate: a lowest-price MIRROR reference was fooled by data/mirror ebay_sold snapshots ($640 for a $1,250 card, sold history not asking price); use the median of retail listings and skip *sold* files | any price check built on snapshots must exclude sold-history
+- [04:17] Codex truth: seller-controlled labels and all warning/call/evidence citations must use closed templates or strict HTTP(S) validation, with accepted public query/fragment preserved | prevents unsafe text leaks while retaining review links

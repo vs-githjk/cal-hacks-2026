@@ -6,9 +6,12 @@ as {category: SpecCard attrs}, e.g. {"psu": {"wattage": 750}, "case": {"max_gpu_
 Fit is Lane C's checker (data.fit_checker), run once per bid on the bid's parts plus the owned parts.
 Fee fields are ignored: the advocate never sees a fee. Text rule: neutral wording ("did not match"), no en/em dashes.
 """
+import re
+from datetime import datetime
+from urllib.parse import urlsplit
+
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
-from urllib.parse import urlsplit, urlunsplit
 
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
@@ -52,12 +55,43 @@ def _norm(s) -> str:
     return " ".join(str(s or "").lower().replace("-", " ").replace("_", " ").split())
 
 
+CONDITIONS = {"new", "open box", "refurbished", "used"}
+_BASELINE_STATES = {"ok", "one_source", "stale", "empty"}
+
+
+def _cond(value) -> str:
+    value = _norm(value)
+    return value if value in CONDITIONS else "an unrecognized condition"
+
+
+def _item(sku, wanted) -> str:
+    return sku if sku in (wanted or {}) else "this item"
+
+
+def _seller(supplier_id) -> str:
+    return f"Seller {supplier_id}" if re.fullmatch(r"seller_\d{1,3}", str(supplier_id)) else "This seller"
+
+
+def _timestamp(value) -> str:
+    if not isinstance(value, str) or len(value) > 40:
+        return ""
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return value
+
+
+def _evidence_hash(value) -> str:
+    return value if isinstance(value, str) and re.fullmatch(r"(?:sha256:)?[0-9a-f]{1,64}", value) else ""
+
+
 def _warn(kind, text, url, dollars, rule_id=None):
     """Every warning carries a source. A veto needs evidence: a condition veto with no listing link is
     downgraded to a caution that says so; code-decided warnings fall back to the rule's own source."""
     if not url and kind in ("condition", "spec"):
         kind, text = "unsourced", text + " No listing link to cite, so this is a caution, not a veto."
-    url = url or CODE_SOURCES.get(kind) or CODE_SOURCES["unsourced"]
+    url = _safe_source_url(url or CODE_SOURCES.get(kind) or CODE_SOURCES["unsourced"])
     return {"kind": kind, "rule_id": rule_id or f"advocate.{kind}",
             "text": text.replace("\u2014", ",").replace("\u2013", " to "),
             "source_url": url, "dollar_impact": round(float(dollars), 2)}
@@ -108,49 +142,51 @@ def _fit_warnings(bid, owned):
 def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence=None):
     out = _fit_warnings(bid, owned)
     for line in bid["lines"]:
-        sku = line["sku_spec"]
+        raw_sku = line["sku_spec"]
+        sku = _item(raw_sku, wanted)
         total = line["unit_price"] * line["quantity"]
         url = line.get("listing_url", "")
 
         # an honest offer of a different condition than asked for: caution, not a veto
-        want = (wanted or {}).get(sku)
+        want = (wanted or {}).get(raw_sku)
         allowed = {_norm(c) for c in (want.get("allowed_conditions") or [want.get("condition")])} if isinstance(want, dict) else {_norm(want)}
         condition = _norm(line.get("offered_condition"))
         if condition and condition not in allowed:
-            out.append(_warn("spec", f"This offer's condition is not in the allowed conditions for {sku}.", url, 0))
+            out.append(_warn("spec", f"This offer is {_cond(condition)}, outside the allowed conditions for {sku}.", url, 0))
 
         offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
         origin = line.get("origin") or bid.get("origin", "SIM")
         if origin == "simulated":
             origin = "SIM"
-        if evidence is None:
-            if offered and page and offered != page:
-                out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
-                                 "The condition claim did not match the listing.", url, total))
-        elif origin == "SIM":
+        if origin == "SIM":
             # These repository-owned fixture pages are deterministic control cases.
             # Never treat seller-supplied page_condition on LIVE/MIRROR as evidence.
             if offered and page and offered != page:
-                out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
+                out.append(_warn("condition", f"{sku} is listed as {_cond(offered)}, the page says {_cond(page)}. "
                                  "The condition claim did not match the listing.", url, total))
         else:
             checked = evidence.get((url, line.get("offered_condition"))) if isinstance(evidence, dict) else None
             result = checked.get("result") if isinstance(checked, dict) else None
             if result == "false":
-                warning = _warn("condition", f"{sku} condition claim did not match the independently checked listing.",
+                warning = _warn("condition", f"The condition claim for {sku} did not match the independently checked listing.",
                                 url, total)
-                warning.update({k: checked[k] for k in ("checked_at", "evidence_hash") if isinstance(checked.get(k), str)})
+                warning.update({"checked_at": _timestamp(checked.get("checked_at")),
+                                "evidence_hash": _evidence_hash(checked.get("evidence_hash"))})
                 out.append(warning)
             elif result != "verified":
                 warning = _warn("unsourced", f"The condition claim for {sku} could not be independently verified.", url, 0)
                 if isinstance(checked, dict):
-                    warning.update({k: checked[k] for k in ("checked_at", "evidence_hash") if isinstance(checked.get(k), str)})
+                    warning.update({"checked_at": _timestamp(checked.get("checked_at")),
+                                    "evidence_hash": _evidence_hash(checked.get("evidence_hash"))})
                 out.append(warning)
 
         base = baseline.get(_norm(sku))
         if base and base.get("status") not in (None, "ok"):
-            span = f", observed {base['from']} to {base['to']}" if base.get("from") and base.get("to") else ""
-            out.append(_warn("unsourced", f"The price history for {sku} is unconfirmed ({base['status']}{span}).",
+            raw_status = base.get("status")
+            status = raw_status if isinstance(raw_status, str) and raw_status in _BASELINE_STATES else "unconfirmed"
+            start, end = _timestamp(base.get("from")), _timestamp(base.get("to"))
+            span = f", observed {start} to {end}" if start and end else ""
+            out.append(_warn("unsourced", f"The price history for {sku} is unconfirmed ({status}{span}).",
                              base.get("source_url", ""), 0))
         elif base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
             over = (line["unit_price"] - base["unit_price"]) * line["quantity"]
@@ -160,17 +196,17 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence
 
         mirror = bid.get("origin") == "MIRROR"
         recall_rows = [r for r in recalls or [] if not mirror or r.get("origin") in ("LIVE", "MIRROR")]
-        hit = next((r for r in recall_rows if r["match"] in _norm(sku)), None)
+        hit = next((r for r in recall_rows if isinstance(r.get("match"), str) and r["match"] in _norm(raw_sku)), None)
         if hit:
-            out.append(_warn("recall", f"{sku} matches a CPSC recall entry ('{hit['match']}').",
+            out.append(_warn("recall", "This product matches a CPSC recall entry.",
                              hit["source_url"], total))
         elif mirror and not recall_rows:
             out.append(_warn("unsourced", "Recall status was not checked against a dated source.",
                              CODE_SOURCES["recall_unknown"], 0))
 
     rec = records.get(bid.get("seller_of_record") if bid.get("origin") == "MIRROR" else bid["supplier_id"])
-    if rec and rec["record"] != "good":
-        out.append(_warn("record", f"Seller {bid['supplier_id']} has a '{rec['record']}' record.",
+    if rec and rec.get("record") != "good":
+        out.append(_warn("record", f"{_seller(bid['supplier_id'])} has a caution record.",
                          rec.get("source_url", ""), 0))
     elif bid.get("origin") == "MIRROR" and not rec:
         out.append(_warn("unsourced", "No independently sourced seller record was available.",
@@ -192,7 +228,7 @@ def _line_indices(bid):
     return indices
 
 
-def _claim_checks(bid, evidence):
+def _claim_checks(bid, evidence, wanted=None):
     """Bounded normalized evidence, suitable for the market's attach_claim_check hook."""
     checks = []
     for index, line in zip(_line_indices(bid), bid.get("lines", [])):
@@ -213,12 +249,16 @@ def _claim_checks(bid, evidence):
             check = {"result": result}
         else:
             check = evidence.get((url, condition), {}) if isinstance(evidence, dict) else {}
+            if not isinstance(check, dict):
+                check = {}
             result = check.get("result") if check.get("result") in {"verified", "false", "unverified"} else "unverified"
             source = _check_source(check.get("method", "independent claim check"))
-        row = {"bid_id": bid["id"], "line_index": index, "listing_id": line.get("listing_id", ""),
-               "sku_spec": line.get("sku_spec", ""), "field": "condition", "value": condition,
-               "result": result, "evidence_url": _safe_source_url(check.get("evidence_url", url)),
-               "evidence_hash": check.get("evidence_hash", ""), "checked_at": check.get("checked_at", ""),
+        listing_id = line.get("listing_id", "")
+        listing_id = listing_id if isinstance(listing_id, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", listing_id) else ""
+        row = {"bid_id": bid["id"], "line_index": index, "listing_id": listing_id,
+               "sku_spec": _item(line.get("sku_spec", ""), wanted), "field": "condition", "value": condition,
+               "result": result, "evidence_url": _safe_evidence_url(check.get("evidence_url", url)),
+               "evidence_hash": _evidence_hash(check.get("evidence_hash", "")), "checked_at": _timestamp(check.get("checked_at", "")),
                "source": source, "origin": origin}
         checks.append(row)
         if len(checks) >= MAX_CLAIM_CHECKS:
@@ -238,7 +278,7 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
         warnings = sorted(warnings, key=lambda w: -w["dollar_impact"])[:MAX_WARNINGS]
         cards.append({"need_id": need["id"], "bid_id": bid["id"], "warnings": warnings,
-                      "claim_checks": _claim_checks(bid, evidence),
+                      "claim_checks": _claim_checks(bid, evidence, wanted),
                       "recommendation": rec, "wait_until": "", "call_reason": reason,
                       "rule_id": reason["rule_id"], "reason": reason["summary"],
                       "source_url": reason["source_url"]})
@@ -261,14 +301,28 @@ def call_reason(warnings: list[dict], bid: dict) -> dict:
 
 
 def _safe_source_url(value: str) -> str:
+    """Keep a valid public citation intact; replace malformed or unsafe URLs."""
+    return value if _valid_source_url(value) else CODE_SOURCES["unsourced"]
+
+
+def _safe_evidence_url(value: str) -> str:
+    """Keep evidence citations intact or omit an unsafe evidence reference."""
+    return value if _valid_source_url(value) else ""
+
+
+def _valid_source_url(value: str) -> bool:
+    if (not isinstance(value, str) or not value or len(value) > 2048
+            or any(char.isspace() or ord(char) < 0x20 or ord(char) == 0x7f for char in value)):
+        return False
     try:
         parsed = urlsplit(value)
-        if parsed.scheme not in {"https", "http"} or not parsed.hostname or parsed.username or parsed.password:
-            return CODE_SOURCES["unsourced"]
-        host = parsed.hostname.lower() + (f":{parsed.port}" if parsed.port else "")
-        return urlunsplit((parsed.scheme, host, parsed.path[:200], "", ""))[:240]
+        if (parsed.scheme not in {"https", "http"} or not parsed.netloc or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return False
+        parsed.port  # force malformed ports to fail closed
+        return True
     except (ValueError, TypeError):
-        return CODE_SOURCES["unsourced"]
+        return False
 
 
 def _check_source(value: str) -> str:
