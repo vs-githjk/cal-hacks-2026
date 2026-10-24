@@ -107,6 +107,20 @@ def test_a_warranty_day_count_never_becomes_a_returns_day_count():
     assert market_returns_days(cfg["perks"]) == 14 and "90-day returns" not in cfg["perks"], cfg["perks"]
 
 
+@pytest.mark.parametrize("returns", [
+    "no returns, 90-day limited warranty",
+    "No returns accepted. 2 year warranty, 60 days parts guarantee",
+    "final sale, 30 days of free support",
+])
+def test_a_shop_with_no_returns_never_gets_a_public_N_day_returns_perk(returns):
+    """A day count that belongs to a warranty, guarantee or support clause is not a returns policy (the market would
+    read it as one and skip the 2 percent no-returns penalty)."""
+    cfg = client.build_config(answers(returns=returns))
+    assert market_returns_days(cfg["perks"]) == 0, cfg["perks"]
+    assert not any(re.search(r"\d+-day returns", p) for p in cfg["perks"]), cfg["perks"]
+    assert any(returns in p for p in cfg["perks"])  # the owner's words are still shown
+
+
 def test_nine_perks_and_a_returns_answer_still_fit_the_ten_perk_limit():
     nine = [f"perk {i}" for i in range(9)]
     cfg = client.build_config(answers(returns="30 days", perks=nine))
@@ -399,6 +413,16 @@ def test_skill_says_only_what_the_ranking_does_today_about_perks_and_returns():
     assert "condition and a returns policy of at least 30 days count" in text
     assert "other perks are shown to the buyer but do not change rank today" in text
     assert "perks all count" not in text and "not decoration" not in text
+
+
+def test_skill_says_a_new_shops_agent_is_not_asked_to_bid_automatically():
+    """buyer_agent.live_sellers() asks only common.SELLERS, so a custom seller bids once the buyer is told its address.
+    Same wording as the /sell page (web/src/app/sell/page.tsx)."""
+    text = " ".join((SKILL_DIR / "SKILL.md").read_text(encoding="utf-8").split())
+    assert "The buyer agent only asks the sellers on its list." in text
+    assert "Your agent bids once the buyer is told its address; that is not automatic yet." in text
+    page = " ".join((REPO / "web" / "src" / "app" / "sell" / "page.tsx").read_text(encoding="utf-8").split())
+    assert "The buyer agent only asks the sellers on its list. Your agent bids once the buyer is told its address; that is not automatic yet." in page
 
 
 def test_marketplace_and_plugin_manifests_point_at_the_skill():

@@ -116,7 +116,7 @@ _CHECKOUT = rx(r"\b(?:check-?out|payment\s+page|secure\s+(?:form|page|payment)|s
 _ASK_CEILING = rx(r"\b" + _ASK_CEILING_VERB + r"\b[^.\n]{0,60}?" + _PRIVATE_CEILING + r"|\b" + _PRIVATE_CEILING + r"\b[^.\n]{0,40}?\b(?:please|so\s+we|so\s+i)\b")
 _ASK_SECRET = rx(r"\b" + _ASK_SECRET_VERB + r"\b[^.\n]{0,60}?\b" + _SECRET + r"\b|"
                  r"(?:^|[.!?;:\n])\s*(?:state|name)\b[^.\n]{0,40}?\b(?:your|you\s+hold|(?:owner|buyer)(?:'s|s')?)\b[^.\n]{0,40}?\b"
-                 + _SECRET + r"\b|(?:^|[.!?;:\n])\s*(?:state|name)\s+the\s+(?:\w+\s+)?" + _SECRET + r"\b")
+                 + _SECRET + r"\b|(?:^|[.!?;:\n])\s*(?:state|name)\s+the\s+(?:[\w-]+\s+){0,2}" + _SECRET + r"\b")
 
 
 def check_ask(doc, ctx):

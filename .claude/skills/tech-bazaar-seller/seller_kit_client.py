@@ -85,19 +85,24 @@ def _pricing(p: Any) -> Any:
 
 _MARKET_DAYS = re.compile(r"(\d+)[- ]day returns?", re.I)  # how the market reads return days (market/rules/scoring.ts returnsDays)
 _TIED_DAYS = re.compile(r"(\d+)\s*-?\s*days?\s*(?:returns?|refund|money)\b", re.I)
-_ANY_DAYS = re.compile(r"(\d+)\s*-?\s*days?\b(?!\s*-?\s*(?:warranty|guarantee))", re.I)
+_DAYS = re.compile(r"(\d+)\s*-?\s*days?\b", re.I)
+_NO_RETURNS = re.compile(r"\bno\s+returns?\b|\bfinal\s+sale\b|\bnon-?\s?refundable\b|\bno\s+refunds?\b", re.I)
+_NOT_RETURNS = re.compile(r"warrant|guarant|support", re.I)
 
 
 def _return_days(text: Any) -> int:
     """The day count the owner tied to returns ('30 days returns', '7 day money back'), or the one day count in the
-    answer ('30 days, no restocking fee'); 0 when none or when several are given and none says returns."""
+    answer ('30 days, no restocking fee') when nothing in the answer says there are no returns; day counts in a clause
+    (the text between commas, periods and semicolons) about a warranty, guarantee or support never count; 0 otherwise."""
     text = str(text)
     if _MARKET_DAYS.search(text):
         return 0  # the market already reads the owner's own words
     tied = _TIED_DAYS.findall(text)
     if tied:
         return int(tied[0])
-    found = _ANY_DAYS.findall(text)
+    if _NO_RETURNS.search(text):
+        return 0
+    found = [n for c in re.split(r"[,.;]", text) if not _NOT_RETURNS.search(c) for n in _DAYS.findall(c)]
     return int(found[0]) if len(found) == 1 else 0
 
 
