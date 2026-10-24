@@ -548,6 +548,7 @@ def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch
 
 def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, monkeypatch):
     ctx = Context()
+    buyer.ROUND['need']['id'] = 'alice-need'
     buyer.ROUND.update(owner='alice', phase='done', goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
     asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
     current_need = buyer.ROUND['need']['id']
@@ -559,8 +560,31 @@ def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, 
         cards_json=json.dumps([card(need_id='alice-need', bid_id='alice-bid')]))))
     assert buyer.ROUND['owner'] == 'bob' and buyer.ROUND['need']['id'] == current_need
     assert buyer.ROUND['phase'] == 'advice' and buyer.ROUND['attempts'] == 0
-    assert screened
+    assert buyer.ROUND['retired_need_ids'] == ['alice-need']
+    assert not screened
     assert not ctx.sent
+
+
+def test_known_retired_malformed_shield_blocked_advocate_reply_is_inert(buyer, monkeypatch):
+    buyer.ROUND['retired_need_ids'] = ['old-need']
+    before = dict(buyer.ROUND)
+    screened = []
+    monkeypatch.setattr(buyer, 'blocked_reasons', lambda *args: screened.append(args) or 'blocked')
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([{'need_id': 'old-need'}]))))
+    assert buyer.ROUND == before
+    assert not screened
+    assert not ctx.sent
+
+
+def test_unknown_foreign_invalid_advocate_reply_fails_current_round(buyer):
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
+        cards_json=json.dumps([card(need_id='foreign-need', bid_id='foreign-bid', recommendation='surprise')]))))
+    assert buyer.ROUND['phase'] == 'waiting'
+    assert buyer.ROUND['attempts'] == 1
+    assert 'Nothing ordered' in ctx.owner_text()
 
 
 def test_ordered_round_cannot_be_cleared_by_cancel_or_new_goal(buyer):

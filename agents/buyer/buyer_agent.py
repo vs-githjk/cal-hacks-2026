@@ -26,6 +26,7 @@ from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember,
 from logic import decide, make_order, sealed
 
 ADVICE_TIMEOUT_S = 15
+RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE
 CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
 SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
@@ -196,11 +197,15 @@ async def handle_text(ctx: Context, sender: str, text: str):
     owned = remember(buyer_id, told)
     goal = apply_owned(goal, owned)
     need = need_from_goal(goal)
+    retired_need_ids = list(ROUND.get("retired_need_ids", []))
+    old_need_id = ROUND.get("need", {}).get("id")
+    if old_need_id and old_need_id != need["id"]:
+        retired_need_ids = (retired_need_ids + [old_need_id])[-RETIRED_NEED_HISTORY:]
     ROUND.clear()
     # Async seller/advocate callbacks must reply on the owner's Chat Protocol session.
     ROUND.update(owner=sender, owner_context=ctx if sender != WEB else None,
                  goal=goal, owned=owned, need=need, bids=[], personas={}, cards={},
-                 attempts=0, last_sent={})
+                 attempts=0, last_sent={}, retired_need_ids=retired_need_ids)
     out = skip_lines(goal, owned)
     if not need["items"]:
         set_state("DONE")
@@ -218,8 +223,12 @@ async def handle_text(ctx: Context, sender: str, text: str):
 async def start_round(ctx: Context, need: dict | None = None):
     """Open a sealed round. A retry gets a fresh Need id so stale bids from the last round cannot count."""
     need = need or need_from_goal(ROUND["goal"])
+    retired_need_ids = list(ROUND.get("retired_need_ids", []))
+    old_need_id = ROUND.get("need", {}).get("id")
+    if old_need_id and old_need_id != need["id"]:
+        retired_need_ids = (retired_need_ids + [old_need_id])[-RETIRED_NEED_HISTORY:]
     token = uuid4().hex
-    ROUND.update(need=need, bids=[], personas={}, cards={}, seller_checks={},
+    ROUND.update(need=need, retired_need_ids=retired_need_ids, bids=[], personas={}, cards={}, seller_checks={},
                  reviewed=False, order=None, mandate=None, told_foreign_busy=False,
                  phase="checking", deadline=0, round_token=token)
     set_state("HUNTING")
@@ -308,25 +317,27 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
     token, need_id = ROUND.get("round_token"), ROUND.get("need", {}).get("id")
     if sender != common.address("advocate") or ROUND.get("phase") != "advice":
         return
-    reasons = blocked_reasons(sender, msg.cards_json, common.shield_context(sender))
-    if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
-        return
     raw = None
     try:
         raw = json.loads(msg.cards_json)
     except Exception:
         pass
+    raw_need_ids = ([c.get("need_id") for c in raw]
+                    if isinstance(raw, list) and raw and all(isinstance(c, dict) for c in raw) else [])
+    if (raw_need_ids and all(isinstance(value, str) and value for value in raw_need_ids)
+            and len(set(raw_need_ids)) == 1
+            and raw_need_ids[0] in ROUND.get("retired_need_ids", [])):
+        ctx.logger.info("stale advocate reply ignored")
+        return
+    reasons = blocked_reasons(sender, msg.cards_json, common.shield_context(sender))
+    if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
+        return
     cards = None
     if isinstance(raw, list) and raw:
         try:
             cards = [common.validate("AdvocateCard", c) for c in raw]
         except Exception:
             cards = None
-    current_bid_ids = {b["id"] for b in ROUND.get("bids", [])}
-    if (cards and need_id and len({c["need_id"] for c in cards}) == 1
-            and cards[0]["need_id"] != need_id and not current_bid_ids.intersection(c["bid_id"] for c in cards)):
-        ctx.logger.info("stale advocate reply ignored")
-        return
     if reasons:
         await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
