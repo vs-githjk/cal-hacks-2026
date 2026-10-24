@@ -11,7 +11,7 @@ from typing import Any, Callable, Mapping
 from jsonschema import Draft202012Validator
 from pay.approval import approved_voice_record_matches
 from pay.mandate import mandate_hash, parse_ts, verify as verify_mandate
-from pay.tap import sign_request
+from pay.tap import attach_signature, sign_request
 from pay.voice_cartesia import VoiceResult, run_approval_call
 
 _CARD_SCHEMA = Path(__file__).resolve().parents[2] / "contracts" / "AdvocateCard.schema.json"
@@ -185,10 +185,11 @@ def settle_offer(transaction: Mapping[str, Any], request_payment: Any, merchant_
         "receipt_keyid": receipt.get("keyid") if isinstance(receipt.get("keyid"), str) else ""}
     headers = sign_request(method="POST", url=merchant_url, body=body, mandate=mandate,
                            private_key=tap_private_key, now=now)
+    signed_mandate = attach_signature(mandate, headers)
     outcome = merchant_sim.handle(method="POST", url=merchant_url, headers=headers, body=body,
         receipt=receipt, message_id=message_id, buyer_id=tx["buyer_id"], now=now)
     if not isinstance(outcome, Mapping):
-        return {"settlement": settlement, "settlement_result": {
+        return {"mandate": signed_mandate, "settlement": settlement, "settlement_result": {
             "status": "uncertain", "reason": "merchant_result_unavailable", "charge_id": None,
             "mandate_hash": mandate["hash"], "origin": "SIM"}}
     result = {key: outcome.get(key) for key in ("status", "reason", "charge_id", "mandate_hash", "origin")}
@@ -197,4 +198,4 @@ def settle_offer(transaction: Mapping[str, Any], request_payment: Any, merchant_
             or not isinstance(result.get("charge_id"), str)
             or not result["charge_id"].startswith(("pi_", "ch_"))):
         raise PermissionError("MerchantSim returned a mismatched paid result")
-    return {"settlement": settlement, "settlement_result": result}
+    return {"mandate": signed_mandate, "settlement": settlement, "settlement_result": result}
