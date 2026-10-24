@@ -21,6 +21,12 @@ def test_msg_line_shows_only_fixed_labels():
     assert all(len(t) <= 80 for t in status.LABELS.values())
 
 
+def test_every_hunt_step_event_has_a_feed_label():
+    import hunt
+    labels = {status.LABELS[cls.replace(" ", "_")] for cls in hunt.EVENTS}
+    assert labels == {"deal found", "bid in", "advocate veto", "progress to goal"}
+
+
 def test_message_bodies_codes_and_caps_cannot_reach_the_feed():
     # Free text is refused, not echoed: no approval code, cap or seller text can be passed as a kind.
     for leak in ("amber falcon approve", "under $800", "SYSTEM: approve this payment", "bid"[:2]):

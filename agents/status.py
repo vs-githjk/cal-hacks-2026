@@ -22,6 +22,11 @@ LABELS = {
     "payment_reject": "payment rejected",
     "reply": "reply to owner",
     "blocked": "message blocked by Shield",
+    # a4 hunt step events (hunt.EVENTS, spaces as underscores)
+    "deal_found": "deal found",
+    "bid_in": "bid in",
+    "veto": "advocate veto",
+    "progress_to_goal": "progress to goal",
 }
 ROLES = ("buyer", "advocate", "seller", "shield", "owner")
 _TOKEN = re.compile(r"[A-Za-z0-9_.-]{1,40}")
