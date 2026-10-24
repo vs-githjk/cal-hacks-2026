@@ -206,7 +206,6 @@ function AgentPipTile() {
             <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="font-semibold text-accent underline-offset-2 hover:underline">
               Open in ASI:One
             </a>
-            {offline || pending ? null : <OriginChip origin={anyUp ? "LIVE" : "SIM"} />}
           </div>
         </>
       ) : (

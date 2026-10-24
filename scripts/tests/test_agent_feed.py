@@ -72,12 +72,21 @@ def by_name(rows):
     return {r["name"]: r for r in rows}
 
 
-def standard_run(tmp_path, mailbox=False):
+def mailbox_up(*tags: str) -> str:
+    """The line uagents logs once an agent's mailbox client loop runs (mailbox.py:214)."""
+    return "".join(f"INFO:     [{t}]: Starting mailbox client for https://agentverse.ai\n" for t in tags)
+
+
+def standard_run(tmp_path, mailbox=False, flag=None):
+    """mailbox=True: every agent's log shows its mailbox client started. flag: the pidfile hint (defaults to mailbox)."""
+    flag = mailbox if flag is None else flag
+    up = (lambda *t: mailbox_up(*t)) if mailbox else (lambda *t: "")
     run = write_run(tmp_path, {
-        "buyer": alive_rec(tmp_path / ".run" / "logs" / "buyer.log", mailbox),
-        "advocate": alive_rec(tmp_path / ".run" / "logs" / "advocate.log", mailbox),
-        "sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log", mailbox),
-    }, {"buyer": BUYER_LOG, "advocate": ADVOCATE_LOG, "sellers": SELLERS_LOG})
+        "buyer": alive_rec(tmp_path / ".run" / "logs" / "buyer.log", flag),
+        "advocate": alive_rec(tmp_path / ".run" / "logs" / "advocate.log", flag),
+        "sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log", flag),
+    }, {"buyer": up("tech_bazaar_buyer") + BUYER_LOG, "advocate": up("quality_advocate") + ADVOCATE_LOG,
+        "sellers": up("Byte Bros Outlet", "Silicon Sally's Surplus") + SELLERS_LOG})
     return run
 
 
@@ -109,7 +118,7 @@ def test_timestamp_only_for_the_agent_that_wrote_the_log_last(tmp_path):
     assert rows["Silicon Sally's Surplus"]["at"] is None
 
 
-def test_status_agentverse_only_when_mailbox_flag_is_on(tmp_path):
+def test_status_agentverse_only_when_the_mailbox_client_started(tmp_path):
     on = F.agent_rows(standard_run(tmp_path / "on", mailbox=True))
     off = F.agent_rows(standard_run(tmp_path / "off", mailbox=False))
     assert {r["status"] for r in on} == {"agentverse"}
@@ -117,15 +126,93 @@ def test_status_agentverse_only_when_mailbox_flag_is_on(tmp_path):
 
 
 def test_old_pidfile_without_mailbox_field_is_local(tmp_path):
-    assert {r["status"] for r in F.agent_rows(standard_run(tmp_path, mailbox=None))} == {"local"}
+    assert {r["status"] for r in F.agent_rows(standard_run(tmp_path, mailbox=False, flag=None))} == {"local"}
 
 
-def test_mailbox_on_but_manifest_not_published_is_local(tmp_path):
+def test_pidfile_flag_alone_proves_nothing(tmp_path):
+    # flag true, manifests published (BUYER_LOG says so), but the log never shows the mailbox client starting
+    rows = F.agent_rows(standard_run(tmp_path, mailbox=False, flag=True))
+    assert {r["status"] for r in rows} == {"local"}
+
+
+def test_mailbox_client_running_without_the_pidfile_flag_is_agentverse(tmp_path):
+    # AGENTS_MAILBOX=1 set only in agents/.env: the launcher records mailbox=false, the agents still run the mailbox client
+    rows = F.agent_rows(standard_run(tmp_path, mailbox=True, flag=False))
+    assert {r["status"] for r in rows} == {"agentverse"}
+
+
+@pytest.mark.parametrize("bad", [
+    "WARNING:  [tech_bazaar_buyer]: Agent mailbox not found: create one using the agent inspector\n",
+    "WARNING:  [tech_bazaar_buyer]: Failed to connect to mailbox server: Cannot connect to host agentverse.ai\n",
+    "ERROR:    [tech_bazaar_buyer]: Failed to retrieve messages: 401:Unauthorized\n",
+    "WARNING:  [tech_bazaar_buyer]: Unable to publish manifest: timeout\n",
+])
+def test_mailbox_failure_lines_keep_that_agent_local(tmp_path, bad):
     run = standard_run(tmp_path, mailbox=True)
-    (run / "logs" / "buyer.log").write_text(BUYER_LOG + "WARNING:  [tech_bazaar_buyer]: Unable to publish manifest\n", encoding="utf-8")
+    (run / "logs" / "buyer.log").write_text(mailbox_up("tech_bazaar_buyer") + BUYER_LOG + bad, encoding="utf-8")
     rows = by_name(F.agent_rows(run))
     assert rows["tech_bazaar_buyer"]["status"] == "local"
     assert rows["quality_advocate"]["status"] == "agentverse"
+
+
+def test_mailbox_not_found_warning_is_not_dropped_as_noise_but_start_line_is(tmp_path):
+    log = (f"INFO:     [tech_bazaar_buyer]: Starting agent with address: {ADDR_B}\n"
+           "INFO:     [tech_bazaar_buyer]: Agent inspector available at https://agentverse.ai/inspect/?uri=x\n"
+           + mailbox_up("tech_bazaar_buyer")
+           + "WARNING:  [tech_bazaar_buyer]: Agent mailbox not found: create one using the agent inspector\n")
+    run = write_run(tmp_path, {"buyer": alive_rec(tmp_path / ".run" / "logs" / "buyer.log", True)}, {"buyer": log})
+    row = by_role(F.agent_rows(run), "buyer")
+    assert row["last_message"] == "Agent mailbox not found: create one using the agent inspector"
+    assert row["status"] == "local"
+    # the positive line alone never shows up as a message
+    run2 = write_run(tmp_path / "two", {"buyer": alive_rec(tmp_path / "two" / ".run" / "logs" / "buyer.log", True)},
+                     {"buyer": log.rsplit("WARNING", 1)[0]})
+    row2 = by_role(F.agent_rows(run2), "buyer")
+    assert row2["last_message"] is None and row2["status"] == "agentverse"
+
+
+def test_mailbox_is_decided_per_agent_in_a_shared_bureau_log(tmp_path):
+    log = mailbox_up("Byte Bros Outlet") + SELLERS_LOG
+    run = write_run(tmp_path, {"sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log")}, {"sellers": log})
+    rows = by_name(F.agent_rows(run))
+    assert rows["Byte Bros Outlet"]["status"] == "agentverse"
+    assert rows["Silicon Sally's Surplus"]["status"] == "local"
+
+
+def test_mailbox_up_but_process_dead_is_down(tmp_path):
+    run = standard_run(tmp_path, mailbox=True)
+    state = json.loads((run / "pids.json").read_text())
+    state["services"]["buyer"]["lstart"] = "Thu Jan  1 00:00:00 1970"
+    (run / "pids.json").write_text(json.dumps(state))
+    assert by_name(F.agent_rows(run))["tech_bazaar_buyer"]["status"] == "down"
+
+
+def test_our_agents_are_never_labelled_live(tmp_path):
+    rows = F.agent_rows(standard_run(tmp_path, mailbox=True))
+    assert {r["origin"] for r in rows} == {"SIM"}
+
+
+def test_seller_origin_comes_from_its_config(tmp_path):
+    cfg = tmp_path / "sellers.json"
+    cfg.write_text(json.dumps({"sellers": {"seller_1": {"name": "Byte Bros Outlet", "origin": "MIRROR"},
+                                           "seller_2": {"name": "Odd One", "origin": "bogus"}}}), encoding="utf-8")
+    assert F.seller_origins(cfg) == {"Byte Bros Outlet": "MIRROR"}
+    assert F.seller_origins(tmp_path / "missing.json") == {}
+    real = F.seller_origins()
+    assert real and set(real.values()) == {"SIM"}  # every shipped seller is SIM
+
+
+def test_old_message_is_not_stamped_by_a_later_noise_line(tmp_path):
+    run = standard_run(tmp_path)
+    log = run / "logs" / "buyer.log"
+    os.utime(log, (1, 1))
+    assert by_role(F.agent_rows(run), "buyer")["at"] is not None  # message is the last line: its mtime is its time
+    log.write_text(BUYER_LOG + "INFO:     [uagents.registration]: Registration on Almanac API successful\n", encoding="utf-8")
+    row = by_role(F.agent_rows(run), "buyer")
+    assert row["last_message"] == "late or stray bid ignored" and row["at"] is None
+    # a boot line from the same agent after the message does the same
+    log.write_text(BUYER_LOG + "INFO:     [tech_bazaar_buyer]: Manifest published successfully: X\n\n", encoding="utf-8")
+    assert by_role(F.agent_rows(run), "buyer")["at"] is None
 
 
 def test_missing_run_dir_gives_three_down_rows_never_raises(tmp_path):
@@ -198,6 +285,7 @@ def test_http_endpoint_returns_the_rows_and_allows_the_local_web_origin(tmp_path
     assert r.status_code == 200
     assert r.headers["access-control-allow-origin"] == "http://localhost:3100"
     assert {x["status"] for x in r.json()} == {"agentverse"}
+    assert {x["origin"] for x in r.json()} == {"SIM"}
     assert set(r.json()[0]) == {"name", "role", "address", "status", "last_message", "at", "origin"}
     assert client.get("/v1/agents", headers={"Origin": "https://evil.example"}).headers.get("access-control-allow-origin") is None
     assert client.get("/v1/health").json() == {"ok": True}
@@ -219,6 +307,22 @@ def test_launcher_runs_the_feed_and_records_the_mailbox_flag(tmp_path):
     assert L.mailbox_record(on["buyer"]) is True and L.mailbox_record(on["shield"]) is False
     off = {s.name: s for s in L.build_services(Namespace(**base, mailbox=False), tmp_path)}
     assert L.mailbox_record(off["buyer"]) is False
+
+
+def test_mailbox_record_reads_the_final_env_not_just_the_flag(tmp_path, monkeypatch):
+    from argparse import Namespace
+    for k in ("AGENTS_MAILBOX", "BUYER_MAILBOX", "ADVOCATE_MAILBOX", "SELLERS_MAILBOX"):
+        monkeypatch.delenv(k, raising=False)
+    off = {s.name: s for s in L.build_services(Namespace(shield_port=8787, stdb_port=3000, web_port=3100, mailbox=False), tmp_path)}
+    assert L.mailbox_record(off["buyer"]) is False
+    # AGENTS_MAILBOX set only in agents/.env (the agents load it themselves): `up` without --mailbox still runs them on Agentverse
+    assert L.mailbox_record(off["buyer"], {}, {"AGENTS_MAILBOX": "1"}) is True
+    assert L.mailbox_record(off["sellers"], {}, {"AGENTS_MAILBOX": "1"}) is True
+    # the launcher env file and a per-role flag count too; the role flag is per role
+    assert L.mailbox_record(off["advocate"], {"ADVOCATE_MAILBOX": "1"}) is True
+    assert L.mailbox_record(off["buyer"], {"ADVOCATE_MAILBOX": "1"}) is False
+    # not an agent service
+    assert L.mailbox_record(off["shield"], {"AGENTS_MAILBOX": "1"}, {"AGENTS_MAILBOX": "1"}) is False
 
 
 def test_missing_fastapi_skips_the_feed_like_the_shield():

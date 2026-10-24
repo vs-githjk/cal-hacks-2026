@@ -2,16 +2,23 @@
 
 GET /v1/agents -> [{name, role, address, status, last_message, at, origin}]
 
-status is "agentverse" only when the launcher started that agent in mailbox mode, the process is alive and its log shows
-no failed manifest publish; "local" when it is alive without that; "down" otherwise (also when its log is missing).
+status is decided per agent from its own log lines, never from a pidfile flag: "agentverse" only when the process is alive
+and that agent logged "Starting mailbox client for" (the uagents mailbox loop running) and none of the mailbox or manifest
+failure lines (no mailbox created yet, cannot reach the mailbox server, 401 on retrieve, manifest not published); "local" when
+it is alive without that; "down" otherwise (also when its log is missing). Manifests publish fine without a mailbox, so a
+published manifest proves nothing about Agentverse.
 Nothing here is invented: a missing run dir, pidfile or log gives down rows with no address and no message.
-`at` is the log file's modification time, given only to the agent whose line is the last one in that file (logs carry no
-per-line clock), so a shared Bureau log never stamps a quiet agent with another agent's time.
+origin is SIM for every row except a seller whose sellers.json entry says otherwise: our own agents are not "LIVE" (a real
+outside party), and an unknown seller is SIM.
+`at` is the log file's modification time, given only to the agent whose line is the last line in that file (logs carry no
+per-line clock): if any other line of any kind follows its message, `at` is null, so a shared Bureau log or an hourly
+Almanac re-registration never stamps an old or quiet agent with a fresh time.
 
 Run (the launcher does this): python3 -m uvicorn agent_feed:app --app-dir scripts --host 127.0.0.1 --port 8790
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -30,12 +37,17 @@ LINE_RE = re.compile(r"^(?:INFO|WARNING|ERROR|CRITICAL|DEBUG):\s+\[([^\]]+)\]: (
 START_RE = re.compile(r"Starting agent with address: (agent1q[0-9a-z]{40,70})")
 LABEL_RE = re.compile(r"^(\w+) address: (agent1q[0-9a-z]{40,70})\s*$")
 # lines about boot and registration, never a message the agent sent or received
-NOISE = ("Starting agent", "Starting server", "inspector", "Manifest published", "registration", "Registration", "Almanac",
-         "wallet", "Overwriting", "endpoint", "Unable to publish manifest")
+NOISE = ("Starting agent", "Starting server", "Agent inspector available", "Manifest published", "registration", "Registration",
+         "Almanac", "wallet", "Overwriting", "endpoint", "Unable to publish manifest", "Starting mailbox client")
 # machine records that are long and carry mandate or order fields
 RECORD_PREFIXES = ("ORDER ", "MANDATE ")
 SECRET_RE = re.compile(r"\b(?:sk|pk|rk|whsec)_[A-Za-z0-9_]{6,}|eyJ[A-Za-z0-9_-]{10,}|Bearer\s+\S+", re.I)
-PUBLISH_FAILED = "Unable to publish manifest"
+# uagents mailbox.py:214 (the loop running) and the lines that say the mailbox is not working (mailbox.py:238, 243, 247, agent.py:1129)
+MAILBOX_UP = "Starting mailbox client for"
+MAILBOX_FAILURES = ("Agent mailbox not found", "Failed to connect to mailbox server", "Failed to retrieve messages",
+                    "Unable to publish manifest")
+SELLERS_JSON = REPO / "agents" / "sellers" / "sellers.json"
+ORIGINS = ("LIVE", "MIRROR", "SIM")
 
 
 def clean(text: str) -> str:
@@ -53,7 +65,8 @@ def read_text(path: str | None) -> str | None:
 
 
 def parse_log(text: str) -> dict[str, dict]:
-    """Agents in one log: {tag: {address, last_message, last_index}}; last_index orders messages across agents."""
+    """Agents in one log: {tag: {address, last_message, last_index, mailbox}}; last_index orders messages across agents.
+    mailbox is True only when that agent logged the mailbox client starting and none of the failure lines."""
     agents: dict[str, dict] = {}
     labels: dict[str, str] = {}  # address -> label ("seller_1 address: ...")
     for i, raw in enumerate(text.splitlines()):
@@ -68,7 +81,11 @@ def parse_log(text: str) -> dict[str, dict]:
         tag, msg = m.group(1), m.group(2)
         if tag.startswith("uagents") or tag == "bureau":
             continue
-        a = agents.setdefault(tag, {"address": None, "last_message": None, "last_index": -1})
+        a = agents.setdefault(tag, {"address": None, "last_message": None, "last_index": -1, "mailbox_up": False, "mailbox_bad": False})
+        if MAILBOX_UP in msg:
+            a["mailbox_up"] = True
+        if any(f in msg for f in MAILBOX_FAILURES):
+            a["mailbox_bad"] = True
         s = START_RE.search(msg)
         if s:
             a["address"] = s.group(1)
@@ -78,8 +95,30 @@ def parse_log(text: str) -> dict[str, dict]:
         a["last_index"] = i
     for addr, label in labels.items():  # an agent that only printed its labelled address still gets a row
         if not any(a["address"] == addr for a in agents.values()):
-            agents.setdefault(label, {"address": addr, "last_message": None, "last_index": -1})
+            agents.setdefault(label, {"address": addr, "last_message": None, "last_index": -1, "mailbox_up": False,
+                                      "mailbox_bad": False})
+    for a in agents.values():
+        a["mailbox"] = a.pop("mailbox_up") and not a.pop("mailbox_bad")
     return agents
+
+
+def last_line_index(text: str) -> int:
+    """Index of the last non-blank line of any kind (noise, other agents, tracebacks included)."""
+    last = -1
+    for i, raw in enumerate(text.splitlines()):
+        if raw.strip():
+            last = i
+    return last
+
+
+def seller_origins(path: Path = SELLERS_JSON) -> dict[str, str]:
+    """Seller display name -> origin from its sellers.json entry. Missing or odd config gives nothing, so rows fall back to SIM."""
+    try:
+        sellers = json.loads(path.read_text(encoding="utf-8")).get("sellers", {})
+        return {v["name"]: v["origin"] for v in sellers.values()
+                if isinstance(v, dict) and isinstance(v.get("name"), str) and v.get("origin") in ORIGINS}
+    except (OSError, ValueError, AttributeError):
+        return {}
 
 
 def _mtime_iso(path: str) -> str | None:
@@ -89,9 +128,9 @@ def _mtime_iso(path: str) -> str | None:
         return None
 
 
-def _row(name, role, address, status, message, at) -> dict:
+def _row(name, role, address, status, message, at, origin="SIM") -> dict:
     return {"name": name, "role": role, "address": address, "status": status, "last_message": message, "at": at,
-            "origin": "LIVE" if status != "down" else "SIM"}
+            "origin": origin if origin in ORIGINS else "SIM"}
 
 
 def service_rows(svc: str, rec: dict) -> list[dict]:
@@ -106,15 +145,15 @@ def service_rows(svc: str, rec: dict) -> list[dict]:
     agents = parse_log(text)
     if not agents:
         return [_row(DEFAULT_NAMES[svc], role, None, "down", None, None)]
-    status = "local" if alive else "down"
-    if alive and rec.get("mailbox") is True and PUBLISH_FAILED not in text:
-        status = "agentverse"
     newest = max(agents, key=lambda t: agents[t]["last_index"])
+    quiet_tail = agents[newest]["last_index"] == last_line_index(text)
     mtime = _mtime_iso(rec["log"])
+    origins = seller_origins() if role == "seller" else {}
     rows = []
     for tag, a in agents.items():
-        stamped = mtime if (tag == newest and a["last_message"] is not None) else None
-        rows.append(_row(tag, role, a["address"], status, a["last_message"], stamped))
+        status = ("agentverse" if a["mailbox"] else "local") if alive else "down"
+        stamped = mtime if (tag == newest and a["last_message"] is not None and quiet_tail) else None
+        rows.append(_row(tag, role, a["address"], status, a["last_message"], stamped, origins.get(tag, "SIM")))
     return rows
 
 

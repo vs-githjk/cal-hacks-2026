@@ -149,9 +149,19 @@ def find_tool(name: str, which=shutil.which, home_bin: Path | None = None) -> st
     return str(p) if p.is_file() else None
 
 
-def mailbox_record(svc: Service) -> bool:
-    """True when this service was started with an Agentverse mailbox flag; the agent feed reads it back from the pidfile."""
-    return any(k.endswith("_MAILBOX") and v == "1" for k, v in svc.extra_env.items())
+MAILBOX_FLAGS = {"buyer": "BUYER_MAILBOX", "advocate": "ADVOCATE_MAILBOX", "sellers": "SELLERS_MAILBOX"}
+
+
+def mailbox_record(svc: Service, file_env: dict[str, str] | None = None, agents_env: dict[str, str] | None = None) -> bool:
+    """True when this agent service starts in Agentverse mailbox mode, computed the way agents/common.py mailbox_on does
+    (AGENTS_MAILBOX or its own flag) over the final env: `up --mailbox`, the environment and the launcher env file win, then
+    agents/.env, which the agents load themselves without overriding. The pidfile records it as a hint; the agent feed decides
+    what to show from the agents' own log lines."""
+    flag = MAILBOX_FLAGS.get(svc.name)
+    if flag is None:
+        return False
+    env = {**(agents_env or {}), **env_for(svc, file_env or {})}
+    return bool(env.get("AGENTS_MAILBOX") or env.get(flag))
 
 
 def build_services(a, repo: Path = REPO) -> list[Service]:
@@ -600,6 +610,7 @@ def cmd_up(a, repo: Path = REPO) -> int:
                     s_.defaults["SSL_CERT_FILE"] = r.stdout.strip()
 
     started: list[tuple[Service, dict]] = []
+    agents_env = load_env_file(repo / "agents" / ".env")[0]
 
     def launch(svc: Service) -> dict | None:
         if svc.skip_reason:
@@ -609,7 +620,7 @@ def cmd_up(a, repo: Path = REPO) -> int:
             skip(svc, f"port {svc.port} is already in use by a process this launcher did not start", "failed")
             return None
         rec = start_process(svc, env_for(svc, file_env), run_dir)
-        rec["mailbox"] = mailbox_record(svc)
+        rec["mailbox"] = mailbox_record(svc, file_env, agents_env)
         record(svc, rec)
         print(f"  started  {svc.name} pid {rec['pid']} (log {rec['log']})")
         started.append((svc, rec))
