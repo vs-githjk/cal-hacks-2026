@@ -1031,3 +1031,17 @@ def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
     text = ctx.owner_text()
     assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
     assert text.count('asked seller_1') == 1
+
+
+@pytest.mark.parametrize('text, question', [
+    ('a new GPU by Friday', 'What is your maximum budget?'),
+    ('a GPU under $800 by Friday', 'What condition do you want: new or open-box?'),
+    ('a new GPU under $800', 'When is your deadline? Give a date, weekday, or tomorrow.'),
+])
+def test_vague_goal_gets_exactly_one_clarifying_question_and_opens_no_round(buyer, text, question):
+    ctx = Context()
+    buyer.ROUND.clear()
+    asyncio.run(buyer.on_chat(ctx, 'owner', buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
+    assert [m.text() for _, m in ctx.sent if hasattr(m, 'text')] == [question]
+    assert not any(isinstance(m, buyer.common.BidRequest) for _, m in ctx.sent)
+    assert not buyer.ROUND.get('goal') and not buyer.ROUND.get('need')
