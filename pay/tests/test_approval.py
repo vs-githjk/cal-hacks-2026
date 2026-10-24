@@ -594,3 +594,9 @@ def test_approved_counts_as_approve_exactly_once():
     assert d.approved and m["status"] == "approved"
     again = s.approve(f"{code} approved", sec(40))
     assert not again.approved and again.reason == "replay"
+
+
+def test_refusal_words_deny():
+    from pay.approval import NEGATIONS
+    for w in ("refuse", "refused", "without", "nothing", "nor"):
+        assert w in NEGATIONS

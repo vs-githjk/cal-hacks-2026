@@ -49,7 +49,7 @@ APPROVE_TOKENS = frozenset({APPROVE_TOKEN, "approved"})  # speech-to-text often 
 NEGATIONS = frozenset({
     "no", "not", "nope", "nah", "dont", "never", "cant", "cannot", "wont", "didnt", "isnt", "wasnt",
     "shouldnt", "stop", "cancel", "deny", "denied", "decline", "reject", "wait", "hold", "should", "would",
-    "could", "can", "if", "whether", "maybe", "unless",
+    "could", "can", "if", "whether", "maybe", "unless", "refuse", "refused", "without", "nothing", "nor",
 })
 
 STATES = ("issued", "awaiting_code", "approved", "denied", "expired")
