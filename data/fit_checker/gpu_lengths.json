@@ -1,0 +1,15 @@
+{
+ "about": "Maker spec lengths (mm) for every RTX 5070 Ti model in the demo listings (issue #96). MIRROR: read from each maker's own spec page or datasheet. MSI and ASUS pages refuse direct fetches, so the figure was read through a search index restricted to the maker's domain; the source URL is the maker page. confidence: exact = the maker page for this exact model; family = a sibling SKU's maker page (noted).",
+ "checked": "2026-10-24",
+ "models": [
+  {"model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC", "match": "gaming trio", "length_mm": 338, "dims": "338 x 140 x 50", "confidence": "exact", "source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification"},
+  {"model": "MSI GeForce RTX 5070 Ti 16G VENTUS 3X OC", "match": "ventus 3x", "length_mm": 303, "dims": "303 x 121 x 49", "confidence": "exact", "source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-VENTUS-3X-OC/Specification"},
+  {"model": "MSI GeForce RTX 5070 Ti 16G VANGUARD SOC LAUNCH EDITION", "match": "vanguard", "length_mm": 357, "dims": "357 x 151 x 66", "confidence": "exact", "source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-VANGUARD-SOC-LAUNCH-EDITION/Specification"},
+  {"model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)", "match": "gigabyte.*gaming oc|gv-n507tgaming", "length_mm": 342, "dims": "342 x 142 x 70", "confidence": "exact", "source": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp"},
+  {"model": "GIGABYTE GeForce RTX 5070 Ti WINDFORCE OC SFF 16G (GV-N507TWF3OC-16GD)", "match": "windforce", "length_mm": 304, "dims": "304 x 126 x 50", "confidence": "exact", "source": "https://www.gigabyte.com/Graphics-Card/GV-N507TWF3OC-16GD/sp"},
+  {"model": "ASUS Prime GeForce RTX 5070 Ti OC Edition (PRIME-RTX5070TI-O16G)", "match": "prime", "length_mm": 304, "dims": "304 x 126 x 50", "confidence": "exact", "source": "https://www.asus.com/motherboards-components/graphics-cards/prime/prime-rtx5070ti-o16g/techspec/"},
+  {"model": "ASUS ProArt GeForce RTX 5070 Ti OC Edition (PROART-RTX5070TI-O16G)", "match": "proart", "length_mm": 304, "dims": "304 x 126 x 50", "confidence": "exact", "source": "https://www.asus.com/motherboards-components/graphics-cards/proart/proart-rtx5070ti-o16g/techspec/"},
+  {"model": "ASUS TUF Gaming GeForce RTX 5070 Ti OC Edition (TUF-RTX5070TI-O16G-GAMING)", "match": "tuf", "length_mm": 329, "dims": "329 x 140 x 62.5", "confidence": "family", "note": "figure from the ASUS TUF 5070 Ti BTF White OC spec page and an ASUS compare page; the OC Edition page's value was not readable", "source": "https://www.asus.com/motherboards-components/graphics-cards/tuf-gaming/tuf-rtx5070ti-o16g-btf-white/techspec/"},
+  {"model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)", "match": "pny|vcg5070t16", "length_mm": 300, "dims": "299.5 x 120.0 x 59.6", "confidence": "exact", "note": "299.5 mm rounded up", "source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"}
+ ]
+}
