@@ -118,7 +118,7 @@ def test_claude_classifier_builds_request_without_network(monkeypatch):
         def __exit__(self, *a):
             return False
 
-    def fake_urlopen(req, timeout):
+    def fake_urlopen(req, timeout, context=None):
         seen["url"], seen["timeout"], seen["body"] = req.full_url, timeout, json.loads(req.data)
         seen["hdr"] = {k.lower(): v for k, v in req.header_items()}
         return R()

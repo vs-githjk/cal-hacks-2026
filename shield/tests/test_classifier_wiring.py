@@ -36,13 +36,16 @@ def test_model_id_goes_into_the_request_body(monkeypatch):
         def __exit__(self, *a): return False
         def read(self): return json.dumps({"content": [{"text": "SAFE"}]}).encode()
 
-    def fake(req, timeout=None):
+    def fake(req, timeout=None, context=None):
         seen["body"] = json.loads(req.data)
+        seen["context"] = context
         return R()
     monkeypatch.setattr(urllib.request, "urlopen", fake)
     monkeypatch.setenv("SHIELD_MODEL", "claude-test-model")
     assert ClaudeClassifier("k").classify("hi", {}) == "SAFE"
     assert seen["body"]["model"] == "claude-test-model"
+    import ssl
+    assert isinstance(seen["context"], ssl.SSLContext)  # explicit CA bundle: python.org builds on macOS ship none
 
 
 def test_load_dotenv_reads_only_known_names_and_never_overrides(tmp_path):
