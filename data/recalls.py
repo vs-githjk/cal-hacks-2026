@@ -5,7 +5,7 @@
 
 "none" only when the API answered and nothing matched; any fetch or parse error is "unverified", never "none".
 Matching is conservative: the brand must be in the recall title, a product name or a manufacturer, AND the recall must
-name a graphics card term or a model word from the product title. Answers are cached per brand for 24 hours.
+name a graphics card word AND a model token from the product title (it has a digit, such as 5070). Generic words alone never match. Answers are cached per brand for 24 hours.
 """
 from __future__ import annotations
 
@@ -18,7 +18,6 @@ from urllib.parse import quote
 CACHE = Path(__file__).resolve().parent / "recalls_cache"
 API = "https://www.saferproducts.gov/RestWebServices/Recall?format=json&ProductName="
 GPU_TERMS = ("graphics card", "video card", "gpu", "geforce", "rtx")
-GENERIC = {"nvidia", "geforce", "graphics", "card", "edition", "with", "gddr7", "gddr6", "series", "overclocked"}
 
 
 def _parse_time(s):
@@ -26,18 +25,24 @@ def _parse_time(s):
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
-def _model_words(title):
-    return {w for w in re.findall(r"[a-z0-9\-]{4,}", title.lower()) if w not in GENERIC and not w.isdigit()}
+def _model_tokens(title, brand):
+    """Tokens that name a model: they contain a digit (5070, gv-n507tgaming). Capacity and memory words do not count."""
+    skip = re.compile(r"\d+gb|gddr\d+x?|\d+\.\d+|pcie.*")
+    return {t for t in re.findall(r"[a-z0-9][a-z0-9\-]*", title.lower()) if re.search(r"\d", t) and len(t) >= 4 and not skip.fullmatch(t)} \
+        - set(brand.lower().split())
 
 
 def _matches(item, brand, title):
+    """Brand AND a graphics-card word AND a model token from the product title, all in the recall. Generic words alone never match."""
     names = [str(item.get("Title") or "")] + [str(p.get("Name") or "") for p in item.get("Products") or []]
     makers = [str(m.get("Name") or "") for m in item.get("Manufacturers") or []]
     hay = " ".join(names + makers).lower()
     if brand.lower() not in hay:
         return False
     product_text = " ".join(names).lower()
-    return any(t in product_text for t in GPU_TERMS) or any(w in product_text for w in _model_words(title) - set(brand.lower().split()))
+    if not any(re.search(rf"\b{re.escape(t)}\b", product_text) for t in GPU_TERMS):
+        return False
+    return any(re.search(rf"\b{re.escape(t)}\b", product_text) for t in _model_tokens(title, brand))
 
 
 def recalls_for(product_title: str, brand: str, fetch=None, now=None, cache_dir=None) -> dict:

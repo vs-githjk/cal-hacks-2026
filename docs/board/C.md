@@ -65,3 +65,4 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [04:30] #140 update: none found, 28 snapshot rows (20 distinct listings) scanned; counts now name distinct listings
 - [04:30] #140 correction to the line above: with the 09:36 to 09:55 refreshes included the scan covers 34 snapshot rows, 21 distinct listings; still none found
 - [04:31] c14 update: three_way_match also names quantity_over (delivered more than the PO: "delivered 3 of 2")
+- [04:46] #127 update: a recall matches only with the brand, a graphics-card word and a model token from the product title (such as 5070) all present; laptop and monitor recalls no longer match
