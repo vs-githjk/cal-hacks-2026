@@ -25,6 +25,7 @@ import crs
 import hunt
 import payment
 import state as buyer_state
+import status
 from market_bridge import MarketBridge, MarketBridgeError
 from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
@@ -40,12 +41,13 @@ SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
 # Agentverse profile, published on connect (README, short description, handle) for ASI:One discovery.
-agent = Agent(**common.agent_args(
+_AGENT_ARGS = common.agent_args(
     "buyer", 8001, name="Tech Bazaar Buyer",
     readme_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "AGENTVERSE.md"),
     description="Your buying agent for computer gear: give it a goal, it skips parts you own, makes seller agents "
                 "bid in a sealed round, vetoes traps with a cited source, and pays only after you approve.",
-    handle=os.getenv("BUYER_AGENT_HANDLE", "techbazaarbuyer")))
+    handle=os.getenv("BUYER_AGENT_HANDLE", "techbazaarbuyer"))
+agent = Agent(**_AGENT_ARGS)
 chat = Protocol(spec=chat_protocol_spec)
 pay = Protocol(spec=payment_protocol_spec, role="buyer")
 
@@ -306,6 +308,7 @@ def recover_buyer_state() -> int:
 async def buyer_startup(ctx: Context):
     try:
         recover_buyer_state()
+        ctx.logger.info(status.status_line("buyer", "buyer", agent.address, mailbox="mailbox" in _AGENT_ARGS))
     except Exception as exc:
         ctx.logger.error(f"Buyer private state recovery failed: {type(exc).__name__}")
         raise
@@ -325,13 +328,13 @@ async def tell(ctx: Context, to: str, text: str):
     else:
         msg = ChatMessage(content=[TextContent(text=text)])
         CHAT_DIAG.send_started(msg.msg_id, to, ctx.session, ROUND.get("need", {}).get("id", ""))
-        ctx.logger.info("AGENT_MSG name=buyer to=owner text=reply to owner")
         try:
             result = await ctx.send(to, msg)
         except Exception as exc:
             CHAT_DIAG.send_exception(msg.msg_id, exc)
             raise
         CHAT_DIAG.send_result(msg.msg_id, result)
+        ctx.logger.info(status.msg_line("buyer", "owner", "reply"))
 
 
 async def tell_owner(ctx: Context, text: str):
@@ -501,6 +504,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
                  goal=goal, owned=owned, need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={}, retired_need_ids=retired_need_ids, market_goal_posted=False,
                  received_bids={})
+    ctx.logger.info(status.msg_line("buyer", "owner", "goal"))
     out = skip_lines(goal, owned)
     if not need["items"]:
         set_state("DONE")
@@ -558,6 +562,7 @@ async def start_round(ctx: Context, need: dict | None = None):
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]:
             return False
         await ctx.send(common.address(s), common.BidRequest(need_json=json.dumps(sealed(need))))
+        ctx.logger.info(status.msg_line("buyer", s, "bid_request"))
         if (ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]
                 or ROUND.get("phase") != "bidding"):
             return False
@@ -641,6 +646,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
         await on_requote(ctx, bid)
         return
     ROUND["bids"].append(bid)
+    ctx.logger.info(status.msg_line("buyer", SELLER_ADDRS[sender], "bid"))
     ROUND["personas"][bid["id"]] = msg.persona_line
     await emit(ctx, "bid in", f"Bid in: {bid['persona']} at ${bid['total_landed_price']:.2f} (sealed round still open).")
 
@@ -952,6 +958,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                      pending_hold=True, phase="approved")
         await ctx.send(common.address(bid["supplier_id"]), common.OrderPlaced(
             order_json=json.dumps(order), mandate_json=json.dumps(mandate)))
+        ctx.logger.info(status.msg_line("buyer", bid["supplier_id"], "order"))
         await tell_owner(ctx, f"Approval recorded for deal {transaction['deal_id']}. The seller was asked to request payment; no charge is confirmed yet.")
     except Exception as exc:
         if transaction.get("phase") == "approved":
@@ -1085,12 +1092,16 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
             or tx.get("mandate", {}).get("payee") != sender or tx.get("deal", {}).get("payee") != sender):
         ctx.logger.info("payment request did not match the approved seller and deal")
         return
+    seller_id = SELLER_ADDRS[sender]
+    ctx.logger.info(status.msg_line("buyer", seller_id, "payment_request"))
     if not _configured_market_owner_matches(tx.get("deal", {}).get("owner_sender")):
         await ctx.send(sender, RejectPayment(reason="buyer owner is not configured"))
+        ctx.logger.info(status.msg_line("buyer", seller_id, "payment_reject"))
         return
     mandate = tx["mandate"]
     if tx.get("mode") != "SIM":
         await ctx.send(sender, RejectPayment(reason="unsupported payment origin"))
+        ctx.logger.info(status.msg_line("buyer", seller_id, "payment_reject"))
         return
     durable_charge_saved = False
     try:
@@ -1149,6 +1160,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
             buyer_state.save_transaction(state_db(), tx)
             ROUND.update(transaction=tx, pending_hold=True, phase="uncertain")
             await ctx.send(sender, RejectPayment(reason="payment result is not confirmed"))
+            ctx.logger.info(status.msg_line("buyer", seller_id, "payment_reject"))
             await tell_owner(ctx, "The payment result is uncertain. This purchase remains held; no automatic retry will occur.")
             return
         tx["phase"] = "submitted"
@@ -1164,6 +1176,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
             return
         ROUND.update(transaction=tx, payment_commit=out, pending_hold=True, phase="submitted")
         await ctx.send(sender, out)
+        ctx.logger.info(status.msg_line("buyer", seller_id, "payment_commit"))
         await tell_owner(ctx, f"A confirmed charge was submitted for {tx['deal_id']}; waiting for the seller acknowledgement.")
     except Exception as exc:
         if durable_charge_saved:
@@ -1181,6 +1194,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
             ROUND.update(transaction=tx, pending_hold=True, phase="uncertain")
         ctx.logger.warning(f"Payment verification failed: {type(exc).__name__}")
         await ctx.send(sender, RejectPayment(reason="payment verification unavailable"))
+        ctx.logger.info(status.msg_line("buyer", seller_id, "payment_reject"))
         await tell_owner(ctx, "Payment verification did not complete. The transaction remains held.")
 
 
@@ -1282,6 +1296,7 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
         buyer_state.save_transaction(state_db(), tx)
         ROUND.update(transaction=tx, pending_hold=False, phase="done", order=None, mandate=None,
                      payment_commit=None)
+        ctx.logger.info(status.msg_line("buyer", SELLER_ADDRS[sender], "payment_complete"))
         await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement.")
     except Exception as exc:
         ctx.logger.warning(f"Settlement readback failed: {type(exc).__name__}")
