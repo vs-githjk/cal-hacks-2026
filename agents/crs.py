@@ -210,21 +210,33 @@ def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
 
 def to_crs_check(supplier_id: str, check: dict | None) -> dict:
     """Project the legacy result into the issue #128 flat CRS check shape."""
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     signal = check.get("signal") if isinstance(check, dict) else None
     stability = signal.get("stability") if isinstance(signal, dict) else None
+    reason = check.get("reason") if isinstance(check, dict) else None
     if stability not in REASON_CODES:
+        not_configured = reason == REASON_NOT_CONFIGURED and not signal
         return {
-            "supplier_id": supplier_id,
+            "seller_id": supplier_id,
             "product": "tu_identity",
             "verified": False,
-            "reason_codes": ["CRS_NOT_CONFIGURED"],
-            "origin": "NOT_CONFIGURED",
-            "checked_at": None,
+            "reason_codes": ["CRS_NOT_CONFIGURED" if not_configured else
+                             ("CRS_UNAVAILABLE" if reason == REASON_UNAVAILABLE else "CRS_INVALID")],
+            "origin": "NOT_CONFIGURED" if not_configured else "SANDBOX",
+            "checked_at": now,
         }
+    if signal.get("supplier_id") != supplier_id or signal.get("source") not in {"sandbox", "recorded"}:
+        return {"seller_id": supplier_id, "product": "tu_identity", "verified": False,
+                "reason_codes": ["CRS_INVALID"], "origin": "SANDBOX", "checked_at": now}
+    try:
+        _utc(signal["checked_at"])
+    except (KeyError, ValueError, TypeError, OverflowError):
+        return {"seller_id": supplier_id, "product": "tu_identity", "verified": False,
+                "reason_codes": ["CRS_INVALID"], "origin": "SANDBOX", "checked_at": now}
     source = signal.get("source")
     origin = {"sandbox": "SANDBOX", "recorded": "CACHED"}.get(source, "NOT_CONFIGURED")
     result = {
-        "supplier_id": supplier_id,
+        "seller_id": supplier_id,
         "product": "tu_identity",
         "verified": stability == "verified_stable",
         "reason_codes": list(REASON_CODES[stability]),
