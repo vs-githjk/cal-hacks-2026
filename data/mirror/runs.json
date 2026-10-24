@@ -329,5 +329,35 @@
    "url"
   ],
   "secs": 92
+ },
+ {
+  "store": "ebay_live",
+  "actor": "memo23/ebay-search-scraper-ppe",
+  "input": {
+   "searchQueries": [
+    "RTX 5070 Ti new"
+   ],
+   "mode": "active",
+   "maxItems": 8,
+   "detailedItems": false,
+   "includeSummary": false
+  },
+  "run_id": "PFWzXsSFAZnx8NygM",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 8,
+  "snapshot_id": "ebay_live-20261024T1217Z",
+  "fields": [
+   "condition",
+   "price",
+   "seller",
+   "shipping",
+   "shipping_type",
+   "stock",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 11
  }
 ]
