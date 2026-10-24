@@ -147,19 +147,27 @@ def web_drain() -> WebOut:
 
 
 async def handle_text(ctx: Context, sender: str, text: str):
-    # Single buyer deployment: no sender other than the owner of the active round sees its state.
-    if ROUND.get("owner") and sender != ROUND["owner"]:
-        await tell(ctx, sender, "A buyer session is active. Try again later.")
+    state = ROUND.get("goal", {}).get("state")
+    terminal = (ROUND.get("phase") in ("done", "expired", "paused")
+                or state in ("DONE", "EXPIRED", "PAUSED"))
+    # shortcut: payment completion is untracked, upgrade when the protocol supplies a verified terminal state.
+    if ROUND.get("owner") and sender != ROUND["owner"] and (not terminal or ROUND.get("order")):
+        if not ROUND.get("told_foreign_busy"):
+            ROUND["told_foreign_busy"] = True
+            await tell(ctx, sender, "A buyer session is active. Try again later.")
         return
     cmd = hunt.command(text)
     if cmd and cmd[0] == "approve" and ROUND.get("owner") == sender:
         await approve(ctx, cmd[1])
         return
     if cmd and cmd[0] == "cancel" and ROUND.get("owner") == sender:
+        if ROUND.get("order"):
+            await tell_owner(ctx, "An order has already been placed; CANCEL cannot reverse it. Nothing was canceled.")
+            return
         ROUND.clear()
         await tell(ctx, sender, "Cancelled. Nothing ordered. Send a new goal when you are ready.")
         return
-    if ROUND.get("phase") == "decided" and not ROUND.get("order"):
+    if ROUND.get("phase") == "decided" and not ROUND.get("order") and not terminal:
         # A deal waits for the owner. ASI:One's own assistant also messages us (recaps of our replies);
         # never let that text start a new round or approve anything.
         if not ROUND.get("told_waiting"):
@@ -168,15 +176,12 @@ async def handle_text(ctx: Context, sender: str, text: str):
                                     "or CANCEL to drop it and start a new goal.")
         return
     if ROUND.get("order"):
-        # Same reason: after an order, a recap of it ("$581.99 for the GPU") would read as a new goal.
-        m = re.match(r"(?is)^(?:@\S+\s+)*new\b[:\s]*(.+)", text.strip())
-        if not m:
-            if not ROUND.get("told_ordered"):
-                ROUND["told_ordered"] = True
-                await tell(ctx, sender, "That order is placed. To start another goal, begin with NEW, "
-                                        "e.g. 'NEW a 850 W PSU under $150'.")
-            return
-        text = m.group(1)
+        # Keep the uncertain payment and its ids bound until a completion signal exists.
+        if not ROUND.get("told_ordered"):
+            ROUND["told_ordered"] = True
+            await tell(ctx, sender, "An order is already placed; its payment status is unresolved. "
+                                    "A new goal cannot replace it yet.")
+        return
     if ROUND.get("phase") in ("checking", "bidding", "advice", "requote"):
         if not ROUND.get("told_busy"):  # once per round: ASI:One rate-limits bursts of replies
             ROUND["told_busy"] = True
@@ -215,7 +220,8 @@ async def start_round(ctx: Context, need: dict | None = None):
     need = need or need_from_goal(ROUND["goal"])
     token = uuid4().hex
     ROUND.update(need=need, bids=[], personas={}, cards={}, seller_checks={},
-                 reviewed=False, order=None, mandate=None, phase="checking", deadline=0, round_token=token)
+                 reviewed=False, order=None, mandate=None, told_foreign_busy=False,
+                 phase="checking", deadline=0, round_token=token)
     set_state("HUNTING")
     try:
         checks = await crs.check_sellers(datetime.now(timezone.utc))

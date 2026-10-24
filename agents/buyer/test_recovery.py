@@ -477,15 +477,75 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
     buyer.ROUND.update(owner='authenticated-owner', phase='decided', bids=[
         {'id': 'secret-bid', 'persona': 'Private Seller Name', 'total_landed_price': 582}],
         order={'id': 'private-order'})
-    owner_context = object()
+    owner_context = Context()
     buyer.ROUND['owner_context'] = owner_context
     before = dict(buyer.ROUND)
     for command in ('hello', 'APPROVE 1', 'CANCEL'):
         asyncio.run(buyer.handle_text(ctx, 'other-sender', command))
     replies = [message.text() for to, message in ctx.sent if to == 'other-sender']
-    assert replies == ['A buyer session is active. Try again later.'] * 3
+    assert replies == ['A buyer session is active. Try again later.']
     assert all('Private Seller Name' not in text and 'private-order' not in text and 'APPROVE' not in text for text in replies)
-    assert buyer.ROUND == before and buyer.ROUND['owner_context'] is owner_context
+    asyncio.run(buyer.handle_text(ctx, 'authenticated-owner', 'APPROVE 1'))
+    assert any(to == 'authenticated-owner' and 'private-order' in message.text()
+               for to, message in owner_context.sent)
+    assert buyer.ROUND == before | {'told_foreign_busy': True}
+    assert buyer.ROUND['owner_context'] is owner_context
+
+
+@pytest.mark.parametrize(('phase', 'state'), [('done', 'ACTIVE'), ('decided', 'DONE')])
+def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase, state):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', owner_context=object(), phase=phase,
+                       goal={'id': 'old-goal', 'state': state}, order=None)
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    assert buyer.ROUND['owner'] == 'bob'
+    assert buyer.ROUND['goal']['buyer_id'] == 'bob'
+    assert buyer.ROUND['goal']['id'] != 'old-goal'
+    assert buyer.ROUND['phase'] == 'bidding'
+
+
+def test_malformed_new_sender_goal_preserves_terminal_owner(buyer):
+    ctx = Context()
+    old_context = object()
+    buyer.ROUND.update(owner='alice', owner_context=old_context, phase='done',
+                       goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
+    before = dict(buyer.ROUND)
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under'))
+    assert buyer.ROUND == before
+    assert buyer.ROUND['owner_context'] is old_context
+    assert buyer.ROUND['owner'] == 'alice'
+
+
+def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch):
+    buyer.ROUND.update(owner='alice', owner_context=object(), phase='done',
+                       goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    current_need = buyer.ROUND['need']['id']
+    monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'allow'})
+    monkeypatch.setattr(buyer.common, 'validate', lambda contract, payload: payload)
+    old_bid = {'id': 'old-bid', 'need_id': 'old-need', 'supplier_id': 'seller_1', 'persona': 'Seller',
+               'total_landed_price': 500, 'source': 'SIM'}
+    asyncio.run(buyer.on_bid(ctx, buyer.common.address('seller_1'),
+                             buyer.common.BidReply(bid_json=json.dumps(old_bid), persona_line='Seller')))
+    assert buyer.ROUND['owner'] == 'bob' and buyer.ROUND['need']['id'] == current_need
+    assert buyer.ROUND['phase'] == 'bidding'
+    assert all(bid['id'] != 'old-bid' for bid in buyer.ROUND['bids'])
+
+
+def test_ordered_round_cannot_be_cleared_by_cancel_or_new_goal(buyer):
+    ctx = Context()
+    buyer.ROUND.update(owner='alice', phase='decided', goal={'id': 'goal-1', 'state': 'DONE'},
+                       order={'id': 'order-1', 'payment_ref': 'payment-1'},
+                       mandate={'hash': 'mandate-1'})
+    before = dict(buyer.ROUND)
+    asyncio.run(buyer.handle_text(ctx, 'alice', 'CANCEL'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', 'PSU under $150'))
+    assert buyer.ROUND == before | {'told_foreign_busy': True}
+    replies = '\n'.join(message.text() for _, message in ctx.sent)
+    assert 'Cancelled. Nothing ordered.' not in replies
+    assert 'Nothing was canceled.' in replies
+    assert buyer.ROUND['order']['payment_ref'] == 'payment-1'
 
 
 def test_pending_prompt_uses_plain_approval_instructions_and_keeps_cancel(buyer):
