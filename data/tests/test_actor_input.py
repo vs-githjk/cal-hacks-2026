@@ -26,6 +26,8 @@ class FakeActor:
 
     async def charge(self, event_name, count):
         self.charges += count
+        if self.charges >= getattr(self, "limit", 99):
+            return type("R", (), {"event_charge_limit_reached": True, "charged_count": count})()
 
     async def get_value(self, key):
         return self.kv.get(key)
@@ -35,6 +37,14 @@ class FakeActor:
 
     async def set_status_message(self, msg, is_terminal=None):
         self.status.append((msg, is_terminal))
+
+    async def open_dataset(self):
+        actor = self
+
+        class DS:
+            async def get_data(self, limit=None):
+                return type("Page", (), {"items": list(actor.rows[:limit])})()
+        return DS()
 
     class log:
         warning = staticmethod(print)
@@ -81,3 +91,44 @@ def test_a_run_writes_rows_a_summary_and_charges_only_verdicts(monkeypatch):
 def test_no_claims_ends_with_a_clear_message_and_no_rows(monkeypatch):
     actor = run_main(monkeypatch, {}, lambda c: {})
     assert actor.rows == [] and actor.charges == 0 and "No claims given" in actor.status[-1][0]
+
+
+# review fixes (#246)
+def test_a_resumed_run_counts_the_earlier_rows_too(monkeypatch):
+    mod = load_main(monkeypatch)
+    actor = FakeActor({"listingUrl": "https://shop.example/p", "claimTexts": ["a", "b", "c"]})
+    actor.rows = [{"id": "c1", "result": "verified"}, {"id": "c2", "result": "false"}]
+    actor.kv["STATE_next_claim"] = 2
+    monkeypatch.setattr(mod, "Actor", actor)
+    monkeypatch.setattr(mod, "check_claim", lambda c: {"result": "verified", "evidence_hash": "h"})
+    asyncio.run(mod.main())
+    assert actor.status[-1][0] == "3 claim(s): 2 verified, 1 false, 0 unverified" and len(actor.kv["OUTPUT"]["results"]) == 3
+
+
+def test_a_charge_limit_stop_says_how_many_were_not_checked(monkeypatch):
+    mod = load_main(monkeypatch)
+    actor = FakeActor({"listingUrl": "https://shop.example/p", "claimTexts": ["a", "b", "c"]})
+    actor.limit = 1
+    monkeypatch.setattr(mod, "Actor", actor)
+    monkeypatch.setattr(mod, "check_claim", lambda c: {"result": "verified", "evidence_hash": "h"})
+    asyncio.run(mod.main())
+    assert actor.status[-1][0].endswith("checked 1 of 3, stopped at your charge limit (2 not checked)")
+    assert actor.kv["OUTPUT"]["checked"] == 1 and actor.kv["OUTPUT"]["total"] == 3
+
+
+def test_a_corrupt_saved_position_starts_from_the_top(monkeypatch):
+    mod = load_main(monkeypatch)
+    actor = FakeActor({"listingUrl": "https://shop.example/p", "claimTexts": ["a"]})
+    actor.kv["STATE_next_claim"] = "abc"
+    monkeypatch.setattr(mod, "Actor", actor)
+    monkeypatch.setattr(mod, "check_claim", lambda c: {"result": "unverified"})
+    asyncio.run(mod.main())
+    assert len(actor.rows) == 1
+
+
+def test_claims_as_one_string_are_split_by_line_and_claims_without_a_page_are_reported(monkeypatch):
+    mod = load_main(monkeypatch)
+    assert [c["text"] for c in mod.claims_from({"listingUrl": "https://s.example/p", "claimTexts": "new\nin stock"})] == ["new", "in stock"]
+    actor = run_main(monkeypatch, {"claimTexts": ["new"], "claims": [{"id": "b1", "text": "new", "evidence_url": "https://o.example/p"}]},
+                     lambda c: {"result": "unverified"})
+    assert "without a product page URL" in actor.status[-1][0] and len(actor.rows) == 1

@@ -11,10 +11,12 @@ Built for **AI shopping agents** (our own, [Tech Bazaar](https://github.com/vs-g
 | Claim | Read from the page | Example claim text |
 |---|---|---|
 | **Price** | schema.org Product JSON-LD offer price | `price $1,749.99` |
-| **Condition** | new, open-box, refurbished, used | `new`, `open-box` |
+| **Condition** | schema.org itemCondition: New is new, Used and Damaged are used, Refurbished is refurbished | `new`, `refurbished`, `used` |
 | **Stock** | schema.org availability (InStock, OutOfStock, PreOrder, BackOrder, ...) | `in stock` |
 | **Warranty** | JSON-LD `warranty`, or "N-year warranty" in the description | `2-year warranty` |
 | **Returns** | JSON-LD `hasMerchantReturnPolicy` | `30-day returns` |
+
+schema.org has no open-box condition, so an `open-box` claim can never be confirmed from the page: it is compared with what the page states (a page marked new gives `false`, "differs from the listing").
 
 One claim line can state several things ("new, in stock, $1,749.99"). All of them are checked, and the line is `false` if any one differs from the page.
 
@@ -22,7 +24,7 @@ One claim line can state several things ("new, in stock, $1,749.99"). All of the
 
 1. Paste the **product page URL**.
 2. Add the **claims**, one per line, as the seller wrote them.
-3. Run. Each claim becomes one row in the results table, and the run's status line sums it up, for example `3 claim(s): 2 verified, 1 false, 0 unverified`.
+3. Run. Each claim becomes one row in the results table, and the run's status line sums it up, for example `3 claim(s): 2 verified, 1 false, 0 unverified`. If your spending limit stops a run early, the line says how many claims were not checked.
 
 To check many listings in one run, use **Batch** (advanced): a list of `{id, text, evidence_url}`, each with its own page.
 
@@ -37,7 +39,7 @@ To check many listings in one run, use **Batch** (advanced): a list of `{id, tex
 
 ## Output example
 
-Real result on that page (a dated read, Oct 24 2026; the claims are test claims we wrote, not the store's):
+**A dated sample of one run** (Oct 24 2026, 18:28 UTC), not what a run returns today: prices and stock change, and every run reads the page again. The claims are test claims we wrote, not the store's.
 
 | Claim | Result | Reason |
 |---|---|---|
@@ -64,7 +66,7 @@ The key-value store's `OUTPUT` record holds the summary and all rows together.
 
 ## Use it from an AI agent or your code
 
-**AI agents (MCP):** add the Actor to any MCP client through Apify's MCP server, `https://mcp.apify.com/?actors=anoopibrampur/tech-bazaar-claim-check`. The agent passes a page and claims and gets the rows back as a tool result.
+**AI agents (MCP):** add the Actor to any MCP client through Apify's MCP server, `https://mcp.apify.com?tools=anoopibrampur/tech-bazaar-claim-check`. The agent passes a page and claims and gets the rows back as a tool result.
 
 **API (one call, results in the response):**
 

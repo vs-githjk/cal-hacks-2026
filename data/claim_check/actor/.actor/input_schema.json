@@ -14,7 +14,7 @@
    "title": "Claims to check",
    "type": "array",
    "editor": "stringList",
-   "description": "What the seller says, one claim per line. Examples: \"price $1,749.99\", \"new\", \"open-box\", \"in stock\", \"2-year warranty\", \"30-day returns\".",
+   "description": "What the seller says, one claim per line. Examples: \"price $1,749.99\", \"new\", \"in stock\", \"2-year warranty\", \"30-day returns\".",
    "prefill": ["price $1,749.99", "new", "in stock"]
   },
   "claims": {

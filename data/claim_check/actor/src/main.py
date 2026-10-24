@@ -18,14 +18,35 @@ def claims_from(inp: dict) -> list:
     """The simple form (one page, claims as plain lines) plus any batch claims (each with its own page)."""
     inp = inp or {}
     url = str(inp.get("listingUrl") or "").strip()
-    texts = [t.strip() for t in inp.get("claimTexts") or [] if isinstance(t, str) and t.strip()]
+    raw = inp.get("claimTexts") or []
+    raw = raw.splitlines() if isinstance(raw, str) else raw  # a plain string is one claim per line, never one per character
+    texts = [t.strip() for t in raw if isinstance(t, str) and t.strip()]
     simple = [{"id": f"c{i}", "text": t, "evidence_url": url} for i, t in enumerate(texts, 1)] if url else []
     return simple + [c for c in inp.get("claims") or [] if c]
 
 
-def summary(rows: list) -> str:
+def summary(rows: list, total: int | None = None) -> str:
+    """Counts over every row of the run (earlier rows included on a resume), and says plainly when claims were not checked."""
     counts = {k: sum(1 for r in rows if r.get("result") == k) for k in ("verified", "false", "unverified")}
-    return f"{len(rows)} claim(s): {counts['verified']} verified, {counts['false']} false, {counts['unverified']} unverified"
+    out = f"{len(rows)} claim(s): {counts['verified']} verified, {counts['false']} false, {counts['unverified']} unverified"
+    if total is not None and len(rows) < total:
+        out += f"; checked {len(rows)} of {total}, stopped at your charge limit ({total - len(rows)} not checked)"
+    return out
+
+
+def input_warning(inp: dict) -> str | None:
+    inp = inp or {}
+    if inp.get("claimTexts") and not str(inp.get("listingUrl") or "").strip():
+        return "Claims to check were given without a product page URL, so they were skipped"
+    return None
+
+
+def _index(v) -> int:
+    """A saved position, or 0 when it is missing or not a whole number."""
+    try:
+        return max(0, int(v or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def judged(result: dict) -> bool:
@@ -39,7 +60,7 @@ async def run_claims(claims, check, push, charge, log=print, get_state=None, set
     The next index is saved after a row is pushed and before it is charged, so a restart resumes after it: a crash can at
     worst leave one claim uncharged, never charge it twice. apify 2.7.3's Actor.charge(event_name, count) has no
     idempotency key, so the saved index is the only guard. The loop stops when the user's charge limit is reached."""
-    start = int((await get_state()) or 0) if get_state else 0
+    start = _index(await get_state()) if get_state else 0
     charged = 0
     for index in range(start, len(claims)):
         claim = claims[index]
@@ -67,19 +88,24 @@ async def run_claims(claims, check, push, charge, log=print, get_state=None, set
 
 async def main():
     async with Actor:
-        claims = claims_from(await Actor.get_input())
+        inp = await Actor.get_input()
+        claims, warning = claims_from(inp), input_warning(inp)
+        if warning:
+            Actor.log.warning(warning)
         if not claims:
-            await Actor.set_status_message("No claims given: add a product page URL and one claim per line", is_terminal=True)
+            await Actor.set_status_message(warning or "No claims given: add a product page URL and one claim per line", is_terminal=True)
             return
-        rows = []
+        start = _index(await Actor.get_value(STATE_KEY))
+        rows = (await (await Actor.open_dataset()).get_data(limit=start)).items[:start] if start else []  # a resume keeps earlier rows
 
         async def push(row):
             rows.append(row)
             await Actor.push_data(row)
         await run_claims(claims, check_claim, push, Actor.charge, log=Actor.log.warning,
                          get_state=lambda: Actor.get_value(STATE_KEY), set_state=lambda v: Actor.set_value(STATE_KEY, v))
-        await Actor.set_value("OUTPUT", {"summary": summary(rows), "results": rows})
-        await Actor.set_status_message(summary(rows), is_terminal=True)
+        line = summary(rows, len(claims)) + (f". {warning}" if warning else "")
+        await Actor.set_value("OUTPUT", {"summary": line, "checked": len(rows), "total": len(claims), "results": rows})
+        await Actor.set_status_message(line, is_terminal=True)
 
 
 if __name__ == "__main__":
