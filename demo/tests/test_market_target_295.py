@@ -89,3 +89,30 @@ def test_export_sets_what_stdb_reads(monkeypatch):
     import os
     assert os.environ["SPACETIMEDB_HTTP"] == "https://maincloud.spacetimedb.com" and os.environ["SPACETIMEDB_DB"] == "tech-bazaar"
     assert "shared market" in T.describe(T.resolve(None, MAIN))
+
+
+@pytest.mark.parametrize("file_server, flag", [("maincloud", "local"), ("local", "maincloud")])
+def test_a_server_flag_that_differs_from_the_env_file_is_refused(tmp_path, monkeypatch, file_server, flag):
+    import types
+    from demo import run_demo
+    f = tmp_path / ".env"
+    http = "https://maincloud.spacetimedb.com" if file_server == "maincloud" else "http://127.0.0.1:3000"
+    f.write_text(f"SPACETIMEDB_SERVER={file_server}\nSPACETIMEDB_HTTP={http}\n")
+    monkeypatch.setattr(run_demo, "DEFAULT_ENV_FILE", f)
+    for k in T.NAMES:
+        monkeypatch.delenv(k, raising=False)
+    with pytest.raises(SystemExit, match="--server"):
+        bridge.live_target(types.SimpleNamespace(server=flag))
+    assert bridge.live_target(types.SimpleNamespace(server=file_server))["server"] == file_server
+    assert bridge.live_target(types.SimpleNamespace(server=None))["server"] == file_server
+
+
+def test_a_symlink_to_a_shared_markets_tokens_counts_as_shared(tmp_path, monkeypatch):
+    monkeypatch.setattr(T, "ROOT", tmp_path)
+    own = tmp_path / ".tokens" / "tech-bazaar@maincloud.spacetimedb.com"
+    own.mkdir(parents=True)
+    for name in (bridge.REFEREE_TOKEN, bridge.BUYER_TOKEN):
+        (own / name).write_text("{}")
+    (tmp_path / "plain").symlink_to(own)
+    with pytest.raises(SystemExit, match="shared market's tokens"):
+        bridge.find_tokens_dir(str(tmp_path / "plain"), T.resolve(None, {}))

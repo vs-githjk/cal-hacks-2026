@@ -97,7 +97,7 @@ def tokens_dir(target: dict, root: Optional[Path] = None) -> Path:
 
 def is_market_tokens_dir(path) -> bool:
     """True for a .tokens/<db>@<host>/ folder, which belongs to a shared market."""
-    return "@" in Path(path).name
+    return "@" in Path(path).name or "@" in Path(path).resolve().name   # a symlink to a shared folder counts too
 
 
 def describe(target: dict) -> str:

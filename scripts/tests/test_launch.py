@@ -396,6 +396,8 @@ def test_maincloud_check_passes_only_for_a_shared_market_the_web_also_points_at(
     assert not L.maincloud_check({**MAINCLOUD_ENV, "NEXT_PUBLIC_SPACETIMEDB_URI": "ws://127.0.0.1:3000"}).ok
     assert not L.maincloud_check({**MAINCLOUD_ENV, "NEXT_PUBLIC_SPACETIMEDB_DB": "other"}).ok
     assert not L.maincloud_check({**MAINCLOUD_ENV, "SPACETIMEDB_HTTP": "http://maincloud.spacetimedb.com"}).ok
+    assert not L.maincloud_check({**MAINCLOUD_ENV, "NEXT_PUBLIC_SPACETIMEDB_URI": "wss://evil.example.com"}).ok   # web on another host
+    assert not L.maincloud_check({**MAINCLOUD_ENV, "NEXT_PUBLIC_SPACETIMEDB_URI": "wss://maincloud.spacetimedb.com:x"}).ok
 
 
 def test_a_failed_maincloud_check_skips_every_service(tmp_path, monkeypatch):

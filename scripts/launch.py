@@ -218,7 +218,14 @@ def maincloud_check(file_env: dict[str, str]) -> "Check":
     if t["local"]:
         return Check("maincloud market", False, "the env file names the local market",
                      "set SPACETIMEDB_SERVER=maincloud and SPACETIMEDB_HTTP=https://maincloud.spacetimedb.com")
-    if not uri.startswith("wss://") or web_db != t["db"]:
+    from urllib.parse import urlsplit
+    try:
+        web = urlsplit(uri)
+        web.port                            # raises on a bad port
+        web_host = web.hostname
+    except ValueError:
+        web_host = None
+    if not uri.startswith("wss://") or web_db != t["db"] or web_host != urlsplit(t["http"]).hostname:
         return Check("maincloud market", False, f"web points at {uri or 'nothing'} / {web_db or 'no db'}",
                      f"set NEXT_PUBLIC_SPACETIMEDB_URI=wss://<maincloud host> and NEXT_PUBLIC_SPACETIMEDB_DB={t['db']}")
     return Check("maincloud market", True, market_target.describe(t))

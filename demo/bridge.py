@@ -909,6 +909,9 @@ def live_target(args) -> dict:
         target = market_target.resolve(DEFAULT_ENV_FILE)
     except market_target.TargetError as e:
         raise SystemExit(f"market target refused: {e}") from None
+    if getattr(args, "server", None) and target["server"] != args.server:   # the env file wins, so a flag that differs is a conflict
+        raise SystemExit(f"--server {args.server} but the Lane D env file names {market_target.describe(target)}: "
+                         "change SPACETIMEDB_SERVER there, or drop --server")
     market_target.export(target)
     args.server = target["server"]
     return target
