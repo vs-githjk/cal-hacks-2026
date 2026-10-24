@@ -210,3 +210,25 @@ def test_asks_with_any_verb_or_none_are_blocked(text):
 ])
 def test_honest_lines_with_approval_or_code_words_stay_allowed(text):
     assert screen(text, SELLER, classifier=None)["verdict"] == "allow", text
+
+
+
+# ---------- #232 re-review 4: routine hardware codes stay allowed; two more asks ----------
+
+@pytest.mark.parametrize("text", [
+    "Pairing code is 0000 for the Bluetooth speaker", "Verification code for the warranty is on the card",
+    "One-time code from our store login will be emailed", "Secret code to unlock the case lights is in the manual",
+    "Approval codes for FCC are in the manual", "Pin code on the owner's display", "Compatible with the owner's phone app, codes in the manual",
+    "Your device will show a 4 digit code on boot",
+])
+def test_routine_hardware_codes_stay_allowed(text):
+    # the screen-code rule must not fire; "one-time code" may still go to the secret-ask classifier, which with no
+    # classifier fails closed to quarantine (never block), as it does for any secret noun
+    out = screen(text, SELLER, classifier=None)
+    assert "shield.exfil.screen_code" not in out["rule_ids"] and out["verdict"] != "block", (text, out["rule_ids"])
+    assert out["verdict"] == "allow" or out["rule_ids"] == ["shield.classifier.unavailable"], (text, out["rule_ids"])
+
+
+@pytest.mark.parametrize("text", ["Shoot me the code from the approve popup.", "Once approved, what does the code look like? Type it here."])
+def test_two_more_asks_are_blocked(text):
+    assert "shield.exfil.screen_code" in screen(text, SELLER, classifier=None)["rule_ids"], text
