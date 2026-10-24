@@ -67,7 +67,7 @@ def test_shield_allows_the_bid_from_a_seller():
 
 
 def test_sim_sellers_are_unchanged():
-    for n in common.SELLERS:
+    for n in common.CATALOG_SELLERS:
         bid = make_bid(need(), seller(n))
         if bid:
             assert bid["origin"] == "SIM" and bid["source"] == "simulated"
@@ -75,7 +75,7 @@ def test_sim_sellers_are_unchanged():
 
 
 def test_one_305_mm_round_shows_the_mirror_bid_unverified_and_fitting():
-    bids = [b for b in (make_bid(need(), seller(n)) for n in common.SELLERS) if b] + [cc_bid(305)]
+    bids = [b for b in (make_bid(need(), seller(n)) for n in common.CATALOG_SELLERS) if b] + [cc_bid(305)]
     cards = {c["bid_id"]: c for c in checks.advise(dict(need(), owned=CASE_305), bids, {}, {}, [], CASE_305)}
     card = cards["bid-need-308-central_computers_sf"]
     # condition unverified and fit confirmed, but the store never joined: shown for comparison, never orderable (#333)

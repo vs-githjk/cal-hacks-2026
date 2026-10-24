@@ -8,9 +8,11 @@ buyer's eligible_for_order, conclude and on_requote). The registry is code-owned
 from __future__ import annotations
 
 # seller id -> the MIRROR label shown wherever the bid is shown (code-owned text, never taken from the bid)
+_CENTRAL_COMPUTERS = ("MIRROR: real Central Computers listing captured Oct 24 21:12 UTC via Apify. "
+                      "Central Computers is not a partner.")
 SELLERS = {
-    "central_computers_sf": ("MIRROR: real Central Computers listing captured Oct 24 21:12 UTC via Apify. "
-                             "Central Computers is not a partner."),
+    "central_computers_sf": _CENTRAL_COMPUTERS,
+    "seller_6": _CENTRAL_COMPUTERS,  # the uAgent that bids those listings (#342); the buyer sees bids under this id
 }
 # snapshot file prefixes of those stores (data/mirror/snapshots/<prefix>-<stamp>.json): kept out of retail medians
 STORES = frozenset({"centralcomputers"})

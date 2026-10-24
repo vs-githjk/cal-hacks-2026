@@ -262,7 +262,7 @@ def _real_need_and_bids():
     goal = {"buyer_id": "vidyut", "cap": 800, "deadline": "2026-11-01T23:59:00Z",
             "items": [{"sku_spec": "rtx 4070 super 12gb", "quantity": 1, "part": "gpu"}]}
     need = sealed(need_from_goal(goal))
-    bids = [b for b in (make_bid(need, seller(n)) for n in common.SELLERS) if b]
+    bids = [b for b in (make_bid(need, seller(n)) for n in common.CATALOG_SELLERS) if b]
     assert need["consent"] is True and bids
     return need, bids
 
