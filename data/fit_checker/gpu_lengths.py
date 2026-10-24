@@ -25,10 +25,10 @@ def maker_length(title: str) -> dict | None:
 
 def listing_length(url: str, title: str) -> dict:
     """Maker length for a store listing, from its title and URL; never a guess."""
-    m = maker_length(f"{title} {url}")
+    m = maker_length(title)  # the title only: a brand in a URL slug is a guess
     if not m:
         return {"length_mm": None, "note": NOT_IDENTIFIABLE}
-    return {"length_mm": m["length_mm"], "model": m["model"], "source": m["source"], "confidence": "maker spec, model named in the listing"}
+    return {"length_mm": m["length_mm"], "model": m["model"], "source": m["source"], "confidence": m["confidence"]}
 
 
 def fits(length_mm, clearance_mm) -> bool | None:
@@ -77,10 +77,11 @@ def demo_listings() -> list[dict]:
 def report() -> list[dict]:
     rows = []
     for d in demo_listings():
-        m = maker_length(f"{d['title']} {d.get('url', '')}") if d["origin"] == "MIRROR" else None
+        m = maker_length(d["title"]) if d["origin"] == "MIRROR" else None
         length = m["length_mm"] if m else d["listed_length_mm"] if d["origin"] == "SIM" else None
         rows.append({**d, "model": m["model"] if m else None, "maker_length_mm": m["length_mm"] if m else None,
                      "length_used_mm": length, "source": m["source"] if m else ("SIM seller's stated length" if length else None),
+                     "confidence": m["confidence"] if m else ("SIM seller's stated length" if length else None),
                      **{f"fits_{c}": fits(length, c) for c in CLEARANCES},
                      **({"note": NOT_IDENTIFIABLE} if d["origin"] == "MIRROR" and not m else {})})
     return rows
