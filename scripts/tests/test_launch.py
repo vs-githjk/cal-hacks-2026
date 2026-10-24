@@ -7,6 +7,7 @@ import sys
 import time
 from argparse import Namespace
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -95,6 +96,32 @@ def make_args(**kw):
     d = dict(shield_port=8787, web_port=3100, stdb_port=3000, only=None, run_dir=".run", env_file="x", strict=False)
     d.update(kw)
     return Namespace(**d)
+
+
+def real_agent_args_with_fake_dotenv(child_env, role, port):
+    """Load the real common.agent_args while substituting, never reading, agents/.env."""
+    env_path = L.REPO / "agents" / ".env"
+    original_exists = Path.exists
+    original_read_text = Path.read_text
+
+    def exists(path):
+        return path == env_path or original_exists(path)
+
+    def read_text(path, *args, **kwargs):
+        if path == env_path:
+            return "AGENTS_MAILBOX=1\nBUYER_MAILBOX=1\nADVOCATE_MAILBOX=1\nSELLERS_MAILBOX=1\nSHIELD_MAILBOX=1\n"
+        return original_read_text(path, *args, **kwargs)
+
+    name = f"launch_test_common_{role}"
+    spec = importlib.util.spec_from_file_location(name, L.REPO / "agents" / "common.py")
+    module = importlib.util.module_from_spec(spec)
+    with patch.dict(os.environ, {key: child_env.get(key, "") for key in (
+            "AGENTS_MAILBOX", "BUYER_MAILBOX", "ADVOCATE_MAILBOX", "SELLERS_MAILBOX", "SHIELD_MAILBOX")}, clear=True), \
+            patch.object(Path, "exists", exists), patch.object(Path, "read_text", read_text):
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        module.SEEDS[role] = "offline-private-example"
+        return module.agent_args(role, port)
 
 
 def preflight(tmp_repo, which, env=None, **kw):
@@ -366,10 +393,81 @@ def test_mailbox_flag_sets_agent_env_only_when_asked(tmp_path):
     base = dict(shield_port=8787, stdb_port=3000, web_port=3100)
     off = {s.name: s for s in L.build_services(Namespace(**base, mailbox=False), tmp_path)}
     on = {s.name: s for s in L.build_services(Namespace(**base, mailbox=True), tmp_path)}
-    assert "BUYER_MAILBOX" not in off["buyer"].extra_env
+    assert off["buyer"].extra_env["AGENTS_MAILBOX"] == ""
+    assert off["buyer"].extra_env["BUYER_MAILBOX"] == ""
+    assert on["buyer"].extra_env["AGENTS_MAILBOX"] == "1"
     assert on["buyer"].extra_env["BUYER_MAILBOX"] == "1"
     assert on["advocate"].extra_env["ADVOCATE_MAILBOX"] == "1"
     assert on["sellers"].extra_env["SELLERS_MAILBOX"] == "1"
+    assert on["shield-client"].extra_env["SHIELD_MAILBOX"] == "1"
+
+
+def test_shield_client_is_managed_on_existing_identity_port(tmp_path):
+    by_name = {s.name: s for s in L.build_services(make_args(), tmp_path)}
+    svc = by_name["shield-client"]
+    assert svc.port == 8004 and svc.health == "tcp" and svc.group == "agents"
+    assert svc.cmd == [str(L.venv_python(tmp_path)), "shield_client.py"]
+    assert svc.cwd == tmp_path / "agents"
+    assert svc.extra_env["SHIELD_URL"] == "http://127.0.0.1:8787"
+    help_text = L.make_parser().format_help()
+    assert "shield-client" in help_text
+
+
+@pytest.mark.parametrize(("service", "role", "flag", "port"), [
+    ("buyer", "buyer", "BUYER_MAILBOX", 8001),
+    ("advocate", "advocate", "ADVOCATE_MAILBOX", 8003),
+    ("sellers", "seller_1", "SELLERS_MAILBOX", 8011),
+    ("shield-client", "shield", "SHIELD_MAILBOX", 8004),
+])
+@pytest.mark.parametrize("mailbox", [False, True])
+def test_agent_modes_override_inherited_and_env_file_flags_for_real_agent_args(
+        tmp_path, monkeypatch, service, role, flag, port, mailbox):
+    monkeypatch.setenv("AGENTS_MAILBOX", "1")
+    monkeypatch.setenv(flag, "1")
+    args = make_args(mailbox=mailbox)
+    services = {s.name: s for s in L.build_services(args, tmp_path)}
+    selected = services[service]
+    child_env = L.env_for(selected, {"AGENTS_MAILBOX": "1", flag: "1"})
+    expected = "1" if mailbox else ""
+    assert child_env["AGENTS_MAILBOX"] == expected
+    assert child_env[flag] == expected
+
+    result = real_agent_args_with_fake_dotenv(child_env, role, port)
+    if mailbox:
+        assert result["mailbox"] is True and "endpoint" not in result
+    else:
+        assert result["endpoint"] == [f"http://localhost:{port}/submit"]
+        assert "mailbox" not in result
+
+
+def test_mailbox_mode_still_rejects_public_shield_seed(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTS_MAILBOX", "1")
+    monkeypatch.setenv("SHIELD_MAILBOX", "1")
+    service = {s.name: s for s in L.build_services(make_args(mailbox=True), tmp_path)}["shield-client"]
+    child_env = L.env_for(service, {})
+    # The real constructor rejects public development seeds when mailbox mode is selected.
+    env_path = L.REPO / "agents" / ".env"
+    original_exists, original_read_text = Path.exists, Path.read_text
+
+    def exists(path):
+        return path == env_path or original_exists(path)
+
+    def read_text(path, *args, **kwargs):
+        if path == env_path:
+            return "AGENTS_MAILBOX=1\nSHIELD_MAILBOX=1\n"
+        return original_read_text(path, *args, **kwargs)
+
+    name = "launch_test_common_public_seed"
+    spec = importlib.util.spec_from_file_location(name, L.REPO / "agents" / "common.py")
+    module = importlib.util.module_from_spec(spec)
+    with patch.dict(os.environ, {key: child_env.get(key, "") for key in (
+            "AGENTS_MAILBOX", "BUYER_MAILBOX", "ADVOCATE_MAILBOX", "SELLERS_MAILBOX", "SHIELD_MAILBOX")}, clear=True), \
+            patch.object(Path, "exists", exists), patch.object(Path, "read_text", read_text):
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        module.SEEDS["shield"] = "tech-bazaar-shield-dev"
+        with pytest.raises(SystemExit, match="default seed is public"):
+            module.agent_args("shield", 8004)
 
 
 def test_windows_interpreter_path_uses_scripts_python(tmp_path):
