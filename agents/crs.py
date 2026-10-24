@@ -435,24 +435,40 @@ def _payee_profile(supplier_id: str):
     if not isinstance(sellers, dict) or not sellers:
         raise ProfilesUnreadable("CRS profile file has no sellers")
     want = str(supplier_id).strip().lower()
-    return next((v for k, v in sellers.items() if isinstance(k, str) and k.strip().lower() == want), None)
+    hits = [v for k, v in sellers.items() if isinstance(k, str) and k.strip().lower() == want]
+    if len(hits) > 1:
+        raise ProfilesUnreadable("CRS profile file has two entries for this seller")
+    if hits and not isinstance(hits[0], dict):
+        raise ProfilesUnreadable("CRS profile entry for this seller is not an object")
+    return hits[0] if hits else None
+
+
+def sim_reason(supplier_id: str) -> str | None:
+    """Why this payee is a SIM seller, or None when it must be checked as a business. Only no profile file, no profile
+    for the seller, or a profile that says "individual" is SIM; any other profile (an odd or missing seller_type too) is
+    checked, and check_sellers holds it if it is not an approved business. Raises ProfilesUnreadable."""
+    if _paths()[0] is None:
+        return "no CRS profile file is configured (CRS_TEST_IDENTITIES_PATH)"
+    profile = _payee_profile(supplier_id)
+    if profile is None:
+        return "no business CRS profile for this seller"
+    if str(profile.get("seller_type", "")).strip().lower() == "individual":
+        return "its CRS profile is an individual seller"
+    return None
 
 
 def is_business(supplier_id: str) -> bool:
-    """A payee is a business when its profile says so (any case); every other payee is a SIM seller.
-    Raises ProfilesUnreadable when a configured profile file cannot be read."""
-    profile = _payee_profile(supplier_id)
-    return isinstance(profile, dict) and str(profile.get("seller_type", "")).strip().lower() == "business"
+    return sim_reason(supplier_id) is None
 
 
 async def check_payee(supplier_id: str, now: datetime) -> dict:
     """#257: one CRS check of the payee at the payment gate, cached per payee for PAYEE_TTL.
     Returns {"business", "check", "cached"}: `check` is the CrsCheck (pay.crs_gate judges it) for a business payee,
     None for a SIM seller (no business profile, so no request). A transport failure is never cached."""
-    business = is_business(supplier_id)          # read every time: a changed profile or consent is never cached over
-    if not business:
+    why_sim = sim_reason(supplier_id)            # read every time: a changed profile or consent is never cached over
+    if why_sim is not None:
         _payee_cache.pop(supplier_id, None)
-        return {"business": False, "check": None, "cached": False}
+        return {"business": False, "check": None, "cached": False, "sim_reason": why_sim}
     hit = _payee_cache.get(supplier_id)
     consent = (_payee_profile(supplier_id) or {}).get("consent") is True
     if hit is not None and now < hit[0] and consent:

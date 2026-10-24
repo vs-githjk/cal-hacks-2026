@@ -601,7 +601,7 @@ def test_a_payee_with_no_business_profile_is_a_sim_seller_with_no_request(monkey
     calls = []
     monkeypatch.setattr(crs, "_request", lambda *a: calls.append(a))
     out = asyncio.run(crs.check_payee("best-buy", NOW))
-    assert out == {"business": False, "check": None, "cached": False} and calls == []
+    assert out["business"] is False and out["check"] is None and calls == [] and "no business CRS profile" in out["sim_reason"]
 
 
 def test_check_payee_never_logs_the_key(monkeypatch, tmp_path, fresh_payee_cache, capsys, caplog):
@@ -641,3 +641,33 @@ def test_a_sim_outcome_is_not_cached_and_withdrawn_consent_beats_the_cache(monke
     out = asyncio.run(crs.check_payee("seller_1", NOW + timedelta(minutes=1)))
     assert out["cached"] is False and out["check"]["verified"] is False
     assert asyncio.run(crs.check_payee("best-buy", NOW))["business"] is False and "best-buy" not in crs._payee_cache
+
+
+
+@pytest.mark.parametrize("seller_type", ["busines", None, "", "partner"])
+def test_a_present_profile_that_is_not_individual_is_checked_and_held(monkeypatch, tmp_path, fresh_payee_cache, seller_type):
+    setup_profile(monkeypatch, tmp_path, seller_type=seller_type)
+    monkeypatch.setattr(crs, "_request", lambda body, token: response())
+    out = asyncio.run(crs.check_payee("seller_1", NOW))
+    assert out["business"] is True and out["check"]["verified"] is False
+
+
+def test_only_an_individual_profile_is_a_sim_seller(monkeypatch, tmp_path, fresh_payee_cache):
+    setup_profile(monkeypatch, tmp_path, seller_type="Individual")
+    out = asyncio.run(crs.check_payee("seller_1", NOW))
+    assert out["business"] is False and "individual" in out["sim_reason"]
+
+
+@pytest.mark.parametrize("sellers", [{"S1": {"seller_type": "individual"}, "s1": {"seller_type": "business"}}, {"s1": "business"},
+                                     {"s1": None}])
+def test_duplicate_or_odd_entries_make_the_file_unreadable(monkeypatch, tmp_path, fresh_payee_cache, sellers):
+    setup_profile(monkeypatch, tmp_path)
+    (tmp_path / "private.json").write_text(json.dumps({"sellers": sellers}))
+    with pytest.raises(crs.ProfilesUnreadable):
+        asyncio.run(crs.check_payee("s1", NOW))
+
+
+def test_no_profile_file_says_so(monkeypatch, fresh_payee_cache):
+    monkeypatch.setattr(crs, "_paths", lambda: (None, Path("/nonexistent/cache.json")))
+    out = asyncio.run(crs.check_payee("best-buy", NOW))
+    assert out["business"] is False and "CRS_TEST_IDENTITIES_PATH" in out["sim_reason"]

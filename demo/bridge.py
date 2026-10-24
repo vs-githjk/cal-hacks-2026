@@ -476,7 +476,8 @@ class DealGate:
             return "CRS: no check was made"
         seller = self.winner["persona"] or self.winner["seller_id"]
         if not self.crs.get("business"):
-            return f"CRS: {seller} is a SIM seller (no business CRS profile), so its identity was not checked"
+            why = self.crs.get("sim_reason") or "no business CRS profile"
+            return f"CRS: {seller} is a SIM seller ({why}), so its identity was not checked"
         c = self.crs["check"]
         cached = ", reused from the last 10 minutes" if self.crs.get("cached") else ""
         return (f"CRS: {seller} identity verified ({c['origin'].lower()}{cached}), check {self.mandate['crs_check_id']} "
