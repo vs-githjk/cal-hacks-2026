@@ -1493,6 +1493,36 @@ describe('#191 approval and mandate holes', () => {
     expect(h.db.mandate.hash.find('h1')).toMatchObject({ payee: 'seller-a', amount: 780 });
   });
 
+  it('#325-1 amount NaN or Infinity is refused, not treated as equal to the landed price', () => {
+    wonByA();
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: NaN })))).toThrow(/amount/);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: Infinity })))).toThrow(/amount/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#325-2 a Shield block, failed claim check or advocate veto attached after close still refuses a mandate', () => {
+    wonByA();
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'block', ruleIds: ['shield.payee.swap'], origin: 'SIM' }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#325-3 approval_recorded carries one neutral label whether the deal was within the allowance or approved by call', () => {
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
+    wonByA(); // 780: over the per-buy limit, needs the call
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2' })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
+    run(C, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-c2', [line(200)]), roundId: 'round-2' }));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-2' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', dealId: 'round-2:bid-c2', payee: 'seller-c', amount: 200 })));
+    expect(h.db.mandate.hash.find('h2')!.withinAllowance).toBe(true); // auto-approved, no call
+    const labels = events().filter((e) => e.kind === 'approval_recorded').map((e) => e.label);
+    expect(labels).toEqual(['Deal approved', 'Deal approved']);
+  });
+
   it('#191-4 one winner: a cheaper bid the advocate flags caution (fit unconfirmed) is held back below a confirmed fit, with its reason', () => {
     setupRound();
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(700)])));

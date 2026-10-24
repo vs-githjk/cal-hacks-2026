@@ -613,7 +613,11 @@ export function createMandate(
   const won = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].find((r) => r.bidId === bid.id) : undefined;
   if (!bid || !won || won.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
   if (a.payee !== bid.sellerId) throw new SenderError(`payee must be the winning seller (${bid.sellerId})`);
-  if (Math.abs(a.amount - won.landed) > 1e-9) throw new SenderError('amount must equal the winning landed price');
+  if (!(Number.isFinite(a.amount) && Math.abs(a.amount - won.landed) <= 1e-9)) throw new SenderError('amount must equal the winning landed price');
+  const checks = [...ctx.db.bidCheck.bidId.filter(bid.id)];
+  if (checks.some((c) => c.kind === 'shield' && c.result === 'block')) throw new SenderError('bid has a Shield block; no mandate');
+  if (checks.some((c) => c.kind === 'claim' && c.result === 'false')) throw new SenderError('bid has a failed claim check; no mandate');
+  if (checks.some((c) => c.kind === 'advocate' && c.result === 'veto')) throw new SenderError('bid has an advocate veto; no mandate');
   if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {
     throw new SenderError(`expiry must be 1 to ${MANDATE_MAX_EXPIRY_MIN} minutes`);
   }
@@ -633,7 +637,7 @@ export function createMandate(
     ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp, voiceApprovalId: '' });
     saveAllowance(ctx, recordAutoSpend(allow, a.amount, ms(ctx.timestamp)));
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Bought within your allowance: ${d.reason}. Receipt for deal ${a.dealId}.`, push: false, at: ctx.timestamp });
-    event(ctx, 'approval_recorded', 'approval', a.hash, 'Approved within the allowance', a.payee, a.origin);
+    event(ctx, 'approval_recorded', 'approval', a.hash, 'Deal approved', a.payee, a.origin);
   } else {
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'state', text: `Call needed: ${d.reason}.`, push: true, at: ctx.timestamp });
   }
@@ -654,7 +658,7 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp, voiceApprovalId: a.voiceApprovalId.trim() });
-  event(ctx, 'approval_recorded', 'approval', a.mandateHash, `Approved by ${a.method.replace('_', ' ')}`, md.payee, md.origin);
+  event(ctx, 'approval_recorded', 'approval', a.mandateHash, 'Deal approved', md.payee, md.origin);
 }
 
 /**
