@@ -81,9 +81,14 @@ def check(doc, ctx):
         cred = _CRED.search(s)
         if not cred and _HARDWARE.search(s) and not _TO_SELLER.search(s) and not strong:
             continue
-        asks = _ASK.search(_DESCRIBE.sub(_blank, s) if boot else s) or (cred and _REQUIRE.search(s))
+        # in a boot or BIOS sentence a bare "?" is a hardware question ("Does your laptop show a code on boot?"), not an
+        # ask, unless the sentence names the approval credential (#252)
+        asks = (_ASK.search(_DESCRIBE.sub(_blank, s).replace("?", " ") if boot and not cred else _DESCRIBE.sub(_blank, s) if boot else s)
+                or (cred and _REQUIRE.search(s)))
         where = _WHERE.search(_WEAK_WHERE.sub(_blank, s) if boot else s)
-        if strong or (noun and where and asks) or _RELAY.search(s):
+        # "The two words you see on your screen go to me.": the credential plus a seller destination, with no ask verb (#252)
+        sent = cred and _TO_SELLER.search(s)
+        if strong or sent or (noun and where and asks) or _RELAY.search(s):
             start = m.start() + len(s) - len(s.lstrip())
             yield doc.raw_span(start, m.end())
 
