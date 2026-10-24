@@ -30,9 +30,29 @@ export const ALLOWANCE_LADDER: { per_purchase: number; per_period: number }[] = 
   { per_purchase: 600, per_period: 1500 },
 ];
 
+/**
+ * PROPOSED weights for quality-adjusted landed price (the advocate ranks on it, 00-shared Seller model).
+ * Fractions of the line's price: a worse condition costs more, a bid without a 30-day-returns perk
+ * costs 2 percent. Same numbers as the Lane D demo runner; Lane A's advocate owns the final weights.
+ */
+export interface QualityWeights {
+  condition_adj: Record<string, number>;
+  no_returns_adj: number;
+  /** A perk like "30-day returns" counts when its day count is at least this. */
+  min_returns_days: number;
+}
+
+export const QUALITY: QualityWeights & { status: "PROPOSED" | "FINAL" } = {
+  condition_adj: { new: 0, "open-box": 0.04, refurbished: 0.08, used: 0.15, unknown: 0 },
+  no_returns_adj: 0.02,
+  min_returns_days: 30,
+  status: "PROPOSED",
+};
+
 export const MARKET_CONFIG = {
   seller_fee: SELLER_FEE,
   allowance_ladder: ALLOWANCE_LADDER,
+  quality: QUALITY,
 };
 
 export type MarketConfig = typeof MARKET_CONFIG;
