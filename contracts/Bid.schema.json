@@ -22,14 +22,22 @@
       "type": "string"
      },
      "unit_price": {
-      "type": "number"
+      "type": "number",
+      "exclusiveMinimum": 0
      },
+     "shipping": {"type": "number", "minimum": 0,
+       "description": "Flat shipping for this line at its quantity; market adds it once. Omitted only for legacy bids."},
+     "listing_id": {"type": "string"},
+     "line_index": {"type": "integer", "minimum": 0,
+       "description": "Original zero-based Bid.lines index assigned by the market when selecting this line for review."},
      "quantity": {
       "type": "number",
+      "exclusiveMinimum": 0,
       "description": "Deprecated alias of qty_available"
      },
      "qty_available": {
-      "type": "number"
+      "type": "number",
+      "exclusiveMinimum": 0
      },
      "condition": {
       "type": "string",
@@ -47,8 +55,33 @@
        "used",
        "unknown"
       ]
-     }
+     },
+     "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]},
+     "source": {"type": "string"},
+     "seller_of_record": {"type": "string"},
+     "model_number": {"type": "string"},
+     "snapshot_id": {"type": "string"},
+     "snapshot_date": {"type": "string"},
+     "floor_evidence": {"type": "object",
+       "properties": {"origin": {"type": "string", "enum": ["MIRROR", "SIM"]}, "source": {"type": "string"}, "observed_at": {"type": "string"}},
+       "required": ["origin", "source", "observed_at"], "additionalProperties": false,
+       "allOf": [{"if": {"properties": {"origin": {"const": "SIM"}}, "required": ["origin"]},
+                 "then": {"properties": {"source": {"const": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py"}}}}],
+       "description": "Public floor evidence provenance only; the numeric private floor is excluded."},
+     "shipping_evidence": {"oneOf": [
+       {"type": "object", "properties": {
+         "origin": {"type": "string", "const": "SIM"},
+         "source": {"type": "string", "const": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/demo/sellers.py"},
+         "policy": {"type": "string", "const": "Shipping amount unobserved; zero is the existing SIM policy."}},
+         "required": ["origin", "source", "policy"], "additionalProperties": false},
+       {"type": "object", "properties": {
+         "origin": {"type": "string", "const": "MIRROR"},
+         "source": {"type": "string"},
+         "observed_at": {"type": "string"}},
+         "required": ["origin", "source", "observed_at"], "additionalProperties": false}
+     ]}
     },
+    "not": {"required": ["floor"]},
     "required": [
      "sku_spec",
      "unit_price"
@@ -57,7 +90,7 @@
      {"required": ["qty_available"]},
      {"required": ["quantity"]}
     ]
-   }
+     }
   },
   "total_landed_price": {
    "type": "number"
@@ -104,7 +137,8 @@
   "supplier_id": {
    "type": "string",
    "description": "Deprecated alias of seller_id, still sent by Lane A; the market reads it as seller_id"
-  }
+  },
+  "seller_of_record": {"type": "string", "description": "Merchant named by the MIRROR listing; not the registered agent or payment payee."}
  },
  "required": [
   "id",

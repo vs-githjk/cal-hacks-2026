@@ -1,0 +1,279 @@
+{
+ "title": "PC build compatibility input",
+ "type": "object",
+ "schemaVersion": 1,
+ "properties": {
+  "cpu": {
+   "title": "CPU",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the processor, for example AMD Ryzen 7 9700X.",
+   "prefill": "AMD Ryzen 7 9700X",
+   "sectionCaption": "Your parts (names)"
+  },
+  "motherboard": {
+   "title": "Motherboard",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the motherboard. Exact names we hold maker data for fill in their RAM type and form.",
+   "prefill": "Asus PRIME B650-PLUS WIFI"
+  },
+  "memory": {
+   "title": "Memory (RAM)",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the RAM kit.",
+   "prefill": "32GB (2x16GB) DDR5-6000"
+  },
+  "gpu": {
+   "title": "Graphics card",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the graphics card. For RTX 5070 Ti models we hold, the maker's length and recommended PSU are filled in.",
+   "prefill": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC"
+  },
+  "psu": {
+   "title": "Power supply",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the power supply.",
+   "prefill": "Corsair RM750e"
+  },
+  "case": {
+   "title": "Case",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the case. Exact names we hold maker data for fill in their cooler clearance.",
+   "prefill": "Fractal Design North"
+  },
+  "cooler": {
+   "title": "CPU cooler",
+   "type": "string",
+   "editor": "textfield",
+   "description": "Name of the CPU cooler. Exact names we hold maker data for fill in their height and sockets.",
+   "prefill": "Thermalright Peerless Assassin 120 SE"
+  },
+  "cpuSocket": {
+   "title": "CPU socket",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "AM5",
+    "AM4",
+    "LGA1851",
+    "LGA1700",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "description": "Leave empty if unknown; that check then comes back uncertain.",
+   "nullable": true,
+   "prefill": "AM5",
+   "sectionCaption": "Specs you know (optional: leave a field empty when you are not sure)"
+  },
+  "cpuVendor": {
+   "title": "CPU maker",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "AMD",
+    "Intel"
+   ],
+   "description": "Used to estimate CPU power for the PSU check.",
+   "nullable": true,
+   "prefill": "AMD"
+  },
+  "cpuTdpW": {
+   "title": "CPU TDP",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "The CPU's rated TDP in watts, for the PSU check.",
+   "nullable": true,
+   "unit": "W",
+   "prefill": 65
+  },
+  "boardSocket": {
+   "title": "Motherboard socket",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "AM5",
+    "AM4",
+    "LGA1851",
+    "LGA1700",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "description": "The board's CPU socket.",
+   "nullable": true,
+   "prefill": "AM5"
+  },
+  "boardFormFactor": {
+   "title": "Motherboard size",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "ATX",
+    "Micro ATX",
+    "Mini ITX",
+    "EATX"
+   ],
+   "description": "The board's form factor.",
+   "nullable": true,
+   "prefill": "ATX"
+  },
+  "boardMemorySlots": {
+   "title": "Motherboard RAM slots",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Number of RAM slots on the board.",
+   "nullable": true,
+   "prefill": 4
+  },
+  "memoryType": {
+   "title": "RAM generation",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "DDR5",
+    "DDR4"
+   ],
+   "description": "DDR4 or DDR5.",
+   "nullable": true,
+   "prefill": "DDR5"
+  },
+  "memoryForm": {
+   "title": "RAM form",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "DIMM",
+    "SO-DIMM"
+   ],
+   "description": "Desktop DIMM or laptop SO-DIMM.",
+   "nullable": true,
+   "prefill": "DIMM"
+  },
+  "memoryModules": {
+   "title": "RAM sticks",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Number of RAM modules in the kit.",
+   "nullable": true,
+   "prefill": 2
+  },
+  "gpuLengthMm": {
+   "title": "Graphics card length",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Only needed when we do not hold the card's maker length.",
+   "nullable": true,
+   "unit": "mm"
+  },
+  "psuWattage": {
+   "title": "Power supply wattage",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "The PSU's rated wattage.",
+   "nullable": true,
+   "unit": "W",
+   "prefill": 750
+  },
+  "psuFormFactor": {
+   "title": "Power supply size",
+   "type": "string",
+   "editor": "select",
+   "enum": [
+    "ATX",
+    "SFX",
+    "SFX-L"
+   ],
+   "description": "ATX, SFX or SFX-L.",
+   "nullable": true,
+   "prefill": "ATX"
+  },
+  "psu16pin": {
+   "title": "PSU 16-pin (12V-2x6) cables",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Native 16-pin GPU power cables on the PSU.",
+   "nullable": true,
+   "prefill": 1
+  },
+  "psu8pin": {
+   "title": "PSU 8-pin PCIe cables",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "8-pin PCIe GPU power cables on the PSU.",
+   "nullable": true,
+   "prefill": 3
+  },
+  "caseMaxGpuLengthMm": {
+   "title": "Case GPU clearance",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Longest graphics card the case takes.",
+   "nullable": true,
+   "unit": "mm",
+   "prefill": 355
+  },
+  "caseMaxCoolerHeightMm": {
+   "title": "Case cooler clearance",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Tallest CPU air cooler the case takes. Only needed when we do not hold the case.",
+   "nullable": true,
+   "unit": "mm"
+  },
+  "caseBoardSizes": {
+   "title": "Case motherboard sizes",
+   "type": "array",
+   "editor": "stringList",
+   "description": "Board form factors the case takes, one per line.",
+   "prefill": [
+    "ATX",
+    "Micro ATX",
+    "Mini ITX"
+   ]
+  },
+  "casePsuSizes": {
+   "title": "Case power supply sizes",
+   "type": "array",
+   "editor": "stringList",
+   "description": "PSU form factors the case takes, one per line.",
+   "prefill": [
+    "ATX"
+   ]
+  },
+  "coolerHeightMm": {
+   "title": "Cooler height",
+   "type": "integer",
+   "editor": "number",
+   "minimum": 0,
+   "description": "Only needed when we do not hold the cooler's maker height.",
+   "nullable": true,
+   "unit": "mm"
+  },
+  "parts": {
+   "title": "Build as JSON (advanced)",
+   "type": "object",
+   "editor": "json",
+   "sectionCaption": "Advanced: JSON input and many builds",
+   "description": "Optional. The same build as an object of parts ({cpu: {name, socket, ...}, ...}; field names in the README). Overrides the form fields for any part it names."
+  },
+  "builds": {
+   "title": "Batch: many builds",
+   "type": "array",
+   "editor": "json",
+   "description": "Optional. A list of {id, parts} objects, each checked as its own build."
+  }
+ }
+}

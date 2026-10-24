@@ -25,7 +25,6 @@ export interface BuyerScreenProps {
   approval: ApprovalView | null;
   /** A live mandate waiting for this buyer; when present it replaces the sample approval card. */
   review?: ReviewView | null;
-  onTyped?: (mandateHash: string, code: string) => Promise<string>;
   receipt: ReceiptView | null;
   feed: FeedItem[];
   /** Id of the latest round close event; a new one flips the bids open. */
@@ -93,8 +92,8 @@ export function BuyerScreen(p: BuyerScreenProps) {
       ) : (
         <>
           {p.composer}
-          {p.review && p.onTyped ? (
-            <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
+          {p.review ? (
+            <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
           ) : (
             <Card>
               <Label>Needs your attention</Label>
@@ -153,7 +152,7 @@ export function MarketScreen(p: MarketScreenProps) {
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
         {/* Very faint, static, decorative; fades out before the small round text on the right. */}
         <DotPattern width={12} height={12} className="fill-line [mask-image:linear-gradient(to_right,white,transparent_40%)]" />
-        <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee's floor</span></div>
+        <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee&apos;s floor</span></div>
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}
           {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}

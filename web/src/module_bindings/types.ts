@@ -38,6 +38,7 @@ export const Approval = __t.object("Approval", {
   method: __t.string(),
   approvedBy: __t.string(),
   at: __t.timestamp(),
+  voiceApprovalId: __t.string(),
 });
 export type Approval = __Infer<typeof Approval>;
 
@@ -85,6 +86,22 @@ export const BidCheck = __t.object("BidCheck", {
 });
 export type BidCheck = __Infer<typeof BidCheck>;
 
+export const BidCheckRow = __t.object("BidCheckRow", {
+  id: __t.u64(),
+  bidId: __t.string(),
+  roundId: __t.string(),
+  sellerId: __t.string(),
+  persona: __t.string(),
+  bidOrigin: __t.string(),
+  kind: __t.string(),
+  result: __t.string(),
+  detail: __t.string(),
+  evidenceUrl: __t.string(),
+  origin: __t.string(),
+  at: __t.timestamp(),
+});
+export type BidCheckRow = __Infer<typeof BidCheckRow>;
+
 export const BidLine = __t.object("BidLine", {
   skuSpec: __t.string(),
   offeredSpec: __t.string(),
@@ -100,6 +117,24 @@ export const BuyerProfile = __t.object("BuyerProfile", {
   origin: __t.string(),
 });
 export type BuyerProfile = __Infer<typeof BuyerProfile>;
+
+export const DealRow = __t.object("DealRow", {
+  mandateHash: __t.string(),
+  mandateId: __t.string(),
+  dealId: __t.string(),
+  amount: __t.f64(),
+  payee: __t.string(),
+  expiry: __t.timestamp(),
+  withinAllowance: __t.bool(),
+  origin: __t.string(),
+  approvalMethod: __t.string(),
+  voiceApprovalId: __t.string(),
+  approvedAt: __t.option(__t.timestamp()),
+  paymentRef: __t.string(),
+  paymentMode: __t.string(),
+  paidAt: __t.option(__t.timestamp()),
+});
+export type DealRow = __Infer<typeof DealRow>;
 
 export const FloorEvent = __t.object("FloorEvent", {
   id: __t.u64(),
@@ -183,11 +218,17 @@ export type Mandate = __Infer<typeof Mandate>;
 export const MyAllowance = __t.object("MyAllowance", {});
 export type MyAllowance = __Infer<typeof MyAllowance>;
 
+export const MyBidChecks = __t.object("MyBidChecks", {});
+export type MyBidChecks = __Infer<typeof MyBidChecks>;
+
 export const MyBids = __t.object("MyBids", {});
 export type MyBids = __Infer<typeof MyBids>;
 
 export const MyBuyerProfile = __t.object("MyBuyerProfile", {});
 export type MyBuyerProfile = __Infer<typeof MyBuyerProfile>;
+
+export const MyDeals = __t.object("MyDeals", {});
+export type MyDeals = __Infer<typeof MyDeals>;
 
 export const MyGoalItems = __t.object("MyGoalItems", {});
 export type MyGoalItems = __Infer<typeof MyGoalItems>;
@@ -273,6 +314,9 @@ export const PairCode = __t.object("PairCode", {
   code: __t.string(),
   failedAttempts: __t.u32(),
   locked: __t.bool(),
+  windowStart: __t.timestamp(),
+  windowMisses: __t.u32(),
+  throttledUntil: __t.timestamp(),
 });
 export type PairCode = __Infer<typeof PairCode>;
 
@@ -369,6 +413,8 @@ export const RoundResult = __t.object("RoundResult", {
   },
   origin: __t.string(),
   source: __t.string(),
+  adjustedTotal: __t.f64(),
+  adjustmentReason: __t.string(),
 });
 export type RoundResult = __Infer<typeof RoundResult>;
 
