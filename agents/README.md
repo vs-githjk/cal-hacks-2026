@@ -26,7 +26,7 @@ Public profile verification on October 24, 2026 at 01:50 PDT: Agentverse's `GET 
 
 The fresh ASI:One evidence covers the buyer goal, three reviewed bids, a cited advocate veto and a controlled advocate outage with visible timeout/retry at 00:05 to 00:06 PDT October 24. See [ISSUE14_EVIDENCE.md](ISSUE14_EVIDENCE.md) for the conversation link, observations and verification limits. Checkout and payment were not exercised.
 
-After restoring the advocate, the scheduled automatic retry visibly delivered a new round with three reviewed bids in the same ASI:One conversation. No purchase approval was sent. Open a PR whose body includes `Closes #14` after verification.
+After restoring the advocate, the scheduled automatic retry visibly delivered a new round with three reviewed bids in the same ASI:One conversation. No purchase approval was sent.
 
 The [Claude hub plan](https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU) names a Shield client among its agent roles. The sixth agent here adds that role while keeping the issue's buyer, advocate and three sellers. A separate seller gateway is not implemented.
 
