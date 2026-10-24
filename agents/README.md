@@ -126,4 +126,6 @@ Lane A hands off the existing `SupplierSignal` fields (`supplier_id`, `stability
 .\agents\.venv\Scripts\python.exe -B agents/crs.py --live
 ```
 
-The equivalent command where `python3` is the configured interpreter is `python3 agents/crs.py --live`. Missing token or profile configuration yields no CRS pass. Live proof and issue owner acceptance of representative verification for the business-seller gate remain pending.
+The equivalent command where `python3` is the configured interpreter is `python3 agents/crs.py --live`. Missing token or profile configuration yields no CRS pass.
+
+Live sandbox proof: the CRS login returned HTTP 200, and the operator-approved official synthetic representative mapping was `seller_1=P01`, `seller_2=P02`, `seller_3=P12`. Three adapter calls returned valid responses at `2026-10-24T07:50:12Z`: sellers 1 and 2 were `verified_stable` and eligible; seller 3 was `not_verified` and blocked. A separate cache fallback check returned the same dated results as `recorded` with zero additional CRS calls. Credentials and tokens remain in ignored local runtime configuration. The result verifies representative identity only. Issue owner acceptance of this scope and Lane B's shared market/UI enforcement remain pending.
