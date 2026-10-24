@@ -470,7 +470,7 @@ def test_every_bid_and_check_lands_before_the_short_deadline():
         assert steps[i].args["window_s"] == 20 and inside <= 20 - 6 + 1e-9, (rno, inside)
 
 
-@pytest.mark.parametrize("bad", ["5", "0", "-3", "abc"])
+@pytest.mark.parametrize("bad", ["5", "0", "-3", "abc", "12", "14"])
 def test_a_bid_window_below_the_minimum_is_refused(bad):
     with pytest.raises(SystemExit):
         stage.main(["--dry-run", "--bid-window", bad])

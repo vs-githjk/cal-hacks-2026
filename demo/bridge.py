@@ -41,7 +41,7 @@ SECOND_ACTOR = "buyer2"
 BUYER_TOKEN, REFEREE_TOKEN = "buyer-vidyut.json", "referee.json"
 MANDATE_MINUTES = 10           # the market keeps the mandate as long as pay.mandate does (10 minute quote TTL)
 MIN_WINDOW_S = 6
-MIN_BID_WINDOW_S = 12          # --bid-window floor: 6 s for the steps, 6 s of margin before the close (snipe window is 3 s)
+MIN_BID_WINDOW_S = 15          # --bid-window floor: 9 s for the steps, 6 s of margin before the close (snipe window is 3 s)
 LIVE_TAGS = {"MIRROR", "SIM", "LIVE"}
 
 
@@ -135,7 +135,7 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
     window = max(MIN_WINDOW_S, math.ceil(paused * delay) + 6)
     open_pace = pace
     if window_s is not None and window_s < window:
-        window = max(MIN_WINDOW_S, int(window_s))
+        window = max(MIN_BID_WINDOW_S, int(window_s))
         inside = (paused + pace) * delay                  # the opener's own pause runs inside the window too
         scale = min(1.0, (window - 6) / inside) if inside > 0 else 1.0
         for s in (*seller_steps, *check_steps):
@@ -300,6 +300,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
     outcomes: list[dict] = []
     mandate_hash = ""
     approved_and_recorded, paid = False, None
+    lag = 0.0   # seconds the reducer calls took since the last pause: the next pause is shortened by it (#183)
     for s in steps:
         if s.gate == "build_mandate" and deal_gate is not None and "referee" in clients:
             try:
@@ -336,6 +337,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                 break
             note(f"live call APPROVED (call {outcome['call_id']}): the referee records the approval, then the payment")
         client = clients[s.actor]
+        t_call = clock()
         if s.close:
             for attempt in range(12):
                 if deadline is not None and clock() < deadline:
@@ -355,10 +357,17 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             client.call(s.reducer, **s.args)
         if s.gate == "approval_call" and approver is not None:
             approved_and_recorded = True    # the approver said approved and the market took the approval row
+        lag += clock() - t_call
         if s.window_s:
             deadline = clock() + s.window_s
+            lag = 0.0
+        if s.close:
+            lag = 0.0          # the close waited for the deadline; pacing starts over
         if s.pause and delay > 0:
-            sleep(delay * s.pace)
+            want = delay * s.pace - lag
+            if want > 0:
+                sleep(want)
+            lag = max(0.0, -want)
     return outcomes
 
 
