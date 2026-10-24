@@ -104,3 +104,48 @@ def test_the_caller_shows_no_code_while_the_market_has_typed_approval(tmp_path):
     assert relay.market_has_typed_approval(tmp_path / "missing.ts") is True
     src = Path(__file__).with_name("caller_agent.py").read_text()
     assert "or market_has_typed_approval()" in src          # screen_sink returns None then: no code, no call
+
+
+# ---------- #298 Lows: the sender before Shield, one call under threads, a byte cap ----------
+
+def test_a_stranger_is_refused_before_any_shield_call():
+    assert relay.precheck("agent1q" + "z" * 58, "hello", buyer_address=BUYER) == "not_the_buyer"
+    assert relay.precheck(BUYER, "hello", buyer_address=BUYER) is None
+
+
+@pytest.mark.parametrize("text", ["x" * 20001, "é" * 15000, "\U0001F600" * 6000])
+def test_a_request_over_the_char_or_body_cap_is_too_large_not_shield_blocked(text):
+    assert relay.precheck(BUYER, text, buyer_address=BUYER) == "too_large"
+
+
+def test_two_threads_with_the_same_mandate_place_one_call():
+    import threading
+
+    clients = [FakeCartesia(lambda code: f"{code} approve") for _ in range(8)]
+    barrier, inside = threading.Barrier(len(clients)), threading.Barrier(len(clients))
+
+    class AllInsideSet(set):
+        """The membership check waits until every thread is inside it. Without the lock all 8 then see "not called"
+        together and dial; with it the first thread waits out the timeout alone and the rest are told already_called."""
+        def __contains__(self, item):
+            found = super().__contains__(item)   # read before the wait, as an unlocked check-then-add would
+            try:
+                inside.wait(timeout=0.5)
+            except threading.BrokenBarrierError:
+                pass
+            return found
+
+    m, seen, results = mandate(), AllInsideSet(), []
+
+    def go(c):
+        barrier.wait()
+        out = relay.handle(BUYER, {"mandate": m, "reason": None, "deal": None}, buyer_address=BUYER, client=c,
+                           show_code=lambda code, c=c: c.shown.update(code=code), seen=seen, secret="s" * 32,
+                           sleep=lambda x: None, poll=0)
+        results.append(out["reason"])
+    threads = [threading.Thread(target=go, args=(c,)) for c in clients]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert sum(len(c.calls) for c in clients) == 1 and results.count("already_called") == len(clients) - 1
