@@ -752,3 +752,13 @@ def test_busy_reply_to_foreign_sender_sent_once(buyer):
         run_bounded(buyer.handle_text(ctx, 'second', 'hello'))
     assert [to for to, _ in ctx.sent].count('second') == 1
     assert buyer.ROUND['owner'] == 'owner'
+
+
+def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
+    monkeypatch.setattr(buyer, 'ALLOWANCE', 0)
+    buyer.ROUND['asked'] = ['seller_1', 'seller_2']
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps([card()]))))
+    text = ctx.owner_text()
+    assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
+    assert text.count('asked seller_1') == 1
