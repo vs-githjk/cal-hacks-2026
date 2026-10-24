@@ -41,7 +41,7 @@ def world(tmp_path):
     mandate = new_mandate(deal_id="deal-A", buyer_id=BUYER, goal_id="goal-1", amount=749.0,
                           payee=PAYEE, now=NOW)
     approvals = ApprovalService("throwaway-test-secret-0123456789")
-    session, code = approvals.issue(mandate, now=NOW)
+    session, code = approvals.issue(mandate, channel="phone", now=NOW)
     session.start_call(now=NOW)
     session.begin_listening(now=NOW)
     decision = session.approve(code + " approve", now=NOW + timedelta(seconds=1))
@@ -191,6 +191,9 @@ def test_voice_approval_must_bind_id_readback_and_decision_time(world, field, va
     assert result["status"] == "refused" and not stripe.calls
 
 
+LIMITS = {"per_purchase_limit": 800.0, "period_limit": 1000.0, "spent_this_period": 0.0}
+
+
 def test_allowance_is_a_distinct_stored_authorization_not_a_voice_approval(world):
     priv, receipt_priv, mandate, transaction, sim, stripe = world
     transaction["mandate"]["within_allowance"] = True
@@ -200,7 +203,7 @@ def test_allowance_is_a_distinct_stored_authorization_not_a_voice_approval(world
     transaction["allowance_authorization"] = {"id": stored_mandate["approval_id"], "mandate_hash": stored_mandate["hash"],
         "mandate_id": stored_mandate["id"], "deal_id": stored_mandate["deal_id"], "buyer_id": stored_mandate["buyer_id"],
         "goal_id": stored_mandate["goal_id"], "amount": stored_mandate["amount"], "payee": stored_mandate["payee"],
-        "method": "allowance", "approved_at": NOW.isoformat()}
+        "method": "allowance", "approved_at": NOW.isoformat(), **LIMITS}
     out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
     assert out["status"] == "charged", out
     assert transaction["voice_approval"] is None
@@ -228,7 +231,7 @@ def test_allowance_binding_mismatch_never_charges(world, field, value):
     transaction["allowance_authorization"] = {"id": stored_mandate["approval_id"], "mandate_hash": stored_mandate["hash"],
         "mandate_id": stored_mandate["id"], "deal_id": stored_mandate["deal_id"], "buyer_id": stored_mandate["buyer_id"],
         "goal_id": stored_mandate["goal_id"], "amount": stored_mandate["amount"], "payee": stored_mandate["payee"],
-        "method": "allowance", "approved_at": NOW.isoformat()}
+        "method": "allowance", "approved_at": NOW.isoformat(), **LIMITS}
     transaction["allowance_authorization"][field] = value
     out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
     assert out["status"] == "refused" and not stripe.calls
@@ -323,3 +326,39 @@ def test_missing_receipt_keyring_is_not_a_compatibility_mode(monkeypatch):
 @pytest.mark.parametrize("amount", ["sNaN", "1e999999"])
 def test_merchant_amount_parser_rejects_nonfinite_and_unbounded_decimal(amount):
     assert _whole_cents(amount) is None
+
+
+@pytest.mark.parametrize("channel", ["typed", "browser", None, "PHONE"])
+def test_only_a_phone_call_approval_charges(world, channel):
+    # #214: approval is by phone call only; a typed, browser, missing or odd-case channel never charges
+    priv, receipt_priv, mandate, transaction, sim, stripe = world
+    record = dict(transaction["voice_approval"])
+    if channel is None:
+        record.pop("channel")
+    else:
+        record["channel"] = channel
+    transaction["voice_approval"] = record
+    out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
+    assert out["status"] == "refused" and not stripe.calls
+
+
+@pytest.mark.parametrize("limits", [
+    {"per_purchase_limit": 700.0, "period_limit": 1000.0, "spent_this_period": 0.0},   # over the per-purchase limit
+    {"per_purchase_limit": 800.0, "period_limit": 1000.0, "spent_this_period": 300.0},  # over the period remainder
+    {"per_purchase_limit": 800.0, "period_limit": 1000.0},                              # spent unknown
+    {},                                                                                 # allowance unknown
+    {"per_purchase_limit": True, "period_limit": 1000.0, "spent_this_period": 0.0},     # not a number
+])
+def test_forged_within_allowance_above_the_limit_never_charges(world, limits):
+    # #214: within_allowance alone is not proof; the amount must fit the allowance the record was checked against
+    priv, receipt_priv, mandate, transaction, sim, stripe = world
+    transaction["mandate"]["within_allowance"] = True
+    mandate["within_allowance"] = True
+    transaction["voice_approval"] = None
+    stored = transaction["mandate"]
+    transaction["allowance_authorization"] = {"id": stored["approval_id"], "mandate_hash": stored["hash"],
+        "mandate_id": stored["id"], "deal_id": stored["deal_id"], "buyer_id": stored["buyer_id"],
+        "goal_id": stored["goal_id"], "amount": stored["amount"], "payee": stored["payee"],
+        "method": "allowance", "approved_at": NOW.isoformat(), **limits}
+    out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
+    assert out["status"] == "refused" and not stripe.calls
