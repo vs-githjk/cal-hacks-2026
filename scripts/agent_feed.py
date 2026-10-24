@@ -1,6 +1,8 @@
 """Agent feed: what the Fetch agents are doing, read from the launcher's own run dir (pids.json and .run/logs).
 
 GET /v1/agents -> [{name, role, address, status, last_message, at, origin}]
+GET /v1/memory -> {entries: [MemoryEntry], sources, note} for the dashboard memory panel (#189, demo/memory.py):
+past goals, purchases, vetoes and seller lessons from demo/out (MEMORY_DIR overrides). ?kind=, ?limit=, ?sample=1.
 
 status is decided per agent from its own log lines, never from a pidfile flag: "agentverse" only when the process is alive
 and that agent logged "Starting mailbox client for" (the uagents mailbox loop running) and none of the mailbox or manifest
@@ -29,6 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(1, str(Path(__file__).resolve().parent.parent))  # the repo root, for demo.memory
 import launch  # noqa: E402  (stdlib-only launcher: pidfile reader and liveness check)
 
 REPO = Path(__file__).resolve().parent.parent
@@ -206,7 +209,7 @@ def agent_rows(run_dir: Path | str) -> list[dict]:
     return rows
 
 
-def create_app(run_dir: Path | str | None = None):
+def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None = None):
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
@@ -222,6 +225,13 @@ def create_app(run_dir: Path | str | None = None):
     @app.get("/v1/agents")
     def agents() -> list[dict]:
         return agent_rows(run)
+
+    mem = Path(memory_dir or os.environ.get("MEMORY_DIR") or REPO / "demo" / "out")
+
+    @app.get("/v1/memory")
+    def memory(kind: str | None = None, limit: int | None = None, sample: bool = False) -> dict:
+        from demo import memory as M
+        return M.load(mem, include_sample=sample, kind=kind, limit=limit)
 
     return app
 
