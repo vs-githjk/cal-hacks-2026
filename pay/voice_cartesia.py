@@ -62,7 +62,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
-from pay.approval import APPROVE_TOKENS, ApprovalError, ApprovalService, Decision, normalize
+from pay.approval import (APPROVE_TOKENS, VOICE_CODE_TTL_SECONDS, ApprovalError, ApprovalService, Decision,
+                          normalize)
 from pay.callscript import CallScript, ScriptError, script_for
 from pay.words import WORD_SET
 
@@ -83,7 +84,7 @@ POLL_S = 2.0
 MAX_WAIT_S = 180.0
 TRANSCRIPT_RETRIES = 4
 TRANSCRIPT_RETRY_S = 2.0
-CALL_CODE_TTL_S = 300     # the call needs ring + script time; still capped by the mandate's own 10 minute expiry
+CALL_CODE_TTL_S = VOICE_CODE_TTL_SECONDS  # still capped by the mandate's own 10 minute expiry
 TERMINAL = ("completed", "failed")
 _E164 = re.compile(r"\+[1-9][0-9]{6,14}")
 _NAME = re.compile(r"[A-Za-z][A-Za-z .'-]{0,39}")
