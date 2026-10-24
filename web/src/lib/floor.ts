@@ -14,7 +14,7 @@ export const FIXED_ACTORS: Actor[] = [
   { key: "shield", name: "Bazaar Shield", kind: "shield", origin: "SIM" },
   { key: "referee", name: "Referee", kind: "referee", origin: "SIM" },
 ];
-export const MAX_SELLERS = 4;
+export const MAX_SELLERS = 5;
 
 const BUYER_KINDS = ["goal_posted", "goal_state", "need_posted", "mandate_created", "approval_recorded", "payment_recorded", "receiving_recorded"];
 

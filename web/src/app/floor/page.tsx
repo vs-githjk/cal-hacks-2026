@@ -35,6 +35,11 @@ export default function FloorPage() {
       .map((e) => ({ id: String(e.id), actor: actorFor(e, sellers), kind: e.kind, label: e.label, origin: e.origin, at: toDate(e.at), ref: `${e.refTable}/${e.refId}` }));
   }, [events, personas]);
   const lastRow = (key: string) => rows.find((r) => r.actor === key);
+  // "Connecting..." until the first connect; "disconnected" only after a live connection drops.
+  const [everActive, setEverActive] = useState(false);
+  useEffect(() => {
+    if (conn.isActive) setEverActive(true);
+  }, [conn.isActive]);
   const disconnected = !conn.isActive;
   const sel = picked ? actors.find((a) => a.key === picked) : undefined;
   const selRow = picked ? lastRow(picked) : undefined;
@@ -58,7 +63,11 @@ export default function FloorPage() {
           )}
           {disconnected && (
             <div className="absolute inset-0 grid place-items-center rounded-[var(--radius)] bg-canvas/70">
-              <span className="rounded-lg bg-coral-soft px-3 py-2 font-semibold text-coral">market disconnected · the floor is still</span>
+              {everActive ? (
+                <span className="rounded-lg bg-coral-soft px-3 py-2 font-semibold text-coral">market disconnected · the floor is still</span>
+              ) : (
+                <span className="rounded-lg bg-soft px-3 py-2 font-semibold text-muted">Connecting...</span>
+              )}
             </div>
           )}
         </div>

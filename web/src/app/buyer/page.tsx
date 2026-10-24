@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { AgentsTile } from "@/components/AgentsTile";
 import { BuyerScreen } from "@/components/screens";
 import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
@@ -62,12 +61,7 @@ function PairScreen() {
 }
 
 export default function BuyerPage() {
-  return (
-    <>
-      <BuyerGate />
-      <AgentsTile />
-    </>
-  );
+  return <BuyerGate />;
 }
 
 function BuyerGate() {
@@ -102,7 +96,7 @@ function BuyerView() {
     if (!code) return "Type the two words shown above.";
     try {
       await approveTyped({ mandateHash, code });
-      return "Sent. If it matched, this card turns into the receipt.";
+      return "If it matched, this card disappears and the approval is recorded.";
     } catch (err) {
       return err instanceof Error ? err.message : "Approval failed";
     }
@@ -121,7 +115,7 @@ function BuyerView() {
       onTyped={onTyped}
       receipt={asSim(sample.receipt)}
       feed={feed}
-      buyerName={profiles[0]?.displayName || DEMO_BUYER}
+      buyerName={profiles[0]?.displayName || "Buyer"}
       revealKey={closeKey}
       sample={{ bids: sim, veto: true, shield: true, approval: !review, receipt: true }}
     />

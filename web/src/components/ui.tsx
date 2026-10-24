@@ -1,6 +1,7 @@
 // web/src/components/ui.tsx
 // Small shared pieces. Every color comes from tokens.css; no literal colors here.
 import type { ReactNode } from "react";
+import { formatMoney } from "@/lib/money";
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 
@@ -102,5 +103,5 @@ export function SampleOnly({ on, children }: { on: boolean; children: ReactNode 
   );
 }
 
-export const money = (x: number) => x.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: x % 1 ? 2 : 0 });
+export const money = formatMoney;
 export const clock = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });

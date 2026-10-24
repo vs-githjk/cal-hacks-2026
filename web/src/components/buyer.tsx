@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { REVIEW_MAX_FAILURES, type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import { commas, typedStatus } from "@/lib/money";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
@@ -246,7 +247,7 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
         {blocked ? "Blocked before the advocate saw it" : "Allowed"}
       </div>
       <p className="mt-1.5 text-[13px] text-muted">
-        {blocked ? "Injected listing" : "Listing"} from {shield.seller} · {shield.chars.toLocaleString()} chars · {shield.latencyMs.toFixed(1)} ms · severity {shield.severity}
+        {blocked ? "Injected listing" : "Listing"} from {shield.seller} · {commas(shield.chars)} chars · {shield.latencyMs.toFixed(1)} ms · severity {shield.severity}
       </p>
       <div className="mt-2.5 overflow-hidden rounded-[10px] border border-line bg-soft px-3 py-2.5 font-mono text-[12px] leading-[1.5] [overflow-wrap:anywhere]">
         {shield.evidence.map((e, i) => (e.hit ? <mark key={i} className="rounded-[3px] bg-coral-soft px-0.5 text-coral">{e.text}</mark> : <span key={i}>{e.text}</span>))}
@@ -319,6 +320,7 @@ export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView;
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
+          setMsg("");
           setMsg(await onTyped(code.trim()));
           setBusy(false);
           setCode("");
@@ -342,7 +344,7 @@ export function ReviewCard({ review, allowance, onTyped }: { review: ReviewView;
           </button>
         </div>
         <p className="text-[13px] text-muted" aria-live="polite">
-          {review.locked ? "Typed approval is locked after too many wrong codes. Approve on the call." : msg || (review.failures > 0 ? `${left} tries left.` : "")}
+          {typedStatus({ locked: review.locked, busy, msg, failures: review.failures, left })}
         </p>
       </form>
       <p className="mt-1 text-[13px] text-muted">{CAP_RULE}</p>

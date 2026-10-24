@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
-import { AgentsTile } from "@/components/AgentsTile";
 import { Mark } from "@/components/shell";
 import { OriginChip, clock } from "@/components/ui";
 import { DotPattern } from "@/components/ui/dot-pattern";
@@ -120,7 +119,6 @@ export default function Home() {
           </Link>
         ))}
       </section>
-      <AgentsTile />
     </div>
   );
 }
