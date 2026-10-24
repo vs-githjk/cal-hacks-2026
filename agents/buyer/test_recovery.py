@@ -506,16 +506,16 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
     ctx = Context()
     buyer.ROUND.update(owner='authenticated-owner', phase='decided', bids=[
         {'id': 'secret-bid', 'persona': 'Private Seller Name', 'total_landed_price': 582}],
-        order={'id': 'private-order'})
+        order={'id': 'private-order'}, mandate={'hash': 'h', 'expires_at': '2999-01-01T00:00:00Z'})
     owner_context = object()
     buyer.ROUND['owner_context'] = owner_context
     before = dict(buyer.ROUND)
     for command in ('hello', 'APPROVE 1', 'CANCEL'):
         asyncio.run(buyer.handle_text(ctx, 'other-sender', command))
     replies = [message.text() for to, message in ctx.sent if to == 'other-sender']
-    assert replies == ['A buyer session is active. Try again later.'] * 3
+    assert replies == ['A buyer session is active. Try again later.']  # once per round
     assert all('Private Seller Name' not in text and 'private-order' not in text and 'APPROVE' not in text for text in replies)
-    assert buyer.ROUND == before and buyer.ROUND['owner_context'] is owner_context
+    assert buyer.ROUND == before | {'told_foreign': True} and buyer.ROUND['owner_context'] is owner_context
 
 
 def test_pending_prompt_uses_plain_approval_instructions_and_keeps_cancel(buyer):
@@ -707,3 +707,48 @@ def test_conclude_stops_after_crs_notice_if_owner_cancels_and_starts_new_goal(bu
         assert buyer.ROUND['phase'] == 'bidding'
 
     run_bounded(run())
+
+
+def goal_text():
+    return 'NEW a 850 W PSU under $150'
+
+
+@pytest.mark.parametrize('finish', ['done', 'expired', 'paused', 'ordered'])
+def test_finished_round_releases_owner_gate(buyer, finish):
+    r = buyer.ROUND
+    if finish == 'done':
+        r['phase'] = 'done'
+    elif finish == 'ordered':
+        r.update(phase='decided', order={'id': 'o1'}, mandate={'hash': 'h', 'expires_at': '2000-01-01T00:00:00Z'})
+        r['goal']['state'] = 'DONE'
+    else:
+        r['goal']['state'] = finish.upper()
+    ctx = Context()
+    with patch.object(buyer, 'start_round', AsyncMock(return_value=True)):
+        run_bounded(buyer.handle_text(ctx, 'second', 'a 850 W PSU under $150'))
+    assert r['owner'] == 'second'
+    assert 'session is active' not in ' '.join(m.text() for _, m in ctx.sent if hasattr(m, 'text'))
+
+
+def test_pending_approval_or_settlement_keeps_gate(buyer):
+    r = buyer.ROUND
+    r['phase'] = 'decided'
+    run_bounded(buyer.handle_text(Context(), 'second', 'hi'))
+    assert r['owner'] == 'owner'
+    r.update(order={'id': 'o1'}, mandate={'hash': 'h', 'expires_at': '2999-01-01T00:00:00Z'})
+    r['goal']['state'] = 'DONE'
+    run_bounded(buyer.handle_text(Context(), 'second', 'hi'))
+    assert r['owner'] == 'owner'
+    buyer.USED.add('h')
+    try:
+        assert buyer.round_finished()
+    finally:
+        buyer.USED.discard('h')
+
+
+def test_busy_reply_to_foreign_sender_sent_once(buyer):
+    ctx = Context()
+    for _ in range(4):
+        run_bounded(buyer.handle_text(ctx, 'second', 'hello'))
+    assert [to for to, _ in ctx.sent].count('second') == 1
+    assert buyer.ROUND['owner'] == 'owner'
