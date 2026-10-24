@@ -6,12 +6,14 @@ All numbers below come from `python3 -m hyphenate.scenarios.run --heldout --writ
 
 | set | planted caught | clean controls with a false flag | decisions written | decisions explainable |
 |---|---|---|---|---|
-| dev (44 cases) | 36/36 | 0/8 | 351 | 351 |
+| dev (47 cases) | 39/39 | 0/8 | 364 | 364 |
 | held-out (14 cases) | 11/11 | 0/3 | 118 | 118 |
 
 Held-out history, stated plainly: the set was committed (sha256 `a1957e37c2d3...`) and run once before RESULTS.md existed: 10/11 planted, 0/3 false flags. The one non-catch, H06, was a crash from my own scripting mistake (the case moved the clock backwards: a bank change at 08:00 after an invoice at 09:00), not an engine miss. I fixed only that timestamp in the case (the key and the engine were not touched) and re-ran: the numbers in the table are from that corrected file.
 
-dev_cases.py sha256 `43b7e6998ab7e3c2a3f7ef9842f3f7a188350130e9f862cdcc738b84cf5e8e79`
+Changes after the PR #40 review: three faults the reviewer found were fixed in the engine and added to the dev set as D37 (invoice splits one SKU over two lines), D38 (requester charges another department) and D39 (strict vendor with a department-head requester). D10 now uses an art-department requester because cross-department requests are refused. The held-out cases were not edited and their results did not change.
+
+dev_cases.py sha256 `4edec08509953b1d3bc1034e1678c310f6f953c3c192ebddd666f324da2ee274`
 heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f1501f4eec`
 
 ## By planted fault
@@ -29,6 +31,7 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | claim_false | 1/1 |
 | controller_no_drop | 1/1 |
 | controller_no_replan | 2/2 |
+| cross_department_charge | 1/1 |
 | delegate_approval | 1/1 |
 | duplicate_invoice | 2/2 |
 | duplicate_serial | 1/1 |
@@ -52,6 +55,8 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | same_person_verifies | 1/1 |
 | serial_missing | 1/1 |
 | short_shipment | 2/2 |
+| split_invoice_lines | 1/1 |
+| strict_vendor_peer_signature | 1/1 |
 | unapproved_po | 1/1 |
 | unbalanced_entry | 1/1 |
 | unreconciled_close | 1/1 |
@@ -114,6 +119,9 @@ heldout_cases.py sha256 `39cb210661f7ba1ad47ddbdc8a51769e6ccb0146bf5d3019b69cd6f
 | D34 | bank_wrong_payee | yes | caught | ok |
 | D35 | prepaid_short_delivery | yes | caught | ok |
 | D36 | receiver_not_independent | yes | caught | ok |
+| D37 | split_invoice_lines | yes | caught | ok |
+| D38 | cross_department_charge | yes | caught | ok |
+| D39 | strict_vendor_peer_signature | yes | caught | ok |
 | C01 | clean_control | control | clean_ok | ok |
 | C02 | clean_control | control | clean_ok | ok |
 | C03 | clean_control | control | clean_ok | ok |

@@ -2,6 +2,7 @@
 reconciliation, vendor bank changes and period close."""
 from __future__ import annotations
 
+import datetime
 import re
 from typing import Optional
 
@@ -52,9 +53,16 @@ class PayablesMixin:
     # ----- invoice intake and match -----
     def invoice(self, *, po_id: str, number: str, date: str, lines: list, at: str, id: Optional[str] = None, remit_to: Optional[str] = None,
                 total: Optional[float] = None, claim: Optional[dict] = None, supersedes: Optional[str] = None, vendor_id: Optional[str] = None) -> Outcome:
-        at = self._now(at)
         po = self.pos[po_id]
         v = self.vendors[po["vendor_id"]]
+        # validate every input before any state changes: a bad invoice must not burn a number or half-book
+        try:
+            datetime.date.fromisoformat(date)
+        except (TypeError, ValueError):
+            raise ValueError(f"invoice date must be YYYY-MM-DD, got {date!r}")
+        if not isinstance(number, str) or not number.strip():
+            raise ValueError("invoice number is required")
+        at = self._now(at)
         iid = id or self._next("inv", "INV")
         subj = f"invoice:{iid}"
         inv_lines = [{"sku": l["sku"], "qty": int(l["qty"]), "unit": cents(l["price"]), "condition": l.get("condition", "new")} for l in lines]
@@ -65,6 +73,14 @@ class PayablesMixin:
         inv = {"id": iid, "po_id": po_id, "vendor_id": v.id, "number": number, "date": date, "lines": inv_lines, "total": stated, "computed": computed,
                "remit_to": remit_to, "claim": claim, "status": "received", "received_at": at, "findings": [], "payable": 0, "supersedes": supersedes}
         self.invoices[iid] = inv
+        try:
+            return self._intake(po, v, inv, iid, subj, inv_lines, stated, computed, number, date, at, remit_to, claim, supersedes, vendor_id)
+        except Exception:
+            self.invoices.pop(iid, None)  # nothing half-booked stays behind; the decision log keeps the attempt
+            raise
+
+    def _intake(self, po, v, inv, iid, subj, inv_lines, stated, computed, number, date, at, remit_to, claim, supersedes, vendor_id) -> Outcome:
+        po_id = po["id"]
         d_in = self._d(at, "invoice_received", subj, "received", f"invoice {number} from {v.name} for {usd(stated)} against {po_id}", rule="match.three_way",
                        actor={"kind": "data", "id": f"invoice:{iid}"}, evidence=[{"type": "invoice", "id": iid, "detail": f"{len(inv_lines)} line(s), dated {date}"}])
         findings: list[Finding] = []
@@ -142,23 +158,24 @@ class PayablesMixin:
         return self._book_bill(po, inv, v, findings, decs, d_in, at)
 
     def _book_bill(self, po, inv, v, findings, decs, d_in, at) -> Outcome:
+        """Post first, mutate after: if the ledger refuses, nothing about the PO or invoice has changed."""
         subj = f"invoice:{inv['id']}"
-        accrual = sum(l["qty"] * next(p for p in po["lines"] if p["sku"] == l["sku"])["unit"] for l in inv["lines"])
+        unit_of = {p["sku"]: p["unit"] for p in po["lines"]}
+        accrual = sum(l["qty"] * unit_of[l["sku"]] for l in inv["lines"])
         variance = inv["total"] - accrual
         notes = [f.detail for f in findings if not f.hold]
         refs = [f"po:{po['id']}", f"invoice:{inv['id']}"]
-        for l in inv["lines"]:
-            next(p for p in po["lines"] if p["sku"] == l["sku"])["billed"] += l["qty"]
-        inv["payable"] = inv["total"]
-        inv["status"] = "matched"
-        po["invoices"].append(inv["id"])
+
+        def commit(status: str, payable: int) -> None:
+            for l in inv["lines"]:
+                next(p for p in po["lines"] if p["sku"] == l["sku"])["billed"] += l["qty"]
+            inv["payable"], inv["status"] = payable, status
+            po["invoices"].append(inv["id"])
+
         if v.terms == "prepay":
-            inv["status"] = "matched_prepaid"
-            inv["payable"] = 0
             lines = []
             if variance > 0:
                 lines = [Line("5900", debit=variance), Line("2000", credit=variance, party=v.id)]
-                inv["payable"], inv["status"] = variance, "matched"
             elif variance < 0:
                 lines = [Line("1300", debit=-variance, party=v.id), Line("5900", credit=-variance)]
             if lines:
@@ -170,6 +187,7 @@ class PayablesMixin:
                 d = self._d(at, "invoice_match", subj, "matched", "matched against PO and receiving; already paid by deposit, nothing to book", rule="match.three_way", codes=("matched",), parents=[d_in.id])
                 decs.append(d)
                 inv["match_decision"] = d.id
+            commit("matched" if variance > 0 else "matched_prepaid", variance if variance > 0 else 0)
             return Outcome(True, inv["status"], decs, {"invoice": inv})
         lines = [Line("2100", debit=accrual, party=v.id)]
         if variance > 0:
@@ -185,6 +203,7 @@ class PayablesMixin:
         decs += [x for x in (moved, jd) if x]
         inv["match_decision"] = jd.id
         inv["entry"] = e.id
+        commit("matched", inv["total"])
         return Outcome(True, "matched", decs, {"invoice": inv, "entry": e.to_dict(), "notes": notes})
 
     # ----- payment -----

@@ -177,6 +177,10 @@ class Company:
             bad.append("trial balance does not balance")
         for a in self.ledger.subledger_ties():
             bad.append(f"vendor subledger for {a} does not tie to the general ledger")
+        for acct, what in (("2100", "accrued liabilities"), ("1200", "prepaid deposits"), ("1300", "vendor credits receivable")):
+            for party, bal in self.ledger.party_balances(acct).items():
+                if bal < 0:
+                    bad.append(f"{what} for {party} is negative ({bal} cents): more was billed or credited than was received or paid")
         for e in self.ledger.entries:
             if e.period in self.ledger.locked and e.posted_at > self.ledger.locked[e.period]["at"]:
                 bad.append(f"{e.id} posted into closed period {e.period} after the close")

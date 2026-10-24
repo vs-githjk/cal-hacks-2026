@@ -10,6 +10,7 @@ import urllib.request
 from typing import Callable, Optional
 
 MODEL = os.environ.get("HYPHENATE_DRAFT_MODEL", "claude-haiku-4-5")  # unverified until a live call answers
+_DECISION_WORDS = re.compile(r"\b(approved?|approves|denied|denies|held|holds?|paid|pays?|matched|rejected|blocked|released|verified)\b", re.I)
 _TOKENS = re.compile(r"\$[\d,]+(?:\.\d+)?|\b(?:dec|je|PO|INV|RCV|CM|PAY)[-_]\d+\b")
 
 
@@ -31,11 +32,14 @@ def draft_explanation(explained: dict, llm: Optional[Callable[[str], Optional[st
     base = explained["text"]
     call = llm if llm is not None else _anthropic
     prompt = ("Rewrite this finance audit explanation for a busy controller in 3 sentences. Keep every dollar amount and every id exactly as written, "
-              "add nothing, and do not give advice.\n\n" + json.dumps(explained["decision"], default=str) + "\n\n" + base)
+              "add nothing, never state an outcome the record does not state, and do not give advice.\n\n" + json.dumps(explained["decision"], default=str) + "\n\n" + base)
     out = call(prompt)
     if not out or not out.strip():
         return {"text": base, "source": "template"}
     allowed = set(_TOKENS.findall(base)) | set(_TOKENS.findall(json.dumps(explained, default=str)))
     if any(t not in allowed for t in _TOKENS.findall(out)):
+        return {"text": base, "source": "template"}
+    source_words = {w.lower() for w in _DECISION_WORDS.findall(json.dumps(explained, default=str))}
+    if any(w.lower() not in source_words for w in _DECISION_WORDS.findall(out)):  # a draft may not state an outcome the record does not
         return {"text": base, "source": "template"}
     return {"text": out.strip(), "source": "model"}

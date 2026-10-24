@@ -53,7 +53,7 @@ class Run:
         if do == "request":
             lines = [{**l, "alternatives": [{"condition": a["condition"], "price": a["price"]} for a in l.get("alt", [])]} for l in s["lines"]]
             out = e.request(requester=s["requester"], vendor_id=s["vendor"], lines=lines, at=at, dept=s.get("dept"), justification=s.get("why", ""))
-            if s.get("as"):
+            if s.get("as") and out.ok:
                 self.alias[s["as"]] = out.data["po"]["id"]
         elif do == "approve":
             e.approve(self.r(s["po"]), by=s["by"], at=at, override_budget=s.get("override", False))

@@ -11,6 +11,8 @@ from typing import Optional
 from hyphenate.org import Policy
 
 IMMATERIAL = {"price_variance_immaterial"}
+# duplicate_line_sku is informational unless the summed quantities then fail another check
+IMMATERIAL.add("duplicate_line_sku")
 
 
 @dataclass(frozen=True)
@@ -40,37 +42,45 @@ def match_lines(po_lines: list, inv_lines: list, policy: Policy, *, strict: bool
     inv_lines: [{sku, qty, unit, condition}]. `accepted`/`billed` are cumulative before this invoice."""
     out: list[Finding] = []
     by_sku = {l["sku"]: l for l in po_lines}
+    # Several invoice lines for one SKU are one bill for that SKU: quantities add up before any comparison,
+    # otherwise two qty-1 lines each pass "1 <= 1 received" while the bill is for 2.
+    groups: dict = {}
     for il in inv_lines:
-        pl = by_sku.get(il["sku"])
+        g = groups.setdefault(il["sku"], {"qty": 0, "diff_base": 0, "conds": set(), "unit": il["unit"], "lines": []})
+        g["qty"] += il["qty"]
+        g["conds"].add(il["condition"])
+        g["lines"].append(il)
+        g["unit"] = max(g["unit"], il["unit"])
+    for sku, g in groups.items():
+        pl = by_sku.get(sku)
         if pl is None:
-            out.append(Finding("sku_not_on_po", il["sku"], f"invoice bills {il['sku']}, which is not on the PO", il["qty"] * il["unit"]))
+            out.append(Finding("sku_not_on_po", sku, f"invoice bills {sku}, which is not on the PO", sum(l["qty"] * l["unit"] for l in g["lines"])))
             continue
-        billed_after = pl["billed"] + il["qty"]
+        qty, unit = g["qty"], g["unit"]
+        billed_after = pl["billed"] + qty
+        if len(g["lines"]) > 1:
+            out.append(Finding("duplicate_line_sku", sku, f"{len(g['lines'])} invoice lines for {sku}; quantities are added before matching"))
         if billed_after > pl["qty"]:
-            over = billed_after - pl["qty"]
-            out.append(Finding("qty_over_po", il["sku"], f"billed {billed_after} units against a PO for {pl['qty']}", over * il["unit"]))
+            out.append(Finding("qty_over_po", sku, f"billed {billed_after} units against a PO for {pl['qty']}", (billed_after - pl["qty"]) * unit))
         if billed_after > pl["accepted"]:
             gap = billed_after - max(pl["accepted"], pl["billed"])
             if pl["accepted"] + pl["rejected"] == 0:
-                out.append(Finding("billed_before_receipt", il["sku"], "nothing received yet for this line"))
+                out.append(Finding("billed_before_receipt", sku, "nothing received yet for this line"))
             else:
                 why = f"{pl['accepted']} accepted" + (f", {pl['rejected']} rejected" if pl["rejected"] else "")
-                out.append(Finding("qty_short", il["sku"], f"billed {billed_after} units, received {why}", gap * il["unit"]))
+                out.append(Finding("qty_short", sku, f"billed {billed_after} units, received {why}", gap * unit))
         # price: the contract (PO) is the reference; the invoice only asks
-        diff = (il["unit"] - pl["unit"]) * il["qty"]
+        diff = sum((l["unit"] - pl["unit"]) * l["qty"] for l in g["lines"])
         if diff != 0:
-            tol = line_tolerance(pl["unit"] * il["qty"], policy, strict)
+            tol = line_tolerance(pl["unit"] * qty, policy, strict)
             if abs(diff) <= tol:
-                out.append(Finding("price_variance_immaterial", il["sku"], f"{diff:+d} cents on the line, inside the {tol} cent tolerance"))
+                out.append(Finding("price_variance_immaterial", sku, f"{diff:+d} cents on the line, inside the {tol} cent tolerance"))
             else:
-                out.append(Finding("price_variance", il["sku"], f"{diff:+d} cents on the line against a {tol} cent tolerance",
-                                   max(diff, 0)))
+                out.append(Finding("price_variance", sku, f"{diff:+d} cents on the line against a {tol} cent tolerance", max(diff, 0)))
         # condition: what we inspected beats what they claim; the PO says what we bought
-        got = pl["accepted_conditions"]
-        bad = [c for c in got if c != il["condition"]]
+        bad = [c for c in pl["accepted_conditions"] if c not in g["conds"]]
         if bad:
-            out.append(Finding("condition_mismatch", il["sku"], f"invoice says {il['condition']}, receiving found {sorted(set(bad))[0]}",
-                               len(bad) * il["unit"]))
-        elif il["condition"] != pl["condition"]:
-            out.append(Finding("condition_mismatch", il["sku"], f"invoice says {il['condition']}, PO bought {pl['condition']}", il["qty"] * il["unit"]))
+            out.append(Finding("condition_mismatch", sku, f"invoice says {', '.join(sorted(g['conds']))}, receiving found {sorted(set(bad))[0]}", len(bad) * unit))
+        elif any(c != pl["condition"] for c in g["conds"]):
+            out.append(Finding("condition_mismatch", sku, f"invoice says {', '.join(sorted(g['conds']))}, PO bought {pl['condition']}", qty * unit))
     return out

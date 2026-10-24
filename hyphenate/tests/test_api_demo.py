@@ -11,7 +11,7 @@ P = "/v1/hyphenate"
 
 
 def client(story=None):
-    c = TestClient(create_app(seed_company(mirror={})))
+    c = TestClient(create_app(seed_company(mirror={}), demo_clock=True))
     if story:
         assert c.post(f"{P}/demo/reset?story={story}").json()["ok"]
     return c
@@ -95,3 +95,23 @@ def test_draft_is_template_offline_and_model_text_with_invented_numbers_is_disca
     assert good["source"] == "model"
     bad = draft_explanation(x, llm=lambda p: "Held, and the loss is $9,999.99 on PO-7777.")
     assert bad["source"] == "template" and bad["text"] == x["text"]
+    # an outcome word the record does not contain ("paid") is discarded even with correct ids and amounts
+    lie = draft_explanation(x, llm=lambda p: f"{x['decision']['id']} was paid in full.")
+    assert lie["source"] == "template"
+
+
+def test_client_supplied_time_is_ignored_on_a_server_clock_app():
+    c = TestClient(create_app(seed_company(mirror={})))
+    r = c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2099-01-01T00:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
+    assert r["po"]["created_at"] < "2099"  # the far-future `at` did not age anything out
+    assert c.get(f"{P}/health").json()["clock_mode"] == "server"
+    c.post(f"{P}/demo/reset?story=empty")
+    assert c.get(f"{P}/health").json()["clock_mode"].startswith("demo")
+    r2 = c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2099-01-01T00:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
+    assert r2["po"]["created_at"].startswith("2099")  # demo mode honours scripted timestamps
+
+
+def test_requisition_route_ignores_a_dept_field():
+    c = client()
+    r = c.post(f"{P}/requisitions", json={"requester": "tony", "dept": "art", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
+    assert r["po"]["dept"] == "engineering"

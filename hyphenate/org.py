@@ -50,6 +50,7 @@ def standard_people() -> list:
     return [
         Person("tony", "Tony Stark", "employee", "engineering"),
         Person("tony-assistant", "Pepper's Assistant", "employee", "engineering", acts_for=("tony",)),
+        Person("jess", "Jess Drew", "employee", "art"),
         Person("rhodey", "James Rhodes", "dept_head", "engineering"),
         Person("kara", "Kara Danvers", "dept_head", "art"),
         Person("pepper", "Pepper Potts", "controller", "finance"),

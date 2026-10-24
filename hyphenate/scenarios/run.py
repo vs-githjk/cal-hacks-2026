@@ -65,6 +65,9 @@ def write_results(dev, sd, ho, sh) -> None:
         out += ["", "Held-out history, stated plainly: the set was committed (sha256 `a1957e37c2d3...`) and run once before RESULTS.md existed: 10/11 planted, 0/3 false flags. "
                 "The one non-catch, H06, was a crash from my own scripting mistake (the case moved the clock backwards: a bank change at 08:00 after an invoice at 09:00), not an engine miss. "
                 "I fixed only that timestamp in the case (the key and the engine were not touched) and re-ran: the numbers in the table are from that corrected file."]
+    out += ["", "Changes after the PR #40 review: three faults the reviewer found were fixed in the engine and added to the dev set as D37 (invoice splits one SKU over two lines), "
+                "D38 (requester charges another department) and D39 (strict vendor with a department-head requester). D10 now uses an art-department requester because cross-department requests are refused. "
+                "The held-out cases were not edited and their results did not change."]
     out += ["", f"dev_cases.py sha256 `{file_sha256('dev_cases')}`"]
     if sh:
         out.append(f"heldout_cases.py sha256 `{file_sha256('heldout_cases')}`")

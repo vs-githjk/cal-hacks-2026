@@ -8,4 +8,4 @@ For Lane C: `three_way_match` is implemented in `hyphenate/matching.py` (pure fu
 
 Possible new use of existing contracts (nothing breaks, nothing required): `ReceivingEvent` and `LedgerEntry` are not used as-is because the ledger here is double-entry in integer cents (`contracts/LedgerEntry.schema.json` is a single-sided float row); a future adapter can map `Entry.lines` to it.
 
-CI note for the conductor: `.github/workflows/python-tests.yml` path filters do not list `hyphenate/**`, so a PR touching only this folder will not trigger it; `python -m pytest -q` at the root does collect the hyphenate tests (61).
+CI note for the conductor: `.github/workflows/python-tests.yml` path filters do not list `hyphenate/**`, so a PR touching only this folder will not trigger it; `python -m pytest -q` at the root does collect the hyphenate tests (69).

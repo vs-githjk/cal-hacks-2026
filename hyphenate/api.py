@@ -1,13 +1,14 @@
 """FastAPI app for Hyphenate (Lane D). Run: python3 -m uvicorn hyphenate.api:app --port 8789
 
 All routes live under /v1/hyphenate. State is one in-memory simulated company (Pixel Forge Games, SIM) so Lane B can render
-pages: POST /v1/hyphenate/demo/reset loads the seeded story, ?story=empty gives a blank studio. Every write returns
+pages: POST /v1/hyphenate/demo/reset loads the seeded story, ?story=empty gives a blank studio, and switches on demo-clock mode (client `at` honoured). Every write returns
 {ok, status, decision_ids, decisions, ...}; route handlers are async def with no awaits, so requests run one at a time on the event loop and the in-memory state needs no lock; a refused action is HTTP 200 with ok=false and a decision that says why (the refusal is
 a result, not an error). 404 unknown id, 409 time went backwards, 422 bad input. JSON shapes: hyphenate/README.md.
 """
 from __future__ import annotations
 
 import datetime
+import os
 from typing import Any, Optional
 
 from fastapi import Body, FastAPI, HTTPException, Request
@@ -29,18 +30,23 @@ def _now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def create_app(engine: Optional[Engine] = None) -> FastAPI:
+def create_app(engine: Optional[Engine] = None, demo_clock: Optional[bool] = None) -> FastAPI:
     app = FastAPI(title="Hyphenate: purchasing and AP seats (SIM)", version=VERSION)
     app.add_middleware(BodyLimit)
     app.state.eng = engine or seed_company()
+    app.state.demo_clock = bool(demo_clock) if demo_clock is not None else os.environ.get("HYPHENATE_DEMO_CLOCK") == "1"
     P = "/v1/hyphenate"
 
     def eng() -> Engine:
         return app.state.eng
 
     def at_of(payload: dict) -> str:
-        at = payload.get("at") or max(_now(), eng().clock)
-        return at
+        """The server clock decides when something happened. A client-supplied `at` is honoured only in demo-clock mode
+        (HYPHENATE_DEMO_CLOCK=1, or after POST /demo/reset), because a far-future `at` would age out vendor strictness and
+        MIRROR freshness."""
+        if app.state.demo_clock and payload.get("at"):
+            return payload["at"]
+        return max(_now(), eng().clock)
 
     @app.exception_handler(KeyError)
     async def _nf(_: Request, e: KeyError):
@@ -61,7 +67,7 @@ def create_app(engine: Optional[Engine] = None) -> FastAPI:
     # ---------- meta ----------
     @app.get(f"{P}/health")
     async def health():
-        return {"status": "ok", "version": VERSION, "company": eng().name, "origin": "SIM", "clock": eng().clock}
+        return {"status": "ok", "version": VERSION, "company": eng().name, "origin": "SIM", "clock": eng().clock, "clock_mode": "demo (client at honoured)" if app.state.demo_clock else "server"}
 
     @app.post(f"{P}/demo/reset")
     async def reset(story: str = "moment"):
@@ -71,7 +77,8 @@ def create_app(engine: Optional[Engine] = None) -> FastAPI:
             app.state.eng = seed_company()
         else:
             raise ValueError("story must be 'moment' or 'empty'")
-        return {"ok": True, "story": story, "decisions": len(eng().audit.decisions), "clock": eng().clock}
+        app.state.demo_clock = True  # a demo reset is the explicit opt-in to scripted timestamps
+        return {"ok": True, "story": story, "demo_clock": True, "decisions": len(eng().audit.decisions), "clock": eng().clock}
 
     @app.get(f"{P}/company")
     async def company():
@@ -102,7 +109,7 @@ def create_app(engine: Optional[Engine] = None) -> FastAPI:
     @app.post(f"{P}/requisitions")
     async def requisition(payload: dict[str, Any] = Body(...)):
         return out(eng().request(requester=payload["requester"], vendor_id=payload["vendor_id"], lines=payload["lines"], at=at_of(payload),
-                                 justification=payload.get("justification", ""), dept=payload.get("dept")))
+                                 justification=payload.get("justification", "")))
 
     @app.post(f"{P}/pos/{{po_id}}/approve")
     async def approve(po_id: str, payload: dict[str, Any] = Body(...)):

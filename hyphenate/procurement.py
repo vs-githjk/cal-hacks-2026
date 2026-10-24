@@ -83,11 +83,13 @@ class ProcurementMixin:
         else:
             needs = ["dept_head"]
         req = self.people[po["requester"]]
+        peer = False
         if req.role == "dept_head" and "dept_head" in needs:
-            needs = [n if n != "dept_head" else "controller" for n in needs]
-            needs = list(dict.fromkeys(needs))
-            two = False
-        return {"needs": needs, "two_person": two, "flags": flags, "notes": notes, "evidence": refs, "vendor_level": risk.level}
+            if two:
+                peer = True  # the requester cannot fill the department-head slot; a dept head of another department signs it
+            else:
+                needs = list(dict.fromkeys("controller" if n == "dept_head" else n for n in needs))
+        return {"needs": needs, "two_person": two, "peer_dept_head": peer, "flags": flags, "notes": notes, "evidence": refs, "vendor_level": risk.level}
 
     # ----- request -----
     def request(self, *, requester: str, vendor_id: str, lines: list, at: str, justification: str = "",
@@ -99,8 +101,11 @@ class ProcurementMixin:
         if vendor_id not in self.vendors:
             raise ValueError(f"unknown vendor {vendor_id}")
         req = self.people[requester]
+        lines = _clean_lines(lines)  # validate before a PO number is used
+        if dept is not None and dept != req.dept and req.role != "controller":
+            return self._deny(at, "po_request", f"requester:{requester}", requester, "wrong_department",
+                              f"{req.name} belongs to {req.dept} and cannot charge a {dept} budget or pick that department's approver", "approval.authority")
         pid = self._next("po", "PO")
-        lines = _clean_lines(lines)
         po = {"id": pid, "requester": requester, "dept": dept or req.dept, "vendor_id": vendor_id, "lines": lines,
               "total": _total(lines), "justification": justification, "status": "pending_approval", "created_at": at,
               "approvals": [], "committed": 0, "parent": parent, "replans": replans, "bound": None, "route": None,
@@ -147,7 +152,7 @@ class ProcurementMixin:
         needs = route["needs"]
         role = me.role
         if role == "dept_head":
-            if me.dept != po["dept"]:
+            if me.dept != po["dept"] and not route.get("peer_dept_head"):
                 return self._deny(at, "po_approval", subj, by, "wrong_department", f"{me.name} heads {me.dept}, this PO is {po['dept']}", "approval.authority", evidence=ev)
             if po["total"] > self.policy.dept_head_limit:
                 return self._deny(at, "po_approval", subj, by, "above_authority",

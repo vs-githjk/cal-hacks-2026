@@ -46,7 +46,7 @@ def test_dept_head_limit_and_controller_override_for_budget():
     assert ok.ok and eng.pos[pid]["status"] == "approved" and eng.pos[pid]["bound"]["ceiling"] >= 374997
     # budget: IT dept has 3000; eng has 12000. Fill a small dept budget.
     eng.budgets["art"] = 100_000
-    po2 = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=1500)], at=T("10-06"))
+    po2 = eng.request(requester="jess", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=1500)], at=T("10-06"))
     assert "over_budget" in po2.data["po"]["route"]["flags"]
     p2 = po2.data["po"]["id"]
     assert eng.approve(p2, by="kara", at=T("10-06", 10)).data["code"] == "over_budget"
@@ -235,9 +235,67 @@ def test_time_cannot_go_backwards_and_every_decision_explainable():
 def test_two_pos_each_inside_budget_but_not_together_second_needs_controller():
     eng = seed_company(mirror={})
     eng.budgets["art"] = 300_000
-    a = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=2000.0)], at=T("10-05")).data["po"]["id"]
-    b = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=2000.0)], at=T("10-05", 9))
+    a = eng.request(requester="jess", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=2000.0)], at=T("10-05")).data["po"]["id"]
+    b = eng.request(requester="jess", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=2000.0)], at=T("10-05", 9))
     assert "over_budget" not in b.data["po"]["route"]["flags"]  # nothing is committed yet when both are drafted
     assert eng.approve(a, by="kara", at=T("10-05", 10)).ok
     second = eng.approve(b.data["po"]["id"], by="kara", at=T("10-05", 11))
     assert not second.ok and second.data["code"] == "over_budget"  # the route is re-checked at approval time
+
+
+def test_split_invoice_lines_are_added_before_matching_and_cannot_overbill():
+    eng, pid = approved_po(lines=[gpu(qty=2)])
+    received(eng, pid, qty=1)
+    two = [{"sku": "RTX-5070-TI", "qty": 1, "price": 1249.99}] * 2
+    r = eng.invoice(po_id=pid, number="SPL-1", date="2026-10-09", at=T("10-09"), lines=two)
+    assert r.status == "held" and "qty_short" in r.data["codes"] and eng.pos[pid]["lines"][0]["billed"] == 0
+    assert eng.invariants() == []
+    ok = eng.invoice(po_id=pid, number="SPL-2", date="2026-10-10", at=T("10-10"), supersedes=r.data["invoice"]["id"], lines=two[:1])
+    assert ok.status == "matched"  # the one received unit can be billed, on one line or several
+
+
+def test_split_lines_that_add_up_to_what_arrived_are_fine():
+    eng, pid = approved_po(lines=[gpu(qty=2)])
+    received(eng, pid, qty=2)
+    r = eng.invoice(po_id=pid, number="SPL-3", date="2026-10-09", at=T("10-09"), lines=[{"sku": "RTX-5070-TI", "qty": 1, "price": 1249.99}] * 2)
+    assert r.status == "matched" and eng.ledger.balance("2100") == 0
+
+
+def test_negative_accrual_is_an_invariant_violation():
+    from hyphenate.ledger import Line
+    eng, pid = approved_po()
+    eng.ledger.post(date="2026-10-09", lines=[Line("2100", debit=100, party="bestbuy"), Line("2000", credit=100, party="bestbuy")], reason="bad", refs=["x"], by="t", at=T("10-09"))
+    assert any("accrued liabilities for bestbuy is negative" in b for b in eng.invariants())
+
+
+def test_bad_invoice_date_is_refused_before_any_state_changes():
+    eng, pid = approved_po()
+    received(eng, pid)
+    n_inv, n_dec, n_entries, billed = len(eng.invoices), len(eng.audit.decisions), len(eng.ledger.entries), eng.pos[pid]["lines"][0]["billed"]
+    for bad in ("bogus", "2026-13-40", "", None, "10/09/2026"):
+        with pytest.raises(ValueError):
+            eng.invoice(po_id=pid, number="D1", date=bad, at=T("10-09"), lines=[{"sku": "RTX-5070-TI", "qty": 2, "price": 1249.99}])
+    assert (len(eng.invoices), len(eng.audit.decisions), len(eng.ledger.entries), eng.pos[pid]["lines"][0]["billed"]) == (n_inv, n_dec, n_entries, billed)
+    ok = eng.invoice(po_id=pid, number="D1", date="2026-10-09", at=T("10-09"), lines=[{"sku": "RTX-5070-TI", "qty": 2, "price": 1249.99}])
+    assert ok.status == "matched" and ok.data["invoice"]["id"] == "INV-1"  # no number was burned
+
+
+def test_requester_cannot_pick_another_departments_budget_or_approver():
+    eng = seed_company(mirror={})
+    r = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05"))
+    assert not r.ok and r.data["code"] == "wrong_department" and eng.pos == {}
+    assert eng.request(requester="pepper", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05", 9)).ok  # the controller may charge any department
+    assert eng.request(requester="jess", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05", 10)).ok
+
+
+def test_strict_vendor_with_a_dept_head_requester_still_needs_two_signatures():
+    eng = seed_company(mirror={})
+    eng.vendors["bestbuy"].add("failed_receiving", "2026-09-20T00:00:00Z", "happy", "late")
+    out = eng.request(requester="rhodey", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05"))
+    pid = out.data["po"]["id"]
+    assert out.data["po"]["route"]["needs"] == ["dept_head", "controller"] and out.data["po"]["route"]["peer_dept_head"]
+    assert eng.approve(pid, by="rhodey", at=T("10-05", 10)).data["code"] == "self_approval"
+    first = eng.approve(pid, by="pepper", at=T("10-05", 11))
+    assert first.status == "pending_approval"  # one controller signature is not enough
+    second = eng.approve(pid, by="kara", at=T("10-05", 12))  # another department's head is the independent second signature
+    assert second.ok and eng.pos[pid]["status"] == "approved"
