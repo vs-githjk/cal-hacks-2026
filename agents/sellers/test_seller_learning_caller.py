@@ -1,54 +1,10 @@
-import sys
-import types
+import asyncio
+import json
 
-
-def _install_agent_runtime_stubs():
-    uagents = types.ModuleType("uagents")
-
-    class Protocol:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def on_message(self, *args, **kwargs):
-            return lambda function: function
-
-    uagents.Agent = type("Agent", (), {})
-    uagents.Context = type("Context", (), {})
-    uagents.Model = type("Model", (), {})
-    uagents.Protocol = Protocol
-    sys.modules.setdefault("uagents", uagents)
-
-    crypto = types.ModuleType("uagents.crypto")
-    crypto.Identity = type("Identity", (), {})
-    sys.modules.setdefault("uagents.crypto", crypto)
-
-    modules = {
-        "uagents_core": types.ModuleType("uagents_core"),
-        "uagents_core.contrib": types.ModuleType("uagents_core.contrib"),
-        "uagents_core.contrib.protocols": types.ModuleType("uagents_core.contrib.protocols"),
-    }
-    for name, module in modules.items():
-        module.__path__ = []
-        sys.modules.setdefault(name, module)
-
-    chat = types.ModuleType("uagents_core.contrib.protocols.chat")
-    chat.ChatAcknowledgement = type("ChatAcknowledgement", (), {})
-    chat.ChatMessage = type("ChatMessage", (), {})
-    chat.TextContent = type("TextContent", (), {})
-    chat.chat_protocol_spec = object()
-    sys.modules.setdefault(chat.__name__, chat)
-
-    payment = types.ModuleType("uagents_core.contrib.protocols.payment")
-    for name in ("CommitPayment", "CompletePayment", "RejectPayment", "Funds", "RequestPayment"):
-        setattr(payment, name, type(name, (), {}))
-    payment.payment_protocol_spec = object()
-    sys.modules.setdefault(payment.__name__, payment)
-
-
-_install_agent_runtime_stubs()
-
+from agents.buyer import state
 from agents.sellers import seller_agent
-from agents.sellers.policy import seller as load_seller
+from agents.sellers import learning
+from agents.sellers.policy import make_bid as policy_make_bid, seller as load_seller
 
 
 def _loss(report_id="loss-1", seller_id="seller-a", *, won=False, band="within10"):
@@ -86,6 +42,62 @@ def _need(source="sim"):
 
 def _db_path(tmp_path):
     return tmp_path / ".state" / "state.sqlite3"
+
+
+class _Protocol:
+    def __init__(self, **_kwargs):
+        self.handlers = {}
+
+    def on_message(self, model):
+        def register(handler):
+            self.handlers[model] = handler
+            return handler
+        return register
+
+
+class _Agent:
+    def __init__(self, **_kwargs):
+        self.address = "seller-agent-test"
+        self.handlers = {}
+        self.protocols = []
+
+    def on_message(self, model):
+        def register(handler):
+            self.handlers[model] = handler
+            return handler
+        return register
+
+    def include(self, protocol, **_kwargs):
+        self.protocols.append(protocol)
+
+
+class _Context:
+    session = "offline-learning-test"
+
+    def __init__(self, events):
+        self.events = events
+        self.sent = []
+        self.logs = []
+        self.logger = self
+
+    async def send(self, to, message):
+        self.events.append("reply")
+        self.sent.append((to, message))
+
+    def warning(self, message):
+        self.logs.append(message)
+
+
+def _registered_bid_handler(monkeypatch, seller):
+    monkeypatch.setattr(seller_agent, "Agent", _Agent)
+    monkeypatch.setattr(seller_agent, "Protocol", _Protocol)
+    monkeypatch.setattr(seller_agent.common, "agent_args", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(seller_agent.common, "include_profile_chat", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(seller_agent.common, "screen", lambda *_args, **_kwargs: {"verdict": "allow", "reasons": []})
+    monkeypatch.setattr(seller_agent.common, "shield_context", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(seller_agent, "load_seller", lambda _name: seller)
+    app = seller_agent.build("seller_1")
+    return app.handlers[seller_agent.common.BidRequest]
 
 
 def test_sim_bid_uses_composed_learned_discount_without_mutating_seller(monkeypatch, tmp_path):
@@ -175,3 +187,60 @@ def test_market_publication_carries_exact_existing_listing_url(monkeypatch):
     seller_agent._market_bid(bid, {"shipping": 0.0})
 
     assert captured["line_metadata"][0]["provenance"]["listing_url"] == original_url
+
+
+def test_registered_bid_handler_fails_closed_when_learning_state_is_unavailable(monkeypatch):
+    events = []
+    handler = _registered_bid_handler(monkeypatch, _sim_seller())
+    monkeypatch.delenv("SPACETIMEDB_SELLER_A_TOKEN_FILE", raising=False)
+    monkeypatch.setattr(learning, "open_learning_state",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("private state path")))
+    monkeypatch.setattr(seller_agent, "make_bid", lambda *_args, **_kwargs: events.append("base-bid"))
+    ctx = _Context(events)
+    message = seller_agent.common.BidRequest(need_json=json.dumps(_need()))
+
+    asyncio.run(handler(ctx, "buyer-test", message))
+
+    assert not ctx.sent
+    assert "base-bid" not in events
+    assert ctx.logs == ["seller learning unavailable: OSError"]
+
+
+def test_registered_bid_handler_applies_own_loss_before_building_and_sending_bid(monkeypatch, tmp_path):
+    events = []
+    seller = _sim_seller()
+    db_path = _db_path(tmp_path)
+    monkeypatch.setattr(state, "DEFAULT_DB_PATH", db_path)
+    monkeypatch.setenv("SPACETIMEDB_SELLER_A_TOKEN_FILE", "unused-test-path")
+
+    class _LearningBridge:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def my_loss_reports(self):
+            events.append("reports")
+            return [_loss()]
+
+    monkeypatch.setattr(seller_agent, "MarketBridge", _LearningBridge)
+    original_make_bid = policy_make_bid
+
+    def observe_strategy(need, bid_seller):
+        db = learning.open_learning_state(db_path)
+        try:
+            step = learning.load_strategy(db, "seller-a")["price_step"]
+        finally:
+            db.close()
+        events.append(("make_bid", step))
+        return original_make_bid(need, bid_seller)
+
+    monkeypatch.setattr(seller_agent, "make_bid", observe_strategy)
+    handler = _registered_bid_handler(monkeypatch, seller)
+    ctx = _Context(events)
+    message = seller_agent.common.BidRequest(need_json=json.dumps(_need()))
+
+    asyncio.run(handler(ctx, "buyer-test", message))
+
+    assert events == ["reports", ("make_bid", 0.07), "reply"]
+    assert len(ctx.sent) == 1
+    bid = json.loads(ctx.sent[0][1].bid_json)
+    assert bid["lines"][0]["unit_price"] == 90.21
