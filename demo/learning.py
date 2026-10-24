@@ -9,7 +9,6 @@ here; in the product Claude writes that one line from the report alone.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from demo.beats import owned_attrs
 from demo.common import MIRROR, SIM, money, utc_iso, validate

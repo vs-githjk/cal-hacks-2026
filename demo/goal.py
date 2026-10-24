@@ -7,7 +7,7 @@ invented comes from real code: the PSU the RTX 5070 Ti needs is read from data.f
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from demo.common import SIM, money, utc_iso, validate
 from data.fit_checker.tables import GPU_POWER

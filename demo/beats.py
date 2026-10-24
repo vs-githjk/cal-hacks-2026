@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from demo.common import LIVE, MIRROR, PAGE_BASE, SIM, SITE, money, schema_errors, validate
+from demo.common import MIRROR, PAGE_BASE, SIM, SITE, money, validate
 from demo.pages import read_page
 from demo.round import run_round
 from demo.sellers import Seller, all_sellers
