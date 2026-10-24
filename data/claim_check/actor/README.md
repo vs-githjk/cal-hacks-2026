@@ -80,7 +80,30 @@ It also works with Apify integrations (webhooks, Make, Zapier, n8n) like any Act
 
 ## Pricing
 
-**$0.01 per claim checked.** Only a `verified` or `false` result is charged. An `unverified` result is always free, including when the page cannot be fetched, and a restarted run never charges a claim twice. Platform usage is included. You can cap the spend per run; the Actor stops at your limit.
+**$0.01 per claim checked** (pay per event), and Apify platform usage is included.
+
+| You check | You pay |
+|---|---|
+| 1 claim (verified or false) | $0.01 |
+| 100 claims | $1.00 |
+| 1,000 claims | $10.00 |
+| An `unverified` claim (page blocked, unreadable, or no data to judge) | free |
+
+Each run also has Apify's run start event of $0.00005. Only a `verified` or `false` result is charged, and a restarted run never charges a claim twice. You can cap the spend per run; the Actor stops at your limit and the status line says how many claims were not checked.
+
+## Agents can pay per call (experimental)
+
+An AI agent with a stablecoin wallet and **no Apify account** can pay for this Actor itself, through [Apify's Agent General Interface](https://agi.apify.com/AGENTS.md):
+
+1. The agent asks for a prepaid token: `GET https://agi.apify.com/protocols/x402/prepaid-tokens?amount=1&currency=usd` answers **HTTP 402** with a payment challenge. x402 takes USDC on Base, or USDC or USDT on Solana. MPP (`/protocols/mpp/...`) takes USDC.e or pathUSD on Tempo, or USDC or USDT on Solana.
+2. The agent's wallet pays it (for example `npx awal x402 pay ...`, `mppx ...` or `pay.sh`), and Apify returns a token with a hard spend cap: at least $1, it expires after 14 days, and unused balance is not refunded.
+3. The agent runs this Actor with `Authorization: Bearer <token>`, and each claim is metered against that balance. This works because the Actor uses limited permissions.
+
+**What we have verified (Oct 24 2026):** our probe, [`scripts/apify_agent_pay_probe.py`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/scripts/apify_agent_pay_probe.py), reaches the 402 pay wall for a prepaid token and for a proxied run of this Actor. That is *reached, not paid*. This section will say LIVE only after a real paid run.
+
+## Our other Actor
+
+- [**PC Build Compatibility Checker: will these parts fit?**](https://apify.com/anoopibrampur/pc-build-compatibility-checker) runs 12 fit rules (socket, RAM, PSU wattage and cables, GPU length, cooler height, form factors) with maker sources, so you know the part you are about to buy fits the rest of the build.
 
 ## Good to know
 
