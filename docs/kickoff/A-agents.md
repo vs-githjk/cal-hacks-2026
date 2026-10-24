@@ -1,23 +1,37 @@
-# Lane A: Agents and ASI:One (Fetch.ai, Claude, CRS and Nessie reads)
+# Lane A: Agents and ASI:One (Fetch.ai, Claude, ownership memory)
 Paste 00-shared.md first, then this.
 
-You own agents/. Goal: the shopper's whole flow runs inside an ASI:One conversation.
+## PIVOT NOTE (Fri 21:00: restaurants to PC builders)
+**Stays:** everything about Fetch.ai (uAgents, Agentverse, Chat Protocol, Payment Protocol, Interactive Cards, ASI:One as the place the user lives), the buyer, advocate and seller agent shapes, sealed bids with policy code deciding prices, recovery from failed tool calls, the rule that every warning cites a source.
+**Changes:** the buyer is a PC upgrader's or builder's agent (not a restaurant's); the hero case is an upgrader whose agent remembers the parts they own and buys one scarce part (GPU or RAM) inside an allowance; the weekly forecast cycle is gone; the advocate checks fit, condition, price truth, seller record and recalls (CPSC) instead of produce spec and openFDA; sellers are PC retailers and marketplace sellers; you now own **ownership memory** (locked Fri 21:00).
+**First 3 things to do now:**
+1. Rename in your stubs: Need items now carry condition and variant instead of grade and pack size; supplier becomes seller. Use the term map in 00-shared.md. Then make the Chat Protocol hello agent turn "I own X and Y; I want a GPU for 1440p that fits my case and PSU, plus 32 GB DDR5, within my allowance" into a Need with must-haves and allowed alternatives (a whole-build brief works the same way).
+2. Write OwnedPart (contract, log it in docs/CHANGES.md) and the memory store: "I already have a 750 W PSU and 16 GB DDR4" becomes entries; the Need builder drops or flags lines the builder owns, and the card says "you already own X (your note, Fri 21:10)".
+3. Stub the quality advocate against Lane C's fit checker (a pure function, same input and output you mock today): it must return fit failures as cited warnings, and be able to veto the cheapest bid.
+
+## GOALS TO SAT 10:00 (TALKABLE PROGRESS: the second round of sponsor and judge feedback)
+1. By Fri 23:00: the buyer agent is registered on Agentverse and answers in ASI:One; a message with specs and a budget becomes a Need and shows on Lane B's screen. Done-check: a teammate types the brief in ASI:One and the Need row appears.
+2. By Fri 23:30: OwnedPart is in contracts/ and docs/CHANGES.md, and "I already have a 750 W PSU" removes the PSU line from the Need with the entry cited. Done-check: a unit test and one ASI:One transcript.
+3. By Sat 03:00: seller agents (at least 3 named, labelled fleet for the rest) bid into the sealed round from Lane C mirrors; the advocate vetoes one bid that is not compatible (fit comes from Lane C's checker) with a cited warning. Done-check: the AdvocateCard JSON for the vetoed bid has a source_url on every warning.
+4. By Sat 07:00: the review card and the Payment Protocol commit work after Lane D's approval gate, for both an auto-approved deal and a voice-approved one. Done-check: CommitPayment appears only with an approval_id (test).
+5. By Sat 09:00: 6 agents registered with names and addresses in the README; recovery message when a tool call fails; the run-through works from a cloud-hosted agent, not a laptop. Done-check: README table filled, one run from a fresh ASI:One session.
+6. By Sat 10:00: the sponsor demo path runs end to end in ASI:One, labelled LIVE, MIRROR or SIM per step. Done-check: Vidyut runs it once without help.
+
+You own agents/. Goal: the builder's whole flow runs inside an ASI:One conversation, and the agent knows what the builder already owns.
 
 Fetch.ai hard requirements (from their Cal Hacks hackpack): register at least one agent on Agentverse; implement the Agent Chat Protocol; be discoverable and usable through ASI:One; meaningful tool use or multi-agent orchestration; the primary workflow completes inside ASI:One; public GitHub repo with run instructions; README lists every agent's name and address plus the two badges (innovationlab, hackathon); 3 to 5 minute demo video. Bonus: multi-agent collaboration, Payment Protocol with a credible monetization model, ASI Interactive Cards, recovery from failed tool calls, real-time data.
 
 Tasks in order:
-1. Shopper agent (uAgents, Python) with the Chat Protocol (uagents_core.contrib.protocols.chat), registered on Agentverse, reachable from ASI:One. It turns a message into a Need and posts it to the market (Lane B contract).
-2. Store agent template: reads a store's rules (floor price, allowed perks) and the mirrored catalog from Lane C, bids within rules, answers counter-offers. Spawn 10 to 20 with personas.
-3. Devil's advocate agent (Claude via the Anthropic API): for each bid, builds an AdvocateCard from Lane C data (price history, reviews, fees), Shield claim checks, CRS affordability (via Lane D adapter) and Nessie accounts (via Lane C). It must cite a source for every warning and hold its ground when the shopper pushes back.
-4. Interactive Cards: a carousel of verified bids, a detail card per bid with the advocate's warnings, a review card for approval (card_kind carousel, detail, review; MetadataContent with card_protocol_version "1").
-5. Payment Protocol (uagents_core.contrib.protocols.payment): store agent sends RequestPayment, shopper agent sends CommitPayment only after the approval card; then Lane D charges the Visa card through Stripe test mode (or Link) and the store sends CompletePayment.
-6. Recovery: retries and a clear message when a tool call fails.
-Done when: a judge completes need, bids, advocate card, approval and payment inside ASI:One, and every agent message passed through Shield first.
+1. Buyer agent (uAgents, Python) with the Chat Protocol (uagents_core.contrib.protocols.chat), registered on Agentverse, reachable from ASI:One. It turns a message ("these are my specs, this is what I want, get me the best value") into a Need: use case, budget, spend limit, a parts list with must-haves and allowed alternatives, and parts to keep. It posts the Need to the market (Lane B contract). Two entry modes: a fixed parts list, or a brief where the agent proposes a compatible list first (Tier 0 is the fixed list with some flexible lines).
+2. Ownership memory (new, yours, Tier 0): OwnedPart records per builder, from what they tell the agent or what they bought through us. Rules: never re-buy an owned part unless asked; give advice from memory ("you already own a 750 W PSU, skip it", "your RAM is fine for this GPU, keep it", "these should last a while") and cite the entry; when memory and the new parts conflict (an owned DDR4 kit and a DDR5 board), say so and let Lane C's fit checker decide. Advice about how long a part will last must come from a stated rule (for example generation and socket lifespan from data, TO VERIFY), never a guess.
+3. Seller agent template: reads a seller's rules (floor price, allowed perks, shipping terms) and the mirrored catalog from Lane C, bids within rules, answers counter-offers. Spawn 10 to 20 with personas. Prices come from policy code; the LLM only writes the persona's line.
+4. Quality advocate (Claude via the Anthropic API): for each bid, builds an AdvocateCard from Lane C data: (a) fit (Lane C's rules engine, never decided by the model), (b) condition (new, open-box, refurbished, used sold as new), (c) price truth against price history and total landed price, (d) seller record from receiving results, marketplace third-party risk and counterfeit risk signals, return policy and warranty, (e) CPSC recalls, (f) CRS stability signal via Lane D. It must cite a source for every warning, show at most three, hold its ground when the builder pushes back, and be able to veto the cheapest bid with reasons. Wording rule: "the price claim did not match the price history", never "the store lied".
+5. Interactive Cards: a carousel of verified bids, a detail card per bid with the advocate's warnings, a review card for approval (card_kind carousel, detail, review; MetadataContent with card_protocol_version "1"). The review card shows parts, price, advocate verdict and savings, the same content the Cartesia call reads aloud.
+6. Payment Protocol (uagents_core.contrib.protocols.payment): seller agent sends RequestPayment, buyer agent sends CommitPayment only after the approval gate (auto-approved inside the allowance, or the recorded voice yes from Lane D's Cartesia call, or the review card); then Lane D charges the Visa test card through Stripe test mode (or Link) and the seller sends CompletePayment. A split order is several payments, one mandate per seller.
+7. Recovery: retries and a clear message when a tool call fails.
+Done when: a judge gives a build brief and completes bids, advocate card, approval and payment inside ASI:One, the agent skips a part the builder already owns and says why with the memory entry, and every agent message passed through Shield first.
 
-## Latest direction additions
-- The buyer is a restaurant agent: it reads the usage forecast from Lane C, turns it into a weekly Need (items with grade, pack size, quantity, delivery window), and asks the owner to approve or auto-approves within limits, always notifying the owner.
-- The devil's advocate checks spec equivalence across suppliers, delivery promises, price against the market baseline, and the CRS stability signal from Lane D.
-
-## Visa and quality update (Fri 20:20)
-- The buyer agent runs the weekly cycle on its own schedule (forecast, request, auction, order) and only pings the owner for approvals or exceptions. Chat is not the product.
-- The devil's advocate is now the Quality Advocate: need check (forecast and stock versus quantity, waste risk), quality check (spec match, shelf life versus delivery date, recalls, supplier quality record), price check (USDA baseline), stability (CRS signal). It can veto the cheapest bid when quality is worse, and must say why with sources.
+## Direction details (replaces the restaurant additions)
+- The buyer agent runs the round on its own after the brief (search, sealed request, auction, checks, plan) and only pings the builder for approval or exceptions. Chat is not the product.
+- Inside the allowance the agent orders and sends a receipt; above it, it hands the deal to Lane D's voice call. It never decides the allowance itself.
+- The advocate can veto the cheapest bid when quality is worse (wrong socket, not new, price claim off, weak seller record) and must say why with sources.
