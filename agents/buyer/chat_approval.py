@@ -30,11 +30,19 @@ def format_approval_result(result: VoiceResult, deal_id: str) -> str:
     return f"Approval not granted for deal {deal_id} (reason: {safe_reason})."
 
 
+def _utc_now(value: datetime) -> datetime:
+    if (not isinstance(value, datetime) or value.tzinfo is None
+            or value.utcoffset() != timedelta(0)):
+        raise ValueError("business time must be timezone-aware UTC")
+    return value.astimezone(timezone.utc)
+
+
 async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_owner: str,
                           send_private: Callable[[str], Awaitable[Any]],
                           call_ready: Callable[[], tuple[bool, str]],
                           wait_for_typed: Callable[[str, str, str, float], Awaitable[tuple[str, str] | None]],
-                          client: Any, service: Any, buyer_name: str = "Vidyut") -> VoiceResult:
+                          client: Any, service: Any, buyer_name: str = "Vidyut",
+                          now: Callable[[], datetime] | None = None) -> VoiceResult:
     """Approve one frozen offer from its authenticated owner's original private chat session.
 
     `send_private` captures the current owner context. `wait_for_typed` returns (sender, text); it must
@@ -43,6 +51,12 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
     if not isinstance(sender, str) or not sender or sender != bound_owner:
         return VoiceResult(False, "wrong_owner")
     loop = asyncio.get_running_loop()
+    business_clock = (lambda: datetime.now(timezone.utc)) if now is None else now
+    if not callable(business_clock):
+        return VoiceResult(False, "transaction_invalid")
+
+    def current_time() -> datetime:
+        return _utc_now(business_clock())
 
     async def send(text: str) -> None:
         result = send_private(text)
@@ -62,7 +76,7 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
             raise PermissionError("private approval delivery failed") from None
 
     async def typed_wait(session, *, prompt: bool) -> str | None:
-        remaining = max(0.0, (session.expires_at - datetime.now(timezone.utc)).total_seconds())
+        remaining = max(0.0, (session.expires_at - current_time()).total_seconds())
         if remaining <= 0:
             return None
         if prompt:
@@ -91,7 +105,7 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
         return result
 
     try:
-        tx, mandate, deal = checkout._bound_transaction(transaction, approval_phase=True)
+        tx, mandate, deal = checkout._bound_transaction(transaction, approval_phase=True, now=current_time())
     except (ValueError, PermissionError):
         return await finish(VoiceResult(False, "transaction_invalid"), "this deal")
     deal_id = tx["deal_id"]
@@ -111,7 +125,7 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
                       and unavailable_reason in _CALL_UNAVAILABLE else "unavailable")
             await send(f"Voice approval is unavailable ({reason}); you can approve with a typed code instead.")
             try:
-                session, code = service.issue(mandate, channel="browser")
+                session, code = service.issue(mandate, channel="browser", now=current_time())
             except ApprovalError as error:
                 return await finish(VoiceResult(False, error.reason), deal_id)
             session.expires_at = min(session.expires_at,
@@ -119,20 +133,20 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
             try:
                 await send(f"One-time approval code: {code}")
             except Exception:
-                session.silence()
+                session.silence(now=current_time())
                 return await finish(VoiceResult(False, "private_code_delivery_failed"), deal_id)
             while not session.terminal:
                 typed = await typed_wait(session, prompt=False)
                 if typed is None:
                     break
-                decision = session.approve_typed(typed)
+                decision = session.approve_typed(typed, now=current_time())
                 if decision.final:
                     return await finish(VoiceResult(decision.approved, decision.reason, record=decision.record,
                                                     attempts=session.attempts), deal_id)
-            if not session.terminal and datetime.now(timezone.utc) >= session.expires_at:
+            if not session.terminal and current_time() >= session.expires_at:
                 decision = session.approve_typed("", now=session.expires_at)
             else:
-                decision = session.silence()
+                decision = session.silence(now=current_time())
             return await finish(VoiceResult(False, decision.reason or "no_answer", record=decision.record,
                                             attempts=session.attempts), deal_id)
 
@@ -140,12 +154,12 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
 
         def on_code(code: str) -> None:
             deadline = min(service.code_ttl.total_seconds(),
-                           (parse_ts(mandate["expires_at"]) - datetime.now(timezone.utc)).total_seconds())
+                           (parse_ts(mandate["expires_at"]) - current_time()).total_seconds())
             send_from_worker(f"One-time approval code: {code}. Voice approval is starting now.", deadline)
 
         def typed_input(session) -> str | None:
             nonlocal prompt_sent
-            remaining = max(0.0, (session.expires_at - datetime.now(timezone.utc)).total_seconds())
+            remaining = max(0.0, (session.expires_at - current_time()).total_seconds())
             if remaining <= 0:
                 return None
             prompt = not prompt_sent
@@ -161,7 +175,7 @@ async def approve_in_chat(transaction: Mapping[str, Any], *, sender: str, bound_
 
         try:
             result = await asyncio.to_thread(checkout.approve_offer, tx, client, service,
-                on_code=on_code, buyer_name=buyer_name, typed_input=typed_input)
+                on_code=on_code, buyer_name=buyer_name, typed_input=typed_input, now=current_time)
             return await finish(result, deal_id)
         except PermissionError:
             return await finish(VoiceResult(False, "private_code_delivery_failed"), deal_id)

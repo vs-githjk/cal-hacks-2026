@@ -41,6 +41,10 @@ def _cents(value: Any) -> int | None:
 
 def _authorized(transaction: Mapping[str, Any], mandate: Mapping[str, Any],
                 now: datetime | None = None) -> bool:
+    now = datetime.now(timezone.utc) if now is None else now
+    if (not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() != timedelta(0)):
+        return False
+    now = now.astimezone(timezone.utc)
     voice = transaction.get("voice_approval")
     if isinstance(voice, Mapping):
         return approved_voice_record_matches(dict(voice), dict(mandate), now=now)
@@ -54,7 +58,7 @@ def _authorized(transaction: Mapping[str, Any], mandate: Mapping[str, Any],
     try:
         approved_at = datetime.fromisoformat(allowance["approved_at"].replace("Z", "+00:00"))
         time_ok = (approved_at.tzinfo is not None and parse_ts(mandate["created_at"]) <= approved_at
-                   <= datetime.now(timezone.utc) + timedelta(seconds=5))
+                   <= now + timedelta(seconds=5))
     except (AttributeError, KeyError, TypeError, ValueError):
         time_ok = False
     return time_ok and all(allowance.get(key) == value for key, value in expected.items())
