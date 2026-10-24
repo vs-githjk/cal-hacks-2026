@@ -1,0 +1,65 @@
+[
+ {
+  "id": "bh:88fafcd15159",
+  "category": "gpu",
+  "name": "ASUS GeForce RTX 5070 Ti PRIME OC Graphics Card",
+  "model_number": "PRIME-RTX5070TI-O16GING",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1875968-REG/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti.html",
+  "snapshot_id": "bh-20261024T0508Z",
+  "snapshot_date": "2026-10-24T05:08:40.689Z",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1875968-REG/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti.html",
+   "price": 1299.99,
+   "stock": "out_of_stock"
+  }
+ },
+ {
+  "id": "bh:f8a10e39a645",
+  "category": "gpu",
+  "name": "ASUS GeForce RTX 5070 Ti ProArt OC Graphics Card",
+  "model_number": "PROART-RTX5070TI-O16G",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1936065-REG/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070.html",
+  "snapshot_id": "bh-20261024T0508Z",
+  "snapshot_date": "2026-10-24T05:08:40.689Z",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1936065-REG/asus_proart_rtx5070ti_o16g_proart_geforce_rtx_5070.html",
+   "price": 1399.99,
+   "stock": "out_of_stock"
+  }
+ },
+ {
+  "id": "bh:bca451723ac0",
+  "category": "gpu",
+  "name": "MSI GeForce RTX 5070 Ti VENTUS 3X OC Black 16G Graphics Card",
+  "model_number": "RTX 5070 TI 16G VENTUS 3X OC BLACK",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1189.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1963842-REG/msi_geforce_rtx_5070_ti.html",
+  "snapshot_id": "bh-20261024T0508Z",
+  "snapshot_date": "2026-10-24T05:08:40.689Z",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1963842-REG/msi_geforce_rtx_5070_ti.html",
+   "price": 1189.95,
+   "stock": "out_of_stock"
+  }
+ }
+]

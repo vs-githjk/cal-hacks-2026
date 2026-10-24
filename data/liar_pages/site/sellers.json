@@ -1,0 +1,13 @@
+{
+ "origin": "SIM",
+ "sellers": {
+  "honest-hal": {
+   "name": "Honest Hal's Parts (SIM)",
+   "payee": "honest-hal@pay.example.test"
+  },
+  "shady-sam": {
+   "name": "Shady Sam's Deals (SIM)",
+   "payee": "shady-sam@pay.example.test"
+  }
+ }
+}

@@ -13,6 +13,7 @@ from .tables import (AMD_PPT_FACTOR, BIOS_RULES, CASE_TYPE_BOARDS, CASE_TYPE_PSU
                      PSU_HEADROOM, REST_OF_SYSTEM_W)
 
 PASS, FAIL, UNCERTAIN = "pass", "fail", "uncertain"
+LARGE_BOARDS = {"EATX", "XL ATX", "SSI EEB", "SSI CEB", "HPTX"}
 
 
 def _r(rule_id, verdict, reason, note=None):
@@ -88,6 +89,8 @@ def psu_wattage(cpu, gpu, psu):
     cpu_w = _cpu_power(cpu) if cpu is not None else None
     if gpu is not None and not gpu_w:
         return _r("fit.psu_wattage", UNCERTAIN, f"board power unknown for GPU {gpu.get('chipset', '?')}")
+    if cpu is not None and cpu_w is None:
+        return _r("fit.psu_wattage", UNCERTAIN, "CPU power unknown (no TDP or vendor on the CPU card)")
     if cpu_w is None:
         if rec_w:
             verdict = PASS if watts >= rec_w else FAIL
@@ -158,6 +161,8 @@ def form_factor(board, case):
     if not ff or not takes:
         return _r("fit.form_factor", UNCERTAIN, "board form factor or case support unknown")
     ok = ff in takes
+    if not ok and ff in LARGE_BOARDS and not case.get("motherboard_form_factors") and (case.get("type") or "").startswith("ATX"):
+        return _r("fit.form_factor", UNCERTAIN, f"{ff} support varies by {case.get('type')}; check the case spec")
     return _r("fit.form_factor", PASS if ok else FAIL, f"{ff} board {'fits' if ok else 'does not fit'} a case for {', '.join(sorted(takes))}")
 
 
@@ -167,6 +172,8 @@ def psu_form_factor(psu, case):
     if not pf or not takes:
         return _r("fit.psu_form_factor", UNCERTAIN, "PSU form factor or case PSU support unknown")
     ok = pf in takes
+    if not ok and pf in ("SFX", "SFX-L") and "ATX" in takes:
+        return _r("fit.psu_form_factor", UNCERTAIN, f"{pf} PSU in an ATX PSU bay needs an SFX-to-ATX bracket; check it is included")
     return _r("fit.psu_form_factor", PASS if ok else FAIL, f"{pf} PSU {'fits' if ok else 'does not fit'} a case for {', '.join(sorted(takes))}")
 
 

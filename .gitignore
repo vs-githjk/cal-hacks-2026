@@ -23,3 +23,7 @@ shot-*.png
 
 # agent identity tokens written by market/scripts/setup_roles.py
 .tokens/
+
+# signing keys (never commit; VISA_TAP_PRIVATE_KEY_PATH points outside the repo)
+*.pem
+*.key
