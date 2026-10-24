@@ -43,6 +43,8 @@ def call(method, path, body=None, timeout=330):
 
 def run(store, second=False):
     """Never raises: every outcome, including a paid run that broke later, comes back as a log record."""
+    if store not in (SECOND_SOURCE if second else ACTORS):
+        return {"store": store, "status": "SKIPPED", "error": f"no {'second-family ' if second else ''}actor for {store}"}
     actor, inp = (SECOND_SOURCE if second else ACTORS)[store]
     snaps, raw = ("snapshots_b", f"{store}-b") if second else ("snapshots", store)
     started = time.time()

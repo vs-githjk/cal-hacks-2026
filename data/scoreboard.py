@@ -38,7 +38,7 @@ def savings_tile() -> dict:
                  source_run="python3 -m data.baselines",
                  detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
                          "sold_kept_out": b["sold"], "marketplace": b["marketplace"]},
-                 note=ref_txt + "Provider apify-b is a second, independent Apify Actor family reading the same stores. "
+                 note=ref_txt + "Provider apify-b re-checked Best Buy only (3 listings); Micro Center has one provider. "
                       "eBay sold prices are kept out of the reference. "
                       "SIM savings, when they exist, go in a separate column and are never added to real ones.")
 

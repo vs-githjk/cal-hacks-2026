@@ -59,3 +59,13 @@ def test_real_feed_has_a_two_provider_baseline():
     rows = observations()
     b = baseline("rtx 5070 ti", max(r["observed_at"] for r in rows), rows=rows)
     assert b["status"] == "ok" and b["providers"] == ["apify", "apify-b"] and b["median"] is not None
+
+
+def test_same_listing_from_two_providers_is_counted_once():  # fixes for #109
+    a, b = obs("apify", "bestbuy", 1249.99), obs("apify-b", "bestbuy", 1249.99, at="2026-10-24T08:51:00+00:00")
+    c = obs("apify", "bestbuy", 1259.99)
+    for r, u in ((a, "u1"), (b, "u1"), (c, "u2")):
+        r["url"] = u
+    out = baseline("rtx 5070 ti", "2026-10-24T09:00:00+00:00", [a, b, c])
+    assert out["n"] == 2 and out["median"] == 1254.99 and out["providers"] == ["apify", "apify-b"]
+    assert "re-check" in out["note"]

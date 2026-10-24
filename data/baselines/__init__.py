@@ -66,6 +66,11 @@ def baseline(sku: str, at: str, rows: list[dict] | None = None) -> dict:
     sold = [r for r in fresh if r["kind"] == "sold"]
     market = [r for r in fresh if r["kind"] == "ask" and r["store"] in MARKETPLACE]
     providers = sorted({r["provider"] for r in asks})
+    latest = {}
+    for r in sorted(asks, key=lambda r: r["observed_at"]):  # one observation per listing URL: a re-check is not a new listing
+        latest[r.get("url") or (r["store"], r["price"])] = r
+    rechecked = len(asks) - len(latest)
+    asks = list(latest.values())
     if not asks:
         stale = any(r["sku"] == sku for r in rows)
         return {"status": "stale" if stale else "empty", "median": None, "n": 0, "providers": [], "from": None, "to": None,
@@ -74,6 +79,7 @@ def baseline(sku: str, at: str, rows: list[dict] | None = None) -> dict:
     ok = len(providers) >= MIN_PROVIDERS
     mid = round(statistics.median(r["price"] for r in asks), 2)
     return {"status": "ok" if ok else "one_source", "median": mid if ok else None, "reference_unconfirmed": None if ok else mid, "n": len(asks), "providers": providers,
+            "note": f"{rechecked} re-check(s) of an already counted listing dropped" if rechecked else None,
             "from": times[0], "to": times[-1], "rows": asks,
             "sold": {"n": len(sold), "median": round(statistics.median(r["price"] for r in sold), 2) if sold else None,
                      "note": "eBay sold, mixed condition: never in the median"},

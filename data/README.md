@@ -36,3 +36,4 @@ Total for the test round: about $0.17 of the $205 credit.
 
 ## c11 baselines
 - `python3 -m data.baselines` writes `data/baselines/feed.json` (recorded price feed, MIRROR, dated) and prints the RTX 5070 Ti reference. `baseline(sku, at)` needs two dated providers within 24 h; until Bright Data is approved it reports `one_source`. Retail, in-stock, new or unstated asks only; eBay sold and eBay live are separate series, never in the median.
+- Second Apify family (provider label `apify-b`, run with `python3 -m data.mirror.run_actors --second <store>`; Best Buy and Micro Center only, other stores print "no second-family actor"): `axlymxp/bestbuy-scraper` (Best Buy, 3 items, $0 logged) and `fortuitous_pirate/microcenter-scraper` (Micro Center, 0 items, $0.02 logged, no snapshot file kept). apify-b re-checked the same Best Buy listings, so the baseline keeps one observation per listing URL and `n` counts distinct listings.
