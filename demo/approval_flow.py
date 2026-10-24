@@ -87,7 +87,7 @@ def _signing_key(env: Mapping[str, str], tmp: str):
 
 
 def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, env: Optional[Mapping[str, str]] = None,
-              stripe_test: Callable = stripe_charge_test) -> dict:
+              stripe_test: Optional[Callable] = None) -> dict:
     env = os.environ if env is None else env
     t0 = now.replace(microsecond=0)
     bid, win = b2["winner_bid"], b2["winner"]
@@ -185,7 +185,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
         stripe_note = f"--stripe was passed but {STRIPE_ENV} is not an sk_test_ key, so the SIM stub runs"
     if live_ok:
         try:
-            charge = stripe_test(mandate, key)
+            charge = (stripe_test or stripe_charge_test)(mandate, key)
         except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             stripe_note = f"Stripe test call failed ({type(e).__name__}), so the SIM stub runs"
     charge = charge or stripe_charge_sim(mandate)
