@@ -27,13 +27,17 @@ Built at Cal Hacks 13.0 (October 23 to 25, 2026) by a team of four.
 
 ## What Bidding Royale does
 
-The restaurant gets a **buyer agent** that learns how fast the kitchen uses each ingredient ("200 carrots lasted a week"), predicts next week's order, and puts it up for a **sealed auction**. **Supplier agents** bid. Before anything is bought, the restaurant's **devil's advocate** argues against weak bids, **Shield** screens every agent message, and **CRS** confirms each supplier's financial stability without revealing their private data. Then the buyer agent orders within the owner's limits and tells the owner what it did.
+The restaurant gets a **buyer agent** that learns how fast the kitchen uses each ingredient ("200 carrots lasted a week"), predicts next week's order, and puts it up for a **sealed auction**. **Supplier agents** bid. Before anything is bought, the restaurant's **quality advocate** argues against weak bids, **Shield** screens every agent message, and **CRS** confirms each supplier's financial stability without revealing their private data. Then the buyer agent orders within the owner's limits and tells the owner what it did.
 
 Suppliers get a **wind tunnel**: they train their bidding agent against simulated buyers, honest and hostile, before it goes live.
 
 A **3D market floor** shows supplier personas haggling. It draws the live market state and nothing else.
 
 Commodity items with the same spec are what make this work: when every bid is for the same grade, pack size and case count, price, delivery and supplier quality can be compared fairly, which branded goods do not allow.
+
+**What Visa told us, and how we designed for it:** trust comes first, and this is not a chatbot. The agent runs the weekly ordering cycle on its own, asks the owner only for approvals and exceptions, and shows the hours and dollars it saved each week with how they were computed.
+
+**Quality first:** before any order, the quality advocate checks that the restaurant actually needs the quantity, that every bid matches the spec (grade, pack size, origin, shelf life against the delivery date), that there is no open recall, and how each supplier performed at past deliveries. At receiving, a photo of each case is checked against the spec, and rejects feed the supplier's quality record.
 
 ## How it works
 
@@ -42,7 +46,7 @@ Commodity items with the same spec are what make this work: when every bid is fo
 3. **Request.** It posts the order as a sealed request for bids: items with exact specs, a delivery window, and a short auction window. The owner can start or change an order by chatting with the agent in ASI:One.
 4. **Bid.** Supplier agents bid until the deadline. Bids stay sealed, suppliers never see the restaurant's spend limit, and the market rejects any bid below the supplier's floor price. Prices come from policy code; the language model only writes the persona's line.
 5. **Screen.** Shield screens every agent-to-agent message, verifies each request's Visa Trusted Agent Protocol signature, and checks supplier claims (stock, delivery, fees, price) against the live page.
-6. **Challenge.** The devil's advocate checks each bid for spec equivalence, delivery claims, price against the USDA wholesale baseline and public supplier prices, and the CRS stability signal. It shows at most three warnings, each with a source.
+6. **Challenge.** The quality advocate checks each bid for spec equivalence, delivery claims, price against the USDA wholesale baseline and public supplier prices, and the CRS stability signal. It shows at most three warnings, each with a source.
 7. **Order.** If the best verified bid fits the owner's limits, the agent orders and notifies the owner. If not, an approval card waits in ASI:One. Payment runs through the Fetch.ai Payment Protocol over Stripe test mode, charging a Visa test card, under a signed single-use mandate.
 8. **Watch.** A second screen shows the 3D floor and dashboards on the same market state: same market, two views.
 
@@ -50,7 +54,7 @@ Diagram, components and data flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Why this is different
 
-- **The buyer has a skeptic on its side.** A price list tells you what is cheapest. The devil's advocate tells you when the cheapest bid is not the same item, will not arrive in time, or comes from a supplier under strain, and it cites a source for every warning.
+- **The buyer has a skeptic on its side.** A price list tells you what is cheapest. The quality advocate tells you when the cheapest bid is not the same item, will not arrive in time, or comes from a supplier under strain, and it cites a source for every warning.
 - **Known agent-market failures are designed out.** Microsoft's Magentic Marketplace study (arXiv 2510.25779) found that buyer agents favor the first proposal they see and that malicious sellers can redirect payments. Sealed bids remove the first-mover advantage. Shield's mandate check blocks any payment whose payee or amount differs from what the owner approved.
 - **Identity says who; Shield says whether it is true.** Visa's Trusted Agent Protocol proves which agent sent a request. Shield checks whether what that agent claims holds up.
 - **Privacy by design.** CRS checks a supplier's credit and pending loans inside our system and shares only a signal (verified stable, caution, or not verified). Neither side sees the other's private data.
@@ -69,7 +73,7 @@ Diagram, components and data flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | CRS | Credit API sandbox, MCP server | Checks each supplier's financial stability inside our system and shares only the signal. Provided test identities only. | Core |
 | Armadin | Shield API (our build) | Shield is our agent-to-agent security API. In the demo a judge attacks the market and Shield blocks it. | Core |
 | Spacetime | SpacetimeDB | Holds the live auction state that every screen and the 3D floor read, and enforces the floor price and approval-before-payment rules in reducers. | Core |
-| Anthropic | Claude | Reasoning for the devil's advocate and the one line each supplier persona speaks. | Core |
+| Anthropic | Claude | Reasoning for the quality advocate and the one line each supplier persona speaks. | Core |
 | Cartesia | Voice | Supplier personas haggle aloud on the floor. | Tier 1 |
 | Hyphenate | Purchasing and accounts payable seat | Purchase order, delivery, invoice, three-way match and approval. | Stretch |
 
@@ -102,7 +106,7 @@ Every bid, claim and screen carries a badge (**LIVE**, **MIRROR**, **SIM**, **SA
 | Agent name | Role | Agentverse address |
 |---|---|---|
 | *pending* | Buyer agent: learns usage, predicts the order, runs the auction, pays within limits | *pending* |
-| *pending* | Devil's advocate: challenges each bid with cited warnings | *pending* |
+| *pending* | Quality advocate: challenges each bid with cited warnings | *pending* |
 | *pending* | Shield: screens messages, verifies signatures, checks claims | *pending* |
 | *pending* | Supplier gateway: routes requests to the supplier fleet | *pending* |
 | *pending* | Supplier agent, named persona 1 | *pending* |
@@ -139,7 +143,7 @@ docs/       architecture, sponsor map, real vs simulated, interviews, kickoff pr
 
    | Variable | Used for |
    |---|---|
-   | `ANTHROPIC_API_KEY` | Devil's advocate and persona lines |
+   | `ANTHROPIC_API_KEY` | Quality advocate and persona lines |
    | `AGENTVERSE_API_KEY`, `ASI1_API_KEY` | Agent registration and ASI:One |
    | `APIFY_TOKEN` | Supplier mirrors and the claim-check Actor |
    | `BRIGHT_DATA_API_KEY` | Wider web price and claim checks |
@@ -203,7 +207,7 @@ Updated with every merge. States: **planned**, **in progress**, **built** (with 
 | Usage learning and order forecast | planned |
 | Supplier agents bidding from Apify mirrors | planned |
 | Sealed auction with floor enforced in reducers | planned |
-| Devil's advocate with cited warnings | planned |
+| Quality advocate with cited warnings | planned |
 | Shield `/screen`, `/verify-agent`, `/check-claim` | planned |
 | Trusted Agent Protocol signing and verification | planned |
 | Stripe test-mode payment through the Payment Protocol | planned |

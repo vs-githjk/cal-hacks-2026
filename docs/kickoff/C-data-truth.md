@@ -17,3 +17,8 @@ Done when: store agents bid from real mirrored data, every claim on screen has a
 - Market baseline: USDA AMS Market News wholesale prices (public; verify the API and key) plus Bright Data for supplier sites.
 - Usage learner (new, you own it): from a seeded order history and weekly counts, predict next week's quantity per item with a simple, explainable model (moving average plus trend, with the reason shown), and measure the error on held-out weeks.
 - Spec normalizer: map listings to grade, pack size and case count so bids compare like for like.
+
+## Visa and quality update (Fri 20:20)
+- Quality data: openFDA food enforcement and recall API (api.fda.gov/food/enforcement.json, public), USDA grade standards and spec fields, supplier reviews and complaints via Apify and Bright Data, and our own receiving results (rejects, credits) per supplier.
+- Receiving check: a vision model compares a delivery photo to the spec (count, size, ripeness, damage); store results as a supplier quality record (a record of events, not an opaque score).
+- Measured numbers for the pitch: hours saved per week (ordering time before versus after, from interviews), dollars saved versus baseline, waste avoided from the forecast, quality issues caught.

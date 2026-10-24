@@ -11,3 +11,7 @@ Tasks in order:
 5. Voices: each persona speaks its bid with its own Cartesia voice (cache audio per bid; mute toggle).
 6. Optional hardware terminal: camera scan of a barcode plus a touch screen showing bids (ESP32-S3 display or Raspberry Pi from the hardware desk); fallback is a webcam scan in the browser.
 Done when: two laptops see the same auction and the same floor in real time, and the floor never shows anything the market did not record.
+
+## Visa and quality update (Fri 20:20)
+- The owner view leads with outcomes: hours saved this week, dollars saved versus last week's prices, waste avoided, each with "how we computed this". Trust is visible: signature verified, claims checked, supplier stability verified, quality record per supplier.
+- Receiving screen: photo of each delivered case, the spec it is checked against, accept or reject, and the supplier's quality record updating live.
