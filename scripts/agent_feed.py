@@ -37,7 +37,7 @@ import launch  # noqa: E402  (stdlib-only launcher: pidfile reader and liveness 
 REPO = Path(__file__).resolve().parent.parent
 MAX_MESSAGE = 140
 ROLES = {"buyer": "buyer", "advocate": "advocate", "sellers": "seller"}
-DEFAULT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Tech Bazaar Quality Advocate", "sellers": "Seller agents"}
+DEFAULT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Bazaar Advocate", "sellers": "Seller agents"}
 
 LINE_RE = re.compile(r"^(?:INFO|WARNING|ERROR|CRITICAL|DEBUG):\s+\[([^\]]+)\]: (.*)$")
 START_RE = re.compile(r"Starting agent with address: (agent1q[0-9a-z]{40,70})")
