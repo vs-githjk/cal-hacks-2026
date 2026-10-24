@@ -11,7 +11,7 @@ for (const name of ["client-1", "client-2"]) {
     .withUri(URI)
     .withDatabaseName(DB)
     .onConnect((conn) => {
-      conn.reducers.pairBuyerScreen({ buyerId: "joe", code: process.env.PAIR_CODE ?? "" });
+      conn.reducers.pairBuyerScreen({ buyerId: "vidyut", code: process.env.PAIR_CODE ?? "" });
       conn.db.myGoals.onInsert((_ctx, g) => console.log(`${name} ${Date.now()} goal ${g.id} ${g.state}`));
       conn.db.floorEvent.onInsert((_ctx, e) => console.log(`${name} ${Date.now()} event ${e.kind}: ${e.label}`));
       conn
