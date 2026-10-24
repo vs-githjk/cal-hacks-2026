@@ -13,3 +13,11 @@ Shared JSON schemas every lane reads and writes. Mock other lanes from these. Ch
 - Forecast.schema.json
 - Persona.schema.json
 - FloorEvent.schema.json
+- SpecCard.schema.json (proposed by B)
+- SellerTerms.schema.json (proposed by B)
+- OrderPlan.schema.json (proposed by B)
+- ReceivingEvent.schema.json (proposed by B)
+- QualityRecord.schema.json (proposed by B)
+- LossReport.schema.json (proposed by B)
+- Goal.schema.json (proposed by B with A)
+- Allowance.schema.json (shape by D, reducer by B)

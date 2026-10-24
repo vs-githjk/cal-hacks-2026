@@ -44,12 +44,14 @@
   },
   "source": {
    "type": "string",
+   "description": "listing URL, actor id or dataset id"
+  },
+  "origin": {
+   "type": "string",
    "enum": [
-    "live",
-    "mirror",
-    "simulated",
-    "sandbox",
-    "recorded"
+    "LIVE",
+    "MIRROR",
+    "SIM"
    ]
   }
  },
@@ -63,6 +65,7 @@
   "checked_at",
   "method",
   "evidence_hash",
-  "source"
+  "source",
+  "origin"
  ]
 }

@@ -1,0 +1,46 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "seller_id": {
+   "type": "string"
+  },
+  "min_order_value": {
+   "type": "number"
+  },
+  "delivery_fee": {
+   "type": "number"
+  },
+  "free_delivery_over": {
+   "type": "number"
+  },
+  "cutoff_time": {
+   "type": "string"
+  },
+  "delivery_days": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "seller_id",
+  "min_order_value",
+  "delivery_fee",
+  "free_delivery_over",
+  "cutoff_time",
+  "delivery_days",
+  "source"
+ ]
+}

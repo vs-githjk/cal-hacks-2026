@@ -1,0 +1,23 @@
+name: market-tests
+
+on:
+  pull_request:
+    paths: ["market/**", "contracts/**", ".github/workflows/market-tests.yml"]
+  push:
+    branches: [main, lane-b-market-floor]
+    paths: ["market/**", "contracts/**", ".github/workflows/market-tests.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The same command as market/README.md. postinstall also installs market/spacetimedb.
+      # Includes INVARIANT-1 and the SECURITY caller-identity tests.
+      - name: Install and test
+        run: npm ci --prefix market && npm test --prefix market
+      - name: Type check
+        run: npm run typecheck --prefix market
