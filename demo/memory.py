@@ -51,7 +51,7 @@ def _money(x: float) -> str:
 
 def _entry(id_: str, kind: str, at: str, origin: str, source: str, ref: str, buyer: str, seller: str, summary: str,
            detail: dict) -> dict:
-    return {"id": id_, "kind": kind, "at": at or "", "origin": _origin(origin), "source": source, "source_ref": ref,
+    return {"id": id_, "kind": kind, "at": str(at or ""), "origin": _origin(origin), "source": source, "source_ref": ref,
             "buyer_id": buyer or "", "seller_id": seller or "", "summary": summary, "detail": detail}
 
 
@@ -83,8 +83,8 @@ def _demo_entries(run: dict, ref: str) -> list[dict]:
     names = {b["seller_id"]: b.get("persona") or b["seller_id"] for b in a.get("bids") or []}
     m, rec, charge = a.get("mandate") or {}, a.get("approval_record") or {}, a.get("charge") or {}
     if m and rec.get("result") == "approved" and charge:
-        mode = str(charge.get("mode") or "")
-        pay_mode = "sim" if "SIM" in mode.upper() else "stripe_test" if "test" in mode.lower() else "none"
+        mode = str(charge.get("mode") or "").strip().lower()
+        pay_mode = "sim" if mode.startswith("sim") else "stripe_test" if mode.startswith("stripe test") else "none"
         bid_id = str(m["deal_id"])[5:] if str(m["deal_id"]).startswith("deal-") else str(m["deal_id"])
         seller = sellers.get(bid_id, "")
         amount = float(m["amount"])
@@ -134,28 +134,37 @@ def _val(cell: Any) -> str:
     return s[1:-1] if len(s) >= 2 and s[0] == s[-1] == '"' else s
 
 
-def _rows(sql: Callable[[str], list], table: str, width: int) -> list[list[str]]:
-    return [[_val(c) for c in r] for r in sql(QUERIES[table]) if len(r) == width]
+def _rows(sql: Callable[[str], list], table: str, width: int, stats: dict) -> list[list[str]]:
+    rows = sql(QUERIES[table])
+    good = [[_val(c) for c in r] for r in rows if len(r) == width]
+    stats["dropped"] = stats.get("dropped", 0) + len(rows) - len(good)   # a "|" inside a cell splits it: counted, never guessed
+    return good
 
 
-def from_market(sql: Callable[[str], list], ref: str) -> list[dict]:
-    """Entries from the market's own rows (owner SQL). A failing read raises: the caller records the error."""
+def from_market(sql: Callable[[str], list], ref: str, stats: Optional[dict] = None) -> list[dict]:
+    """Entries from the market's own rows (owner SQL). A failing read raises: the caller records the error.
+    `stats["dropped"]` counts rows that could not be read (and purchases whose rows disagree)."""
+    stats = {} if stats is None else stats
+    _r = lambda table, width: _rows(sql, table, width, stats)  # noqa: E731
     out: list[dict] = []
     items: dict[str, list[dict]] = {}
-    for gid, sku, cond, qty in _rows(sql, "goal_item", 4):
+    for gid, sku, cond, qty in _r("goal_item", 4):
         items.setdefault(gid, []).append({"sku_spec": sku, "condition": cond, "quantity": float(qty or 1)})
-    for gid, buyer, cap, deadline, origin, at in _rows(sql, "goal", 6):
+    for gid, buyer, cap, deadline, origin, at in _r("goal", 6):
         its = items.get(gid, [])
         out.append(_entry(f"{ref}:goal:{gid}", "goal", at, origin, "market", ref, buyer, "",
                           f"Goal: {', '.join(i['sku_spec'] for i in its) or gid} (cap {_money(float(cap))})",
                           {"goal_id": gid, "items": its, "cap": float(cap), "deadline": deadline}))
-    bids = {r[0]: (r[1], r[2] or r[1]) for r in _rows(sql, "bid", 3)}
-    approvals = {r[0]: r[1] for r in _rows(sql, "approval", 3)}
-    payments = {r[0]: r for r in _rows(sql, "payment", 5)}
-    for h, mid, deal, buyer, amount, payee, origin in _rows(sql, "mandate", 7):
+    bids = {r[0]: (r[1], r[2] or r[1]) for r in _r("bid", 3)}
+    approvals = {r[0]: r[1] for r in _r("approval", 3)}
+    payments = {r[0]: r for r in _r("payment", 5)}
+    for h, mid, deal, buyer, amount, payee, origin in _r("mandate", 7):
         if h not in payments:
             continue                                    # a mandate with no payment row is not a purchase
-        _, ref_, _paid, at, mode = payments[h]
+        _, ref_, paid, at, mode = payments[h]
+        if h not in approvals or abs(float(paid) - float(amount)) > 0.005:
+            stats["dropped"] = stats.get("dropped", 0) + 1   # paid with no approval row, or a different amount: not shown
+            continue
         bid_id = deal[5:] if deal.startswith("deal-") else deal
         seller, name = bids.get(bid_id, ("", ""))
         amt = float(amount)
@@ -164,9 +173,9 @@ def from_market(sql: Callable[[str], list], ref: str) -> list[dict]:
         out.append(_entry(f"{ref}:purchase:{mid}", "purchase", at, "SIM", "market", ref, buyer, seller,
                           f"Bought from {name or 'the winner'} for {_money(amt)} before tax ({note})",
                           {"mandate_id": mid, "deal_id": deal, "amount_before_tax": amt, "currency": "USD", "payee": payee,
-                           "approval_method": approvals.get(h, "none"), "payment_mode": pay_mode, "payment_ref": ref_,
+                           "approval_method": approvals[h], "payment_mode": pay_mode, "payment_ref": ref_,
                            "listing_origin": _origin(origin)}))
-    for bid_id, kind, result, detail, url, origin, at in _rows(sql, "bid_check", 7):
+    for bid_id, kind, result, detail, url, origin, at in _r("bid_check", 7):
         if kind != "advocate" or result != "veto":
             continue
         rule, _, text = detail.partition(" ")
@@ -174,7 +183,7 @@ def from_market(sql: Callable[[str], list], ref: str) -> list[dict]:
         out.append(_entry(f"{ref}:veto:{bid_id}", "veto", at, origin, "market", ref, "", seller,
                           f"Vetoed {name or bid_id}: {text or rule}",
                           {"bid_id": bid_id, "rule_id": rule, "reason": text, "source_url": url}))
-    for id_, round_id, seller, won, band, reason, change, origin, at in _rows(sql, "loss_report", 9):
+    for id_, round_id, seller, won, band, reason, change, origin, at in _r("loss_report", 9):
         if band not in BANDS:
             continue                                    # a band we can't name is dropped, never guessed
         out.append(_lesson(id_, round_id, seller, won.lower() == "true", band, reason, change, origin, at, "market", ref))
@@ -183,20 +192,27 @@ def from_market(sql: Callable[[str], list], ref: str) -> list[dict]:
 
 def snapshot(sql: Callable[[str], list], out_dir: Path, *, db: str, now: Optional[str] = None) -> Path:
     """Write demo/out/market-memory-<time>.json from the market. A failed read is written as an error with no rows."""
-    now = now or datetime.now(timezone.utc).strftime("%Y%m%dT%H%MZ")
+    now = now or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     ref = f"market:{db}@{now}"
+    stats: dict = {}
     try:
-        entries, error = from_market(sql, ref), None
+        entries, error = from_market(sql, ref, stats), None
     except Exception as e:  # recorded, never a fake row
         entries, error = [], f"{type(e).__name__}: {e}"
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"market-memory-{now}.json"
-    path.write_text(json.dumps({"taken_at": now, "db": db, "entries": entries, "error": error}, indent=2) + "\n")
+    path.write_text(json.dumps({"taken_at": now, "db": db, "entries": entries, "error": error,
+                                "dropped": stats.get("dropped", 0)}, indent=2) + "\n")
     return path
 
 
 # ---------------------------------------------------------------- what GET /v1/memory returns
+
+def _well_formed(e: Any) -> bool:
+    return (isinstance(e, dict) and all(isinstance(e.get(k), str) for k in ("id", "kind", "at", "origin", "summary"))
+            and e["origin"] in ORIGINS and isinstance(e.get("detail"), dict))
+
 
 def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optional[str] = None,
          limit: Optional[int] = None) -> dict:
@@ -209,12 +225,14 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
         newest = snaps[-1]
         try:
             saved = json.loads(newest.read_text())
-            rows = [e for e in saved.get("entries") or [] if isinstance(e, dict)]
+            rows = [e for e in saved.get("entries") or [] if _well_formed(e)]
             state = "error" if saved.get("error") else "ok"
-        except (OSError, ValueError, AttributeError):
-            rows, state = [], "error"
+            dropped = int(saved.get("dropped") or 0) + len(saved.get("entries") or []) - len(rows)
+        except (OSError, ValueError, AttributeError, TypeError):
+            rows, state, dropped = [], "error", 0
         entries += rows
-        sources.append({"ref": newest.name, "kind": "market", "state": state, "sample": False, "rows": len(rows)})
+        sources.append({"ref": newest.name, "kind": "market", "state": state, "sample": False, "rows": len(rows),
+                        "dropped": dropped})
     runs = sorted(out_dir.glob("run-*.json")) if out_dir.is_dir() else []
     if include_sample and (out_dir / SAMPLE).exists():
         runs.append(out_dir / SAMPLE)

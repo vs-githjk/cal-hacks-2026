@@ -189,3 +189,43 @@ def test_kind_filter_and_limit(tmp_path):
     shutil.copy(SAMPLE, tmp_path / "run-a.json")
     out = M.load(tmp_path, kind="veto", limit=1)
     assert len(out["entries"]) == 1 and out["entries"][0]["kind"] == "veto"
+
+
+
+# ---------------------------------------------------------------- #255 review 1
+
+def test_bad_rows_in_a_snapshot_never_break_load(tmp_path):
+    good = M.from_market(fake_sql(MARKET), "m")
+    bad = [{"kind": "goal"}, {**good[0], "at": None}, {**good[0], "id": 5}, {**good[0], "origin": "REAL"}, "x", None]
+    (tmp_path / "market-memory-20261024T1805Z.json").write_text(json.dumps({"entries": good + bad, "error": None}))
+    out = M.load(tmp_path)
+    assert len(out["entries"]) == len(good) and out["sources"][0]["dropped"] == len(bad)
+
+
+def test_a_run_file_with_a_number_for_a_time_still_loads(tmp_path):
+    run = _sample()
+    run["artifacts"]["goal"]["created_at"] = 12345
+    (tmp_path / "run-a.json").write_text(json.dumps(run))
+    assert all(isinstance(e["at"], str) for e in M.load(tmp_path)["entries"])
+
+
+def test_a_payment_that_disagrees_with_its_mandate_or_has_no_approval_is_not_a_purchase():
+    t = dict(MARKET, payment=[['"h1"', '"ch_test_1"', "999.0", "2026-10-24T18:02:05+00:00", '"sim"']])
+    stats = {}
+    assert not [e for e in M.from_market(fake_sql(t), "m", stats) if e["kind"] == "purchase"] and stats["dropped"] >= 1
+    t = dict(MARKET, approval=[])
+    assert not [e for e in M.from_market(fake_sql(t), "m") if e["kind"] == "purchase"]
+
+
+def test_a_split_cell_is_counted_as_dropped_not_guessed():
+    t = dict(MARKET, bid=MARKET["bid"] + [['"bid-3"', '"x"', '"Bad', 'Persona"']])
+    stats = {}
+    M.from_market(fake_sql(t), "m", stats)
+    assert stats["dropped"] == 1
+
+
+def test_only_an_exact_mode_reads_as_stripe_test():
+    run = _sample()
+    run["artifacts"]["charge"]["mode"] = "Stripe LIVE latest"
+    p = next(e for e in M.from_demo_run(run, "r") if e["kind"] == "purchase")
+    assert p["detail"]["payment_mode"] == "none" and p["origin"] == "SIM"

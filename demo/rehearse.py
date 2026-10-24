@@ -353,11 +353,15 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
         if browser is not None:
             browser.close()
     (out / "runs.json").write_text(json.dumps(runs, indent=2) + "\n")
-    # the dashboard memory panel (#189) reads the market's own rows from the last rehearsal; a failed read is recorded
-    from demo import memory
-    snap = memory.snapshot(sql, memory_dir or memory.OUT_DIR, db=os.environ.get("SPACETIMEDB_DB", "tech-bazaar"))
-    say_r(f"memory: {snap.name} ({'error' if json.loads(snap.read_text())['error'] else 'market rows saved'})")
     (out / "REPORT.md").write_text(redact(report_md(runs, cmd, args, started), secrets))
+    # the dashboard memory panel (#189) reads the market's own rows from the last rehearsal. After the report, and never
+    # able to change the rehearsal's verdict or exit code: a failed read or write is one console line.
+    try:
+        from demo import memory
+        snap = memory.snapshot(sql, memory_dir or memory.OUT_DIR, db=os.environ.get("SPACETIMEDB_DB", "tech-bazaar"))
+        say_r(f"memory: {snap.name} ({'error' if json.loads(snap.read_text())['error'] else 'market rows saved'})")
+    except Exception as e:  # noqa: BLE001
+        say_r(f"memory: snapshot not saved ({type(e).__name__}: {e})")
     bad = any(r["exit_code"] != 0 or "fail" in r["checks"].values() for r in runs)
     if bad:
         verdict = "problems found"

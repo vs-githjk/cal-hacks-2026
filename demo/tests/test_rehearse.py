@@ -301,3 +301,18 @@ def test_a_rehearsal_saves_the_market_rows_for_the_memory_panel(tmp_path, memory
     snaps = list(memory_in_tmp.glob("market-memory-*.json"))
     assert code == 0 and len(snaps) == 1
     assert any(line.startswith("memory: market-memory-") for line in say)
+
+
+
+def test_a_failed_memory_snapshot_never_changes_the_rehearsal_result(tmp_path, monkeypatch):
+    from demo import memory
+
+    def boom(*a, **k):
+        raise OSError("disk full")
+    monkeypatch.setattr(memory, "snapshot", boom)
+    say = []
+    out = tmp_path / "out"
+    code = rehearse.main(["--stage-cmd", stage(tmp_path, "ok.py", OK_STAGE), "--out", str(out), "--runs", "1"],
+                         probe=up, sql=good_sql, shoot=no_shots, say=say.append)
+    assert code == 0 and (out / "REPORT.md").exists()
+    assert any("snapshot not saved (OSError: disk full)" in line for line in say)
