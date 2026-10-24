@@ -438,7 +438,7 @@ def test_an_unreadable_market_ranking_stops_beat_four_with_nothing_paid(capsys):
     code, log, *_ = go(["--auto", "--step-delay", "0"], result_rows=None)     # the fake has no round_result
     out = capsys.readouterr().out
     assert "could not read round_result back (RuntimeError)" in out           # after beat 2: one note
-    assert code == 1 and "no mandate was made" in out and "Nothing was charged" in out
+    assert code == 1 and "no mandate was made" in out and "nothing was paid" in out and "Nothing was charged" not in out
     assert not any(r in ("create_mandate", "record_approval", "record_payment") for _, r, _ in log)
 
 
@@ -476,3 +476,13 @@ def test_a_bid_window_below_the_minimum_is_refused(bad):
         stage.main(["--dry-run", "--bid-window", bad])
     with pytest.raises(SystemExit):
         bridge.main(["--dry-run", "--bid-window", bad])
+
+
+
+def test_the_stop_line_says_nothing_was_paid_once():
+    """#222: the denial line already says nothing was paid; the stop line does not repeat it."""
+    import inspect
+    from demo import stage
+    src = inspect.getsource(stage)
+    i = src.index("STOPPED at beat {n}")
+    assert "Nothing was charged" not in src[i:i + 300]

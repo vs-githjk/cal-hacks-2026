@@ -302,7 +302,7 @@ def stack_down_md(down: list, at: str) -> str:
 # ---------------------------------------------------------------- CLI
 
 def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Callable = run_sql,
-         shoot: Callable = chrome_shot, say: Callable = print) -> int:
+         shoot: Callable = chrome_shot, say: Callable = print, memory_dir: Optional[Path] = None) -> int:
     ap = argparse.ArgumentParser(description="Run the five-beat skeleton N times and record it")
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--stage-cmd", help="command to run per rehearsal (default: demo/stage.py --auto if present, else bridge.py)")
@@ -325,7 +325,8 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
         say_r(f"  per run: wall time, seconds per beat from `BEAT <n>` lines, timeout {args.timeout:g} s")
         say_r("  end-state checks (read only): " + ", ".join(CHECKS))
         say_r("  screenshots: " + (f"yes, after each beat, pages {', '.join('/' + p for p in PAGES)}" if args.screens else "no (add --screens)"))
-        say_r(f"  writes: {out}/REPORT.md, runs.json, run<k>.log" + (", screens/*.png" if args.screens else ""))
+        say_r(f"  writes: {out}/REPORT.md, runs.json, run<k>.log" + (", screens/*.png" if args.screens else "")
+              + ", demo/out/market-memory-<time>.json (market rows for the memory panel)")
         say_r(f"  target: {TARGET_SECONDS} s per run (2:00)")
         return 0
 
@@ -353,6 +354,14 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
             browser.close()
     (out / "runs.json").write_text(json.dumps(runs, indent=2) + "\n")
     (out / "REPORT.md").write_text(redact(report_md(runs, cmd, args, started), secrets))
+    # the dashboard memory panel (#189) reads the market's own rows from the last rehearsal. After the report, and never
+    # able to change the rehearsal's verdict or exit code: a failed read or write is one console line.
+    try:
+        from demo import memory
+        snap = memory.snapshot(sql, memory_dir or memory.OUT_DIR, db=os.environ.get("SPACETIMEDB_DB", "tech-bazaar"))
+        say_r(f"memory: {snap.name} ({'error' if json.loads(snap.read_text())['error'] else 'market rows saved'})")
+    except Exception as e:  # noqa: BLE001
+        say_r(f"memory: snapshot not saved ({type(e).__name__}: {e})")
     bad = any(r["exit_code"] != 0 or "fail" in r["checks"].values() for r in runs)
     if bad:
         verdict = "problems found"

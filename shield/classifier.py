@@ -18,7 +18,7 @@ from shield.rules.secret_ask import REASON_CODES, SECRET_ASK_RULE
 
 SUSPICIOUS_RULE = "shield.classifier.suspicious"
 UNAVAILABLE_RULE = "shield.classifier.unavailable"
-MAX_CHARS = 4000
+MAX_CHARS = 20000  # the same window as shield.core.MAX_CHARS (#196): the classifier sees what the rules see
 TIMEOUT_S = 1.5  # per socket operation (connect, send, each read), not for the whole call
 DEADLINE_S = 4.0  # the whole call, however slowly the bytes arrive; past it the caller fails closed
 API_URL = "https://api.anthropic.com/v1/messages"

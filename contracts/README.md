@@ -21,3 +21,4 @@ Shared JSON schemas every lane reads and writes. Mock other lanes from these. Ch
 - LossReport.schema.json (proposed by B)
 - Goal.schema.json (proposed by B with A)
 - Allowance.schema.json (shape by D, reducer by B)
+- MemoryEntry.schema.json (D, #189: the memory panel rows served by GET /v1/memory)
