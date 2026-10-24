@@ -81,12 +81,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap: number }) {
             <div className="text-[15px] text-muted">
               <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
             </div>
-            {win.adjusted !== null && (
-              <div className="text-[15px] text-muted">
-                Quality-adjusted <b className="font-semibold text-ink">{money(win.adjusted)}</b>
-                {win.recommendation === "caution" && " (fit not confirmed on the page)"}
-              </div>
-            )}
+            {win.recommendation === "caution" && <div className="text-[15px] text-muted">Fit not confirmed on the page</div>}
           </>
         ) : (
           <div className="my-1 font-display text-[clamp(40px,5vw,64px)] leading-none text-muted">no deal yet</div>
@@ -144,7 +139,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
           <table className="w-full border-collapse text-[14px] tabular-nums">
             <thead>
               <tr>
-                <Th>#</Th><Th>Seller</Th><Th>Condition</Th><Th right>Landed</Th><Th right>Adjusted</Th><Th>Advocate</Th><Th>Why</Th>
+                <Th>#</Th><Th>Seller</Th><Th>Condition</Th><Th right>Landed price</Th><Th>Advocate</Th><Th>Why</Th>
               </tr>
             </thead>
             <tbody>
@@ -182,13 +177,12 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
                       </Td>
                       <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
-                      <Td right className={struck}>{b.adjusted === null ? "·" : b.won ? <b>{money(b.adjusted)}</b> : money(b.adjusted)}</Td>
                       <Td><Verdict kind={REC[b.recommendation].kind}>{REC[b.recommendation].text}</Verdict></Td>
                       <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
                     </motion.tr>
                     {expanded && (
                       <tr className={b.won ? "bg-mint-soft" : "bg-soft"}>
-                        <td colSpan={7} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
+                        <td colSpan={6} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
                           <p>{b.why || "No reason recorded."}</p>
                           <p className="mt-1 text-muted">
                             {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /> · </> : "No source link · "}
