@@ -11,13 +11,11 @@ Wording is neutral: "differs from the listing at time T", "did not match the pri
 import hashlib
 import json
 import re
-import urllib.request
 from datetime import datetime, timezone
 from urllib.parse import urljoin, urlparse
 
 from data.fit_checker.tables import MICROARCH_SOCKET
 
-UA = "TechBazaar-claim-check/0.1 (hackathon research)"
 PATTERNS = [  # (field, regex, value from match); first match wins
     ("was_price", r"\bwas\s*\$?\s*([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(1))),
     ("socket", r"\bsocket\s*(AM\d|LGA\s?\d{3,4})", lambda m: m.group(1).replace(" ", "").upper()),
@@ -58,12 +56,7 @@ def parse_claim(claim):
     return None, None
 
 
-def default_fetch(url):
-    if urlparse(url).scheme not in ("http", "https"):
-        raise ValueError("only http and https URLs are fetched")
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return r.read()
+from .fetch import guarded_get as default_fetch  # noqa: E402  (http(s) only, public addresses, redirects re-checked, 2 MB cap)
 
 
 def page_facts(html):
@@ -175,7 +168,7 @@ def check_claim(claim, fetch=None, history=None):
     try:
         body = fetch(url)
     except Exception as e:  # unreachable or blocked page: never "false"
-        return unverified(f"page fetch failed ({type(e).__name__})")
+        return unverified(f"page fetch failed ({e if isinstance(e, ValueError) else type(e).__name__})")
     if isinstance(body, str):
         body = body.encode("utf-8")
     if not isinstance(body, (bytes, bytearray)):
