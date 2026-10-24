@@ -10,3 +10,4 @@ for f in __init__.py normalize.py tables.py depth.py power.py gpu_lengths.py dep
   cp "../fit_checker/$f" src/data/fit_checker/
 done
 cp ../mirror/normalize.py src/data/mirror/
+echo "bundled src/data/: .actorignore makes apify push upload it although .gitignore skips it; check that the push lists src/data/readiness.py"

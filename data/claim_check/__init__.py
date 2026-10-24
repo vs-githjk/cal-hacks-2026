@@ -141,9 +141,25 @@ def _same_url(a, b):
     return norm(a) is not None and norm(a) == norm(b)
 
 
+def _page_key(u, base):
+    """(host, path) of u resolved against base, ignoring scheme, query, fragment and a trailing slash; None if not a URL."""
+    from urllib.parse import urljoin, urlparse
+    if not isinstance(u, str) or not u.strip():
+        return None
+    p = urlparse(urljoin(base, u.strip()))
+    return ((p.hostname or "").lower(), p.path.rstrip("/")) if p.hostname else None
+
+
+def _names_another_page(node, url):
+    """True when the Product's url is a different page (a related product or a carousel item, not this listing)."""
+    there, here = _page_key(node.get("url"), url), _page_key(url, url)
+    return there is not None and here is not None and there != here
+
+
 def ld_product(html, url=None):
     """The schema.org Product node an agent reads: the one whose @id or url is this page, else the first with offers,
-    else the first; {} when there is none. Raises ValueError for JSON-LD too deeply nested to parse."""
+    else the first; {} when there is none. With the page url given, a Product whose url is another page is never read
+    (#334). Raises ValueError for JSON-LD too deeply nested to parse."""
     nodes = []
     for tag, body in script_blocks(html):
         if "application/ld+json" not in tag.translate(_ASCII_LOWER):
@@ -160,6 +176,7 @@ def ld_product(html, url=None):
         for n in nodes:
             if _same_url(n.get("@id"), url) or _same_url(n.get("url"), url):
                 return n
+        nodes = [n for n in nodes if not _names_another_page(n, url)]
     return next((n for n in nodes if n.get("offers")), nodes[0] if nodes else {})
 
 

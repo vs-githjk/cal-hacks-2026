@@ -9,9 +9,10 @@ source_url, fix}, worded as what a shopping agent sees, never what the seller di
 
 What is read: the page's schema.org Product JSON-LD (data.claim_check.page_facts and ld_product: the Product whose @id or
 url is the page, else the first with offers), with price, name and availability re-checked strictly here. Then:
-  page checks   no Product structured data (blocks), no price that is a finite number > 0 or a plain numeric string
-                (blocks), no name as text (warns), no condition (warns), no return policy (warns), no model identifier
-                (mpn, gtin or sku) an agent can match to maker specs (warns), availability not a schema.org value (warns);
+  page checks   no Product structured data (blocks), no price that is a finite number of at least 0.01 or a plain numeric
+                string (blocks), a price with no three-letter priceCurrency (warns), no name as text (warns), no condition
+                (warns), no return policy (warns), no model identifier (mpn, gtin or sku) an agent can match to maker specs
+                (warns), availability not a schema.org value (warns);
   seller_report title claims against the page's own data (blocks), and shipping and stock stated (warns).
 The seller_report GPU fit rows are not run: they warn when OUR maker table lacks a model, which is not the seller's to fix.
 The dated retail price band is not used here: it is a 24 h window over our own captures, so it would be stale for a run on a
@@ -27,14 +28,16 @@ from data.claim_check import ld_offer as _offer, ld_product, page_facts
 from data.seller_report import _finding, findings_for
 
 PLAIN_PRICE = re.compile(r"[0-9]+(\.[0-9]+)?")
+MIN_PRICE = 0.01  # one cent: a price below it (1e-8, "0.001") is not a price a shopper pays (#334)
+CURRENCY = re.compile(r"[A-Za-z]{3}")  # an ISO 4217 code such as USD or CAD
 # schema.org ItemAvailability values (https://schema.org/ItemAvailability), by their lower-case name
 ITEM_AVAILABILITY = {v.lower(): v for v in ("InStock", "InStoreOnly", "OnlineOnly", "LimitedAvailability", "OutOfStock", "SoldOut",
                                             "Discontinued", "PreOrder", "PreSale", "BackOrder", "MadeToOrder", "Reserved")}
 
 
 def _plain_price(v):
-    """A price an agent can read without guessing: a finite number > 0, or a plain numeric string ("299.99"), else None.
-    "1.749,99", "1,749.99", "$5", [1], {"a": 1}, NaN, 1e400, 0 and -5 are not (#317)."""
+    """A price an agent can read without guessing: a finite number of at least MIN_PRICE, or a plain numeric string ("299.99"), else None.
+    "1.749,99", "1,749.99", "$5", [1], {"a": 1}, NaN, 1e400, 0, -5 (#317) and anything below MIN_PRICE (#334) are not."""
     if isinstance(v, bool):
         return None
     if isinstance(v, str):
@@ -47,7 +50,12 @@ def _plain_price(v):
         v = float(v)
     except (OverflowError, ValueError):
         return None
-    return v if math.isfinite(v) and v > 0 else None
+    return v if math.isfinite(v) and v >= MIN_PRICE else None
+
+
+def _currency(v):
+    """A three-letter currency code ("USD"), upper-cased, else None (missing, "XYZ!!", "$", 840)."""
+    return v.strip().upper() if isinstance(v, str) and CURRENCY.fullmatch(v.strip()) else None
 
 
 def _availability(v):
@@ -86,7 +94,7 @@ def _card(url: str, facts: dict, offer: dict, at: str) -> dict:
                         "shipping": _shipping(offer)}}
 
 
-def _page_findings(url: str, facts: dict, how: str, product: dict | None = None) -> list[dict]:
+def _page_findings(url: str, facts: dict, how: str, product: dict | None = None, offer: dict | None = None) -> list[dict]:
     if how == "no structured data":
         return [_finding("listing.no_structured_data", "blocks", "The page has no schema.org Product data, so an agent cannot read "
                          "the price, stock or condition without guessing from the page text.", url,
@@ -98,6 +106,10 @@ def _page_findings(url: str, facts: dict, how: str, product: dict | None = None)
     if facts.get("price") is None:
         out.append(_finding("listing.price_unreadable", "blocks", "The Product data has no price an agent can read.", url,
                             "Put the price as a number in offers.price, with offers.priceCurrency."))
+    elif product is not None and _currency((offer or {}).get("priceCurrency")) is None:
+        out.append(_finding("listing.currency_unknown", "warns", "The Product data has no currency an agent can read, so it cannot "
+                            "tell which currency the price is in or compare it with other sellers.", url,
+                            "Set offers.priceCurrency to a three-letter ISO 4217 code, for example USD or CAD."))
     if not facts.get("condition"):
         out.append(_finding("listing.condition_unknown", "warns", "No item condition is stated, so an agent cannot tell new from "
                             "used or refurbished.", url, "Set offers.itemCondition, for example https://schema.org/NewCondition."))
@@ -145,14 +157,14 @@ def _check_page(url: str, html: str, at: str) -> dict:
         facts["title"] = title.strip() if isinstance(title, str) and title.strip() else None
         if product is not None:
             facts["stock"] = _availability(offer.get("availability"))
-    findings = _page_findings(url, facts, how, product)
+    findings = _page_findings(url, facts, how, product, offer)
     if how != "no structured data":
         findings += findings_for(_card(url, facts, offer, at), None, [])
     findings = list({f["rule_id"]: f for f in findings}.values())  # one finding per rule
     status = "blocks" if any(f["severity"] == "blocks" for f in findings) else "warns" if findings else "ready"
     read = {k: facts.get(k) for k in ("title", "price", "condition", "stock", "return_policy", "warranty_months") if facts.get(k) is not None}
-    if offer.get("priceCurrency"):
-        read["currency"] = str(offer["priceCurrency"])
+    if _currency(offer.get("priceCurrency")):
+        read["currency"] = _currency(offer["priceCurrency"])
     shipping = _shipping(offer)
     if shipping is not None:
         read["shipping"] = shipping

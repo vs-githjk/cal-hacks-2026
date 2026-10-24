@@ -7,6 +7,8 @@ import json
 import socket
 import subprocess
 import sys
+import threading
+import time
 import types
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,6 +21,7 @@ ACTOR = Path(__file__).resolve().parents[1] / "readiness_actor"
 REAL = (Path(__file__).resolve().parents[1] / "claim_check" / "fixtures" / "mirror-canadacomputers-269441.html").read_text()
 REAL_URL = json.loads((ACTOR / ".actor" / "input_schema.json").read_text())["properties"]["listingUrls"]["prefill"][0]
 NOW = datetime(2026, 10, 24, 21, 0, tzinfo=timezone.utc)
+REAL_CONNECT = socket.create_connection  # saved before the offline fixture; only the local drip-server test uses it
 
 
 @pytest.fixture(autouse=True)
@@ -131,6 +134,15 @@ class FakeActor:
 
     async def set_value(self, k, v):
         self.kv[k] = v
+
+    async def open_dataset(self):
+        rows = self.rows
+
+        class Dataset:
+            async def iterate_items(self):
+                for r in list(rows):
+                    yield r
+        return Dataset()
 
     async def set_status_message(self, msg, is_terminal=None):
         self.status.append((msg, is_terminal))
@@ -349,8 +361,126 @@ def test_the_state_saves_running_counts(monkeypatch):
     assert a.kv["STATE_next_listing"]["counts"] == {"blocks": 0, "warns": 1, "ready": 1, "unreadable": 0}
 
 
-def test_the_readme_says_it_is_not_published_yet():
-    assert (ACTOR / "README.md").read_text().count("Not published on Apify yet") >= 2
+def test_the_readme_says_it_is_public_on_the_store():
+    text = (ACTOR / "README.md").read_text()
+    assert "Not public" not in text and "Not published" not in text and "private" not in text
+    assert "https://apify.com/anoopibrampur/seller-agent-readiness-report" in text
+
+
+def test_apify_push_uploads_the_git_ignored_bundle():  # the first Apify build failed: push skipped src/data (gitignored)
+    assert "src/data/" in (ACTOR / ".gitignore").read_text().split()
+    lines = [ln.strip() for ln in (ACTOR / ".actorignore").read_text().splitlines()]
+    assert "!src/data/**/*.py" in lines and "!src/data/**/*.json" in lines and "src/data/" not in lines
+
+
+@pytest.mark.parametrize("cur,ok", [("USD", True), ("cad", True), (None, False), ("", False), ("XYZ!!", False), ("$", False), (840, False)])
+def test_a_price_without_a_readable_currency_warns(cur, ok):
+    p = json.loads(page().split(">", 2)[2].rsplit("</script>", 1)[0])
+    if cur is None:
+        del p["offers"]["priceCurrency"]
+    else:
+        p["offers"]["priceCurrency"] = cur
+    r = check_page("https://shop.example/m27q", f'<script type="application/ld+json">{json.dumps(p)}</script>', now=NOW)
+    assert (r["status"] == "ready") is ok and ("listing.currency_unknown" in rules(r)) is (not ok)
+    assert r["facts_read"].get("currency") == (cur.upper() if ok else None)
+
+
+@pytest.mark.parametrize("price,ok", [(1e-8, False), ("0.001", False), (0.009, False), (0.01, True), ("0.01", True)])
+def test_a_price_below_one_cent_blocks(price, ok):
+    r = check_page("https://shop.example/m27q", page(price=price), now=NOW)
+    assert ("listing.price_unreadable" in rules(r)) is (not ok)
+
+
+def _ld(*products):
+    return "".join(f'<script type="application/ld+json">{json.dumps(p)}</script>' for p in products)
+
+
+def test_a_product_for_another_page_is_never_read():
+    related = {"@type": "Product", "name": "SIM Other Monitor", "url": "https://shop.example/other",
+               "offers": {"price": 5, "priceCurrency": "USD"}}
+    r = check_page("https://shop.example/m27q", _ld(related), now=NOW)
+    assert r["read_from"] == "no structured data" and rules(r) == ["listing.no_structured_data"]
+    mine = {"@type": "Product", "name": "SIM 27in Monitor M27Q", "offers": {"price": 299.99, "priceCurrency": "USD"}}
+    r = check_page("https://shop.example/m27q", _ld(related, mine), now=NOW)
+    assert r["facts_read"]["title"] == "SIM 27in Monitor M27Q" and r["facts_read"]["price"] == 299.99
+
+
+@pytest.mark.parametrize("u", ["/m27q", "https://SHOP.example/m27q/", "http://shop.example/m27q?variant=2", "#product"])
+def test_a_product_url_for_the_same_page_is_still_read(u):
+    p = {"@type": "Product", "name": "SIM 27in Monitor M27Q", "url": u, "offers": {"price": 299.99, "priceCurrency": "USD"}}
+    assert check_page("https://shop.example/m27q", _ld(p), now=NOW)["facts_read"]["price"] == 299.99
+
+
+@pytest.mark.parametrize("inp", [{"listingUrls": 5}, {"listingUrls": {"url": "https://a.example/1"}}, {"listingUrls": True}, 5, None, []])
+def test_listing_urls_of_the_wrong_type_give_no_urls(monkeypatch, inp):
+    _, mod = run(monkeypatch, {"listingUrls": []})
+    assert mod.urls_from(inp) == []
+
+
+def test_output_after_a_restart_holds_the_rows_from_before_the_restart(monkeypatch):
+    urls = [REAL_URL, "https://shop.example/ok", "https://shop.example/bare"]
+    first, _ = run(monkeypatch, {"listingUrls": urls[:2]})  # the rows the first container delivered, then it died
+    actor = FakeActor({"listingUrls": urls})
+    actor.rows = list(first.rows)
+    actor.kv["STATE_next_listing"] = {"index": 2, "paid": False, "counts": {"blocks": 0, "warns": 1, "ready": 1, "unreadable": 0}}
+    a, _ = run(monkeypatch, None, actor=actor)
+    assert [r["url"] for r in a.kv["OUTPUT"]["results"]] == urls and a.kv["OUTPUT"]["checked"] == 3 and a.charges == ["listing-reported"]
+
+
+def test_a_run_stops_at_its_time_budget_without_charging_the_rest(monkeypatch):
+    _, mod = run(monkeypatch, {"listingUrls": []})
+    clock, rows, charges = [0.0], [], []
+
+    def slow_check(url):  # every page takes the full 30 s fetch deadline
+        clock[0] += 30
+        return check_page(url, page(), now=NOW)
+
+    async def push(row):
+        rows.append(row)
+
+    async def charge(event_name, count):
+        charges.append(event_name)
+        return types.SimpleNamespace(event_charge_limit_reached=False, charged_count=count)
+    urls = [f"https://shop.example/{i}" for i in range(200)]
+    got, stopped, counts = asyncio.run(mod.run_listings(urls, slow_check, push, charge, budget_s=15 * 60, clock=lambda: clock[0]))
+    assert len(got) == 30 and len(charges) == 30 and "time limit of 15 minutes" in stopped
+    assert mod.summary(got, len(urls), stopped, counts).endswith("170 not checked: the run time limit of 15 minutes was reached")
+
+
+def test_a_server_that_drips_its_headers_hits_the_deadline(monkeypatch):
+    """A real local socket (the guard refuses loopback, so _request is called directly): one header byte every 50 ms
+    for 10 s, never a single socket timeout, but the hop must stop at its 0.5 s deadline."""
+    from data.claim_check import fetch as guarded
+    monkeypatch.setattr(socket, "create_connection", REAL_CONNECT)
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    stop = threading.Event()
+
+    def serve():
+        conn, _ = srv.accept()
+        conn.recv(4096)
+        try:
+            conn.sendall(b"HTTP/1.1 200 OK\r\n")
+            for b in b"X-Slow: " + b"a" * 200:
+                if stop.is_set():
+                    break
+                conn.sendall(bytes([b]))
+                time.sleep(0.05)
+        except OSError:
+            pass
+        finally:
+            conn.close()
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    start = time.monotonic()
+    try:
+        with pytest.raises(ValueError, match="deadline"):
+            guarded._request("http", "shop.example", srv.getsockname()[1], "/", "127.0.0.1", 0.5)
+        assert time.monotonic() - start < 2
+    finally:
+        stop.set()
+        srv.close()
 
 
 def test_a_slow_drip_body_hits_the_overall_deadline():
@@ -376,3 +506,30 @@ def test_a_redirect_chain_past_the_overall_deadline_stops():
         return 302, {"location": "/next"}, None
     with pytest.raises(ValueError, match="deadline"):
         guarded.guarded_get("https://shop.example/x", resolve=lambda h: ["93.184.216.34"], request=request, clock=lambda: clock[0])
+
+
+@pytest.mark.parametrize("chunked", [False, True])
+def test_a_normal_local_response_still_reads_headers_and_body(monkeypatch, chunked):
+    from data.claim_check import fetch as guarded
+    monkeypatch.setattr(socket, "create_connection", REAL_CONNECT)
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    body = b"<html>" + b"x" * 100000 + b"</html>"
+
+    def serve():
+        conn, _ = srv.accept()
+        conn.recv(4096)
+        if chunked:
+            conn.sendall(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nX-Test: yes\r\n\r\n"
+                         + b"%x\r\n" % len(body) + body + b"\r\n0\r\n\r\n")
+        else:
+            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: %d\r\nX-Test: yes\r\n\r\n" % len(body) + body)
+        conn.close()
+    threading.Thread(target=serve, daemon=True).start()
+    try:
+        status, headers, read = guarded._request("http", "shop.example", srv.getsockname()[1], "/", "127.0.0.1", 5)
+        assert status == 200 and headers["x-test"] == "yes"
+        assert read(guarded.MAX_PAGE_BYTES + 1, time.monotonic() + 5) == body
+    finally:
+        srv.close()

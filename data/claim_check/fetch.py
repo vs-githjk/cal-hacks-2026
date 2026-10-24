@@ -1,6 +1,7 @@
 """SSRF-guarded fetch for caller-supplied listing URLs (Lane C). Used by the claim check, its Apify Actor and Shield."""
 from __future__ import annotations
 
+import io
 import ipaddress
 import socket
 import time
@@ -26,25 +27,84 @@ def _resolve(host: str) -> list[str]:
         raise ValueError(f"cannot resolve {host}") from e
 
 
-def _request(scheme: str, host: str, port: int, path: str, ip: str, timeout: float):
-    """One GET to the already-checked IP (no second DNS lookup), with Host and TLS SNI set to the name."""
+class _Deadline:
+    """The time one hop may still take; the body reader moves `end` to the whole fetch's deadline."""
+    def __init__(self, end: float, clock=time.monotonic):
+        self.end, self.clock = end, clock
+
+    def left(self) -> float:
+        left = self.end - self.clock()
+        if left <= 0:
+            raise _past_deadline()
+        return left
+
+
+class _DeadlineIO(io.RawIOBase):
+    """The response stream: before EVERY socket read the timeout is set to the time left, so a server that drips the
+    status line or headers one byte a second cannot outlast the deadline (a plain socket timeout resets on each byte)."""
+    def __init__(self, sock, deadline: _Deadline):
+        super().__init__()
+        self.sock, self.deadline = sock, deadline
+
+    def readable(self) -> bool:
+        return True
+
+    def readinto(self, b) -> int:
+        self.sock.settimeout(self.deadline.left())
+        try:
+            return self.sock.recv_into(b)
+        except socket.timeout as e:
+            raise _past_deadline() from e
+
+
+class _DeadlineSock:
+    """What http.client.HTTPResponse is given in place of the socket: its makefile() is the deadline-bound stream."""
+    def __init__(self, sock, deadline: _Deadline):
+        self.sock, self.deadline = sock, deadline
+
+    def makefile(self, mode="rb", *a, **k):
+        return io.BufferedReader(_DeadlineIO(self.sock, self.deadline))
+
+
+def _request(scheme: str, host: str, port: int, path: str, ip: str, timeout: float, clock=time.monotonic):
+    """One GET to the already-checked IP (no second DNS lookup), with Host and TLS SNI set to the name. `timeout` bounds the
+    whole hop up to the end of the headers (connect, TLS handshake, request, status line and headers), not each read."""
     import http.client
     import ssl
-    sock = socket.create_connection((ip, port), timeout=timeout)
+    import threading
+    deadline = _Deadline(clock() + timeout, clock)
+    sock = socket.create_connection((ip, port), timeout=deadline.left())
     if scheme == "https":
         try:
             import certifi
             ctx = ssl.create_default_context(cafile=certifi.where())
         except ImportError:
             ctx = ssl.create_default_context()
+        sock.settimeout(deadline.left())
+        # the handshake reads inside the ssl module, out of _DeadlineIO's reach: a watchdog cuts it off at the deadline
+        dog = threading.Timer(deadline.left(), lambda: _shutdown(sock))
+        dog.daemon = True
+        dog.start()
+        try:
+            sock = ctx.wrap_socket(sock, server_hostname=host)
+        finally:
+            dog.cancel()
         conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=ctx)
-        conn.sock = ctx.wrap_socket(sock, server_hostname=host)
     else:
         conn = http.client.HTTPConnection(host, port, timeout=timeout)
-        conn.sock = sock
+    conn.sock = sock
+    conn.response_class = lambda s, *a, **k: http.client.HTTPResponse(_DeadlineSock(s, deadline), *a, **k)
+    sock.settimeout(deadline.left())
     conn.request("GET", path, headers={"Host": host, "User-Agent": UA})
     r = conn.getresponse()
-    return r.status, {k.lower(): v for k, v in r.getheaders()}, _BodyReader(r, conn.sock)
+    return r.status, {k.lower(): v for k, v in r.getheaders()}, _BodyReader(r, sock, deadline)
+
+
+def _shutdown(sock) -> None:
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass
 
 
 def _past_deadline() -> ValueError:
@@ -73,11 +133,14 @@ def _read_body(resp, sock, n: int, end: float, clock=time.monotonic) -> bytes:
 
 class _BodyReader:
     """What _request returns as its reader: guarded_get reads it under the overall deadline. Called plainly, read(n)."""
-    def __init__(self, resp, sock):
-        self.resp, self.sock = resp, sock
+    def __init__(self, resp, sock, deadline: _Deadline | None = None):
+        self.resp, self.sock, self.deadline = resp, sock, deadline
 
     def __call__(self, n: int, end: float | None = None, clock=time.monotonic) -> bytes:
-        return _read_body(self.resp, self.sock, n, clock() + DEADLINE_S if end is None else end, clock)
+        end = clock() + DEADLINE_S if end is None else end
+        if self.deadline is not None:  # the body may use what is left of the whole fetch, not only this hop's time
+            self.deadline.end, self.deadline.clock = end, clock
+        return _read_body(self.resp, self.sock, n, end, clock)
 
 
 def guarded_get(url: str, *, resolve=_resolve, request=_request, max_bytes: int = MAX_PAGE_BYTES,

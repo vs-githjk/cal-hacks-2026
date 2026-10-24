@@ -4,11 +4,11 @@ AI shopping agents are starting to buy for people. They do not look at your phot
 
 Give it your own listing URLs. For each one you get **blocks** (an agent would skip it), **warns** (an agent cannot confirm something), **ready** (nothing found), or **unreadable** (the page could not be fetched, so nothing is known, and it is free). Every finding names the rule, says what an agent sees, links the page, and gives the fix.
 
+It is public on the Apify Store: [anoopibrampur/seller-agent-readiness-report](https://apify.com/anoopibrampur/seller-agent-readiness-report).
+
 It was built for [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
 
 ## Real example (the default input)
-
-> **Not public on the Apify Store yet.** The Actor is on Apify but private; the Store page, the API call and the MCP tool below work for other accounts once it is made public.
 
 The default input is a real Canada Computers listing for an MSI RTX 5070 Ti. An Apify run of this Actor on Oct 24 2026 (run `cmaUq7VR6HPKpCHMf`, LIVE fetch of the page) ended with **WARNS: 0 block(s), 2 warning(s); first: listing.returns_unknown**:
 
@@ -22,8 +22,9 @@ The page's JSON-LD gave the title, price ($1,749.99 CAD), condition (new), stock
 | Rule | Severity | What an agent sees |
 |---|---|---|
 | `listing.no_structured_data` | blocks | No schema.org Product data, so price, stock and condition are guesses from page text |
-| `listing.price_unreadable` | blocks | Product data with no price an agent can read: it must be a number above 0, or plain digits such as "1749.99" (no currency sign, no thousands separator) |
+| `listing.price_unreadable` | blocks | Product data with no price an agent can read: it must be a number of at least 0.01, or plain digits such as "1749.99" (no currency sign, no thousands separator) |
 | `claim.*` | blocks | A title claim (such as "NEW" or "in stock") that the page's own data contradicts |
+| `listing.currency_unknown` | warns | A price with no three-letter currency code (such as USD) in priceCurrency |
 | `listing.condition_unknown` | warns | No item condition, so new and used look the same |
 | `listing.stock_unknown` | warns | No availability (a schema.org value such as https://schema.org/InStock), so an agent cannot tell if it ships now |
 | `listing.name_unreadable` | warns | No product name as plain text |
@@ -31,13 +32,13 @@ The page's JSON-LD gave the title, price ($1,749.99 CAD), condition (new), stock
 | `listing.returns_unknown` | warns | No return policy in the Product data |
 | `listing.model_unknown` | warns | No mpn, gtin or sku, so the exact model cannot be matched to maker specs |
 
-The facts come from the page's schema.org Product JSON-LD. A page with no structured data gets one finding, `listing.no_structured_data`, since nothing else can be read reliably. When several Product blocks are on a page, the one whose `url` or `@id` is the page is read, else the first with `offers`. A page whose data cannot be parsed is **unreadable** (free).
+The facts come from the page's schema.org Product JSON-LD. A page with no structured data gets one finding, `listing.no_structured_data`, since nothing else can be read reliably. When several Product blocks are on a page, the one whose `url` or `@id` is the page is read, else the first with `offers`; a Product whose `url` is another page (a related product) is never read. A page whose data cannot be parsed is **unreadable** (free).
 
 **What it does not do:** it does not compare your price with other stores, and it does not check whether a part fits a buyer's build. Our dated price data covers too few products to be fair to every seller, so a price verdict would mostly say "no data".
 
 ## Input
 
-`listingUrls`: your product page URLs, one per line, up to 200 per run. Each page is fetched once, from public addresses only, with a 2 MB cap.
+`listingUrls`: your product page URLs, one per line, up to 200 per run. Each page is fetched once, from public addresses only, with a 2 MB cap and 30 seconds per page. A run stops after 15 minutes; the listings left are not checked and not charged, and the status line says how many.
 
 ## Output
 
@@ -57,8 +58,6 @@ One dataset row per listing: `status`, `summary`, the counts of `blocks` and `wa
 Each run also has Apify's run start event of $0.00005. A listing is charged only when its page was read, and it is charged before its row is delivered. When your spending limit is reached, the run stops and the status line says how many listings were not checked. A restarted run never charges a listing twice.
 
 ## Use it from your code or an AI agent
-
-> **Not public on the Apify Store yet.** The Actor is on Apify but private; the Store page, the API call and the MCP tool below work for other accounts once it is made public.
 
 **API (one call, results in the response):**
 
