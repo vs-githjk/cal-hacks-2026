@@ -129,6 +129,8 @@ def test_a_shop_with_no_returns_never_gets_a_public_N_day_returns_perk(returns):
     "90-day limited warranty covers defects",
     "90-day warranty on all parts",
     "90-day limited warranty, no returns",
+    "90-day mfr. warranty",
+    "90-day ltd. warranty",
 ])
 def test_a_warranty_or_guarantee_count_with_words_between_is_never_read_as_returns_days(returns):
     """Parked T3 finding: only 'warranty' right after the count was skipped, so any word in between ('limited',
