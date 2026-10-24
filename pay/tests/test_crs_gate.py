@@ -171,22 +171,38 @@ def test_f_mandate_without_crs_check_id_hashes_exactly_as_before():
 # binding: the mandate must name exactly the check that cleared the payee
 def test_bound_ok_requires_the_mandate_to_name_this_check_for_a_business_payee():
     good = mandate(crs_check_id=check_id(P19_GRACE))
-    assert bound_ok(good, P19_GRACE, business=True, now=NOW).ok
+    assert bound_ok(good, P19_GRACE, business=True, seller_id="seller-grace-nakamura", now=NOW).ok
     unbound = mandate()
-    v = bound_ok(unbound, P19_GRACE, business=True, now=NOW)
+    v = bound_ok(unbound, P19_GRACE, business=True, seller_id="seller-grace-nakamura", now=NOW)
     assert not v.ok and v.reason == "crs_not_bound"
     other = check(request_id="req-9999")
-    v = bound_ok(good, other, business=True, now=NOW)
+    v = bound_ok(good, other, business=True, seller_id="seller-grace-nakamura", now=NOW)
     assert not v.ok and v.reason == "crs_not_bound"
+
+
+def test_bound_ok_refuses_a_mandate_carrying_another_sellers_check_id():
+    # seller A's verified check id on a mandate that pays seller B: the gate is told who is paid and refuses
+    m = mandate(payee="seller-evil", crs_check_id=check_id(P19_GRACE))
+    v = bound_ok(m, P19_GRACE, business=True, seller_id="seller-evil", now=NOW)
+    assert not v.ok and v.reason == "crs_seller_mismatch"
+    assert bound_ok(m, P19_GRACE, business=True, seller_id="seller-grace-nakamura", now=NOW).ok
+
+
+def test_bound_ok_fails_closed_without_a_seller_id():
+    m = mandate(payee="seller-evil", crs_check_id=check_id(P19_GRACE))
+    with pytest.raises(TypeError):
+        bound_ok(m, P19_GRACE, business=True, now=NOW)
+    v = bound_ok(m, P19_GRACE, business=True, seller_id=None, now=NOW)
+    assert not v.ok and v.reason == "crs_seller_mismatch"
 
 
 def test_bound_ok_for_a_sim_seller_needs_no_binding():
-    assert bound_ok(mandate(), None, business=False, now=NOW).ok
+    assert bound_ok(mandate(), None, business=False, seller_id="seller-sim", now=NOW).ok
 
 
 def test_bound_ok_refuses_when_the_check_fails_before_looking_at_the_binding():
     m = mandate(crs_check_id=check_id(P13_KAYLA))
-    v = bound_ok(m, P13_KAYLA, business=True, now=NOW)
+    v = bound_ok(m, P13_KAYLA, business=True, seller_id="seller-kayla-brennan", now=NOW)
     assert not v.ok and v.reason == "crs_not_verified"
 
 

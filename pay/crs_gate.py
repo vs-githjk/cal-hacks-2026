@@ -140,14 +140,18 @@ def bound_ok(
     check: Optional[Mapping[str, Any]],
     *,
     business: bool,
+    seller_id: Optional[str],
     now: Optional[datetime] = None,
-    seller_id: Optional[str] = None,
 ) -> Verdict:
     """The payment-side gate: payee_ok, and for a business payee the mandate must carry this exact check's
-    id (crs_check_id is inside the mandate hash, so it cannot be added or swapped after approval)."""
+    id (crs_check_id is inside the mandate hash, so it cannot be added or swapped after approval).
+    `seller_id` is the seller being paid and has no default: a caller that forgets it gets a TypeError, and a
+    business payee with None or a different seller than the check's is refused (crs_seller_mismatch)."""
     verdict = payee_ok(check, business=business, now=now, seller_id=seller_id)
     if not verdict.ok or not business:
         return verdict
+    if seller_id is None or check["seller_id"] != seller_id:
+        return _no("crs_seller_mismatch", "the CRS check is for a different seller")
     if mandate.get("crs_check_id") != check_id(check):
         return _no("crs_not_bound", "the mandate does not name the CRS check that cleared this payee")
     return verdict
