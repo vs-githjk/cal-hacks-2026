@@ -338,6 +338,30 @@ def test_pid_without_start_marker_is_not_ours():
     assert L.pid_is_ours({"pid": os.getpid(), "lstart": None}) is False
 
 
+def test_process_marker_round_trips_for_owned_child(started):
+    rec = started(fake_tcp(free_port()))
+    assert rec["lstart"]
+    assert L.pid_is_ours(rec)
+    assert L.proc_start_marker(0xFFFFFFFF) is None
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows direct-process fallback")
+def test_windows_timeout_terminates_only_verified_direct_process(started):
+    port = free_port()
+    code = ("import signal,socket,time;signal.signal(signal.SIGBREAK,signal.SIG_IGN);"
+            f"s=socket.socket();s.bind(('127.0.0.1',{port}));s.listen();time.sleep(600)")
+    rec = started(L.Service("stubborn", port, [sys.executable, "-c", code], Path.cwd(), health="tcp"))
+    assert wait_up(rec)
+    assert "verified process" in L.stop_record(rec, grace=0.1)
+    assert not L.pid_is_ours(rec)
+
+
+def test_web_starts_next_directly_without_npm_wrapper(tmp_path):
+    web = next(s for s in L.build_services(make_args(), tmp_path) if s.name == "web")
+    assert "next" in web.cmd[1].lower()
+    assert "npm" not in web.cmd[0].lower()
+
+
 def test_mailbox_flag_sets_agent_env_only_when_asked(tmp_path):
     base = dict(shield_port=8787, stdb_port=3000, web_port=3100)
     off = {s.name: s for s in L.build_services(Namespace(**base, mailbox=False), tmp_path)}
@@ -346,3 +370,8 @@ def test_mailbox_flag_sets_agent_env_only_when_asked(tmp_path):
     assert on["buyer"].extra_env["BUYER_MAILBOX"] == "1"
     assert on["advocate"].extra_env["ADVOCATE_MAILBOX"] == "1"
     assert on["sellers"].extra_env["SELLERS_MAILBOX"] == "1"
+
+
+def test_windows_interpreter_path_uses_scripts_python(tmp_path):
+    assert L.venv_python(tmp_path, platform="nt") == tmp_path / "agents" / ".venv" / "Scripts" / "python.exe"
+    assert L.venv_python(tmp_path, platform="posix") == tmp_path / "agents" / ".venv" / "bin" / "python"

@@ -11,7 +11,9 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / ".state.sqlite3"
+DEFAULT_STATE_DIR = Path(__file__).resolve().parents[1] / ".state"
+DEFAULT_DB_PATH = DEFAULT_STATE_DIR / "state.sqlite3"
+LEGACY_DB_PATH = Path(__file__).resolve().parents[1] / ".state.sqlite3"
 _CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 _GOAL_KEYS = {"id", "buyer_id", "type", "items", "cap", "deadline", "state", "reserved_amount",
               "po_number", "created_at", "notes"}
@@ -181,7 +183,7 @@ def _create_tables(db: sqlite3.Connection) -> None:
     """)
 
 
-def _restrict_windows_acl(path: Path) -> None:
+def _restrict_windows_acl(path: Path, *, directory: bool = False) -> None:
     """Restrict this state file to the current Windows user before opening it."""
     identity = subprocess.run(["whoami", "/user", "/fo", "csv", "/nh"], capture_output=True,
                               text=True, check=True, timeout=5).stdout.strip()
@@ -191,20 +193,72 @@ def _restrict_windows_acl(path: Path) -> None:
     sid = rows[0][-1] if rows and rows[0] else ""
     if not sid.startswith("S-1-"):
         raise OSError("could not identify current Windows user for private state ACL")
-    for args in (["/reset"], ["/inheritance:r"], ["/grant:r", f"*{sid}:(F)"]):
-        result = subprocess.run(["icacls", str(path), *args], capture_output=True, text=True, timeout=10)
-        if result.returncode:
-            raise OSError("could not restrict buyer state file permissions")
+    # Replace the DACL in one SetFileSecurity call. In particular, do not use
+    # icacls /reset: on an existing database that briefly copies the parent's
+    # potentially broad inherited ACL onto private budgets and approvals.
+    import ctypes
+    from ctypes import wintypes
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    convert = advapi32.ConvertStringSecurityDescriptorToSecurityDescriptorW
+    convert.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.POINTER(ctypes.c_void_p),
+                        ctypes.POINTER(wintypes.DWORD)]
+    convert.restype = wintypes.BOOL
+    set_file_security = advapi32.SetFileSecurityW
+    set_file_security.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_void_p]
+    set_file_security.restype = wintypes.BOOL
+    local_free = kernel32.LocalFree
+    local_free.argtypes = [ctypes.c_void_p]
+    local_free.restype = ctypes.c_void_p
+
+    descriptor = ctypes.c_void_p()
+    inherit_flags = "OICI" if directory else ""
+    if not convert(f"D:P(A;{inherit_flags};FA;;;{sid})", 1, ctypes.byref(descriptor), None):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        dacl_and_protect = 0x00000004 | 0x80000000
+        if not set_file_security(str(path), dacl_and_protect, descriptor):
+            raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        local_free(descriptor)
 
 
 def open_state(path: str | Path | None = None) -> sqlite3.Connection:
     """Open safe state without recovery; use this connection on its creating thread only.
 
     Callers doing blocking work in a worker thread must pass immutable snapshots and
-    persist results back on the event-loop thread.
+    persist results back on the event-loop thread. The database must live in a
+    dedicated `.state` directory; this directory is made private before SQLite
+    creates the database or its journal/WAL sidecars.
     """
+    uses_default = path is None or Path(path) == DEFAULT_DB_PATH
     path = Path(path or DEFAULT_DB_PATH)
+    if path.parent.name != ".state":
+        raise ValueError("buyer state must live in a dedicated .state directory")
+    if path.parent.is_symlink():
+        raise ValueError("buyer state directory must not be a symlink")
+    if path.is_symlink():
+        raise ValueError("buyer state file must not be a symlink")
+    if uses_default and not path.exists() and LEGACY_DB_PATH.exists():
+        raise ValueError(
+            "legacy buyer state exists at agents/.state.sqlite3; manually migrate it into "
+            "agents/.state/state.sqlite3 before startup"
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        os.chmod(path.parent, 0o700)
+    else:
+        _restrict_windows_acl(path.parent, directory=True)
+    for suffix in ("-journal", "-wal", "-shm"):
+        sidecar = Path(str(path) + suffix)
+        if sidecar.is_symlink():
+            raise ValueError("buyer state sidecar must not be a symlink")
+        if sidecar.exists():
+            if os.name != "nt":
+                os.chmod(sidecar, 0o600)
+            else:
+                _restrict_windows_acl(sidecar)
     try:
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError:
