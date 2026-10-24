@@ -62,6 +62,13 @@ _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THE
             # "copy what your phone displays into the reply", "put what your phone shows in your reply"
             r"|\b(?:copy|put|paste|type|enter|write|send|add|include)\b[^.!?]{0,20}?\bwhat\s+" + _THEIRS + r"\s+"
             + _DEVICE + r"\s+(?:shows?|displays?|says?|reads?)\b")
+_SENT_CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase|pair)\b"
+                r"|\b(?:the|your|ur|their)\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
+_SENT_TO = rx(r"\b(?:to|for)\s+(?:me|us)\b|\b(?:go|goes|belong|belongs)\s+(?:to|in|into|here)\b|\bin\s+(?:the\s+|our\s+)?(?:chat|reply"
+              r"|order\s+notes|notes|comments|message|dm|email)\b|\bhere\b")
+# a warning negates the request itself ("must not request", "never ask for"); a stray "Not to worry:" does not count
+_NEGATED = rx(r"\b(?:never|not|don'?t|dont|doesn'?t|no\s+one|nobody|won'?t|will\s+not|do\s+not)\s+(?:\w+\s+)?"
+              r"(?:ask|asks|request|requests|need|needs|want|wants|share|send|give|type|post|put|use|collect|require)\b")
 _SENTENCE = re.compile(r"[^.!?]+[.!?]*")
 
 
@@ -83,7 +90,10 @@ def check(doc, ctx):
             continue
         asks = _ASK.search(_DESCRIBE.sub(_blank, s) if boot else s) or (cred and _REQUIRE.search(s))
         where = _WHERE.search(_WEAK_WHERE.sub(_blank, s) if boot else s)
-        if strong or (noun and where and asks) or _RELAY.search(s):
+        # "The two words you see on your screen go to me.": the approval credential sent to the seller, with no ask verb
+        # (#252). A negated line ("Sellers must not request the two words in the order notes") is a warning, not an ask.
+        sent = _SENT_CRED.search(s) and _SENT_TO.search(s) and not _NEGATED.search(s)
+        if strong or sent or (noun and where and asks) or _RELAY.search(s):
             start = m.start() + len(s) - len(s.lstrip())
             yield doc.raw_span(start, m.end())
 

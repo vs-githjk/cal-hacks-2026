@@ -21,7 +21,6 @@ from caller.relay import market_has_typed_approval  # noqa: E402
 
 common.SEEDS.setdefault("caller", os.getenv("CALLER_AGENT_SEED") or "tech-bazaar-caller-dev")
 NAME = "Bazaar Caller"
-MAX_REQUEST_CHARS = 20000   # Shield's own cap: a longer request is refused, never screened in part
 
 
 class CallRequest(Model):
@@ -63,10 +62,12 @@ SEEN: set = set()
 
 @protocol.on_message(CallRequest, replies=CallResult)
 async def on_call(ctx: Context, sender: str, msg: CallRequest):
-    # Invariant 3: every agent message goes through Shield first (fails closed when Shield is down)
+    # Only the buyer agent may ask, checked before Shield so a stranger costs no Shield call (#298). Then invariant 3:
+    # every agent message goes through Shield first (fails closed when Shield is down), whole or not at all.
     text = " ".join((msg.mandate_json, msg.reason_json, msg.deal_json))
-    if len(text) > MAX_REQUEST_CHARS:   # never read back text that Shield did not see whole
-        await ctx.send(sender, CallResult(approved=False, reason="too_large"))
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
+    if refused:
+        await ctx.send(sender, CallResult(approved=False, reason=refused))
         return
     verdict = await asyncio.to_thread(common.screen, f"call-{abs(hash(msg.mandate_json)) % 10**12}", sender, text)
     if verdict.get("verdict") != "allow":
