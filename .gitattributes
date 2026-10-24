@@ -1,2 +1,3 @@
 docs/CHANGES.md merge=union
 docs/BOARD.md merge=union
+shield/corpus/evasion_probe.jsonl text eol=lf
