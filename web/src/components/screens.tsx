@@ -1,8 +1,8 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import type { ApprovalView, ReviewView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
-import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
+import type { ApprovalView, ReviewView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, PurchaseStatusView, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView } from "@/lib/screens";
+import { AgentFeed, ApprovalCard, PurchaseCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { OriginChip, Pill, SampleOnly } from "./ui";
 
@@ -13,6 +13,8 @@ export interface BuyerScreenProps {
   veto: VetoView | null;
   shield: ShieldView | null;
   approval: ApprovalView | null;
+  /** Read-only mandate/payment state for the paired buyer's actual checkout. */
+  purchase?: PurchaseStatusView | null;
   /** A live mandate waiting for this buyer; when present it replaces the sample approval card. */
   review?: ReviewView | null;
   onTyped?: (mandateHash: string, code: string) => Promise<string>;
@@ -54,7 +56,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
           <div className="grid gap-3.5 lg:grid-cols-3">
             <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
             <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-            {p.review && p.onTyped ? (
+            {p.purchase ? <PurchaseCard purchase={p.purchase} /> : p.review && p.onTyped ? (
               <ReviewCard review={p.review} allowance={p.goal.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
             ) : (
               <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>
