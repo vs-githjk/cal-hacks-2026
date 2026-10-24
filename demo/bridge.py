@@ -312,10 +312,12 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             outcome = approver(s)
             outcomes.append(outcome)
             if not outcome["approved"]:
-                note(f"live call DENIED ({outcome['reason']}): no approval and no payment are recorded; the mandate stays pending")
+                from pay.voice_cartesia import denial_line
+                line = denial_line(outcome["reason"])
+                note(f"live call DENIED ({outcome['reason']}): {line} No approval and no payment are recorded; the mandate stays pending")
                 if mandate_hash and "referee" in clients:
-                    try:   # the held unit goes back on sale at once (it would also expire after 2 minutes)
-                        clients["referee"].call("deny_approval", mandate_hash=mandate_hash, reason=str(outcome["reason"] or "denied"))
+                    try:   # /buyer shows "Approval denied: <line>"; the held unit goes back on sale at once
+                        clients["referee"].call("deny_approval", mandate_hash=mandate_hash, reason=line.rstrip("."))
                         note("deny_approval recorded: the unit held for this deal is released")
                     except RuntimeError as e:
                         note(f"deny_approval not recorded ({e}); the hold expires by itself after 2 minutes")

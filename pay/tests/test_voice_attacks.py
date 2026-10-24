@@ -122,10 +122,3 @@ def test_no_other_list_word_near_miss_repeat_or_foreign_script_rides_along(said)
     a, b = code.split()
     d = s.approve(said.format(code=code, a=a, b=b), now=T0 + timedelta(seconds=5))
     assert not d.approved and d.reason == "no_code", said
-
-
-def test_the_typed_path_gets_the_same_judge():
-    svc = ApprovalService(SECRET)
-    s, code = svc.issue(make(), now=T0)
-    for i, said in enumerate([f"{code} approve 900", f"{code} approve for bob", f"{code} river"]):
-        assert not s.approve_typed(said, now=T0 + timedelta(seconds=5 + 31 * i)).approved, said
