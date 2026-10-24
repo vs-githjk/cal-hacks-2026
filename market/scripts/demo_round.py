@@ -9,8 +9,8 @@ from stdb import Market
 
 TOKENS = sys.argv[1] if len(sys.argv) > 1 else ".tokens"
 WINDOW = int(sys.argv[2]) if len(sys.argv) > 2 else 12
-agent = {n: Market(token_file=os.path.join(TOKENS, f"{n}.json")) for n in ["referee", "buyer-joe", "seller-a", "seller-b", "seller-c"]}
-ref, joe = agent["referee"], agent["buyer-joe"]
+agent = {n: Market(token_file=os.path.join(TOKENS, f"{n}.json")) for n in ["referee", "buyer-vidyut", "seller-a", "seller-b", "seller-c"]}
+ref, vidyut = agent["referee"], agent["buyer-vidyut"]
 GPU = "gpu-rtx5070ti-retail"
 run = str(int(time.time()))
 need, rnd = f"need-{run}", f"round-{run}"
@@ -28,7 +28,7 @@ def refused(who, reducer, **args):
         return "refused: " + str(e).split("): ", 1)[-1][:90]
 
 
-joe.call("post_need", id=need, buyer_id="joe", goal_id="goal-joe-gpu", delivery_window="by Friday", spend_limit=800,
+vidyut.call("post_need", id=need, buyer_id="vidyut", goal_id="goal-vidyut-gpu", delivery_window="by Friday", spend_limit=800,
          consent=True, auction_window_s=WINDOW, origin="SIM",
          items=[{"sku_spec": GPU, "condition": "new", "allowed_conditions": ["new"], "variant": "retail", "quantity": 1, "unit": "each"}])
 ref.call("open_round", round_id=rnd, need_id=need, window_s=WINDOW)
@@ -51,23 +51,23 @@ print("round:", ref.sql(f"SELECT state FROM round WHERE id = '{rnd}'"))
 for r in ref.sql(f"SELECT seller_id, rank, landed, reasons FROM round_result WHERE round_id = '{rnd}'"):
     print("  result:", r)
 mh = f"mh-{run}"
-ref.call("create_mandate", hash=mh, id=f"mdt-{run}", deal_id=f"{rnd}-seller-c", buyer_id="joe", amount=745, payee="seller-c",
+ref.call("create_mandate", hash=mh, id=f"mdt-{run}", deal_id=f"{rnd}-seller-c", buyer_id="vidyut", amount=745, payee="seller-c",
          expiry_minutes=10, nonce=run, requested_by="", origin="SIM")
-print("allowance before:", joe.sql("SELECT ladder_step, per_purchase_limit FROM my_allowance"))
+print("allowance before:", vidyut.sql("SELECT ladder_step, per_purchase_limit FROM my_allowance"))
 print("pay before approval:", refused("referee", "record_payment", mandate_hash=mh, payment_ref="pi_sim", amount=745, mode="sim"))
-print("seller-c approves own deal:", refused("seller-c", "record_approval", mandate_hash=mh, method="typed_code", approved_by="joe"))
-joe.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="joe")
+print("seller-c approves own deal:", refused("seller-c", "record_approval", mandate_hash=mh, method="typed_code", approved_by="vidyut"))
+vidyut.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="vidyut")
 ref.call("record_payment", mandate_hash=mh, payment_ref="pi_sim_" + run, amount=745, mode="sim")
-ref.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="joe")
+ref.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="vidyut")
 print("refused attempts shown:", ref.sql("SELECT kind, reason FROM rejected_attempt"))
 
-joe.call("record_receiving", id=f"rcv-{run}", order_id=mh, sku_spec=GPU, photo_url="sim://box-photo", expected_spec_id="spec-gpu",
+vidyut.call("record_receiving", id=f"rcv-{run}", order_id=mh, sku_spec=GPU, photo_url="sim://box-photo", expected_spec_id="spec-gpu",
          result="accepted", reasons=[], checked_by="owner", origin="SIM")
-print("allowance after a clean receiving check:", joe.sql("SELECT ladder_step, per_purchase_limit, period_limit FROM my_allowance"))
+print("allowance after a clean receiving check:", vidyut.sql("SELECT ladder_step, per_purchase_limit, period_limit FROM my_allowance"))
 for amount in (40, 60):
-    before = joe.sql("SELECT spent_this_period FROM my_allowance")[0][0]
+    before = vidyut.sql("SELECT spent_this_period FROM my_allowance")[0][0]
     h = f"mh-{run}-{amount}"
-    ref.call("create_mandate", hash=h, id=f"mdt-{h}", deal_id=f"accessory-{amount}", buyer_id="joe", amount=amount, payee="seller-a",
+    ref.call("create_mandate", hash=h, id=f"mdt-{h}", deal_id=f"accessory-{amount}", buyer_id="vidyut", amount=amount, payee="seller-a",
              expiry_minutes=10, nonce=h, requested_by="", origin="SIM")
-    spent = joe.sql("SELECT spent_this_period FROM my_allowance")[0][0]
+    spent = vidyut.sql("SELECT spent_this_period FROM my_allowance")[0][0]
     print(f"${amount} buy:", "auto-approved inside the allowance" if spent > before else "above the allowance, needs the call", f"(spent this week ${spent:g})")

@@ -11,7 +11,7 @@ const need = load("Need");
 const bid = load("Bid");
 
 const laneANeed = () => ({
-  id: "need-1a2b3c4d", buyer_id: "joe",
+  id: "need-1a2b3c4d", buyer_id: "vidyut",
   items: [{ sku_spec: "rtx 4070 super 12gb", condition: "new", variant: "retail", quantity: 1, unit: "each", grade: "new", pack_size: "retail" }],
   delivery_window: "by 2026-10-30T23:59:00Z", spend_limit: 800, consent: true, auction_window_s: 12, source: "live",
 });
