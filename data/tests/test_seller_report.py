@@ -62,6 +62,7 @@ def test_wording_says_what_an_agent_sees_never_what_the_seller_did():
     for word in ("liar", "lied", "fraud", "scam", "cheat", "fake"):
         assert word not in text, word
     assert "(MIRROR)" in markdown(rep) and "uncertain" in text
+    assert "Offered free to a seller in exchange for a signed commitment; no payment taken." in markdown(rep)
 
 
 def test_a_mirror_seller_id_selects_by_store_and_item_id():

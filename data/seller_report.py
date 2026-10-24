@@ -17,6 +17,7 @@ from pathlib import Path
 
 REPORTS = Path(__file__).resolve().parent / "reports"
 SEVERITIES = ("blocks", "warns")
+OFFER = "Offered free to a seller in exchange for a signed commitment; no payment taken."
 
 
 def _url(card: dict) -> str:
@@ -109,7 +110,8 @@ def markdown(rep: dict) -> str:
              f"Checked {rep['as_of'][:16]} UTC from our dated captures, not a live visit. What was checked per listing: maker length and "
              "power spec match (fit checker), title claims against the listing's own data (claim check), price against the dated band "
              "of in-stock retail asks, and whether shipping and stock are stated. Findings marked 'warns' are uncertain: an agent "
-             "cannot confirm something, not that it is wrong. 'blocks' means an agent would skip the listing.", ""]
+             "cannot confirm something, not that it is wrong. 'blocks' means an agent would skip the listing.", "",
+             OFFER, ""]
     if not rep["listings"]:
         lines.append("No captured listings matched this seller id.")
     for p in rep["listings"]:
