@@ -162,12 +162,31 @@ describe('migration-safe bid line metadata', () => {
     expect(() => run(B, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: mk(1) }))).toThrow(/no bid for this seller/);
     expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: mk(-1) }))).toThrow(/shipping/);
     const value = mk(2);
-    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: value }));
-    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: value }));
+    const prettyValue = JSON.stringify(JSON.parse(value), null, 2);
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: prettyValue }));
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: prettyValue }));
     expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: mk(3) }))).toThrow(/immutable/);
     advance(15_000);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
-    expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: value }))).not.toThrow();
+    expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: prettyValue }))).not.toThrow();
+  });
+
+  it('keeps a partial bid out of authoritative review and settlement when the need has multiple items', () => {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ items: [
+      { skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' },
+      { skuSpec: 'cpu-ryzen9', condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' },
+    ] })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('partial-bid', [line(780)])));
+    advance(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect(m.reviewCandidatesView(h.viewContext(REF) as any)).toHaveLength(0);
+    advance(m.REVIEW_WINDOW_MS);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    expect([...h.db.roundResult.iter()]).toMatchObject([
+      { bidId: 'partial-bid', rank: 0 },
+    ]);
+    expect([...h.db.roundResult.iter()][0]!.reasons.join(' ')).toMatch(/does not cover (every )?requested item/);
   });
 
   it('uses the shared picker for the private review candidate and carries original line index and selected metadata', () => {

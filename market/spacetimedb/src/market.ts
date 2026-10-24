@@ -446,17 +446,17 @@ export function setBidLineMeta(ctx: Ctx, { bidId, lineMetaJson }: { bidId: strin
   const sellerId = requireRole(ctx, 'set_bid_line_meta', ['seller']).subjectId;
   const b = ctx.db.bid.id.find(bidId);
   if (!b || b.sellerId !== sellerId) throw new SenderError('no bid for this seller');
-  const current = b.lineMetaJson || '[]';
-  if (current !== '[]') {
-    if (current === lineMetaJson) return;
-    throw new SenderError('line metadata is immutable once written');
-  }
-  const r = ctx.db.round.id.find(b.roundId);
-  if (!r || r.state !== 'open' || isClosed(clockOf(r), ms(ctx.timestamp))) throw new SenderError('line metadata must be written while bidding is open');
   if (lineMetaJson.length > 32_000) throw new SenderError('line metadata is too large');
   const checked = parseLineMeta(lineMetaJson, b.lines.length);
   if (!checked.rows) throw new SenderError(checked.reason ?? 'line metadata is invalid');
   const canonical = JSON.stringify(checked.rows);
+  const current = b.lineMetaJson || '[]';
+  if (current !== '[]') {
+    if (current === canonical) return;
+    throw new SenderError('line metadata is immutable once written');
+  }
+  const r = ctx.db.round.id.find(b.roundId);
+  if (!r || r.state !== 'open' || isClosed(clockOf(r), ms(ctx.timestamp))) throw new SenderError('line metadata must be written while bidding is open');
   ctx.db.bid.id.update({ ...b, lineMetaJson: canonical });
 }
 
@@ -643,6 +643,8 @@ function reviewCandidates(ctx: { db: Ctx['db'] | VCtx['db'] }) {
       needItems, rejections, lineRejects, quality: MARKET_CONFIG.quality,
     });
     for (const item of ranked.ranked) {
+      // Partial bids may remain visible in rank ordering, but cannot enter review or settlement.
+      if (item.picked.length !== needItems.size) continue;
       const b = rows.find((row) => row.id === item.bid.id)!;
       const metadata = metas.get(b.id)!;
       const selected = selectedCandidate(round.id, round.needId, b, metadata, item.picked, item.landed);
@@ -704,9 +706,10 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     const candidateRank = parsedMeta.rows && b.floorCheckPassed
       ? rankBids([toBid(b, parsedMeta.rows)], { needItems, lineRejects: new Map([[b.id, b.lineRejects]]), quality: MARKET_CONFIG.quality }).ranked[0]
       : undefined;
-    const candidate = candidateRank && parsedMeta.rows
+    const candidate = candidateRank && candidateRank.picked.length === needItems.size && parsedMeta.rows
       ? selectedCandidate(roundId, r.needId, b, parsedMeta.rows, candidateRank.picked, candidateRank.landed)
       : undefined;
+    if (candidateRank && candidateRank.picked.length !== needItems.size) reasons.push('bid does not cover every requested item');
     const bound = (check: typeof checks[number], line?: { line_index: number; listing_id: string; listing_hash: string }) => {
       try {
         const proof = JSON.parse(check.bindingJson || '{}');
