@@ -101,7 +101,9 @@ Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" t
 
 ## CRS sandbox setup (Issue #15)
 
-Set `CRS_USERNAME` and `CRS_PASSWORD` in the private `agents/.env`; optionally set `CRS_BASE_URL` (default `https://api-sandbox.stitchcredit.com/api`). The adapter posts JSON credentials to `/users/login` once per process, caches the returned bearer token, rejects redirects, and permanently latches a failed login without retrying. Missing credentials perform zero network requests and override any old cache with `CRS not configured`. `CRS_API_KEY` remains a legacy bearer-token override for existing offline callers. Set `CRS_TEST_IDENTITIES_PATH` there to an absolute path for a private operator JSON file outside the repository. The file has this shape; `request` must contain the exact body for the named persona from the official CRS Cal Hacks package version 1.1.2:
+Set `CRS_USERNAME` and `CRS_PASSWORD` in the private `agents/.env`; optionally set `CRS_BASE_URL` (default `https://api-sandbox.stitchcredit.com/api`). The adapter posts JSON credentials to `/users/login` once per process, caches the returned bearer token, rejects redirects, and permanently latches a failed login without retrying. Missing credentials perform zero network requests and override any old cache with `CRS not configured`. Set `CRS_TEST_IDENTITIES_PATH` there to an absolute path for a private operator JSON file outside the repository. The file has this shape; `request` must contain the exact body for the named persona from the official CRS Cal Hacks package version 1.1.2:
+
+An optional preissued `CRS_API_KEY` may be supplied for an already-authorized sandbox process; it skips login and is never written to logs. A configured `seller_4` may be an individually classified seller with no CRS persona. A configured `seller_5` may be a business seller only when its private profile references an already approved persona such as `P01`, `P02`, or `P12`; do not invent identity bodies or public seller data.
 
 ```json
 {
