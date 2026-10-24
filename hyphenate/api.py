@@ -12,6 +12,7 @@ import os
 from typing import Any, Optional
 
 from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from hyphenate import VERSION
@@ -33,6 +34,8 @@ def _now() -> str:
 def create_app(engine: Optional[Engine] = None, demo_clock: Optional[bool] = None) -> FastAPI:
     app = FastAPI(title="Hyphenate: purchasing and AP seats (SIM)", version=VERSION)
     app.add_middleware(BodyLimit)
+    # The /hyphenate web screen (localhost:3100) reads this API from the browser. Local origins only; GET to read, POST for the demo reset button.
+    app.add_middleware(CORSMiddleware, allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$", allow_methods=["GET", "POST"], allow_headers=[])
     app.state.eng = engine or seed_company()
     app.state.demo_clock = bool(demo_clock) if demo_clock is not None else os.environ.get("HYPHENATE_DEMO_CLOCK") == "1"
     P = "/v1/hyphenate"

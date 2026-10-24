@@ -10,7 +10,8 @@ import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
 import { authorizePayment } from '../../rules/approval';
-import { decide, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, newAllowance, type Allowance, type Period } from '../../rules/allowance';
+import { HOLD_TTL_MS, SOLD_OUT_REASON, availableStock, holdIsActive, soldOutReasons, type HoldLike, type HoldState } from '../../rules/holds';
+import { decide, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, newAllowance, setAllowance, type Allowance, type Period } from '../../rules/allowance';
 import type { Bid, Condition, NeedItem, Origin } from '../../rules/types';
 import { resetDemo, seedDemo } from './demo';
 
@@ -163,6 +164,25 @@ function allowanceFor(ctx: Ctx, buyerId: string): Allowance {
 function saveAllowance(ctx: Ctx, a: Allowance) {
   if (ctx.db.allowance.buyerId.find(a.buyer_id)) ctx.db.allowance.buyerId.update(fromRule(a));
   else ctx.db.allowance.insert(fromRule(a));
+}
+
+export interface SetAllowanceArgs { buyerId: string; perPurchaseLimit: number; periodLimit: number; period: string }
+
+/**
+ * Buyer (their own id) or referee. The referee sets the demo operator's starting allowance; the buyer
+ * may only lower theirs (the rule in rules/allowance.setAllowance). Writes only the allowance row and one event.
+ */
+export function setAllowanceChecked(ctx: Ctx, a: SetAllowanceArgs) {
+  if (!a.buyerId) throw new SenderError('set_allowance needs a buyer id');
+  const who = requireRole(ctx, 'set_allowance', ['buyer', 'referee'], a.buyerId);
+  const r = setAllowance(
+    allowanceFor(ctx, a.buyerId),
+    { per_purchase_limit: a.perPurchaseLimit, period_limit: a.periodLimit, period: a.period as Period },
+    who.role === 'referee' ? 'referee' : 'buyer', ms(ctx.timestamp),
+  );
+  if (!r.ok) throw new SenderError(`set_allowance refused: ${r.reasons.join('; ')}`);
+  saveAllowance(ctx, r.allowance);
+  event(ctx, 'allowance_set', 'allowance', a.buyerId, 'A buyer allowance was set', '', 'SIM');
 }
 
 // ---------------------------------------------------------------- needs and goals
@@ -353,6 +373,65 @@ const toBid = (b: BidRow): Bid => ({
   mirror_snapshot_id: '', decision_trace: '', expires_at: '', origin: b.origin as Origin, source: b.source, sealed_at: ms(b.sealedAt),
 });
 
+// ---------------------------------------------------------------- stock holds (rules/holds)
+
+type HoldRow = NonNullable<ReturnType<Ctx['db']['stockHold']['id']['find']>>;
+const asHoldLike = (r: HoldRow): HoldLike => ({
+  sellerId: r.sellerId, skuSpec: r.skuSpec, condition: r.condition, qty: r.qty, state: r.state as HoldState, expiresAtMs: ms(r.expiresAt),
+});
+
+/** A hold past its expiry becomes released (the unit is free again). Runs before any availability check. */
+function sweepExpiredHolds(ctx: Ctx) {
+  for (const hd of [...ctx.db.stockHold.iter()]) {
+    if (hd.state === 'held' && ms(hd.expiresAt) <= ms(ctx.timestamp)) {
+      ctx.db.stockHold.id.update({ ...hd, state: 'released' });
+      event(ctx, 'stock_released', 'stock_hold', hd.bidId, 'A held unit was released: its approval window ended', hd.sellerId);
+    }
+  }
+}
+
+/** A deal id names its awarded bid as `<bid id>`, `deal-<bid id>` or `<round id>:<bid id>`. */
+export function bidIdOfDeal(dealId: string): string {
+  const d = dealId.startsWith('deal-') ? dealId.slice(5) : dealId;
+  return d.slice(d.lastIndexOf(':') + 1);
+}
+
+/**
+ * Move the units held for a mandate's deal: `held` renews the 2 minute window (the call starts it), `sold` ends it for good.
+ * A hold that was released is claimed again only if the seller still has the stock; if another round took it the call
+ * throws, so nothing is oversold. A deal that names no awarded bid touches nothing.
+ */
+function claimDealUnits(ctx: Ctx, dealId: string, buyerId: string, to: 'held' | 'sold') {
+  const bidId = bidIdOfDeal(dealId);
+  // The deal belongs to the buyer whose need the bid answered, from the bid itself, so the owner is known before any hold
+  // exists (bid ids are public while the round is open). A deal that names no bid has no owner and is left alone.
+  const bidOwner = ctx.db.need.id.find(ctx.db.bid.id.find(bidId)?.needId ?? '')?.buyerId;
+  if (bidOwner !== undefined && bidOwner !== buyerId) throw new SenderError('not your deal');
+  const mine = [...ctx.db.stockHold.bidId.filter(bidId)];
+  if (!mine.length) return;
+  const now = ms(ctx.timestamp);
+  for (const hd of mine) {
+    // A hold agrees: nobody but the buyer whose need the round served can renew, lock or pay for its unit.
+    const owner = ctx.db.need.id.find(ctx.db.round.id.find(hd.roundId)?.needId ?? '')?.buyerId;
+    if (owner !== buyerId) throw new SenderError('not your deal');
+    // A unit already sold is gone: a second mandate, approval or payment on it can never sell it again.
+    if (hd.state === 'sold') throw new SenderError(`${SOLD_OUT_REASON}; the deal must be re-quoted`);
+    const active = hd.state === 'held' && ms(hd.expiresAt) > now;
+    if (!active) {
+      const bidRow = ctx.db.bid.id.find(bidId);
+      const needCond = new Map([...ctx.db.needItem.needId.filter(bidRow?.needId ?? '')].map((i) => [i.skuSpec, i.condition]));
+      const stock = bidRow?.lines.find((l: Line) => l.skuSpec === hd.skuSpec && (l.offeredCondition || needCond.get(l.skuSpec) || 'new') === hd.condition)?.quantity ?? 0;
+      const others = [...ctx.db.stockHold.sellerId.filter(hd.sellerId)].filter((x) => x.id !== hd.id).map(asHoldLike);
+      if (availableStock(stock, others, hd.sellerId, hd.skuSpec, hd.condition, now) < hd.qty) {
+        throw new SenderError(`${SOLD_OUT_REASON}; the deal must be re-quoted`);
+      }
+      event(ctx, 'stock_held', 'stock_hold', hd.bidId, 'A released unit was held again for its own deal', hd.sellerId);
+    }
+    ctx.db.stockHold.id.update({ ...hd, state: to, expiresAt: to === 'held' ? tsFromMs(now + HOLD_TTL_MS) : hd.expiresAt });
+    if (to === 'sold') event(ctx, 'stock_sold', 'stock_hold', hd.bidId, 'A held unit was sold: the payment was recorded', hd.sellerId);
+  }
+}
+
 export function closeRound(ctx: Ctx, { roundId }: { roundId: string }) {
   requireRole(ctx, 'close_round', ['referee']);
   return closeRoundInner(ctx, roundId, false);
@@ -399,7 +478,20 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   // The seller fee is deliberately not passed: it never feeds ranking (invariant 8).
   const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
-  const lineRejects = new Map(rows.map((b) => [b.id, b.lineRejects]));
+  // A line whose units are held or sold by an earlier round is skipped with a reason, like a line with no floor.
+  const nowMs = ms(ctx.timestamp);
+  sweepExpiredHolds(ctx);
+  const needQtyOf = (sku: string) => needItems.get(sku)?.quantity ?? 1;
+  const condOfLine = (l: Line) => l.offeredCondition || needItems.get(l.skuSpec)?.condition || 'new';
+  const soldOut = new Map<string, string[]>();
+  // Only holds from rounds that served a different need count: replaying the same need (the demo's round 2) must not
+  // compete with its own earlier sale, while a second buyer's round still meets the held or sold unit.
+  const sameNeed = (h: HoldRow) => ctx.db.round.id.find(h.roundId)?.needId === r.needId;
+  for (const b of rows) {
+    const held = [...ctx.db.stockHold.sellerId.filter(b.sellerId)].filter((h) => !sameNeed(h)).map(asHoldLike);
+    soldOut.set(b.id, soldOutReasons(b.lines.map((l: Line) => ({ skuSpec: l.skuSpec, condition: condOfLine(l), quantity: l.quantity })), held, b.sellerId, nowMs, needQtyOf));
+  }
+  const lineRejects = new Map(rows.map((b) => [b.id, b.lines.map((_: Line, i: number) => b.lineRejects[i] || soldOut.get(b.id)![i] || '')]));
   const ranked = rankBids(rows.map(toBid), {
     needItems, rejections, lineRejects, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
   });
@@ -415,6 +507,21 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
   const top = ranked.ranked[0];
+  for (const b of rows) {
+    if (soldOut.get(b.id)!.some((x) => x)) event(ctx, 'stock_sold_out', 'bid', b.id, `A bid line was ${SOLD_OUT_REASON}`, b.sellerId, b.origin);
+  }
+  if (top) {
+    // The awarded line holds its units for the approval call, so a round that closes later cannot award them too.
+    const won = byId.get(top.bid.id)!;
+    for (const i of top.picked) {
+      const l = won.lines[i]!;
+      ctx.db.stockHold.insert({
+        id: 0n, sellerId: won.sellerId, skuSpec: l.skuSpec, condition: condOfLine(l), qty: needQtyOf(l.skuSpec), roundId, bidId: won.id,
+        expiresAt: tsFromMs(nowMs + HOLD_TTL_MS), state: 'held',
+      });
+      event(ctx, 'stock_held', 'stock_hold', won.id, 'A unit is held for the round winner during the approval call', won.sellerId, r.origin);
+    }
+  }
   event(ctx, 'auction_closed', 'round', roundId, top ? `Round closed: ${ranked.ranked.length} ranked, ${ranked.disqualified.length} out` : 'Round closed: no eligible bid', top?.bid.seller_id ?? '', r.origin);
 }
 
@@ -430,6 +537,7 @@ export function createMandate(
 ) {
   requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
+  claimDealUnits(ctx, a.dealId, a.buyerId, 'held');
   const allow = allowanceFor(ctx, a.buyerId);
   const d = decide(allow, a.amount, ms(ctx.timestamp));
   const within = d.path === 'auto';
@@ -461,8 +569,32 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
   if (!sep.ok) throw new SenderError(sep.reasons.join('; '));
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
+  claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp });
   event(ctx, 'approval_recorded', 'approval', a.mandateHash, `Approved by ${a.method.replace('_', ' ')}`, md.payee, md.origin);
+}
+
+/**
+ * The approval was denied (wrong code, silence, "no"): the units held for this deal go back on sale. The mandate's own buyer
+ * or the referee relaying the call result. The public label says nothing about the amount, the buyer or the reason; the
+ * reason goes only to the buyer's own feed.
+ */
+export function denyApproval(ctx: Ctx, a: { mandateHash: string; reason: string }) {
+  requireRole(ctx, 'deny_approval', ['buyer', 'referee']);
+  const md = ctx.db.mandate.hash.find(a.mandateHash);
+  if (!md) throw new SenderError('no mandate with that hash');
+  requireRole(ctx, 'deny_approval', ['buyer', 'referee'], md.buyerId);
+  if (ctx.db.approval.mandateHash.find(a.mandateHash)) throw new SenderError('already approved; a denial can no longer release the units');
+  for (const hd of [...ctx.db.stockHold.bidId.filter(bidIdOfDeal(md.dealId))]) {
+    if (hd.state !== 'held') continue;
+    // A mandate can name a bid that did not exist yet, so a denial frees only the holds of the buyer whose need the round
+    // served (the same owner test claimDealUnits uses), never a rival's unit.
+    if (ctx.db.need.id.find(ctx.db.round.id.find(hd.roundId)?.needId ?? '')?.buyerId !== md.buyerId) continue;
+    ctx.db.stockHold.id.update({ ...hd, state: 'released' });
+    event(ctx, 'stock_released', 'stock_hold', hd.bidId, 'A held unit was released: the approval was denied', hd.sellerId, md.origin);
+  }
+  ctx.db.notification.insert({ id: 0n, buyerId: md.buyerId, goalId: '', klass: 'state', text: `Approval denied: ${a.reason.slice(0, 200)}. The deal was not paid.`, push: false, at: ctx.timestamp });
+  rejected(ctx, 'approval', a.mandateHash, 'Approval denied; nothing was paid');
 }
 
 /** INVARIANT-1: no payment row without an approval row for the same mandate hash. */
@@ -484,6 +616,7 @@ export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: st
   const auth = authorizePayment({ amount: a.amount, limit_checked: true, approval_id: String(ap.id) }, md.amount);
   if (!auth.ok) throw new SenderError(auth.reasons.join('; '));
   if (ctx.db.payment.mandateHash.find(a.mandateHash)) return rejected(ctx, 'payment', a.mandateHash, 'second payment for the same mandate refused');
+  claimDealUnits(ctx, md.dealId, md.buyerId, 'sold');
   ctx.db.payment.insert({ id: 0n, mandateHash: a.mandateHash, paymentRef: a.paymentRef, amount: a.amount, at: ctx.timestamp, mode: a.mode });
   event(ctx, 'payment_recorded', 'payment', a.mandateHash, mode.label, md.payee, mode.origin);
 }

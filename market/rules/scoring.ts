@@ -138,6 +138,7 @@ export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; di
       a.score - b.score ||
       b.verified - a.verified ||
       a.bid.sealed_at - b.bid.sealed_at ||
+      (a.bid.seller_id < b.bid.seller_id ? -1 : a.bid.seller_id > b.bid.seller_id ? 1 : 0) ||
       (a.bid.id < b.bid.id ? -1 : a.bid.id > b.bid.id ? 1 : 0),
   );
   return { ranked: eligible.map((e, i) => ({ ...e, rank: i + 1 })), disqualified };

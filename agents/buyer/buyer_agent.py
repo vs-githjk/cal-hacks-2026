@@ -204,10 +204,17 @@ async def handle_text(ctx: Context, sender: str, text: str):
         return
     if not await start_round(ctx, need):
         return
+    n_sellers = len(live_sellers())
     lines = "\n".join(f"- {i['quantity']} x {i['sku_spec']} ({i['condition']}, {i['variant']})" for i in need["items"])
     out.append(f"Goal: under ${goal['cap']:.0f} by {goal['deadline'][:10]}. Sealed round open for "
-               f"{need['auction_window_s']}s with {len(common.SELLERS)} sellers (they never see your cap):\n{lines}")
+               f"{need['auction_window_s']}s with {n_sellers} seller{'s' if n_sellers != 1 else ''} (they never see your cap):\n{lines}")
     await tell_owner(ctx, "\n".join(out))
+
+
+def live_sellers() -> list[str]:
+    """The sellers that can run in this mode. On Agentverse a seller still on its public dev seed is skipped by
+    sellers/run_all.py, so it is neither asked for a bid nor counted in what the owner is told."""
+    return [s for s in common.SELLERS if common.mailbox_ready(s)]
 
 
 async def start_round(ctx: Context, need: dict | None = None):
@@ -225,7 +232,7 @@ async def start_round(ctx: Context, need: dict | None = None):
     if ROUND.get("round_token") != token or ROUND.get("phase") != "checking" or ROUND.get("need") is not need:
         return False
     ROUND.update(seller_checks=checks, phase="bidding", deadline=time.time() + need["auction_window_s"])
-    for s in common.SELLERS:
+    for s in live_sellers():
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]:
             return False
         await ctx.send(common.address(s), common.BidRequest(need_json=json.dumps(sealed(need))))

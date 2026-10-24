@@ -177,7 +177,9 @@ class OrderPlaced(Model):
 
 
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
-SELLERS = ["seller_1", "seller_2", "seller_3"]  # three named seller agents, each its own uAgent
+SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named seller agents, each its own uAgent
+SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015}
+BUILT_IN_ROLES = ("buyer", "advocate", "shield", *SELLERS)
 SEEDS = {
     "buyer": os.getenv("BUYER_AGENT_SEED", "tech-bazaar-buyer-dev"),
     "advocate": os.getenv("ADVOCATE_AGENT_SEED") or os.getenv("ADVOCATE_SEED", "tech-bazaar-advocate-dev"),
@@ -187,10 +189,37 @@ SEEDS = {
 }
 
 
+def register_custom_seller(role: str) -> None:
+    """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
+    Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
+    if role in SEEDS:
+        raise ValueError(f"{role!r} is already a Tech Bazaar agent: a custom seller must not reuse its key")
+    env = role.upper().replace("-", "_")
+    # Both env names a role reads are checked against every name a built-in reads: 'seller-1' and 'seller_1_agent'
+    # both land on SELLER_1_AGENT_SEED, 'buyer_agent' on BUYER_AGENT_SEED, so none may reuse a built-in's key.
+    owned = {f"{built_in.upper()}{suffix}" for built_in in BUILT_IN_ROLES for suffix in ("_AGENT_SEED", "_SEED")}
+    if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
+        raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
+                         "built-in agent, a custom seller must not reuse its key")
+    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
+
+
 def public_seed(role: str) -> bool:
     """The dev defaults above are in the public repo, so anyone could sign as that agent.
     Never put an agent on Agentverse with one; set <ROLE>_AGENT_SEED in agents/.env first."""
     return SEEDS[role].endswith("-dev")
+
+
+def mailbox_on(role: str) -> bool:
+    """True when this role should go on Agentverse (AGENTS_MAILBOX, or its own flag; sellers share SELLERS_MAILBOX)."""
+    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
+    return bool(os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag))
+
+
+def mailbox_ready(role: str) -> bool:
+    """False only when mailbox mode is on for this role and it still has the public dev seed (agent_args would exit).
+    Multi-agent runners use it to skip that one agent instead of losing the whole process."""
+    return not (mailbox_on(role) and public_seed(role))
 
 
 def agent_args(role: str, port: int, **profile) -> dict:
@@ -198,8 +227,7 @@ def agent_args(role: str, port: int, **profile) -> dict:
     `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
     readme_path, handle, published to Agentverse on connect."""
     args = dict(seed=SEEDS[role], port=port, publish_agent_details=True, **profile)
-    mailbox_flag = "SELLERS_MAILBOX" if role in SELLERS else f"{role.upper()}_MAILBOX"
-    if os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag):
+    if mailbox_on(role):
         if public_seed(role):
             sys.exit(f"Set {role.upper()}_AGENT_SEED in agents/.env before going on Agentverse: the default seed is public.")
         return {**args, "mailbox": True}

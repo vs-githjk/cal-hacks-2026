@@ -1,4 +1,6 @@
-"""One seller uAgent. Run from agents/: python sellers/seller_agent.py seller_1"""
+"""One seller uAgent. Run from agents/: python sellers/seller_agent.py seller_1
+A custom seller from the Seller Kit runs from its config: python sellers/seller_agent.py --config sellers/custom/<id>.json"""
+import argparse
 import json
 import os
 import re
@@ -13,13 +15,12 @@ from uagents_core.contrib.protocols.payment import CommitPayment, CompletePaymen
 
 import common
 import payment
+from factory import load_config, pick_port, seller_from_config
 from policy import make_bid, seller as load_seller
-
-PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013}
 
 
 def persona_line(s: dict, total: float) -> str:
-    fallback = f"{s['name']} here: ${total:,.2f} all in, {s['claims'][0]}."
+    fallback = f"{s['name']} here: ${total:,.2f} all in" + (f", {s['claims'][0]}." if s["claims"] else ".")
     if not os.getenv("ANTHROPIC_API_KEY"):
         return fallback
     try:
@@ -39,15 +40,25 @@ def persona_line(s: dict, total: float) -> str:
         return fallback
 
 
-def build(name: str) -> Agent:
-    s = load_seller(name)
-    port = PORTS[name]
+def build(name: str, cfg: dict | None = None) -> Agent:
+    """A catalog seller by name, or a custom seller from a validated SellerConfig `cfg` (name is then cfg["id"])."""
+    if cfg is None:
+        s = load_seller(name)
+        port = common.SELLER_PORTS[name]
+        profile = {"readme_path": str(Path(__file__).with_name(f"AGENTVERSE-{name}.md")),
+                   "handle": f"techbazaar{name.replace('_', '')}"}
+    else:
+        s = seller_from_config(cfg)
+        name = s["id"]
+        common.register_custom_seller(name)
+        port = pick_port(cfg)
+        profile = {}  # a custom seller has no Agentverse profile page until its owner writes one
+    labelled = "simulated (SIM)" if s["origin"] == "SIM" else "LIVE, owner supplied"
     agent = Agent(**common.agent_args(
-        name, port, name=s['name'][:32], handle=f"techbazaar{name.replace('_', '')}",
-        readme_path=str(Path(__file__).with_name(f"AGENTVERSE-{name}.md")),
+        name, port, name=s['name'][:32], **profile,
         description=f"Seller agent ({s['archetype']}) that bids in Tech Bazaar's sealed rounds for computer gear. "
-                    "Prices come from policy code, never below its floor. Listings are simulated (SIM)."))
-    common.include_profile_chat(agent, f"I am {s['name']}, a Tech Bazaar SIM seller. I bid on structured sealed "
+                    f"Prices come from policy code, never below its floor. Listings are {labelled}."))
+    common.include_profile_chat(agent, f"I am {s['name']}, a Tech Bazaar {s['origin']} seller. I bid on structured sealed "
                                 "rounds using policy prices. Send buying goals to @techbazaarbuyer; "
                                 "this chat cannot place orders or approve purchases.")
 
@@ -98,7 +109,17 @@ def build(name: str) -> Agent:
 
 
 if __name__ == "__main__":
-    name = sys.argv[1] if len(sys.argv) > 1 else "seller_1"
-    a = build(name)
+    ap = argparse.ArgumentParser(description="Run one Tech Bazaar seller agent")
+    ap.add_argument("name", nargs="?", default="seller_1", help="a catalog seller (seller_1 to seller_5)")
+    ap.add_argument("--config", help="path to a SellerConfig JSON file (custom seller); overrides name")
+    args = ap.parse_args()
+    if args.config:
+        try:
+            cfg = load_config(args.config)
+        except ValueError as e:
+            sys.exit(f"Seller config refused: {e}")
+        a, name = build(cfg["id"], cfg), cfg["id"]
+    else:
+        a, name = build(args.name), args.name
     print(f"{name} address:", a.address)
     a.run()

@@ -60,9 +60,51 @@ export function recordAutoSpend(a: Allowance, amount: number, now_ms: number): A
   return { ...a, spent_this_period: round2(spentNow(a, now_ms) + amount), updated_at: now_ms };
 }
 
+/** One step up. A limit that was set by hand above the next step is kept: a clean delivery never lowers it. */
 export function raiseOnCleanReceiving(a: Allowance, now_ms: number): Allowance {
   const step = Math.min(a.ladder_step + 1, ALLOWANCE_LADDER.length - 1);
-  return { ...a, ladder_step: step, ...stepLimits(step), spent_this_period: spentNow(a, now_ms), updated_at: now_ms };
+  const next = stepLimits(step);
+  return {
+    ...a, ladder_step: step,
+    per_purchase_limit: Math.max(a.per_purchase_limit, next.per_purchase_limit),
+    period_limit: Math.max(a.period_limit, next.period_limit),
+    spent_this_period: spentNow(a, now_ms), updated_at: now_ms,
+  };
+}
+
+export interface AllowanceRequest { per_purchase_limit: number; period_limit: number; period: Period }
+export type SetAllowanceResult = { ok: true; allowance: Allowance } | { ok: false; reasons: string[] };
+
+/**
+ * set_allowance. The referee (the demo operator) may set any limits up to the ladder's top step.
+ * The buyer may only tighten their own: a raise comes from clean deliveries, so a stolen or
+ * confused session cannot talk a fresh $0 allowance into auto-spending. The step shown is the
+ * highest ladder step whose limits the new numbers reach; spending this period is kept.
+ */
+export function setAllowance(a: Allowance, req: AllowanceRequest, by: "buyer" | "referee", now_ms: number): SetAllowanceResult {
+  const top = ALLOWANCE_LADDER[ALLOWANCE_LADDER.length - 1]!;
+  const reasons: string[] = [];
+  const { per_purchase_limit: per, period_limit: lim, period } = req;
+  if (period !== "week" && period !== "month") reasons.push("period must be week or month");
+  if (!(Number.isFinite(per) && per >= 0)) reasons.push("per_purchase_limit must be a number of at least 0");
+  if (!(Number.isFinite(lim) && lim >= 0)) reasons.push("period_limit must be a number of at least 0");
+  if (reasons.length === 0) {
+    if (per > lim) reasons.push("per_purchase_limit cannot be above period_limit");
+    if (per > top.per_purchase || lim > top.per_period) {
+      reasons.push(`limits cannot go above the top step (${money(top.per_purchase)} per buy, ${money(top.per_period)} per period)`);
+    }
+    if (by === "buyer") {
+      if (per > a.per_purchase_limit || lim > a.period_limit) reasons.push("a buyer can lower their allowance; it goes up with clean deliveries");
+      if (period !== a.period) reasons.push("a buyer cannot change the period");
+    }
+  }
+  if (reasons.length > 0) return { ok: false, reasons };
+  let step = 0;
+  ALLOWANCE_LADDER.forEach((s, i) => { if (per >= s.per_purchase && lim >= s.per_period) step = i; });
+  return {
+    ok: true,
+    allowance: { ...a, per_purchase_limit: round2(per), period_limit: round2(lim), period, ladder_step: step, spent_this_period: spentNow(a, now_ms), updated_at: now_ms },
+  };
 }
 
 /** Nobody who requests a payment can approve it. An empty requester means a consumer's own buy. */

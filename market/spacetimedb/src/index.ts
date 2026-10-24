@@ -81,6 +81,11 @@ export const record_approval = spacetimedb.reducer(
   (ctx, a) => m.recordApproval(ctx, a),
 );
 
+export const deny_approval = spacetimedb.reducer(
+  { mandateHash: t.string(), reason: t.string() },
+  (ctx, a) => m.denyApproval(ctx, a),
+);
+
 export const record_payment = spacetimedb.reducer(
   { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string() },
   (ctx, a) => m.recordPayment(ctx, a),
@@ -92,6 +97,11 @@ export const record_receiving = spacetimedb.reducer(
     result: t.string(), reasons: t.array(t.string()), checkedBy: t.string(), origin: t.string(),
   },
   (ctx, a) => m.recordReceiving(ctx, a),
+);
+
+export const set_allowance = spacetimedb.reducer(
+  { buyerId: t.string(), perPurchaseLimit: t.f64(), periodLimit: t.f64(), period: t.string() },
+  (ctx, a) => m.setAllowanceChecked(ctx, a),
 );
 
 export const reset_demo = spacetimedb.reducer((ctx) => m.resetDemoChecked(ctx));

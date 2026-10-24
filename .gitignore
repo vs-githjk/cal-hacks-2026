@@ -33,3 +33,5 @@ shot-*.png
 
 # Lane C sealed set (second blind held-out): only its sha256 is committed
 sim/attacks/heldout2.jsonl
+# custom sellers written by the Seller Kit (SIM configs, one JSON per shop)
+agents/sellers/custom/

@@ -18,6 +18,7 @@ import common
 
 @pytest.mark.parametrize('role,flag', [('advocate', 'ADVOCATE_MAILBOX'), ('seller_1', 'SELLERS_MAILBOX'),
                                       ('seller_2', 'SELLERS_MAILBOX'), ('seller_3', 'SELLERS_MAILBOX'),
+                                      ('seller_4', 'SELLERS_MAILBOX'), ('seller_5', 'SELLERS_MAILBOX'),
                                       ('shield', 'SHIELD_MAILBOX')])
 def test_role_mailbox_flag_uses_stable_seed_and_publishes_details(monkeypatch, role, flag):
     monkeypatch.delenv('AGENTS_MAILBOX', raising=False)

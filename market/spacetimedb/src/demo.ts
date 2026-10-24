@@ -34,6 +34,7 @@ export function resetDemo(ctx: Ctx) {
   for (const r of [...db.round.iter()]) db.round.id.delete(r.id);
   for (const r of [...db.roundResult.iter()]) db.roundResult.id.delete(r.id);
   for (const r of [...db.rejectedAttempt.iter()]) db.rejectedAttempt.id.delete(r.id);
+  for (const r of [...db.stockHold.iter()]) db.stockHold.id.delete(r.id);
   for (const r of [...db.roundTimer.iter()]) db.roundTimer.scheduledId.delete(r.scheduledId);
   for (const r of [...db.floorEvent.iter()]) db.floorEvent.id.delete(r.id);
   for (const r of [...db.persona.iter()]) db.persona.sellerId.delete(r.sellerId);

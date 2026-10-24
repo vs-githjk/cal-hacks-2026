@@ -3,7 +3,7 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with three seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
+Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with five seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
 
 ## Agents
 
@@ -14,11 +14,25 @@ Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 
 | Byte Bros Outlet (@techbazaarseller1) | Seller agent: bids from its listings, price from policy code, never below floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered on Agentverse (mailbox) |
 | Silicon Sally's Surplus (@techbazaarseller2) | Seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` | Registered on Agentverse (mailbox) |
 | FlashDeal Frankie (@techbazaarseller3) | Seller agent; SIM planted trap (claims new, fixture page condition says open box) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered on Agentverse (mailbox) |
+| Bay Area PC Shop (@techbazaarseller4) | Seller agent; SIM local physical shop, fixed margin on its own cost, port 8014 | assigned when registered | Not registered yet: manual mailbox step, see below |
+| ReNew Refurb (@techbazaarseller5) | Seller agent; SIM refurbisher, refurbished and open-box lines of one SKU in one bid, port 8015 | assigned when registered | Not registered yet: manual mailbox step, see below |
 | Tech Bazaar Shield Client (@techbazaarshield) | Chat front door to the existing Shield HTTP screening service; no purchases or payments | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered on Agentverse (mailbox) |
 
 The five existing addresses come from private seeds in `agents/.env`; the Shield address comes from `agents/.env.shield`, injected into its process environment. Both files are gitignored and never committed. Seller listings, prices and records are SIM (simulated, example.com links).
 
 Public profile verification on October 23, 2026 at 23:46 PDT: Agentverse's `GET /v1/search/agents/{address}` returned HTTP 200 for all six addresses, with matching names and handles, `status: active`, published Agent Chat Protocol 0.3.0, and READMEs containing both required badges. All six profiles were republished at 23:45 PDT; the five existing identities are unchanged. This verifies public metadata at that time, not ongoing responsiveness or ASI:One discovery. The advocate and seller Chat Protocol handlers explain their roles; shopping goals still start with the buyer.
+
+## Seller Kit core (sellers 4 and 5, custom sellers)
+
+Note for Abhinav: `seller_4` and `seller_5` are in `common.SELLERS` and run in `sellers/run_all.py`, so the buyer now asks five sellers. Putting them on Agentverse is a manual mailbox step that needs you: set `SELLER_4_AGENT_SEED` and `SELLER_5_AGENT_SEED` in `agents/.env` (private values; the dev defaults are public and the agent refuses to start with them in mailbox mode), run each with `SELLERS_MAILBOX=1`, then `connect.py 8014` and `connect.py 8015`, and add their addresses to the table above. Until the seeds are set, `sellers/run_all.py` in mailbox mode skips them (it prints `seller_4 skipped: set SELLER_4_AGENT_SEED`) and sellers 1 to 3 keep running; without mailbox mode all five bid locally. Their READMEs are `sellers/AGENTVERSE-seller_4.md` and `AGENTVERSE-seller_5.md`.
+
+Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json](../contracts/SellerConfig.schema.json); change note in `docs/changes/0130-D-seller-config.md`). `sellers/sellers.json` holds all five as configs, and `sellers/factory.py` refuses a bad config (negative floor, floor above price, unknown condition, non-http listing URL) with field errors. A custom seller runs from its own file, from `agents/`:
+
+```bash
+.venv/bin/python sellers/seller_agent.py --config sellers/custom/<id>.json
+```
+
+The port comes from the config or is the next free one from 8016. The buyer's seller list is still `common.SELLERS`, so a custom seller bids only once the buyer is told its address.
 
 ## Issue #14 verification
 
@@ -50,7 +64,7 @@ Put the keys and agent seeds in `agents/.env` (see the repo's `.env.example`; va
 .venv/Scripts/python buyer/buyer_agent.py
 ```
 
-For Agentverse and ASI:One, keep the existing private `BUYER_AGENT_SEED`, `ADVOCATE_AGENT_SEED` and `SELLER_1_AGENT_SEED` through `SELLER_3_AGENT_SEED` values. Changing a seed changes the address. Do not use the public development defaults.
+For Agentverse and ASI:One, keep the existing private `BUYER_AGENT_SEED`, `ADVOCATE_AGENT_SEED` and `SELLER_1_AGENT_SEED` through `SELLER_3_AGENT_SEED` values (sellers 4 and 5 get their own private seeds, see Seller Kit core). Changing a seed changes the address. Do not use the public development defaults.
 
 Set a new private `SHIELD_AGENT_SEED` for the sixth agent. `ADVOCATE_SEED`, `SELLER_1_SEED` through `SELLER_3_SEED` and `SHIELD_SEED` are aliases; existing `*_AGENT_SEED` values take priority. Do not replace the five existing seeds. Set `SHIELD_URL` to the running Shield HTTP service; the Shield client blocks if its screening service is unavailable or unconfigured.
 

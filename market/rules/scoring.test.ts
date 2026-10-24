@@ -101,6 +101,18 @@ describe("rankBids", () => {
     expect(r.ranked.map((x) => x.bid.id)).toEqual([verified.id, early.id, late.id]);
   });
 
+  it("is deterministic: a full tie goes to the earlier bid time, then the lower seller id, whatever order the bids arrive in", () => {
+    const sameTime = { sealed_at: 500 };
+    const zed = mk("seller-z", 750, { ...sameTime, id: "bid-a" }); // lowest bid id, highest seller id
+    const abe = mk("seller-a", 750, { ...sameTime, id: "bid-z" });
+    const first = mk("seller-m", 750, { sealed_at: 400, id: "bid-m" });
+    const orders = [[zed, abe, first], [first, abe, zed], [abe, first, zed]];
+    for (const bids of orders) {
+      const r = rankBids(bids, { needItems: items });
+      expect(r.ranked.map((x) => x.bid.seller_id)).toEqual(["seller-m", "seller-a", "seller-z"]);
+    }
+  });
+
   it("computes landed price from the lines, not the seller's stated total", () => {
     const claimsLow = mk("seller-a", 780, { total_landed_price: 1 });
     const honest = mk("seller-b", 760);
