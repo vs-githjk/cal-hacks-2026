@@ -133,7 +133,6 @@ docs/       architecture, sponsor map, real vs simulated, interviews, kickoff pr
 
 1. **Clone and configure.** `git clone https://github.com/vs-githjk/cal-hacks-2026.git && cd cal-hacks-2026`, then:
    ```bash
-   cd bidding-royale
    cp .env.example .env   # fill in your own sandbox keys; .env is gitignored
    ```
 2. **Set these environment variables** (names from [.env.example](.env.example)):
