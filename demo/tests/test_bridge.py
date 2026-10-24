@@ -352,3 +352,84 @@ def test_live_call_flags_and_refusals(capsys):
 
 def test_the_screen_code_gap_is_listed():
     assert "approval code" in " ".join(bridge.NOT_BRIDGED)
+
+
+# ---------------------------------------------------------------- --two-buyers (T11): a second buyer after the same single units
+
+@pytest.fixture(scope="module")
+def two(run):
+    return bridge.plan(run, delay=2.0, rounds=1, two_buyers=True)
+
+
+def test_two_buyers_off_leaves_the_plan_untouched(run, steps):
+    assert [(s.actor, s.reducer, s.args) for s in bridge.plan(run, delay=2.0, rounds=1, two_buyers=False)] == [(s.actor, s.reducer, s.args) for s in steps]
+    assert not any(s.actor == bridge.SECOND_ACTOR for s in steps)
+
+
+def test_the_second_buyer_comes_after_vidyuts_payment_and_acts_only_as_buyer_2(two, steps):
+    n = len(steps)
+    assert [(s.actor, s.reducer, s.args) for s in two[:n]] == [(s.actor, s.reducer, s.args) for s in steps]   # Vidyut's story is unchanged
+    extra = two[n:]
+    mine = [s for s in extra if s.actor == bridge.SECOND_ACTOR]
+    assert [s.reducer for s in mine] == ["post_goal", "post_need"]
+    assert {s.args["buyer_id"] for s in mine} == {"buyer-2"}
+    assert mine[1].args["goal_id"] == mine[0].args["id"] and mine[0].args["id"] != next(s for s in steps if s.reducer == "post_goal").args["id"]
+    assert extra[-1].reducer == "close_round" and extra[-1].actor == "referee"
+
+
+def test_the_second_round_is_its_own_round_for_its_own_need_with_one_unit_per_seller(run, two):
+    first = [s for s in two if s.reducer == "open_round"]
+    assert len(first) == 2 and first[1].args["need_id"].endswith("buyer-2") and first[1].args["round_id"] != first[0].args["round_id"]
+    need_qty = next(s for s in two if s.reducer == "post_need" and s.actor == bridge.SECOND_ACTOR).args["items"][0]["quantity"]
+    bids = [s for s in two if s.reducer == "place_bid" and s.args["round_id"] == first[1].args["round_id"]]
+    assert {s.actor.split(":")[1] for s in bids} == {b["seller_id"] for b in run["beats"]["2"]["bids"]}   # the same sellers
+    for s in bids:
+        assert all(l["quantity"] == need_qty for l in s.args["lines"])         # one unit in stock each, so a held unit cannot be re-awarded
+    ids = [s.args["id"] for s in two if s.reducer == "place_bid"]
+    assert len(ids) == len(set(ids))
+
+
+def test_with_round_two_the_second_buyer_gets_round_three(run):
+    s = bridge.plan(run, delay=0, rounds=2, two_buyers=True)
+    assert [x.args["round_id"] for x in s if x.reducer == "open_round"] == ["round-1", "round-2", "round-3"]
+
+
+def test_second_buyer_report_names_the_sold_out_seller_and_the_new_winner():
+    rows = [
+        [1, "round-2", "b-a", "seller-a", "Best Buy", 0, 1299.99, ["sold out to an earlier round"]],
+        [2, "round-2", "b-b", "seller-b", "Gadget Grove", 1, 1319.0, []],
+        [3, "round-1", "b-c", "seller-a", "Best Buy", 1, 1299.99, []],
+    ]
+    out = bridge.second_buyer_report(rows, "round-2")
+    assert out == ["buyer-2's round: Best Buy is out: sold out to an earlier round", "buyer-2's round winner: Gadget Grove $1,319.00"]
+    assert bridge.second_buyer_report([], "round-2") == ["buyer-2's round: no bid was ranked"]
+
+
+def test_a_denied_live_call_releases_the_held_unit(run):
+    mandate, client, shown, approver = live_parts(run, "hello there")
+    log, outcomes = run_with(run, approver, mandate)
+    denies = [(who, args) for who, r, args in log if r == "deny_approval"]
+    assert outcomes[0]["approved"] is False
+    assert [(who, a["mandate_hash"]) for who, a in denies] == [("referee", mandate["hash"])]
+
+
+def test_an_approved_call_never_denies(run):
+    mandate, client, shown, approver = live_parts(run, lambda code: f"{code} approve")
+    log, _ = run_with(run, approver, mandate)
+    assert "deny_approval" not in [r for _, r, _ in log]
+
+
+def test_a_market_without_deny_approval_does_not_crash_the_denied_run(run):
+    mandate, client, shown, approver = live_parts(run, "")
+    log = []
+    cl = clients(log, fail={"deny_approval": ["no such reducer"]})
+    notes = []
+    bridge.execute(bridge.plan(run, delay=0, rounds=1, mandate=mandate, live_call=True), cl, delay=0, say=lambda s: None, sleep=lambda x: None,
+                   clock=lambda: 0.0, approver=approver, note=notes.append)
+    assert any("deny_approval not recorded" in n for n in notes)
+
+
+def test_two_buyers_dry_run_prints_the_second_buyer(capsys):
+    assert bridge.main(["--dry-run", "--two-buyers"]) == 0
+    out = capsys.readouterr().out
+    assert "buyer2" in out and "second buyer" in out

@@ -39,6 +39,12 @@ The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real c
 `allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
 (`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its
 reason, and a DIVERGENCE line if its #1 is not the demo's winner.
+### Two buyers, one unit (`--two-buyers`)
+```
+python3 demo/bridge.py --two-buyers --reset   # after Vidyut's deal, a second SIM buyer (buyer-2) goes for the same single units
+```
+buyer-2 sets the same goal and the same sellers bid again, each with one unit. The unit Vidyut's round won is sold, so that line is skipped by the market with "sold out to an earlier round" and the next best bid wins. The bridge creates a `bridge-buyer-2.json` identity in `.tokens/` and gives it the buyer role for `buyer-2` only (owner `assign_role`, skipped with `--no-assign-roles`). A denied `--live-call` now also calls `deny_approval`, which releases the held unit at once. Rules: `docs/ARENA_RULES.md`.
+
 ### Real phone call inside the round (`--live-call`)
 ```
 python3 demo/bridge.py --live-call --reset                 # beat 4 places ONE real Cartesia call; names read from pay.voice_cartesia's env file

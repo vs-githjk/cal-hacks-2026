@@ -6,6 +6,7 @@ step by step, so /buyer and /market on the web app show Vidyut's round live.
     python3 demo/bridge.py --step-delay 3 --reset  # slower, and wipe the demo tables first (reset_demo)
     python3 demo/bridge.py --dry-run             # print the reducer calls, touch nothing
     python3 demo/bridge.py --live-call           # beat 4 places one real approval phone call; pays only if it approves
+    python3 demo/bridge.py --two-buyers          # then a second buyer (buyer-2, SIM) goes for the same single units: sold out to an earlier round
 
 Every write goes through an EXISTING reducer with the role token that reducer demands: the buyer token posts the
 goal and the need, the referee token opens and closes rounds and attaches Shield, claim-check and advocate results and moves
@@ -35,6 +36,8 @@ if str(ROOT) not in sys.path:
 from demo.common import MIRROR, SIM, Narrator, money  # noqa: E402
 
 DB_BUYER_ID = "vidyut"          # the id /buyer pairs with (web DEMO_BUYER) and the only one with a pairing code
+SECOND_BUYER_ID = "buyer-2"     # --two-buyers: a SIM buyer after the same single units (it has no screen and no pairing code)
+SECOND_ACTOR = "buyer2"
 BUYER_TOKEN, REFEREE_TOKEN = "buyer-vidyut.json", "referee.json"
 MANDATE_MINUTES = 30
 MIN_WINDOW_S = 6
@@ -143,7 +146,7 @@ def fresh_pending_mandate(m: dict) -> dict:
 
 
 def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: int = 1,
-         mandate: Optional[dict] = None, live_call: bool = False) -> list[Step]:
+         mandate: Optional[dict] = None, live_call: bool = False, two_buyers: bool = False) -> list[Step]:
     """Map a demo run (demo.run_demo.run_all) to reducer calls, in the order the stage story tells it.
     `mandate` (with `live_call`) replaces the run's beat-4 mandate with the pending one the real call will judge."""
     b = run["beats"]
@@ -215,7 +218,50 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
         r2 = b["5"]["round2"]
         steps += round_steps(round_no=2, need_id=need["id"], bids=r2["bids"], ranking=r2["ranking"], sellers=sellers,
                              shield=b2["shield"], claims=b2["claims"], cards=r2["cards"], delay=delay, pace=0.5)
+    if two_buyers:
+        steps += second_buyer_steps(goal, need, b2, delay=delay, round_no=3 if rounds >= 2 else 2)
     return steps
+
+
+def second_buyer_steps(goal: dict, need: dict, b2: dict, *, delay: float, round_no: int) -> list[Step]:
+    """--two-buyers (SIM): after Vidyut's deal, buyer-2 sets the same goal and the same sealed round runs again with the same sellers.
+    Every seller states one unit, so the unit Vidyut's round won is held or sold: that line is skipped with the market's own reason
+    'sold out to an earlier round' and the next best bid wins. Nothing here fakes the result; the market decides at the close."""
+    g_id, n_id = f"{goal['id']}-{SECOND_BUYER_ID}", f"{need['id']}-{SECOND_BUYER_ID}"
+    items = [{"sku_spec": i["sku_spec"], "condition": " or ".join(goal["items"][0].get("allowed_conditions") or [goal["items"][0]["condition"]])
+              if i["part"] == "gpu" else i["condition"],
+              "variant": i["variant"], "quantity": i["quantity"], "skipped_owned_part_id": ""} for i in goal["items"]]
+    n = need["items"][0]
+    sellers = {s["id"]: s for s in b2["sellers"]}
+    steps = [
+        Step(SECOND_ACTOR, "post_goal",
+             {"id": g_id, "buyer_id": SECOND_BUYER_ID, "type": goal["type"], "cap": goal["cap"], "deadline": goal["deadline"],
+              "po_number": "", "origin": SIM, "items": items},
+             pause=True, say=f"a second buyer ({SECOND_BUYER_ID}, SIM) sets the same goal: one unit of the same part"),
+        Step(SECOND_ACTOR, "post_need",
+             {"id": n_id, "buyer_id": SECOND_BUYER_ID, "goal_id": g_id, "delivery_window": need["delivery_window"],
+              "spend_limit": need["spend_limit"], "consent": need["consent"], "auction_window_s": need["auction_window_s"], "origin": SIM,
+              "items": [{"sku_spec": n["sku_spec"], "condition": n["condition"], "allowed_conditions": list(n.get("allowed_conditions") or []),
+                         "variant": n["variant"], "quantity": n["quantity"], "unit": n["unit"]}]},
+             pause=True, say="the second need goes to the same sellers, who each have one unit"),
+    ]
+    steps += round_steps(round_no=round_no, need_id=n_id, bids=b2["bids"], ranking=b2["ranking"], sellers=sellers, shield=b2["shield"],
+                         claims=b2["claims"], cards=b2["cards"], delay=delay, pace=0.5)
+    return steps
+
+
+def second_buyer_report(rows: list, round_id: str) -> list[str]:
+    """Console lines from the second buyer's round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed, reasons, ...):
+    who was skipped as sold out, and who won instead."""
+    mine = [r for r in rows if r[1] == round_id]
+    out = []
+    for r in sorted(mine, key=lambda r: r[4]):
+        reasons = r[7] if len(r) > 7 and isinstance(r[7], list) else []
+        if any("sold out to an earlier round" in x for x in reasons):
+            out.append(f"{SECOND_BUYER_ID}'s round: {r[4]} is out: sold out to an earlier round")
+    ranked = sorted((r for r in mine if r[5]), key=lambda r: r[5])
+    out.append(f"{SECOND_BUYER_ID}'s round winner: {ranked[0][4]} {money(ranked[0][6])}" if ranked else f"{SECOND_BUYER_ID}'s round: no bid was ranked")
+    return out
 
 
 # What the market cannot take today (printed at the end of every run; mirrored in demo/README.md for Lane B).
@@ -242,13 +288,22 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
     step and ends the run there (the mandate stays pending, nothing is charged). Returns the approval outcomes."""
     deadline: Optional[float] = None
     outcomes: list[dict] = []
+    mandate_hash = ""
     for s in steps:
         say(s)
+        if s.reducer == "create_mandate" and s.actor in clients:
+            mandate_hash = s.args.get("hash", "")
         if s.gate == "approval_call" and approver is not None:
             outcome = approver(s)
             outcomes.append(outcome)
             if not outcome["approved"]:
                 note(f"live call DENIED ({outcome['reason']}): no approval and no payment are recorded; the mandate stays pending")
+                if mandate_hash and "referee" in clients:
+                    try:   # the held unit goes back on sale at once (it would also expire after 2 minutes)
+                        clients["referee"].call("deny_approval", mandate_hash=mandate_hash, reason=str(outcome["reason"] or "denied"))
+                        note("deny_approval recorded: the unit held for this deal is released")
+                    except RuntimeError as e:
+                        note(f"deny_approval not recorded ({e}); the hold expires by itself after 2 minutes")
                 break
             note(f"live call APPROVED (call {outcome['call_id']}): the referee records the approval, then the payment")
         client = clients[s.actor]
@@ -336,6 +391,12 @@ def assign_seller_roles(seller_ids: list[str], clients: dict, spacetime: str, se
                        check=True, capture_output=True)
 
 
+def assign_buyer_role(buyer_id: str, client: Any, spacetime: str, server: str, db: str) -> None:
+    """Owner step for --two-buyers: the SIM second buyer's own identity gets the buyer role for its own id only."""
+    subprocess.run([spacetime, "call", "-s", server, db, "assign_role", f'"0x{client.identity}"', '"buyer"', f'"{buyer_id}"'],
+                   check=True, capture_output=True)
+
+
 def find_tokens_dir(explicit: Optional[str]) -> Path:
     cands = [Path(explicit)] if explicit else [Path(os.environ["BRIDGE_TOKENS_DIR"])] if os.environ.get("BRIDGE_TOKENS_DIR") else []
     cands += [ROOT / ".tokens", ROOT.parent / "lane-d-launcher" / ".tokens", ROOT.parent / "lane-d" / ".tokens"]
@@ -357,6 +418,8 @@ def main(argv: Optional[list] = None) -> int:
                     help="beat 4 places ONE real Cartesia phone call to APPROVAL_CALL_TO; approval and payment are recorded only if the call approves")
     ap.add_argument("--env-file", type=Path, default=None,
                     help="where the CARTESIA_* names are read from for --live-call (default: pay.voice_cartesia.DEFAULT_ENV_FILE)")
+    ap.add_argument("--two-buyers", action="store_true",
+                    help=f"after the run, a second SIM buyer ({SECOND_BUYER_ID}) goes for the same single units: its round skips a unit an earlier round won")
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
     ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
@@ -369,7 +432,8 @@ def main(argv: Optional[list] = None) -> int:
     env = {**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else None
     run = run_all(say=Narrator(False), use_stripe=args.stripe, env=env)
     live_mandate = fresh_pending_mandate(run["beats"]["4"]["mandate"]) if args.live_call else None
-    steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, mandate=live_mandate, live_call=args.live_call)
+    steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, mandate=live_mandate, live_call=args.live_call,
+                 two_buyers=args.two_buyers)
     out = Narrator(True)
     out.note("Tech Bazaar screen bridge: demo beats (real lane code) -> existing SpacetimeDB reducers")
     out.note(f"{len(steps)} reducer calls, {args.step_delay} s between visible steps. Open /buyer (pair as {args.buyer_id}) and /market.")
@@ -447,10 +511,14 @@ def _run_live(args, steps, run, out, say, approver=None) -> int:
     seller_ids = sorted({s.actor.split(":", 1)[1] for s in steps if s.actor.startswith("seller:")})
     for sid in seller_ids:
         clients[f"seller:{sid}"] = Market(token_file=str(seller_tokens / f"bridge-{sid}.json"))
+    if any(s.actor == SECOND_ACTOR for s in steps):
+        clients[SECOND_ACTOR] = Market(token_file=str(seller_tokens / f"bridge-{SECOND_BUYER_ID}.json"))
     if not args.no_assign_roles:
         spacetime = shutil.which("spacetime") or str(Path.home() / ".local" / "bin" / "spacetime")
         from stdb import DB
         assign_seller_roles(seller_ids, clients, spacetime, args.server, DB)
+        if SECOND_ACTOR in clients:
+            assign_buyer_role(SECOND_BUYER_ID, clients[SECOND_ACTOR], spacetime, args.server, DB)
     if args.reset:
         out.note("reset_demo (referee): clearing the demo tables")
         clients["referee"].call("reset_demo")
@@ -468,6 +536,10 @@ def _run_live(args, steps, run, out, say, approver=None) -> int:
         rows = clients["referee"].sql("SELECT * FROM round_result")
         for line in compare_to_db(rows, run):
             out.note(line)
+        if args.two_buyers:
+            second = next(s.args["round_id"] for s in steps if s.reducer == "open_round" and s.args["need_id"].endswith(SECOND_BUYER_ID))
+            for line in second_buyer_report(rows, second):
+                out.note(line)
     except Exception as e:  # reading back is a courtesy; the run itself succeeded
         out.note(f"could not read round_result back ({type(e).__name__})")
     out.blank()
