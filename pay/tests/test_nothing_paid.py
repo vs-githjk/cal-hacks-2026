@@ -39,3 +39,22 @@ def test_there_is_no_typed_approval_path():
     assert not hasattr(approval.ApprovalSession, "approve_typed")
     for f in PAY.glob("*.py"):
         assert "approve_typed" not in f.read_text(encoding="utf-8"), f.name
+
+
+def test_the_approval_session_has_exactly_the_known_public_methods():
+    """#222: a new public method on the session (a second way to approve) fails here first."""
+    public = sorted(n for n in dir(approval.ApprovalSession) if not n.startswith("_"))
+    assert public == ["approve", "begin_listening", "silence", "start_call", "terminal", "tick", "to_record"]
+
+
+def test_no_code_in_pay_demo_or_agents_calls_or_defines_a_typed_approval():
+    """#222: scan pay/, demo/ and agents/ for a call or definition of approve_typed (the bridge may name it in text,
+    to refuse a market that still has it, but must never call it)."""
+    import re
+    root = PAY.parent
+    calls = re.compile(r"""(?:def\s+approve_typed\b|\.call\(\s*["']approve_typed["']|\bapprove_typed\()""")   # a real call, not the name in a sentence)
+    for folder in ("pay", "demo", "agents"):
+        for f in (root / folder).rglob("*.py"):
+            if "tests" in f.parts or f.name.startswith("test_"):
+                continue
+            assert not calls.search(f.read_text(encoding="utf-8")), f

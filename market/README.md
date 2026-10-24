@@ -47,6 +47,8 @@ cd ../web && npm ci && npm run dev
 
 `spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes.
 
+For a rehearsal, run or project the demo, not `npm run dev`: `npm run demo --prefix web` (`next build && next start -p 3100`) so the screen is a production build with no dev indicator or Insight badge.
+
 ## Who may call what (roles)
 
 Every state-changing reducer checks the caller first (`requireRole` in `spacetimedb/src/market.ts`). Roles live in a private `role` table: **buyer** (bound to a buyer_id), **seller** (bound to a seller_id) or **referee** (the market service, Shield and the advocate relay). Only the module **owner**, the identity that published it, grants roles. The deadline scheduler runs as the module itself.
