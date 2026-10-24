@@ -6,13 +6,12 @@ Checks what a seller says about a listing against the live listing page, and ret
 Built for Tech Bazaar (Cal Hacks 2026). Source: https://github.com/vs-githjk/cal-hacks-2026 (`data/claim_check/`).
 
 ## What it checks
-Against the page's schema.org Product JSON-LD (or the listing JSON on our SIM test pages):
-- **Price** and **was price** (a "was $X" claim is checked against the price history you pass in)
+On real store pages, against the page's schema.org Product JSON-LD:
+- **Price**
 - **Condition** (new, open-box, refurbished, used)
 - **Stock** (in stock, out of stock)
-- **Returns** window and CPU **socket**
 
-Not checked yet: shipping and warranty claims (they come back `unverified`).
+Not checked on real store pages yet: was-price, returns and socket claims are only checked on our SIM test pages (their listing JSON); on real store pages they come back `unverified`. Shipping and warranty are not checked at all yet. The Actor has no price-history input.
 
 ## Input
 ```json
@@ -33,6 +32,10 @@ Results on real store pages are MIRROR (a dated read of a public page). Results 
 `./bundle.sh` copies the checker into `src/data/` (gitignored), then push this folder.
 
 ## Example run on a real store page (MIRROR, 2026-10-24 07:31 UTC)
+Apify run `4kespJWmbkHwo0FIA` (build `vIlfeUdPfGEYGPbi1`). Listings:
+- Canada Computers: https://www.canadacomputers.com/en/powered-by-nvidia/269441/msi-rtx-5070-ti-16g-shadow-3x-oc-gddr7-triple-fans-rtx-5070-ti-16g-shadow-3x-oc.html
+- Micro Center: https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card
+
 Run on Apify against a Canada Computers listing (MSI RTX 5070 Ti 16G Shadow 3X OC, prices in CAD) and one Micro Center listing. The claims are test claims we wrote, not claims made by the stores.
 
 | claim | page | result | evidence |
