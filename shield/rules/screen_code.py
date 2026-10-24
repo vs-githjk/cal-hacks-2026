@@ -12,10 +12,6 @@ from shield.rules.base import BLOCK, Rule, rx, seller_side
 _HONEST_CODE = rx(r"\b(?:error|fault|post|boot|beep|bios|qr|bar|promo|promotional|coupon|discount|tracking|zip|postal|area|"
                   r"product|model|serial|part|sku|order|reference|confirmation\s+number|color|colour|source|access\s+point)\s+"
                   r"(?:codes?|numbers?|words?)\b")
-# Honest only while the code stays with the buyer: "give the delivery code to the driver" passes, but "send me the license
-# code on your screen" names the seller as the destination, and the seller picks the label, so it is read as an ask.
-_SOFT_HONEST = rx(r"\b(?:delivery|pickup|pick-?up|locker|license|licence|activation|download|install(?:ation)?)\s+(?:codes?|keys?)\b")
-_TO_ME = rx(r"\b(?:me|us|our|we|here|chat|reply|replies|dm|e-?mail|notes?|form|portal|checkout|comments?|thread|listing)\b")
 _NOUN = rx(r"\b(?:words?|codes?|phrase|passphrase|pass\s+phrase|pair|digits|numbers|letters|pin)\b")
 _DEVICE = r"(?:screen|display|device|phone|tablet|app|browser|monitor|laptop|computer)"
 _THEIRS = r"(?:your|ur|the\s+buyer'?s?|the\s+owner'?s?|their|his|her)"
@@ -49,8 +45,7 @@ _CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|wor
            r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
 # A hardware pairing sentence ("enter the PIN on your phone to pair the headset") is the buyer typing a code into
 # their own device. It is skipped only when it names no approval credential and nothing sends the code to the seller.
-_HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b"
-               )
+_HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
 _TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
                 r"|give|what|whats|relay|whisper|aloud|include|list|write|form|notes?|comments?|portal|checkout|gift|listing"
                 r"|field|website|site|cart|account|seller'?s?|box|below|above|review|feedback|reply|instructions|q&a)\b"
@@ -80,8 +75,6 @@ def check(doc, ctx):
     text = _HONEST_CODE.sub(lambda m: " " * len(m.group(0)), doc.norm)
     for m in _SENTENCE.finditer(text):
         s = m.group(0)
-        if not _TO_ME.search(s):
-            s = _SOFT_HONEST.sub(_blank, s)
         boot = _BOOT.search(s)
         noun = _NOUN.search(s)
         strong = noun and _STRONG.search(s) and ((not _REGULATORY.search(s) and not boot) or _REQUIRE.search(s))
