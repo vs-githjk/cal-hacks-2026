@@ -29,7 +29,7 @@ Built at Cal Hacks 13.0 by the Tech Bazaar team.
 
 ## Summary
 
-Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves on a phone call.
+Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves (a chat APPROVE in this agent today, a phone call in the live demo).
 
 ## Features
 
