@@ -97,9 +97,9 @@ SPOOF = [
 # handled per path. Ceiling asks (_ASK_CEILING) already need owner, buyer or walk-away wording, which no noun use
 # has, so the bare verbs count there. Secret asks (_ASK_SECRET) have only the word "password" to go on, so
 # "state" and "name" count only after a cue word ("please state", "could you name"), or at a sentence start (or
-# after a colon) when a possessive comes between the verb and the secret ("State your password", "Name the card
-# number you hold"). "State: like new, no password", "Name, password and serial number are on the sticker",
-# "Name/password on the sticker", "State unknown, password not tested" have no possessive and stay honest.
+# after a colon) when a determiner-led secret follows ("State your password", "Name the card number you hold",
+# "State their card number"). "State: like new, no password", "Name, password and serial number are on the sticker",
+# "Name/password on the sticker", "State unknown, password not tested" have no determiner and stay honest.
 _VERBS = (r"tell|share|reveal|disclose|let\s+(?:us|me)\s+know|confirm|what(?:'s|\s+is|\s+are)|how\s+(?:much|high)|provide|send|"
           r"give|reply\s+with|divulge|indicate|specify|say|paste|enter|submit")
 _CUE = r"(?:please|kindly|just|then|to|must|should|will|would\s+you|could\s+you|can\s+you)\s+(?:please\s+)?"
@@ -114,9 +114,17 @@ _SECRET = (r"(?:card\s+number|cvv|cvc|security\s+code|password|passcode|api\s+ke
            r"seed\s+phrase|recovery\s+phrase|credentials|one-?time\s+(?:code|password)|otp|routing\s+number|social\s+security)")
 _CHECKOUT = rx(r"\b(?:check-?out|payment\s+page|secure\s+(?:form|page|payment)|stripe)\b")
 _ASK_CEILING = rx(r"\b" + _ASK_CEILING_VERB + r"\b[^.\n]{0,60}?" + _PRIVATE_CEILING + r"|\b" + _PRIVATE_CEILING + r"\b[^.\n]{0,40}?\b(?:please|so\s+we|so\s+i)\b")
+# Imperative secret ask at a sentence start: the verb, a short aside, then a determiner-led secret ("State the
+# 16-digit card number", "State, for our records, their card number", "Name any password you were given"). A noun
+# use is ruled out three ways: a label shape right after the verb (colon, slash, ampersand, and/or/is/on/...), a
+# listing word in the aside (the aside may not hold and/or/on/is/printed/set...), and a secret that is itself the
+# subject of is/are/was ("the password is on the sticker").
+_NOUN_AFTER = r"(?!\s*(?:[:/&]|(?:and|or|is|are|was|were|on|of|must|field|tag|label)\b))"
+_ASIDE_WORD = r"(?!(?:and|or|then|set|change|on|of|is|are|was|were|printed|by|at)\b)[\w'-]+,?"
+_DET = r"(?:the|your|their|its|his|her|our|my|any|an?|\w+['\u2019]s|\w+s['\u2019])"
 _ASK_SECRET = rx(r"\b" + _ASK_SECRET_VERB + r"\b[^.\n]{0,60}?\b" + _SECRET + r"\b|"
-                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b[^.\n]{0,40}?\b(?:your|you\s+hold|(?:owner|buyer)(?:'s|s')?)\b[^.\n]{0,40}?\b"
-                 + _SECRET + r"\b|(?:^|[.!?;:\n])\s*(?:state|name)\s+the\s+(?:[\w-]+\s+){0,2}" + _SECRET + r"\b")
+                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b" + _NOUN_AFTER + r"(?:\s*,)?(?:\s+" + _ASIDE_WORD + r"){0,5}\s+" + _DET
+                 + r"\s+(?:[\w'-]+\s+){0,3}" + _SECRET + r"\b(?!\s+(?:is|are|was|were)\b)")
 
 
 def check_ask(doc, ctx):
