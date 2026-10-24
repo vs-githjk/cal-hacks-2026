@@ -171,6 +171,25 @@ describe('migration-safe bid line metadata', () => {
     expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'meta-bid', lineMetaJson: prettyValue }))).not.toThrow();
   });
 
+  it('accepts catalog scalar arrays and canonicalizes reordered metadata objects for retries after cutoff', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('catalog-meta', [line(780)])));
+    const original = JSON.stringify([{
+      lineIndex: 0, shipping: 12, listingId: 'https://example.test/gpu', listingHash: 'c'.repeat(64),
+      source: 'catalog', snapshotId: 'catalog-1', provenance: { origin: 'SIM', source: 'catalog' },
+      attrs: { power_connector: ['8pin', 1], chipset: 'RTX', category: 'gpu' },
+    }]);
+    run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'catalog-meta', lineMetaJson: original }));
+    advance(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const reordered = JSON.stringify([{
+      attrs: { category: 'gpu', chipset: 'RTX', power_connector: ['8pin', 1] },
+      provenance: { source: 'catalog', origin: 'SIM' }, snapshotId: 'catalog-1', source: 'catalog',
+      listingHash: 'c'.repeat(64), listingId: 'https://example.test/gpu', shipping: 12, lineIndex: 0,
+    }]);
+    expect(() => run(A, (ctx) => m.setBidLineMeta(ctx, { bidId: 'catalog-meta', lineMetaJson: reordered }))).not.toThrow();
+  });
+
   it('keeps a partial bid out of authoritative review and settlement when the need has multiple items', () => {
     run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ items: [
       { skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' },

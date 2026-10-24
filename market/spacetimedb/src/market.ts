@@ -429,16 +429,30 @@ function parseLineMeta(raw: string, lineCount: number): { rows?: LineMeta[]; rea
     if (typeof row.snapshotId !== 'string' || row.snapshotId.length > 256) return { reason: 'snapshotId must be a bounded string' };
     if (!row.provenance || typeof row.provenance !== 'object' || Array.isArray(row.provenance)
         || !row.attrs || typeof row.attrs !== 'object' || Array.isArray(row.attrs)) return { reason: 'provenance and attrs must be objects' };
+    const safeScalar = (val: unknown) => val === null || typeof val === 'boolean'
+      || (typeof val === 'number' && Number.isFinite(val))
+      || (typeof val === 'string' && val.length <= 512);
     const safeObject = (obj: Record<string, unknown>) => Object.entries(obj).every(([key, val]) =>
-      key.length > 0 && key.length <= 64 && (typeof val === 'string' ? val.length <= 512
-        : typeof val === 'number' ? Number.isFinite(val) : typeof val === 'boolean' || val === null
-          || (Array.isArray(val) && val.length <= 32 && val.every((x) => typeof x === 'string' && x.length <= 128))));
+      key.length > 0 && key.length <= 64 && (safeScalar(val)
+        || (Array.isArray(val) && val.length <= 32 && val.every((item) => safeScalar(item)
+          && (typeof item !== 'string' || item.length <= 128)))));
     if (!safeObject(row.provenance as Record<string, unknown>) || !safeObject(row.attrs as Record<string, unknown>)) {
       return { reason: 'provenance or attrs contains an unsupported value' };
     }
     seen.add(row.lineIndex as number);
   }
-  return { rows: [...value].sort((a, b) => (a as LineMeta).lineIndex - (b as LineMeta).lineIndex) };
+  const canonicalObject = (obj: Record<string, unknown>) => Object.fromEntries(
+    Object.entries(obj).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
+  const rows = value.map((item) => {
+    const row = item as LineMeta;
+    return {
+      lineIndex: row.lineIndex, shipping: row.shipping, listingId: row.listingId, listingHash: row.listingHash,
+      source: row.source, snapshotId: row.snapshotId,
+      provenance: canonicalObject(row.provenance), attrs: canonicalObject(row.attrs),
+    };
+  }).sort((a, b) => a.lineIndex - b.lineIndex);
+  return { rows };
 }
 
 /** Seller-owned, append-only metadata step. A bid without this complete metadata remains ineligible. */
