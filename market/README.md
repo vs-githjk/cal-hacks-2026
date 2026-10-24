@@ -74,7 +74,7 @@ joe.call("post_need", id="need-1", buyer_id="joe", goal_id="goal-joe-gpu",
          delivery_window="by Friday", spend_limit=800, consent=True,
          auction_window_s=15, origin="SIM",
          items=[{"sku_spec": "gpu-rtx5070ti-retail", "condition": "new",
-                 "variant": "retail", "quantity": 1, "unit": "each"}])
+                 "allowed_conditions": ["new"], "variant": "retail", "quantity": 1, "unit": "each"}])
 ref.call("open_round", round_id="round-1", need_id="need-1", window_s=15)
 seller.call("set_floor", sku_spec="gpu-rtx5070ti-retail", floor=700)
 seller.call("place_bid", id="bid-a", round_id="round-1", persona="Seller A",
@@ -94,15 +94,16 @@ Pass every name in snake_case. SpacetimeDB's HTTP API wants top-level reducer ar
 | `assign_role(identity, role, subject_id)` | owner | role is buyer, seller or referee |
 | `pair_buyer_screen(buyer_id, code)` | a screen with no role, or a buyer | demo sign-in (SIM); a seller or referee is refused |
 | `set_floor(sku_spec, floor)` | seller | private; only the seller reads its floor |
-| `post_need(...)`, `post_goal(...)` | buyer, for its own buyer_id | goal follows Lane A's Goal contract; starts ACTIVE, reserved 0 |
+| `post_need(...)`, `post_goal(...)` | buyer, for its own buyer_id | goal follows Lane A's Goal contract; starts ACTIVE, reserved 0. Each need item carries `allowed_conditions` (empty means only its `condition`) |
 | `open_round(round_id, need_id, window_s)` | referee | schedules the auto close at the deadline |
 | `place_bid(...)` | seller, as its own seller_id | sealed; anti-snipe extends; quantity must equal the need line; below-floor bids are recorded as rejected and never rank |
-| `close_round(round_id)` | referee after the deadline (the scheduler closes it anyway) | ranks with `rules/scoring`; writes `round_result` |
+| `close_round(round_id)` | referee after the deadline (the scheduler closes it anyway) | ranks with `rules/scoring`; writes `round_result`. A bid's lines for one SKU are alternatives: the cheapest line whose condition is in the need item's `allowed_conditions` (empty means only `condition`) ranks, never the sum. A bid over `need.spend_limit` is out with `over_cap` (the cap itself is never shown). The score is quality-adjusted landed price (`QUALITY` in `config.ts`, PROPOSED: open-box +4 percent, refurbished +8, used +15, no 30-day-returns perk +2); `landed` stays the plain price |
 | `attach_verdict(bid_id, verdict, rule_ids, origin)` | referee (Shield) | quarantine or block disqualifies |
 | `attach_claim_check(bid_id, claim, check, evidence_url, origin)` | referee (claim check relay) | `false` disqualifies; `verified` breaks ties |
+| `attach_advocate_card(bid_id, recommendation, rule_id, text, source_url, origin)` | referee (advocate relay) | recommendation is `buy`, `caution` or `veto`. A veto must cite `source_url` and disqualifies the bid in the round result (rule, text and source in the reason); it writes an `advocate_card` floor event (rule id only, no seller, text or price) and a `veto` line on the buyer's feed. Refused once the round is closed |
 | `create_mandate(...)` | the mandate's buyer, or the referee | MOCK shape until the Mandate contract is wired in. Inside the buyer's allowance it auto-approves (method `allowance`) with a receipt; otherwise the deal waits for the call. `requested_by` names an IT seat that asked for it |
 | `record_approval(mandate_hash, method, approved_by)` | the mandate's buyer, or the referee relaying that buyer's code | approved_by must equal the mandate's buyer and must not be the requester; a second approval is refused and shown |
-| `record_payment(mandate_hash, payment_ref, amount)` | referee | INVARIANT-1: refused without an approval for the same hash |
+| `record_payment(mandate_hash, payment_ref, amount, mode)` | referee | INVARIANT-1: refused without an approval for the same hash. `mode` is `sim` (our stub; label "SIM stub, no money moved", origin SIM) or `stripe_test` (Stripe's test API; label "Stripe test mode", origin LIVE) |
 | `record_receiving(id, order_id, sku_spec, photo_url, expected_spec_id, result, reasons, checked_by, origin)` | the deal's buyer | needs a paid deal; a clean check raises the allowance one step (once per deal); a failed one opens a credit request |
 | `reset_demo()`, `seed_demo()` | owner or referee | SIM data only; roles survive a reset |
 

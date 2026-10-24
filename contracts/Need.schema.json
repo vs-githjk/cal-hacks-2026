@@ -21,6 +21,13 @@
       "type": "string",
       "enum": ["new", "open-box", "refurbished", "used"]
      },
+     "allowed_conditions": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": ["new", "open-box", "refurbished", "used"]
+      }
+     },
      "variant": {
       "type": "string"
      },

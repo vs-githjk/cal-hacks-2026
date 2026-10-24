@@ -30,7 +30,7 @@ def refused(who, reducer, **args):
 
 joe.call("post_need", id=need, buyer_id="joe", goal_id="goal-joe-gpu", delivery_window="by Friday", spend_limit=800,
          consent=True, auction_window_s=WINDOW, origin="SIM",
-         items=[{"sku_spec": GPU, "condition": "new", "variant": "retail", "quantity": 1, "unit": "each"}])
+         items=[{"sku_spec": GPU, "condition": "new", "allowed_conditions": ["new"], "variant": "retail", "quantity": 1, "unit": "each"}])
 ref.call("open_round", round_id=rnd, need_id=need, window_s=WINDOW)
 for s, floor in [("seller-a", 700), ("seller-b", 650), ("seller-c", 690)]:
     agent[s].call("set_floor", sku_spec=GPU, floor=floor)
@@ -54,10 +54,10 @@ mh = f"mh-{run}"
 ref.call("create_mandate", hash=mh, id=f"mdt-{run}", deal_id=f"{rnd}-seller-c", buyer_id="joe", amount=745, payee="seller-c",
          expiry_minutes=10, nonce=run, requested_by="", origin="SIM")
 print("allowance before:", joe.sql("SELECT ladder_step, per_purchase_limit FROM my_allowance"))
-print("pay before approval:", refused("referee", "record_payment", mandate_hash=mh, payment_ref="pi_sim", amount=745))
+print("pay before approval:", refused("referee", "record_payment", mandate_hash=mh, payment_ref="pi_sim", amount=745, mode="sim"))
 print("seller-c approves own deal:", refused("seller-c", "record_approval", mandate_hash=mh, method="typed_code", approved_by="joe"))
 joe.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="joe")
-ref.call("record_payment", mandate_hash=mh, payment_ref="pi_sim_" + run, amount=745)
+ref.call("record_payment", mandate_hash=mh, payment_ref="pi_sim_" + run, amount=745, mode="sim")
 ref.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="joe")
 print("refused attempts shown:", ref.sql("SELECT kind, reason FROM rejected_attempt"))
 
