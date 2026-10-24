@@ -187,14 +187,14 @@ Nothing is measured yet. These are the methods; results go here with the date an
 
 ## Team and lanes
 
-> **Team: add your names and GitHub handles.**
+Hour-by-hour plan: [docs/HOUR_PLAN.md](docs/HOUR_PLAN.md).
 
 | Lane | Owns | Member |
 |---|---|---|
-| A: Agents | Buyer, advocate and supplier agents; ASI:One chat; Payment Protocol; Interactive Cards | *to add* |
-| B: Market and floor | SpacetimeDB market, owner and supplier views, 3D floor, voices | *to add* |
-| C: Data and truth | Apify and Bright Data mirrors, USDA baseline, claim checks, measured numbers | *to add* |
-| D: Pay and trust | Shield, Visa and Stripe, Trusted Agent Protocol, CRS, wind tunnel | *to add* |
+| A: Agents | Buyer, advocate and supplier agents; ASI:One chat; Payment Protocol; Interactive Cards | Abhinav |
+| B: Market and floor | SpacetimeDB market, owner and supplier views, 3D floor, voices | Vedant |
+| C: Data and truth | Apify and Bright Data mirrors, USDA baseline, claim checks, measured numbers | Anoop |
+| D: Pay and trust | Shield, Visa and Stripe, Trusted Agent Protocol, CRS, wind tunnel | Vidyut |
 
 ## Status
 
