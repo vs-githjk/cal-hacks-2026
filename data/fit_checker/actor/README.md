@@ -95,6 +95,10 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~pc-build-compatibility
   -d '{"parts": {"gpu": {"name": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC"}, "case": {"name": "NZXT H5 Flow", "max_gpu_length_mm": 365}}}'
 ```
 
+## Pricing
+
+**$0.005 per build checked.** A build is charged only when at least one rule ran. A build with no pair of parts to compare, or one we could not read, is free. A restarted run never charges a build twice, and the Actor stops at your spending limit. Platform usage is included.
+
 ## FAQ
 
 **Why "uncertain" instead of a best guess?** A wrong "fits" costs a return. If a spec is missing, we say so and name it in the reason, so you know exactly what to look up.

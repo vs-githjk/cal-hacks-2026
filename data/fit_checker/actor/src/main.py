@@ -1,9 +1,17 @@
-"""Apify Actor entry: check each PC build and write one dataset row per rule (pass, fail or uncertain, with maker sources)."""
+"""Apify Actor entry: check each PC build and write one dataset row per rule (pass, fail or uncertain, with maker sources).
+
+Pricing (pay-per-event): one "build-checked" event per build that ran at least one rule. A build with no pair of parts to
+compare, or one we could not read, is free. A failed charge (or a run without pay-per-event pricing) is logged and never
+fails the run. The next build index is saved before the charge, so a restarted run never charges a build twice.
+"""
 import asyncio
 
 from apify import Actor
 
 from src.data.fit_checker.build_check import check_build
+
+EVENT = "build-checked"
+STATE_KEY = "STATE_next_build"
 
 
 def builds_from(inp: dict) -> list:
@@ -36,15 +44,37 @@ def summary(results: list) -> str:
     return f"{len(results)} builds: {n['pass']} pass, {n['fail']} fail, {n['uncertain']} uncertain"
 
 
+async def run_builds(builds, push, charge, log=print, get_state=None, set_state=None) -> list:
+    """Check each build, push its rows, charge one event per build that ran a rule. Stops at the user's charge limit."""
+    start = int((await get_state()) or 0) if get_state else 0
+    results = []
+    for index in range(start, len(builds)):
+        r = check_one(builds[index])
+        results.append(r)
+        await push(rows_of(r))
+        if set_state:
+            await set_state(index + 1)
+        if not r["checks"]:
+            continue
+        try:
+            res = await charge(event_name=EVENT, count=1)
+        except Exception as e:  # not on pay-per-event pricing, or the charge failed: log it and go on
+            log(f"charge skipped ({type(e).__name__}): {e}")
+            continue
+        if getattr(res, "event_charge_limit_reached", False):
+            log("the user's charge limit for build-checked was reached; stopping")
+            break
+    return results
+
+
 async def main():
     async with Actor:
         builds = builds_from(await Actor.get_input())
         if not builds:
             await Actor.set_status_message("No build given: add your parts under Your build", is_terminal=True)
             return
-        results = [check_one(b) for b in builds]
-        for r in results:
-            await Actor.push_data(rows_of(r))
+        results = await run_builds(builds, Actor.push_data, Actor.charge, log=Actor.log.warning,
+                                   get_state=lambda: Actor.get_value(STATE_KEY), set_state=lambda v: Actor.set_value(STATE_KEY, v))
         await Actor.set_value("OUTPUT", {"summary": summary(results), "builds": results})
         await Actor.set_status_message(summary(results), is_terminal=True)
 
