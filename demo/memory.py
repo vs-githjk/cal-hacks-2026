@@ -17,6 +17,7 @@ import argparse
 import json
 import math
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -26,6 +27,8 @@ OUT_DIR = Path(__file__).resolve().parent / "out"
 ORIGINS = ("LIVE", "MIRROR", "SIM")
 BANDS = ("within5", "within10", "within20", "over20")
 SAMPLE = "sample-run.json"
+MAX_FILE_BYTES = 5_000_000   # a bigger snapshot or run file is an error source, never read (#273)
+SNAPSHOT_BUDGET_S = 30.0     # the whole market read; one hanging query past it is the most a rehearsal waits
 EMPTY_NOTE = "no demo runs or market snapshots recorded yet"
 
 # owner SQL, explicit columns so positional rows map to names (snake_case, as `spacetime sql` prints them)
@@ -52,6 +55,13 @@ def _num(x: Any) -> float:
     if not math.isfinite(v):
         raise ValueError(f"not a finite number: {x!r}")
     return v
+
+
+def _same_amount(a: Any, b: Any) -> bool:
+    """Both real numbers (never a bool) within half a cent."""
+    if isinstance(a, bool) or isinstance(b, bool) or not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+        return False
+    return abs(a - b) <= 0.005   # "<=" is False for nan
 
 
 def _money(x: float) -> str:
@@ -92,9 +102,12 @@ def _demo_entries(run: dict, ref: str) -> list[dict]:
     names = {b["seller_id"]: b.get("persona") or b["seller_id"] for b in a.get("bids") or []}
     m, rec, charge = a.get("mandate") or {}, a.get("approval_record") or {}, a.get("charge") or {}
     paid_cents = charge.get("amount_cents") if isinstance(charge, dict) else None
-    matches = (m and m.get("hash") and rec.get("mandate_hash") == m.get("hash")
+    # the approval names this mandate and read back its payee and amount; the charge is for this mandate at its amount (#273)
+    matches = (m and m.get("hash") and rec.get("mandate_hash") == m.get("hash") and rec.get("mandate_id") == m.get("id")
+               and rec.get("payee_read_back") == m.get("payee") and _same_amount(rec.get("amount_read_back"), m.get("amount"))
                and str(charge.get("status") or "").lower().startswith("succeeded") and charge.get("idempotency_key") == f"mandate:{m.get('hash')}"
-               and isinstance(paid_cents, int) and paid_cents == round(_num(m["amount"]) * 100))
+               and isinstance(paid_cents, int) and not isinstance(paid_cents, bool) and _num(m["amount"]) > 0
+               and paid_cents == round(_num(m["amount"]) * 100))
     if m and rec.get("result") == "approved" and charge and matches:   # approved, and charged for this mandate at its amount
         mode = str(charge.get("mode") or "").strip().lower()
         pay_mode = "sim" if mode.startswith("sim") else "stripe_test" if mode.startswith("stripe test") else "none"
@@ -175,7 +188,7 @@ def from_market(sql: Callable[[str], list], ref: str, stats: Optional[dict] = No
         if h not in payments:
             continue                                    # a mandate with no payment row is not a purchase
         _, ref_, paid, at, mode = payments[h]
-        if h not in approvals or not abs(float(paid) - float(amount)) <= 0.005:   # "not <=" also refuses nan
+        if h not in approvals or not abs(float(paid) - float(amount)) <= 0.005 or not float(amount) > 0:   # "not" also refuses nan
             stats["dropped"] = stats.get("dropped", 0) + 1   # paid with no approval row, or a different amount: not shown
             continue
         bid_id = deal[5:] if deal.startswith("deal-") else deal
@@ -203,13 +216,26 @@ def from_market(sql: Callable[[str], list], ref: str, stats: Optional[dict] = No
     return out
 
 
-def snapshot(sql: Callable[[str], list], out_dir: Path, *, db: str, now: Optional[str] = None) -> Path:
+def _budgeted(sql: Callable[[str], list], budget_s: float, clock: Callable[[], float]) -> Callable[[str], list]:
+    """sql that refuses to start a query once budget_s has passed, so a hanging `spacetime sql` costs one timeout at most
+    past the budget instead of one per table (#273)."""
+    deadline = clock() + budget_s
+
+    def run(query: str) -> list:
+        if clock() >= deadline:
+            raise TimeoutError(f"market read took over {budget_s:.0f} s; stopped before: {query[:40]}")
+        return sql(query)
+    return run
+
+
+def snapshot(sql: Callable[[str], list], out_dir: Path, *, db: str, now: Optional[str] = None,
+             budget_s: float = SNAPSHOT_BUDGET_S, clock: Callable[[], float] = time.monotonic) -> Path:
     """Write demo/out/market-memory-<time>.json from the market. A failed read is written as an error with no rows."""
     now = now or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     ref = f"market:{db}@{now}"
     stats: dict = {}
     try:
-        entries, error = from_market(sql, ref, stats), None
+        entries, error = from_market(_budgeted(sql, budget_s, clock), ref, stats), None
     except Exception as e:  # recorded, never a fake row
         entries, error = [], f"{type(e).__name__}: {e}"
     out_dir = Path(out_dir)
@@ -224,7 +250,7 @@ def snapshot(sql: Callable[[str], list], out_dir: Path, *, db: str, now: Optiona
 
 def _encodable(x: Any) -> bool:
     try:
-        json.dumps(x, ensure_ascii=False, allow_nan=True).encode("utf-8")
+        json.dumps(x, ensure_ascii=False, allow_nan=False).encode("utf-8")   # Infinity or NaN drops the row (#273)
         return True
     except (UnicodeEncodeError, ValueError, TypeError, RecursionError):
         return False
@@ -245,6 +271,8 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
     if snaps:
         newest = snaps[-1]
         try:
+            if newest.stat().st_size > MAX_FILE_BYTES:
+                raise ValueError("snapshot too large")
             saved = json.loads(newest.read_text())
             rows = [e for e in saved.get("entries") or [] if _well_formed(e)]
             state = "error" if saved.get("error") else "ok"
@@ -259,6 +287,8 @@ def load(out_dir: Path = OUT_DIR, *, include_sample: bool = False, kind: Optiona
         runs.append(out_dir / SAMPLE)
     for f in runs:
         try:
+            if f.stat().st_size > MAX_FILE_BYTES:
+                raise ValueError("run file too large")
             run = json.loads(f.read_text())
             ref = str(run.get("run_id") or f.stem)
         except Exception:  # noqa: BLE001

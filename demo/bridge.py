@@ -2,7 +2,7 @@
 """Screen bridge: play the demo beats (real lane code, demo/run_demo.py) into the running SpacetimeDB market,
 step by step, so /buyer and /market on the web app show Vidyut's round live.
 
-    python3 demo/bridge.py                       # one run, 2 s between steps, against the local market
+    python3 demo/bridge.py                       # one run, 2 s between steps; ends at beat 4's approval gate (no scripted approval)
     python3 demo/bridge.py --step-delay 3 --reset  # slower, and wipe the demo tables first (reset_demo)
     python3 demo/bridge.py --dry-run             # print the reducer calls, touch nothing
     python3 demo/bridge.py --live-call           # beat 4 places one real approval phone call; pays only if it approves
@@ -148,11 +148,42 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
     return [opener, *seller_steps, *check_steps, closer]
 
 
+BUYER_NAME = "Vidyut"
+# #216: the names the Fetch tile shows for the demo's agents (#259); their lines in a stage run are the demo's, so SIM
+AGENT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Bazaar Advocate", "shield": "Bazaar Shield"}
+
+
+def demo_agent_addresses() -> dict:
+    """The agent1q addresses of the buyer, advocate and Shield agents, from agents/common (the same seeds the agents run
+    with). {} when agents/ cannot be loaded (no uagents): the Fetch tile then gets no rows and the run says so."""
+    # Loaded by path under its own name: a top-level "common" may already be demo/common.py when the stage runs as a
+    # script, and agents/ on sys.path would shadow other top-level names. Its import reads agents/.env (setdefault only).
+    import importlib.util
+    try:
+        spec = importlib.util.spec_from_file_location("tech_bazaar_agents_common", ROOT / "agents" / "common.py")
+        common = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(common)
+        return {role: common.address(role) for role in AGENT_NAMES}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _event(role: str, addresses: dict, text: str) -> Optional[Step]:
+    if role not in addresses:
+        return None
+    return Step("referee", "record_agent_event",
+                {"agent_name": AGENT_NAMES[role], "address": addresses[role], "text": text, "ts": "", "origin": SIM},
+                say=f"{AGENT_NAMES[role]} (SIM line on the Fetch tile): {text}")
+
+
 def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: int = 1,
          mandate: Optional[dict] = None, live_call: bool = False, two_buyers: bool = False,
-         bid_window: Optional[int] = None) -> list[Step]:
+         bid_window: Optional[int] = None, agent_addresses: Optional[dict] = None) -> list[Step]:
     """Map a demo run (demo.run_demo.run_all) to reducer calls, in the order the stage story tells it.
-    `mandate` (with `live_call`) replaces the run's beat-4 mandate with the pending one the real call will judge."""
+    `mandate` (with `live_call`) replaces the run's beat-4 mandate with the pending one the real call will judge.
+    `agent_addresses` ({role: agent1q...}) adds the Fetch tile lines; None or {} adds none."""
+    addresses = agent_addresses or {}
+    events: list[Optional[Step]] = []
     b = run["beats"]
     goal, need, b2 = b["1"]["goal"], b["1"]["need"], b["2"]
     sellers = {s["id"]: s for s in b2["sellers"]}
@@ -182,10 +213,21 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                                   "allowed_conditions": list(n.get("allowed_conditions") or []), "variant": n["variant"],
                                   "quantity": n["quantity"], "unit": n["unit"]}]},
                       pause=True, say=f"the need goes to sellers: {n['sku_spec']}, {' or '.join(n.get('allowed_conditions') or [n['condition']])}; the cap is withheld from them"))
+    # #216: the name /buyer shows (SIM: the demo's buyer), and the buyer agent's line on the Fetch tile
+    steps.append(Step("referee", "set_buyer_profile", {"buyer_id": buyer_id, "display_name": BUYER_NAME},
+                      say=f"/buyer shows the buyer's name: {BUYER_NAME} (SIM)"))
+    events.append(_event("buyer", addresses, f"Goal posted for {n['sku_spec']}; the need went to sellers, the cap stays sealed"))
+    steps += [e for e in events if e]
+    events.clear()
 
     # beat 2: the sealed round (Shield and claim checks attach before the close; the market ranks)
     steps += round_steps(round_no=1, need_id=need["id"], bids=b2["bids"], ranking=b2["ranking"], sellers=sellers, shield=b2["shield"],
                          claims=b2["claims"], cards=b2["cards"], delay=delay, pace=1.0, window_s=bid_window)
+
+    vetoes = sum(1 for c in b2["cards"] if c.get("recommendation") == "veto")
+    events.append(_event("advocate", addresses, f"Reviewed {len(b2['cards'])} bids: {vetoes} vetoed, each with a cited source"))
+    steps += [e for e in events if e]
+    events.clear()
 
     # beat 3: Shield blocks Shady Sam's injected re-post (after the close, as in the demo; Sam is already out on his claims)
     inj = b["3"]["injected"]
@@ -194,6 +236,9 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       {"bid_id": bid_id(sam, 1), "verdict": inj["verdict"], "rule_ids": list(inj["rule_ids"]), "origin": SIM},
                       pause=True, say=f"Bazaar Shield BLOCKS {sam['persona']}'s injected listing re-post "
                                       f"({len(inj['rule_ids'])} rules, {inj['latency_ms']} ms)"))
+    events.append(_event("shield", addresses, f"Blocked {sam['persona']}'s injected listing re-post ({len(inj['rule_ids'])} rules)"))
+    steps += [e for e in events if e]
+    events.clear()
 
     # beat 4: mandate, approval, payment (the deal is above the allowance set in beat 1, so it needs the call)
     m, win = (mandate if mandate is not None else b["4"]["mandate"]), b2["winner"]
@@ -205,14 +250,16 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       tag=m["origin"], pause=True, gate="build_mandate",
                       say=f"mandate for the market's #1, made when beat 4 starts (the demo expects {wbid['persona']}, "
                           f"{money(m['amount'])} to {m['payee']}, a SIM test address)"))
-    # Only a real call is a voice approval. The scripted story is method sim_script, and its payment is always the SIM stub,
-    # even if the run's own beat 4 made a Stripe test charge (#193). With --live-call, execute's charger replaces the stub.
+    # #251: only a real call is an approval; there is no scripted one. The step names the call's method, and execute runs it only
+    # after the live approver says approved (it fills in the VoiceApproval id). Without --live-call execute stops at this gate.
+    # The payment is the SIM stub unless --live-call --stripe's charger replaces it after an approved call (#193).
     steps.append(Step("referee", "record_approval",
-                      {"mandate_hash": m["hash"], "method": "voice_code" if live_call else "sim_script", "approved_by": buyer_id},
+                      {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": buyer_id,
+                       "voice_approval_id": ""},   # #240: the call's VoiceApproval id, filled in by execute after an approved call
                       pause=True, gate="approval_call",
                       say=("a real phone call: the buyer says the code from the screen and 'approve'; the referee relays the verified code"
                            if live_call else
-                           "SIM scripted approval, no phone call: the runner types the three tries (wrong code, no 'approve', then right)")))
+                           f"{NO_CALL_LINE}: the run stops at this gate, no approval and no payment are recorded")))
     ref = "ch_sim_" + m["hash"][:12]
     pay = {"mandate_hash": m["hash"], "payment_ref": ref, "amount": m["amount"], "mode": "sim"}
     steps.append(Step("referee", "record_payment", dict(pay), pause=True, tag=SIM,
@@ -220,7 +267,22 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     steps.append(Step("referee", "record_payment", dict(pay),
                       pause=True, say="the same payment again: the market's own idempotency refuses it and shows the refusal"))
 
-    # beat 5: round 2 with the learning seller's lowered price (loss reports have no reducer: NOT BRIDGED)
+    # beat 5 (#216): round 1's loss reports (banded gap, reason, cited source; the learner's strategy step and line). The
+    # reports come from the demo's own ranking, a SIM stand-in for the market's rules, so every row is SIM.
+    b5 = b["5"]
+    diff = [{"key": k, "from": str(v["from"]), "to": str(v["to"])} for k, v in ((b5.get("strategy") or {}).get("diff") or {}).items()]
+    for lr in b5.get("round1_loss_reports") or []:
+        learner = lr["seller_id"] == b5.get("learning_seller")
+        steps.append(Step("referee", "record_loss_report",
+                          {"id": lr["id"], "round_id": lr["round_id"], "seller_id": lr["seller_id"], "won": bool(lr["won"]),
+                           "gap_band": lr["gap_band"], "reason": lr["reason"], "source_url": lr["source_url"],
+                           "strategy_diff": diff if learner else [], "what_to_change": b5.get("what_to_change", "") if learner else "",
+                           "what_to_change_origin": SIM if learner else "", "origin": SIM},
+                          pause=learner, tag=SIM,
+                          say=f"loss report for {sellers.get(lr['seller_id'], {}).get('name', lr['seller_id'])}: {lr['gap_band']}, "
+                              f"{lr['reason']}" + (f"; what to change: {b5.get('what_to_change', '')}" if learner else "")))
+
+    # beat 5: round 2 with the learning seller's lowered price
     if rounds >= 2:
         r2 = b["5"]["round2"]
         steps += round_steps(round_no=2, need_id=need["id"], bids=r2["bids"], ranking=r2["ranking"], sellers=sellers,
@@ -271,13 +333,14 @@ def second_buyer_report(rows: list, round_id: str) -> list[str]:
     return out
 
 
+NO_CALL_LINE = "approval needs the real phone call (--live-call); nothing was paid"
+NO_CALL_REASON = "no_live_call: " + NO_CALL_LINE
+
 # What the market cannot take today (printed at the end of every run; mirrored in demo/README.md for Lane B).
 NOT_BRIDGED = [
-    "loss reports (contracts/LossReport): no table or reducer, so beat 5 (reports, the learner's price step) is console only; `--rounds 2` replays round 2 and the learner's lower open-box price now ranks, but the loss report itself is not on screen.",
     "goal state (HUNTING, HOLD_FOR_CALL, DONE): no set_goal_state reducer; the goal stays ACTIVE and reserved_amount stays 0.",
     "denied approval attempts (wrong code, no 'approve'): record_approval only logs a second approval; the denied tries are console only.",
-    "buyer name and seller personas: /buyer is hardcoded to the id vidyut and prints 'Buyer: Vidyut'; persona rows come only "
-    "from seed_demo (Seller A to C), so the 3D floor has no personas for the demo sellers.",
+    "seller personas: persona rows come only from seed_demo (Seller A to C), so the 3D floor has no personas for the demo sellers.",
     "seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor "
     "(issue #18 asks for a floor per seller, SKU and condition).",
 ]
@@ -292,6 +355,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
     """Run the steps in order. A reducer refusal stops the run with the market's own message.
     With an `approver`, the approval step runs only after it returns approved; a denial skips the approval and every payment
     step and ends the run there (the mandate stays pending, nothing is charged). Returns the approval outcomes.
+    Without an `approver` there is no approval at all (#251: no scripted approval): the run ends at the approval gate with the
+    outcome reason `no_live_call`, no record_approval and no payment, and the mandate's held unit is released.
     A `charger` (make_charger) runs once, at the first payment step, and only after the approver said approved AND the market
     recorded the approval; its payment ref and mode replace the SIM stub's. Without an approver it never runs.
     A `deal_gate` (DealGate) builds beat 4's mandate when its create_mandate step comes up, from the market's own rank 1, and every
@@ -325,15 +390,21 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
         say(s)
         if s.reducer == "create_mandate" and s.actor in clients:
             mandate_hash = s.args.get("hash", "")
-        if s.gate == "approval_call" and approver is not None:
-            outcome = approver(s)
+        if s.gate == "approval_call":
+            no_call = approver is None
+            outcome = ({"step": "approval_call", "approved": False, "reason": NO_CALL_REASON, "call_id": None} if no_call
+                       else approver(s))
             outcomes.append(outcome)
             for line in (deal_gate.drain_notes() if deal_gate is not None else []):
                 note(line)
             if not outcome["approved"]:
                 from pay.voice_cartesia import denial_line
                 line = denial_line(outcome["reason"])
-                note(f"live call DENIED ({outcome['reason']}): {line} No approval and no payment are recorded; the mandate stays pending")
+                if no_call:
+                    line = "Approval needs the real phone call."
+                    note(f"beat 4 STOPPED at the approval gate: {NO_CALL_LINE}. No approval and no payment are recorded; the mandate stays pending")
+                else:
+                    note(f"live call DENIED ({outcome['reason']}): {line} No approval and no payment are recorded; the mandate stays pending")
                 if mandate_hash and "referee" in clients:
                     try:   # /buyer shows "Approval denied: <line>"; the held unit goes back on sale at once
                         clients["referee"].call("deny_approval", mandate_hash=mandate_hash, reason=line.rstrip("."))
@@ -342,6 +413,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                         note(f"deny_approval not recorded ({e}); the hold expires by itself after 2 minutes")
                 break
             note(f"live call APPROVED (call {outcome['call_id']}): the referee records the approval, then the payment")
+            s = replace(s, args={**s.args, "voice_approval_id": outcome.get("voice_approval_id") or ""})
         client = clients[s.actor]
         t_call = clock()
         if s.close:
@@ -419,12 +491,33 @@ class CrsRefused(GateRefused):
 
 
 def market_winner(rows: list, round_id: str = "round-1") -> Optional[dict]:
-    """The market's rank 1 in `round_id` from round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed, ...)."""
+    """The market's rank 1 in `round_id` from round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed,
+    reasons, lines, ...). `reasons` are the market's own reason strings for the row, [] when it has none (#251: the market writes
+    'held back: advocate caution (...)' on rank 1 when every bid carries a caution). `lines` are the lines the market picked (#216),
+    [] when the row has none."""
     first = [r for r in rows if r[1] == round_id and r[5] == 1]
     if len(first) != 1:
         return None
     r = first[0]
-    return {"bid_id": r[2], "seller_id": r[3], "persona": r[4], "landed": float(r[6])}
+    reasons = [str(x) for x in r[7]] if len(r) > 7 and isinstance(r[7], (list, tuple)) else []
+    lines = r[8] if len(r) > 8 and isinstance(r[8], list) else []
+    return {"bid_id": r[2], "seller_id": r[3], "persona": r[4], "landed": float(r[6]), "lines": lines, "reasons": reasons}
+
+
+def _picked(cell: Any) -> Optional[tuple]:
+    """(offered_condition, unit_price) of one picked BidLine as SpacetimeDB returns it: a positional array
+    [sku_spec, offered_spec, offered_condition, unit_price, quantity] or an object. None when unreadable."""
+    try:
+        if isinstance(cell, dict):
+            cond = cell.get("offeredCondition", cell.get("offered_condition"))
+            price = cell.get("unitPrice", cell.get("unit_price"))
+        else:
+            cond, price = cell[2], cell[3]
+        if not isinstance(cond, str) or not cond:
+            return None   # an empty condition means the need's; the demo's own line is the safe fallback
+        return cond, float(price)
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
 
 
 class DealGate:
@@ -460,9 +553,17 @@ class DealGate:
         seller, bid = self.sellers.get(w["seller_id"]), self.bids.get(w["bid_id"])
         if seller is None or bid is None or bid["seller_id"] != w["seller_id"]:
             raise GateRefused(f"the market's rank 1 ({w['persona'] or w['seller_id']}) is not a bid this run placed, so there is no payee")
+        held = next((x for x in w["reasons"] if "held back" in x), None)
+        if held is not None:   # #251: every bid carries a caution, so the market's #1 is only the least bad; the agent buys nothing
+            raise GateRefused(f"the market's rank 1 ({w['persona'] or w['seller_id']}) is {held}: every bid carries a caution, "
+                              "so the agent will not buy it")
         if not (math.isfinite(w["landed"]) and w["landed"] > 0):
             raise GateRefused("the market's rank 1 has no usable landed price")
-        return {**w, "deal_id": f"deal-{w['bid_id']}", "amount": round(w["landed"], 2), "payee": seller["payee"], "origin": bid["origin"]}
+        if abs(w["landed"] * 100 - round(w["landed"] * 100)) > 1e-6 or round(w["landed"], 2) != w["landed"]:
+            # #240 wants the mandate at the landed price exactly, and the call reads the amount back in whole cents
+            raise GateRefused(f"the market's rank 1 landed price {w['landed']!r} is not a whole number of cents")
+        # #240: the mandate pays the winning seller id, at the winning landed price exactly (the market compares to 1e-9)
+        return {**w, "deal_id": f"deal-{w['bid_id']}", "amount": w["landed"], "payee": w["seller_id"], "origin": bid["origin"]}
 
     def prepare(self, referee: Any) -> dict:
         from pay.crs_gate import check_id, payee_ok
@@ -528,8 +629,8 @@ class DealGate:
         if s.reducer == "create_mandate":
             return replace(s, args={**s.args, "hash": m["hash"], "id": m["id"], "deal_id": m["deal_id"], "amount": m["amount"],
                                     "payee": m["payee"], "nonce": m["nonce"], "origin": m["origin"], "expiry_minutes": MANDATE_MINUTES},
-                           tag=m["origin"], say=f"mandate for the market's #1, {w['persona']}: {money(m['amount'])} to {m['payee']} "
-                                                f"(a SIM test address), {MANDATE_MINUTES} minutes")
+                           tag=m["origin"], say=f"mandate for the market's #1, {w['persona']}: {money(m['amount'])} to seller "
+                                                f"{m['payee']} (SIM payee, no real merchant is paid), {MANDATE_MINUTES} minutes")
         if s.reducer == "record_approval":
             return replace(s, args={**s.args, "mandate_hash": m["hash"]})
         if s.reducer == "record_payment":
@@ -552,6 +653,10 @@ class DealGate:
         w = self.winner
         bid, seller = self.bids[w["bid_id"]], self.sellers[w["seller_id"]]
         line = bid["lines"][min(self.lines.get(w["seller_id"], 0), len(bid["lines"]) - 1)]
+        picked = _picked(w["lines"][0]) if w.get("lines") else None
+        if picked is not None:   # #216: the line the market picked, so the spoken condition matches the landed amount
+            line = next((x for x in bid["lines"] if x["offered_condition"] == picked[0]
+                         and abs(float(x["unit_price"]) - picked[1]) <= 0.005), line)
         facts = {"item": line.get("attrs", {}).get("chipset") or line["sku_spec"].upper(), "condition": line["offered_condition"],
                  "seller": seller["name"], "crs": "verified" if self.crs and self.crs.get("business") else "sim_seller"}
         if self.price is not None:
@@ -585,8 +690,9 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
     from pay.replay import NonceStore
     from pay.voice_cartesia import CALL_CODE_TTL_S, run_approval_call
 
-    def outcome(approved: bool, reason: Optional[str], call_id: Optional[str] = None) -> dict:
-        return {"step": "approval_call", "approved": approved, "reason": reason, "call_id": call_id}
+    def outcome(approved: bool, reason: Optional[str], call_id: Optional[str] = None, voice_approval_id: Optional[str] = None) -> dict:
+        return {"step": "approval_call", "approved": approved, "reason": reason, "call_id": call_id,
+                "voice_approval_id": voice_approval_id}
 
     def to_screen(code: str) -> None:
         on_code(code, gate.show_code(code))
@@ -615,6 +721,9 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
                                 **timing)
         if not res.approved:
             return outcome(False, res.reason or "denied", res.call_id)
+        voice_id = str((res.record or {}).get("id") or "").strip()
+        if not voice_id:   # #240 keeps the VoiceApproval id on the approval row; an approval with none is not recorded
+            return outcome(False, "no_voice_approval_id: the call approved but left no VoiceApproval record", res.call_id)
         try:
             expect = gate.expect_now()
         except (GateRefused, RuntimeError, OSError, ValueError, KeyError, TypeError) as e:
@@ -627,7 +736,7 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
             crs_ok = bound_ok(mandate, gate.crs.get("check"), business=bool(gate.crs.get("business")), seller_id=expect["seller_id"])
             if not crs_ok:
                 return outcome(False, f"crs: {crs_ok.reason}", res.call_id)
-        return outcome(True, None, res.call_id)
+        return outcome(True, None, res.call_id, voice_id)
 
     return approve
 
@@ -693,9 +802,24 @@ def assign_buyer_role(buyer_id: str, client: Any, spacetime: str, server: str, d
                    check=True, capture_output=True)
 
 
-def find_tokens_dir(explicit: Optional[str]) -> Path:
+def find_tokens_dir(explicit: Optional[str], target: Optional[dict] = None) -> Path:
+    """The referee and buyer tokens for this market. A market that is not local (#295) uses only its own folder,
+    .tokens/<db>@<host>/, so a local identity never signs a call on the shared market."""
+    from demo import market_target
+    if target is not None and not target["local"]:
+        own = market_target.tokens_dir(target)
+        if explicit and Path(explicit).resolve() != own.resolve():
+            raise SystemExit(f"--tokens-dir {explicit} is not this market's own folder {own}: "
+                             "local tokens are never used for another market")
+        if (own / REFEREE_TOKEN).exists() and (own / BUYER_TOKEN).exists():
+            return own
+        raise SystemExit(f"no {REFEREE_TOKEN} and {BUYER_TOKEN} for {market_target.describe(target)} in {own} "
+                         "(scripts/deploy_maincloud.sh creates them; local tokens are never used for another market)")
     cands = [Path(explicit)] if explicit else [Path(os.environ["BRIDGE_TOKENS_DIR"])] if os.environ.get("BRIDGE_TOKENS_DIR") else []
     cands += [ROOT / ".tokens", ROOT.parent / "lane-d-launcher" / ".tokens", ROOT.parent / "lane-d" / ".tokens"]
+    shared = [c for c in cands if market_target.is_market_tokens_dir(c)]
+    if shared:   # a shared market's tokens never sign a call on the local market either
+        raise SystemExit(f"{shared[0]} holds a shared market's tokens; the local market uses .tokens/")
     for c in cands:
         if (c / REFEREE_TOKEN).exists() and (c / BUYER_TOKEN).exists():
             return c
@@ -720,18 +844,18 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
     ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
-    ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
+    ap.add_argument("--server", default=None, help="spacetime -s server (default SPACETIMEDB_SERVER from the env or the Lane D env file, else local)")
     ap.add_argument("--bid-window", type=bid_window_arg, default=None,
                     help=f"seconds each sealed round stays open (at least {MIN_BID_WINDOW_S}); steps inside run faster to fit")
     args = ap.parse_args(argv)
     if args.stripe and not args.live_call:
-        ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (the scripted approval is SIM)")
+        ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (there is no scripted approval)")
 
     from demo.run_demo import run_all, stripe_env, DEFAULT_ENV_FILE
     run = run_all(say=Narrator(False))       # never a Stripe call here: this run builds the plan, before any round or call
     gate = DealGate(run)                     # beat 4's mandate is made from the market's rank 1 when beat 4 starts
     steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, live_call=args.live_call,
-                 two_buyers=args.two_buyers, bid_window=args.bid_window)
+                 two_buyers=args.two_buyers, bid_window=args.bid_window, agent_addresses=demo_agent_addresses())
     out = Narrator(True)
     out.note("Tech Bazaar screen bridge: demo beats (real lane code) -> existing SpacetimeDB reducers")
     out.note(f"{len(steps)} reducer calls, {args.step_delay} s between visible steps. Open /buyer (pair as {args.buyer_id}) and /market.")
@@ -764,6 +888,8 @@ def main(argv: Optional[list] = None) -> int:
             out.note("NOT BRIDGED: " + g)
         return 0
 
+    if not args.live_call:
+        out.note(f"No --live-call: the run ends at beat 4's approval gate. {NO_CALL_LINE[0].upper()}{NO_CALL_LINE[1:]}")
     if not args.stripe:
         out.note("Payment is the SIM stub: /market labels it 'SIM stub, no money moved'. Use --stripe for a Stripe TEST charge.")
     try:
@@ -804,13 +930,34 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
                               secret=env.get(vc.SECRET_ENV)), where
 
 
+def live_target(args) -> dict:
+    """#295: the market this run talks to, from --server, the env and the Lane D env file; exported for stdb.py."""
+    from demo import market_target
+    from demo.run_demo import DEFAULT_ENV_FILE
+    if getattr(args, "server", None):
+        os.environ["SPACETIMEDB_SERVER"] = args.server
+    try:
+        target = market_target.resolve(DEFAULT_ENV_FILE)
+    except market_target.TargetError as e:
+        raise SystemExit(f"market target refused: {e}") from None
+    if getattr(args, "server", None) and target["server"] != args.server:   # the env file wins, so a flag that differs is a conflict
+        raise SystemExit(f"--server {args.server} but the Lane D env file names {market_target.describe(target)}: "
+                         "change SPACETIMEDB_SERVER there, or drop --server")
+    market_target.export(target)
+    args.server = target["server"]
+    return target
+
+
 def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None) -> int:
+    from demo import market_target
+    target = live_target(args)
+    out.note(market_target.describe(target))
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
-    from stdb import Market   # the market's own bridge; reads SPACETIMEDB_HTTP and SPACETIMEDB_DB
-    tokens = find_tokens_dir(args.tokens_dir)
+    from stdb import Market   # the market's own bridge; reads SPACETIMEDB_HTTP and SPACETIMEDB_DB (set above)
+    tokens = find_tokens_dir(args.tokens_dir, target)
     out.note(f"tokens: {tokens}")
-    seller_tokens = ROOT / ".tokens"
-    seller_tokens.mkdir(exist_ok=True)
+    seller_tokens = market_target.tokens_dir(target)
+    seller_tokens.mkdir(parents=True, exist_ok=True)
     clients: dict[str, Any] = {"buyer": Market(token_file=str(tokens / BUYER_TOKEN)),
                                "referee": Market(token_file=str(tokens / REFEREE_TOKEN))}
     seller_ids = sorted({s.actor.split(":", 1)[1] for s in steps if s.actor.startswith("seller:")})
@@ -820,16 +967,16 @@ def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None
         clients[SECOND_ACTOR] = Market(token_file=str(seller_tokens / f"bridge-{SECOND_BUYER_ID}.json"))
     if not args.no_assign_roles:
         spacetime = shutil.which("spacetime") or str(Path.home() / ".local" / "bin" / "spacetime")
-        from stdb import DB
-        assign_seller_roles(seller_ids, clients, spacetime, args.server, DB)
+        assign_seller_roles(seller_ids, clients, spacetime, target["server"], target["db"])
         if SECOND_ACTOR in clients:
-            assign_buyer_role(SECOND_BUYER_ID, clients[SECOND_ACTOR], spacetime, args.server, DB)
+            assign_buyer_role(SECOND_BUYER_ID, clients[SECOND_ACTOR], spacetime, target["server"], target["db"])
     if args.reset:
         out.note("reset_demo (referee): clearing the demo tables")
         clients["referee"].call("reset_demo")
         time.sleep(1)
     try:
-        execute(steps, clients, delay=args.step_delay, say=say, approver=approver, note=out.note, charger=charger, deal_gate=gate)
+        outcomes = execute(steps, clients, delay=args.step_delay, say=say, approver=approver, note=out.note, charger=charger,
+                           deal_gate=gate)
     except RuntimeError as e:
         out.blank()
         out.note(f"STOPPED by the market: {e}")
@@ -850,7 +997,7 @@ def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None
     out.blank()
     for g in NOT_BRIDGED:
         out.note("NOT BRIDGED: " + g)
-    return 0
+    return 1 if any(not o["approved"] for o in outcomes) else 0   # a run that ended at the gate is not a clean run
 
 
 if __name__ == "__main__":

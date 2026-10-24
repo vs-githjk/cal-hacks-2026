@@ -55,7 +55,7 @@ One live market for every laptop: Abhinav's agents, Vidyut's bridge/call/pay Mac
 
 `seed_demo` and `reset_demo` are idempotent to re-run (every insert in `seed_demo` is guarded by a `find` first; `reset_demo` never touches `role`, `owner` or `pair_code`, so a republish or a re-seed never breaks an open tab or a paired agent). `init` only ever sets the owner once, so republishing an existing database never changes who owns it. See `spacetimedb/src/market.test.ts`, describe block `#293 Maincloud`.
 
-WARNING: `reset_demo` deletes all rounds, bids, needs, goals, payments and results -- it is NOT safe to run on a live market with real rounds. Only run it on a fresh deployment or a test database, never on a live market with real data.
+WARNING: `reset_demo` deletes every need, goal, bid, mandate, approval, approval code, allowance spend record, persona and floor event, plus every round, round result and payment. Only `role`, `owner` and `pair_code` survive. It is NOT safe to run on a live market with real rounds: never run it after a real payment has gone through. Only run it on a fresh deployment or a test database.
 
 **Vidyut runs this** (his `spacetime login` becomes the module owner, which the referee and buyer tokens depend on):
 
@@ -63,15 +63,12 @@ WARNING: `reset_demo` deletes all rounds, bids, needs, goals, payments and resul
 # once: log in (opens a browser; GitHub OAuth)
 spacetime login
 
-# publish the real database (from market/, --yes=all skips the breaking-change prompt on a schema change)
-spacetime publish --server maincloud -p ./spacetimedb --yes=all tech-bazaar
-
-# seed the demo data (SIM personas, the pair code, the buyer profile and goal); safe to re-run
-spacetime call -s maincloud tech-bazaar seed_demo
-
-# grant roles once (same script as local, pointed at maincloud)
-SPACETIMEDB_SERVER=maincloud SPACETIMEDB_DB=tech-bazaar python3 market/scripts/setup_roles.py
+# dry run first (prints every step, calls nothing); then for real
+sh scripts/deploy_maincloud.sh
+sh scripts/deploy_maincloud.sh --go
 ```
+
+`deploy_maincloud.sh` publishes (no `--yes=all`, so a schema change that would need a data wipe stops with spacetime's own error instead of silently clearing the shared market), calls `seed_demo`, and grants roles (same `setup_roles.py` as local, pointed at maincloud).
 
 Env the web needs (Vercel, or any `.env` for a local client pointed at the hosted database):
 
