@@ -211,3 +211,33 @@ def test_web_followup_stays_in_web_queue(buyer):
     asyncio.run(buyer.tell_owner(ctx, 'Review ready'))
     assert buyer.web_drain().replies == ['Bid in\nReview ready']
     assert not ctx.sent
+
+
+def _open_round(buyer, monkeypatch, *, mailbox, seeded):
+    """Send one goal from the owner and return (BidRequest recipients, the owner's text)."""
+    common = buyer.common
+    monkeypatch.delenv('AGENTS_MAILBOX', raising=False)
+    monkeypatch.delenv('SELLERS_MAILBOX', raising=False)
+    if mailbox:
+        monkeypatch.setenv('AGENTS_MAILBOX', '1')
+    for s in common.SELLERS:
+        monkeypatch.setitem(common.SEEDS, s, f'private-seed-{s}' if s in seeded else f'tech-bazaar-{s}-dev')
+    buyer.ROUND.clear()
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, 'owner', 'NEW a 850 W PSU under $150'))
+    bids = [to for to, message in ctx.sent if isinstance(message, common.BidRequest)]
+    return bids, ctx.owner_text(), common
+
+
+def test_mailbox_round_counts_only_sellers_that_can_run(buyer, monkeypatch):
+    # AGENTS_MAILBOX=1, seeds set for seller_1 to seller_3 only: seller_4 and seller_5 keep the public dev seed and never run.
+    bids, text, common = _open_round(buyer, monkeypatch, mailbox=True, seeded={'seller_1', 'seller_2', 'seller_3'})
+    assert sorted(bids) == sorted(common.address(s) for s in ['seller_1', 'seller_2', 'seller_3'])
+    assert 'with 3 sellers' in text
+    assert '5 sellers' not in text
+
+
+def test_local_round_still_counts_all_five_sellers(buyer, monkeypatch):
+    bids, text, common = _open_round(buyer, monkeypatch, mailbox=False, seeded=set())
+    assert len(bids) == 5
+    assert 'with 5 sellers' in text
