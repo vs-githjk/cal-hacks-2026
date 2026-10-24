@@ -1,5 +1,5 @@
-"""Hand tables the dataset lacks. Hand-entered from AMD, Intel and NVIDIA spec pages; rows marked
-`# verify` still need a second person to check them against the maker's page (see data/README.md).
+"""Hand tables the dataset lacks. Hand-entered from AMD, Intel and NVIDIA spec pages; rows with a
+source comment were re-checked on the maker's page; the rest still need that pass (see data/RESULTS.md).
 A value we do not know is left out, so the checker answers "uncertain" instead of guessing."""
 
 # CPU microarchitecture -> socket (desktop parts only). Threadripper, EPYC, Xeon and Intel X-series
@@ -61,7 +61,7 @@ CASE_TYPE_PSU = {t: {"ATX"} for t in CASE_TYPE_BOARDS if "ITX" not in t}
 GPU_POWER = {
     "RTX 5090": {"board_power_w": 575, "rec_psu_w": 1000, "connector": ("16pin", 4)},
     "RTX 5080": {"board_power_w": 360, "rec_psu_w": 850, "connector": ("16pin", 3)},
-    "RTX 5070 Ti": {"board_power_w": 300, "rec_psu_w": 750, "connector": ("16pin", 3)},  # verify adapter count
+    "RTX 5070 Ti": {"board_power_w": 300, "rec_psu_w": 750, "connector": ("16pin", 2)},  # nvidia.com: 2x 8-pin adapter, 750 W (checked Fri 22:40)
     "RTX 5070": {"board_power_w": 250, "rec_psu_w": 650, "connector": ("16pin", 2)},
     "RTX 5060 Ti": {"board_power_w": 180, "rec_psu_w": 600, "connector": None},
     "RTX 5060": {"board_power_w": 145, "rec_psu_w": 550, "connector": None},
@@ -82,8 +82,8 @@ GPU_POWER = {
     "RTX 3070": {"board_power_w": 220, "rec_psu_w": 650, "connector": None},
     "RTX 3060 Ti": {"board_power_w": 200, "rec_psu_w": 600, "connector": None},
     "RTX 3060": {"board_power_w": 170, "rec_psu_w": 550, "connector": None},
-    "RX 9070 XT": {"board_power_w": 304, "rec_psu_w": None, "connector": None},  # verify
-    "RX 9070": {"board_power_w": 220, "rec_psu_w": None, "connector": None},  # verify
+    "RX 9070 XT": {"board_power_w": 304, "rec_psu_w": None, "connector": None},  # rec PSU left out: amd.com blocked our fetch; third-party pages disagree (650 to 800 W)
+    "RX 9070": {"board_power_w": 220, "rec_psu_w": None, "connector": None},  # same: estimate rule decides
     "RX 7900 XTX": {"board_power_w": 355, "rec_psu_w": 800, "connector": None},
     "RX 7900 XT": {"board_power_w": 315, "rec_psu_w": 750, "connector": None},
     "RX 7800 XT": {"board_power_w": 263, "rec_psu_w": 700, "connector": None},

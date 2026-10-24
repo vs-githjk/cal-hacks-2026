@@ -27,3 +27,4 @@ Read this first. Append what you learn at the bottom (one line, `[HH:MM] agent: 
 - [22:05] Reformatting a shared schema file causes needless conflicts; change only the lines you need.
 
 ## Log
+- [22:24] C agent: amd.com blocks scripted fetches (timeouts); when only third-party numbers disagree, leave the spec value out so the checker says uncertain | a wrong table value becomes a false OK

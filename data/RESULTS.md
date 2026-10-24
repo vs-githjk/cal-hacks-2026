@@ -25,4 +25,11 @@ Run: `python -m data.fit_checker.eval_builds`
 The false fail is on purpose: the PSU rule takes the larger of the maker's recommended PSU and the estimated load plus
 25% headroom, so a 170 W CPU plus RTX 5090 on 1000 W is flagged. We prefer a false fail to a false OK.
 The uncertain row is a 300-series AM4 board with Ryzen 5000, where support depends on the board's BIOS.
-Next: re-open each spec page, then add held-out builds that no one tuned against.
+**Do not quote 42/43 as hand-checked accuracy.** It is accuracy against drafted specs until every part's spec page is re-opened.
+
+### Review fixes (Fri 22:40, same frozen set, score unchanged)
+- A CPU card with no TDP or vendor now makes `fit.psu_wattage` uncertain instead of judging on the GPU alone.
+- EATX in an ATX mid tower (known only by case type) and an SFX PSU in an ATX bay are now uncertain, not fail.
+- Table rows re-checked: RTX 5070 Ti and 5070 on nvidia.com (2x 8-pin adapter, 750 W and 650 W). RX 9070 and 9070 XT recommended PSU left out: amd.com blocked our fetch and third-party pages disagree, so the load estimate decides.
+
+Next: re-open each spec page in fit_builds.json (then set hand_checked), and add held-out builds no one tuned against.

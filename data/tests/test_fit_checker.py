@@ -112,8 +112,8 @@ def test_4090_14900k_on_750w_fails():
     assert check_fit([I9_14900K, RTX4090_STRIX, PSU_750])["rule_id"] == "fit.psu_wattage"
 
 
-def test_16pin_gpu_on_psu_with_two_8pin_fails():
-    psu = card("psu", "old 850", wattage=850, form_factor="ATX", pcie_8pin=2, pcie_16pin=0)
+def test_16pin_gpu_on_psu_with_one_8pin_fails():
+    psu = card("psu", "old 850", wattage=850, form_factor="ATX", pcie_8pin=1, pcie_16pin=0)
     out = check_fit([R7_9800X3D, RTX5070TI, psu])
     assert rule(out, "fit.gpu_connectors")["verdict"] == "fail"
 
@@ -189,3 +189,28 @@ def test_empty_attrs_never_raise():
 def test_atx_psu_in_sfx_only_case_fails():
     out = check_fit([PSU_850, NR200P])
     assert out["verdict"] == "fail" and out["rule_id"] == "fit.psu_form_factor"
+
+
+# review fixes (Vidyut, Fri 22:00)
+def test_cpu_card_without_power_info_is_uncertain_not_gpu_only():
+    psu = card("psu", "1000 W", wattage=1000, form_factor="ATX")
+    gpu = card("gpu", "5090", chipset="RTX 5090", length_mm=304)
+    assert rule(check_fit([card("cpu"), gpu, psu]), "fit.psu_wattage")["verdict"] == "uncertain"
+
+
+def test_eatx_board_in_atx_mid_tower_by_type_is_uncertain():
+    board = card("motherboard", "EATX board", socket="AM5", form_factor="EATX")
+    case = card("case", "mid tower", type="ATX Mid Tower")
+    assert rule(check_fit([board, case]), "fit.form_factor")["verdict"] == "uncertain"
+
+
+def test_sfx_psu_in_atx_tower_is_uncertain():
+    sfx = card("psu", "SF750", wattage=750, form_factor="SFX")
+    assert rule(check_fit([sfx, NORTH]), "fit.psu_form_factor")["verdict"] == "uncertain"
+    listed = card("case", "atx case", type="ATX Mid Tower", psu_form_factors=["ATX"])
+    assert rule(check_fit([sfx, listed]), "fit.psu_form_factor")["verdict"] == "uncertain"
+
+
+def test_5070ti_adapter_needs_two_8pin_per_nvidia():
+    psu = card("psu", "850 two 8-pin", wattage=850, form_factor="ATX", pcie_8pin=2, pcie_16pin=0)
+    assert rule(check_fit([R7_9800X3D, RTX5070TI, psu]), "fit.gpu_connectors")["verdict"] == "pass"
