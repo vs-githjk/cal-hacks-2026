@@ -130,13 +130,14 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
         </div>
       ) : (
         <div className="overflow-hidden rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
-          <div className="relative min-w-0">
+          <div className="relative flex min-w-0 flex-col sm:block">
             {webgl ? (
               <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
             ) : (
               <div className="grid h-[440px] place-items-center bg-[#F1E7D9] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
             )}
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-4 sm:p-6">{top}</div>
+            {/* phones: the story sits above the scene so it never covers the figures; wider screens overlay it */}
+            <div className="pointer-events-none z-20 bg-[#FBF6EE] p-4 max-sm:order-first sm:absolute sm:inset-x-0 sm:top-0 sm:bg-transparent sm:p-6">{top}</div>
             {disconnected && (
               <div className="absolute inset-0 z-30 grid place-items-center bg-canvas/70">
                 {everActive ? (
