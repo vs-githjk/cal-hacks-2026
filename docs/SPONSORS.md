@@ -26,8 +26,8 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 - Hard requirements: Apify used in a meaningful way (Best Use of Apify); Best Actor asks for an Actor built for this event, so the claim-check Actor is published to the Apify Store (a14) with cost per run documented.
 
 **Bright Data** (Lane C, in progress)
-- Carries (in progress, not built end to end): a dated second price source through the Scraper API, live only when `BRIGHT_DATA_API_KEY` is set. Today `data/baselines/brightdata.py` is a stub that raises not configured and no demo path uses it. Any spend needs Vidyut's OK first.
-- Proof: none beyond the stub; planned, not built.
+- Carries (in progress, not built end to end): a dated second price source through the Scraper API, live only when `BRIGHT_DATA_API_KEY` is set. Status: key set, one smoke call passed Sat 02:55 (agent-board); the integration code is night task T6 and not on this branch, where `data/baselines/brightdata.py` is still a stub that raises not configured and no demo path uses it. It flips to LIVE only when T6 lands. Any spend needs Vidyut's OK first.
+- Proof: none beyond the stub and the dated smoke call on the board; not built end to end.
 - Breaks without it: the savings tile loses its second source and reads "unverified".
 - Demo moment: the savings tile with two dated sources (shown with the beat 4 receipt).
 - Hard requirements (Bright Data is in progress): track text not yet read (prize text is in the guide or "coming soon"); owner posts it at kickoff. Meanwhile: Bright Data used for a real, named step (the second baseline and one blocked page), recorded in data/README.md.
@@ -41,14 +41,14 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 
 **Armadin** (Lane D core, Lane C product layer, Lane A `/verify-agent`)
 - Carries: Bazaar Shield: `/v1/shield/screen`, `/verify-agent`, `/verify-mandate`, `/v1/check-claim`, rules as data, the attack corpus, a key and a `shield-bench` for any attack file. Signed verdict receipts are planned, not built.
-- Proof: `shield/api.py`, `shield/product.py`, `shield/bench.py`, `shield/corpus/RESULTS.md` (6 of 12 on the post-freeze check; 2026-10-23).
+- Proof: `shield/api.py`, `shield/product.py`, `shield/bench.py`, `shield/corpus/RESULTS.md` (6 of 12 on the post-freeze check, 2026-10-23).
 - Breaks without it: the injected listing reaches the advocate, a payee swap goes through, and the block-rate tile reads zero.
 - Demo moment: beat 3, Shield blocks an injected listing live. The "Hack the market" console is planned, not built; judges can send attacks to the API or the bench.
 - Hard requirements: Best Security Hack, sponsored by Armadin (posted prize: headphones, possibly hacking tools; not cash). Report "blocked X of Y on this corpus" per set (dev, held-out; the adaptive set is planned, not built), never "secure"; hand them a key and the bench.
 
 **Cartesia** (Lane D core, Lane B screens, Lane C Photon spike)
 - Carries: the two-way call: the buyer asks "why not the cheaper one?", the advocate answers aloud, the buyer speaks the word-pair code, the amount is read back. Built as a Cartesia managed agent that places a phone call; our code judges the transcript. An in-browser Cartesia call and Photon SIP are planned, not built; the typed card is the fallback.
-- Proof: `pay/voice_cartesia.py`, `pay/approval.py`, `pay/VOICE_ATTACKS.md`; the README has the Cartesia section with setup and known limits.
+- Proof: `pay/voice_cartesia.py`, `pay/approval.py`, `pay/VOICE_ATTACKS.md`; features used, setup and known limits are in the Cartesia section below.
 - Breaks without it: nothing above the allowance can be approved, so the first buy stalls.
 - Demo moment: beat 4.
 - Hard requirements: voice must be core to the product, not a feature added for the demo; make clear what Cartesia contributes; submit a working demo, a 2-minute demo-first presentation and a short README with setup, the Cartesia features used and known limitations.
@@ -73,15 +73,32 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 - Demo moment: two laptops show the same round at once (beats 1, 2 and 5).
 - Hard requirements: Spacetime is the core real-time backend (live shared state, instant sync between agents and users, "AI systems coordinating in a persistent world state"), meaningfully used and not added on the side. README names the Python bridge as the single point of failure.
 
-**Tiger Data** (MLH track, Lane C): planned, not built. Time series behind dated savings and the learning curve; plain Postgres could do this, say so. There is no Tiger code on this branch; do not opt in on Devpost until it exists.
+**Tiger Data** (MLH track, Lane C): planned, not built. Key set and a connection checked Sat 02:53 (agent-board); no code until night task T13. Time series behind dated savings and the learning curve; plain Postgres could do this, say so. Do not opt in on Devpost until the code exists.
 
 **Capital One (Nessie):** maybe, only if Capital One is present at the event. Not planned; no lane has time for it.
 
 Hyphenate proof: `hyphenate/RESULTS-blind.md` (26 of 27 planted errors caught on the first blind run, 2026-10-24).
 
+## Cartesia: the approval call
+
+Voice is the trust step: above the allowance, a call asks for a one-time word-pair code that appears only on the buyer's screen.
+
+**Features used.** A Cartesia managed agent that only talks; outbound calls (`POST /agents/calls`); dynamic variables (`buyer_name`, `deal_script`, `why_answer`); the call transcript (`GET /agents/calls/{id}`). Code: `pay/voice_cartesia.py`.
+
+**What the voice does and does not decide.** The agent reads a script that code fills from the mandate (amount and payee), answers "why not the cheaper one?" from the advocate's closed-schema reason, asks for the code and repeats what it heard. It never decides. Our code reads the transcript and feeds every buyer utterance to the approval judge in `pay/approval.py`: it approves only on the exact word pair plus the word "approve", and silence, a hang-up, voicemail, a failed dial, a timeout or a missing transcript all deny. The judge, not the call, is what the tests cover (`pay/tests/test_approval.py`). Attack cases (`pay/VOICE_ATTACKS.md`, 2026-10-24): 9 of 10 denied on the first run; 10 of 10 after one fix (v04 no longer blind).
+
+**Setup.** Env names (values never printed): `CARTESIA_API_KEY`, `CARTESIA_AGENT_ID`, `APPROVAL_CALL_TO` (the only number ever dialed). Then `python3 -m pay.voice_cartesia --dry-run --env-file /abs/path/.env` prints the variables with no network, `--check` is a read-only look at the agent, and `--demo` places one real call. Details: `pay/README.md`.
+
+**Known limits.**
+- A noisy room can make the speech-to-text miss the code. We have not measured a noise level; the answer to a miss is the typed fallback, which goes through the same judge and is labelled typed.
+- 3 tries per mandate, shared by voice and typed, then the mandate is denied and needs a new one. A failed try starts a 30 second cooldown.
+- A spoken different amount ("approve nine hundred dollars") is caught; not every phrasing is ("approve nine fifty" still passes). The real money control is the signed mandate hash, which a call cannot change.
+- Cartesia does not document how long after a call ends the transcript is complete, or a call-cancel endpoint, so a wait timeout denies and the call may still be ringing.
+- The call is a phone call to one registered number. An in-browser Cartesia call is planned, not built; the typed card is the fallback today. A rehearsed live call is not recorded in this repo.
+
 **Phone for the call:** Photon SIP first (the team used it at LA Hacks and won its voice prize), with Cartesia over SIP. Anoop spikes it (decision Sat 09:00); the in-browser Cartesia call is the default and fallback. Do not buy Twilio before Photon is proven.
 
-**Credits in hand: Apify and CRS (CRS is planned, not built).** Anything else that costs money (Bright Data, Twilio; Stripe is test mode and free) needs Vidyut's OK first.
+**Credits in hand: Apify and CRS.** CRS is planned, not built. Anything else that costs money (Twilio, more Bright Data credits beyond the in progress smoke calls; Stripe is test mode and free) needs Vidyut's OK first.
 
 ## MLH tracks and extras
 | Track | Status | Owner |

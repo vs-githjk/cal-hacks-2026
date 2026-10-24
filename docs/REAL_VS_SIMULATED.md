@@ -11,7 +11,7 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 | Seller catalogs and prices (Newegg, Amazon, Best Buy, Micro Center, B&H, eBay) | MIRROR (Apify, dated snapshots) | `data/mirror/snapshots/`, `data/RESULTS.md` | C |
 | Demo winner | MIRROR listing (ASUS Prime RTX 5070 Ti OC Edition, 304 mm, Best Buy, $1,299.99 before sales tax, shipping: not captured), bid by a SIM seller | `demo/tests/test_demo_winner.py` | D |
 | Price baseline | MIRROR: eBay sold listings (mixed condition, never in the median) and a dated open dataset | `data/RESULTS.md` | C |
-| Bright Data price source | planned: a stub that says not configured; live only when `BRIGHT_DATA_API_KEY` is set; not used by the demo | `data/baselines/brightdata.py` | C |
+| Bright Data price source | in progress: key set, one smoke call passed Sat 02:55 (agent-board); the integration code is night task T6 and not on this branch, where `data/baselines/brightdata.py` is still a stub that raises not configured; not used by the demo. Flips to LIVE only when T6 lands | `data/baselines/brightdata.py` | C |
 | Price history series | SIM unless a real source works; labelled on screen | `agents/advocate/mock_data.py` | C |
 | Seller bids | SIM over MIRROR: code that bids from real listings, plus labelled SIM sellers. Any real seller that joins would bid LIVE; none has | `demo/sellers.py` | A |
 | Agentverse agents (buyer, advocate, three sellers, Shield client) | LIVE on Agentverse (mailbox), listings SIM; checkout not exercised | `agents/ISSUE14_EVIDENCE.md` | A |
@@ -23,12 +23,12 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 | Payments | SIM stub by default; SANDBOX with `--stripe` (one Stripe test charge on a Visa test card; no real money) | `demo/approval_flow.py` | D |
 | Request signatures (Visa TAP style) | LIVE code, verified by our own merchant simulator; Visa does not verify them | `pay/tap.py`, `pay/merchant_sim.py` | D |
 | Visa Intelligent Commerce | planned: swaps in only with Visa sandbox access | none yet | D |
-| Shield verdicts | LIVE code on every message; scored per set (dev and dev2 in-sample, frozen probe an upper bound, post-freeze check 6 of 12) | `shield/corpus/RESULTS.md` | D |
+| Shield verdicts | LIVE code on every message; scored per set (dev and dev2 in-sample, frozen probe an upper bound, post-freeze check 6 of 12, 2026-10-23) | `shield/corpus/RESULTS.md` | D |
 | Claude | Optional: a seller persona line and Shield's classifier (off by default); the advocate is code | `agents/sellers/seller_agent.py`, `shield/classifier.py` | A |
 | Hyphenate IT buyer purchasing | SIM company around a real rule engine; blind planted-error run reported | `hyphenate/RESULTS-blind.md` | D |
 | Receiving check photos (buyer path) | planned, not built | none yet | C |
 | Seller demand and trend dashboard | planned, not built | none yet | C |
-| Tiger Data time series | planned, not built | none yet | C |
+| Tiger Data time series | planned, not built: key set, connection checked Sat 02:53 (agent-board); no code until night task T13 | none yet | C |
 | Wind tunnel builders | SIM by design; no headline lift yet | `sim/RESULTS-2026-10-24-b48x3.md` | D |
 | Seller learning | SIM stand-in (price step); Claude writing the change line is planned | `demo/learning.py` | D |
 | 3D floor | planned, not built: no three.js in `web/package.json` | none yet | B |
