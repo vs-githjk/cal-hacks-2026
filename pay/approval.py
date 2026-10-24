@@ -26,6 +26,7 @@ import threading
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation, Overflow
 from typing import Any, Optional
 
 from pay.callscript import CallScript, ScriptError, script_for  # noqa: F401  (re-exported)
@@ -38,6 +39,7 @@ SECRET_ENV = "APPROVAL_SECRET"
 MIN_SECRET_LENGTH = 16
 NS_CODE = "approval_code"
 CODE_TTL_SECONDS = 120
+VOICE_CODE_TTL_SECONDS = 300
 MAX_ATTEMPTS = 3
 COOLDOWN_SECONDS = 30
 LISTEN_WINDOW_SECONDS = 10
@@ -140,6 +142,63 @@ def validate_record(rec: dict) -> list[str]:
         return _manual_check(rec, schema)
     return sorted(f"{'/'.join(map(str, e.absolute_path)) or '<root>'}: {e.message}"
                   for e in jsonschema.Draft202012Validator(schema).iter_errors(rec))
+
+
+def _approval_cents(value: Any) -> Optional[int]:
+    try:
+        amount = Decimal(str(value))
+        if isinstance(value, bool) or not amount.is_finite() or amount <= 0 or amount.adjusted() > 11:
+            return None
+        cents = amount * 100
+        if cents <= 0 or cents != cents.to_integral_value():
+            return None
+        return int(cents)
+    except (InvalidOperation, Overflow, ValueError, TypeError):
+        return None
+
+
+def _approval_time(value: Any) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError("timestamp must be a string")
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("timestamp must include a timezone")
+    return parsed.astimezone(timezone.utc)
+
+
+def approved_voice_record_matches(record: Any, mandate: Any, *,
+                                  now: Optional[datetime] = None) -> bool:
+    """Pure approval gate shared by checkout, settlement, and MerchantSim.
+
+    Browser approvals keep their 120-second issuance window; the voice adapter may use up to 300 seconds
+    for ringing and read-back, still bounded by the exact mandate expiry.
+    """
+    if not isinstance(record, dict) or not isinstance(mandate, dict):
+        return False
+    if validate_record(record):
+        return False
+    if (record.get("result") != "approved" or record.get("id") != mandate.get("approval_id")
+            or record.get("mandate_id") != mandate.get("id")
+            or record.get("mandate_hash") != mandate.get("hash")
+            or _approval_cents(record.get("amount_read_back")) != _approval_cents(mandate.get("amount"))
+            or record.get("payee_read_back") != mandate.get("payee")):
+        return False
+    try:
+        issued = _approval_time(record["code_issued_at"])
+        expires = _approval_time(record["code_expires_at"])
+        decided = _approval_time(record["decided_at"])
+        mandate_created = _approval_time(mandate["created_at"])
+        mandate_expires = _approval_time(mandate["expires_at"])
+        current = now or datetime.now(timezone.utc)
+        if current.tzinfo is None:
+            return False
+        current = current.astimezone(timezone.utc)
+        ttl = expires - issued
+        return (issued <= decided <= expires and timedelta(0) < ttl <= timedelta(seconds=VOICE_CODE_TTL_SECONDS)
+                and mandate_created <= issued <= expires <= mandate_expires
+                and decided <= current + timedelta(seconds=5))
+    except (AttributeError, KeyError, TypeError, ValueError, OverflowError):
+        return False
 
 
 @dataclass(frozen=True)

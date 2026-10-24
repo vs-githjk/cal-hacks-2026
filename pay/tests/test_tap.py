@@ -5,6 +5,7 @@ import json
 import os
 import re
 import stat
+import subprocess
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -283,7 +284,32 @@ def test_key_loaded_from_env_var_path(tmp_path, monkeypatch):
     monkeypatch.setenv(KEY_ENV, path)
     loaded = load_private_key()
     assert key_id(loaded.public_key()) == key_id(pub)
-    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+    if os.name == "nt":
+        acl = subprocess.run(["icacls", path], capture_output=True, text=True, check=True).stdout
+        identity = subprocess.run(["whoami", "/user", "/fo", "csv", "/nh"], capture_output=True,
+                                  text=True, check=True).stdout.strip()
+        import csv
+        account = next(csv.reader(identity.splitlines()))[0]
+        entries = acl.replace(path, "", 1)
+        assert "(I)" not in acl
+        assert "Everyone:" not in entries and "S-1-1-0:" not in entries
+        assert "BUILTIN\\Users:" not in entries and "Authenticated Users:" not in entries
+        assert account.lower() in entries.lower()
+    else:
+        assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows ACL regression")
+def test_generated_key_does_not_inherit_broad_parent_acl(tmp_path):
+    subprocess.run(["icacls", str(tmp_path), "/grant", "*S-1-1-0:(OI)(CI)(R)"],
+                   capture_output=True, text=True, check=True)
+    path = str(tmp_path / "private.pem")
+    generate_keypair(path)
+    acl = subprocess.run(["icacls", path], capture_output=True, text=True, check=True).stdout
+    entries = acl.replace(path, "", 1)
+    assert "(I)" not in acl
+    assert "Everyone:" not in entries and "S-1-1-0:" not in entries
+    assert "BUILTIN\\Users:" not in entries and "Authenticated Users:" not in entries
 
 
 def test_missing_env_var_or_file_raises(tmp_path, monkeypatch):
