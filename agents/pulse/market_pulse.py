@@ -22,7 +22,7 @@ from typing import Any, Callable, Optional
 STEP_CAP = {"within5": 0.03, "within10": 0.07, "within20": 0.15, "over20": 0.25}   # = demo/learning.py STEP_BY_BAND (pinned by a test)
 BAND_TEXT = {"within5": "less than 5 percent", "within10": "less than 10 percent", "within20": "less than 20 percent",
              "over20": "more than 20 percent"}
-ACTIONS = {"price": ("lower_price", "hold_price"), "fit": ("check_fit_data",), "condition": ("fix_condition_claim",),
+ACTIONS = {"price": ("lower_price",), "fit": ("check_fit_data",), "condition": ("fix_condition_claim",),
            "delivery": ("improve_delivery",), "record": ("improve_record",), "advocate_veto": ("fix_listing_claims",)}
 MODEL = "claude-opus-5-5"
 # The "why" and the action are closed lists; the seller only ever reads these fixed phrases.
@@ -30,7 +30,6 @@ WHY = {"lost_narrowly": "You lost by a small margin", "lost_widely": "You lost b
        "busy_market": "Many sellers are bidding on this part", "quiet_market": "Few sellers are bidding on this part",
        "listing_flagged": "The advocate flagged your listing"}
 ACTION_LINE = {"lower_price": "Lower your price by about {pct}%, and keep it above your floor.",
-               "hold_price": "Hold your price; price was not what lost this round.",
                "check_fit_data": "Check your fit data against the maker's page.",
                "fix_condition_claim": "Make the condition in your listing match the page.",
                "improve_delivery": "Offer a faster delivery window.",
@@ -79,13 +78,25 @@ def _line(action: str, step: float, why: str) -> str:
     return f"{WHY[why]}. {ACTION_LINE[action].format(pct=round(step * 100))}"
 
 
-def check_claude(raw: Any, report: dict) -> Optional[tuple[str, float, str]]:
+def allowed_why(report: dict, market: Optional[dict] = None) -> set:
+    """The "why" phrases that are true for this loss: the margin matches the band; "flagged" only for a loss the
+    advocate or a claim check caused; busy or quiet only when Tiger Data answered with demand."""
+    out = {"lost_narrowly"} if report["gap_band"] in ("within5", "within10") else {"lost_widely"}
+    if report["reason"] in ("advocate_veto", "condition", "fit"):
+        out.add("listing_flagged")
+    rounds = ((market or {}).get("demand") or {}).get("round_hours_24h")
+    if isinstance(rounds, int) and not isinstance(rounds, bool):
+        out.add("busy_market" if rounds >= 5 else "quiet_market")
+    return out
+
+
+def check_claude(raw: Any, report: dict, market: Optional[dict] = None) -> Optional[tuple[str, float, str]]:
     """The model's choices as (action, step, line) when they fit the closed lists and the seller's case, else None.
     The line is built from fixed phrases; no model text is passed on."""
     if not isinstance(raw, dict) or set(raw) != {"action", "step_pct", "why"}:
         return None
     action, step, why = raw["action"], raw["step_pct"], raw["why"]
-    if action not in ACTIONS.get(report["reason"], ()) or why not in WHY:
+    if action not in ACTIONS.get(report["reason"], ()) or why not in allowed_why(report, market):
         return None
     if isinstance(step, bool) or not isinstance(step, int) or not 0 <= step <= 25:
         return None
@@ -125,7 +136,7 @@ def note_for(report: dict, sku: str, demand: dict, coach: dict, *, writer: Optio
     picked, origin = None, "SIM template"
     if writer is not None:
         try:
-            picked = check_claude(writer({k: facts[k] for k in ("gap_band", "reason", "sku", "market")}), report)
+            picked = check_claude(writer({k: facts[k] for k in ("gap_band", "reason", "sku", "market")}), report, facts["market"])
         except Exception:  # noqa: BLE001  (API down, timeout, bad JSON: the template line, labelled SIM)
             picked = None
         origin = "Claude" if picked else "SIM template (Claude answer unusable)"

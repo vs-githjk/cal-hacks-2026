@@ -138,3 +138,25 @@ def test_an_unknown_band_or_reason_gets_no_note_instead_of_a_crash():
     notes = P.pulse([{**REPORT, "gap_band": "half"}, {**REPORT, "reason": "vibes"}, REPORT], "rtx 5070 ti",
                     demand=lambda: DEMAND, coach=lambda s: COACH)
     assert len(notes) == 1
+
+
+
+# ---------- #323 review 2: the why must be true for the loss ----------
+
+@pytest.mark.parametrize("answer, report", [
+    ({"action": "hold_price", "step_pct": 0, "why": "lost_narrowly"}, REPORT),                       # no hold on a price loss
+    ({"action": "lower_price", "step_pct": 3, "why": "listing_flagged"}, REPORT),                    # a price loss was not flagged
+    ({"action": "lower_price", "step_pct": 3, "why": "lost_widely"}, REPORT),                        # within5 is narrow
+    ({"action": "lower_price", "step_pct": 15, "why": "lost_narrowly"}, {**REPORT, "gap_band": "over20"}),
+    ({"action": "lower_price", "step_pct": 3, "why": "quiet_market"}, REPORT),                       # 7 round-hours is busy
+])
+def test_a_why_that_is_not_true_for_the_loss_falls_back(answer, report):
+    n = note(lambda f: answer, report=report)
+    assert n["what_to_change_origin"].startswith("SIM template"), (answer, report)
+
+
+def test_busy_or_quiet_only_when_tiger_answered():
+    n = note(lambda f: {"action": "lower_price", "step_pct": 3, "why": "busy_market"}, demand={"status": "not_configured", "rows": []})
+    assert n["what_to_change_origin"].startswith("SIM template")
+    n = note(lambda f: {"action": "check_fit_data", "step_pct": 0, "why": "listing_flagged"}, report={**REPORT, "reason": "fit"})
+    assert n["what_to_change_origin"] == "Claude" and n["what_to_change"].startswith("The advocate flagged your listing")
