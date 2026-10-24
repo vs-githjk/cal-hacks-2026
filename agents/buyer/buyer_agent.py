@@ -27,7 +27,7 @@ from chat_diagnostics import ChatDiagnostics
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
 from logic import advice_need_for, decide, make_order, sealed
 
-BASELINE = shield_baseline()  # real dated price where we hold data, labelled SIM rows for the rest
+BASELINE = shield_baseline()  # real dated prices only; a SKU with no fresh real baseline has no price reference
 
 ADVICE_TIMEOUT_S = 15
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE

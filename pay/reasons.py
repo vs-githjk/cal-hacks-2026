@@ -24,6 +24,7 @@ MAX_URL = 500
 SUMMARIES: dict[str, str] = {
     "advocate.condition": "The listing page shows a different condition than the seller claims",
     "advocate.recall": "This product matches a CPSC recall entry",
+    "advocate.recall_partial": "A CPSC recall names a similar model, so check the exact model",
     "advocate.price": "The price is more than 10 percent above its price history",
     "advocate.spec": "This offer is not the condition you asked for",
     "advocate.record": "This seller has a caution record",
@@ -32,6 +33,7 @@ SUMMARIES: dict[str, str] = {
     "advocate.unsourced": "A claim on this bid could not be checked against its listing",
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
     "advocate.ok": "No problems found in the checks",
+    "advocate.unverified": "Some checks could not run",
     "fit": "This part does not fit your build",
     "fit.gpu_length": "The card is longer than your case allows",
     "fit.psu_wattage": "Your power supply is below what this card needs",
