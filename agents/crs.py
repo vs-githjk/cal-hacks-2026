@@ -2,15 +2,20 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import sys
 import tempfile
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
-ENDPOINT = "https://api-sandbox.stitchcredit.com/api/transunion/identity-manager-verification/basic"
+BASE_URL = os.environ.get("CRS_BASE_URL", "https://api-sandbox.stitchcredit.com/api").rstrip("/")
+LOGIN_PATH = "/users/login"
+ENDPOINT_PATH = "/transunion/identity-manager-verification/basic"
+ENDPOINT = f"{BASE_URL}{ENDPOINT_PATH}"
 CACHE_MAX_AGE = timedelta(hours=24)
 REASON_VERIFIED = "Synthetic representative identity verified by CRS sandbox."
 REASON_CAUTION = "CRS sandbox returned a fraud alert; additional proof is required."
@@ -18,6 +23,31 @@ REASON_NOT_VERIFIED = "CRS sandbox could not verify the synthetic representative
 REASON_UNAVAILABLE = "CRS sandbox check unavailable; a current recorded result may be used."
 REASON_CONSENT = "Seller consent is missing or withdrawn."
 REASON_PROFILE = "Approved synthetic representative profile is unavailable."
+REASON_NOT_CONFIGURED = "CRS not configured."
+_LOG = logging.getLogger(__name__)
+
+
+class CrsAuthError(RuntimeError):
+    """Sanitized authentication failure; details never leave the adapter."""
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = build_opener(_NoRedirect())
+urlopen = _NO_REDIRECT_OPENER.open
+
+
+class _AuthState:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.token = None
+        self.failed = False
+
+
+_auth_state = _AuthState()
 
 # SHA-256 of canonical JSON request bodies from the official CRS 1.1.2 persona file.
 # Bodies stay in the operator's private config; only these non-identifying pins are committed.
@@ -168,10 +198,62 @@ def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
     return timedelta(0) <= age <= CACHE_MAX_AGE
 
 
+def _open_request(request):
+    return urlopen(request, timeout=4)
+
+
+def _configured():
+    return bool(os.environ.get("CRS_API_KEY") or
+                (os.environ.get("CRS_USERNAME") and os.environ.get("CRS_PASSWORD")))
+
+
+def _login():
+    username, password = os.environ.get("CRS_USERNAME"), os.environ.get("CRS_PASSWORD")
+    if not username or not password:
+        raise CrsAuthError(REASON_NOT_CONFIGURED)
+    request = Request(f"{BASE_URL}{LOGIN_PATH}", data=json.dumps({
+        "username": username, "password": password}).encode("utf-8"), headers={
+            "Content-Type": "application/json"}, method="POST")
+    with _open_request(request) as result:
+        if result.status != 200:
+            raise CrsAuthError("CRS authentication failed")
+        payload = json.loads(result.read())
+    token = payload.get("token") if isinstance(payload, dict) else None
+    if not isinstance(token, str) or not token:
+        raise CrsAuthError("CRS authentication failed")
+    return token
+
+
+def _get_token():
+    """Return one cached process token, permanently latching failed login."""
+    global _auth_state
+    legacy = os.environ.get("CRS_API_KEY")
+    if legacy and not (os.environ.get("CRS_USERNAME") and os.environ.get("CRS_PASSWORD")):
+        return legacy
+    if not _configured():
+        raise CrsAuthError(REASON_NOT_CONFIGURED)
+    with _auth_state.lock:
+        if _auth_state.token:
+            return _auth_state.token
+        if _auth_state.failed:
+            raise CrsAuthError("CRS authentication failed")
+        try:
+            _auth_state.token = _login()
+            return _auth_state.token
+        except CrsAuthError:
+            _auth_state.failed = True
+            _LOG.warning("CRS authentication failed; using sanitized fallback if available")
+            raise
+        except Exception:
+            _auth_state.failed = True
+            _LOG.warning("CRS authentication failed; using sanitized fallback if available")
+            raise CrsAuthError("CRS authentication failed") from None
+
+
 def _request(body, token):
     req = Request(ENDPOINT, data=json.dumps(body).encode("utf-8"), headers={
         "Authorization": f"Bearer {token}", "Content-Type": "application/json"}, method="POST")
-    with urlopen(req, timeout=4) as result:
+    with _open_request(req) as result:
         if result.status != 200:
             raise ValueError("CRS request failed")
         payload = json.loads(result.read())
@@ -211,7 +293,13 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
     _issued_personas.clear()
     _, cache_path = _paths()
     profiles, cache = _profiles(), _cache_read(cache_path)
-    token = os.environ.get("CRS_API_KEY")
+    token = None
+    auth_failed = False
+    if _configured():
+        try:
+            token = _get_token()
+        except CrsAuthError:
+            auth_failed = True
     results = {}
     for supplier_id, profile in profiles.items():
         if not isinstance(supplier_id, str) or not supplier_id:
@@ -225,6 +313,9 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
         body = _approved(profile)
         if body is None:
             results[supplier_id] = {"signal": None, "reason": REASON_PROFILE}
+            continue
+        if not _configured():
+            results[supplier_id] = {"signal": None, "reason": REASON_NOT_CONFIGURED}
             continue
         if token:
             try:
@@ -242,8 +333,9 @@ async def check_sellers(now: datetime) -> dict[str, dict]:
                 results[supplier_id] = result
                 continue
             except Exception:
+                auth_failed = True
                 pass
-        cached = _cached(supplier_id, profile, now, cache)
+        cached = _cached(supplier_id, profile, now, cache) if auth_failed else None
         if cached is not None:
             _issued_personas[id(cached)] = (cached, profile["persona_ref"], _canonical_hash(cached["signal"]))
             results[supplier_id] = cached
