@@ -273,7 +273,7 @@ class CodeCapturingContext(Context):
     async def send(self, to, message):
         self.sent.append((to, message))
         if hasattr(message, "text"):
-            match = re.search(r"One-time approval code: ([a-z]+ [a-z]+)", message.text())
+            match = re.search(r"Your two words: ([a-z]+ [a-z]+)\.", message.text())
             if match:
                 self.client.code = match.group(1)
 
@@ -309,7 +309,7 @@ def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     assert any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
     texts = owner_texts(owner_ctx)
     assert any("Calling you now to approve" in text for text in texts)
-    assert any("One-time approval code:" in text and "Calling your phone now" in text for text in texts)
+    assert any("Your two words:" in text and "Say them, then 'approve'." in text for text in texts)
     assert not any("APPROVE" in text for text in texts)
 
     # a repeat of the same offer, or any owner text, never starts a second call or a typed approval
@@ -343,6 +343,95 @@ def test_failed_call_says_nothing_was_paid_and_a_typed_code_never_approves(runti
     assert any("Nothing was paid" in text for text in owner_texts(owner_ctx))
 
 
+def _logged(ctx):
+    return " ".join(str(c) for m in ("info", "warning", "error", "debug") for c in getattr(ctx.logger, m).call_args_list)
+
+
+def test_call_lines_approve_names_pair_privately_then_call_approved(runtime):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    buyer.MARKET_BUYER.record_approval.return_value = {
+        "approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    client = FakeVoiceClient()
+    _wire_voice(buyer, client, "buyer-runtime-call-lines-secret")
+    ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    texts = owner_texts(ctx)
+    call_lines = [t for t in texts if "Your two words:" in t]
+    assert call_lines == [f"Every purchase needs your approval, so I am calling you now. "
+                          f"Your two words: {client.code}. Say them, then 'approve'."]
+    assert texts.index(call_lines[0]) < texts.index("Call approved.")
+    assert texts.count("Call approved.") == 1
+    assert client.code not in _logged(ctx)
+    assert all(client.code not in t for t in texts if t != call_lines[0])
+    assert all(client.code not in str(m) for _to, m in ctx.sent if not hasattr(m, "text"))
+
+
+def test_call_line_names_the_allowance_when_there_is_one(runtime, monkeypatch):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    monkeypatch.setattr(buyer, "ALLOWANCE", 50)
+    client = FakeVoiceClient()
+    _wire_voice(buyer, client, "buyer-runtime-allowance-line-secret")
+    ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    assert any(t.startswith("Over your $50 allowance, so I am calling you now. Your two words: ")
+               for t in owner_texts(ctx))
+
+
+def test_denied_call_posts_the_reason_code_and_that_nothing_was_paid(runtime):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    class WrongWordsClient(FakeVoiceClient):
+        def get_call(self, call_id):
+            call = super().get_call(call_id)
+            call["transcript"] = [{"role": "user", "text": "approve", "start_timestamp": 1.0 + 40 * i}
+                                  for i in range(2)]
+            return call
+
+    client = WrongWordsClient()
+    _wire_voice(buyer, client, "buyer-runtime-denied-secret")
+    buyer.APPROVAL_SERVICE.max_attempts = 1  # the second spoken try is denied as max_attempts
+    ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    texts = owner_texts(ctx)
+    denied = [t for t in texts if t.startswith("Call denied (")]
+    assert denied == ["Call denied (max_attempts). Nothing was paid."], texts
+    assert "Call approved." not in texts
+    assert not any("Approval not granted" in t or "failed or was not approved" in t for t in texts)
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+    assert not buyer.MARKET_BUYER.record_approval.called
+    assert client.code not in _logged(ctx)
+
+
+def test_no_answer_posts_nothing_was_paid_and_no_approved_line(runtime):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+
+    class NoAnswerClient(FakeVoiceClient):
+        def get_call(self, call_id):
+            return {"id": call_id, "status": "failed", "end_reason": "dial_no_answer", "transcript": []}
+
+    client = NoAnswerClient()
+    _wire_voice(buyer, client, "buyer-runtime-no-answer-secret")
+    ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    texts = owner_texts(ctx)
+    assert "Call approved." not in texts
+    assert sum("Nothing was paid" in t for t in texts) == 1
+    assert client.code not in _logged(ctx)
+
+
+def test_receipt_line_has_hash_prefix_and_the_payment_label(runtime):
+    buyer, db = runtime
+    tx, _charger = charged_transaction(buyer, db)
+    ctx = Context()
+    asyncio.run(buyer.on_complete(ctx, tx["mandate"]["payee"],
+        CompletePayment(transaction_id="ch_simulated_runtime")))
+    texts = [m.text() for _to, m in ctx.sent if hasattr(m, "text")]
+    assert any(f"Receipt: mandate {tx['mandate']['hash'][:12]}, SIM." in t for t in texts), texts
+
+
 def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, monkeypatch):
     buyer, db = runtime
     for name in ("CARTESIA_API_KEY", "CARTESIA_AGENT_ID", "APPROVAL_CALL_TO", "CARTESIA_PHONE_NUMBER_ID"):
@@ -363,7 +452,7 @@ def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, m
     texts = owner_texts(owner_ctx)
     assert any("Phone approval is not set up" in text and "Nothing was approved" in text
                and "nothing was paid" in text for text in texts)
-    assert not any("One-time approval code:" in text for text in texts)
+    assert not any("Your two words:" in text for text in texts)
 
 
 def submitted_transaction(buyer):

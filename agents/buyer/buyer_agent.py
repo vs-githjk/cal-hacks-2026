@@ -955,10 +955,11 @@ async def _phone_approval(transaction: dict, send_private, client, service):
     from buyer import checkout
     from pay.voice_cartesia import VoiceResult
     loop = asyncio.get_running_loop()
-    deal_id = transaction.get("deal_id", "this deal")
 
     def on_code(code: str) -> None:
-        text = f"One-time approval code: {code}. Calling your phone now: say the code, then say approve."
+        lead = ("Every purchase needs your approval" if not ALLOWANCE
+                else f"Over your ${ALLOWANCE:g} allowance")
+        text = f"{lead}, so I am calling you now. Your two words: {code}. Say them, then 'approve'."
         try:
             future = asyncio.run_coroutine_threadsafe(send_private(text), loop)
             delivered = future.result(timeout=10.0)
@@ -972,13 +973,6 @@ async def _phone_approval(transaction: dict, send_private, client, service):
                                          on_code=on_code, buyer_name="Vidyut", now=business_now)
     except Exception:
         result = VoiceResult(False, "private_approval_unavailable")
-    try:
-        if result.approved:
-            await send_private(f"Approval confirmed for deal {deal_id}. Payment is not confirmed by this approval.")
-        else:
-            await send_private(f"Approval not granted for deal {deal_id}.")
-    except Exception:
-        pass
     return result
 
 
@@ -1007,12 +1001,19 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                                "Nothing was approved, nothing was ordered and nothing was paid.")
             return
         result = await _phone_approval(transaction, send_private, client, _approval_service())
+        record = result.record if isinstance(result.record, dict) else {}
+        if not result.approved and record.get("result") == "denied":
+            await send_private(f"Call denied ({record.get('deny_reason') or result.reason or 'denied'}). "
+                               "Nothing was paid.")
+        elif result.approved and record.get("channel") == "phone":
+            await send_private("Call approved.")
         if not result.approved or not isinstance(result.record, dict) or result.record.get("channel") != "phone":
             transaction["phase"] = "denied" if result.record and result.record.get("result") == "denied" else "paused"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
-            await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
-                                  "the deal remains held until it expires.")
+            if record.get("result") != "denied":
+                await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
+                                      "the deal remains held until it expires.")
             return
         record = result.record
         mandate = dict(transaction["mandate"])
@@ -1397,7 +1398,9 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
         await tell_owner(ctx, "The seller acknowledgement arrived, but Market could not confirm settlement. This purchase remains held.")
         return
     try:
-        await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement.")
+        label = {"SIM": "SIM", "stripe_test": "Stripe test"}.get(settlement.get("mode"), "SIM")
+        await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement. "
+                               f"Receipt: mandate {mandate['hash'][:12]}, {label}.")
     except Exception as exc:
         # The settled state is already durable. A failed owner notice must not relock it.
         ctx.logger.warning(f"Settlement notice failed after durable completion: {type(exc).__name__}")
