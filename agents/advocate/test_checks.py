@@ -323,12 +323,18 @@ def test_fit_unconfirmed_veto_speaks_the_fit_unknown_template():
 
 
 def test_buyer_advice_need_carries_in_cap_ids_only():
-    import os
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "buyer"))
     from logic import advice_need_for
     need = {**NEED, "spend_limit": 1400}
     bids = [bid("b1", "seller_1", 1500), bid("b2", "seller_2", 1239.99)]
     out = advice_need_for(need, {}, bids)
     assert out["in_cap_bid_ids"] == ["b2"]
     assert "spend_limit" not in out and "1400" not in str(out)
+
+
+def test_price_caution_only_bid_is_not_a_confirmed_fit():
+    # a bid with no fit check at all (no attrs) has no fit-ok signal, even though it has no fit warning
+    cheap = bid("b1", "seller_1", 1299.99, attrs={})
+    ebay = bid("b2", "seller_2", 1239.99, attrs={"category": "gpu", "chipset": "RTX 4070 SUPER"})
+    cards = run115([cheap, ebay], in_cap=["b1", "b2"])
+    assert cards[1]["recommendation"] != "veto"
+
