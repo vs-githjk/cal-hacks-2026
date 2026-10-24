@@ -1,0 +1,147 @@
+{
+ "actorSpecification": 1,
+ "fields": {
+  "type": "object",
+  "properties": {
+   "id": {
+    "type": "string",
+    "description": "Listing id in this run"
+   },
+   "url": {
+    "type": "string",
+    "description": "The listing URL"
+   },
+   "status": {
+    "type": "string",
+    "description": "blocks (an agent would skip it), warns (an agent cannot confirm something), ready, or unreadable (could not fetch)"
+   },
+   "summary": {
+    "type": "string",
+    "description": "One line in plain words"
+   },
+   "blocks": {
+    "type": [
+     "integer",
+     "null"
+    ],
+    "description": "Number of blocking findings"
+   },
+   "warns": {
+    "type": [
+     "integer",
+     "null"
+    ],
+    "description": "Number of warnings"
+   },
+   "first_rule": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "The first finding's rule id (blocks first)"
+   },
+   "first_fix": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "What to change for that finding"
+   },
+   "findings": {
+    "type": [
+     "array",
+     "null"
+    ],
+    "description": "Every finding: rule_id, severity, what_an_agent_sees, source_url, fix"
+   },
+   "facts_read": {
+    "type": [
+     "object",
+     "null"
+    ],
+    "description": "What an agent could read from the page: title, price, currency, condition, stock, shipping, returns"
+   },
+   "read_from": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Where the facts came from: page JSON-LD, or no structured data"
+   },
+   "checked_at": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "When the page was read (UTC)"
+   },
+   "origin": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "LIVE: one fetch of the page at checked_at"
+   }
+  },
+  "required": [
+   "id",
+   "url",
+   "status",
+   "summary"
+  ]
+ },
+ "views": {
+  "report": {
+   "title": "Readiness report",
+   "transformation": {
+    "fields": [
+     "url",
+     "status",
+     "summary",
+     "blocks",
+     "warns",
+     "first_rule",
+     "first_fix",
+     "checked_at"
+    ]
+   },
+   "display": {
+    "component": "table",
+    "properties": {
+     "url": {
+      "label": "Listing",
+      "format": "link"
+     },
+     "status": {
+      "label": "Status",
+      "format": "text"
+     },
+     "summary": {
+      "label": "Summary",
+      "format": "text"
+     },
+     "blocks": {
+      "label": "Blocks",
+      "format": "number"
+     },
+     "warns": {
+      "label": "Warnings",
+      "format": "number"
+     },
+     "first_rule": {
+      "label": "First finding",
+      "format": "text"
+     },
+     "first_fix": {
+      "label": "Fix",
+      "format": "text"
+     },
+     "checked_at": {
+      "label": "Read at",
+      "format": "text"
+     }
+    }
+   }
+  }
+ }
+}
