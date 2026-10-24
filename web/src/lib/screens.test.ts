@@ -1,9 +1,10 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import type { Timestamp } from "spacetimedb";
 import { asOrigin, asSim, bidsFromRows, dealFromRows, feedFromRows, latestRound, linesFromRows, originCounts, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
 
-const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as any;
+const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
 
 const result = (over: Record<string, unknown> = {}) => ({

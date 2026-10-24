@@ -181,8 +181,8 @@ export function SellerLearns({ learning }: { learning: LearningView | null }) {
     <Card>
       <Label>Seller learns · {learning.seller} <OriginChip origin={learning.origin} /></Label>
       <div className="rounded-xl border-l-[3px] border-accent bg-soft px-3.5 py-3 text-[15px]">
-        "{learning.whatToChange}"
-        <small className="mt-1 block text-[12px] text-muted">Claude's one line to the owner ({learning.whatToChangeOrigin} in this run)</small>
+        &quot;{learning.whatToChange}&quot;
+        <small className="mt-1 block text-[12px] text-muted">Claude&apos;s one line to the owner ({learning.whatToChangeOrigin} in this run)</small>
       </div>
       <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 font-mono text-[13px]">
         {learning.diff.map((d) => (
