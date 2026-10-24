@@ -228,11 +228,34 @@ def _units(text: str) -> Iterable[tuple[int, int, bool]]:
         yield a[0], b[1], True
 
 
-def _eval(unit: str, off: int, pair: bool) -> dict[str, tuple[float, Span]]:
+_LEX_PATTERNS = {"skip": SKIP, "gate": GATE, "cleared": CLEARED, "proceed": PROCEED, "approve": APPROVE,
+                 "urgent": URGENT, "auth": AUTH, "role": ROLE, "discard": DISCARD, "instr": INSTR, "qual": QUAL,
+                 "strong": DEST_STRONG, "weak": DEST_WEAK, "payv": PAYV, "sbg": SKIP_BEFORE_GATE}
+
+
+_HAS_WORD = re.compile(r"[a-z]{3}")
+
+
+def _lex(sentence: str) -> dict[str, list[Span]]:
+    """Every lexicon role's matches in one sentence (offsets inside the sentence). Computed once per sentence."""
+    if not _HAS_WORD.search(sentence):  # markup debris such as "</p>" or "<br/>": nothing to score
+        return {**{name: [] for name in _LEX_PATTERNS}, "chg": [], "iban": []}
+    lex = {name: _spans(p, sentence) for name, p in _LEX_PATTERNS.items()}
+    lex["chg"] = _changes(sentence)
+    m = _IBAN.search(sentence)  # digits survive only in the plain view; folded views read them as letters
+    lex["iban"] = [(m.start(), m.end())] if m else []
+    return lex
+
+
+def _merge(a: dict, a_off: int, b: dict, b_off: int) -> dict:
+    return {k: [(s + a_off, e + a_off) for s, e in a[k]] + [(s + b_off, e + b_off) for s, e in b[k]] for k in a}
+
+
+def _eval(lex: dict, off: int, pair: bool) -> dict[str, tuple[float, Span]]:
     """Score one unit for every intent. Returns rule_id -> (score, evidence span in this view's offsets)."""
-    skip, gate, cleared = _spans(SKIP, unit), _spans(GATE, unit), _spans(CLEARED, unit)
-    proceed, approve = _spans(PROCEED, unit), _spans(APPROVE, unit)
-    urgent, auth, role = _spans(URGENT, unit), _spans(AUTH, unit), _spans(ROLE, unit)
+    skip, gate, cleared = lex["skip"], lex["gate"], lex["cleared"]
+    proceed, approve = lex["proceed"], lex["approve"]
+    urgent, auth, role = lex["urgent"], lex["auth"], lex["role"]
     found: dict[str, tuple[float, Span]] = {}
 
     def put(rule_id: str, score: float, span: Span | None):
@@ -240,7 +263,7 @@ def _eval(unit: str, off: int, pair: bool) -> dict[str, tuple[float, Span]]:
             found[rule_id] = (score, (span[0] + off, span[1] + off))
 
     # approval bypass
-    sg = None if pair else (_near(skip, gate) or _follows(_spans(SKIP_BEFORE_GATE, unit), gate))  # one sentence only: a skip in one and a gate in the next is no pair
+    sg = None if pair else (_near(skip, gate) or _follows(lex["sbg"], gate))  # one sentence only: a skip in one and a gate in the next is no pair
     if sg:
         put("approval_bypass", 3 + bool(urgent) + bool(auth), sg)
     cg = None if pair else _near(cleared, gate)
@@ -250,13 +273,13 @@ def _eval(unit: str, off: int, pair: bool) -> dict[str, tuple[float, Span]]:
         put("approval_bypass", 3 + bool(urgent) + bool(auth), (min(cleared[0][0], proceed[0][0]), max(cleared[0][1], proceed[0][1])))
 
     # override of the reader's instructions
-    discard, instr, qual = _spans(DISCARD, unit), _spans(INSTR, unit), _spans(QUAL, unit)
+    discard, instr, qual = lex["discard"], lex["instr"], lex["qual"]
     di = None if pair else _near(discard, instr)
     if di and _near([di], qual, 30):
         put("override", 3, di)
 
     # payment redirect
-    chg, strong, weak, payv = _changes(unit), _spans(DEST_STRONG, unit), _spans(DEST_WEAK, unit), _spans(PAYV, unit)
+    chg, strong, weak, payv = lex["chg"], lex["strong"], lex["weak"], lex["payv"]
     cs = None if pair else _near(chg, strong)
     if cs:
         put("payment_redirect", 3, cs)
@@ -264,12 +287,11 @@ def _eval(unit: str, off: int, pair: bool) -> dict[str, tuple[float, Span]]:
         cw = _near(chg, weak)
         if cw and payv:
             put("payment_redirect", 3, cw)
-    m = None if pair else _IBAN.search(unit)  # digits survive only in the plain view; folded views read them as letters
-    if m and payv:
-        put("payment_redirect", 3, (m.start(), m.end()))
+    if lex["iban"] and payv and not pair:
+        put("payment_redirect", 3, lex["iban"][0])
 
     # authority claim or assumed role, plus an action
-    act = bool(approve or proceed or cleared or _near(skip, gate) or _follows(_spans(SKIP_BEFORE_GATE, unit), gate))
+    act = bool(approve or proceed or cleared or _near(skip, gate) or _follows(lex["sbg"], gate))
     if act and (auth or role):
         hull = (auth or role)[0]
         put("authority_claim", 3 + (1 if (auth and role) else 0) + bool(urgent), hull)
@@ -282,8 +304,17 @@ def analyse(doc) -> dict[str, list[Span]]:
         return doc.cache["intent"]
     text, result = doc.norm, {}
     if text:
-        for us, ue, pair in _units(text):
-            for rule_id, (score, span) in _eval(text[us:ue], us, pair).items():
+        sents = _sentences(text)
+        lexes = [_lex(text[s0:e0]) for s0, e0 in sents]
+        units = [(s0, lx, False) for (s0, _), lx in zip(sents, lexes)]
+        full = [any(lx.values()) for lx in lexes]
+        for i in range(len(sents) - 1):
+            if not (full[i] and full[i + 1]):  # a pair adds nothing when one half matched no lexicon word
+                continue
+            (s0, _), (s1, _) = sents[i], sents[i + 1]
+            units.append((s0, _merge(lexes[i], 0, lexes[i + 1], s1 - s0), True))
+        for off, lx, pair in units:
+            for rule_id, (score, span) in _eval(lx, off, pair).items():
                 if score >= THRESHOLD:
                     result.setdefault(rule_id, []).append(span)
     doc.cache["intent"] = result

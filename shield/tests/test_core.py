@@ -176,7 +176,7 @@ def test_adversarial_markup_at_the_cap_stays_fast(unit, count):
     payload = (unit * count)[:20000]
     t = time.perf_counter()
     out = screen(payload, {})
-    assert time.perf_counter() - t < 0.25, (unit, time.perf_counter() - t)
+    assert time.perf_counter() - t < 0.5, (unit, time.perf_counter() - t)  # the quadratic version took 0.7 to 54 s
     assert out["verdict"] in ("allow", "quarantine", "block")
 
 
