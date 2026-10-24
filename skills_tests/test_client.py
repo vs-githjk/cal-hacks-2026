@@ -328,11 +328,11 @@ def test_cli_refusal_exits_1_and_lists_each_field(tmp_path):
     assert code == 1 and "name: bad" in err and "origin: worse" in err and "Nothing was saved" in err
 
 
-def test_cli_taken_id_suggests_replace(tmp_path):
+def test_cli_taken_id_asks_for_another_id(tmp_path):
     f = tmp_path / "a.json"
     f.write_text(json.dumps(answers()))
     code, _, err = run([str(f)], Recorder(409, {"errors": [{"field": "id", "message": "already a shop here"}]}))
-    assert code == 1 and "--replace" in err
+    assert code == 1 and "another shop id" in err and "--replace" not in err   # replace is operator only (#237)
 
 
 def test_cli_bad_input_file_is_a_message(tmp_path):
@@ -475,3 +475,14 @@ def test_marketplace_and_plugin_manifests_point_at_the_skill():
     # plugin loader from registering its markdown files as agents
     assert plugin["agents"] == []
     assert (SKILL_DIR / "SKILL.md").is_file()
+
+
+# #237 L2: a taken id is never answered with --replace, which only the operator can use
+@pytest.mark.parametrize("message", ["corner-pc is already set up", "corner_pc is the same shop id as corner-pc (- and _ and a trailing _agent fold together); pick another id"])
+def test_a_409_points_the_owner_to_another_id_not_to_replace(tmp_path, message):
+    f = tmp_path / "a.json"
+    f.write_text(json.dumps(answers()))
+    rec, out, err = Recorder(409, {"errors": [{"field": "id", "message": message}]}), io.StringIO(), io.StringIO()
+    code = client.main([str(f)], transport=rec, stdout=out, stderr=err)
+    assert code == 1 and "--replace" not in err.getvalue() and "operator" in err.getvalue()
+    assert "--replace" not in (SKILL_DIR / "SKILL.md").read_text().split("do not offer")[0].split("If the id is taken")[1]
