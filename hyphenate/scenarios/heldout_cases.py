@@ -1,0 +1,61 @@
+"""HELD-OUT scenarios: written after dev_cases.py was frozen, never run while tuning, run once for RESULTS.md.
+Same company and same runner, new variants: boundaries, multi-line orders, recoveries and combinations."""
+from hyphenate.scenarios.dev_cases import GPU, L, SSD, clean, inv, planted, rcv, ready
+
+
+def MON(q, p=300.0, **kw):
+    return {"sku": "MON-27", "qty": q, "price": p, **kw}
+
+
+CASES = [
+    planted("H01", "Two-line order: monitors short by one, SSDs complete", "short_shipment",
+            [*ready("po1", [SSD(5), MON(2)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 5}, {"sku": "MON-27", "qty": 1}]),
+             inv("po1", "H1-1", [L("SSD-2TB", 5, 100.0), L("MON-27", 2, 300.0)])],
+            [("invoice_match", "hold", "qty_short"), ("credit_memo_request", "requested", "qty_short")], ["invoice_status:{i1}:held", "memo_requested:{i1}"], ["paid:{i1}", "invoice_status:{i1}:matched"]),
+    planted("H02", "Refurbished units arrive; PO allows new and open-box only", "wrong_condition_rejected",
+            [*ready("po1", [SSD(2, allowed=["new", "open-box"])]), rcv("po1", [{"sku": "SSD-2TB", "qty": 2, "condition": "refurbished"}]), inv("po1", "H2-1", [L("SSD-2TB", 2, 100.0, condition="open-box")])],
+            [("receiving", "failed", "condition_not_allowed"), ("invoice_match", "hold", None)], ["invoice_status:{i1}:held"], ["paid:{i1}", "invoice_status:{i1}:matched"]),
+    planted("H03", "Price drift one dollar over the tolerance on a $1,000 PO", "price_drift",
+            [*ready("po1", [SSD(20, 50.0)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 20}]), inv("po1", "H3-1", [L("SSD-2TB", 20, 50.30)])],
+            [("invoice_match", "hold", "price_variance")], ["invoice_status:{i1}:held"], ["paid:{i1}", "invoice_status:{i1}:matched"]),
+    planted("H04", "Same lines and total resubmitted under a new invoice number", "duplicate_invoice",
+            [*ready("po1", [SSD(2)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 2}]), inv("po1", "INV-9000", [L("SSD-2TB", 2, 100.0)]),
+             inv("po1", "INV-9001", [L("SSD-2TB", 2, 100.0)], date="10-13", as_="i2")],
+            [("invoice_match", "hold", "possible_duplicate")], ["invoice_status:{i1}:matched", "invoice_status:{i2}:held"], ["paid:{i2}", "invoice_status:{i2}:matched"]),
+    planted("H05", "The controller requests a PO and tries to approve it; another department head also tries", "requester_self_approval",
+            [{"do": "request", "as": "po1", "requester": "pepper", "dept": "it", "vendor": "bestbuy", "lines": [SSD(1, 1500.0)], "at": "10-05"},
+             {"do": "approve", "po": "po1", "by": "pepper", "at": "10-05 10"}, {"do": "approve", "po": "po1", "by": "rhodey", "at": "10-05 11"}],
+            [("po_approval", "denied", "self_approval"), ("po_approval", "denied", "wrong_department")], ["po_status:{po1}:pending_approval"], ["po_approved_by:{po1}:pepper", "po_status:{po1}:approved"]),
+    planted("H06", "Bank details changed four days before payment; the system holds, then pays after a call-back", "changed_bank_details_recovery",
+            [*ready("po1", [SSD(2)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 2}]), inv("po1", "H6-1", [L("SSD-2TB", 2, 100.0)]),
+             {"do": "vendor_bank_change", "vendor": "bestbuy", "by": "maria", "at": "10-09 15"}, {"do": "pay", "invoice": "i1", "at": "10-09 16"},
+             {"do": "vendor_bank_verify", "vendor": "bestbuy", "by": "pepper", "at": "10-12"}, {"do": "pay", "invoice": "i1", "at": "10-13"}],
+            [("payment_release", "denied", "bank_unverified"), ("vendor_bank_verify", "verified", "bank_verified")], ["paid:{i1}", "vendor_bank_verified:bestbuy:true"]),
+    planted("H07", "Vendor ships 6 units against a PO for 4", "over_delivery",
+            [*ready("po1", [SSD(4)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 6}])],
+            [("receiving", "failed", "over_delivery")], ["po_status:{po1}:received"]),
+    planted("H08", "Prepaid vendor sends refurbished units we did not allow", "prepaid_wrong_condition",
+            [*ready("po1", [SSD(2, 300.0)], vendor="bargain-bin"), {"do": "prepay", "po": "po1", "at": "10-06"}, rcv("po1", [{"sku": "SSD-2TB", "qty": 2, "condition": "refurbished"}])],
+            [("receiving", "failed", "condition_not_allowed"), ("vendor_credit", "posted", "refund_due")], ["vendor_credit:bargain-bin:60000", "memo_requested:{po1}"]),
+    planted("H09", "A GPU listed 52 percent under the fresh market price (too good to be true)", "price_below_market",
+            [{"do": "request", "as": "po1", "requester": "tony", "vendor": "gadget-grove", "lines": [GPU(1, 600.0)], "at": "10-24"}, {"do": "approve", "po": "po1", "by": "rhodey", "at": "10-24 10"}],
+            [("approval_route", "routed", "suspiciously_low"), ("po_approval", "denied", "controller_required")], ["po_status:{po1}:pending_approval"], ["po_status:{po1}:approved"],
+            setup={"mirror": {"RTX-5070-TI": {"price": 124999, "as_of": "2026-10-20T00:00:00Z", "source": "https://example.test/bb", "origin": "MIRROR"}}}),
+    planted("H10", "Controller says no with a $2,600 ceiling; the only way down is one fewer unit", "controller_no_replan",
+            [{"do": "request", "as": "po1", "requester": "tony", "vendor": "bestbuy", "lines": [GPU(3, min_qty=2)], "at": "10-05"},
+             {"do": "reject", "po": "po1", "by": "pepper", "at": "10-05 10", "reason": "ceiling is 2,600", "max": 2600}],
+            [("po_reject", "rejected", "controller_no"), ("replan", "replanned", None)], ["po_status:{po1}:replanned"], ["po_status:{po1}:approved"]),
+    planted("H11", "On a strict vendor the same person tries to give both required signatures", "duplicate_signature",
+            [{"do": "request", "as": "po1", "requester": "tony", "vendor": "bestbuy", "lines": [SSD(10)], "at": "10-05"}, {"do": "approve", "po": "po1", "by": "rhodey", "at": "10-05 10"},
+             {"do": "approve", "po": "po1", "by": "rhodey", "at": "10-05 11"}],
+            [("po_approval", "denied", "duplicate_approver")], ["po_status:{po1}:pending_approval"], ["po_status:{po1}:approved"],
+            setup={"vendors": {"bestbuy": {"events": [{"kind": "failed_receiving", "at": "2026-08-30T00:00:00Z", "by": "happy", "detail": "short box"}]}}}),
+    clean("HC1", "Large PO approved by the controller, exact invoice, exact bank record",
+          [*ready("po1", [GPU(3)], by="pepper"), rcv("po1", [{"sku": "RTX-5070-TI", "qty": 3}]), inv("po1", "HC-1", [L("RTX-5070-TI", 3, 1249.99)]), {"do": "pay", "invoice": "i1", "at": "10-10", "as": "p1"},
+           {"do": "bank", "id": "bh1", "at": "10-11", "pay": "p1", "vendor": "bestbuy", "amount": 3749.97}], ["paid:{i1}", "po_status:{po1}:closed"]),
+    clean("HC2", "Invoice 30 cents a unit under the PO is booked to variance and paid",
+          [*ready("po1", [SSD(10)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 10}]), inv("po1", "HC-2", [L("SSD-2TB", 10, 99.70)]), {"do": "pay", "invoice": "i1", "at": "10-10"}], ["paid:{i1}"]),
+    clean("HC3", "Vendor failed a check over a year ago: back to normal, small variance passes",
+          [*ready("po1", [SSD(10)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 10}]), inv("po1", "HC-3", [L("SSD-2TB", 10, 100.4)]), {"do": "pay", "invoice": "i1", "at": "10-10"}], ["paid:{i1}"],
+          setup={"vendors": {"bestbuy": {"events": [{"kind": "failed_receiving", "at": "2025-08-01T00:00:00Z", "by": "happy", "detail": "old"}]}}}),
+]

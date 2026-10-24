@@ -1,0 +1,741 @@
+{
+ "origin": "SIM",
+ "run_at": "2026-10-24T06:31:11+00:00",
+ "builders": 30,
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "learning": {
+  "learner": "gadget-grove",
+  "learner_rule": "demo.learning.update_strategy (Lane D SIM stand-in, price step only; not Abhinav's a7 strategy)",
+  "controls": [
+   "fair-price-pc",
+   "median-market-pc"
+  ],
+  "held_out_archetypes": [
+   "open_box_ok",
+   "small_case"
+  ],
+  "per_archetype": {
+   "open_box_ok": {
+    "n": 15,
+    "learner": 0.0,
+    "untrained": 0.0,
+    "control": 0.0,
+    "control_median": 0.0,
+    "winners": [
+     "bargain-bin"
+    ],
+    "identical_across_seeds": true
+   },
+   "small_case": {
+    "n": 15,
+    "learner": 1.0,
+    "untrained": 0.0,
+    "control": 0.0,
+    "control_median": 0.0,
+    "winners": [
+     "gadget-grove"
+    ],
+    "identical_across_seeds": true
+   }
+  },
+  "quotable": false,
+  "winning_archetypes": [
+   "small_case"
+  ],
+  "seeds": [
+   {
+    "seed": 0,
+    "train_builders": 20,
+    "held_out_builders": 10,
+    "frozen_strategy": {
+     "price_step": 0.07
+    },
+    "strategy_diffs": [
+     {
+      "builder": "b0-01",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.0,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-02",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-03",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-06",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-07",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-08",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-13",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-14",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-15",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-19",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-20",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-21",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-25",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-26",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-27",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     }
+    ],
+    "held_out": [
+     {
+      "builder": "b0-04",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b0-05",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b0-10",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b0-11",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b0-16",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b0-17",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b0-22",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b0-23",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b0-28",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b0-29",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     }
+    ]
+   },
+   {
+    "seed": 1,
+    "train_builders": 20,
+    "held_out_builders": 10,
+    "frozen_strategy": {
+     "price_step": 0.07
+    },
+    "strategy_diffs": [
+     {
+      "builder": "b1-01",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.0,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-02",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-07",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-08",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-09",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-12",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-13",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-14",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-15",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-18",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-19",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-20",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-21",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-24",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-25",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-26",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-27",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     }
+    ],
+    "held_out": [
+     {
+      "builder": "b1-04",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b1-05",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b1-10",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b1-11",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b1-16",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b1-17",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b1-22",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b1-23",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b1-28",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b1-29",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     }
+    ]
+   },
+   {
+    "seed": 2,
+    "train_builders": 20,
+    "held_out_builders": 10,
+    "frozen_strategy": {
+     "price_step": 0.07
+    },
+    "strategy_diffs": [
+     {
+      "builder": "b2-01",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.0,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-02",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-07",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-08",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-09",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-12",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-13",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-14",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-15",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-18",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-19",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-20",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-21",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-24",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-25",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-26",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-27",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     }
+    ],
+    "held_out": [
+     {
+      "builder": "b2-04",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b2-05",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b2-10",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b2-11",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b2-16",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b2-17",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b2-22",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b2-23",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     },
+     {
+      "builder": "b2-28",
+      "archetype": "open_box_ok",
+      "winner_trained": "bargain-bin",
+      "winner_untrained": "bargain-bin"
+     },
+     {
+      "builder": "b2-29",
+      "archetype": "small_case",
+      "winner_trained": "gadget-grove",
+      "winner_untrained": "median-market-pc"
+     }
+    ]
+   }
+  ]
+ },
+ "attack": {
+  "dev": {
+   "attacks": 30,
+   "stopped": 30,
+   "block_rate": 1.0,
+   "missed": [],
+   "controls": 10,
+   "false_blocks": 0,
+   "false_block_ids": []
+  },
+  "held_out": {
+   "attacks": 20,
+   "stopped": 12,
+   "block_rate": 0.6,
+   "missed": [
+    "h01",
+    "h03",
+    "h05",
+    "h07",
+    "h09",
+    "h13",
+    "h15",
+    "h20"
+   ],
+   "controls": 10,
+   "false_blocks": 2,
+   "false_block_ids": [
+    "k04",
+    "k05"
+   ]
+  }
+ }
+}
