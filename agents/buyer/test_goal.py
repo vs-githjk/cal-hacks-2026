@@ -90,3 +90,22 @@ def test_missing_budget_or_part_raises():
 def test_psu_850_sku():
     goal, _ = parse_goal("an 850 W PSU under $200", "b", now=NOW)
     assert [i["sku_spec"] for i in need_from_goal(goal)["items"]] == ["psu 850w"]
+
+
+def test_explicit_5070_ti_stays_canonical_and_keeps_the_cap():
+    goal, _ = parse_goal("RTX 5070 Ti GPU under $800", "b", now=NOW)
+    need = need_from_goal(goal)
+    assert goal["cap"] == 800
+    assert [item["sku_spec"] for item in need["items"]] == ["rtx 5070 ti"]
+
+
+def test_unsupported_gpu_model_is_not_substituted():
+    with pytest.raises(ValueError, match="Which GPU model"):
+        parse_goal("RTX 5080 under $1200", "b", now=NOW)
+
+
+def test_allowed_new_and_open_box_and_distinct_parts_are_preserved():
+    goal, _ = parse_goal("Build with an RTX 5070 Ti GPU and 850 W PSU, new or open-box, under $1500", "b", now=NOW)
+    need = need_from_goal(goal)
+    assert [item["sku_spec"] for item in need["items"]] == ["rtx 5070 ti", "psu 850w", "case"]
+    assert need["items"][0]["allowed_conditions"] == ["new", "open-box"]

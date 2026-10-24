@@ -67,6 +67,16 @@ def test_price_above_history():
     assert "did not match the price history" in w["text"]
 
 
+def test_unconfirmed_price_baseline_preserves_its_actual_date_range():
+    base = {GPU: {"status": "one_source", "source_url": "https://example.com/feed",
+                  "from": "2026-10-24T05:08:39.627Z", "to": "2026-10-24T05:09:29.655Z"}}
+    card = checks.advise(NEED, [bid("b1", "seller_1", 590)], base, mock_data.RECORDS, mock_data.RECALLS)[0]
+    warning = next(w for w in card["warnings"] if w["kind"] == "unsourced")
+    assert "one_source" in warning["text"]
+    assert "2026-10-24T05:08:39.627Z" in warning["text"]
+    assert "2026-10-24T05:09:29.655Z" in warning["text"]
+
+
 def test_seller_3_record_caution():
     card = run([bid("b1", "seller_3", 590)])[0]
     assert [w["kind"] for w in card["warnings"]] == ["record"] and card["recommendation"] == "caution"
@@ -134,3 +144,28 @@ def test_call_reason_for_fit_veto_uses_fit_rule():
     card = run([bid("b1", "seller_1", 590, attrs={**ATTRS, "length_mm": 340})])[0]
     assert card["call_reason"]["rule_id"] == "fit.gpu_length"
     assert card["call_reason"]["summary"] == "The card is longer than your case allows"
+
+
+def test_independent_false_condition_veto_ignores_seller_page_condition():
+    b = bid("b1", "seller_1", 590, offered="new", page="new")
+    b["origin"] = "MIRROR"
+    evidence = {("https://example.com/listing/b1", "new"): {"result": "false"}}
+    card = checks.advise(NEED, [b], {}, {}, [], evidence=evidence)[0]
+    assert card["recommendation"] == "veto"
+    assert card["call_reason"]["rule_id"] == "advocate.condition"
+
+
+def test_missing_independent_condition_result_is_uncertain_not_verified():
+    b = bid("b1", "seller_1", 590, offered="new", page="new")
+    b["origin"] = "MIRROR"
+    card = checks.advise(NEED, [b], {}, {}, [], evidence={})[0]
+    assert card["recommendation"] == "caution"
+    assert card["warnings"][0]["kind"] == "unsourced"
+
+
+def test_allowed_open_box_alternative_is_not_reported_as_wrong_condition():
+    b = bid("b1", "seller_1", 590, offered="open-box", page="open-box")
+    need = {**NEED, "items": [{**NEED["items"][0], "allowed_conditions": ["new", "open-box"]}]}
+    card = checks.advise(need, [b], {}, {}, [])[0]
+    assert card["recommendation"] == "buy"
+    assert all(w["kind"] != "spec" for w in card["warnings"])

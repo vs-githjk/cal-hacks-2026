@@ -12,13 +12,15 @@ from data.fit_checker import check_fit
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
+MAX_CLAIM_CHECKS = 9
 VETO_KINDS = {"condition", "fit", "recall"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
 CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
                 "note": f"{REPO}/data/fit_checker/README.md", "record": f"{REPO}/agents/advocate/checks.py",
-                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py"}
+                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py",
+                "recall_unknown": "https://www.cpsc.gov/Recalls"}
 
 # Closed-schema reason for the voice call: summary comes only from this table, never from seller text or a model.
 # Every summary must pass pay.callscript.clean_advocate_reason (tested).
@@ -100,7 +102,7 @@ def _fit_warnings(bid, owned):
     return out
 
 
-def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
+def _card_warnings(bid, owned, baseline, records, recalls, wanted=None, evidence=None):
     out = _fit_warnings(bid, owned)
     for line in bid["lines"]:
         sku = line["sku_spec"]
@@ -108,50 +110,121 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
         url = line.get("listing_url", "")
 
         # an honest offer of a different condition than asked for: caution, not a veto
-        asked = _norm((wanted or {}).get(sku))
-        if asked and _norm(line.get("offered_condition")) not in ("", asked):
-            out.append(_warn("spec", f"You asked for {asked}; this offer is {_norm(line['offered_condition'])}.",
-                             url, 0))
+        want = (wanted or {}).get(sku)
+        allowed = {_norm(c) for c in (want.get("allowed_conditions") or [want.get("condition")])} if isinstance(want, dict) else {_norm(want)}
+        condition = _norm(line.get("offered_condition"))
+        if condition and condition not in allowed:
+            out.append(_warn("spec", f"This offer's condition is not in the allowed conditions for {sku}.", url, 0))
 
         offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
-        if offered and page and offered != page:
-            out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
-                             "The condition claim did not match the listing.", url, total))
+        origin = line.get("origin") or bid.get("origin", "SIM")
+        if origin == "simulated":
+            origin = "SIM"
+        if evidence is None:
+            if offered and page and offered != page:
+                out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
+                                 "The condition claim did not match the listing.", url, total))
+        elif origin == "SIM":
+            # These repository-owned fixture pages are deterministic control cases.
+            # Never treat seller-supplied page_condition on LIVE/MIRROR as evidence.
+            if offered and page and offered != page:
+                out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
+                                 "The condition claim did not match the listing.", url, total))
+        else:
+            checked = evidence.get((url, line.get("offered_condition"))) if isinstance(evidence, dict) else None
+            result = checked.get("result") if isinstance(checked, dict) else None
+            if result == "false":
+                warning = _warn("condition", f"{sku} condition claim did not match the independently checked listing.",
+                                url, total)
+                warning.update({k: checked[k] for k in ("checked_at", "evidence_hash") if isinstance(checked.get(k), str)})
+                out.append(warning)
+            elif result != "verified":
+                warning = _warn("unsourced", f"The condition claim for {sku} could not be independently verified.", url, 0)
+                if isinstance(checked, dict):
+                    warning.update({k: checked[k] for k in ("checked_at", "evidence_hash") if isinstance(checked.get(k), str)})
+                out.append(warning)
 
         base = baseline.get(_norm(sku))
-        if base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
+        if base and base.get("status") not in (None, "ok"):
+            span = f", observed {base['from']} to {base['to']}" if base.get("from") and base.get("to") else ""
+            out.append(_warn("unsourced", f"The price history for {sku} is unconfirmed ({base['status']}{span}).",
+                             base.get("source_url", ""), 0))
+        elif base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
             over = (line["unit_price"] - base["unit_price"]) * line["quantity"]
             out.append(_warn("price", f"{sku} at ${line['unit_price']:.2f} is above the price history baseline "
                              f"of ${base['unit_price']:.2f}; the price claim did not match the price history "
                              f"by ${over:.2f}.", base["source_url"], over))
 
-        hit = next((r for r in recalls if r["match"] in _norm(sku)), None)
+        mirror = bid.get("origin") == "MIRROR"
+        recall_rows = [r for r in recalls or [] if not mirror or r.get("origin") in ("LIVE", "MIRROR")]
+        hit = next((r for r in recall_rows if r["match"] in _norm(sku)), None)
         if hit:
             out.append(_warn("recall", f"{sku} matches a CPSC recall entry ('{hit['match']}').",
                              hit["source_url"], total))
+        elif mirror and not recall_rows:
+            out.append(_warn("unsourced", "Recall status was not checked against a dated source.",
+                             CODE_SOURCES["recall_unknown"], 0))
 
-    rec = records.get(bid["supplier_id"])
+    rec = records.get(bid.get("seller_of_record") if bid.get("origin") == "MIRROR" else bid["supplier_id"])
     if rec and rec["record"] != "good":
         out.append(_warn("record", f"Seller {bid['supplier_id']} has a '{rec['record']}' record.",
                          rec.get("source_url", ""), 0))
+    elif bid.get("origin") == "MIRROR" and not rec:
+        out.append(_warn("unsourced", "No independently sourced seller record was available.",
+                         CODE_SOURCES["record"], 0))
 
     if not bid.get("floor_check_passed", True):
         out.append(_warn("floor", "Bid did not pass the price floor check; the price may not hold.", FLOOR_URL, 0))
     return out
 
 
+def _claim_checks(bid, evidence):
+    """Bounded normalized evidence, suitable for the market's attach_claim_check hook."""
+    checks = []
+    for index, line in enumerate(bid.get("lines", [])):
+        condition = line.get("offered_condition")
+        if condition not in {"new", "open-box", "refurbished", "used"}:
+            continue
+        origin = line.get("origin") or bid.get("origin", "SIM")
+        if origin == "simulated":
+            origin = "SIM"
+        url = line.get("listing_url") or ""
+        if origin == "SIM":
+            page = line.get("page_condition")
+            if page not in {"new", "open-box", "refurbished", "used"}:
+                result, source = "unverified", "SIM fixture has no condition fixture"
+            else:
+                result = "verified" if _norm(condition) == _norm(page) else "false"
+                source = "SIM fixture page_condition (repository-owned control)"
+            check = {"result": result}
+        else:
+            check = evidence.get((url, condition), {}) if isinstance(evidence, dict) else {}
+            result = check.get("result") if check.get("result") in {"verified", "false", "unverified"} else "unverified"
+            source = check.get("method", "independent claim check")
+        row = {"bid_id": bid["id"], "line_index": index, "listing_id": line.get("listing_id", ""),
+               "sku_spec": line.get("sku_spec", ""), "field": "condition", "value": condition,
+               "result": result, "evidence_url": check.get("evidence_url", url),
+               "evidence_hash": check.get("evidence_hash", ""), "checked_at": check.get("checked_at", ""),
+               "source": source, "origin": origin}
+        checks.append(row)
+        if len(checks) >= MAX_CLAIM_CHECKS:
+            break
+    return checks
+
+
 def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls: list[dict],
-           owned: dict | None = None) -> list[dict]:
+           owned: dict | None = None, evidence: dict | None = None) -> list[dict]:
     owned = owned if owned is not None else need.get("owned", {})
-    wanted = {i["sku_spec"]: i.get("condition") for i in need.get("items", [])}
+    wanted = {i["sku_spec"]: i for i in need.get("items", [])}
     cards = []
     for bid in bids:
-        warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted)
+        warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted, evidence)
         kinds = {w["kind"] for w in warnings}  # decided before truncation so a veto is never hidden
         rec = "veto" if kinds & VETO_KINDS else "caution" if kinds - INFO_KINDS else "buy"
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
         warnings = sorted(warnings, key=lambda w: -w["dollar_impact"])[:MAX_WARNINGS]
         cards.append({"need_id": need["id"], "bid_id": bid["id"], "warnings": warnings,
+                      "claim_checks": _claim_checks(bid, evidence),
                       "recommendation": rec, "wait_until": "", "call_reason": reason})
     return cards
 

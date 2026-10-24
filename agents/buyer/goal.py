@@ -10,6 +10,7 @@ WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 OWN_VERB = r"\b(?:own|have|got)\b"
 # ponytail/SIM: part type -> seller sku until the real SpecCards land. Sellers match Need items by exact sku_spec.
 SKUS = {"gpu": "rtx 4070 super 12gb", "psu": "psu 750w", "case": "case"}
+SUPPORTED_GPUS = {"rtx 5070 ti": "rtx 5070 ti", "rtx 4070 super": "rtx 4070 super 12gb"}
 OWNED: dict[str, list[dict]] = {}  # buyer_id -> OwnedParts; in memory, lost on restart
 
 
@@ -41,6 +42,23 @@ def _cap(text: str) -> float | None:
 
 def _sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?;])\s+", text) if s.strip()]
+
+
+def _gpu_sku(text: str) -> str:
+    model = re.search(r"\b(?:RTX|RX|GTX)\s*\d{3,4}(?:\s*(?:Ti|SUPER|XT|XTX|GRE))?\b", text, re.I)
+    if not model:
+        return SKUS["gpu"]  # legacy generic GPU goals remain the SIM control
+    key = " ".join(model.group(0).upper().replace("TI", "Ti").replace("SUPER", "SUPER").split())
+    sku = SUPPORTED_GPUS.get(key.lower())
+    if not sku:
+        raise ValueError("Which GPU model? I can't resolve that request yet.")
+    return sku
+
+
+def _allowed_conditions(text: str) -> list[str] | None:
+    if re.search(r"\bnew\s+(?:or|/)\s+open[- ]box\b", text, re.I):
+        return ["new", "open-box"]
+    return None
 
 
 def _owned(text: str, buyer_id: str, now: datetime) -> list[dict]:
@@ -76,10 +94,14 @@ def parse_goal(text: str, buyer_id: str, now: datetime | None = None) -> tuple[d
         raise ValueError("Tell me a budget, e.g. 'under $800'.")
     build = re.search(r"\bbuild\b", t)
     cats = ["gpu", "psu", "case"] if build else [c for c, rx in PARTS.items() if re.search(rf"\b(?:{rx})\b", t)]
+    if re.search(r"\b(?:RTX|RX|GTX)\s*\d{3,4}\b", text, re.I) and "gpu" not in cats:
+        cats.append("gpu")
     if not cats:
         raise ValueError("Which part? I can hunt for a GPU, PSU or case (or a whole build).")
-    sku = dict(SKUS, psu="psu 850w" if re.search(r"\b850\s*-?\s*w", t) else SKUS["psu"])
-    items = [{"part": c, "sku_spec": sku[c], "condition": "new", "variant": "retail", "quantity": 1} for c in cats]
+    sku = dict(SKUS, gpu=_gpu_sku(text), psu="psu 850w" if re.search(r"\b850\s*-?\s*w", t) else SKUS["psu"])
+    conditions = _allowed_conditions(text)
+    items = [{"part": c, "sku_spec": sku[c], "condition": "new", "variant": "retail", "quantity": 1,
+              **({"allowed_conditions": conditions} if conditions else {})} for c in cats]
     has_date = re.search(r"\b(by|before|tomorrow|\d{4}-\d{2}-\d{2})\b", t) or any(d in t for d in WEEKDAYS)
     goal = {"id": f"goal-{uuid.uuid4().hex[:8]}", "buyer_id": buyer_id,
             "type": "build_by_date" if build else "part_by_date" if has_date else "budget_cap",
@@ -115,7 +137,7 @@ def apply_owned(goal: dict, owned: list[dict]) -> dict:
 def need_from_goal(goal: dict, auction_window_s: int = 12) -> dict:
     items = [{"sku_spec": i["sku_spec"], "condition": i.get("condition", "new"), "variant": i.get("variant", "retail"),
               "quantity": i["quantity"], "unit": "each", "grade": i.get("condition", "new"),
-              "pack_size": i.get("variant", "retail")}
+              "pack_size": i.get("variant", "retail"), **({"allowed_conditions": i["allowed_conditions"]} if i.get("allowed_conditions") else {})}
              for i in goal["items"] if not i.get("skipped_owned_part_id")]
     return common.validate("Need", {
         "id": f"need-{uuid.uuid4().hex[:8]}", "buyer_id": goal["buyer_id"], "items": items,

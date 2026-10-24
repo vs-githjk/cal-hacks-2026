@@ -35,8 +35,40 @@
     ]
    }
   },
+  "claim_checks": {
+   "type": "array",
+   "maxItems": 9,
+   "items": {
+    "type": "object",
+    "properties": {
+     "bid_id": {"type": "string"}, "line_index": {"type": "integer", "minimum": 0},
+     "listing_id": {"type": "string"}, "sku_spec": {"type": "string"},
+     "field": {"type": "string"}, "value": {"type": "string"},
+     "result": {"type": "string", "enum": ["verified", "unverified", "false"]},
+     "evidence_url": {"type": "string"}, "evidence_hash": {"type": "string"},
+     "checked_at": {"type": "string"}, "source": {"type": "string"},
+     "origin": {"type": "string", "enum": ["LIVE", "MIRROR", "SIM"]}
+    },
+    "required": ["bid_id", "line_index", "listing_id", "sku_spec", "field", "value", "result",
+                 "evidence_url", "evidence_hash", "checked_at", "source", "origin"],
+    "additionalProperties": false
+   }
+  },
   "recommendation": {
    "type": "string"
+  },
+  "call_reason": {
+    "type": "object",
+    "properties": {"rule_id": {"type": "string"}, "summary": {"type": "string"}, "source_url": {"type": "string"}},
+    "required": ["rule_id", "summary", "source_url"],
+    "additionalProperties": false
+  },
+  "explanation": {
+    "type": "object",
+    "properties": {"text": {"type": "string", "maxLength": 160}, "source_url": {"type": "string"},
+                   "status": {"type": "string", "enum": ["claude", "template_fallback"]}},
+    "required": ["text", "source_url", "status"],
+    "additionalProperties": false
   },
   "wait_until": {
    "type": "string"

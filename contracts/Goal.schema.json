@@ -14,6 +14,7 @@
         "properties": {
           "sku_spec": {"type": "string"},
           "condition": {"type": "string"},
+          "allowed_conditions": {"type": "array", "items": {"type": "string", "enum": ["new", "open-box", "refurbished", "used"]}},
           "variant": {"type": "string"},
           "quantity": {"type": "number"},
           "skipped_owned_part_id": {"type": "string", "description": "Set when ownership memory dropped this line; the card cites that OwnedPart."}
