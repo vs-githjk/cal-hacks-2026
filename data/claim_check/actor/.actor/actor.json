@@ -1,8 +1,8 @@
 {
  "actorSpecification": 1,
  "name": "tech-bazaar-claim-check",
- "title": "Tech Bazaar claim check",
- "description": "Checks a seller's price, condition or stock claim against the live listing page and returns verified, unverified or false with the page URL, time, method and a page hash. Evidence, not a verdict.",
+ "title": "Listing Claim Checker: Price, Stock, Condition",
+ "description": "Checks what a seller claims about a product (price, stock, condition, warranty, returns) against the live listing page. Each claim comes back verified, false or unverified, with the page URL, time and a page hash as evidence. Built for AI shopping agents.",
  "version": "0.1",
  "input": "./input_schema.json",
  "dockerfile": "../Dockerfile",
