@@ -707,3 +707,36 @@ def test_not_configured_also_says_nothing_was_paid(run):
                    sleep=lambda x: None, clock=lambda: 0.0, approver=approver, deal_gate=gate)
     deny = next(a for _, r, a in log if r == "deny_approval")
     assert deny["reason"].endswith("nothing was paid") and "record_payment" not in [r for _, r, _ in log]
+
+
+# ---------------------------------------------------------------- #183: pacing subtracts the reducer calls' own latency
+
+def test_slow_reducer_calls_still_land_every_bid_well_before_a_short_deadline(run):
+    """Each call takes 80 ms on this clock (a slow local market; 70 calls is 5.6 s). The pauses shrink by that time, so the
+    last bid still lands about 6 s before
+    the 20 s deadline (outside the market's 3 s snipe window), and nothing is late."""
+    t = [0.0]
+    log = []
+
+    class Slow(Fake):
+        def call(self, reducer, **args):
+            t[0] += 0.08
+            log.append((self.name, reducer, dict(args, _at=t[0])))
+
+    names = ["buyer", "referee"] + sorted({s.actor for s in bridge.plan(run) if s.actor.startswith("seller:")})
+    cl = {n: Slow(log, n) for n in names}
+
+    def sleep(x):
+        t[0] += x
+    bridge.execute(bridge.plan(run, delay=2.0, rounds=1, bid_window=20), cl, delay=2.0, say=lambda s: None,
+                   sleep=sleep, clock=lambda: t[0])
+    kinds = [r for _, r, _ in log]
+    i, j = kinds.index("open_round"), kinds.index("close_round")
+    opened = log[i][2]["_at"]
+    last = max(a["_at"] for _, r, a in log[i + 1:j])           # every bid and check of the round, before its close
+    assert last <= opened + 20 - 4.5, (last - opened)
+
+
+def test_plan_clamps_a_bid_window_below_the_floor(run):
+    s = bridge.plan(run, delay=2.0, rounds=1, bid_window=5)
+    assert next(x for x in s if x.reducer == "open_round").args["window_s"] == bridge.MIN_BID_WINDOW_S == 15

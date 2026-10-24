@@ -440,3 +440,39 @@ def test_an_unreadable_market_ranking_stops_beat_four_with_nothing_paid(capsys):
     assert "could not read round_result back (RuntimeError)" in out           # after beat 2: one note
     assert code == 1 and "no mandate was made" in out and "Nothing was charged" in out
     assert not any(r in ("create_mandate", "record_approval", "record_payment") for _, r, _ in log)
+
+
+# ---------------------------------------------------------------- #183: one run under 120 s with a short sealed window
+
+def test_a_full_auto_run_with_a_20_s_bid_window_takes_under_120_s():
+    """The clock moves only when the code sleeps, so this is the run's own pacing: cues, steps and both sealed windows."""
+    code, log, clk, _ = go(["--auto", "--bid-window", "20"])
+    assert code == 0 and reducers(log).count("open_round") == 2
+    assert clk.t - 1000.0 < 120, clk.t - 1000.0
+    windows = [a["window_s"] for _, r, a in log if r == "open_round"]
+    assert windows == [20, 20]
+
+
+def test_without_the_flag_the_windows_cover_the_paced_steps_as_before():
+    code, log, clk, _ = go(["--auto"])
+    windows = [a["window_s"] for _, r, a in log if r == "open_round"]
+    assert code == 0 and windows[0] > 20 and clk.t - 1000.0 > 120
+
+
+def test_every_bid_and_check_lands_before_the_short_deadline():
+    """Compressing the window compresses the step pace inside the round, so no bid arrives after the close."""
+    run = RUN["run"]
+    steps = bridge.plan(run, delay=2.0, rounds=2, bid_window=20)
+    for rno in ("round-1", "round-2"):
+        i = next(k for k, s in enumerate(steps) if s.reducer == "open_round" and s.args["round_id"] == rno)
+        j = next(k for k, s in enumerate(steps) if s.reducer == "close_round" and s.args["round_id"] == rno)
+        inside = sum(2.0 * s.pace for s in steps[i:j] if s.pause)
+        assert steps[i].args["window_s"] == 20 and inside <= 20 - 6 + 1e-9, (rno, inside)
+
+
+@pytest.mark.parametrize("bad", ["5", "0", "-3", "abc", "12", "14"])
+def test_a_bid_window_below_the_minimum_is_refused(bad):
+    with pytest.raises(SystemExit):
+        stage.main(["--dry-run", "--bid-window", bad])
+    with pytest.raises(SystemExit):
+        bridge.main(["--dry-run", "--bid-window", bad])

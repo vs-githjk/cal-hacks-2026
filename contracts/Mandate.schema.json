@@ -51,7 +51,7 @@
   },
   "hash": {
    "type": "string",
-   "description": "sha256 hex over canonical JSON of deal_id, amount, currency, payee, tier_price, nonce, expires_at, plus crs_check_id when present (sorted keys, no spaces)"
+   "description": "sha256 hex over canonical JSON of deal_id, buyer_id, amount, currency, payee, tier_price, nonce, expires_at, plus crs_check_id when present (sorted keys, no spaces)"
   },
   "crs_check_id": {
    "type": "string",
