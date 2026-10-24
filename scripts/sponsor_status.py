@@ -24,8 +24,14 @@ if str(ROOT) not in sys.path:
 # The CRS adapter (agents/crs.py, Lane A) caches its sandbox results here: supplier_id -> {persona_ref, signal, reason}.
 # Only signal.checked_at and signal.stability are read; persona_ref and reason never leave this file.
 CRS_CACHE = ROOT / ".cache" / "crs-signals.json"
-# Configured means both are set, as the adapter's own _configured() decides; CRS_BASE_URL is optional there.
+# Configured means a bearer token, or both user and password, as the adapter's own _configured() decides
+# (agents/crs.py: CRS_API_KEY or (CRS_USERNAME and CRS_PASSWORD)); CRS_BASE_URL is optional there.
 CRS_ENV = ("CRS_USERNAME", "CRS_PASSWORD")
+CRS_KEY = "CRS_API_KEY"
+# The adapter loads this file through agents/common.py, so a credential kept here counts as set.
+AGENTS_ENV = ROOT / "agents" / ".env"
+# Bright Data and Tiger Data keep their status in module state, which a fresh CLI process does not have.
+PER_PROCESS = ("Bright Data", "Tiger Data")
 CRS_SOURCES = ("sandbox", "recorded")
 NAMES = ("Bright Data", "CRS", "Tiger Data")
 
@@ -97,8 +103,31 @@ def _newest_signal(cache: object) -> Optional[tuple]:
     return None if best is None else (best[1], best[2])
 
 
+def _env_file_values(path: Path) -> dict:
+    """Name -> value from an env file, parsed as agents/common.py does (comments and empty values skipped).
+
+    The values stay in this dict: nothing is put into os.environ and nothing is printed."""
+    values: dict = {}
+    try:
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return values
+    for line in lines:
+        key, _, val = line.partition("=")
+        if key.strip() and not key.lstrip().startswith("#") and val.strip():
+            values[key.strip()] = val.strip().strip('"').strip("'")
+    return values
+
+
+def _crs_env(name: str, file_values: dict) -> str:
+    """A real environment variable wins over the file, as os.environ.setdefault does in the adapter."""
+    return os.environ[name] if name in os.environ else file_values.get(name, "")
+
+
 def _crs(cache: Path) -> dict:
-    configured = all(os.environ.get(k, "").strip() for k in CRS_ENV)
+    file_values = _env_file_values(AGENTS_ENV)
+    configured = bool(_crs_env(CRS_KEY, file_values).strip()) or all(
+        _crs_env(k, file_values).strip() for k in CRS_ENV)
     if not configured:
         return _row("CRS", False, None, "not_configured")
     try:
@@ -125,10 +154,16 @@ def _yes_no(v: Optional[bool]) -> str:
     return "unknown" if v is None else ("yes" if v else "no")
 
 
+def _last_call_text(r: dict) -> str:
+    if r["last_call"]:
+        return r["last_call"]
+    return "none in this process" if r["name"] in PER_PROCESS else "never"
+
+
 def render(rows: list[dict]) -> str:
     width = max(len(r["name"]) for r in rows)
     return "\n".join(
-        f"{r['name']:<{width}}  configured: {_yes_no(r['configured'])}  last call: {r['last_call'] or 'never'}  "
+        f"{r['name']:<{width}}  configured: {_yes_no(r['configured'])}  last call: {_last_call_text(r)}  "
         f"result: {r['result'].replace('_', ' ')}"
         for r in rows)
 

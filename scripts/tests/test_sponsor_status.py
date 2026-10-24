@@ -28,6 +28,7 @@ SECRETS = {
     "CRS_USERNAME": "crs_user_SECRETNAME",
     "CRS_PASSWORD": "crs_pass_SECRETWORD",
     "CRS_BASE_URL": "https://crs-secret-host.example.com/api",
+    "CRS_API_KEY": "crs_tok_SECRETTOKEN_5521",
 }
 NOW = datetime(2026, 10, 24, 9, 0, 0, tzinfo=timezone.utc)
 
@@ -37,9 +38,11 @@ def ts(dt):
 
 
 @pytest.fixture(autouse=True)
-def clean(monkeypatch):
+def clean(monkeypatch, tmp_path_factory):
     for name in ENV_NAMES:
         monkeypatch.delenv(name, raising=False)
+    # Never read a real agents/.env while testing; tests that want one write their own.
+    monkeypatch.setattr(S, "AGENTS_ENV", tmp_path_factory.mktemp("noenv") / ".env")
     brightdata.reset()
     saved = dict(tiger._state)
     tiger._state.update({"last_call": None, "last_result": "not_configured"})
@@ -92,7 +95,9 @@ def test_no_env_lists_three_sponsors_not_configured_without_network(tmp_path, no
     text = S.render(rows)
     assert len(text.splitlines()) == 3
     for line in text.splitlines():
-        assert "configured: no" in line and "not configured" in line and "last call: never" in line
+        assert "configured: no" in line and "not configured" in line
+        want = "never" if line.startswith("CRS") else "none in this process"
+        assert f"last call: {want}  " in line
 
 
 def test_configured_modules_show_last_call_time_and_result(tmp_path, monkeypatch, no_network):
@@ -117,7 +122,10 @@ def test_configured_but_never_called_says_so(monkeypatch):
     assert rows["Bright Data"]["configured"] is True and rows["Bright Data"]["last_call"] is None
     assert rows["Bright Data"]["result"] == "not_called"
     assert rows["Tiger Data"]["result"] == "not_called"
-    assert "last call: never" in S.render(list(rows.values()))
+    text = S.render([rows["Bright Data"], rows["Tiger Data"]])
+    # Their status lives in module state, so a fresh process cannot say "never": it only knows none happened here.
+    assert "last call: never" not in text
+    assert text.count("last call: none in this process") == 2
 
 
 CRS_CREDS = ("CRS_USERNAME", "CRS_PASSWORD")
@@ -146,6 +154,55 @@ def test_crs_is_configured_with_user_and_password_and_no_base_url(tmp_path, monk
     text = S.render([row])
     assert "configured: yes" in text
     assert SECRETS["CRS_USERNAME"] not in text and SECRETS["CRS_PASSWORD"] not in text
+
+
+def test_crs_api_key_alone_is_configured_like_the_adapter(tmp_path, monkeypatch):
+    # agents/crs.py _configured(): CRS_API_KEY or (CRS_USERNAME and CRS_PASSWORD).
+    monkeypatch.setenv("CRS_API_KEY", SECRETS["CRS_API_KEY"])
+    row = by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]
+    assert row == {"name": "CRS", "configured": True, "last_call": row["last_call"], "result": "verified"}
+    assert row["last_call"] is not None
+    assert SECRETS["CRS_API_KEY"] not in S.render([row])
+    monkeypatch.setenv("CRS_API_KEY", "   ")
+    assert by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]["configured"] is False
+
+
+def write_agents_env(tmp_path, monkeypatch, body):
+    f = tmp_path / "agents.env"
+    f.write_text(body)
+    monkeypatch.setattr(S, "AGENTS_ENV", f)
+    return f
+
+
+def test_crs_credentials_in_agents_env_count_as_configured(tmp_path, monkeypatch):
+    # agents/README.md says to keep them in agents/.env; the adapter loads it through agents/common.py.
+    write_agents_env(tmp_path, monkeypatch,
+                     f"# comment\nCRS_USERNAME={SECRETS['CRS_USERNAME']}\nCRS_PASSWORD=\"{SECRETS['CRS_PASSWORD']}\"\n")
+    row = by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]
+    assert row["configured"] is True and row["result"] == "verified" and row["last_call"] is not None
+    text = S.render([row])
+    assert SECRETS["CRS_USERNAME"] not in text and SECRETS["CRS_PASSWORD"] not in text
+    # Reading the file does not export anything.
+    import os
+    assert "CRS_USERNAME" not in os.environ and "CRS_PASSWORD" not in os.environ
+
+
+def test_crs_agents_env_api_key_and_empty_values(tmp_path, monkeypatch):
+    write_agents_env(tmp_path, monkeypatch, f"CRS_API_KEY={SECRETS['CRS_API_KEY']}\n")
+    row = by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]
+    assert row["configured"] is True
+    assert SECRETS["CRS_API_KEY"] not in S.render([row])
+    # An empty value in the file is skipped, as common.py does, so a lone username is not configured.
+    write_agents_env(tmp_path, monkeypatch, f"CRS_USERNAME={SECRETS['CRS_USERNAME']}\nCRS_PASSWORD=\n")
+    assert by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]["configured"] is False
+
+
+def test_crs_real_environment_beats_agents_env(tmp_path, monkeypatch):
+    # setdefault: a variable already in the environment (even empty) is not replaced by the file.
+    write_agents_env(tmp_path, monkeypatch,
+                     f"CRS_USERNAME={SECRETS['CRS_USERNAME']}\nCRS_PASSWORD={SECRETS['CRS_PASSWORD']}\n")
+    monkeypatch.setenv("CRS_PASSWORD", "")
+    assert by_name(S.collect(crs_cache=cache(tmp_path)))["CRS"]["configured"] is False
 
 
 @pytest.mark.parametrize("missing", CRS_CREDS)
