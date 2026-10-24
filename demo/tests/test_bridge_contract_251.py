@@ -4,8 +4,7 @@ A strict fake referee enforces #240's reducer checks (market/spacetimedb/src/mar
 - create_mandate: deal_id names the rank 1 bid, payee is that bid's seller id, amount is its landed price exactly, and
   expiry_minutes is an integer from 1 to 10;
 - record_approval: method is voice_code or allowance, and voice_code carries the VoiceApproval id from the call.
-Item 1 of #251 (the scripted run's sim_script method, which #240 refuses) is held for a product answer, so only the
-shape of its arguments is checked here."""
+There is no scripted approval (#251 item 1, Vidyut 12:15): a run without --live-call ends at the approval gate."""
 from __future__ import annotations
 
 import pytest
@@ -150,20 +149,73 @@ def test_an_approved_call_with_no_voice_approval_id_is_denied_and_nothing_is_rec
     assert not any(r in ("record_approval", "record_payment") for _, r, _ in log)
 
 
-def test_the_scripted_record_approval_carries_every_240_argument(run):
-    """Item 1 is held (sim_script vs #240), but the call already has the shape #240 reads."""
-    appr = next(s for s in bridge.plan(run, delay=0, rounds=1) if s.reducer == "record_approval")
-    assert set(appr.args) == {"mandate_hash", "method", "approved_by", "voice_approval_id"}
-    assert appr.args["voice_approval_id"] == "" and appr.args["method"] == "sim_script"
+def test_the_planned_approval_is_never_a_scripted_method(run):
+    """No scripted approval (#251, Vidyut 12:15): the only method the plan can name is the real call's, with an id slot for it."""
+    for live_call in (False, True):
+        appr = next(s for s in bridge.plan(run, delay=0, rounds=1, live_call=live_call) if s.reducer == "record_approval")
+        assert set(appr.args) == {"mandate_hash", "method", "approved_by", "voice_approval_id"}
+        assert appr.args["method"] == "voice_code" and appr.args["voice_approval_id"] == ""
+    assert "sim_script" not in repr(bridge.plan(run, delay=0, rounds=2)) and "sim_script" not in repr(bridge.plan(run, delay=0, rounds=2, live_call=True))
 
 
-
-def test_a_scripted_run_on_a_240_market_stops_at_the_approval_with_no_payment(run):
-    """#251 item 1 is held: #240 refuses sim_script, so the scripted run stops there. Nothing is paid."""
-    rows = market_rows(run)
-    log = []
-    with pytest.raises(RuntimeError, match="method must be one of"):
-        bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=False), clients(log, rows), delay=0, say=lambda s: None,
-                       sleep=lambda x: None, clock=lambda: 0.0, deal_gate=bridge.DealGate(run))
+def test_a_run_without_a_call_stops_at_the_approval_gate_and_pays_nothing(run):
+    """No --live-call: the mandate is made and held, then the run ends at the gate. No record_approval, no payment, no beat 5."""
+    rows, log, notes = market_rows(run), [], []
+    outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=False), clients(log, rows), delay=0, say=lambda s: None,
+                              sleep=lambda x: None, clock=lambda: 0.0, deal_gate=bridge.DealGate(run), note=notes.append)
     kinds = [r for _, r, _ in log]
-    assert "create_mandate" in kinds and kinds[-1] == "record_approval" and "record_payment" not in kinds
+    assert "create_mandate" in kinds
+    assert not any(k in kinds for k in ("record_approval", "record_payment", "record_loss_report"))
+    assert [(o["step"], o["approved"]) for o in outcomes] == [("approval_call", False)] and outcomes[0]["reason"].startswith("no_live_call")
+    assert any("approval needs the real phone call (--live-call); nothing was paid" in n for n in notes)
+
+
+def test_a_run_without_a_call_releases_the_held_unit(run):
+    rows, log = market_rows(run), []
+    bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=False), clients(log, rows), delay=0, say=lambda s: None,
+                   sleep=lambda x: None, clock=lambda: 0.0, deal_gate=bridge.DealGate(run))
+    assert [r for _, r, _ in log].count("deny_approval") == 1
+
+
+HELD = "held back: advocate caution (fit.unconfirmed: card length not on the listing)"
+
+
+def with_reasons(rows, index, reasons):
+    rows = [list(r) for r in rows]
+    rows[index][7] = reasons
+    return [tuple(r) for r in rows]
+
+
+def test_a_held_back_rank_one_makes_no_mandate_and_places_no_call(run):
+    """The market writes 'held back: advocate caution (...)' on rank 1 when every bid carries a caution. The agent buys nothing."""
+    rows = with_reasons(market_rows(run), 0, [HELD])
+    gate, approver = live(run)
+    log, outcomes = go(run, rows, gate, approver)
+    assert outcomes[0]["step"] == "build_mandate" and not outcomes[0]["approved"] and "held back" in outcomes[0]["reason"]
+    assert gate.mandate is None
+    assert not any(r in ("create_mandate", "record_approval", "record_payment", "issue_approval_code") for _, r, _ in log)
+
+
+def test_the_gate_refuses_a_held_back_rank_one_whatever_else_its_reasons_say(run):
+    gate = bridge.DealGate(run)
+    for reasons in ([HELD], ["within budget", HELD]):
+        with pytest.raises(bridge.GateRefused, match="held back"):
+            gate.expectations(with_reasons(market_rows(run), 0, reasons))
+    assert gate.expectations(with_reasons(market_rows(run), 0, ["within budget"]))["payee"] == "best-buy"
+
+
+def test_only_rank_ones_reasons_hold_the_gate(run):
+    """A held-back rank 2 is the market doing its job (it ranks below every bid not held back): rank 1 still gets its mandate."""
+    gate, approver = live(run)
+    log, outcomes = go(run, with_reasons(market_rows(run), 1, [HELD]), gate, approver)
+    assert outcomes[0]["approved"] is True and "create_mandate" in [r for _, r, _ in log]
+
+
+def test_a_rank_one_that_turns_held_back_after_the_call_is_not_paid(run):
+    """expect_now reads the market again after the call; a row that changed to held back denies the charge."""
+    rows = market_rows(run)
+    gate, approver = live(run)
+    gate.prepare(StrictReferee([], rows))
+    gate._referee = StrictReferee([], with_reasons(rows, 0, [HELD]))
+    with pytest.raises(bridge.GateRefused, match="held back"):
+        gate.expect_now()

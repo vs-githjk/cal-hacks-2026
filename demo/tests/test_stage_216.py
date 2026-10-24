@@ -26,7 +26,9 @@ def executed(run, **kw):
     steps = bridge.plan(run, delay=0, rounds=1, **kw)
     log = []
     names = {s.actor for s in steps} | {"buyer", "referee"}
-    bridge.execute(steps, {n: Fake(log, n) for n in names}, delay=0, say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0)
+    approved = {"step": "approval_call", "approved": True, "reason": None, "call_id": "c", "voice_approval_id": "apr_test"}   # #251: no scripted approval
+    bridge.execute(steps, {n: Fake(log, n) for n in names}, delay=0, say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0,
+                   approver=lambda step: approved)
     return log
 
 

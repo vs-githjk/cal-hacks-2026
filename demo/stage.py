@@ -40,8 +40,8 @@ CUES = {
     2: "Sellers bid in a sealed round. Every bid is tagged real listing or simulated, and the advocate vetoes the traps "
        "and shows its source.",
     3: "Bazaar Shield blocks the injected re-post of a listing and names the rules that fired.",
-    4: "The winning bid becomes a signed mandate. The approval call is simulated here: wrong code, no 'approve', then "
-       "right. The payment is a stub and no money moves.",
+    4: "The winning bid becomes a signed mandate. Approval needs the real phone call, so without --live-call the run stops "
+       "here and nothing is paid.",
     5: "Every loser gets a reason. Gadget Grove (Vedant) uses its loss report to lower its open-box price for round two.",
 }
 LIVE_CUE_4 = ("The winning bid becomes a signed mandate and Vidyut's phone rings for real. Say the two-word code, then say "
@@ -191,6 +191,9 @@ def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, d
                                   approver=approver, note=out.note, deal_gate=deal_gate)
         if outcomes and not outcomes[-1]["approved"]:
             out.blank()
+            if outcomes[-1]["reason"] == bridge.NO_CALL_REASON:   # #251: no scripted approval
+                out.note(f"STOPPED at beat {n}: {bridge.NO_CALL_LINE}. Run again with --live-call.")
+                return 1
             what = "no mandate was made" if outcomes[-1]["step"] == "build_mandate" else "the approval call did not approve"
             from pay.voice_cartesia import denial_line
             out.note(f"STOPPED at beat {n}: {what} ({outcomes[-1]['reason']}). {denial_line(outcomes[-1]['reason'])} "
