@@ -179,3 +179,10 @@ def test_check_claim_on_internal_url_is_unverified_not_an_error(tmp_path):
     client = TestClient(create_product_app(keys=keys, meter=Meter(tmp_path / "m.sqlite")))  # default (guarded) fetch
     r = client.post("/v1/check-claim", json=dict(CLAIM, evidence_url="http://127.0.0.1:8788/v1/usage"), headers={"X-API-Key": key})
     assert r.status_code == 200 and r.json()["result"] == "unverified"
+
+
+def test_check_claim_mixed_field_text_with_a_false_price_is_false(tmp_path):  # #99
+    page = b'<script type="application/json" id="listing">{"price": 1299.0, "condition": "new"}</script>'
+    client, key = claim_app(tmp_path, lambda url: page)
+    r = client.post("/v1/check-claim", json=dict(CLAIM, text="New RTX 5070 Ti for only $749"), headers={"X-API-Key": key})
+    assert r.status_code == 200 and r.json()["result"] == "false" and "$1,299.00" in r.json()["reason"]
