@@ -24,6 +24,12 @@ shot-*.png
 # agent identity tokens written by market/scripts/setup_roles.py
 .tokens/
 
+# buyer state is private and shared with pay.replay.NonceStore
+agents/.state.sqlite3
+agents/.state.sqlite3-journal
+agents/.state.sqlite3-wal
+agents/.state.sqlite3-shm
+
 # signing keys (never commit; VISA_TAP_PRIVATE_KEY_PATH points outside the repo)
 *.pem
 *.key
