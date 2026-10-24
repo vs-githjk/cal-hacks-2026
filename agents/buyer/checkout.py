@@ -98,7 +98,8 @@ def _advocate_reason(card: Mapping[str, Any]) -> dict | None:
 
 
 def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
-                  on_code: Callable[[str], Any], buyer_name: str = "Vidyut") -> VoiceResult:
+                  on_code: Callable[[str], Any], buyer_name: str = "Vidyut",
+                  typed_input: Callable[[Any], str | None] | None = None) -> VoiceResult:
     """Run the existing real voice approval flow for one stored pending transaction.
 
     `on_code` must privately deliver to the authenticated owner/session bound by the caller. This
@@ -123,7 +124,8 @@ def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
             raise PermissionError("private approval code delivery failed") from None
 
     result = run_approval_call(mandate, _advocate_reason(tx["advocate_card"]), client, service,
-                               deal=deal, buyer_name=buyer_name, on_code=private_delivery)
+                               deal=deal, buyer_name=buyer_name, on_code=private_delivery,
+                               typed_input=typed_input)
     record = result.record
     if result.approved and not approved_voice_record_matches(record, mandate):
         return VoiceResult(False, "approval_record_mismatch", call_id=result.call_id,
