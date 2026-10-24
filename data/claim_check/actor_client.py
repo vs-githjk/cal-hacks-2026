@@ -11,8 +11,10 @@ the normal approval (agents/tests/test_containment.py). Reads APIFY_TOKEN from t
 """
 from __future__ import annotations
 
+import math
 import os
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 ACTOR = "anoopibrampur~tech-bazaar-claim-check"
 URL = f"https://api.apify.com/v2/acts/{ACTOR}/run-sync-get-dataset-items"
@@ -54,11 +56,15 @@ def check_via_actor(claim: dict, post=None, timeout: float = TIMEOUT) -> dict:
     token = os.environ.get("APIFY_TOKEN", "")
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     try:
-        status, rows = post(f"{URL}?timeout={int(timeout)}", {"claims": [claim]}, headers, timeout)
+        status, rows = post(f"{URL}?timeout={max(1, math.ceil(timeout))}", {"claims": [claim]}, headers, timeout)
     except Slow:
         return _unavailable(claim, "slow", f"no answer within {timeout:g} s")
     except Down as e:
         return _unavailable(claim, "down", str(e))
+    except Exception:  # anything else fails safe too; no detail, so a token in an exception message cannot leak
+        return _unavailable(claim, "error")
+    if not isinstance(status, int) or isinstance(status, bool):
+        return _unavailable(claim, "error", "no status")
     if status == 408:
         return _unavailable(claim, "slow", "Apify run timeout")
     if status in (402, 429):
@@ -69,11 +75,19 @@ def check_via_actor(claim: dict, post=None, timeout: float = TIMEOUT) -> dict:
         return _unavailable(claim, "error", f"HTTP {status}")
     if not isinstance(rows, list):
         return _unavailable(claim, "error", "unreadable body")
-    row = next((r for r in rows if isinstance(r, dict) and r.get("id") == claim.get("id")), rows[0] if len(rows) == 1 else None)
+    cid = claim.get("id")
+    row = next((r for r in rows if isinstance(r, dict) and cid is not None and r.get("id") == cid), None)
+    if row is None and len(rows) == 1 and isinstance(rows[0], dict) and rows[0].get("id") in (None, cid):  # a lone row naming another claim is not ours
+        row = rows[0]
     if not isinstance(row, dict):
         return _unavailable(claim, "empty", "no row for this claim")
     if row.get("result") not in RESULTS:
         return _unavailable(claim, "error", "row has no valid result")
-    return {"result": row["result"], "evidence_url": row.get("evidence_url") or claim.get("evidence_url") or "",
+    url = row.get("evidence_url") or claim.get("evidence_url") or ""
+    if not isinstance(url, str) or urlparse(url).scheme not in ("http", "https"):  # same rule as check_claim
+        return _unavailable(claim, "error", "evidence url is not http or https")
+    if row["result"] != "unverified" and not row.get("evidence_hash"):  # verified or false always comes with the page hash
+        return _unavailable(claim, "error", "verdict without a page hash")
+    return {"result": row["result"], "evidence_url": url,
             "checked_at": row.get("checked_at") or datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "method": row.get("method") or "apify actor", "evidence_hash": row.get("evidence_hash") or "", "reason": row.get("reason") or ""}

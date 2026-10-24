@@ -60,3 +60,51 @@ def test_the_token_is_never_in_the_result(monkeypatch):
     post, calls = fake(exc=Down("ConnectError"))
     out = check_via_actor(CLAIM, post=post)
     assert "SECRET123" not in repr(out)
+
+
+# review fixes (#233)
+def test_a_lone_row_for_another_claim_is_not_used():
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{"id": "other", "result": "verified", "evidence_hash": "ab"}])[0])
+    assert out["result"] == "unverified" and out["method"].startswith(f"{UNAVAILABLE}: empty")
+
+
+def test_a_claim_with_no_id_does_not_match_a_row_naming_another_claim():
+    claim = {k: v for k, v in CLAIM.items() if k != "id"}
+    out = check_via_actor(claim, post=fake(status=201, rows=[{"id": "c9", "result": "verified", "evidence_hash": "ab"}])[0])
+    assert out["result"] == "unverified"
+
+
+def test_a_lone_row_with_no_id_is_used():
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{"result": "false", "evidence_hash": "ab"}])[0])
+    assert out["result"] == "false"
+
+
+@pytest.mark.parametrize("result", ["verified", "false"])
+def test_a_verdict_without_a_page_hash_is_unverified(result):
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{**CLAIM, "result": result}])[0])
+    assert out["result"] == "unverified" and out["reason"] == UNAVAILABLE
+
+
+@pytest.mark.parametrize("url", ["javascript:alert(1)", "file:///etc/passwd", 5, ["https://x.example"]])
+def test_a_verdict_with_a_non_http_evidence_url_is_unverified(url):
+    out = check_via_actor(CLAIM, post=fake(status=201, rows=[{**CLAIM, "result": "verified", "evidence_hash": "ab", "evidence_url": url}])[0])
+    assert out["result"] == "unverified" and out["method"].startswith(f"{UNAVAILABLE}: error")
+
+
+@pytest.mark.parametrize("exc", [ValueError("x"), RuntimeError("x"), OSError("x"), TypeError("x"),
+                                 RuntimeError("token apify_api_SECRET123 in message")])
+def test_any_other_exception_fails_safe_without_detail(exc):
+    out = check_via_actor(CLAIM, post=fake(exc=exc)[0])
+    assert out["result"] == "unverified" and out["method"] == f"{UNAVAILABLE}: error" and "SECRET123" not in repr(out)
+
+
+@pytest.mark.parametrize("ret", [None, (None, []), ("200", []), (True, [])])
+def test_a_missing_or_bad_status_fails_safe(ret):
+    out = check_via_actor(CLAIM, post=lambda *a: ret)
+    assert out["result"] == "unverified" and out["method"].startswith(f"{UNAVAILABLE}: error")
+
+
+def test_a_sub_second_bound_is_not_sent_as_zero():
+    post, calls = fake(status=201, rows=[])
+    check_via_actor(CLAIM, post=post, timeout=0.5)
+    assert calls[0][0].endswith("?timeout=1") and calls[0][2] == 0.5
