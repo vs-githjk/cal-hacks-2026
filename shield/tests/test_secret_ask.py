@@ -228,7 +228,7 @@ def test_claude_classifier_without_a_tool_answer_raises_so_the_caller_fails_clos
 
 
 def test_candidates_too_long_for_one_classifier_call_fail_closed():
-    text = "State, " + "very, " * 800 + "your password"  # one 4800 character sentence
+    text = "State, " + "very, " * 3316 + "your password"  # one sentence of 19,916 chars: over one call, under the cap
     clf = FakeModel()
     out = screen(text, SELLER, classifier=clf)
     assert out["rule_ids"] == ["shield.classifier.unavailable"] and clf.seen == []
