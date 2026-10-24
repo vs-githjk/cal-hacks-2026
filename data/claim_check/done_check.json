@@ -1,0 +1,42 @@
+{
+ "origin": "SIM",
+ "served_from": "localhost (python http.server)",
+ "runs": [
+  {
+   "claim": "Brand new, factory sealed",
+   "result": "false",
+   "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+   "checked_at": "2026-10-24T05:17:57+00:00",
+   "evidence_hash": "e124b7aee1994b9397bd010608c6551a96f78dd7bc19233a1c7eaeef9d50b489",
+   "method": "fetched page, page listing JSON, condition rule",
+   "reason": "claim says new; differs from the listing at 2026-10-24T05:17:57+00:00: the page shows open-box"
+  },
+  {
+   "claim": "was $1,099",
+   "result": "false",
+   "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+   "checked_at": "2026-10-24T05:17:57+00:00",
+   "evidence_hash": "e124b7aee1994b9397bd010608c6551a96f78dd7bc19233a1c7eaeef9d50b489",
+   "method": "fetched page, page listing JSON, was_price rule",
+   "reason": "the price claim did not match the price history: highest recorded $829.00 (2026-09-01 to 2026-10-20)"
+  },
+  {
+   "claim": "Socket AM5",
+   "result": "false",
+   "evidence_url": "http://127.0.0.1:8765/shady-sam-cpu-5800x3d-lies.html",
+   "checked_at": "2026-10-24T05:17:57+00:00",
+   "evidence_hash": "8cd513a40ad08607abbe09c9b5957af4e65e8d0ec28ad27e7358d0cb23d1f0b7",
+   "method": "fetched page, page listing JSON, socket rule",
+   "reason": "claim says AM5; the maker table maps Zen 3 to AM4"
+  },
+  {
+   "claim": "Brand new",
+   "result": "verified",
+   "evidence_url": "http://127.0.0.1:8765/honest-hal-gpu-5070ti.html",
+   "checked_at": "2026-10-24T05:17:57+00:00",
+   "evidence_hash": "2db9bd0e34e599a562b69c048d48bef9037201c644d52ce925a9886198616de3",
+   "method": "fetched page, page listing JSON, condition rule",
+   "reason": "the page shows new"
+  }
+ ]
+}

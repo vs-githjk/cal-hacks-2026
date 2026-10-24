@@ -1,0 +1,15 @@
+{
+ "title": "Claims to check",
+ "type": "object",
+ "schemaVersion": 1,
+ "properties": {
+  "claims": {
+   "title": "Claims",
+   "type": "array",
+   "editor": "json",
+   "description": "Each item: {id, text, kind, evidence_url} (Tech Bazaar Claim). Optional field and value skip text parsing.",
+   "prefill": [{"id": "c1", "text": "was $1,099", "kind": "price", "evidence_url": "https://example.com/listing"}]
+  }
+ },
+ "required": ["claims"]
+}
