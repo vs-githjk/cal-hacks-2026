@@ -70,8 +70,8 @@ async def tell_owner(ctx: Context, text: str):
         await tell(ROUND.get("owner_context") or ctx, ROUND["owner"], "\n".join(pending + [text]))
 
 
-def blocked_reasons(sender: str, text: str) -> str | None:
-    verdict = common.screen(str(uuid4()), sender, text)
+def blocked_reasons(sender: str, text: str, context: dict | None = None) -> str | None:
+    verdict = common.screen(str(uuid4()), sender, text, context)
     if verdict.get("verdict") == "allow":
         return None
     return "; ".join(verdict.get("reasons", [])) or verdict.get("verdict", "blocked")  # quarantine counts as blocked
@@ -225,7 +225,8 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
     if sender not in SELLER_ADDRS:
         ctx.logger.info(f"bid from unknown agent {sender[:16]} ignored")
         return
-    reasons = blocked_reasons(sender, msg.bid_json + "\n" + msg.persona_line)
+    verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, BASELINE)
+    reasons = None if verdict.get("verdict") == "allow" else "; ".join(verdict.get("reasons", [])) or verdict.get("verdict")
     if reasons:
         await tell_owner(ctx, f"Shield blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
         return
@@ -251,7 +252,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
 async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
     if sender != common.address("advocate") or ROUND.get("phase") != "advice":
         return
-    reasons = blocked_reasons(sender, msg.cards_json)
+    reasons = blocked_reasons(sender, msg.cards_json, common.shield_context(sender))
     if reasons:
         await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
@@ -416,7 +417,7 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
     if sender not in SELLER_ADDRS:
         ctx.logger.info(f"payment request from unknown agent {sender[:16]} ignored")
         return
-    reasons = blocked_reasons(sender, req.model_dump_json())
+    reasons = blocked_reasons(sender, req.model_dump_json(), common.shield_context(sender, payee_of_record=sender))
     if reasons:
         await ctx.send(sender, RejectPayment(reason=f"blocked by Shield: {reasons}"))
         await tell_owner(ctx, f"Shield blocked a payment request from {SELLER_ADDRS[sender]}: {reasons}")

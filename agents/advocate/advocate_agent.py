@@ -21,7 +21,8 @@ common.include_profile_chat(agent, "I am Tech Bazaar's Quality Advocate. I revie
 
 @agent.on_message(model=common.AdviceRequest, replies=common.AdviceReply)
 async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
-    verdict = common.screen(f"advice-{ctx.session}", sender, msg.need_json + msg.bids_json)
+    verdict = common.screen(f"advice-{ctx.session}", sender, msg.need_json + msg.bids_json,
+                            common.shield_context(sender))
     if verdict["verdict"] != "allow":
         ctx.logger.warning(f"shield {verdict['verdict']} from {sender}: {verdict['reasons']}")
         return
