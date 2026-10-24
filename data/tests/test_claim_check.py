@@ -127,3 +127,9 @@ def test_only_http_and_https_urls_are_fetched():
 def test_not_in_stock_parses_as_out_of_stock():
     assert parse_claim({"text": "Not in stock", "kind": "stock"}) == ("stock", False)
     assert parse_claim({"text": "currently unavailable", "kind": "stock"}) == ("stock", False)
+
+
+def test_page_saying_not_in_stock_does_not_verify_an_in_stock_claim():
+    for text in ("Not in stock", "Currently unavailable", "Sold out", "Out of stock", "OutOfStock"):
+        body = b'<script type="application/json" id="listing">{"stock": "' + text.encode() + b'"}</script>'
+        assert check_body("in stock", body, kind="stock")["result"] == "false", text

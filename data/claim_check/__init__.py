@@ -92,8 +92,8 @@ def in_stock(v):
     if isinstance(v, bool):
         return v
     s = str(v).lower()
-    if "out of stock" in s or "outofstock" in s or s.startswith("0 "):
-        return False
+    if re.search(r"out of stock|outofstock|not in stock|unavailable|sold out|soldout", s) or s.startswith("0 "):
+        return False  # negations first: "not in stock" contains "in stock"
     if "in stock" in s or "instock" in s or re.match(r"\d+ (units|in stock|remaining)", s):
         return True
     return None
