@@ -308,7 +308,7 @@ def main(argv: Optional[list] = None) -> int:
         who = "buyer" if s.actor == "buyer" else "referee" if s.actor == "referee" else s.actor.replace("seller:", "seller ")
         if s.reducer == "set_floor":
             return
-        out.line(s.tag if s.tag in LIVE_TAGS else SIM, f"{who:<26}{s.reducer:<20}{s.say}")
+        out.line(s.tag if s.tag in LIVE_TAGS else SIM, f"{who:<26}{s.reducer:<22}{s.say}")
 
     if args.dry_run:
         for s in steps:

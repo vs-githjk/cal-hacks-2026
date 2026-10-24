@@ -14,4 +14,5 @@ export default {
   mandateHash: __t.string(),
   paymentRef: __t.string(),
   amount: __t.f64(),
+  mode: __t.string(),
 };

@@ -173,12 +173,14 @@ export const NeedItem = __t.object("NeedItem", {
   variant: __t.string(),
   quantity: __t.f64(),
   unit: __t.string(),
+  allowedConditions: __t.array(__t.string()),
 });
 export type NeedItem = __Infer<typeof NeedItem>;
 
 export const NeedItemArg = __t.object("NeedItemArg", {
   skuSpec: __t.string(),
   condition: __t.string(),
+  allowedConditions: __t.array(__t.string()),
   variant: __t.string(),
   quantity: __t.f64(),
   unit: __t.string(),
@@ -214,6 +216,7 @@ export const Payment = __t.object("Payment", {
   paymentRef: __t.string(),
   amount: __t.f64(),
   at: __t.timestamp(),
+  mode: __t.string(),
 });
 export type Payment = __Infer<typeof Payment>;
 
