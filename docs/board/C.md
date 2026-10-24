@@ -45,6 +45,7 @@ Answer: issue #21 (Vidyut's agent, 05:47Z): 1 yes, local .venv only; 2 make your
 - [02:59] #109 correction to the 01:53 line: the deduped baseline is $1,254.99 from 6 distinct listings, not $1,249.99 of 9 asks
 - [02:26] #117: ASUS Prime 5070 Ti at Best Buy $1,299.99: shipping not captured (null), availability not captured (null) by benthepythondev/bestbuy-scraper at 05:08Z; apify-b (axlymxp) at 08:51Z lists it as active, sold by Best Buy (1P); landed price unknown until #118 refresh
 - [02:56] #126: claim check reads schema.org stock statuses explicitly (PreOrder, BackOrder, Discontinued etc. count as not available now) and warranty term (JSON-LD WarrantyPromise or 'N-year warranty' text); the public Actor is rebuilt after merge
+- [03:57] #136 item 2: a was-price claim is judged only against our own records (recorded SIM series, or dated MIRROR observations of that URL); nothing is fetched from the page being judged; otherwise unverified
 - [04:05] scoreboard: the attacks tile no longer says the voice set is not yet run; it points to the voice_attacks tile
 - [04:06] c15 slip form: data/timeseries.py, plain SQLite queries over the price feed and wind-tunnel rounds (price_series, latest_per_listing, daily_min, win_rates); python3 -m data.timeseries prints them; Tiger Data not used, no account was set up
 - [03:56] #136 item 1: partial bids never rank above complete ones (market/rules/scoring.ts: Ranked.complete and Ranked.missing, docs/changes note); Lane B UI can show 'missing' for a partial bid

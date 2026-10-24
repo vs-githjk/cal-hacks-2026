@@ -262,3 +262,52 @@ def test_warranty_list_must_agree():
     assert _res("3-year warranty", "warranty", _page(node_extra=two))["result"] == "unverified"
     same = ',"warranty":[%s,%s]' % tuple(_w(3, "ANN")[len(',"warranty":'):] for _ in (1, 2))
     assert _res("3-year warranty", "warranty", _page(node_extra=same))["result"] == "verified"
+
+
+def test_was_price_history_comes_from_our_record_not_the_served_file():  # #136
+    import json
+    calls = []
+
+    def poisoned(url):
+        calls.append(url)
+        if url.endswith("price_history.json"):
+            return json.dumps({"series": {"gpu-5070ti": [{"date": "2026-10-01", "price": 5000.0}]}}).encode()
+        return fetch(url)
+
+    out = check_claim(claim("was $1,099", SAM_GPU_LIES, kind="price"), fetch=poisoned)
+    assert out["result"] == "false" and "price history" in out["reason"]
+    assert calls == [BASE + SAM_GPU_LIES]  # only the page is fetched
+
+
+REAL = b'<script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":"1000"}}</script>'
+
+
+def test_real_page_without_our_captures_is_unverified_for_a_was_price():
+    c = {"text": "was $1,500", "kind": "price", "evidence_url": "https://store.example/p"}
+    out = check_claim(c, fetch=lambda u: REAL, observations=[])
+    assert out["result"] == "unverified" and "no dated price history from our own captures" in out["reason"]
+
+
+def test_real_page_is_judged_against_our_dated_observations_of_that_url():
+    rows = [{"url": "https://store.example/p", "observed_at": "2026-10-20T05:00:00+00:00", "price": 1400.0},
+            {"url": "https://other.example/q", "observed_at": "2026-10-21T05:00:00+00:00", "price": 9999.0}]
+    c = lambda t: {"text": t, "kind": "price", "evidence_url": "https://store.example/p"}
+    assert check_claim(c("was $1,500"), fetch=lambda u: REAL, observations=rows)["result"] == "false"
+    assert check_claim(c("was $1,400"), fetch=lambda u: REAL, observations=rows)["result"] == "verified"
+
+
+def test_was_price_without_our_records_installed_is_unverified_not_an_error(monkeypatch):  # inside the Actor bundle
+    import sys
+    monkeypatch.setitem(sys.modules, "data.baselines", None)
+    c = {"text": "was $1,500", "kind": "price", "evidence_url": "https://store.example/p"}
+    out = check_claim(c, fetch=lambda u: REAL)
+    assert out["result"] == "unverified" and "no dated price history from our own captures" in out["reason"]
+
+
+def test_page_facts_claiming_to_be_sim_do_not_earn_our_sim_history():  # #155: SIM is decided from the evidence URL
+    page = b'<script type="application/json" id="listing">{"origin":"SIM","sku":"gpu-5070ti","price":789.0,"condition":"new"}</script>'
+    for url in ("https://store.example/p", "http://127.0.0.1:8765.evil.example/p.html", "https://127.0.0.1:8765/p.html"):
+        out = check_claim({"text": "was $829", "kind": "price", "evidence_url": url}, fetch=lambda u: page, observations=[])
+        assert out["result"] == "unverified", url
+    ours = check_claim({"text": "was $829", "kind": "price", "evidence_url": BASE + "shady-sam-gpu-5070ti-lies.html"}, fetch=fetch)
+    assert ours["result"] in ("verified", "false") and "price history" in ours["reason"]
