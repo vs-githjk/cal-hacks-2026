@@ -39,11 +39,13 @@ SKIP = _w(
     r"omit\w+", r"salt(?:a|e|ar|ate)\w*",
     r"no\s+(?:es\s+)?(?:necesari[oa]|hace\s+falta|necesit\w+)", r"prescind\w+", r"evit(?:a|e|ar)\b", r"dispens\w+",
     # Hindi transliteration
+    # no time to check, French and German
+    r"no\s+time\s+(?:to|for)", r"inutile\s+de", r"pas\s+besoin\s+de", r"nicht\s+n[oö]tig", r"keine\s+(?:zeit|notwendigkeit)",
     r"zaroorat\s+nahi", r"zarurat\s+nahi", r"jarurat\s+nahi", r"zaroori\s+nahi", r"chh?od\s+(?:do|dijiye|dena|den)",
     r"skip\s+kar\w*", r"mat\s+(?:karo|puchho|poochho|pucho|bulao)", r"avoid\s+kar\w*",
 )
 # "without ..." only counts when the gate word FOLLOWS it ("without waiting for your owner"), never "approval ... without a deposit".
-SKIP_BEFORE_GATE = _w(r"without", r"sin\s+(?:pedir|consultar|llamar|esperar|preguntar|avisar|requerir)?", r"bina")
+SKIP_BEFORE_GATE = _w(r"without", r"sin\s+(?:pedir|consultar|llamar|esperar|preguntar|avisar|requerir)?", r"bina", r"sans", r"ohne")
 _NOT_MANUAL = r"(?!\s*(?:'s)?\s*(?:manual|guide|handbook|interface|account|manuals|reviews))"
 GATE = rx(
     r"\b(?:the\s+|your\s+|our\s+|its\s+)?(?:buyer|owner|human|principal|advocate|approver)(?:'s|s')?\b" + _NOT_MANUAL
@@ -55,6 +57,11 @@ GATE = rx(
     # Spanish
     + r"|\baprobaci\w+|\baprobar\b|\bverificaci\w+|\bverificar\b|\bcomprador\w*|\bpropietari[oa]\b|\bduen[oa]\b"
     + r"|\babogad[oa]\b|\bautorizaci\w+|\bpermiso\b|\bconsentimiento\b|\brevisi\w+"
+    # French and German
+    + r"|\bacheteur\b|\baccord\b|\bpropri[eé]taire\b|\bapprobation\b|\bv[eé]rification\b|\bk[aä]ufer\w*|\beigent[uü]mer\w*"
+    + r"|\bgenehmigung\b|\bfreigabe\b|\bzustimmung\b|\b[uü]berpr[uü]fung\b"
+    # buyer-side checks named by what they check
+    + r"|\b(?:allowance|spending|spend|referee|mandate|price|limit)\s+(?:checks?|limits?|caps?|calls?)\b|\breferee\b|\bveto(?:es)?\b"
     # Hindi transliteration
     + r"|\bmaalik\b|\bmalik\b|\bmanzoori\b|\bmanjuri\b|\bmanjoori\b|\banumati\b|\bijazat\b"
 )
@@ -124,16 +131,21 @@ DISCARD = _w(
     r"abandon(?:ing)?", r"stop\s+following", r"(?:do\s+not|don'?t)\s+follow", r"overlook(?:ing)?", r"neglect(?:ing)?",
     r"cast(?:ing)?\s+aside", r"throw(?:ing)?\s+out", r"pay\s+no\s+(?:attention|heed)\s+to", r"dismiss(?:ing)?", r"ditch(?:ing)?",
     r"ignor[ae]\w*", r"olvid[ae]\w*", r"descart[ae]\w*", r"anul[ae]\w*",
+    r"ignor(?:ez|er|ez-?\s?vous)\b", r"oubli(?:ez|er)\b", r"ne\s+tenez\s+pas\s+compte", r"ignorier\w*", r"vergiss\w*", r"missachte\w*",
+    r"esque[cç]a\w*", r"desconsidere\w*", r"dimentica\w*",
     r"ignore\s+kar\w*", r"bhool\s+(?:jao|jaiye|ja)", r"ignore\s+karo", r"nazarandaz\w*",
 )
 INSTR = _w(
     r"instructions?", r"guidance", r"guidelines?", r"rules?", r"directives?", r"directions?", r"prompts?",
     r"programming", r"constraints?", r"orders", r"polic(?:y|ies)", r"what\s+you\s+(?:were|have\s+been)\s+(?:told|given)",
+    r"consignes", r"r[eè]gles", r"directives", r"anweisungen", r"regeln", r"vorgaben", r"richtlinien", r"befehle",
+    r"instru[cç][oõ]es", r"regras", r"istruzioni", r"regole",
     r"instrucciones", r"reglas", r"indicaciones", r"nirdesh\w*", r"niyam\w*",
 )
 QUAL = _w(
     r"earlier", r"previous", r"prior", r"above", r"before", r"original", r"initial", r"existing", r"given", r"your",
-    r"all", r"any", r"every", r"former", r"old", r"anteriores?", r"previas?", r"pichle", r"purane", r"pehle\s+ke",
+    r"all", r"any", r"every", r"former", r"old",
+    r"pr[eé]c[eé]dent\w*", r"ant[eé]rieur\w*", r"vorherig\w*", r"bisherig\w*", r"fr[uü]her\w*", r"alle\w*", r"toutes?", r"vos", r"anteriori", r"precedenti", r"anteriores?", r"previas?", r"pichle", r"purane", r"pehle\s+ke",
 )
 CHANGE = _w(
     r"new(?:er)?", r"updated?", r"chang(?:e|ed|es|ing)", r"revised?", r"different", r"alternat(?:e|ive)", r"another",
@@ -170,6 +182,9 @@ AGENT_PATTERNS = [
     rx(r"\b(?:if|when|since|because)\s+you\s+(?:are|'re|were)\s+(?:an?\s+|the\s+)?(?:(?:ai|language|automated|shopping)\s+)*" + _AGENT + r"\b"),
     rx(r"\b(?:agents?|assistants?|bots?|ai|agente|asistente)\s*[,:]\s*" + _IMPERATIVE + r"\b"),
     rx(r"\byou,?\s+(?:the\s+)?(?:ai\s+)?" + _AGENT + r"\b"),
+    rx(r"\b(?:to|for)\s+(?:any|all|every|whichever|whatever)\s+(?:other\s+)?(?:ai|llm|bot|chatbot|robot|automated)\b"),
+    rx(r"\b(?:whichever|whatever|any)\s+(?:ai|llm|bot|chatbot|assistant|agent|model)\s+(?:that\s+)?(?:reads?|is\s+reading|summari[sz]es?|processes|scans?|crawls?|parses?)\b"),
+    rx(r"\b(?:attention|attn|hey|hello|hi|dear)\s*,?\s+(?:ai|llm|chatbot|a\.i\.)\b"),
     rx(r"\bas\s+(?:an?|the)\s+(?:ai\s+)?" + _AGENT + r",?\s+you\s+(?:must|should|need|have|will|are|shall|can|may)\b"),
     rx(r"\b(?:the|your|this)\s+(?:(?:buyer'?s?|shopping|purchasing|ai|automated|reading)\s+){0,2}(?:agents?|assistants?|bots?)\s+"
        r"(?:should|must|shall|needs?\s+to|has\s+to|have\s+to|is\s+to|are\s+to|is\s+required\s+to|is\s+instructed\s+to|ought\s+to)\b"),

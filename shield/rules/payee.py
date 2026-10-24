@@ -7,7 +7,8 @@ import re
 
 from shield.rules.base import QUARANTINE, Rule, rx
 
-_VALUE = r"(?P<v>[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+|0x[0-9a-fA-F]{40}|https?://[^\s\"'<>]+)"
+_VALUE = (r"(?P<v>[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+|0x[0-9a-fA-F]{40}|https?://[^\s\"'<>]+|"
+          r"(?:paypal\.me|venmo\.com/u|cash\.app/\$|revolut\.me|wise\.com/pay|ko-fi\.com|t\.me)/[\w.\-$]+|acct_[A-Za-z0-9]{6,})")
 _GAP = r"(?:[\s:=\"'>]|<[^>]*>)*?"
 PATTERNS = [
     rx(r"\b(?:pay(?:ment)?s?\s*(?:to|address)|payee|payout(?:\s+(?:to|address|account))?|remit(?:\s+to)?|"

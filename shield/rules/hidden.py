@@ -17,7 +17,7 @@ _OPEN = re.compile(r"<(?P<tag>[a-z][\w-]*)\b(?P<attrs>[^>]{0,2000})>", re.IGNORE
 _ATTR_HIDDEN = re.compile(r"style\s*=\s*[\"'][^\"']*(?:" + _HIDDEN_STYLE + r")|\shidden(?:\s|=|$)", re.IGNORECASE)
 _TAGS = re.compile(r"<[^>]*>")
 _ADDRESS = rx(r"\b(?:agent|assistant|bot|ai|llm|model)s?\b[^a-z0-9]{0,3}\s*(?:please\s+)?"
-              r"(?:approve|pay|skip|send|verify|ignore|mark|charge|trust|accept|do\s+not|don'?t)\b")
+              r"(?:approve|pay|skip|send|verify|ignore|mark|charge|trust|accept|do\s+not|don'?t|wire|transfer|deposit|forward|release|rank|recommend|buy|purchase|confirm|order)\b")
 _SIGNALS = (override.PATTERNS + money.PATTERNS + list(impersonation.PATTERNS.values()) + [_ADDRESS])
 
 

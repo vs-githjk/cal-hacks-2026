@@ -13,7 +13,9 @@ PATTERNS = [
     rx(r"\byou\s+are\s+now\s+(?:a|an|the|in|my|acting|operating|unrestricted|free|dan|no\s+longer)\b"),
     rx(r"\bfrom\s+now\s+on,?\s+(?:you|ignore|always|only)\b"),
     rx(r"\bpretend\s+(?:to\s+be|you\s+are)\b"),
-    rx(r"\b(?:jailbreak|developer\s+mode|dan\s+mode)\b"),
+    # "developer mode" is also a BIOS, Android and browser setting: not an attack when a setting word is near
+    rx(r"\b(?:jailbreak|dan\s+mode)\b"),
+    rx(r"\bdeveloper\s+mode\b(?!\s+(?:bios|setting|option|toggle|menu|switch)|[^.\n]{0,40}\b(?:bios|firmware|settings?|menu|motherboard|android|browser|chrome|usb)\b)"),
     rx(r"\bact\s+as\s+(?:if\s+you\s+(?:are|were)|an?\s+(?:unrestricted|different|new|system|admin))"),
     rx(r"\b(?:note|message|instructions?|attention|notice|memo)s?\s+(?:to|for)\s+(?:all\s+|the\s+)?"
        r"(?:shopping\s+|buyer\s+|seller\s+|ai\s+)?(?:agents?|assistants?|bots?|llms?|models?)\b"),

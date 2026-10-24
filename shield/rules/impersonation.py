@@ -4,6 +4,7 @@ from shield.rules.base import BLOCK, Rule, rx
 _ROLES = {
     "marketplace": r"(?:tech\s*bazaar|bazaar\s*shield|the\s+marketplace\s+(?:admin|operator|support)|marketplace\s+(?:admin|operator|support)|shield)",
     "advocate": r"(?:the\s+|your\s+)?advocate",
+    "referee": r"(?:the\s+)?(?:tech\s*bazaar\s+)?(?:referee|arbiter|moderator|auditor)(?:\s+team)?",
     "buyer": r"(?:the\s+buyer'?s?\s+agent|the\s+buyer|your\s+buyer|your\s+owner|your\s+agent|the\s+owner)",
 }
 _LEAD = r"\b(?:this\s+is|i\s+am|i'?m|we\s+are|message\s+from|official(?:ly)?|speaking\s+as|on\s+behalf\s+of)\s+(?:the\s+)?(?:official\s+)?"
