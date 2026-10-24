@@ -123,6 +123,9 @@ def test_the_agent_addresses_load_when_the_stage_runs_as_a_script():
     import sys
     from pathlib import Path
 
+    # agents/common.py imports uagents; without it the stage correctly prints "no agent rows". CI installs
+    # agents/requirements.txt (python-tests.yml), so there this test runs; a bare system python skips it.
+    pytest.importorskip("uagents", reason="uagents is not installed (pip install -r agents/requirements.txt)")
     root = Path(__file__).resolve().parents[2]
     out = subprocess.run([sys.executable, str(root / "demo" / "stage.py"), "--dry-run"], capture_output=True, text=True, timeout=180,
                          cwd=root)
