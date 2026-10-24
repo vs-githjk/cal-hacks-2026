@@ -132,6 +132,11 @@ def clean_advocate_reason(reason: Any) -> tuple[dict[str, str], list[str]]:
     return kept, dropped
 
 
+def _speakable_host(host: str) -> bool:
+    """A raw IP or a local test page means nothing read aloud; the link stays on the screen."""
+    return not (host == "localhost" or host.endswith(".localhost") or re.fullmatch(r"[0-9.]+", host))
+
+
 def _host(url: str) -> Optional[str]:
     try:
         parts = urlsplit(url.strip())
@@ -181,8 +186,10 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None) -> CallS
         parts.append("The advocate has no recorded reason for that")
     if "summary" in kept:
         parts.append(kept["summary"])
-    if "host" in kept:
+    if "host" in kept and _speakable_host(kept["host"]):
         parts.append(f"The source is {kept['host']}, and the link is on your screen")
+    elif "host" in kept:
+        parts.append("The source link is on your screen")
     else:
         parts.append("The source link is on your screen")
     why = ". ".join(parts) + ". Nothing is paid until you say the code and approve"
