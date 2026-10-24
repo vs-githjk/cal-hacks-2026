@@ -396,12 +396,12 @@ def run_approval_call(mandate: dict, advocate_reason: Any, client, service: Appr
             try:
                 on_code(code)
             except Exception:
-                session.silence()
+                session.silence(now=now())
                 raise
-        session.start_call()
+        session.start_call(now=now())
         placed_at = now()
     except ScriptError as e:
-        d = session.silence()
+        d = session.silence(now=now())
         return VoiceResult(False, "call_failed", record=d.record, trace=[{"outcome": type(e).__name__}])
     try:
         call_id = place_call(client, variables)
@@ -426,7 +426,7 @@ def run_approval_call(mandate: dict, advocate_reason: Any, client, service: Appr
         return VoiceResult(True, None, call_id, end_reason, last.record, session.attempts, trace)
     if last is None:
         return no_voice_answer("no_buyer_speech", call_id=call_id, end_reason=end_reason, trace=trace)
-    final = last if last.final else session.silence()
+    final = last if last.final else session.silence(now=now())
     return VoiceResult(False, last.reason, call_id, end_reason, final.record, session.attempts, trace)
 
 
