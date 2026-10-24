@@ -28,3 +28,8 @@ def test_mirrored_gpu_and_psu_feed_the_fit_checker():
     gpu = to_spec_card("x", {"title": "Gigabyte RTX 5070 Ti WINDFORCE"}, "s", "d")
     psu = to_spec_card("x", {"title": "Corsair RM650e 650W ATX Power Supply"}, "s", "d")
     assert check_fit([gpu, psu])["rule_id"] == "fit.psu_wattage"
+
+
+def test_ebay_seller_handles_are_dropped():
+    card = to_spec_card("ebay_live", {"title": "RTX 5070 Ti", "sellerUsername": "someone_123", "seller": "someone_123"}, "s", "d")
+    assert "seller" not in card["listing"]
