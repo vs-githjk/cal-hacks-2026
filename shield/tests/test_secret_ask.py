@@ -232,3 +232,26 @@ def test_candidates_too_long_for_one_classifier_call_fail_closed():
     clf = FakeModel()
     out = screen(text, SELLER, classifier=clf)
     assert out["rule_ids"] == ["shield.classifier.unavailable"] and clf.seen == []
+
+
+# --- fix round: line breaks and HTML must not split a verb from its noun ---------------------------------------
+@pytest.mark.parametrize("text", [
+    "Please state your\npassword now", "State your\r\npassword", "Give us your seed\nphrase",
+    "<p>State</p>\n<p>your password</p>", "State your password", "State&nbsp;your&nbsp;password",
+    "<b>State</b> your <i>password</i>", "State your <!-- x -->password",
+])
+def test_a_line_break_or_html_tag_does_not_hide_a_secret_ask(text):
+    assert secret_ask.candidates(make_doc(text)), text
+    clf = FakeModel(asks=["password", "seed"])
+    assert screen(text, SELLER, classifier=clf)["rule_ids"] == ["shield.classifier.secret_ask"]
+
+
+def test_a_blank_line_or_a_sentence_mark_still_separates_sentences():
+    for text in ["State\n\nyour password", "State\r\n\r\nyour password", "State\n \n your password", "State.\nYour password"]:
+        assert not secret_ask.candidates(make_doc(text)), text
+
+
+def test_candidate_spans_of_a_multi_line_ask_map_back_to_the_raw_text():
+    text = "Great card.\n\nPlease state your\npassword now\n\nShips Monday."
+    (s, e), = secret_ask.candidates(make_doc(text))
+    assert text[s:e].strip() == "Please state your\npassword now"

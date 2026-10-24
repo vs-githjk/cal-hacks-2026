@@ -29,7 +29,15 @@ _SECRET = rx(
     r"|\bapi[\s_-]?keys?\b|\b(?:private|secret|signing|access)\s+keys?\b"
     r"|\blog-?in\s+(?:credentials|details)\b"
 )
-_SENTENCE = re.compile(r"[^.!?;\n]+")
+# A sentence ends at . ! ? ; or a blank line. A single line break (\n, \r\n, U+2028) is just a space, so a
+# verb on one line still meets its noun on the next.
+_SENTENCE = re.compile(r"(?:(?!\n\s*\n|\r\s*\r|\u2029)[^.!?;])+")
+# Simple HTML tags and comment markers become blanks of the same length, so spans still map back to the raw text.
+_MARKUP = re.compile(r"</?[a-z][^<>]{0,200}>|<!--|-->", re.IGNORECASE)
+
+
+def _blank(m: "re.Match[str]") -> str:
+    return " " * len(m.group(0))
 
 
 def candidates(doc) -> list[tuple[int, int]]:
@@ -37,7 +45,8 @@ def candidates(doc) -> list[tuple[int, int]]:
     (leetspeak such as "pa55word"). Sorted, overlaps merged, empty when nothing is a candidate."""
     found: list[tuple[int, int]] = []
     for view in [doc, *doc.views()]:
-        for m in _SENTENCE.finditer(view.norm):
+        prose = _MARKUP.sub(_blank, view.norm)
+        for m in _SENTENCE.finditer(prose):
             # the whole sentence goes to the classifier: a window around the match could cut the real ask
             if _VERB.search(m.group(0)) and _SECRET.search(m.group(0)):
                 found.append(view.raw_span(m.start(), m.end()))
