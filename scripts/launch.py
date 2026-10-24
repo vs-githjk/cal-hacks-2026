@@ -152,6 +152,9 @@ def find_tool(name: str, which=shutil.which, home_bin: Path | None = None) -> st
 def build_services(a, repo: Path = REPO) -> list[Service]:
     shield_url = f"http://{HOST}:{a.shield_port}"
     py = str(venv_python(repo))
+    mb = getattr(a, "mailbox", False)
+    agent_env = lambda flag: {"SHIELD_URL": shield_url, **({flag: "1"} if mb else {})}  # noqa: E731
+    mode = "Agentverse mailbox" if mb else "local mode, not Agentverse mailbox"
     return [
         Service("market-stdb", a.stdb_port, [find_tool("spacetime") or "spacetime", "start", "--listen-addr", f"{HOST}:{a.stdb_port}"], repo / "market",
                 health_path="/v1/ping", wait=40, group="market",
@@ -160,11 +163,11 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
                 [sys.executable, "-m", "uvicorn", "shield.api:app", "--host", HOST, "--port", str(a.shield_port)], repo,
                 health_path="/v1/shield/health", wait=30, group="shield"),
         Service("sellers", 8010, [py, "sellers/run_all.py"], repo / "agents", health="tcp", wait=90, group="agents",
-                extra_env={"SHIELD_URL": shield_url}, note="3 seller agents in one Bureau (port fixed in code)"),
+                extra_env=agent_env("SELLERS_MAILBOX"), note=f"3 seller agents in one Bureau, {mode} (port fixed in code)"),
         Service("advocate", 8003, [py, "-m", "advocate.advocate_agent"], repo / "agents", health="tcp", wait=90,
-                group="agents", extra_env={"SHIELD_URL": shield_url}, note="port fixed in code"),
+                group="agents", extra_env=agent_env("ADVOCATE_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("buyer", 8001, [py, "buyer/buyer_agent.py"], repo / "agents", health="tcp", wait=90, group="agents",
-                extra_env={"SHIELD_URL": shield_url}, note="local mode, not Agentverse mailbox; port fixed in code"),
+                extra_env=agent_env("BUYER_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("web", a.web_port,
                 ["npm", "exec", "--no-install", "--", "next", "dev", "-p", str(a.web_port)], repo / "web", wait=150, env_filter="web",
                 group="web", extra_env={"NEXT_TELEMETRY_DISABLED": "1"},
@@ -693,6 +696,8 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--web-port", type=int, default=3100)
     p.add_argument("--stdb-port", type=int, default=3000, help="SpacetimeDB listen port")
     p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, web)")
+    p.add_argument("--mailbox", action="store_true",
+                   help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX); register each once with agents/connect.py <port>")
     p.add_argument("--strict", action="store_true", help="status: also exit 1 when a service is SKIPPED")
     return p
 
