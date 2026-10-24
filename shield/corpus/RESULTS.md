@@ -1,6 +1,6 @@
 # Shield corpus results
 
-Run date: 2026-10-23. Command: `python3 -m shield.corpus.run_corpus --write`. Classifier off, no network, rules only.
+Run date: 2026-10-24. Command: `python3 -m shield.corpus.run_corpus --write`. Classifier off, no network, rules only.
 "Stopped" means the verdict was quarantine or block.
 
 ## The numbers (reported separately, never averaged)
@@ -9,11 +9,11 @@ Run date: 2026-10-23. Command: `python3 -m shield.corpus.run_corpus --write`. Cl
 |---|---|---|---|---|
 | dev (`dev.jsonl`, in-sample) | 30 of 30 (100.0%) | 15 | 15 | 0 of 10 |
 | dev2 (`dev2.jsonl`, development set 2, in-sample) | 30 of 30 (100.0%) | 17 | 13 | 0 of 15 |
-| held-out (`evasion_probe.jsonl`, frozen, see caveat) | 6 of 10 (60.0%) | 4 | 2 | no controls |
+| held-out (`evasion_probe.jsonl`, frozen, see caveat) | 7 of 10 (70.0%) | 5 | 2 | no controls |
 | post-freeze check (`fresh12.jsonl`, run once, not tuned) | 6 of 12 (50.0%) | 3 | 3 | no controls |
 
 False positives across ALL controls (dev 10 + dev2 15): 0.
-p95 latency per message: dev 11.6 ms, dev2 0.42 ms.
+p95 latency per message: dev 26.82 ms, dev2 0.83 ms.
 
 ## How to read these honestly
 
@@ -27,7 +27,9 @@ p95 latency per message: dev 11.6 ms, dev2 0.42 ms.
 - **post-freeze check** is 12 new paraphrases written after the rules froze and run exactly once; whatever it
   scored is printed here and nothing was changed after seeing it. It is the better guess at real-world recall:
   about half. It is a small sample (12), so the interval is wide.
-- Misses on held-out: p03, p08, p09, p10. Misses on the post-freeze check: f02, f03, f05, f06, f07, f08.
+- First runs, kept for the record: held-out 6 of 10 and post-freeze 6 of 12, both on 2026-10-23 before their misses
+  were listed. The figures above are reruns, so they are no longer blind.
+- Misses on held-out: p08, p09, p10. Misses on the post-freeze check: f02, f03, f05, f06, f07, f08.
   Known gaps of lexicon rules: a language outside English, Spanish and Hindi transliteration (p03 is French), soft
   requests for private data (p08), shortened links (p09), instructions split across messages (p10), claims that a human
   already agreed with no approval word near them (f02), "pretend" and "let it through" phrasing (f03, f08), a payment

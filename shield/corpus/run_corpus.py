@@ -103,6 +103,8 @@ p95 latency per message: dev {dev["p95_ms"]} ms, dev2 {dev2["p95_ms"]} ms.
 - **post-freeze check** is 12 new paraphrases written after the rules froze and run exactly once; whatever it
   scored is printed here and nothing was changed after seeing it. It is the better guess at real-world recall:
   about half. It is a small sample (12), so the interval is wide.
+- First runs, kept for the record: held-out 6 of 10 and post-freeze 6 of 12, both on 2026-10-23 before their misses
+  were listed. The figures above are reruns, so they are no longer blind.
 - Misses on held-out: {", ".join(probe["missed"]) or "none"}. Misses on the post-freeze check: {", ".join(fresh["missed"]) or "none"}.
   Known gaps of lexicon rules: a language outside English, Spanish and Hindi transliteration (p03 is French), soft
   requests for private data (p08), shortened links (p09), instructions split across messages (p10), claims that a human
