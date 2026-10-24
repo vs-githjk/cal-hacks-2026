@@ -1,6 +1,6 @@
 // Live-sync check without a browser: two independent clients, each with its own identity and
 // buyer session, subscribe the way /buyer does and print every goal and floor event they receive.
-// Run: npx tsx scripts/two_clients.ts, then post_goal from Python within 15 seconds.
+// Run: PAIR_CODE=<code> npx tsx scripts/two_clients.ts, then post_goal from Python within 15 seconds.
 import { DbConnection } from "../src/module_bindings";
 
 const URI = process.env.NEXT_PUBLIC_SPACETIMEDB_URI || "ws://127.0.0.1:3000";
@@ -11,7 +11,7 @@ for (const name of ["client-1", "client-2"]) {
     .withUri(URI)
     .withDatabaseName(DB)
     .onConnect((conn) => {
-      conn.reducers.openBuyerSession({ buyerId: "joe" });
+      conn.reducers.pairBuyerScreen({ buyerId: "joe", code: process.env.PAIR_CODE ?? "" });
       conn.db.myGoals.onInsert((_ctx, g) => console.log(`${name} ${Date.now()} goal ${g.id} ${g.state}`));
       conn.db.floorEvent.onInsert((_ctx, e) => console.log(`${name} ${Date.now()} event ${e.kind}: ${e.label}`));
       conn

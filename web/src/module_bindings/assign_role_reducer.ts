@@ -11,5 +11,7 @@ import {
 } from "spacetimedb";
 
 export default {
-  buyerId: __t.string(),
+  identity: __t.identity(),
+  role: __t.string(),
+  subjectId: __t.string(),
 };

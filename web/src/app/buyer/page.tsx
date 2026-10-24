@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { OriginBadge } from "@/components/OriginBadge";
@@ -43,17 +43,57 @@ const CLASS_STYLE: Record<FeedClass, string> = {
   progress: "text-[var(--muted)]",
 };
 
+/** A screen sees Joe's goal only after pairing with the demo code (SIM sign-in). */
+function PairScreen() {
+  const pair = useReducer(reducers.pairBuyerScreen);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  return (
+    <section className="panel mx-auto max-w-md p-6">
+      <h1 className="mb-2 text-lg font-semibold">Pair this screen with Joe</h1>
+      <p className="mb-4 text-sm text-[var(--muted)]">
+        Joe is a demo persona (SIM). Enter the pairing code from the demo operator. Sellers can never pair.
+      </p>
+      <form
+        className="flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setError("");
+          try {
+            await pair({ buyerId: DEMO_BUYER, code: code.trim() });
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Pairing failed");
+          }
+        }}
+      >
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          inputMode="numeric"
+          placeholder="6-digit code"
+          className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 font-mono"
+        />
+        <button className="rounded-lg bg-[var(--accent)] px-4 py-2 font-medium text-white">Pair</button>
+      </form>
+      {error && <p className="mt-3 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
+    </section>
+  );
+}
+
 export default function BuyerPage() {
   const conn = useSpacetimeDB();
-  const openSession = useReducer(reducers.openBuyerSession);
+  const [roles, rolesReady] = useTable(tables.myRole);
+  const isBuyer = roles.some((r) => r.role === "buyer" && r.subjectId === DEMO_BUYER);
+  if (!conn.isActive || !rolesReady) return <p className="text-[var(--muted)]">Connecting to the market...</p>;
+  if (!isBuyer) return <PairScreen />;
+  return <BuyerScreen />;
+}
+
+function BuyerScreen() {
   const [goals, goalsReady] = useTable(tables.myGoals);
   const [goalItems] = useTable(tables.myGoalItems);
   const [notes] = useTable(tables.myNotifications);
   const [events, eventsReady] = useTable(tables.floorEvent);
-
-  useEffect(() => {
-    if (conn.isActive) openSession({ buyerId: DEMO_BUYER }).catch(() => {});
-  }, [conn.isActive, openSession]);
 
   const feed = useMemo(() => {
     const fromEvents = events
@@ -87,13 +127,16 @@ export default function BuyerPage() {
               <span className="text-sm text-[var(--muted)]">{GOAL_TYPE[goal.type] ?? goal.type}</span>
               <OriginBadge origin={goal.origin} />
             </div>
-            <p className="text-xl leading-snug">&ldquo;{goal.text}&rdquo;</p>
             {items.length > 0 && (
-              <ul className="space-y-1 text-sm">
+              <ul className="space-y-2">
                 {items.map((i) => (
-                  <li key={String(i.id)} className="flex gap-2">
-                    <span className="rounded bg-[var(--bg)] px-1.5 font-mono text-xs uppercase">{i.category}</span>
-                    <span>{i.description}</span>
+                  <li key={String(i.id)} className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-xl font-medium">{i.quantity > 1 ? `${i.quantity} x ` : ""}{i.skuSpec}</span>
+                    <span className="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs">{i.condition}</span>
+                    {i.variant && <span className="rounded bg-[var(--bg)] px-1.5 py-0.5 text-xs">{i.variant}</span>}
+                    {i.skippedOwnedPartId && (
+                      <span className="text-xs text-[var(--muted)]">skipped, already owned ({i.skippedOwnedPartId})</span>
+                    )}
                   </li>
                 ))}
               </ul>

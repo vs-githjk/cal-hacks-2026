@@ -34,18 +34,18 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AssignRoleReducer from "./assign_role_reducer";
 import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
 import CloseRoundReducer from "./close_round_reducer";
 import CreateMandateReducer from "./create_mandate_reducer";
-import OpenBuyerSessionReducer from "./open_buyer_session_reducer";
 import OpenRoundReducer from "./open_round_reducer";
+import PairBuyerScreenReducer from "./pair_buyer_screen_reducer";
 import PlaceBidReducer from "./place_bid_reducer";
 import PostGoalReducer from "./post_goal_reducer";
 import PostNeedReducer from "./post_need_reducer";
 import RecordApprovalReducer from "./record_approval_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
-import RegisterSellerReducer from "./register_seller_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
 import SetFloorReducer from "./set_floor_reducer";
@@ -58,6 +58,7 @@ import MyBidsRow from "./my_bids_table";
 import MyGoalItemsRow from "./my_goal_items_table";
 import MyGoalsRow from "./my_goals_table";
 import MyNotificationsRow from "./my_notifications_table";
+import MyRoleRow from "./my_role_table";
 import PersonaRow from "./persona_table";
 import RejectedAttemptRow from "./rejected_attempt_table";
 import RoundRow from "./round_table";
@@ -157,6 +158,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyNotificationsRow),
+  myRole: __table({
+    name: 'my_role',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyRoleRow),
   sellerNeeds: __table({
     name: 'seller_needs',
     indexes: [
@@ -168,18 +176,18 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("assign_role", AssignRoleReducer),
   __reducerSchema("attach_claim_check", AttachClaimCheckReducer),
   __reducerSchema("attach_verdict", AttachVerdictReducer),
   __reducerSchema("close_round", CloseRoundReducer),
   __reducerSchema("create_mandate", CreateMandateReducer),
-  __reducerSchema("open_buyer_session", OpenBuyerSessionReducer),
   __reducerSchema("open_round", OpenRoundReducer),
+  __reducerSchema("pair_buyer_screen", PairBuyerScreenReducer),
   __reducerSchema("place_bid", PlaceBidReducer),
   __reducerSchema("post_goal", PostGoalReducer),
   __reducerSchema("post_need", PostNeedReducer),
   __reducerSchema("record_approval", RecordApprovalReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),
-  __reducerSchema("register_seller", RegisterSellerReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
   __reducerSchema("set_floor", SetFloorReducer),
@@ -199,6 +207,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_goals": Omit<typeof tablesSchema.schemaType.tables["myGoals"], "accessorName"> & { readonly accessorName: "my_goals" };
     /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
     readonly "my_notifications": Omit<typeof tablesSchema.schemaType.tables["myNotifications"], "accessorName"> & { readonly accessorName: "my_notifications" };
+    /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
+    readonly "my_role": Omit<typeof tablesSchema.schemaType.tables["myRole"], "accessorName"> & { readonly accessorName: "my_role" };
     /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
     readonly "seller_needs": Omit<typeof tablesSchema.schemaType.tables["sellerNeeds"], "accessorName"> & { readonly accessorName: "seller_needs" };
   };
@@ -223,6 +233,7 @@ const tableAccessorAliases = {
   "my_goal_items": "myGoalItems",
   "my_goals": "myGoals",
   "my_notifications": "myNotifications",
+  "my_role": "myRole",
   "seller_needs": "sellerNeeds",
 } as const;
 
@@ -252,6 +263,8 @@ export type DbView = __DbViewBase & {
   readonly "my_goals": __DbViewBase["myGoals"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __DbViewBase["myNotifications"];
+  /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
+  readonly "my_role": __DbViewBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
   readonly "seller_needs": __DbViewBase["sellerNeeds"];
 };
@@ -266,6 +279,8 @@ export type Tables = __TablesBase & {
   readonly "my_goals": __TablesBase["myGoals"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __TablesBase["myNotifications"];
+  /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
+  readonly "my_role": __TablesBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
   readonly "seller_needs": __TablesBase["sellerNeeds"];
 };

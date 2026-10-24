@@ -6,34 +6,34 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AssignRoleReducer from "../assign_role_reducer";
 import AttachClaimCheckReducer from "../attach_claim_check_reducer";
 import AttachVerdictReducer from "../attach_verdict_reducer";
 import CloseRoundReducer from "../close_round_reducer";
 import CreateMandateReducer from "../create_mandate_reducer";
-import OpenBuyerSessionReducer from "../open_buyer_session_reducer";
 import OpenRoundReducer from "../open_round_reducer";
+import PairBuyerScreenReducer from "../pair_buyer_screen_reducer";
 import PlaceBidReducer from "../place_bid_reducer";
 import PostGoalReducer from "../post_goal_reducer";
 import PostNeedReducer from "../post_need_reducer";
 import RecordApprovalReducer from "../record_approval_reducer";
 import RecordPaymentReducer from "../record_payment_reducer";
-import RegisterSellerReducer from "../register_seller_reducer";
 import ResetDemoReducer from "../reset_demo_reducer";
 import SeedDemoReducer from "../seed_demo_reducer";
 import SetFloorReducer from "../set_floor_reducer";
 
+export type AssignRoleParams = __Infer<typeof AssignRoleReducer>;
 export type AttachClaimCheckParams = __Infer<typeof AttachClaimCheckReducer>;
 export type AttachVerdictParams = __Infer<typeof AttachVerdictReducer>;
 export type CloseRoundParams = __Infer<typeof CloseRoundReducer>;
 export type CreateMandateParams = __Infer<typeof CreateMandateReducer>;
-export type OpenBuyerSessionParams = __Infer<typeof OpenBuyerSessionReducer>;
 export type OpenRoundParams = __Infer<typeof OpenRoundReducer>;
+export type PairBuyerScreenParams = __Infer<typeof PairBuyerScreenReducer>;
 export type PlaceBidParams = __Infer<typeof PlaceBidReducer>;
 export type PostGoalParams = __Infer<typeof PostGoalReducer>;
 export type PostNeedParams = __Infer<typeof PostNeedReducer>;
 export type RecordApprovalParams = __Infer<typeof RecordApprovalReducer>;
 export type RecordPaymentParams = __Infer<typeof RecordPaymentReducer>;
-export type RegisterSellerParams = __Infer<typeof RegisterSellerReducer>;
 export type ResetDemoParams = __Infer<typeof ResetDemoReducer>;
 export type SeedDemoParams = __Infer<typeof SeedDemoReducer>;
 export type SetFloorParams = __Infer<typeof SetFloorReducer>;

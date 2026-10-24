@@ -1,7 +1,7 @@
 "use client";
 
-import { useReducer, useTable } from "spacetimedb/react";
-import { reducers, tables } from "@/module_bindings";
+import { useTable } from "spacetimedb/react";
+import { tables } from "@/module_bindings";
 import { OriginBadge } from "@/components/OriginBadge";
 import { fmtMoney, fmtTime } from "@/lib/stdb";
 
@@ -11,8 +11,6 @@ export default function MarketPage() {
   const [results] = useTable(tables.roundResult);
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [rejected] = useTable(tables.rejectedAttempt);
-  const reset = useReducer(reducers.resetDemo);
-  const seed = useReducer(reducers.seedDemo);
 
   const sortedEvents = [...events].sort((a, b) => (a.id < b.id ? 1 : -1));
 
@@ -20,15 +18,7 @@ export default function MarketPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Market state</h1>
-        <button
-          onClick={async () => {
-            await reset();
-            await seed();
-          }}
-          className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-sm hover:border-[var(--accent)]"
-        >
-          Reset demo
-        </button>
+        <span className="text-xs text-[var(--muted)]">Reset: the demo operator runs reset_demo then seed_demo</span>
       </div>
 
       <section className="panel p-5">

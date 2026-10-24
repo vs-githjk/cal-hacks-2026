@@ -13,8 +13,9 @@ import {
 export default __t.row({
   id: __t.u64().primaryKey(),
   goalId: __t.string().name("goal_id"),
-  category: __t.string(),
-  description: __t.string(),
   skuSpec: __t.string().name("sku_spec"),
-  modelNumber: __t.string().name("model_number"),
+  condition: __t.string(),
+  variant: __t.string(),
+  quantity: __t.f64(),
+  skippedOwnedPartId: __t.string().name("skipped_owned_part_id"),
 });

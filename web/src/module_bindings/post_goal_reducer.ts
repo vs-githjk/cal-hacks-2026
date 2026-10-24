@@ -18,9 +18,8 @@ export default {
   id: __t.string(),
   buyerId: __t.string(),
   type: __t.string(),
-  text: __t.string(),
   cap: __t.f64(),
-  deadlineMinutes: __t.u32(),
+  deadline: __t.string(),
   poNumber: __t.string(),
   origin: __t.string(),
   get items() {

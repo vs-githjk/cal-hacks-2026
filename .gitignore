@@ -20,3 +20,6 @@ next-env.d.ts
 
 # local render-check screenshots
 shot-*.png
+
+# agent identity tokens written by market/scripts/setup_roles.py
+.tokens/

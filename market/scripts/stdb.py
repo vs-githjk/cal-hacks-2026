@@ -28,19 +28,23 @@ def _camel(name):
 
 
 class Market:
-    """One identity. Reuse the same token (token_file) for an agent so it stays the same seller."""
+    """One identity. Reuse the same token_file for an agent so it keeps its identity and role.
+
+    Roles (buyer, seller, referee) are granted by the module owner: run setup_roles.py once.
+    """
 
     def __init__(self, token_file=TOKEN_FILE):
-        token = None
+        saved = None
         if token_file and os.path.exists(token_file):
-            token = open(token_file).read().strip()
-        if not token:
+            saved = json.load(open(token_file))
+        if not saved:
             _, body = _post("/v1/identity")
-            token = json.loads(body)["token"]
+            saved = json.loads(body)
             if token_file:
                 with open(token_file, "w") as f:
-                    f.write(token)
-        self.headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
+                    json.dump({"token": saved["token"], "identity": saved["identity"]}, f)
+        self.identity = saved["identity"]
+        self.headers = {"Authorization": "Bearer " + saved["token"], "Content-Type": "application/json"}
 
     def call(self, reducer, **args):
         """Call a reducer. Pass every name in snake_case (buyer_id, items=[{"sku_spec": ...}]).

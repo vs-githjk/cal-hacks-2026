@@ -14,7 +14,6 @@ export default __t.row({
   id: __t.string().primaryKey(),
   buyerId: __t.string().name("buyer_id"),
   type: __t.string(),
-  text: __t.string(),
   cap: __t.f64(),
   deadline: __t.timestamp(),
   state: __t.string(),
