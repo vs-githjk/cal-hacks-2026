@@ -29,6 +29,8 @@ export function resetDemo(ctx: Ctx) {
   for (const r of [...db.mandate.iter()]) db.mandate.hash.delete(r.hash);
   for (const r of [...db.approval.iter()]) db.approval.id.delete(r.id);
   for (const r of [...db.payment.iter()]) db.payment.id.delete(r.id);
+  for (const r of [...db.allowance.iter()]) db.allowance.buyerId.delete(r.buyerId);
+  for (const r of [...db.receivingEvent.iter()]) db.receivingEvent.id.delete(r.id);
   for (const r of [...db.round.iter()]) db.round.id.delete(r.id);
   for (const r of [...db.roundResult.iter()]) db.roundResult.id.delete(r.id);
   for (const r of [...db.rejectedAttempt.iter()]) db.rejectedAttempt.id.delete(r.id);

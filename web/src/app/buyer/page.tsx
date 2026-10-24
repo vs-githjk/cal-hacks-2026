@@ -93,6 +93,8 @@ function BuyerScreen() {
   const [goals, goalsReady] = useTable(tables.myGoals);
   const [goalItems] = useTable(tables.myGoalItems);
   const [notes] = useTable(tables.myNotifications);
+  const [allowances] = useTable(tables.myAllowance);
+  const allowance = allowances[0];
   const [events, eventsReady] = useTable(tables.floorEvent);
 
   const feed = useMemo(() => {
@@ -141,7 +143,7 @@ function BuyerScreen() {
                 ))}
               </ul>
             )}
-            <dl className="grid grid-cols-3 gap-3 text-sm">
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
               <div className="rounded-lg bg-[var(--bg)] p-3">
                 <dt className="text-[var(--muted)]">Cap</dt>
                 <dd className="text-lg font-semibold">{fmtMoney(goal.cap)}</dd>
@@ -154,6 +156,15 @@ function BuyerScreen() {
                 <dt className="text-[var(--muted)]">Deadline</dt>
                 <dd className="text-lg font-semibold">
                   {toDate(goal.deadline).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                </dd>
+              </div>
+              <div className="rounded-lg bg-[var(--bg)] p-3">
+                <dt className="text-[var(--muted)]">Allowance</dt>
+                <dd className="text-lg font-semibold">{allowance ? fmtMoney(allowance.perPurchaseLimit) : fmtMoney(0)}</dd>
+                <dd className="text-xs text-[var(--muted)]">
+                  {allowance && allowance.perPurchaseLimit > 0
+                    ? `per buy, step ${allowance.ladderStep}; ${fmtMoney(allowance.spentThisPeriod)} of ${fmtMoney(allowance.periodLimit)} this ${allowance.period}`
+                    : "every buy calls you first"}
                 </dd>
               </div>
             </dl>

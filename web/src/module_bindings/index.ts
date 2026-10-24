@@ -46,6 +46,7 @@ import PostGoalReducer from "./post_goal_reducer";
 import PostNeedReducer from "./post_need_reducer";
 import RecordApprovalReducer from "./record_approval_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
+import RecordReceivingReducer from "./record_receiving_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
 import SetFloorReducer from "./set_floor_reducer";
@@ -54,6 +55,7 @@ import SetFloorReducer from "./set_floor_reducer";
 
 // Import all table schema definitions
 import FloorEventRow from "./floor_event_table";
+import MyAllowanceRow from "./my_allowance_table";
 import MyBidsRow from "./my_bids_table";
 import MyGoalItemsRow from "./my_goal_items_table";
 import MyGoalsRow from "./my_goals_table";
@@ -130,6 +132,13 @@ const tablesSchema = __schema({
       { name: 'round_result_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, RoundResultRow),
+  myAllowance: __table({
+    name: 'my_allowance',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyAllowanceRow),
   myBids: __table({
     name: 'my_bids',
     indexes: [
@@ -188,6 +197,7 @@ const reducersSchema = __reducers(
   __reducerSchema("post_need", PostNeedReducer),
   __reducerSchema("record_approval", RecordApprovalReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),
+  __reducerSchema("record_receiving", RecordReceivingReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
   __reducerSchema("set_floor", SetFloorReducer),
@@ -199,6 +209,8 @@ const proceduresSchema = __procedures(
 
 type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "tables"> & {
   tables: typeof tablesSchema.schemaType.tables & {
+    /** @deprecated Use `myAllowance` instead. This alias will be removed in the next major version. */
+    readonly "my_allowance": Omit<typeof tablesSchema.schemaType.tables["myAllowance"], "accessorName"> & { readonly accessorName: "my_allowance" };
     /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
     readonly "my_bids": Omit<typeof tablesSchema.schemaType.tables["myBids"], "accessorName"> & { readonly accessorName: "my_bids" };
     /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
@@ -229,6 +241,7 @@ const REMOTE_MODULE = {
 >;
 
 const tableAccessorAliases = {
+  "my_allowance": "myAllowance",
   "my_bids": "myBids",
   "my_goal_items": "myGoalItems",
   "my_goals": "myGoals",
@@ -255,6 +268,8 @@ function __withTableAccessorAliases<T extends object>(target: T, freeze = false)
 
 type __DbViewBase = __DbConnectionImpl<typeof REMOTE_MODULE>["db"];
 export type DbView = __DbViewBase & {
+  /** @deprecated Use `myAllowance` instead. This alias will be removed in the next major version. */
+  readonly "my_allowance": __DbViewBase["myAllowance"];
   /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
   readonly "my_bids": __DbViewBase["myBids"];
   /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
@@ -271,6 +286,8 @@ export type DbView = __DbViewBase & {
 
 type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
 export type Tables = __TablesBase & {
+  /** @deprecated Use `myAllowance` instead. This alias will be removed in the next major version. */
+  readonly "my_allowance": __TablesBase["myAllowance"];
   /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
   readonly "my_bids": __TablesBase["myBids"];
   /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */

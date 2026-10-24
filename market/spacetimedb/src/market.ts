@@ -9,6 +9,7 @@ import { rankBids } from '../../rules/scoring';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
 import { authorizePayment } from '../../rules/approval';
+import { decide, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, newAllowance, type Allowance, type Period } from '../../rules/allowance';
 import type { Bid, Condition, NeedItem, Origin } from '../../rules/types';
 import { resetDemo, seedDemo } from './demo';
 
@@ -90,6 +91,31 @@ export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; 
   else ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
 }
 
+// ---------------------------------------------------------------- allowance (D's shape, rules/allowance)
+
+type AllowanceRow = NonNullable<ReturnType<Ctx['db']['allowance']['buyerId']['find']>>;
+const toRule = (r: AllowanceRow): Allowance => ({
+  buyer_id: r.buyerId, currency: 'USD', per_purchase_limit: r.perPurchaseLimit, period_limit: r.periodLimit,
+  period: r.period as Period, spent_this_period: r.spentThisPeriod, ladder_step: r.ladderStep, updated_at: ms(r.updatedAt),
+});
+const fromRule = (a: Allowance): AllowanceRow => ({
+  buyerId: a.buyer_id, currency: a.currency, perPurchaseLimit: a.per_purchase_limit, periodLimit: a.period_limit,
+  period: a.period, spentThisPeriod: a.spent_this_period, ladderStep: a.ladder_step, updatedAt: tsFromMs(a.updated_at),
+});
+
+function allowanceFor(ctx: Ctx, buyerId: string): Allowance {
+  const row = ctx.db.allowance.buyerId.find(buyerId);
+  if (row) return toRule(row);
+  const fresh = newAllowance(buyerId, ms(ctx.timestamp));
+  ctx.db.allowance.insert(fromRule(fresh));
+  return fresh;
+}
+
+function saveAllowance(ctx: Ctx, a: Allowance) {
+  if (ctx.db.allowance.buyerId.find(a.buyer_id)) ctx.db.allowance.buyerId.update(fromRule(a));
+  else ctx.db.allowance.insert(fromRule(a));
+}
+
 // ---------------------------------------------------------------- needs and goals
 
 export interface PostNeedArgs {
@@ -100,6 +126,7 @@ export interface PostNeedArgs {
 
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
   requireRole(ctx, 'post_need', ['buyer'], a.buyerId);
+  allowanceFor(ctx, a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');
   ctx.db.need.insert({
@@ -133,6 +160,7 @@ export function insertGoal(ctx: Ctx, a: PostGoalArgs) {
   for (const i of a.items) {
     if (!(Number.isFinite(i.quantity) && i.quantity > 0)) throw new SenderError(`goal item ${i.skuSpec}: quantity must be a number above 0`);
   }
+  allowanceFor(ctx, a.buyerId);
   ctx.db.goal.insert({
     id: a.id, buyerId: a.buyerId, type: a.type, cap: a.cap, deadline: tsFromMs(deadlineMs), state: 'ACTIVE', reservedAmount: 0,
     poNumber: a.poNumber, origin: a.origin, createdAt: ctx.timestamp,
@@ -290,15 +318,31 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
 /** MOCK until Vidyut's Mandate lands: same fields as the 00-shared shape. */
 export function createMandate(
   ctx: Ctx,
-  a: { hash: string; id: string; dealId: string; buyerId: string; amount: number; payee: string; expiryMinutes: number; nonce: string; origin: string },
+  a: {
+    hash: string; id: string; dealId: string; buyerId: string; amount: number; payee: string; expiryMinutes: number; nonce: string;
+    requestedBy: string; origin: string;
+  },
 ) {
   requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
+  const allow = allowanceFor(ctx, a.buyerId);
+  const d = decide(allow, a.amount, ms(ctx.timestamp));
+  const within = d.path === 'auto';
   ctx.db.mandate.insert({
     hash: a.hash, id: a.id, dealId: a.dealId, buyerId: a.buyerId, amount: a.amount, payee: a.payee,
-    expiry: tsFromMs(ms(ctx.timestamp) + a.expiryMinutes * 60_000), nonce: a.nonce, origin: a.origin,
+    expiry: tsFromMs(ms(ctx.timestamp) + a.expiryMinutes * 60_000), nonce: a.nonce, withinAllowance: within,
+    requestedBy: a.requestedBy, origin: a.origin,
   });
-  event(ctx, 'mandate_created', 'mandate', a.hash, 'Deal ready for approval', a.payee, a.origin);
+  event(ctx, 'mandate_created', 'mandate', a.hash, within ? 'Deal within the allowance' : 'Deal needs the buyer call', a.payee, a.origin);
+  if (within) {
+    // Inside the allowance: approved by the buyer's own standing rule, with a receipt.
+    ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp });
+    saveAllowance(ctx, recordAutoSpend(allow, a.amount, ms(ctx.timestamp)));
+    ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Bought within your allowance: ${d.reason}. Receipt for deal ${a.dealId}.`, push: false, at: ctx.timestamp });
+    event(ctx, 'approval_recorded', 'approval', a.hash, 'Approved within the allowance', a.payee, a.origin);
+  } else {
+    ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'state', text: `Call needed: ${d.reason}.`, push: true, at: ctx.timestamp });
+  }
 }
 
 export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string }) {
@@ -308,6 +352,8 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
   // Only the mandate's own buyer, or the referee relaying that buyer's verified code.
   requireRole(ctx, 'record_approval', ['buyer', 'referee'], md.buyerId);
   if (a.approvedBy !== md.buyerId) throw new SenderError(`approvedBy must be the mandate's buyer (${md.buyerId})`);
+  const sep = requesterMayApprove(md.requestedBy, a.approvedBy);
+  if (!sep.ok) throw new SenderError(sep.reasons.join('; '));
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp });
@@ -327,6 +373,39 @@ export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: st
   if (ctx.db.payment.mandateHash.find(a.mandateHash)) return rejected(ctx, 'payment', a.mandateHash, 'second payment for the same mandate refused');
   ctx.db.payment.insert({ id: 0n, mandateHash: a.mandateHash, paymentRef: a.paymentRef, amount: a.amount, at: ctx.timestamp });
   event(ctx, 'payment_recorded', 'payment', a.mandateHash, 'Payment recorded (Stripe test mode)', md.payee, 'SIM');
+}
+
+// ---------------------------------------------------------------- receiving check
+
+export interface RecordReceivingArgs {
+  id: string; orderId: string; skuSpec: string; photoUrl: string; expectedSpecId: string; result: string;
+  reasons: string[]; checkedBy: string; origin: string;
+}
+
+/** The buyer's own check at delivery. A clean one raises the allowance one step, once per deal. */
+export function recordReceiving(ctx: Ctx, a: RecordReceivingArgs) {
+  requireRole(ctx, 'record_receiving', ['buyer']);
+  const md = ctx.db.mandate.hash.find(a.orderId);
+  if (!md) throw new SenderError('no deal with that mandate hash');
+  requireRole(ctx, 'record_receiving', ['buyer'], md.buyerId);
+  if (!ctx.db.payment.mandateHash.find(a.orderId)) throw new SenderError('this deal is not paid, so there is nothing to receive');
+  if (!['accepted', 'rejected'].includes(a.result)) throw new SenderError('result must be accepted or rejected');
+  if (ctx.db.receivingEvent.id.find(a.id)) throw new SenderError(`receiving event ${a.id} already exists`);
+  const clean = a.result === 'accepted';
+  const alreadyRaised = [...ctx.db.receivingEvent.orderId.filter(a.orderId)].some((e) => e.raisedAllowance);
+  const raise = clean && !alreadyRaised;
+  ctx.db.receivingEvent.insert({
+    id: a.id, orderId: a.orderId, skuSpec: a.skuSpec, photoUrl: a.photoUrl, expectedSpecId: a.expectedSpecId, result: a.result,
+    reasons: a.reasons, creditRequestId: clean ? '' : `credit-${a.id}`, checkedBy: a.checkedBy, raisedAllowance: raise,
+    origin: a.origin, at: ctx.timestamp,
+  });
+  event(ctx, 'delivery_checked', 'receiving_event', a.id, clean ? 'Delivery passed the receiving check' : 'Delivery failed the receiving check; credit requested', md.payee, a.origin);
+  if (raise) {
+    const next = raiseOnCleanReceiving(allowanceFor(ctx, md.buyerId), ms(ctx.timestamp));
+    saveAllowance(ctx, next);
+    ctx.db.notification.insert({ id: 0n, buyerId: md.buyerId, goalId: '', klass: 'progress', text: 'Clean delivery: your allowance went up one step.', push: false, at: ctx.timestamp });
+    event(ctx, 'allowance_raised', 'allowance', md.buyerId, 'A buyer allowance went up one step', '', a.origin);
+  }
 }
 
 // ---------------------------------------------------------------- views
@@ -367,6 +446,12 @@ export function myGoalsView(ctx: VCtx) {
 
 export function myGoalItemsView(ctx: VCtx) {
   return myGoalsView(ctx).flatMap((g) => [...ctx.db.goalItem.goalId.filter(g.id)]);
+}
+
+export function myAllowanceView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  const row = id ? ctx.db.allowance.buyerId.find(id) : undefined;
+  return row ? [row] : [];
 }
 
 export function myNotificationsView(ctx: VCtx) {

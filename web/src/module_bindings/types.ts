@@ -10,6 +10,18 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const Allowance = __t.object("Allowance", {
+  buyerId: __t.string(),
+  currency: __t.string(),
+  perPurchaseLimit: __t.f64(),
+  periodLimit: __t.f64(),
+  period: __t.string(),
+  spentThisPeriod: __t.f64(),
+  ladderStep: __t.u32(),
+  updatedAt: __t.timestamp(),
+});
+export type Allowance = __Infer<typeof Allowance>;
+
 export const Approval = __t.object("Approval", {
   id: __t.u64(),
   mandateHash: __t.string(),
@@ -116,9 +128,14 @@ export const Mandate = __t.object("Mandate", {
   payee: __t.string(),
   expiry: __t.timestamp(),
   nonce: __t.string(),
+  withinAllowance: __t.bool(),
+  requestedBy: __t.string(),
   origin: __t.string(),
 });
 export type Mandate = __Infer<typeof Mandate>;
+
+export const MyAllowance = __t.object("MyAllowance", {});
+export type MyAllowance = __Infer<typeof MyAllowance>;
 
 export const MyBids = __t.object("MyBids", {});
 export type MyBids = __Infer<typeof MyBids>;
@@ -209,6 +226,22 @@ export const Persona = __t.object("Persona", {
   origin: __t.string(),
 });
 export type Persona = __Infer<typeof Persona>;
+
+export const ReceivingEvent = __t.object("ReceivingEvent", {
+  id: __t.string(),
+  orderId: __t.string(),
+  skuSpec: __t.string(),
+  photoUrl: __t.string(),
+  expectedSpecId: __t.string(),
+  result: __t.string(),
+  reasons: __t.array(__t.string()),
+  creditRequestId: __t.string(),
+  checkedBy: __t.string(),
+  raisedAllowance: __t.bool(),
+  origin: __t.string(),
+  at: __t.timestamp(),
+});
+export type ReceivingEvent = __Infer<typeof ReceivingEvent>;
 
 export const RejectedAttempt = __t.object("RejectedAttempt", {
   id: __t.u64(),

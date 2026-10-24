@@ -52,10 +52,22 @@ for r in ref.sql(f"SELECT seller_id, rank, landed, reasons FROM round_result WHE
     print("  result:", r)
 mh = f"mh-{run}"
 ref.call("create_mandate", hash=mh, id=f"mdt-{run}", deal_id=f"{rnd}-seller-c", buyer_id="joe", amount=745, payee="seller-c",
-         expiry_minutes=10, nonce=run, origin="SIM")
+         expiry_minutes=10, nonce=run, requested_by="", origin="SIM")
+print("allowance before:", joe.sql("SELECT ladder_step, per_purchase_limit FROM my_allowance"))
 print("pay before approval:", refused("referee", "record_payment", mandate_hash=mh, payment_ref="pi_sim", amount=745))
 print("seller-c approves own deal:", refused("seller-c", "record_approval", mandate_hash=mh, method="typed_code", approved_by="joe"))
 joe.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="joe")
 ref.call("record_payment", mandate_hash=mh, payment_ref="pi_sim_" + run, amount=745)
 ref.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="joe")
 print("refused attempts shown:", ref.sql("SELECT kind, reason FROM rejected_attempt"))
+
+joe.call("record_receiving", id=f"rcv-{run}", order_id=mh, sku_spec=GPU, photo_url="sim://box-photo", expected_spec_id="spec-gpu",
+         result="accepted", reasons=[], checked_by="owner", origin="SIM")
+print("allowance after a clean receiving check:", joe.sql("SELECT ladder_step, per_purchase_limit, period_limit FROM my_allowance"))
+for amount in (40, 60):
+    before = joe.sql("SELECT spent_this_period FROM my_allowance")[0][0]
+    h = f"mh-{run}-{amount}"
+    ref.call("create_mandate", hash=h, id=f"mdt-{h}", deal_id=f"accessory-{amount}", buyer_id="joe", amount=amount, payee="seller-a",
+             expiry_minutes=10, nonce=h, requested_by="", origin="SIM")
+    spent = joe.sql("SELECT spent_this_period FROM my_allowance")[0][0]
+    print(f"${amount} buy:", "auto-approved inside the allowance" if spent > before else "above the allowance, needs the call", f"(spent this week ${spent:g})")

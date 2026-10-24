@@ -44,7 +44,7 @@ const bidArgs = (id: string, lines: ReturnType<typeof line>[]) => ({
 });
 
 const mandateArgs = (over: Partial<Parameters<typeof m.createMandate>[1]> = {}) => ({
-  hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'joe', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', origin: 'SIM', ...over,
+  hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'joe', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', requestedBy: '', origin: 'SIM', ...over,
 });
 
 const goalArgs = (over: Partial<m.PostGoalArgs> = {}): m.PostGoalArgs => ({
@@ -353,5 +353,88 @@ describe('goals (Lane A Goal contract)', () => {
 
   it('post_goal refuses a deadline that is not an ISO date', () => {
     expect(() => run(JOE, (ctx) => m.postGoal(ctx, goalArgs({ deadline: 'by friday' })))).toThrow(/deadline/);
+  });
+});
+
+// ============================================================================================
+// b2 ALLOWANCE LADDER (D's Allowance shape). Starts at $0; only the buyer's own clean receiving
+// check raises it; inside the allowance a buy auto-approves with a receipt; requester never approves.
+// ============================================================================================
+describe('b2 allowance ladder', () => {
+  const allowance = () => h.db.allowance.buyerId.find('joe');
+  const paidDeal = (hash: string, amount: number) => {
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash, id: `m-${hash}`, amount, nonce: hash })));
+    if (!h.db.approval.mandateHash.find(hash)) run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'typed_code', approvedBy: 'joe' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: hash, paymentRef: `pi_${hash}`, amount }));
+  };
+  let n = 0;
+  const receive = (who: Auth, hash: string, result = 'accepted') =>
+    run(who, (ctx) => m.recordReceiving(ctx, { id: `rcv-${hash}-${result}-${++n}`, orderId: hash, skuSpec: GPU, photoUrl: 'sim://photo', expectedSpecId: 'spec-gpu', result, reasons: result === 'accepted' ? [] : ['box shows open-box seal'], checkedBy: 'owner', origin: 'SIM' }));
+
+  it('a buyer starts at step 0 with $0 limits, so the first buy needs the call (no auto approval)', () => {
+    run(JOE, (ctx) => m.postGoal(ctx, goalArgs()));
+    expect(allowance()).toMatchObject({ ladderStep: 0, perPurchaseLimit: 0, periodLimit: 0, currency: 'USD', period: 'week' });
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 5 })));
+    expect(h.db.mandate.hash.find('h1')!.withinAllowance).toBe(false);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+  });
+
+  it('one clean receiving check by the buyer raises the ladder one step, once per deal', () => {
+    paidDeal('d1', 780);
+    receive(JOE, 'd1');
+    expect(allowance()!.ladderStep).toBe(1);
+    expect(allowance()!.perPurchaseLimit).toBeGreaterThan(0);
+    receive(JOE, 'd1');
+    expect(allowance()!.ladderStep).toBe(1);
+    expect(events().some((e) => e.kind === 'allowance_raised')).toBe(true);
+    expect(events().some((e) => e.kind === 'delivery_checked')).toBe(true);
+  });
+
+  it('a failed receiving check does not raise the ladder and opens a credit request', () => {
+    paidDeal('d1', 780);
+    receive(JOE, 'd1', 'rejected');
+    expect(allowance()?.ladderStep ?? 0).toBe(0);
+    const ev = [...h.db.receivingEvent.orderId.filter('d1')][0]!;
+    expect(ev.creditRequestId).not.toBe('');
+  });
+
+  it('only the buyer may record receiving; a seller or the referee cannot raise the allowance', () => {
+    paidDeal('d1', 780);
+    expect(() => receive(A, 'd1')).toThrow(/not allowed/);
+    expect(() => receive(REF, 'd1')).toThrow(/not allowed/);
+    expect(() => receive(BOB, 'd1')).toThrow(/not allowed/);
+    expect(allowance()?.ladderStep ?? 0).toBe(0);
+  });
+
+  it('receiving needs a paid deal', () => {
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
+    expect(() => receive(JOE, 'h1')).toThrow(/not paid/);
+  });
+
+  it('inside the allowance a buy auto-approves with a receipt and counts against the period; above it, it calls', () => {
+    paidDeal('d1', 780);
+    receive(JOE, 'd1');
+    const per = allowance()!.perPurchaseLimit;
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'small', id: 'm-small', amount: per, nonce: 's' })));
+    expect(h.db.mandate.hash.find('small')!.withinAllowance).toBe(true);
+    expect(h.db.approval.mandateHash.find('small')!.method).toBe('allowance');
+    expect(allowance()!.spentThisPeriod).toBe(per);
+    expect([...h.db.notification.buyerId.filter('joe')].some((n) => n.text.includes('within your allowance'))).toBe(true);
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'small', paymentRef: 'pi_small', amount: per }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'big', id: 'm-big', amount: per + 1, nonce: 'b' })));
+    expect(h.db.mandate.hash.find('big')!.withinAllowance).toBe(false);
+    expect(h.db.approval.mandateHash.find('big')).toBeFalsy();
+  });
+
+  it('the requester can never approve their own purchase', () => {
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ requestedBy: 'joe' })));
+    expect(() => run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }))).toThrow(/requester/);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+  });
+
+  it('the buyer screen sees its allowance; a seller sees none', () => {
+    run(JOE, (ctx) => m.postGoal(ctx, goalArgs()));
+    expect(m.myAllowanceView(h.viewContext(JOE) as any)).toHaveLength(1);
+    expect(m.myAllowanceView(h.viewContext(A) as any)).toHaveLength(0);
   });
 });

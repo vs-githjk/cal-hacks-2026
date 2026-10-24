@@ -100,9 +100,12 @@ Pass every name in snake_case. SpacetimeDB's HTTP API wants top-level reducer ar
 | `close_round(round_id)` | referee after the deadline (the scheduler closes it anyway) | ranks with `rules/scoring`; writes `round_result` |
 | `attach_verdict(bid_id, verdict, rule_ids, origin)` | referee (Shield) | quarantine or block disqualifies |
 | `attach_claim_check(bid_id, claim, check, evidence_url, origin)` | referee (claim check relay) | `false` disqualifies; `verified` breaks ties |
-| `create_mandate(...)` | the mandate's buyer, or the referee | MOCK shape until the Mandate contract is wired in |
-| `record_approval(mandate_hash, method, approved_by)` | the mandate's buyer, or the referee relaying that buyer's code | approved_by must equal the mandate's buyer; a second approval is refused and shown |
+| `create_mandate(...)` | the mandate's buyer, or the referee | MOCK shape until the Mandate contract is wired in. Inside the buyer's allowance it auto-approves (method `allowance`) with a receipt; otherwise the deal waits for the call. `requested_by` names an IT seat that asked for it |
+| `record_approval(mandate_hash, method, approved_by)` | the mandate's buyer, or the referee relaying that buyer's code | approved_by must equal the mandate's buyer and must not be the requester; a second approval is refused and shown |
 | `record_payment(mandate_hash, payment_ref, amount)` | referee | INVARIANT-1: refused without an approval for the same hash |
+| `record_receiving(id, order_id, sku_spec, photo_url, expected_spec_id, result, reasons, checked_by, origin)` | the deal's buyer | needs a paid deal; a clean check raises the allowance one step (once per deal); a failed one opens a credit request |
 | `reset_demo()`, `seed_demo()` | owner or referee | SIM data only; roles survive a reset |
 
-Views clients subscribe to: `my_role`, `seller_needs` (redacted: items, window, deadline, never the spend limit or goal), `my_bids`, `my_goals`, `my_goal_items`, `my_notifications`.
+The allowance ladder (`rules/allowance.ts`, amounts PROPOSED in `config.ts`) follows D's Allowance contract: it starts at $0, so a new buyer's first buy always calls.
+
+Views clients subscribe to: `my_role`, `my_allowance`, `seller_needs` (redacted: items, window, deadline, never the spend limit or goal), `my_bids`, `my_goals`, `my_goal_items`, `my_notifications`.

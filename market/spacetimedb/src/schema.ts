@@ -174,7 +174,43 @@ export const mandate = table(
     payee: t.string(),
     expiry: t.timestamp(),
     nonce: t.string(),
+    withinAllowance: t.bool(), // true: auto-approved inside the allowance; false: needs the call
+    requestedBy: t.string(), // who asked for the buy (IT seat); empty for a consumer's own buy
     origin: t.string(),
+  },
+);
+
+/** D's Allowance contract. Private: sellers never see it. */
+export const allowance = table(
+  { name: 'allowance' },
+  {
+    buyerId: t.string().primaryKey(),
+    currency: t.string(),
+    perPurchaseLimit: t.f64(),
+    periodLimit: t.f64(),
+    period: t.string(),
+    spentThisPeriod: t.f64(),
+    ladderStep: t.u32(),
+    updatedAt: t.timestamp(),
+  },
+);
+
+/** ReceivingEvent contract; orderId is the paid mandate hash. */
+export const receivingEvent = table(
+  { name: 'receiving_event' },
+  {
+    id: t.string().primaryKey(),
+    orderId: t.string().index('btree'),
+    skuSpec: t.string(),
+    photoUrl: t.string(),
+    expectedSpecId: t.string(),
+    result: t.string(), // accepted | rejected
+    reasons: t.array(t.string()),
+    creditRequestId: t.string(),
+    checkedBy: t.string(), // photo_check | owner
+    raisedAllowance: t.bool(),
+    origin: t.string(),
+    at: t.timestamp(),
   },
 );
 
@@ -285,7 +321,7 @@ export const roundTimer = table(
 const spacetimedb = schema({
   need, needItem, goal, goalItem, notification, owner, role, pairCode,
   sellerFloor, bid, bidCheck,
-  mandate, approval, payment,
+  mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, persona, roundTimer,
 });
 export default spacetimedb;

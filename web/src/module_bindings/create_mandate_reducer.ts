@@ -19,5 +19,6 @@ export default {
   payee: __t.string(),
   expiryMinutes: __t.u32(),
   nonce: __t.string(),
+  requestedBy: __t.string(),
   origin: __t.string(),
 };

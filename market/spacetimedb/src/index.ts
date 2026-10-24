@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, bid, goal, goalItem, notification, role, roundTimer } from './schema';
+import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, allowance, bid, goal, goalItem, notification, role, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -59,7 +59,7 @@ export const attach_claim_check = spacetimedb.reducer(
 export const create_mandate = spacetimedb.reducer(
   {
     hash: t.string(), id: t.string(), dealId: t.string(), buyerId: t.string(), amount: t.f64(), payee: t.string(),
-    expiryMinutes: t.u32(), nonce: t.string(), origin: t.string(),
+    expiryMinutes: t.u32(), nonce: t.string(), requestedBy: t.string(), origin: t.string(),
   },
   (ctx, a) => m.createMandate(ctx, a),
 );
@@ -72,6 +72,14 @@ export const record_approval = spacetimedb.reducer(
 export const record_payment = spacetimedb.reducer(
   { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64() },
   (ctx, a) => m.recordPayment(ctx, a),
+);
+
+export const record_receiving = spacetimedb.reducer(
+  {
+    id: t.string(), orderId: t.string(), skuSpec: t.string(), photoUrl: t.string(), expectedSpecId: t.string(),
+    result: t.string(), reasons: t.array(t.string()), checkedBy: t.string(), origin: t.string(),
+  },
+  (ctx, a) => m.recordReceiving(ctx, a),
 );
 
 export const reset_demo = spacetimedb.reducer((ctx) => m.resetDemoChecked(ctx));
@@ -87,4 +95,5 @@ export const my_bids = spacetimedb.view({ name: 'my_bids', public: true }, t.arr
 export const my_goals = spacetimedb.view({ name: 'my_goals', public: true }, t.array(goal.rowType), (ctx) => m.myGoalsView(ctx));
 export const my_goal_items = spacetimedb.view({ name: 'my_goal_items', public: true }, t.array(goalItem.rowType), (ctx) => m.myGoalItemsView(ctx));
 export const my_role = spacetimedb.view({ name: 'my_role', public: true }, t.array(role.rowType), (ctx) => m.myRoleView(ctx));
+export const my_allowance = spacetimedb.view({ name: 'my_allowance', public: true }, t.array(allowance.rowType), (ctx) => m.myAllowanceView(ctx));
 export const my_notifications = spacetimedb.view({ name: 'my_notifications', public: true }, t.array(notification.rowType), (ctx) => m.myNotificationsView(ctx));
