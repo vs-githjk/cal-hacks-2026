@@ -1,5 +1,6 @@
 """Lot Wall (T6): one pooled lot of 38 RTX 5070 Ti orders, exactly one of them REAL (Vidyut's)."""
 import json
+import re
 from pathlib import Path
 
 from sim.lot_wall import LOT_JSON, LOT_SIZE, SEED, STAGE_LINE, build_lot
@@ -72,6 +73,8 @@ def test_stage_line_is_exact_and_in_the_lot():
 def test_no_dashes_in_any_text_and_no_pronouns():
     text = json.dumps(build_lot())
     assert chr(0x2014) not in text and chr(0x2013) not in text
+    found = re.findall(r"\b(?:he|she|his|her|him|hers)\b", text.lower())
+    assert found == []
 
 
 def test_committed_lot_json_matches_the_generator():

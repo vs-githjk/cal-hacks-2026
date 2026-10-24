@@ -34,7 +34,7 @@ function OrderCard({ o }: { o: LotOrder }) {
         <span className={`rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-bold ${o.label === "REAL" ? GOLD : "border-line bg-slate-soft text-slate"}`}>{o.label}</span>
       </div>
       <p className="text-[28px] font-semibold tracking-[-0.01em] tabular-nums">{money(o.cap)}</p>
-      <p className="text-[13px] text-muted">the most {o.name} will pay for one RTX 5070 Ti</p>
+      <p className="text-[13px] text-muted">the most {o.name} will pay for one RTX 5070 Ti, before sales tax</p>
       <dl className="mt-3 grid grid-cols-2 gap-2">
         <Stat label="Condition" value={conditionsText(o.conditions)} />
         <Stat label="Case fits" value={o.caseMaxGpuMm ? `${o.caseMaxGpuMm} mm` : "unknown"} />
@@ -92,7 +92,7 @@ export function LotScreen({ state, lot }: { state: "loading" | "offline" | "read
               ))}
             </ul>
             <p className="mt-3 text-[13px] text-muted">
-              Gold is Vidyut&apos;s real request. Grey bricks are simulated builders from our wind tunnel, one request each. Each brick shows the most that order will pay.
+              Gold is Vidyut&apos;s real request. Grey bricks are simulated builders from our wind tunnel, one request each. Each brick shows the most that order will pay, before sales tax.
             </p>
             <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Stat label="Median ceiling" value={money(lot.capMedian)} />
