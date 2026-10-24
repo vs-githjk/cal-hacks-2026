@@ -19,7 +19,7 @@ _GOAL_KEYS = {"id", "buyer_id", "type", "items", "cap", "deadline", "state", "re
               "po_number", "created_at", "notes", "parent_goal_id", "parent_part"}
 _TRANSACTION_KEYS = {"deal_id", "buyer_id", "goal_id", "need_id", "bid_id", "phase", "deal", "order",
                      "advocate_card", "mandate", "voice_approval", "allowance_authorization",
-                     "settlement", "settlement_result", "payment_ref", "mode"}
+                     "settlement", "settlement_result", "payment_ref", "mode", "passed_over_reason"}
 _PHASES = {"pending_approval", "paused", "approved", "denied", "expired", "submitted", "uncertain",
            "settled", "refused", "failed"}
 _FORBIDDEN_KEYS = {"context", "owner_context", "runtime_context", "code", "approval_code", "passcode",
