@@ -7,11 +7,15 @@ import { ASI_ONE_URL } from "@/lib/agents";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
+import { BuildPanel } from "./build";
+import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
 import { DotPattern } from "./ui/dot-pattern";
 
 
 export interface BuyerScreenProps {
+  /** The planner's build (parts, sellers, steps); the SIM sample run is shown, labelled, until build rounds are live. */
+  build?: BuildResult;
   /** This buyer's searches, open ones first; the first is the active one. */
   goals: GoalView[];
   /** The buyer's spending rule; shown even before the first goal. */
@@ -85,6 +89,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
             </Card>
           )}
           <Searches goals={p.goals} />
+          <SampleOnly on={!p.build}><BuildPanel build={p.build ?? SAMPLE_BUILD} origin={p.build ? "LIVE" : "SIM"} /></SampleOnly>
           <div className="grid gap-3.5 md:grid-cols-3">
             {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
             <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
