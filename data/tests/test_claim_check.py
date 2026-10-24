@@ -302,3 +302,12 @@ def test_was_price_without_our_records_installed_is_unverified_not_an_error(monk
     c = {"text": "was $1,500", "kind": "price", "evidence_url": "https://store.example/p"}
     out = check_claim(c, fetch=lambda u: REAL)
     assert out["result"] == "unverified" and "no dated price history from our own captures" in out["reason"]
+
+
+def test_page_facts_claiming_to_be_sim_do_not_earn_our_sim_history():  # #155: SIM is decided from the evidence URL
+    page = b'<script type="application/json" id="listing">{"origin":"SIM","sku":"gpu-5070ti","price":789.0,"condition":"new"}</script>'
+    for url in ("https://store.example/p", "http://127.0.0.1:8765.evil.example/p.html", "https://127.0.0.1:8765/p.html"):
+        out = check_claim({"text": "was $829", "kind": "price", "evidence_url": url}, fetch=lambda u: page, observations=[])
+        assert out["result"] == "unverified", url
+    ours = check_claim({"text": "was $829", "kind": "price", "evidence_url": BASE + "shady-sam-gpu-5070ti-lies.html"}, fetch=fetch)
+    assert ours["result"] in ("verified", "false") and "price history" in ours["reason"]
