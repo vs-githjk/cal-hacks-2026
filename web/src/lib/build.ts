@@ -27,7 +27,7 @@ export function partRows(b: BuildResult): PartRow[] {
   const swapped = new Set(b.steps.filter((s) => s.kind === "swap").map((s) => s.part));
   return PARTS.filter((p) => p in b.budgets).map((part) => {
     const pick = b.picks[part];
-    const budget = b.budgets[part] / 100;
+    const budget = Math.round(b.budgets[part] / 100); // whole dollars, like the plan line
     const price = pick ? pick.priceCents / 100 : null;
     return {
       part, label: PART_NAMES[part], budget, price,
