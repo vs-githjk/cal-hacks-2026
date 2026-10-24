@@ -35,6 +35,12 @@ _SUMMARY_BLOCKED = frozenset({
     "pretend", "override", "pay", "paid", "payment", "payments", "payee", "send", "sent", "dollar",
     "dollars", "usd", "bucks", "cash", "refund",
 })
+# Item and seller text read aloud also must not steer the buyer (#197): "you already agreed to this", "official reseller".
+_FACTS_BLOCKED = _SUMMARY_BLOCKED | frozenset({
+    "you", "your", "yours", "agreed", "agree", "already", "official", "officially", "authorized", "authorised",
+    "verified", "certified", "trusted", "guaranteed", "confirmed", "promised", "advocate", "shield", "bazaar", "buyer",
+    "referee", "now", "urgent",
+})
 
 
 class ScriptError(ValueError):
@@ -154,12 +160,12 @@ def _host(url: str) -> Optional[str]:
     return host[4:] if host.startswith("www.") else host
 
 
-def _plain(value: Any, pattern: "re.Pattern[str]") -> Optional[str]:
+def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY_BLOCKED) -> Optional[str]:
     """The value when it is a short plain string that passes `pattern` and holds no steering word, else None."""
     if not isinstance(value, str):
         return None
     v = " ".join(value.split())
-    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & _SUMMARY_BLOCKED:
+    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & blocked:
         return None
     return v
 
@@ -178,7 +184,7 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
     dropped += [str(k) for k in deal if k not in ("item", "condition", "seller")]
     for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
         if key in deal:
-            v = _plain(deal[key], pattern)
+            v = _plain(deal[key], pattern, _FACTS_BLOCKED)
             if v is None:
                 dropped.append(key)
             else:

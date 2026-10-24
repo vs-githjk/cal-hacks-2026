@@ -67,7 +67,7 @@ def parse_beat(line: str) -> Optional[int]:
 def default_stage_cmd(root: Path = ROOT) -> str:
     stage = Path(root) / "demo" / "stage.py"
     if stage.exists():
-        return f"python3 {stage} --auto"
+        return f"python3 {stage} --auto --bid-window 20"     # #183: one run under the 2:00 cut
     return f"python3 {Path(root) / 'demo' / 'bridge.py'} --reset --rounds 2 --step-delay 1"
 
 
@@ -128,6 +128,23 @@ def chrome_shot(url: str, path: str) -> tuple:
     if p.returncode != 0 or not Path(path).exists():
         return False, f"chrome exited {p.returncode}"
     return True, ""
+
+
+def paired_shooter(sql: Callable, market: Optional[Callable] = None, browser_cls: Optional[Callable] = None,
+                   chrome: Optional[str] = None) -> tuple:
+    """(shoot, browser or None, note). Pairs the rehearsal's own screen identity once (demo/screens.py) and shoots in
+    one browser that holds its token, so /buyer shows the buyer's screen, not the pair gate (#184). Any failure falls
+    back to plain chrome_shot and the note says /buyer is NOT paired."""
+    from demo import screens
+    try:
+        token = screens.pair_screen(sql, market or screens.stdb_market, ROOT / ".tokens" / "rehearse-screen.json")
+        exe = chrome or screens.find_chrome()
+        if exe is None:
+            raise RuntimeError("no Chrome or Chromium found (set CHROME_PATH)")
+        browser = (browser_cls or screens.PairedBrowser)(exe, f"http://localhost:{WEB_PORT}/", token)
+    except Exception as e:  # never a crash, never a fake pass: the shots still run, unpaired, and the report says so
+        return chrome_shot, None, f"/buyer NOT paired ({str(e)[:160]}); its shots show the pair gate"
+    return browser.shot, browser, "/buyer paired once with the rehearsal's own screen identity (pair_buyer_screen); shots show the buyer's screen"
 
 
 # ---------------------------------------------------------------- one run
@@ -227,6 +244,8 @@ def one_run(k: int, cmd: str, out: Path, args, secrets: list, sql, shoot, say) -
 def report_md(runs: list, cmd: str, args, started: str) -> str:
     L = [f"# Rehearsal report ({started})", "",
          f"Stage command: `{cmd}`", f"Runs: {len(runs)} of {args.runs}. Target: {TARGET_SECONDS} s per run (the 2:00 cut).", ""]
+    if getattr(args, "pairing_note", ""):
+        L += [f"Screens: {args.pairing_note}", ""]
     head = "| Run | Total s | " + " | ".join(f"Beat {b} s" for b in BEATS) + " | Exit | Target | Checks |"
     L += [head, "|" + "---|" * (len(BEATS) + 5)]
     for r in runs:
@@ -319,10 +338,19 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
         (out / "runs.json").write_text("[]\n")
         say_r(f"stack down at {at}, not run (closed: {', '.join(f'{h}:{p}' for h, p in down)}). Report: {out}/REPORT.md")
         return 2
+    browser = None
+    args.pairing_note = ""
+    if args.screens and shoot is chrome_shot:
+        shoot, browser, args.pairing_note = paired_shooter(sql)
+        say_r(f"screens: {args.pairing_note}")
     runs = []
-    for k in range(1, args.runs + 1):
-        say_r(f"run {k} of {args.runs}: {redact(cmd, secrets)}")
-        runs.append(one_run(k, cmd, out, args, secrets, sql, shoot, say_r))
+    try:
+        for k in range(1, args.runs + 1):
+            say_r(f"run {k} of {args.runs}: {redact(cmd, secrets)}")
+            runs.append(one_run(k, cmd, out, args, secrets, sql, shoot, say_r))
+    finally:
+        if browser is not None:
+            browser.close()
     (out / "runs.json").write_text(json.dumps(runs, indent=2) + "\n")
     (out / "REPORT.md").write_text(redact(report_md(runs, cmd, args, started), secrets))
     bad = any(r["exit_code"] != 0 or "fail" in r["checks"].values() for r in runs)

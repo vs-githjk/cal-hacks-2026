@@ -11,6 +11,7 @@ is SIM: the kit cannot verify a real shop, so origin LIVE is refused. Nothing he
 """
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import re
@@ -96,13 +97,25 @@ def _one(status: int, field: str, message: str):
     return _errors(status, [{"field": field, "message": message}])
 
 
-def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], Any] | None = None):
+OPERATOR_ENV = "SELLER_KIT_OPERATOR_TOKEN"
+OPERATOR_HEADER = "x-operator-token"
+
+
+def fold_id(seller_id: str) -> str:
+    """The id as seeds and agent names see it (agents/sellers/factory.py): - becomes _ and a trailing _agent goes."""
+    return seller_id.replace("-", "_").removesuffix("_agent")
+
+
+def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], Any] | None = None,
+               operator_token: str | None = None):
     folder = Path(os.path.abspath(custom_dir or CUSTOM_DIR))
+    # replace=true overwrites a shop's config, and the kit cannot tell one shop from another: only the operator may.
+    operator = operator_token if operator_token is not None else os.environ.get(OPERATOR_ENV, "")
     lock = threading.Lock()
     app = FastAPI(title="Tech Bazaar Seller Kit", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(BodyLimit)
     app.add_middleware(CORSMiddleware, allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$", allow_methods=["GET", "POST"],
-                       allow_headers=["content-type"])
+                       allow_headers=["content-type", OPERATOR_HEADER])
 
     @app.get("/v1/health")
     def health() -> dict:
@@ -130,6 +143,10 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             errors.append({"field": "origin", "message": "must be SIM: the Seller Kit cannot verify a real shop, so a shop it writes is SIM"})
         if errors:
             return _errors(422, errors)
+        if replace:
+            given = request.headers.get(OPERATOR_HEADER) or ""
+            if not operator or not hmac.compare_digest(given.encode(), operator.encode()):
+                return _one(403, "replace", f"replace=true needs the operator token ({OPERATOR_HEADER} header, set by {OPERATOR_ENV})")
         return _write(norm, replace)
 
     def _write(norm: dict, replace: bool):
@@ -138,6 +155,9 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             if path.parent != folder or path.is_symlink():
                 return _one(422, "id", "does not name a plain file in the custom sellers folder")
             existing = list(folder.glob("*.json")) if folder.is_dir() else []
+            twin = next((p.stem for p in existing if p != path and fold_id(p.stem) == fold_id(norm["id"])), None)
+            if twin is not None:   # corner_pc and corner-pc_agent would share corner-pc's seed and agent name
+                return _one(409, "id", f"{norm['id']} is the same shop id as {twin} (- and _ and a trailing _agent fold together); pick another id")
             if path.exists():
                 if not replace:
                     return _one(409, "id", f"{norm['id']} is already a shop here; pick another id or send replace=true")
