@@ -19,6 +19,7 @@ from uagents_core.contrib.protocols.payment import (CancelPayment, CompletePayme
 import common
 import crs
 import hunt
+from chat_trace import round_trace
 import payment
 from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
@@ -231,8 +232,9 @@ async def start_round(ctx: Context, need: dict | None = None):
         checks = {}
     if ROUND.get("round_token") != token or ROUND.get("phase") != "checking" or ROUND.get("need") is not need:
         return False
-    ROUND.update(seller_checks=checks, phase="bidding", deadline=time.time() + need["auction_window_s"])
-    for s in live_sellers():
+    asked = live_sellers()
+    ROUND.update(seller_checks=checks, asked=asked, phase="bidding", deadline=time.time() + need["auction_window_s"])
+    for s in asked:
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need["id"]:
             return False
         await ctx.send(common.address(s), common.BidRequest(need_json=json.dumps(sealed(need))))
@@ -427,6 +429,8 @@ async def conclude(ctx: Context, reviewed: bool):
         for w in card.get("warnings", [])[:3]:
             out.append(f"   ! {w['text']} (source: {w['source_url']})")
     best = hunt.pick_best(bids, cards, eligible_suppliers)
+    asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
+    out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
     vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
     if vetoed:
         await emit(ctx, "veto", f"Advocate vetoed {len(vetoed)} bid(s): {', '.join(vetoed)}.")

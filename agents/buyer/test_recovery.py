@@ -707,3 +707,13 @@ def test_conclude_stops_after_crs_notice_if_owner_cancels_and_starts_new_goal(bu
         assert buyer.ROUND['phase'] == 'bidding'
 
     run_bounded(run())
+
+
+def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
+    monkeypatch.setattr(buyer, 'ALLOWANCE', 0)
+    buyer.ROUND['asked'] = ['seller_1', 'seller_2']
+    ctx = Context()
+    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps([card()]))))
+    text = ctx.owner_text()
+    assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
+    assert text.count('asked seller_1') == 1
