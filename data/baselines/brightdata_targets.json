@@ -1,0 +1,59 @@
+{
+ "_note": "URLs are copied from data/mirror/snapshots/*.json (the Apify listings), never invented. Newegg has a scraper id but no listing URL in our snapshots yet, so it has no target. 'mapping: unverified' means only url, title, final_price, availability and sku are read and no live record has been seen for that store.",
+ "stores": {
+  "bestbuy": {
+   "dataset_id": "gd_ltre1jqe1jfr7cccf",
+   "mapping": "verified"
+  },
+  "newegg": {
+   "dataset_id": "gd_mkcnpcq825jb5uiuna",
+   "mapping": "unverified"
+  },
+  "microcenter": {
+   "dataset_id": "gd_mkckexq2uquhupguv",
+   "mapping": "unverified"
+  },
+  "bh": {
+   "dataset_id": "gd_mkce0sox1mchrlpp8g",
+   "mapping": "unverified"
+  }
+ },
+ "targets": [
+  {
+   "store": "bestbuy",
+   "sku": "rtx 5070 ti",
+   "name": "ASUS Prime RTX 5070 Ti OC",
+   "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"
+  },
+  {
+   "store": "bestbuy",
+   "sku": "rtx 5070 ti",
+   "name": "MSI Gaming Trio RTX 5070 Ti OC",
+   "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085"
+  },
+  {
+   "store": "bestbuy",
+   "sku": "rtx 5070 ti",
+   "name": "Gigabyte Gaming OC RTX 5070 Ti",
+   "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884"
+  },
+  {
+   "store": "microcenter",
+   "sku": "rtx 5070 ti",
+   "name": "ASUS Prime RTX 5070 Ti OC",
+   "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card"
+  },
+  {
+   "store": "microcenter",
+   "sku": "rtx 5070 ti",
+   "name": "MSI Gaming Trio RTX 5070 Ti OC",
+   "url": "https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card"
+  },
+  {
+   "store": "bh",
+   "sku": "rtx 5070 ti",
+   "name": "ASUS Prime RTX 5070 Ti OC",
+   "url": "https://www.bhphotovideo.com/c/product/1875968-REG/asus_prime_rtx5070ti_o16ging_geforce_rtx_5070_ti.html"
+  }
+ ]
+}

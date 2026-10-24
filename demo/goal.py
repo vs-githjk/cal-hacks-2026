@@ -9,6 +9,7 @@ import re
 from datetime import datetime, timedelta
 
 from demo.common import SIM, money, utc_iso, validate
+from demo.sellers import CASE_CLEARANCE_MM
 from data.fit_checker.tables import GPU_POWER
 
 BUYER_ID = "vidyut"
@@ -26,8 +27,8 @@ def vidyut_owned_parts(now: datetime) -> list[dict]:
          told("I have a 750 W PSU with a native 16-pin cable")),
         ("owned-ram", "memory ddr5 32gb", "32 GB DDR5", {"type": "DDR5", "modules": 2, "module_gb": 16},
          told("I already have 32 GB of DDR5")),
-        ("owned-case", "case mid-tower", "mid-tower case", {"max_gpu_length_mm": 305},
-         told("my case takes cards up to 305 mm")),
+        ("owned-case", "case mid-tower", "mid-tower case", {"max_gpu_length_mm": CASE_CLEARANCE_MM},
+         told(f"my case takes cards up to {CASE_CLEARANCE_MM} mm")),
     ]
     return [validate("OwnedPart", {"id": pid, "buyer_id": BUYER_ID, "sku_spec": sku, "item_name": name,
                                    "condition": "unknown", "acquired_on": "", "source": "told_by_user",
