@@ -223,6 +223,79 @@ class MarketBridge:
             raise MarketBridgeError("bid_readback_ambiguous")
         return _project(rows[0], _BID_COLUMNS)
 
+    def post_goal(self, goal: Mapping[str, Any], *, buyer_id: str) -> None:
+        """Persist the buyer's parsed goal without sending its cap to sellers."""
+        if self.role != "buyer" or not isinstance(goal, Mapping):
+            raise MarketBridgeError("market_role_mismatch")
+        goal_id = _safe_id(goal.get("id"), "goal_id")
+        items = []
+        for item in goal.get("items", []):
+            if not isinstance(item, Mapping):
+                raise MarketBridgeError("goal_items_invalid")
+            items.append({"sku_spec": item.get("sku_spec"), "condition": item.get("condition", "new"),
+                          "variant": item.get("variant", "retail"),
+                          "quantity": _finite(item.get("quantity"), "goal_quantity", minimum=0.000000001),
+                          "skipped_owned_part_id": item.get("skipped_owned_part_id", "")})
+        self._call("post_goal", id=goal_id, buyer_id=_safe_id(buyer_id, "buyer_id"), type=goal.get("type"),
+                   cap=_finite(goal.get("cap"), "goal_cap", minimum=0.000000001), deadline=goal.get("deadline"),
+                   po_number="", origin="SIM", items=items)
+        rows = self._sql("SELECT id, buyer_id, cap FROM my_goals WHERE id = " + _quote(goal_id))
+        if len(rows) != 1:
+            raise MarketBridgeError("goal_readback_missing")
+        observed = _project(rows[0], ("id", "buyer_id", "cap"))
+        if (observed.get("id") != goal_id or observed.get("buyer_id") != buyer_id
+                or _finite(observed.get("cap"), "goal_cap") != _finite(goal.get("cap"), "goal_cap")):
+            raise MarketBridgeError("goal_readback_mismatch")
+
+    def post_need(self, need: Mapping[str, Any], *, buyer_id: str, goal_id: str) -> None:
+        if self.role != "buyer" or not isinstance(need, Mapping):
+            raise MarketBridgeError("market_role_mismatch")
+        need_id = _safe_id(need.get("id"), "need_id")
+        items = []
+        for item in need.get("items", []):
+            if not isinstance(item, Mapping):
+                raise MarketBridgeError("need_items_invalid")
+            items.append({"sku_spec": item.get("sku_spec"), "condition": item.get("condition", "new"),
+                          "allowed_conditions": list(item.get("allowed_conditions", [item.get("condition", "new")])),
+                          "variant": item.get("variant", "retail"),
+                          "quantity": _finite(item.get("quantity"), "need_quantity", minimum=0.000000001),
+                          "unit": item.get("unit", "each")})
+        if not items:
+            raise MarketBridgeError("need_items_invalid")
+        self._call("post_need", id=need_id, buyer_id=_safe_id(buyer_id, "buyer_id"), goal_id=_safe_id(goal_id, "goal_id"),
+                   delivery_window=need.get("delivery_window", ""),
+                   spend_limit=_finite(need.get("spend_limit"), "spend_limit", minimum=0.000000001),
+                   consent=bool(need.get("consent", True)),
+                   auction_window_s=int(_finite(need.get("auction_window_s"), "auction_window", minimum=1)),
+                   origin="SIM", items=items)
+
+    def open_round(self, round_id: str, need_id: str, window_s: int) -> None:
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        self._call("open_round", round_id=_safe_id(round_id, "round_id"), need_id=_safe_id(need_id, "need_id"),
+                   window_s=int(_finite(window_s, "auction_window", minimum=1)))
+
+    def round_status(self, round_id: str) -> dict[str, Any]:
+        round_id = _safe_id(round_id, "round_id")
+        rows = self._sql("SELECT id, need_id, state, deadline, review_deadline FROM round WHERE id = " + _quote(round_id))
+        if len(rows) != 1:
+            raise MarketBridgeError("round_readback_missing")
+        row = _project(rows[0], ("id", "need_id", "state", "deadline", "review_deadline"))
+        if row.get("id") != round_id or row.get("state") not in {"open", "review", "closed"}:
+            raise MarketBridgeError("round_readback_invalid")
+        return row
+
+    def close_round(self, round_id: str) -> None:
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        self._call("close_round", round_id=_safe_id(round_id, "round_id"))
+
+    def attach_verdict(self, *, bid_id: str, verdict: str, rule_ids: Sequence[str], origin: str = "SIM") -> None:
+        if self.role != "referee" or verdict not in {"allow", "quarantine", "block"}:
+            raise MarketBridgeError("market_review_invalid")
+        self._call("attach_verdict", bid_id=_safe_id(bid_id, "bid_id"), verdict=verdict,
+                   rule_ids=[str(rule)[:128] for rule in rule_ids[:32]], origin=origin)
+
     @staticmethod
     def _same_bid(row: Mapping[str, Any] | None, *, bid_id: str, round_id: str, seller_id: str,
                   persona: str, lines: list[dict[str, Any]], stated_total: float, perks: Sequence[str],
