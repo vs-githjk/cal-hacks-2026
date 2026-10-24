@@ -96,12 +96,46 @@ export const BidLine = __t.object("BidLine", {
 });
 export type BidLine = __Infer<typeof BidLine>;
 
+export const BidReviewRow = __t.object("BidReviewRow", {
+  checkId: __t.u64(),
+  goalId: __t.string(),
+  needId: __t.string(),
+  roundId: __t.string(),
+  bidId: __t.string(),
+  sellerId: __t.string(),
+  sellerName: __t.string(),
+  landed: __t.f64(),
+  bindingHash: __t.string(),
+  kind: __t.string(),
+  result: __t.string(),
+  detail: __t.string(),
+  evidenceUrl: __t.string(),
+  origin: __t.string(),
+  at: __t.timestamp(),
+  lineIndex: __t.option(__t.u32()),
+  listingId: __t.option(__t.string()),
+  listingHash: __t.option(__t.string()),
+});
+export type BidReviewRow = __Infer<typeof BidReviewRow>;
+
 export const BuyerProfile = __t.object("BuyerProfile", {
   buyerId: __t.string(),
   displayName: __t.string(),
   origin: __t.string(),
 });
 export type BuyerProfile = __Infer<typeof BuyerProfile>;
+
+export const BuyerRoundRow = __t.object("BuyerRoundRow", {
+  roundId: __t.string(),
+  needId: __t.string(),
+  goalId: __t.string(),
+  state: __t.string(),
+  openedAt: __t.timestamp(),
+});
+export type BuyerRoundRow = __Infer<typeof BuyerRoundRow>;
+
+export const EligibleReviewCandidates = __t.object("EligibleReviewCandidates", {});
+export type EligibleReviewCandidates = __Infer<typeof EligibleReviewCandidates>;
 
 export const FloorEvent = __t.object("FloorEvent", {
   id: __t.u64(),
@@ -204,11 +238,17 @@ export type Mandate = __Infer<typeof Mandate>;
 export const MyAllowance = __t.object("MyAllowance", {});
 export type MyAllowance = __Infer<typeof MyAllowance>;
 
+export const MyBidReviews = __t.object("MyBidReviews", {});
+export type MyBidReviews = __Infer<typeof MyBidReviews>;
+
 export const MyBids = __t.object("MyBids", {});
 export type MyBids = __Infer<typeof MyBids>;
 
 export const MyBuyerProfile = __t.object("MyBuyerProfile", {});
 export type MyBuyerProfile = __Infer<typeof MyBuyerProfile>;
+
+export const MyBuyerRounds = __t.object("MyBuyerRounds", {});
+export type MyBuyerRounds = __Infer<typeof MyBuyerRounds>;
 
 export const MyGoalItems = __t.object("MyGoalItems", {});
 export type MyGoalItems = __Infer<typeof MyGoalItems>;
@@ -230,6 +270,9 @@ export type MyPairAttempts = __Infer<typeof MyPairAttempts>;
 
 export const MyPendingApprovals = __t.object("MyPendingApprovals", {});
 export type MyPendingApprovals = __Infer<typeof MyPendingApprovals>;
+
+export const MyPurchaseStatus = __t.object("MyPurchaseStatus", {});
+export type MyPurchaseStatus = __Infer<typeof MyPurchaseStatus>;
 
 export const MyRole = __t.object("MyRole", {});
 export type MyRole = __Infer<typeof MyRole>;
@@ -343,6 +386,29 @@ export const Persona = __t.object("Persona", {
 });
 export type Persona = __Infer<typeof Persona>;
 
+export const PurchaseStatusRow = __t.object("PurchaseStatusRow", {
+  mandateHash: __t.string(),
+  mandateId: __t.string(),
+  dealId: __t.string(),
+  goalId: __t.string(),
+  needId: __t.string(),
+  amount: __t.f64(),
+  payee: __t.string(),
+  expiry: __t.timestamp(),
+  origin: __t.string(),
+  withinAllowance: __t.bool(),
+  retired: __t.bool(),
+  reservationMatches: __t.bool(),
+  settled: __t.bool(),
+  approvalMethod: __t.option(__t.string()),
+  approvedAt: __t.option(__t.timestamp()),
+  paymentRef: __t.option(__t.string()),
+  paymentAmount: __t.option(__t.f64()),
+  paymentMode: __t.option(__t.string()),
+  paidAt: __t.option(__t.timestamp()),
+});
+export type PurchaseStatusRow = __Infer<typeof PurchaseStatusRow>;
+
 export const ReceivingEvent = __t.object("ReceivingEvent", {
   id: __t.string(),
   orderId: __t.string(),
@@ -431,6 +497,12 @@ export const RoundTimer = __t.object("RoundTimer", {
   roundId: __t.string(),
 });
 export type RoundTimer = __Infer<typeof RoundTimer>;
+
+export const SameSellerIdentityEvidence = __t.object("SameSellerIdentityEvidence", {
+  source: __t.string(),
+  reference: __t.string(),
+});
+export type SameSellerIdentityEvidence = __Infer<typeof SameSellerIdentityEvidence>;
 
 export const SellerFloor = __t.object("SellerFloor", {
   id: __t.u64(),
