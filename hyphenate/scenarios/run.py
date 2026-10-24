@@ -61,6 +61,10 @@ def write_results(dev, sd, ho, sh) -> None:
            f"| dev ({len(dev)} cases) | {sd['caught']}/{sd['planted']} | {len(sd['false_positives'])}/{sd['clean']} | {sd['decisions']} | {sd['explained']} |"]
     if sh:
         out.append(f"| held-out ({len(ho)} cases) | {sh['caught']}/{sh['planted']} | {len(sh['false_positives'])}/{sh['clean']} | {sh['decisions']} | {sh['explained']} |")
+    if sh:
+        out += ["", "Held-out history, stated plainly: the set was committed (sha256 `a1957e37c2d3...`) and run once before RESULTS.md existed: 10/11 planted, 0/3 false flags. "
+                "The one non-catch, H06, was a crash from my own scripting mistake (the case moved the clock backwards: a bank change at 08:00 after an invoice at 09:00), not an engine miss. "
+                "I fixed only that timestamp in the case (the key and the engine were not touched) and re-ran: the numbers in the table are from that corrected file."]
     out += ["", f"dev_cases.py sha256 `{file_sha256('dev_cases')}`"]
     if sh:
         out.append(f"heldout_cases.py sha256 `{file_sha256('heldout_cases')}`")

@@ -28,7 +28,7 @@ CASES = [
             [("po_approval", "denied", "self_approval"), ("po_approval", "denied", "wrong_department")], ["po_status:{po1}:pending_approval"], ["po_approved_by:{po1}:pepper", "po_status:{po1}:approved"]),
     planted("H06", "Bank details changed four days before payment; the system holds, then pays after a call-back", "changed_bank_details_recovery",
             [*ready("po1", [SSD(2)]), rcv("po1", [{"sku": "SSD-2TB", "qty": 2}]), inv("po1", "H6-1", [L("SSD-2TB", 2, 100.0)]),
-             {"do": "vendor_bank_change", "vendor": "bestbuy", "by": "maria", "at": "10-09 8"}, {"do": "pay", "invoice": "i1", "at": "10-09 9"},
+             {"do": "vendor_bank_change", "vendor": "bestbuy", "by": "maria", "at": "10-09 15"}, {"do": "pay", "invoice": "i1", "at": "10-09 16"},
              {"do": "vendor_bank_verify", "vendor": "bestbuy", "by": "pepper", "at": "10-12"}, {"do": "pay", "invoice": "i1", "at": "10-13"}],
             [("payment_release", "denied", "bank_unverified"), ("vendor_bank_verify", "verified", "bank_verified")], ["paid:{i1}", "vendor_bank_verified:bestbuy:true"]),
     planted("H07", "Vendor ships 6 units against a PO for 4", "over_delivery",
