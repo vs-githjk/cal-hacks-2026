@@ -1,0 +1,756 @@
+{
+ "schema": "tech-bazaar-lot/1",
+ "origin": "SIM",
+ "seed": 7,
+ "sku_spec": "rtx 5070 ti",
+ "stage_line": "This is one real request, Vidyut's. When many requests pool, this is what a seller sees.",
+ "real_count": 1,
+ "sim_count": 37,
+ "orders": [
+  {
+   "id": "b7-00",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 00",
+   "buyer_id": "b7-00",
+   "need_id": "need-b7-00",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1240.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-01",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 01",
+   "buyer_id": "b7-01",
+   "need_id": "need-b7-01",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1365.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "comfort",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-02",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 02",
+   "buyer_id": "b7-02",
+   "need_id": "need-b7-02",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1490.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-03",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 03",
+   "buyer_id": "b7-03",
+   "need_id": "need-b7-03",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1280.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-04",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 04",
+   "buyer_id": "b7-04",
+   "need_id": "need-b7-04",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1265.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-05",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 05",
+   "buyer_id": "b7-05",
+   "need_id": "need-b7-05",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1285.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-06",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 06",
+   "buyer_id": "b7-06",
+   "need_id": "need-b7-06",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1245.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-07",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 07",
+   "buyer_id": "b7-07",
+   "need_id": "need-b7-07",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1295.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "comfort",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-08",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 08",
+   "buyer_id": "b7-08",
+   "need_id": "need-b7-08",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1500.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-09",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 09",
+   "buyer_id": "b7-09",
+   "need_id": "need-b7-09",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1340.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-10",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 10",
+   "buyer_id": "b7-10",
+   "need_id": "need-b7-10",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1235.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-11",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 11",
+   "buyer_id": "b7-11",
+   "need_id": "need-b7-11",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1385.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-12",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 12",
+   "buyer_id": "b7-12",
+   "need_id": "need-b7-12",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1245.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-13",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 13",
+   "buyer_id": "b7-13",
+   "need_id": "need-b7-13",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1295.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "comfort",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-14",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 14",
+   "buyer_id": "b7-14",
+   "need_id": "need-b7-14",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1530.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-15",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 15",
+   "buyer_id": "b7-15",
+   "need_id": "need-b7-15",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1340.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-16",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 16",
+   "buyer_id": "b7-16",
+   "need_id": "need-b7-16",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1215.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-17",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 17",
+   "buyer_id": "b7-17",
+   "need_id": "need-b7-17",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1255.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-18",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 18",
+   "buyer_id": "b7-18",
+   "need_id": "need-b7-18",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1245.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-19",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 19",
+   "buyer_id": "b7-19",
+   "need_id": "need-b7-19",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1370.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "comfort",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "vidyut-5070ti",
+   "label": "REAL",
+   "origin": "SIM",
+   "name": "Vidyut",
+   "buyer_id": "vidyut",
+   "need_id": "need-vidyut-5070ti",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1300.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "real",
+   "case_max_gpu_mm": 305,
+   "psu_watts": 750,
+   "deadline": "by 2026-10-30T23:59:00Z"
+  },
+  {
+   "id": "b7-20",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 20",
+   "buyer_id": "b7-20",
+   "need_id": "need-b7-20",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1445.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-21",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 21",
+   "buyer_id": "b7-21",
+   "need_id": "need-b7-21",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1285.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-22",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 22",
+   "buyer_id": "b7-22",
+   "need_id": "need-b7-22",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1245.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-23",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 23",
+   "buyer_id": "b7-23",
+   "need_id": "need-b7-23",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1365.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-24",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 24",
+   "buyer_id": "b7-24",
+   "need_id": "need-b7-24",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1190.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-25",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 25",
+   "buyer_id": "b7-25",
+   "need_id": "need-b7-25",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1345.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "comfort",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-26",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 26",
+   "buyer_id": "b7-26",
+   "need_id": "need-b7-26",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1420.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-27",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 27",
+   "buyer_id": "b7-27",
+   "need_id": "need-b7-27",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1255.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-28",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 28",
+   "buyer_id": "b7-28",
+   "need_id": "need-b7-28",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1290.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-29",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 29",
+   "buyer_id": "b7-29",
+   "need_id": "need-b7-29",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1360.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-30",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 30",
+   "buyer_id": "b7-30",
+   "need_id": "need-b7-30",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1255.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-31",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 31",
+   "buyer_id": "b7-31",
+   "need_id": "need-b7-31",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1290.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "comfort",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-32",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 32",
+   "buyer_id": "b7-32",
+   "need_id": "need-b7-32",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1510.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-33",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 33",
+   "buyer_id": "b7-33",
+   "need_id": "need-b7-33",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1295.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-34",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 34",
+   "buyer_id": "b7-34",
+   "need_id": "need-b7-34",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1310.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-35",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 35",
+   "buyer_id": "b7-35",
+   "need_id": "need-b7-35",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1305.0,
+   "conditions": [
+    "new"
+   ],
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 750,
+   "deadline": "by Friday"
+  },
+  {
+   "id": "b7-36",
+   "label": "SIM",
+   "origin": "SIM",
+   "name": "Builder 36",
+   "buyer_id": "b7-36",
+   "need_id": "need-b7-36",
+   "sku_spec": "rtx 5070 ti",
+   "quantity": 1,
+   "cap": 1235.0,
+   "conditions": [
+    "new",
+    "open-box"
+   ],
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 1000,
+   "deadline": "by Friday"
+  }
+ ],
+ "summary": {
+  "orders": 38,
+  "cap_min": 1190.0,
+  "cap_max": 1530.0,
+  "cap_median": 1295.0,
+  "by_archetype": {
+   "comfort": 6,
+   "new_only_mid": 6,
+   "open_box_ok": 6,
+   "premium": 6,
+   "real": 1,
+   "small_case": 6,
+   "tight_budget": 7
+  },
+  "open_box_ok": 14,
+  "demand_at": [
+   [
+    1200,
+    37
+   ],
+   [
+    1250,
+    29
+   ],
+   [
+    1300,
+    17
+   ],
+   [
+    1350,
+    11
+   ],
+   [
+    1400,
+    6
+   ],
+   [
+    1450,
+    4
+   ],
+   [
+    1500,
+    3
+   ]
+  ]
+ },
+ "source": "REAL order: demo/out/sample-run.json. SIM orders: sim.wind_tunnel.make_builders. Demand only, not a market result."
+}
