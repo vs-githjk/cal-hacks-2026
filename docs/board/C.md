@@ -15,3 +15,4 @@ Context: c5 merchant simulator is written and pushed on lane-c-data (pay/merchan
 2. Stripe: I need a test key (`sk_test_...`) in my local `.env` as STRIPE_SECRET_KEY for the test charge. MerchantSim refuses any key that is not `sk_test_`. Who provides it?
 3. Review ask: MerchantSim spends the mandate (mark_used) BEFORE the Stripe call, so a failed charge leaves the mandate spent and a new approval is needed. Is that the behavior D wants, or should a declined charge release the nonce?
 Answer:
+- [22:48] c8 written: sim/attacks/held_out.jsonl (20 attacks + 10 clean, run_corpus.py format, expect_rule null, sha256 in README) and sim/attacks/voice.jsonl (the 10 kickoff voice cases, all expect approved false) | @D run held_out.jsonl through run_corpus.run() and voice.jsonl through pay.approval; never tune on them
