@@ -188,6 +188,10 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
                 repo, health_path="/v1/health", wait=30, group="feed",
                 extra_env={"AGENT_FEED_RUN_DIR": str(Path(getattr(a, "run_dir", None) or repo / ".run").resolve())},
                 note="read-only feed of the agents' status and last lines for the web corner tile"),
+        Service("seller-kit", 8791,
+                [sys.executable, "-m", "uvicorn", "seller_kit.api:app", "--host", HOST, "--port", "8791"],
+                repo, health_path="/v1/health", wait=30, group="kit",
+                note="Seller Kit API: checks a shop's config and writes it to agents/sellers/custom/ for the /sell page; starts no agent"),
         Service("web", a.web_port,
                 ["npm", "exec", "--no-install", "--", "next", "dev", "-p", str(a.web_port)], repo / "web", wait=150, env_filter="web",
                 group="web", extra_env={"NEXT_TELEMETRY_DISABLED": "1"},
@@ -272,7 +276,7 @@ def decide_skips(services: list[Service], checks: list[Check]) -> None:
             continue
         if s.name == "market-stdb" and "spacetime CLI" in bad:
             s.skip_reason = f"spacetime CLI not installed. Install: {SPACETIME_INSTALL}"
-        elif s.name in ("shield", "agent-feed") and "shield deps (fastapi, uvicorn)" in bad:
+        elif s.name in ("shield", "agent-feed", "seller-kit") and "shield deps (fastapi, uvicorn)" in bad:
             s.skip_reason = f"fastapi/uvicorn not importable. Fix: {SHIELD_DEPS_FIX}"
         elif s.group == "agents" and "uv" in bad and "agents/.venv" in {c.name for c in checks if not c.ok}:
             s.skip_reason = f"uv not found and agents/.venv missing. Install: {UV_INSTALL}"
@@ -717,7 +721,7 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--shield-port", type=int, default=8787)
     p.add_argument("--web-port", type=int, default=3100)
     p.add_argument("--stdb-port", type=int, default=3000, help="SpacetimeDB listen port")
-    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, agent-feed, web)")
+    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, agent-feed, seller-kit, web)")
     p.add_argument("--mailbox", action="store_true",
                    help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX); register each once with agents/connect.py <port>")
     p.add_argument("--strict", action="store_true", help="status: also exit 1 when a service is SKIPPED")

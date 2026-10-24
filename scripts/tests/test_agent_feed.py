@@ -330,7 +330,7 @@ def test_missing_fastapi_skips_the_feed_like_the_shield():
     svcs = L.build_services(Namespace(shield_port=8787, stdb_port=3000, web_port=3100, mailbox=False), Path("/nowhere"))
     checks = [L.Check("shield deps (fastapi, uvicorn)", False, "", "fix")]
     L.decide_skips(svcs, checks)
-    assert {s.name for s in svcs if s.skip_reason} == {"shield", "agent-feed"}
+    assert {s.name for s in svcs if s.skip_reason} == {"shield", "agent-feed", "seller-kit"}
 
 
 # ---- T4R: module loggers are not agents; a mailbox created after start clears "Local only" -------------------------------
