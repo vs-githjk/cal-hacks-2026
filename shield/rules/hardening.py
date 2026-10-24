@@ -93,16 +93,18 @@ SPOOF = [
 ]
 
 # ---- soft requests for private data ----------------------------------------------------------------------
-# "name" and "state" are also nouns ("Wi-Fi name and password", "solid state drive ... password"): they count as
-# asking verbs only when an imperative cue comes first. A cue word ("please state", "could you name") is enough on
-# its own. At a sentence start or after a colon the noun readings are ruled out instead of the asks listed, so a
-# comma or an adverb after the verb ("State, for our records, ...", "State plainly ...") cannot hide a real ask:
-# "State: like new", "Name and password are printed", "Name is printed", "Name on the label" stay honest.
-_NOT_NOUN_USE = r"(?!\s*:|\s+(?:and|or|is|are|was|on|of|must|field|tag)\b)"
-_IMPERATIVE = (r"(?:(?:please|kindly|just|then|to|must|should|will|would\s+you|could\s+you|can\s+you)\s+(?:please\s+)?"
-               r"|(?:^|[.!?;:\n])\s*(?=(?:state|name)\b" + _NOT_NOUN_USE + r"))")
-_ASK = (r"(?:tell|share|reveal|disclose|let\s+(?:us|me)\s+know|confirm|what(?:'s|\s+is|\s+are)|how\s+(?:much|high)|provide|send|"
-        r"give|reply\s+with|divulge|indicate|specify|say|paste|enter|submit|" + _IMPERATIVE + r"(?:state|name))")
+# "name" and "state" are also nouns ("Wi-Fi name and password", "solid state drive ... password"), so they are
+# handled per path. Ceiling asks (_ASK_CEILING) already need owner, buyer or walk-away wording, which no noun use
+# has, so the bare verbs count there. Secret asks (_ASK_SECRET) have only the word "password" to go on, so
+# "state" and "name" count only after a cue word ("please state", "could you name"), or at a sentence start (or
+# after a colon) when a possessive comes between the verb and the secret ("State your password", "Name the card
+# number you hold"). "State: like new, no password", "Name, password and serial number are on the sticker",
+# "Name/password on the sticker", "State unknown, password not tested" have no possessive and stay honest.
+_VERBS = (r"tell|share|reveal|disclose|let\s+(?:us|me)\s+know|confirm|what(?:'s|\s+is|\s+are)|how\s+(?:much|high)|provide|send|"
+          r"give|reply\s+with|divulge|indicate|specify|say|paste|enter|submit")
+_CUE = r"(?:please|kindly|just|then|to|must|should|will|would\s+you|could\s+you|can\s+you)\s+(?:please\s+)?"
+_ASK_CEILING_VERB = r"(?:" + _VERBS + r"|state|name)"
+_ASK_SECRET_VERB = r"(?:" + _VERBS + r"|" + _CUE + r"(?:state|name))"
 _PRIVATE_CEILING = (r"(?:(?:the\s+)?most\s+(?:your|the)\s+(?:owner|buyer|principal)|max(?:imum)?\s+(?:price\s+|budget\s+|amount\s+|spend\w*\s+)?"
                     r"(?:your|the)\s+(?:owner|buyer|principal)|(?:your|the)\s+(?:owner|buyer|principal)(?:'s|s')?\s+"
                     r"(?:max\w*|budget|spend\w*\s+limit|limit|allowance|ceiling|walk-?\s?away(?:\s+price)?|reserve)|"
@@ -111,8 +113,10 @@ _PRIVATE_CEILING = (r"(?:(?:the\s+)?most\s+(?:your|the)\s+(?:owner|buyer|princip
 _SECRET = (r"(?:card\s+number|cvv|cvc|security\s+code|password|passcode|api\s+key|access\s+token|secret\s+key|private\s+key|"
            r"seed\s+phrase|recovery\s+phrase|credentials|one-?time\s+(?:code|password)|otp|routing\s+number|social\s+security)")
 _CHECKOUT = rx(r"\b(?:check-?out|payment\s+page|secure\s+(?:form|page|payment)|stripe)\b")
-_ASK_CEILING = rx(r"\b" + _ASK + r"\b[^.\n]{0,60}?" + _PRIVATE_CEILING + r"|\b" + _PRIVATE_CEILING + r"\b[^.\n]{0,40}?\b(?:please|so\s+we|so\s+i)\b")
-_ASK_SECRET = rx(r"\b" + _ASK + r"\b[^.\n]{0,60}?\b" + _SECRET + r"\b")
+_ASK_CEILING = rx(r"\b" + _ASK_CEILING_VERB + r"\b[^.\n]{0,60}?" + _PRIVATE_CEILING + r"|\b" + _PRIVATE_CEILING + r"\b[^.\n]{0,40}?\b(?:please|so\s+we|so\s+i)\b")
+_ASK_SECRET = rx(r"\b" + _ASK_SECRET_VERB + r"\b[^.\n]{0,60}?\b" + _SECRET + r"\b|"
+                 r"(?:^|[.!?;:\n])\s*(?:state|name)\b[^.\n]{0,40}?\b(?:your|you\s+hold|(?:owner|buyer)(?:'s|s')?)\b[^.\n]{0,40}?\b"
+                 + _SECRET + r"\b|(?:^|[.!?;:\n])\s*(?:state|name)\s+the\s+(?:\w+\s+)?" + _SECRET + r"\b")
 
 
 def check_ask(doc, ctx):
