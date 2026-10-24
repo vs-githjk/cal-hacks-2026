@@ -88,12 +88,15 @@
   },
   "seller_id": {
    "type": "string"
+  },
+  "supplier_id": {
+   "type": "string",
+   "description": "Deprecated alias of seller_id, still sent by Lane A; the market reads it as seller_id"
   }
  },
  "required": [
   "id",
   "need_id",
-  "seller_id",
   "persona",
   "lines",
   "total_landed_price",
@@ -105,5 +108,17 @@
   "expires_at",
   "source",
   "origin"
+ ],
+ "anyOf": [
+  {
+   "required": [
+    "seller_id"
+   ]
+  },
+  {
+   "required": [
+    "supplier_id"
+   ]
+  }
  ]
 }
