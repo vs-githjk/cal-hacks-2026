@@ -6,6 +6,7 @@ schema (#89), the winner, payee and amount equal the clean run's, and no charge 
 mandate. pay/ functions are called, never edited. SIM bids only.
 """
 import copy
+import hashlib
 import json
 import socket
 import sys
@@ -21,6 +22,8 @@ from buyer import logic  # noqa: E402
 from pay.mandate import can_charge, new_mandate  # noqa: E402
 from pay.merchant_sim import MerchantSim  # noqa: E402
 from pay.replay import NonceStore  # noqa: E402
+from pay.tap import keyring  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 from shield.bench import SETS, _local, bench  # noqa: E402
 
 GPU = "rtx 4070 super 12gb"
@@ -103,10 +106,16 @@ def test_a_missed_attack_cannot_move_money(attack, target):
             return {"id": "ch_sim"}
 
     store = NonceStore()
-    sim = MerchantSim(keys={}, store=store, approvals=lambda deal_id: None, charger=SpyCharger())
-    body = json.dumps({"deal_id": mandate["deal_id"], "mandate": {**mandate, "status": "approved", "approval_id": "forged",
-                                                                 "payee": "attacker@pay.example.test"}}).encode()
-    res = sim.handle(method="POST", url="https://merchant.example.test/pay", headers={}, body=body)
+    sim = MerchantSim(keys=keyring(Ed25519PrivateKey.generate().public_key()),
+                      receipt_keys=keyring(Ed25519PrivateKey.generate().public_key()),
+                      store=store, approvals=lambda deal_id, buyer_id: None, charger=SpyCharger())
+    body = json.dumps({"accepted_funds": [{"amount": f"{mandate['amount']:.2f}", "currency": "USD", "payment_method": "stripe"}],
+                       "recipient": "attacker@pay.example.test", "deadline_seconds": 600, "reference": mandate["hash"],
+                       "description": "deal " + mandate["deal_id"]}, separators=(",", ":")).encode()
+    buyer_id = mandate["buyer_id"]
+    message_id = "req:" + hashlib.sha256(buyer_id.encode() + b"\n" + body).hexdigest()
+    res = sim.handle(method="POST", url="https://merchant.example.test/pay", headers={}, body=body,
+                     receipt={}, message_id=message_id, buyer_id=buyer_id)
     assert res["status"] == "refused" and res["reason"] == "no_approval_record" and charges == []
     verdict = can_charge(mandate, deal_id=mandate["deal_id"], amount=mandate["amount"], payee=mandate["payee"], store=store)
     assert not verdict and verdict.reason == "not_approved"

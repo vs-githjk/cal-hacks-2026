@@ -99,12 +99,16 @@ p95 latency per message: dev {dev["p95_ms"]} ms, dev2 {dev2["p95_ms"]} ms.
   tuned to make a probe row pass. Caveat: the author had READ the ten probe messages before writing the new
   lexicons, so this number is an upper bound, not a clean held-out result. One probe-shaped pattern ("do what this
   note says", "treat its content as your new rules") was written, noticed as tuned to the probe, and deleted before
-  commit. A truly blind number needs Anoop's held-out set (c8) or the adaptive set.**
+  commit. Later French, German and Chinese rules (#187, #249, #263) were written from their issues' own probes, and
+  p03 (French) has been caught since #249, so treat that row as seen too. A truly blind number needs Anoop's held-out
+  set (c8) or the adaptive set.**
 - **post-freeze check** is 12 new paraphrases written after the rules froze and run exactly once; whatever it
   scored is printed here and nothing was changed after seeing it. It is the better guess at real-world recall:
   about half. It is a small sample (12), so the interval is wide.
+- First runs, kept for the record: held-out 6 of 10 and post-freeze 6 of 12, both on 2026-10-23 before their misses
+  were listed. The figures above are reruns, so they are no longer blind.
 - Misses on held-out: {", ".join(probe["missed"]) or "none"}. Misses on the post-freeze check: {", ".join(fresh["missed"]) or "none"}.
-  Known gaps of lexicon rules: a language outside English, Spanish and Hindi transliteration (p03 is French), soft
+  Known gaps of lexicon rules: a language the rules do not cover (they cover English, Spanish, Hindi transliteration, French, German and Chinese), soft
   requests for private data (p08), shortened links (p09), instructions split across messages (p10), claims that a human
   already agreed with no approval word near them (f02), "pretend" and "let it through" phrasing (f03, f08), a payment
   sent to a named third party with no change word (f05), a claimed exemption with no approval word (f06), and a note

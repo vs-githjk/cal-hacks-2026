@@ -299,3 +299,14 @@ def test_replace_cannot_take_a_lookalike_id_either(custom):
     assert c.post("/v1/sellers", json=good()).status_code == 201
     r = c.post("/v1/sellers?replace=true", json=good(id="corner_pc", name="Lookalike"), headers={"X-Operator-Token": "op-token-test-1234567890"})
     assert r.status_code == 409
+
+
+# #237 L1: a whitespace-only operator token is unset, so a blank header can never replace a shop
+@pytest.mark.parametrize("token", [" ", "  \t", "\n"])
+def test_a_blank_operator_token_is_unset_and_replace_is_refused(custom, token, monkeypatch):
+    monkeypatch.setenv(api.OPERATOR_ENV, token)
+    for c in (TestClient(api.create_app(custom_dir=custom, operator_token=token)), TestClient(api.create_app(custom_dir=custom))):
+        c.post("/v1/sellers", json=good())
+        for header in (token, " ", ""):
+            r = c.post("/v1/sellers?replace=true", json=good(name="Hijacked"), headers={"X-Operator-Token": header})
+            assert r.status_code == 403 and load_config(custom / "corner-pc.json")["name"] == "Corner PC"
