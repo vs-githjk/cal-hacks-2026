@@ -2,7 +2,7 @@
 
     price_position(sku, price, condition, as_of, max_gpu_length_mm=305, rows=None) -> dict
 
-The honest claim behind "proves the price": rank among in-stock retail asks of the same condition that physically fit,
+The honest claim behind "proves the price": rank among in-stock retail asks of the same condition (a first-party retailer's unstated condition counts as new, as in baseline()) that physically fit,
 observed within 24 h before `as_of`, one row per listing URL. 305 mm is the demo case's GPU clearance today; the demo may
 change it. A listing whose model we cannot name from its title is not counted as fitting (it is counted in `unknown_fit`).
 The sentence never says "savings"; the sold-median clause appears only when the baseline status is "ok".
@@ -29,7 +29,7 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
     rows = observations() if rows is None else rows
     t = _ts(as_of)
     live = [r for r in rows if r["sku"] == sku and r["kind"] == "ask" and r["store"] in RETAIL and r["in_stock"]
-            and r["condition"] == condition and t - WINDOW <= _ts(r["observed_at"]) <= t]
+            and (r["condition"] == condition or (condition == "new" and r["condition"] == "unknown")) and t - WINDOW <= _ts(r["observed_at"]) <= t]
     latest = {}
     for r in sorted(live, key=lambda r: r["observed_at"]):  # one row per listing URL, the latest capture
         latest[r.get("url") or (r["store"], r["price"])] = r
@@ -54,9 +54,9 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
         f"No fitting {condition} listings held, {_day(as_of)}"
     if of_n and status == "ok" and sold_median is not None:
         if price < sold_median:
-            sentence += f" and ${sold_median - price:,.2f} under the 30-day eBay sold median (n = {sold_n})"
+            sentence += f" and ${sold_median - price:,.2f} under the 30-day eBay sold median (mixed condition, n = {sold_n})"
         else:
-            sentence += f" (30-day eBay sold median ${sold_median:,.2f}, n = {sold_n})"
+            sentence += f" (30-day eBay sold median, mixed condition: ${sold_median:,.2f}, n = {sold_n})"
     return {"sku": sku, "price": price, "condition": condition, "as_of": as_of, "rank": rank if of_n else None, "of_n": of_n,
             "stores": stores, "cheapest_fitting": {"price": cheapest["price"], "store": cheapest["store"], "url": cheapest.get("url")} if cheapest else None,
             "snapshot_dates": sorted({r["observed_at"][:10] for r in fitting}), "sold_median": sold_median, "sold_n": sold_n,

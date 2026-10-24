@@ -25,15 +25,15 @@ def test_one_source_wording_has_no_sold_clause_and_never_says_savings():
 def test_ok_wording_adds_the_sold_clause_only_when_price_is_under_it():
     sold = row("ebay_sold", 1500.0, kind="sold", provider="ebay-sold", sold_date="2026-10-23", url="https://ebay.example/1")
     out = price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + [sold])
-    assert out["status"] == "ok" and out["sentence"].endswith("and $200.01 under the 30-day eBay sold median (n = 1)")
+    assert out["status"] == "ok" and out["sentence"].endswith("and $200.01 under the 30-day eBay sold median (mixed condition, n = 1)")
     above = price_position(SKU, 1600.0, "new", AS_OF, rows=BASE + [sold])
-    assert "under" not in above["sentence"] and "(30-day eBay sold median $1,500.00, n = 1)" in above["sentence"]
+    assert "under" not in above["sentence"] and "(30-day eBay sold median, mixed condition: $1,500.00, n = 1)" in above["sentence"]
     assert above["sentence"].startswith("4th cheapest fitting new card")
 
 
 def test_other_condition_and_out_of_stock_listings_are_excluded():
     rows = BASE + [row("newegg", 999.0, condition="used"), row("newegg", 1000.0, stock=False, url="https://newegg.example/oos"),
-                   row("newegg", 1001.0, condition="unknown", url="https://newegg.example/unk")]
+                   row("newegg", 1001.0, condition="open-box", url="https://newegg.example/ob")]
     out = price_position(SKU, 1299.99, "new", AS_OF, rows=rows)
     assert out["of_n"] == 3 and out["rank"] == 1
 
@@ -59,3 +59,10 @@ def test_a_relisted_url_counts_once_and_old_captures_drop_out():
 def test_singular_wording():
     out = price_position(SKU, 1299.99, "new", AS_OF, rows=BASE[:1])
     assert out["sentence"] == "Cheapest fitting new card of 1 listing at 1 store, Oct 24"
+
+
+def test_unknown_condition_at_a_first_party_retailer_counts_as_new_only_for_new():
+    mc = row("microcenter", 1250.0, "NVIDIA GeForce RTX 5070 Ti PRIME Overclocked Triple Fan 16GB", condition="unknown")
+    assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + [mc])["of_n"] == 4
+    assert price_position(SKU, 1299.99, "open-box", AS_OF, rows=BASE + [mc])["of_n"] == 0
+    assert price_position(SKU, 1299.99, "open-box", AS_OF, rows=BASE + [mc])["rank"] is None
