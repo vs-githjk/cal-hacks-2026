@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import copy
 import importlib
-import ipaddress
 import socket
 import sys
 from collections.abc import Mapping, Sequence
@@ -70,7 +69,8 @@ def _buyer_agent():
 class ReplayMarketAdapter:
     """Async `run_replay` dispatcher using production buyer callbacks and injected SIM dependencies."""
 
-    def __init__(self, *, clock: Any, checker: Any, provider: Any, transport: SimTransport):
+    def __init__(self, *, clock: Any, checker: Any, provider: Any, transport: SimTransport,
+                 market_clients: tuple[Any, Any] | None = None):
         if type(transport) is not SimTransport:
             raise ReplayError("replay requires the in-memory SIM transport")
         if not callable(getattr(clock, "now", None)):
@@ -86,7 +86,17 @@ class ReplayMarketAdapter:
         self.buyer = _buyer_agent()
         if not callable(getattr(self.buyer, "business_now", None)):
             raise ReplayError("buyer business_now() clock seam is required")
+        if hasattr(self.buyer, "MARKET_BUYER"):
+            if (not isinstance(market_clients, tuple) or len(market_clients) != 2
+                    or market_clients[0] is market_clients[1]
+                    or getattr(market_clients[0], "role", None) != "buyer"
+                    or getattr(market_clients[1], "role", None) != "referee"
+                    or not getattr(market_clients[0], "identity", None)
+                    or not getattr(market_clients[1], "identity", None)
+                    or market_clients[0].identity == market_clients[1].identity):
+                raise ReplayError("current buyer runtime requires distinct injected SIM buyer/referee clients")
         self.clock, self.checker, self.provider, self.transport = clock, checker, provider, transport
+        self.market_clients = market_clients
         self.ctx = _Context(transport)
         self._started = False
         self._entered = False
@@ -97,13 +107,17 @@ class ReplayMarketAdapter:
         if self.buyer.ROUND:
             raise ReplayError("SIM replay requires an empty volatile buyer ROUND")
         try:
-            self._runtime_snapshot = {
-                "ROUND": copy.deepcopy(self.buyer.ROUND),
-                "APPROVALS": copy.deepcopy(self.buyer.APPROVALS),
-                "USED": copy.deepcopy(self.buyer.USED),
-                "WEB_OUTBOX": copy.deepcopy(self.buyer.WEB_OUTBOX),
-                "CHAT_DIAG": copy.deepcopy(self.buyer.CHAT_DIAG.__dict__),
-            }
+            self._runtime_snapshot = {}
+            for name in ("ROUND", "APPROVALS", "USED", "WEB_OUTBOX", "APPROVAL_WAITERS"):
+                if hasattr(self.buyer, name):
+                    self._runtime_snapshot[name] = copy.deepcopy(getattr(self.buyer, name))
+            self._runtime_snapshot["CHAT_DIAG"] = copy.deepcopy(self.buyer.CHAT_DIAG.__dict__)
+            self._global_snapshot = {name: getattr(self.buyer, name) for name in (
+                "STATE_DB", "NONCE_STORE", "MARKET_BUYER", "MARKET_REFEREE", "APPROVAL_SERVICE",
+                "APPROVAL_CALL_CLIENT", "MERCHANT_SIM", "TAP_PRIVATE_KEY", "SHIELD_RECEIPT_KEYS",
+                "SHIELD_PAYMENT_SCREEN") if hasattr(self.buyer, name)}
+            self._buyer_state_path = (getattr(self.buyer.buyer_state, "DEFAULT_DB_PATH", None)
+                                      if hasattr(self.buyer, "buyer_state") else None)
         except Exception as exc:
             raise ReplayError(f"buyer runtime globals cannot be isolated: {type(exc).__name__}") from None
         self._originals = (self.buyer.business_now, self.buyer.crs.check_sellers,
@@ -111,56 +125,20 @@ class ReplayMarketAdapter:
         self._socket_originals = (socket.socket.connect, socket.socket.connect_ex,
                                   socket.create_connection, socket.getaddrinfo,
                                   socket.socket.sendto, getattr(socket.socket, "sendmsg", None))
+        original_sendmsg = self._socket_originals[-1]
         self.buyer.business_now = self.clock.now
         self.buyer.crs.check_sellers = self.checker.check_sellers
         self.buyer.common.screen = self.checker.screen
         self.buyer.common.screen_bid = self.checker.screen_bid
-        connect, connect_ex, create_connection, getaddrinfo, sendto, sendmsg = self._socket_originals
-
-        def guarded_connect(sock, address):
-            if _is_loopback_address(address):
-                return connect(sock, address)
-            return _deny_network(address)
-
-        def guarded_connect_ex(sock, address):
-            if _is_loopback_address(address):
-                return connect_ex(sock, address)
-            return _deny_network(address)
-
-        def guarded_create_connection(address, *args, **kwargs):
-            if _is_loopback_address(address):
-                return create_connection(address, *args, **kwargs)
-            return _deny_network(address)
-
-        def guarded_getaddrinfo(host, *args, **kwargs):
-            if _is_loopback_address(host):
-                return getaddrinfo(host, *args, **kwargs)
-            return _deny_network(host)
-
-        def guarded_sendto(sock, *args, **kwargs):
-            address = kwargs.get("address")
-            if address is None and len(args) >= 2:
-                address = args[-1]
-            if _is_loopback_address(address):
-                return sendto(sock, *args, **kwargs)
-            return _deny_network(address)
-
-        def guarded_sendmsg(sock, *args, **kwargs):
-            address = kwargs.get("address")
-            if address is None and len(args) >= 4:
-                address = args[3]
-            if _is_loopback_address(address):
-                return sendmsg(sock, *args, **kwargs)
-            return _deny_network(address)
-
-        self._network_guards = (guarded_connect, guarded_connect_ex,
-                                guarded_create_connection, guarded_getaddrinfo,
-                                guarded_sendto, guarded_sendmsg)
-        socket.socket.connect, socket.socket.connect_ex = guarded_connect, guarded_connect_ex
-        socket.create_connection, socket.getaddrinfo = guarded_create_connection, guarded_getaddrinfo
-        socket.socket.sendto = guarded_sendto
-        if sendmsg is not None:
-            socket.socket.sendmsg = guarded_sendmsg
+        if self.market_clients is not None and hasattr(self.buyer, "MARKET_BUYER"):
+            self.buyer.MARKET_BUYER, self.buyer.MARKET_REFEREE = self.market_clients
+        socket.socket.connect = _deny_network
+        socket.socket.connect_ex = _deny_network
+        socket.create_connection = _deny_network
+        socket.getaddrinfo = _deny_network
+        socket.socket.sendto = _deny_network
+        if original_sendmsg is not None:
+            socket.socket.sendmsg = _deny_network
         self._entered = True
         return self
 
@@ -173,8 +151,12 @@ class ReplayMarketAdapter:
              socket.socket.sendto, original_sendmsg) = self._socket_originals
             if original_sendmsg is not None:
                 socket.socket.sendmsg = original_sendmsg
-            for name in ("ROUND", "APPROVALS", "USED", "WEB_OUTBOX"):
-                target, snapshot = getattr(self.buyer, name), self._runtime_snapshot[name]
+            for name, snapshot in self._runtime_snapshot.items():
+                if name == "CHAT_DIAG":
+                    self.buyer.CHAT_DIAG.__dict__.clear()
+                    self.buyer.CHAT_DIAG.__dict__.update(snapshot)
+                    continue
+                target = getattr(self.buyer, name)
                 target.clear()
                 if isinstance(target, dict):
                     target.update(snapshot)
@@ -182,8 +164,10 @@ class ReplayMarketAdapter:
                     target.update(snapshot)
                 else:
                     target.extend(snapshot)
-            self.buyer.CHAT_DIAG.__dict__.clear()
-            self.buyer.CHAT_DIAG.__dict__.update(self._runtime_snapshot["CHAT_DIAG"])
+            for name, value in self._global_snapshot.items():
+                setattr(self.buyer, name, value)
+            if self._buyer_state_path is not None:
+                self.buyer.buyer_state.DEFAULT_DB_PATH = self._buyer_state_path
             self._started = False
         finally:
             self._entered = False
@@ -201,6 +185,7 @@ class ReplayMarketAdapter:
         if starting:
             persisted_goal = state.load_goal(db, scenario["goal_id"], scenario["buyer_id"])
             before_goal_state = persisted_goal.get("state") if persisted_goal else None
+            self._inject_scratch_services(db)
             await self._start(db, scenario)
 
         buyer = self.buyer
@@ -237,13 +222,13 @@ class ReplayMarketAdapter:
                     if not isinstance(reply, buyer.common.AdviceReply):
                         raise ReplayError("SIM provider returned an invalid advice reply")
                     await buyer.on_advice(self.ctx, buyer.common.address("advocate"), reply)
-            if before_phase in {"bidding", "advice", "requote"}:
+            if before_phase in {"bidding", "advice", "requote", "market_review_wait"}:
                 events.append("deadline")
             if round_state.get("round_token") != before_round_token:
                 events.append("round_started")
             if round_state.get("phase") == "waiting":
                 events.append("retry")
-            if round_state.get("phase") == "decided" and before_phase == "advice":
+            if round_state.get("phase") == "decided" and before_phase in {"advice", "market_review_wait"}:
                 events.append("deal_found")
         else:
             raise ReplayError("unsupported replay event")
@@ -298,23 +283,26 @@ class ReplayMarketAdapter:
         phase = round_state.get("phase")
         if phase == "waiting":
             candidates.append(datetime.fromtimestamp(round_state["next_round_at"], timezone.utc))
-        elif phase in {"bidding", "advice", "requote"}:
+        elif phase in {"bidding", "advice", "requote", "market_review_wait"}:
             candidates.append(datetime.fromtimestamp(round_state["deadline"], timezone.utc)
                               + timedelta(microseconds=1))
         return min((when for when in candidates if when > self.clock.now()), default=None)
 
+    def _inject_scratch_services(self, db):
+        if not hasattr(self.buyer, "STATE_DB"):
+            return
+        raw_path = db.execute("PRAGMA database_list").fetchone()[2]
+        if not raw_path:
+            raise ReplayError("SIM buyer state database must be a file-backed replay database")
+        replay_path = Path(raw_path)
+        if replay_path.resolve() == state.DEFAULT_DB_PATH.resolve():
+            raise ReplayError("SIM buyer state cannot use the live default database")
+        self.buyer.STATE_DB = db
+        self.buyer.buyer_state.DEFAULT_DB_PATH = replay_path
+        from pay.replay import NonceStore
+
+        self.buyer.NONCE_STORE = NonceStore()
+
 
 def _deny_network(*args, **kwargs):
     raise ReplayError("outbound network is disabled during SIM replay")
-
-
-def _is_loopback_address(address: Any) -> bool:
-    host = address[0] if isinstance(address, tuple) and address else address
-    if not isinstance(host, str):
-        return False
-    if host.lower() == "localhost":
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
