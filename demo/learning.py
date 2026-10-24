@@ -1,6 +1,6 @@
 """Beat 5: a loss report for every losing seller, then a second round where one learning seller adjusts.
 
-SIM stand-in for Lane B's LossReport (contract: demo/contracts_pending until Lane B merges) and for Lane A's
+SIM stand-in for the market's loss reports (contract: contracts/LossReport.schema.json, on main) and for Lane A's
 seller strategy update. Reports carry a banded gap (within5, within10, within20, over20), a reason category and
 the cited source; never a threshold and never a rival's price. The strategy update is deterministic and stays
 above the seller's floor (the referee checks the floor again in round 2). "What to change" is a fixed template
@@ -110,8 +110,10 @@ def run_beat5(b1: dict, b2: dict, now: datetime, say) -> dict:
                      strategies={learner.id: strategy1})
     bids1 = {b["seller_id"]: b for b in b2["bids"]}
     bids2 = {b["seller_id"]: b for b in res2["bids"]}
-    p1, p2 = bids1[learner.id]["lines"][0]["unit_price"], bids2[learner.id]["lines"][0]["unit_price"]
-    floor = learner.lines[0].floor
+    pick1 = next(r for r in b2["ranking"]["ranked"] if r["seller_id"] == learner.id)["line"]   # the line the market picked in round 1
+    p1 = bids1[learner.id]["lines"][pick1]["unit_price"]
+    p2 = bids2[learner.id]["lines"][pick1]["unit_price"]
+    floor = learner.lines[pick1].floor
     c1, c2 = bids1[control.id]["lines"][0]["unit_price"], bids2[control.id]["lines"][0]["unit_price"]
     ref2 = next(r for r in res2["referee"] if r["seller_id"] == learner.id)
     reports2, _ = loss_reports(res2, sellers, now)

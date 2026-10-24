@@ -1,4 +1,4 @@
-"""Beat 4: the deal is above Joe's allowance, so the agent calls. All of this runs through the REAL pay/ code:
+"""Beat 4: the deal is above Tony Stark's allowance, so the agent calls. All of this runs through the REAL pay/ code:
 pay.mandate (hash, can_charge, mark_used), pay.callscript (script_for), pay.approval (word-pair code, three tries),
 pay.tap (RFC 9421 signing, verify_request) and pay.replay (used nonces).
 
@@ -14,6 +14,7 @@ import copy
 import json
 import os
 import secrets
+import ssl
 import tempfile
 import urllib.error
 import urllib.parse
@@ -21,7 +22,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from typing import Any, Callable, Mapping, Optional
 
-from demo.common import LIVE, SIM, money, validate
+from demo.common import LIVE, MIRROR, SIM, money, validate
 from demo.goal import needs_call
 from pay.approval import ApprovalService, script_for
 from pay.mandate import can_charge, idempotency_key, mark_used, new_mandate
@@ -33,12 +34,13 @@ MERCHANT_URL = "https://merchant-sim.example.test/v1/charge"
 KEY_ENV = "VISA_TAP_PRIVATE_KEY_PATH"
 STRIPE_ENV = "STRIPE_SECRET_KEY"
 RETRY_GAP_S = 31          # clears the 30 s deny cooldown on the sim clock
-ANSWER_DELAY_S = 4        # Joe answers 4 s after the agent stops speaking (listen window is 10 s)
+ANSWER_DELAY_S = 4        # Tony Stark answers 4 s after the agent stops speaking (listen window is 10 s)
 STRIPE_URL = "https://api.stripe.com/v1/payment_intents"
+SYSTEM_CA = "/etc/ssl/cert.pem"
 
 
 def _wrong_pair(code: str) -> str:
-    """Two valid code words that are not Joe's code, so the denial is for the wrong code and not for bad words."""
+    """Two valid code words that are not Tony Stark's code, so the denial is for the wrong code and not for bad words."""
     taken = set(code.split())
     return " ".join([w for w in WORDS if w not in taken][3:5])
 
@@ -54,6 +56,15 @@ def stripe_charge_sim(mandate: Mapping[str, Any]) -> dict:
             "idempotency_key": idempotency_key(mandate)}
 
 
+def _tls_context() -> ssl.SSLContext:
+    """Normal certificate checking. A python.org build on macOS ships no CA file, so fall back to the system bundle
+    (verification stays on; nothing is disabled)."""
+    ctx = ssl.create_default_context()
+    if not ssl.get_default_verify_paths().cafile and not ctx.cert_store_stats().get("x509_ca") and os.path.exists(SYSTEM_CA):
+        ctx = ssl.create_default_context(cafile=SYSTEM_CA)
+    return ctx
+
+
 def stripe_charge_test(mandate: Mapping[str, Any], key: str, urlopen: Callable = urllib.request.urlopen) -> dict:
     """One Stripe TEST-mode PaymentIntent on the Visa test card, idempotent on the mandate hash. The key goes
     only in the Authorization header; errors name the exception type and never echo the request."""
@@ -65,7 +76,7 @@ def stripe_charge_test(mandate: Mapping[str, Any], key: str, urlopen: Callable =
     req = urllib.request.Request(STRIPE_URL, data=form, method="POST", headers={
         "Authorization": f"Bearer {key}", "Idempotency-Key": idempotency_key(mandate),
         "Content-Type": "application/x-www-form-urlencoded"})
-    with urlopen(req, timeout=20) as r:
+    with urlopen(req, timeout=20, context=_tls_context()) as r:
         body = json.loads(r.read())
     return {"mode": "Stripe test mode", "id": body.get("id"), "object": body.get("object"), "amount_cents": body.get("amount"),
             "currency": body.get("currency"), "payment_method": "pm_card_visa (Stripe test card)", "status": body.get("status"),
@@ -99,6 +110,8 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
                "REAL pay.mandate, pay.callscript, pay.approval, pay.tap, pay.replay; SIM call transport, clock and merchant; "
                + ("Stripe TEST API" if use_stripe else "SIM Stripe stub"))
     say.line(SIM, f"winning deal: {seller['name']} {money(amount)}; {why_call}: the agent must call")
+    if bid["origin"] == MIRROR:
+        say.line(SIM, f"the bid is MIRROR (a real, dated listing); the payee {payee} is a SIM test address, so no real merchant is contacted or paid")
     goal["state"], goal["reserved_amount"] = "HOLD_FOR_CALL", amount
     states = [{"state": "HUNTING", "at": b1["goal"]["created_at"]}, {"state": "HOLD_FOR_CALL", "reserved_amount": amount}]
     if not call:
@@ -114,16 +127,16 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     script = script_for(mandate, reason)
     say.line(SIM, f"call script (amount and payee read from the mandate, why-answer from the closed-schema reason; stripped: {list(script.stripped) or 'nothing'}):")
     say.line(SIM, f"agent: \"{script.spoken()}\"", 1)
-    say.line(SIM, 'Joe: "Why not the cheaper one?"', 1)
+    say.line(SIM, 'Tony Stark: "Why not the cheaper one?"', 1)
     say.line(SIM, f"agent: \"{script.why_answer}\"", 1)
-    say.line(SIM, f"cited source on Joe's screen: {reason['source_url']}", 1)
+    say.line(SIM, f"cited source on Tony Stark's screen: {reason['source_url']}", 1)
 
     store = NonceStore()
     secret = env.get("APPROVAL_SECRET") or secrets.token_hex(16)
     svc = ApprovalService(secret=secret, store=store)
     session, code = svc.issue(mandate, now=t0)
     before = can_charge(mandate, t0, deal_id=mandate["deal_id"], amount=amount, payee=payee, store=store)
-    say.line(SIM, f"two-word code issued and shown on Joe's authenticated screen (never printed here); can_charge before approval: "
+    say.line(SIM, f"two-word code issued and shown on Tony Stark's authenticated screen (never printed here); can_charge before approval: "
                   f"{'PASS' if before else 'REFUSED'} ({before.reason})")
     session.start_call(t0)
 
@@ -138,7 +151,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
         d = session.approve(said, t, confidence=0.93)
         attempts.append({"try": n, "label": label, "said": shown, "at": t.isoformat().replace("+00:00", "Z"), "decision": _decision(d)})
         verdict = "APPROVED" if d.approved else f"DENIED ({d.reason})"
-        say.line(SIM, f"try {n} ({label}): Joe says \"{shown}\" -> {verdict}", 1)
+        say.line(SIM, f"try {n} ({label}): Tony Stark says \"{shown}\" -> {verdict}", 1)
         if d.record:
             final = d.record
         if d.approved:
@@ -186,6 +199,13 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     if live_ok:
         try:
             charge = (stripe_test or stripe_charge_test)(mandate, key)
+        except urllib.error.HTTPError as e:   # Stripe's error type and code are safe to show; the key never is
+            try:
+                err = json.loads(e.read()).get("error", {})
+            except (ValueError, OSError):
+                err = {}
+            stripe_note = (f"Stripe test call refused (HTTP {e.code}, {err.get('type', 'unknown')}/{err.get('code', 'none')}), "
+                           "so the SIM stub runs")
         except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             stripe_note = f"Stripe test call failed ({type(e).__name__}), so the SIM stub runs"
     charge = charge or stripe_charge_sim(mandate)

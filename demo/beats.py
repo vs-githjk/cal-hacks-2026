@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from demo.adapters import advocate_checks
 from demo.common import MIRROR, PAGE_BASE, SIM, SITE, money, validate
 from demo.pages import read_page
 from demo.round import run_round
@@ -28,8 +29,9 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
     by_id = {s.id: s for s in sellers}
     bids = {b["seller_id"]: b for b in res["bids"]}
     say.header(2, "Sealed round: sellers bid, the advocate vetoes the traps with a source",
-               "REAL data.fit_checker + shield.screen; claim check: " + res["claim_check"]["label"]
-               + "; SIM stand-ins for Lane A sellers and advocate, Lane B market rules")
+               "REAL agents/advocate/checks.py (" + ("uagents-free load" if "empty module" in advocate_checks()[1] else "direct") + "), data.fit_checker, "
+               + "shield.screen; claim check: " + res["claim_check"]["label"]
+               + "; SIM stand-ins for Lane A seller bids and Lane B market rules (Python, node not installed)")
     dates = sorted({l.snapshot_date[:16] for sl in sellers for l in sl.lines if l.snapshot_date})
     say.line(MIRROR, f"listings read from data/mirror/snapshots (Apify, dated {dates[0]}Z to {dates[-1]}Z), one agent per seller of record")
     for s in skips:
@@ -41,7 +43,8 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
         anchor = next((l for l in s.lines if l.origin == MIRROR), s.lines[0])
         where = (f"snapshot {anchor.snapshot_id}" if anchor.origin == MIRROR
                  else "hosted SIM page" if s.page_html else "SIM listing, no page hosted")
-        say.line(b["origin"], f"{s.name}: " + " | ".join(_fmt_line(l) for l in b["lines"]), 0)
+        alt = "  (alternatives, the market takes the cheapest allowed)" if len(b["lines"]) > 1 else ""
+        say.line(b["origin"], f"{s.name}: " + " | ".join(_fmt_line(l) for l in b["lines"]) + alt, 0)
         say.line(b["origin"], f"{where}  {anchor.listing_url}", 2)
     arrival_ext = [a for a in res["arrivals"] if a["extended"]]
     say.blank()
@@ -62,20 +65,20 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
     unverified = sum(1 for cs in res["claims"].values() for c in cs if c["check"] == "unverified")
     say.line(SIM, f"claims checked: {sum(1 for cs in res['claims'].values() for c in cs if c['check'] == 'verified')} verified, "
                   f"{sum(1 for cs in res['claims'].values() for c in cs if c['check'] == 'false')} false, {unverified} unverified "
-                  f"(offline: only the hosted SIM pages can be fetched, every other claim stays unverified)")
+                  f"(offline: only the hosted SIM pages can be fetched, so claims on real listings stay unverified, never false)")
     say.blank()
-    say.note(f"Score: quality-adjusted landed price (SIM weights), cap {money(goal['cap'])} withheld from sellers")
+    say.note(f"Score: the cheapest allowed line per bid, then quality-adjusted landed price (SIM weights), cap {money(goal['cap'])} withheld from sellers")
     for r in res["ranking"]["ranked"]:
         s = by_id[r["seller_id"]]
-        say.line(bids[s.id]["origin"], f"#{r['rank']} {s.name}: {r['condition']}, landed {money(r['landed'])}, adjusted {money(r['adjusted'])}", 1)
+        alt = f" (picked of {len(r['alternatives'])} lines)" if len(r["alternatives"]) > 1 else ""
+        say.line(bids[s.id]["origin"], f"#{r['rank']} {s.name}: {r['condition']}{alt}, landed {money(r['landed'])}, adjusted {money(r['adjusted'])}", 1)
     for d in res["ranking"]["disqualified"]:
         s = by_id[d["seller_id"]]
         say.line(bids[s.id]["origin"], f"out: {s.name}: {'; '.join(d['reasons'])}", 1)
-    real_min = min(l["unit_price"] for b in res["bids"] for l in b["lines"] if l["origin"] == MIRROR and l["offered_condition"] != "unknown") if any(
-        l["origin"] == MIRROR for b in res["bids"] for l in b["lines"]) else None
-    if real_min:
-        say.line(MIRROR, f"cheapest real listing with a stated condition today: {money(real_min)}; every MIRROR bid is over Joe's cap, "
-                         f"so only SIM sellers can win this round (labelled, never mixed into real numbers)")
+    real_in = [r for r in res["ranking"]["ranked"] if by_id[r["seller_id"]].origin == MIRROR]
+    if real_in:
+        say.line(MIRROR, f"real bids inside the cap: " + ", ".join(f"{by_id[r['seller_id']].name} {r['condition']} {money(r['landed'])}" for r in real_in)
+                         + f"; the other real listings are over the cap or state no condition (labelled MIRROR, never mixed with SIM numbers)")
     say.blank()
     say.note("Advocate (code decides fit, claims come from their pages, no model, every veto cites a source):")
     for r, card in zip(res["ranking"]["ranked"], res["cards"]):
@@ -84,21 +87,21 @@ def run_beat2(b1: dict, now: datetime, say, round_no: int = 1) -> dict:
         verdict = {"veto": "VETO", "caution": "CAUTION", "buy": "OK"}[card["recommendation"]]
         say.line(tag, f"#{r['rank']} {s.name} {money(r['landed'])}: {verdict}", 1)
         for w in card["warnings"]:
-            if w["kind"] == "fit_unknown":
+            if w["kind"] == "note":
                 continue
             say.line(tag, f"{w['rule_id']}: {w['text']}", 3)
             say.line(tag, f"source: {w['source_url']}", 4)
-        if card["recommendation"] == "buy":
+        if card["recommendation"] != "veto":
             fit = card["fit"]
             say.line(tag, "fit " + fit["verdict"] + ": " + "; ".join(c["reason"] for c in fit["checks"]), 3)
             cs = res["claims"][r["bid_id"]]
-            say.line(tag, f"claims: {sum(1 for c in cs if c['check'] == 'verified')} of {len(cs)} verified against the page", 3)
+            say.line(tag, f"claims: {sum(1 for c in cs if c['check'] == 'verified')} of {len(cs)} verified (the rest could not be fetched offline)", 3)
     w = res["winner"]
     winner_seller = by_id[w["seller_id"]]
     say.blank()
-    cheapest = res["ranking"]["ranked"][0]
-    say.line(SIM, f"winner: {winner_seller.name} at {money(w['landed'])}; the cheaper {by_id[cheapest['seller_id']].name} "
-                  f"({money(cheapest['landed'])}) was vetoed under {res['cards'][0]['call_reason']['rule_id']}")
+    vetoed = [by_id[r["seller_id"]].name + f" ({money(r['landed'])}, {c['call_reason']['rule_id']})"
+              for r, c in zip(res["ranking"]["ranked"], res["cards"]) if c["recommendation"] == "veto" and r["rank"] < w["rank"]]
+    say.line(winner_seller.origin, f"winner: {winner_seller.name} at {money(w['landed'])}; vetoed as cheaper: " + "; ".join(vetoed))
     return {"sellers": [_seller_artifact(s) for s in sellers], "skips": skips, **res,
             "veto_reason": res["cards"][0]["call_reason"] if res["cards"] and res["cards"][0]["recommendation"] == "veto" else None,
             "winner_seller_id": w["seller_id"]}

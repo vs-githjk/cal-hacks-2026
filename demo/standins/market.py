@@ -7,9 +7,10 @@ Mirrors, rule for rule:
               the earlier sealed bid, then the bid id; a line whose condition differs from the goal is out;
               the market fee is never read
 Where this runner differs on purpose (the LOCKED seller model, Fri 22:36): a bid carries SEVERAL condition
-lines for one SKU, so floors are keyed by sku and condition, the score is per line, and a bid ranks on its
-best eligible line. Lane B's checkLineSpec still assumes one condition per need line. The advocate's
-quality adjustment (condition, returns, seller record) is applied here as SIM weights.
+lines for one SKU as ALTERNATIVES. Floors are keyed by sku and condition, and the market picks the CHEAPEST line
+whose condition is in the goal's allowed_conditions (never a sum of lines). The bid then ranks on that line's
+quality-adjusted landed price (condition, returns, seller record: SIM weights, the real ones are Lane A's).
+Lane B's checkLineSpec still assumes one condition per need line; tests/test_market_parity.py pins what does match.
 """
 from __future__ import annotations
 
@@ -116,9 +117,11 @@ def line_problems(line: dict, landed: float, need_item: dict, cap: float) -> lis
 
 
 def rank_bids(bids: list[dict], need_item: dict, cap: float, meta: dict[str, dict], sealed_at: dict[str, int],
-              rejections: Optional[dict[str, list[str]]] = None, verified: Optional[dict[str, int]] = None) -> dict:
-    """-> {"ranked": [...], "disqualified": [...]}. Each ranked entry names the best eligible line of that bid."""
-    rejections, verified = rejections or {}, verified or {}
+              rejections: Optional[dict[str, list[str]]] = None, verified: Optional[dict[str, int]] = None,
+              perks_value: Optional[dict[str, float]] = None) -> dict:
+    """-> {"ranked": [...], "disqualified": [...]}. Each ranked entry names the line the market picked for that
+    bid: the cheapest eligible one. score = quality-adjusted landed price less perks value (as scoring.ts does)."""
+    rejections, verified, perks_value = rejections or {}, verified or {}, perks_value or {}
     ranked, out = [], []
     for bid in bids:
         sid = bid["seller_id"]
@@ -133,7 +136,7 @@ def rank_bids(bids: list[dict], need_item: dict, cap: float, meta: dict[str, dic
                 why.append({"line": i, "condition": ln["offered_condition"], "landed": landed, "reasons": problems})
                 continue
             adj = quality_adjusted(landed, ln["offered_condition"], meta[sid]["returns_days"], meta[sid]["record"])
-            if best is None or adj < best["adjusted"]:
+            if best is None or landed < best["landed"]:   # alternatives: the cheapest allowed line is the one picked
                 best = {"line": i, "condition": ln["offered_condition"], "landed": landed, "adjusted": adj}
         if best is None:
             cheapest = min(why, key=lambda w: w["landed"]) if why else {"line": 0, "condition": "", "landed": 0.0, "reasons": ["no line"]}
@@ -141,8 +144,11 @@ def rank_bids(bids: list[dict], need_item: dict, cap: float, meta: dict[str, dic
                         "line": cheapest["line"], "landed": cheapest["landed"], "condition": cheapest["condition"]})
             continue
         ranked.append({"bid_id": bid["id"], "seller_id": sid, **best, "verified": verified.get(bid["id"], 0),
-                       "sealed_at": sealed_at.get(bid["id"], 0)})
-    ranked.sort(key=lambda r: (r["adjusted"], -r["verified"], r["sealed_at"], r["bid_id"]))
+                       "sealed_at": sealed_at.get(bid["id"], 0),
+                       "score": round(best["adjusted"] - perks_value.get(bid["id"], 0.0), 2),
+                       "alternatives": [{"line": j, "condition": l["offered_condition"], "unit_price": l["unit_price"]}
+                                        for j, l in enumerate(bid["lines"])]})
+    ranked.sort(key=lambda r: (r["score"], -r["verified"], r["sealed_at"], r["bid_id"]))
     for n, r in enumerate(ranked, 1):
         r["rank"] = n
     return {"ranked": ranked, "disqualified": out}

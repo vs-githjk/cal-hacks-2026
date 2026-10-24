@@ -1,8 +1,7 @@
 """Tests for the end-to-end demo runner. Run from the repo root: python3 -m pytest demo/tests
 
 The runner must complete offline, block the injected listing in beat 3, approve only on the third try in beat 4,
-and emit JSON that validates against the contracts (contracts/, plus the pending copies for Goal, OwnedPart and
-LossReport until Lane A and Lane B merge).
+and emit JSON that validates against the contracts on main (contracts/). One REAL mirror seller wins round 1.
 """
 import io
 import json
@@ -73,7 +72,7 @@ def test_beat1_skips_the_owned_psu_and_cites_the_entry(run):
     assert psu["skipped_owned_part_id"] == "owned-psu"
     assert any("owned-psu" in s and "750 W PSU" in s for s in b(run, 1)["skip_lines"])
     assert [i["sku_spec"] for i in b(run, 1)["need"]["items"]] == ["rtx 5070 ti"]
-    assert goal["cap"] == 900.0 and goal["items"][0]["allowed_conditions"] == ["new", "open-box"]
+    assert goal["cap"] == 1300.0 and goal["items"][0]["allowed_conditions"] == ["new", "open-box"]
 
 
 def test_sellers_never_see_the_cap(run):
@@ -92,7 +91,7 @@ def test_beat2_every_bid_is_labelled_and_mirror_bids_carry_listing_urls(run):
         for line in x["lines"]:
             assert line["origin"] in ("MIRROR", "SIM") and line["listing_url"].startswith("http")
             if line["origin"] == "MIRROR":
-                assert line["listing_url"] == x["lines"][0]["listing_url"] or "derived" not in line["basis"]
+                assert "derived" not in line["basis"]   # a real seller never gets an invented line
     assert len({x["seller_id"] for x in bids}) == len(bids)  # one agent per seller of record
     several = [x for x in bids if len(x["lines"]) > 1]
     assert several and all(len({l["offered_condition"] for l in x["lines"]}) == len(x["lines"]) for x in several)
@@ -102,12 +101,45 @@ def test_beat2_cheapest_eligible_bid_is_vetoed_with_a_cited_source(run):
     b2 = b(run, 2)
     ranked, cards = b2["ranking"]["ranked"], b2["cards"]
     assert ranked[0]["seller_id"] == "shady-sam" and cards[0]["recommendation"] == "veto"
+    assert cards[0]["call_reason"]["rule_id"] == "advocate.condition"   # Lane A's real call_reason and closed summary
     assert cards[0]["call_reason"]["source_url"].endswith("shady-sam-gpu-5070ti-lies.html")
     rules = {w["rule_id"] for w in cards[0]["warnings"]}
-    assert "advocate.claim_price" in rules  # the false "was" price
+    assert rules == {"advocate.condition", "advocate.price"}  # the page shows open-box; the false "was" price
     assert all(w["source_url"].startswith("http") for c in cards for w in c["warnings"])
     assert any("highest recorded $829.00" in w["text"] for w in cards[0]["warnings"])
-    assert b2["winner"]["seller_id"] == "honest-hal" and b2["winner_seller_id"] == "honest-hal"
+    assert b2["winner"]["seller_id"] == "best-buy" and b2["winner_seller_id"] == "best-buy"
+
+
+def test_beat2_a_real_mirror_seller_wins_on_a_real_line(run):
+    b2 = b(run, 2)
+    win = next(x for x in b2["bids"] if x["id"] == b2["winner"]["bid_id"])
+    assert win["origin"] == "MIRROR" and win["lines"][b2["winner"]["line"]]["origin"] == "MIRROR"
+    assert win["lines"][b2["winner"]["line"]]["unit_price"] == 1249.99 and 1249.99 <= b(run, 1)["goal"]["cap"]
+    assert win["mirror_snapshot_id"].startswith("bestbuy-")
+    card = next(c for c in b2["cards"] if c["bid_id"] == win["id"])
+    assert card["recommendation"] == "caution" and card["warnings"][0]["rule_id"] == "advocate.fit_unknown"  # length not captured: said, not guessed
+    assert all(s["origin"] == "SIM" for s in b2["sellers"] if s["id"] in {"shady-sam", "bargain-bin", "lowball", "fair-price-pc", "gadget-grove"})
+
+
+def test_seller_model_one_seller_two_condition_lines_cheapest_allowed_line_is_picked(run):
+    b2 = b(run, 2)
+    grove = next(x for x in b2["bids"] if x["seller_id"] == "gadget-grove")
+    assert [l["offered_condition"] for l in grove["lines"]] == ["new", "open-box"]
+    entry = next(r for r in b2["ranking"]["ranked"] if r["seller_id"] == "gadget-grove")
+    assert entry["condition"] == "open-box" and entry["landed"] == min(l["unit_price"] for l in grove["lines"])
+    assert [a["condition"] for a in entry["alternatives"]] == ["new", "open-box"]   # lines are alternatives, never summed
+    assert entry["landed"] < grove["lines"][0]["unit_price"]
+    card = next(c for c in b2["cards"] if c["bid_id"] == grove["id"])
+    assert card["line"] == entry["line"] == 1 and card["judged_condition"] == "open-box"
+    assert not any(w["rule_id"] == "advocate.spec" for w in card["warnings"])   # allowed open-box is not "you asked for new"
+
+
+def test_advice_compares_on_quality_adjusted_price_not_raw_price(run):
+    ranked = b(run, 2)["ranking"]["ranked"]
+    by = {r["seller_id"]: r for r in ranked}
+    assert by["gadget-grove"]["landed"] < by["best-buy"]["landed"] < by["fair-price-pc"]["landed"]
+    assert by["best-buy"]["adjusted"] < by["gadget-grove"]["adjusted"]    # open-box and unknown returns cost points
+    assert [r["adjusted"] for r in ranked] == sorted(r["adjusted"] for r in ranked)
 
 
 def test_beat2_incompatible_part_is_vetoed_by_the_fit_checker(run):
@@ -134,7 +166,7 @@ def test_beat2_sealing_and_anti_snipe(run):
 
 def test_beat2_mirror_bids_over_the_cap_are_out_and_unknown_condition_is_not_guessed(run):
     out = {d["seller_id"]: d for d in b(run, 2)["ranking"]["disqualified"]}
-    assert "over the goal cap" in " ".join(out["best-buy"]["reasons"])
+    assert "over the goal cap" in " ".join(out["ebay-263900"]["reasons"]) and "ebay-442526" in out
     assert any("will not guess" in r for r in out["micro-center"]["reasons"])
 
 
@@ -144,13 +176,16 @@ def test_beat2_every_advocate_reason_is_speakable(run):
         assert not dropped and set(kept) == {"rule_id", "summary", "host"}, (c["call_reason"], dropped)
 
 
-def test_real_fit_checker_and_shield_are_actually_called():
+def test_real_fit_checker_advocate_claim_check_and_shield_are_actually_called():
     from data.fit_checker import check_fit
     from shield.core import screen
-    with mock.patch("demo.standins.advocate.check_fit", wraps=check_fit) as fit, \
+    mod, how = adapters.advocate_checks()
+    assert how.startswith("REAL agents/advocate/checks.py") and mod.__file__.endswith("agents/advocate/checks.py")
+    with mock.patch.object(mod, "check_fit", wraps=check_fit) as fit, mock.patch.object(mod, "advise", wraps=mod.advise) as adv, \
+            mock.patch.object(mod, "call_reason", wraps=mod.call_reason) as cr, \
             mock.patch("demo.round.screen", wraps=screen) as sh, mock.patch("demo.beats.screen", wraps=screen) as sh3:
         full_run()
-    assert fit.call_count >= 8 and sh.call_count >= 10 and sh3.call_count == 2
+    assert fit.call_count >= 8 and adv.call_count >= 8 and cr.call_count >= 8 and sh.call_count >= 10 and sh3.call_count == 2
 
 
 # ---------- beat 3 ----------
@@ -191,10 +226,10 @@ def test_beat4_mandate_is_above_the_allowance_and_binds_the_winner(run):
     b4, b1 = b(run, 4), b(run, 1)
     m = b4["mandate"]
     assert m["amount"] == b(run, 2)["winner"]["landed"] > b1["allowance"]["per_purchase_limit"]
-    assert m["within_allowance"] is False and m["payee"] == "honest-hal@pay.example.test"
+    assert m["within_allowance"] is False and m["payee"] == "best-buy@pay.example.test"
     assert m["tap_signature"] == b4["signature"]["headers"]["Signature"]
-    assert b4["call_script"]["stripped"] == [] and "773.22" in b4["call_script"]["deal_line"]
-    assert b4["advocate_reason"]["rule_id"] == "advocate.claim_price"
+    assert b4["call_script"]["stripped"] == [] and "1,249.99" in b4["call_script"]["deal_line"]
+    assert b4["advocate_reason"]["rule_id"] == "advocate.condition"
 
 
 def test_beat4_signature_verifies_and_replay_or_edit_fails(run):
@@ -241,15 +276,18 @@ def test_stripe_charge_test_sends_the_key_only_in_the_header_and_returns_no_key(
         def __exit__(self, *a):
             return False
 
-    def fake_urlopen(req, timeout=None):
+    def fake_urlopen(req, timeout=None, context=None):
+        seen["ctx"] = context
         seen["auth"], seen["idem"], seen["body"], seen["url"] = req.get_header("Authorization"), req.get_header("Idempotency-key"), req.data.decode(), req.full_url
         return Resp(json.dumps({"id": "pi_1", "object": "payment_intent", "amount": 77322, "currency": "usd", "status": "succeeded"}).encode())
     from pay.mandate import idempotency_key, new_mandate
-    m = new_mandate(deal_id="deal-t", buyer_id="joe", amount=773.22, payee="honest-hal@pay.example.test")
+    m = new_mandate(deal_id="deal-t", buyer_id="tony-stark", amount=773.22, payee="honest-hal@pay.example.test")
     out = stripe_charge_test(m, key, urlopen=fake_urlopen)
     assert seen["auth"] == f"Bearer {key}" and key not in seen["body"] and key not in json.dumps(out)
     assert seen["idem"] == idempotency_key(m) == out["idempotency_key"] and "pm_card_visa" in seen["body"] and "amount=77322" in seen["body"]
     assert seen["url"].startswith("https://api.stripe.com/")
+    import ssl
+    assert seen["ctx"].verify_mode == ssl.CERT_REQUIRED and seen["ctx"].check_hostname   # verification stays on
 
 
 def test_beat4_uses_the_env_signing_key_when_it_is_usable(tmp_path):
@@ -269,8 +307,8 @@ def test_beat5_loss_reports_have_bands_reasons_and_sources_only(run):
     reports = b(run, 5)["round1_loss_reports"]
     by = {r["seller_id"]: r for r in reports}
     assert by["shady-sam"]["reason"] == "advocate_veto" and by["bargain-bin"]["reason"] == "fit"
-    assert by["gadget-grove"]["reason"] == "price" and by["gadget-grove"]["gap_band"] == "within10"
-    assert by["best-buy"]["gap_band"] == "over20" and "lowball" not in by and "honest-hal" not in by
+    assert by["gadget-grove"]["reason"] == "price" and by["gadget-grove"]["gap_band"] == "within5"
+    assert by["ebay-263900"]["gap_band"] == "within20" and "lowball" not in by and "best-buy" not in by  # the winner gets no loss report
     for r in reports:
         assert set(r) == {"id", "round_id", "seller_id", "won", "gap_band", "reason", "source_url", "created_at"}
         assert r["won"] is False and r["source_url"].startswith("http")
@@ -280,10 +318,11 @@ def test_beat5_learner_closes_the_gap_inside_its_floor_against_a_static_control(
     b5 = b(run, 5)
     assert b5["learner"]["round2_price"] < b5["learner"]["round1_price"] and b5["learner"]["above_floor"]
     assert b5["learner"]["round2_price"] >= b5["learner"]["floor"]
-    assert b5["control"] == {"round1_price": 773.22, "round2_price": 773.22, "unchanged": True}
+    assert b5["control"] == {"round1_price": 1289.0, "round2_price": 1289.0, "unchanged": True}
+    assert b5["learning_seller"] == "gadget-grove" and b5["control_seller"] == "fair-price-pc"
     assert b5["round2"]["winner"]["seller_id"] == "gadget-grove" and b5["gap_closed"] is True
-    assert b5["strategy"]["diff"] == {"price_step": {"from": 0.0, "to": 0.07}}
-    assert next(r for r in b5["round2"]["loss_reports"] if r["seller_id"] == "honest-hal")["gap_band"] == "within5"
+    assert b5["strategy"]["diff"] == {"price_step": {"from": 0.0, "to": 0.03}}
+    assert next(r for r in b5["round2"]["loss_reports"] if r["seller_id"] == "fair-price-pc")["gap_band"] == "within5"
     assert "SIM template" in b5["what_to_change_origin"]
 
 
@@ -320,26 +359,55 @@ def test_contract_validation_catches_a_broken_artifact(run):
 
 # ---------- adapters ----------
 
-def test_claim_check_adapter_uses_the_stand_in_for_the_mock_and_the_real_one_when_it_takes_fetch():
-    _, label, real = adapters.claim_checker()
-    assert real is False and "stand-in" in label
-    fake = mock.Mock()
-    fake.check_claim = lambda claim, fetch=None, history=None: {"result": "verified"}
-    with mock.patch.dict(sys.modules, {"data.claim_check": fake}), mock.patch("data.claim_check", fake, create=True):
-        fn, label, real = adapters.claim_checker()
-    assert real is True and fn is fake.check_claim and label.startswith("REAL")
-
-
-def test_stand_in_claim_check_matches_lane_c_wording():
+def test_claim_check_adapter_returns_the_real_lane_c_check_and_it_reads_hosted_pages_offline():
+    from data import claim_check
     from demo.pages import fixture_fetch
-    from demo.standins.claim_check import check_claim
+    fn, label, real = adapters.claim_checker()
+    assert real is True and fn is claim_check.check_claim and label.startswith("REAL data.claim_check")
     base = "http://127.0.0.1:8765/"
-    r = check_claim({"evidence_url": base + "shady-sam-gpu-5070ti-lies.html", "field": "was_price", "value": 1099.0}, fetch=fixture_fetch)
+    r = fn({"evidence_url": base + "shady-sam-gpu-5070ti-lies.html", "field": "was_price", "value": 1099.0}, fetch=fixture_fetch)
     assert r["result"] == "false" and "did not match the price history" in r["reason"] and r["evidence_hash"]
-    r = check_claim({"evidence_url": base + "honest-hal-gpu-5070ti.html", "field": "condition", "value": "new"}, fetch=fixture_fetch)
+    r = fn({"evidence_url": base + "honest-hal-gpu-5070ti.html", "field": "condition", "value": "new"}, fetch=fixture_fetch)
     assert r["result"] == "verified"
-    r = check_claim({"evidence_url": "https://www.bestbuy.com/x", "field": "condition", "value": "new"}, fetch=fixture_fetch)
+    r = fn({"evidence_url": "https://www.bestbuy.com/x", "field": "condition", "value": "new"}, fetch=fixture_fetch)
     assert r["result"] == "unverified"  # a page we cannot read is never "false"
+
+
+def test_advocate_adapter_loads_lane_a_checks_without_the_uagents_runtime():
+    mod, how = adapters.advocate_checks()
+    assert callable(mod.advise) and mod.CALL_SUMMARIES["fit.gpu_length"] and how.startswith("REAL agents/advocate/checks.py")
+    for rule, text in mod.CALL_SUMMARIES.items():   # every closed summary is speakable on the call
+        kept, dropped = clean_advocate_reason({"rule_id": rule, "summary": text, "source_url": "https://example.com/x"})
+        assert not dropped, (rule, dropped)
+
+
+def test_no_pending_contract_copies_remain():
+    assert not (ROOT / "demo" / "contracts_pending").exists()
+    assert not (ROOT / "demo" / "standins" / "advocate.py").exists() and not (ROOT / "demo" / "standins" / "claim_check.py").exists()
+    for name in ("Goal", "OwnedPart", "LossReport"):
+        assert (ROOT / "contracts" / f"{name}.schema.json").exists()
+
+
+def test_stripe_env_reads_only_the_key_from_env_or_file_and_never_returns_other_values(tmp_path):
+    f = tmp_path / ".env"
+    f.write_text("OTHER=secret-other\nSTRIPE_SECRET_KEY='sk_test_FILEKEY'\n", encoding="utf-8")
+    assert run_demo.stripe_env(f, {}) == {"STRIPE_SECRET_KEY": "sk_test_FILEKEY"}
+    assert run_demo.stripe_env(f, {"STRIPE_SECRET_KEY": "sk_test_ENVKEY"}) == {"STRIPE_SECRET_KEY": "sk_test_ENVKEY"}
+    assert run_demo.stripe_env(tmp_path / "missing", {}) == {}
+
+
+def test_stripe_http_error_shows_stripe_error_type_never_the_key():
+    import urllib.error
+    from demo import approval_flow
+    key = "sk_test_FAKEKEY1234567890"
+
+    def boom(mandate, k):
+        raise urllib.error.HTTPError("https://api.stripe.com/v1/payment_intents", 401, "Unauthorized", {},
+                                     io.BytesIO(json.dumps({"error": {"type": "invalid_request_error", "code": "api_key_invalid"}}).encode()))
+    with mock.patch.object(approval_flow, "stripe_charge_test", boom):
+        run, text = full_run(use_stripe=True, env={STRIPE_ENV: key})
+    assert run["beats"]["4"]["charge"]["mode"] == "SIM stub" and "HTTP 401, invalid_request_error/api_key_invalid" in text
+    assert key not in text
 
 
 # ---------- console and CLI ----------

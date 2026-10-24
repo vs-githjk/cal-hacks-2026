@@ -2,7 +2,8 @@
 
 Order, as the product defines it: sellers bid sealed; the referee checks floors and quantities; Shield screens
 every seller's text before the advocate sees it; claims are checked against their pages; bids are scored on
-quality-adjusted landed price; the advocate (REAL fit checker, claim check) vetoes traps with a source; the
+quality-adjusted landed price of the cheapest allowed line; the advocate (REAL agents/advocate/checks.py, fit
+checker and claim check) vetoes traps with a source; the
 cheapest bid that survives wins. Pure and silent: printing is done by the caller from the returned dict.
 """
 from __future__ import annotations
@@ -14,7 +15,8 @@ from demo.adapters import claim_checker
 from demo.common import SOURCE_OF, validate
 from demo.pages import fixture_fetch
 from demo.sellers import Seller, make_bid
-from demo.standins import advocate, market
+from demo import advice
+from demo.standins import market
 from shield.core import screen
 from shield.service import attack_type
 
@@ -110,11 +112,11 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
     meta = {s.id: {"shipping": s.shipping, "returns_days": s.returns_days, "record": s.record} for s in sellers}
     ranking = market.rank_bids(bids, item, cap, meta, sealed_at, rejections, verified)
 
-    # 6. advocate: REAL fit checker and the claim results; cheapest surviving bid wins
+    # 6. advocate: Lane A's real checks.advise on the picked line, plus false claims from the claim check; cheapest surviving bid wins
     bid_by_id = {b["id"]: b for b in bids}
     cards = []
     for r in ranking["ranked"]:
-        cards.append(advocate.advise(need, bid_by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs))
+        cards.append(advice.advise(need, bid_by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs))
     for card in cards:
         validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")})
     winner = next((r for r, c in zip(ranking["ranked"], cards) if c["recommendation"] != "veto"), None)

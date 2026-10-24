@@ -5,8 +5,13 @@ one sealed bid. Prices come from a deterministic policy (list price less a disco
 never from a model. Mirrors origin/agents agents/sellers/policy.py make_bid.
 
 MIRROR agents bid from real, dated listings in data/mirror/snapshots (listing URL and snapshot id on every line).
-Where a seller has no real listing for a condition, the agent adds a derived line labelled SIM. SIM sellers are
-ours: Honest Hal and Shady Sam from Lane C's hosted pages (data/liar_pages/site), plus two more labelled SIM.
+They never get an invented line: a real seller bids only the conditions its real listings show. SIM sellers are
+ours: Shady Sam from Lane C's hosted pages (data/liar_pages/site) and four more labelled SIM, priced inside the real
+market band ($1,200 to $1,300 at the retailers on Oct 24) so one real seller can win honestly. Sam's page is
+Lane C's and shows $789, so he is the "too good to be true" trap. Honest Hal's page is used by beat 3 only: at $789
+his honest listing would undercut every real seller, so he does not bid in the market round.
+Seller model (LOCKED): the lines of one bid are ALTERNATIVES for the same SKU; the market takes the cheapest line
+whose condition the goal allows. Gadget Grove (SIM) carries two lines, new and open-box.
 """
 from __future__ import annotations
 
@@ -21,8 +26,6 @@ from demo.pages import page_listing, read_page
 
 SKU = "rtx 5070 ti"
 CHIPSET = "RTX 5070 Ti"
-# SIM derivation rules for lines a real listing does not give us (labelled SIM on every line that uses them).
-OPEN_BOX_DISCOUNT = 0.10
 FLOOR_OF_LIST = 0.93  # a MIRROR agent never bids below 93 percent of its listed price (SIM assumption)
 
 SELLER_OF_RECORD = {  # snapshot file prefix -> seller of record for listings the retailer sells itself
@@ -107,14 +110,6 @@ def _mirror_line(offer: dict, condition: str) -> Line:
                 snapshot_date=card["snapshot_date"])
 
 
-def _derived_open_box(base: Line) -> Line:
-    price = round(base.list_price * (1 - OPEN_BOX_DISCOUNT), 2)
-    return Line(condition="open-box", list_price=price, floor=round(price * FLOOR_OF_LIST, 2), listing_url=base.listing_url,
-                origin=SIM, page_condition=None,
-                basis=f"derived open-box line: {OPEN_BOX_DISCOUNT:.0%} under its own new listing, no open-box listing captured",
-                attrs=dict(base.attrs), snapshot_id=base.snapshot_id, snapshot_date=base.snapshot_date)
-
-
 def mirror_sellers(offers: list[dict]) -> list[Seller]:
     """One agent per seller of record. Amazon selling directly is one agent; each eBay listing is its own agent
     because the snapshot does not capture the seller handle."""
@@ -141,15 +136,14 @@ def mirror_sellers(offers: list[dict]) -> list[Seller]:
             if cond not in by_cond or o["card"]["price"] < by_cond[cond]["card"]["price"]:
                 by_cond[cond] = o
         lines = [_mirror_line(o, cond) for cond, o in sorted(by_cond.items())]
-        if "open-box" not in by_cond and "new" in by_cond:
-            lines.append(_derived_open_box(next(l for l in lines if l.condition == "new")))
         shipping_txt = next((o["listing"].get("shipping") for o in group if o["listing"].get("shipping")), "")
         first = group[0]
         claims = [{"text": f"{l.condition} per the listing", "kind": "spec", "field": "condition", "value": l.condition,
                    "evidence_url": l.listing_url} for l in lines if l.origin == MIRROR and l.condition != "unknown"]
         sellers.append(Seller(id=sid, name=names[sid], origin=MIRROR, lines=lines, shipping=0.0,
-                              returns_days=0, claims=claims,
-                              note=f"delivery per listing: {shipping_txt or 'not captured'}; first listing {first['card']['id']}"))
+                              returns_days=0, claims=claims, payee=f"{sid}@pay.example.test",
+                              note=f"delivery per listing: {shipping_txt or 'not captured'}; first listing {first['card']['id']}; "
+                                   "payee is a SIM test address, no real merchant is paid"))
     return sellers
 
 
@@ -168,32 +162,46 @@ def _sim_hosted(seller_key: str, name: str, discount: float, floor_pct: float, l
               if lies else
               [{"text": "New, sealed box", "kind": "spec", "field": "condition", "value": "new", "evidence_url": url},
                {"text": "30-day returns", "kind": "returns", "field": "return_days", "value": 30, "evidence_url": url}])
+    if lies:   # one claim in Sam's page is true; the claim check marks it verified next to the two false ones
+        claims.append({"text": "30-day returns", "kind": "returns", "field": "return_days", "value": 30, "evidence_url": url})
     sellers_json = json.loads((SITE / "sellers.json").read_text(encoding="utf-8"))["sellers"]
     return Seller(id=seller_key, name=name, origin=SIM, lines=[line], shipping=0.0, returns_days=30,
                   payee=sellers_json[seller_key]["payee"], claims=claims,
                   page_html=read_page(html_name), **kw)
 
 
+def _sim_line(slug: str, condition: str, list_price: float, floor: float, basis: str, length_mm: int = 303, **kw) -> Line:
+    url = f"https://example.com/sim/{slug}/rtx-5070-ti"
+    return Line(condition, list_price, floor, url, SIM, page_condition=condition, basis=basis,
+                attrs={"category": "gpu", "chipset": CHIPSET, "length_mm": length_mm}, **kw)
+
+
+def _sim_seller(sid: str, name: str, lines: list[Line], **kw) -> Seller:
+    claims = [{"text": f"{l.condition.capitalize()}, retail box", "kind": "spec", "field": "condition", "value": l.condition,
+               "evidence_url": l.listing_url} for l in lines]
+    return Seller(sid, name, SIM, lines, 0.0, 30, payee=f"{sid}@pay.example.test", claims=claims, **kw)
+
+
 def sim_sellers() -> list[Seller]:
-    sim_url = lambda slug: f"https://example.com/sim/{slug}/rtx-5070-ti"
-    hal = _sim_hosted("honest-hal", "Honest Hal's Parts (SIM)", 0.02, 0.94, lies=False, control=True)
+    band = "SIM listing priced inside the real market band"
     sam = _sim_hosted("shady-sam", "Shady Sam's Deals (SIM)", 0.04, 0.89, lies=True)
-    # A card that is too long for Joe's 305 mm case: the fit checker, not a model, vetoes it.
-    xl = Line("new", 764.0, 740.0, sim_url("bargain-bin"), SIM, page_condition="new",
-              basis="SIM listing, 5070 Ti with a 4-slot cooler", attrs={"category": "gpu", "chipset": CHIPSET, "length_mm": 336})
-    bin_ = Seller("bargain-bin", "Bargain Bin Hardware (SIM)", SIM, [xl], 0.0, 30, payee="bargain-bin@pay.example.test",
-                  claims=[{"text": "New, retail box", "kind": "spec", "field": "condition", "value": "new", "evidence_url": xl.listing_url}])
-    # The learning seller: fair, honest and a little too high. It adjusts after its first loss report.
-    gg = Line("new", 840.0, 740.0, sim_url("gadget-grove"), SIM, page_condition="new", discount=0.025,
-              basis="SIM listing, honest card and 303 mm", attrs={"category": "gpu", "chipset": CHIPSET, "length_mm": 303})
-    grove = Seller("gadget-grove", "Gadget Grove (SIM)", SIM, [gg], 0.0, 30, payee="gadget-grove@pay.example.test", learning=True,
-                   claims=[{"text": "New, retail box", "kind": "spec", "field": "condition", "value": "new", "evidence_url": gg.listing_url}])
+    # A card that is too long for Tony Stark's 305 mm case: the fit checker, not a model, vetoes it.
+    bin_ = _sim_seller("bargain-bin", "Bargain Bin Hardware (SIM)",
+                       [_sim_line("bargain-bin", "new", 1199.0, 1150.0, f"{band}, 5070 Ti with a 4-slot cooler", length_mm=336)])
+    # The learning seller: honest and a little too high, with two condition lines (the seller-model demo).
+    # It adjusts after its first loss report.
+    grove = _sim_seller("gadget-grove", "Gadget Grove (SIM)", [
+        _sim_line("gadget-grove", "new", 1349.0, 1230.0, f"{band}, honest card and 303 mm", discount=0.025),
+        _sim_line("gadget-grove", "open-box", 1279.0, 1190.0, f"{band}, open-box line of the same card", discount=0.025)],
+        learning=True)
     # A seller whose agent tries to bid under its own floor: the referee rejects it before anyone sees it.
-    lb = Line("new", 760.0, 735.0, sim_url("lowball"), SIM, page_condition="new", bid_override=690.0,
-              basis="SIM listing", attrs={"category": "gpu", "chipset": CHIPSET, "length_mm": 303})
-    lowball = Seller("lowball", "Lowball Direct (SIM)", SIM, [lb], 0.0, 30, payee="lowball@pay.example.test", note="rogue: bids under its floor",
-                     claims=[])
-    return [hal, sam, bin_, grove, lowball]
+    lowball = _sim_seller("lowball", "Lowball Direct (SIM)",
+                          [_sim_line("lowball", "new", 1180.0, 1150.0, band, bid_override=1090.0)], note="rogue: bids under its floor")
+    lowball.claims = []
+    # The static control: honest, fair, and a little above the real winner. It never changes its bid.
+    fair = _sim_seller("fair-price-pc", "Fair Price PC (SIM)", [_sim_line("fair-price-pc", "new", 1289.0, 1200.0, f"{band}, honest card and 303 mm")],
+                       control=True)
+    return [sam, bin_, grove, lowball, fair]
 
 
 def all_sellers() -> tuple[list[Seller], list[str]]:

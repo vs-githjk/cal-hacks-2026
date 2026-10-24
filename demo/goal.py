@@ -1,7 +1,6 @@
-"""Beat 1: Joe's goal and ownership memory. SIM stand-in for Lane A's agents/buyer/goal.py (not merged).
+"""Beat 1: Tony Stark's goal and ownership memory. SIM stand-in for Lane A's agents/buyer/goal.py.
 
-Same shapes as Lane A's Goal, OwnedPart and Need (contracts: Goal and OwnedPart are pending copies under
-demo/contracts_pending/). The persona is SIM: nothing here is a real buyer. The one derived fact that is NOT
+Same shapes as the Goal, OwnedPart and Need contracts on main (contracts/). The persona is SIM: nothing here is a real buyer. The one derived fact that is NOT
 invented comes from real code: the PSU the RTX 5070 Ti needs is read from data.fit_checker.tables.GPU_POWER.
 """
 from __future__ import annotations
@@ -12,14 +11,14 @@ from datetime import datetime, timedelta
 from demo.common import SIM, money, utc_iso, validate
 from data.fit_checker.tables import GPU_POWER
 
-BUYER_ID = "joe"
-GOAL_TEXT = "RTX 5070 Ti that fits my case, under $900, by Friday, new or open-box"
+BUYER_ID = "tony-stark"
+GOAL_TEXT = "RTX 5070 Ti that fits my case, under $1,300, by Friday, new or open-box"
 ALLOWED_CONDITIONS = ("new", "open-box", "refurbished", "used")
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
-def joe_owned_parts(now: datetime) -> list[dict]:
-    """What Joe told the agent earlier (SIM persona). Attrs are SpecCard attrs the fit checker reads."""
+def tony_stark_owned_parts(now: datetime) -> list[dict]:
+    """What Tony Stark told the agent earlier (SIM persona). Attrs are SpecCard attrs the fit checker reads."""
     when = utc_iso(now - timedelta(days=9))
     told = lambda text: f"'{text}', told on {when[:10]}"
     parts = [
@@ -71,7 +70,7 @@ def build_goal(text: str, owned: list[dict], now: datetime) -> dict:
         psu_line["skipped_owned_part_id"] = mine["id"]
     gpu_line = {"part": "gpu", "sku_spec": p["sku_spec"], "condition": p["allowed_conditions"][0],
                 "allowed_conditions": p["allowed_conditions"], "variant": "retail", "quantity": 1}
-    goal = {"id": "goal-joe-5070ti", "buyer_id": BUYER_ID, "type": "part_by_date", "items": [gpu_line, psu_line],
+    goal = {"id": "goal-tony-stark-5070ti", "buyer_id": BUYER_ID, "type": "part_by_date", "items": [gpu_line, psu_line],
             "cap": p["cap"], "deadline": p["deadline"], "state": "ACTIVE", "reserved_amount": 0,
             "created_at": utc_iso(now), "notes": f"'{text}'"}
     return validate("Goal", goal)
@@ -80,16 +79,16 @@ def build_goal(text: str, owned: list[dict], now: datetime) -> dict:
 def need_from_goal(goal: dict, auction_window_s: int = 12) -> dict:
     """The Need sellers see. Sealed: the cap stays with the buyer agent in `spend_limit`, which the market
     strips before bids open (Lane B redaction). Owned lines are dropped."""
-    items = [{"sku_spec": i["sku_spec"], "grade": i["condition"], "pack_size": i["variant"], "quantity": i["quantity"],
+    items = [{"sku_spec": i["sku_spec"], "quantity": i["quantity"],
               "unit": "each", "condition": i["condition"], "allowed_conditions": i.get("allowed_conditions", [i["condition"]]),
               "variant": i["variant"]} for i in goal["items"] if not i.get("skipped_owned_part_id")]
-    return validate("Need", {"id": "need-joe-5070ti", "buyer_id": goal["buyer_id"], "items": items,
+    return validate("Need", {"id": "need-tony-stark-5070ti", "buyer_id": goal["buyer_id"], "items": items,
                              "delivery_window": f"by {goal['deadline']}", "spend_limit": goal["cap"], "consent": True,
                              "auction_window_s": auction_window_s, "source": "simulated"})
 
 
-def joe_allowance(now: datetime) -> dict:
-    """SIM: what Joe may spend without a call. A brand new buyer starts at 0; Joe has two clean receiving checks."""
+def tony_stark_allowance(now: datetime) -> dict:
+    """SIM: what Tony Stark may spend without a call. A brand new buyer starts at 0; Tony Stark has two clean receiving checks."""
     return validate("Allowance", {"buyer_id": BUYER_ID, "currency": "USD", "per_purchase_limit": 250.0, "period_limit": 500.0,
                            "period": "month", "spent_this_period": 120.0, "ladder_step": 1,
                               "updated_at": utc_iso(now)})
@@ -107,21 +106,21 @@ def needs_call(allowance: dict, amount: float) -> tuple[bool, str]:
 
 def skip_lines(goal: dict, owned: list[dict]) -> list[str]:
     by_id = {o["id"]: o for o in owned}
-    return [f"skipped {i['part'].upper()} line ({i['sku_spec']}): Joe already owns {by_id[i['skipped_owned_part_id']]['item_name']}, "
+    return [f"skipped {i['part'].upper()} line ({i['sku_spec']}): Tony Stark already owns {by_id[i['skipped_owned_part_id']]['item_name']}, "
             f"entry {i['skipped_owned_part_id']}, {by_id[i['skipped_owned_part_id']]['notes']}"
             for i in goal["items"] if i.get("skipped_owned_part_id") in by_id]
 
 
 def run_beat1(now: datetime, say) -> dict:
-    owned = joe_owned_parts(now)
+    owned = tony_stark_owned_parts(now)
     goal = build_goal(GOAL_TEXT, owned, now)
     need = need_from_goal(goal)
-    allowance = joe_allowance(now)
-    say.header(1, "Joe sets a goal", "SIM stand-in for agents/buyer/goal.py (Lane A, not merged); PSU need read from real data.fit_checker.tables")
-    say.line(SIM, f'Joe: "{GOAL_TEXT}"')
+    allowance = tony_stark_allowance(now)
+    say.header(1, "Tony Stark sets a goal", "SIM stand-in for agents/buyer/goal.py (Lane A's is hardcoded to a 4070 Super and one condition); PSU need read from real data.fit_checker.tables")
+    say.line(SIM, f'Tony Stark: "{GOAL_TEXT}"')
     say.line(SIM, f"Goal {goal['id']}: {goal['type']}, cap {money(goal['cap'])}, deadline {goal['deadline']}, "
                   f"conditions {'/'.join(goal['items'][0]['allowed_conditions'])}, state {goal['state']}")
-    say.line(SIM, "Ownership memory (told by Joe, persona is SIM):")
+    say.line(SIM, "Ownership memory (told by Tony Stark, persona is SIM):")
     for o in owned:
         say.line(SIM, f"{o['id']}: {o['item_name']}  attrs {o['attrs']}", 1)
     for s in skip_lines(goal, owned):

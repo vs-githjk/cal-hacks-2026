@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,20 +34,40 @@ SCHEMA = "tech-bazaar-demo-run/1"
 NEEDS = {1: set(), 2: {1}, 3: set(), 4: {1, 2}, 5: {1, 2}}
 
 
+DEFAULT_ENV_FILE = Path(__file__).resolve().parents[2] / "lane-d" / ".env"   # main lane-d checkout, gitignored
+
+
+def stripe_env(path: Path = DEFAULT_ENV_FILE, environ: Optional[Mapping[str, str]] = None) -> dict:
+    """{"STRIPE_SECRET_KEY": ...} from the process environment, else from the lane-d .env file. Only that one name
+    is read; no value is ever printed. Returns {} when neither has it."""
+    environ = os.environ if environ is None else environ
+    if environ.get("STRIPE_SECRET_KEY"):
+        return {"STRIPE_SECRET_KEY": environ["STRIPE_SECRET_KEY"]}
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            k, _, v = line.partition("=")
+            if k.strip() == "STRIPE_SECRET_KEY" and v.strip():
+                return {"STRIPE_SECRET_KEY": v.strip().strip('"').strip("'")}
+    except OSError:
+        pass
+    return {}
+
+
 def provenance() -> dict:
     _, label, real = claim_checker()
     return {
-        "real_code": ["data.fit_checker (Lane C)", "shield.screen (Lane D)", "pay.mandate", "pay.callscript", "pay.approval", "pay.tap", "pay.replay"],
+        "real_code": ["agents/advocate/checks.py advise and call_reason (Lane A)", "data.claim_check (Lane C)", "contracts/*.schema.json (Goal, OwnedPart, Need, Bid, Claim, AdvocateCard, LossReport, Mandate, VoiceApproval, ShieldVerdict)",
+                      "data.fit_checker (Lane C)", "shield.screen (Lane D)", "pay.mandate", "pay.callscript", "pay.approval", "pay.tap", "pay.replay"],
         "claim_check": {"label": label, "real": real},
         "stand_ins": {
-            "agents/buyer goal parsing and ownership memory (Lane A, origin/agents)": "demo/goal.py",
-            "agents/sellers bid policy (Lane A, origin/agents)": "demo/sellers.py",
-            "agents/advocate card (Lane A, origin/agents)": "demo/standins/advocate.py",
-            "market rules: sealing, floor, scoring, loss reports (Lane B, origin/lane-b-market-floor)": "demo/standins/market.py, demo/learning.py",
+            "agents/buyer goal parsing and ownership memory (Lane A; goal.py is hardcoded to a 4070 Super and one condition)": "demo/goal.py",
+            "agents/sellers bid policy (Lane A; the runner's MIRROR agents bid from real listings instead)": "demo/sellers.py",
+            "market rules: sealing, floor, scoring (Lane B market/rules, TypeScript, node not installed)": "demo/standins/market.py (parity test: demo/tests/test_market_parity.py)",
+            "loss reports and seller learning (Lane B and Lane A)": "demo/learning.py",
             "merchant simulator (Lane C): verify_request is called directly": "demo/approval_flow.py",
             "call transport (Cartesia): transcripts typed by the runner": "demo/approval_flow.py",
         },
-        "data": {"MIRROR": "data/mirror/snapshots (real, dated listings)", "SIM": "Joe, Hal, Sam, Bargain Bin, Gadget Grove, Lowball, derived lines",
+        "data": {"MIRROR": "data/mirror/snapshots (real, dated listings)", "SIM": "Tony Stark, Sam, Hal (beat 3 page only), Bargain Bin, Gadget Grove, Lowball, Fair Price PC",
                  "LIVE": "none offline; Stripe test API only with --stripe"},
     }
 
@@ -60,6 +81,9 @@ def checks_of(run: Mapping) -> dict:
         top = b2["cards"][0] if b2["cards"] else None
         out["beat2_cheapest_eligible_vetoed_with_source"] = bool(
             top and top["recommendation"] == "veto" and all(w["source_url"] for w in top["warnings"]) and b2["winner"])
+        win = next((b for b in b2["bids"] if b["id"] == b2["winner"]["bid_id"]), None) if b2["winner"] else None
+        out["beat2_winner_is_a_real_mirror_seller"] = bool(win and win["origin"] == "MIRROR" and win["lines"][b2["winner"]["line"]]["origin"] == "MIRROR")
+        out["beat2_one_seller_has_new_and_open_box_lines"] = any({"new", "open-box"} <= {l["offered_condition"] for l in b["lines"]} for b in b2["bids"])
         out["beat1_psu_skipped"] = any(i.get("skipped_owned_part_id") for i in beats["1"]["goal"]["items"]) if "1" in beats else None
     if "3" in beats:
         out["beat3_injected_listing_blocked"] = beats["3"]["blocked"] and bool(beats["3"]["injected"]["evidence_spans"])
@@ -146,14 +170,16 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--beat", type=int, choices=[1, 2, 3, 4, 5], help="run a single beat")
     ap.add_argument("--json", action="store_true", help="print the run JSON to stdout (the story goes to stderr)")
     ap.add_argument("--stripe", action="store_true", help="use the Stripe TEST API when STRIPE_SECRET_KEY is an sk_test_ key")
+    ap.add_argument("--env-file", type=Path, default=DEFAULT_ENV_FILE, help="where STRIPE_SECRET_KEY is read from when --stripe is used")
     ap.add_argument("--out-dir", type=Path, default=OUT_DIR, help="where run-<timestamp>.json is written")
     ap.add_argument("--no-write", action="store_true", help="do not write the JSON file")
     args = ap.parse_args(argv)
     say = Narrator(True, sys.stderr if args.json else sys.stdout)
     say.note("Tech Bazaar end-to-end demo runner  (offline: no network, no real keys printed)")
     say.note("Tags: [LIVE] real outside party now   [MIRROR] our agent on a real dated listing   [SIM] generated by us")
-    say.note("Joe, the sellers named (SIM) and every derived line are simulated. Real code runs on them; the headers say which.")
-    run = run_all({args.beat} if args.beat else None, say=say, use_stripe=args.stripe)
+    say.note("Tony Stark, the sellers named (SIM) and every derived line are simulated. Real code runs on them; the headers say which.")
+    env = {**os.environ, **stripe_env(args.env_file)} if args.stripe else None
+    run = run_all({args.beat} if args.beat else None, say=say, use_stripe=args.stripe, env=env)
     path = None if args.no_write else write_run(run, args.out_dir)
     summary(say, run, path)
     if args.json:

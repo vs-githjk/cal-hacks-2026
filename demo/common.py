@@ -17,7 +17,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 CONTRACTS = ROOT / "contracts"
-PENDING = Path(__file__).resolve().parent / "contracts_pending"
 SITE = ROOT / "data" / "liar_pages" / "site"
 SNAPSHOTS = ROOT / "data" / "mirror" / "snapshots"
 LIVE, MIRROR, SIM = "LIVE", "MIRROR", "SIM"
@@ -31,12 +30,11 @@ def utc_iso(dt: datetime) -> str:
 
 
 def load_schema(name: str) -> dict:
-    """contracts/<name>.schema.json when it exists on this branch, else the pending copy under demo/."""
-    for base in (CONTRACTS, PENDING):
-        path = base / f"{name}.schema.json"
-        if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
-    raise FileNotFoundError(f"no schema for contract {name}")
+    """contracts/<name>.schema.json: every contract the demo uses is on main now."""
+    path = CONTRACTS / f"{name}.schema.json"
+    if not path.exists():
+        raise FileNotFoundError(f"no schema for contract {name}")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def schema_errors(name: str, obj: Any) -> list[str]:
