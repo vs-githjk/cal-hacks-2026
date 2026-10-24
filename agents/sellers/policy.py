@@ -9,6 +9,7 @@ CATALOG = json.loads((Path(__file__).parent / "sellers.json").read_text(encoding
 ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOTS = ROOT / "data" / "mirror" / "snapshots"
 CONDITIONS = {"new", "open-box", "refurbished", "used"}
+QUOTE_TTL_S = 600
 
 
 def _mirror_listings(name: str) -> list[dict]:
@@ -120,7 +121,8 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
                           "listing_id": card["id"],
                           "model_number": card.get("model_number"),
                           "snapshot_id": card["snapshot_id"], "snapshot_date": card["snapshot_date"],
-                          "floor_evidence": dict(inputs["floor"]), "shipping_evidence": dict(inputs["shipping"])})
+                          "floor_evidence": {k: inputs["floor"][k] for k in ("origin", "source", "observed_at")},
+                          "shipping_evidence": dict(inputs["shipping"])})
             origins.add("MIRROR")
     if not lines or len(origins) != 1:
         return None
@@ -161,6 +163,8 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
         "claims": ["MIRROR listing provenance attached per line; no merchant payment is enabled."]
                   if origin == "MIRROR" else list(seller["claims"]),
         "floor_check_passed": True, "mirror_snapshot_id": snapshot_id, "decision_trace": trace,
-        "expires_at": (now + timedelta(seconds=need.get("auction_window_s", 60))).isoformat(),
+        # The bid submission cutoff is the auction window. Review and approval happen afterward;
+        # keep the quote live for the shared 600-second review/call allowance.
+        "expires_at": (now + timedelta(seconds=QUOTE_TTL_S)).isoformat(),
         "origin": origin, "source": lines[0]["source"],
     }

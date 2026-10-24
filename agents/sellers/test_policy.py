@@ -1,5 +1,7 @@
 import sys
 import copy
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -30,6 +32,12 @@ def test_every_bid_validates_and_respects_floor():
         assert bid["floor_check_passed"]
         for line in bid["lines"]:
             assert line["unit_price"] >= s["listings"][line["sku_spec"]]["floor"]
+
+
+def test_quote_survives_review_and_call_window_for_shared_600_seconds():
+    now = datetime(2026, 10, 24, 5, 0, tzinfo=timezone.utc)
+    bid = make_bid(need(GPU), seller("seller_1"), now=now)
+    assert datetime.fromisoformat(bid["expires_at"]) == now.replace(minute=10)
 
 
 def test_below_floor_price_is_raised_to_floor():
@@ -99,6 +107,7 @@ def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():
         "bestbuy-20261024T0508Z", "2026-10-24T05:08:39.627Z", "Best Buy")
     assert line["model_number"] == "G507T-16GTC"
     assert line["floor_evidence"]["source"] == "https://seller.example/floor"
+    assert "1200.0" not in json.dumps(bid)  # private floor input is never serialized
     assert line["shipping"] == 0.0
     assert line["listing_id"] == card["id"]
     assert bid["total_landed_price"] == 1249.99
