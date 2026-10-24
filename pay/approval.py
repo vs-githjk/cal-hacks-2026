@@ -189,8 +189,10 @@ def approved_voice_record_matches(record: Any, mandate: Any, *,
         return False
     if validate_record(record):
         return False
-    # LOCKED rule (Vidyut, 08:40): approval is by phone call only; a typed or browser record never pays
-    if (record.get("channel") != "phone" or record.get("result") != "approved" or record.get("id") != mandate.get("approval_id")
+    # LOCKED rule (Vidyut, 08:40): approval is by phone call only; a typed or browser record never pays.
+    # "phone" is only a label, so the record must also carry the call's evidence (voice_cartesia: cartesia:<call_id>).
+    if (record.get("channel") != "phone" or not re.fullmatch(r"cartesia:\S+", str(record.get("recording_ref") or ""))
+            or record.get("result") != "approved" or record.get("id") != mandate.get("approval_id")
             or record.get("mandate_id") != mandate.get("id")
             or record.get("mandate_hash") != mandate.get("hash")
             or _approval_cents(record.get("amount_read_back")) != _approval_cents(mandate.get("amount"))
