@@ -18,6 +18,8 @@ from typing import Any, Mapping, Optional
 from pay.replay import NS_MANDATE, NonceStore
 
 HASH_FIELDS = ("deal_id", "amount", "currency", "payee", "tier_price", "nonce", "expires_at")
+# Hashed only when present, so a mandate without it hashes exactly as it did before (T8: CRS check binding).
+OPTIONAL_HASH_FIELDS = ("crs_check_id",)
 MAX_TTL_SECONDS = 600
 TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 _SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -82,8 +84,10 @@ def _norm_number(v: Any) -> Any:
 
 
 def canonical(m: Mapping[str, Any]) -> str:
-    """Canonical JSON over HASH_FIELDS: sorted keys, no spaces. A missing tier_price counts as null."""
+    """Canonical JSON over HASH_FIELDS: sorted keys, no spaces. A missing tier_price counts as null.
+    OPTIONAL_HASH_FIELDS join the body only when they are not None."""
     body = {k: m.get(k) for k in HASH_FIELDS}
+    body.update({k: m[k] for k in OPTIONAL_HASH_FIELDS if m.get(k) is not None})
     body["amount"] = _norm_number(body["amount"])
     body["tier_price"] = _norm_number(body["tier_price"])
     return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
@@ -174,8 +178,12 @@ def new_mandate(
     ttl_seconds: int = MAX_TTL_SECONDS,
     now: Optional[datetime] = None,
     mandate_id: Optional[str] = None,
+    crs_check_id: Optional[str] = None,
 ) -> dict:
-    """A pending mandate with a random 128-bit nonce, expiring at most 10 minutes out."""
+    """A pending mandate with a random 128-bit nonce, expiring at most 10 minutes out.
+    `crs_check_id` (pay.crs_gate.check_id) binds the mandate to the CRS check that cleared a business payee."""
+    if crs_check_id is not None and (not isinstance(crs_check_id, str) or not crs_check_id.strip()):
+        raise ValueError("crs_check_id must be a non-empty string when given")
     if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int) or not 0 < ttl_seconds <= MAX_TTL_SECONDS:
         raise ValueError(f"ttl_seconds must be 1..{MAX_TTL_SECONDS}")
     amt = _norm_number(amount)
@@ -202,6 +210,8 @@ def new_mandate(
     }
     if goal_id is not None:
         m["goal_id"] = goal_id
+    if crs_check_id is not None:
+        m["crs_check_id"] = crs_check_id
     m["hash"] = mandate_hash(m)
     errors = validate_schema(m)
     if errors:

@@ -8,11 +8,11 @@
       "period": "month",
       "period_limit": 500.0,
       "spent_this_period": 120.0,
-      "updated_at": "2026-10-24T08:21:22Z"
+      "updated_at": "2026-10-24T09:43:42Z"
     },
     "approval_attempts": [
       {
-        "at": "2026-10-24T08:21:26Z",
+        "at": "2026-10-24T09:43:46Z",
         "decision": {
           "approved": false,
           "final": false,
@@ -24,7 +24,7 @@
         "try": 1
       },
       {
-        "at": "2026-10-24T08:21:57Z",
+        "at": "2026-10-24T09:44:17Z",
         "decision": {
           "approved": false,
           "final": false,
@@ -36,7 +36,7 @@
         "try": 2
       },
       {
-        "at": "2026-10-24T08:22:28Z",
+        "at": "2026-10-24T09:44:48Z",
         "decision": {
           "approved": true,
           "final": true,
@@ -49,17 +49,17 @@
       }
     ],
     "approval_record": {
-      "amount_read_back": 1249.99,
+      "amount_read_back": 1299.99,
       "attempts": 3,
       "channel": "browser",
-      "code_expires_at": "2026-10-24T08:23:22Z",
-      "code_hash": "498581f3c34121a3b8f25c311dacb610b66668ea4bb41cbb412162f32e3c6460",
-      "code_issued_at": "2026-10-24T08:21:22Z",
-      "decided_at": "2026-10-24T08:22:28Z",
+      "code_expires_at": "2026-10-24T09:45:42Z",
+      "code_hash": "7deb0c0fbabe97ee32f4ab0e55222d0c4fa7de1f6b24b1484f12d7c481b47a31",
+      "code_issued_at": "2026-10-24T09:43:42Z",
+      "decided_at": "2026-10-24T09:44:48Z",
       "deny_reason": null,
-      "id": "apr_d7af7bc142dcd245",
-      "mandate_hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-      "mandate_id": "mnd_0450bbf66828f0ee",
+      "id": "apr_0101446bb7ff8b35",
+      "mandate_hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+      "mandate_id": "mnd_f1b0a838d23dae3f",
       "payee_read_back": "best-buy@pay.example.test",
       "recording_ref": null,
       "result": "approved"
@@ -68,14 +68,17 @@
       {
         "claims": [],
         "decision_trace": "Amazon.com (sells direct): unknown 1,299.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-amazon-direct",
         "lines": [
           {
             "attrs": {
               "category": "gpu",
-              "chipset": "RTX 5070 Ti"
+              "chipset": "RTX 5070 Ti",
+              "length_mm": 300,
+              "length_model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+              "length_source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"
             },
             "basis": "real listing amazon-20261024T0509Z at 1,299.99, floor 93% of list (SIM assumption)",
             "listing_url": "https://www.amazon.com/dp/B0DXL8NFLF",
@@ -103,24 +106,27 @@
         "claims": [
           "new per the listing"
         ],
-        "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "decision_trace": "Best Buy: new 1,299.99 (list less discount); plus 0.00 shipping",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-best-buy",
         "lines": [
           {
             "attrs": {
               "category": "gpu",
-              "chipset": "RTX 5070 Ti"
+              "chipset": "RTX 5070 Ti",
+              "length_mm": 304,
+              "length_model": "ASUS Prime GeForce RTX 5070 Ti OC Edition (PRIME-RTX5070TI-O16G)",
+              "length_source": "https://www.asus.com/motherboards-components/graphics-cards/prime/prime-rtx5070ti-o16g/techspec/"
             },
-            "basis": "real listing bestbuy-20261024T0508Z at 1,249.99, floor 93% of list (SIM assumption)",
-            "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+            "basis": "real listing bestbuy-20261024T0508Z at 1,299.99, floor 93% of list (SIM assumption)",
+            "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "offered_condition": "new",
             "origin": "MIRROR",
             "page_condition": "new",
             "quantity": 1,
             "sku_spec": "rtx 5070 ti",
-            "unit_price": 1249.99
+            "unit_price": 1299.99
           }
         ],
         "mirror_snapshot_id": "bestbuy-20261024T0508Z",
@@ -133,14 +139,36 @@
         "seller_id": "best-buy",
         "source": "mirror",
         "supplier_id": "best-buy",
-        "total_landed_price": 1249.99
+        "total_landed_price": 1299.99,
+        "withheld_lines": [
+          {
+            "condition": "new",
+            "length_mm": 338,
+            "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+            "model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+            "reason": "GPU length 338 mm exceeds case clearance 305 mm",
+            "rule_id": "fit.gpu_length",
+            "source_url": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification",
+            "unit_price": 1249.99
+          },
+          {
+            "condition": "new",
+            "length_mm": 342,
+            "listing_url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+            "model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+            "reason": "GPU length 342 mm exceeds case clearance 305 mm",
+            "rule_id": "fit.gpu_length",
+            "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+            "unit_price": 1249.99
+          }
+        ]
       },
       {
         "claims": [
           "new per the listing"
         ],
         "decision_trace": "eBay seller of item ...263900 (handle not captured): new 1,489.00 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-ebay-263900",
         "lines": [
@@ -176,14 +204,17 @@
           "new per the listing"
         ],
         "decision_trace": "eBay seller of item ...442526 (handle not captured): new 1,399.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-ebay-442526",
         "lines": [
           {
             "attrs": {
               "category": "gpu",
-              "chipset": "RTX 5070 Ti"
+              "chipset": "RTX 5070 Ti",
+              "length_mm": 338,
+              "length_model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+              "length_source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification"
             },
             "basis": "real listing ebay_live-20261024T0508Z at 1,399.99, floor 93% of list (SIM assumption)",
             "listing_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
@@ -212,14 +243,17 @@
           "open-box per the listing"
         ],
         "decision_trace": "eBay seller of item ...824742 (handle not captured): open-box 1,239.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-ebay-824742",
         "lines": [
           {
             "attrs": {
               "category": "gpu",
-              "chipset": "RTX 5070 Ti"
+              "chipset": "RTX 5070 Ti",
+              "length_mm": 342,
+              "length_model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+              "length_source": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp"
             },
             "basis": "real listing ebay_live-20261024T0508Z at 1,239.99, floor 93% of list (SIM assumption)",
             "listing_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
@@ -246,14 +280,17 @@
       {
         "claims": [],
         "decision_trace": "Micro Center: unknown 1,199.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-micro-center",
         "lines": [
           {
             "attrs": {
               "category": "gpu",
-              "chipset": "RTX 5070 Ti"
+              "chipset": "RTX 5070 Ti",
+              "length_mm": 300,
+              "length_model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+              "length_source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"
             },
             "basis": "real listing microcenter-20261024T0509Z at 1,199.99, floor 93% of list (SIM assumption)",
             "listing_url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
@@ -284,7 +321,7 @@
           "30-day returns"
         ],
         "decision_trace": "Shady Sam's Deals (SIM): new 757.44 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-shady-sam",
         "lines": [
@@ -322,7 +359,7 @@
           "New, retail box"
         ],
         "decision_trace": "Bargain Bin Hardware (SIM): new 1,199.00 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-bargain-bin",
         "lines": [
@@ -358,7 +395,7 @@
       {
         "claims": [],
         "decision_trace": "Lowball Direct (SIM): new 1,090.00 (rogue agent ignored its floor); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": false,
         "id": "bid-need-vidyut-5070ti-lowball",
         "lines": [
@@ -395,8 +432,8 @@
         "claims": [
           "New, retail box"
         ],
-        "decision_trace": "Fair Price PC (SIM): new 1,289.00 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "decision_trace": "Fair Price PC (SIM): new 1,329.00 (list less discount); plus 0.00 shipping",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-fair-price-pc",
         "lines": [
@@ -413,7 +450,7 @@
             "page_condition": "new",
             "quantity": 1,
             "sku_spec": "rtx 5070 ti",
-            "unit_price": 1289.0
+            "unit_price": 1329.0
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
@@ -427,15 +464,15 @@
         "seller_id": "fair-price-pc",
         "source": "simulated",
         "supplier_id": "fair-price-pc",
-        "total_landed_price": 1289.0
+        "total_landed_price": 1329.0
       },
       {
         "claims": [
           "New, retail box",
           "Open-box, retail box"
         ],
-        "decision_trace": "Gadget Grove (Vedant): new 1,315.27 (list less discount); open-box 1,247.02 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "decision_trace": "Gadget Grove (Vedant): new 1,315.27 (list less discount); open-box 1,286.02 (list less discount); plus 0.00 shipping",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-gadget-grove",
         "lines": [
@@ -467,7 +504,7 @@
             "page_condition": "open-box",
             "quantity": 1,
             "sku_spec": "rtx 5070 ti",
-            "unit_price": 1247.02
+            "unit_price": 1286.02
           }
         ],
         "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
@@ -481,23 +518,23 @@
         "seller_id": "gadget-grove",
         "source": "simulated",
         "supplier_id": "gadget-grove",
-        "total_landed_price": 1247.02
+        "total_landed_price": 1286.02
       }
     ],
     "call_script": {
-      "approved_line": "Approved. One payment of one thousand two hundred forty nine dollars and ninety nine cents, written 1,249.99 dollars, to best-buy@pay.example.test. Nothing else is authorized",
+      "approved_line": "Approved. One payment of one thousand two hundred ninety nine dollars and ninety nine cents, written 1,299.99 dollars, to best-buy@pay.example.test. Nothing else is authorized",
       "ask_line": "Please read me the two words on your screen, then say approve. Anything else cancels this deal",
-      "deal_line": "One purchase, from the seller named on your screen, for one thousand two hundred forty nine dollars and ninety nine cents",
+      "deal_line": "One purchase, from the seller named on your screen, for one thousand two hundred ninety nine dollars and ninety nine cents",
       "denied_line": "Not approved. Nothing was paid",
       "opening": "I will only ask for the code on your screen, never a card number",
       "stripped": [],
       "why_answer": "The advocate rejected the cheaper offer. The listing page shows a different condition than the seller claims. The source link is on your screen. Nothing is paid until you say the code and approve"
     },
     "charge": {
-      "amount_cents": 124999,
+      "amount_cents": 129999,
       "currency": "usd",
-      "id": "ch_sim_b301f7109bb6",
-      "idempotency_key": "mandate:b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
+      "id": "ch_sim_0ac919278858",
+      "idempotency_key": "mandate:0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
       "mode": "SIM stub",
       "object": "charge",
       "payment_method": "pm_card_visa (Stripe test card, not sent)",
@@ -507,9 +544,9 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-best-buy",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
-        "evidence_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+        "evidence_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
         "id": "claim-bid-need-vidyut-5070ti-best-buy-1",
         "kind": "spec",
         "method": "could not verify: page fetch failed (OSError)",
@@ -521,7 +558,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
         "id": "claim-bid-need-vidyut-5070ti-ebay-263900-1",
@@ -535,7 +572,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
         "id": "claim-bid-need-vidyut-5070ti-ebay-442526-1",
@@ -549,7 +586,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
         "id": "claim-bid-need-vidyut-5070ti-ebay-824742-1",
@@ -563,21 +600,21 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-shady-sam",
         "check": "false",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
         "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
         "id": "claim-bid-need-vidyut-5070ti-shady-sam-1",
         "kind": "spec",
         "method": "fetched page, page listing JSON, condition rule",
         "origin": "SIM",
-        "reason": "claim says new; differs from the listing at 2026-10-24T08:21:23+00:00: the page shows open-box",
+        "reason": "claim says new; differs from the listing at 2026-10-24T09:43:42+00:00: the page shows open-box",
         "source": "simulated",
         "text": "BRAND NEW, factory sealed"
       },
       {
         "bid_id": "bid-need-vidyut-5070ti-shady-sam",
         "check": "false",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
         "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
         "id": "claim-bid-need-vidyut-5070ti-shady-sam-2",
@@ -591,7 +628,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-shady-sam",
         "check": "verified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
         "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
         "id": "claim-bid-need-vidyut-5070ti-shady-sam-3",
@@ -605,7 +642,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
         "id": "claim-bid-need-vidyut-5070ti-bargain-bin-1",
@@ -619,7 +656,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
         "id": "claim-bid-need-vidyut-5070ti-fair-price-pc-1",
@@ -633,7 +670,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
         "id": "claim-bid-need-vidyut-5070ti-gadget-grove-1",
@@ -647,7 +684,7 @@
       {
         "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
         "check": "unverified",
-        "checked_at": "2026-10-24T08:21:23+00:00",
+        "checked_at": "2026-10-24T09:43:42+00:00",
         "evidence_hash": "",
         "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
         "id": "claim-bid-need-vidyut-5070ti-gadget-grove-2",
@@ -662,7 +699,7 @@
     "goal": {
       "buyer_id": "vidyut",
       "cap": 1300.0,
-      "created_at": "2026-10-24T08:21:22Z",
+      "created_at": "2026-10-24T09:43:42Z",
       "deadline": "2026-10-30T23:59:00Z",
       "id": "goal-vidyut-5070ti",
       "items": [
@@ -694,7 +731,7 @@
     },
     "loss_reports": [
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-1-amazon-direct",
         "reason": "condition",
@@ -704,7 +741,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within20",
         "id": "lr-round-1-ebay-263900",
         "reason": "price",
@@ -714,8 +751,8 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within20",
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within10",
         "id": "lr-round-1-ebay-442526",
         "reason": "price",
         "round_id": "round-1",
@@ -724,7 +761,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-1-micro-center",
         "reason": "condition",
@@ -734,27 +771,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within5",
-        "id": "lr-round-1-shady-sam",
-        "reason": "advocate_veto",
-        "round_id": "round-1",
-        "seller_id": "shady-sam",
-        "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-        "won": false
-      },
-      {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within5",
-        "id": "lr-round-1-bargain-bin",
-        "reason": "fit",
-        "round_id": "round-1",
-        "seller_id": "bargain-bin",
-        "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
-        "won": false
-      },
-      {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-1-fair-price-pc",
         "reason": "price",
@@ -764,7 +781,37 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within5",
+        "id": "lr-round-1-shady-sam",
+        "reason": "advocate_veto",
+        "round_id": "round-1",
+        "seller_id": "shady-sam",
+        "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+        "won": false
+      },
+      {
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within5",
+        "id": "lr-round-1-bargain-bin",
+        "reason": "fit",
+        "round_id": "round-1",
+        "seller_id": "bargain-bin",
+        "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
+        "won": false
+      },
+      {
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within5",
+        "id": "lr-round-1-ebay-824742",
+        "reason": "fit",
+        "round_id": "round-1",
+        "seller_id": "ebay-824742",
+        "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+        "won": false
+      },
+      {
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-1-gadget-grove",
         "reason": "price",
@@ -774,18 +821,8 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
-        "id": "lr-round-1-ebay-824742",
-        "reason": "price",
-        "round_id": "round-1",
-        "seller_id": "ebay-824742",
-        "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-        "won": false
-      },
-      {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within10",
         "id": "lr-round-2-amazon-direct",
         "reason": "condition",
         "round_id": "round-2",
@@ -794,8 +831,8 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "over20",
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within20",
         "id": "lr-round-2-ebay-263900",
         "reason": "price",
         "round_id": "round-2",
@@ -804,7 +841,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within20",
         "id": "lr-round-2-ebay-442526",
         "reason": "price",
@@ -814,7 +851,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-2-micro-center",
         "reason": "condition",
@@ -824,37 +861,7 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within5",
-        "id": "lr-round-2-shady-sam",
-        "reason": "advocate_veto",
-        "round_id": "round-2",
-        "seller_id": "shady-sam",
-        "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-        "won": false
-      },
-      {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within5",
-        "id": "lr-round-2-bargain-bin",
-        "reason": "fit",
-        "round_id": "round-2",
-        "seller_id": "bargain-bin",
-        "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
-        "won": false
-      },
-      {
-        "created_at": "2026-10-24T08:21:22Z",
-        "gap_band": "within5",
-        "id": "lr-round-2-best-buy",
-        "reason": "price",
-        "round_id": "round-2",
-        "seller_id": "best-buy",
-        "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-        "won": false
-      },
-      {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-2-fair-price-pc",
         "reason": "price",
@@ -864,47 +871,77 @@
         "won": false
       },
       {
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within5",
+        "id": "lr-round-2-shady-sam",
+        "reason": "advocate_veto",
+        "round_id": "round-2",
+        "seller_id": "shady-sam",
+        "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+        "won": false
+      },
+      {
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within5",
+        "id": "lr-round-2-bargain-bin",
+        "reason": "fit",
+        "round_id": "round-2",
+        "seller_id": "bargain-bin",
+        "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
+        "won": false
+      },
+      {
+        "created_at": "2026-10-24T09:43:42Z",
         "gap_band": "within5",
         "id": "lr-round-2-ebay-824742",
-        "reason": "price",
+        "reason": "fit",
         "round_id": "round-2",
         "seller_id": "ebay-824742",
-        "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+        "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+        "won": false
+      },
+      {
+        "created_at": "2026-10-24T09:43:42Z",
+        "gap_band": "within5",
+        "id": "lr-round-2-best-buy",
+        "reason": "price",
+        "round_id": "round-2",
+        "seller_id": "best-buy",
+        "source_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
         "won": false
       }
     ],
     "mandate": {
-      "amount": 1249.99,
-      "approval_id": "apr_d7af7bc142dcd245",
+      "amount": 1299.99,
+      "approval_id": "apr_0101446bb7ff8b35",
       "buyer_id": "vidyut",
-      "created_at": "2026-10-24T08:21:22Z",
+      "created_at": "2026-10-24T09:43:42Z",
       "currency": "USD",
       "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
-      "expires_at": "2026-10-24T08:31:22Z",
+      "expires_at": "2026-10-24T09:53:42Z",
       "goal_id": "goal-vidyut-5070ti",
-      "hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-      "id": "mnd_0450bbf66828f0ee",
-      "nonce": "11acd9800e756841da75eb973e0aad2c",
+      "hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+      "id": "mnd_f1b0a838d23dae3f",
+      "nonce": "416b1f745b408f4f8c3a0f04f77fa137",
       "origin": "MIRROR",
       "payee": "best-buy@pay.example.test",
       "status": "used",
-      "tap_signature": "sig1=:y9IV5c8JttnlfovwqXa7GWpaqTllKN7JAyXx3l2iAeAOhLxdjUa3EQT08+zij+aRbwO3UbOBrf+qAu9nRLZuDg==:",
+      "tap_signature": "sig1=:xUo7RhApuOE6ORUMXs2WbHx9k50eZ7BFJHOBW44qIJlZ5beA0xT9tlXea2Guu4uUSLahxvu1ubZEb2G3+fMrDg==:",
       "tier_price": null,
       "within_allowance": false
     },
     "mandate_at_approval": {
-      "amount": 1249.99,
-      "approval_id": "apr_d7af7bc142dcd245",
+      "amount": 1299.99,
+      "approval_id": "apr_0101446bb7ff8b35",
       "buyer_id": "vidyut",
-      "created_at": "2026-10-24T08:21:22Z",
+      "created_at": "2026-10-24T09:43:42Z",
       "currency": "USD",
       "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
-      "expires_at": "2026-10-24T08:31:22Z",
+      "expires_at": "2026-10-24T09:53:42Z",
       "goal_id": "goal-vidyut-5070ti",
-      "hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-      "id": "mnd_0450bbf66828f0ee",
-      "nonce": "11acd9800e756841da75eb973e0aad2c",
+      "hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+      "id": "mnd_f1b0a838d23dae3f",
+      "nonce": "416b1f745b408f4f8c3a0f04f77fa137",
       "origin": "MIRROR",
       "payee": "best-buy@pay.example.test",
       "status": "approved",
@@ -1009,11 +1046,11 @@
         "learning": false,
         "lines": [
           {
-            "basis": "real listing bestbuy-20261024T0508Z at 1,249.99, floor 93% of list (SIM assumption)",
+            "basis": "real listing bestbuy-20261024T0508Z at 1,299.99, floor 93% of list (SIM assumption)",
             "condition": "new",
-            "floor": 1162.49,
-            "list_price": 1249.99,
-            "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+            "floor": 1208.99,
+            "list_price": 1299.99,
+            "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "origin": "MIRROR",
             "snapshot_date": "2026-10-24T05:08:39.627Z",
             "snapshot_id": "bestbuy-20261024T0508Z"
@@ -1183,7 +1220,7 @@
             "basis": "SIM listing priced inside the real market band, open-box line of the same card",
             "condition": "open-box",
             "floor": 1190.0,
-            "list_price": 1279.0,
+            "list_price": 1319.0,
             "listing_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
             "origin": "SIM",
             "snapshot_date": "",
@@ -1229,7 +1266,7 @@
             "basis": "SIM listing priced inside the real market band, honest card and 303 mm",
             "condition": "new",
             "floor": 1200.0,
-            "list_price": 1289.0,
+            "list_price": 1329.0,
             "listing_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
             "origin": "SIM",
             "snapshot_date": "",
@@ -1259,15 +1296,15 @@
       }
     },
     "signatures": {
-      "body_sha256_in_digest": "sha-256=:byKJTzh2FQD1s/AAASs8t3lz7lSX0IVCzzhLJhl0oac=:",
+      "body_sha256_in_digest": "sha-256=:Sjf3Sxz4TvT4K/Ivfm6DlJmUfECZp91wi8hreJ2dtds=:",
       "headers": {
-        "Content-Digest": "sha-256=:byKJTzh2FQD1s/AAASs8t3lz7lSX0IVCzzhLJhl0oac=:",
-        "Mandate-Hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-        "Signature": "sig1=:y9IV5c8JttnlfovwqXa7GWpaqTllKN7JAyXx3l2iAeAOhLxdjUa3EQT08+zij+aRbwO3UbOBrf+qAu9nRLZuDg==:",
-        "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792830150;expires=1792830210;keyid=\"akCFuNBNf1bqFBbUmkaIgJeEu1PZz2xbqBEQdjXQiqY\";alg=\"ed25519\";nonce=\"2Y34H2J2cXZH7kLmneqTkw\";tag=\"agent-browser-auth\""
+        "Content-Digest": "sha-256=:Sjf3Sxz4TvT4K/Ivfm6DlJmUfECZp91wi8hreJ2dtds=:",
+        "Mandate-Hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+        "Signature": "sig1=:xUo7RhApuOE6ORUMXs2WbHx9k50eZ7BFJHOBW44qIJlZ5beA0xT9tlXea2Guu4uUSLahxvu1ubZEb2G3+fMrDg==:",
+        "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792835090;expires=1792835150;keyid=\"TzswzK6NkShqSdJVFu5fHPwn2QVa_UM3_9d8-wdPP7Y\";alg=\"ed25519\";nonce=\"_rcb3EFPfxhnMPbl_UCC2A\";tag=\"agent-browser-auth\""
       },
       "key_source": "throwaway Ed25519 key in a temp dir (deleted after the run)",
-      "keyid": "akCFuNBNf1bqFBbUmkaIgJeEu1PZz2xbqBEQdjXQiqY",
+      "keyid": "TzswzK6NkShqSdJVFu5fHPwn2QVa_UM3_9d8-wdPP7Y",
       "method": "POST",
       "url": "https://merchant-sim.example.test/v1/charge"
     },
@@ -1328,7 +1365,7 @@
               "text": "rtx 5070 ti is listed as new, the page says open box. The condition claim did not match the listing."
             },
             {
-              "checked_at": "2026-10-24T08:21:23+00:00",
+              "checked_at": "2026-10-24T09:43:42+00:00",
               "dollar_impact": 757.44,
               "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
               "kind": "price",
@@ -1381,11 +1418,11 @@
           ]
         },
         {
-          "bid_id": "bid-need-vidyut-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "call_reason": {
-            "rule_id": "advocate.fit_unknown",
-            "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-            "summary": "Fit could not be confirmed from the listing details"
+            "rule_id": "fit.gpu_length",
+            "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+            "summary": "The card is longer than your case allows"
           },
           "fit": {
             "checks": [
@@ -1400,33 +1437,33 @@
                 "verdict": "pass"
               },
               {
-                "reason": "GPU length or case clearance unknown",
+                "reason": "GPU length 342 mm exceeds case clearance 305 mm",
                 "rule_id": "fit.gpu_length",
-                "verdict": "uncertain"
+                "verdict": "fail"
               }
             ],
-            "verdict": "uncertain"
+            "verdict": "fail"
           },
-          "judged_condition": "new",
+          "judged_condition": "open-box",
           "line": 0,
           "need_id": "need-vidyut-5070ti",
-          "recommendation": "caution",
+          "recommendation": "veto",
           "wait_until": "",
           "warnings": [
             {
-              "dollar_impact": 0.0,
-              "kind": "fit_unknown",
-              "rule_id": "advocate.fit_unknown",
-              "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-              "text": "Fit not confirmed: GPU length or case clearance unknown."
+              "dollar_impact": 1239.99,
+              "kind": "fit",
+              "rule_id": "fit.gpu_length",
+              "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+              "text": "Does not fit: GPU length 342 mm exceeds case clearance 305 mm (rule fit.gpu_length)."
             }
           ]
         },
         {
-          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "call_reason": {
             "rule_id": "advocate.ok",
-            "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
+            "source_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "summary": "No problems found in the checks"
           },
           "fit": {
@@ -1442,7 +1479,7 @@
                 "verdict": "pass"
               },
               {
-                "reason": "GPU length 303 mm within case clearance 305 mm",
+                "reason": "GPU length 304 mm within case clearance 305 mm",
                 "rule_id": "fit.gpu_length",
                 "verdict": "pass"
               }
@@ -1489,48 +1526,6 @@
           "recommendation": "buy",
           "wait_until": "",
           "warnings": []
-        },
-        {
-          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
-          "call_reason": {
-            "rule_id": "advocate.fit_unknown",
-            "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-            "summary": "Fit could not be confirmed from the listing details"
-          },
-          "fit": {
-            "checks": [
-              {
-                "reason": "750 W PSU vs GPU maker's recommended 750 W (CPU not given)",
-                "rule_id": "fit.psu_wattage",
-                "verdict": "pass"
-              },
-              {
-                "reason": "PSU has a native 16-pin (12V-2x6) cable",
-                "rule_id": "fit.gpu_connectors",
-                "verdict": "pass"
-              },
-              {
-                "reason": "GPU length or case clearance unknown",
-                "rule_id": "fit.gpu_length",
-                "verdict": "uncertain"
-              }
-            ],
-            "verdict": "uncertain"
-          },
-          "judged_condition": "open-box",
-          "line": 0,
-          "need_id": "need-vidyut-5070ti",
-          "recommendation": "caution",
-          "wait_until": "",
-          "warnings": [
-            {
-              "dollar_impact": 0.0,
-              "kind": "fit_unknown",
-              "rule_id": "advocate.fit_unknown",
-              "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-              "text": "Fit not confirmed: GPU length or case clearance unknown."
-            }
-          ]
         }
       ],
       "control_listing": {
@@ -1541,11 +1536,11 @@
           "sender_role"
         ],
         "evidence_spans": [],
-        "latency_ms": 13.608,
+        "latency_ms": 12.469,
         "message_id": "msg-honest-hal-gpu-5070ti.html",
         "page": "honest-hal-gpu-5070ti.html",
         "reasons": [],
-        "request_id": "21713a1f1c7b47db81e492d619a7421e",
+        "request_id": "bc168b5cac1d42bfa5428f6fc551bdca",
         "rule_ids": [],
         "seller_id": "honest-hal",
         "sender_agent": "honest-hal",
@@ -1690,7 +1685,7 @@
             "text": "Pay to</dt><dd data-field=\"payee\">sam-payouts-7731@payout.example.test"
           }
         ],
-        "latency_ms": 17.359,
+        "latency_ms": 16.594,
         "message_id": "msg-shady-sam-gpu-5070ti-injected.html",
         "page": "shady-sam-gpu-5070ti-injected.html",
         "reasons": [
@@ -1704,7 +1699,7 @@
           "shield.payee.swap",
           "shield.price.contradiction"
         ],
-        "request_id": "5ed9df0ae14944bdb837557387e0906b",
+        "request_id": "d153c577b4c34f98b70d98325aa0c628",
         "rule_ids": [
           "shield.exfil.send",
           "shield.hidden.instruction",
@@ -1776,6 +1771,17 @@
               "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
             ],
             "seller_id": "lowball"
+          },
+          {
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+            "condition": "new",
+            "kind": "ineligible",
+            "landed": 1329.0,
+            "line": 0,
+            "reasons": [
+              "price: landed $1,329.00 is over the goal cap"
+            ],
+            "seller_id": "fair-price-pc"
           }
         ],
         "ranked": [
@@ -1818,68 +1824,6 @@
             "verified": 0
           },
           {
-            "adjusted": 1274.99,
-            "alternatives": [
-              {
-                "condition": "new",
-                "line": 0,
-                "unit_price": 1249.99
-              }
-            ],
-            "bid_id": "bid-need-vidyut-5070ti-best-buy",
-            "condition": "new",
-            "landed": 1249.99,
-            "line": 0,
-            "rank": 3,
-            "score": 1274.99,
-            "sealed_at": 1200,
-            "seller_id": "best-buy",
-            "verified": 0
-          },
-          {
-            "adjusted": 1289.0,
-            "alternatives": [
-              {
-                "condition": "new",
-                "line": 0,
-                "unit_price": 1289.0
-              }
-            ],
-            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
-            "condition": "new",
-            "landed": 1289.0,
-            "line": 0,
-            "rank": 4,
-            "score": 1289.0,
-            "sealed_at": 8400,
-            "seller_id": "fair-price-pc",
-            "verified": 0
-          },
-          {
-            "adjusted": 1296.9,
-            "alternatives": [
-              {
-                "condition": "new",
-                "line": 0,
-                "unit_price": 1315.27
-              },
-              {
-                "condition": "open-box",
-                "line": 1,
-                "unit_price": 1247.02
-              }
-            ],
-            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
-            "condition": "open-box",
-            "landed": 1247.02,
-            "line": 1,
-            "rank": 5,
-            "score": 1296.9,
-            "sealed_at": 10600,
-            "seller_id": "gadget-grove",
-            "verified": 0
-          },
-          {
             "adjusted": 1314.39,
             "alternatives": [
               {
@@ -1892,10 +1836,53 @@
             "condition": "open-box",
             "landed": 1239.99,
             "line": 0,
-            "rank": 6,
+            "rank": 3,
             "score": 1314.39,
             "sealed_at": 3900,
             "seller_id": "ebay-824742",
+            "verified": 0
+          },
+          {
+            "adjusted": 1325.99,
+            "alternatives": [
+              {
+                "condition": "new",
+                "line": 0,
+                "unit_price": 1299.99
+              }
+            ],
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
+            "condition": "new",
+            "landed": 1299.99,
+            "line": 0,
+            "rank": 4,
+            "score": 1325.99,
+            "sealed_at": 1200,
+            "seller_id": "best-buy",
+            "verified": 0
+          },
+          {
+            "adjusted": 1337.46,
+            "alternatives": [
+              {
+                "condition": "new",
+                "line": 0,
+                "unit_price": 1315.27
+              },
+              {
+                "condition": "open-box",
+                "line": 1,
+                "unit_price": 1286.02
+              }
+            ],
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
+            "condition": "open-box",
+            "landed": 1286.02,
+            "line": 1,
+            "rank": 5,
+            "score": 1337.46,
+            "sealed_at": 10600,
+            "seller_id": "gadget-grove",
             "verified": 0
           }
         ]
@@ -1975,10 +1962,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
           "evidence_spans": [],
-          "latency_ms": 1.435,
+          "latency_ms": 1.588,
           "message_id": "msg-bid-need-vidyut-5070ti-amazon-direct",
           "reasons": [],
-          "request_id": "634625494e424bb7a9a2bf99fe2d7e28",
+          "request_id": "1df1e9d63c2b4f99b37857985860a03a",
           "rule_ids": [],
           "seller_id": "amazon-direct",
           "sender_agent": "amazon-direct",
@@ -1990,10 +1977,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "evidence_spans": [],
-          "latency_ms": 0.362,
+          "latency_ms": 0.358,
           "message_id": "msg-bid-need-vidyut-5070ti-best-buy",
           "reasons": [],
-          "request_id": "fad47b6db6c843769242950596688991",
+          "request_id": "51c3cbf487114a41af7e6f0abaf18861",
           "rule_ids": [],
           "seller_id": "best-buy",
           "sender_agent": "best-buy",
@@ -2005,10 +1992,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
           "evidence_spans": [],
-          "latency_ms": 0.434,
+          "latency_ms": 0.45,
           "message_id": "msg-bid-need-vidyut-5070ti-ebay-263900",
           "reasons": [],
-          "request_id": "3d8e3d2f226f46a096fa96c7b5abafc1",
+          "request_id": "a3634d15b3fe4952aed8796bdb76dd3f",
           "rule_ids": [],
           "seller_id": "ebay-263900",
           "sender_agent": "ebay-263900",
@@ -2020,10 +2007,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
           "evidence_spans": [],
-          "latency_ms": 0.444,
+          "latency_ms": 0.44,
           "message_id": "msg-bid-need-vidyut-5070ti-ebay-442526",
           "reasons": [],
-          "request_id": "cb0c4bd5727e41d1a17fe86bd37df672",
+          "request_id": "44e4043a8ec94393a7c73d78defa9062",
           "rule_ids": [],
           "seller_id": "ebay-442526",
           "sender_agent": "ebay-442526",
@@ -2035,10 +2022,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "evidence_spans": [],
-          "latency_ms": 0.441,
+          "latency_ms": 0.462,
           "message_id": "msg-bid-need-vidyut-5070ti-ebay-824742",
           "reasons": [],
-          "request_id": "b829c96f590f480f95d6264624e95015",
+          "request_id": "2f60eeff88474499b8ca4800d0017bc1",
           "rule_ids": [],
           "seller_id": "ebay-824742",
           "sender_agent": "ebay-824742",
@@ -2050,10 +2037,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-micro-center",
           "evidence_spans": [],
-          "latency_ms": 0.264,
+          "latency_ms": 0.268,
           "message_id": "msg-bid-need-vidyut-5070ti-micro-center",
           "reasons": [],
-          "request_id": "9836459e5a2246f0819edfd3eb0dff42",
+          "request_id": "3c6dd61f4caa431ba7cc3e92ec394dd5",
           "rule_ids": [],
           "seller_id": "micro-center",
           "sender_agent": "micro-center",
@@ -2065,10 +2052,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "evidence_spans": [],
-          "latency_ms": 13.323,
+          "latency_ms": 13.857,
           "message_id": "msg-bid-need-vidyut-5070ti-shady-sam",
           "reasons": [],
-          "request_id": "e346b9af543b463a97489c2c5e5d555f",
+          "request_id": "18d4dd27caea4aaf93283557eb003116",
           "rule_ids": [],
           "seller_id": "shady-sam",
           "sender_agent": "shady-sam",
@@ -2080,10 +2067,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "evidence_spans": [],
-          "latency_ms": 0.426,
+          "latency_ms": 0.466,
           "message_id": "msg-bid-need-vidyut-5070ti-bargain-bin",
           "reasons": [],
-          "request_id": "4997753e2bf34fe1afff1abd22aca1f2",
+          "request_id": "bd6c87b8d94946889bc13e1af7ed00c2",
           "rule_ids": [],
           "seller_id": "bargain-bin",
           "sender_agent": "bargain-bin",
@@ -2095,10 +2082,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "evidence_spans": [],
-          "latency_ms": 0.388,
+          "latency_ms": 0.444,
           "message_id": "msg-bid-need-vidyut-5070ti-fair-price-pc",
           "reasons": [],
-          "request_id": "f7cf853060f646d18a91ad6d0c0478e8",
+          "request_id": "fcee1f6933004a6bb0148b6c1e4f75f3",
           "rule_ids": [],
           "seller_id": "fair-price-pc",
           "sender_agent": "fair-price-pc",
@@ -2110,10 +2097,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "evidence_spans": [],
-          "latency_ms": 0.56,
+          "latency_ms": 0.568,
           "message_id": "msg-bid-need-vidyut-5070ti-gadget-grove",
           "reasons": [],
-          "request_id": "904f98d7eeef4829a3fe3917970d4bbe",
+          "request_id": "ddc89224fca648edacfe7c435573a453",
           "rule_ids": [],
           "seller_id": "gadget-grove",
           "sender_agent": "gadget-grove",
@@ -2123,20 +2110,20 @@
         }
       ],
       "winner": {
-        "adjusted": 1274.99,
+        "adjusted": 1325.99,
         "alternatives": [
           {
             "condition": "new",
             "line": 0,
-            "unit_price": 1249.99
+            "unit_price": 1299.99
           }
         ],
         "bid_id": "bid-need-vidyut-5070ti-best-buy",
         "condition": "new",
-        "landed": 1249.99,
+        "landed": 1299.99,
         "line": 0,
-        "rank": 3,
-        "score": 1274.99,
+        "rank": 4,
+        "score": 1325.99,
         "sealed_at": 1200,
         "seller_id": "best-buy",
         "verified": 0
@@ -2154,12 +2141,12 @@
         "period": "month",
         "period_limit": 500.0,
         "spent_this_period": 120.0,
-        "updated_at": "2026-10-24T08:21:22Z"
+        "updated_at": "2026-10-24T09:43:42Z"
       },
       "goal": {
         "buyer_id": "vidyut",
         "cap": 1300.0,
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "deadline": "2026-10-30T23:59:00Z",
         "id": "goal-vidyut-5070ti",
         "items": [
@@ -2357,14 +2344,17 @@
         {
           "claims": [],
           "decision_trace": "Amazon.com (sells direct): unknown 1,299.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-amazon-direct",
           "lines": [
             {
               "attrs": {
                 "category": "gpu",
-                "chipset": "RTX 5070 Ti"
+                "chipset": "RTX 5070 Ti",
+                "length_mm": 300,
+                "length_model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+                "length_source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"
               },
               "basis": "real listing amazon-20261024T0509Z at 1,299.99, floor 93% of list (SIM assumption)",
               "listing_url": "https://www.amazon.com/dp/B0DXL8NFLF",
@@ -2392,24 +2382,27 @@
           "claims": [
             "new per the listing"
           ],
-          "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "decision_trace": "Best Buy: new 1,299.99 (list less discount); plus 0.00 shipping",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-best-buy",
           "lines": [
             {
               "attrs": {
                 "category": "gpu",
-                "chipset": "RTX 5070 Ti"
+                "chipset": "RTX 5070 Ti",
+                "length_mm": 304,
+                "length_model": "ASUS Prime GeForce RTX 5070 Ti OC Edition (PRIME-RTX5070TI-O16G)",
+                "length_source": "https://www.asus.com/motherboards-components/graphics-cards/prime/prime-rtx5070ti-o16g/techspec/"
               },
-              "basis": "real listing bestbuy-20261024T0508Z at 1,249.99, floor 93% of list (SIM assumption)",
-              "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+              "basis": "real listing bestbuy-20261024T0508Z at 1,299.99, floor 93% of list (SIM assumption)",
+              "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
               "offered_condition": "new",
               "origin": "MIRROR",
               "page_condition": "new",
               "quantity": 1,
               "sku_spec": "rtx 5070 ti",
-              "unit_price": 1249.99
+              "unit_price": 1299.99
             }
           ],
           "mirror_snapshot_id": "bestbuy-20261024T0508Z",
@@ -2422,14 +2415,36 @@
           "seller_id": "best-buy",
           "source": "mirror",
           "supplier_id": "best-buy",
-          "total_landed_price": 1249.99
+          "total_landed_price": 1299.99,
+          "withheld_lines": [
+            {
+              "condition": "new",
+              "length_mm": 338,
+              "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+              "model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+              "reason": "GPU length 338 mm exceeds case clearance 305 mm",
+              "rule_id": "fit.gpu_length",
+              "source_url": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification",
+              "unit_price": 1249.99
+            },
+            {
+              "condition": "new",
+              "length_mm": 342,
+              "listing_url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+              "model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+              "reason": "GPU length 342 mm exceeds case clearance 305 mm",
+              "rule_id": "fit.gpu_length",
+              "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+              "unit_price": 1249.99
+            }
+          ]
         },
         {
           "claims": [
             "new per the listing"
           ],
           "decision_trace": "eBay seller of item ...263900 (handle not captured): new 1,489.00 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-ebay-263900",
           "lines": [
@@ -2465,14 +2480,17 @@
             "new per the listing"
           ],
           "decision_trace": "eBay seller of item ...442526 (handle not captured): new 1,399.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-ebay-442526",
           "lines": [
             {
               "attrs": {
                 "category": "gpu",
-                "chipset": "RTX 5070 Ti"
+                "chipset": "RTX 5070 Ti",
+                "length_mm": 338,
+                "length_model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+                "length_source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification"
               },
               "basis": "real listing ebay_live-20261024T0508Z at 1,399.99, floor 93% of list (SIM assumption)",
               "listing_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
@@ -2501,14 +2519,17 @@
             "open-box per the listing"
           ],
           "decision_trace": "eBay seller of item ...824742 (handle not captured): open-box 1,239.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-ebay-824742",
           "lines": [
             {
               "attrs": {
                 "category": "gpu",
-                "chipset": "RTX 5070 Ti"
+                "chipset": "RTX 5070 Ti",
+                "length_mm": 342,
+                "length_model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+                "length_source": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp"
               },
               "basis": "real listing ebay_live-20261024T0508Z at 1,239.99, floor 93% of list (SIM assumption)",
               "listing_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
@@ -2535,14 +2556,17 @@
         {
           "claims": [],
           "decision_trace": "Micro Center: unknown 1,199.99 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-micro-center",
           "lines": [
             {
               "attrs": {
                 "category": "gpu",
-                "chipset": "RTX 5070 Ti"
+                "chipset": "RTX 5070 Ti",
+                "length_mm": 300,
+                "length_model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+                "length_source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"
               },
               "basis": "real listing microcenter-20261024T0509Z at 1,199.99, floor 93% of list (SIM assumption)",
               "listing_url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
@@ -2573,7 +2597,7 @@
             "30-day returns"
           ],
           "decision_trace": "Shady Sam's Deals (SIM): new 757.44 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-shady-sam",
           "lines": [
@@ -2611,7 +2635,7 @@
             "New, retail box"
           ],
           "decision_trace": "Bargain Bin Hardware (SIM): new 1,199.00 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-bargain-bin",
           "lines": [
@@ -2647,7 +2671,7 @@
         {
           "claims": [],
           "decision_trace": "Lowball Direct (SIM): new 1,090.00 (rogue agent ignored its floor); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": false,
           "id": "bid-need-vidyut-5070ti-lowball",
           "lines": [
@@ -2684,8 +2708,8 @@
           "claims": [
             "New, retail box"
           ],
-          "decision_trace": "Fair Price PC (SIM): new 1,289.00 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "decision_trace": "Fair Price PC (SIM): new 1,329.00 (list less discount); plus 0.00 shipping",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-fair-price-pc",
           "lines": [
@@ -2702,7 +2726,7 @@
               "page_condition": "new",
               "quantity": 1,
               "sku_spec": "rtx 5070 ti",
-              "unit_price": 1289.0
+              "unit_price": 1329.0
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
@@ -2716,15 +2740,15 @@
           "seller_id": "fair-price-pc",
           "source": "simulated",
           "supplier_id": "fair-price-pc",
-          "total_landed_price": 1289.0
+          "total_landed_price": 1329.0
         },
         {
           "claims": [
             "New, retail box",
             "Open-box, retail box"
           ],
-          "decision_trace": "Gadget Grove (Vedant): new 1,315.27 (list less discount); open-box 1,247.02 (list less discount); plus 0.00 shipping",
-          "expires_at": "2026-10-24T08:21:34Z",
+          "decision_trace": "Gadget Grove (Vedant): new 1,315.27 (list less discount); open-box 1,286.02 (list less discount); plus 0.00 shipping",
+          "expires_at": "2026-10-24T09:43:54Z",
           "floor_check_passed": true,
           "id": "bid-need-vidyut-5070ti-gadget-grove",
           "lines": [
@@ -2756,7 +2780,7 @@
               "page_condition": "open-box",
               "quantity": 1,
               "sku_spec": "rtx 5070 ti",
-              "unit_price": 1247.02
+              "unit_price": 1286.02
             }
           ],
           "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
@@ -2770,7 +2794,7 @@
           "seller_id": "gadget-grove",
           "source": "simulated",
           "supplier_id": "gadget-grove",
-          "total_landed_price": 1247.02
+          "total_landed_price": 1286.02
         }
       ],
       "cards": [
@@ -2815,7 +2839,7 @@
               "text": "rtx 5070 ti is listed as new, the page says open box. The condition claim did not match the listing."
             },
             {
-              "checked_at": "2026-10-24T08:21:23+00:00",
+              "checked_at": "2026-10-24T09:43:42+00:00",
               "dollar_impact": 757.44,
               "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
               "kind": "price",
@@ -2868,11 +2892,11 @@
           ]
         },
         {
-          "bid_id": "bid-need-vidyut-5070ti-best-buy",
+          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "call_reason": {
-            "rule_id": "advocate.fit_unknown",
-            "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-            "summary": "Fit could not be confirmed from the listing details"
+            "rule_id": "fit.gpu_length",
+            "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+            "summary": "The card is longer than your case allows"
           },
           "fit": {
             "checks": [
@@ -2887,33 +2911,33 @@
                 "verdict": "pass"
               },
               {
-                "reason": "GPU length or case clearance unknown",
+                "reason": "GPU length 342 mm exceeds case clearance 305 mm",
                 "rule_id": "fit.gpu_length",
-                "verdict": "uncertain"
+                "verdict": "fail"
               }
             ],
-            "verdict": "uncertain"
+            "verdict": "fail"
           },
-          "judged_condition": "new",
+          "judged_condition": "open-box",
           "line": 0,
           "need_id": "need-vidyut-5070ti",
-          "recommendation": "caution",
+          "recommendation": "veto",
           "wait_until": "",
           "warnings": [
             {
-              "dollar_impact": 0.0,
-              "kind": "fit_unknown",
-              "rule_id": "advocate.fit_unknown",
-              "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-              "text": "Fit not confirmed: GPU length or case clearance unknown."
+              "dollar_impact": 1239.99,
+              "kind": "fit",
+              "rule_id": "fit.gpu_length",
+              "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+              "text": "Does not fit: GPU length 342 mm exceeds case clearance 305 mm (rule fit.gpu_length)."
             }
           ]
         },
         {
-          "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+          "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "call_reason": {
             "rule_id": "advocate.ok",
-            "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
+            "source_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "summary": "No problems found in the checks"
           },
           "fit": {
@@ -2929,7 +2953,7 @@
                 "verdict": "pass"
               },
               {
-                "reason": "GPU length 303 mm within case clearance 305 mm",
+                "reason": "GPU length 304 mm within case clearance 305 mm",
                 "rule_id": "fit.gpu_length",
                 "verdict": "pass"
               }
@@ -2976,48 +3000,6 @@
           "recommendation": "buy",
           "wait_until": "",
           "warnings": []
-        },
-        {
-          "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
-          "call_reason": {
-            "rule_id": "advocate.fit_unknown",
-            "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-            "summary": "Fit could not be confirmed from the listing details"
-          },
-          "fit": {
-            "checks": [
-              {
-                "reason": "750 W PSU vs GPU maker's recommended 750 W (CPU not given)",
-                "rule_id": "fit.psu_wattage",
-                "verdict": "pass"
-              },
-              {
-                "reason": "PSU has a native 16-pin (12V-2x6) cable",
-                "rule_id": "fit.gpu_connectors",
-                "verdict": "pass"
-              },
-              {
-                "reason": "GPU length or case clearance unknown",
-                "rule_id": "fit.gpu_length",
-                "verdict": "uncertain"
-              }
-            ],
-            "verdict": "uncertain"
-          },
-          "judged_condition": "open-box",
-          "line": 0,
-          "need_id": "need-vidyut-5070ti",
-          "recommendation": "caution",
-          "wait_until": "",
-          "warnings": [
-            {
-              "dollar_impact": 0.0,
-              "kind": "fit_unknown",
-              "rule_id": "advocate.fit_unknown",
-              "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-              "text": "Fit not confirmed: GPU length or case clearance unknown."
-            }
-          ]
         }
       ],
       "claim_check": {
@@ -3030,7 +3012,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
             "id": "claim-bid-need-vidyut-5070ti-bargain-bin-1",
@@ -3046,9 +3028,9 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
-            "evidence_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+            "evidence_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "id": "claim-bid-need-vidyut-5070ti-best-buy-1",
             "kind": "spec",
             "method": "could not verify: page fetch failed (OSError)",
@@ -3062,7 +3044,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
             "id": "claim-bid-need-vidyut-5070ti-ebay-263900-1",
@@ -3078,7 +3060,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
             "id": "claim-bid-need-vidyut-5070ti-ebay-442526-1",
@@ -3094,7 +3076,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
             "id": "claim-bid-need-vidyut-5070ti-ebay-824742-1",
@@ -3110,7 +3092,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
             "id": "claim-bid-need-vidyut-5070ti-fair-price-pc-1",
@@ -3126,7 +3108,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
             "id": "claim-bid-need-vidyut-5070ti-gadget-grove-1",
@@ -3140,7 +3122,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
             "check": "unverified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "",
             "evidence_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
             "id": "claim-bid-need-vidyut-5070ti-gadget-grove-2",
@@ -3157,21 +3139,21 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "check": "false",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
             "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
             "id": "claim-bid-need-vidyut-5070ti-shady-sam-1",
             "kind": "spec",
             "method": "fetched page, page listing JSON, condition rule",
             "origin": "SIM",
-            "reason": "claim says new; differs from the listing at 2026-10-24T08:21:23+00:00: the page shows open-box",
+            "reason": "claim says new; differs from the listing at 2026-10-24T09:43:42+00:00: the page shows open-box",
             "source": "simulated",
             "text": "BRAND NEW, factory sealed"
           },
           {
             "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "check": "false",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
             "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
             "id": "claim-bid-need-vidyut-5070ti-shady-sam-2",
@@ -3185,7 +3167,7 @@
           {
             "bid_id": "bid-need-vidyut-5070ti-shady-sam",
             "check": "verified",
-            "checked_at": "2026-10-24T08:21:23+00:00",
+            "checked_at": "2026-10-24T09:43:42+00:00",
             "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
             "evidence_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
             "id": "claim-bid-need-vidyut-5070ti-shady-sam-3",
@@ -3256,6 +3238,17 @@
               "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
             ],
             "seller_id": "lowball"
+          },
+          {
+            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+            "condition": "new",
+            "kind": "ineligible",
+            "landed": 1329.0,
+            "line": 0,
+            "reasons": [
+              "price: landed $1,329.00 is over the goal cap"
+            ],
+            "seller_id": "fair-price-pc"
           }
         ],
         "ranked": [
@@ -3298,68 +3291,6 @@
             "verified": 0
           },
           {
-            "adjusted": 1274.99,
-            "alternatives": [
-              {
-                "condition": "new",
-                "line": 0,
-                "unit_price": 1249.99
-              }
-            ],
-            "bid_id": "bid-need-vidyut-5070ti-best-buy",
-            "condition": "new",
-            "landed": 1249.99,
-            "line": 0,
-            "rank": 3,
-            "score": 1274.99,
-            "sealed_at": 1200,
-            "seller_id": "best-buy",
-            "verified": 0
-          },
-          {
-            "adjusted": 1289.0,
-            "alternatives": [
-              {
-                "condition": "new",
-                "line": 0,
-                "unit_price": 1289.0
-              }
-            ],
-            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
-            "condition": "new",
-            "landed": 1289.0,
-            "line": 0,
-            "rank": 4,
-            "score": 1289.0,
-            "sealed_at": 8400,
-            "seller_id": "fair-price-pc",
-            "verified": 0
-          },
-          {
-            "adjusted": 1296.9,
-            "alternatives": [
-              {
-                "condition": "new",
-                "line": 0,
-                "unit_price": 1315.27
-              },
-              {
-                "condition": "open-box",
-                "line": 1,
-                "unit_price": 1247.02
-              }
-            ],
-            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
-            "condition": "open-box",
-            "landed": 1247.02,
-            "line": 1,
-            "rank": 5,
-            "score": 1296.9,
-            "sealed_at": 10600,
-            "seller_id": "gadget-grove",
-            "verified": 0
-          },
-          {
             "adjusted": 1314.39,
             "alternatives": [
               {
@@ -3372,10 +3303,53 @@
             "condition": "open-box",
             "landed": 1239.99,
             "line": 0,
-            "rank": 6,
+            "rank": 3,
             "score": 1314.39,
             "sealed_at": 3900,
             "seller_id": "ebay-824742",
+            "verified": 0
+          },
+          {
+            "adjusted": 1325.99,
+            "alternatives": [
+              {
+                "condition": "new",
+                "line": 0,
+                "unit_price": 1299.99
+              }
+            ],
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
+            "condition": "new",
+            "landed": 1299.99,
+            "line": 0,
+            "rank": 4,
+            "score": 1325.99,
+            "sealed_at": 1200,
+            "seller_id": "best-buy",
+            "verified": 0
+          },
+          {
+            "adjusted": 1337.46,
+            "alternatives": [
+              {
+                "condition": "new",
+                "line": 0,
+                "unit_price": 1315.27
+              },
+              {
+                "condition": "open-box",
+                "line": 1,
+                "unit_price": 1286.02
+              }
+            ],
+            "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
+            "condition": "open-box",
+            "landed": 1286.02,
+            "line": 1,
+            "rank": 5,
+            "score": 1337.46,
+            "sealed_at": 10600,
+            "seller_id": "gadget-grove",
             "verified": 0
           }
         ]
@@ -3481,11 +3455,11 @@
           "learning": false,
           "lines": [
             {
-              "basis": "real listing bestbuy-20261024T0508Z at 1,249.99, floor 93% of list (SIM assumption)",
+              "basis": "real listing bestbuy-20261024T0508Z at 1,299.99, floor 93% of list (SIM assumption)",
               "condition": "new",
-              "floor": 1162.49,
-              "list_price": 1249.99,
-              "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+              "floor": 1208.99,
+              "list_price": 1299.99,
+              "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
               "origin": "MIRROR",
               "snapshot_date": "2026-10-24T05:08:39.627Z",
               "snapshot_id": "bestbuy-20261024T0508Z"
@@ -3655,7 +3629,7 @@
               "basis": "SIM listing priced inside the real market band, open-box line of the same card",
               "condition": "open-box",
               "floor": 1190.0,
-              "list_price": 1279.0,
+              "list_price": 1319.0,
               "listing_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
               "origin": "SIM",
               "snapshot_date": "",
@@ -3701,7 +3675,7 @@
               "basis": "SIM listing priced inside the real market band, honest card and 303 mm",
               "condition": "new",
               "floor": 1200.0,
-              "list_price": 1289.0,
+              "list_price": 1329.0,
               "listing_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
               "origin": "SIM",
               "snapshot_date": "",
@@ -3721,10 +3695,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
           "evidence_spans": [],
-          "latency_ms": 1.435,
+          "latency_ms": 1.588,
           "message_id": "msg-bid-need-vidyut-5070ti-amazon-direct",
           "reasons": [],
-          "request_id": "634625494e424bb7a9a2bf99fe2d7e28",
+          "request_id": "1df1e9d63c2b4f99b37857985860a03a",
           "rule_ids": [],
           "seller_id": "amazon-direct",
           "sender_agent": "amazon-direct",
@@ -3736,10 +3710,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-best-buy",
           "evidence_spans": [],
-          "latency_ms": 0.362,
+          "latency_ms": 0.358,
           "message_id": "msg-bid-need-vidyut-5070ti-best-buy",
           "reasons": [],
-          "request_id": "fad47b6db6c843769242950596688991",
+          "request_id": "51c3cbf487114a41af7e6f0abaf18861",
           "rule_ids": [],
           "seller_id": "best-buy",
           "sender_agent": "best-buy",
@@ -3751,10 +3725,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
           "evidence_spans": [],
-          "latency_ms": 0.434,
+          "latency_ms": 0.45,
           "message_id": "msg-bid-need-vidyut-5070ti-ebay-263900",
           "reasons": [],
-          "request_id": "3d8e3d2f226f46a096fa96c7b5abafc1",
+          "request_id": "a3634d15b3fe4952aed8796bdb76dd3f",
           "rule_ids": [],
           "seller_id": "ebay-263900",
           "sender_agent": "ebay-263900",
@@ -3766,10 +3740,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
           "evidence_spans": [],
-          "latency_ms": 0.444,
+          "latency_ms": 0.44,
           "message_id": "msg-bid-need-vidyut-5070ti-ebay-442526",
           "reasons": [],
-          "request_id": "cb0c4bd5727e41d1a17fe86bd37df672",
+          "request_id": "44e4043a8ec94393a7c73d78defa9062",
           "rule_ids": [],
           "seller_id": "ebay-442526",
           "sender_agent": "ebay-442526",
@@ -3781,10 +3755,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
           "evidence_spans": [],
-          "latency_ms": 0.441,
+          "latency_ms": 0.462,
           "message_id": "msg-bid-need-vidyut-5070ti-ebay-824742",
           "reasons": [],
-          "request_id": "b829c96f590f480f95d6264624e95015",
+          "request_id": "2f60eeff88474499b8ca4800d0017bc1",
           "rule_ids": [],
           "seller_id": "ebay-824742",
           "sender_agent": "ebay-824742",
@@ -3796,10 +3770,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-micro-center",
           "evidence_spans": [],
-          "latency_ms": 0.264,
+          "latency_ms": 0.268,
           "message_id": "msg-bid-need-vidyut-5070ti-micro-center",
           "reasons": [],
-          "request_id": "9836459e5a2246f0819edfd3eb0dff42",
+          "request_id": "3c6dd61f4caa431ba7cc3e92ec394dd5",
           "rule_ids": [],
           "seller_id": "micro-center",
           "sender_agent": "micro-center",
@@ -3811,10 +3785,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-shady-sam",
           "evidence_spans": [],
-          "latency_ms": 13.323,
+          "latency_ms": 13.857,
           "message_id": "msg-bid-need-vidyut-5070ti-shady-sam",
           "reasons": [],
-          "request_id": "e346b9af543b463a97489c2c5e5d555f",
+          "request_id": "18d4dd27caea4aaf93283557eb003116",
           "rule_ids": [],
           "seller_id": "shady-sam",
           "sender_agent": "shady-sam",
@@ -3826,10 +3800,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
           "evidence_spans": [],
-          "latency_ms": 0.426,
+          "latency_ms": 0.466,
           "message_id": "msg-bid-need-vidyut-5070ti-bargain-bin",
           "reasons": [],
-          "request_id": "4997753e2bf34fe1afff1abd22aca1f2",
+          "request_id": "bd6c87b8d94946889bc13e1af7ed00c2",
           "rule_ids": [],
           "seller_id": "bargain-bin",
           "sender_agent": "bargain-bin",
@@ -3841,10 +3815,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
           "evidence_spans": [],
-          "latency_ms": 0.388,
+          "latency_ms": 0.444,
           "message_id": "msg-bid-need-vidyut-5070ti-fair-price-pc",
           "reasons": [],
-          "request_id": "f7cf853060f646d18a91ad6d0c0478e8",
+          "request_id": "fcee1f6933004a6bb0148b6c1e4f75f3",
           "rule_ids": [],
           "seller_id": "fair-price-pc",
           "sender_agent": "fair-price-pc",
@@ -3856,10 +3830,10 @@
           "attack_type": "none",
           "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "evidence_spans": [],
-          "latency_ms": 0.56,
+          "latency_ms": 0.568,
           "message_id": "msg-bid-need-vidyut-5070ti-gadget-grove",
           "reasons": [],
-          "request_id": "904f98d7eeef4829a3fe3917970d4bbe",
+          "request_id": "ddc89224fca648edacfe7c435573a453",
           "rule_ids": [],
           "seller_id": "gadget-grove",
           "sender_agent": "gadget-grove",
@@ -3899,20 +3873,20 @@
         }
       },
       "winner": {
-        "adjusted": 1274.99,
+        "adjusted": 1325.99,
         "alternatives": [
           {
             "condition": "new",
             "line": 0,
-            "unit_price": 1249.99
+            "unit_price": 1299.99
           }
         ],
         "bid_id": "bid-need-vidyut-5070ti-best-buy",
         "condition": "new",
-        "landed": 1249.99,
+        "landed": 1299.99,
         "line": 0,
-        "rank": 3,
-        "score": 1274.99,
+        "rank": 4,
+        "score": 1325.99,
         "sealed_at": 1200,
         "seller_id": "best-buy",
         "verified": 0
@@ -3921,24 +3895,27 @@
         "claims": [
           "new per the listing"
         ],
-        "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-        "expires_at": "2026-10-24T08:21:34Z",
+        "decision_trace": "Best Buy: new 1,299.99 (list less discount); plus 0.00 shipping",
+        "expires_at": "2026-10-24T09:43:54Z",
         "floor_check_passed": true,
         "id": "bid-need-vidyut-5070ti-best-buy",
         "lines": [
           {
             "attrs": {
               "category": "gpu",
-              "chipset": "RTX 5070 Ti"
+              "chipset": "RTX 5070 Ti",
+              "length_mm": 304,
+              "length_model": "ASUS Prime GeForce RTX 5070 Ti OC Edition (PRIME-RTX5070TI-O16G)",
+              "length_source": "https://www.asus.com/motherboards-components/graphics-cards/prime/prime-rtx5070ti-o16g/techspec/"
             },
-            "basis": "real listing bestbuy-20261024T0508Z at 1,249.99, floor 93% of list (SIM assumption)",
-            "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+            "basis": "real listing bestbuy-20261024T0508Z at 1,299.99, floor 93% of list (SIM assumption)",
+            "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "offered_condition": "new",
             "origin": "MIRROR",
             "page_condition": "new",
             "quantity": 1,
             "sku_spec": "rtx 5070 ti",
-            "unit_price": 1249.99
+            "unit_price": 1299.99
           }
         ],
         "mirror_snapshot_id": "bestbuy-20261024T0508Z",
@@ -3951,7 +3928,29 @@
         "seller_id": "best-buy",
         "source": "mirror",
         "supplier_id": "best-buy",
-        "total_landed_price": 1249.99
+        "total_landed_price": 1299.99,
+        "withheld_lines": [
+          {
+            "condition": "new",
+            "length_mm": 338,
+            "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+            "model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+            "reason": "GPU length 338 mm exceeds case clearance 305 mm",
+            "rule_id": "fit.gpu_length",
+            "source_url": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification",
+            "unit_price": 1249.99
+          },
+          {
+            "condition": "new",
+            "length_mm": 342,
+            "listing_url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+            "model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+            "reason": "GPU length 342 mm exceeds case clearance 305 mm",
+            "rule_id": "fit.gpu_length",
+            "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+            "unit_price": 1249.99
+          }
+        ]
       },
       "winner_seller_id": "best-buy"
     },
@@ -3965,11 +3964,11 @@
           "sender_role"
         ],
         "evidence_spans": [],
-        "latency_ms": 13.608,
+        "latency_ms": 12.469,
         "message_id": "msg-honest-hal-gpu-5070ti.html",
         "page": "honest-hal-gpu-5070ti.html",
         "reasons": [],
-        "request_id": "21713a1f1c7b47db81e492d619a7421e",
+        "request_id": "bc168b5cac1d42bfa5428f6fc551bdca",
         "rule_ids": [],
         "seller_id": "honest-hal",
         "sender_agent": "honest-hal",
@@ -4114,7 +4113,7 @@
             "text": "Pay to</dt><dd data-field=\"payee\">sam-payouts-7731@payout.example.test"
           }
         ],
-        "latency_ms": 17.359,
+        "latency_ms": 16.594,
         "message_id": "msg-shady-sam-gpu-5070ti-injected.html",
         "page": "shady-sam-gpu-5070ti-injected.html",
         "reasons": [
@@ -4128,7 +4127,7 @@
           "shield.payee.swap",
           "shield.price.contradiction"
         ],
-        "request_id": "5ed9df0ae14944bdb837557387e0906b",
+        "request_id": "d153c577b4c34f98b70d98325aa0c628",
         "rule_ids": [
           "shield.exfil.send",
           "shield.hidden.instruction",
@@ -4156,24 +4155,24 @@
         "summary": "The listing page shows a different condition than the seller claims"
       },
       "approval_record": {
-        "amount_read_back": 1249.99,
+        "amount_read_back": 1299.99,
         "attempts": 3,
         "channel": "browser",
-        "code_expires_at": "2026-10-24T08:23:22Z",
-        "code_hash": "498581f3c34121a3b8f25c311dacb610b66668ea4bb41cbb412162f32e3c6460",
-        "code_issued_at": "2026-10-24T08:21:22Z",
-        "decided_at": "2026-10-24T08:22:28Z",
+        "code_expires_at": "2026-10-24T09:45:42Z",
+        "code_hash": "7deb0c0fbabe97ee32f4ab0e55222d0c4fa7de1f6b24b1484f12d7c481b47a31",
+        "code_issued_at": "2026-10-24T09:43:42Z",
+        "decided_at": "2026-10-24T09:44:48Z",
         "deny_reason": null,
-        "id": "apr_d7af7bc142dcd245",
-        "mandate_hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-        "mandate_id": "mnd_0450bbf66828f0ee",
+        "id": "apr_0101446bb7ff8b35",
+        "mandate_hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+        "mandate_id": "mnd_f1b0a838d23dae3f",
         "payee_read_back": "best-buy@pay.example.test",
         "recording_ref": null,
         "result": "approved"
       },
       "attempts": [
         {
-          "at": "2026-10-24T08:21:26Z",
+          "at": "2026-10-24T09:43:46Z",
           "decision": {
             "approved": false,
             "final": false,
@@ -4185,7 +4184,7 @@
           "try": 1
         },
         {
-          "at": "2026-10-24T08:21:57Z",
+          "at": "2026-10-24T09:44:17Z",
           "decision": {
             "approved": false,
             "final": false,
@@ -4197,7 +4196,7 @@
           "try": 2
         },
         {
-          "at": "2026-10-24T08:22:28Z",
+          "at": "2026-10-24T09:44:48Z",
           "decision": {
             "approved": true,
             "final": true,
@@ -4210,9 +4209,9 @@
         }
       ],
       "call_script": {
-        "approved_line": "Approved. One payment of one thousand two hundred forty nine dollars and ninety nine cents, written 1,249.99 dollars, to best-buy@pay.example.test. Nothing else is authorized",
+        "approved_line": "Approved. One payment of one thousand two hundred ninety nine dollars and ninety nine cents, written 1,299.99 dollars, to best-buy@pay.example.test. Nothing else is authorized",
         "ask_line": "Please read me the two words on your screen, then say approve. Anything else cancels this deal",
-        "deal_line": "One purchase, from the seller named on your screen, for one thousand two hundred forty nine dollars and ninety nine cents",
+        "deal_line": "One purchase, from the seller named on your screen, for one thousand two hundred ninety nine dollars and ninety nine cents",
         "denied_line": "Not approved. Nothing was paid",
         "opening": "I will only ask for the code on your screen, never a card number",
         "stripped": [],
@@ -4227,10 +4226,10 @@
         "reason": "not_approved"
       },
       "charge": {
-        "amount_cents": 124999,
+        "amount_cents": 129999,
         "currency": "usd",
-        "id": "ch_sim_b301f7109bb6",
-        "idempotency_key": "mandate:b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
+        "id": "ch_sim_0ac919278858",
+        "idempotency_key": "mandate:0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
         "mode": "SIM stub",
         "object": "charge",
         "payment_method": "pm_card_visa (Stripe test card, not sent)",
@@ -4238,16 +4237,16 @@
       },
       "code_redacted": true,
       "deal": {
-        "amount": 1249.99,
+        "amount": 1299.99,
         "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
         "payee": "best-buy@pay.example.test",
         "seller_id": "best-buy",
-        "why_call": "$1,249.99 is over the $250.00 per-purchase allowance"
+        "why_call": "$1,299.99 is over the $250.00 per-purchase allowance"
       },
       "goal_final": {
         "buyer_id": "vidyut",
         "cap": 1300.0,
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "deadline": "2026-10-30T23:59:00Z",
         "id": "goal-vidyut-5070ti",
         "items": [
@@ -4279,11 +4278,11 @@
       },
       "goal_state_log": [
         {
-          "at": "2026-10-24T08:21:22Z",
+          "at": "2026-10-24T09:43:42Z",
           "state": "HUNTING"
         },
         {
-          "reserved_amount": 1249.99,
+          "reserved_amount": 1299.99,
           "state": "HOLD_FOR_CALL"
         },
         {
@@ -4292,36 +4291,36 @@
         }
       ],
       "mandate": {
-        "amount": 1249.99,
-        "approval_id": "apr_d7af7bc142dcd245",
+        "amount": 1299.99,
+        "approval_id": "apr_0101446bb7ff8b35",
         "buyer_id": "vidyut",
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "currency": "USD",
         "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
-        "expires_at": "2026-10-24T08:31:22Z",
+        "expires_at": "2026-10-24T09:53:42Z",
         "goal_id": "goal-vidyut-5070ti",
-        "hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-        "id": "mnd_0450bbf66828f0ee",
-        "nonce": "11acd9800e756841da75eb973e0aad2c",
+        "hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+        "id": "mnd_f1b0a838d23dae3f",
+        "nonce": "416b1f745b408f4f8c3a0f04f77fa137",
         "origin": "MIRROR",
         "payee": "best-buy@pay.example.test",
         "status": "used",
-        "tap_signature": "sig1=:y9IV5c8JttnlfovwqXa7GWpaqTllKN7JAyXx3l2iAeAOhLxdjUa3EQT08+zij+aRbwO3UbOBrf+qAu9nRLZuDg==:",
+        "tap_signature": "sig1=:xUo7RhApuOE6ORUMXs2WbHx9k50eZ7BFJHOBW44qIJlZ5beA0xT9tlXea2Guu4uUSLahxvu1ubZEb2G3+fMrDg==:",
         "tier_price": null,
         "within_allowance": false
       },
       "mandate_at_approval": {
-        "amount": 1249.99,
-        "approval_id": "apr_d7af7bc142dcd245",
+        "amount": 1299.99,
+        "approval_id": "apr_0101446bb7ff8b35",
         "buyer_id": "vidyut",
-        "created_at": "2026-10-24T08:21:22Z",
+        "created_at": "2026-10-24T09:43:42Z",
         "currency": "USD",
         "deal_id": "deal-bid-need-vidyut-5070ti-best-buy",
-        "expires_at": "2026-10-24T08:31:22Z",
+        "expires_at": "2026-10-24T09:53:42Z",
         "goal_id": "goal-vidyut-5070ti",
-        "hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-        "id": "mnd_0450bbf66828f0ee",
-        "nonce": "11acd9800e756841da75eb973e0aad2c",
+        "hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+        "id": "mnd_f1b0a838d23dae3f",
+        "nonce": "416b1f745b408f4f8c3a0f04f77fa137",
         "origin": "MIRROR",
         "payee": "best-buy@pay.example.test",
         "status": "approved",
@@ -4331,15 +4330,15 @@
       },
       "origin": "SIM",
       "signature": {
-        "body_sha256_in_digest": "sha-256=:byKJTzh2FQD1s/AAASs8t3lz7lSX0IVCzzhLJhl0oac=:",
+        "body_sha256_in_digest": "sha-256=:Sjf3Sxz4TvT4K/Ivfm6DlJmUfECZp91wi8hreJ2dtds=:",
         "headers": {
-          "Content-Digest": "sha-256=:byKJTzh2FQD1s/AAASs8t3lz7lSX0IVCzzhLJhl0oac=:",
-          "Mandate-Hash": "b301f7109bb64a72d8e4f1babbd78355813e8a6905087da720498e95146bbeb1",
-          "Signature": "sig1=:y9IV5c8JttnlfovwqXa7GWpaqTllKN7JAyXx3l2iAeAOhLxdjUa3EQT08+zij+aRbwO3UbOBrf+qAu9nRLZuDg==:",
-          "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792830150;expires=1792830210;keyid=\"akCFuNBNf1bqFBbUmkaIgJeEu1PZz2xbqBEQdjXQiqY\";alg=\"ed25519\";nonce=\"2Y34H2J2cXZH7kLmneqTkw\";tag=\"agent-browser-auth\""
+          "Content-Digest": "sha-256=:Sjf3Sxz4TvT4K/Ivfm6DlJmUfECZp91wi8hreJ2dtds=:",
+          "Mandate-Hash": "0ac919278858c17945a133c1f444ae3c4883689be3f7dd33bf83856b29e1ff23",
+          "Signature": "sig1=:xUo7RhApuOE6ORUMXs2WbHx9k50eZ7BFJHOBW44qIJlZ5beA0xT9tlXea2Guu4uUSLahxvu1ubZEb2G3+fMrDg==:",
+          "Signature-Input": "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\" \"mandate-hash\");created=1792835090;expires=1792835150;keyid=\"TzswzK6NkShqSdJVFu5fHPwn2QVa_UM3_9d8-wdPP7Y\";alg=\"ed25519\";nonce=\"_rcb3EFPfxhnMPbl_UCC2A\";tag=\"agent-browser-auth\""
         },
         "key_source": "throwaway Ed25519 key in a temp dir (deleted after the run)",
-        "keyid": "akCFuNBNf1bqFBbUmkaIgJeEu1PZz2xbqBEQdjXQiqY",
+        "keyid": "TzswzK6NkShqSdJVFu5fHPwn2QVa_UM3_9d8-wdPP7Y",
         "method": "POST",
         "url": "https://merchant-sim.example.test/v1/charge"
       },
@@ -4360,8 +4359,8 @@
     },
     "5": {
       "control": {
-        "round1_price": 1289.0,
-        "round2_price": 1289.0,
+        "round1_price": 1329.0,
+        "round2_price": 1329.0,
         "unchanged": true
       },
       "control_seller": "fair-price-pc",
@@ -4369,8 +4368,8 @@
       "learner": {
         "above_floor": true,
         "floor": 1190.0,
-        "round1_price": 1247.02,
-        "round2_price": 1209.61
+        "round1_price": 1286.02,
+        "round2_price": 1247.44
       },
       "learning_seller": "gadget-grove",
       "origin": "SIM",
@@ -4379,7 +4378,7 @@
       ],
       "round1_loss_reports": [
         {
-          "created_at": "2026-10-24T08:21:22Z",
+          "created_at": "2026-10-24T09:43:42Z",
           "gap_band": "within5",
           "id": "lr-round-1-amazon-direct",
           "reason": "condition",
@@ -4389,7 +4388,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T08:21:22Z",
+          "created_at": "2026-10-24T09:43:42Z",
           "gap_band": "within20",
           "id": "lr-round-1-ebay-263900",
           "reason": "price",
@@ -4399,8 +4398,8 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T08:21:22Z",
-          "gap_band": "within20",
+          "created_at": "2026-10-24T09:43:42Z",
+          "gap_band": "within10",
           "id": "lr-round-1-ebay-442526",
           "reason": "price",
           "round_id": "round-1",
@@ -4409,7 +4408,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T08:21:22Z",
+          "created_at": "2026-10-24T09:43:42Z",
           "gap_band": "within5",
           "id": "lr-round-1-micro-center",
           "reason": "condition",
@@ -4419,27 +4418,7 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T08:21:22Z",
-          "gap_band": "within5",
-          "id": "lr-round-1-shady-sam",
-          "reason": "advocate_veto",
-          "round_id": "round-1",
-          "seller_id": "shady-sam",
-          "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-          "won": false
-        },
-        {
-          "created_at": "2026-10-24T08:21:22Z",
-          "gap_band": "within5",
-          "id": "lr-round-1-bargain-bin",
-          "reason": "fit",
-          "round_id": "round-1",
-          "seller_id": "bargain-bin",
-          "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
-          "won": false
-        },
-        {
-          "created_at": "2026-10-24T08:21:22Z",
+          "created_at": "2026-10-24T09:43:42Z",
           "gap_band": "within5",
           "id": "lr-round-1-fair-price-pc",
           "reason": "price",
@@ -4449,23 +4428,43 @@
           "won": false
         },
         {
-          "created_at": "2026-10-24T08:21:22Z",
+          "created_at": "2026-10-24T09:43:42Z",
+          "gap_band": "within5",
+          "id": "lr-round-1-shady-sam",
+          "reason": "advocate_veto",
+          "round_id": "round-1",
+          "seller_id": "shady-sam",
+          "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+          "won": false
+        },
+        {
+          "created_at": "2026-10-24T09:43:42Z",
+          "gap_band": "within5",
+          "id": "lr-round-1-bargain-bin",
+          "reason": "fit",
+          "round_id": "round-1",
+          "seller_id": "bargain-bin",
+          "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
+          "won": false
+        },
+        {
+          "created_at": "2026-10-24T09:43:42Z",
+          "gap_band": "within5",
+          "id": "lr-round-1-ebay-824742",
+          "reason": "fit",
+          "round_id": "round-1",
+          "seller_id": "ebay-824742",
+          "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+          "won": false
+        },
+        {
+          "created_at": "2026-10-24T09:43:42Z",
           "gap_band": "within5",
           "id": "lr-round-1-gadget-grove",
           "reason": "price",
           "round_id": "round-1",
           "seller_id": "gadget-grove",
           "source_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
-          "won": false
-        },
-        {
-          "created_at": "2026-10-24T08:21:22Z",
-          "gap_band": "within5",
-          "id": "lr-round-1-ebay-824742",
-          "reason": "price",
-          "round_id": "round-1",
-          "seller_id": "ebay-824742",
-          "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
           "won": false
         }
       ],
@@ -4474,14 +4473,17 @@
           {
             "claims": [],
             "decision_trace": "Amazon.com (sells direct): unknown 1,299.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-amazon-direct",
             "lines": [
               {
                 "attrs": {
                   "category": "gpu",
-                  "chipset": "RTX 5070 Ti"
+                  "chipset": "RTX 5070 Ti",
+                  "length_mm": 300,
+                  "length_model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+                  "length_source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"
                 },
                 "basis": "real listing amazon-20261024T0509Z at 1,299.99, floor 93% of list (SIM assumption)",
                 "listing_url": "https://www.amazon.com/dp/B0DXL8NFLF",
@@ -4509,24 +4511,27 @@
             "claims": [
               "new per the listing"
             ],
-            "decision_trace": "Best Buy: new 1,249.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "decision_trace": "Best Buy: new 1,299.99 (list less discount); plus 0.00 shipping",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-best-buy",
             "lines": [
               {
                 "attrs": {
                   "category": "gpu",
-                  "chipset": "RTX 5070 Ti"
+                  "chipset": "RTX 5070 Ti",
+                  "length_mm": 304,
+                  "length_model": "ASUS Prime GeForce RTX 5070 Ti OC Edition (PRIME-RTX5070TI-O16G)",
+                  "length_source": "https://www.asus.com/motherboards-components/graphics-cards/prime/prime-rtx5070ti-o16g/techspec/"
                 },
-                "basis": "real listing bestbuy-20261024T0508Z at 1,249.99, floor 93% of list (SIM assumption)",
-                "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+                "basis": "real listing bestbuy-20261024T0508Z at 1,299.99, floor 93% of list (SIM assumption)",
+                "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
                 "offered_condition": "new",
                 "origin": "MIRROR",
                 "page_condition": "new",
                 "quantity": 1,
                 "sku_spec": "rtx 5070 ti",
-                "unit_price": 1249.99
+                "unit_price": 1299.99
               }
             ],
             "mirror_snapshot_id": "bestbuy-20261024T0508Z",
@@ -4539,14 +4544,36 @@
             "seller_id": "best-buy",
             "source": "mirror",
             "supplier_id": "best-buy",
-            "total_landed_price": 1249.99
+            "total_landed_price": 1299.99,
+            "withheld_lines": [
+              {
+                "condition": "new",
+                "length_mm": 338,
+                "listing_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+                "model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+                "reason": "GPU length 338 mm exceeds case clearance 305 mm",
+                "rule_id": "fit.gpu_length",
+                "source_url": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification",
+                "unit_price": 1249.99
+              },
+              {
+                "condition": "new",
+                "length_mm": 342,
+                "listing_url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+                "model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+                "reason": "GPU length 342 mm exceeds case clearance 305 mm",
+                "rule_id": "fit.gpu_length",
+                "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+                "unit_price": 1249.99
+              }
+            ]
           },
           {
             "claims": [
               "new per the listing"
             ],
             "decision_trace": "eBay seller of item ...263900 (handle not captured): new 1,489.00 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-ebay-263900",
             "lines": [
@@ -4582,14 +4609,17 @@
               "new per the listing"
             ],
             "decision_trace": "eBay seller of item ...442526 (handle not captured): new 1,399.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-ebay-442526",
             "lines": [
               {
                 "attrs": {
                   "category": "gpu",
-                  "chipset": "RTX 5070 Ti"
+                  "chipset": "RTX 5070 Ti",
+                  "length_mm": 338,
+                  "length_model": "MSI GeForce RTX 5070 Ti 16G GAMING TRIO OC",
+                  "length_source": "https://www.msi.com/Graphics-Card/GeForce-RTX-5070-Ti-16G-GAMING-TRIO-OC/Specification"
                 },
                 "basis": "real listing ebay_live-20261024T0508Z at 1,399.99, floor 93% of list (SIM assumption)",
                 "listing_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
@@ -4618,14 +4648,17 @@
               "open-box per the listing"
             ],
             "decision_trace": "eBay seller of item ...824742 (handle not captured): open-box 1,239.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-ebay-824742",
             "lines": [
               {
                 "attrs": {
                   "category": "gpu",
-                  "chipset": "RTX 5070 Ti"
+                  "chipset": "RTX 5070 Ti",
+                  "length_mm": 342,
+                  "length_model": "GIGABYTE GeForce RTX 5070 Ti GAMING OC 16G (GV-N507TGAMING OC-16GD)",
+                  "length_source": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp"
                 },
                 "basis": "real listing ebay_live-20261024T0508Z at 1,239.99, floor 93% of list (SIM assumption)",
                 "listing_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
@@ -4652,14 +4685,17 @@
           {
             "claims": [],
             "decision_trace": "Micro Center: unknown 1,199.99 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-micro-center",
             "lines": [
               {
                 "attrs": {
                   "category": "gpu",
-                  "chipset": "RTX 5070 Ti"
+                  "chipset": "RTX 5070 Ti",
+                  "length_mm": 300,
+                  "length_model": "PNY GeForce RTX 5070 Ti 16GB OC Triple Fan / EPIC-X RGB OC Triple Fan (VCG5070T16TFXPB1-O)",
+                  "length_source": "https://www.pny.com/File%20Library/Company/Support/Product%20Brochures/GeForce%20Graphics/English/RTX-5070-Ti-16GB-Triple-Fan-OC-Brochure.pdf"
                 },
                 "basis": "real listing microcenter-20261024T0509Z at 1,199.99, floor 93% of list (SIM assumption)",
                 "listing_url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
@@ -4690,7 +4726,7 @@
               "30-day returns"
             ],
             "decision_trace": "Shady Sam's Deals (SIM): new 757.44 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-shady-sam",
             "lines": [
@@ -4728,7 +4764,7 @@
               "New, retail box"
             ],
             "decision_trace": "Bargain Bin Hardware (SIM): new 1,199.00 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-bargain-bin",
             "lines": [
@@ -4764,7 +4800,7 @@
           {
             "claims": [],
             "decision_trace": "Lowball Direct (SIM): new 1,090.00 (rogue agent ignored its floor); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": false,
             "id": "bid-need-vidyut-5070ti-lowball",
             "lines": [
@@ -4801,8 +4837,8 @@
             "claims": [
               "New, retail box"
             ],
-            "decision_trace": "Fair Price PC (SIM): new 1,289.00 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "decision_trace": "Fair Price PC (SIM): new 1,329.00 (list less discount); plus 0.00 shipping",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-fair-price-pc",
             "lines": [
@@ -4819,7 +4855,7 @@
                 "page_condition": "new",
                 "quantity": 1,
                 "sku_spec": "rtx 5070 ti",
-                "unit_price": 1289.0
+                "unit_price": 1329.0
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
@@ -4833,15 +4869,15 @@
             "seller_id": "fair-price-pc",
             "source": "simulated",
             "supplier_id": "fair-price-pc",
-            "total_landed_price": 1289.0
+            "total_landed_price": 1329.0
           },
           {
             "claims": [
               "New, retail box",
               "Open-box, retail box"
             ],
-            "decision_trace": "Gadget Grove (Vedant): new 1,275.82 (list less discount); open-box 1,209.61 (list less discount); plus 0.00 shipping",
-            "expires_at": "2026-10-24T08:21:34Z",
+            "decision_trace": "Gadget Grove (Vedant): new 1,275.82 (list less discount); open-box 1,247.44 (list less discount); plus 0.00 shipping",
+            "expires_at": "2026-10-24T09:43:54Z",
             "floor_check_passed": true,
             "id": "bid-need-vidyut-5070ti-gadget-grove",
             "lines": [
@@ -4873,7 +4909,7 @@
                 "page_condition": "open-box",
                 "quantity": 1,
                 "sku_spec": "rtx 5070 ti",
-                "unit_price": 1209.61
+                "unit_price": 1247.44
               }
             ],
             "mirror_snapshot_id": "sim-hosted-pages-2026-10-23",
@@ -4887,7 +4923,7 @@
             "seller_id": "gadget-grove",
             "source": "simulated",
             "supplier_id": "gadget-grove",
-            "total_landed_price": 1209.61
+            "total_landed_price": 1247.44
           }
         ],
         "cards": [
@@ -4932,7 +4968,7 @@
                 "text": "rtx 5070 ti is listed as new, the page says open box. The condition claim did not match the listing."
               },
               {
-                "checked_at": "2026-10-24T08:21:23+00:00",
+                "checked_at": "2026-10-24T09:43:42+00:00",
                 "dollar_impact": 757.44,
                 "evidence_hash": "24b5802002ea9360545f3ebf1b3c110cdb86eeaceb0ef593046cd56047db1c6e",
                 "kind": "price",
@@ -5019,11 +5055,11 @@
             "warnings": []
           },
           {
-            "bid_id": "bid-need-vidyut-5070ti-best-buy",
+            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
             "call_reason": {
-              "rule_id": "advocate.fit_unknown",
-              "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-              "summary": "Fit could not be confirmed from the listing details"
+              "rule_id": "fit.gpu_length",
+              "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+              "summary": "The card is longer than your case allows"
             },
             "fit": {
               "checks": [
@@ -5038,33 +5074,33 @@
                   "verdict": "pass"
                 },
                 {
-                  "reason": "GPU length or case clearance unknown",
+                  "reason": "GPU length 342 mm exceeds case clearance 305 mm",
                   "rule_id": "fit.gpu_length",
-                  "verdict": "uncertain"
+                  "verdict": "fail"
                 }
               ],
-              "verdict": "uncertain"
+              "verdict": "fail"
             },
-            "judged_condition": "new",
+            "judged_condition": "open-box",
             "line": 0,
             "need_id": "need-vidyut-5070ti",
-            "recommendation": "caution",
+            "recommendation": "veto",
             "wait_until": "",
             "warnings": [
               {
-                "dollar_impact": 0.0,
-                "kind": "fit_unknown",
-                "rule_id": "advocate.fit_unknown",
-                "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-                "text": "Fit not confirmed: GPU length or case clearance unknown."
+                "dollar_impact": 1239.99,
+                "kind": "fit",
+                "rule_id": "fit.gpu_length",
+                "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+                "text": "Does not fit: GPU length 342 mm exceeds case clearance 305 mm (rule fit.gpu_length)."
               }
             ]
           },
           {
-            "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+            "bid_id": "bid-need-vidyut-5070ti-best-buy",
             "call_reason": {
               "rule_id": "advocate.ok",
-              "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
+              "source_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
               "summary": "No problems found in the checks"
             },
             "fit": {
@@ -5080,7 +5116,7 @@
                   "verdict": "pass"
                 },
                 {
-                  "reason": "GPU length 303 mm within case clearance 305 mm",
+                  "reason": "GPU length 304 mm within case clearance 305 mm",
                   "rule_id": "fit.gpu_length",
                   "verdict": "pass"
                 }
@@ -5093,54 +5129,12 @@
             "recommendation": "buy",
             "wait_until": "",
             "warnings": []
-          },
-          {
-            "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
-            "call_reason": {
-              "rule_id": "advocate.fit_unknown",
-              "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-              "summary": "Fit could not be confirmed from the listing details"
-            },
-            "fit": {
-              "checks": [
-                {
-                  "reason": "750 W PSU vs GPU maker's recommended 750 W (CPU not given)",
-                  "rule_id": "fit.psu_wattage",
-                  "verdict": "pass"
-                },
-                {
-                  "reason": "PSU has a native 16-pin (12V-2x6) cable",
-                  "rule_id": "fit.gpu_connectors",
-                  "verdict": "pass"
-                },
-                {
-                  "reason": "GPU length or case clearance unknown",
-                  "rule_id": "fit.gpu_length",
-                  "verdict": "uncertain"
-                }
-              ],
-              "verdict": "uncertain"
-            },
-            "judged_condition": "open-box",
-            "line": 0,
-            "need_id": "need-vidyut-5070ti",
-            "recommendation": "caution",
-            "wait_until": "",
-            "warnings": [
-              {
-                "dollar_impact": 0.0,
-                "kind": "fit_unknown",
-                "rule_id": "advocate.fit_unknown",
-                "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
-                "text": "Fit not confirmed: GPU length or case clearance unknown."
-              }
-            ]
           }
         ],
         "loss_reports": [
           {
-            "created_at": "2026-10-24T08:21:22Z",
-            "gap_band": "within10",
+            "created_at": "2026-10-24T09:43:42Z",
+            "gap_band": "within5",
             "id": "lr-round-2-amazon-direct",
             "reason": "condition",
             "round_id": "round-2",
@@ -5149,8 +5143,8 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T08:21:22Z",
-            "gap_band": "over20",
+            "created_at": "2026-10-24T09:43:42Z",
+            "gap_band": "within20",
             "id": "lr-round-2-ebay-263900",
             "reason": "price",
             "round_id": "round-2",
@@ -5159,7 +5153,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T08:21:22Z",
+            "created_at": "2026-10-24T09:43:42Z",
             "gap_band": "within20",
             "id": "lr-round-2-ebay-442526",
             "reason": "price",
@@ -5169,7 +5163,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T08:21:22Z",
+            "created_at": "2026-10-24T09:43:42Z",
             "gap_band": "within5",
             "id": "lr-round-2-micro-center",
             "reason": "condition",
@@ -5179,37 +5173,7 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T08:21:22Z",
-            "gap_band": "within5",
-            "id": "lr-round-2-shady-sam",
-            "reason": "advocate_veto",
-            "round_id": "round-2",
-            "seller_id": "shady-sam",
-            "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
-            "won": false
-          },
-          {
-            "created_at": "2026-10-24T08:21:22Z",
-            "gap_band": "within5",
-            "id": "lr-round-2-bargain-bin",
-            "reason": "fit",
-            "round_id": "round-2",
-            "seller_id": "bargain-bin",
-            "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
-            "won": false
-          },
-          {
-            "created_at": "2026-10-24T08:21:22Z",
-            "gap_band": "within5",
-            "id": "lr-round-2-best-buy",
-            "reason": "price",
-            "round_id": "round-2",
-            "seller_id": "best-buy",
-            "source_url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
-            "won": false
-          },
-          {
-            "created_at": "2026-10-24T08:21:22Z",
+            "created_at": "2026-10-24T09:43:42Z",
             "gap_band": "within5",
             "id": "lr-round-2-fair-price-pc",
             "reason": "price",
@@ -5219,13 +5183,43 @@
             "won": false
           },
           {
-            "created_at": "2026-10-24T08:21:22Z",
+            "created_at": "2026-10-24T09:43:42Z",
+            "gap_band": "within5",
+            "id": "lr-round-2-shady-sam",
+            "reason": "advocate_veto",
+            "round_id": "round-2",
+            "seller_id": "shady-sam",
+            "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+            "won": false
+          },
+          {
+            "created_at": "2026-10-24T09:43:42Z",
+            "gap_band": "within5",
+            "id": "lr-round-2-bargain-bin",
+            "reason": "fit",
+            "round_id": "round-2",
+            "seller_id": "bargain-bin",
+            "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
+            "won": false
+          },
+          {
+            "created_at": "2026-10-24T09:43:42Z",
             "gap_band": "within5",
             "id": "lr-round-2-ebay-824742",
-            "reason": "price",
+            "reason": "fit",
             "round_id": "round-2",
             "seller_id": "ebay-824742",
-            "source_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+            "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+            "won": false
+          },
+          {
+            "created_at": "2026-10-24T09:43:42Z",
+            "gap_band": "within5",
+            "id": "lr-round-2-best-buy",
+            "reason": "price",
+            "round_id": "round-2",
+            "seller_id": "best-buy",
+            "source_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
             "won": false
           }
         ],
@@ -5282,6 +5276,17 @@
                 "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
               ],
               "seller_id": "lowball"
+            },
+            {
+              "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+              "condition": "new",
+              "kind": "ineligible",
+              "landed": 1329.0,
+              "line": 0,
+              "reasons": [
+                "price: landed $1,329.00 is over the goal cap"
+              ],
+              "seller_id": "fair-price-pc"
             }
           ],
           "ranked": [
@@ -5324,7 +5329,7 @@
               "verified": 0
             },
             {
-              "adjusted": 1257.99,
+              "adjusted": 1297.34,
               "alternatives": [
                 {
                   "condition": "new",
@@ -5334,55 +5339,17 @@
                 {
                   "condition": "open-box",
                   "line": 1,
-                  "unit_price": 1209.61
+                  "unit_price": 1247.44
                 }
               ],
               "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
               "condition": "open-box",
-              "landed": 1209.61,
+              "landed": 1247.44,
               "line": 1,
               "rank": 3,
-              "score": 1257.99,
+              "score": 1297.34,
               "sealed_at": 10600,
               "seller_id": "gadget-grove",
-              "verified": 0
-            },
-            {
-              "adjusted": 1274.99,
-              "alternatives": [
-                {
-                  "condition": "new",
-                  "line": 0,
-                  "unit_price": 1249.99
-                }
-              ],
-              "bid_id": "bid-need-vidyut-5070ti-best-buy",
-              "condition": "new",
-              "landed": 1249.99,
-              "line": 0,
-              "rank": 4,
-              "score": 1274.99,
-              "sealed_at": 1200,
-              "seller_id": "best-buy",
-              "verified": 0
-            },
-            {
-              "adjusted": 1289.0,
-              "alternatives": [
-                {
-                  "condition": "new",
-                  "line": 0,
-                  "unit_price": 1289.0
-                }
-              ],
-              "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
-              "condition": "new",
-              "landed": 1289.0,
-              "line": 0,
-              "rank": 5,
-              "score": 1289.0,
-              "sealed_at": 8400,
-              "seller_id": "fair-price-pc",
               "verified": 0
             },
             {
@@ -5398,10 +5365,29 @@
               "condition": "open-box",
               "landed": 1239.99,
               "line": 0,
-              "rank": 6,
+              "rank": 4,
               "score": 1314.39,
               "sealed_at": 3900,
               "seller_id": "ebay-824742",
+              "verified": 0
+            },
+            {
+              "adjusted": 1325.99,
+              "alternatives": [
+                {
+                  "condition": "new",
+                  "line": 0,
+                  "unit_price": 1299.99
+                }
+              ],
+              "bid_id": "bid-need-vidyut-5070ti-best-buy",
+              "condition": "new",
+              "landed": 1299.99,
+              "line": 0,
+              "rank": 5,
+              "score": 1325.99,
+              "sealed_at": 1200,
+              "seller_id": "best-buy",
               "verified": 0
             }
           ]
@@ -5478,7 +5464,7 @@
         ],
         "round_id": "round-2",
         "winner": {
-          "adjusted": 1257.99,
+          "adjusted": 1297.34,
           "alternatives": [
             {
               "condition": "new",
@@ -5488,15 +5474,15 @@
             {
               "condition": "open-box",
               "line": 1,
-              "unit_price": 1209.61
+              "unit_price": 1247.44
             }
           ],
           "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
           "condition": "open-box",
-          "landed": 1209.61,
+          "landed": 1247.44,
           "line": 1,
           "rank": 3,
-          "score": 1257.99,
+          "score": 1297.34,
           "sealed_at": 10600,
           "seller_id": "gadget-grove",
           "verified": 0
@@ -5545,7 +5531,7 @@
     "beat4_signature_valid_and_replay_fails": true,
     "beat5_learner_closes_gap_above_floor": true
   },
-  "generated_at": "2026-10-24T08:21:22Z",
+  "generated_at": "2026-10-24T09:43:42Z",
   "provenance": {
     "claim_check": {
       "label": "REAL data.claim_check (Lane C), offline via fixture fetch",
@@ -5577,6 +5563,6 @@
       "merchant simulator (Lane C): verify_request is called directly": "demo/approval_flow.py"
     }
   },
-  "run_id": "run-20261024T082122Z",
+  "run_id": "run-20261024T094342Z",
   "schema": "tech-bazaar-demo-run/1"
 }

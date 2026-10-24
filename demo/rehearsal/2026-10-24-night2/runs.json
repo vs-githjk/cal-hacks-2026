@@ -1,0 +1,68 @@
+[
+  {
+    "run": 1,
+    "started_at": "2026-10-24T04:07:50-07:00",
+    "seconds": 75.29,
+    "beats": {},
+    "exit_code": 0,
+    "checks": {
+      "round_closed": "pass",
+      "awarded_line": "pass",
+      "payment_row": "pass",
+      "round_2_present": "pass"
+    },
+    "screenshots": [
+      "screens/run1-end-buyer.png",
+      "screens/run1-end-market.png"
+    ],
+    "last_beat": null,
+    "last_line": "NOT BRIDGED: seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor (issue #18 asks for a floor per seller, SKU and condition).",
+    "timed_out": false,
+    "check_notes": {},
+    "screenshot_notes": []
+  },
+  {
+    "run": 2,
+    "started_at": "2026-10-24T04:09:11-07:00",
+    "seconds": 75.3,
+    "beats": {},
+    "exit_code": 0,
+    "checks": {
+      "round_closed": "pass",
+      "awarded_line": "pass",
+      "payment_row": "pass",
+      "round_2_present": "pass"
+    },
+    "screenshots": [
+      "screens/run2-end-buyer.png",
+      "screens/run2-end-market.png"
+    ],
+    "last_beat": null,
+    "last_line": "NOT BRIDGED: seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor (issue #18 asks for a floor per seller, SKU and condition).",
+    "timed_out": false,
+    "check_notes": {},
+    "screenshot_notes": []
+  },
+  {
+    "run": 3,
+    "started_at": "2026-10-24T04:10:30-07:00",
+    "seconds": 75.32,
+    "beats": {},
+    "exit_code": 0,
+    "checks": {
+      "round_closed": "pass",
+      "awarded_line": "pass",
+      "payment_row": "pass",
+      "round_2_present": "pass"
+    },
+    "screenshots": [
+      "screens/run3-end-buyer.png",
+      "screens/run3-end-market.png"
+    ],
+    "last_beat": null,
+    "last_line": "NOT BRIDGED: seller floors per condition: the market keeps one floor per SKU, so a seller with several condition lines gets its lowest floor (issue #18 asks for a floor per seller, SKU and condition).",
+    "timed_out": false,
+    "check_notes": {},
+    "screenshot_notes": []
+  }
+]

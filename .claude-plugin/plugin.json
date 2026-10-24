@@ -1,0 +1,12 @@
+{
+  "name": "tech-bazaar-seller",
+  "version": "0.1.0",
+  "description": "Interview a PC shop owner and set up a Tech Bazaar seller agent through the Seller Kit API.",
+  "skills": [
+    "./.claude/skills/tech-bazaar-seller"
+  ],
+  "agents": [],
+  "author": {
+    "name": "Tech Bazaar (Cal Hacks 13)"
+  }
+}

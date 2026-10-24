@@ -20,9 +20,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -42,9 +44,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -60,9 +64,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30"
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -163,15 +169,17 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_NVMe_SSD_990_PRO_Datasheet_Rev.1.0.pdf",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_NVMe_SSD_990_PRO_Datasheet_Rev.1.0.pdf"
     }
    ],
    "truth": "does_not_fit",
    "why": "PA120 SE 155 mm cooler, North clearance 145 mm (fixed on re-check)",
    "truth_before_recheck": "fits",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "hero_650w",
@@ -190,9 +198,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -212,9 +222,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -272,9 +284,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -294,9 +308,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -355,9 +371,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
     },
     {
      "id": "motherboard:MSI B550 GAMING GEN3",
@@ -377,14 +395,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/B550-GAMING-GEN3/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/B550-GAMING-GEN3/Specification"
     }
    ],
    "truth": "does_not_fit",
    "why": "AM5 CPU, AM4 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "zen3_b550",
@@ -403,9 +423,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-7-5800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-7-5800x3d.html"
     },
     {
      "id": "motherboard:MSI B550 GAMING GEN3",
@@ -425,9 +447,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/B550-GAMING-GEN3/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/B550-GAMING-GEN3/Specification"
     },
     {
      "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
@@ -443,14 +467,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmk16gx4m2b3200c16/vengeancea-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmk16gx4m2b3200c16/vengeancea-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16"
     }
    ],
    "truth": "fits",
    "why": "AM4, DDR4",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "am4_cpu_am5_board",
@@ -469,9 +495,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-7-5800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-7-5800x3d.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -491,14 +519,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     }
    ],
    "truth": "does_not_fit",
    "why": "AM4 CPU, AM5 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "rpl_z790",
@@ -517,9 +547,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/236799/intel-core-i5-processor-14600k-24m-cache-up-to-5-30-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/236799/intel-core-i5-processor-14600k-24m-cache-up-to-5-30-ghz/specifications.html"
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -539,9 +571,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -557,14 +591,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30"
     }
    ],
    "truth": "fits",
    "why": "LGA1700, DDR5 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "arl_z790",
@@ -583,9 +619,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html"
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -605,14 +643,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
     }
    ],
    "truth": "does_not_fit",
    "why": "LGA1851 CPU, LGA1700 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "arl_z890",
@@ -631,9 +671,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html"
     },
     {
      "id": "motherboard:MSI PRO Z890-A WIFI",
@@ -653,9 +695,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification"
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -671,14 +715,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30"
     }
    ],
    "truth": "fits",
    "why": "LGA1851, DDR5",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "4090_14900k_750",
@@ -697,9 +743,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/236773/intel-core-i9-processor-14900k-36m-cache-up-to-6-00-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/236773/intel-core-i9-processor-14900k-36m-cache-up-to-6-00-ghz/specifications.html"
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -719,9 +767,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
     },
     {
      "id": "gpu:Asus ROG STRIX RTX 4090 GAMING OC",
@@ -807,9 +857,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/236773/intel-core-i9-processor-14900k-36m-cache-up-to-6-00-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/236773/intel-core-i9-processor-14900k-36m-cache-up-to-6-00-ghz/specifications.html"
     },
     {
      "id": "motherboard:MSI PRO Z790-A WIFI",
@@ -829,9 +881,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
     },
     {
      "id": "gpu:NVIDIA RTX 4090 Founders Edition",
@@ -845,9 +899,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/"
     },
     {
      "id": "psu:Corsair RM1000x (2024)",
@@ -924,7 +980,7 @@
    "truth": "does_not_fit",
    "why": "NH-D15 is 168 mm, O11 EVO clearance 167 mm (fixed on re-check)",
    "truth_before_recheck": "fits",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "strix4090_north",
@@ -992,9 +1048,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/"
     },
     {
      "id": "case:Fractal Design North",
@@ -1025,7 +1083,7 @@
    ],
    "truth": "fits",
    "why": "304 mm card, 355 mm clearance",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "5070ti_nr200p",
@@ -1458,16 +1516,17 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "retailer",
-      "source": "retailer listings only (nzxt.com rate-limited): original H5 Flow GPU 365, cooler 165; 2024 H5 Flow is 410/170",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://support.nzxt.com/hc/en-us/articles/15970258057371-H5-2023-Series-FAQ",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://support.nzxt.com/hc/en-us/articles/15970258057371-H5-2023-Series-FAQ"
     }
    ],
    "truth": "does_not_fit",
    "why": "NH-D15 is 168 mm, H5 Flow clearance 165 mm (fixed on re-check)",
    "truth_before_recheck": "fits",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "drp5_h5",
@@ -1518,15 +1577,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "retailer",
-      "source": "retailer listings only (nzxt.com rate-limited): original H5 Flow GPU 365, cooler 165; 2024 H5 Flow is 410/170",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://support.nzxt.com/hc/en-us/articles/15970258057371-H5-2023-Series-FAQ",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://support.nzxt.com/hc/en-us/articles/15970258057371-H5-2023-Series-FAQ"
     }
    ],
    "truth": "does_not_fit",
    "why": "168 mm cooler, 165 mm clearance",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "atx_board_nr200p",
@@ -1549,9 +1609,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "case:Cooler Master MasterBox NR200P",
@@ -1581,7 +1643,7 @@
    ],
    "truth": "does_not_fit",
    "why": "ATX board, Mini ITX case",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "itx_board_nr200p",
@@ -1660,9 +1722,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification"
     },
     {
      "id": "case:Cooler Master MasterBox Q300L",
@@ -1692,7 +1756,7 @@
    ],
    "truth": "fits",
    "why": "Micro ATX board and case",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "atx_board_q300l",
@@ -1715,9 +1779,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
     },
     {
      "id": "case:Cooler Master MasterBox Q300L",
@@ -1747,7 +1813,7 @@
    ],
    "truth": "does_not_fit",
    "why": "ATX board, Micro ATX case",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "ddr4_on_am5",
@@ -1770,9 +1836,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
@@ -1788,14 +1856,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmk16gx4m2b3200c16/vengeancea-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmk16gx4m2b3200c16/vengeancea-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16"
     }
    ],
    "truth": "does_not_fit",
    "why": "DDR4 kit, DDR5 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "ddr5_on_d4_board",
@@ -1818,9 +1888,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification"
     },
     {
      "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
@@ -1836,14 +1908,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30"
     }
    ],
    "truth": "does_not_fit",
    "why": "DDR5 kit, DDR4 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "ddr4_on_d4_board",
@@ -1866,9 +1940,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification"
     },
     {
      "id": "memory:G.Skill Ripjaws V DDR4-3600 2x16GB",
@@ -1884,14 +1960,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.gskill.com/specification/165/184/1562833535/F4-3600C18D-32GVK-Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.gskill.com/specification/165/184/1562833535/F4-3600C18D-32GVK-Specification"
     }
    ],
    "truth": "fits",
    "why": "DDR4 kit, DDR4 board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "4dimm_on_itx",
@@ -1959,9 +2037,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
     },
     {
      "id": "gpu:MSI RTX 5070 Ti VENTUS 3X OC",
@@ -1994,14 +2074,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.evga.com/products/specs/psu.aspx?pn=d3e700bb-00cb-46b3-8ef4-f48874a11cb4",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.evga.com/products/specs/psu.aspx?pn=d3e700bb-00cb-46b3-8ef4-f48874a11cb4"
     }
    ],
    "truth": "does_not_fit",
    "why": "600 W and two 8-pin; card needs 750 W",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "4060_7600_550",
@@ -2020,9 +2102,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-5-7600.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-5-7600.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -2042,9 +2126,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "gpu:MSI RTX 4060 VENTUS 2X",
@@ -2081,9 +2167,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/psu/cp-9020277-na/cx-series-cx550-550-watt-80-plus-bronze-atx-power-supply-cp-9020277-na",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/psu/cp-9020277-na/cx-series-cx550-550-watt-80-plus-bronze-atx-power-supply-cp-9020277-na"
     }
    ],
    "truth": "fits",
@@ -2107,9 +2195,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-5-7600.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-5-7600.html"
     },
     {
      "id": "gpu:MSI RTX 4060 VENTUS 2X",
@@ -2141,14 +2231,16 @@
       "wattage": 450,
       "form_factor": "ATX",
       "pcie_16pin": 0,
-      "pcie_8pin": 1
+      "pcie_8pin": 2
      },
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/psu/cp-9020209-na/cv-series-cv450-450-watt-80-plus-bronze-certified-psu-cp-9020209-na",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/psu/cp-9020209-na/cv-series-cv450-450-watt-80-plus-bronze-certified-psu-cp-9020209-na"
     }
    ],
    "truth": "does_not_fit",
@@ -2172,9 +2264,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7800x3d.html"
     },
     {
      "id": "gpu:Sapphire NITRO+ RX 7900 XTX",
@@ -2239,9 +2333,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7800x3d.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -2261,9 +2357,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "gpu:Sapphire NITRO+ RX 7900 XTX",
@@ -2359,9 +2457,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "storage:Samsung 990 Pro 2TB",
@@ -2375,14 +2475,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_NVMe_SSD_990_PRO_Datasheet_Rev.1.0.pdf",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_NVMe_SSD_990_PRO_Datasheet_Rev.1.0.pdf"
     }
    ],
    "truth": "fits",
    "why": "board has M.2 slots",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "sata_b650",
@@ -2405,9 +2507,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "storage:Samsung 870 EVO 1TB",
@@ -2421,14 +2525,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_SSD_870_EVO_Data_Sheet_Rev1.1_230509.pdf",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_SSD_870_EVO_Data_Sheet_Rev1.1_230509.pdf"
     }
    ],
    "truth": "fits",
    "why": "board has SATA ports",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "terra_lowprofile",
@@ -2638,9 +2744,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-5-5600x.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/5000-series/amd-ryzen-5-5600x.html"
     },
     {
      "id": "motherboard:Asus PRIME B350M-A",
@@ -2710,14 +2818,16 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/us/motherboards-components/motherboards/prime/prime-z270-a/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/us/motherboards-components/motherboards/prime/prime-z270-a/techspec/"
     }
    ],
    "truth": "does_not_fit",
    "why": "Coffee Lake needs a 300-series board",
-   "hand_checked": false
+   "hand_checked": true
   },
   {
    "id": "kaby_z370",
@@ -2759,9 +2869,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/ca-en/motherboards-components/motherboards/prime/prime-z370-a/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/ca-en/motherboards-components/motherboards/prime/prime-z370-a/techspec/"
     }
    ],
    "truth": "does_not_fit",
@@ -2785,9 +2897,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-9-9950x.html"
     },
     {
      "id": "motherboard:Asus PRIME B650-PLUS WIFI",
@@ -2807,9 +2921,11 @@
      "origin": "SIM",
      "source": "maker spec page, values entered from memory; re-open the page to confirm",
      "checked": {
-      "level": "not re-checked",
-      "date": "2026-10-23"
-     }
+      "level": "maker",
+      "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
     },
     {
      "id": "gpu:NVIDIA RTX 5090 Founders Edition",
@@ -2878,7 +2994,462 @@
    "truth": "fits",
    "why": "NVIDIA recommends 1000 W for RTX 5090",
    "hand_checked": false
+  },
+  {
+   "id": "north_nhl12s",
+   "truth": "fits",
+   "why": "NH-L12S is 70 mm, North clears 145 mm",
+   "hand_checked": true,
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
+    },
+    {
+     "id": "cooler:Noctua NH-L12S",
+     "category": "cooler",
+     "name": "Noctua NH-L12S",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 70,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at: 70 mm with fan underneath (low-profile mode), 86 mm with fan on top",
+      "date": "2026-10-23"
+     }
+    },
+    {
+     "id": "case:Fractal Design North",
+     "category": "case",
+     "name": "Fractal Design North",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 355,
+      "max_cooler_height_mm": 145,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU",
+      "date": "2026-10-23"
+     }
+    }
+   ]
+  },
+  {
+   "id": "north_ak400",
+   "truth": "does_not_fit",
+   "why": "AK400 is 155 mm, North clears 145 mm",
+   "hand_checked": true,
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
+    },
+    {
+     "id": "cooler:DeepCool AK400",
+     "category": "cooler",
+     "name": "DeepCool AK400",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 155,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "deepcool.com: 127x97x155 mm",
+      "date": "2026-10-23"
+     }
+    },
+    {
+     "id": "case:Fractal Design North",
+     "category": "case",
+     "name": "Fractal Design North",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 355,
+      "max_cooler_height_mm": 145,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU",
+      "date": "2026-10-23"
+     }
+    }
+   ]
+  },
+  {
+   "id": "north_nhu12s",
+   "truth": "does_not_fit",
+   "why": "NH-U12S is 158 mm, North clears 145 mm",
+   "hand_checked": true,
+   "parts": [
+    {
+     "id": "cpu:AMD Ryzen 7 9800X3D",
+     "category": "cpu",
+     "name": "AMD Ryzen 7 9800X3D",
+     "condition": "new",
+     "attrs": {
+      "socket": "AM5",
+      "microarchitecture": "Zen 5",
+      "tdp_w": 120,
+      "vendor": "AMD"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9800x3d.html"
+    },
+    {
+     "id": "cooler:Noctua NH-U12S",
+     "category": "cooler",
+     "name": "Noctua NH-U12S",
+     "condition": "new",
+     "attrs": {
+      "type": "air",
+      "height_mm": 158,
+      "sockets": [
+       "AM4",
+       "AM5",
+       "LGA1700",
+       "LGA1851",
+       "LGA1200",
+       "LGA1151"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "noctua.at: 158 mm with fan",
+      "date": "2026-10-23"
+     }
+    },
+    {
+     "id": "case:Fractal Design North",
+     "category": "case",
+     "name": "Fractal Design North",
+     "condition": "new",
+     "attrs": {
+      "type": "ATX Mid Tower",
+      "motherboard_form_factors": [
+       "ATX",
+       "Micro ATX",
+       "Mini ITX"
+      ],
+      "max_gpu_length_mm": 355,
+      "max_cooler_height_mm": 145,
+      "psu_form_factors": [
+       "ATX"
+      ]
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU",
+      "date": "2026-10-23"
+     }
+    }
+   ]
+  },
+  {
+   "id": "z890_ddr5_kit",
+   "truth": "fits",
+   "why": "Z890 board takes DDR5; the kit is DDR5, 2 modules in 4 slots",
+   "hand_checked": true,
+   "parts": [
+    {
+     "id": "cpu:Intel Core Ultra 7 265K",
+     "category": "cpu",
+     "name": "Intel Core Ultra 7 265K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "microarchitecture": "Arrow Lake",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html"
+    },
+    {
+     "id": "motherboard:MSI PRO Z890-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z890-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "chipset": "Z890",
+      "chipset_series": 8,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 4
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification"
+    },
+    {
+     "id": "memory:Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "category": "memory",
+     "name": "Corsair Vengeance RGB DDR5-6000 2x16GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 6000,
+      "modules": 2,
+      "module_gb": 16
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000c30/vengeance-rgb-32gb-2x16gb-ddr5-dram-6000mt-s-c30-memory-kit-black-cmh32gx5m2b6000c30"
+    }
+   ]
+  },
+  {
+   "id": "z790_ddr4_kit",
+   "truth": "does_not_fit",
+   "why": "Z790-A is a DDR5 board; the kit is DDR4",
+   "hand_checked": true,
+   "parts": [
+    {
+     "id": "cpu:Intel Core i5-14600K",
+     "category": "cpu",
+     "name": "Intel Core i5-14600K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "microarchitecture": "Raptor Lake Refresh",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/236799/intel-core-i5-processor-14600k-24m-cache-up-to-5-30-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/236799/intel-core-i5-processor-14600k-24m-cache-up-to-5-30-ghz/specifications.html"
+    },
+    {
+     "id": "motherboard:MSI PRO Z790-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z790-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1700",
+      "chipset": "Z790",
+      "chipset_series": 7,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 6
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
+    },
+    {
+     "id": "memory:Corsair Vengeance LPX DDR4-3200 2x8GB",
+     "category": "memory",
+     "name": "Corsair Vengeance LPX DDR4-3200 2x8GB",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR4",
+      "speed_mhz": 3200,
+      "modules": 2,
+      "module_gb": 8
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.corsair.com/us/en/p/memory/cmk16gx4m2b3200c16/vengeancea-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.corsair.com/us/en/p/memory/cmk16gx4m2b3200c16/vengeancea-lpx-16gb-2-x-8gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk16gx4m2b3200c16"
+    }
+   ]
+  },
+  {
+   "id": "z890_sodimm_kit",
+   "truth": "does_not_fit",
+   "why": "SO-DIMM laptop memory does not fit a desktop DIMM board",
+   "hand_checked": true,
+   "parts": [
+    {
+     "id": "cpu:Intel Core Ultra 7 265K",
+     "category": "cpu",
+     "name": "Intel Core Ultra 7 265K",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "microarchitecture": "Arrow Lake",
+      "tdp_w": 125,
+      "vendor": "Intel"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.intel.com/content/www/us/en/products/sku/241063/intel-core-ultra-7-processor-265k-30m-cache-up-to-5-50-ghz/specifications.html"
+    },
+    {
+     "id": "motherboard:MSI PRO Z890-A WIFI",
+     "category": "motherboard",
+     "name": "MSI PRO Z890-A WIFI",
+     "condition": "new",
+     "attrs": {
+      "socket": "LGA1851",
+      "chipset": "Z890",
+      "chipset_series": 8,
+      "form_factor": "ATX",
+      "memory_type": "DDR5",
+      "memory_slots": 4,
+      "m2_slots": 4,
+      "sata_ports": 4,
+      "memory_form": "DIMM"
+     },
+     "origin": "SIM",
+     "source": "maker spec page, values entered from memory; re-open the page to confirm",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification"
+    },
+    {
+     "id": "memory:Crucial DDR5-5600 SODIMM 2x16GB",
+     "category": "memory",
+     "name": "Crucial 32GB Kit (16GBx2) DDR5-5600 SODIMM",
+     "condition": "new",
+     "attrs": {
+      "type": "DDR5",
+      "speed_mhz": 5600,
+      "modules": 2,
+      "module_gb": 16,
+      "form": "SO-DIMM"
+     },
+     "origin": "SIM",
+     "source": "crucial.com product page CT2K16G56C46S5",
+     "checked": {
+      "level": "maker",
+      "source": "https://www.crucial.com/memory/ddr5/ct2k16g56c46s5",
+      "date": "2026-10-24"
+     },
+     "check_source": "https://www.crucial.com/memory/ddr5/ct2k16g56c46s5"
+    }
+   ]
   }
  ],
- "recheck_note": "Values were corrected after the freeze from maker pages; truths changed for demo_hero, nhd15_h5 and 4090fe_14900k_1000. Builds were not added or removed."
+ "recheck_note": "Values were corrected after the freeze from maker pages; truths changed for demo_hero, nhd15_h5 and 4090fe_14900k_1000. Builds were not added or removed. On 2026-10-24 a second pass confirmed 26 more parts on maker domains (CPUs, boards, memory, storage, three PSUs, RTX 4090 FE, NZXT H5 Flow); one value corrected: Corsair CV450 PCIe 8-pin connectors 1 -> 2. Seasonic GX-850 (2019), Corsair RM650e and RM750e (2023, 8-pin counts), Trident Z5 4x16GB and MSI RTX 4060 Ventus length stay unconfirmed."
 }

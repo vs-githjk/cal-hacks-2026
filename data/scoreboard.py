@@ -23,17 +23,26 @@ def _tile(**kw) -> dict:
 def savings_tile() -> dict:
     from data.baselines import baseline, observations
     rows = observations()
-    at = max(r["observed_at"] for r in rows)
+    at = max((r["observed_at"] for r in rows), default=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     b = baseline("rtx 5070 ti", at, rows=rows)
+    ok = b["status"] == "ok"
+    why = "no verified purchase recorded yet" if ok else "no purchase has a confirmed dated baseline to compare against"
+    ref = b["median"] if ok else b.get("reference_unconfirmed")
+    ref_txt = (f"{'Baseline' if ok else 'Unconfirmed reference (not a baseline)'}: median ${ref:,.2f} of {b['n']} in-stock retail asks "
+               f"({b['status']}, providers {', '.join(b['providers'])}; a baseline needs two distinct data owners). "
+               if ref is not None else f"No reference ({b['status']}). ")
+    sd = b["sold"]
+    sold_txt = (f"eBay sold median ${sd['median']:,.2f} of {sd['n']} (last 30 days, mixed condition), shown beside the ask median, never blended. "
+                if sd.get("median") is not None else "")
+    owners_txt = f"Data owners: {' and '.join(b['owners'])}. " if b.get("owners") else ""
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
-                 display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
-                         f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",
+                 display=(f"No verified savings yet: {why} (reference {b['status']}, "
+                          f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})"),
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
                  source_run="python3 -m data.baselines",
-                 detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
-                         "sold_kept_out": b["sold"], "marketplace": b["marketplace"]},
-                 note=f"Unconfirmed reference (not a baseline): median ${b['reference_unconfirmed'] or b['median']:,.2f} of {b['n']} in-stock retail asks ({b['status']}: a baseline needs two "
-                      "dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. "
+                 detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"], "owners": b.get("owners", []), "ask_median": b.get("ask_median")},
+                         "sold_kept_out": b["sold"], "sold": b["sold"], "marketplace": b["marketplace"]},
+                 note=ref_txt + owners_txt + sold_txt + "apify-b re-checked Best Buy only (3 listings) and is the same data owner as apify. "
                       "SIM savings, when they exist, go in a separate column and are never added to real ones.")
 
 
@@ -49,7 +58,7 @@ def attacks_tile(now: str) -> dict:
                                       "missed": h["missed"], "false_blocks": h["false_blocks"]},
                          "dev": {"attacks": d["attacks"], "block_rate": d["block_rate"], "false_block_rate": d["false_block_rate"]},
                          "adaptive": b["adaptive"], "judge_attempts": {"count": 0, "status": "console not built yet"},
-                         "voice": {"status": "voice set written (sim/attacks/voice.jsonl), not yet run"}},
+                         "voice": {"see_tile": "voice_attacks"}},
                  note=f"Run at {now} (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. "
                       "Dev (what the rules were written against) is shown separately, never pooled. Never say secure.")
 
@@ -76,8 +85,8 @@ def learning_tile() -> dict:
     w = json.loads(pick.read_text())
     L = w["learning"]
     arch = L["per_archetype"]
-    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}"
-                     for a, v in arch.items())
+    rows = "; ".join(f"{a}: learner {v['learner']:.2f}, untrained {v['untrained']:.2f}, median control {v['control_median']:.2f}, "
+                     f"lift vs median control {v['learner'] - v['control_median']:+.2f}" for a, v in arch.items())
     return _tile(id="learning_lift", title="Seller learning lift", status="measured" if L["quotable"] else "not_quotable",
                  value=None, unit="points",
                  display=(f"No lift to quote ({len(L['winning_archetypes'])} of {len(arch)} archetypes, not quotable): the learner "
@@ -135,10 +144,24 @@ def hyphenate_tile() -> dict:
                       "b24, k02 and k03 were fixed after it, so the rerun is not blind.")
 
 
+DEMO_WINNER = {"sku": "rtx 5070 ti", "price": 1299.99, "condition": "new",  # ASUS Prime at Best Buy
+               "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"}
+
+
+def position_block() -> dict:
+    """Where the demo winner's price sits among the dated listings we hold (data.baselines.position)."""
+    from data.baselines import observations
+    from data.baselines.position import price_position
+    rows = observations()
+    as_of = max((r["observed_at"] for r in rows), default=datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    return price_position(DEMO_WINNER["sku"], DEMO_WINNER["price"], DEMO_WINNER["condition"], as_of, rows=rows,
+                          subject_url=DEMO_WINNER["url"])
+
+
 def build() -> dict:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return {"generated_at": now, "tiles": [savings_tile(), attacks_tile(now), fit_tile(now), learning_tile(),
-                                                voice_tile(), hyphenate_tile()]}
+                                                voice_tile(), hyphenate_tile()], "price_position": position_block()}
 
 
 if __name__ == "__main__":

@@ -1,0 +1,20 @@
+{
+  "name": "tech-bazaar",
+  "owner": {
+    "name": "Tech Bazaar (Cal Hacks 13)"
+  },
+  "metadata": {
+    "description": "Skills for sellers on the Tech Bazaar PC parts market",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "tech-bazaar-seller",
+      "description": "Interview a PC shop owner and set up a Tech Bazaar seller agent through the Seller Kit API.",
+      "source": "./",
+      "author": {
+        "name": "Tech Bazaar (Cal Hacks 13)"
+      }
+    }
+  ]
+}

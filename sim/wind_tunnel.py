@@ -45,8 +45,11 @@ ARCHETYPES = {  # cap range (USD), allowed conditions, case pool. Caps sit aroun
     "new_only_mid": ((1250, 1350), ["new"], ["north", "q300l"]),
     "open_box_ok": ((1200, 1320), ["new", "open-box"], ["north", "lancool216"]),
     "small_case": ((1250, 1400), ["new"], ["nr200p"]),
+    # Added for #73 item 5, committed before any run with them and with no learner change (sim/CONTROL.md):
+    "sff_open_box": ((1200, 1300), ["new", "open-box"], ["nr200p"]),
+    "new_only_tight": ((1230, 1280), ["new"], ["north", "q300l"]),
 }
-HELD_OUT = ("open_box_ok", "small_case")  # never seen in training
+HELD_OUT = ("open_box_ok", "small_case", "sff_open_box", "new_only_tight")  # never seen in training
 
 
 def median_control():

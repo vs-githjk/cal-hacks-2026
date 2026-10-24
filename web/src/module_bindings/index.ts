@@ -34,47 +34,75 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import ApproveTypedReducer from "./approve_typed_reducer";
 import AssignRoleReducer from "./assign_role_reducer";
 import AttachAdvocateCardReducer from "./attach_advocate_card_reducer";
 import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
 import CloseRoundReducer from "./close_round_reducer";
 import CreateMandateReducer from "./create_mandate_reducer";
+import DenyApprovalReducer from "./deny_approval_reducer";
+import IssueApprovalCodeReducer from "./issue_approval_code_reducer";
 import OpenRoundReducer from "./open_round_reducer";
 import PairBuyerScreenReducer from "./pair_buyer_screen_reducer";
+import PairSellerScreenReducer from "./pair_seller_screen_reducer";
 import PlaceBidReducer from "./place_bid_reducer";
 import PostGoalReducer from "./post_goal_reducer";
 import PostNeedReducer from "./post_need_reducer";
+import RecordAgentEventReducer from "./record_agent_event_reducer";
 import RecordApprovalReducer from "./record_approval_reducer";
+import RecordLossReportReducer from "./record_loss_report_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
 import RecordReceivingReducer from "./record_receiving_reducer";
 import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
+import ReissueSellerScreenCodeReducer from "./reissue_seller_screen_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
+import SetAllowanceReducer from "./set_allowance_reducer";
+import SetBuyerProfileReducer from "./set_buyer_profile_reducer";
 import SetFloorReducer from "./set_floor_reducer";
 import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import AgentEventRow from "./agent_event_table";
 import FloorEventRow from "./floor_event_table";
 import MyAllowanceRow from "./my_allowance_table";
 import MyBidsRow from "./my_bids_table";
+import MyBuyerProfileRow from "./my_buyer_profile_table";
 import MyGoalItemsRow from "./my_goal_items_table";
 import MyGoalsRow from "./my_goals_table";
+import MyLossReportsRow from "./my_loss_reports_table";
 import MyNotificationsRow from "./my_notifications_table";
 import MyPairAttemptsRow from "./my_pair_attempts_table";
+import MyPendingApprovalsRow from "./my_pending_approvals_table";
 import MyRoleRow from "./my_role_table";
 import PersonaRow from "./persona_table";
 import RejectedAttemptRow from "./rejected_attempt_table";
 import RoundRow from "./round_table";
 import RoundResultRow from "./round_result_table";
 import SellerNeedsRow from "./seller_needs_table";
+import StockHoldRow from "./stock_hold_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  agentEvent: __table({
+    name: 'agent_event',
+    indexes: [
+      { accessor: 'address', name: 'agent_event_address_idx_btree', algorithm: 'btree', columns: [
+        'address',
+      ] },
+      { accessor: 'id', name: 'agent_event_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'agent_event_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AgentEventRow),
   floorEvent: __table({
     name: 'floor_event',
     indexes: [
@@ -136,6 +164,26 @@ const tablesSchema = __schema({
       { name: 'round_result_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, RoundResultRow),
+  stockHold: __table({
+    name: 'stock_hold',
+    indexes: [
+      { accessor: 'bidId', name: 'stock_hold_bid_id_idx_btree', algorithm: 'btree', columns: [
+        'bidId',
+      ] },
+      { accessor: 'id', name: 'stock_hold_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'roundId', name: 'stock_hold_round_id_idx_btree', algorithm: 'btree', columns: [
+        'roundId',
+      ] },
+      { accessor: 'sellerId', name: 'stock_hold_seller_id_idx_btree', algorithm: 'btree', columns: [
+        'sellerId',
+      ] },
+    ],
+    constraints: [
+      { name: 'stock_hold_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, StockHoldRow),
   myAllowance: __table({
     name: 'my_allowance',
     indexes: [
@@ -150,6 +198,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyBidsRow),
+  myBuyerProfile: __table({
+    name: 'my_buyer_profile',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyBuyerProfileRow),
   myGoalItems: __table({
     name: 'my_goal_items',
     indexes: [
@@ -164,6 +219,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyGoalsRow),
+  myLossReports: __table({
+    name: 'my_loss_reports',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyLossReportsRow),
   myNotifications: __table({
     name: 'my_notifications',
     indexes: [
@@ -178,6 +240,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyPairAttemptsRow),
+  myPendingApprovals: __table({
+    name: 'my_pending_approvals',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyPendingApprovalsRow),
   myRole: __table({
     name: 'my_role',
     indexes: [
@@ -196,23 +265,32 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("approve_typed", ApproveTypedReducer),
   __reducerSchema("assign_role", AssignRoleReducer),
   __reducerSchema("attach_advocate_card", AttachAdvocateCardReducer),
   __reducerSchema("attach_claim_check", AttachClaimCheckReducer),
   __reducerSchema("attach_verdict", AttachVerdictReducer),
   __reducerSchema("close_round", CloseRoundReducer),
   __reducerSchema("create_mandate", CreateMandateReducer),
+  __reducerSchema("deny_approval", DenyApprovalReducer),
+  __reducerSchema("issue_approval_code", IssueApprovalCodeReducer),
   __reducerSchema("open_round", OpenRoundReducer),
   __reducerSchema("pair_buyer_screen", PairBuyerScreenReducer),
+  __reducerSchema("pair_seller_screen", PairSellerScreenReducer),
   __reducerSchema("place_bid", PlaceBidReducer),
   __reducerSchema("post_goal", PostGoalReducer),
   __reducerSchema("post_need", PostNeedReducer),
+  __reducerSchema("record_agent_event", RecordAgentEventReducer),
   __reducerSchema("record_approval", RecordApprovalReducer),
+  __reducerSchema("record_loss_report", RecordLossReportReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),
   __reducerSchema("record_receiving", RecordReceivingReducer),
   __reducerSchema("reissue_pair_code", ReissuePairCodeReducer),
+  __reducerSchema("reissue_seller_screen_code", ReissueSellerScreenCodeReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
+  __reducerSchema("set_allowance", SetAllowanceReducer),
+  __reducerSchema("set_buyer_profile", SetBuyerProfileReducer),
   __reducerSchema("set_floor", SetFloorReducer),
   __reducerSchema("set_floor_for_condition", SetFloorForConditionReducer),
 );
@@ -227,14 +305,20 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_allowance": Omit<typeof tablesSchema.schemaType.tables["myAllowance"], "accessorName"> & { readonly accessorName: "my_allowance" };
     /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
     readonly "my_bids": Omit<typeof tablesSchema.schemaType.tables["myBids"], "accessorName"> & { readonly accessorName: "my_bids" };
+    /** @deprecated Use `myBuyerProfile` instead. This alias will be removed in the next major version. */
+    readonly "my_buyer_profile": Omit<typeof tablesSchema.schemaType.tables["myBuyerProfile"], "accessorName"> & { readonly accessorName: "my_buyer_profile" };
     /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
     readonly "my_goal_items": Omit<typeof tablesSchema.schemaType.tables["myGoalItems"], "accessorName"> & { readonly accessorName: "my_goal_items" };
     /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
     readonly "my_goals": Omit<typeof tablesSchema.schemaType.tables["myGoals"], "accessorName"> & { readonly accessorName: "my_goals" };
+    /** @deprecated Use `myLossReports` instead. This alias will be removed in the next major version. */
+    readonly "my_loss_reports": Omit<typeof tablesSchema.schemaType.tables["myLossReports"], "accessorName"> & { readonly accessorName: "my_loss_reports" };
     /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
     readonly "my_notifications": Omit<typeof tablesSchema.schemaType.tables["myNotifications"], "accessorName"> & { readonly accessorName: "my_notifications" };
     /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
     readonly "my_pair_attempts": Omit<typeof tablesSchema.schemaType.tables["myPairAttempts"], "accessorName"> & { readonly accessorName: "my_pair_attempts" };
+    /** @deprecated Use `myPendingApprovals` instead. This alias will be removed in the next major version. */
+    readonly "my_pending_approvals": Omit<typeof tablesSchema.schemaType.tables["myPendingApprovals"], "accessorName"> & { readonly accessorName: "my_pending_approvals" };
     /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
     readonly "my_role": Omit<typeof tablesSchema.schemaType.tables["myRole"], "accessorName"> & { readonly accessorName: "my_role" };
     /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
@@ -259,10 +343,13 @@ const REMOTE_MODULE = {
 const tableAccessorAliases = {
   "my_allowance": "myAllowance",
   "my_bids": "myBids",
+  "my_buyer_profile": "myBuyerProfile",
   "my_goal_items": "myGoalItems",
   "my_goals": "myGoals",
+  "my_loss_reports": "myLossReports",
   "my_notifications": "myNotifications",
   "my_pair_attempts": "myPairAttempts",
+  "my_pending_approvals": "myPendingApprovals",
   "my_role": "myRole",
   "seller_needs": "sellerNeeds",
 } as const;
@@ -289,14 +376,20 @@ export type DbView = __DbViewBase & {
   readonly "my_allowance": __DbViewBase["myAllowance"];
   /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
   readonly "my_bids": __DbViewBase["myBids"];
+  /** @deprecated Use `myBuyerProfile` instead. This alias will be removed in the next major version. */
+  readonly "my_buyer_profile": __DbViewBase["myBuyerProfile"];
   /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
   readonly "my_goal_items": __DbViewBase["myGoalItems"];
   /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
   readonly "my_goals": __DbViewBase["myGoals"];
+  /** @deprecated Use `myLossReports` instead. This alias will be removed in the next major version. */
+  readonly "my_loss_reports": __DbViewBase["myLossReports"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __DbViewBase["myNotifications"];
   /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
   readonly "my_pair_attempts": __DbViewBase["myPairAttempts"];
+  /** @deprecated Use `myPendingApprovals` instead. This alias will be removed in the next major version. */
+  readonly "my_pending_approvals": __DbViewBase["myPendingApprovals"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __DbViewBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
@@ -309,14 +402,20 @@ export type Tables = __TablesBase & {
   readonly "my_allowance": __TablesBase["myAllowance"];
   /** @deprecated Use `myBids` instead. This alias will be removed in the next major version. */
   readonly "my_bids": __TablesBase["myBids"];
+  /** @deprecated Use `myBuyerProfile` instead. This alias will be removed in the next major version. */
+  readonly "my_buyer_profile": __TablesBase["myBuyerProfile"];
   /** @deprecated Use `myGoalItems` instead. This alias will be removed in the next major version. */
   readonly "my_goal_items": __TablesBase["myGoalItems"];
   /** @deprecated Use `myGoals` instead. This alias will be removed in the next major version. */
   readonly "my_goals": __TablesBase["myGoals"];
+  /** @deprecated Use `myLossReports` instead. This alias will be removed in the next major version. */
+  readonly "my_loss_reports": __TablesBase["myLossReports"];
   /** @deprecated Use `myNotifications` instead. This alias will be removed in the next major version. */
   readonly "my_notifications": __TablesBase["myNotifications"];
   /** @deprecated Use `myPairAttempts` instead. This alias will be removed in the next major version. */
   readonly "my_pair_attempts": __TablesBase["myPairAttempts"];
+  /** @deprecated Use `myPendingApprovals` instead. This alias will be removed in the next major version. */
+  readonly "my_pending_approvals": __TablesBase["myPendingApprovals"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __TablesBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */

@@ -52,6 +52,10 @@ export interface Ranked {
   verified: number;
   /** Indexes into bid.lines of the picked (cheapest allowed) line per SKU. */
   picked: number[];
+  /** True when every needed SKU has a picked line. A partial bid never ranks above a complete one. */
+  complete: boolean;
+  /** The needed sku_specs no picked line covers (empty when complete). */
+  missing: string[];
 }
 
 export interface Disqualified {
@@ -122,13 +126,19 @@ export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; di
       continue;
     }
     const adjusted = opts.quality ? qualityAdjusted(bid, pickedLines, opts.needItems, opts.quality) : landed;
-    eligible.push({ bid, landed, score: round2(adjusted - (opts.perksValue?.(bid) ?? 0)), verified: opts.verifiedClaims?.(bid) ?? 0, picked });
+    const missing = [...opts.needItems.keys()].filter((sku) => !pickedLines.some((l) => l.sku_spec === sku));
+    eligible.push({
+      bid, landed, score: round2(adjusted - (opts.perksValue?.(bid) ?? 0)), verified: opts.verifiedClaims?.(bid) ?? 0, picked,
+      complete: missing.length === 0, missing,
+    });
   }
   eligible.sort(
     (a, b) =>
+      Number(b.complete) - Number(a.complete) ||
       a.score - b.score ||
       b.verified - a.verified ||
       a.bid.sealed_at - b.bid.sealed_at ||
+      (a.bid.seller_id < b.bid.seller_id ? -1 : a.bid.seller_id > b.bid.seller_id ? 1 : 0) ||
       (a.bid.id < b.bid.id ? -1 : a.bid.id > b.bid.id ? 1 : 0),
   );
   return { ranked: eligible.map((e, i) => ({ ...e, rank: i + 1 })), disqualified };

@@ -12,7 +12,7 @@ from datetime import datetime
 
 from demo.beats import owned_attrs
 from demo.common import MIRROR, SIM, money, utc_iso, validate
-from demo.round import run_round
+from demo.round import landed_note, run_round
 from demo.sellers import Seller, all_sellers
 from demo.standins.market import quality_adjusted
 
@@ -122,7 +122,7 @@ def run_beat5(b1: dict, b2: dict, now: datetime, say) -> dict:
     say.line(SIM, f"{learner.name}: {money(p1)} -> {money(p2)}, referee floor check {'passed' if ref2['passed'] and p2 >= floor else 'FAILED'} (never below its floor)", 1)
     say.line(SIM, f"{control.name} (static control): {money(c1)} -> {money(c2)}", 1)
     w2 = sellers[res2["winner"]["seller_id"]]
-    say.line(SIM, f"round-2 winner: {w2.name} at {money(res2['winner']['landed'])}; vetoes unchanged: "
+    say.line(SIM, f"round-2 winner: {w2.name} at {landed_note(w2, res2['winner']['landed'])}; vetoes unchanged: "
                   + ", ".join(sellers[next(b["seller_id"] for b in res2["bids"] if b["id"] == c["bid_id"])].name
                             for c in res2["cards"] if c["recommendation"] == "veto"))
     ctrl2 = next((r for r in reports2 if r["seller_id"] == control.id), None)

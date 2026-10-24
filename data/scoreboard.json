@@ -1,25 +1,40 @@
 {
- "generated_at": "2026-10-24T08:49:52+00:00",
+ "generated_at": "2026-10-24T15:54:59+00:00",
  "tiles": [
   {
    "detail": {
     "reference": {
-     "status": "one_source",
-     "median": null,
-     "reference_unconfirmed": 1254.99,
-     "n": 6,
+     "status": "ok",
+     "median": 1259.99,
+     "reference_unconfirmed": null,
+     "n": 7,
      "providers": [
-      "apify"
-     ]
+      "apify",
+      "apify-b"
+     ],
+     "owners": [
+      "eBay sold",
+      "retailer listings (Apify)"
+     ],
+     "ask_median": 1259.99
     },
     "sold_kept_out": {
      "n": 5,
      "median": 880.0,
-     "note": "eBay sold, mixed condition: never in the median"
+     "from": "2026-10-23",
+     "to": "2026-10-23",
+     "note": "eBay sold, mixed condition, 30-day window: never blended into the ask median"
+    },
+    "sold": {
+     "n": 5,
+     "median": 880.0,
+     "from": "2026-10-23",
+     "to": "2026-10-23",
+     "note": "eBay sold, mixed condition, 30-day window: never blended into the ask median"
     },
     "marketplace": {
-     "n": 3,
-     "median": 1399.99
+     "n": 11,
+     "median": 1349.99
     }
    },
    "id": "verified_savings",
@@ -27,15 +42,15 @@
    "status": "none_yet",
    "value": null,
    "unit": "USD",
-   "display": "No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference one_source, 6 retail asks from 1 provider)",
-   "count": 6,
+   "display": "No verified savings yet: no verified purchase recorded yet (reference ok, 7 retail asks from 2 providers)",
+   "count": 7,
    "date_range": {
-    "from": "2026-10-24T05:08:39.627Z",
-    "to": "2026-10-24T05:09:29.655Z"
+    "from": "2026-10-24T05:09:29.655Z",
+    "to": "2026-10-24T09:38:02+00:00"
    },
    "origin": "MIRROR",
    "source_run": "python3 -m data.baselines",
-   "note": "Unconfirmed reference (not a baseline): median $1,254.99 of 6 in-stock retail asks (one_source: a baseline needs two dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
+   "note": "Baseline: median $1,259.99 of 7 in-stock retail asks (ok, providers apify, apify-b; a baseline needs two distinct data owners). Data owners: eBay sold and retailer listings (Apify). eBay sold median $880.00 of 5 (last 30 days, mixed condition), shown beside the ask median, never blended. apify-b re-checked Best Buy only (3 listings) and is the same data owner as apify. SIM savings, when they exist, go in a separate column and are never added to real ones."
   },
   {
    "detail": {
@@ -71,7 +86,7 @@
      "status": "console not built yet"
     },
     "voice": {
-     "status": "voice set written (sim/attacks/voice.jsonl), not yet run"
+     "see_tile": "voice_attacks"
     }
    },
    "id": "attacks_blocked",
@@ -82,24 +97,24 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T08:49:52+00:00",
-    "to": "2026-10-24T08:49:52+00:00"
+    "from": "2026-10-24T15:54:59+00:00",
+    "to": "2026-10-24T15:54:59+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T08:49:52+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T15:54:59+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
     "checked": {
-     "n": 12,
-     "correct": 12,
-     "decided": 12
+     "n": 39,
+     "correct": 39,
+     "decided": 39
     },
     "all": {
-     "n": 44,
-     "correct": 42,
-     "decided": 43,
+     "n": 50,
+     "correct": 48,
+     "decided": 49,
      "uncertain": 1
     },
     "false_ok": 0,
@@ -110,8 +125,8 @@
    "status": "measured",
    "value": 1.0,
    "unit": "ratio",
-   "display": "12 of 12 right on maker-checked builds; 42 of 43 on all; 0 false OK (tuned set, not held out)",
-   "count": 12,
+   "display": "39 of 39 right on maker-checked builds; 48 of 49 on all; 0 false OK (tuned set, not held out)",
+   "count": 39,
    "date_range": {
     "from": "2026-10-24",
     "to": "2026-10-24"
@@ -124,7 +139,7 @@
    "detail": {
     "per_archetype": {
      "open_box_ok": {
-      "n": 15,
+      "n": 30,
       "learner": 0.0,
       "untrained": 0.0,
       "control": 0.0,
@@ -135,36 +150,61 @@
       "identical_across_seeds": true
      },
      "small_case": {
-      "n": 15,
-      "learner": 1.0,
+      "n": 30,
+      "learner": 0.2,
+      "untrained": 0.0,
+      "control": 0.0,
+      "control_median": 0.8,
+      "winners": [
+       "gadget-grove",
+       "median-market-pc"
+      ],
+      "identical_across_seeds": false
+     },
+     "sff_open_box": {
+      "n": 30,
+      "learner": 0.6333333333333333,
+      "untrained": 0.0,
+      "control": 0.0,
+      "control_median": 0.26666666666666666,
+      "winners": [
+       "gadget-grove",
+       "median-market-pc",
+       "none"
+      ],
+      "identical_across_seeds": false
+     },
+     "new_only_tight": {
+      "n": 30,
+      "learner": 0.0,
       "untrained": 0.0,
       "control": 0.0,
       "control_median": 0.0,
       "winners": [
-       "gadget-grove"
+       "bargain-bin"
       ],
       "identical_across_seeds": true
      }
     },
     "winning_archetypes": [
-     "small_case"
+     "sff_open_box"
     ],
-    "run_file": "wind_tunnel-2026-10-24-b30x3.json"
+    "run_file": "wind_tunnel-2026-10-24-b48x5.json"
    },
    "id": "learning_lift",
    "title": "Seller learning lift",
    "status": "not_quotable",
    "value": null,
    "unit": "points",
-   "display": "No lift to quote (1 of 2 archetypes, not quotable): the learner beats the fair control on too few held-out buyer types",
-   "count": 30,
+   "display": "No lift to quote (1 of 4 archetypes, not quotable): the learner beats the fair control on too few held-out buyer types",
+   "count": 120,
    "date_range": {
-    "from": "2026-10-24T06:31:11+00:00",
-    "to": "2026-10-24T06:31:11+00:00"
+    "from": "2026-10-24T10:49:16+00:00",
+    "to": "2026-10-24T10:49:16+00:00"
    },
    "origin": "SIM",
-   "source_run": "python3 -m sim.wind_tunnel --builders 30 --seeds 3",
-   "note": "open_box_ok: learner 0.00, untrained 0.00, median control 0.00; small_case: learner 1.00, untrained 0.00, median control 0.00. A simulator we built, not the market. Negative or zero lift is shown, never hidden."
+   "source_run": "python3 -m sim.wind_tunnel --builders 48 --seeds 5",
+   "note": "open_box_ok: learner 0.00, untrained 0.00, median control 0.00, lift vs median control +0.00; small_case: learner 0.20, untrained 0.00, median control 0.80, lift vs median control -0.60; sff_open_box: learner 0.63, untrained 0.00, median control 0.27, lift vs median control +0.37; new_only_tight: learner 0.00, untrained 0.00, median control 0.00, lift vs median control +0.00. A simulator we built, not the market. Negative or zero lift is shown, never hidden."
   },
   {
    "detail": {
@@ -233,5 +273,39 @@
    "source_run": "python3 -m hyphenate.scenarios.blind_run --write",
    "note": "Cases frozen and hashed before any run, written without reading the engine. Headline is the first run; b24, k02 and k03 were fixed after it, so the rerun is not blind."
   }
- ]
+ ],
+ "price_position": {
+  "sku": "rtx 5070 ti",
+  "price": 1299.99,
+  "condition": "new",
+  "as_of": "2026-10-24T12:17:26+00:00",
+  "rank": 1,
+  "of_n": 2,
+  "stores": [
+   "bestbuy",
+   "microcenter"
+  ],
+  "cheapest_fitting": {
+   "price": 1299.99,
+   "store": "bestbuy",
+   "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"
+  },
+  "snapshot_dates": [
+   "2026-10-24"
+  ],
+  "sold_median": 880.0,
+  "sold_n": 5,
+  "tied_with": [
+   {
+    "store": "microcenter",
+    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card"
+   }
+  ],
+  "unknown_fit": 2,
+  "too_long": 3,
+  "max_gpu_length_mm": 305,
+  "status": "ok",
+  "sentence": "Tied as the cheapest of the listings we can confirm fit; 2 of unknown length not counted (2 new listings at 2 stores, Oct 24) (30-day eBay sold median, mixed condition: $880.00, n = 5)",
+  "origin": "MIRROR"
+ }
 }

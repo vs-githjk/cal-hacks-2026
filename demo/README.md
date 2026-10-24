@@ -39,7 +39,45 @@ The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real c
 `allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
 (`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its
 reason, and a DIVERGENCE line if its #1 is not the demo's winner.
-Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, buyer allowance, denied approval attempts, personas and the
+### Two buyers, one unit (`--two-buyers`)
+```
+python3 demo/bridge.py --two-buyers --reset   # after Vidyut's deal, a second SIM buyer (buyer-2) goes for the same single units
+```
+buyer-2 sets the same goal and the same sellers bid again, each with one unit. The unit Vidyut's round won is sold, so that line is skipped by the market with "sold out to an earlier round" and the next best bid wins. The bridge creates a `bridge-buyer-2.json` identity in `.tokens/` and gives it the buyer role for `buyer-2` only (owner `assign_role`, skipped with `--no-assign-roles`). A denied `--live-call` now also calls `deny_approval`, which releases the held unit at once. Rules: `docs/ARENA_RULES.md`.
+
+### Real phone call inside the round (`--live-call`)
+```
+python3 demo/bridge.py --live-call --reset                 # beat 4 places ONE real Cartesia call; names read from pay.voice_cartesia's env file
+python3 demo/bridge.py --live-call --env-file /path/to/.env --dry-run   # says where the call would go; no network, no call
+```
+At the approval beat the bridge builds a fresh pending mandate (same deal, amount and payee as beat 4), sends it to the market with `create_mandate`, then runs
+`pay.voice_cartesia.run_approval_call` for that mandate: one call to `APPROVAL_CALL_TO` only, the two-word code printed as `SCREEN CODE` (the same code the call judges),
+three tries. Only an approved call, plus a `pay.mandate.can_charge` pass, makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
+answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
+`--live-call` cannot be combined with `--stripe` (that charge runs before the round). Without `--live-call` nothing changes. The market has no place to show the code yet, so it is
+on the operator console (see NOT BRIDGED); tests use a fake client and place no call.
+
+## Stage runner (`demo/stage.py`): one command for the video and the room
+```
+python3 demo/stage.py                      # check services, reset, press Enter to play each beat
+python3 demo/stage.py --auto               # hands free: each beat starts after its reading delay
+python3 demo/stage.py --auto --live-call   # beat 4 places ONE real Cartesia call (see above for what denies it)
+python3 demo/stage.py --dry-run            # cues and reducer calls only: no check, no reset, no market
+python3 -m pytest demo/tests/test_stage.py # fakes only, about a second
+```
+It wraps `bridge.py` (same reducers, same tokens, same live-call gate) and adds the show around it:
+1. **Service check.** The launcher's own status logic (`scripts/launch.py status`) reads `--run-dir` (default `.run` in this checkout; when you run from another checkout than the live stack, pass the stack's, for example `--run-dir /path/to/bidding-royale/.run`). It refuses to start if any service is DOWN or FAILED, or if the launcher started nothing; `--force` plays anyway and says FORCED. A SKIPPED service does not block (the launcher already said why).
+2. **Reset.** `reset_demo` (referee), which keeps roles and pair codes, then the beats.
+3. **Five beats, in order.** 1 goal and need, 2 sealed round (open to close), 3 Shield blocks the injected listing, 4 mandate, approval, payment, 5 round 2 with the learner's lower price. Before each beat the console prints `BEAT n of 5` and one **SAY THIS** line for the narrator.
+4. **Pacing.** Without `--auto` it waits for Enter before each beat (`q` stops). With `--auto` it waits `--delays` seconds between a beat's cue and the beat (five numbers, default `7,8,6,9,8`, time to say the line); `--step-delay` (default 2) is the pause between visible steps inside a beat, as in the bridge.
+5. **Live call.** `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. The mandate the call judges is made when beat 4 starts (a mandate lives 10 minutes, so a long wait at the Enter prompts cannot expire it). Retake by running again (it resets). The two-word code prints as `SCREEN CODE` on this console (see NOT BRIDGED). `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
+After beat 2 the runner reads the market's `round_result` back and prints its ranking; if the market's #1 is not the demo's winner it prints DIVERGENCE before beat 3, and `--auto` pauses once for Enter so the operator sees it before the beat 4 cue (the mandate that follows is the demo's winner).
+Exit codes: 0 all beats played, 1 refused or stopped (service down, market refusal, denial, `q`), 130 Ctrl-C. Open /buyer (paired as `vidyut`) and /market first; the console reminds you.
+The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2, the loss report itself is console only (NOT BRIDGED).
+
+The bridge sets Vidyut's standing allowance ($250 per buy, $500 a month, SIM) with the referee's `set_allowance` right after the goal, so /buyer shows it and the deal still needs the call. The market starts spending this period at $0 (the run's $120 spent is not bridged).
+
+Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, denied approval attempts, personas and the
 buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
 
 ## Tags
