@@ -143,6 +143,7 @@ def test_e_default_stage_command(tmp_path):
     (tmp_path / "demo" / "stage.py").write_text("")
     cmd = rehearse.default_stage_cmd(tmp_path)
     assert str(tmp_path / "demo" / "stage.py") in cmd and "--auto" in cmd and "bridge.py" not in cmd
+    assert "--bid-window 20" in cmd                       # #183: one run under the 2:00 cut
 
 
 def test_f_secrets_are_never_echoed(tmp_path, monkeypatch, capsys):

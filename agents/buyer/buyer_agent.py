@@ -31,7 +31,7 @@ from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
-from logic import decide, make_order, sealed
+from logic import advice_need_for, decide, make_order, sealed
 
 ADVICE_TIMEOUT_S = 15
 RETIRED_NEED_HISTORY = 8
@@ -799,7 +799,7 @@ async def tick(ctx: Context):
         if not review_bids:
             return
         # The advocate sees the owned parts for fit checks, but not the cap.
-        advice_need = dict(sealed(ROUND["need"]), owned=owned_attrs(ROUND["owned"]))
+        advice_need = advice_need_for(ROUND["need"], owned_attrs(ROUND["owned"]), ROUND["bids"])
         token, need_id = ROUND.get("round_token"), ROUND.get("need", {}).get("id")
         log_msg(ctx, "buyer", "advocate", "advice_request")
         try:

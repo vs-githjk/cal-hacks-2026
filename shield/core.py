@@ -11,8 +11,9 @@ import uuid
 from typing import Any, Mapping, Optional
 
 from shield import VERSION
-from shield.classifier import default_classifier, run_classifier
+from shield.classifier import UNAVAILABLE_RULE, default_classifier, run_classifier, run_secret_ask
 from shield.rules import RULES
+from shield.rules import secret_ask
 from shield.rules.base import BLOCK, QUARANTINE, SEVERITY_ORDER
 from shield.text import make_doc
 
@@ -21,6 +22,7 @@ MAX_SPANS = 32
 MAX_EXCERPT = 80
 MAX_CHARS = 20000  # longer messages are quarantined before any parsing (regex cost grows with size)
 OVERSIZE_RULE = "shield.encoded.payload"
+MAX_CANDIDATE_CHARS = 3900  # what one classifier call carries (shield.classifier.MAX_CHARS is 4000)
 _DEFAULT = object()
 
 
@@ -37,12 +39,41 @@ def _verdict(verdict: str, rule_ids: list[str], severity: str, spans: list[dict]
     }
 
 
+_BUYER_SIDE = frozenset({"buyer", "advocate", "marketplace"})
+
+
+def _seller_side(ctx: Mapping) -> bool:
+    """Secret asks are checked for every sender except the buyer's own side. The role is trimmed and lowercased; only
+    buyer, advocate and marketplace skip the check, so "seller_agent", "vendor", "Seller " and a missing role get it."""
+    return str((ctx or {}).get("sender_role") or "").strip().lower() not in _BUYER_SIDE
+
+
 def _as_text(message: Any) -> str:
     if isinstance(message, str):
         return message
     if isinstance(message, (bytes, bytearray)):
         return bytes(message).decode("utf-8")
     raise TypeError("message must be str")
+
+
+def _secret_ask(clf: Any, text: str, doc, ctx: Mapping) -> Optional[tuple[str, list[dict]]]:
+    """Seller text only. Candidate sentences (a state/name/tell/give verb and a secret noun) are asked of the
+    classifier. Returns (rule id, spans) to quarantine, or None to carry on. No classifier means fail closed."""
+    cands = secret_ask.candidates(doc)
+    if not cands:
+        return None
+    spans = [{"rule_id": secret_ask.SECRET_ASK_RULE, "start": s, "end": e, "text": text[s:e][:MAX_EXCERPT]}
+             for s, e in cands[:MAX_SPANS]]
+    joined = "\n".join(text[s:e] for s, e in cands)
+    if clf is None or len(joined) > MAX_CANDIDATE_CHARS:  # too much to judge in one call: fail closed as well
+        rule_id = UNAVAILABLE_RULE
+    else:
+        rule_id = run_secret_ask(clf, joined, ctx)
+        if rule_id is None:
+            return None
+    for s in spans:
+        s["rule_id"] = rule_id
+    return rule_id, spans
 
 
 def screen(message: Any, context: Optional[Mapping] = None, *, classifier: Any = _DEFAULT) -> dict:
@@ -77,6 +108,12 @@ def screen(message: Any, context: Optional[Mapping] = None, *, classifier: Any =
 
         if not fired:
             clf = default_classifier() if classifier is _DEFAULT else classifier
+            if _seller_side(ctx):  # buyer-side text is never held for a secret ask
+                asked = _secret_ask(clf, text, doc, ctx)
+                if asked is not None:
+                    rule_id, spans = asked
+                    return _verdict(QUARANTINE, [rule_id], "high" if rule_id == secret_ask.SECRET_ASK_RULE else "medium",
+                                    spans, started, request_id)
             if clf is not None:
                 added = run_classifier(clf, text, ctx)
                 if added is not None:

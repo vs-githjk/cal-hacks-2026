@@ -15,8 +15,12 @@ def run():
     return run_all(say=Narrator(False))
 
 
+RUN: dict = {}
+
+
 @pytest.fixture(autouse=True)
 def offline(run, monkeypatch):
+    RUN["run"] = run
     """main() reuses one run (the story is deterministic enough for these tests) and never reads the Cartesia env."""
     monkeypatch.setattr(stage, "run_all", lambda **kw: run)
     from pay import voice_cartesia as vc
@@ -59,8 +63,11 @@ class Time:
         return self.t
 
 
-def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows=None, on_ask=None):
+def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows="market", on_ask=None):
+    """result_rows: the market's round_result rows (default: the market agrees with the demo's winner; None: unreadable)."""
     log = [] if log is None else log
+    if result_rows == "market":
+        result_rows = market_rows(RUN["run"], RUN["run"]["beats"]["2"]["winner"]["seller_id"])
     clk = Time()
     asked = []
 
@@ -242,7 +249,7 @@ def test_live_call_passes_through_to_the_bridge_and_records_on_approval(monkeypa
     assert code == 0 and approver.seen == ["record_approval"]
     assert "record_approval" in reducers(log) and "record_payment" in reducers(log)
     created = next(a for _, r, a in log if r == "create_mandate")
-    assert created["hash"] == seen["mandate"]["hash"]           # the mandate the call judges is the one the market got
+    assert created["hash"] == seen["mandate"].mandate["hash"]   # the mandate the call judges is the one the market got
     assert reducers(log).count("open_round") == 2                  # beat 5 still plays
 
 
@@ -357,9 +364,9 @@ def test_live_call_mandate_is_made_at_beat_four_so_a_long_wait_does_not_expire_i
     judged = []
     real = bridge.make_live_approver
 
-    def spy(mandate, *a, **k):
-        judged.append(mandate)
-        return real(mandate, *a, **k)
+    def spy(gate, *a, **k):
+        judged.append(gate)
+        return real(gate, *a, **k)
 
     monkeypatch.setattr(bridge, "make_live_approver", spy)
 
@@ -372,14 +379,14 @@ def test_live_call_mandate_is_made_at_beat_four_so_a_long_wait_does_not_expire_i
     assert len(dialled) == 1, "the gate refused before dialling"
     assert "(expired)" not in out and "call_failed" in out and code == 1       # the blocked dial is the only denial
     created = next(a for _, r, a in log if r == "create_mandate")
-    assert judged[-1]["hash"] == created["hash"]                             # the gate judged the mandate the market got
+    assert judged[-1].mandate["hash"] == created["hash"]                     # the gate judged the mandate the market got
     assert "record_approval" not in reducers(log) and "record_payment" not in reducers(log)
 
 
 def test_live_call_startup_does_not_make_the_call_mandate(monkeypatch):
     made = []
-    real = bridge.fresh_pending_mandate
-    monkeypatch.setattr(bridge, "fresh_pending_mandate", lambda m: made.append(1) or real(m))
+    real = bridge.DealGate.prepare
+    monkeypatch.setattr(bridge.DealGate, "prepare", lambda self, ref: made.append(1) or real(self, ref))
     patch_live(monkeypatch, Approver(True))
     asked_when = []
     go(["--live-call", "--step-delay", "0"], on_ask=lambda prompt: asked_when.append(len(made)))
@@ -389,10 +396,18 @@ def test_live_call_startup_does_not_make_the_call_mandate(monkeypatch):
 
 # ---------------------------------------------------------------- round 1 read-back
 
-def result_rows(run, first_seller_id):
-    win = run["beats"]["2"]["winner"]["seller_id"]
-    return [("rr-1", "round-1", "b1", first_seller_id, "Winner Co", 1, 124999, []),
-            ("rr-2", "round-1", "b2", "other-2" if first_seller_id == win else win, "Second Co", 2, 130000, [])]
+def market_rows(run, first_seller_id):
+    """round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed, reasons) with `first_seller_id` ranked 1."""
+    b2 = run["beats"]["2"]
+    win = b2["winner"]["seller_id"]
+    second = "gadget-grove" if first_seller_id == win else win
+    bids = {b["seller_id"]: b for b in b2["bids"]}
+    landed = {e["seller_id"]: e["landed"] for e in b2["ranking"]["ranked"]}
+    return [("rr-1", "round-1", bids[first_seller_id]["id"], first_seller_id, bids[first_seller_id]["persona"], 1, landed[first_seller_id], []),
+            ("rr-2", "round-1", bids[second]["id"], second, bids[second]["persona"], 2, landed[second], [])]
+
+
+result_rows = market_rows
 
 
 def test_beat_two_reads_the_market_ranking_back_and_says_when_it_agrees(run, capsys):
@@ -403,9 +418,11 @@ def test_beat_two_reads_the_market_ranking_back_and_says_when_it_agrees(run, cap
 
 
 def test_a_different_market_number_one_prints_divergence_before_the_beat_four_cue(run, capsys):
-    code, log, clk, asked = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, "someone-else"))
+    code, log, clk, asked = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, "gadget-grove"))
     out = capsys.readouterr().out
     assert code == 0
+    gg = next(x for x in run["beats"]["2"]["sellers"] if x["id"] == "gadget-grove")
+    assert next(a for _, r, a in log if r == "create_mandate")["payee"] == gg["payee"]    # #194: beat 4 pays the market's #1
     assert out.index("DIVERGENCE") < out.index("BEAT 4 of 5")
     assert out.index("BEAT 2 of 5") < out.index("DIVERGENCE") < out.index("BEAT 3 of 5")
     assert any("not the demo's winner" in p for p in asked)         # --auto pauses once so the operator cannot miss it
@@ -417,7 +434,45 @@ def test_agreement_does_not_add_a_pause(run):
     assert asked == []
 
 
-def test_an_unreadable_market_ranking_is_one_note_not_a_stop(capsys):
-    code, *_ = go(["--auto", "--step-delay", "0"])     # the fake has no round_result
+def test_an_unreadable_market_ranking_stops_beat_four_with_nothing_paid(capsys):
+    code, log, *_ = go(["--auto", "--step-delay", "0"], result_rows=None)     # the fake has no round_result
     out = capsys.readouterr().out
-    assert code == 0 and "could not read round_result back (RuntimeError)" in out
+    assert "could not read round_result back (RuntimeError)" in out           # after beat 2: one note
+    assert code == 1 and "no mandate was made" in out and "Nothing was charged" in out
+    assert not any(r in ("create_mandate", "record_approval", "record_payment") for _, r, _ in log)
+
+
+# ---------------------------------------------------------------- #183: one run under 120 s with a short sealed window
+
+def test_a_full_auto_run_with_a_20_s_bid_window_takes_under_120_s():
+    """The clock moves only when the code sleeps, so this is the run's own pacing: cues, steps and both sealed windows."""
+    code, log, clk, _ = go(["--auto", "--bid-window", "20"])
+    assert code == 0 and reducers(log).count("open_round") == 2
+    assert clk.t - 1000.0 < 120, clk.t - 1000.0
+    windows = [a["window_s"] for _, r, a in log if r == "open_round"]
+    assert windows == [20, 20]
+
+
+def test_without_the_flag_the_windows_cover_the_paced_steps_as_before():
+    code, log, clk, _ = go(["--auto"])
+    windows = [a["window_s"] for _, r, a in log if r == "open_round"]
+    assert code == 0 and windows[0] > 20 and clk.t - 1000.0 > 120
+
+
+def test_every_bid_and_check_lands_before_the_short_deadline():
+    """Compressing the window compresses the step pace inside the round, so no bid arrives after the close."""
+    run = RUN["run"]
+    steps = bridge.plan(run, delay=2.0, rounds=2, bid_window=20)
+    for rno in ("round-1", "round-2"):
+        i = next(k for k, s in enumerate(steps) if s.reducer == "open_round" and s.args["round_id"] == rno)
+        j = next(k for k, s in enumerate(steps) if s.reducer == "close_round" and s.args["round_id"] == rno)
+        inside = sum(2.0 * s.pace for s in steps[i:j] if s.pause)
+        assert steps[i].args["window_s"] == 20 and inside <= 20 - 6 + 1e-9, (rno, inside)
+
+
+@pytest.mark.parametrize("bad", ["5", "0", "-3", "abc", "12", "14"])
+def test_a_bid_window_below_the_minimum_is_refused(bad):
+    with pytest.raises(SystemExit):
+        stage.main(["--dry-run", "--bid-window", bad])
+    with pytest.raises(SystemExit):
+        bridge.main(["--dry-run", "--bid-window", bad])

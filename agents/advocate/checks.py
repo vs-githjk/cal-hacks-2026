@@ -15,11 +15,11 @@ from data.fit_checker import check_fit
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
-VETO_KINDS = {"condition", "fit", "recall", "same_seller"}
+VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
-CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
+CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unconfirmed": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
                 "note": f"{REPO}/data/fit_checker/README.md", "same_seller": f"{REPO}/agents/advocate/checks.py", "record": f"{REPO}/agents/advocate/checks.py",
                 "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py"}
 
@@ -236,6 +236,8 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
     wanted = {i["sku_spec"]: i.get("condition") for i in need.get("items", [])}
     cards = []
     shills = _group_shills(bids)
+    in_cap = need.get("in_cap_bid_ids")  # ids only: the buyer keeps the cap itself sealed
+    staged = []
     for bid in bids:
         warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted)
         if bid["id"] in shills:
@@ -243,6 +245,16 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
             warnings.append(_warn("same_seller", f"Same seller as {kept['supplier_id']}: shares {key_type}. "
                                   f"Seller ids: {bid['supplier_id']} and {kept['supplier_id']}.",
                                   (kept.get("lines") or [{}])[0].get("listing_url", ""), 0))
+        staged.append((bid, warnings))
+    # #115: a bid inside the cap with a confirmed fit outranks any bid whose fit is unknown
+    # a bid vetoed for any other reason is not a confirmed fit; a missing id list never vetoes
+    confirmed = in_cap is not None and any(
+        b["id"] in in_cap and not ({"fit", "fit_unknown"} | VETO_KINDS) & {w["kind"] for w in ws} for b, ws in staged)
+    for bid, warnings in staged:
+        if confirmed and any(w["kind"] == "fit_unknown" for w in warnings) and not any(w["kind"] == "fit" for w in warnings):
+            url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""
+            warnings.append(_warn("fit_unconfirmed", "Fit not confirmed, and another offer in your cap has a confirmed fit.",
+                                  url, 0))
         kinds = {w["kind"] for w in warnings}  # decided before truncation so a veto is never hidden
         rec = "veto" if kinds & VETO_KINDS else "caution" if kinds - INFO_KINDS else "buy"
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
@@ -265,6 +277,7 @@ def call_reason(warnings: list[dict], bid: dict) -> dict:
                 "source_url": _safe_source_url(url) if url else CODE_SOURCES["unsourced"]}
     w = ranked[0]
     rid = w["rule_id"] if w["rule_id"] in CALL_SUMMARIES else ("fit" if w["kind"] == "fit" else f"advocate.{w['kind']}")
+    rid = "advocate.fit_unknown" if rid == "advocate.fit_unconfirmed" else rid  # same spoken template, Lane D's table
     return {"rule_id": rid, "summary": CALL_SUMMARIES[rid],
             "source_url": _safe_source_url(w["source_url"])}
 
