@@ -170,3 +170,15 @@ def test_g_nothing_is_real_that_is_not_built():
     assert "test_readme_honesty" not in status, "the pasted Status block cites a test that is not on this branch"
     assert "demo/README.md" not in pitch, "demo/README.md is run 1's file and still names the old winner"
     assert "demo/out/sample-run.json" in pitch and "demo/tests/test_demo_winner.py" in pitch
+
+
+def test_h_pitch_stage_line_uses_the_locked_wording():
+    """plan/decisions.md (LOCKED Sat 01:45): the Lot Wall line says request, not order (payment is Stripe test mode),
+    and 'one or two bids here are real' is dropped (no outside seller has bid)."""
+    locked = "This is one real request, Vidyut's. When many requests pool, this is what a seller sees."
+    pitch = read("docs/PITCH.md")
+    assert locked in pitch, "docs/PITCH.md must carry the LOCKED Lot Wall stage line exactly"
+    for doc in DOCS:
+        text = read(doc)
+        for old in ("one real order", "many orders pool", "bids here are real", "one or two bids"):
+            assert old not in text, f"{doc}: LOCKED stage-line wording dropped '{old}'"

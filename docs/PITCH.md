@@ -24,7 +24,7 @@ Hyphenate is built (`hyphenate/`) and is an add-on, not a beat. The IT fleet vie
 
 ## The multiverse line (say it exactly)
 
-"This is one real order, Vidyut's. When many orders pool, this is what a seller sees. One or two bids here are real, the rest are labelled simulated." Never say "many buyers use it". The Lot Wall (Vidyut's gold REAL brick, the rest grey SIM, the price ladder, folded back to one brick) is planned, not built; cut this line unless it exists by the freeze.
+"This is one real request, Vidyut's. When many requests pool, this is what a seller sees." Never say "many buyers use it". The Lot Wall (Vidyut's gold REAL brick, the rest grey SIM, the price ladder, folded back to one brick) is planned, not built; cut this line unless it exists by the freeze.
 
 ## Sourced facts (only these)
 
