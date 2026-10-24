@@ -611,3 +611,33 @@ def test_check_payee_never_logs_the_key(monkeypatch, tmp_path, fresh_payee_cache
     asyncio.run(crs.check_payee("seller_1", NOW))
     out = capsys.readouterr()
     assert "private-token-canary" not in out.out + out.err + caplog.text
+
+
+
+@pytest.mark.parametrize("content", [None, "{not json", "[]", '{"sellers": {}}'])
+def test_an_unreadable_profile_file_never_makes_a_business_a_sim_seller(monkeypatch, tmp_path, fresh_payee_cache, content):
+    setup_profile(monkeypatch, tmp_path)
+    path = tmp_path / "private.json"
+    if content is None:
+        path.unlink()
+    else:
+        path.write_text(content)
+    with pytest.raises(crs.ProfilesUnreadable):
+        asyncio.run(crs.check_payee("seller_1", NOW))
+
+
+def test_ids_and_seller_type_match_without_case(monkeypatch, tmp_path, fresh_payee_cache):
+    setup_profile(monkeypatch, tmp_path, seller_type="Business")
+    monkeypatch.setattr(crs, "_request", lambda body, token: response())
+    out = asyncio.run(crs.check_payee("SELLER_1", NOW))
+    assert out["business"] is True and out["check"]["seller_id"] == "SELLER_1"
+
+
+def test_a_sim_outcome_is_not_cached_and_withdrawn_consent_beats_the_cache(monkeypatch, tmp_path, fresh_payee_cache):
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setattr(crs, "_request", lambda body, token: response())
+    assert asyncio.run(crs.check_payee("seller_1", NOW))["check"]["verified"] is True
+    setup_profile(monkeypatch, tmp_path, consent=False)
+    out = asyncio.run(crs.check_payee("seller_1", NOW + timedelta(minutes=1)))
+    assert out["cached"] is False and out["check"]["verified"] is False
+    assert asyncio.run(crs.check_payee("best-buy", NOW))["business"] is False and "best-buy" not in crs._payee_cache

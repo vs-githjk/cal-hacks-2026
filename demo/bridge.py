@@ -459,10 +459,10 @@ class DealGate:
         # bound into the mandate; an error, a timeout, "not configured" or a failed check holds the payee gate.
         try:
             self.crs = self.crs_check(w["seller_id"])   # CRS profiles are keyed by the seller being paid
-        except Exception as e:  # noqa: BLE001
-            raise CrsRefused(f"CRS check failed ({type(e).__name__}), so the payee gate holds") from None
-        business = bool(self.crs.get("business"))
-        verdict = payee_ok(self.crs.get("check"), business=business, seller_id=w["seller_id"])
+            business = bool(self.crs["business"])
+            verdict = payee_ok(self.crs.get("check"), business=business, seller_id=w["seller_id"])
+        except Exception as e:  # noqa: BLE001  (an unreadable profile file, a timeout, an odd answer: all hold the gate)
+            raise CrsRefused(f"CRS check failed ({type(e).__name__}: {str(e)[:80]}), so the payee gate holds") from None
         if not verdict:
             raise CrsRefused(f"CRS: {verdict.detail} ({verdict.reason}), so the payee gate holds")
         self.mandate = new_mandate(deal_id=w["deal_id"], buyer_id=self.goal["buyer_id"], amount=w["amount"], payee=w["payee"],

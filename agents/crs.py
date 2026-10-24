@@ -417,26 +417,56 @@ async def check_sellers(now: datetime, only: set[str] | None = None) -> dict[str
 _payee_cache: dict[str, tuple[datetime, dict]] = {}
 
 
+class ProfilesUnreadable(RuntimeError):
+    """CRS_TEST_IDENTITIES_PATH is set but the file is missing, unreadable or has no sellers: who is a business is unknown."""
+
+
+def _payee_profile(supplier_id: str):
+    """The seller's profile (ids and seller_type compared without case), None when there is none. When a profile file
+    is configured but cannot be read, ProfilesUnreadable: an unreadable file never turns a business into a SIM seller."""
+    profile_path, _ = _paths()
+    if profile_path is None:
+        return None                      # no profile file configured: no seller is a known business
+    try:
+        data = json.loads(profile_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ProfilesUnreadable(f"CRS profile file unreadable ({type(e).__name__})") from None
+    sellers = data.get("sellers") if isinstance(data, dict) else None
+    if not isinstance(sellers, dict) or not sellers:
+        raise ProfilesUnreadable("CRS profile file has no sellers")
+    want = str(supplier_id).strip().lower()
+    return next((v for k, v in sellers.items() if isinstance(k, str) and k.strip().lower() == want), None)
+
+
 def is_business(supplier_id: str) -> bool:
-    """A payee is a business only when its approved profile says so; every other payee is a SIM seller."""
-    profile = _profiles().get(supplier_id)
-    return isinstance(profile, dict) and profile.get("seller_type") == "business"
+    """A payee is a business when its profile says so (any case); every other payee is a SIM seller.
+    Raises ProfilesUnreadable when a configured profile file cannot be read."""
+    profile = _payee_profile(supplier_id)
+    return isinstance(profile, dict) and str(profile.get("seller_type", "")).strip().lower() == "business"
 
 
 async def check_payee(supplier_id: str, now: datetime) -> dict:
     """#257: one CRS check of the payee at the payment gate, cached per payee for PAYEE_TTL.
     Returns {"business", "check", "cached"}: `check` is the CrsCheck (pay.crs_gate judges it) for a business payee,
     None for a SIM seller (no business profile, so no request). A transport failure is never cached."""
+    business = is_business(supplier_id)          # read every time: a changed profile or consent is never cached over
+    if not business:
+        _payee_cache.pop(supplier_id, None)
+        return {"business": False, "check": None, "cached": False}
     hit = _payee_cache.get(supplier_id)
-    if hit is not None and now < hit[0]:
+    consent = (_payee_profile(supplier_id) or {}).get("consent") is True
+    if hit is not None and now < hit[0] and consent:
         return {**hit[1], "cached": True}
-    if not is_business(supplier_id):
-        outcome = {"business": False, "check": None}
+    key = next((k for k in _profiles() if isinstance(k, str) and k.strip().lower() == str(supplier_id).strip().lower()),
+               supplier_id)
+    legacy = (await check_sellers(now, only={key})).get(key)
+    check = to_crs_check(key, legacy)
+    check["seller_id"] = supplier_id          # the seller being paid; payee_ok matches it exactly
+    outcome = {"business": True, "check": check}
+    if check["verified"] and "CRS_UNAVAILABLE" not in check["reason_codes"]:
+        _payee_cache[supplier_id] = (now + PAYEE_TTL, outcome)   # only a verified, fresh answer is reused
     else:
-        legacy = (await check_sellers(now, only={supplier_id})).get(supplier_id)
-        outcome = {"business": True, "check": to_crs_check(supplier_id, legacy)}
-    if outcome["check"] is None or "CRS_UNAVAILABLE" not in outcome["check"]["reason_codes"]:
-        _payee_cache[supplier_id] = (now + PAYEE_TTL, outcome)
+        _payee_cache.pop(supplier_id, None)
     return {**outcome, "cached": False}
 
 

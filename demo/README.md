@@ -65,8 +65,10 @@ answer, dial failure, expired mandate) or a missing Cartesia setup prints the de
 Before the call, the winning seller gets one CRS identity check (#257, `agents/crs.py` `check_payee`, cached per
 seller for 10 minutes). A business seller (an approved business profile in `CRS_TEST_IDENTITIES_PATH`) needs a
 verified check, and that check's id is bound into the mandate and checked again before the charge. A failed check,
-an error, a timeout or CRS not configured holds the payee gate: no mandate, no call, nothing paid. A seller with no
-business profile is a SIM seller and is said to be unchecked. The call reads the result ("checked with CRS and
+CRS not configured, or an unreadable profile file holds the payee gate: no mandate, no call, nothing paid. When CRS
+does not answer, the adapter may use its own recorded result for that seller if it is under 24 hours old (labelled
+cached on the console); with none, the gate holds. A seller with no business profile is a SIM seller and is said to
+be unchecked. Only a verified answer is reused, for 10 minutes; consent is read again every time. The call reads the result ("checked with CRS and
 verified" or "a simulated seller, not checked with CRS"), and the console prints it.
 `--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). Without `--live-call` the approval is
 SIM scripted (`record_approval` method `sim_script`, never `voice_code`) and the payment is the SIM stub. Tests use a fake client and place no call.

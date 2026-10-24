@@ -113,3 +113,21 @@ def test_a_swapped_check_after_the_call_is_refused_before_the_charge(run):
     log, outcomes, _, _ = go(run, gate)
     assert outcomes[0]["approved"] is False and "crs" in outcomes[0]["reason"]
     assert "record_payment" not in kinds(log) and "record_approval" not in kinds(log)
+
+
+
+def test_an_odd_answer_from_the_checker_holds_the_gate(run):
+    gate, _ = gate_with(run, lambda payee: "not a dict")
+    log, outcomes, _, client = go(run, gate)
+    assert not outcomes[0]["approved"] and "CRS" in outcomes[0]["reason"] and client.calls == []
+
+
+def test_an_unreadable_profile_file_holds_the_gate_through_the_default_checker(run, tmp_path, monkeypatch):
+    bad = tmp_path / "private.json"
+    bad.write_text("{not json")
+    monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(bad))
+    gate = bridge.DealGate(run)
+    gate.typed_approval_present = lambda: False
+    log, outcomes, _, client = go(run, gate)
+    assert not outcomes[0]["approved"] and "unreadable" in outcomes[0]["reason"] and client.calls == []
+    assert "record_payment" not in kinds(log)
