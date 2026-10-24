@@ -96,12 +96,18 @@ Check each profile is Active on Agentverse, then find each by name in a fresh AS
 
 ## Safety rules in code
 
-- `payment.py` requires an approval entry for the same mandate hash and checks replay, expiry, payee and amount. The buyer currently creates that entry from chat `APPROVE` or its allowance: this is a SIM approval stub, not Lane D's voice approval record. Stripe charging is not connected.
-- Buyer and seller bid/order/payment handlers and the advocate request handler call Shield before acting. Configure `SHIELD_URL` for screening; when configured but unreachable it blocks. With no URL, the current client allows messages using a labelled stub.
-- Prices come from policy code, never from a model. Fit is decided by Lane C's checker, never by a model.
-- The voice call gets only `{rule_id, summary, source_url}`; the summary is a fixed template per rule_id (`advocate/checks.py` CALL_SUMMARIES).
+### Current purchase readiness
 
-Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" to one SKU (SIM table until Lane C's SpecCards land); a buyer who does not state PSU connector counts gets "fit not confirmed". Condition evidence is supplied in bid fields, not independently fetched; price history, recalls and seller records use fixtures. Voice approval and Stripe charges wait on Lane D.
+- Market purchase actions require `MARKET_BUYER_OWNER_SENDER` to be explicitly configured with the exact authenticated buyer sender. The buyer checks this before mandate/approval and again against the frozen transaction before payment or seller completion acknowledgement. Missing or mismatched mapping fails closed; it is not inferred from a chat session.
+- The buyer uses the real mandate-bound `ApprovalService` through the private typed-code flow. The service shares the buyer's persistent protected nonce store, so approval replay protection survives restarts. Phone/Cartesia approval is unavailable in this runtime: the buyer passes `call_ready=False` and does not start a call.
+- Payment is not ready from environment variables alone. In `buyer_agent.py`, `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS`, and `SHIELD_PAYMENT_SCREEN` start unset and have no startup bootstrap. The payment handler requires the checkout, signing, receipt-verification, and payment-screen dependencies; `SHIELD_PAYMENT_SCREEN` is a callback, not an environment setting. It is separate from `SHIELD_URL`, which is the message-screening endpoint. The current handler accepts only `SIM` payment origin; no live Stripe charge or deployed checkout is claimed.
+- Build goals remain helper-only: three child goals, independent mandates/approvals, and full paid/owned completion are not wired into the buyer runtime. The current buyer source does not prove a full hunt restart or three-child build completion.
+
+- Buyer, seller bid/order/payment handlers and advocate request handling use Shield message screening. `SHIELD_URL` configures that screening path; it is not the checkout payment-screen callback.
+- Prices come from policy code, never from a model. Fit is decided by Lane C's checker, never by a model.
+- If a voice-call helper is used in a separately approved integration, its reason input is limited to `{rule_id, summary, source_url}`; the summary is a fixed template per rule_id (`advocate/checks.py` CALL_SUMMARIES). The current buyer runtime does not place calls.
+
+Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" to one SKU (SIM table until Lane C's SpecCards land); a buyer who does not state PSU connector counts gets "fit not confirmed". Condition evidence is supplied in bid fields, not independently fetched; price history, recalls and seller records use fixtures. Private typed approval is implemented, but phone approval is unavailable and checkout remains unbootstrapped.
 
 ## CRS sandbox setup (Issue #15)
 
