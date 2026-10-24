@@ -27,7 +27,7 @@ def command(text: str):
     return None
 
 
-def pick_best(bids: list[dict], cards: dict) -> int | None:
+def pick_best(bids: list[dict], cards: dict, eligible_suppliers: set[str]) -> int | None:
     """1-based index of the winning bid, or None. Vetoed bids never win. Among the rest, a bid offering a
     different condition than asked ("spec" warning) only wins if nothing else is left; then "buy" beats
     "caution"; then the lower price."""
@@ -35,7 +35,9 @@ def pick_best(bids: list[dict], cards: dict) -> int | None:
         card = cards.get(nb[1]["id"], {})
         kinds = {w["kind"] for w in card.get("warnings", [])}
         return ("spec" in kinds, card.get("recommendation") != "buy", nb[1]["total_landed_price"])
-    ok = [(n, b) for n, b in enumerate(bids, 1) if cards.get(b["id"], {}).get("recommendation") != "veto"]
+    ok = [(n, b) for n, b in enumerate(bids, 1)
+          if b.get("supplier_id") in eligible_suppliers
+          and cards.get(b["id"], {}).get("recommendation") != "veto"]
     return min(ok, key=rank)[0] if ok else None
 
 
