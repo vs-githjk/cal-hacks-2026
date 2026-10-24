@@ -22,11 +22,31 @@ from agents.buyer import checkout, state
 from agents.sellers import learning
 from pay.mandate import mandate_hash
 from pay.replay import NonceStore
-from policy import make_bid, seller as load_seller
+from policy import make_bid, mirror_seller, seller as load_seller
+from data.mirror import not_partners
 from shield.receipt import parse_unique_json
 
 _CHARGE_ID = re.compile(r"(?:pi|ch)_[A-Za-z0-9_]{1,128}\Z")
 _MARKET_SELLER_SUBJECT = {"seller_1": "seller-a", "seller_2": "seller-b", "seller_3": "seller-c"}
+# #342: built-in MIRROR sellers and the real store whose dated listings each one bids. Never a partner, never paid.
+MIRROR_SOURCES = {"seller_6": "central_computers_sf"}
+MIRROR_NAMES = {"seller_6": "Central Comp MIRROR"}  # display name under 20 characters (#259), never the bare store name
+
+
+def _mirror_for(name: str, need: dict | None = None) -> dict | None:
+    """The MIRROR seller dict for a built-in MIRROR agent, under its own agent id (the buyer checks the sender's id).
+    The buyer's case clearance, when the need carries it, picks the card that fits; None when no card can be bid."""
+    owned = (need or {}).get("owned") if isinstance(need, dict) else None
+    clearance = ((owned or {}).get("case") or {}).get("max_gpu_length_mm") if isinstance(owned, dict) else None
+    if isinstance(clearance, bool) or not isinstance(clearance, (int, float)):
+        clearance = None
+    s = mirror_seller(MIRROR_SOURCES[name], clearance)
+    return None if s is None else {**s, "id": name, "orderable": False}
+
+
+def _mirror_persona(s: dict, total: float) -> str:
+    """Fixed text for a MIRROR seller: never a model speaking in character as a real store."""
+    return f"{s['mirror_label']} Listed at ${total:,.2f}, shown for comparison."
 
 
 def _learned_price_step(name: str, db_path=None) -> float:
@@ -233,7 +253,18 @@ def persona_line(s: dict, total: float) -> str:
 
 def build(name: str, cfg: dict | None = None) -> Agent:
     """A catalog seller by name, or a custom seller from a validated SellerConfig `cfg` (name is then cfg["id"])."""
-    if cfg is None:
+    mirror = cfg is None and name in MIRROR_SOURCES
+    if mirror:
+        if name not in common.SEEDS:  # no default seed: a guessable key must never sign as this agent
+            raise SystemExit(f"{name} is off: set {name.upper()}_AGENT_SEED in agents/.env to a private seed of "
+                             f"{common.MIN_PRIVATE_SEED}+ characters (never committed).")
+        s = _mirror_for(name)
+        if s is None:
+            raise SystemExit(f"{name} has no listing it may bid.")
+        port = common.SELLER_PORTS[name]
+        profile = {"readme_path": str(Path(__file__).with_name(f"AGENTVERSE-{name}.md")),
+                   "handle": f"techbazaar{name.replace('_', '')}"}
+    elif cfg is None:
         s = load_seller(name)
         port = common.SELLER_PORTS[name]
         profile = {"readme_path": str(Path(__file__).with_name(f"AGENTVERSE-{name}.md")),
@@ -245,14 +276,25 @@ def build(name: str, cfg: dict | None = None) -> Agent:
         port = pick_port(cfg)
         profile = {}  # a custom seller has no Agentverse profile page until its owner writes one
     origin = s.get("origin", "SIM")
-    labelled = "simulated (SIM)" if origin == "SIM" else "LIVE, owner supplied"
-    agent = Agent(**common.agent_args(
-        name, port, name=s['name'][:32], **profile,
-        description=f"Seller agent ({s['archetype']}) that bids in Tech Bazaar's sealed rounds for computer gear. "
-                    f"Prices come from policy code, never below its floor. Listings are {labelled}."))
-    common.include_profile_chat(agent, f"I am {s['name']}, a Tech Bazaar {origin} seller. I bid on structured sealed "
-                                "rounds using policy prices. Send buying goals to @techbazaarbuyer; "
-                                "this chat cannot place orders or approve purchases.")
+    # a real store that never joined: no money path may treat this agent as a payee (#333, #342)
+    not_orderable = not not_partners.orderable({"supplier_id": name, **({"orderable": False} if mirror else {})})
+    if mirror:
+        agent = Agent(**common.agent_args(
+            name, port, name=MIRROR_NAMES[name], **profile,
+            description=f"Tech Bazaar MIRROR agent that bids {s['name']} public listings at their listed price. "
+                        f"{s['mirror_label']} Shown for comparison, cannot be bought here."))
+        common.include_profile_chat(agent, f"I am Tech Bazaar's MIRROR agent for {s['name']} listings, not the store. "
+                                    f"{s['mirror_label']} My bids are shown for comparison and cannot be bought "
+                                    "here. Send buying goals to @techbazaarbuyer.")
+    else:
+        labelled = "simulated (SIM)" if origin == "SIM" else "LIVE, owner supplied"
+        agent = Agent(**common.agent_args(
+            name, port, name=s['name'][:32], **profile,
+            description=f"Seller agent ({s['archetype']}) that bids in Tech Bazaar's sealed rounds for computer gear. "
+                        f"Prices come from policy code, never below its floor. Listings are {labelled}."))
+        common.include_profile_chat(agent, f"I am {s['name']}, a Tech Bazaar {origin} seller. I bid on structured "
+                                    "sealed rounds using policy prices. Send buying goals to @techbazaarbuyer; "
+                                    "this chat cannot place orders or approve purchases.")
 
     @agent.on_message(model=common.BidRequest)
     async def on_bid_request(ctx: Context, sender: str, msg: common.BidRequest):
@@ -263,7 +305,11 @@ def build(name: str, cfg: dict | None = None) -> Agent:
             return
         need = json.loads(msg.need_json)
         try:
-            bid = _make_bid_with_learning(need, s, name)
+            if mirror:  # listed price as captured, no learning; the card is picked for this buyer's case
+                s_bid = _mirror_for(name, need)
+                bid = make_bid(need, s_bid) if s_bid else None
+            else:
+                bid = _make_bid_with_learning(need, s, name)
         except Exception as exc:
             ctx.logger.warning(f"seller learning unavailable: {type(exc).__name__}")
             return
@@ -275,13 +321,17 @@ def build(name: str, cfg: dict | None = None) -> Agent:
         except Exception as exc:
             ctx.logger.warning(f"Market bid publication failed: {type(exc).__name__}")
             return
-        await ctx.send(sender, common.BidReply(bid_json=json.dumps(bid),
-                                               persona_line=persona_line(s, bid["total_landed_price"])))
+        line = (_mirror_persona(s, bid["total_landed_price"]) if mirror
+                else persona_line(s, bid["total_landed_price"]))
+        await ctx.send(sender, common.BidReply(bid_json=json.dumps(bid), persona_line=line))
 
     pay = Protocol(spec=payment_protocol_spec, role="seller")
 
     @agent.on_message(model=common.OrderPlaced)
     async def on_order(ctx: Context, sender: str, msg: common.OrderPlaced):
+        if not_orderable:
+            ctx.logger.warning("ignored OrderPlaced: MIRROR seller for a store that never joined, never ordered")
+            return
         if sender != common.address("buyer"):
             ctx.logger.warning("ignored OrderPlaced from unregistered buyer")
             return
@@ -314,6 +364,9 @@ def build(name: str, cfg: dict | None = None) -> Agent:
 
     @pay.on_message(CommitPayment)
     async def on_commit(ctx: Context, sender: str, msg: CommitPayment):
+        if not_orderable:
+            ctx.logger.warning("ignored CommitPayment: MIRROR seller for a store that never joined, never paid")
+            return
         if sender != common.address("buyer"):
             ctx.logger.warning("ignored CommitPayment from unregistered buyer")
             return
@@ -354,7 +407,7 @@ def build(name: str, cfg: dict | None = None) -> Agent:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Run one Tech Bazaar seller agent")
-    ap.add_argument("name", nargs="?", default="seller_1", help="a catalog seller (seller_1 to seller_5)")
+    ap.add_argument("name", nargs="?", default="seller_1", help="a catalog seller (seller_1 to seller_5) or seller_6 (MIRROR)")
     ap.add_argument("--config", help="path to a SellerConfig JSON file (custom seller); overrides name")
     args = ap.parse_args()
     if args.config:

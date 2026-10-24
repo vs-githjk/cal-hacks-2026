@@ -287,6 +287,7 @@ def test_run_all_in_mailbox_mode_skips_sellers_with_a_public_seed(monkeypatch, c
     for k in ("AGENTS_MAILBOX", "SELLER_4_AGENT_SEED", "SELLER_5_AGENT_SEED"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("SELLERS_MAILBOX", "1")
+    monkeypatch.setattr(common, "SELLERS", list(common.CATALOG_SELLERS))  # seller_6 (MIRROR): test_seller_6.py
     for s in ("seller_1", "seller_2", "seller_3"):
         monkeypatch.setitem(common.SEEDS, s, f"private-{s}")
     agents = run_all.build_all()  # must not raise SystemExit
@@ -298,6 +299,7 @@ def test_run_all_in_mailbox_mode_skips_sellers_with_a_public_seed(monkeypatch, c
 def test_run_all_builds_every_seller_without_mailbox_mode(monkeypatch, event_loop_for_agents):
     for k in ("AGENTS_MAILBOX", "SELLERS_MAILBOX"):
         monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(common, "SELLERS", list(common.CATALOG_SELLERS))  # seller_6 (MIRROR): test_seller_6.py
     assert len(run_all.build_all()) == 5
 
 
@@ -318,7 +320,7 @@ def test_all_five_sellers_validate_against_the_schema():
         Draft202012Validator(schema).validate(cfg)
         validate_config(cfg, catalog=True)
         assert cfg["origin"] == "SIM"
-    assert common.SELLERS == [f"seller_{i}" for i in range(1, 6)]
+    assert common.CATALOG_SELLERS == [f"seller_{i}" for i in range(1, 6)]
 
 
 def test_existing_sellers_keep_their_prices():
