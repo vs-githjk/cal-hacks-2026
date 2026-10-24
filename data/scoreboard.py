@@ -29,17 +29,20 @@ def savings_tile() -> dict:
     why = "no verified purchase recorded yet" if ok else "no purchase has a confirmed dated baseline to compare against"
     ref = b["median"] if ok else b.get("reference_unconfirmed")
     ref_txt = (f"{'Baseline' if ok else 'Unconfirmed reference (not a baseline)'}: median ${ref:,.2f} of {b['n']} in-stock retail asks "
-               f"({b['status']}, providers {', '.join(b['providers'])}; a baseline needs two dated providers within 24 h). "
+               f"({b['status']}, providers {', '.join(b['providers'])}; a baseline needs two distinct data owners). "
                if ref is not None else f"No reference ({b['status']}). ")
+    sd = b["sold"]
+    sold_txt = (f"eBay sold median ${sd['median']:,.2f} of {sd['n']} (last 30 days, mixed condition), shown beside the ask median, never blended. "
+                if sd.get("median") is not None else "")
+    owners_txt = f"Data owners: {' and '.join(b['owners'])}. " if b.get("owners") else ""
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
                  display=(f"No verified savings yet: {why} (reference {b['status']}, "
                           f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})"),
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
                  source_run="python3 -m data.baselines",
-                 detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
-                         "sold_kept_out": b["sold"], "marketplace": b["marketplace"]},
-                 note=ref_txt + "Provider apify-b re-checked Best Buy only (3 listings); Micro Center has one provider. "
-                      "eBay sold prices are kept out of the reference. "
+                 detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"], "owners": b.get("owners", []), "ask_median": b.get("ask_median")},
+                         "sold_kept_out": b["sold"], "sold": b["sold"], "marketplace": b["marketplace"]},
+                 note=ref_txt + owners_txt + sold_txt + "apify-b re-checked Best Buy only (3 listings) and is the same data owner as apify. "
                       "SIM savings, when they exist, go in a separate column and are never added to real ones.")
 
 
