@@ -137,3 +137,33 @@ def test_a_tiger_failure_is_said_and_never_stops_the_deal(run):
 def test_write_round_ticks_says_not_configured_without_a_url(run):
     res = S.write_round_ticks(S.round_ticks(market_rows(run), "rtx 5070 ti"))
     assert res["state"] == "not_configured"
+
+
+
+def test_the_tiger_note_counts_what_the_store_inserted(monkeypatch):
+    from data.tiger import store
+    monkeypatch.setenv("TIGER_DATA_SERVICE_URL", "postgres://user:pw@host/db")
+    monkeypatch.setattr(store, "write_bid_ticks", lambda ticks: {"inserted": 0})
+    ticks = [{"ts": "t", "round_id": "round-1", "sku": "x", "seller_id": "s", "price_cents": 100, "event": "win"}]
+    res = S.write_round_ticks(ticks)
+    assert res["state"] == "empty" and "stored 0" in S.tiger_note(res, "round-1")
+    assert S.write_round_ticks([])["state"] == "empty"
+
+
+def test_a_slow_tiger_write_is_unconfirmed_not_not_written(monkeypatch):
+    from data.tiger import store
+    monkeypatch.setenv("TIGER_DATA_SERVICE_URL", "postgres://user:pw@host/db")
+    monkeypatch.setattr(store, "write_bid_ticks", lambda ticks: time.sleep(1.0) or {"inserted": 1})
+    res = S.write_round_ticks([{"ts": "t", "round_id": "r", "sku": "x", "seller_id": "s", "price_cents": 1, "event": "bid"}],
+                              timeout=0.1)
+    assert res["state"] == "unconfirmed" and "write not confirmed" in S.tiger_note(res, "r")
+
+
+@pytest.mark.parametrize("landed", ["inf", "-5", "0", True, None, "abc"])
+def test_bad_prices_never_reach_the_history(landed):
+    assert S.round_ticks([(1, "round-1", "b", "s", "P", 2, landed, [])], "x") == []
+
+
+def test_a_disqualified_bid_is_a_blocked_tick():
+    ticks = S.round_ticks([(1, "round-1", "b", "s", "P", 0, 12.5, [])], "x")
+    assert ticks[0]["event"] == "blocked"

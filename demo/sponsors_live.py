@@ -9,6 +9,7 @@ a failed write is one console line and the deal goes on.
 from __future__ import annotations
 
 import concurrent.futures as cf
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -16,7 +17,7 @@ from typing import Callable, Optional
 from demo.common import LIVE, MIRROR, money
 
 SPONSOR_ENV = ("BRIGHT_DATA_API_KEY", "BRIGHT_DATA_MAX_CALLS", "TIGER_DATA_SERVICE_URL")
-RECHECK_TIMEOUT_S = 20.0
+RECHECK_TIMEOUT_S = 45.0   # a Bright Data scrape takes about 20 s in smoke runs; its own read timeout is 75 s
 TIGER_TIMEOUT_S = 10.0
 
 
@@ -77,7 +78,7 @@ def price_note(result: dict, quoted: float, *, now: Optional[datetime] = None) -
             ago = f" {secs} s ago"
         except (ValueError, TypeError):
             pass
-        return f"Bright Data: price checked live{ago} via Bright Data: {money(result['price'])} (LIVE; quoted {money(quoted)})"
+        return f"price checked live{ago} via Bright Data: {money(result['price'])} (LIVE; quoted {money(quoted)})"
     why = {"not_configured": "not configured", "slow": "too slow"}.get(result.get("state"), result.get("detail") or result.get("state"))
     return f"Bright Data: live price not read ({why}); the quoted MIRROR price stays: {money(quoted)}"
 
@@ -89,11 +90,17 @@ def round_ticks(rows: list, sku: str, *, now: Optional[datetime] = None) -> list
     out = []
     for r in rows:
         try:
-            cents = round(float(r[6]) * 100)
+            if isinstance(r[6], bool):
+                continue
+            price = float(r[6])
+            if not (math.isfinite(price) and price > 0):
+                continue                     # never a zero, negative or infinite price in the history
         except (TypeError, ValueError, IndexError):
             continue
-        out.append({"ts": ts, "round_id": str(r[1]), "sku": sku, "seller_id": str(r[3]), "price_cents": int(cents),
-                    "event": "win" if str(r[5]) == "1" else "bid"})
+        rank = str(r[5])
+        event = "win" if rank == "1" else "blocked" if rank == "0" else "bid"   # rank 0: disqualified at the close
+        out.append({"ts": ts, "round_id": str(r[1]), "sku": sku, "seller_id": str(r[3]), "price_cents": int(round(price * 100)),
+                    "event": event})
     return out
 
 
@@ -102,11 +109,14 @@ def write_round_ticks(ticks: list[dict], *, timeout: float = TIGER_TIMEOUT_S) ->
     from data.tiger import store
     if not store.status()["configured"]:
         return {"state": "not_configured", "n": 0}
+    if not ticks:
+        return {"state": "empty", "n": 0}
     try:
         res = _bounded(lambda: store.write_bid_ticks(ticks), timeout)
-        return {"state": "written", "n": len(ticks), "result": res}
-    except cf.TimeoutError:
-        return {"state": "error", "n": 0, "detail": f"over {timeout:g} s"}
+        n = res.get("inserted", 0) if isinstance(res, dict) else 0
+        return {"state": "written" if n else "empty", "n": int(n), "result": res}
+    except cf.TimeoutError:   # the write may still finish in the background: unconfirmed, not "not written"
+        return {"state": "unconfirmed", "n": 0, "detail": f"over {timeout:g} s"}
     except Exception as e:  # noqa: BLE001  (the connection string never reaches the message: store redacts it)
         return {"state": "error", "n": 0, "detail": type(e).__name__}
 
@@ -118,4 +128,8 @@ def tiger_note(result: dict, round_id: str) -> str:
                 f"market_1h and bid_curve_10s)")
     if state == "not_configured":
         return "Tiger Data: not configured (TIGER_DATA_SERVICE_URL), so the round's prices were not stored"
+    if state == "empty":
+        return f"Tiger Data: stored 0 bid ticks for {round_id} (nothing new to store)"
+    if state == "unconfirmed":
+        return f"Tiger Data: write not confirmed ({result.get('detail')}); the deal goes on"
     return f"Tiger Data: not written ({result.get('detail') or 'error'}); the deal goes on"

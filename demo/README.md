@@ -64,7 +64,7 @@ approved call plus a `pay.mandate.can_charge` pass against the market's rank 1 m
 answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
 On `--live-call` the bridge also loads `BRIGHT_DATA_API_KEY` and `TIGER_DATA_SERVICE_URL` from the same env file
 as the call (the process environment wins; values are never printed) (#269). Right before the call, Bright Data
-re-checks the winner's listing price (20 s limit): a live price above the quote, or out of stock, stops the call and
+re-checks the winner's listing price (45 s limit): a live price above the quote, or out of stock, stops the call and
 nothing is paid; a slow or failed read keeps the quoted MIRROR price and the console says so. The call says "the
 price was checked live just now" or "the price is from a dated listing snapshot". After the close, the round's
 prices go to Tiger Data as bid ticks (rank 1 is the win); a Tiger failure is one console line and the deal goes on.
