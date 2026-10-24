@@ -21,7 +21,7 @@ def test_demo_story_has_the_moment_and_clean_books():
     r = run_story()
     assert r["invariants"] == [] and r["trial_balance"]["balanced"]
     labels = {s["label"]: s for s in r["steps"]}
-    assert labels["Tony tries to approve his own PO"]["status"] == "denied"
+    assert labels["Vidyut tries to self-approve the PO"]["status"] == "denied"
     assert labels["Pepper (controller) says no, ceiling $2,600"]["status"] == "replanned"
     assert labels["Invoice for 2 new units arrives, remit-to account changed"]["status"] == "held"
     assert labels["Payment attempt the next morning"]["status"] == "denied"
@@ -38,10 +38,10 @@ def test_mirror_reference_ignores_sold_history_and_uses_the_median():
 
 def test_api_full_flow_and_refusals_are_results_not_errors():
     c = client()
-    r = c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "SSD-2TB", "qty": 2, "price": 100.0}]}).json()
+    r = c.post(f"{P}/requisitions", json={"requester": "vidyut", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "SSD-2TB", "qty": 2, "price": 100.0}]}).json()
     po = r["po"]["id"]
     assert r["ok"] and r["po"]["route"]["needs"] == ["dept_head"]
-    no = c.post(f"{P}/pos/{po}/approve", json={"by": "tony", "at": "2026-10-24T10:00:00Z"})
+    no = c.post(f"{P}/pos/{po}/approve", json={"by": "vidyut", "at": "2026-10-24T10:00:00Z"})
     assert no.status_code == 200 and no.json()["ok"] is False and no.json()["code"] == "self_approval"
     ok = c.post(f"{P}/pos/{po}/approve", json={"by": "rhodey", "at": "2026-10-24T11:00:00Z"}).json()
     assert ok["ok"] and ok["po"]["status"] == "approved"
@@ -65,9 +65,9 @@ def test_api_errors_404_409_422_and_body_limit():
     c = client()
     assert c.get(f"{P}/pos/PO-9").status_code == 404
     assert c.get(f"{P}/audit/dec_9999/explain").status_code == 404
-    assert c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 0, "price": 1}]}).status_code == 422
-    c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]})
-    assert c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2026-10-23T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).status_code == 409
+    assert c.post(f"{P}/requisitions", json={"requester": "vidyut", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 0, "price": 1}]}).status_code == 422
+    c.post(f"{P}/requisitions", json={"requester": "vidyut", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]})
+    assert c.post(f"{P}/requisitions", json={"requester": "vidyut", "vendor_id": "bestbuy", "at": "2026-10-23T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).status_code == 409
     assert c.post(f"{P}/requisitions", content=b"x" * 70_000, headers={"content-type": "application/json"}).status_code == 413
 
 
@@ -102,16 +102,16 @@ def test_draft_is_template_offline_and_model_text_with_invented_numbers_is_disca
 
 def test_client_supplied_time_is_ignored_on_a_server_clock_app():
     c = TestClient(create_app(seed_company(mirror={})))
-    r = c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2099-01-01T00:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
+    r = c.post(f"{P}/requisitions", json={"requester": "vidyut", "vendor_id": "bestbuy", "at": "2099-01-01T00:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
     assert r["po"]["created_at"] < "2099"  # the far-future `at` did not age anything out
     assert c.get(f"{P}/health").json()["clock_mode"] == "server"
     c.post(f"{P}/demo/reset?story=empty")
     assert c.get(f"{P}/health").json()["clock_mode"].startswith("demo")
-    r2 = c.post(f"{P}/requisitions", json={"requester": "tony", "vendor_id": "bestbuy", "at": "2099-01-01T00:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
+    r2 = c.post(f"{P}/requisitions", json={"requester": "vidyut", "vendor_id": "bestbuy", "at": "2099-01-01T00:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
     assert r2["po"]["created_at"].startswith("2099")  # demo mode honours scripted timestamps
 
 
 def test_requisition_route_ignores_a_dept_field():
     c = client()
-    r = c.post(f"{P}/requisitions", json={"requester": "tony", "dept": "art", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
+    r = c.post(f"{P}/requisitions", json={"requester": "vidyut", "dept": "art", "vendor_id": "bestbuy", "at": "2026-10-24T09:00:00Z", "lines": [{"sku": "x", "qty": 1, "price": 1}]}).json()
     assert r["po"]["dept"] == "engineering"

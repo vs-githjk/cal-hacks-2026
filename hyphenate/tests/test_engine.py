@@ -20,8 +20,8 @@ def test_clean_cycle_request_approve_receive_invoice_pay_reconcile():
 
 def test_requester_cannot_approve_and_delegate_cannot_either():
     eng = seed_company(mirror={})
-    pid = eng.request(requester="tony", vendor_id="bestbuy", lines=[gpu()], at=T("10-05")).data["po"]["id"]
-    for who, code in (("tony", "self_approval"), ("tony-assistant", "delegate_of_requester")):
+    pid = eng.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu()], at=T("10-05")).data["po"]["id"]
+    for who, code in (("vidyut", "self_approval"), ("vidyut-assistant", "delegate_of_requester")):
         r = eng.approve(pid, by=who, at=T("10-05", 10))
         assert not r.ok and r.data["code"] == code
     assert eng.pos[pid]["status"] == "pending_approval"
@@ -29,7 +29,7 @@ def test_requester_cannot_approve_and_delegate_cannot_either():
 
 def test_agents_cannot_approve_or_change_bank_details():
     eng = seed_company(mirror={})
-    pid = eng.request(requester="tony", vendor_id="bestbuy", lines=[gpu()], at=T("10-05")).data["po"]["id"]
+    pid = eng.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu()], at=T("10-05")).data["po"]["id"]
     assert eng.approve(pid, by="ap-agent", at=T("10-05", 10)).data["code"] == "no_permission"
     assert eng.approve(pid, by="purchasing-agent", at=T("10-05", 11)).data["code"] == "no_permission"
     assert eng.change_vendor_bank("bestbuy", new_account="acct_evil", by="ap-agent", at=T("10-05", 12)).data["code"] == "no_permission"
@@ -37,7 +37,7 @@ def test_agents_cannot_approve_or_change_bank_details():
 
 def test_dept_head_limit_and_controller_override_for_budget():
     eng = seed_company(mirror={})
-    big = eng.request(requester="tony", vendor_id="bestbuy", lines=[gpu(qty=3, price=1249.99)], at=T("10-05"))  # 3749.97 > 2500
+    big = eng.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu(qty=3, price=1249.99)], at=T("10-05"))  # 3749.97 > 2500
     pid = big.data["po"]["id"]
     assert "over_limit" in big.data["po"]["route"]["flags"]
     r = eng.approve(pid, by="rhodey", at=T("10-05", 10))
@@ -57,13 +57,13 @@ def test_dept_head_limit_and_controller_override_for_budget():
 def test_controller_no_replans_to_cheaper_allowed_line_or_drops():
     eng = seed_company(mirror={})
     line = gpu(qty=2, price=1249.99, allowed=["new", "open-box"], alternatives=[{"condition": "open-box", "price": 1099.0}])
-    pid = eng.request(requester="tony", vendor_id="bestbuy", lines=[line], at=T("10-05")).data["po"]["id"]
+    pid = eng.request(requester="vidyut", vendor_id="bestbuy", lines=[line], at=T("10-05")).data["po"]["id"]
     r = eng.reject(pid, by="pepper", at=T("10-05", 10), reason="too much for this quarter", max_amount=2300)
     assert r.data["replan"]["child"] and eng.pos[pid]["status"] == "replanned"
     child = eng.pos[r.data["replan"]["child"]]
     assert child["total"] == 219800 and child["status"] == "pending_approval" and child["parent"] == pid and eng.pos[pid]["committed"] == 0
     # no alternative under a lower cap: dropped
-    pid2 = eng.request(requester="tony", vendor_id="bestbuy", lines=[gpu()], at=T("10-06")).data["po"]["id"]
+    pid2 = eng.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu()], at=T("10-06")).data["po"]["id"]
     r2 = eng.reject(pid2, by="pepper", at=T("10-06", 10), reason="no")
     assert eng.pos[pid2]["status"] == "dropped" and "dropped" in codes(r2)
     # the child can be said no to, and re-plans are capped
@@ -121,7 +121,7 @@ def test_price_materiality_and_strict_vendor_history():
     eng2, p2 = approved_po(lines=[gpu(qty=10, price=100.0)])
     eng2.vendors["bestbuy"].add("failed_receiving", "2026-09-20T00:00:00Z", "happy", "wrong condition")  # March-style history
     # strict vendor needs two signatures: rhodey alone is not enough
-    out = eng2.request(requester="tony", vendor_id="bestbuy", lines=[gpu(qty=10, price=100.0)], at=T("10-10"))
+    out = eng2.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu(qty=10, price=100.0)], at=T("10-10"))
     p3 = out.data["po"]["id"]
     assert out.data["po"]["route"]["needs"] == ["dept_head", "controller"]
     assert eng2.approve(p3, by="rhodey", at=T("10-10", 10)).status == "pending_approval"
@@ -202,7 +202,7 @@ def test_close_blocks_on_unreconciled_cash_and_non_controller():
 
 def test_prepaid_vendor_short_delivery_becomes_vendor_credit():
     eng = seed_company(mirror={})
-    pid = eng.request(requester="tony", vendor_id="bargain-bin", lines=[gpu(qty=4, price=300.0)], at=T("10-05")).data["po"]["id"]
+    pid = eng.request(requester="vidyut", vendor_id="bargain-bin", lines=[gpu(qty=4, price=300.0)], at=T("10-05")).data["po"]["id"]
     assert eng.approve(pid, by="rhodey", at=T("10-05", 10)).ok
     assert eng.prepay(pid, at=T("10-06")).ok and eng.ledger.balance("1200") == 120000
     received(eng, pid, qty=3, at="10-08")
@@ -215,18 +215,18 @@ def test_prepaid_vendor_short_delivery_becomes_vendor_credit():
 
 def test_mirror_reference_routes_inflated_and_too_cheap_prices_to_controller():
     eng = seed_company(mirror={"RTX-5070-TI": {"price": 124999, "as_of": "2026-10-20T00:00:00Z", "source": "https://x", "origin": "MIRROR"}})
-    hi = eng.request(requester="tony", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1600.0)], at=T("10-24"))
+    hi = eng.request(requester="vidyut", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1600.0)], at=T("10-24"))
     assert "above_market" in hi.data["po"]["route"]["flags"]
-    lo = eng.request(requester="tony", vendor_id="gadget-grove", lines=[gpu(qty=1, price=700.0)], at=T("10-24", 10))
+    lo = eng.request(requester="vidyut", vendor_id="gadget-grove", lines=[gpu(qty=1, price=700.0)], at=T("10-24", 10))
     assert "suspiciously_low" in lo.data["po"]["route"]["flags"]
-    stale = seed_company(mirror={"RTX-5070-TI": {"price": 124999, "as_of": "2026-08-01T00:00:00Z", "origin": "MIRROR"}}).request(requester="tony", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1600.0)], at=T("10-24"))
+    stale = seed_company(mirror={"RTX-5070-TI": {"price": 124999, "as_of": "2026-08-01T00:00:00Z", "origin": "MIRROR"}}).request(requester="vidyut", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1600.0)], at=T("10-24"))
     assert "above_market" not in stale.data["po"]["route"]["flags"]
 
 
 def test_time_cannot_go_backwards_and_every_decision_explainable():
     eng, pid = approved_po()
     with pytest.raises(ValueError):
-        eng.request(requester="tony", vendor_id="bestbuy", lines=[gpu()], at=T("09-01"))
+        eng.request(requester="vidyut", vendor_id="bestbuy", lines=[gpu()], at=T("09-01"))
     last = eng.audit.decisions[-1]
     x = eng.explain(last.id)
     assert x["text"] and eng.invariants() == []
@@ -282,7 +282,7 @@ def test_bad_invoice_date_is_refused_before_any_state_changes():
 
 def test_requester_cannot_pick_another_departments_budget_or_approver():
     eng = seed_company(mirror={})
-    r = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05"))
+    r = eng.request(requester="vidyut", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05"))
     assert not r.ok and r.data["code"] == "wrong_department" and eng.pos == {}
     assert eng.request(requester="pepper", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05", 9)).ok  # the controller may charge any department
     assert eng.request(requester="jess", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=500.0)], at=T("10-05", 10)).ok

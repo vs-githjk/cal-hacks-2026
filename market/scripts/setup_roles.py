@@ -14,7 +14,7 @@ SERVER = os.environ.get("SPACETIMEDB_SERVER", "local")
 
 AGENTS = [  # token file name, role, subject id
     ("referee", "referee", "market"),
-    ("buyer-joe", "buyer", "joe"),
+    ("buyer-vidyut", "buyer", "vidyut"),
     ("seller-a", "seller", "seller-a"),
     ("seller-b", "seller", "seller-b"),
     ("seller-c", "seller", "seller-c"),

@@ -1,4 +1,4 @@
-"""Beat 4: the deal is above Tony Stark's allowance, so the agent calls. All of this runs through the REAL pay/ code:
+"""Beat 4: the deal is above Vidyut's allowance, so the agent calls. All of this runs through the REAL pay/ code:
 pay.mandate (hash, can_charge, mark_used), pay.callscript (script_for), pay.approval (word-pair code, three tries),
 pay.tap (RFC 9421 signing, verify_request) and pay.replay (used nonces).
 
@@ -34,13 +34,13 @@ MERCHANT_URL = "https://merchant-sim.example.test/v1/charge"
 KEY_ENV = "VISA_TAP_PRIVATE_KEY_PATH"
 STRIPE_ENV = "STRIPE_SECRET_KEY"
 RETRY_GAP_S = 31          # clears the 30 s deny cooldown on the sim clock
-ANSWER_DELAY_S = 4        # Tony Stark answers 4 s after the agent stops speaking (listen window is 10 s)
+ANSWER_DELAY_S = 4        # Vidyut answers 4 s after the agent stops speaking (listen window is 10 s)
 STRIPE_URL = "https://api.stripe.com/v1/payment_intents"
 SYSTEM_CA = "/etc/ssl/cert.pem"
 
 
 def _wrong_pair(code: str) -> str:
-    """Two valid code words that are not Tony Stark's code, so the denial is for the wrong code and not for bad words."""
+    """Two valid code words that are not Vidyut's code, so the denial is for the wrong code and not for bad words."""
     taken = set(code.split())
     return " ".join([w for w in WORDS if w not in taken][3:5])
 
@@ -127,16 +127,16 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     script = script_for(mandate, reason)
     say.line(SIM, f"call script (amount and payee read from the mandate, why-answer from the closed-schema reason; stripped: {list(script.stripped) or 'nothing'}):")
     say.line(SIM, f"agent: \"{script.spoken()}\"", 1)
-    say.line(SIM, 'Tony Stark: "Why not the cheaper one?"', 1)
+    say.line(SIM, 'Vidyut: "Why not the cheaper one?"', 1)
     say.line(SIM, f"agent: \"{script.why_answer}\"", 1)
-    say.line(SIM, f"cited source on Tony Stark's screen: {reason['source_url']}", 1)
+    say.line(SIM, f"cited source on Vidyut's screen: {reason['source_url']}", 1)
 
     store = NonceStore()
     secret = env.get("APPROVAL_SECRET") or secrets.token_hex(16)
     svc = ApprovalService(secret=secret, store=store)
     session, code = svc.issue(mandate, now=t0)
     before = can_charge(mandate, t0, deal_id=mandate["deal_id"], amount=amount, payee=payee, store=store)
-    say.line(SIM, f"two-word code issued and shown on Tony Stark's authenticated screen (never printed here); can_charge before approval: "
+    say.line(SIM, f"two-word code issued and shown on Vidyut's authenticated screen (never printed here); can_charge before approval: "
                   f"{'PASS' if before else 'REFUSED'} ({before.reason})")
     session.start_call(t0)
 
@@ -151,7 +151,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
         d = session.approve(said, t, confidence=0.93)
         attempts.append({"try": n, "label": label, "said": shown, "at": t.isoformat().replace("+00:00", "Z"), "decision": _decision(d)})
         verdict = "APPROVED" if d.approved else f"DENIED ({d.reason})"
-        say.line(SIM, f"try {n} ({label}): Tony Stark says \"{shown}\" -> {verdict}", 1)
+        say.line(SIM, f"try {n} ({label}): Vidyut says \"{shown}\" -> {verdict}", 1)
         if d.record:
             final = d.record
         if d.approved:

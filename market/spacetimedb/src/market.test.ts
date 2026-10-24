@@ -24,18 +24,18 @@ const line = (price: number, extra: Partial<{ offeredSpec: string; offeredCondit
   skuSpec: GPU, offeredSpec: '', offeredCondition: '', unitPrice: price, quantity: 1, ...extra,
 });
 
-// Identities: the module owner, the referee (market service, Shield, advocate relay), Joe's buyer
+// Identities: the module owner, the referee (market service, Shield, advocate relay), Vidyut's buyer
 // agent, another buyer, three sellers and a stranger with no role.
-let OWNER: Auth, REF: Auth, JOE: Auth, BOB: Auth, A: Auth, B: Auth, C: Auth, STRANGER: Auth;
+let OWNER: Auth, REF: Auth, VIDYUT: Auth, BOB: Auth, A: Auth, B: Auth, C: Auth, STRANGER: Auth;
 
 const needArgs = (over: Partial<m.PostNeedArgs> = {}): m.PostNeedArgs => ({
-  id: 'need-1', buyerId: 'joe', goalId: 'goal-1', deliveryWindow: 'by Friday', spendLimit: 800, consent: true,
+  id: 'need-1', buyerId: 'vidyut', goalId: 'goal-1', deliveryWindow: 'by Friday', spendLimit: 800, consent: true,
   auctionWindowS: 15, origin: 'SIM',
   items: [{ skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 1, unit: 'each' }], ...over,
 });
 
 function setupRound(windowS = 15) {
-  run(JOE, (ctx) => m.postNeed(ctx, needArgs({ auctionWindowS: windowS })));
+  run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ auctionWindowS: windowS })));
   run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS }));
 }
 
@@ -44,18 +44,18 @@ const bidArgs = (id: string, lines: ReturnType<typeof line>[]) => ({
 });
 
 const mandateArgs = (over: Partial<Parameters<typeof m.createMandate>[1]> = {}) => ({
-  hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'joe', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', requestedBy: '', origin: 'SIM', ...over,
+  hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'vidyut', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', requestedBy: '', origin: 'SIM', ...over,
 });
 
 const goalArgs = (over: Partial<m.PostGoalArgs> = {}): m.PostGoalArgs => ({
-  id: 'goal-1', buyerId: 'joe', type: 'part_by_date', cap: 800, deadline: '2025-10-27T23:59:00Z', poNumber: '', origin: 'SIM',
+  id: 'goal-1', buyerId: 'vidyut', type: 'part_by_date', cap: 800, deadline: '2025-10-27T23:59:00Z', poNumber: '', origin: 'SIM',
   items: [{ skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1, skippedOwnedPartId: '' }], ...over,
 });
 
 beforeEach(() => {
   h = createModuleTestHarness(spacetimedb, mod);
   h.clock.set(T0);
-  OWNER = as('owner'); REF = as('referee'); JOE = as('joe-agent'); BOB = as('bob-agent');
+  OWNER = as('owner'); REF = as('referee'); VIDYUT = as('vidyut-agent'); BOB = as('bob-agent');
   A = as('seller-a'); B = as('seller-b'); C = as('seller-c'); STRANGER = as('stranger');
   run(OWNER, (ctx) => m.init(ctx));
   const grant = (who: Auth, role: string, subjectId: string) => {
@@ -63,7 +63,7 @@ beforeEach(() => {
     run(OWNER, (ctx) => m.assignRole(ctx, { identity, role, subjectId }));
   };
   grant(REF, 'referee', 'market');
-  grant(JOE, 'buyer', 'joe');
+  grant(VIDYUT, 'buyer', 'vidyut');
   grant(BOB, 'buyer', 'bob');
   grant(A, 'seller', 'seller-a');
   grant(B, 'seller', 'seller-b');
@@ -86,7 +86,7 @@ describe('post_need and redaction', () => {
     expect(v).toHaveLength(1);
     expect(v[0]).toMatchObject({ needId: 'need-1', roundId: 'round-1', skuSpec: GPU, condition: 'new' });
     const text = JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? String(x) : x));
-    expect(text).not.toMatch(/spendLimit|800|goal|joe/);
+    expect(text).not.toMatch(/spendLimit|800|goal|vidyut/);
   });
 });
 
@@ -197,13 +197,13 @@ describe('INVARIANT-1 approval before payment', () => {
   it('INVARIANT-1: an approval for a different hash does not unlock this one', () => {
     mk();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', dealId: 'd2', amount: 10, payee: 'seller-b', nonce: 'n2' })));
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h2', method: 'typed_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h2', method: 'typed_code', approvedBy: 'vidyut' }));
     expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/no approval/);
   });
 
   it('INVARIANT-1: with an approval, one payment is recorded; the amount must equal the mandate', () => {
     mk();
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
     expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 781, mode: 'sim' }))).toThrow(/amount/);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'sim' }));
     expect([...h.db.payment.iter()]).toHaveLength(1);
@@ -211,8 +211,8 @@ describe('INVARIANT-1 approval before payment', () => {
 
   it('INVARIANT-1: a second approval for the same hash is rejected and shown; a second payment too', () => {
     mk();
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'joe' }));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     expect([...h.db.approval.iter()]).toHaveLength(1);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_1', amount: 780, mode: 'sim' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_2', amount: 780, mode: 'sim' }));
@@ -223,7 +223,7 @@ describe('INVARIANT-1 approval before payment', () => {
   it('INVARIANT-1: an expired mandate cannot be approved', () => {
     mk();
     advance(11 * 60_000);
-    expect(() => run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }))).toThrow(/expired/);
+    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }))).toThrow(/expired/);
   });
 });
 
@@ -240,7 +240,7 @@ describe('SECURITY caller identity', () => {
     ['attach_verdict', (ctx) => m.attachVerdict(ctx, { bidId: 'bid-b', verdict: 'block', ruleIds: ['x'], origin: 'SIM' })],
     ['attach_claim_check', (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM' })],
     ['create_mandate', (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h9' }))],
-    ['record_approval', (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' })],
+    ['record_approval', (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' })],
     ['record_payment', (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' })],
     ['attach_advocate_card', (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'x', sourceUrl: 'https://x', origin: 'SIM' })],
     ['assign_role', (ctx) => m.assignRole(ctx, { identity: ctx.sender, role: 'referee', subjectId: 'market' })],
@@ -252,7 +252,7 @@ describe('SECURITY caller identity', () => {
     setupRound();
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     advance(16_000);
     expect(() => run(A, call)).toThrow(/not allowed/);
   });
@@ -265,21 +265,21 @@ describe('SECURITY caller identity', () => {
 
   it('SECURITY: a buyer cannot bid; a seller bids only as its own seller id', () => {
     setupRound();
-    expect(() => run(JOE, (ctx) => m.placeBid(ctx, bidArgs('bid-j', [line(780)])))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => m.placeBid(ctx, bidArgs('bid-j', [line(780)])))).toThrow(/not allowed/);
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     expect(h.db.bid.id.find('bid-a')!.sellerId).toBe('seller-a');
   });
 
   it('SECURITY: a buyer posts needs and goals only for its own buyer id', () => {
-    expect(() => run(JOE, (ctx) => m.postNeed(ctx, needArgs({ buyerId: 'bob' })))).toThrow(/not allowed/);
-    expect(() => run(JOE, (ctx) => m.postGoal(ctx, goalArgs({ buyerId: 'bob' })))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ buyerId: 'bob' })))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ buyerId: 'bob' })))).toThrow(/not allowed/);
   });
 
   it('SECURITY: a seller cannot approve or pay its own deal', () => {
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ payee: 'seller-a' })));
-    expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }))).toThrow(/not allowed/);
+    expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }))).toThrow(/not allowed/);
     expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'seller-a' }))).toThrow(/not allowed/);
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     expect(() => run(A, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/not allowed/);
     expect([...h.db.payment.iter()]).toHaveLength(0);
   });
@@ -295,29 +295,29 @@ describe('SECURITY caller identity', () => {
   it('SECURITY: approvedBy must equal the mandate buyer, even when the referee relays it', () => {
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
     expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'mallory' }))).toThrow(/approvedBy/);
-    expect(() => run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'bob' }))).toThrow(/approvedBy/);
+    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'bob' }))).toThrow(/approvedBy/);
     expect([...h.db.approval.iter()]).toHaveLength(0);
   });
 
-  it("SECURITY: another buyer cannot approve or create a mandate for Joe's deal", () => {
+  it("SECURITY: another buyer cannot approve or create a mandate for Vidyut's deal", () => {
     expect(() => run(BOB, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/not allowed/);
-    run(JOE, (ctx) => m.createMandate(ctx, mandateArgs()));
-    expect(() => run(BOB, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }))).toThrow(/not allowed/);
+    run(VIDYUT, (ctx) => m.createMandate(ctx, mandateArgs()));
+    expect(() => run(BOB, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }))).toThrow(/not allowed/);
   });
 
   it('SECURITY: only the module owner assigns roles', () => {
     const stranger = idOf(STRANGER);
-    expect(() => run(REF, (ctx) => m.assignRole(ctx, { identity: stranger, role: 'buyer', subjectId: 'joe' }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.assignRole(ctx, { identity: stranger, role: 'buyer', subjectId: 'vidyut' }))).toThrow(/not allowed/);
     expect(() => run(STRANGER, (ctx) => m.assignRole(ctx, { identity: stranger, role: 'referee', subjectId: 'm' }))).toThrow(/not allowed/);
   });
 
   it('SECURITY: a buyer screen pairs with the demo code only; a seller cannot pair', () => {
     run(OWNER, (ctx) => m.seedDemoChecked(ctx));
-    const code = h.db.pairCode.buyerId.find('joe')!.code;
-    const screen = as('joe-laptop');
-    expect(() => run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code: 'wrong-code' }))).toThrow(/code/);
-    expect(() => run(A, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code }))).toThrow(/not allowed/);
-    run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'joe', code }));
+    const code = h.db.pairCode.buyerId.find('vidyut')!.code;
+    const screen = as('vidyut-laptop');
+    expect(() => run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: 'wrong-code' }))).toThrow(/code/);
+    expect(() => run(A, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code }))).toThrow(/not allowed/);
+    run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code }));
     expect(m.myGoalsView(h.viewContext(screen) as any).length).toBe(1);
     expect(m.myGoalsView(h.viewContext(A) as any).length).toBe(0);
   });
@@ -332,7 +332,7 @@ describe('every state change writes a floor event', () => {
     advance(16_000);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
     expect(events().slice(n0).map((e) => e.kind)).toEqual([
       'bid_sealed', 'verdict', 'auction_closed', 'mandate_created', 'approval_recorded', 'payment_recorded',
@@ -342,18 +342,18 @@ describe('every state change writes a floor event', () => {
 
 describe('goals (Lane A Goal contract)', () => {
   it('post_goal stores the goal with its items; only a paired buyer screen sees it', () => {
-    run(JOE, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
     const g = h.db.goal.id.find('goal-1')!;
     expect(g).toMatchObject({ state: 'ACTIVE', cap: 800, reservedAmount: 0, type: 'part_by_date' });
     const items = [...h.db.goalItem.goalId.filter('goal-1')];
     expect(items[0]).toMatchObject({ skuSpec: GPU, condition: 'new', variant: 'retail', quantity: 1 });
     expect(m.myGoalsView(h.viewContext(STRANGER) as any)).toHaveLength(0);
-    expect(m.myGoalsView(h.viewContext(JOE) as any)).toHaveLength(1);
+    expect(m.myGoalsView(h.viewContext(VIDYUT) as any)).toHaveLength(1);
     expect(events().find((e) => e.kind === 'goal_posted')!.label).not.toMatch(/800/);
   });
 
   it('post_goal refuses a deadline that is not an ISO date', () => {
-    expect(() => run(JOE, (ctx) => m.postGoal(ctx, goalArgs({ deadline: 'by friday' })))).toThrow(/deadline/);
+    expect(() => run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ deadline: 'by friday' })))).toThrow(/deadline/);
   });
 });
 
@@ -362,10 +362,10 @@ describe('goals (Lane A Goal contract)', () => {
 // check raises it; inside the allowance a buy auto-approves with a receipt; requester never approves.
 // ============================================================================================
 describe('b2 allowance ladder', () => {
-  const allowance = () => h.db.allowance.buyerId.find('joe');
+  const allowance = () => h.db.allowance.buyerId.find('vidyut');
   const paidDeal = (hash: string, amount: number) => {
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash, id: `m-${hash}`, amount, nonce: hash })));
-    if (!h.db.approval.mandateHash.find(hash)) run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'typed_code', approvedBy: 'joe' }));
+    if (!h.db.approval.mandateHash.find(hash)) run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'typed_code', approvedBy: 'vidyut' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: hash, paymentRef: `pi_${hash}`, amount, mode: 'sim' }));
   };
   let n = 0;
@@ -373,7 +373,7 @@ describe('b2 allowance ladder', () => {
     run(who, (ctx) => m.recordReceiving(ctx, { id: `rcv-${hash}-${result}-${++n}`, orderId: hash, skuSpec: GPU, photoUrl: 'sim://photo', expectedSpecId: 'spec-gpu', result, reasons: result === 'accepted' ? [] : ['box shows open-box seal'], checkedBy: 'owner', origin: 'SIM' }));
 
   it('a buyer starts at step 0 with $0 limits, so the first buy needs the call (no auto approval)', () => {
-    run(JOE, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
     expect(allowance()).toMatchObject({ ladderStep: 0, perPurchaseLimit: 0, periodLimit: 0, currency: 'USD', period: 'week' });
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 5 })));
     expect(h.db.mandate.hash.find('h1')!.withinAllowance).toBe(false);
@@ -382,10 +382,10 @@ describe('b2 allowance ladder', () => {
 
   it('one clean receiving check by the buyer raises the ladder one step, once per deal', () => {
     paidDeal('d1', 780);
-    receive(JOE, 'd1');
+    receive(VIDYUT, 'd1');
     expect(allowance()!.ladderStep).toBe(1);
     expect(allowance()!.perPurchaseLimit).toBeGreaterThan(0);
-    receive(JOE, 'd1');
+    receive(VIDYUT, 'd1');
     expect(allowance()!.ladderStep).toBe(1);
     expect(events().some((e) => e.kind === 'allowance_raised')).toBe(true);
     expect(events().some((e) => e.kind === 'delivery_checked')).toBe(true);
@@ -393,7 +393,7 @@ describe('b2 allowance ladder', () => {
 
   it('a failed receiving check does not raise the ladder and opens a credit request', () => {
     paidDeal('d1', 780);
-    receive(JOE, 'd1', 'rejected');
+    receive(VIDYUT, 'd1', 'rejected');
     expect(allowance()?.ladderStep ?? 0).toBe(0);
     const ev = [...h.db.receivingEvent.orderId.filter('d1')][0]!;
     expect(ev.creditRequestId).not.toBe('');
@@ -409,18 +409,18 @@ describe('b2 allowance ladder', () => {
 
   it('receiving needs a paid deal', () => {
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    expect(() => receive(JOE, 'h1')).toThrow(/not paid/);
+    expect(() => receive(VIDYUT, 'h1')).toThrow(/not paid/);
   });
 
   it('inside the allowance a buy auto-approves with a receipt and counts against the period; above it, it calls', () => {
     paidDeal('d1', 780);
-    receive(JOE, 'd1');
+    receive(VIDYUT, 'd1');
     const per = allowance()!.perPurchaseLimit;
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'small', id: 'm-small', amount: per, nonce: 's' })));
     expect(h.db.mandate.hash.find('small')!.withinAllowance).toBe(true);
     expect(h.db.approval.mandateHash.find('small')!.method).toBe('allowance');
     expect(allowance()!.spentThisPeriod).toBe(per);
-    expect([...h.db.notification.buyerId.filter('joe')].some((n) => n.text.includes('within your allowance'))).toBe(true);
+    expect([...h.db.notification.buyerId.filter('vidyut')].some((n) => n.text.includes('within your allowance'))).toBe(true);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'small', paymentRef: 'pi_small', amount: per, mode: 'sim' }));
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'big', id: 'm-big', amount: per + 1, nonce: 'b' })));
     expect(h.db.mandate.hash.find('big')!.withinAllowance).toBe(false);
@@ -428,14 +428,14 @@ describe('b2 allowance ladder', () => {
   });
 
   it('the requester can never approve their own purchase', () => {
-    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ requestedBy: 'joe' })));
-    expect(() => run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'joe' }))).toThrow(/requester/);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ requestedBy: 'vidyut' })));
+    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'typed_code', approvedBy: 'vidyut' }))).toThrow(/requester/);
     expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
   });
 
   it('the buyer screen sees its allowance; a seller sees none', () => {
-    run(JOE, (ctx) => m.postGoal(ctx, goalArgs()));
-    expect(m.myAllowanceView(h.viewContext(JOE) as any)).toHaveLength(1);
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    expect(m.myAllowanceView(h.viewContext(VIDYUT) as any)).toHaveLength(1);
     expect(m.myAllowanceView(h.viewContext(A) as any)).toHaveLength(0);
   });
 });
@@ -484,7 +484,7 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
     expect(e.map((x) => x.kind)).toEqual(['advocate_card']);
     expect(e[0]!.label).toMatch(/veto/);
     expect(e[0]!.sellerId).toBe('');
-    const feed = m.myNotificationsView(h.viewContext(JOE) as any);
+    const feed = m.myNotificationsView(h.viewContext(VIDYUT) as any);
     const v = feed.filter((n: any) => n.klass === 'veto');
     expect(v).toHaveLength(1);
     expect(v[0]!.text).toContain('The card is longer than your case allows');
@@ -511,7 +511,7 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
   it('SECURITY: a buyer cannot attach a card either', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
-    expect(() => run(JOE, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }))).toThrow(/not allowed/);
   });
 });
 
@@ -519,7 +519,7 @@ describe('allowed conditions, alternative lines and the cap at close', () => {
   const openBoxNeed = () =>
     needArgs({ items: [{ skuSpec: GPU, condition: 'new', allowedConditions: ['new', 'open-box'], variant: 'retail', quantity: 1, unit: 'each' }] });
   const setup = (over: Partial<m.PostNeedArgs> = {}) => {
-    run(JOE, (ctx) => m.postNeed(ctx, { ...openBoxNeed(), ...over }));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, { ...openBoxNeed(), ...over }));
     run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));
   };
   const closeIt = () => {
@@ -582,7 +582,7 @@ describe('allowed conditions, alternative lines and the cap at close', () => {
 describe('record_payment mode (sim or stripe_test)', () => {
   const ready = () => {
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    run(JOE, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'joe' }));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut' }));
   };
   const last = () => events().filter((e) => e.kind === 'payment_recorded').pop()!;
 

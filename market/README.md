@@ -54,7 +54,7 @@ Every state-changing reducer checks the caller first (`requireRole` in `spacetim
 ```bash
 # once per database, as the owner (the spacetime CLI identity): creates agent tokens in .tokens/ (gitignored)
 python3 market/scripts/setup_roles.py
-# the buyer screen pairing code for Joe (demo persona, SIM)
+# the buyer screen pairing code for Vidyut (demo persona, SIM)
 spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"
 ```
 
@@ -66,11 +66,11 @@ Open http://localhost:3100/buyer and enter that code. A seller identity can neve
 import sys; sys.path.insert(0, "market/scripts")
 from stdb import Market
 
-joe = Market(token_file=".tokens/buyer-joe.json")       # buyer role for joe
+vidyut = Market(token_file=".tokens/buyer-vidyut.json")       # buyer role for vidyut
 ref = Market(token_file=".tokens/referee.json")         # referee role
 seller = Market(token_file=".tokens/seller-a.json")     # seller role for seller-a
 
-joe.call("post_need", id="need-1", buyer_id="joe", goal_id="goal-joe-gpu",
+vidyut.call("post_need", id="need-1", buyer_id="vidyut", goal_id="goal-vidyut-gpu",
          delivery_window="by Friday", spend_limit=800, consent=True,
          auction_window_s=15, origin="SIM",
          items=[{"sku_spec": "gpu-rtx5070ti-retail", "condition": "new",

@@ -9,7 +9,7 @@ MIRROR = {"RTX-5070-TI": {"price": 129999, "as_of": "2026-10-20T00:00:00Z", "sou
 def test_mirror_reference_matches_any_spelling_of_the_sku_and_records_the_trust_reason():
     for spelling in ("rtx 5070 ti", "RTX-5070-TI", "Rtx_5070-Ti ", "RTX  5070   TI"):
         eng = seed_company(mirror=MIRROR)
-        out = eng.request(requester="tony", vendor_id="gadget-grove", lines=[{"sku": spelling, "qty": 1, "price": 1600.0}], at=T("10-24"))
+        out = eng.request(requester="vidyut", vendor_id="gadget-grove", lines=[{"sku": spelling, "qty": 1, "price": 1600.0}], at=T("10-24"))
         route = out.data["po"]["route"]
         assert "above_market" in route["flags"] and route["needs"] == ["controller"], spelling
         assert any("believed mirror" in n and "dated listing" in n for n in route["notes"])
@@ -20,9 +20,9 @@ def test_mirror_reference_matches_any_spelling_of_the_sku_and_records_the_trust_
 
 def test_price_at_the_threshold_is_not_flagged_and_just_over_is():
     eng = seed_company(mirror=MIRROR)
-    at_limit = eng.request(requester="tony", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1494.98)], at=T("10-24"))  # just inside +15 percent of 1299.99
+    at_limit = eng.request(requester="vidyut", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1494.98)], at=T("10-24"))  # just inside +15 percent of 1299.99
     assert "above_market" not in at_limit.data["po"]["route"]["flags"]
-    over = eng.request(requester="tony", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1495.0)], at=T("10-24", 10))
+    over = eng.request(requester="vidyut", vendor_id="gadget-grove", lines=[gpu(qty=1, price=1495.0)], at=T("10-24", 10))
     assert "above_market" in over.data["po"]["route"]["flags"]
 
 

@@ -165,12 +165,12 @@ transcript all deny. `can_charge` passes only after an approved session.
 ```
 python3 -m pay.voice_cartesia --dry-run --env-file /abs/path/.env   # prints the variables; no network, no code
 python3 -m pay.voice_cartesia --check   --env-file /abs/path/.env   # read-only GET of the agent, prints the outcome
-python3 -m pay.voice_cartesia --demo    --env-file /abs/path/.env   # ONE real call, beat 4, Tony Stark / Best Buy
+python3 -m pay.voice_cartesia --demo    --env-file /abs/path/.env   # ONE real call, beat 4, Vidyut / Best Buy
 python3 -m pytest pay/tests/test_voice_cartesia.py                  # 36 tests, no network
 ```
 - Env names (values never printed): `CARTESIA_API_KEY`, `CARTESIA_AGENT_ID`, `APPROVAL_CALL_TO` (the only number
   ever dialed; no flag overrides it), optional `CARTESIA_PHONE_NUMBER_ID` (else the agent's own number is looked up), optional `APPROVAL_BUYER_NAME`
-  (the first name the call greets; falls back to "Tony Stark"; `--buyer-name` overrides both).
+  (the first name the call greets; falls back to "Vidyut"; `--buyer-name` overrides both).
 - Sent to Cartesia as dynamic variables: `buyer_name`, `deal_script` (deal line, then the no-card promise, from `script_for`) and
   `why_answer` (closed-schema advocate reason). Never the code, never seller text; `assert_clean` refuses to dial if
   the code appears in any value.
