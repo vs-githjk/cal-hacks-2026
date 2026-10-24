@@ -79,7 +79,8 @@ export const attach_advocate_card = spacetimedb.reducer(
 );
 
 export const attach_same_seller_exclusion = spacetimedb.reducer(
-  { roundId: t.string(), keptBidId: t.string(), excludedBidId: t.string(), keptBindingHash: t.string(), excludedBindingHash: t.string() },
+  { roundId: t.string(), keptBidId: t.string(), excludedBidId: t.string(), keptBindingHash: t.string(), excludedBindingHash: t.string(),
+    identityEvidenceJson: t.object('SameSellerIdentityEvidence', { source: t.string(), reference: t.string() }) },
   (ctx, a) => m.attachSameSellerExclusion(ctx, a),
 );
 export const clear_same_seller_exclusion = spacetimedb.reducer(

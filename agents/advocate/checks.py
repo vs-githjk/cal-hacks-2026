@@ -382,6 +382,11 @@ def best_bid(bids: list[dict], cards: list[dict]):
 def same_seller_exclusions(eligible_candidates: list[dict], trusted_identity_by_seller: dict) -> list[dict]:
     """Build bound exclusion calls from the referee's already-ranked eligible candidates."""
     candidates = list(eligible_candidates)
+    ranks = [candidate.get("rank") if isinstance(candidate, dict) else None for candidate in candidates]
+    if (any(not isinstance(rank, int) or isinstance(rank, bool) or rank < 1 for rank in ranks)
+            or len(set(ranks)) != len(ranks)):
+        raise ValueError("eligible candidate needs a unique positive server rank")
+    candidates.sort(key=lambda candidate: candidate["rank"])
     candidate_rows = []
     first_by_seller = {}
     seen_bid_ids = set()

@@ -47,9 +47,9 @@ def test_gpu_too_long_vetoed_with_reason():
 
 def test_same_seller_rule_uses_server_order_and_expands_each_excluded_bid():
     candidates = [
-        {"bid_id": "kept", "seller_id": "seller-a", "binding_hash": "a" * 64},
-        {"bid_id": "excluded-1", "seller_id": "seller-b", "binding_hash": "b" * 64},
-        {"bid_id": "excluded-2", "seller_id": "seller-b", "binding_hash": "c" * 64},
+        {"bid_id": "kept", "seller_id": "seller-a", "binding_hash": "a" * 64, "rank": 1},
+        {"bid_id": "excluded-1", "seller_id": "seller-b", "binding_hash": "b" * 64, "rank": 2},
+        {"bid_id": "excluded-2", "seller_id": "seller-b", "binding_hash": "c" * 64, "rank": 3},
     ]
     identities = {
         "seller-a": {"provenance": "registry", "payee": "merchant-1"},
@@ -75,9 +75,9 @@ def test_same_seller_rule_uses_server_order_and_expands_each_excluded_bid():
 
 def test_same_seller_rule_does_not_infer_identity_from_candidate_fields_or_untrusted_map():
     candidates = [
-        {"bid_id": "a", "seller_id": "seller-a", "binding_hash": "a" * 64,
+        {"bid_id": "a", "seller_id": "seller-a", "binding_hash": "a" * 64, "rank": 1,
          "payee": "merchant-1", "owner": "merchant-1", "listing_url": "https://shop.example/item"},
-        {"bid_id": "b", "seller_id": "seller-b", "binding_hash": "b" * 64,
+        {"bid_id": "b", "seller_id": "seller-b", "binding_hash": "b" * 64, "rank": 2,
          "payee": "merchant-1", "owner": "merchant-1", "listing_url": "https://shop.example/item"},
     ]
     identities = {
@@ -89,13 +89,29 @@ def test_same_seller_rule_does_not_infer_identity_from_candidate_fields_or_untru
 
 
 def test_same_seller_rule_cannot_let_a_vetoed_bid_suppress_the_eligible_next_seller():
-    eligible = [{"bid_id": "clean-next", "seller_id": "seller-b", "binding_hash": "b" * 64}]
+    eligible = [{"bid_id": "clean-next", "seller_id": "seller-b", "binding_hash": "b" * 64, "rank": 1}]
     identities = {
         "seller-a": {"provenance": "registry", "owner": "owner-1"},
         "seller-b": {"provenance": "registry", "owner": "owner-1"},
     }
 
     assert checks.same_seller_exclusions(eligible, identities) == []
+
+
+def test_same_seller_rule_uses_numeric_server_rank_when_rows_arrive_out_of_order():
+    candidates = [
+        {"bid_id": "rank-two", "seller_id": "seller-b", "binding_hash": "b" * 64, "rank": 2},
+        {"bid_id": "rank-one", "seller_id": "seller-a", "binding_hash": "a" * 64, "rank": 1},
+    ]
+    identities = {
+        "seller-a": {"provenance": "registry", "owner": "owner-1"},
+        "seller-b": {"provenance": "mirror", "owner": "owner-1"},
+    }
+
+    [exclusion] = checks.same_seller_exclusions(candidates, identities)
+
+    assert exclusion["kept_bid_id"] == "rank-one"
+    assert exclusion["excluded_bid_id"] == "rank-two"
 
 
 def test_psu_too_small_vetoed():

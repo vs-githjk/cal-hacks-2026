@@ -86,6 +86,7 @@ const attachSameSeller = (keptBidId: string, excludedBidId: string, keptBindingH
     roundId: 'round-1', keptBidId, excludedBidId,
     keptBindingHash: keptBindingHash ?? rows.find((row) => row.bidId === keptBidId)!.bindingHash,
     excludedBindingHash: excludedBindingHash ?? rows.find((row) => row.bidId === excludedBidId)!.bindingHash,
+    identityEvidenceJson: { source: 'registry', reference: 'merchant-group-17' },
   }));
 };
 const clearSameSeller = (excludedBidId: string) =>
@@ -223,6 +224,7 @@ describe('same-seller review exclusions', () => {
     expect(JSON.parse(proof!.bindingJson)).toEqual({
       keptBidId: 'kept-bid', keptSellerId: 'seller-a', keptBindingHash: kept.bindingHash,
       excludedBidId: 'excluded-bid', excludedSellerId: 'seller-b', excludedBindingHash: excluded.bindingHash,
+      identityEvidenceJson: { source: 'registry', reference: 'merchant-group-17' },
       reason: {
         rule_id: 'advocate.same_seller',
         summary: 'This seller shares trusted identity evidence with a higher-ranked seller',
@@ -318,13 +320,42 @@ describe('same-seller review exclusions', () => {
     expect(() => run(VIDYUT, (ctx) => m.attachSameSellerExclusion(ctx, {
       roundId: 'round-1', keptBidId: 'earlier', excludedBidId: 'later',
       keptBindingHash: rows[0]!.bindingHash, excludedBindingHash: rows[1]!.bindingHash,
+      identityEvidenceJson: { source: 'registry', reference: 'merchant-group-17' },
     }))).toThrow(/not allowed/i);
     advance(m.REVIEW_WINDOW_MS);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     expect(() => run(REF, (ctx) => m.attachSameSellerExclusion(ctx, {
       roundId: 'round-1', keptBidId: 'earlier', excludedBidId: 'later',
       keptBindingHash: rows[0]!.bindingHash, excludedBindingHash: rows[1]!.bindingHash,
+      identityEvidenceJson: { source: 'registry', reference: 'merchant-group-17' },
     }))).toThrow(/review/i);
+  });
+
+  it('requires bounded opaque trusted identity evidence and persists it with the bound proof', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('identity-kept', [line(710)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('identity-excluded', [line(720)])));
+    beginReview();
+    attachOrdinaryReviewChecks();
+    const rows = eligibleCandidates();
+    const base = {
+      roundId: 'round-1', keptBidId: 'identity-kept', excludedBidId: 'identity-excluded',
+      keptBindingHash: rows[0]!.bindingHash, excludedBindingHash: rows[1]!.bindingHash,
+    };
+    const rejectEvidence = (identityEvidenceJson: any) => run(REF, (ctx) => m.attachSameSellerExclusion(ctx, { ...base, identityEvidenceJson }));
+    expect(() => rejectEvidence(undefined)).toThrow(/identity evidence/i);
+    expect(() => rejectEvidence({ source: 'seller_claim', reference: 'merchant-group-17' })).toThrow(/identity evidence/i);
+    expect(() => rejectEvidence({ source: 'registry', reference: 'seller-b' })).toThrow(/identity evidence/i);
+    expect(() => rejectEvidence({ source: 'bound_state', reference: 'https://example.test/payee/17' })).toThrow(/identity evidence/i);
+    expect(() => rejectEvidence({ source: 'registry', reference: 'merchant-group-17', payee: 'raw-value' })).toThrow(/identity evidence/i);
+    expect(() => rejectEvidence({ source: 'registry', reference: 'merchant-group-17\n' })).toThrow(/identity evidence/i);
+    // Syntax cannot tell a private fingerprint from a pinned record ID, so the referee owns this contract.
+    rejectEvidence({ source: 'mirror', reference: 'a'.repeat(64) });
+    const [opaqueProof] = [...h.db.bidCheck.bidId.filter('identity-excluded')].filter((check) => check.kind === 'same_seller');
+    expect(JSON.parse(opaqueProof!.bindingJson).identityEvidenceJson).toEqual({ source: 'mirror', reference: 'a'.repeat(64) });
+    attachSameSeller('identity-kept', 'identity-excluded');
+    const [proof] = [...h.db.bidCheck.bidId.filter('identity-excluded')].filter((check) => check.kind === 'same_seller');
+    expect(JSON.parse(proof!.bindingJson).identityEvidenceJson).toEqual({ source: 'registry', reference: 'merchant-group-17' });
   });
 
 });
@@ -403,6 +434,17 @@ describe('migration-safe bid line metadata', () => {
       { bidId: 'partial-bid', rank: 0 },
     ]);
     expect([...h.db.roundResult.iter()][0]!.reasons.join(' ')).toMatch(/does not cover (every )?requested item/);
+  });
+
+  it('keeps post-check eligible review candidates private to referees', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('private-eligible', [line(780)])));
+    advance(15_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    attachOrdinaryReviewChecks();
+
+    expect(m.eligibleReviewCandidatesView(h.viewContext(REF) as any)).toHaveLength(1);
+    expect(m.eligibleReviewCandidatesView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
   });
 
   it('uses the shared picker for the private review candidate and carries original line index and selected metadata', () => {
