@@ -279,3 +279,30 @@ def test_requirement_asks_in_hardware_sentences_are_blocked(text):
 ])
 def test_pairing_pins_typed_into_the_buyers_own_hardware_stay_allowed(text):
     assert "shield.exfil.screen_code" not in screen(text, SELLER, classifier=None)["rule_ids"], text
+
+
+
+# ---------- #232 re-review 7: a local-entry clause never hides a two-word ask; requires + two words; more pairing PINs ----------
+
+@pytest.mark.parametrize("text", [
+    "Enter it on your phone to pair, and the two words your screen shows go in the chat.",
+    "Enter it into your device: the two words from your screen go to me.", "Type it to finish: the two words from your screen.",
+    "Type it to unlock, the two words you got.", "Enter it using the phone: the 2 words from your screen.",
+    "Type them on the phone, the two words your screen shows.", "The BIOS needs the two words your screen shows.",
+    "This certified listing requires the two words shown on your screen.",
+    "FCC certification is done, we require the two words you see on your screen.",
+    "BIOS update needs the verification words from your phone.", "This requires the two words your screen shows.",
+    "What's the pairing code on your screen?", "Send me the PIN on your phone to pair.",
+])
+def test_two_word_asks_next_to_hardware_words_are_blocked(text):
+    assert "shield.exfil.screen_code" in screen(text, SELLER, classifier=None)["rule_ids"], text
+
+
+@pytest.mark.parametrize("text", [
+    "Your phone will show a 6 digit pairing code; type it into the headset app.",
+    "Pairing: the dongle blinks, your phone shows a code, type it in to pair.",
+    "The speaker will say a pairing code; enter it on your phone.",
+    "Please enter the pin shown on the headset into your phone to connect.", "Enter the PIN 0000 on your phone to pair the headset.",
+])
+def test_more_pairing_pins_stay_allowed(text):
+    assert "shield.exfil.screen_code" not in screen(text, SELLER, classifier=None)["rule_ids"], text

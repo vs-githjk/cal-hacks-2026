@@ -39,10 +39,14 @@ _WEAK_WHERE = rx(r"\b(?:pairing|verification|one[-\s]time|magic|secret)\b")
 # "BIOS update requires the approval code", "FCC certification requires your approval code": a requirement for the
 # approval code is an ask even in a hardware sentence
 _REQUIRE = rx(r"\b(?:requires?|needs|wants?)\b")
-# Typing a code into the buyer's own hardware sends it nowhere: "enter it on the keyboard", "type it to pair"
-_LOCAL_ENTRY = rx(r"\b(?:enter|type|input|key\s+in)\s+(?:it|them|this|that|the\s+(?:\w+\s+){0,2}?(?:pin|code|digits))\s+"
-                  r"(?:to\s+(?:connect|pair|unlock|finish)|(?:on|into|in|using)\s+(?:the\s+|your\s+)?(?:\w+\s+)?"
-                  r"(?:keyboard|headset|phone|device|speaker|monitor|tv|console|laptop|computer|controller|remote|keypad|settings))\b")
+# The approval credential itself: with one of these, no hardware context and no "requires" wording excuses the sentence
+_CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word|verification)\s+(?:codes?|words?|phrase|pair)\b"
+           r"|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
+# A hardware pairing sentence ("enter the PIN on your phone to pair the headset") is the buyer typing a code into
+# their own device. It is skipped only when it names no approval credential and nothing sends the code to the seller.
+_HARDWARE = rx(r"\bpair(?:ing|s|ed)?\b|\bpins?\b|\bto\s+connect\b|\b(?:headset|speaker|keyboard|dongle|earbuds?|mouse|controller)s?\b")
+_TO_SELLER = rx(r"\?|\b(?:me|us|our|we|here|chat|reply|message|dm|e-?mail|send|text|tell|read|share|paste|forward|post|drop"
+                r"|give|what|whats|which|relay|whisper|aloud)\b")
 # "tell me what your screen says", "what does the buyer's screen read": relaying the screen's text, no noun needed
 _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THEIRS + r"\s+" + _DEVICE +
             r"\b[^.!?]{0,15}?\b(?:says?|reads?|reading|shows?\s+(?:as\s+)?(?:the\s+)?(?:code|words?))\b"
@@ -65,8 +69,10 @@ def check(doc, ctx):
         boot = _BOOT.search(s)
         noun = _NOUN.search(s)
         strong = noun and _STRONG.search(s) and ((not _REGULATORY.search(s) and not boot) or _REQUIRE.search(s))
-        a = _LOCAL_ENTRY.sub(_blank, s)
-        asks = _ASK.search(_DESCRIBE.sub(_blank, a) if boot else a)
+        cred = _CRED.search(s)
+        if not cred and _HARDWARE.search(s) and not _TO_SELLER.search(s) and not strong:
+            continue
+        asks = _ASK.search(_DESCRIBE.sub(_blank, s) if boot else s) or (cred and _REQUIRE.search(s))
         where = _WHERE.search(_WEAK_WHERE.sub(_blank, s) if boot else s)
         if strong or (noun and where and asks) or _RELAY.search(s):
             start = m.start() + len(s) - len(s.lstrip())
