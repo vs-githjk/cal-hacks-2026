@@ -1,5 +1,6 @@
 "use client";
 
+import { AgentWire } from "@/components/AgentWire";
 import { AgentAvatar, useAgents } from "@/components/useAgents";
 import { Card, Code, Label, OriginChip, Tag } from "@/components/ui";
 import { shortAddress } from "@/lib/agents";
@@ -56,6 +57,7 @@ export default function AgentsPage() {
           Open in ASI:One
         </a>
       </Card>
+      <AgentWire />
       {rows === undefined ? (
         <p className="text-muted">Checking the agent feed...</p>
       ) : rows === null ? (
