@@ -35,7 +35,7 @@ Automatic recovery PASS: after browser reload, the same conversation visibly sho
 
 - Six public Agentverse profiles verified at 23:46 PDT: HTTP 200, Active, matching names and handles, published Chat Protocol 0.3.0 and both README badges. See [README.md](README.md) for addresses and local mailbox instructions. This metadata check is separate from the ASI:One observations above.
 - Agent table and both required badges are present; restaurant text is absent from `agents/README.md`.
-- Offline suite: 105 tests passed in reviewer verification after the asynchronous reply routing fix. Offline recovery tests do not establish a live ASI:One recovery transcript.
+- Offline suite chronology: 105 tests passed in reviewer verification after the asynchronous reply routing fix. The suite later passed 122 tests before removal of the obsolete duplicate `agents/voice/` transport; it now passes 115 after removing that transport and its seven tests. Offline recovery tests do not establish a live ASI:One recovery transcript.
 - Failed-tool recovery message in ASI:One: PASS, 00:06 PDT October 24. Automatic retry after restoration: PASS, reviewed bids visibly delivered.
 - Fresh-session goal-to-reviewed-bids run: PASS, 00:05 PDT October 24. Checkout was not exercised.
-- PR containing `Closes #14`: PENDING.
+- PR: [#54](https://github.com/vs-githjk/cal-hacks-2026/pull/54), which closes issue #14.

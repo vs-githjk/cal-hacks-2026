@@ -40,6 +40,8 @@ python -m venv .venv
 .venv/Scripts/python -m pytest -q
 ```
 
+On macOS/Linux, create the environment with `python3 -m venv .venv`, then use `.venv/bin/python` in place of `.venv/Scripts/python` in these commands.
+
 Put the keys and agent seeds in `agents/.env` (see the repo's `.env.example`; values never go in git). Then, each in its own terminal:
 
 ```bash
