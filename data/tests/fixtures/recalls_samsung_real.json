@@ -1,0 +1,251 @@
+[
+ {
+  "RecallID": 9486,
+  "RecallNumber": "23080",
+  "RecallDate": "2022-12-22T00:00:00",
+  "Description": "This recall involves several models of Samsung's top-load washers with super speed wash. The washers were sold in white, black, champagne, and ivory colors and include model series WA49B, WA50B, WA51A, WA52A, WA54A, and WA55A. The model and serial numbers are found on the washer's label attached to the inside of the top lid. An additional label is located on the rear of the washer. The following model and serial number ranges are included in the recall: Model Number Serial Number Range WA49B5105AV/US 01J457BT700001W through 01J457BTB00111H WA49B5105AW/US 01J557BT700001J through 01J557BT700010D WA49B5205AW/US 01HH57BT300006X through 01HH57BTB00932W WA50B5100AV/US 01J257BT70001B through 01J257BTB01232B WA50B5100AW/US 01J357BT770001L through 01J357BT700010F WA51A5505AC/US 01HA57BR700003P through 01HA57BTB00346F WA51A5505AV/US 01H257BR600003R through 01H257BTB02018L WA51A5505AW/US 01GY57BR600026P through 01GY57BTB00269W WA52A5500AC/US 01HB57BR700003Y through 01HB57BTB02968X WA52A5500AV/US 01H357BR600006A through 01H357BTB01820Y WA52A5500AW/US 01H457BR600003X through 01H457BTB01503Y WA54A7305AV/US 01H557BR600003P through 01H557BR800650T WA55A7300AE/US 01H057BR600001H through 01H057BTB05872Z WA55A7700AV/US 01H157BR600151Z through 01H157ZT700005K",
+  "URL": "https://www.cpsc.gov/Recalls/2023/Samsung-Recalls-Top-Load-Washing-Machines-Due-to-Fire-Hazard-Software-Repair-Available",
+  "Title": "Samsung Recalls Top-Load Washing Machines Due to Fire Hazard; Software Repair Available",
+  "Products": [
+   {
+    "Name": "Samsung Top-Load Washing Machines",
+    "Description": "",
+    "Model": "",
+    "Type": "",
+    "CategoryID": "",
+    "NumberOfUnits": "About 663,500"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "The washing machines can short-circuit and overheat, posing a fire hazard.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Consumers should immediately check whether their washer's software has been updated to prevent the hazard; and, if not, consumers should immediately stop using the washer until the software is updated. Instructions on how to check whether a washer's software has been updated can be found here https://www.samsung.com/us/support/tlw-sw-update. All Wi-Fi equipped washers that are plugged into a power source and actively connected to the internet will automatically download the free software repair over-the-air when they are connected to the internet. Consumers who have not connected their Wi-Fi equipped washer to the internet should contact Samsung for instructions on how to download the software repair. Consumers whose washer does not have Wi-Fi capability or who otherwise wish to receive a free software repair without connecting to the internet, should immediately stop using the washer and contact Samsung directly for a free dongle to plug in and download the free software repair."
+   }
+  ],
+  "Manufacturers": [],
+  "ProductUPCs": []
+ },
+ {
+  "RecallID": 7899,
+  "RecallNumber": "17028",
+  "RecallDate": "2016-11-04T00:00:00",
+  "Description": "This recall involves 34 models of Samsung top-load washing machines. The washing machines have mid-controls or rear-controls. Model numbers and serial information can be found on two labels affixed to the back of the machine. The following model numbers are included in the recall depending on the serial number. Consumers should check with Samsung to see if their washer is recalled. Models WA40J3000AW/A2 WA45H7000AP/A2 WA45H7000AW/A2 WA45H7200AW/A2 WA45K7600AW/A2 WA45K7100AW/A2 WA48H7400AW/A2 WA48J7700AW/A2 WA48J7770AP/A2 WA48J7770AW/A2 WA50K8600AV/A2 WA50K8600AW/A2 WA52J8700AP/A2 WA52J8700AW/A2 WA400PJHDWR/AA WA422PRHDWR/AA WA456DRHDSU/AA WA456DRHDWR/AA WA476DSHASU/A1 WA476DSHAWR/A1 WA484DSHASU/A1 WA484DSHAWR/A1 WA48H7400AP/A2 WA50F9A6DSW/A2 WA50F9A7DSP/A2 WA50F9A7DSW/A2 WA50F9A8DSP/A2 WA50F9A8DSW/A2 WA52J8060AW/A2 WA5451ANW/XAA WA5471ABP/XAA WA5471ABW/XAA WA56H9000AP/A2 WA56H9000AW/A2",
+  "URL": "https://www.cpsc.gov/Recalls/2017/Samsung-Recalls-Top-Load-Washing-Machines",
+  "Title": "Samsung Recalls Top-Load Washing Machines Due to Risk of Impact Injuries",
+  "Products": [
+   {
+    "Name": "Samsung top-load washing machines",
+    "Description": "",
+    "Model": "",
+    "Type": "",
+    "CategoryID": "",
+    "NumberOfUnits": "About 2.8 million"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "The washing machine top can unexpectedly detach from the washing machine chassis during use, posing a risk of injury from impact.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Consumers should contact Samsung immediately to receive one of the following remedy options. Consumers can choose (1) a free in-home repair that includes reinforcement of the washer's top and a free one-year extension of the manufacturer's warranty; (2) a rebate to be applied towards the purchase of a new Samsung or other brand washing machine, along with free installation of the new unit and removal of old unit; or (3) a full refund for consumers who purchased their washing machine within the past 30 days of the recall announcement. All known consumers will also receive a Home Label Kit that includes a control panel guide and additional safety instructions in the mail. Until they have received and installed a Home Label Kit, consumers should only use the delicate or waterproof cycles when washing bedding, water-resistant and bulky items. The lower spin speed in the delicate or waterproof cycles lessens the risk of the washing machine top unexpectedly detaching from the washing machine chassis."
+   }
+  ],
+  "Manufacturers": [],
+  "ProductUPCs": []
+ },
+ {
+  "RecallID": 7876,
+  "RecallNumber": "17011",
+  "RecallDate": "2016-10-13T00:00:00",
+  "Description": "This recall involves all Samsung Galaxy Note7 smartphones. The recalled devices have a 5.7-inch screen and were sold in the following colors: black onyx, blue coral, gold platinum and silver titanium with a matching stylus. Samsung is printed on the top front of the phone and Galaxy Note7 is printed on the back of the phone. This recall involves all Galaxy Note7 devices received as replacements as part of the previous Galaxy Note7 recall on September 15, 2016 and any Galaxy Note 7 with a green battery icon, regardless of date purchased or IMEI.",
+  "URL": "https://www.cpsc.gov/Recalls/2017/Samsung-Expands-Recall-of-Galaxy-Note7-Smartphones-Based-on-Additional-Incidents-with-Replacement-Phones",
+  "Title": "Samsung Expands Recall of Galaxy Note7 Smartphones Based on Additional Incidents with Replacement Phones; Serious Fire and Burn Hazards",
+  "Products": [
+   {
+    "Name": "Samsung Galaxy Note7 smartphones",
+    "Description": "",
+    "Model": "",
+    "Type": "",
+    "CategoryID": "",
+    "NumberOfUnits": "About 1.9 million (This includes the 1 million Galaxy Note7s recalled on September 15, 2016)"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "The lithium-ion battery in the Galaxy Note7 smartphones can overheat and catch fire, posing serious fire and burn hazard to consumers.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Consumers should immediately stop using and power down all Galaxy Note7 devices, including Note7 devices received as replacements in the previous recall. Contact the wireless carrier, retail outlet or Samsung.com where you purchased your device to receive a refund or free exchange for a new replacement device plus incentives. Consumers who purchased their phones from other sources should contact Samsung directly to receive a free remedy. Go to http://www.samsung.com and http://www.samsung.com/us/note7recall/ for more details."
+   }
+  ],
+  "Manufacturers": [
+   {
+    "Name": "Samsung Electronics America Inc., of Ridgefield Park, N.J.",
+    "CompanyID": ""
+   }
+  ],
+  "ProductUPCs": []
+ },
+ {
+  "RecallID": 7856,
+  "RecallNumber": "16266",
+  "RecallDate": "2016-09-15T00:00:00",
+  "Description": "This recall involves the Samsung Galaxy Note7 smartphone sold before September 15, 2016. The recalled devices have a 5.7 inch screen and were sold in the following colors: black onyx, blue coral, gold platinum and silver titanium with a matching stylus. Samsung is printed on the top front of the phone and Galaxy Note7 is printed on the back of the phone. To determine if your phone has been recalled, locate the IMEI number on the back of the phone or the packaging, and enter the IMEI number into the online registration site www.samsung.com or call Samsung toll-free at 844-365-6197.",
+  "URL": "https://www.cpsc.gov/Recalls/2016/Samsung-Recalls-Galaxy-Note7-Smartphones",
+  "Title": "Samsung Recalls Galaxy Note7 Smartphones Due to Serious Fire and Burn Hazards",
+  "Products": [
+   {
+    "Name": "Samsung Galaxy Note7 smartphones sold prior to September 15, 2016",
+    "Description": "",
+    "Model": "",
+    "Type": "Telephones, Cell Phones & Accessories",
+    "CategoryID": "2167",
+    "NumberOfUnits": "About 1 million"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "The lithium-ion battery in the Galaxy Note7 smartphones can overheat and catch fire, posing a serious burn hazard to consumers.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Consumers should immediately stop using and power down the recalled Galaxy Note7 devices purchased before September 15, 2016. Contact the wireless carrier, retail outlet or Samsung.com where you purchased your device to receive free of charge a new Galaxy Note7 with a different battery, a refund or a new replacement device. Go to www.samsung.com for more details."
+   }
+  ],
+  "Manufacturers": [
+   {
+    "Name": "Samsung Electronics America Inc., of Ridgefield Park, N.J.",
+    "CompanyID": ""
+   }
+  ],
+  "ProductUPCs": []
+ },
+ {
+  "RecallID": 31,
+  "RecallNumber": "10031",
+  "RecallDate": "2009-11-05T00:00:00",
+  "Description": "The recall involves Samsung 1000-watt over-the-range microwave ovens. The following model and serial numbers are included in this recall: Affected production lots Affected Serial Number Range From serial number To serial number All SMH9151x produced from January through May 2009: xxxxxxxS1xxxxxx xxxxxxxS5xxxxxx Some products produced in June were also affected: From serial number To serial number SMH9151B xxxxxxOS600001 xxxxxxTS600001 xxxxxxOS600100 xxxxxxTS601100 SMH9151S xxxxxxTS600001 xxxxxxTS601386 SMH9151ST xxxxxxTS600001 xxxxxxTS600330 SMH9151STE xxxxxxTS600001 xxxxxxTS600330 SMH9151W xxxxxxOS600001 xxxxxxTS600001 xxxxxxOS600200 xxxxxxTS602055",
+  "URL": "https://www.cpsc.gov/Recalls/2010/Samsung-Over-the-Range-Microwaves-Recalled-Due-to-Shock-Hazard-",
+  "Title": "Samsung Over-the-Range Microwaves Recalled Due to Shock Hazard",
+  "Products": [
+   {
+    "Name": "Samsung Over-the-Range Microwave Ovens",
+    "Description": "",
+    "Model": "",
+    "Type": "Ovens/Stoves/Ranges/Microwaves",
+    "CategoryID": "2056",
+    "NumberOfUnits": "About 43,000"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "If an installation bolt comes in contact with an electrical component inside the unit and the microwave is plugged into an ungrounded outlet, it could create a shock hazard.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Consumers should immediately unplug and stop using the recalled product, and contact Samsung to schedule a free repair."
+   }
+  ],
+  "Manufacturers": [
+   {
+    "Name": "Samsung Electronics America Inc., of Ridgefield Park, N.J.",
+    "CompanyID": ""
+   }
+  ],
+  "ProductUPCs": []
+ },
+ {
+  "RecallID": 6049,
+  "RecallNumber": "09744",
+  "RecallDate": "2009-05-22T00:00:00",
+  "Description": "This recall involves \"Jitterbug\" cell phones model numbers SPH-a110 and SPH-a120 with standard key pads and version BB14 software. No other Samsung wireless phones or software versions are included in this recall.",
+  "URL": "https://www.cpsc.gov/Recalls/2009/Samsung-Recalls-to-Upgrade-Certain-Cell-Phones-Could-Fail-to-Reach-Emergency-911-in-a-No-Service-Area",
+  "Title": "Samsung Recalls to Upgrade Certain Cell Phones; Could Fail to Reach Emergency 911 in a No-Service Area",
+  "Products": [
+   {
+    "Name": "Samsung \"Jitterbug\" Cell Phones",
+    "Description": "",
+    "Model": "",
+    "Type": "Telephones, Cell Phones & Accessories",
+    "CategoryID": "2167",
+    "NumberOfUnits": "About 160,000"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "The recalled cell phones that are in a no-service area and display an \"out of range, try again later\" message could fail to connect to emergency 911.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Samsung and Jitterbug are directly contacting consumers to schedule a free software upgrade. Consumers should call Samsung if they have not already been contacted."
+   }
+  ],
+  "Manufacturers": [
+   {
+    "Name": "Samsung Telecommunications America, of Richardson, Texas",
+    "CompanyID": ""
+   }
+  ],
+  "ProductUPCs": []
+ },
+ {
+  "RecallID": 3572,
+  "RecallNumber": "07135",
+  "RecallDate": "2007-03-21T00:00:00",
+  "Description": "The recall involves certain Maytag- and Samsung-brand front-load washers. The Maytag washers have model numbers beginning with MAH9700 or MAH8700. The Samsung model number WF306BHW or a model number beginning with WF316. Not all serial numbers are subject to the recall. The model and serial numbers are located on a tag at the bottom of the door opening. Maytag models with a serial number ending in the last two letters identified below are subject to the recall: 2005 GA GC GE GG GJ GL GN GP GR GT GV GX 2006 JA JC JE JG JJ JL JN Sample Maytag Serial Number: 10123456GN Samsung models with the six-digit number 100001 through 799999 prior to a letter at the end of the serial number are subject to the recall: Sample Samsung Serial Number: 230854AL300026B",
+  "URL": "https://www.cpsc.gov/Recalls/2007/Maytag-and-Samsung-Brand-Front-Loading-Washing-Machines-Recalled-Due-to-Fire-Hazard",
+  "Title": "Maytag\u00ae and Samsung\u2122 Brand Front Loading Washing Machines Recalled Due to Fire Hazard",
+  "Products": [
+   {
+    "Name": "Maytag- and Samsung-Brand Front Loading Washing Machines",
+    "Description": "",
+    "Model": "",
+    "Type": "Washing Machines",
+    "CategoryID": "2227",
+    "NumberOfUnits": "About 250,000 Maytag-brand units and about 20,000 Samsung-brand units"
+   }
+  ],
+  "Hazards": [
+   {
+    "Name": "Water leakage onto the electrical connections to the washing machine's thermal sensor could cause an electrical short and ignite a circuit board, posing a fire hazard to consumers.",
+    "HazardType": "",
+    "HazardTypeID": ""
+   }
+  ],
+  "Remedies": [
+   {
+    "Name": "Consumers should immediately contact the firm for information on how to receive a free repair. Consumers should not return the washing machine to the retailer where it was purchased."
+   }
+  ],
+  "Manufacturers": [
+   {
+    "Name": "Samsung Electronics Co. Ltd., of South Korea",
+    "CompanyID": ""
+   }
+  ],
+  "ProductUPCs": []
+ }
+]

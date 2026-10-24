@@ -40,8 +40,8 @@ CUES = {
     2: "Sellers bid in a sealed round. Every bid is tagged real listing or simulated, and the advocate vetoes the traps "
        "and shows its source.",
     3: "Bazaar Shield blocks the injected re-post of a listing and names the rules that fired.",
-    4: "The winning bid becomes a signed mandate. The approval call is simulated here: wrong code, no 'approve', then "
-       "right. The payment is a stub and no money moves.",
+    4: "The winning bid becomes a signed mandate. Approval needs the real phone call, so without --live-call the run stops "
+       "here and nothing is paid.",
     5: "Every loser gets a reason. Gadget Grove (Vedant) uses its loss report to lower its open-box price for round two.",
 }
 LIVE_CUE_4 = ("The winning bid becomes a signed mandate and Vidyut's phone rings for real. Say the two-word code, then say "
@@ -67,6 +67,8 @@ def assign_beats(steps: list[Step]) -> dict[int, list[Step]]:
             beat = 2 if rounds_seen == 1 else 5
         elif s.reducer == "create_mandate":
             beat = 4
+        elif s.reducer == "record_loss_report":   # #216: round 1's loss reports open beat 5
+            beat = 5
         elif s.reducer == "attach_verdict" and round_one_closed and beat == 2:
             beat = 3
         beats.setdefault(beat, []).append(s)
@@ -115,12 +117,15 @@ def make_say(out: Narrator) -> Callable[[Step], None]:
 
 def default_make_clients(args, steps: list[Step], out: Narrator) -> dict[str, Any]:
     """The same identities bridge.py uses: buyer and referee tokens, one seller identity per demo seller (owner assign_role)."""
+    from demo import market_target
+    target = bridge.live_target(args)          # #295: local, or the shared market the Lane D env file names
+    out.note(market_target.describe(target))
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
-    from stdb import DB, Market
-    tokens = bridge.find_tokens_dir(args.tokens_dir)
+    from stdb import Market
+    tokens = bridge.find_tokens_dir(args.tokens_dir, target)
     out.note(f"tokens: {tokens}")
-    seller_tokens = ROOT / ".tokens"
-    seller_tokens.mkdir(exist_ok=True)
+    seller_tokens = market_target.tokens_dir(target)
+    seller_tokens.mkdir(parents=True, exist_ok=True)
     clients: dict[str, Any] = {"buyer": Market(token_file=str(tokens / bridge.BUYER_TOKEN)),
                                "referee": Market(token_file=str(tokens / bridge.REFEREE_TOKEN))}
     seller_ids = sorted({s.actor.split(":", 1)[1] for s in steps if s.actor.startswith("seller:")})
@@ -129,7 +134,7 @@ def default_make_clients(args, steps: list[Step], out: Narrator) -> dict[str, An
     if not args.no_assign_roles:
         import shutil
         spacetime = shutil.which("spacetime") or str(Path.home() / ".local" / "bin" / "spacetime")
-        bridge.assign_seller_roles(seller_ids, clients, spacetime, args.server, DB)
+        bridge.assign_seller_roles(seller_ids, clients, spacetime, target["server"], target["db"])
     return clients
 
 
@@ -186,10 +191,13 @@ def play(beats: dict[int, list[Step]], clients: dict[str, Any], *, auto: bool, d
                                   approver=approver, note=out.note, deal_gate=deal_gate)
         if outcomes and not outcomes[-1]["approved"]:
             out.blank()
+            if outcomes[-1]["reason"] == bridge.NO_CALL_REASON:   # #251: no scripted approval
+                out.note(f"STOPPED at beat {n}: {bridge.NO_CALL_LINE}. Run again with --live-call.")
+                return 1
             what = "no mandate was made" if outcomes[-1]["step"] == "build_mandate" else "the approval call did not approve"
             from pay.voice_cartesia import denial_line
-            out.note(f"STOPPED at beat {n}: {what} ({outcomes[-1]['reason']}). {denial_line(outcomes[-1]['reason'])} Nothing was charged and "
-                     "no payment is recorded. Run again to retake.")
+            out.note(f"STOPPED at beat {n}: {what} ({outcomes[-1]['reason']}). {denial_line(outcomes[-1]['reason'])} "
+                     "Run again to retake.")   # one "nothing was paid" sentence (#222)
             return 1
         if n == 2 and run is not None and report_round_one(clients, run, out) and auto:
             try:
@@ -217,13 +225,14 @@ def make_parser() -> argparse.ArgumentParser:
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
     ap.add_argument("--buyer-id", default=bridge.DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
-    ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
+    ap.add_argument("--server", default=None, help="spacetime -s server (default SPACETIMEDB_SERVER from the env or the Lane D env file, else local)")
     return ap
 
 
 def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], list]] = None,
          make_clients: Optional[Callable[..., dict]] = None, input_fn: Callable[[str], str] = input,
-         sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic) -> int:
+         sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
+         agent_addresses: Optional[Callable[[], dict]] = None) -> int:
     ap = make_parser()
     args = ap.parse_args(argv)
     try:
@@ -234,12 +243,15 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
     say = make_say(out)
 
     run = run_all(say=Narrator(False))
+    addresses = (agent_addresses or bridge.demo_agent_addresses)()
     steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, live_call=args.live_call,
-                        bid_window=args.bid_window)
+                        bid_window=args.bid_window, agent_addresses=addresses)
     beats = assign_beats(steps)
 
     out.note("Tech Bazaar stage runner: five beats, real lane code, existing SpacetimeDB reducers")
     out.note("Buyer: Vidyut. The goal, owned parts and payment are simulated. Tags: [MIRROR] real dated listing, [SIM] generated by us.")
+    if not addresses:
+        out.note("Fetch tile: no agent rows this run (agents/ could not be loaded, so there are no agent addresses)")
 
     if args.dry_run:
         for n in sorted(beats):
@@ -272,7 +284,14 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         # Startup only says where the call would go. The mandate the call judges is made when beat 4 starts (see play).
         approver, note = bridge.live_approver_for(args, run, gate, out)
         out.note(note)
-    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s local tech-bazaar \"SELECT code FROM pair_code\") and open /market before you start.")
+    from demo import market_target
+    from demo.run_demo import DEFAULT_ENV_FILE
+    try:
+        t = market_target.resolve(DEFAULT_ENV_FILE, {**os.environ, **({"SPACETIMEDB_SERVER": args.server} if args.server else {})})
+        server, db = t["server"], t["db"]
+    except market_target.TargetError:
+        server, db = args.server or "local", "tech-bazaar"
+    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s {server} {db} \"SELECT code FROM pair_code\") and open /market before you start.")
 
     try:
         clients = (make_clients or default_make_clients)(args, steps, out)

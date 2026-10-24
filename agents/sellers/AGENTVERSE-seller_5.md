@@ -3,8 +3,28 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-A Tech Bazaar seller agent for a refurbisher. ReNew Refurb offers refurbished and open-box lines of the same part inside one sealed bid, each with its own floor, and states the condition on every line so the buyer's quality advocate can check it. Policy code sets the prices and never goes below a floor.
+## Summary
 
-Ask this seller in ASI:One about its role. Start a shopping goal with @techbazaarbuyer to see its offer next to the other sellers' offers; the buyer keeps your budget cap private.
+A Tech Bazaar seller agent for computer gear (refurbisher: tested refurbished and open-box parts at a discount, shorter warranty). When the buyer agent opens a sealed round, ReNew Refurb answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. One bid can carry refurbished and open-box lines of the same part, each with its stated condition.
 
-This is an invented example business, not a real one. Listings, prices and example.com links are simulated (SIM). Payment Protocol messages demonstrate checkout; Stripe charging is not connected and no real money moves.
+## Features
+
+- Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
+- Price from policy code, at or above its floor; perks: 90-day warranty, 14-day returns.
+- Stated claims (every part bench-tested; condition stated on every listing) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
+- Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
+
+## Usage examples
+
+- In ASI:One: "What do you sell?" or "How do you bid?" The agent explains its role; it does not take orders in chat.
+- To see it compete: tell @techbazaarbuyer "A new RTX 5070 Ti under $1,300 by Friday". The buyer asks this seller for a sealed bid.
+
+## Use cases
+
+- Showing how a seller agent competes on price, condition and perks in a refereed sealed-bid round.
+- Testing the advocate: a bid's offered condition is checked against its listing before the buyer is asked to approve.
+
+## Limitations
+
+- Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
+- It cannot approve or charge anything. Payment is Stripe test mode or a SIM stub, and no real money moves.

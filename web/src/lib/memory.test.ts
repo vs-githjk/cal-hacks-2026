@@ -142,10 +142,10 @@ test("memoryForBuyer shows only rows recorded for the paired buyer and fails clo
     veto({ id: "v", buyer_id: "" }),
     goal({ id: "g", buyer_id: "" }),
   ])).entries;
-  assert.deepEqual(memoryForBuyer(entries, "vidyut").map((e) => e.id), ["a"]);
-  assert.deepEqual(memoryForBuyer(entries, "buyer-b").map((e) => e.id), ["b"]);
+  assert.deepEqual(memoryForBuyer(entries, "vidyut").map((e) => e.id), ["a", "v"]);
+  assert.deepEqual(memoryForBuyer(entries, "buyer-b").map((e) => e.id), ["b", "v"]);
   assert.deepEqual(memoryForBuyer(entries, ""), [], "no identity, no rows");
-  assert.deepEqual(memoryForBuyer(entries, "stranger"), []);
+  assert.deepEqual(memoryForBuyer(entries, "stranger").map((e) => e.id), ["v"], "only the buyer-less market veto");
 });
 
 test("a seller lesson has no buyer by design: it shows for any paired buyer, but another buyer's lesson never does", () => {
@@ -211,4 +211,13 @@ test("an identity switch aborts the pending read: the signal is passed through a
     },
   );
   assert.equal(seen, ctl.signal);
+});
+
+test("a market veto has no buyer (buyer_id empty): kept for any paired buyer, another buyer's veto is dropped", () => {
+  const entries = parseMemoryResponse(envelope([
+    veto({ id: "mv", buyer_id: "" }),
+    veto({ id: "vy", buyer_id: "buyer-y" }),
+  ])).entries;
+  assert.deepEqual(memoryForBuyer(entries, "buyer-x").map((e) => e.id), ["mv"]);
+  assert.deepEqual(memoryForBuyer(entries, ""), []);
 });
