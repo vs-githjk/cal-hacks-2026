@@ -110,6 +110,7 @@ def _fit_warnings(bid, owned):
 # #89: seller-supplied strings never reach card text. Conditions map to this closed set, item names come from the
 # buyer's own need, seller ids must match our pattern, and fit text comes from the rule templates.
 CONDITIONS = {"new", "open box", "refurbished", "used"}
+UNSTATED = {"unknown", "not stated", "unverified"}  # the listing page gives no condition (#308)
 
 
 def _cond(value) -> str:
@@ -132,14 +133,21 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
         total = line["unit_price"] * line["quantity"]
         url = line.get("listing_url", "")
 
+        offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
+        # #308: a page that does not state the condition (MIRROR Central Computers) proves nothing either way.
+        # It is unverified: a caution, never shown or treated as new, and never a mismatch veto against a real store.
+        unstated = UNSTATED & {offered, page}
+
         # an honest offer of a different condition than asked for: caution, not a veto
         asked = _norm((wanted or {}).get(line["sku_spec"]))
-        if asked and _norm(line.get("offered_condition")) not in ("", asked):
+        if asked and not unstated and offered not in ("", asked):
             out.append(_warn("spec", f"You asked for {_cond(asked)}; this offer is {_cond(line['offered_condition'])}.",
                              url, 0))
 
-        offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
-        if offered and page and offered != page:
+        if unstated:
+            out.append(_warn("unverified", f"{sku}: the listing does not state a condition, so the condition is "
+                             "unverified, not confirmed as asked.", url, 0, rule_id="advocate.unsourced"))
+        elif offered and page and offered != page:
             offered, page = _cond(offered), _cond(page)
             out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
                              "The condition claim did not match the listing.", url, total))

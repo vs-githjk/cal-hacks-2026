@@ -338,3 +338,22 @@ def test_price_caution_only_bid_is_not_a_confirmed_fit():
     cards = run115([cheap, ebay], in_cap=["b1", "b2"])
     assert cards[1]["recommendation"] != "veto"
 
+
+# #308: a page that does not state the condition (Central Computers, MIRROR) is unverified, never new
+@pytest.mark.parametrize("offered,page", [("unknown", "unknown"), ("new", "unknown"), ("unknown", None)])
+def test_an_unknown_condition_is_unverified_never_shown_or_treated_as_new(offered, page):
+    import json
+    card = run([bid("b1", "seller_1", 590, offered=offered, page=page)])[0]
+    assert card["recommendation"] == "caution"  # not "buy" (as if new), and not a mismatch veto against a real store
+    [w] = [w for w in card["warnings"] if w["kind"] == "unverified"]
+    assert "unverified" in w["text"] and "new" not in w["text"].lower()
+    assert w["source_url"] == "https://example.com/listing/b1" and w["rule_id"] == "advocate.unsourced"
+    assert card["rule_id"] == "advocate.unsourced" and card["reason"] == checks.CALL_SUMMARIES["advocate.unsourced"]
+    assert not {"condition", "spec"} & {x["kind"] for x in card["warnings"]}
+    assert "new" not in json.dumps({k: card[k] for k in ("reason", "warnings", "call_reason")}).lower()
+
+
+def test_a_stated_condition_still_gets_the_old_checks():
+    assert run([bid("b1", "seller_1", 590, offered="new", page="new")])[0]["recommendation"] == "buy"
+    assert run([bid("b1", "seller_1", 540, offered="new", page="open-box")])[0]["recommendation"] == "veto"
+
