@@ -39,6 +39,12 @@
   },
   "created_at": {
    "type": "string"
+  },
+  "stage": {
+   "type": "integer",
+   "minimum": 1,
+   "maximum": 3,
+   "description": "Knockout stage the seller went out in (#336, #337); omitted for a single sealed round"
   }
  },
  "required": [

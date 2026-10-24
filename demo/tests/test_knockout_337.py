@@ -61,14 +61,17 @@ def test_no_offer_is_under_its_floor_or_above_the_last_one(setup):
         assert o["previous"] is None or o["price"] <= o["previous"]
 
 
-def test_loss_reports_name_the_stage_and_reason_and_never_a_rival_price(setup):
+def test_loss_reports_name_the_stage_and_reason_and_never_a_price(setup):
     out = run(setup, K.ROSTER)
-    reports = {r["seller_id"]: r for r in K.loss_reports(out)}
+    reports = {r["seller_id"]: r for r in K.loss_reports(out, NOW)}
     assert set(reports) == {"shady-sam", "bargain-bin", "ebay-235887", "gadget-grove"}
     assert reports["gadget-grove"]["stage"] == 2 and reports["shady-sam"]["stage"] == 1
+    assert {k: r["reason"] for k, r in reports.items()} == {"shady-sam": "condition", "bargain-bin": "fit",
+                                                             "ebay-235887": "fit", "gadget-grove": "price"}
+    assert reports["gadget-grove"]["id"] == "lr-round-1-s2-gadget-grove"
     for r in reports.values():
-        assert r["reason"] and set(r) == {"seller_id", "stage", "rule_id", "reason", "source_url", "own_offer"}
-        assert "1,299.99" not in json.dumps(r) and "1299.99" not in json.dumps(r)   # the champion's price never leaks
+        text = json.dumps(r)
+        assert "1,299.99" not in text and "1299.99" not in text and "1276.02" not in text   # no price, rival or own
 
 
 def test_one_stage_round_picks_the_champion_at_the_final_stage(setup):
