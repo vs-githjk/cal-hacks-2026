@@ -30,8 +30,11 @@ Returns `{result: verified|unverified|false, evidence_url, checked_at, method, e
 price, was price (against a dated price history), condition, stock, return window, CPU socket. Wording is neutral ("differs
 from the listing at time T", "could not verify"); it never calls a store a liar. A page it cannot reach, cannot parse, or
 may not fetch is `unverified`, never `false`. Same key, rate limit and meter as `/v1/shield/screen`.
-**Safety:** only http and https, and only public addresses: localhost, private, link-local (cloud metadata) and reserved
-ranges are refused before any request. DNS rebinding between the check and the fetch is not covered.
+**Safety (the caller picks the URL our server opens):** only http and https; every address the host resolves to must be
+public (localhost, private, link-local and cloud metadata, CGNAT 100.64.0.0/10, reserved and multicast are refused); we
+connect to the address we checked, so DNS cannot change in between; redirects are followed by hand, at most 3, and every
+hop is checked again; pages over 2 MB are refused. Any refusal returns `unverified` (could not verify). A non-string
+`text`, `evidence_url`, `kind`, `field` or `id` returns 422.
 
 ## Measure it (shield-bench)
 `python3 -m shield.bench` (local rules) or `--url http://127.0.0.1:8788 --key $KEY` (through the API; dev plus held_out

@@ -109,16 +109,68 @@ def test_check_claim_returns_the_claim_check_result_and_is_metered(tmp_path):
     assert client.get("/v1/usage", headers={"X-API-Key": key}).json()["calls"] == {"/v1/check-claim": 1}
 
 
-def test_check_claim_never_fetches_internal_addresses(tmp_path):
-    from shield.product import public_fetch
-    fetched = []
-    for url in ("http://127.0.0.1:8787/v1/shield/health", "http://localhost/admin", "http://169.254.169.254/latest/meta-data",
-                "http://10.0.0.5/", "http://[::1]/"):
+def fake_net(dns, pages):
+    """dns: host -> ip. pages: url -> (status, headers, body). Records every (host, ip) actually connected to."""
+    connected = []
+
+    def resolve(host):
+        return [dns[host]]
+
+    def request(scheme, host, port, path, ip, timeout):
+        connected.append((host, ip))
+        status, headers, body = pages[f"{scheme}://{host}{path}"]
+        return status, headers, (lambda n: body[:n])
+    return resolve, request, connected
+
+
+def test_check_claim_never_fetches_internal_addresses():
+    from shield.product import guarded_get
+    dns = {"localhost": "127.0.0.1", "meta": "169.254.169.254", "lan": "10.0.0.5", "cgnat": "100.64.1.1", "v6": "::1"}
+    resolve, request, connected = fake_net(dns, {})
+    for host in dns:
         try:
-            public_fetch(url, fetch=lambda u: fetched.append(u) or PAGE)
+            guarded_get(f"http://{host}/x", resolve=resolve, request=request)
         except ValueError:
             pass
-    assert fetched == []
+    assert connected == []
+
+
+def test_redirect_to_a_private_address_is_refused_before_connecting():
+    from shield.product import guarded_get
+    resolve, request, connected = fake_net({"shop.example.com": "93.184.216.34", "meta": "169.254.169.254"},
+                                           {"https://shop.example.com/p/1": (302, {"location": "http://meta/latest/"}, b""),
+                                            "http://meta/latest/": (200, {}, b"SECRET-INTERNAL")})
+    try:
+        guarded_get("https://shop.example.com/p/1", resolve=resolve, request=request)
+        raise AssertionError("redirect to metadata was followed")
+    except ValueError:
+        pass
+    assert connected == [("shop.example.com", "93.184.216.34")]  # never connected to the metadata address
+
+
+def test_public_redirect_is_followed_on_the_checked_ip():
+    from shield.product import guarded_get
+    resolve, request, connected = fake_net({"a.example.com": "93.184.216.34", "b.example.com": "93.184.216.35"},
+                                           {"https://a.example.com/x": (301, {"location": "https://b.example.com/y"}, b""),
+                                            "https://b.example.com/y": (200, {}, PAGE)})
+    assert guarded_get("https://a.example.com/x", resolve=resolve, request=request) == PAGE
+    assert connected == [("a.example.com", "93.184.216.34"), ("b.example.com", "93.184.216.35")]
+
+
+def test_oversize_page_is_refused():
+    from shield.product import guarded_get
+    resolve, request, _ = fake_net({"big.example.com": "93.184.216.34"}, {"https://big.example.com/": (200, {}, b"x" * 3000)})
+    try:
+        guarded_get("https://big.example.com/", resolve=resolve, request=request, max_bytes=2048)
+        raise AssertionError("oversize page accepted")
+    except ValueError as e:
+        assert "too large" in str(e)
+
+
+def test_bad_claim_types_get_422_not_500(tmp_path):
+    client, key = claim_app(tmp_path, lambda url: PAGE)
+    for bad in (dict(CLAIM, text=123), dict(CLAIM, evidence_url=["x"]), dict(CLAIM, field={"a": 1})):
+        assert client.post("/v1/check-claim", json=bad, headers={"X-API-Key": key}).status_code == 422
 
 
 def test_check_claim_on_internal_url_is_unverified_not_an_error(tmp_path):
