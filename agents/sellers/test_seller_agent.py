@@ -8,6 +8,7 @@ from uagents_core.contrib.protocols.payment import CommitPayment, CompletePaymen
 
 from agents.buyer import state
 from agents.sellers import seller_agent
+from agents.advocate.checks import CALL_SUMMARIES
 from pay.approval import ApprovalService
 from pay.mandate import new_mandate
 from pay.replay import NonceStore
@@ -87,9 +88,11 @@ def approved_transaction(*, expired=False, allowance=False):
     order = {"id": "deal-seller", "need_id": "need-seller", "bid_id": "bid-seller", "amount": 79.99,
              "approved_by": "allowance" if allowance else "owner", "approval_id": approval_id, "limit_checked": True,
              "idempotency_key": "mandate:" + mandate["hash"], "payment_ref": "", "status": "PENDING"}
-    card = {"need_id": "need-seller", "bid_id": "bid-seller", "warnings": [], "recommendation": "buy",
-            "wait_until": "", "call_reason": {"rule_id": "advocate.ok", "summary": "No problems found",
-            "source_url": "https://example.com/check"}, "rule_id": "advocate.ok", "reason": "No problems found",
+    card = {"need_id": "need-seller", "bid_id": "bid-seller", "warnings": [], "claim_checks": [],
+            "recommendation": "buy", "wait_until": "",
+            "call_reason": {"rule_id": "advocate.ok", "summary": CALL_SUMMARIES["advocate.ok"],
+            "source_url": "https://example.com/check"}, "rule_id": "advocate.ok",
+            "reason": CALL_SUMMARIES["advocate.ok"],
             "source_url": "https://example.com/check"}
     return {"deal_id": "deal-seller", "buyer_id": BUYER_ID, "goal_id": "goal-seller",
             "need_id": "need-seller", "bid_id": "bid-seller", "phase": "approved",
