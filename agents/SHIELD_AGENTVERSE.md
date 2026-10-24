@@ -9,9 +9,9 @@ A chat front door to Tech Bazaar's Bazaar Shield screening service. Send it list
 
 ## Features
 
-- Rules for prompt injection aimed at shopping agents: instruction overrides (English, Spanish, French, German, Chinese), hidden text, payee swaps, "already approved" pushes, asks for the buyer's approval code, limit or address.
+- Rules for prompt injection aimed at shopping agents: instruction overrides (English, French, German, Chinese; Spanish paraphrases through the intent rules), hidden text, payee swaps, "already approved" pushes, asks for the buyer's approval code, limit or address.
 - Fails closed: when screening is unavailable or not configured, the request is blocked and the failure is reported.
-- Returns the rule ids and short evidence spans, never free text from the model.
+- Returns the verdict and the rule ids that fired, never free text from the model.
 
 ## Usage examples
 

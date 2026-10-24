@@ -17,7 +17,7 @@ Then reply `APPROVE <number>` to order the bid it recommends.
 
 1. Turns your message into a goal (budget cap, part by date, or build by date).
 2. Skips parts you already own and cites your own words ("you already own it, your note at 21:58").
-3. Runs a sealed round with three seller agents. Sellers never see your cap.
+3. Runs a sealed round with five seller agents. Sellers never see your cap.
 4. The Quality Advocate checks fit (socket, GPU length, PSU wattage, decided by code), the condition claim against the listing page, price history, CPSC recalls and the seller's record. It can veto the cheapest bid and cites a source for every warning.
 5. You approve; payment uses the Fetch.ai Payment Protocol with a single-use mandate bound to that exact deal.
 
@@ -49,5 +49,5 @@ Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's revie
 ## Limitations
 
 - Seller catalogs are SIM or MIRROR (dated real listings); payment is Stripe test mode and no real money moves.
-- Approval is by phone call only; there is no typed approval.
+- In this agent today the order is confirmed by a chat APPROVE (a stand-in until the phone approval is wired here); the live demo approves by phone call. No real money moves either way.
 

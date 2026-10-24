@@ -8,7 +8,19 @@ no screen to show the code on (the code goes only to the buyer's own screen), or
 from __future__ import annotations
 
 import secrets as _secrets
+from pathlib import Path
 from typing import Any, Callable, Optional
+
+MARKET_MODULE = Path(__file__).resolve().parents[2] / "market" / "spacetimedb" / "src" / "index.ts"
+
+
+def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:
+    """True while the market still exports approve_typed, or when that cannot be read (as demo/bridge.py decides): a code
+    on /buyer would then arm a typed approval, which the phone-only rule forbids, so no code goes there and no call."""
+    try:
+        return "approve_typed" in module.read_text(encoding="utf-8")
+    except OSError:
+        return True
 
 
 def _no(reason: str) -> dict:
@@ -38,10 +50,13 @@ def handle(sender: str, request: Any, *, buyer_address: str, client: Any, show_c
         return _no(f"not_configured: {unconfigured or 'no Cartesia client'}")
     if show_code is None:
         return _no("no_screen: the code has nowhere safe to show")
-    seen.add(mandate["hash"])
+    seen.add(mandate["hash"])                     # burned even if the call fails: never a second call for it
     service = ApprovalService(secret=secret or _secrets.token_hex(16), store=NonceStore(), code_ttl_seconds=CALL_CODE_TTL_S)
-    res = (run or run_approval_call)(mandate, request.get("reason"), client, service, deal=request.get("deal"),
-                                     buyer_name=buyer_name, on_code=show_code, **timing)
+    try:
+        res = (run or run_approval_call)(mandate, request.get("reason"), client, service, deal=request.get("deal"),
+                                         buyer_name=buyer_name, on_code=show_code, **timing)
+    except Exception as e:  # noqa: BLE001  (a screen that refused the code, a transport error: not approved, and said)
+        return _no(f"call_error: {type(e).__name__}")
     if not res.approved:
         return {"approved": False, "reason": res.reason or "denied", "call_id": res.call_id, "voice_approval_id": None}
     voice_id = str((res.record or {}).get("id") or "").strip()

@@ -5,7 +5,7 @@
 
 ## Summary
 
-The agent that places Tech Bazaar's approval phone call. When the buyer agent has a deal over the buyer's allowance, it sends this agent a CallRequest. The caller phones the buyer once, reads the deal back (item, seller, amount in words), and listens for the two-word code shown on the buyer's own screen plus "approve". It answers with a CallResult. It approves nothing and charges nothing itself.
+The agent that places Tech Bazaar's approval phone call. It is built to receive a CallRequest from the buyer agent for a deal over the buyer's allowance (not wired yet: today the buyer agent does not send it, and the live demo places the same call from the bridge). The caller phones the buyer once, reads the deal back (item, seller, amount in words), and listens for the two-word code shown on the buyer's own screen plus "approve". It answers with a CallResult. It approves nothing and charges nothing itself.
 
 ## Features
 
@@ -30,10 +30,11 @@ and gets back `CallResult(approved=True, call_id="call_...", voice_approval_id="
 ## Use cases
 
 - A buyer's agent finds a GPU deal above the auto-approve allowance and needs a human yes before paying.
-- A judge watching Agentverse sees the workflow as four agents: buyer, advocate, caller, pay.
+- Once the buyer agent sends CallRequests, the workflow shows on Agentverse as buyer, advocate, caller, then payment.
 
 ## Limitations
 
 - It dials only the one number configured for the buyer (APPROVAL_CALL_TO); it cannot call anyone else.
-- Without Cartesia configured, or without a screen to show the code on, it places no call and answers not approved.
+- Without Cartesia configured, or without a screen to show the code on, it places no call and answers not approved. While the market still has a typed-code approval, it shows no code and places no call (phone only).
+- Every request is screened by Bazaar Shield first; a blocked or unscreened request places no call.
 - Stripe stays in test mode, and the caller never touches it: payment happens after the buyer agent records the approval.

@@ -80,3 +80,27 @@ def test_no_cartesia_or_no_screen_places_no_call():
     assert out["reason"].startswith("not_configured")
     out, c = call(show=False)
     assert out["reason"].startswith("no_screen") and c.calls == []
+
+
+def test_a_screen_that_refuses_the_code_is_not_approved_and_never_calls_twice():
+    seen, m = set(), mandate()
+
+    def refuse(code):
+        raise RuntimeError("issue_approval_code refused")
+    c = FakeCartesia(lambda code: f"{code} approve")
+    out = relay.handle(BUYER, {"mandate": m}, buyer_address=BUYER, client=c, show_code=refuse, seen=seen, secret="s" * 32,
+                       sleep=lambda x: None, poll=0)
+    assert out["approved"] is False and out["reason"].startswith("call_error") and c.calls == []
+    again, _ = call(seen=seen, m=m)
+    assert again["reason"] == "already_called"
+
+
+def test_the_caller_shows_no_code_while_the_market_has_typed_approval(tmp_path):
+    module = tmp_path / "index.ts"
+    module.write_text("export const approve_typed = 1")
+    assert relay.market_has_typed_approval(module) is True
+    module.write_text("export const record_approval = 1")
+    assert relay.market_has_typed_approval(module) is False
+    assert relay.market_has_typed_approval(tmp_path / "missing.ts") is True
+    src = Path(__file__).with_name("caller_agent.py").read_text()
+    assert "or market_has_typed_approval()" in src          # screen_sink returns None then: no code, no call

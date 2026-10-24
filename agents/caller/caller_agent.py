@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))         # agents/, 
 sys.path.insert(1, str(Path(__file__).resolve().parents[2]))         # the repo root, for pay/
 import common  # noqa: E402
 from caller import relay  # noqa: E402
+from caller.relay import market_has_typed_approval  # noqa: E402
 
 common.SEEDS.setdefault("caller", os.getenv("CALLER_AGENT_SEED") or "tech-bazaar-caller-dev")
 NAME = "Bazaar Caller"
@@ -36,9 +37,10 @@ class CallResult(Model):
 
 
 def screen_sink():
-    """The code goes to the buyer's /buyer screen through the market (issue_approval_code), or nowhere."""
+    """The code goes to the buyer's /buyer screen through the market (issue_approval_code), or nowhere. Nowhere while
+    the market still has typed approval, or without the referee token."""
     token = os.getenv("SPACETIMEDB_REFEREE_TOKEN_FILE")
-    if not token or not Path(token).exists():
+    if not token or not Path(token).exists() or market_has_typed_approval():
         return None
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "market" / "scripts"))
     from stdb import Market
@@ -60,10 +62,16 @@ SEEN: set = set()
 
 @protocol.on_message(CallRequest, replies=CallResult)
 async def on_call(ctx: Context, sender: str, msg: CallRequest):
+    # Invariant 3: every agent message goes through Shield first (fails closed when Shield is down)
+    verdict = await asyncio.to_thread(common.screen, f"call-{abs(hash(msg.mandate_json)) % 10**12}", sender,
+                                      " ".join((msg.mandate_json, msg.reason_json, msg.deal_json))[:20000])
+    if verdict.get("verdict") != "allow":
+        await ctx.send(sender, CallResult(approved=False, reason="shield_blocked"))
+        return
     try:
         request = {"mandate": json.loads(msg.mandate_json), "reason": json.loads(msg.reason_json or "null"),
                    "deal": json.loads(msg.deal_json or "null")}
-    except ValueError:
+    except Exception:  # noqa: BLE001  (bad JSON, deep nesting)
         await ctx.send(sender, CallResult(approved=False, reason="bad_request"))
         return
     from pay import voice_cartesia as vc
@@ -72,7 +80,10 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
         client, unconfigured = vc.CartesiaClient.from_env(env), None
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
-    sink = screen_sink()
+    try:
+        sink = screen_sink()
+    except Exception:  # noqa: BLE001  (an unreadable token file: no screen, so no call)
+        sink = None
     mandate_hash = request["mandate"].get("hash") if isinstance(request["mandate"], dict) else None
     show = (lambda code: sink(code, mandate_hash)) if sink else None
     out = await asyncio.to_thread(relay.handle, sender, request, buyer_address=common.address("buyer"), client=client,

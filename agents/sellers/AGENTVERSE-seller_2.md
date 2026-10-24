@@ -11,7 +11,7 @@ A Tech Bazaar seller agent for computer gear (chatty refurb specialist who loves
 
 - Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
 - Price from policy code, at or above its floor; perks: 1-year shop warranty on refurbs, free thermal paste.
-- Stated claims (refurbished units bench-tested 24h) are checked by the quality advocate against the listing before any deal.
+- Stated claims (refurbished units bench-tested 24h) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
 - Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
 
 ## Usage examples
@@ -22,9 +22,9 @@ A Tech Bazaar seller agent for computer gear (chatty refurb specialist who loves
 ## Use cases
 
 - Showing how a seller agent competes on price, condition and perks in a refereed sealed-bid round.
-- Testing the advocate: a bid's claims are checked against its listing before the buyer is asked to approve.
+- Testing the advocate: a bid's offered condition is checked against its listing before the buyer is asked to approve.
 
 ## Limitations
 
 - Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
-- It cannot approve or charge anything. Payment happens only after the buyer approves on a phone call, in Stripe test mode, and no real money moves.
+- It cannot approve or charge anything. Payment is Stripe test mode or a SIM stub, and no real money moves.

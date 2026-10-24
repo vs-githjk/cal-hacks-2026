@@ -15,7 +15,7 @@ agent = Agent(**common.agent_args(
     description="Argues for the buyer: checks fit with code and condition claims, price history, recalls and "
                 "seller records using SIM fixtures; vetoes traps with cited warnings."))
 
-common.include_profile_chat(agent, "I am Tech Bazaar's Quality Advocate. I review structured seller bids for fit "
+common.include_profile_chat(agent, "I am Bazaar Advocate, Tech Bazaar's quality advocate. I review structured seller bids for fit "
                             "and claims with cited warnings. Current checks use SIM fixtures. "
                             "Send buying goals to @techbazaarbuyer; this chat cannot approve purchases.")
 
