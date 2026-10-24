@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 from datetime import datetime, timezone
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 from data.fit_checker.tables import MICROARCH_SOCKET
 
@@ -206,15 +206,20 @@ def in_stock(v):
     return None
 
 
-def _history(url, facts, fetch, history):
+def _history(url, facts, fetch, history, observations=None):
+    """Price history for a was-price claim, from our own records only: the caller's history, our recorded SIM series for a
+    SIM page, or our dated MIRROR observations of this exact URL. Nothing is read from the page being judged."""
     if history is not None:
         return history
-    if facts.get("origin") == "SIM" and facts.get("sku"):  # our planted pages publish their SIM price history
-        try:
-            return json.loads(fetch(urljoin(url, "price_history.json")))["series"].get(facts["sku"])
-        except (OSError, ValueError, KeyError):
-            return None
-    return None
+    if facts.get("origin") == "SIM" and facts.get("sku"):
+        from data.liar_pages.build import PRICE_HISTORY
+        return PRICE_HISTORY.get(facts["sku"])
+    if observations is None:
+        from data.baselines import observations as load_observations
+        observations = load_observations()
+    series = sorted(({"date": str(r["observed_at"])[:10], "price": r["price"]} for r in observations if r.get("url") == url),
+                    key=lambda p: p["date"])
+    return series or None
 
 
 def judge(field, value, facts, at, series):
@@ -235,7 +240,7 @@ def judge(field, value, facts, at, series):
             ("false", f"claim says ${value:,.2f}; differs from the listing at {at}: the page shows ${page:,.2f}")
     if field == "was_price":
         if not series:
-            return "unverified", "could not verify: no dated price history for this item"
+            return "unverified", "could not verify: no dated price history from our own captures"
         top = max(series, key=lambda p: p["price"])
         span = f"{series[0]['date']} to {series[-1]['date']}"
         if value <= top["price"] + 0.01:
@@ -281,7 +286,7 @@ def judge(field, value, facts, at, series):
     return "unverified", f"could not verify: {field} claims are not checked yet"
 
 
-def check_claim(claim, fetch=None, history=None):
+def check_claim(claim, fetch=None, history=None, observations=None):
     fetch = fetch or default_fetch
     url = claim.get("evidence_url") or ""
     unverified = lambda why: {**out, "method": f"could not verify: {why}", "reason": "could not verify"}
@@ -303,7 +308,7 @@ def check_claim(claim, fetch=None, history=None):
     out["evidence_hash"] = hashlib.sha256(body).hexdigest()
     try:  # a malformed page must not abort a batch or turn into "false"
         facts, source = page_facts(body.decode("utf-8", "replace"))
-        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history) if f == "was_price" else None))
+        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history, observations) if f == "was_price" else None))
                    for f, v in fields]
     except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")
