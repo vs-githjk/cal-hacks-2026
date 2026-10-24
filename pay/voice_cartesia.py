@@ -43,7 +43,7 @@ complete (we retry a few times when it is empty); (b) whether Get Call needs X-A
 timeout denies and the call may still be ringing, and anything said after the timeout is ignored.
 
 Keys are read from the environment or an env file (names only: CARTESIA_API_KEY, CARTESIA_AGENT_ID,
-APPROVAL_CALL_TO, optional CARTESIA_PHONE_NUMBER_ID (the "ap_..." id sent as from_number_id) and APPROVAL_SECRET). No value is ever printed or logged.
+APPROVAL_CALL_TO, optional APPROVAL_BUYER_NAME and CARTESIA_PHONE_NUMBER_ID (the "ap_..." id sent as from_number_id) and APPROVAL_SECRET). No value is ever printed or logged.
 """
 from __future__ import annotations
 
@@ -70,9 +70,11 @@ API_BASE = "https://api.cartesia.ai"
 API_VERSION = "2026-08-14"
 USER_AGENT = "tech-bazaar-lane-d/1.0"
 SYSTEM_CA = "/etc/ssl/cert.pem"
-KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV = ("CARTESIA_API_KEY", "CARTESIA_AGENT_ID", "APPROVAL_CALL_TO",
-                                                    "CARTESIA_PHONE_NUMBER_ID", "APPROVAL_SECRET")
-ENV_NAMES = (KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV)
+KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV = (
+    "CARTESIA_API_KEY", "CARTESIA_AGENT_ID", "APPROVAL_CALL_TO", "CARTESIA_PHONE_NUMBER_ID", "APPROVAL_SECRET",
+    "APPROVAL_BUYER_NAME")
+ENV_NAMES = (KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV)
+DEFAULT_BUYER_NAME = "Tony Stark"
 DEFAULT_ENV_FILE = Path(__file__).resolve().parents[2] / "lane-d" / ".env"   # main lane-d checkout, gitignored
 
 RINGING_TIMEOUT_S = 30
@@ -224,7 +226,7 @@ def build_variables(script: CallScript, buyer_name: str) -> dict:
     if not isinstance(buyer_name, str) or not _NAME.fullmatch(buyer_name):
         raise ScriptError("buyer_name must be a plain name")
     return {"buyer_name": buyer_name,
-            "deal_script": f"{script.opening}. {script.deal_line}.",
+            "deal_script": f"{script.deal_line}. {script.opening}.",
             "why_answer": script.why_answer}
 
 
@@ -346,14 +348,14 @@ def judge_call(session, call: Mapping[str, Any], placed_at: datetime) -> tuple[O
 
 
 def run_approval_call(mandate: dict, advocate_reason: Any, client, service: ApprovalService, *,
-                      buyer_name: str = "Tony Stark", on_code: Optional[Callable[[str], None]] = None,
+                      deal: Any = None, buyer_name: str = DEFAULT_BUYER_NAME, on_code: Optional[Callable[[str], None]] = None,
                       max_wait: float = MAX_WAIT_S, poll: float = POLL_S,
                       sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
                       now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> VoiceResult:
     """One approval call for one pending mandate. Approves only when ApprovalSession approves a buyer
     utterance. `on_code(code)` shows the code on the buyer's screen; it is the only place the code goes."""
     try:
-        script = script_for(mandate, advocate_reason)
+        script = script_for(mandate, advocate_reason, deal)
         variables = build_variables(script, buyer_name)
         session, code = service.issue(mandate, channel="phone", now=now())
     except ScriptError:
@@ -411,7 +413,10 @@ def _demo_deal() -> dict:
                           goal_id=goal["id"], within_allowance=False, origin=bid["origin"])
     reason = b2["veto_reason"] or {"rule_id": "advocate.ok", "summary": "No problems found in the checks",
                                    "source_url": bid["lines"][0]["listing_url"]}
-    return {"mandate": mandate, "reason": reason, "seller": seller["name"], "amount": amount}
+    line = bid["lines"][0]
+    facts = {"item": line.get("attrs", {}).get("chipset") or line["sku_spec"].upper(),
+             "condition": win["condition"], "seller": seller["name"]}
+    return {"mandate": mandate, "reason": reason, "seller": seller["name"], "amount": amount, "facts": facts}
 
 
 def main(argv: Optional[list] = None) -> int:
@@ -420,9 +425,10 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--demo", action="store_true", help="place the real call for Tony Stark's Best Buy mandate")
     ap.add_argument("--dry-run", action="store_true", help="print the variables that would be sent; no network, no call")
     ap.add_argument("--check", action="store_true", help="read-only: GET the agent and print the HTTP outcome")
-    ap.add_argument("--buyer-name", default="Tony Stark")
+    ap.add_argument("--buyer-name", default=None, help=f"default: {NAME_ENV} from the env file, else {DEFAULT_BUYER_NAME}")
     args = ap.parse_args(argv)
     env = load_env(args.env_file)
+    args.buyer_name = args.buyer_name or env.get(NAME_ENV) or DEFAULT_BUYER_NAME
     if not (args.demo or args.dry_run or args.check):
         ap.error("pick --demo, --dry-run or --check")
     if args.check:
@@ -437,8 +443,12 @@ def main(argv: Optional[list] = None) -> int:
         return 0
     deal = _demo_deal()
     mandate = deal["mandate"]
-    script = script_for(mandate, deal["reason"])
-    variables = build_variables(script, args.buyer_name)
+    script = script_for(mandate, deal["reason"], deal["facts"])
+    try:
+        variables = build_variables(script, args.buyer_name)
+    except ScriptError as e:
+        print(f"STOPPED: {e}")
+        return 2
     print(f"deal: {deal['seller']} {deal['amount']:.2f} USD, payee {mandate['payee']}, mandate {mandate['id']} (SIM buyer, MIRROR listing)")
     if args.dry_run:
         print("dry-run: no network, no call, no code issued. Variables that would be sent:")
@@ -463,7 +473,7 @@ def main(argv: Optional[list] = None) -> int:
         print(f"SCREEN CODE: {code}   (stands in for the buyer screen; say it, then say approve)", flush=True)
         print(f"calling {mask_number(client.approval_call_to)} now ...", flush=True)
 
-    res = run_approval_call(mandate, deal["reason"], client, service, buyer_name=args.buyer_name, on_code=show)
+    res = run_approval_call(mandate, deal["reason"], client, service, deal=deal["facts"], buyer_name=args.buyer_name, on_code=show)
     print(f"result: {'APPROVED' if res.approved else 'DENIED'}" + ("" if res.approved else f" ({res.reason})"))
     print(f"call id: {res.call_id or 'none'}, end reason: {res.end_reason or 'n/a'}, judged attempts: {res.attempts}, "
           f"utterance outcomes: {[t['outcome'] for t in res.trace] or 'none'}")
