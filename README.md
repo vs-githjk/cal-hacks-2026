@@ -1,271 +1,227 @@
+<div align="center">
+
 # Tech Bazaar
 
-**A buyer's agent for scarce, scam-prone goods, starting with computer gear. You give it a goal, seller agents bid for it, an advocate vetoes the traps with a source, and nothing is paid until you approve on a two-way voice call.**
+### Your agent finds the part that fits, proves the price, and calls you before it pays.
 
-A refereed arena for agent commerce. Seller agents learn from every loss, and Bazaar Shield, our security API, blocks agents that try to cheat.
+A buyer's agent for computer gear. Seller agents bid on your goal, an advocate vetoes the traps with a source, and nothing above your allowance is paid until you approve on a phone call.
 
-![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
-![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+<p>
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-3776AB.svg">
+  <img alt="TypeScript 5" src="https://img.shields.io/badge/typescript-5-3178C6.svg">
+  <img alt="Tests passing" src="https://img.shields.io/badge/tests-passing-brightgreen.svg">
+  <img alt="tag:innovationlab" src="https://img.shields.io/badge/innovationlab-3D8BD3">
+  <img alt="tag:hackathon" src="https://img.shields.io/badge/hackathon-5F43F1">
+</p>
 
-Built at Cal Hacks 13.0 (October 23 to 25, 2026) by a team of four.
+[How it works](#how-it-works) · [Real vs simulated](#what-is-real-and-what-is-simulated) · [Results](#measured-results) · [Getting started](#getting-started) · [Architecture](docs/ARCHITECTURE.md)
 
-> **Status, Fri Oct 23, about 21:45 PDT.** Hacking started at 18:00. This README describes the design we are building. A piece counts as working only when the [Status](#status) table says "built" and links the proof. The demo video and live link go here once they exist.
+</div>
 
-**The five beats of the demo:** (1) set a goal; (2) sellers bid and the advocate vetoes a trap with a source; (3) Shield blocks an injected listing live; (4) the two-way call approves above the allowance; (5) the seller's loss report and learning. Everything on screen is labelled LIVE, MIRROR or SIM.
+<!-- hero screenshot: docs/images/hero.png (coming) -->
 
-**Jump to:** [Problem](#the-problem) · [What it does](#what-tech-bazaar-does) · [How it works](#how-it-works) · [Architecture](docs/ARCHITECTURE.md) · [Sponsors](#sponsor-technology) · [Real vs simulated](#real-vs-simulated) · [Agents](#fetchai-agents) · [Quickstart](#quickstart) · [Safety](#invariants-safety-by-design) · [Status](#status)
+## Overview
 
----
+Tech Bazaar is a refereed market where AI agents buy and sell computer gear on a person's behalf. You give your buyer agent a goal, not a one-shot order. Seller agents compete for it in a sealed round. A quality advocate checks every bid against the part you already own and the seller's own page, and Bazaar Shield, our agent security API, screens every message before any agent acts on it. Spending above your allowance needs your spoken approval of one exact, signed deal.
+
+**The reference scenario.** Vidyut needs an RTX 5070 Ti that fits his 305 mm case, under $1,300. Five seller agents bid. The cheapest card is 336 mm long, so the advocate vetoes it and cites the length. The winner is the ASUS Prime RTX 5070 Ti at 304 mm by the maker's spec, $1,299.99 at Best Buy before sales tax (shipping: not captured). The losing seller, Gadget Grove (Vedant), gets a report on why it lost and adjusts its next bid.
+
+Store prices are real, dated mirrors. The bidding agents are ours and labelled SIM until a real shop connects its own.
 
 ## The problem
 
-**Who feels it:** people who upgrade or build a PC. The one we design for first is the **upgrader**: someone who already owns a rig and needs one scarce part, a graphics card or memory, at a fair price from a seller they can trust. Our growth path is **small IT buyers** (a school, an office, an esports cafe) buying 10 to 50 PCs.
+**Who feels it:** people who upgrade or build a PC. We design first for the upgrader, who already owns a rig and needs one scarce part at a fair price from a seller they can trust. The growth path is small IT buyers (a school, an office, an esports cafe) buying 10 to 50 machines.
 
-**What hurts:**
+- **Prices are wild.** The lowest US listing for an RTX 5070 Ti was $1,119 against a $749 launch price, 49 percent over, on Sep 1, 2026.[^1]
+- **Parts must fit each other.** Socket and motherboard, memory generation, power supply wattage and connectors, case and cooler clearance. A part that does not fit is a return and lost days.
+- **Cheapest is not always safe.** Open-box parts sold as new, a "was" price that does not match the history, a third-party seller with no record.
+- **Shopping agents are easy to fool.** Without defenses, prompt injection succeeded against an AI browser agent 23.6 percent of the time.[^2] In a simulated agent market, buyer agents gave fast sellers a 10x to 30x edge over better ones.[^3]
+- **Sellers fly blind.** They cannot see what a buyer asked for, at what ceiling, or why they lost.
 
-- **Prices are wild.** An RTX 5090 lists at $4,999 against a $1,999 launch price, and an RTX 5070 Ti is about 49 percent over its launch price (Capital & Compute, citing Tom's Hardware, Sep 1 2026). 32 GB of DDR5 now costs at least $375 (Tom's Hardware). PC gaming hardware is a $44.5 billion market, up 35 percent in 2025 (Jon Peddie Research). Sources and caveats are in the team's PC research notes (plan/research-pc.md, section 6), which list a link and a verified or reported label for each fact.
-- **Parts must fit each other.** CPU socket and motherboard, RAM generation, power supply wattage and connectors, case and cooler clearance. A part that does not fit is a return and lost days.
-- **Cheapest is not always safe.** Marketplace listings can be used or open-box parts sold as new, a "was" price can fail to match the price history, and a third-party seller carries more risk than the retailer. Press reports of an RTX 5090 shipped without its chip and of return-swap scams show where the risk sits (each is reported, not verified by us; see the research file).
-- **Sellers fly blind.** They cannot see what builders asked for, at what ceiling, or why they lost.
-
-We have no sourced number for research time, compatibility mistakes or return rates, so we do not claim one. Our interviews ask for theirs ([docs/INTERVIEWS.md](docs/INTERVIEWS.md)).
-
-## What Tech Bazaar does
-
-You give your **buyer agent a goal**, not a one-shot order: "spend at most X", "this part under this price by this day", or "assemble this build under this price by this day". It **remembers the parts you already own**, so it never re-buys them. It hunts over time and **tells you after each step** (deal found, bid in, veto, progress to goal). **Seller agents** bid in a sealed round. Your **advocate** checks fit with code and every claim against the live page, and **vetoes the cheapest bid when it is a trap, with the source** ("listed as new, the page says open box"). **Bazaar Shield** screens every message and blocks an injected listing before it reaches the advocate.
-
-You set an **allowance**, which starts at $0 and rises with each clean delivery. Above it, the agent **calls you**. You can ask "why not the cheaper one?" and it answers aloud. You approve by speaking a one-time word-pair code from your screen, and the system reads the amount back. Silence or any mismatch means no. The approval is bound to a signed mandate for that exact deal.
-
-Losing sellers get a **loss report** (a banded gap and the reason with its source) and their agents adjust a small, inspectable strategy inside their owner's rules.
-
-**The multiverse.** The demo is one universe of one order. The real market has many buyers whose requests pool by exact SKU, and sellers bid a price ladder by quantity on the pooled lot. The **Lot Wall** (a later item, built from real lot rows once the core loop works) shows it: Vidyut's brick is gold and labelled REAL, the rest are grey and labelled SIM, and the sealed bids slide down the price tiers. One or two bids are real, the rest are labelled simulated. We do not claim many people use it.
-
-**Fully agentic:** every seller is a Fetch.ai uAgent on Agentverse. A real non-agent seller side is coming later, or only if time remains after the agentic path.
-
-**Scope:** all computer gear (PCs, parts, laptops, monitors, peripherals). The first payer we design for is the small IT buyer (10 to 50 machines, with approvals and purchase orders), priced per refresh (proposed, finalized later). Named adapters, shown as add-ons and not extra beats: CRS identity and fraud check on business sellers, Hyphenate IT buyer purchasing (PO, three-way match, audit), the IT fleet view, Tiger Data time series, and Bright Data baselines.
-
-**Shield as an API.** `POST /v1/shield/screen`, `/verify-agent`, `/check-claim` and `/verify-mandate`, with a versioned schema, signed verdict receipts and a `shield-bench` for any attack swarm. A "Hack the market" console lets a judge write a hostile listing and watch it blocked or not; every attempt is counted.
+We found no sourced number for research time, compatibility mistakes or return rates in PC building, so we claim none.
 
 ## How it works
 
-1. **Goal.** You state a goal in ASI:One. The agent turns it into a Goal (budget cap, part price by date, or build price by date) and a sealed request, after skipping parts you already own and citing the memory entry.
-2. **Bid.** Seller agents bid until the deadline from their owner's real listings (MIRROR) or as simulated builders' counterparts (SIM); an outside Agentverse agent that speaks the open seller protocol bids LIVE. Bids stay sealed, sellers never see your budget, and a reducer rejects any bid below a seller's floor. Every bid carries an origin badge and a listing link.
-3. **Screen.** Shield screens every seller message, listing title and claim before the advocate sees it: injection patterns, payee changes, identity mismatch. A blocked message is quarantined on screen with the rule that fired. Business sellers pass a CRS identity and fraud check first.
-4. **Veto.** The advocate (Claude, closed output schema) checks fit by code (socket, length, PSU wattage), condition and price claims against the live page with our Apify claim-check Actor, CPSC recalls and the seller record. It can veto the cheapest bid with the source. It never sees the fee.
-5. **Notify.** After each step you get one event per class (deal found, bid in, veto, progress), throttled to one per class per 10 minutes. Quotes expire after 10 minutes.
-6. **Call.** Above your allowance the agent calls you (in-browser Cartesia call by default, phone via Photon SIP if proven). It reads amount and payee from a template filled by code, answers "why not the cheaper one?" from the advocate's cited reason, and asks for the code. The mandate binds deal id, amount, payee, expiry and nonce, and a typed fallback is labelled.
-7. **Pay.** The request is signed under Visa's Trusted Agent Protocol and the Fetch.ai Payment Protocol charges a Visa test card through Stripe test mode. Our merchant simulator verifies the signature. A replayed or altered mandate fails on screen. No payment exists without an approval for the same mandate hash.
-8. **Receive.** Photos of the delivery are checked against the spec. A clean check raises your allowance and the seller's record; a failed one writes a credit memo and the loss report says why.
-9. **Learn.** Each losing seller gets a loss report and updates its strategy (price step, bundle, delivery promise, condition disclosure). Before going live, sellers train in a wind tunnel of simulated builders against a frozen control seller; the result is labelled SIM and reported with seeds and intervals.
+The product runs as five steps.
 
-Diagram, components and data flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Why this is different
-
-- **The buyer has a skeptic on its side.** A price list tells you what is cheapest. The advocate tells you when the cheapest bid will not fit, is not new, or carries a price claim that did not match the price history, and it cites a source for every warning.
-- **It remembers your rig.** Existing scanners cover one brand's memory or storage (Crucial, Corsair and Kingston scanners, per our research). We found no checked tool that remembers your whole rig across sellers and advises from it (not proof that none exists).
-- **Voice is the trust step, and voice is never the credential.** Spending above your allowance needs a one-time word-pair code from your screen, spoken on a call about one exact mandate. A recording of your voice cannot approve it.
-- **Known agent-market failures are designed out.** Microsoft's Magentic Marketplace study (arXiv 2510.25779) found that buyer agents favor the first proposal they see and that malicious sellers can redirect payments. Sealed bids remove the first-mover advantage. Shield's mandate check blocks any payment whose payee or amount differs from what you approved.
-- **Identity says who; Shield says whether it is true.** Visa's Trusted Agent Protocol proves which agent sent a request. Shield checks whether what that agent claims holds up.
-- **Privacy by design.** CRS identity and fraud checks on business sellers share only a band. Sellers see aggregate pool data (SKU, quantity, ceiling band, deadline), never an individual buyer.
-
-## Sponsor technology
-
-| Sponsor | Product | What it does in Tech Bazaar | Depth |
-|---|---|---|---|
-| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol | Every agent is a uAgent registered on Agentverse. Your whole request (brief, bids, warnings, approval, payment) runs in an ASI:One chat. | Core |
-| Fetch.ai | Payment Protocol, Interactive Cards | The seller sends `RequestPayment`; the buyer sends `CommitPayment` with a signed mandate, only after the approval gate. Bids, warnings and approvals appear as cards, with a plain-text fallback (numbered bids, reply `APPROVE <id>`). | Core |
-| Visa | Trusted Agent Protocol | Every agent request to a seller is signed with HTTP Message Signatures and verified at the seller and in Shield. The UI shows "signature verified". | Core |
-| Visa | Visa test card over Stripe test mode or Link | The payment is a Stripe test-mode charge on a Visa test card, made through the Payment Protocol. | Core |
-| Visa | Intelligent Commerce (tokenized agent credentials) | An adapter behind the same payment interface. It replaces the Stripe path only if Visa grants sandbox access. | Adapter |
-| Cartesia | Line voice agent | Above your allowance, a voice agent calls you, reads the deal and records your yes or no before payment. In-browser call first; phone call via an imported Twilio number or SIP trunk is to be verified. Personas can also speak their bids on the floor. | Core |
-| Apify | MCP server, Store actors, our own Actor | Mirrors listings from Newegg, PCPartPicker, Micro Center, Best Buy, B&H, eBay (sold and live) and Amazon (actor slugs in the research file). We also build and publish a claim-check Actor ([Apify Store](https://apify.com/anoopibrampur/tech-bazaar-claim-check)): claim and URL in, verified, unverified or false plus evidence out. | Core |
-| Bright Data | MCP server, SERP API, Web Unlocker | Price and claim checks across the wider web. | Core |
-| CRS | Credit API sandbox, MCP server | Identity and fraud check on business sellers; a failed check greys out the seller's bid with the reason. Test identities only, band output. | Adapter |
-| Armadin | Bazaar Shield API (our build) | Shield is our agent-to-agent security API with a versioned schema, signed verdict receipts and a `shield-bench` for any swarm. In the demo it blocks an injected listing live, and a judge can attack it in the "Hack the market" console. | Core |
-| Spacetime | SpacetimeDB | Holds the live auction state that every screen and the 3D floor read, and enforces the floor price and approval-before-payment rules in reducers. | Core |
-| Anthropic | Claude | Reasoning and wording for the quality advocate and ownership-memory advice, and the line each seller persona speaks. | Core |
-| Tiger Data (MLH) | Time-series Postgres | Time series behind dated savings and the learning curve. Starts after Sat 14:00. | Adapter |
-| Hyphenate | IT buyer purchasing | PO number, requester cannot approve, three-way match, credit memo and audit page. | Adapter |
-
-Also under consideration, each marked optional: Snowflake, Gemini, a GoDaddy Registry domain, and the MLH Commit Fellowship opt-in ([docs/SPONSORS.md](docs/SPONSORS.md)).
-
-Public data, not a sponsor: **CPSC recalls API** (no key), **docyx/pc-part-dataset** (MIT) for compatibility fields, and eBay sold listings for a used-price baseline.
-
-## Real vs simulated
-
-Every bid, claim and screen carries a badge (**LIVE**, **MIRROR**, **SIM**, **SANDBOX** or **RECORDED**) driven by the `source` field in the contracts. The working copy of this table is [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md).
-
-| Component | Label | What that means |
+| Step | What happens | Where it lives |
 |---|---|---|
-| Builder's owned parts | SIM until a real builder shares them | A seeded rig for the demo builder |
-| Seller catalogs and prices | MIRROR | Real public listings, mirrored by Apify with a date |
-| Seller bids | SIM over MIRROR | Big-box stores will not change their price for one order. Our demo sellers are agents for marketplace or used sellers, built from real scraped listings. Real prices are sources, not bidders. Any real seller that joins bids LIVE. |
-| Fit checks | LIVE code | Rules over a dated open dataset plus two small tables we wrote; unknown means "uncertain" |
-| Claim checks | LIVE or MIRROR | LIVE against seller pages we host for the demo; MIRROR for real stores |
-| The caught liar | LIVE, planted | A planted attack on a page we host, with a lie toggle and an answer key. We never call a real store a liar; real pages get neutral wording ("differs from the listing at time T", "the price claim did not match the price history"). |
-| Price history and baseline | MIRROR or SIM | Dated sources where they work; a labelled seeded series where they do not |
-| CPSC recalls | LIVE | Real API call; a labelled fixture if no real record fits a demo part |
-| CRS seller stability | SANDBOX | Real sandbox calls on CRS-provided test identities |
-| Allowance and voice approval | LIVE code, call path to verify | Auto-approval is code. The Cartesia call starts in the browser; the phone path is labelled when it works |
-| Payments | SANDBOX | Stripe test mode, Visa test card, no real money |
-| Visa Trusted Agent Protocol signatures | LIVE | Real signing and verification on every request |
-| Visa Intelligent Commerce | Adapter | Swaps in only with Visa sandbox access |
-| Shield verdicts | LIVE | Real screening on every message |
-| Seller demand and trends | SIM plus MIRROR | Simulated requests from the wind tunnel plus public best-seller ranks |
-| Wind tunnel builders | SIM | Simulated by design |
-| 3D floor | LIVE state | Characters are drawn from market rows; click one to see its row |
+| 1. Goal | You state a goal ("this part, under this price, by this date"). The agent skips parts you already own. | `agents/buyer/`, `demo/goal.py` |
+| 2. Bid and veto | Seller agents bid in a sealed round from real, dated listings. The advocate checks fit by code (socket, length, wattage) and claims against the page, and vetoes the cheapest bid when it is a trap, with the source. | `agents/sellers/`, `agents/advocate/`, `data/fit_checker/` |
+| 3. Screen | Shield screens every seller message, listing title and claim first. An injected listing is quarantined with the rule that fired. | `shield/` |
+| 4. Approve | Above your allowance, a Cartesia voice agent phones you, reads the deal from a template filled by code, and answers "why not the cheaper one?". Code, not the voice agent, approves: only the one-time word pair on your screen plus "approve" passes. | `pay/approval.py`, `pay/voice_cartesia.py` |
+| 5. Learn | Each losing seller gets a loss report (a banded gap and the reason with its source) and adjusts its strategy for the next round. | `demo/learning.py`, `sim/` |
+
+```mermaid
+flowchart LR
+    U["Buyer<br/>(ASI:One or web)"] --> B["Buyer agent"]
+    B -- "sealed request" --> S["5 seller agents<br/>(Agentverse)"]
+    S -- "bids" --> SH["Bazaar Shield<br/>screen, verify"]
+    SH --> A["Quality advocate<br/>fit + claim checks"]
+    M[("Dated listing mirrors<br/>Apify, Bright Data")] --> S
+    M --> A
+    A --> MK[("Market state<br/>SpacetimeDB")]
+    MK --> W["Buyer and market screens"]
+    A -- "above allowance" --> C["Cartesia approval call"]
+    C --> J["Approval judge<br/>(code)"]
+    J -- "signed mandate" --> P["TAP-style signing<br/>Stripe test mode"]
+    A -- "loss report" --> S
+```
+
+Components and data flow in detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Key capabilities
+
+- **A skeptic on the buyer's side.** The advocate is deterministic code, not a model. It can veto the cheapest bid and must cite a source for every warning.
+- **Fit checking.** Rules over an open parts dataset plus maker specs; an unknown fit is "uncertain" and can never beat a confirmed fit.
+- **Agent security as an API.** Bazaar Shield exposes `POST /v1/shield/screen`, `/verify-agent` and `/verify-mandate`, plus a claim check, with a published rule list. See [shield/API.md](shield/API.md).
+- **Voice is the trust step, never the credential.** A recording of your voice cannot approve a payment: the code on your screen is single use, bound to one mandate, and silence, a hang-up or a mismatch all deny.
+- **Scoped, replay-proof payments.** Each mandate binds deal, amount, payee, expiry and nonce. A replayed or altered mandate fails.
+- **Sellers that learn.** Loss reports turn a lost sale into a specific change, and a wind tunnel of simulated buyers tests seller strategies against fixed controls.
+- **IT purchasing controls.** PO numbers, a requester who cannot approve their own order, three-way match and an audit trail ([hyphenate/](hyphenate/)).
+
+## What is real and what is simulated
+
+Every bid, claim and screen carries a badge driven by the `source` field in the contracts. Full table: [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md). Status as of Oct 24, 2026.
+
+| Component | Label | Notes |
+|---|---|---|
+| Store listings and prices | MIRROR | Real public listings in dated snapshots ([data/mirror/](data/mirror/)) |
+| Seller agents and their bids | SIM | Our agents bid from mirrored listings; no outside shop has bid yet |
+| Buyer's goal and owned parts | SIM | Scripted for the reference scenario; the buyer is Vidyut |
+| Fit checks, claim checks, Shield | LIVE | Real code on every bid; claim checks run on pages we host for the demo |
+| Approval call | LIVE | A real Cartesia phone call to one registered number; a typed fallback is labelled |
+| Request signing | LIVE | Signed in the style of Visa's Trusted Agent Protocol and verified by our merchant simulator, not by Visa |
+| Payment | SIM by default | One Stripe test-mode charge on a Visa test card with `--stripe`; no real money |
+| Bright Data | LIVE | Account connected; a first real scrape returned the ASUS Prime at $1,299.99. Wiring into the price re-check is in progress |
+| Tiger Data | LIVE | Time-series service running; loading savings and seller trends is in progress |
+| CRS identity and fraud check | in progress | Runs through the agents' single CRS client; not merged yet |
+| Wind tunnel buyers | SIM | Simulated by design |
+
+## Measured results
+
+Every number comes from [data/scoreboard.json](data/scoreboard.json), regenerated by `python3 -m data.scoreboard`. Headlines are first runs; anything fixed after reading a result is marked as no longer blind. All runs are dated 2026-10-24.
+
+| Measure | Result | Reproduce |
+|---|---|---|
+| Shield, held-out attacks | 12 of 20 stopped; 2 of 10 honest listings wrongly blocked | `python3 -m shield.bench` |
+| Fit checker | 12 of 12 right on maker-checked builds; 42 of 43 on all decided builds; 0 false OK (tuned once, not held out) | `python3 -m data.fit_checker.eval_builds` |
+| Voice approval attacks | 9 of 10 denied on the first run (10 of 10 after one fix, not blind) | `python3 -m pytest pay/tests/test_voice_attacks.py -q` |
+| Purchasing controls, blind planted errors | 26 of 27 caught on the first run; 2 of 7 clean cases falsely flagged | `python3 -m hyphenate.scenarios.blind_run --write` |
+| Seller learning lift | No lift to quote: the learner beats the control on 1 of 4 held-out buyer types | `python3 -m sim.wind_tunnel --builders 48 --seeds 3` |
+| Verified savings | None yet: a baseline needs two dated price providers | `python3 -m data.baselines` |
+
+Shield on its development set stops 30 of 30, but its rules were written against that set, so we never pool it with the held-out result and never call Shield "secure."
+
+## Built with
+
+| Partner | What we use | Role in Tech Bazaar |
+|---|---|---|
+| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol, Payment Protocol | Every agent is a registered uAgent; the buyer takes goals in ASI:One |
+| Visa | Trusted Agent Protocol (style), Visa test card | Signed agent requests; the test card behind the Stripe charge |
+| Stripe | Test mode | The one sandbox charge, idempotent on the mandate hash |
+| Cartesia | Voice agent, outbound calls | The approval call |
+| Apify | Store actors, our own [claim-check Actor](https://apify.com/anoopibrampur/tech-bazaar-claim-check) | Listing mirrors and claim checks |
+| Bright Data | Scraper API | A second, dated price source (in progress) |
+| Tiger Data | Time-series Postgres | Savings and seller trends over time (in progress) |
+| CRS | Credit API sandbox | Business seller identity and fraud check (in progress) |
+| SpacetimeDB | Reducers and live state | Auction state; floor prices and approval-before-payment enforced in reducers |
+| Anthropic | Claude | Optional seller persona lines and an off-by-default Shield classifier (`shield/classifier.py`) |
+
+Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT) for compatibility fields.
 
 ## Fetch.ai agents
 
-> **Team: fill this table as each agent registers on Agentverse.** A row marked *pending* is not registered yet.
-
 | Agent name | Role | Agentverse address |
 |---|---|---|
-| *pending* | Buyer agent: remembers your parts, runs the auction, pays within your allowance | *pending* |
-| *pending* | Quality advocate: challenges each bid with cited warnings | *pending* |
-| *pending* | Shield: screens messages, verifies signatures, checks claims | *pending* |
-| *pending* | Seller gateway: routes requests to the seller fleet | *pending* |
-| *pending* | Seller agent, named persona 1 | *pending* |
-| *pending* | Seller agent, named persona 2 | *pending* |
+| Tech Bazaar Buyer (@techbazaarbuyer) | Takes goals over the Chat Protocol, remembers owned parts, runs the sealed round, pays within the allowance | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` |
+| Tech Bazaar Quality Advocate (@techbazaaradvocate) | Checks fit and claims; at most 3 cited warnings; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` |
+| Tech Bazaar Shield Client (@techbazaarshield) | Chat front door to Shield screening; makes no purchases | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` |
+| Byte Bros Outlet (@techbazaarseller1) | Seller agent: bids from its listings, never below its floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` |
+| Silicon Sally's Surplus (@techbazaarseller2) | Seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` |
+| FlashDeal Frankie (@techbazaarseller3) | Seller agent; carries the planted condition trap (SIM) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` |
+| Bay Area PC Shop | Seller agent: fixed margin | *pending* |
+| ReNew Refurb | Seller agent: refurbished and open-box lines | *pending* |
 
-The rest of the seller fleet runs behind the gateway and is labelled as a fleet in the UI.
+Registration details and profile checks: [agents/README.md](agents/README.md).
 
-## Repo layout
+## Getting started
 
-Each lane owns its folders and talks to the others only through `contracts/`.
-
-```
-contracts/  shared JSON schemas: Need, SpecCard, Bid, Claim, ShieldVerdict, SupplierSignal,
-            AdvocateCard, OrderPlan, Order, ReceivingEvent, QualityRecord, LedgerEntry,
-            Persona, FloorEvent (OwnedPart, Allowance, VoiceApproval, DemandRecord,
-            TrendSignal are proposed in docs/CHANGES.md)
-agents/     Lane A: Python uAgents (buyer, advocate, seller agents), ownership memory, ASI:One chat, Payment Protocol
-market/     Lane B: SpacetimeDB module (auction state) and market/rules (sealing, scoring, optimizer, outcomes)
-web/        Lane B: Next.js builder view, voice approval screen, seller dashboard, 3D floor (three.js)
-data/       Lane C: Apify and Bright Data adapters, seller mirrors, price history, fit checker, demand trends, claim checks
-shield/     Lane D: FastAPI Bazaar Shield API (/screen, /verify-agent, /check-claim)
-pay/        Lane D: approval gate, Stripe and Visa adapters, Trusted Agent Protocol signing, CRS adapter
-sim/        Lane D: wind tunnel (simulated builders, hostile agents)
-docs/       architecture, sponsor map, real vs simulated, interviews, kickoff prompts, team board
-```
-
-## Run it
-
-One command brings the whole product up locally and tells the truth about what is up (Python 3.12, stdlib only):
+**Prerequisites:** Python 3.12, Node.js with npm, the SpacetimeDB CLI, and sandbox keys for the services you want live (names in [.env.example](.env.example)). The launcher tells you what is missing.
 
 ```bash
-python3 scripts/launch.py up       # preflight, then start every service that can start
-python3 scripts/launch.py status   # table of service, port, pid, health; exit 1 if a service is down
-python3 scripts/launch.py down     # stop only the processes it started
+git clone https://github.com/vs-githjk/cal-hacks-2026.git tech-bazaar && cd tech-bazaar
+cp .env.example .env                                  # your own sandbox keys; .env is gitignored
+python3 scripts/launch.py up --env-file .env          # preflight, then start every service that can start
+python3 scripts/launch.py status                      # service, port, pid, health
+python3 scripts/launch.py down                        # stop only what it started
 ```
 
-`up` prints one OK or MISSING line per prerequisite with the fix command, then starts SpacetimeDB (publishes `tech-bazaar` and runs `seed_demo`), Shield (8787), the seller, advocate and buyer agents (8010, 8003, 8001) and the web app (3100). Logs are in `.run/logs/<service>.log`, pids in `.run/pids.json` (both gitignored). A service whose prerequisite is missing is shown as SKIPPED with the exact install command, never as up. Keys come from `--env-file` (default `~/hackathons/cal-hacks-13-2026/lane-d/.env`) into child environments only; only key names are printed. Nothing global is installed: the only installs are a project-local `uv` venv in `agents/.venv` and `npm ci` in `web/` and `market/`. Port flags: `--shield-port`, `--web-port`, `--stdb-port` (the agent ports are fixed in `agents/` code). Tests: `python3 -m pytest scripts/tests -q`.
+`up` prints one OK or MISSING line per prerequisite with its fix, then starts SpacetimeDB, Shield (8787), the seller, advocate and buyer agents, and the web app (3100). A service without its prerequisites shows as SKIPPED, never as up. Nothing is installed globally.
 
-## Quickstart
+<details>
+<summary>Run the reference scenario and the tests</summary>
 
-> Run commands are added as each lane's code lands. Until then, this section lists what you need.
+```bash
+python3 demo/run_demo.py              # all five steps; writes demo/out/run-<timestamp>.json
+python3 demo/run_demo.py --stripe     # adds one Stripe test-mode charge (needs an sk_test_ key)
+python3 -m pytest -q --ignore=agents  # Python tests
+agents/.venv/bin/python -m pytest -q agents
+```
 
-1. **Clone and configure.** `git clone https://github.com/vs-githjk/cal-hacks-2026.git && cd cal-hacks-2026`, then:
-   ```bash
-   cp .env.example .env   # fill in your own sandbox keys; .env is gitignored
-   ```
-2. **Set these environment variables** (names from [.env.example](.env.example); two are new with the pivot and need adding there: the Cartesia call setup and the telephony credentials):
+More: [demo/README.md](demo/README.md), [pay/README.md](pay/README.md), [shield/API.md](shield/API.md).
+</details>
 
-   | Variable | Used for |
-   |---|---|
-   | `ANTHROPIC_API_KEY` | Quality advocate, memory advice and persona lines |
-   | `AGENTVERSE_API_KEY`, `ASI1_API_KEY` | Agent registration and ASI:One |
-   | `APIFY_TOKEN` | Seller mirrors and the claim-check Actor (paid actors, run only with approval) |
-   | `BRIGHT_DATA_API_KEY` | Wider web price and claim checks |
-   | `CRS_API_KEY` | Seller stability check (sandbox) |
-   | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | Test-mode payments |
-   | `VISA_TAP_PRIVATE_KEY_PATH` | Trusted Agent Protocol request signing |
-   | `VISA_VIC_API_KEY` | Intelligent Commerce adapter, only with sandbox access |
-   | `SPACETIMEDB_URI` | Live market state |
-   | `CARTESIA_API_KEY` | Voice approval call and persona voices |
-   | Telephony (Twilio number or SIP trunk) | Phone path for the approval call, to be verified; test numbers only |
+## Repository structure
 
-3. **Run each lane:** agents, market, web, Shield. Commands are added here as each lane merges.
+```
+agents/      Fetch.ai uAgents: buyer, quality advocate, sellers, Shield client, Payment Protocol
+contracts/   Shared JSON schemas (Goal, Bid, ShieldVerdict, Mandate, LossReport, ...)
+data/        Listing mirrors, fit checker, claim checks, baselines, scoreboard
+demo/        The reference scenario and stage runner
+hyphenate/   IT purchasing controls and blind test scenarios
+market/      SpacetimeDB module and auction rules (sealing, scoring, outcomes)
+pay/         Approval judge, mandates, request signing, merchant simulator, Cartesia call client
+shield/      Bazaar Shield API, rules, attack corpus and bench
+sim/         Wind tunnel: simulated buyers and hostile agents
+web/         Next.js buyer and market screens
+docs/        Architecture, real vs simulated, red team, research notes
+```
 
-## Invariants (safety by design)
+## Safety and design invariants
 
-These are enforced in code and covered by tests, not left to prompts.
+These live in code and tests, not in prompts.
 
-1. **No payment without a limit check and an approval.** The agent buys on its own only inside the allowance you set, and sends a receipt. Above it, a recorded voice yes (or the approval card) is required. No answer means no payment.
-2. **Every seller claim shown to a builder has a check result:** verified, unverified or false, with evidence.
-3. **No agent acts on another agent's text before Shield screens it.** Screening fails closed for payments.
-4. **The 3D floor and every screen render real market state only.**
-5. **No seller agent bids below its floor**, enforced in the market reducers, so even a compromised agent cannot.
-6. **Sealed bids.** Sellers see the parts, conditions and delivery window, never your budget, allowance or each other's bids.
-7. **Private financial data stays private.** CRS checks run inside our system; both sides see only the stability signal.
-8. **Scoped payments.** Each mandate has an amount cap, one seller, an expiry, single use and an idempotency key.
-9. **Sandbox only.** Test identities and test cards, no real money, no secrets in the repo.
-10. **Anything simulated is labelled** in the UI and in this README.
-11. **Sellers never see an individual builder.** Demand and trend views are aggregates with a minimum group size of 5 (proposed).
-12. **The agent never re-buys a part you own** unless you ask, and its advice cites the memory entry.
-
-## Numbers we will report
-
-Nothing is measured yet. These are the methods; results go here with the date and dataset once measured, including results that show no effect. We do not report research time, incompatibility rate or return rate: no source was found.
-
-| Number | Method |
-|---|---|
-| Price spread across sellers and vs baseline | Winning bid against a dated baseline on real parts. Real price spread and simulated bid discount are reported separately, never blended. |
-| Fit-checker accuracy | Against a hand-checked set of part combinations, including known mismatches |
-| Advocate precision and recall | Against a hand-labelled answer key of 30 to 50 cases with planted issues (fit, condition, false "was" price, recall) and clean controls |
-| Shield catch rate, false-positive rate, latency | On a frozen held-out attack set plus unseen wind-tunnel attacks. Design targets: rule checks under 50 ms, 1.5 s timeout. |
-| Wind tunnel lift | Seller policy tuned on a training set; before and after on held-out simulated builders, against a cheapest-wins baseline |
-
-## Team and lanes
-
-Hour-by-hour plan: [docs/HOUR_PLAN.md](docs/HOUR_PLAN.md). Next gate: Sat 10:00, a demo we can show sponsors.
-
-| Lane | Owns | Member |
-|---|---|---|
-| A: Agents | Buyer, advocate and seller agents; ownership memory; goal hunt loop; ASI:One; Payment Protocol; CRS gate; open seller protocol; Shield `/verify-agent` | Abhinav |
-| B: Market and screens | Spacetime market (rounds, goals, lots, allowance), buyer and seller screens, seller console, the Lot Wall, 3D floor, Hyphenate pages | Vedant |
-| C: Data, truth, then integration | Apify mirrors and claim-check Actor, fit checker, wind tunnel, merchant simulator, Shield OpenAPI, keys and bench, scoreboard; integration owner from Sun 03:00 | Anoop |
-| D: Trust and pitch | Mandate and Visa TAP, the hardened call, Shield core, interviews and real quotes, the real purchase, pitch and video | Vidyut |
-
-## Status
-
-Updated with every merge. States: **planned**, **in progress**, **built** (with a link to the PR or test).
-
-| Piece | State |
-|---|---|
-| Contracts (JSON schemas) | in progress: first version in `contracts/`, PC renames proposed |
-| Market rules (sealing, scoring, split optimizer, outcomes) | in progress on branch `lane-b-market-floor`, tested; renames to PC terms pending |
-| Buyer agent on Agentverse, reachable in ASI:One | planned |
-| Ownership memory | planned |
-| Seller agents bidding from Apify mirrors | planned |
-| Fit checker | planned |
-| Quality advocate with cited warnings | planned |
-| Shield `/screen`, `/verify-agent`, `/check-claim` | planned |
-| Trusted Agent Protocol signing and verification | planned |
-| Allowance and Cartesia voice approval | planned |
-| Stripe test-mode payment through the Payment Protocol | planned |
-| CRS seller stability signal | planned |
-| Seller demand and trend dashboard | planned |
-| Wind tunnel | planned |
-| 3D floor | planned |
-| Visa Intelligent Commerce adapter | planned, needs sandbox access |
+1. **No payment without a limit check and an approval** for the same mandate hash. No answer means no payment.
+2. **No agent acts on another agent's text before Shield screens it.** Screening fails closed for payments.
+3. **No seller bids below its floor,** enforced in market reducers, so even a compromised agent cannot.
+4. **Sealed bids.** Sellers never see your budget, your allowance or each other's bids.
+5. **Scoped mandates:** one seller, an amount cap, an expiry, single use and an idempotency key.
+6. **The agent never re-buys a part you own** unless you ask.
+7. **Sandbox only:** test cards and test identities, no real money, no secrets in the repository.
+8. **Anything simulated is labelled** on screen and in this README.
 
 ## Roadmap
 
-**During the hackathon**
-- **Sat Oct 24, 10:00 PDT, talkable progress:** the five beats run end to end on MIRROR plus SIM data, labelled.
-- **Sat Oct 24, 14:00 PDT, demo path green** on the deployed build. After this: the Lot Wall, the wind tunnel at 50 builders, Tiger Data, persona voices.
-- **Real people:** interviews tonight, one real seller quote, one IT buyer quote, one real teammate purchase with a receiving check, and an outside agent bidding live.
-- **Sun Oct 25, 03:00 PDT:** feature freeze, then integration and the Devpost write-up. Deadline 09:00.
-
-**After the hackathon**
-- Small IT buyers (10 to 50 PCs), where sealed bids on volume are believable.
-- Seller onboarding: paste a catalog URL, set a floor and perks, go live.
-- Visa Intelligent Commerce tokens in place of the Stripe path.
+- Outside sellers bidding live through an open seller protocol.
+- Bright Data price re-check right before the approval call, and Tiger Data savings curves.
+- CRS identity and fraud gate on business sellers, sharing only a band.
+- An in-browser approval call next to the phone call.
+- Small IT buyers (10 to 50 machines), where sealed volume bids matter most.
+- Visa Intelligent Commerce tokens in place of the Stripe path, given sandbox access.
 - Tech Bazaar as an MCP server, so any agent can request bids.
+
+## Team
+
+Vidyut Sriram, Vedant Shirvi, Abhinav, Anoop Ibrampur.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Tech Bazaar is released under the [MIT License](LICENSE). Copyright (c) 2026 the Tech Bazaar team.
+
+Third-party data keeps its own license, including [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT). Product and retailer names belong to their owners and are shown for price comparison only.
+
+[^1]: Capital & Compute, [NVIDIA GPU prices](https://capitalandcompute.net/gpu-prices/nvidia/), citing Tom's Hardware, Sep 1, 2026.
+[^2]: Anthropic, [Piloting Claude for Chrome](https://www.anthropic.com/news/claude-for-chrome), Aug 25, 2025: 23.6 percent attack success without mitigations, 11.2 percent with them.
+[^3]: Microsoft Research, [Magentic Marketplace](https://arxiv.org/abs/2510.25779), arXiv 2510.25779, Oct 2025.

@@ -214,3 +214,51 @@ def test_non_price_amounts_beside_offer_words_are_unverified_not_false():
     for text in ("New, free shipping on orders of $35 or more", "New, includes $50 gift card", "New, save up to $50",
                  "New, $25 rebate", "New, $10 coupon"):
         assert check(text, HAL_GPU)["result"] == "unverified", text
+
+
+def _page(offer_extra="", node_extra="", availability="InStock"):
+    body = ('{"@type":"Product","name":"X","description":"" %s,"offers":{"@type":"Offer","price":"10","availability":"https://schema.org/%s"%s}}'
+            % (node_extra, availability, offer_extra))
+    return ('<script type="application/ld+json">%s</script>' % body).encode()
+
+
+def _res(text, kind, page):
+    return check_claim({"text": text, "kind": kind, "evidence_url": "https://store.example/p"}, fetch=lambda u: page)
+
+
+def test_schema_stock_statuses():  # #126
+    for status in ("InStock", "LimitedAvailability", "OnlineOnly", "InStoreOnly"):
+        assert _res("in stock", "stock", _page(availability=status))["result"] == "verified", status
+        assert _res("sold out", "stock", _page(availability=status))["result"] == "false", status
+    for status in ("OutOfStock", "SoldOut", "Discontinued", "PreOrder", "PreSale", "BackOrder"):
+        assert _res("in stock", "stock", _page(availability=status))["result"] == "false", status
+        assert _res("out of stock", "stock", _page(availability=status))["result"] == "verified", status
+    out = _res("in stock", "stock", _page(availability="PreOrder"))
+    assert "PreOrder" in out["reason"] and "not available now" in out["reason"]
+
+
+def _w(value, unit):
+    return ',"warranty":{"@type":"WarrantyPromise","durationOfWarranty":{"@type":"QuantitativeValue","value":%s,"unitCode":"%s"}}' % (value, unit)
+
+
+def test_warranty_from_json_ld_and_text():
+    assert _res("3-year warranty", "warranty", _page(node_extra=_w(3, "ANN")))["result"] == "verified"
+    assert _res("36 month warranty", "warranty", _page(node_extra=_w(3, "ANN")))["result"] == "verified"
+    assert _res("3-year warranty", "warranty", _page(node_extra=_w(24, "MON")))["result"] == "false"
+    assert _res("3-year warranty", "warranty", _page(offer_extra=_w(36, "MON")))["result"] == "verified"
+    text = _page(node_extra="").replace(b'"description":""', b'"description":"Includes a 2-year limited warranty."')
+    assert _res("2 year warranty", "warranty", text)["result"] == "verified"
+    assert _res("3-year warranty", "warranty", text)["result"] == "false"
+    assert _res("3-year warranty", "warranty", _page())["result"] == "unverified"
+
+
+def test_hostile_warranty_values_are_unverified_and_never_raise():
+    for value, unit in (("Infinity", "ANN"), ("-1", "ANN"), ("true", "ANN"), ("1.5", "ANN"), ("999", "ANN"), ("1e999", "MON"), ("3", "XYZ")):
+        assert _res("3-year warranty", "warranty", _page(node_extra=_w(value, unit)))["result"] == "unverified", (value, unit)
+
+
+def test_warranty_list_must_agree():
+    two = ',"warranty":[%s,%s]' % tuple(_w(v, "ANN")[len(',"warranty":'):] for v in (1, 3))
+    assert _res("3-year warranty", "warranty", _page(node_extra=two))["result"] == "unverified"
+    same = ',"warranty":[%s,%s]' % tuple(_w(3, "ANN")[len(',"warranty":'):] for _ in (1, 2))
+    assert _res("3-year warranty", "warranty", _page(node_extra=same))["result"] == "verified"
