@@ -3,3 +3,4 @@ uagents-core==0.4.12
 anthropic
 jsonschema
 pytest
+cryptography==50.0.1
