@@ -6,6 +6,7 @@ import { reducers, tables } from "@/module_bindings";
 import { BuyerScreen } from "@/components/screens";
 import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
+import { crsFor } from "@/lib/crs";
 
 // Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
 const DEMO_BUYER = "vidyut";
@@ -83,6 +84,8 @@ function BuyerView() {
   const [notes] = useTable(tables.myNotifications);
   const [pending] = useTable(tables.myPendingApprovals);
   const [profiles] = useTable(tables.myBuyerProfile);
+  const [signals] = useTable(tables.supplierSignal);
+  const crs = (sellerId: string) => crsFor(signals, sellerId, Date.now()); // bands only (docs/changes/0033)
   const approveTyped = useReducer(reducers.approveTyped);
 
   const goal = useMemo(() => goalFromRows(goals, goalItems, allowances[0]), [goals, goalItems, allowances]);
@@ -105,6 +108,7 @@ function BuyerView() {
   // veto, shield, approval and receipt rows (bid_check, mandate, approval, payment) are not public yet: those cards show the SIM sample.
   return (
     <BuyerScreen
+        crs={crs}
       connecting={!goalsReady || !eventsReady}
       goal={goal}
       bids={sim ? asSim(sample.rankedBids) : liveBids}

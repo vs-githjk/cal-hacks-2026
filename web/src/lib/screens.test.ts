@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { asOrigin, asSim, bidsFromRows, clusterArrivals, feedFromRows, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows } from "./screens.ts";
+import { asOrigin, asSim, bidsFromRows, clusterArrivals, feedFromRows, latestRound, linesFromRows, missingFrom, originCounts, originMixLabel, reviewFromRows, roundFromRows } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as any;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -154,4 +154,15 @@ test("reviewFromRows shows the latest expiring code, with the origin normalized"
   assert.equal(r.mandateHash, "b");
   assert.equal(r.origin, "SIM");
   assert.equal(reviewFromRows([]), null);
+});
+
+test("Lane C #136: a partial bid (complete false) shows missing: <items> on /buyer and /market", () => {
+  const rows = [
+    result({ id: 1n, bidId: "bid-full", rank: 1, landed: 1500 }),
+    result({ id: 2n, bidId: "bid-part", sellerId: "gpu-only", persona: "GPU Only", rank: 2, landed: 700, reasons: ["missing: psu-850w-atx3, case-nr200p"] }),
+  ];
+  assert.equal(missingFrom(["missing: psu-850w-atx3, case-nr200p"]), "psu-850w-atx3, case-nr200p");
+  assert.equal(missingFrom(["below this seller floor"]), null);
+  assert.equal(bidsFromRows(rows, [], "round-1").find((b) => b.seller === "GPU Only")!.missing, "psu-850w-atx3, case-nr200p");
+  assert.deepEqual(linesFromRows(rows, [], round()).find((l) => l.seller === "GPU Only")!.outcome, { kind: "ranked", rank: 2, note: "missing: psu-850w-atx3, case-nr200p" });
 });

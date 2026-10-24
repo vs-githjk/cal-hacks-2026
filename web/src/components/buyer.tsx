@@ -7,6 +7,8 @@ import { motion, useReducedMotion } from "motion/react";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { REVIEW_MAX_FAILURES, type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import type { CrsView } from "@/lib/crs";
+import { CrsSignal } from "./crs";
 import { commas, typedStatus } from "@/lib/money";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
@@ -119,7 +121,7 @@ const REC: Record<RankedBid["recommendation"], { kind: "veto" | "caution" | "buy
  * Ranked bids. Hover tints a row, click or Enter expands its Why with the source and the market row it came from.
  * When a new round close arrives (revealKey changes), the rows flip open in rank order, 60 ms apart, and the winner pulses once.
  */
-export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: { bids: RankedBid[]; roundLabel?: string; revealKey?: string }) {
+export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey, crs }: { bids: RankedBid[]; roundLabel?: string; revealKey?: string; crs?: (sellerId: string) => CrsView | null }) {
   const reduce = useReducedMotion();
   const [open, setOpen] = useState<string | null>(null);
   const [play, setPlay] = useState(0);
@@ -147,6 +149,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                 const k = b.rowRef ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
                 const struck = b.recommendation === "veto" ? "line-through text-muted" : "";
+                const signal = b.sellerId && crs ? crs(b.sellerId) : null;
                 const expanded = open === k;
                 return (
                   <Fragment key={`${k}-${play}`}>
@@ -168,12 +171,13 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                           : { rotateX: 0, opacity: 1 }
                       }
                       transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
-                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${b.won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}`}
+                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${b.won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}${signal?.greyed ? " opacity-50" : ""}`}
                     >
                       <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /></Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /><CrsSignal view={signal} /></Td>
                       <Td>
                         <Tag>{b.condition}</Tag>
+                        {b.missing && <span className="ml-1.5 text-[13px] text-amber">missing: {b.missing}</span>}
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] text-muted">{l.condition} {money(l.unitPrice)}</span>)}
                       </Td>
                       <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
@@ -219,7 +223,7 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
     <Card stripe="coral">
       <Label>Advocate veto</Label>
       <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em]">Cheapest bid vetoed: {veto.seller}, {money(veto.landed)}</h3>
-      <p className="text-[14px]">Listed as "{veto.claim}". {veto.finding}</p>
+      <p className="text-[14px]">Listed as &quot;{veto.claim}&quot;. {veto.finding}</p>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
         <dt className="text-muted">Rule</dt><dd><Code>{veto.ruleId}</Code></dd>
         <dt className="text-muted">Source</dt><dd className="min-w-0"><SourceLink href={veto.sourceUrl} /></dd>
@@ -272,7 +276,7 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
         <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
       </div>
       <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
-      <p className="mt-1.5 text-[14px]">You asked "why not the cheaper one?" It answered: {approval.whyAnswer}</p>
+      <p className="mt-1.5 text-[14px]">You asked &quot;why not the cheaper one?&quot; It answered: {approval.whyAnswer}</p>
       <p className="mt-1.5 text-[13px] text-muted">{CAP_RULE}</p>
       <ol className="mt-2.5 grid gap-1.5 text-[13px]">
         {approval.attempts.map((a, i) => (

@@ -25,6 +25,7 @@ export type Recommendation = "veto" | "caution" | "buy" | "ineligible" | "refuse
 export interface RankedBid {
   rank: number | null; // null when ineligible or refused
   seller: string;
+  sellerId?: string; // the market seller id (CRS signal key); absent on sample rows
   origin: Origin;
   condition: string;
   altLines?: { condition: string; unitPrice: number }[]; // the other condition lines the same seller bid
@@ -33,6 +34,8 @@ export interface RankedBid {
   why: string;
   sourceUrl?: string;
   won: boolean;
+  /** Lane C #136: the needed items a partial bid does not cover (close_round writes "missing: a, b"). */
+  missing?: string;
   /** The market row this bid was drawn from (round_result/<id>); absent on sample rows. */
   rowRef?: string;
 }
@@ -128,6 +131,7 @@ export interface Arrival { label: string; atMs: number; origin: Origin; refused:
 
 export interface SellerLine {
   seller: string;
+  sellerId?: string;
   origin: Origin;
   condition: string;
   landed: number;
@@ -217,6 +221,12 @@ function advocateByBid(events: readonly EventRow[]): Map<string, { rec: "veto" |
   return m;
 }
 
+/** The items a partial bid leaves out, from the "missing: a, b" reason close_round writes on a ranked row; null for a complete bid. */
+export function missingFrom(reasons: readonly string[]): string | null {
+  const m = reasons.find((x) => x.startsWith("missing: "));
+  return m ? m.slice("missing: ".length) : null;
+}
+
 export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undefined {
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
@@ -236,6 +246,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
       return {
         rank: ranked ? r.rank : null,
         seller: r.persona || r.sellerId,
+        sellerId: r.sellerId,
         origin: asOrigin(r.origin),
         condition: cond(picked?.offeredCondition ?? ""),
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
@@ -244,6 +255,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         why: r.reasons.join("; ") || card?.label || "",
         sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
+        ...(ranked && missingFrom(r.reasons) ? { missing: missingFrom(r.reasons)! } : {}),
         rowRef: `round_result/${r.id}`,
       };
     });
@@ -315,11 +327,12 @@ export function linesFromRows(results: readonly ResultRow[], events: readonly Ev
   const out: SellerLine[] = rows.flatMap((r) =>
     r.lines.map((l, i): SellerLine => {
       const card = adv.get(r.bidId);
-      const base = { seller: r.persona || r.sellerId, origin: asOrigin(r.origin), condition: cond(l.offeredCondition), landed: i === 0 ? r.landed : l.unitPrice, referee: "passed" as const };
+      const base = { seller: r.persona || r.sellerId, sellerId: r.sellerId, origin: asOrigin(r.origin), condition: cond(l.offeredCondition), landed: i === 0 ? r.landed : l.unitPrice, referee: "passed" as const };
       if (i > 0) return { ...base, outcome: { kind: "alt", note: "not the picked line" } };
       if (r.rank === 0) return { ...base, outcome: { kind: "ineligible", note: r.reasons.join("; ") || "not eligible" } };
       if (card?.rec === "veto") return { ...base, outcome: { kind: "veto", rank: r.rank, note: card.label } };
-      return { ...base, outcome: { kind: r.rank === 1 ? "won" : "ranked", rank: r.rank } };
+      const missing = missingFrom(r.reasons);
+      return { ...base, outcome: { kind: r.rank === 1 ? "won" : "ranked", rank: r.rank, ...(missing ? { note: `missing: ${missing}` } : {}) } };
     }),
   );
   const refused = refusedInRound(events, round).map(
