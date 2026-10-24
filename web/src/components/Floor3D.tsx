@@ -485,7 +485,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       // Fit the seat ring (radius about 6, heads included) into the view; on wide boxes height decides, on phones width does.
       camera.aspect = W / H;
       const tanV = Math.tan(((VFOV / 2) * Math.PI) / 180);
-      const fitW = 5.4 / (tanV * camera.aspect);
+      const fitW = (W < 640 ? 4.3 : 5.4) / (tanV * camera.aspect);
       const fitH = 3.3 / tanV;
       viewDist = Math.max(fitW, fitH);
       placeCamera();
@@ -625,7 +625,7 @@ function build(T: Three, box: HTMLElement, host: HTMLElement, plateEls: Map<stri
       const items: { el: HTMLDivElement; w: number; h: number; px: number; py: number; vis: number; prio: number; feet: boolean }[] = [];
       for (const [k, el] of plateEls) {
         const f = figs.get(k.split("#")[0]!);
-        if (!f || f.vis.vis < 0.02) { el.style.visibility = "hidden"; continue; }
+        if (!f || f.vis.vis < 0.02 || !el.offsetWidth) { el.style.visibility = "hidden"; continue; }
         const refe = f.kind === "referee";
         const feet = el.dataset.anchor === "feet";
         const lift = f.key === plinthFor ? PLINTH * tPlinth.v : 0;
@@ -1019,13 +1019,13 @@ export function Floor3D({ scene, beat, frozen, reducedMotion, selected, onPick, 
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]" style={{ background: "radial-gradient(60% 45% at 0% 0%, rgba(251,246,238,0.92) 0%, rgba(251,246,238,0.6) 45%, rgba(251,246,238,0) 75%), radial-gradient(28% 22% at 100% 0%, rgba(251,246,238,0.9) 0%, rgba(251,246,238,0) 80%)" }} />
       {plates.map((p) =>
         p.say || p.sealed ? (
-          <div key={`${p.key}#top`} data-prio={p.sealed ? 1 : 0} data-anchor="top" ref={setEl(`${p.key}#top`)} className="pointer-events-none absolute left-0 top-0 z-10 will-change-transform" style={HIDDEN}>
+          <div key={`${p.key}#top`} data-prio={p.sealed ? 1 : 0} data-anchor="top" ref={setEl(`${p.key}#top`)} className={`pointer-events-none absolute left-0 top-0 z-10 will-change-transform ${p.sealed ? "" : "max-sm:hidden"}`} style={HIDDEN}>
             {p.sealed ? <SealedCard /> : <Bubble key={p.say} text={p.say!} reducedMotion={reducedMotion} />}
           </div>
         ) : null,
       )}
       {plates.filter((p) => !p.sealed).map((p) => (
-        <div key={p.key} data-prio={p.prio} data-anchor="feet" ref={setEl(p.key)} className="pointer-events-none absolute left-0 top-0 z-10 will-change-transform" style={HIDDEN}>
+        <div key={p.key} data-prio={p.prio} data-anchor="feet" ref={setEl(p.key)} className={`pointer-events-none absolute left-0 top-0 z-10 will-change-transform ${p.prio >= 2 && p.word !== "Winner" && p.key !== "buyer" ? "max-sm:hidden" : ""}`} style={HIDDEN}>
           <button type="button" onClick={() => onPick(p.key)} aria-pressed={selected === p.key} className="pointer-events-auto flex min-h-[44px] items-start p-1 text-left">
             <span
               className={`flex flex-col items-center whitespace-nowrap rounded-lg bg-[#FBF7F0]/95 px-2.5 py-[3px] text-[13px] font-medium leading-[17px] text-[#2B2A33] shadow-[0_3px_10px_rgba(90,60,30,0.14)] ${selected === p.key ? "ring-2 ring-[#4F7F7C]" : ""} ${p.struck ? "opacity-75" : ""} ${p.word === "Winner" ? "bg-[#FFF6DD] ring-1 ring-[#C9A45C]" : ""}`}
