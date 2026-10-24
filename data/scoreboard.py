@@ -25,7 +25,9 @@ def savings_tile() -> dict:
     rows = observations()
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
-    return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
+    # Always none_yet for now: no verified purchase is recorded anywhere yet, so there is nothing to measure savings on.
+    status = "none_yet"
+    return _tile(id="verified_savings", title="Dated verified savings", status=status, value=None, unit="USD",
                  display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
                          f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
