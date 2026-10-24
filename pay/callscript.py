@@ -170,6 +170,12 @@ def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY
     return v
 
 
+CRS_LINES = {
+    "verified": "The seller was checked with CRS and verified",
+    "sim_seller": "This is a simulated seller, not checked with CRS",
+}
+
+
 PRICE_LINES = {
     "live": "The price was checked live just now",
     "mirror": "The price is from a dated listing snapshot",
@@ -187,7 +193,7 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
         return kept, dropped
     if not isinstance(deal, Mapping):
         return kept, ["deal"]
-    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "price")]
+    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "crs", "price")]
     for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
         if key in deal:
             v = _plain(deal[key], pattern, _FACTS_BLOCKED)
@@ -195,6 +201,12 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
                 dropped.append(key)
             else:
                 kept[key] = v
+    if "crs" in deal:   # our own CRS result (#257), a fixed phrase per value; nothing the seller wrote is read
+        line = CRS_LINES.get(deal["crs"]) if isinstance(deal["crs"], str) else None
+        if line is None:
+            dropped.append("crs")
+        else:
+            kept["crs"] = line
     if "price" in deal:   # our own Bright Data re-check (#269), a fixed phrase per value
         line = PRICE_LINES.get(deal["price"]) if isinstance(deal["price"], str) else None
         if line is None:
@@ -246,6 +258,8 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
         deal_line += f", {facts['condition']}"
     deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
     deal_line += f", for {words}"
+    if "crs" in facts:
+        deal_line += f". {facts['crs']}"
     if "price" in facts:
         deal_line += f". {facts['price']}"
     kept, dropped = clean_advocate_reason(advocate_reason)

@@ -62,6 +62,14 @@ exports `approve_typed`, because a code on /buyer would arm that typed approval;
 only on a `--live-call` run: the scripted run issues no code. After the call the market is read again, and only an
 approved call plus a `pay.mandate.can_charge` pass against the market's rank 1 makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
 answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
+Before the call, the winning seller gets one CRS identity check (#257, `agents/crs.py` `check_payee`, cached per
+seller for 10 minutes). A business seller (an approved business profile in `CRS_TEST_IDENTITIES_PATH`) needs a
+verified check, and that check's id is bound into the mandate and checked again before the charge. A failed check,
+CRS not configured, or an unreadable profile file holds the payee gate: no mandate, no call, nothing paid. When CRS
+does not answer, the adapter may use its own recorded result for that seller if it is under 24 hours old (labelled
+cached on the console); with none, the gate holds. A seller with no business profile is a SIM seller and is said to
+be unchecked. Only a verified answer is reused, for 10 minutes; consent is read again every time. The call reads the result ("checked with CRS and
+verified" or "a simulated seller, not checked with CRS"), and the console prints it.
 On `--live-call` the bridge also loads `BRIGHT_DATA_API_KEY` and `TIGER_DATA_SERVICE_URL` from the same env file
 as the call (the process environment wins; values are never printed) (#269). Right before the call, Bright Data
 re-checks the winner's listing price (45 s limit): a live price above the quote, or out of stock, stops the call and
