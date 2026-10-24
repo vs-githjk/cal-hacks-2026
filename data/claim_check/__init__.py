@@ -26,8 +26,16 @@ PATTERNS = [  # (field, regex, value from match); first match per field, every f
     ("condition", r"\brefurb", lambda m: "refurbished"),
     ("condition", r"\b(used|pre-owned)\b", lambda m: "used"),
     ("condition", r"\bnew\b", lambda m: "new"),
-    ("price", r"\$\s?([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(1))),
+    ("price", None, None),  # see _price: a $ amount next to over/save/off/fee/shipping is not the price
 ]
+# A keyword attaches only to its own amount: directly before the $ (spaces only, no comma or colon between) or directly
+# after it. "off" and "fee" follow their amount ("$50 off"), so "$50 off $749" keeps $749 as the price.
+NOT_PRICE_BEFORE = re.compile(r"\b(over|save|saves|saving|under|shipping|ship)\s*$", re.I)
+NOT_PRICE_AFTER = re.compile(r"^\s*(off|fee|fees)\b", re.I)
+# Amounts that are not the item price but say something about the offer: the claim's price is then unverified.
+OFFER_BEFORE = re.compile(r"\b(orders? of|up to|rebate|coupon|gift card|credit)\s*$", re.I)
+OFFER_AFTER = re.compile(r"^\s*(or more|gift card|rebate|coupon|credit|back)\b", re.I)
+
 LD_CONDITION = {"NewCondition": "new", "UsedCondition": "used", "RefurbishedCondition": "refurbished", "DamagedCondition": "used"}
 
 
@@ -45,6 +53,21 @@ def _money(v):
     return _num(m.group(0)) if m else None
 
 
+def _price(text):
+    """(amount,) for the claimed price; (None,) when it is ambiguous (two different amounts, or an offer amount such as a
+    gift card or an order minimum); () when no amount is the price."""
+    amounts, offer = [], False
+    for m in re.finditer(r"\$\s?([\d,]+(?:\.\d+)?)", text):
+        before, after = text[:m.start()], text[m.end():]
+        if OFFER_BEFORE.search(before) or OFFER_AFTER.search(after):
+            offer = True
+        elif not (NOT_PRICE_BEFORE.search(before) or NOT_PRICE_AFTER.search(after)):
+            amounts.append(_num(m.group(1)))
+    if offer or len(set(amounts)) > 1:
+        return (None,)
+    return (amounts[0],) if amounts else ()
+
+
 def parse_claims(claim):
     """Every field the claim states, in PATTERNS order. A "was $X" amount is not also read as the current price."""
     if claim.get("field"):
@@ -52,6 +75,10 @@ def parse_claims(claim):
     text = claim.get("text") or ""
     found = {}
     for field, rx, val in PATTERNS:
+        if field == "price":
+            for v in _price(text):
+                found.setdefault("price", v)
+            continue
         m = re.search(rx, text, re.I)
         if m and field not in found:
             found[field] = val(m)
@@ -150,6 +177,8 @@ def judge(field, value, facts, at, series):
             return "unverified", "could not verify: the page states no condition"
         return ("verified", f"the page shows {page}") if page == value else \
             ("false", f"claim says {value}; differs from the listing at {at}: the page shows {page}")
+    if field == "price" and value is None:
+        return "unverified", "could not verify: the claim states more than one amount (another price, or an offer such as a gift card or order minimum)"
     if field == "price":
         page = _money(facts.get("price"))
         if page is None:
