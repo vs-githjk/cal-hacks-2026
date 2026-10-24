@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import hashlib
 import http.client
 import importlib
 import json
@@ -124,6 +125,7 @@ def lane(monkeypatch):
     buyer.ROUND.clear()
     buyer.APPROVALS.clear()
     yield SimpleNamespace(buyer=buyer, advocate=advocate, screen_calls=screen_calls, pick_results=pick_results,
+                          monkeypatch=monkeypatch,
                           network_attempts=network_attempts)
     buyer.ROUND.clear()
     buyer.APPROVALS.clear()
@@ -186,11 +188,34 @@ def _seed_round(buyer):
                        cards={}, seller_checks=checks, attempts=0, last_sent={})
 
 
-def _run_real_buyer_callbacks(lane, attack=None, prices=(749.0, 779.0), page_conditions=("new", "new")):
+def _run_real_buyer_callbacks(lane, attack=None, prices=(749.0, 779.0), page_conditions=("new", "new"),
+                              listing_conditions=("new", "new")):
     buyer, advocate = lane.buyer, lane.advocate
     _seed_round(buyer)
     lane.pick_results.clear()
     ctx = LocalContext()
+    # Synthetic read-only listing transport. Page facts are held separately from
+    # seller Bid fields, so page_condition cannot manufacture its own evidence.
+    listing_facts = {
+        f"https://example.invalid/listing/bid-one": listing_conditions[0],
+        f"https://example.invalid/listing/bid-two": listing_conditions[1],
+    }
+
+    def synthetic_check_claim(claim, fetch=None):
+        observed = listing_facts.get(claim.get("evidence_url"))
+        result = "unverified" if observed is None else (
+            "verified" if claim.get("value") == observed else "false")
+        return {"result": result, "evidence_url": claim.get("evidence_url", ""),
+                "checked_at": "2026-10-24T12:00:00Z",
+                "evidence_hash": hashlib.sha256(f"synthetic-listing:{observed}".encode()).hexdigest()
+                if observed is not None else "",
+                "method": "fetched page, synthetic test transport",
+                "reason": "condition matched synthetic listing" if result == "verified"
+                else "condition did not match synthetic listing" if result == "false"
+                else "listing fixture unavailable"}
+
+    from data import claim_check
+    lane.monkeypatch.setattr(claim_check, "check_claim", synthetic_check_claim)
     bids = [_bid(buyer, "seller_1", "bid-one", prices[0], attack=attack,
                  page_condition=page_conditions[0]),
             _bid(buyer, "seller_2", "bid-two", prices[1], page_condition=page_conditions[1])]
@@ -391,10 +416,12 @@ def test_held_out_misses_cannot_change_real_buyer_order_or_pay_without_same_hash
 
 
 def test_real_recommendation_drives_approval_and_requote_for_second_bid(lane):
-    # Equal prices preserve fixture order. The first bid has a real page-condition
-    # mismatch and is vetoed; the second, clean bid must be selected at index 2.
+    # Equal prices preserve fixture order. A separately supplied synthetic listing
+    # has an open-box condition for bid one, while its seller claim says new.
+    # The buyer must veto that claim from checker evidence, not from page_condition.
     result = _run_real_buyer_callbacks(lane, prices=(749.0, 749.0),
-                                       page_conditions=("open-box", "new"))
+                                       page_conditions=("new", "new"),
+                                       listing_conditions=("open-box", "new"))
     assert result["recommended_index"] == 2
     assert result["recommended_bid_id"] == "bid-two"
     assert result["cards"]["bid-one"]["recommendation"] == "veto"

@@ -13,18 +13,36 @@
    "items": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
+    "additionalProperties": false,
     "properties": {
      "kind": {
-      "type": "string"
+      "type": "string",
+      "enum": ["condition", "fit", "fit_unknown", "spec", "price", "recall", "record", "floor", "unsourced", "note"]
      },
      "text": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 600
      },
      "source_url": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 2048
      },
      "dollar_impact": {
       "type": "number"
+     },
+     "rule_id": {
+      "type": "string",
+      "maxLength": 80,
+      "pattern": "^[A-Za-z0-9_.:-]{1,80}$"
+     },
+     "checked_at": {
+      "type": "string",
+      "maxLength": 40
+     },
+     "evidence_hash": {
+      "type": "string",
+      "maxLength": 71,
+      "pattern": "^(sha256:)?[0-9a-f]{0,64}$"
      }
     },
     "required": [
