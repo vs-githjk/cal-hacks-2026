@@ -52,9 +52,36 @@ def test_no_code_in_pay_demo_or_agents_calls_or_defines_a_typed_approval():
     to refuse a market that still has it, but must never call it)."""
     import re
     root = PAY.parent
-    calls = re.compile(r"""(?:def\s+approve_typed\b|\.call\(\s*["']approve_typed["']|\bapprove_typed\()""")   # a real call, not the name in a sentence)
     for folder in ("pay", "demo", "agents"):
-        for f in (root / folder).rglob("*.py"):
-            if "tests" in f.parts or f.name.startswith("test_"):
+        for f in (root / folder).rglob("*"):
+            if f.suffix not in (".py", ".js", ".mjs", ".ts", ".tsx") or "node_modules" in f.parts:
                 continue
-            assert not calls.search(f.read_text(encoding="utf-8")), f
+            if "tests" in f.parts or f.name.startswith("test_") or ".test." in f.name:
+                continue
+            assert not TYPED_CALL.search(f.read_text(encoding="utf-8", errors="replace")), f
+
+
+# #300: a real call or definition of the typed approval, however it is spelled; never the name in a sentence or the
+# bridge's `"approve_typed" in module_text` check that refuses a market which still has it
+TYPED_CALL = __import__("re").compile(
+    r"""def\s+approve_typed\b|function\s+approveTyped\b|\bapprove_?[tT]yped\("""
+    r"""|\.call\(\s*["']approve_typed["']|getattr\([^)]*["']approve_typed["']"""
+    r"""|=\s*["']approve_typed["']|["']approve_["']\s*\+|\.approveTyped\b""")
+
+
+@pytest.mark.parametrize("line", [
+    "m.approve_typed(code)", "def approve_typed(self):", 'getattr(m, "approve_typed")(1)', "fn = getattr(market, 'approve_typed')",
+    'NAME = "approve_typed"', 'referee.call(NAME := "approve_typed")', 'name = "approve_" + "typed"', 'client.call("approve_typed", code)',
+    "await conn.reducers.approveTyped({ code })", "approveTyped(code)", "export function approveTyped(ctx) {",
+])
+def test_the_typed_approval_scan_catches_every_spelling(line):
+    assert TYPED_CALL.search(line), line
+
+
+@pytest.mark.parametrize("line", [
+    'return "approve_typed" in module.read_text(encoding="utf-8")',
+    'raise GateRefused("the market still has approve_typed (typed-code approval), so no code goes to /buyer")',
+    "# approve_typed was removed in #185",
+])
+def test_the_typed_approval_scan_allows_the_name_in_text_and_the_refusal_check(line):
+    assert not TYPED_CALL.search(line), line
