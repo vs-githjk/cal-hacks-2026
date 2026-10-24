@@ -63,7 +63,9 @@ only on a `--live-call` run: the scripted run issues no code. After the call the
 approved call plus a `pay.mandate.can_charge` pass against the market's rank 1 makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
 answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
 `--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). Without `--live-call` the approval is
-SIM scripted (`record_approval` method `sim_script`, never `voice_code`) and the payment is the SIM stub. Tests use a fake client and place no call.
+SIM scripted (`record_approval` method `sim_script`, never `voice_code`) and the payment is the SIM stub. A market built from #240 (#191)
+refuses `sim_script` until #251 item 1 is decided, so there a scripted bridge or stage run stops at beat 4 with the market's refusal: no approval,
+no payment. Tests use a fake client and place no call.
 
 ## Stage runner (`demo/stage.py`): one command for the video and the room
 ```

@@ -155,3 +155,15 @@ def test_the_scripted_record_approval_carries_every_240_argument(run):
     appr = next(s for s in bridge.plan(run, delay=0, rounds=1) if s.reducer == "record_approval")
     assert set(appr.args) == {"mandate_hash", "method", "approved_by", "voice_approval_id"}
     assert appr.args["voice_approval_id"] == "" and appr.args["method"] == "sim_script"
+
+
+
+def test_a_scripted_run_on_a_240_market_stops_at_the_approval_with_no_payment(run):
+    """#251 item 1 is held: #240 refuses sim_script, so the scripted run stops there. Nothing is paid."""
+    rows = market_rows(run)
+    log = []
+    with pytest.raises(RuntimeError, match="method must be one of"):
+        bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=False), clients(log, rows), delay=0, say=lambda s: None,
+                       sleep=lambda x: None, clock=lambda: 0.0, deal_gate=bridge.DealGate(run))
+    kinds = [r for _, r, _ in log]
+    assert "create_mandate" in kinds and kinds[-1] == "record_approval" and "record_payment" not in kinds

@@ -213,7 +213,8 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
                       pause=True, gate="approval_call",
                       say=("a real phone call: the buyer says the code from the screen and 'approve'; the referee relays the verified code"
                            if live_call else
-                           "SIM scripted approval, no phone call: the runner types the three tries (wrong code, no 'approve', then right)")))
+                           "SIM scripted approval, no phone call: the runner types the three tries (wrong code, no 'approve', then right); "
+                           "a #240 market refuses it until #251 item 1 is decided, and then nothing is paid")))
     ref = "ch_sim_" + m["hash"][:12]
     pay = {"mandate_hash": m["hash"], "payment_ref": ref, "amount": m["amount"], "mode": "sim"}
     steps.append(Step("referee", "record_payment", dict(pay), pause=True, tag=SIM,
