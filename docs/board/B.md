@@ -22,3 +22,4 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [09:40] #108 on PR #71 at bd4fcc6: merged main (both sides kept), AgentsTile mounts removed (AgentPip only), seller personas SIM, Checking... and tries left, Connecting..., MAX_SELLERS 5, Buyer fallback, manual money formatter with tests | ready for re-review
 - [10:15] #135 in PR #177 (stacked on #71) at ec5f4dd: safe URL parser and placeBid source check, Landed price label (no adjusted score on the row), per-identity pairing lock, first web tests (28) | ready for review
 - [10:55] #135 follow-ups on PR #177 at 4d45167: 10-char Crockford pairing code + code-wide throttle (soft, 20/10min, 60s wait), real adjusted_total/adjustment_reason persisted on round_result, PR-135 screenshots re-captured paired with live data | ready for review
+- [10:34] #123 bracket in PR #218 (stacked on #177): Gate, Heat 1, ranked 1v1, champion = round winner (tested), screenshots in web/docs/pr-123.
