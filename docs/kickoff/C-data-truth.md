@@ -5,7 +5,7 @@
 ## SETUP (do this first)
 1. Your branch is `lane-c-data`. Clone and switch (if the branch does not exist yet, create it with `git checkout -b lane-c-data`): `git clone https://github.com/vs-githjk/cal-hacks-2026 && cd cal-hacks-2026 && git checkout lane-c-data && git pull origin main`
 2. Copy `.env.example` to `.env` and fill only the keys this lane needs: APIFY_TOKEN, ANTHROPIC_API_KEY, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, CRS_API_KEY (test identities), CARTESIA_API_KEY (Photon spike), TIGER_DATA_SERVICE_URL (after Sat 14:00); BRIGHT_DATA_API_KEY only after Vidyut approves the spend. Ask Vidyut for values; never paste a key in chat, a doc or a commit, and never commit `.env`.
-3. You own `data/`, `sim/`, the merchant simulator in `pay/`, and the Shield product layer in `shield/`. Touch other lanes' folders only through `contracts/` (log changes in `docs/CHANGES.md`).
+3. You own `data/`, `sim/`, the merchant simulator in `pay/`, and the Shield product layer in `shield/`. Touch other lanes' folders only through `contracts/` (log changes in `a new file in docs/changes/ (`<HHMM>-<lane>-<topic>.md`)`).
 4. Read `docs/kickoff/00-shared.md`, then this file.
 5. Open a PR to main per finished item, small and often. Never add Co-Authored-By.
 6. Details live in `docs/`, `contracts/` and the hub page: https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU
