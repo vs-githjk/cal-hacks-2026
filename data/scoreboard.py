@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from data.fit_checker import eval_builds
-from data.mirror import price_spread
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(__file__).resolve().parent / "scoreboard.json"
@@ -21,15 +20,18 @@ def _tile(**kw) -> dict:
 
 
 def savings_tile() -> dict:
-    s = price_spread.summarize(price_spread.load())
-    dates = s["snapshot_dates"]
+    from data.baselines import baseline, observations
+    rows = observations()
+    at = max(r["observed_at"] for r in rows)
+    b = baseline("rtx 5070 ti", at, rows=rows)
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
-                 display="No verified savings yet: the only was prices captured (Best Buy) equal the price",
-                 count=s["asks"]["n"], date_range={"from": dates[0], "to": dates[-1]}, origin="MIRROR",
-                 source_run="python3 -m data.mirror.price_spread",
-                 detail={"asks": s["asks"], "baseline": {k: v for k, v in s["baseline"].items() if k != "dates"},
-                         "out_of_stock_left_out": s["out_of_stock"]},
-                 note="Store asks vs 5 eBay sales from one day, mixed condition: the gap is not a markup and not a saving. "
+                 display="No verified savings yet: the only prices captured (Best Buy) equal the price",
+                 count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
+                 source_run="python3 -m data.baselines",
+                 detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
+                         "sold_kept_out": b["sold"], "marketplace": b["marketplace"]},
+                 note=f"Unconfirmed reference (not a baseline): median ${b['reference_unconfirmed'] or b['median']:,.2f} of {b['n']} in-stock retail asks ({b['status']}: a baseline needs two "
+                      "dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. "
                       "SIM savings, when they exist, go in a separate column and are never added to real ones.")
 
 

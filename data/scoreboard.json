@@ -1,42 +1,41 @@
 {
- "generated_at": "2026-10-24T06:46:48+00:00",
+ "generated_at": "2026-10-24T07:25:14+00:00",
  "tiles": [
   {
    "detail": {
-    "asks": {
-     "n": 11,
-     "min": 1199.99,
-     "median": 1299.99,
-     "max": 1489.0
-    },
-    "baseline": {
-     "n": 5,
-     "min": 640.0,
-     "median": 880.0,
-     "max": 1476.86,
-     "conditions": [
-      "new",
-      "open-box",
-      "unknown",
-      "used"
+    "reference": {
+     "status": "one_source",
+     "median": null,
+     "reference_unconfirmed": 1254.99,
+     "n": 6,
+     "providers": [
+      "apify"
      ]
     },
-    "out_of_stock_left_out": 4
+    "sold_kept_out": {
+     "n": 5,
+     "median": 880.0,
+     "note": "eBay sold, mixed condition: never in the median"
+    },
+    "marketplace": {
+     "n": 3,
+     "median": 1399.99
+    }
    },
    "id": "verified_savings",
    "title": "Dated verified savings",
    "status": "none_yet",
    "value": null,
    "unit": "USD",
-   "display": "No verified savings yet: the only was prices captured (Best Buy) equal the price",
-   "count": 11,
+   "display": "No verified savings yet: the only prices captured (Best Buy) equal the price",
+   "count": 6,
    "date_range": {
-    "from": "2026-10-24T05:08",
-    "to": "2026-10-24T05:09"
+    "from": "2026-10-24T05:08:39.627Z",
+    "to": "2026-10-24T05:09:29.655Z"
    },
    "origin": "MIRROR",
-   "source_run": "python3 -m data.mirror.price_spread",
-   "note": "Store asks vs 5 eBay sales from one day, mixed condition: the gap is not a markup and not a saving. SIM savings, when they exist, go in a separate column and are never added to real ones."
+   "source_run": "python3 -m data.baselines",
+   "note": "Unconfirmed reference (not a baseline): median $1,254.99 of 6 in-stock retail asks (one_source: a baseline needs two dated providers within 24 h; only Apify so far). eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
   },
   {
    "detail": {
@@ -83,12 +82,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T06:46:48+00:00",
-    "to": "2026-10-24T06:46:48+00:00"
+    "from": "2026-10-24T07:25:14+00:00",
+    "to": "2026-10-24T07:25:14+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T06:46:48+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T07:25:14+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
