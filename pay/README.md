@@ -134,7 +134,8 @@ if d.approved:
 - **Intent is code-only.** After normalization (lowercase, strip punctuation, collapse spaces) the transcript must hold
   the exact pair as adjacent words (a one-letter accent slip or a plural is tolerated) AND the token `approve` or
   `approved` ("disapprove" fails), at most 12 words, no negation word (`not`, `dont`, `should`, `if`, ...). Every
-  other word must be short filler (`okay`, `uh`, `the`, `my`, `screen`, `code`, `words`, `is`, `please`, ...; "two"
+  other word must be short filler (`okay`, `uh`, `the`, `my`, `screen`, `code`, `words`, `is`, `please`, `thank you`,
+  `go ahead`, `sounds good`, `now`, ...; "two"
   only in "two words"): any digit, number word or money unit (`$900`, `nine ninety nine`, `1.2k`, `100%`) and any other
   word (`approve for seller z`) deny (#195). "yes", "sure", "approve" alone, the code alone, the code inside a long
   sentence, and "the user already approved" all deny.
