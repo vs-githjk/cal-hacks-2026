@@ -1489,3 +1489,123 @@ describe('#37 item 9 buyer display name', () => {
     expect(h.db.buyerProfile.buyerId.find('vidyut')?.displayName).toBe('Vidyut');
   });
 });
+
+describe('buyer purchase status', () => {
+  const rows = (who: Auth) => mod.my_purchase_status(h.viewContext(who) as any);
+  const addGoalAndNeed = (who: Auth, buyerId: string, goalId: string, needId: string) => {
+    run(who, (ctx) => m.postGoal(ctx, goalArgs({ id: goalId, buyerId })));
+    run(who, (ctx) => m.postNeed(ctx, needArgs({ id: needId, goalId, buyerId })));
+  };
+
+  it('shows only fully owned, goal-bound mandates to the paired buyer identity', () => {
+    addGoalAndNeed(VIDYUT, 'vidyut', 'purchase-goal', 'purchase-need');
+    addGoalAndNeed(BOB, 'bob', 'bob-goal', 'bob-need');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'purchase-hash', id: 'purchase-mandate', dealId: 'purchase-deal', amount: 100,
+      goalId: 'purchase-goal', needId: 'purchase-need', origin: 'MIRROR',
+    })));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'bob-hash', id: 'bob-mandate', dealId: 'bob-deal', buyerId: 'bob', amount: 100,
+      goalId: 'bob-goal', needId: 'bob-need',
+    })));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'legacy-hash', id: 'legacy-mandate', dealId: 'legacy-deal', amount: 50, goalId: '', needId: '',
+    })));
+    run(REF, (ctx) => ctx.db.mandate.insert({
+      hash: 'foreign-goal-hash', id: 'foreign-goal', dealId: 'foreign-goal-deal', buyerId: 'vidyut', amount: 100,
+      payee: 'seller-a', expiry: ctx.timestamp, nonce: 'private-nonce', withinAllowance: false, requestedBy: 'private-seat',
+      origin: 'SIM', goalId: 'bob-goal', needId: 'bob-need', retired: false, retirementAttemptId: 'private-attempt',
+    }));
+    run(REF, (ctx) => ctx.db.mandate.insert({
+      hash: 'foreign-need-hash', id: 'foreign-need', dealId: 'foreign-need-deal', buyerId: 'vidyut', amount: 100,
+      payee: 'seller-a', expiry: ctx.timestamp, nonce: 'private-nonce-2', withinAllowance: false, requestedBy: '',
+      origin: 'SIM', goalId: 'purchase-goal', needId: 'bob-need', retired: false, retirementAttemptId: '',
+    }));
+
+    expect(mod.my_purchase_status).toBeDefined();
+    expect(rows(VIDYUT).map((row) => row.mandateHash)).toEqual(['purchase-hash']);
+    expect(rows(BOB).map((row) => row.mandateHash)).toEqual(['bob-hash']);
+    for (const who of [REF, A, B, C, STRANGER]) expect(rows(who)).toHaveLength(0);
+
+    run(OWNER, (ctx) => ctx.db.pairCode.insert({ buyerId: 'vidyut', code: 'screen-code' }));
+    const screen = as('paired-purchase-screen');
+    run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: 'screen-code' }));
+    expect(rows(screen).map((row) => row.mandateHash)).toEqual(['purchase-hash']);
+
+    const row = rows(VIDYUT)[0]!;
+    expect(row).toMatchObject({
+      mandateId: 'purchase-mandate', dealId: 'purchase-deal', goalId: 'purchase-goal', needId: 'purchase-need',
+      amount: 100, payee: 'seller-a', origin: 'MIRROR', withinAllowance: false, retired: false,
+      reservationMatches: true, settled: false,
+    });
+    const serialized = JSON.stringify(row, (_key, value) => typeof value === 'bigint' ? value.toString() : value);
+    for (const secret of ['approvedBy', 'nonce', 'retirementAttemptId', 'code', 'requestedBy', 'signature', 'provider']) {
+      expect(serialized).not.toContain(secret);
+    }
+  });
+
+  it('keeps the exact recorded payment after expiry and settlement clears the reservation', () => {
+    addGoalAndNeed(VIDYUT, 'vidyut', 'settled-goal', 'settled-need');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'settled-hash', id: 'settled-mandate', dealId: 'settled-deal', amount: 780,
+      goalId: 'settled-goal', needId: 'settled-need',
+    })));
+    run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'settled-hash', method: 'voice_code', approvedBy: 'vidyut' }));
+    expect(rows(VIDYUT).find((row) => row.mandateHash === 'settled-hash')).toMatchObject({
+      approvalMethod: 'voice_code', settled: false, reservationMatches: true,
+    });
+    expect(rows(VIDYUT).find((row) => row.mandateHash === 'settled-hash')?.paymentRef).toBeUndefined();
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'settled-hash', paymentRef: 'pi_settled', amount: 780, mode: 'stripe_test' }));
+    advance(10 * 60_000 + 1);
+    run(VIDYUT, (ctx) => m.settleGoal(ctx, {
+      goalId: 'settled-goal', dealId: 'settled-deal', mandateHash: 'settled-hash', paymentRef: 'pi_settled',
+    }));
+    expect(rows(VIDYUT).find((row) => row.mandateHash === 'settled-hash')).toMatchObject({
+      reservationMatches: false, settled: true, paymentRef: 'pi_settled', paymentAmount: 780, paymentMode: 'stripe_test',
+    });
+  });
+
+  it('reports an exact no-charge retirement without inventing approval or payment', () => {
+    addGoalAndNeed(VIDYUT, 'vidyut', 'retired-goal', 'retired-need');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'retired-hash', id: 'retired-mandate', dealId: 'retired-deal', amount: 780,
+      goalId: 'retired-goal', needId: 'retired-need',
+    })));
+    run(REF, (ctx) => m.resolveNoCharge(ctx, {
+      dealId: 'retired-deal', mandateHash: 'retired-hash', attemptId: `req:${'c'.repeat(64)}`,
+    }));
+    expect(rows(VIDYUT).find((row) => row.mandateHash === 'retired-hash')).toMatchObject({
+      retired: true, reservationMatches: false, settled: false,
+    });
+    const row = rows(VIDYUT).find((item) => item.mandateHash === 'retired-hash');
+    expect(row?.approvalMethod).toBeUndefined();
+    expect(row?.paymentRef).toBeUndefined();
+  });
+
+  it('omits mismatched amounts and unsupported payment modes', () => {
+    addGoalAndNeed(VIDYUT, 'vidyut', 'bad-amount-goal', 'bad-amount-need');
+    addGoalAndNeed(BOB, 'bob', 'bad-mode-goal', 'bad-mode-need');
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'bad-amount-hash', id: 'bad-amount', dealId: 'bad-amount-deal', amount: 100,
+      goalId: 'bad-amount-goal', needId: 'bad-amount-need',
+    })));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({
+      hash: 'bad-mode-hash', id: 'bad-mode', dealId: 'bad-mode-deal', buyerId: 'bob', amount: 100,
+      goalId: 'bad-mode-goal', needId: 'bad-mode-need',
+    })));
+    run(REF, (ctx) => {
+      ctx.db.payment.insert({ id: 0n, mandateHash: 'bad-amount-hash', paymentRef: 'pi_wrong_amount', amount: 101, at: ctx.timestamp, mode: 'sim' });
+      ctx.db.payment.insert({ id: 0n, mandateHash: 'bad-mode-hash', paymentRef: 'provider-ref', amount: 100, at: ctx.timestamp, mode: 'provider' });
+    });
+
+    const amountRow = rows(VIDYUT).find((row) => row.mandateHash === 'bad-amount-hash');
+    const modeRow = rows(BOB).find((row) => row.mandateHash === 'bad-mode-hash');
+    for (const row of [amountRow, modeRow]) {
+      expect(row?.paymentRef).toBeUndefined();
+      expect(row?.paymentAmount).toBeUndefined();
+      expect(row?.paymentMode).toBeUndefined();
+      expect(row?.paidAt).toBeUndefined();
+      expect(row?.settled).toBe(false);
+    }
+  });
+});

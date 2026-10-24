@@ -180,6 +180,18 @@ export const my_allowance = spacetimedb.view({ name: 'my_allowance', public: tru
 export const my_notifications = spacetimedb.view({ name: 'my_notifications', public: true }, t.array(notification.rowType), (ctx) => m.myNotificationsView(ctx));
 export const my_goal_step_events = spacetimedb.view({ name: 'my_goal_step_events', public: true }, t.array(goalStepEvent.rowType), (ctx) => m.myGoalStepEventsView(ctx));
 
+const PurchaseStatusRow = t.object('PurchaseStatusRow', {
+  mandateHash: t.string(), mandateId: t.string(), dealId: t.string(), goalId: t.string(), needId: t.string(),
+  amount: t.f64(), payee: t.string(), expiry: t.timestamp(), origin: t.string(), withinAllowance: t.bool(),
+  retired: t.bool(), reservationMatches: t.bool(), settled: t.bool(),
+  approvalMethod: t.option(t.string()), approvedAt: t.option(t.timestamp()),
+  paymentRef: t.option(t.string()), paymentAmount: t.option(t.f64()), paymentMode: t.option(t.string()),
+  paidAt: t.option(t.timestamp()),
+});
+export const my_purchase_status = spacetimedb.view(
+  { name: 'my_purchase_status', public: true }, t.array(PurchaseStatusRow), (ctx) => m.myPurchaseStatusView(ctx),
+);
+
 const PendingApprovalRow = t.object('PendingApprovalRow', {
   mandateHash: t.string(), mandateId: t.string(), amount: t.f64(), payee: t.string(), expiry: t.timestamp(), code: t.string(),
   failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp(), codeExpiresAt: t.timestamp(), origin: t.string(),

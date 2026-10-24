@@ -1115,6 +1115,46 @@ export function myGoalStepEventsView(ctx: VCtx) {
   return id ? [...ctx.db.goalStepEvent.buyerId.filter(id)] : [];
 }
 
+/** Read-only purchase history for the authenticated buyer's own fully bound Goals and Needs. */
+export function myPurchaseStatusView(ctx: VCtx) {
+  const buyerId = myBuyerId(ctx);
+  if (!buyerId) return [];
+  return [...ctx.db.mandate.iter()].flatMap((md) => {
+    if (md.buyerId !== buyerId || !md.goalId || !md.needId) return [];
+    const ownedGoal = ctx.db.goal.id.find(md.goalId);
+    const ownedNeed = ctx.db.need.id.find(md.needId);
+    if (!ownedGoal || ownedGoal.buyerId !== buyerId || !ownedNeed
+        || ownedNeed.buyerId !== buyerId || ownedNeed.goalId !== ownedGoal.id) return [];
+
+    const approval = ctx.db.approval.mandateHash.find(md.hash);
+    const payment = ctx.db.payment.mandateHash.find(md.hash);
+    const exactPayment = payment && payment.amount === md.amount
+      && (payment.mode === 'sim' || payment.mode === 'stripe_test') ? payment : undefined;
+    return [{
+      mandateHash: md.hash,
+      mandateId: md.id,
+      dealId: md.dealId,
+      goalId: ownedGoal.id,
+      needId: ownedNeed.id,
+      amount: md.amount,
+      payee: md.payee,
+      expiry: md.expiry,
+      origin: md.origin,
+      withinAllowance: md.withinAllowance,
+      retired: md.retired,
+      reservationMatches: ownedGoal.reservedAmount === md.amount
+        && ownedGoal.reservedDealId === md.dealId && ownedGoal.reservedMandateHash === md.hash,
+      settled: ownedGoal.state === 'DONE' && ownedGoal.poNumber === md.dealId && !!exactPayment,
+      approvalMethod: approval?.method,
+      approvedAt: approval?.at,
+      paymentRef: exactPayment?.paymentRef,
+      paymentAmount: exactPayment?.amount,
+      paymentMode: exactPayment?.mode,
+      paidAt: exactPayment?.at,
+    }];
+  });
+}
+
 // ---------------------------------------------------------------- demo operator
 
 export function resetDemoChecked(ctx: Ctx) {
