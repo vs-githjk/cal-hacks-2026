@@ -161,7 +161,7 @@ def settle_offer(transaction: Mapping[str, Any], request_payment: Any, merchant_
     settlement = {"message_id": message_id, "request_sha256": hashlib.sha256(body).hexdigest(),
         "mandate_hash": mandate["hash"], "deal_id": tx["deal_id"], "buyer_id": tx["buyer_id"],
         "amount_cents": amount_cents, "currency": funds[0]["currency"], "payee": parsed["recipient"],
-        "idempotency_key": "mandate:" + mandate["hash"],
+        "idempotency_key": "mandate:" + mandate["hash"], "mode": tx.get("mode"),
         "receipt_keyid": receipt.get("keyid") if isinstance(receipt.get("keyid"), str) else ""}
     headers = sign_request(method="POST", url=merchant_url, body=body, mandate=mandate,
                            private_key=tap_private_key, now=now)

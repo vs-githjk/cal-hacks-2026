@@ -289,7 +289,8 @@ def test_foreign_typed_reply_does_not_use_or_consume_the_owner_approval():
 
 def test_settlement_formatter_uses_only_matching_returned_envelope():
     mandate_hash = "a" * 64
-    envelope = {"settlement": {"deal_id": "deal-1", "amount_cents": 7525, "mandate_hash": mandate_hash},
+    envelope = {"settlement": {"deal_id": "deal-1", "amount_cents": 7525, "mandate_hash": mandate_hash,
+                                "mode": "SIM"},
         "settlement_result": {"status": "charged", "charge_id": "pi_test_1", "mandate_hash": mandate_hash,
                               "origin": "SIM"}}
     text = format_settlement_result(envelope)
@@ -300,3 +301,12 @@ def test_settlement_formatter_uses_only_matching_returned_envelope():
         **envelope["settlement_result"], "origin": "untrusted-origin"}})
     uncertain = format_settlement_result({**envelope, "settlement_result": {"status": "uncertain"}})
     assert uncertain.startswith("Payment uncertain")
+    for invalid_mode in (None, "untrusted", "stripe_test; charged"):
+        invalid = {**envelope, "settlement": {**envelope["settlement"], "mode": invalid_mode}}
+        assert format_settlement_result(invalid) == "Payment mode unavailable; do not mark this purchase paid."
+    assert "confirmed" not in format_settlement_result({**envelope, "settlement_result": {
+        **envelope["settlement_result"], "origin": "stripe_test"}})
+    assert "confirmed" not in format_settlement_result({**envelope, "settlement_result": {
+        **envelope["settlement_result"], "charge_id": "pi_\nforged"}})
+    assert "unavailable" in format_settlement_result({**envelope, "settlement": {
+        **envelope["settlement"], "mandate_hash": "A" * 64}})

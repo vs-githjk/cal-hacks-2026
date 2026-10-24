@@ -7,6 +7,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from agents.buyer import checkout
+from agents.buyer.chat_approval import format_settlement_result
 from pay.approval import ApprovalService
 from pay.mandate import new_mandate
 from pay.tap import keyring, verify_request
@@ -115,8 +116,10 @@ def test_checkout_cents_parser_rejects_nonfinite_and_unbounded_decimal(amount):
     assert checkout._cents(amount) is None
 
 
-def test_settle_offer_signs_and_submits_exact_bytes_and_binding(tx):
+@pytest.mark.parametrize("mode", ["SIM", "stripe_test"])
+def test_settle_offer_signs_and_submits_exact_bytes_and_binding(tx, mode):
     set_approved(tx)
+    tx["mode"] = mode
     private = Ed25519PrivateKey.generate()
     req = payment_request(tx["mandate"], "seller-1")
     body = req.model_dump_json().encode("utf-8")
@@ -132,6 +135,9 @@ def test_settle_offer_signs_and_submits_exact_bytes_and_binding(tx):
     result = checkout.settle_offer(tx, req, Merchant(), receipt={"receipt_id": "r", "keyid": "k"},
         message_id=message_id, tap_private_key=private, merchant_url="https://merchant.test/pay", now=NOW)
     assert result["settlement_result"]["status"] == "charged"
+    assert result["settlement_result"]["origin"] == "SIM"
+    assert result["settlement"]["mode"] == mode
+    assert format_settlement_result(result).startswith(f"{mode} payment confirmed")
     assert seen["body"] == body and seen["message_id"] == message_id and seen["buyer_id"] == "buyer-1"
     verdict = verify_request(method=seen["method"], url=seen["url"], headers=seen["headers"], body=body,
         keys=keyring(private.public_key()), store=NonceStore(), now=NOW,
