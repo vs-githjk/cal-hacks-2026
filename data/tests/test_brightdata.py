@@ -97,6 +97,33 @@ def test_c_202_polls_at_most_three_times_then_slow(monkeypatch, clean):
     assert bd.status()["last_result"] == "slow"
 
 
+def test_c1_read_timeout_outlasts_the_servers_one_minute_wait():
+    # Bright Data's sync /scrape holds the request up to 60 s before it answers 202; a shorter client timeout would give up first.
+    assert bd.TIMEOUT.read > 60
+
+
+def test_c1b_read_timeout_on_the_scrape_is_slow_not_error(monkeypatch):
+    monkeypatch.setenv("BRIGHT_DATA_API_KEY", KEY)
+
+    def boom(request):
+        raise httpx.ReadTimeout("no answer yet", request=request)
+
+    fake = Fake(boom)
+    assert bd.observations(client=fake.client(), now=NOW, urls=[ASUS_BB]) == []
+    assert bd.status()["last_result"] == "slow"
+    assert bd.last_error() == "ReadTimeout" and len(fake.requests) == 1  # one request, never retried
+
+
+def test_c1c_connect_timeout_is_still_an_error(monkeypatch):
+    monkeypatch.setenv("BRIGHT_DATA_API_KEY", KEY)
+
+    def boom(request):
+        raise httpx.ConnectTimeout("unreachable", request=request)
+
+    assert bd.observations(client=Fake(boom).client(), now=NOW, urls=[ASUS_BB]) == []
+    assert bd.status()["last_result"] == "error"
+
+
 def test_c2_202_ready_downloads_the_snapshot(monkeypatch):
     monkeypatch.setenv("BRIGHT_DATA_API_KEY", KEY)
     fake = Fake(httpx.Response(202, json={"snapshot_id": "s_9"}),

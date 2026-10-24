@@ -5,7 +5,7 @@ observations() returns the same row dicts as data.baselines.observations() with 
 raises NotConfigured before any network attempt.
 
 How it fails, always visibly through status()["last_result"] and never with an invented price:
-  ok | slow (202, still running after 3 polls) | empty (no record, dead page or no price) | blocked (429, one request,
+  ok | slow (202 still running after 3 polls, or no answer within the read timeout) | empty (no record, dead page or no price) | blocked (429, one request,
   then a 5 minute cooldown with no calls) | not_active (HTTP 400 "Customer is not active", no retry) | error | budget
   (BRIGHT_DATA_MAX_CALLS scrape calls per process, default 8) | not_configured.
 
@@ -36,7 +36,9 @@ MAX_POLLS = 3
 DEFAULT_RETRY_AFTER = 3.0
 MAX_RETRY_AFTER = 10.0
 COOLDOWN_SECONDS = 300.0  # 25 requests in 5 minutes blocks the IP; after a 429 we make no call for this long
-TIMEOUT = httpx.Timeout(60.0, connect=15.0)  # the live smoke took about 20 s
+# Bright Data's sync /scrape holds the request up to 60 s before it answers 202, so the read timeout must be longer or
+# the 202 (and its snapshot_id) arrives after the client has already given up. The live smoke took about 20 s.
+TIMEOUT = httpx.Timeout(75.0, connect=15.0)
 HOSTS = {"bestbuy.com": "bestbuy", "newegg.com": "newegg", "microcenter.com": "microcenter", "bhphotovideo.com": "bh"}
 PRIORITY = ("blocked", "not_active", "slow", "error", "empty", "budget")
 
@@ -149,8 +151,12 @@ def _retry_after(resp: httpx.Response) -> float:
 
 def _one(client: httpx.Client, headers: dict, target: dict, store_info: dict, now: datetime) -> tuple[str, list[dict]]:
     """One target, one scrape request. Returns (state, rows). Never retries a failure; only a 202 is polled."""
-    resp = client.post(f"{API}/scrape", params={"dataset_id": store_info["dataset_id"], "format": "json", "include_errors": "true"},
-                       json={"input": [{"url": target["url"]}], "custom_output_fields": FIELDS}, headers=headers)
+    try:
+        resp = client.post(f"{API}/scrape", params={"dataset_id": store_info["dataset_id"], "format": "json", "include_errors": "true"},
+                           json={"input": [{"url": target["url"]}], "custom_output_fields": FIELDS}, headers=headers)
+    except httpx.ReadTimeout as e:
+        _state["error"] = type(e).__name__
+        return "slow", []  # connected but no answer yet: the scrape is still running, not a failure (never retried)
     if resp.status_code == 429:
         return "blocked", []
     if resp.status_code == 400 and "not active" in resp.text.lower():
