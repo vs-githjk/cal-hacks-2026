@@ -236,7 +236,7 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
     wanted = {i["sku_spec"]: i.get("condition") for i in need.get("items", [])}
     cards = []
     shills = _group_shills(bids)
-    cap = need.get("spend_limit")
+    in_cap = need.get("in_cap_bid_ids")  # ids only: the buyer keeps the cap itself sealed
     staged = []
     for bid in bids:
         warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted)
@@ -247,8 +247,9 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
                                   (kept.get("lines") or [{}])[0].get("listing_url", ""), 0))
         staged.append((bid, warnings))
     # #115: a bid inside the cap with a confirmed fit outranks any bid whose fit is unknown
-    confirmed = any(not {"fit", "fit_unknown"} & {w["kind"] for w in ws}
-                    and (cap is None or b["total_landed_price"] <= cap) for b, ws in staged)
+    # a bid vetoed for any other reason is not a confirmed fit; a missing id list never vetoes
+    confirmed = in_cap is not None and any(
+        b["id"] in in_cap and not ({"fit", "fit_unknown"} | VETO_KINDS) & {w["kind"] for w in ws} for b, ws in staged)
     for bid, warnings in staged:
         if confirmed and any(w["kind"] == "fit_unknown" for w in warnings) and not any(w["kind"] == "fit" for w in warnings):
             url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""

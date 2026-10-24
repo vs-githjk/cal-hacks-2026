@@ -8,6 +8,13 @@ def sealed(need: dict) -> dict:
     return {k: v for k, v in need.items() if k != "spend_limit"}
 
 
+def advice_need_for(need: dict, owned: dict, bids: list[dict]) -> dict:
+    """What the advocate sees: the sealed Need, owned parts, and the ids (never amounts) of bids inside the cap."""
+    out = dict(sealed(need), owned=owned)
+    out["in_cap_bid_ids"] = [b["id"] for b in bids if b["total_landed_price"] <= need["spend_limit"]]
+    return out
+
+
 def decide(need: dict, best_bid: dict, auto_limit: float) -> str:
     total = best_bid["total_landed_price"]
     if total <= auto_limit and total <= need["spend_limit"]:
