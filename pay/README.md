@@ -156,3 +156,31 @@ The call answers "why not the cheaper one?" only from a closed-schema reason. `r
 curl -s localhost:8787/v1/advocate/reason -d '{"rule_id":"fit.gpu_length","source_url":"https://example.com/listing"}'
 ```
 Lane A also renders the same table in code (`call_reason` in `agents/advocate/checks.py`); keep the two tables in step.
+
+## Approval call over Cartesia (`pay/voice_cartesia.py`, issue #13)
+A Cartesia MANAGED agent ("Tech Bazaar approval") only talks. Our code decides: it issues the mandate and the
+word-pair code (on-screen only), places the call, waits for it to end, reads the transcript from Cartesia and
+feeds each BUYER utterance to `ApprovalSession.approve`. Silence, hang-up, voicemail, a failed dial, a timeout or no
+transcript all deny. `can_charge` passes only after an approved session.
+```
+python3 -m pay.voice_cartesia --dry-run --env-file /abs/path/.env   # prints the variables; no network, no code
+python3 -m pay.voice_cartesia --check   --env-file /abs/path/.env   # read-only GET of the agent, prints the outcome
+python3 -m pay.voice_cartesia --demo    --env-file /abs/path/.env   # ONE real call, beat 4, Tony Stark / Best Buy
+python3 -m pytest pay/tests/test_voice_cartesia.py                  # 34 tests, no network
+```
+- Env names (values never printed): `CARTESIA_API_KEY`, `CARTESIA_AGENT_ID`, `APPROVAL_CALL_TO` (the only number
+  ever dialed; no flag overrides it), optional `CARTESIA_PHONE_NUMBER_ID` (else the agent's own number is looked up).
+- Sent to Cartesia as dynamic variables: `buyer_name`, `deal_script` (opening + deal line from `script_for`) and
+  `why_answer` (closed-schema advocate reason). Never the code, never seller text; `assert_clean` refuses to dial if
+  the code appears in any value.
+- Endpoints (header `Cartesia-Version: 2026-08-14`): `POST /agents/calls`, `GET /agents/calls/{id}` (status,
+  end_reason, transcript with roles `user` and `assistant`), `GET /agents/{id}`. Exact fields and doc links are in the
+  module docstring.
+- Only `role: user` entries count. Back-to-back user entries are one utterance (code and "approve" may arrive as two
+  STT turns); an assistant turn in between splits them. Utterances with no code word and no "approve" (a "hello", a
+  "why") are skipped so they do not burn the three tries; nothing is ever approved by skipping.
+- Time is the call's own clock (`start_time` + entry offset), so the 30 s cooldown and code expiry apply. The 10 s
+  listen window is not used (the call is over). The code lives 300 s for the call (service `code_ttl_seconds`),
+  still capped by the mandate's 10 minute expiry.
+- A call that times out (3 minute cap) cannot be cancelled through a documented endpoint; it is denied and anything
+  said after is ignored. Each call is one attempt budget on the mandate; a retry is a new run.
