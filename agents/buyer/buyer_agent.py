@@ -29,7 +29,7 @@ import state as buyer_state
 from market_bridge import MarketBridge, MarketBridgeError
 from advocate.mock_data import BASELINE
 from chat_diagnostics import ChatDiagnostics
-from chat_trace import round_trace
+from chat_trace import _safe as chat_trace_safe, _source as chat_trace_source, round_trace
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
 from logic import advice_need_for, decide, make_order, sealed
 
@@ -869,7 +869,22 @@ async def conclude(ctx: Context, reviewed: bool):
             and crs.eligible(winner["supplier_id"], seller_checks.get(winner["supplier_id"]), now_utc) else None)
     asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
     out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
-    vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
+    vetoed_bids = [(n, b) for n, b in enumerate(bids, 1) if cards.get(b["id"], {}).get("recommendation") == "veto"]
+    vetoed = [b["persona"] for _, b in vetoed_bids]
+    if vetoed_bids:
+        # Closed card fields and the seller label only: never seller-written text.
+        pick = bids[best - 1] if best and cards.get(bids[best - 1]["id"], {}).get("recommendation") != "veto" else None
+        nxt = (f"Next best: bid #{best}, {pick['persona']} at ${pick['total_landed_price']:.2f}."
+               if pick else "No next best.")
+        for _, b in vetoed_bids:
+            c = cards[b["id"]]
+            src = chat_trace_source(c.get("source_url"))
+            src = "no source" if src == "source unavailable" else f"source {src}"
+            out.append(f"Vetoed {b['persona']}: {chat_trace_safe(c.get('reason')).rstrip('.')} ({src}).")
+        if len(vetoed_bids) == 1:
+            out[-1] += f" {nxt}"
+        else:
+            out.append(nxt)
     if vetoed:
         await emit(ctx, "veto", f"Advocate vetoed {len(vetoed)} bid(s): {', '.join(vetoed)}.")
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
