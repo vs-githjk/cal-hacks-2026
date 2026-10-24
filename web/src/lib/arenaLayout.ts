@@ -25,6 +25,7 @@ export interface StageState {
 }
 
 export const STACK_MAX = 12;
+export const ANON_MAX = 8; // anonymous sealed bidders drawn at most; the caption states the real count
 export const TIER_Y = [0, 0.22, 0.44] as const;
 export const TABLE = { x: 0, y: 0.5, z: 0.35 } as const; // the ledger table's center; its top is at y 0.56
 export const WINNER_SEAT = { x: 0.8, y: 0.44, z: -0.2 } as const;
@@ -101,8 +102,9 @@ export function stageAt(scene: ArenaScene, beat: number): StageState {
 
   const dimFixed = crown;
   actors.buyer = pose(0, TIER_Y[2], -0.35, 0, 2);
-  actors.advocate = pose(-2.5, TIER_Y[1], 1.5, faceCenter(-2.5, 1.5), 1, { dim: dimFixed, pitch: acting.has("advocate") ? LEAN : 0 });
-  actors.shield = pose(2.5, TIER_Y[1], 1.5, faceCenter(2.5, 1.5), 1, { dim: dimFixed, pitch: acting.has("shield") ? LEAN : 0 });
+  // The advocate and the Shield stand at the sides of the stage, on the floor, like officials at a ring.
+  actors.advocate = pose(-4.1, TIER_Y[0], 0.4, faceCenter(-4.1, 0.4), 0, { dim: dimFixed, pitch: acting.has("advocate") ? LEAN : 0 });
+  actors.shield = pose(4.1, TIER_Y[0], 0.4, faceCenter(4.1, 0.4), 0, { dim: dimFixed, pitch: acting.has("shield") ? LEAN : 0 });
   actors.referee = pose(TABLE.x, TABLE.y, TABLE.z, 0, 2);
 
   scene.offers.forEach((o: SceneOffer, i) => {
@@ -137,6 +139,14 @@ export function stageAt(scene: ArenaScene, beat: number): StageState {
     cards[o.bidId] = card;
     marks[o.bidId] = mark;
   });
+
+  // Anonymous sealed bidders: one grey figure per sealed envelope until the close names them. Nobody's identity is public before
+  // close, so these carry no name; at arrive the named sellers take the same seats. Keys anon:0 to anon:ANON_MAX-1, always present.
+  const anonCount = arrived ? 0 : closed ? Math.min(n, ANON_MAX) : Math.min(sealed, ANON_MAX);
+  for (let i = 0; i < ANON_MAX; i++) {
+    const seat = seatOf(Math.max(anonCount, 1), Math.min(i, Math.max(anonCount - 1, 0)));
+    actors[`anon:${i}`] = pose(seat.x, 0, seat.z, seat.yaw, 0, { visible: i < anonCount });
+  }
 
   const taken = arrived ? Math.min(n, sealed) : 0;
   const stackCount = scene.phase === "waiting" ? 0 : sealed - taken;

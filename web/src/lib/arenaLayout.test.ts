@@ -40,12 +40,21 @@ test("before close no offer is visible and the stack follows sealedCount, capped
     const s = stageAt(scene({ sealedCount: sealed, offers: [] }), 0);
     assert.equal(s.stackCount, stack);
     assert.equal(s.crown, false);
-    assert.deepEqual(Object.keys(s.actors).sort(), ["advocate", "buyer", "referee", "shield"]);
+    assert.deepEqual(Object.keys(s.actors).filter((k) => !k.startsWith("anon:")).sort(), ["advocate", "buyer", "referee", "shield"]);
+    // one anonymous sealed bidder per envelope, at most 8, with no identity
+    const anon = Object.keys(s.actors).filter((k) => k.startsWith("anon:") && s.actors[k]!.visible);
+    assert.equal(anon.length, Math.min(sealed, 8));
   }
   const closed = stageAt(five(), 0);
   assert.equal(closed.stackCount, 5);
   for (const k of OFFER_KEYS) assert.equal(closed.actors[k]!.visible, false, k);
   for (const id of ["a", "b", "c", "d", "e"]) assert.equal(closed.cards[id], "stack", id);
+  // before arrive, the anonymous bidders stand in the seats the named offers will take
+  for (let i = 0; i < 5; i++) {
+    assert.equal(closed.actors[`anon:${i}`]!.visible, true);
+    assert.equal(closed.actors[`anon:${i}`]!.x, stageAt(five(), 1).actors[OFFER_KEYS[i]!]!.x);
+  }
+  assert.equal(Object.keys(stageAt(five(), 1).actors).filter((k) => k.startsWith("anon:") && stageAt(five(), 1).actors[k]!.visible).length, 0);
 });
 
 test("waiting shows an empty dais with the light on the buyer; closing dims the key light to 70 percent", () => {
@@ -61,8 +70,8 @@ test("waiting shows an empty dais with the light on the buyer; closing dims the 
 test("the fixed cast stands where the design puts it", () => {
   const s = stageAt(scene(), 0);
   assert.deepEqual([s.actors.buyer!.x, s.actors.buyer!.y, s.actors.buyer!.z, s.actors.buyer!.tier], [0, 0.44, -0.35, 2]);
-  assert.deepEqual([s.actors.advocate!.x, s.actors.advocate!.y, s.actors.advocate!.z, s.actors.advocate!.tier], [-2.5, 0.22, 1.5, 1]);
-  assert.deepEqual([s.actors.shield!.x, s.actors.shield!.y, s.actors.shield!.z], [2.5, 0.22, 1.5]);
+  assert.deepEqual([s.actors.advocate!.x, s.actors.advocate!.y, s.actors.advocate!.z, s.actors.advocate!.tier], [-4.1, 0, 0.4, 0]);
+  assert.deepEqual([s.actors.shield!.x, s.actors.shield!.y, s.actors.shield!.z], [4.1, 0, 0.4]);
   assert.deepEqual([s.actors.referee!.x, s.actors.referee!.y, s.actors.referee!.z], [0, 0.5, 0.35]);
   for (const k of ["buyer", "advocate", "shield", "referee"]) assert.equal(s.actors[k]!.visible, true, k);
 });

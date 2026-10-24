@@ -675,8 +675,8 @@ test("story: open with nothing sealed says when sellers can bid until; the hero 
 });
 
 test("story: open with sealed offers counts them, singular for one, and keeps prices hidden", () => {
-  assert.equal(storyFor(openWith(3), pbAt(openWith(3), 0)).caption, "3 sealed offers on the table. Prices stay hidden until the round closes.");
-  assert.equal(storyFor(openWith(1), pbAt(openWith(1), 0)).caption, "1 sealed offer on the table. Prices stay hidden until the round closes.");
+  assert.equal(storyFor(openWith(3), pbAt(openWith(3), 0)).caption, "3 sealed offers are in. Prices stay hidden until the round closes.");
+  assert.equal(storyFor(openWith(1), pbAt(openWith(1), 0)).caption, "1 sealed offer is in. Prices stay hidden until the round closes.");
 });
 
 test("story: closing waits for the referee", () => {

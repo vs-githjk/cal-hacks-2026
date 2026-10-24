@@ -107,49 +107,52 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
 
   const story = storyFor(scene, view);
   const reveal = revealAt(scene, view.beat);
-  const total = scene.beats.length;
 
   const top = <StoryTop story={story} sample={sample !== null} deadline={scene.phase === "open" ? scene.deadline : null} />;
-  const controls = total > 0 ? <Controls pb={view} total={total} story={story} act={act} /> : null;
+  const controls = <Controls pb={view} scene={scene} act={act} />;
 
   return (
-    <div className="grid gap-3.5">
+    <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
         <div className="text-[18px] font-bold tracking-[-0.01em]">
           Floor <span className="font-medium text-muted">every motion is a market row</span>
         </div>
         <div className="text-[14px] text-muted">{sample ? "Sample run" : scene.roundId ? `Round ${scene.roundId}` : "No round"}</div>
       </div>
-      <div className="grid gap-3.5 lg:grid-cols-[8fr_4fr]">
-        {flat ? (
-          <div className="grid min-w-0 content-start gap-3.5">
-            {top}
-            {controls}
-            <ActorList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
-          </div>
-        ) : (
+      {flat ? (
+        <div className="grid min-w-0 content-start gap-3.5">
+          {top}
+          {controls}
+          <ActorList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.5)]">
           <div className="relative min-w-0">
-            <div className="z-20 pointer-events-none pb-3 sm:absolute sm:inset-x-0 sm:top-0 sm:p-4">{top}</div>
             {webgl ? (
               <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
             ) : (
-              <div className="grid h-[420px] place-items-center rounded-[var(--radius)] bg-canvas text-muted sm:h-[560px]">Loading the floor...</div>
+              <div className="grid h-[440px] place-items-center bg-[#F1E7D9] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
             )}
-            {controls && <div className="z-20 pointer-events-none pt-3 sm:absolute sm:inset-x-0 sm:bottom-0 sm:p-4">{controls}</div>}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 p-4 sm:p-6">{top}</div>
             {disconnected && (
-              <div className="absolute inset-0 z-30 grid place-items-center rounded-[var(--radius)] bg-canvas/70">
+              <div className="absolute inset-0 z-30 grid place-items-center bg-canvas/70">
                 {everActive ? (
-                  <span className="rounded-lg bg-coral-soft px-3 py-2 font-semibold text-coral">market disconnected · the floor is still</span>
+                  <span className="rounded-lg bg-coral-soft px-3 py-2 font-semibold text-coral">Market disconnected. The floor is still.</span>
                 ) : (
                   <span className="rounded-lg bg-soft px-3 py-2 font-semibold text-muted">Connecting...</span>
                 )}
               </div>
             )}
           </div>
-        )}
+          <div className="border-t border-[#E4D8C6] bg-[#FBF8F3] px-4 py-3 sm:px-6">{controls}</div>
+        </div>
+      )}
+      <div className="grid gap-3.5 lg:grid-cols-[7fr_5fr]">
         <Card className="content-start">
           <Label>Offers</Label>
           <OffersList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
+        </Card>
+        <Card className="content-start">
           <Details scene={scene} reveal={reveal} events={rows.events} agentRows={agentRows} sample={sample} picked={picked} />
         </Card>
       </div>
@@ -177,41 +180,99 @@ function ClosesIn({ deadline, sample }: { deadline: Date; sample: boolean }) {
 /** Top left: the status line, the hero, the one-sentence caption and the quiet knockout note. Top right: the countdown while open. */
 function StoryTop({ story, sample, deadline }: { story: Story; sample: boolean; deadline: Date | null }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 rounded-2xl bg-white p-4 sm:bg-white/90 text-[#2B2A33] shadow-[0_6px_24px_rgba(90,60,40,0.18)]">
-        <p className="flex items-center gap-2 text-[13px] text-[#2B2A33]/70">
+    <div className="flex items-start justify-between gap-3 text-[#2B2A33]">
+      <div className="min-w-0 max-w-[46ch]">
+        {story.hero && <p className="text-[28px] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[36px]">{story.hero}</p>}
+        <p role="status" className="mt-1 text-[16px] leading-snug text-[#2B2A33]/85 sm:text-[18px]">{story.caption}</p>
+        {story.note && <p className="mt-1.5 text-[13px] leading-snug text-[#2B2A33]/65">{story.note}</p>}
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        <p className="flex items-center gap-2 text-[14px] text-[#2B2A33]/75">
           {story.status}
           {sample && <span className="rounded-md border border-dashed border-[#2B2A33]/50 px-1.5 py-0.5 font-mono text-[11px] font-semibold leading-[1.5] tracking-[0.06em]">SIM</span>}
         </p>
-        {story.hero && <p className="font-display text-[24px] leading-[1.1] sm:text-[30px]">{story.hero}</p>}
-        <p role="status" className="mt-1 max-w-[52ch] text-[16px] leading-snug">{story.caption}</p>
-        {story.note && <p className="mt-1.5 max-w-[52ch] text-[13px] leading-snug text-[#2B2A33]/70">{story.note}</p>}
+        {deadline && <ClosesIn deadline={deadline} sample={sample} />}
       </div>
-      {deadline && <ClosesIn deadline={deadline} sample={sample} />}
     </div>
   );
 }
 
 const BUTTON =
-  "pointer-events-auto inline-flex min-h-11 items-center rounded-full bg-white/95 px-4 text-[14px] font-medium text-[#2B2A33] shadow-[0_2px_8px_rgba(60,40,30,0.15)] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66] disabled:cursor-not-allowed disabled:opacity-50";
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#2B2A33]/15 bg-white px-4 text-[15px] font-medium text-[#2B2A33] shadow-[0_1px_2px_rgba(60,40,30,0.08)] hover:bg-[#F6F1EA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66] disabled:cursor-not-allowed disabled:opacity-50";
 
-/** Bottom left: Pause or Play, Replay, Skip to result. Bottom right: where the close is. */
-function Controls({ pb, total, story, act }: { pb: Playback; total: number; story: Story; act: (a: PlaybackAction) => void }) {
+const STEPS = ["Request", "Sealed bids", "Checks", "Reveal"] as const;
+
+/** Where the story is, from the scene and the beats applied: 0 request, 1 sealed bids, 2 checks, 3 reveal. */
+function stepOf(scene: ArenaScene, beat: number): number {
+  if (scene.phase === "waiting") return 0;
+  if (scene.phase === "open") return scene.sealedCount > 0 ? 1 : 0;
+  if (scene.phase !== "closed" || beat === 0) return 1;
+  const k = scene.beats[beat - 1]?.kind;
+  return k === "knockout" || k === "crown" ? 3 : 2;
+}
+
+/** The first beat count that lands on step i (checks: the arrive beat; reveal: the first knockout or the crown). */
+function seekFor(scene: ArenaScene, i: number): number {
+  if (i <= 1) return 0;
+  const idx = scene.beats.findIndex((b) => (i === 2 ? b.kind === "arrive" : b.kind === "knockout" || b.kind === "crown"));
+  return idx < 0 ? scene.beats.length : idx + 1;
+}
+
+/** The bottom bar: the four-step story line (click a reached step to jump to it) and Pause or Play or Replay, and Skip. */
+function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a: PlaybackAction) => void }) {
+  const total = scene.beats.length;
   const done = pb.beat >= total;
-  const place = [story.stage, story.step].filter(Boolean).join(", ");
+  const at = stepOf(scene, pb.beat);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <div className="flex flex-wrap gap-2">
-        {pb.playing ? (
-          <button type="button" className={BUTTON} onClick={() => act({ type: "pause" })}>Pause</button>
-        ) : (
-          <button type="button" className={BUTTON} disabled={done} onClick={() => act({ type: "resume" })}>Play</button>
-        )}
-        <button type="button" className={BUTTON} onClick={() => act({ type: "replay" })}>Replay</button>
-        <button type="button" className={BUTTON} disabled={done} onClick={() => act({ type: "skip" })}>Skip to result</button>
-      </div>
-      {place && <p className={PILL}>{place}</p>}
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-[#2B2A33]">
+      <ol className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {STEPS.map((name, i) => {
+          const state = i < at || (i === at && done && total > 0 && i === 3) ? "done" : i === at ? "now" : "next";
+          const seekable = total > 0 && i >= 1 && state !== "next";
+          return (
+            <li key={name} className="flex items-center gap-2">
+              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#4F7F7C]" : "bg-[#2B2A33]/20"}`} />}
+              <button
+                type="button"
+                disabled={!seekable}
+                onClick={() => act({ type: "seek", beat: seekFor(scene, i) })}
+                aria-current={state === "now" ? "step" : undefined}
+                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#4F7F7C]"
+              >
+                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#4F7F7C] bg-[#4F7F7C] shadow-[0_0_0_4px_rgba(79,127,124,0.18)]" : state === "done" ? "border-[#4F7F7C] bg-[#4F7F7C]/15" : "border-[#2B2A33]/25"}`}>
+                  {state === "done" && (
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#4F7F7C]" aria-hidden="true">
+                      <path d="M2.5 6.5 5 9l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-[#2B2A33]/55" : ""}>{name}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      {total > 0 && (
+        <div className="flex gap-2">
+          {pb.playing ? (
+            <button type="button" className={BUTTON} onClick={() => act({ type: "pause" })}><Icon d="M4 3h2.5v10H4zM9.5 3H12v10H9.5z" />Pause</button>
+          ) : done ? (
+            <button type="button" className={BUTTON} onClick={() => act({ type: "replay" })}><Icon d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7l1.4.5A4 4 0 1 0 8 4v2L4.5 3.25 8 .5z" />Replay</button>
+          ) : (
+            <button type="button" className={BUTTON} onClick={() => act({ type: "resume" })}><Icon d="M4.5 3 12.5 8l-8 5z" />Play</button>
+          )}
+          <button type="button" className={BUTTON} disabled={done} onClick={() => act({ type: "skip" })}><Icon d="M3 3l7 5-7 5zM11 3h2v10h-2z" />Skip</button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+      <path d={d} fill="currentColor" />
+    </svg>
   );
 }
 

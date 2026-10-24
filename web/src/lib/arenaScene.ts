@@ -333,7 +333,7 @@ export function storyFor(scene: ArenaScene, pb: Playback): Story {
   if (scene.phase === "waiting") caption = "No round yet. When a buyer posts a request, it appears here.";
   else if (scene.phase === "open") {
     caption = scene.sealedCount > 0
-      ? `${plural(scene.sealedCount, "sealed offer")} on the table. Prices stay hidden until the round closes.`
+      ? `${plural(scene.sealedCount, "sealed offer")} ${scene.sealedCount === 1 ? "is" : "are"} in. Prices stay hidden until the round closes.`
       : `Sealed round open. Sellers can bid until ${scene.deadline ? scene.deadline.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "the deadline"}.`;
   } else if (scene.phase === "closing") caption = "Round closed. Waiting for the referee's result.";
   else if (scene.phase === "inconsistent") caption = "The result rows disagree, so no winner is shown.";
