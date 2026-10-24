@@ -64,7 +64,11 @@ def screen(message: Any, context: Optional[Mapping] = None, *, classifier: Any =
         fired: dict[str, Any] = {}
         spans: list[dict] = []
         for rule in RULES:
-            hits = sorted(set(rule.check(doc, ctx)))
+            found = list(rule.check(doc, ctx))
+            if rule.fold:  # same rule on the leetspeak / spacing / accent-folded views of the message
+                for view in doc.views():
+                    found.extend(rule.check(view, ctx))
+            hits = sorted(set(found))
             if not hits:
                 continue
             fired[rule.id] = rule

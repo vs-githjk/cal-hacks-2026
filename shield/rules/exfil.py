@@ -25,4 +25,4 @@ def check(doc, ctx):
 
 
 RULE = Rule("shield.exfil.send", QUARANTINE, "high",
-            "attempt to send private data to a URL, webhook or mailbox", check)
+            "attempt to send private data to a URL, webhook or mailbox", check, fold=True)

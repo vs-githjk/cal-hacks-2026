@@ -20,4 +20,4 @@ def check(doc, ctx):
 
 
 RULE = Rule("shield.impersonation", BLOCK, "high",
-            "sender claims a role it does not hold (buyer, advocate, Tech Bazaar)", check)
+            "sender claims a role it does not hold (buyer, advocate, Tech Bazaar)", check, fold=True)

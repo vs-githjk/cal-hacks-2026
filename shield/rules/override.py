@@ -27,4 +27,4 @@ def check(doc, ctx):
 
 
 RULE = Rule("shield.override.instruction", BLOCK, "high",
-            "instruction override aimed at the reading agent", check)
+            "instruction override aimed at the reading agent", check, fold=True)

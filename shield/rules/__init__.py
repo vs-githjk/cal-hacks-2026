@@ -1,5 +1,5 @@
 """Rules as files: one module per rule family, each exposing Rule objects with a stable id."""
-from shield.rules import encoded, exfil, hidden, impersonation, money, override, payee, price
+from shield.rules import encoded, exfil, hidden, impersonation, intent, money, override, payee, price
 
 RULES = [
     override.RULE,
@@ -11,5 +11,6 @@ RULES = [
     exfil.RULE,
     encoded.RULE,
     impersonation.RULE,
+    *intent.RULES,
 ]
 RULES_BY_ID = {r.id: r for r in RULES}

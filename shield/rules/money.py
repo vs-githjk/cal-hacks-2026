@@ -20,4 +20,4 @@ def check(doc, ctx):
 
 
 RULE = Rule("shield.money.approval", BLOCK, "high",
-            "seller text pushing the buyer agent to approve, skip a check or charge", check)
+            "seller text pushing the buyer agent to approve, skip a check or charge", check, fold=True)

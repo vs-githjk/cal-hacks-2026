@@ -6,8 +6,9 @@ impersonation pattern, or addresses an agent directly (block).
 """
 import re
 
-from shield.rules import exfil, impersonation, money, override
+from shield.rules import exfil, impersonation, intent, money, override
 from shield.rules.base import BLOCK, QUARANTINE, Rule, any_match, rx
+from shield.text import make_doc
 
 ZERO_WIDTH_LIMIT = 3
 _HIDDEN_STYLE = (r"display\s*:\s*none|visibility\s*:\s*hidden|font-size\s*:\s*0(?![.\d])|opacity\s*:\s*0(?![.\d])"
@@ -21,7 +22,11 @@ _SIGNALS = (override.PATTERNS + money.PATTERNS + list(impersonation.PATTERNS.val
 
 
 def _has_signal(text):
-    return any_match(text, _SIGNALS) or exfil.matches(text)
+    doc = make_doc(text)
+    for norm in [doc.norm, *(v.norm for v in doc.views())]:
+        if any_match(norm, _SIGNALS) or exfil.matches(norm):
+            return True
+    return intent.fires(doc)
 
 
 _SKIP_TAGS = {"style", "script", "template", "noscript"}

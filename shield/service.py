@@ -25,9 +25,17 @@ _ATTACK_TYPE = {
 }
 
 
+_INTENT_TYPE = {
+    "approval_bypass": "approval_pressure", "override": "instruction_override", "payment_redirect": "payee_swap",
+    "authority_claim": "impersonation", "agent_directed": "instruction_override",
+}
+
+
 def attack_type(rule_ids: list[str]) -> str:
     if not rule_ids:
         return "none"
+    if rule_ids[0].startswith("shield.intent."):
+        return _INTENT_TYPE.get(rule_ids[0].split(".", 2)[2], "other")
     family = rule_ids[0].split(".")[1] if "." in rule_ids[0] else "error"
     return _ATTACK_TYPE.get(family, "other")
 
