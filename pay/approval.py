@@ -334,7 +334,11 @@ class ApprovalSession:
             # speech-to-text never emits invisible format characters; text carrying them is an injection, and
             # the close-spelling match below must not glue a split word back together
             hidden = isinstance(text, str) and any(unicodedata.category(c) == "Cf" for c in text)
-            reason = "wrong_code" if hidden else self._judge(tokens, confidence)
+            # normalize() turns any other script into blanks; a non-ASCII digit, letter or symbol ("approve ٩٠٠", "€",
+            # "九百") must deny, not vanish (#195)
+            foreign = isinstance(text, str) and any(ord(c) > 127 and (c.isalnum() or unicodedata.category(c)[0] == "S")
+                                                    for c in unicodedata.normalize("NFKC", text))
+            reason = "wrong_code" if hidden else "no_code" if foreign else self._judge(tokens, confidence)
             svc._attempts[self.mandate_hash] = svc.attempts_used(self.mandate_hash) + 1
             self.attempts += 1
             if reason is None:
@@ -361,9 +365,11 @@ class ApprovalSession:
                 t in NUMBER_WORDS and i not in two_words for i, t in enumerate(tokens)):
             return "no_code"                   # a number was spoken; consent must be the code and "approve" only
         words = [_as_code_word(t) for t in tokens]
-        pair_hashes = [hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest()
-                       for a, b in zip(words, words[1:]) if a in WORD_SET and b in WORD_SET]
-        own = any(hmac.compare_digest(h, self.code_hash) for h in pair_hashes)
+        pairs = [(k, hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest())
+                 for k, (a, b) in enumerate(zip(words, words[1:])) if a in WORD_SET and b in WORD_SET]
+        pair_hashes = [h for _, h in pairs]
+        own_at = [k for k, h in pairs if hmac.compare_digest(h, self.code_hash)]
+        own = bool(own_at)
         if not own:
             for h in pair_hashes:
                 owner = svc._codes.get(h)
@@ -372,7 +378,10 @@ class ApprovalSession:
             return "wrong_code" if any(_code_like(t) for t in tokens) else "no_code"
         if not APPROVE_TOKENS & set(tokens):
             return "no_code"                   # the code alone is not consent
-        if any(w not in WORD_SET and w not in APPROVE_TOKENS and w not in FILLER and i not in two_words for i, w in enumerate(words)):
+        # Outside this deal's pair (said once), every heard token must be approve or filler as heard: no other list word, no
+        # repeat of the code, and no near miss mapped onto a list word ("rover", "apples" are not "river", "apple" here).
+        if len(own_at) != 1 or any(t not in APPROVE_TOKENS and t not in FILLER and i not in two_words
+                                   for i, t in enumerate(tokens) if i not in (own_at[0], own_at[0] + 1)):
             return "no_code"                   # any other word (a payee, a term, a condition) is not consent to this mandate
         if not svc.store.consume(NS_CODE, self.code_hash):
             return "replay"                    # single use
