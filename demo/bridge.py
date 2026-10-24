@@ -360,7 +360,13 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                         continue
                     raise
         else:
-            client.call(s.reducer, **s.args)
+            try:
+                client.call(s.reducer, **s.args)
+            except RuntimeError:
+                if s.reducer == "record_payment" and s.args.get("mode") == "stripe_test":   # #208
+                    note(f"the market refused record_payment after Stripe test charge {s.args.get('payment_ref')}: "
+                         "find it in the Stripe test dashboard (it is idempotent on the mandate hash)")
+                raise
         if s.gate == "approval_call" and approver is not None:
             approved_and_recorded = True    # the approver said approved and the market took the approval row
         lag += clock() - t_call
