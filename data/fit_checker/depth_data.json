@@ -1,0 +1,138 @@
+{
+ "note": "Maker mm values and memory types from fit_builds.json parts confirmed on maker domains (checked level maker). Memory module form is DIMM for desktop boards (their maker pages list DIMM slots).",
+ "coolers": [
+  {
+   "name": "Thermalright Peerless Assassin 120 SE",
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "thermalright.com: 155 mm; AM4, AM5, 115X, 1200, 1700, 1851"
+  },
+  {
+   "name": "Noctua NH-D15",
+   "height_mm": 168,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "noctua.at spec page: 168 mm with fans (old infosheet said 165)"
+  },
+  {
+   "name": "Noctua NH-U12S",
+   "height_mm": 158,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "noctua.at: 158 mm with fan"
+  },
+  {
+   "name": "DeepCool AK400",
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "deepcool.com: 127x97x155 mm"
+  },
+  {
+   "name": "be quiet! Dark Rock Pro 5",
+   "height_mm": 168,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "bequiet.com: 168 mm"
+  },
+  {
+   "name": "Noctua NH-L12S",
+   "height_mm": 70,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "noctua.at: 70 mm with fan underneath (low-profile mode), 86 mm with fan on top"
+  }
+ ],
+ "cases": [
+  {
+   "name": "Fractal Design North",
+   "max_cooler_height_mm": 145,
+   "source": "fractal-design.com: GPU 355 (300 with 360 front radiator), cooler 145, ATX PSU"
+  },
+  {
+   "name": "Cooler Master MasterBox NR200P",
+   "max_cooler_height_mm": 155,
+   "source": "coolermaster.com: GPU 330 (incl. power connector), cooler 155 mesh panel / 153 glass, Mini-ITX/DTX, SFX/SFX-L"
+  },
+  {
+   "name": "NZXT H5 Flow",
+   "max_cooler_height_mm": 165,
+   "source": "https://support.nzxt.com/hc/en-us/articles/15970258057371-H5-2023-Series-FAQ"
+  }
+ ],
+ "boards": [
+  {
+   "name": "Asus PRIME B650-PLUS WIFI",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "source": "https://www.asus.com/motherboards-components/motherboards/prime/prime-b650-plus-wifi/techspec/"
+  },
+  {
+   "name": "MSI B550 GAMING GEN3",
+   "memory_type": "DDR4",
+   "memory_form": "DIMM",
+   "source": "https://www.msi.com/Motherboard/B550-GAMING-GEN3/Specification"
+  },
+  {
+   "name": "MSI PRO Z790-A WIFI",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "source": "https://www.msi.com/Motherboard/PRO-Z790-A-WIFI/Specification"
+  },
+  {
+   "name": "MSI PRO Z890-A WIFI",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "source": "https://www.msi.com/Motherboard/PRO-Z890-A-WIFI/Specification"
+  },
+  {
+   "name": "MSI PRO B760M-A DDR4 II",
+   "memory_type": "DDR4",
+   "memory_form": "DIMM",
+   "source": "https://www.msi.com/Motherboard/PRO-B760M-A-DDR4-II/Specification"
+  },
+  {
+   "name": "Asus PRIME Z270-A",
+   "memory_type": "DDR4",
+   "memory_form": "DIMM",
+   "source": "https://www.asus.com/us/motherboards-components/motherboards/prime/prime-z270-a/techspec/"
+  }
+ ]
+}

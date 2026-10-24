@@ -58,6 +58,16 @@ Next: confirm the remaining parts, and add held-out builds no one tuned against.
 
 False OK is 0 on both. The checker was not changed; the set was tuned on once, so neither row is held out.
 
+### Fit depth (Sat 2026-10-24, issue #159)
+Cooler height vs case clearance and RAM generation/form vs the board, using maker values already confirmed on maker domains (`data/fit_checker/depth_data.json`: 6 coolers, 3 cases, 6 boards). One rule was truly missing and was added: `fit.ram_form` (DIMM vs SO-DIMM; a check only when a form is stated, uncertain when only one side states it). Six new maker-checked builds: NH-L12S, AK400 and NH-U12S in the Fractal North; a DDR5 kit on Z890 (fits); a DDR4 kit on Z790 (does not fit); a Crucial DDR5 SO-DIMM kit on a desktop DIMM board (does not fit).
+
+| set | builds | decided correct | false OK | false fail | uncertain |
+|---|---|---|---|---|---|
+| all | 50 | 48 of 49 | 0 | 1 | 1 |
+| maker-checked subset | 39 | 39 of 39 | 0 | 0 | 0 |
+
+**False OK: 0** on both. The checker's existing rules were not tuned; the set was tuned on once, so neither row is held out.
+
 ## First price numbers on real parts (MIRROR, RTX 5070 Ti)
 
 Run: `python3 -m data.mirror.price_spread`. Source: the c1 Apify snapshots in `data/mirror/snapshots/`. Out-of-stock listings are left out of the ask range (not buyable at that price) and counted.
