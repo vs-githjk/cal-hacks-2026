@@ -94,6 +94,11 @@ export const record_receiving = spacetimedb.reducer(
   (ctx, a) => m.recordReceiving(ctx, a),
 );
 
+export const set_allowance = spacetimedb.reducer(
+  { buyerId: t.string(), perPurchaseLimit: t.f64(), periodLimit: t.f64(), period: t.string() },
+  (ctx, a) => m.setAllowanceChecked(ctx, a),
+);
+
 export const reset_demo = spacetimedb.reducer((ctx) => m.resetDemoChecked(ctx));
 export const seed_demo = spacetimedb.reducer((ctx) => m.seedDemoChecked(ctx));
 

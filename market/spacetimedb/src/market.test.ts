@@ -455,6 +455,56 @@ describe('b2 allowance ladder', () => {
     expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
   });
 
+  const setAllow = (who: Auth, buyerId: string, per: number, lim: number, period = 'week') =>
+    run(who, (ctx) => m.setAllowanceChecked(ctx, { buyerId, perPurchaseLimit: per, periodLimit: lim, period }));
+
+  it('set_allowance: the referee sets Vidyut\'s demo allowance, creating the row and an event; the starting $0 stays for others', () => {
+    setAllow(REF, 'vidyut', 250, 500);
+    expect(allowance()).toMatchObject({ perPurchaseLimit: 250, periodLimit: 500, ladderStep: 2, period: 'week' });
+    expect(events().some((e) => e.kind === 'allowance_set' && e.refId === 'vidyut')).toBe(true);
+    expect(h.db.allowance.buyerId.find('bob')).toBeFalsy();
+  });
+
+  it('set_allowance: only the buyer (for their own id) or the referee may call it; a seller, a stranger and another buyer cannot', () => {
+    setAllow(REF, 'vidyut', 250, 500);
+    expect(() => setAllow(A, 'vidyut', 1, 1)).toThrow(/not allowed/);
+    expect(() => setAllow(STRANGER, 'vidyut', 1, 1)).toThrow(/not allowed/);
+    expect(() => setAllow(BOB, 'vidyut', 1, 1)).toThrow(/not allowed/);
+    expect(allowance()).toMatchObject({ perPurchaseLimit: 250, periodLimit: 500 });
+  });
+
+  it('set_allowance: the buyer can lower their own allowance but not raise it, and a fresh $0 stays $0 so the first buy calls', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    expect(() => setAllow(VIDYUT, 'vidyut', 50, 150)).toThrow(/clean deliveries/);
+    expect(allowance()).toMatchObject({ perPurchaseLimit: 0, ladderStep: 0 });
+    setAllow(REF, 'vidyut', 250, 500);
+    setAllow(VIDYUT, 'vidyut', 100, 300);
+    expect(allowance()).toMatchObject({ perPurchaseLimit: 100, periodLimit: 300, ladderStep: 1 });
+    expect(() => setAllow(VIDYUT, 'vidyut', 101, 300)).toThrow(/clean deliveries/);
+  });
+
+  it('set_allowance: bad numbers are refused with the reason, and nothing changes', () => {
+    setAllow(REF, 'vidyut', 250, 500);
+    expect(() => setAllow(REF, 'vidyut', -1, 500)).toThrow(/per_purchase_limit/);
+    expect(() => setAllow(REF, 'vidyut', 600, 500)).toThrow(/above period_limit/);
+    expect(() => setAllow(REF, 'vidyut', 601, 1500)).toThrow(/top step/);
+    expect(() => setAllow(REF, 'vidyut', 10, 100, 'year')).toThrow(/week or month/);
+    expect(() => setAllow(REF, '', 10, 100)).toThrow(/buyer id/);
+    expect(allowance()).toMatchObject({ perPurchaseLimit: 250, periodLimit: 500 });
+  });
+
+  it('a set allowance drives the buy decision, and a clean delivery then raises it without ever lowering it', () => {
+    setAllow(REF, 'vidyut', 250, 500);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'in', id: 'm-in', amount: 250, nonce: 'in' })));
+    expect(h.db.mandate.hash.find('in')!.withinAllowance).toBe(true);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'over', id: 'm-over', amount: 251, nonce: 'over' })));
+    expect(h.db.mandate.hash.find('over')!.withinAllowance).toBe(false);
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'in', paymentRef: 'pi_in', amount: 250, mode: 'sim' }));
+    receive(VIDYUT, 'in');
+    expect(allowance()).toMatchObject({ ladderStep: 3 });
+    expect(allowance()!.perPurchaseLimit).toBeGreaterThanOrEqual(250);
+  });
+
   it('the buyer screen sees its allowance; a seller sees none', () => {
     run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
     expect(m.myAllowanceView(h.viewContext(VIDYUT) as any)).toHaveLength(1);

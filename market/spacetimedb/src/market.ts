@@ -10,7 +10,7 @@ import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
 import { authorizePayment } from '../../rules/approval';
-import { decide, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, newAllowance, type Allowance, type Period } from '../../rules/allowance';
+import { decide, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, newAllowance, setAllowance, type Allowance, type Period } from '../../rules/allowance';
 import type { Bid, Condition, NeedItem, Origin } from '../../rules/types';
 import { resetDemo, seedDemo } from './demo';
 
@@ -163,6 +163,25 @@ function allowanceFor(ctx: Ctx, buyerId: string): Allowance {
 function saveAllowance(ctx: Ctx, a: Allowance) {
   if (ctx.db.allowance.buyerId.find(a.buyer_id)) ctx.db.allowance.buyerId.update(fromRule(a));
   else ctx.db.allowance.insert(fromRule(a));
+}
+
+export interface SetAllowanceArgs { buyerId: string; perPurchaseLimit: number; periodLimit: number; period: string }
+
+/**
+ * Buyer (their own id) or referee. The referee sets the demo operator's starting allowance; the buyer
+ * may only lower theirs (the rule in rules/allowance.setAllowance). Writes only the allowance row and one event.
+ */
+export function setAllowanceChecked(ctx: Ctx, a: SetAllowanceArgs) {
+  if (!a.buyerId) throw new SenderError('set_allowance needs a buyer id');
+  const who = requireRole(ctx, 'set_allowance', ['buyer', 'referee'], a.buyerId);
+  const r = setAllowance(
+    allowanceFor(ctx, a.buyerId),
+    { per_purchase_limit: a.perPurchaseLimit, period_limit: a.periodLimit, period: a.period as Period },
+    who.role === 'referee' ? 'referee' : 'buyer', ms(ctx.timestamp),
+  );
+  if (!r.ok) throw new SenderError(`set_allowance refused: ${r.reasons.join('; ')}`);
+  saveAllowance(ctx, r.allowance);
+  event(ctx, 'allowance_set', 'allowance', a.buyerId, `An allowance was set (step ${r.allowance.ladder_step})`, '', 'SIM');
 }
 
 // ---------------------------------------------------------------- needs and goals

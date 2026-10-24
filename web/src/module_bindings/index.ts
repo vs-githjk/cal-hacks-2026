@@ -51,6 +51,7 @@ import RecordReceivingReducer from "./record_receiving_reducer";
 import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
 import SeedDemoReducer from "./seed_demo_reducer";
+import SetAllowanceReducer from "./set_allowance_reducer";
 import SetFloorReducer from "./set_floor_reducer";
 import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
 
@@ -213,6 +214,7 @@ const reducersSchema = __reducers(
   __reducerSchema("reissue_pair_code", ReissuePairCodeReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),
   __reducerSchema("seed_demo", SeedDemoReducer),
+  __reducerSchema("set_allowance", SetAllowanceReducer),
   __reducerSchema("set_floor", SetFloorReducer),
   __reducerSchema("set_floor_for_condition", SetFloorForConditionReducer),
 );

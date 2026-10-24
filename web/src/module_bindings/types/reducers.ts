@@ -23,6 +23,7 @@ import RecordReceivingReducer from "../record_receiving_reducer";
 import ReissuePairCodeReducer from "../reissue_pair_code_reducer";
 import ResetDemoReducer from "../reset_demo_reducer";
 import SeedDemoReducer from "../seed_demo_reducer";
+import SetAllowanceReducer from "../set_allowance_reducer";
 import SetFloorReducer from "../set_floor_reducer";
 import SetFloorForConditionReducer from "../set_floor_for_condition_reducer";
 
@@ -43,6 +44,7 @@ export type RecordReceivingParams = __Infer<typeof RecordReceivingReducer>;
 export type ReissuePairCodeParams = __Infer<typeof ReissuePairCodeReducer>;
 export type ResetDemoParams = __Infer<typeof ResetDemoReducer>;
 export type SeedDemoParams = __Infer<typeof SeedDemoReducer>;
+export type SetAllowanceParams = __Infer<typeof SetAllowanceReducer>;
 export type SetFloorParams = __Infer<typeof SetFloorReducer>;
 export type SetFloorForConditionParams = __Infer<typeof SetFloorForConditionReducer>;
 
