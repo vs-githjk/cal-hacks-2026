@@ -51,16 +51,11 @@ def test_vetoes_are_sorted_and_unknown_cards_are_ignored():
 
 
 def test_malformed_cards_and_unsafe_sources_fail_closed():
-    text = round_trace(
-        ["seller_1"],
-        [bid("b1", "seller_1")],
-        {"b1": {"recommendation": "veto", "warnings": [None, "bad", {"source_url": "javascript:alert(1)"}]}},
-        None,
-    )
-    assert text.endswith("seller_1 (source unavailable); no reviewed recommendation.")
-
-    text = round_trace(
-        ["seller_1"], [bid("b1", "seller_1")],
-        {"b1": {"recommendation": "veto", "warnings": [{"source_url": "https://user:pass@example.test/a"}]}}, None,
-    )
-    assert text.endswith("seller_1 (source unavailable); no reviewed recommendation.")
+    for source in ("javascript:alert(1)", "https://user:pass@example.test/a", "https://example.test/\npath",
+                   "https://example.test/\u2028path", "https://example.test/\u2029path", "https://example.test/a path",
+                   "https://", "https://example.test/" + "x" * 2048):
+        text = round_trace(
+            ["seller_1"], [bid("b1", "seller_1")],
+            {"b1": {"recommendation": "veto", "warnings": [None, "bad", {"source_url": source}]}}, None,
+        )
+        assert text.endswith("seller_1 (source unavailable); no reviewed recommendation.")

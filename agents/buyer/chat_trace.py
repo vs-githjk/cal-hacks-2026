@@ -12,7 +12,7 @@ def _safe(value: object) -> str:
 
 def _source(value: object) -> str:
     raw = str(value) if isinstance(value, str) else ""
-    if not raw or len(raw) > 2048 or any(ord(c) < 32 or ord(c) == 127 for c in raw):
+    if not raw or len(raw) > 2048 or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in raw):
         return "source unavailable"
     try:
         parsed = urlsplit(raw)
