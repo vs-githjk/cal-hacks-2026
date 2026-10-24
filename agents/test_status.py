@@ -1,4 +1,5 @@
 import pytest
+from uagents.crypto import Identity
 
 import status
 
@@ -73,3 +74,11 @@ def test_producer_message_lines_fit_the_feed_bound():
     for kind in status.LABELS:
         line = status.msg_line("n" * 40, "t" * 40, kind)
         assert len(line) <= 140
+
+
+def test_native_sdk_advocate_address_fits_without_truncation():
+    address = Identity.from_seed("offline-public-log-test", 0).address
+    assert len(address) == 65
+    line = status.status_line("advocate", "advocate", address, mailbox=True)
+    assert len(line) == 127
+    assert f"address={address}" in line
