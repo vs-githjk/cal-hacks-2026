@@ -86,6 +86,13 @@ then lane-d-night.
   and the web tsc line of the test command in `.night/plan.md`. Every state change a reducer makes writes a floor event, so a new reducer
   can move the pinned event-order test: read that failure before editing the test.
 
+- web/public/lot.json (any step that changes `sim/wind_tunnel.py` ARCHETYPES, and again after the last merge): a generated file the lot
+  tests pin to its generator (`sim/tests/test_lot_wall.py::test_committed_lot_json_matches_the_generator`). Main's 400cd51 added two
+  archetypes, so a branch whose lot.json was built before it passes alone and turns main red after the merge (1 failed, 1061 passed
+  in the reviewer's scratch merge). After the merge run `python3 -m sim.lot_wall` from the repo root (it rewrites `web/public/lot.json`
+  offline, seed 7), then `python3 -m pytest sim/tests/test_lot_wall.py -q` (8 passed) and commit the new file. lane-d-night already
+  carries the regenerated file as of its whole-branch fix round (9938995), so this step matters when main moves again.
+
 ## One window, not two (LOCKED 02:08)
 
 AgentsTile (#71, SpacetimeDB `agent_event`) and the Lane D AgentPip (:8790 feed) both exist and share no file. Rule: mount ONE window.
