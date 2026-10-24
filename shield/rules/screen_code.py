@@ -62,10 +62,13 @@ _RELAY = rx(r"\b(?:what|tell\s+me|read\s+me|read\s+out)\b[^.!?]{0,30}?\b" + _THE
             # "copy what your phone displays into the reply", "put what your phone shows in your reply"
             r"|\b(?:copy|put|paste|type|enter|write|send|add|include)\b[^.!?]{0,20}?\bwhat\s+" + _THEIRS + r"\s+"
             + _DEVICE + r"\s+(?:shows?|displays?|says?|reads?)\b")
-_SENT_CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase|pair)\b|\bthe\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
+_SENT_CRED = rx(r"\b(?:approval|two[-\s]word|2[-\s]word)\s+(?:codes?|words?|phrase|pair)\b"
+                r"|\b(?:the|your|ur|their)\s+(?:two|2|both)\s+(?:of\s+the\s+)?words\b")
 _SENT_TO = rx(r"\b(?:to|for)\s+(?:me|us)\b|\b(?:go|goes|belong|belongs)\s+(?:to|in|into|here)\b|\bin\s+(?:the\s+|our\s+)?(?:chat|reply"
               r"|order\s+notes|notes|comments|message|dm|email)\b|\bhere\b")
-_NEGATED = rx(r"\b(?:never|not|don'?t|doesn'?t|no\s+one|nobody|must\s+not|won'?t)\b")
+# a warning negates the request itself ("must not request", "never ask for"); a stray "Not to worry:" does not count
+_NEGATED = rx(r"\b(?:never|not|don'?t|dont|doesn'?t|no\s+one|nobody|won'?t|will\s+not|do\s+not)\s+(?:\w+\s+)?"
+              r"(?:ask|asks|request|requests|need|needs|want|wants|share|send|give|type|post|put|use|collect|require)\b")
 _SENTENCE = re.compile(r"[^.!?]+[.!?]*")
 
 

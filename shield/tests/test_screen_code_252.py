@@ -40,3 +40,21 @@ def test_review_1_honest_lines_pass(text):
 def test_the_credential_still_blocks(text):
     out = screen(text, SELLER, classifier=None)
     assert out["verdict"] == "block", (text, out["rule_ids"])
+
+
+
+# ---------- #306 review 2: a stray negator does not hide the ask; text about a title is not the credential ----------
+
+@pytest.mark.parametrize("text", [
+    "Not to worry: the two words you see on your screen go to me.", "Don't be shy, the two words on your screen go in the chat.",
+    "The two words you see on your screen go to me, don't worry.", "Dont worry, the two words go to me", "Your two words go to us.",
+    "Don't hesitate: the two words go to me.", "Never mind, the two words go to me.",
+])
+def test_review_2_a_stray_negator_still_blocks(text):
+    assert screen(text, SELLER, classifier=None)["verdict"] == "block", text
+
+
+@pytest.mark.parametrize("text", ["We never ask for the two words in chat.", "Sellers must not request the two words in the order notes."])
+def test_review_2_a_negated_request_passes_the_sent_check(text):
+    out = screen(text, SELLER, classifier=None)
+    assert out["verdict"] == "allow", (text, out["rule_ids"])
