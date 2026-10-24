@@ -16,6 +16,15 @@ def seller(name: str) -> dict:
     return seller_from_config({"id": name, **CATALOG["sellers"][name]}, catalog=True)
 
 
+def mirror_seller(name: str, clearance_mm: int | None = None) -> dict | None:
+    """A MIRROR seller (#283 T9): our agent bidding a real store's dated listings, labelled as such, never a partner.
+    Built from data/mirror, not sellers.json. None when the store has no listing it may bid."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, for data.*
+    from data.mirror import central_computers
+    sources = {central_computers.SELLER_ID: central_computers.seller}
+    return sources[name](clearance_mm)
+
+
 def _lines_for(have: dict) -> list[dict]:
     """The primary condition line and any alternative condition lines of one listing."""
     primary = {k: have[k] for k in ("condition", "page_condition", "price", "floor", "listing_url")}
@@ -53,7 +62,8 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
             lines.append({"sku_spec": sku, "unit_price": price, "quantity": want["quantity"],
                           "offered_condition": alt["condition"], "variant": have["variant"],
                           "listing_url": alt["listing_url"], "page_condition": alt["page_condition"],
-                          "attrs": dict(have["attrs"]), "_floor": alt["floor"]})
+                          "attrs": dict(have["attrs"]), "_floor": alt["floor"],
+                          **({"qty_available": have["qty_available"]} if "qty_available" in have else {})})
         cheapest.append(min(prices) * want["quantity"])
     if not lines:
         return None
@@ -63,13 +73,16 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
     skipped = [w["sku_spec"] for w in need["items"] if w["sku_spec"] not in seller["listings"]]
     margin = seller.get("margin_pct")
     basis = f"Cost plus {margin:g}% margin" if margin is not None else f"List price less {discount:.0%} discount"
-    trace = (basis
+    mirror = seller.get("origin") == "MIRROR"  # a real listing: no shipping figure was captured, so none is claimed
+    trace = ((f"{seller['trace_prefix']} " if seller.get("trace_prefix") else "") + ("Listed price" if mirror else basis)
              + (f", {'; '.join(notes)}" if notes else "")
-             + f", plus ${seller['shipping']:.2f} shipping = ${total:.2f}."
+             + (f" = ${total:.2f} before delivery." if mirror else f", plus ${seller['shipping']:.2f} shipping = ${total:.2f}.")
              + (" Several condition lines of one SKU are alternatives; the total uses the cheapest."
                 if len(lines) > len({l["sku_spec"] for l in lines}) else "")
              + (f" Not carried: {', '.join(skipped)}." if skipped else ""))
     now = now or datetime.now(timezone.utc)
+    origin = seller.get("origin", "SIM")
+    source = {"SIM": "simulated", "MIRROR": lines[0]["listing_url"]}.get(origin, f"seller-config:{seller['id']}")
     return {
         "id": f"bid-{need['id']}-{seller['id']}",
         "need_id": need["id"],
@@ -80,9 +93,12 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
         "perks": list(seller["perks"]),
         "claims": list(seller["claims"]),
         "floor_check_passed": floors_ok,
-        "mirror_snapshot_id": CATALOG["mirror_snapshot_id"],
+        "mirror_snapshot_id": seller.get("mirror_snapshot_id", CATALOG["mirror_snapshot_id"]),
         "decision_trace": trace,
         "expires_at": (now + timedelta(seconds=need.get("auction_window_s", 60))).isoformat(),
-        "origin": seller.get("origin", "SIM"),
-        "source": "simulated" if seller.get("origin", "SIM") == "SIM" else f"seller-config:{seller['id']}",
+        "origin": origin,
+        "source": source,
+        **({"mirror_label": seller["mirror_label"]} if seller.get("mirror_label") else {}),
+        # cheaper or other in-stock lines the agent did not bid, with the fit reason (additive key, not seller text)
+        **({"withheld_lines": [dict(w) for w in seller["withheld"]]} if seller.get("withheld") else {}),
     }
