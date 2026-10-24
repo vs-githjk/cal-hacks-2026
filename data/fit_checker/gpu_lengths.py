@@ -12,6 +12,7 @@ from pathlib import Path
 
 TABLE = Path(__file__).resolve().parent / "gpu_lengths.json"
 CLEARANCES = (305, 340)
+NOT_IDENTIFIABLE = "model not identifiable from listing"
 
 
 def _rows() -> list[dict]:
@@ -22,8 +23,31 @@ def maker_length(title: str) -> dict | None:
     return next((r for r in _rows() if re.search(r["match"], title, re.I)), None)
 
 
+def listing_length(url: str, title: str) -> dict:
+    """Maker length for a store listing, from its title and URL; never a guess."""
+    m = maker_length(f"{title} {url}")
+    if not m:
+        return {"length_mm": None, "note": NOT_IDENTIFIABLE}
+    return {"length_mm": m["length_mm"], "model": m["model"], "source": m["source"], "confidence": "maker spec, model named in the listing"}
+
+
 def fits(length_mm, clearance_mm) -> bool | None:
     return None if length_mm is None else length_mm <= clearance_mm
+
+
+def _raw_listings() -> list[dict]:
+    """5070 Ti listings that only exist in the raw Actor output (not in a normalized snapshot). eBay sold prices are not listings."""
+    out = []
+    for f in sorted((TABLE.parents[1] / "mirror" / "raw").glob("*.json")):
+        if f.stem.startswith("ebay_sold"):
+            continue
+        for it in json.loads(f.read_text()):
+            title = it.get("title") or it.get("name") or it.get("productTitle") or ""
+            m = re.search(r"[\d,]+(?:\.\d+)?", str(it.get("priceValue") or it.get("price") or "").replace(",", ""))
+            if re.search(r"5070\s*Ti", title, re.I) and it.get("url"):
+                out.append({"seller": f.stem, "title": title, "origin": "MIRROR", "price": float(m.group()) if m else None,
+                            "url": it["url"], "listed_length_mm": None})
+    return out
 
 
 def demo_listings() -> list[dict]:
@@ -37,6 +61,11 @@ def demo_listings() -> list[dict]:
                 out.append({"seller": store, "title": c["name"], "origin": "MIRROR", "price": c.get("price"),
                             "url": (c.get("listing") or {}).get("url") or c.get("source") or "",
                             "listed_length_mm": c["attrs"].get("length_mm")})
+    seen = {o["url"] for o in out if o["url"]}
+    for o in _raw_listings():
+        if o["url"] not in seen:
+            out.append(o)
+            seen.add(o["url"])
     for s in sim_sellers():
         for l in s.lines:
             if l.attrs.get("chipset") and "5070" in str(l.attrs.get("chipset")):
@@ -52,7 +81,8 @@ def report() -> list[dict]:
         length = m["length_mm"] if m else d["listed_length_mm"] if d["origin"] == "SIM" else None
         rows.append({**d, "model": m["model"] if m else None, "maker_length_mm": m["length_mm"] if m else None,
                      "length_used_mm": length, "source": m["source"] if m else ("SIM seller's stated length" if length else None),
-                     **{f"fits_{c}": fits(length, c) for c in CLEARANCES}})
+                     **{f"fits_{c}": fits(length, c) for c in CLEARANCES},
+                     **({"note": NOT_IDENTIFIABLE} if d["origin"] == "MIRROR" and not m else {})})
     return rows
 
 
