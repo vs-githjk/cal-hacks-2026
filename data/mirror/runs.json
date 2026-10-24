@@ -237,5 +237,32 @@
   "fields": [],
   "secs": 72,
   "note": "no snapshot file (0 items returned)"
+ },
+ {
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "rtx 5070 ti"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "OXhhdlHNaRpwRdCAS",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-20261024T0955Z",
+  "fields": [
+   "condition",
+   "date",
+   "price",
+   "seller",
+   "shipping",
+   "title",
+   "url"
+  ],
+  "secs": 7
  }
 ]

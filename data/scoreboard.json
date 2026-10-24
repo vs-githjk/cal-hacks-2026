@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T10:52:09+00:00",
+ "generated_at": "2026-10-24T10:53:01+00:00",
  "tiles": [
   {
    "detail": {
@@ -11,12 +11,26 @@
      "providers": [
       "apify",
       "apify-b"
-     ]
+     ],
+     "owners": [
+      "eBay sold",
+      "retailer listings (Apify)"
+     ],
+     "ask_median": 1254.99
     },
     "sold_kept_out": {
      "n": 5,
      "median": 880.0,
-     "note": "eBay sold, mixed condition: never in the median"
+     "from": "2026-10-23",
+     "to": "2026-10-23",
+     "note": "eBay sold, mixed condition, 30-day window: never blended into the ask median"
+    },
+    "sold": {
+     "n": 5,
+     "median": 880.0,
+     "from": "2026-10-23",
+     "to": "2026-10-23",
+     "note": "eBay sold, mixed condition, 30-day window: never blended into the ask median"
     },
     "marketplace": {
      "n": 3,
@@ -36,7 +50,7 @@
    },
    "origin": "MIRROR",
    "source_run": "python3 -m data.baselines",
-   "note": "Baseline: median $1,254.99 of 6 in-stock retail asks (ok, providers apify, apify-b; a baseline needs two dated providers within 24 h). Provider apify-b re-checked Best Buy only (3 listings); Micro Center has one provider. eBay sold prices are kept out of the reference. SIM savings, when they exist, go in a separate column and are never added to real ones."
+   "note": "Baseline: median $1,254.99 of 6 in-stock retail asks (ok, providers apify, apify-b; a baseline needs two distinct data owners). Data owners: eBay sold and retailer listings (Apify). eBay sold median $880.00 of 5 (last 30 days, mixed condition), shown beside the ask median, never blended. apify-b re-checked Best Buy only (3 listings) and is the same data owner as apify. SIM savings, when they exist, go in a separate column and are never added to real ones."
   },
   {
    "detail": {
@@ -83,12 +97,12 @@
    "display": "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked",
    "count": 20,
    "date_range": {
-    "from": "2026-10-24T10:52:09+00:00",
-    "to": "2026-10-24T10:52:09+00:00"
+    "from": "2026-10-24T10:53:01+00:00",
+    "to": "2026-10-24T10:53:01+00:00"
    },
    "origin": "SIM",
    "source_run": "python3 -m shield.bench",
-   "note": "Run at 2026-10-24T10:52:09+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
+   "note": "Run at 2026-10-24T10:53:01+00:00 (the bench reruns when the feed is built). Rules only, no classifier. Held-out was written before the rules froze and is never tuned on. Dev (what the rules were written against) is shown separately, never pooled. Never say secure."
   },
   {
    "detail": {
