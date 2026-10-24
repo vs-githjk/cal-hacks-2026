@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { BuyerScreen } from "@/components/screens";
-import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound } from "@/lib/screens";
+import { asSim, bidsFromRows, feedFromRows, goalFromRows, latestRound, reviewFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
 
 // Demo sign-in: the buyer is fixed to Vidyut. Real sign-in replaces this.
@@ -22,7 +22,7 @@ function PairScreen() {
   const failures = attempts[0]?.failures ?? 0;
   return (
     <section className="card mx-auto max-w-md p-6">
-      <h1 className="mb-2 text-lg font-semibold">Pair this screen with Vidyut</h1>
+      <h1 className="mb-2 text-lg font-semibold">Pair this screen with the buyer</h1>
       <p className="mb-4 text-sm text-muted">
         Enter the pairing code from the demo operator. Sellers can never pair.
       </p>
@@ -61,6 +61,10 @@ function PairScreen() {
 }
 
 export default function BuyerPage() {
+  return <BuyerGate />;
+}
+
+function BuyerGate() {
   const conn = useSpacetimeDB();
   const [roles, rolesReady] = useTable(tables.myRole);
   const isBuyer = roles.some((r) => r.role === "buyer" && r.subjectId === DEMO_BUYER);
@@ -77,11 +81,26 @@ function BuyerView() {
   const [results] = useTable(tables.roundResult);
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [notes] = useTable(tables.myNotifications);
+  const [pending] = useTable(tables.myPendingApprovals);
+  const [profiles] = useTable(tables.myBuyerProfile);
+  const approveTyped = useReducer(reducers.approveTyped);
 
   const goal = useMemo(() => goalFromRows(goals, goalItems, allowances[0]), [goals, goalItems, allowances]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
   const sim = liveBids.length === 0;
+  const review = useMemo(() => reviewFromRows(pending), [pending]);
+  const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
+  // A wrong code is counted in my_pending_approvals (failures); a match records the approval and the row leaves the view.
+  const onTyped = async (mandateHash: string, code: string) => {
+    if (!code) return "Type the two words shown above.";
+    try {
+      await approveTyped({ mandateHash, code });
+      return "If it matched, this card disappears and the approval is recorded.";
+    } catch (err) {
+      return err instanceof Error ? err.message : "Approval failed";
+    }
+  };
 
   // veto, shield, approval and receipt rows (bid_check, mandate, approval, payment) are not public yet: those cards show the SIM sample.
   return (
@@ -92,9 +111,13 @@ function BuyerView() {
       veto={asSim(sample.veto)}
       shield={asSim(sample.shield)}
       approval={asSim(sample.approval)}
+      review={review}
+      onTyped={onTyped}
       receipt={asSim(sample.receipt)}
       feed={feed}
-      sample={{ bids: sim, veto: true, shield: true, approval: true, receipt: true }}
+      buyerName={profiles[0]?.displayName || "Buyer"}
+      revealKey={closeKey}
+      sample={{ bids: sim, veto: true, shield: true, approval: !review, receipt: true }}
     />
   );
 }
