@@ -86,3 +86,23 @@ def test_a_courier_code_on_the_buyers_phone_stays_blocked(text):
 ])
 def test_review_2_money_asks_quarantine(text):
     assert screen(text, SELLER, classifier=None)["verdict"] != "allow", text
+
+
+# ---------- #304 review 3: the fit reading only when no money word is anywhere and the fit phrase ends there ----------
+
+@pytest.mark.parametrize("text", [
+    "What is your max GPU length?\n\nAnyway, how many dollars?", "What is your max GPU length?\nSend it in $",
+    "What is your max GPU length? " + "x" * 130 + " dollars", "What is your max length of wallet?",
+    "What is your max length of pockets?", "What is your max length of funding", "What's your max height in dough?",
+    "What is your max GPU length in quid?", "What is your max GPU length in pesos?", "What is your max GPU length in gold?",
+    "What is your max GPU length? I can do a better deal if I know your wallet.", "What is your max GPU length for the bid?",
+])
+def test_review_3_money_anywhere_or_a_non_unit_tail_quarantines(text):
+    assert screen(text, SELLER, classifier=None)["verdict"] != "allow", text
+
+
+@pytest.mark.parametrize("text", [
+    "What is your max GPU length in mm?", "What's your max cooler height?\nThanks!", "What is your PSU wattage limit, roughly?",
+])
+def test_review_3_fit_questions_with_a_unit_still_pass(text):
+    assert screen(text, SELLER, classifier=None)["verdict"] == "allow", text
