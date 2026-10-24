@@ -1,0 +1,303 @@
+{
+ "origin": "SIM",
+ "run_at": "2026-10-24T06:10:48+00:00",
+ "builders": 10,
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "learning": {
+  "lift_mean": 0.5,
+  "lift_range": [
+   0.5,
+   0.5
+  ],
+  "untrained_lift_mean": 0.0,
+  "per_seed": [
+   0.5,
+   0.5,
+   0.5
+  ],
+  "held_out_archetypes": [
+   "open_box_ok",
+   "small_case"
+  ],
+  "learner": "gadget-grove",
+  "control": "fair-price-pc",
+  "seeds": [
+   {
+    "seed": 0,
+    "train_builders": 8,
+    "held_out_builders": 2,
+    "frozen_strategy": {
+     "price_step": 0.07
+    },
+    "strategy_diffs": [
+     {
+      "builder": "b0-00",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.0,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-01",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-02",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-03",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-07",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b0-08",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b0-09",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     }
+    ],
+    "held_out_winners": [
+     "bargain-bin",
+     "gadget-grove"
+    ],
+    "learner": 0.5,
+    "control": 0.0,
+    "untrained": 0.0,
+    "per_archetype": {
+     "open_box_ok": {
+      "n": 1,
+      "learner": 0.0,
+      "control": 0.0
+     },
+     "small_case": {
+      "n": 1,
+      "learner": 1.0,
+      "control": 0.0
+     }
+    }
+   },
+   {
+    "seed": 1,
+    "train_builders": 8,
+    "held_out_builders": 2,
+    "frozen_strategy": {
+     "price_step": 0.07
+    },
+    "strategy_diffs": [
+     {
+      "builder": "b1-01",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.0,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-02",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-07",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b1-08",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b1-09",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     }
+    ],
+    "held_out_winners": [
+     "bargain-bin",
+     "gadget-grove"
+    ],
+    "learner": 0.5,
+    "control": 0.0,
+    "untrained": 0.0,
+    "per_archetype": {
+     "open_box_ok": {
+      "n": 1,
+      "learner": 0.0,
+      "control": 0.0
+     },
+     "small_case": {
+      "n": 1,
+      "learner": 1.0,
+      "control": 0.0
+     }
+    }
+   },
+   {
+    "seed": 2,
+    "train_builders": 8,
+    "held_out_builders": 2,
+    "frozen_strategy": {
+     "price_step": 0.07
+    },
+    "strategy_diffs": [
+     {
+      "builder": "b2-02",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.0,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-03",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-07",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     },
+     {
+      "builder": "b2-08",
+      "band": "within5",
+      "reason": "price",
+      "price_step": {
+       "from": 0.07,
+       "to": 0.03
+      }
+     },
+     {
+      "builder": "b2-09",
+      "band": "within10",
+      "reason": "price",
+      "price_step": {
+       "from": 0.03,
+       "to": 0.07
+      }
+     }
+    ],
+    "held_out_winners": [
+     "bargain-bin",
+     "gadget-grove"
+    ],
+    "learner": 0.5,
+    "control": 0.0,
+    "untrained": 0.0,
+    "per_archetype": {
+     "open_box_ok": {
+      "n": 1,
+      "learner": 0.0,
+      "control": 0.0
+     },
+     "small_case": {
+      "n": 1,
+      "learner": 1.0,
+      "control": 0.0
+     }
+    }
+   }
+  ]
+ },
+ "attack": {
+  "dev": {
+   "attacks": 30,
+   "stopped": 30,
+   "block_rate": 1.0,
+   "missed": [],
+   "controls": 10,
+   "false_blocks": 0,
+   "false_block_ids": []
+  },
+  "held_out": {
+   "attacks": 20,
+   "stopped": 12,
+   "block_rate": 0.6,
+   "missed": [
+    "h01",
+    "h03",
+    "h05",
+    "h07",
+    "h09",
+    "h13",
+    "h15",
+    "h20"
+   ],
+   "controls": 10,
+   "false_blocks": 2,
+   "false_block_ids": [
+    "k04",
+    "k05"
+   ]
+  }
+ }
+}
