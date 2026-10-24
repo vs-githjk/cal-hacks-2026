@@ -195,3 +195,149 @@ def test_not_bridged_list_names_every_gap_and_no_secret():
     for fixed in ("advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
         assert fixed not in text, f"{fixed} is bridged now"
     assert "token" not in text.lower()
+
+
+# ---------------------------------------------------------------- T7: --live-call (a fake Cartesia client, no network)
+
+from pay.mandate import can_charge  # noqa: E402
+from pay.replay import NonceStore  # noqa: E402
+from pay.voice_cartesia import CartesiaClient, CartesiaError  # noqa: E402
+
+TO = "+14155550123"
+
+
+class FakeCartesia:
+    """Stands in for pay.voice_cartesia.CartesiaClient: one number, scripted answers, never a socket."""
+    approval_call_to = TO
+
+    def __init__(self, says):
+        self.says, self.calls, self.shown = says, [], {}
+
+    def create_call(self, to_number, variables):
+        assert to_number == TO
+        self.calls.append((to_number, dict(variables)))
+        return "call_1"
+
+    def get_call(self, call_id):
+        said = self.says(self.shown.get("code")) if callable(self.says) else self.says
+        entries = [{"role": "assistant", "text": "Hello Vidyut, one purchase for you.", "start_timestamp": 0.0}]
+        if said:
+            entries.append({"role": "user", "text": said, "start_timestamp": 6.0})
+        return {"status": "completed", "end_reason": "client_hangup", "transcript": entries}
+
+
+def live_parts(run, says):
+    mandate = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"])
+    client = FakeCartesia(says)
+    shown = []
+
+    def show(code):
+        client.shown["code"] = code
+        shown.append(code)
+
+    approver = bridge.make_live_approver(mandate, {"rule_id": "advocate.ok", "summary": "No problems found in the checks",
+                                                   "source_url": "https://example.com/x"},
+                                         client, buyer_name="Vidyut", on_code=show, secret="s" * 32,
+                                         sleep=lambda x: None, poll=0)
+    return mandate, client, shown, approver
+
+
+def run_with(run, approver, mandate):
+    log = []
+    outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, mandate=mandate, live_call=True), clients(log), delay=0, say=lambda s: None, sleep=lambda x: None,
+                              clock=lambda: 0.0, approver=approver)
+    return log, outcomes
+
+
+def test_live_plan_uses_the_fresh_pending_mandate_and_marks_the_approval_gate(run):
+    old = run["beats"]["4"]["mandate"]
+    fresh = bridge.fresh_pending_mandate(old)
+    assert fresh["status"] == "pending" and fresh["hash"] != old["hash"]
+    assert (fresh["deal_id"], fresh["amount"], fresh["payee"], fresh["buyer_id"]) == (old["deal_id"], old["amount"], old["payee"], old["buyer_id"])
+    s = bridge.plan(run, delay=0, rounds=1, mandate=fresh, live_call=True)
+    assert next(x for x in s if x.reducer == "create_mandate").args["hash"] == fresh["hash"]
+    assert [x.args["mandate_hash"] for x in s if x.reducer in ("record_approval", "record_payment")] == [fresh["hash"]] * 3
+    assert [x.gate for x in s if x.gate] == ["approval_call"]
+    assert "third try" not in next(x for x in s if x.reducer == "record_approval").say     # the sim story is not told over a real call
+
+
+def test_without_live_call_the_plan_is_unchanged(run, steps):
+    assert [(s.actor, s.reducer, s.args) for s in bridge.plan(run, delay=2.0, rounds=1)] == [(s.actor, s.reducer, s.args) for s in steps]
+
+
+def test_live_call_approved_places_one_call_and_records_approval_then_payment(run):
+    mandate, client, shown, approver = live_parts(run, lambda code: f"{code} approve")
+    log, outcomes = run_with(run, approver, mandate)
+    assert len(client.calls) == 1 and client.calls[0][0] == TO                       # exactly one call, to the configured number
+    assert len(shown) == 1 and all(shown[0] not in str(v) for v in client.calls[0][1].values())   # the code is on screen only
+    tail = [r for _, r, _ in log][[r for _, r, _ in log].index("create_mandate"):]
+    assert tail == ["create_mandate", "record_approval", "record_payment", "record_payment"]
+    assert outcomes[0]["approved"] is True and outcomes[0]["call_id"] == "call_1"
+    assert mandate["status"] == "approved"
+
+
+def test_the_code_judged_is_the_code_shown(run):
+    from demo.approval_flow import _wrong_pair
+    mandate, client, shown, approver = live_parts(run, lambda code: f"{_wrong_pair(code)} approve")   # two code words that are not the code
+    log, outcomes = run_with(run, approver, mandate)
+    assert shown and outcomes[0]["approved"] is False
+    assert not any(r in ("record_approval", "record_payment") for _, r, _ in log)
+
+
+def test_denied_call_records_the_denial_and_no_payment_step(run):
+    mandate, client, shown, approver = live_parts(run, "hello there")                        # no code word, no approve
+    log, outcomes = run_with(run, approver, mandate)
+    kinds = [r for _, r, _ in log]
+    assert "create_mandate" in kinds and "record_approval" not in kinds and "record_payment" not in kinds
+    assert outcomes[0]["approved"] is False and outcomes[0]["reason"] and outcomes[0]["step"] == "approval_call"
+    assert mandate["status"] != "approved"
+    assert not can_charge(mandate, deal_id=mandate["deal_id"], amount=mandate["amount"], payee=mandate["payee"],
+                          store=NonceStore())
+
+
+def test_silence_on_the_call_denies(run):
+    mandate, client, shown, approver = live_parts(run, "")
+    log, outcomes = run_with(run, approver, mandate)
+    assert outcomes[0]["approved"] is False and "record_payment" not in [r for _, r, _ in log]
+
+
+def test_not_configured_denies_without_placing_a_call(run):
+    mandate = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"])
+    approver = bridge.make_live_approver(mandate, None, None, unconfigured="missing CARTESIA_API_KEY", buyer_name="Vidyut",
+                                         on_code=lambda c: pytest.fail("no code is issued when nothing can be called"))
+    log, outcomes = run_with(run, approver, mandate)
+    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None}]
+    kinds = [r for _, r, _ in log]
+    assert "create_mandate" in kinds and "record_approval" not in kinds and "record_payment" not in kinds
+
+
+def test_a_failed_dial_denies(run):
+    class Down(FakeCartesia):
+        def create_call(self, to_number, variables):
+            raise CartesiaError("call could not start")
+    mandate = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"])
+    approver = bridge.make_live_approver(mandate, None, Down(""), buyer_name="Vidyut", on_code=lambda c: None, secret="s" * 32,
+                                         sleep=lambda x: None, poll=0)
+    log, outcomes = run_with(run, approver, mandate)
+    assert outcomes[0]["approved"] is False and outcomes[0]["reason"] == "call_failed"
+    assert "record_payment" not in [r for _, r, _ in log]
+
+
+def test_an_expired_mandate_is_denied_even_if_the_buyer_said_the_code(run):
+    mandate, client, shown, approver = live_parts(run, lambda code: f"{code} approve")
+    mandate["expires_at"] = "2020-01-01T00:00:00Z"
+    log, outcomes = run_with(run, approver, mandate)
+    assert outcomes[0]["approved"] is False and client.calls == []
+    assert "record_payment" not in [r for _, r, _ in log]
+
+
+def test_live_call_flags_and_refusals(capsys):
+    with pytest.raises(SystemExit):
+        bridge.main(["--live-call", "--stripe", "--dry-run"])        # a Stripe charge must never run before the call approves
+    assert bridge.main(["--dry-run", "--live-call", "--env-file", "/nonexistent/none.env"]) == 0
+    out = capsys.readouterr().out
+    assert "live call" in out.lower() and "CARTESIA" in out
+
+
+def test_the_screen_code_gap_is_listed():
+    assert "approval code" in " ".join(bridge.NOT_BRIDGED)

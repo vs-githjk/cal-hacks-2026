@@ -39,6 +39,18 @@ The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real c
 `allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
 (`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its
 reason, and a DIVERGENCE line if its #1 is not the demo's winner.
+### Real phone call inside the round (`--live-call`)
+```
+python3 demo/bridge.py --live-call --reset                 # beat 4 places ONE real Cartesia call; names read from pay.voice_cartesia's env file
+python3 demo/bridge.py --live-call --env-file /path/to/.env --dry-run   # says where the call would go; no network, no call
+```
+At the approval beat the bridge builds a fresh pending mandate (same deal, amount and payee as beat 4), sends it to the market with `create_mandate`, then runs
+`pay.voice_cartesia.run_approval_call` for that mandate: one call to `APPROVAL_CALL_TO` only, the two-word code printed as `SCREEN CODE` (the same code the call judges),
+three tries. Only an approved call, plus a `pay.mandate.can_charge` pass, makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
+answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
+`--live-call` cannot be combined with `--stripe` (that charge runs before the round). Without `--live-call` nothing changes. The market has no place to show the code yet, so it is
+on the operator console (see NOT BRIDGED); tests use a fake client and place no call.
+
 Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, buyer allowance, denied approval attempts, personas and the
 buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
 
