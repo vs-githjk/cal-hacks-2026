@@ -1,57 +1,100 @@
-# Tech Bazaar claim check (Apify Actor)
+# Listing Claim Checker: price, stock, condition
 
-Checks what a seller says about a listing against the live listing page, and returns evidence.
-**Results are evidence, not a verdict.** A page we cannot read is `unverified`, never `false`.
+**Is the seller telling the truth?** Paste a product page and what the seller says about it ("price $1,749.99", "new", "in stock"). The Actor reads the live page and returns, for every claim, **verified**, **false** or **unverified**, with the evidence: the page URL, the time it was read and a sha256 hash of the page.
 
-Apify Store: https://apify.com/anoopibrampur/tech-bazaar-claim-check
+Built for **AI shopping agents** (our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), uses it to catch sellers whose words do not match their listing before money moves), and useful to marketplaces, price-match teams and anyone who buys on someone else's word.
 
-Built for Tech Bazaar (Cal Hacks 2026). Source: https://github.com/vs-githjk/cal-hacks-2026 (`data/claim_check/`).
-
-## Price
-$0.01 per claim checked; nothing charged when the page cannot be fetched. Only a verified or false result is charged; an unverified result is always free. (Pay-per-event, one `claim-checked` event per charged claim; a restarted run does not charge a claim twice.)
+**Results are evidence, not a verdict.** A page we cannot read is `unverified`, never `false`, and the wording is neutral: a mismatch means "the page differed at that time", never that a store lied.
 
 ## What it checks
-On real store pages, against the page's schema.org Product JSON-LD:
-- **Price**
-- **Condition** (new, open-box, refurbished, used)
-- **Stock**: schema.org availability InStock, LimitedAvailability, OnlineOnly and InStoreOnly count as in stock; OutOfStock, SoldOut, Discontinued, PreOrder, PreSale and BackOrder count as not available now (the reason names the status the page shows)
-- **Warranty** term in months, from the page's JSON-LD `warranty` (WarrantyPromise duration) or a plain "N-year warranty" in the product description; a list of promises counts only when they agree, and values outside 0 to 120 whole months come back `unverified`
-- **Returns** window, only when the page's JSON-LD states a schema.org `hasMerchantReturnPolicy` (days, or returns not permitted). None of the store pages we could fetch on Oct 24 publish one, so on those a returns claim comes back `unverified`.
 
-A was-price claim is judged only against price history from our own dated captures (never against anything on the page being checked); without our captures of that URL it is `unverified`.
+| Claim | Read from the page | Example claim text |
+|---|---|---|
+| **Price** | schema.org Product JSON-LD offer price | `price $1,749.99` |
+| **Condition** | new, open-box, refurbished, used | `new`, `open-box` |
+| **Stock** | schema.org availability (InStock, OutOfStock, PreOrder, BackOrder, ...) | `in stock` |
+| **Warranty** | JSON-LD `warranty`, or "N-year warranty" in the description | `2-year warranty` |
+| **Returns** | JSON-LD `hasMerchantReturnPolicy` | `30-day returns` |
 
-Not checked on real store pages yet: was-price and socket claims are only checked on our SIM test pages (their listing JSON); on real store pages they come back `unverified`. Shipping is not checked at all yet. The Actor has no price-history input.
+One claim line can state several things ("new, in stock, $1,749.99"). All of them are checked, and the line is `false` if any one differs from the page.
 
-## Input
+## How to use it
+
+1. Paste the **product page URL**.
+2. Add the **claims**, one per line, as the seller wrote them.
+3. Run. Each claim becomes one row in the results table, and the run's status line sums it up, for example `3 claim(s): 2 verified, 1 false, 0 unverified`.
+
+To check many listings in one run, use **Batch** (advanced): a list of `{id, text, evidence_url}`, each with its own page.
+
+## Input example
+
 ```json
-{"claims": [{"id": "c1", "text": "in stock", "kind": "stock", "evidence_url": "https://www.example-store.com/p/123"}]}
+{
+  "listingUrl": "https://www.canadacomputers.com/en/powered-by-nvidia/269441/msi-rtx-5070-ti-16g-shadow-3x-oc-gddr7-triple-fans-rtx-5070-ti-16g-shadow-3x-oc.html",
+  "claimTexts": ["price $1,749.99", "new", "in stock"]
+}
 ```
-Optional `field` and `value` on a claim skip text parsing.
 
-## Output (one dataset row per claim)
-The claim plus `result` (`verified`, `unverified` or `false`), `evidence_url`, `checked_at` (UTC), `method`, `evidence_hash` (sha256 of the page) and `reason`. Wording is neutral, for example "differs from the listing at time T".
+## Output example
 
-## Safety
-Only http and https. Every hop's address must be public (no localhost, private, link-local, cloud metadata or CGNAT), redirects are re-checked (at most 3), pages over 2 MB are refused and requests time out.
+Real result on that page (a dated read, Oct 24 2026; the claims are test claims we wrote, not the store's):
+
+| Claim | Result | Reason |
+|---|---|---|
+| price $1,749.99 | verified | the page shows $1,749.99 |
+| new | verified | the page shows new |
+| in stock | **false** | claim says in stock; differs from the listing at 2026-10-24T18:28:40+00:00: the page shows out of stock |
+
+Each dataset row is the claim plus:
+
+```json
+{
+  "id": "c3",
+  "text": "in stock",
+  "evidence_url": "https://www.canadacomputers.com/en/powered-by-nvidia/269441/...",
+  "result": "false",
+  "reason": "claim says in stock; differs from the listing at 2026-10-24T18:28:40+00:00: the page shows out of stock",
+  "checked_at": "2026-10-24T18:28:40+00:00",
+  "method": "fetched page, page JSON-LD, stock rule",
+  "evidence_hash": "sha256 of the page bytes"
+}
+```
+
+The key-value store's `OUTPUT` record holds the summary and all rows together.
+
+## Use it from an AI agent or your code
+
+**AI agents (MCP):** add the Actor to any MCP client through Apify's MCP server, `https://mcp.apify.com/?actors=anoopibrampur/tech-bazaar-claim-check`. The agent passes a page and claims and gets the rows back as a tool result.
+
+**API (one call, results in the response):**
+
+```bash
+curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~tech-bazaar-claim-check/run-sync-get-dataset-items" \
+  -H "Authorization: Bearer YOUR_APIFY_TOKEN" -H "Content-Type: application/json" \
+  -d '{"listingUrl": "https://shop.example/product/123", "claimTexts": ["price $99.99", "in stock"]}'
+```
+
+It also works with Apify integrations (webhooks, Make, Zapier, n8n) like any Actor.
+
+## Pricing
+
+**$0.01 per claim checked.** Only a `verified` or `false` result is charged. An `unverified` result is always free, including when the page cannot be fetched, and a restarted run never charges a claim twice. Platform usage is included. You can cap the spend per run; the Actor stops at your limit.
+
+## Good to know
+
+- **Big US retailers often block plain fetches** (Micro Center, Best Buy, B&H, Newegg usually answer 403). Those claims come back `unverified` and free, never `false`. Store pages that publish schema.org Product data work best.
+- **Was-price ("was $1,999") claims** are not judged from the page being checked, because a page can state any was-price. Without independent dated price history they come back `unverified`.
+- **Shipping** claims are not checked yet.
+- **Safety:** only http and https; every hop must be a public address (no localhost, private, link-local, cloud metadata or CGNAT); redirects are re-checked (at most 3); pages over 2 MB are refused; requests time out.
+
+## FAQ
+
+**Why "unverified" instead of "false" when a page is blocked?** Because we did not see the page. Calling a claim false needs evidence, so we only say false when the page we read says otherwise.
+
+**Can I prove later what the page said?** Each row has the page's sha256 hash and the time it was read. If you keep the page, the hash shows it is the same one we checked.
+
+**Does it work on any store?** Any public page with schema.org Product data (most shops publish it for search engines). Pages without it come back `unverified`.
 
 ## Labels
-Results on real store pages are MIRROR (a dated read of a public page). Results on our test pages are SIM. We never call a real store a liar: a mismatch means the page differed at that time.
 
-## Build
-`./bundle.sh` copies the checker into `src/data/` (gitignored), then push this folder.
-
-## Example run on a real store page (MIRROR, 2026-10-24 07:31 UTC)
-Apify run `4kespJWmbkHwo0FIA` (build `vIlfeUdPfGEYGPbi1`). Listings:
-- Canada Computers: https://www.canadacomputers.com/en/powered-by-nvidia/269441/msi-rtx-5070-ti-16g-shadow-3x-oc-gddr7-triple-fans-rtx-5070-ti-16g-shadow-3x-oc.html
-- Micro Center: https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card
-
-Run on Apify against a Canada Computers listing (MSI RTX 5070 Ti 16G Shadow 3X OC, prices in CAD) and one Micro Center listing. The claims are test claims we wrote, not claims made by the stores.
-
-| claim | page | result | evidence |
-|---|---|---|---|
-| price $1,749.99 | Canada Computers | verified | the page shows $1,749.99 (page JSON-LD) |
-| condition new | Canada Computers | verified | the page shows new |
-| in stock | Canada Computers | false | differs from the listing at 07:31 UTC: the page shows out of stock |
-| in stock | Micro Center | unverified | could not verify: page fetch failed (http 403) |
-
-Large US retailers (Micro Center, Best Buy, B&H, Newegg) usually refuse a plain fetch, so their pages come back `unverified`, never `false`.
+Results on real store pages are MIRROR (a dated read of a public page). Source: [github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/claim_check/`. Developers: `./bundle.sh` copies the checker into `src/data/` before a push.

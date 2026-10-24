@@ -14,6 +14,20 @@ EVENT = "claim-checked"
 STATE_KEY = "STATE_next_claim"  # key-value store: index of the next claim, so a restarted run never charges a claim twice
 
 
+def claims_from(inp: dict) -> list:
+    """The simple form (one page, claims as plain lines) plus any batch claims (each with its own page)."""
+    inp = inp or {}
+    url = str(inp.get("listingUrl") or "").strip()
+    texts = [t.strip() for t in inp.get("claimTexts") or [] if isinstance(t, str) and t.strip()]
+    simple = [{"id": f"c{i}", "text": t, "evidence_url": url} for i, t in enumerate(texts, 1)] if url else []
+    return simple + [c for c in inp.get("claims") or [] if c]
+
+
+def summary(rows: list) -> str:
+    counts = {k: sum(1 for r in rows if r.get("result") == k) for k in ("verified", "false", "unverified")}
+    return f"{len(rows)} claim(s): {counts['verified']} verified, {counts['false']} false, {counts['unverified']} unverified"
+
+
 def judged(result: dict) -> bool:
     """Billable: the page was fetched and gave a verdict (verified or false). Unverified is always free."""
     return bool(result.get("evidence_hash")) and result.get("result") in ("verified", "false")
@@ -53,9 +67,19 @@ async def run_claims(claims, check, push, charge, log=print, get_state=None, set
 
 async def main():
     async with Actor:
-        claims = (await Actor.get_input() or {}).get("claims") or []
-        await run_claims(claims, check_claim, Actor.push_data, Actor.charge, log=Actor.log.warning,
+        claims = claims_from(await Actor.get_input())
+        if not claims:
+            await Actor.set_status_message("No claims given: add a product page URL and one claim per line", is_terminal=True)
+            return
+        rows = []
+
+        async def push(row):
+            rows.append(row)
+            await Actor.push_data(row)
+        await run_claims(claims, check_claim, push, Actor.charge, log=Actor.log.warning,
                          get_state=lambda: Actor.get_value(STATE_KEY), set_state=lambda v: Actor.set_value(STATE_KEY, v))
+        await Actor.set_value("OUTPUT", {"summary": summary(rows), "results": rows})
+        await Actor.set_status_message(summary(rows), is_terminal=True)
 
 
 if __name__ == "__main__":
