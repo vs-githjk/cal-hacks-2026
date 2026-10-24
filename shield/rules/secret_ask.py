@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 
 from shield.rules.base import rx
+from shield.text import INVISIBLE, make_doc
 
 SECRET_ASK_RULE = "shield.classifier.secret_ask"
 # Closed answer set of the classifier: {ask_for_secret: bool, reason_code: one of these}. Never free text.
@@ -62,6 +63,7 @@ _ASKING = rx(
 )
 # Verbless: "Your password." "ur PIN" "the seed phrase" is a candidate on its own, sent with the sentence before it.
 _NAMED = rx(r"\b(?:your|ur|the)\s+(?:" + _SECRET_SRC + r")")
+_MARK = re.compile(r"[.!?;]")
 # Bank account and routing numbers are everywhere in honest invoices; only "your account number" is a candidate.
 _YOUR_BANK = rx(r"\b(?:your|ur)\s+(?:bank\s+)?(?:account|acct|routing)\s+(?:numbers?|nos?\.?|#)")
 # Honest hardware and label text that looks like a secret noun or a verb. Blanked (same length) before matching.
@@ -81,16 +83,25 @@ def _blank(m: "re.Match[str]") -> str:
     return " " * len(m.group(0))
 
 
-def _sentences(text: str) -> list[tuple[int, int]]:
-    """(start, end) of each sentence; a closing "?" stays in its sentence (the "your PIN?" pattern needs it)."""
-    out, start = [], 0
+def _asks(seg: str) -> bool:
+    """The candidate test on one sentence: a secret noun with an ask verb or an ask pattern, or "your account number"."""
+    noun_text = _CONNECTOR_PIN.sub(_blank, seg)
+    return bool(_YOUR_BANK.search(noun_text) or (_SECRET.search(noun_text) and (
+        _VERB.search(_NAME_NOUN.sub(_blank, seg)) or _ASKING.search(noun_text))))
+
+
+def _sentences(text: str) -> list[tuple[int, int, int]]:
+    """(start, end, paragraph) of each sentence; a closing "?" stays in its sentence (the "your PIN?" pattern needs it).
+    A blank line or a paragraph mark starts a new paragraph."""
+    out, start, para = [], 0, 0
     for m in [*_END.finditer(text), None]:
         end = len(text) if m is None else m.start() + (1 if m.group(0).startswith("?") else 0)
         seg = text[start:end]
         if seg.strip():
-            out.append((start + len(seg) - len(seg.lstrip()), end))
+            out.append((start + len(seg) - len(seg.lstrip()), end, para))
         if m is not None:
             start = m.end()
+            para += m.group(0)[0] in "\n\r\u2029"
     return out
 
 
@@ -98,18 +109,29 @@ def candidates(doc) -> list[tuple[int, int]]:
     """Raw-text spans (start, end) of every candidate sentence, on the message and on its folded views
     (leetspeak such as "pa55word"). Sorted, overlaps merged, empty when nothing is a candidate."""
     found: list[tuple[int, int]] = []
-    for view in [doc, *doc.views()]:
+    views = [doc, *doc.views()]
+    if doc.invisible:
+        # A zero-width mark between words ("send<ZWSP>your<ZWSP>password") is dropped in `doc`, which glues the words;
+        # read it once more with every invisible mark as a blank. Same length, so spans still map to the raw text.
+        spaced = make_doc("".join(" " if c in INVISIBLE else c for c in doc.raw))
+        views += [spaced, *spaced.views()]
+    for view in views:
         prose = _LINK_TARGET.sub(_blank, _MARKUP.sub(_blank, view.norm))
         sents = _sentences(prose)
-        for i, (a, b) in enumerate(sents):
+        hit = [_asks(prose[a:b]) for a, b, _ in sents]
+        for i, (a, b, para) in enumerate(sents):
             # the whole sentence goes to the classifier: a window around the match could cut the real ask
-            seg = prose[a:b]
-            noun_text = _CONNECTOR_PIN.sub(_blank, seg)
-            if _YOUR_BANK.search(noun_text) or (_SECRET.search(noun_text) and (
-                    _VERB.search(_NAME_NOUN.sub(_blank, seg)) or _ASKING.search(noun_text))):
+            if hit[i]:
                 found.append(view.raw_span(a, b))
-            elif _NAMED.search(noun_text):
-                found.append(view.raw_span(sents[i - 1][0] if i else a, b))   # with the sentence before it
+                continue
+            # one word per sentence ("Send. Your. Password.", "Send your pass. word") must not hide the ask: up to three
+            # sentences of one paragraph are read again as one, and a verbless "Your password." goes with the two before it
+            j = i
+            while j > max(0, i - 2) and sents[j - 1][2] == para and not hit[j - 1]:
+                j -= 1
+            w0 = sents[j][0]
+            if _NAMED.search(_CONNECTOR_PIN.sub(_blank, prose[a:b])) or (j < i and _asks(_MARK.sub(" ", prose[w0:b]))):
+                found.append(view.raw_span(w0, b))
     merged: list[tuple[int, int]] = []
     for s, e in sorted(found):
         if merged and s <= merged[-1][1]:

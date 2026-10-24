@@ -178,6 +178,12 @@ the general one, so about 8 s in the worst case), an error, a self-contradicting
 that is not a candidate is never affected, and buyer, advocate and marketplace text is never held for this.
 Consequence: with the classifier off, an honest seller line such as "State: like new, no password set." is
 quarantined. The unit tests use a fake classifier; the live prompt and default model were checked on the six lines above only.
+The candidate filter is broad on purpose (#201): a sentence that names "your", "ur" or "the" secret with no verb
+("Your password.", "Leave the password blank", "the PIN connector") is a candidate, and so are up to three sentences of
+one paragraph read as one ("Send. Your. Password."). Descriptive lines like these cost one classifier call each, or a
+quarantine with the classifier off. Blank-rendering fillers (U+2800, U+3164, U+FFA0, U+115F) count as a word gap, and a
+zero-width mark between words is read once more as a gap. 0 candidates on the 9,329 strings of demo/, data/mirror and
+data/liar_pages (test_no_false_candidates_in_the_demo_the_mirror_snapshots_or_the_liar_pages).
 
 ## How a marketplace calls Shield (Armadin or any agent market)
 

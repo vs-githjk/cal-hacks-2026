@@ -247,9 +247,12 @@ def test_a_line_break_or_html_tag_does_not_hide_a_secret_ask(text):
 
 
 def test_a_blank_line_or_a_sentence_mark_still_separates_sentences():
-    # #201: "your password" alone is a candidate now, so the separation is shown with a bare noun
-    for text in ["State\n\na password", "State\r\n\r\na password", "State\n \n a password", "State.\nA password", "State! A password"]:
+    # #201: "your password" alone is a candidate now, so the separation is shown with a bare noun. A blank line still
+    # separates; a sentence mark no longer does on its own (#181 re-review: "Send. Your. Password." is one ask).
+    for text in ["State\n\na password", "State\r\n\r\na password", "State\n \n a password", "State\u2029a password"]:
         assert not secret_ask.candidates(make_doc(text)), text
+    for text in ["State.\nA password", "State! A password"]:
+        assert secret_ask.candidates(make_doc(text)), text
 
 
 def test_candidate_spans_of_a_multi_line_ask_map_back_to_the_raw_text():
@@ -444,9 +447,9 @@ def test_a_verbless_your_or_the_secret_is_a_candidate(text):
 
 
 def test_a_verbless_candidate_goes_with_the_sentence_before_it():
-    text = "Great card. Please confirm one thing. Your password."
+    text = "Ships fast. Great card. Please confirm one thing. Your password."
     (s, e), = secret_ask.candidates(make_doc(text))
-    assert text[s:e] == "Please confirm one thing. Your password"
+    assert text[s:e] == "Great card. Please confirm one thing. Your password"     # the two sentences before it
     clf = FakeModel(asks=["confirm one thing. your password"])
     assert screen(text, SELLER, classifier=clf)["rule_ids"] == ["shield.classifier.secret_ask"]
     assert clf.seen and "please confirm one thing" in clf.seen[0].lower()
@@ -516,3 +519,17 @@ def test_no_false_candidates_in_the_demo_the_mirror_snapshots_or_the_liar_pages(
 def test_blank_filler_characters_do_not_hide_a_secret_noun(ch):
     """#201 Low: fillers that render as nothing are dropped like a zero-width space."""
     assert secret_ask.candidates(make_doc(f"Send me a pass{ch}word")), repr(ch)
+
+
+@pytest.mark.parametrize("ch", ["\u2800", "\u3164", "\uffa0", "\u115f", "\u200b", "\u2060", "\ufeff"])
+def test_a_blank_or_zero_width_mark_between_words_does_not_hide_an_ask(ch):
+    """#181 re-review M: a filler used as the word gap ("Please send<U+2800>your<U+2800>password") is still an ask."""
+    text = f"Please send{ch}your{ch}password"
+    (s, e), = secret_ask.candidates(make_doc(text))
+    assert text[s:e] == text
+    assert screen(text, SELLER, classifier=FakeModel(asks=["password"]))["rule_ids"] == ["shield.classifier.secret_ask"]
+
+
+@pytest.mark.parametrize("text", ["Send. Your. Password.", "e.g. send. your. password", "Send your pass. word", "Tell me. The. PIN."])
+def test_one_word_per_sentence_does_not_hide_an_ask(text):
+    assert secret_ask.candidates(make_doc(text)), text
