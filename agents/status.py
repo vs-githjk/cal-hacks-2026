@@ -25,6 +25,8 @@ LABELS = {
 }
 ROLES = ("buyer", "advocate", "seller", "shield", "owner")
 _TOKEN = re.compile(r"[A-Za-z0-9_.-]{1,40}")
+# Anchored to the logger prefix, so remote text inside a logged reason cannot forge a line.
+_LINE = re.compile(r"^(?:\w+:\s+)?\[[^\]]+\]:\s+(AGENT_STATUS|AGENT_MSG) (.*)$")
 _ADDRESS = re.compile(r"agent1q[0-9a-z]{20,80}")
 
 
@@ -52,8 +54,8 @@ def msg_line(name: str, to: str, kind: str) -> str:
 
 
 def parse_line(line: str) -> dict | None:
-    """For the feed: the fields of one AGENT_STATUS or AGENT_MSG line found anywhere in a log line, else None."""
-    m = re.search(r"\b(AGENT_STATUS|AGENT_MSG) (.*)$", line)
+    """For the feed: the fields of one AGENT_STATUS or AGENT_MSG line at the start of a logger message, else None."""
+    m = _LINE.match(line)
     if not m:
         return None
     kind, rest = m.groups()
