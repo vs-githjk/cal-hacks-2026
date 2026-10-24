@@ -30,6 +30,10 @@ The [Claude hub plan](https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU) names a
 
 The [issue owner's October 23 update](https://github.com/vs-githjk/cal-hacks-2026/issues/14#issuecomment-6380938238) specifies local processes with Agentverse mailboxes and explicitly says no cloud server is needed. This updates the earlier cloud-hosting instruction in the plan. Keep the laptop awake during judging. Use the mailbox run instructions below.
 
+## Issue #143 offline containment probe
+
+At source snapshot `3ad940e`, the real local Shield benchmark derived 8 held-out misses (`h01`, `h03`, `h05`, `h07`, `h09`, `h13`, `h15`, `h20`). With Shield screening bypassed and deterministic SIM CRS identity fixtures, the actual buyer bid/tick, advocate, buyer review, recommendation, approval/requote callbacks preserved the baseline recommendation, payee and amount for all 8 rows. A selection control also showed the production recommendation at index 2 driving the second bid through approval and requote after the first bid's real condition mismatch was vetoed. For each resulting order and the same mandate hash, both absent approval and a real approval record for a different hash were refused by `MerchantSim` as `no_trusted_approval`; `agents.payment.commit` also refused, and the fake charger recorded zero calls. Network sentinels recorded zero attempts. This is a SIM behavioral result, not a full containment pass: the accepted `AdvocateCard` contract is still open, so the strict closed-schema test remains a dependency gate.
+
 ## Run
 
 From `agents/`, with Python 3.12:
