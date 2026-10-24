@@ -1,0 +1,100 @@
+/* Tech Bazaar design tokens, direction A "Ledger". Replaces the :root, dark and @theme blocks in web/src/app/globals.css.
+   Tailwind v4: the @theme inline block turns every token into a utility (bg-panel, text-muted, border-line, font-display, ...). */
+@import "tailwindcss";
+
+:root {
+  --canvas: #f7f7f9;
+  --panel: #ffffff;
+  --soft: #f1f2f5;
+  --ink: #121417;
+  --muted: #5f6672;
+  --line: #e3e5ea;
+  --accent: #4f46e5;
+  --accent-ink: #ffffff;
+  --mint: #0e7a56;
+  --mint-soft: #e4f5ec;
+  --coral: #b3400f;
+  --coral-soft: #fcebe2;
+  --amber: #8a5a05;
+  --amber-soft: #fbf1d3;
+  --sky: #0b5f9e;
+  --sky-soft: #e3f0fb;
+  --slate: #475569;
+  --slate-soft: #eceef2;
+  --radius: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0d1017;
+    --panel: #151a24;
+    --soft: #1b2130;
+    --ink: #e9ecf1;
+    --muted: #99a1ad;
+    --line: #262d3a;
+    --accent: #8f8bff;
+    --accent-ink: #0d1017;
+    --mint: #5ddba6;
+    --mint-soft: #10301f;
+    --coral: #ff9a73;
+    --coral-soft: #3a1a0e;
+    --amber: #f3c969;
+    --amber-soft: #3a2b08;
+    --sky: #7cc0f5;
+    --sky-soft: #0f2b43;
+    --slate: #b3bcc9;
+    --slate-soft: #232a36;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-soft: var(--soft);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-slate: var(--slate);
+  --color-slate-soft: var(--slate-soft);
+  --radius-card: var(--radius);
+  /* next/font sets these variables on <html>; see fonts.ts */
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* One card style for every panel. Keep .panel so untouched pages still render. */
+.panel,
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
