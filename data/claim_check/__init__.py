@@ -16,7 +16,7 @@ from urllib.parse import urljoin, urlparse
 
 from data.fit_checker.tables import MICROARCH_SOCKET
 
-PATTERNS = [  # (field, regex, value from match); first match wins
+PATTERNS = [  # (field, regex, value from match); first match per field, every field is checked
     ("was_price", r"\bwas\s*\$?\s*([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(1))),
     ("socket", r"\bsocket\s*(AM\d|LGA\s?\d{3,4})", lambda m: m.group(1).replace(" ", "").upper()),
     ("return_days", r"(\d+)[- ]day returns?", lambda m: int(m.group(1))),
@@ -45,15 +45,24 @@ def _money(v):
     return _num(m.group(0)) if m else None
 
 
-def parse_claim(claim):
+def parse_claims(claim):
+    """Every field the claim states, in PATTERNS order. A "was $X" amount is not also read as the current price."""
     if claim.get("field"):
-        return claim["field"], claim.get("value")
+        return [(claim["field"], claim.get("value"))]
     text = claim.get("text") or ""
+    found = {}
     for field, rx, val in PATTERNS:
         m = re.search(rx, text, re.I)
-        if m:
-            return field, val(m)
-    return None, None
+        if m and field not in found:
+            found[field] = val(m)
+            if field == "was_price":
+                text = text[:m.start()] + text[m.end():]
+    return list(found.items())
+
+
+def parse_claim(claim):
+    """The first field the claim states (kept for callers that read one field)."""
+    return (parse_claims(claim) or [(None, None)])[0]
 
 
 from .fetch import guarded_get as default_fetch  # noqa: E402  (http(s) only, public addresses, redirects re-checked, 2 MB cap)
@@ -160,8 +169,8 @@ def check_claim(claim, fetch=None, history=None):
     unverified = lambda why: {**out, "method": f"could not verify: {why}", "reason": "could not verify"}
     at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     out = {"result": "unverified", "evidence_url": url, "checked_at": at, "evidence_hash": ""}
-    field, value = parse_claim(claim)
-    if field is None:
+    fields = parse_claims(claim)
+    if not fields:
         return unverified("claim text not recognized")
     if urlparse(url).scheme not in ("http", "https"):
         return unverified("only http and https pages are checked")
@@ -176,10 +185,15 @@ def check_claim(claim, fetch=None, history=None):
     out["evidence_hash"] = hashlib.sha256(body).hexdigest()
     try:  # a malformed page must not abort a batch or turn into "false"
         facts, source = page_facts(body.decode("utf-8", "replace"))
-        series = _history(url, facts, fetch, history) if field == "was_price" else None
-        result, reason = judge(field, value, facts, at, series)
+        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history) if f == "was_price" else None))
+                   for f, v in fields]
     except (ValueError, TypeError, KeyError, AttributeError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")
+    rank = {"false": 0, "unverified": 1, "verified": 2}  # the worst field decides: one false part makes the claim false
+    result = min((r for _, r, _ in results), key=rank.get)
+    names = ", ".join(f for f, _, _ in results)
+    reason = "; ".join(why for _, r, why in results if r == result)
+    rules = f"{names} rule{'s' if len(results) > 1 else ''}"
     if result == "unverified":
-        return {**out, "result": result, "method": f"could not verify: {source}, {field} rule", "reason": reason}
-    return {**out, "result": result, "method": f"fetched page, {source}, {field} rule", "reason": reason}
+        return {**out, "result": result, "method": f"could not verify: {source}, {rules}", "reason": reason}
+    return {**out, "result": result, "method": f"fetched page, {source}, {rules}", "reason": reason}

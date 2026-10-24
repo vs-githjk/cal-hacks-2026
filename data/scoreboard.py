@@ -25,7 +25,8 @@ def savings_tile() -> dict:
     at = max(r["observed_at"] for r in rows)
     b = baseline("rtx 5070 ti", at, rows=rows)
     return _tile(id="verified_savings", title="Dated verified savings", status="none_yet", value=None, unit="USD",
-                 display="No verified savings yet: the only prices captured (Best Buy) equal the price",
+                 display=f"No verified savings yet: no purchase has a confirmed dated baseline to compare against (reference {b['status']}, "
+                         f"{b['n']} retail asks from {len(b['providers'])} provider{'s' if len(b['providers']) != 1 else ''})",
                  count=b["n"], date_range={"from": b["from"] or at, "to": b["to"] or at}, origin="MIRROR",
                  source_run="python3 -m data.baselines",
                  detail={"reference": {"status": b["status"], "median": b["median"], "reference_unconfirmed": b.get("reference_unconfirmed"), "n": b["n"], "providers": b["providers"]},
@@ -59,7 +60,7 @@ def fit_tile(now: str) -> dict:
     return _tile(id="fit_accuracy", title="Fit accuracy", status="measured",
                  value=round(checked["correct"] / checked["decided"], 4) if checked["decided"] else None, unit="ratio",
                  display=f"{checked['correct']} of {checked['decided']} right on maker-checked builds; "
-                         f"{full['correct']} of {full['decided']} on all; {len(full['false_ok'])} false OK",
+                         f"{full['correct']} of {full['decided']} on all; {len(full['false_ok'])} false OK (tuned set, not held out)",
                  count=checked["n"], date_range={"from": when, "to": now[:10]}, origin="SIM",
                  source_run="python3 -m data.fit_checker.eval_builds",
                  detail={"checked": {"n": checked["n"], "correct": checked["correct"], "decided": checked["decided"]},
@@ -78,8 +79,8 @@ def learning_tile() -> dict:
                      for a, v in arch.items())
     return _tile(id="learning_lift", title="Seller learning lift", status="measured" if L["quotable"] else "not_quotable",
                  value=None, unit="points",
-                 display=("No lift to quote: the learner beats the fair control on "
-                          f"{len(L['winning_archetypes'])} of {len(arch)} held-out buyer types") if not L["quotable"] else rows,
+                 display=(f"No lift to quote ({len(L['winning_archetypes'])} of {len(arch)} archetypes, not quotable): the learner "
+                          "beats the fair control on too few held-out buyer types") if not L["quotable"] else rows,
                  count=sum(v["n"] for v in arch.values()), date_range={"from": w["run_at"], "to": w["run_at"]}, origin="SIM",
                  source_run=f"python3 -m sim.wind_tunnel --builders {w['builders']} --seeds {len(w['seeds'])}",
                  detail={"per_archetype": arch, "winning_archetypes": L["winning_archetypes"], "run_file": pick.name},

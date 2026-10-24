@@ -219,3 +219,10 @@ def test_5070ti_adapter_needs_two_8pin_per_nvidia():
 
 def test_pa120_does_not_fit_the_north():  # fractal-design.com: 145 mm cooler clearance
     assert check_fit([PA120, NORTH])["rule_id"] == "fit.cooler_height"
+
+
+def test_psu_exactly_at_need_passes_and_ten_below_fails():
+    import re
+    need = int(re.search(r"need (\d+) W", rule(check_fit([R7_9800X3D, RTX5070TI, PSU_850]), "fit.psu_wattage")["reason"]).group(1))
+    at = lambda w: rule(check_fit([R7_9800X3D, RTX5070TI, card("psu", "x", wattage=w, form_factor="ATX")]), "fit.psu_wattage")["verdict"]
+    assert at(need) == "pass" and at(need - 10) == "fail"
