@@ -66,8 +66,8 @@ def resolve(field: str, observations: Iterable[dict], *, now: Optional[str] = No
     top = obs[0]
     others = [o for o in obs[1:] if o["value"] != top["value"]]
     if others:
-        parts = ", ".join(f"{o['source']} says {o['value']}" for o in others)
-        reason = (f"For {field} I believed {top['source']} ({top['value']}) over {parts}: {why[top['source']]}.")
+        parts = " and ".join(f"{o['source']} ({o['value']})" for o in others)
+        reason = f"For {field} I believed {top['source']} ({top['value']}) over {parts}, because {why[top['source']]}."
     else:
         reason = f"For {field} every usable source agrees on {top['value']} (most trusted: {top['source']})."
     if stale:

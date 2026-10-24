@@ -74,6 +74,11 @@ def write_results(dev, sd, ho, sh) -> None:
     out += ["", "## Misses and false positives (reported as found)", ""]
     out += [f"- MISS {i} ({s}) {f}: {d}" for i, s, f, d in miss] or ["- no planted case missed"]
     out += [f"- FALSE POSITIVE {i} ({s}) {f}: {d}" for i, s, f, d in fps] or ["- no clean control flagged"]
+    out += ["", "## What these numbers do not show", "",
+            "- One author wrote the engine, the dev set and the held-out set from the same list of fault classes; a held-out variant is a different number, boundary, order or combination, not a fault class the engine was never designed for. Treat 100 percent as 'the controls do what they say', not 'finds every error'.",
+            "- The runner can say MISSED: `hyphenate/tests/test_scenarios.py` switches off the three-way match, the mandate guard and the period lock one at a time and watches the matching cases stop being caught.",
+            "- Not covered: sales tax, freight and multi-currency lines, OCR of invoices, collusion between two real approvers, depreciation, real Stripe or bank feeds, authentication.",
+            "- A clean control counts as a false positive on any denied, hold, blocked, exception, rejected, dropped or failed decision; only 11 controls exist, so a 0 percent false-flag rate has wide error bars."]
     out += ["", "## Every case", "", "### Dev", "", table(dev)]
     if ho:
         out += ["", "### Held-out", "", table(ho)]

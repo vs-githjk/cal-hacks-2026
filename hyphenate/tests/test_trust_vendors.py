@@ -5,7 +5,7 @@ from hyphenate.vendors import Vendor, assess
 def test_bank_beats_ledger_and_reason_names_both():
     r = resolve("cash_amount", [{"source": "ledger", "value": 129499, "ref": "je_1"}, {"source": "bank", "value": 124999, "ref": "ba_1"}])
     assert r["trusted"]["source"] == "bank" and r["trusted"]["value"] == 124999 and not r["agreed"]
-    assert "bank" in r["reason"] and "ledger says 129499" in r["reason"]
+    assert "bank" in r["reason"] and "ledger (129499)" in r["reason"]
 
 
 def test_receiving_beats_seller_on_condition_and_agreement_is_reported():

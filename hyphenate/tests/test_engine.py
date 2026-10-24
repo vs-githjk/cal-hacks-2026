@@ -230,3 +230,14 @@ def test_time_cannot_go_backwards_and_every_decision_explainable():
     last = eng.audit.decisions[-1]
     x = eng.explain(last.id)
     assert x["text"] and eng.invariants() == []
+
+
+def test_two_pos_each_inside_budget_but_not_together_second_needs_controller():
+    eng = seed_company(mirror={})
+    eng.budgets["art"] = 300_000
+    a = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=2000.0)], at=T("10-05")).data["po"]["id"]
+    b = eng.request(requester="tony", dept="art", vendor_id="bestbuy", lines=[gpu(qty=1, price=2000.0)], at=T("10-05", 9))
+    assert "over_budget" not in b.data["po"]["route"]["flags"]  # nothing is committed yet when both are drafted
+    assert eng.approve(a, by="kara", at=T("10-05", 10)).ok
+    second = eng.approve(b.data["po"]["id"], by="kara", at=T("10-05", 11))
+    assert not second.ok and second.data["code"] == "over_budget"  # the route is re-checked at approval time
