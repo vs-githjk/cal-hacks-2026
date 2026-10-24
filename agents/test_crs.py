@@ -101,7 +101,7 @@ def test_missing_token_returns_safe_unavailable_without_request(monkeypatch, tmp
     monkeypatch.delenv("CRS_API_KEY", raising=False)
     monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(AssertionError("called")))
     result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
-    assert result == {"signal": None, "reason": crs.REASON_UNAVAILABLE}
+    assert result == {"signal": None, "reason": crs.REASON_NOT_CONFIGURED}
     assert not crs.eligible("seller_1", result, NOW)
 
 
@@ -143,6 +143,10 @@ def test_live_response_and_cached_fallback_preserve_original_time(monkeypatch, t
     assert fresh["signal"]["source"] == "sandbox"
     assert crs.eligible("seller_1", fresh, NOW)
     monkeypatch.delenv("CRS_API_KEY")
+    monkeypatch.setenv("CRS_USERNAME", "user")
+    monkeypatch.setenv("CRS_PASSWORD", "password")
+    crs._auth_state = crs._AuthState()
+    monkeypatch.setattr(crs, "_open_request", lambda *args: (_ for _ in ()).throw(OSError("private login text")))
     monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(OSError("private provider text")))
     old = asyncio.run(crs.check_sellers(NOW + timedelta(hours=1)))["seller_1"]
     assert old["signal"]["source"] == "recorded"
@@ -255,3 +259,118 @@ def test_cache_write_failure_keeps_fresh_signal_and_emits_fixed_warning(monkeypa
     warning = capsys.readouterr().err
     assert warning.strip() == "CRS result cache could not be saved."
     assert "secret" not in warning and "token-canary" not in warning
+
+class _Reply:
+    def __init__(self, status, payload):
+        self.status = status
+        self._payload = payload
+
+    def read(self):
+        return json.dumps(self._payload).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def test_missing_credentials_overrides_existing_cache_without_http(monkeypatch, tmp_path):
+    setup_profile(monkeypatch, tmp_path)
+    cache = tmp_path / "cache.json"
+    cache.write_text(json.dumps({"seller_1": {"persona_ref": "official-a", "signal": {
+        "supplier_id": "seller_1", "stability": "verified_stable",
+        "checked_at": NOW.isoformat(), "source": "sandbox"},
+        "reason": crs.REASON_VERIFIED}}), encoding="utf-8")
+    monkeypatch.delenv("CRS_USERNAME", raising=False)
+    monkeypatch.delenv("CRS_PASSWORD", raising=False)
+    calls = []
+    monkeypatch.setattr(crs, "_open_request", lambda request: calls.append(request))
+    result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert result == {"signal": None, "reason": crs.REASON_NOT_CONFIGURED}
+    assert calls == []
+
+
+def test_successful_login_is_cached_for_concurrent_checks(monkeypatch):
+    crs._auth_state = crs._AuthState()
+    monkeypatch.setenv("CRS_USERNAME", "user")
+    monkeypatch.setenv("CRS_PASSWORD", "password")
+    calls = []
+
+    def opened(request):
+        calls.append(request)
+        return _Reply(200, {"token": "token-123"})
+
+    monkeypatch.setattr(crs, "_open_request", opened)
+    async def concurrent_tokens():
+        return await asyncio.gather(asyncio.to_thread(crs._get_token), asyncio.to_thread(crs._get_token))
+
+    tokens = asyncio.run(concurrent_tokens())
+    assert tokens == ["token-123", "token-123"]
+    assert len(calls) == 1
+
+
+def test_login_failure_latches_and_never_retries(monkeypatch):
+    crs._auth_state = crs._AuthState()
+    monkeypatch.setenv("CRS_USERNAME", "user")
+    monkeypatch.setenv("CRS_PASSWORD", "password")
+    calls = []
+
+    def opened(request):
+        calls.append(request)
+        return _Reply(401, {"error": "private"})
+
+    monkeypatch.setattr(crs, "_open_request", opened)
+    with pytest.raises(crs.CrsAuthError):
+        crs._get_token()
+    with pytest.raises(crs.CrsAuthError):
+        crs._get_token()
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("payload,status", [({"error": "private"}, 302), ({}, 200)])
+def test_redirect_or_malformed_login_latches_after_one_attempt(monkeypatch, payload, status):
+    crs._auth_state = crs._AuthState()
+    monkeypatch.setenv("CRS_USERNAME", "user")
+    monkeypatch.setenv("CRS_PASSWORD", "password")
+    calls = []
+    monkeypatch.setattr(crs, "_open_request", lambda request: (calls.append(request) or _Reply(status, payload)))
+    for _ in range(2):
+        with pytest.raises(crs.CrsAuthError):
+            crs._get_token()
+    assert len(calls) == 1
+
+
+def test_configured_login_failure_can_use_fresh_cache_but_stays_latched(monkeypatch, tmp_path):
+    crs._auth_state = crs._AuthState()
+    setup_profile(monkeypatch, tmp_path)
+    monkeypatch.setenv("CRS_USERNAME", "user")
+    monkeypatch.setenv("CRS_PASSWORD", "password")
+    cache = tmp_path / "cache.json"
+    cache.write_text(json.dumps({"seller_1": {"persona_ref": "official-a", "signal": {
+        "supplier_id": "seller_1", "stability": "verified_stable",
+        "checked_at": NOW.isoformat(), "source": "sandbox"},
+        "reason": crs.REASON_VERIFIED}}), encoding="utf-8")
+    calls = []
+    monkeypatch.setattr(crs, "_open_request", lambda request: (calls.append(request) or _Reply(401, {})))
+    result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    assert result["signal"]["source"] == "recorded"
+    assert result["signal"]["checked_at"] == NOW.isoformat()
+    assert len(calls) == 1
+    with pytest.raises(crs.CrsAuthError):
+        crs._get_token()
+    assert len(calls) == 1
+
+
+def test_login_redacts_credentials_token_and_provider_error(monkeypatch, caplog):
+    crs._auth_state = crs._AuthState()
+    monkeypatch.setenv("CRS_USERNAME", "private-user")
+    monkeypatch.setenv("CRS_PASSWORD", "private-password")
+    monkeypatch.setattr(crs, "_open_request", lambda request: (_ for _ in ()).throw(OSError("provider-secret")))
+    with pytest.raises(crs.CrsAuthError):
+        crs._get_token()
+    output = " ".join(record.getMessage() for record in caplog.records)
+    assert "private-user" not in output
+    assert "private-password" not in output
+    assert "provider-secret" not in output
+    assert "token-123" not in output
