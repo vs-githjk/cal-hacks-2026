@@ -23,14 +23,27 @@ def _row(text: str) -> dict | None:
 
 def _adapter_count(row, ref) -> int:
     m = re.match(r"\s*(\d+)x", (row or {}).get("adapter_in_box") or "")
-    return int(m.group(1)) if m else ref["connector"][1]
+    return int(m.group(1)) if m else (ref["connector"][1] if ref.get("connector") else None)
+
+
+def _chipset(text: str) -> str | None:
+    m = re.search(r"\b(rtx|gtx|rx)\s?(\d{4})\s?(ti super|super|ti|xt)?\b", text, re.I)
+    return f"{m.group(1).upper()} {m.group(2)}{' ' + m.group(3).upper() if m.group(3) else ''}".replace(" TI", " Ti") if m else None
 
 
 def check_power(gpu_title_or_url: str, owned_psu: dict) -> dict:
-    ref = GPU_POWER["RTX 5070 Ti"]
-    row = _row(gpu_title_or_url)
+    """Per-SKU maker data applies only to RTX 5070 Ti titles; another known chipset uses its tables.GPU_POWER row; else uncertain."""
+    chip = _chipset(gpu_title_or_url)
+    if chip != "RTX 5070 Ti":
+        ref = GPU_POWER.get(chip or "")
+        if not ref:
+            return {"status": "uncertain", "reason": f"chipset {chip or 'not named'} not in our power tables", "source": None,
+                    "rec_psu_w": None, "connector": None}
+        row = None
+    else:
+        ref, row = GPU_POWER["RTX 5070 Ti"], _row(gpu_title_or_url)
     rec = row["rec_psu_w"] if row else ref["rec_psu_w"]
-    source = row["source"] if row else "nvidia.com chipset reference (RTX 5070 Ti)"
+    source = row["source"] if row else f"nvidia.com chipset reference ({chip})"
     where = f"the maker lists {rec} W" if row else f"the chipset reference is {rec} W (model not identified)"
     reasons, states = [], []
 
@@ -46,6 +59,8 @@ def check_power(gpu_title_or_url: str, owned_psu: dict) -> dict:
     n = _adapter_count(row, ref)
     if p16:
         states.append("pass"); reasons.append("native 12V-2x6 cable")
+    elif n is None:
+        states.append("uncertain"); reasons.append("this chipset's power connector varies by card")
     elif p16 is None and p8 is None:
         states.append("uncertain"); reasons.append("PSU connector counts unknown")
     elif p8 is not None and p8 >= n:

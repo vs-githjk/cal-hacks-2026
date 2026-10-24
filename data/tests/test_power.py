@@ -33,3 +33,19 @@ def test_owned_psu_fixture_is_labelled_and_sourced():
     d = json.loads(power.OWNED_PSU.read_text())
     assert d["origin"] == "SIM ownership" and d["source"].startswith("https://www.corsair.com/")
     assert check_power(PRIME, d)["status"] == "pass"
+
+
+def test_other_chipsets_never_pass_on_the_5070_ti_rows():  # #156
+    for title, rec in (("ASUS PRIME GeForce RTX 5080 OC", 850), ("MSI GeForce RTX 5090 GAMING TRIO", 1000)):
+        out = check_power(title, OWNED)
+        assert out["rec_psu_w"] == rec and out["status"] == "fail" and "nvidia.com chipset reference" in out["source"], title
+    unknown = check_power("ASUS PRIME GeForce RTX 9999", OWNED)
+    assert unknown["status"] == "uncertain" and unknown["rec_psu_w"] is None
+    assert check_power("some graphics card", OWNED)["status"] == "uncertain"
+
+
+def test_brand_words_match_whole_words_only():
+    for text in ("stuff RTX 5070 Ti 16GB", "Amazon Prime GeForce RTX 5070 Ti", "pnyx GeForce RTX 5070 Ti"):
+        out = check_power(text, OWNED)
+        assert "chipset reference" in out["source"] and out["rec_psu_w"] == 750, text
+    assert check_power("PNY GeForce RTX 5070 Ti", OWNED)["source"].startswith("https://www.pny.com/")
