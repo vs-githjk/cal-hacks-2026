@@ -42,7 +42,7 @@ def find_chrome() -> Optional[str]:
 
 def token_key(db: Optional[str] = None) -> str:
     """The localStorage key web/src/lib/stdb.ts reads the SpacetimeDB token from."""
-    return f"tb_token_{db or os.environ.get('SPACETIMEDB_DB', 'tech-bazaar')}"
+    return f"tb_token_{db or os.environ.get('NEXT_PUBLIC_SPACETIMEDB_DB') or os.environ.get('SPACETIMEDB_DB', 'tech-bazaar')}"
 
 
 def pair_screen(sql: Callable[[str], list], market: Callable[[str], Any], token_file: Path, buyer_id: str = DEMO_BUYER) -> str:
@@ -53,14 +53,28 @@ def pair_screen(sql: Callable[[str], list], market: Callable[[str], Any], token_
     if not rows or not rows[0]:
         raise RuntimeError("no pairing code issued for the buyer (seed the market first)")
     code = str(rows[0][0]).strip().strip('"')
+    Path(token_file).parent.mkdir(parents=True, exist_ok=True)
     client = market(str(token_file))
     try:
         client.call("pair_buyer_screen", buyer_id=buyer_id, code=code)
     except RuntimeError as e:
         msg = str(e).replace(code, "[code]")
         raise RuntimeError(f"pair_buyer_screen refused: {msg[:160]}") from None
-    token = json.loads(Path(token_file).read_text())["token"]
-    return token
+    saved = json.loads(Path(token_file).read_text())
+    # A wrong code is not an error over HTTP (the reducer returns {paired: false}), so the role row is the proof.
+    if not has_buyer_role(sql("SELECT * FROM role"), saved["identity"], buyer_id):
+        raise RuntimeError("pairing did not take: the screen identity has no buyer role (wrong or locked code?)")
+    return saved["token"]
+
+
+def has_buyer_role(rows: list, identity: str, buyer_id: str) -> bool:
+    """True when the role rows (identity, role, subject_id) hold role buyer for `buyer_id` on this identity."""
+    want = identity.lower().removeprefix("0x")
+    for r in rows:
+        cells = [str(c).strip().strip('"') for c in r]
+        if len(cells) >= 3 and cells[0].lower().removeprefix("0x") == want and cells[1] == "buyer" and cells[2] == buyer_id:
+            return True
+    return False
 
 
 class _WebSocket:
@@ -137,21 +151,24 @@ class PairedBrowser:
     same signature and (ok, error) result as rehearse.chrome_shot."""
 
     def __init__(self, chrome: str, origin: str, token: str, *, settle: float = 4.0, db: Optional[str] = None):
-        self.settle, self._id = settle, 0
+        self.settle, self._id, self.ws, self.proc = settle, 0, None, None
+        self.key, self.token = token_key(db), token
         self.profile = tempfile.mkdtemp(prefix="rehearse-chrome-")
-        root = ["--no-sandbox"] if hasattr(os, "geteuid") and os.geteuid() == 0 else []   # Chrome refuses root without it
-        self.proc = subprocess.Popen([chrome, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
-                                      *root, "--window-size=1440,900", "--remote-debugging-port=0",
-                                      f"--user-data-dir={self.profile}", "about:blank"],
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
+            root = ["--no-sandbox"] if hasattr(os, "geteuid") and os.geteuid() == 0 else []   # Chrome refuses root without it
+            self.proc = subprocess.Popen([chrome, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+                                          *root, "--window-size=1440,900", "--remote-debugging-port=0",
+                                          f"--user-data-dir={self.profile}", "about:blank"],
+                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             port = self._devtools_port()
             pages = json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=10))
             ws = next(p["webSocketDebuggerUrl"] for p in pages if p.get("type") == "page")
             self.ws = _WebSocket(ws)
             self.call("Page.enable")
-            self._goto(origin)
-            self.call("Runtime.evaluate", {"expression": f"localStorage.setItem({json.dumps(token_key(db))}, {json.dumps(token)})"})
+            # Before ANY page script on every load: the web app reads this token when it connects, so its own
+            # onConnect cannot race us with a fresh anonymous token (it saves back the token it connected with).
+            self.call("Page.addScriptToEvaluateOnNewDocument", {"source": f"try {{ localStorage.setItem("
+                      f"{json.dumps(self.key)}, {json.dumps(token)}) }} catch (e) {{}}"})
         except Exception:
             self.close()
             raise
@@ -176,7 +193,10 @@ class PairedBrowser:
             if msg.get("id") == mine:
                 if "error" in msg:
                     raise RuntimeError(f"{method}: {msg['error'].get('message', 'error')}")
-                return msg.get("result", {})
+                result = msg.get("result", {})
+                if "exceptionDetails" in result:          # Runtime.evaluate reports a thrown script this way
+                    raise RuntimeError(f"{method}: the page script threw")
+                return result
 
     def _goto(self, url: str) -> None:
         self.call("Page.navigate", {"url": url})
@@ -186,11 +206,18 @@ class PairedBrowser:
             if state.get("result", {}).get("value") == "complete":
                 return
             time.sleep(0.1)
+        raise RuntimeError("page did not finish loading in 15 s")
+
+    def stored_token(self) -> Optional[str]:
+        return self.call("Runtime.evaluate", {"expression": f"localStorage.getItem({json.dumps(self.key)})",
+                                              "returnByValue": True}).get("result", {}).get("value")
 
     def shot(self, url: str, path: str) -> tuple:
         try:
             self._goto(url)
             time.sleep(self.settle)               # the page connects to the market and renders its rows
+            if self.stored_token() != self.token:
+                return False, "the page replaced the paired token, so this shot would show the pair gate"
             data = self.call("Page.captureScreenshot", {"format": "png"})["data"]
             Path(path).write_bytes(base64.b64decode(data))
             return True, ""
@@ -198,9 +225,9 @@ class PairedBrowser:
             return False, f"paired screenshot failed ({type(e).__name__})"
 
     def close(self) -> None:
-        if getattr(self, "ws", None) is not None:
+        if self.ws is not None:
             self.ws.close()
-        if self.proc.poll() is None:
+        if self.proc is not None and self.proc.poll() is None:
             self.proc.terminate()
             try:
                 self.proc.wait(timeout=5)
