@@ -350,13 +350,13 @@ def test_console_has_one_header_per_beat_and_tags_every_data_line(result):
     for line in text.splitlines():
         if line.startswith("  ") and line.strip() and not line.startswith("  code:") and line[2:11].strip():
             assert re.match(r"  \[(LIVE|MIRROR|SIM)\]", line), line
-    assert "—" not in text and "–" not in text
+    assert "\u2014" not in text and "\u2013" not in text
     assert "Visa settles" not in text
 
 
 def test_no_dashes_or_secrets_in_the_json(run):
     blob = json.dumps(run, default=str)
-    assert "—" not in blob and "–" not in blob
+    assert "\u2014" not in blob and "\u2013" not in blob
     assert not re.search(r"sk_(live|test)_|BEGIN [A-Z ]*PRIVATE KEY", blob)
 
 
