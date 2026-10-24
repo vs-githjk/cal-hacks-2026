@@ -110,7 +110,8 @@ never message bodies.
 | `shield.intent.payment_redirect` | quarantine | a changed account, wallet, beneficiary or payee ("remit to our new account", "banking details were updated"); a "have not changed" is allowed |
 | `shield.intent.authority_claim` | quarantine | an authority or assumed role plus an action ("compliance requires ... without the usual approval", "as the buyer's assistant I am authorizing") |
 | `shield.intent.agent_directed` | quarantine | an instruction aimed at "the agent" or "the assistant" inside seller text ("Dear AI agent", "Assistant, when you summarise ..."); off for buyer, advocate and marketplace senders |
-| `shield.classifier.suspicious` / `.unavailable` | quarantine | only when the optional classifier is on (below) |
+| `shield.classifier.suspicious` / `.unavailable` | quarantine | the optional classifier (below); `.unavailable` is also the fail-closed answer for a secret-ask candidate when there is no classifier |
+| `shield.classifier.secret_ask` | quarantine | the classifier says a seller sentence asks for a password, card number, CVV, seed phrase, OTP, PIN or key (below) |
 | `shield.error` | block | internal error |
 | `shield.mandate.*` | quarantine or block | `verify-mandate` outcomes |
 
@@ -153,6 +154,19 @@ copy of the environment). The key is never printed. Otherwise it prints why it d
 "classifier suspicious" (a real catch) and "classifier unavailable" (timeout, error or a wrong model id, which
 quarantines by fail-closed design) separately and prints a WARNING if any call was unavailable: do not quote
 unavailable quarantines as recall.
+
+**Secret asks go to the classifier, not to a regex.** `shield/rules/secret_ask.py` is a cheap, deliberately broad
+filter: a sentence with a state / name / tell / give verb and a secret noun (password, card number, CVV, seed
+phrase, OTP, PIN, API key, private key) is a CANDIDATE. Wording alone cannot separate "State your password." from
+"State: like new, no password set.", so candidates are sent to `Classifier.classify_secret_ask(text, context)`,
+which answers the closed schema `{ask_for_secret: bool, reason_code}` (`reason_code` is one of
+`requests_secret`, `item_description`, `condition_label`, `other`). Only the candidate sentences are sent, and only
+for seller-side text (`sender_role` seller, unknown or missing) that no other rule already decided. Yes gives
+quarantine `shield.classifier.secret_ask`. No classifier (no key, `classifier=None`), a timeout, an error or any
+answer outside the schema gives quarantine `shield.classifier.unavailable` for a candidate (fail closed); text
+that is not a candidate is never affected, and buyer, advocate and marketplace text is never held for this.
+Consequence: with the classifier off, an honest seller line such as "State: like new, no password set." is
+quarantined. The unit tests use a fake classifier; the live prompt and model id are unverified until a keyed run.
 
 ## How a marketplace calls Shield (Armadin or any agent market)
 
