@@ -1,0 +1,13 @@
+{
+ "actorSpecification": 1,
+ "name": "listing-injection-screen",
+ "title": "Listing Injection Screen: Prompt Injection Check for AI Shoppers",
+ "description": "Screens product listing text (title, description, seller notes) before an AI shopping agent reads it. Each listing gets block, flag or pass, with the rule ids that fired and the matched text. Rules only: no LLM, no API key.",
+ "version": "0.1",
+ "input": "./input_schema.json",
+ "dockerfile": "../Dockerfile",
+ "storages": {
+  "dataset": "./dataset_schema.json"
+ },
+ "output": "./output_schema.json"
+}
