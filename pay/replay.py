@@ -8,15 +8,62 @@ raises instead of loading empty, because an empty store would let every old nonc
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 import sqlite3
 import threading
 import time
-import hashlib
+from decimal import Decimal, InvalidOperation, Overflow
 from typing import Optional
 
 NS_MANDATE = "mandate"
 NS_TAP = "tap"
 RETIRED_BEFORE_SUBMISSION = "retired_before_submission"
+
+
+def _retirement_request_matches(request_body: bytes, *, mandate_hash: str, deal_id: str,
+                                amount_cents: int, currency: str, payee: str) -> bool:
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+
+    def reject_constant(_value):
+        raise ValueError("invalid JSON constant")
+
+    try:
+        if len(request_body) > 32 * 1024:
+            return False
+        request = json.loads(request_body.decode("utf-8"), object_pairs_hook=unique_pairs,
+                             parse_constant=reject_constant)
+        funds = request.get("accepted_funds") if isinstance(request, dict) else None
+        if (not isinstance(request, dict)
+                or set(request) - {"accepted_funds", "recipient", "deadline_seconds", "reference",
+                                   "description", "metadata"}
+                or not isinstance(funds, list) or len(funds) != 1 or not isinstance(funds[0], dict)
+                or set(funds[0]) != {"amount", "currency", "payment_method"}
+                or not isinstance(funds[0]["amount"], str)
+                or not re.fullmatch(r"[0-9]+\.[0-9]{2}", funds[0]["amount"])
+                or funds[0]["currency"] != currency or funds[0]["payment_method"] != "stripe"
+                or request.get("recipient") != payee or request.get("reference") != mandate_hash
+                or request.get("description") != "deal " + deal_id
+                or isinstance(request.get("deadline_seconds"), bool)
+                or not isinstance(request.get("deadline_seconds"), int) or request["deadline_seconds"] <= 0
+                or ("metadata" in request and request["metadata"] is not None
+                    and not isinstance(request["metadata"], dict))):
+            return False
+        try:
+            parsed_amount = Decimal(funds[0]["amount"])
+            return (parsed_amount.is_finite() and parsed_amount.adjusted() <= 11
+                    and parsed_amount * 100 == amount_cents)
+        except (InvalidOperation, Overflow, TypeError, ValueError):
+            return False
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return False
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS used_nonce (
@@ -146,6 +193,9 @@ class NonceStore:
                 raise ValueError(f"{field} must be a non-empty string")
         if len(mandate_hash) != 64 or any(c not in "0123456789abcdef" for c in mandate_hash):
             raise ValueError("mandate_hash must be lowercase SHA-256 hex")
+        if not _retirement_request_matches(request_body, mandate_hash=mandate_hash, deal_id=deal_id,
+                                           amount_cents=amount_cents, currency=currency, payee=payee):
+            raise ValueError("RequestPayment bytes do not match retirement binding")
         request_digest = hashlib.sha256(request_body).hexdigest()
         message_id = "req:" + hashlib.sha256(buyer_id.encode("utf-8") + b"\n" + request_body).hexdigest()
         return {"mandate_hash": mandate_hash, "buyer_id": buyer_id, "deal_id": deal_id,

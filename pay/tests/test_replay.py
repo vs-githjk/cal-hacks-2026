@@ -130,11 +130,20 @@ def test_submitted_attempt_recovers_as_uncertain_without_retry(tmp_path):
     assert store.get_payment_attempt(row["mandate_hash"])["phase"] == "uncertain"
 
 
+def retirement_body(*, amount="123.45", currency="USD", recipient="seller-1", reference="a" * 64,
+                    description="deal deal-1"):
+    from uagents_core.contrib.protocols.payment import Funds, RequestPayment
+    request = RequestPayment(accepted_funds=[Funds(amount=amount, currency=currency, payment_method="stripe")],
+        recipient=recipient, deadline_seconds=300, reference=reference, description=description)
+    return request.model_dump_json().encode("utf-8")
+
+
 def test_unsubmitted_retirement_consumes_nonce_and_is_idempotent(tmp_path):
     store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    body = retirement_body()
     row = store.retirement_attempt(mandate_hash="a" * 64, buyer_id="buyer-1", deal_id="deal-1",
-        request_body=b'{"reference":"x"}', amount_cents=12345, currency="USD", payee="seller-1")
-    assert row["message_id"] == "req:" + hashlib.sha256(b"buyer-1\n" + b'{"reference":"x"}').hexdigest()
+        request_body=body, amount_cents=12345, currency="USD", payee="seller-1")
+    assert row["message_id"] == "req:" + hashlib.sha256(b"buyer-1\n" + body).hexdigest()
     assert row["receipt_keyid"] == "not-submitted"
     assert store.retire_unsubmitted_attempt(row, "nonce-1") is True
     saved = store.get_payment_attempt(row["mandate_hash"])
@@ -184,8 +193,11 @@ def test_retirement_refuses_every_attempt_that_may_have_reached_charger(tmp_path
 def test_retirement_and_submission_race_has_one_terminal_winner(tmp_path):
     path = str(tmp_path / "attempts.sqlite")
     stores = [NonceStore(path), NonceStore(path)]
-    submission = attempt()
-    retirement = {**submission, "receipt_keyid": "not-submitted", "phase": "refused"}
+    body = retirement_body()
+    message_id = "req:" + hashlib.sha256(b"buyer-1\n" + body).hexdigest()
+    submission = attempt(request_sha256=hashlib.sha256(body).hexdigest(), message_id=message_id)
+    retirement = stores[0].retirement_attempt(mandate_hash=submission["mandate_hash"], buyer_id="buyer-1",
+        deal_id="deal-1", request_body=body, amount_cents=12345, currency="USD", payee="seller-1")
     barrier, outcomes = threading.Barrier(2), {}
 
     def submit():
@@ -213,8 +225,9 @@ def test_retirement_and_submission_race_has_one_terminal_winner(tmp_path):
                                           ("receipt_keyid", "key-1")])
 def test_retirement_rejects_changed_identity_or_receipt_binding(tmp_path, field, value):
     store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    body = retirement_body()
     row = store.retirement_attempt(mandate_hash="a" * 64, buyer_id="buyer-1", deal_id="deal-1",
-        request_body=b'{"reference":"x"}', amount_cents=12345, currency="USD", payee="seller-1")
+        request_body=body, amount_cents=12345, currency="USD", payee="seller-1")
     changed = {**row, field: value}
     assert store.retire_unsubmitted_attempt(row, "nonce-1")
     if field == "buyer_id":
@@ -224,3 +237,20 @@ def test_retirement_rejects_changed_identity_or_receipt_binding(tmp_path, field,
     else:
         with pytest.raises(ValueError):
             store.retire_unsubmitted_attempt(changed, "nonce-1")
+
+
+@pytest.mark.parametrize("body", [
+    retirement_body(amount="123.46"),
+    retirement_body(currency="CAD"),
+    retirement_body(recipient="other-seller"),
+    retirement_body(reference="b" * 64),
+    retirement_body(description="deal other-deal"),
+    b'{"reference":"' + b"a" * 64 + b'","reference":"' + b"a" * 64 + b'"}',
+    b'{"accepted_funds": NaN}',
+    b"not json",
+])
+def test_retirement_requires_strict_request_body_matching_metadata(tmp_path, body):
+    store = NonceStore(str(tmp_path / "attempts.sqlite"))
+    with pytest.raises(ValueError, match="RequestPayment"):
+        store.retirement_attempt(mandate_hash="a" * 64, buyer_id="buyer-1", deal_id="deal-1",
+            request_body=body, amount_cents=12345, currency="USD", payee="seller-1")
