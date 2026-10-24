@@ -71,13 +71,13 @@ def test_bids_carry_origin_picked_line_and_floor(run, steps):
     bids = {s.args["id"]: s for s in steps if s.reducer == "place_bid"}
     assert len(bids) == len(run["beats"]["2"]["bids"])
     best = bids["bid-need-vidyut-5070ti-best-buy"].args
-    assert best["origin"] == "MIRROR" and best["lines"][0]["unit_price"] == 1249.99
+    assert best["origin"] == "MIRROR" and best["lines"][0]["unit_price"] == 1299.99
     assert best["lines"][0]["offered_condition"] == "new" and best["source"].startswith("https://www.bestbuy.com")
     sim = bids["bid-need-vidyut-5070ti-shady-sam"].args
     assert sim["origin"] == "SIM"
     gg = bids["bid-need-vidyut-5070ti-gadget-grove"].args     # two alternative lines: BOTH are placed, the market picks one
-    assert [(l["offered_condition"], l["unit_price"]) for l in gg["lines"]] == [("new", 1315.27), ("open-box", 1247.02)]
-    assert gg["stated_total"] == 1247.02 and gg["source"].startswith("https://example.com/sim/gadget-grove")
+    assert [(l["offered_condition"], l["unit_price"]) for l in gg["lines"]] == [("new", 1315.27), ("open-box", 1286.02)]
+    assert gg["stated_total"] == 1286.02 and gg["source"].startswith("https://example.com/sim/gadget-grove")
     floors = {s.actor: s.args["floor"] for s in steps if s.reducer == "set_floor"}
     assert floors["seller:lowball"] > 1090.0          # the referee floor rejection is the market's, not ours
     assert floors["seller:gadget-grove"] == 1190.0    # one floor per SKU: the lowest of its two condition lines
@@ -102,7 +102,7 @@ def test_advocate_cards_are_the_real_cards_and_every_veto_cites_its_source(run, 
     assert by["shady-sam"]["recommendation"] == "veto" and by["shady-sam"]["rule_id"] == "advocate.condition"
     assert by["shady-sam"]["source_url"].endswith("shady-sam-gpu-5070ti-lies.html")
     assert by["bargain-bin"]["recommendation"] == "veto" and by["bargain-bin"]["rule_id"] == "fit.gpu_length"
-    assert by["best-buy"]["recommendation"] == "caution"
+    assert by["best-buy"]["recommendation"] == "buy"                # ASUS Prime, 304 mm in a 305 mm case
     assert all(c["source_url"] and c["text"] for c in cards if c["recommendation"] == "veto")
     kinds = [s.reducer for s in steps]
     last_card = max(i for i, s in enumerate(steps) if s.reducer == "attach_advocate_card")
@@ -127,7 +127,7 @@ def test_payment_mode_follows_the_charge(run, steps):
 def test_money_steps_use_the_demos_real_mandate(run, steps):
     m = run["beats"]["4"]["mandate"]
     mand = next(s for s in steps if s.reducer == "create_mandate").args
-    assert mand["hash"] == m["hash"] and mand["amount"] == 1249.99 and mand["payee"] == m["payee"]
+    assert mand["hash"] == m["hash"] and mand["amount"] == 1299.99 and mand["payee"] == m["payee"]
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
     assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut"}

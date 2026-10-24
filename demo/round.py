@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Optional
 
 from demo.adapters import claim_checker
-from demo.common import SOURCE_OF, validate
+from demo.common import SOURCE_OF, money, validate
 from demo.pages import fixture_fetch
 from demo.sellers import Seller, make_bid
 from demo import advice
@@ -21,6 +21,28 @@ from shield.core import screen
 from shield.service import attack_type
 
 ARRIVAL_STEP_MS = 900  # seller i seals its bid at 300 + i * 900 ms on the sim clock (SIM clock, no sleeping)
+
+
+def landed_note(seller: Seller, landed: float) -> str:
+    """How to read a landed price. Tax is never included; shipping is only counted when the listing states it,
+    and the words say so (the math uses 0 when it is not captured, the line never calls that free)."""
+    ship = "shipping: not captured" if not seller.shipping_captured else \
+        "shipping: free" if not seller.shipping else f"shipping: {money(seller.shipping)} included"
+    return f"{money(landed)} before sales tax, {ship}"
+
+
+def _fit_unknown(card: dict) -> bool:
+    return any(w["kind"] == "fit_unknown" for w in card["warnings"]) or card["fit"]["verdict"] == "uncertain"
+
+
+def pick_winner(ranked: list[dict], cards: list[dict]) -> Optional[dict]:
+    """Buyer rule, demo; to move into the advocate (issue for Abhinav): the cheapest surviving bid wins, but a bid
+    whose fit is not confirmed cannot win while a confirmed-fit bid is inside the cap (ranking only holds bids
+    inside the cap). With no confirmed fit left, the cheapest unconfirmed one may still win, with its caution."""
+    alive = [(r, c) for r, c in zip(ranked, cards) if c["recommendation"] != "veto"]
+    sure = [(r, c) for r, c in alive if not _fit_unknown(c)]
+    pick = sure or alive
+    return pick[0][0] if pick else None
 
 
 def _seller_text(seller: Seller, bid: dict) -> str:
@@ -119,7 +141,7 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
         cards.append(advice.advise(need, bid_by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs))
     for card in cards:
         validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")})
-    winner = next((r for r, c in zip(ranking["ranked"], cards) if c["recommendation"] != "veto"), None)
+    winner = pick_winner(ranking["ranked"], cards)
     for b in bids:
         validate("Bid", b)
     return {"round_id": f"round-{round_no}", "claim_check": {"label": label, "real": real}, "arrivals": arrivals,

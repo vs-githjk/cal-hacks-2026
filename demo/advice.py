@@ -27,6 +27,15 @@ def _claim_warning(claim: dict, landed: float):
             "dollar_impact": round(float(landed), 2), "evidence_hash": claim["evidence_hash"], "checked_at": claim["checked_at"]}
 
 
+def _cite_maker_spec(warning: dict, line: dict) -> dict:
+    """A length veto cites the maker's own spec page when the line carries one (the listing page alone does not
+    prove how long the card is). checks.py is Lane A's and cites the listing; this swaps only the source."""
+    src = (line.get("attrs") or {}).get("length_source")
+    if src and warning["rule_id"] == "fit.gpu_length":
+        return {**warning, "source_url": src}
+    return warning
+
+
 def fit_display(bid: dict, owned_attrs: dict) -> dict:
     """The fit checks the real advocate ran, shown for the console (same cards, same rule filter)."""
     mod, _ = advocate_checks()
@@ -53,6 +62,7 @@ def advise(need: dict, bid: dict, entry: dict, claims: list[dict], owned_attrs: 
     warnings = sorted(card["warnings"] + extra, key=lambda w: -w["dollar_impact"])
     kinds = {w["kind"] for w in warnings}
     rec = "veto" if kinds & mod.VETO_KINDS else "caution" if kinds - mod.INFO_KINDS else "buy"
+    warnings = [_cite_maker_spec(w, sel) for w in warnings]
     card = {**card, "warnings": warnings[:mod.MAX_WARNINGS], "recommendation": rec, "call_reason": mod.call_reason(warnings, one),
             "line": entry["line"], "fit": fit_display(one, owned_attrs), "judged_condition": sel["offered_condition"]}
     return card
