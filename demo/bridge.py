@@ -307,9 +307,26 @@ def main(argv: Optional[list] = None) -> int:
             out.note("NOT BRIDGED: " + g)
         return 0
 
+    if not args.stripe:
+        out.note("WARNING: /market labels this SIM payment stub 'Stripe test mode' (market.ts:375, Lane B #37). Use --stripe for a recorded take.")
+    try:
+        return _run_live(args, steps, run, out, say)
+    except (OSError, subprocess.CalledProcessError) as e:
+        out.blank()
+        if isinstance(e, subprocess.CalledProcessError):
+            err = (e.stderr or b"").decode(errors="replace").strip().splitlines()
+            out.note(f"STOPPED: spacetime CLI failed: {err[0] if err else e}")
+        else:
+            out.note(f"STOPPED: market not reachable at {os.environ.get('SPACETIMEDB_HTTP', 'http://127.0.0.1:3000')} "
+                     f"({type(e).__name__}). Start it with `python3 scripts/launch.py up` or check SPACETIMEDB_HTTP.")
+        return 1
+
+
+def _run_live(args, steps, run, out, say) -> int:
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
     from stdb import Market   # the market's own bridge; reads SPACETIMEDB_HTTP and SPACETIMEDB_DB
     tokens = find_tokens_dir(args.tokens_dir)
+    out.note(f"tokens: {tokens}")
     seller_tokens = ROOT / ".tokens"
     seller_tokens.mkdir(exist_ok=True)
     clients: dict[str, Any] = {"buyer": Market(token_file=str(tokens / BUYER_TOKEN)),
