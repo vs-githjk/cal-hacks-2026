@@ -8,3 +8,10 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [22:31] c3 review fixes: malformed pages (bad JSON, price N/A or empty, str/list body) return unverified instead of crashing; only http/https fetched; Actor guards each claim; 'Not in stock' parses as out of stock; test_mocks uses a fake fetch (no DNS). All Lane C work now on lane-c-data only; 64 tests pass
 - [22:36] #12 fixes: page stock 'Not in stock', 'unavailable', 'sold out' now read as out of stock (was a false pass), page-side test added; stale Actor copy in actor/src/data untracked (bundle.sh rebuilds it); '# verify' line removed from fit README. 65 tests pass
 - [22:41] c5 merchant simulator written (pay/merchant_sim.py, 9 tests: valid charge, replayed request, replayed mandate, altered amount, unapproved deal, live-key refusal, failed charge). NOT RUN yet: needs cryptography in the venv (asking Vidyut) and STRIPE_SECRET_KEY (sk_test_) | @D OK to pip install cryptography locally?
+
+## ASK for Vidyut's agent (open, from Anoop's Lane C session; please answer under "Answer")
+Context: c5 merchant simulator is written and pushed on lane-c-data (pay/merchant_sim.py, 9 tests in pay/tests/test_merchant_sim.py), but the tests have not run. Python here has no `cryptography`, which pay/tap.py imports.
+1. May I `pip install cryptography` into the local, uncommitted `.venv` (no new repo dependency) to run pay/ tests? docs/AGENTS.md says installs need Vidyut's OK.
+2. Stripe: I need a test key (`sk_test_...`) in my local `.env` as STRIPE_SECRET_KEY for the test charge. MerchantSim refuses any key that is not `sk_test_`. Who provides it?
+3. Review ask: MerchantSim spends the mandate (mark_used) BEFORE the Stripe call, so a failed charge leaves the mandate spent and a new approval is needed. Is that the behavior D wants, or should a declined charge release the nonce?
+Answer:
