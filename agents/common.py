@@ -177,7 +177,8 @@ class OrderPlaced(Model):
 
 
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
-SELLERS = ["seller_1", "seller_2", "seller_3"]  # three named seller agents, each its own uAgent
+SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named seller agents, each its own uAgent
+SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015}
 SEEDS = {
     "buyer": os.getenv("BUYER_AGENT_SEED", "tech-bazaar-buyer-dev"),
     "advocate": os.getenv("ADVOCATE_AGENT_SEED") or os.getenv("ADVOCATE_SEED", "tech-bazaar-advocate-dev"),
@@ -185,6 +186,13 @@ SEEDS = {
     **{s: os.getenv(f"{s.upper()}_AGENT_SEED") or os.getenv(f"{s.upper()}_SEED", f"tech-bazaar-{s}-dev")
        for s in SELLERS},
 }
+
+
+def register_custom_seller(role: str) -> None:
+    """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
+    Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
+    env = role.upper().replace("-", "_")
+    SEEDS.setdefault(role, os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev"))
 
 
 def public_seed(role: str) -> bool:
@@ -198,7 +206,7 @@ def agent_args(role: str, port: int, **profile) -> dict:
     `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
     readme_path, handle, published to Agentverse on connect."""
     args = dict(seed=SEEDS[role], port=port, publish_agent_details=True, **profile)
-    mailbox_flag = "SELLERS_MAILBOX" if role in SELLERS else f"{role.upper()}_MAILBOX"
+    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
     if os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag):
         if public_seed(role):
             sys.exit(f"Set {role.upper()}_AGENT_SEED in agents/.env before going on Agentverse: the default seed is public.")

@@ -30,3 +30,6 @@ shot-*.png
 
 # local launcher state (scripts/launch.py)
 .run/
+
+# custom sellers written by the Seller Kit (SIM configs, one JSON per shop)
+agents/sellers/custom/

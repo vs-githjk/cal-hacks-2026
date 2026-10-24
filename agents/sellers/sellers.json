@@ -1,11 +1,16 @@
 {
-  "_note": "SIM: simulated sellers, Oct 2026 US street prices. listing_url values are example.com placeholders, not real listings.",
+  "_note": "SIM: simulated sellers, Oct 2026 US street prices. listing_url values are example.com placeholders, not real listings. Entries are SellerConfig (contracts/SellerConfig.schema.json) minus the id, which is the key.",
   "mirror_snapshot_id": "sim-pcparts-2026-10-23",
   "sellers": {
     "seller_1": {
+      "id": "seller_1",
       "name": "Byte Bros Outlet",
       "archetype": "steady big-box retailer, fair prices, no surprises",
-      "discount": 0.03,
+      "origin": "SIM",
+      "pricing": {
+        "mode": "discount",
+        "discount": 0.03
+      },
       "shipping": 0.0,
       "perks": [
         "free shipping",
@@ -17,7 +22,9 @@
       "listings": {
         "rtx 4070 super 12gb": {
           "price": 599.99,
-          "floor": 569.0,
+          "floor_by_condition": {
+            "new": 569.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "retail",
@@ -34,7 +41,9 @@
         },
         "rx 7800 xt 16gb": {
           "price": 489.99,
-          "floor": 459.0,
+          "floor_by_condition": {
+            "new": 459.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "retail",
@@ -51,7 +60,9 @@
         },
         "psu 750w": {
           "price": 99.99,
-          "floor": 89.0,
+          "floor_by_condition": {
+            "new": 89.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "retail",
@@ -67,7 +78,9 @@
         },
         "case": {
           "price": 94.99,
-          "floor": 84.0,
+          "floor_by_condition": {
+            "new": 84.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "retail",
@@ -81,9 +94,14 @@
       }
     },
     "seller_2": {
+      "id": "seller_2",
       "name": "Silicon Sally's Surplus",
       "archetype": "chatty refurb specialist who loves a deal",
-      "discount": 0.06,
+      "origin": "SIM",
+      "pricing": {
+        "mode": "discount",
+        "discount": 0.06
+      },
       "shipping": 14.99,
       "perks": [
         "1-year shop warranty on refurbs",
@@ -95,7 +113,9 @@
       "listings": {
         "rtx 4070 super 12gb": {
           "price": 559.0,
-          "floor": 535.0,
+          "floor_by_condition": {
+            "refurbished": 535.0
+          },
           "condition": "refurbished",
           "page_condition": "refurbished",
           "variant": "OEM",
@@ -112,7 +132,9 @@
         },
         "psu 750w": {
           "price": 89.99,
-          "floor": 79.0,
+          "floor_by_condition": {
+            "open-box": 79.0
+          },
           "condition": "open-box",
           "page_condition": "open-box",
           "variant": "retail",
@@ -128,7 +150,9 @@
         },
         "psu 850w": {
           "price": 129.99,
-          "floor": 115.0,
+          "floor_by_condition": {
+            "new": 115.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "retail",
@@ -144,7 +168,9 @@
         },
         "case": {
           "price": 79.99,
-          "floor": 70.0,
+          "floor_by_condition": {
+            "new": 70.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "retail",
@@ -158,9 +184,14 @@
       }
     },
     "seller_3": {
+      "id": "seller_3",
       "name": "FlashDeal Frankie",
       "archetype": "pushy marketplace flipper, always 'brand new, best price'",
-      "discount": 0.02,
+      "origin": "SIM",
+      "pricing": {
+        "mode": "discount",
+        "discount": 0.02
+      },
       "shipping": 9.99,
       "perks": [
         "ships today"
@@ -171,7 +202,9 @@
       "listings": {
         "rtx 4070 super 12gb": {
           "price": 529.0,
-          "floor": 515.0,
+          "floor_by_condition": {
+            "new": 515.0
+          },
           "condition": "new",
           "page_condition": "open-box",
           "variant": "retail",
@@ -188,7 +221,9 @@
         },
         "rx 7800 xt 16gb": {
           "price": 449.0,
-          "floor": 430.0,
+          "floor_by_condition": {
+            "used": 430.0
+          },
           "condition": "used",
           "page_condition": "used",
           "variant": "retail",
@@ -205,7 +240,9 @@
         },
         "psu 850w": {
           "price": 119.0,
-          "floor": 105.0,
+          "floor_by_condition": {
+            "new": 105.0
+          },
           "condition": "new",
           "page_condition": "new",
           "variant": "OEM",
@@ -218,6 +255,186 @@
             "efficiency": "80+ Bronze",
             "modular": "none"
           }
+        }
+      }
+    },
+    "seller_4": {
+      "id": "seller_4",
+      "name": "Bay Area PC Shop",
+      "archetype": "local physical PC shop, fixed margin on its own cost, helps with builds in store",
+      "origin": "SIM",
+      "pricing": {
+        "mode": "fixed_margin",
+        "margin_pct": 14
+      },
+      "shipping": 0.0,
+      "perks": [
+        "same-day local pickup",
+        "free shipping",
+        "30-day returns"
+      ],
+      "claims": [
+        "all items new retail, sealed",
+        "in stock at the shop counter"
+      ],
+      "listings": {
+        "rtx 5070 ti": {
+          "cost": 1115.0,
+          "floor_by_condition": {
+            "new": 1190.0
+          },
+          "condition": "new",
+          "page_condition": "new",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/bay-area-pc-shop/rtx-5070-ti",
+          "attrs": {
+            "category": "gpu",
+            "chipset": "RTX 5070 Ti",
+            "length_mm": 303
+          }
+        },
+        "rtx 4070 super 12gb": {
+          "cost": 560.0,
+          "floor_by_condition": {
+            "new": 600.0
+          },
+          "condition": "new",
+          "page_condition": "new",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/bay-area-pc-shop/rtx-4070-super-12gb",
+          "attrs": {
+            "category": "gpu",
+            "chipset": "RTX 4070 SUPER",
+            "length_mm": 267,
+            "power_connector": [
+              "8pin",
+              1
+            ]
+          }
+        },
+        "psu 750w": {
+          "cost": 78.0,
+          "floor_by_condition": {
+            "new": 85.0
+          },
+          "condition": "new",
+          "page_condition": "new",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/bay-area-pc-shop/psu-750w-gold",
+          "attrs": {
+            "category": "psu",
+            "wattage": 750,
+            "form_factor": "ATX",
+            "pcie_8pin": 2,
+            "efficiency": "80+ Gold",
+            "modular": "full"
+          }
+        },
+        "case": {
+          "cost": 66.0,
+          "floor_by_condition": {
+            "new": 74.0
+          },
+          "condition": "new",
+          "page_condition": "new",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/bay-area-pc-shop/mid-tower-airflow",
+          "attrs": {
+            "category": "case",
+            "type": "ATX Mid Tower",
+            "max_gpu_length_mm": 370
+          }
+        }
+      }
+    },
+    "seller_5": {
+      "id": "seller_5",
+      "name": "ReNew Refurb",
+      "archetype": "refurbisher: tested refurbished and open-box parts at a discount, shorter warranty",
+      "origin": "SIM",
+      "pricing": {
+        "mode": "discount",
+        "discount": 0.02
+      },
+      "shipping": 12.99,
+      "perks": [
+        "90-day warranty",
+        "14-day returns"
+      ],
+      "claims": [
+        "every part bench-tested",
+        "condition stated on every listing"
+      ],
+      "listings": {
+        "rtx 5070 ti": {
+          "price": 1119.0,
+          "floor_by_condition": {
+            "refurbished": 1060.0,
+            "open-box": 1135.0
+          },
+          "condition": "refurbished",
+          "page_condition": "refurbished",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/renew-refurb/rtx-5070-ti-refurbished",
+          "attrs": {
+            "category": "gpu",
+            "chipset": "RTX 5070 Ti",
+            "length_mm": 303
+          },
+          "alt_lines": [
+            {
+              "condition": "open-box",
+              "page_condition": "open-box",
+              "price": 1199.0,
+              "listing_url": "https://example.com/sim/renew-refurb/rtx-5070-ti-open-box"
+            }
+          ]
+        },
+        "rtx 4070 super 12gb": {
+          "price": 549.0,
+          "floor_by_condition": {
+            "refurbished": 520.0
+          },
+          "condition": "refurbished",
+          "page_condition": "refurbished",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/renew-refurb/rtx-4070-super-12gb-refurbished",
+          "attrs": {
+            "category": "gpu",
+            "chipset": "RTX 4070 SUPER",
+            "length_mm": 267,
+            "power_connector": [
+              "8pin",
+              1
+            ]
+          }
+        },
+        "psu 750w": {
+          "price": 64.99,
+          "floor_by_condition": {
+            "refurbished": 58.0,
+            "open-box": 68.0
+          },
+          "condition": "refurbished",
+          "page_condition": "refurbished",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/renew-refurb/psu-750w-refurbished",
+          "attrs": {
+            "category": "psu",
+            "wattage": 750,
+            "form_factor": "ATX",
+            "pcie_8pin": 2,
+            "efficiency": "80+ Gold",
+            "modular": "full"
+          },
+          "alt_lines": [
+            {
+              "condition": "open-box",
+              "page_condition": "open-box",
+              "price": 79.99,
+              "listing_url": "https://example.com/sim/renew-refurb/psu-750w-open-box"
+            }
+          ]
         }
       }
     }
