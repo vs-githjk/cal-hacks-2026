@@ -1078,6 +1078,29 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect([...h.db.payment.iter()].map((x) => x.mandateHash)).toEqual(['h1']);
   });
 
+  it('a rival cannot make a mandate on your bid before any hold exists, so it cannot later deny that mandate to free your unit', () => {
+    twoBuyerRounds();
+    // Bid ids are public while the round is open; the round has not closed, so no hold exists yet.
+    expect(holds()).toHaveLength(0);
+    expect(() => run(BOB, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'hb', id: 'mdt-b', nonce: 'nb', buyerId: 'bob', amount: 99999, dealId: 'deal-bid-a1' })))).toThrow(/not your deal/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+    close('round-1');
+    expect(holds().map((x) => [x.bidId, x.state])).toEqual([['bid-a1', 'held']]);
+    // The same refusal with every deal id spelling, and for the referee relaying Bob.
+    for (const dealId of ['bid-a1', 'deal-bid-a1', 'round-1:bid-a1']) {
+      expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: `hx-${dealId}`, id: `mdt-${dealId}`, nonce: `nx-${dealId}`, buyerId: 'bob', dealId })))).toThrow(/not your deal/);
+    }
+    // Bob cannot free Vidyut's unit by denying: there is no mandate of his to deny.
+    expect(() => run(BOB, (ctx) => m.denyApproval(ctx, { mandateHash: 'hb', reason: 'no' }))).toThrow(/no mandate/);
+    expect(holds()[0]!.state).toBe('held');
+    // Bob's own round is untouched: his round-2 winner is the next best bid and holds a different line.
+    close('round-2');
+    expect(holds().filter((x) => x.state === 'held').map((x) => x.bidId).sort()).toEqual(['bid-a1', 'bid-b2']);
+    // Vidyut still buys his own unit.
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'deal-bid-a1' })));
+    expect(holds().find((x) => x.bidId === 'bid-a1')!.state).toBe('held');
+  });
+
   it('a line short of the need with no holds keeps its true quantity reason, not a false sold-out one', () => {
     run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ items: [{ skuSpec: GPU, condition: 'new', allowedConditions: [], variant: 'retail', quantity: 2, unit: 'each' }] })));
     run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-1', needId: 'need-1', windowS: 15 }));

@@ -403,11 +403,15 @@ export function bidIdOfDeal(dealId: string): string {
  */
 function claimDealUnits(ctx: Ctx, dealId: string, buyerId: string, to: 'held' | 'sold') {
   const bidId = bidIdOfDeal(dealId);
+  // The deal belongs to the buyer whose need the bid answered, from the bid itself, so the owner is known before any hold
+  // exists (bid ids are public while the round is open). A deal that names no bid has no owner and is left alone.
+  const bidOwner = ctx.db.need.id.find(ctx.db.bid.id.find(bidId)?.needId ?? '')?.buyerId;
+  if (bidOwner !== undefined && bidOwner !== buyerId) throw new SenderError('not your deal');
   const mine = [...ctx.db.stockHold.bidId.filter(bidId)];
   if (!mine.length) return;
   const now = ms(ctx.timestamp);
   for (const hd of mine) {
-    // The deal belongs to the buyer whose need the round served: nobody else can renew, lock or pay for its unit.
+    // A hold agrees: nobody but the buyer whose need the round served can renew, lock or pay for its unit.
     const owner = ctx.db.need.id.find(ctx.db.round.id.find(hd.roundId)?.needId ?? '')?.buyerId;
     if (owner !== buyerId) throw new SenderError('not your deal');
     // A unit already sold is gone: a second mandate, approval or payment on it can never sell it again.
