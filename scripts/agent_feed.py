@@ -6,8 +6,8 @@ status is decided per agent from its own log lines, never from a pidfile flag: "
 and that agent logged "Starting mailbox client for" (the uagents mailbox loop running) and none of the mailbox or manifest
 failure lines (no mailbox created yet, cannot reach the mailbox server, 401 on retrieve, manifest not published); "local" when
 it is alive without that; "down" otherwise (also when its log is missing). A mailbox created by connect.py after the agent
-started logs one unattributed [mailbox] "Successfully registered" line: it clears "mailbox not found" for the single agent
-waiting on one, and with several waiting they stay local (cannot say which). Only tags that logged "Starting agent with
+started logs one unattributed [mailbox] "Successfully registered" line: it clears "mailbox not found" only for the single
+agent waiting on one when no other agent in the log runs a mailbox client; otherwise they stay as they are (cannot say which). Only tags that logged "Starting agent with
 address" are agents, so uagents module loggers (resolver, dispenser, mailbox ...) never become rows. Manifests publish fine without a mailbox, so a
 published manifest proves nothing about Agentverse.
 Nothing here is invented: a missing run dir, pidfile or log gives down rows with no address and no message.
@@ -74,8 +74,10 @@ def parse_log(text: str) -> dict[str, dict]:
     mailbox is True only when that agent logged the mailbox client starting and none of the failure lines.
     An agent is a tag that logged "Starting agent with address:" (or a labelled address): every other tag in the log is a
     uagents module logger (resolver, dispenser, mailbox, network, setup, server, config ...) and never becomes a row.
-    A [mailbox] "Successfully registered" line names no agent, so it clears the "mailbox not found" flag only when exactly
-    one agent is waiting on a mailbox; with two or more waiting it cannot say which, and they all stay local."""
+    A [mailbox] "Successfully registered" line names no agent, so it clears the "mailbox not found" flag only when the
+    waiting agent is the only one in the log that logged the mailbox client starting (any other running mailbox client
+    could be the one connect.py registered); otherwise it cannot say which, and every agent stays as it is. When it does
+    clear the flag, the stale 404 message is replaced by the registration line."""
     agents: dict[str, dict] = {}
     labels: dict[str, str] = {}  # address -> label ("seller_1 address: ...")
     lines = text.splitlines()
@@ -93,8 +95,14 @@ def parse_log(text: str) -> dict[str, dict]:
         tag, msg = m.group(1), m.group(2)
         if tag == "mailbox" and MAILBOX_REGISTERED in msg:
             waiting = [a for a in agents.values() if a["mailbox_missing"]]
-            if len(waiting) == 1:
-                waiting[0]["mailbox_missing"] = False
+            running = [a for a in agents.values() if a["mailbox_up"]]
+            # connect.py can be run for any port, so another agent running a mailbox client may be the one registered:
+            # only when the waiting agent is the single one that logged the mailbox client starting is it the one
+            if len(waiting) == 1 and len(running) == 1 and running[0] is waiting[0]:
+                a = waiting[0]
+                a["mailbox_missing"] = False
+                if a["last_message"] is not None and a["last_message"].startswith(MAILBOX_MISSING):
+                    a["last_message"], a["last_index"] = clean(msg), i  # the 404 text is stale now
             continue
         if tag not in real:
             continue

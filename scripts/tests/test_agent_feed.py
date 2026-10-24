@@ -389,7 +389,8 @@ def test_mailbox_created_after_start_clears_local_only_without_a_restart(tmp_pat
     rows = [r for r in F.agent_rows(run) if r["role"] == "seller"]
     assert [r["name"] for r in rows] == ["seller_4"]  # no phantom 'mailbox' row
     assert rows[0]["status"] == "agentverse"
-    assert rows[0]["last_message"] == "Agent mailbox not found: create one using the agent inspector"
+    # the stale 404 text is replaced by the registration line
+    assert rows[0]["last_message"] == "Successfully registered as mailbox agent in Agentverse"
     # before connect.py runs it is still honest
     before = write_run(tmp_path / "b", {"sellers": alive_rec(tmp_path / "b" / ".run" / "logs" / "sellers.log")},
                        {"sellers": seller4_log()})
@@ -404,6 +405,18 @@ def test_registration_line_with_two_agents_missing_a_mailbox_cannot_say_which(tm
     rows = by_name([r for r in F.agent_rows(run) if r["role"] == "seller"])
     assert set(rows) == {"seller_4", "seller_5"}
     assert {r["status"] for r in rows.values()} == {"local"}  # unattributable: stay Local only, never guess Agentverse
+
+
+def test_registration_line_may_belong_to_another_running_mailbox_agent(tmp_path):
+    # seller_1 already has its mailbox; seller_4 got the 404; a re-run of connect.py for seller_1 logs the line
+    log = (f"INFO:     [seller_1]: Starting agent with address: {ADDR_2}\n" + mailbox_up("seller_1")
+           + f"INFO:     [seller_4]: Starting agent with address: {ADDR_1}\n" + mailbox_up("seller_4")
+           + NOT_FOUND.format(t="seller_4") + REGISTERED)
+    run = write_run(tmp_path, {"sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log")}, {"sellers": log})
+    rows = by_name([r for r in F.agent_rows(run) if r["role"] == "seller"])
+    assert rows["seller_4"]["status"] == "local"
+    assert rows["seller_4"]["last_message"] == "Agent mailbox not found: create one using the agent inspector"
+    assert rows["seller_1"]["status"] == "agentverse"
 
 
 def test_registration_line_never_clears_a_connect_or_auth_failure(tmp_path):
