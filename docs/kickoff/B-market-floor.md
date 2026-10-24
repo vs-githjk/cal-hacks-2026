@@ -15,3 +15,6 @@ Done when: two laptops see the same auction and the same floor in real time, and
 ## Visa and quality update (Fri 20:20)
 - The owner view leads with outcomes: hours saved this week, dollars saved versus last week's prices, waste avoided, each with "how we computed this". Trust is visible: signature verified, claims checked, supplier stability verified, quality record per supplier.
 - Receiving screen: photo of each delivered case, the spec it is checked against, accept or reject, and the supplier's quality record updating live.
+
+## Decided Fri 20:30
+- Build the 3D floor from the start (Vidyut's call), drawn only from market state; 2D sprites only as an emergency fallback. The owner view, receiving screen and the two judge toggles ("cheapest per line" vs "optimizer", "advocate off") still ship in Tier 0 or 1.

@@ -14,3 +14,7 @@ Done when: a liar is caught live with a reason, a Stripe test-mode charge on a V
 ## Latest direction additions
 - CRS supplier stability (CRS suggested it): Shield calls CRS for each supplier (credit, pending loans) and exposes only a signal (verified stable, caution, not verified) to the market; raw data never leaves Lane D. Add a test that fails if any CRS field reaches a buyer- or seller-bound message.
 - Hyphenate fit is stronger now: the restaurant's purchasing and accounts-payable seat (purchase order, delivery, invoice, three-way match, payment), with the owner as approver.
+
+## Decided Fri 20:30
+- Hyphenate purchasing seat is Tier 1 (after the demo path is green, Sat afternoon): purchase order from the approved order, receiving check results, invoice read and matched against the order and the delivery (three-way match), credit memos for rejects, owner approval above the limit, balanced ledger. "Sources that disagree" is the moment: the invoice says 48 count, the delivery photo shows 24.
+- Pricing in the product: 15% of verified savings, capped at $299 a month; show the fee next to the savings.

@@ -1,11 +1,9 @@
-# Pitch (keep in sync with the artifact)
+# Pitch (decided Fri 20:30; keep in sync with the artifact)
 
-One line: Bidding Royale makes suppliers fight for a restaurant's weekly order, and an agent that knows your kitchen makes sure you get the best deal.
+10 seconds: Bidding Royale is the purchasing agent for independent restaurants. Snap your order guide: it makes your suppliers bid for the same-spec items, blocks anything off-spec or recalled, and orders within your limit.
 
-For whom: independent restaurants (1 to 5 locations) ordering ingredients every week from several suppliers.
+30 seconds: "Three in four restaurants that buy from both Sysco and Restaurant Depot already play one against the other by hand, and operators who split suppliers report a median ten thousand dollars a year saved. Bidding Royale does it every week. It reads your order guide, turns each line into grade, pack and price per pound, and makes your suppliers bid by email and text. It throws out the wrong pack, anything under recall, and the supplier who shorted you last time. You approve one card; it checks the delivery, files the credit, and shows every dollar saved and how. Not a chatbot: it does Monday's ordering."
 
-Problem: food is a restaurant's biggest controllable cost, prices move weekly, ordering eats hours of the owner's week, over-ordering becomes waste and under-ordering runs dishes out, and independents have no procurement team.
+Price to test: 15% of verified savings, capped at $299 a month.
 
-How: the agent learns how much you use, predicts next week's order, and runs a sealed auction among suppliers. Your devil's advocate checks that bids are the same spec, the delivery promise holds, the price beats the market, and the supplier is financially stable (verified privately through CRS). It orders within your limits and tells you.
-
-Fill in from interviews: one restaurant quote, one number (hours or dollars), one real order.
+Every clause must be built by the Sun 03:00 freeze; cut any clause that is not built.
