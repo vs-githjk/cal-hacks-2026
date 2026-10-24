@@ -16,24 +16,87 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import crs
+from advocate.checks import CALL_SUMMARIES
+from buyer import state as buyer_state
 
 REAL_CHECK_SELLERS = crs.check_sellers
 REAL_ELIGIBLE = crs.eligible
 
 
+def market_candidate(bid, round_id='round-need-1'):
+    import hashlib
+    lines, metadata = [], []
+    for index, raw in enumerate(bid['lines']):
+        line_hash = hashlib.sha256(json.dumps(raw, sort_keys=True, separators=(',', ':'),
+                                              ensure_ascii=False, allow_nan=False).encode()).hexdigest()
+        lines.append({'line_index': index, 'sku_spec': raw['sku_spec'],
+                      'unit_price': raw['unit_price'], 'quantity': raw['quantity'],
+                      'shipping': raw['shipping']})
+        metadata.append({'lineIndex': index, 'listingId': raw['listing_id'], 'listingHash': line_hash,
+                         'source': raw['source'], 'snapshotId': '', 'provenance': {}, 'attrs': raw['attrs']})
+    return {'round_id': round_id, 'need_id': bid['need_id'], 'bid_id': bid['id'],
+            'seller_id': {'seller_1': 'seller-a', 'seller_2': 'seller-b', 'seller_3': 'seller-c'}[bid['supplier_id']],
+            'origin': bid['origin'], 'lines': lines, 'line_metadata': metadata,
+            'binding_hash': 'c' * 64}
+
+
+def projected_market_bid(bid, candidate):
+    selected = []
+    for index, (row, meta) in enumerate(zip(candidate['lines'], candidate['line_metadata'])):
+        selected.append({**bid['lines'][index], 'line_index': row['line_index'],
+                         'listing_id': meta['listingId'], 'listing_hash': meta['listingHash']})
+    return {**bid, 'lines': selected, 'candidate_binding_hash': candidate['binding_hash']}
+
+
 @pytest.fixture
-def buyer(monkeypatch):
+def buyer(monkeypatch, tmp_path):
     # Agent construction writes local identity storage; handlers need no running agent.
     fake_agent = Mock()
     fake_agent.on_message.side_effect = lambda *a, **k: lambda fn: fn
     fake_agent.on_interval.side_effect = lambda *a, **k: lambda fn: fn
     fake_agent.on_rest_post.side_effect = lambda *a, **k: lambda fn: fn
     fake_agent.on_rest_get.side_effect = lambda *a, **k: lambda fn: fn
+    fake_agent.on_event.side_effect = lambda *a, **k: lambda fn: fn
     exists = Path.exists
     with patch('uagents.Agent', return_value=fake_agent), patch.object(
             Path, 'exists', lambda p: False if p.name == '.env' else exists(p)):
         module = importlib.import_module('buyer_agent')
+    fake_agent.address = module.common.address('buyer')
     monkeypatch.setattr(module, 'ALLOWANCE', 1000)
+    class FakeMarket:
+        def __init__(self, identity):
+            self.identity = identity
+            self.state = 'review'
+            self.candidates = []
+
+        def post_goal(self, *args, **kwargs): pass
+        def post_need(self, *args, **kwargs): pass
+        def open_round(self, *args, **kwargs): self.state = 'open'
+        def close_round(self, *args, **kwargs): self.state = 'closed' if self.state == 'review' else 'review'
+        def round_status(self, *args, **kwargs):
+            return {'state': self.state, 'review_deadline': datetime.now(timezone.utc).isoformat()}
+        def attach_verdict(self, *args, **kwargs): pass
+        def attach_claim_check(self, *args, **kwargs): pass
+        def attach_advocate_card(self, *args, **kwargs): pass
+        def review_candidates(self, round_id):
+            return self.candidates or module.ROUND.get('review_bids', [])
+        def authoritative_winner(self, round_id, need_items):
+            candidate = (self.candidates or module.ROUND.get('review_bids', []))[0]
+            lines, metadata = candidate['lines'], candidate['line_metadata']
+            return {'bid_id': candidate['bid_id'], 'seller_id': candidate['seller_id'],
+                    'binding_hash': candidate['binding_hash'], 'landed': module.ROUND['bids'][0]['total_landed_price'],
+                    'lines': [{'original_line_index': line['line_index'], 'sku_spec': line['sku_spec'],
+                               'unit_price': line['unit_price'], 'quantity': line['quantity'],
+                               'shipping': line['shipping'], 'listing_id': metadata[index]['listingId'],
+                               'listing_hash': metadata[index]['listingHash']}
+                              for index, line in enumerate(lines)]}
+
+    monkeypatch.setattr(module, 'MARKET_BUYER', FakeMarket('buyer-test'))
+    referee = FakeMarket('referee-test')
+    monkeypatch.setattr(module, 'MARKET_REFEREE', referee)
+    market = module.MARKET_BUYER
+    db = buyer_state.open_state(tmp_path / '.state' / 'state.sqlite3')
+    monkeypatch.setattr(module, 'STATE_DB', db)
     async def checks(now):
         return {'seller_1': {'eligible': True, 'signal': {'supplier_id': 'seller_1', 'stability': 'verified_stable',
                                         'checked_at': '2026-10-24T08:00:00Z', 'source': 'sandbox'},
@@ -42,20 +105,33 @@ def buyer(monkeypatch):
     monkeypatch.setattr(crs, 'eligible', lambda supplier_id, check, now: bool(check and check.get('eligible')))
     monkeypatch.setattr(module, 'blocked_reasons', lambda *a: None)
     module.ROUND.clear()
-    module.APPROVALS.clear()
+    module.APPROVAL_WAITERS.clear()
+    raw_line = {'sku_spec': 'gpu', 'unit_price': 582.0, 'quantity': 1, 'shipping': 0.0,
+                'offered_condition': 'new', 'variant': 'retail', 'listing_id': 'SIM:seller_1:gpu',
+                'listing_url': 'https://seller.example/gpu', 'page_condition': 'new', 'attrs': {'chipset': 'gpu'},
+                'origin': 'SIM', 'source': 'simulated'}
+    raw_bid = {'id': 'bid-1', 'need_id': 'need-1', 'supplier_id': 'seller_1', 'seller_id': 'seller_1',
+               'persona': 'Seller', 'lines': [raw_line], 'total_landed_price': 582, 'perks': [], 'claims': [],
+               'floor_check_passed': True, 'mirror_snapshot_id': 'sim', 'decision_trace': 'SIM',
+               'expires_at': '2099-01-01T00:00:00Z', 'origin': 'SIM', 'source': 'simulated'}
+    candidate = market_candidate(raw_bid)
+    projected_bid = projected_market_bid(raw_bid, candidate)
     module.ROUND.update(
         owner='owner', phase='advice', deadline=time.time() - 1, quoted_at=time.time(),
         need={'id': 'need-1', 'buyer_id': 'owner', 'spend_limit': 800, 'items': [], 'auction_window_s': 12},
         goal={'id': 'goal-1', 'deadline': '2099-01-01T00:00:00Z', 'state': 'HUNTING'},
-        bids=[{'id': 'bid-1', 'supplier_id': 'seller_1', 'total_landed_price': 582,
-               'persona': 'Seller', 'source': 'SIM'}],
+        bids=[raw_bid], received_bids={'bid-1': raw_bid}, review_bids=[projected_bid],
+        candidate_hashes={'bid-1': candidate['binding_hash']}, market_round_id='round-need-1',
         cards={}, personas={}, owned=[], attempts=0, last_sent={})
     module.ROUND['seller_checks'] = {'seller_1': {'eligible': True, 'signal': {
         'supplier_id': 'seller_1', 'stability': 'verified_stable', 'checked_at': '2026-10-24T08:00:00Z',
         'source': 'sandbox'}, 'reason': 'Synthetic representative identity verified by CRS sandbox.'}}
+    referee.candidates = [candidate]
+    market.candidates = [candidate]
     yield module
     module.ROUND.clear()
-    module.APPROVALS.clear()
+    module.APPROVAL_WAITERS.clear()
+    db.close()
 
 
 class Context:
@@ -79,7 +155,14 @@ def run_bounded(coro):
 
 
 def card(**updates):
-    return dict(need_id='need-1', bid_id='bid-1', warnings=[], recommendation='buy', wait_until='') | updates
+    reason = CALL_SUMMARIES['advocate.ok']
+    source = 'https://example.test/advocate'
+    return dict(need_id='need-1', bid_id='bid-1', warnings=[], claim_checks=[], recommendation='buy',
+                wait_until='', call_reason={'rule_id': 'advocate.ok', 'summary': reason, 'source_url': source},
+                rule_id='advocate.ok', reason=reason, source_url=source) | updates
+
+
+VALID_GOAL = 'a new GPU under $800 by Friday'
 
 
 @pytest.mark.parametrize('payload', ['{', '[]', '{}', '[1]', json.dumps([card(need_id='old')]),
@@ -91,7 +174,7 @@ def test_invalid_review_retries_without_manual_or_auto_purchase(buyer, payload):
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=payload)))
     asyncio.run(buyer.handle_text(ctx, 'owner', 'APPROVE 1'))
     assert not buyer.ROUND.get('order')
-    assert not buyer.APPROVALS
+    assert not buyer.APPROVAL_WAITERS
     assert buyer.ROUND['phase'] == 'waiting'
     assert 'Nothing ordered' in ctx.owner_text()
     assert 'next round' in ctx.owner_text()
@@ -133,10 +216,12 @@ def test_shield_blocked_review_retries(buyer, monkeypatch):
 
 def test_missing_card_in_multi_bid_round_retries(buyer):
     buyer.ROUND['bids'].append(dict(buyer.ROUND['bids'][0], id='bid-2', supplier_id='seller_2'))
+    buyer.ROUND['review_bids'].append(dict(buyer.ROUND['review_bids'][0], id='bid-2',
+                                           supplier_id='seller_2', seller_id='seller_2'))
     ctx = Context()
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps([card()]))))
     assert buyer.ROUND['phase'] == 'waiting'
-    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    assert not buyer.ROUND.get('order') and not buyer.APPROVAL_WAITERS
 
 
 def test_advice_send_failure_recovers(buyer):
@@ -150,28 +235,35 @@ def test_advice_send_failure_recovers(buyer):
 @pytest.mark.parametrize('recommendation', [None, 'veto'])
 def test_approval_and_order_boundary_reject_unreviewed_or_vetoed_bid(buyer, recommendation):
     buyer.ROUND['phase'] = 'decided'
+    ctx = Context()
+    buyer.ROUND.update(owner_context=ctx, owner_session=ctx.session)
     if recommendation:
         buyer.ROUND['reviewed'] = True
         buyer.ROUND['cards']['bid-1'] = card(recommendation=recommendation)
-    ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, 'owner', 'APPROVE 1'))
-    result = asyncio.run(buyer.place_order(ctx, 1, approved_by='auto', approval_id='auto-1'))
-    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    asyncio.run(buyer.approve(ctx, 1, sender='owner'))
+    assert not buyer.ROUND.get('order') and not buyer.APPROVAL_WAITERS
     assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
-    assert 'not ordering' in result.lower()
+    assert 'no reviewed bid' in ctx.owner_text().lower()
 
 
 @pytest.mark.parametrize('allowance', [0, 1000])
-def test_complete_review_preserves_manual_requote_and_auto_order(buyer, monkeypatch, allowance):
+def test_completed_review_never_auto_orders_even_with_allowance(buyer, monkeypatch, allowance):
     monkeypatch.setattr(buyer, 'ALLOWANCE', allowance)
     ctx = Context()
-    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps([card()]))))
+    buyer.ROUND.update(reviewed=True, cards={'bid-1': card()}, market_winner=buyer.ROUND['bids'][0],
+                       owner_context=ctx, owner_session=ctx.session, quoted_at=time.time())
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    assert buyer.ROUND['phase'] == 'decided'
+    assert not buyer.ROUND.get('order')
+    assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
     if allowance == 0:
-        asyncio.run(buyer.handle_text(ctx, 'owner', 'APPROVE 1'))
+        asyncio.run(buyer.approve(ctx, 1, sender='owner'))
         assert buyer.ROUND['phase'] == 'requote' and not buyer.ROUND.get('order')
-        asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND['bids'][0])))
-    assert buyer.ROUND['order']['amount'] == 582
-    assert buyer.ROUND['goal']['state'] == 'DONE'
+        assert any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
+    else:
+        assert buyer.ROUND['phase'] == 'decided'
+        assert not buyer.APPROVAL_WAITERS
+    assert buyer.ROUND['goal']['state'] == 'HOLD_FOR_CALL'
 
 
 def test_crs_ineligible_cheapest_bid_stays_displayed_but_cannot_order(buyer, monkeypatch):
@@ -181,12 +273,13 @@ def test_crs_ineligible_cheapest_bid_stays_displayed_but_cannot_order(buyer, mon
         seller_checks={'seller_1': buyer.ROUND['seller_checks']['seller_1'],
                        'seller_2': {'signal': None, 'reason': 'Seller consent is missing or withdrawn.'}})
     cards = [card(need_id='need-1', bid_id='bad'), card(need_id='need-1', bid_id='good')]
+    buyer.ROUND.update(reviewed=True, cards={row['bid_id']: row for row in cards},
+                       market_winner=buyer.ROUND['bids'][0])
     ctx = Context()
-    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps(cards))))
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
     assert len(buyer.ROUND['bids']) == 2
-    assert buyer.ROUND['order']['bid_id'] == 'good'
-    assert not any(isinstance(msg, buyer.common.OrderPlaced) and to == buyer.common.address('seller_2')
-                   for to, msg in ctx.sent)
+    assert not buyer.ROUND.get('order')
+    assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
     assert 'Cheap Seller' in ctx.owner_text() and 'consent is missing' in ctx.owner_text()
 
 
@@ -194,27 +287,27 @@ def test_crs_failure_reason_uses_received_bids_only(buyer):
     buyer.ROUND.update(phase='advice', bids=[
         {'id': 'bad', 'supplier_id': 'seller_2', 'total_landed_price': 100, 'persona': 'Cheap Seller', 'source': 'SIM'}],
         seller_checks={'seller_1': buyer.ROUND['seller_checks']['seller_1'],
-                       'seller_2': {'signal': None, 'reason': 'Seller consent is missing or withdrawn.'}})
+                       'seller_2': {'signal': None, 'reason': 'Seller consent is missing or withdrawn.'}},
+        cards={'bad': card(need_id='need-1', bid_id='bad')})
     ctx = Context()
-    asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
-        cards_json=json.dumps([card(need_id='need-1', bid_id='bad')]))))
-    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    assert not buyer.ROUND.get('order') and not buyer.APPROVAL_WAITERS
     assert 'No seller passed the CRS eligibility check' in ctx.owner_text()
 
 
-def test_crs_ineligible_rejects_approve_auto_order_and_requote(buyer):
+def test_crs_ineligible_cannot_begin_fresh_requote(buyer):
     buyer.ROUND.update(phase='decided', reviewed=True, seller_checks={'seller_1': {'signal': None, 'reason': 'unavailable'}},
                        cards={'bid-1': card()}, quoted_at=time.time())
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, 'owner', 'APPROVE 1'))
-    result = asyncio.run(buyer.place_order(ctx, 1, approved_by='auto', approval_id='auto-1'))
-    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    buyer.ROUND.update(owner_context=ctx, owner_session=ctx.session)
+    asyncio.run(buyer.approve(ctx, 1, sender='owner'))
+    assert not buyer.ROUND.get('order') and not buyer.APPROVAL_WAITERS
     assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
     assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
-    assert 'CRS' in result or 'CRS' in ctx.owner_text()
+    assert 'no reviewed bid' in ctx.owner_text().lower()
     buyer.ROUND.update(phase='requote', pick=1)
     asyncio.run(buyer.on_requote(ctx, dict(buyer.ROUND['bids'][0])))
-    assert not buyer.ROUND.get('order') and not buyer.APPROVALS
+    assert not buyer.ROUND.get('order') and not buyer.APPROVAL_WAITERS
     assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
 
 
@@ -323,14 +416,18 @@ def test_buyer_output_shows_cached_crs_time_without_forwarding_profile(buyer, mo
     seller_requests = [msg for _, msg in seller_ctx.sent if isinstance(msg, buyer.common.BidRequest)]
     assert len(seller_requests) == len(buyer.common.SELLERS)
     buyer.ROUND.update(phase='bidding', seller_checks={'seller_1': check}, deadline=time.time() - 1,
-                       bids=[bid])
+                       bids=[bid], received_bids={'bid-1': bid})
     ctx = Context()
     asyncio.run(buyer.tick(ctx))
-    request = next(msg for _, msg in ctx.sent if isinstance(msg, buyer.common.AdviceRequest))
+    requests = [msg for _, msg in ctx.sent if isinstance(msg, buyer.common.AdviceRequest)]
+    assert requests, (buyer.ROUND.get('phase'), buyer.ROUND.get('review_bids'),
+                      ctx.logger.warning.call_args_list)
+    request = requests[0]
     assert all('CRS' not in msg.need_json and 'persona_ref' not in msg.need_json for msg in seller_requests)
     assert 'CRS' not in request.need_json and 'persona_ref' not in request.need_json
     assert 'CRS' not in request.bids_json and 'persona_ref' not in request.bids_json
     buyer.ROUND['phase'] = 'advice'
+    buyer.MARKET_REFEREE.state = 'review'
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
         cards_json=json.dumps([card()]))))
     text = ctx.owner_text()
@@ -384,7 +481,7 @@ def test_no_crs_config_winner_notifies_once_and_stays_unchecked(buyer, monkeypat
     assert text.count('CRS not configured') == 1
     assert 'CRS: not configured' in text
     assert 'CRS: exempt' not in text
-    assert 'Reply APPROVE 1' in text
+    assert 'Reply APPROVE 1' not in text
     assert not buyer.ROUND.get('order')
 
 
@@ -444,10 +541,18 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer,
         bid = dict(buyer.ROUND['bids'][0])
         buyer.ROUND.clear()
         with patch('uagents.context.dispatcher.contains', return_value=False):
-            await buyer.on_chat(owner_ctx, owner, buyer.ChatMessage(content=[buyer.TextContent(text='GPU under $800')]))
-            buyer.ROUND.update(phase='advice', bids=[bid])
+            await buyer.on_chat(owner_ctx, owner, buyer.ChatMessage(content=[buyer.TextContent(text=VALID_GOAL)]))
+            bid['need_id'] = buyer.ROUND['need']['id']
+            round_id = buyer.ROUND['market_round_id']
+            candidate = market_candidate(bid, round_id)
+            buyer.ROUND.update(phase='advice', bids=[bid], received_bids={bid['id']: bid},
+                review_bids=[projected_market_bid(bid, candidate)],
+                candidate_hashes={bid['id']: candidate['binding_hash']})
+            buyer.MARKET_BUYER.candidates = [candidate]
+            buyer.MARKET_REFEREE.candidates = [candidate]
+            buyer.MARKET_REFEREE.state = 'review'
             await buyer.on_advice(advocate_ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
-                cards_json=json.dumps([card(need_id=buyer.ROUND['need']['id'])])))
+                cards_json=json.dumps([card(need_id=buyer.ROUND['need']['id'], bid_id=bid['id'])])))
             final = envelopes[-1]
             assert 'APPROVE 1' in final.decode_payload()
             assert final.target == owner
@@ -493,8 +598,9 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
     assert replies == ['A buyer session is active. Try again later.']
     assert all('Private Seller Name' not in text and 'private-order' not in text and 'APPROVE' not in text for text in replies)
     asyncio.run(buyer.handle_text(ctx, 'authenticated-owner', 'APPROVE 1'))
-    assert any(to == 'authenticated-owner' and 'private-order' in message.text()
+    assert any(to == 'authenticated-owner' and 'no reviewed bid #1 is ready' in message.text().lower()
                for to, message in owner_context.sent)
+    assert not any('private-order' in message.text() for _, message in ctx.sent)
     assert buyer.ROUND == before | {'told_foreign_busy': True}
     assert buyer.ROUND['owner_context'] is owner_context
 
@@ -505,7 +611,7 @@ def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase,
     ctx = Context()
     buyer.ROUND.update(owner='alice', owner_context=object(), phase=phase,
                        goal={'id': 'old-goal', 'state': state}, order=None)
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     assert buyer.ROUND['owner'] == 'bob'
     assert buyer.ROUND['goal']['buyer_id'] == 'bob'
     assert buyer.ROUND['goal']['id'] != 'old-goal'
@@ -540,7 +646,7 @@ def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch
     buyer.ROUND.update(owner='alice', owner_context=object(), phase='done',
                        goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     current_need = buyer.ROUND['need']['id']
     monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'allow'})
     monkeypatch.setattr(buyer.common, 'validate', lambda contract, payload: payload)
@@ -572,7 +678,7 @@ def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(buyer, mo
     ctx = Context()
     old_need_id = buyer.ROUND['need']['id']
     asyncio.run(buyer.handle_text(ctx, 'owner', 'CANCEL'))
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     assert old_need_id in buyer.ROUND['retired_need_ids']
     monkeypatch.setattr(buyer.common, 'screen_bid', lambda *args: {'verdict': 'block', 'reasons': ['injection']})
     bid = {'id': 'old-bid', 'need_id': old_need_id, 'persona': 'Seller', 'lines': [],
@@ -590,7 +696,7 @@ def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, 
     ctx = Context()
     buyer.ROUND['need']['id'] = 'alice-need'
     buyer.ROUND.update(owner='alice', phase='done', goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
-    asyncio.run(buyer.handle_text(ctx, 'bob', 'GPU under $800'))
+    asyncio.run(buyer.handle_text(ctx, 'bob', VALID_GOAL))
     current_need = buyer.ROUND['need']['id']
     buyer.ROUND.update(phase='advice', bids=[{'id': 'bob-bid'}], attempts=0)
     screened = []
@@ -685,7 +791,7 @@ def test_start_round_stops_before_old_summary_after_final_send_is_superseded(buy
 
         ctx = PausedLastSeller()
         buyer.ROUND.clear()
-        task = asyncio.create_task(buyer.handle_text(ctx, 'old-owner', 'GPU under $800'))
+        task = asyncio.create_task(buyer.handle_text(ctx, 'old-owner', VALID_GOAL))
         await started.wait()
         buyer.ROUND.clear()
         buyer.ROUND.update(owner='new-owner', owner_context=ctx, round_token='replacement',
@@ -708,6 +814,7 @@ def test_tick_failed_advice_send_does_not_fail_replacement_round(buyer):
                 await super().send(to, message)
 
         ctx = PausedFailure()
+        buyer.MARKET_REFEREE.state = 'open'
         buyer.ROUND.update(phase='bidding', deadline=time.time() - 1, round_token='old-token',
                            bids=[dict(buyer.ROUND['bids'][0])], owned=[])
         task = asyncio.create_task(buyer.tick(ctx))
@@ -760,6 +867,7 @@ def test_advice_send_failure_after_review_does_not_overwrite_decision(buyer, mon
             buyer.ROUND['phase'] = 'decided'
         monkeypatch.setattr(buyer, 'conclude', conclude)
         ctx = PausedFailure()
+        buyer.MARKET_REFEREE.state = 'open'
         buyer.ROUND.update(phase='bidding', deadline=time.time() - 1, round_token='same-token',
                            bids=[dict(buyer.ROUND['bids'][0])], owned=[], attempts=0)
         task = asyncio.create_task(buyer.tick(ctx))
