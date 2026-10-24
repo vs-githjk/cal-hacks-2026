@@ -56,28 +56,55 @@ function closedRound(roundId: string, needId: string, skuSpec: string, sellers: 
 }
 
 const GPU = "rtx 5070 ti";
-const GPU_VETO = "Advocate veto (fit.gpu_length: The card is 336 mm; your case allows 305 mm) [source: https://bargainbin.example.test/rtx-5070-ti-specs]";
+const GPU_VETO = "Advocate veto (advocate.condition: Listed brand new, but the page shows refurbished) [source: https://example.com/sim/flashdeal-frankie/rtx-5070-ti]";
 
+// The real Fetch.ai seller agents (agents/sellers/sellers.json), SIM: ids and names are theirs, the prices are this sample's.
 const gpu = closedRound("round-sample-gpu", "need-sample-gpu", GPU, [
-  { sellerId: "fair-price-pc", name: "Fair Price PC (SIM)", rank: 1, landed: 1299.99, unitPrice: 1279.99, offeredSpec: "asus prime rtx 5070 ti oc", condition: "new", shield: "allow", advocate: "Advocate: buy" },
-  { sellerId: "gadget-grove", name: "Gadget Grove (Vedant)", rank: 2, landed: 1247.02, unitPrice: 1229.02, offeredSpec: "rtx 5070 ti", condition: "open-box", shield: "allow", advocate: "Advocate: caution" },
+  { sellerId: "seller_1", name: "Byte Bros Outlet", rank: 1, landed: 1299.99, unitPrice: 1279.99, offeredSpec: "asus prime rtx 5070 ti oc", condition: "new", shield: "allow", advocate: "Advocate: buy" },
+  { sellerId: "seller_5", name: "ReNew Refurb", rank: 2, landed: 1247.02, unitPrice: 1229.02, offeredSpec: "rtx 5070 ti", condition: "open-box", shield: "allow", advocate: "Advocate: caution" },
   {
-    sellerId: "bargain-bin", name: "Bargain Bin Hardware (SIM)", rank: 0, landed: 1199, unitPrice: 1179, offeredSpec: "rtx 5070 ti", condition: "new",
-    reasons: [GPU_VETO], source: "https://bargainbin.example.test/rtx-5070-ti", shield: "allow", advocate: "Advocate veto (fit.gpu_length)",
+    sellerId: "seller_3", name: "FlashDeal Frankie", rank: 0, landed: 1199, unitPrice: 1179, offeredSpec: "rtx 5070 ti", condition: "new",
+    reasons: [GPU_VETO], source: "https://example.com/sim/flashdeal-frankie/rtx-5070-ti", shield: "allow", advocate: "Advocate veto (advocate.condition)",
   },
   {
-    sellerId: "renew-refurb", name: "ReNew Refurb (SIM)", rank: 0, landed: 1150, unitPrice: 1130, offeredSpec: "rtx 5070 ti", condition: "open-box",
+    sellerId: "seller_2", name: "Silicon Sally's Surplus", rank: 0, landed: 1150, unitPrice: 1130, offeredSpec: "rtx 5070 ti", condition: "open-box",
     reasons: ["Bazaar Shield block: shield.override.instruction, shield.payee.swap"], shield: "block",
   },
-  { sellerId: "lowball", name: "Lowball Direct (SIM)", rank: 0, landed: 1090, unitPrice: 1075, offeredSpec: "rtx 5070 ti", condition: "new", reasons: ["below this seller floor"], belowFloor: true },
+  { sellerId: "seller_4", name: "Bay Area PC Shop", rank: 0, landed: 1090, unitPrice: 1075, offeredSpec: "rtx 5070 ti", condition: "new", reasons: ["below this seller floor"], belowFloor: true },
 ]);
+
+const bidKey = (round: string, seller: string) => `offer:bid-${round}-${seller}`;
+const G = (seller: string) => bidKey("round-sample-gpu", seller);
+const S = (seller: string) => bidKey("round-sample-ssd", seller);
+
+/** Short SIM lines in each persona's voice, by actor key: sample mode shows the first one while the actor is in focus. Factual about the scene. */
+export const SAMPLE_AGENT_LINES: Record<"gpu" | "ssd", Partial<Record<string, string[]>>> = {
+  gpu: {
+    buyer: ["I asked for an RTX 5070 Ti. The round is closed, so let's open the offers."],
+    advocate: ["Frankie says brand new, but the page shows refurbished. Veto, source attached."],
+    shield: ["One listing hides an instruction for shopping agents. Blocked."],
+    [G("seller_1")]: ["Steady price, free shipping, 30 day returns. Nothing fancy."],
+    [G("seller_5")]: ["Tested open box at a discount. The condition is stated on the listing."],
+    [G("seller_3")]: ["Brand new, lowest price on the floor!"],
+    [G("seller_2")]: ["Bench tested for 24 hours, and I do love a deal."],
+    [G("seller_4")]: ["Local shop here. I priced under my own floor, so the bid was refused."],
+  },
+  ssd: {
+    buyer: ["I asked for a 2 TB NVMe SSD. Let's see what the sellers sent."],
+    advocate: ["All three listings match their pages. No vetoes."],
+    shield: ["No hidden instructions in these listings."],
+    [S("seller-a")]: ["Sealed bid in, new and ready to ship."],
+    [S("seller-b")]: ["A little higher, with the same drive."],
+    [S("seller-c")]: ["Tested and priced fairly, with a short warranty."],
+  },
+};
 
 /** The same request while the sealed window is still running: three sealed bids, no prices, no results. */
 const gpuOpen: ArenaRows = (() => {
   const roundId = "round-sample-gpu-open";
   const openedAt = ts(OPENED_MS);
   const need: NeedRow = { roundId, skuSpec: GPU, condition: "new", quantity: 1, unit: "each" };
-  const bids = ["fair-price-pc", "gadget-grove", "bargain-bin"];
+  const bids = ["seller_1", "seller_5", "seller_3"];
   const events: EventRow[] = [
     { id: 1n, kind: "round_opened", refTable: "round", refId: roundId, sellerId: "", label: `Sealed round open for ${WINDOW_S} s`, origin: "SIM", at: openedAt },
     ...bids.map((sellerId, i): EventRow => ({

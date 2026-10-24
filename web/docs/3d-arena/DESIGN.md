@@ -2,7 +2,43 @@
 
 The /floor scene tells one sealed round as a short piece of theater: a request, anonymous sealed envelopes, the close, the checks, the referee's ranking, and the winner. Every motion comes from a market row. The data contract is `web/src/lib/arenaScene.ts`.
 
-## Concept: the sealed room
+## Art direction v2: toy diorama (supersedes the look below; geometry layout, beats, copy and lifecycle still apply)
+
+Chosen by Abhinav on Sat afternoon. The arena is a bright miniature world, like Monument Valley: a lit diorama box set into the dark app. Warm daylight, soft shadows, and chunky toy characters. Color is personality, never meaning: origin is still written as text (LIVE, MIRROR or SIM).
+
+- **Container:** CSS background `linear-gradient(180deg, #F8EBDD 0%, #EEDCEB 100%)`. The renderer uses alpha with no scene.background. Fog is `#F1E3E4`, near 14, far 30. The container is `rounded-[20px]`.
+- **Camera:** an `OrthographicCamera` in an isometric-ish diorama view at elevation about 35 degrees and azimuth 0, sized so the T0 disc plus the seats fill about 85 percent of the width. The crown push-in is a zoom from 1.0 to 1.12. On phones, zoom out so the horseshoe fits.
+- **Island stage:** each tier is a cylinder with a thick visible side, like a cake layer.
+  - T0 top: sage `#A9C9A4`. T1: clay `#E4A587`. T2: cream `#F5EBDC`. All the sides are `#E8D6C0`.
+  - Add a thin darker lip (`#8FB08A` for T0) by stacking a slightly larger, very thin disc under each top.
+  - Under T0 sits a short inverted cone of earth (`#C9A98A`) so the island floats.
+  - Roughness 0.85.
+  - Drop the hairline LineLoops.
+- **Light:**
+  - Sun: `DirectionalLight(#FFE9CC, 2.6)` from the upper left `(-6, 10, 6)`, casting shadows with map 2048, radius 4, and a shadow camera fit to the island.
+  - Ambient: `HemisphereLight(#FFF6EA, #CDB8DC, 1.0)`.
+  - No dark theater. Focus is shown by a **focus ring**, not darkness: a soft white disc (`CircleGeometry`, opacity 0.55) under the focused actor that glides between actors over 350 ms, plus a 6 percent scale bounce on the actor when focus lands.
+  - At the crown: a warm `SpotLight(#FFD98A)` on the winner and buyer, and every other figure desaturates.
+- **Toy characters:** chunky and cute.
+  - Body `CapsuleGeometry(0.34, 0.46, 8, 20)`, head `SphereGeometry(0.3, 32, 20)` sitting on the body, two eye spheres (r 0.035, `#2B2A33`) on the front of the head, and a tiny flat foot disc.
+  - Roughness 0.6, clay-like.
+  - **Seller color:** picked deterministically by hashing sellerId into `#F28482` coral, `#F6BD60` mustard, `#7FB7BE` teal, `#B79CED` lilac, `#90BE6D` leaf, `#F7A072` apricot, `#6D9DC5` cornflower. Two sellers on stage never share a color.
+  - **Seller hat:** also by hash: a cone party hat, a cap (a disc brim plus a half sphere), a top box, or a beanie (a half sphere with a pom).
+  - **Buyer:** cream `#FFF8EE` with a navy `#2F3E66` beret.
+  - **Advocate:** navy body with a cream clipboard.
+  - **Shield:** steel blue `#5B7FA6` with the hex shield in cream with a navy rim.
+- **Envelopes:** cream `#FFF4E2` with a red wax seal `#C8553D`. When opened, they become small price cards standing upright.
+- **Knocked:** the figure desaturates to `#BDB3A9` (tween the color), sits down (scale y to 0.82), steps back, and its card falls flat.
+- **Winner:** a gold `#E9B949` trophy plinth (a short cylinder plus a ring) rises out of T2 under the winner. Then comes **one confetti burst**: 60 small paper quads in the seller palette with simple gravity and spin over 1.6 s, then they are removed. This is the one orchestrated moment. Under reduced motion there's no confetti; the plinth is simply present.
+- **Nameplates:** compact pills.
+  - White `#FFFFFF` with 94 percent opacity, text `#2B2A33`, 12px semibold, rounded-full, `shadow-[0_2px_8px_rgba(60,40,30,0.15)]`.
+  - Line 1 is the name with the origin text chip; line 2 (offers only) is the price or the outcome word.
+  - Each pill keeps a 44px hit area through transparent padding while staying visually small.
+  - The advocate, Shield and referee plates appear only while they are in focus or selected.
+  - Plates never overlap: resolve collisions each frame by nudging lower-priority plates down. Priority runs winner, then focus, then the rest.
+- **HUD** (on the light backdrop, dark text): the caption block is a white card (`rounded-2xl`, 92 percent white, a soft shadow, padding 16), with the hero in `font-display` `#2B2A33`. The controls are white pill buttons with dark text. The side Offers card stays in the app's dark style, so the diorama reads as a lit window into the market.
+
+## Concept (v1, superseded look): the sealed room
 
 A black-box theater. A stepped circular dais in matte graphite, matte porcelain figures, and **one moving key light that tells the story**. Light is the only narrator: whoever the current beat is about is lit, and everyone else sits in soft shadow. The app is strictly black and white, and meaning never rides on hue, so this scene is about light, form, and shadow, not color.
 
