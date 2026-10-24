@@ -1,3 +1,5 @@
+import pytest
+
 import common
 from advocate import checks, mock_data
 from data.fit_checker import check_fit
@@ -170,3 +172,30 @@ def test_fit_warning_uses_code_owned_template_for_hostile_chipset():
     fit_warning = next(w for w in card["warnings"] if w["kind"] == "fit")
     assert fit_warning["text"] == "Does not fit: The card is longer than your case allows."
     assert hostile not in fit_warning["text"]
+
+
+@pytest.mark.parametrize("listing_url", [
+    "javascript:alert(1)",
+    "https:///missing-host",
+    "https://user:password@example.com/listing/b1",
+    "https://example.com/listing/b1 with-space",
+    "https://example.com:bad/listing/b1",
+])
+def test_unsafe_listing_urls_fall_back_for_warning_and_card(listing_url):
+    b = bid("b1", "seller_1", 540, page="open-box")
+    b["lines"][0]["listing_url"] = listing_url
+    card = run([b])[0]
+    fallback = checks.CODE_SOURCES["unsourced"]
+    assert card["warnings"][0]["source_url"] == fallback
+    assert card["source_url"] == fallback
+    assert card["call_reason"]["source_url"] == fallback
+
+
+def test_valid_listing_url_query_and_fragment_are_preserved_exactly():
+    listing_url = "https://example.com/listing/b1?source=trusted#condition"
+    b = bid("b1", "seller_1", 540, page="open-box")
+    b["lines"][0]["listing_url"] = listing_url
+    card = run([b])[0]
+    assert card["warnings"][0]["source_url"] == listing_url
+    assert card["source_url"] == listing_url
+    assert card["call_reason"]["source_url"] == listing_url
