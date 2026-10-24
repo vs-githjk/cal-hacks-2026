@@ -249,7 +249,7 @@ describe('same-seller review exclusions', () => {
     run(C, (ctx) => m.placeBid(ctx, bidArgs('loss-bid', [line(770)])));
     setTestBidMeta(A, 'kept-bid', 'SIM:seller_a:sku', { origin: 'SIM', listing_url: 'https://shop.example/winner' });
     setTestBidMeta(B, 'excluded-bid', 'SIM:seller_b:sku', { origin: 'SIM', listing_url: 'https://shop.example/excluded' });
-    setTestBidMeta(C, 'loss-bid', 'SIM:seller_c:sku', { origin: 'SIM', listing_url: 'https://shop.example/loss?q=public#listing' });
+    setTestBidMeta(C, 'loss-bid', 'SIM:seller_c:sku', { origin: 'LIVE', listing_url: 'https://shop.example/loss?q=public#listing' });
     beginReview();
     attachOrdinaryReviewChecks();
     attachSameSeller('kept-bid', 'excluded-bid');
