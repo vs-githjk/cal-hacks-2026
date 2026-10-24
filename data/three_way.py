@@ -76,8 +76,9 @@ def three_way_match(po: dict, listing: dict, delivery: dict, origin: str | None 
                            "detail": f"sources disagree: delivered {_show(d_cond)}, PO says {_show(po_cond)}"})
     if d_qty is None:
         missing.append("delivery quantity")
-    elif po_qty is not None and d_qty < po_qty:
-        mismatches.append({"code": "quantity_short", "sources": ["po", "delivery"], "detail": f"delivered {d_qty} of {po_qty}"})
+    elif po_qty is not None and d_qty != po_qty:
+        mismatches.append({"code": "quantity_short" if d_qty < po_qty else "quantity_over", "sources": ["po", "delivery"],
+                           "detail": f"delivered {d_qty} of {po_qty}"})
     if delivery.get("ok") is False:
         why = "; ".join(str(r) for r in delivery.get("reasons") or []) or "no reason given"
         mismatches.append({"code": "delivery_failed", "sources": ["delivery"], "detail": f"receiving check failed: {why}"})

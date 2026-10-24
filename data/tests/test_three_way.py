@@ -72,3 +72,10 @@ def test_sim_liar_page_against_a_po_for_new():
     out = three_way_match({**PO, "price": 719.0}, {"url": "https://liar.example/renew", "page": facts, "claims": []}, DELIVERY, origin="SIM")
     assert out["result"] == "mismatch" and "condition_page" in codes(out)
     assert "page says refurbished" in out["mismatches"][0]["detail"]
+
+
+def test_over_delivery_is_a_named_mismatch_too():  # #155
+    out = three_way_match(PO, LISTING, {**DELIVERY, "quantity": 3})
+    assert out["result"] == "mismatch" and codes(out) == ["quantity_over"] and out["mismatches"][0]["detail"] == "delivered 3 of 2"
+    assert codes(three_way_match(PO, LISTING, {**DELIVERY, "quantity": 1})) == ["quantity_short"]
+    assert three_way_match(PO, LISTING, DELIVERY)["result"] == "match"
