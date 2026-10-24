@@ -1,6 +1,6 @@
 """Wind tunnel (Lane C, c7; issues #30 and #34). SIM: a simulator we built, not the market.
 
-    python3 -m sim.wind_tunnel --builders 10 --seeds 3      # writes sim/RESULTS.md and sim/out/wind_tunnel-<date>.json
+    python3 -m sim.wind_tunnel --builders 10 --seeds 3      # writes sim/RESULTS-<tag>.md and sim/out/wind_tunnel-<tag>.json (tag = date-b<builders>x<seeds>)
 
 Learning arm (benign builders only): parametric buyers from real part data (maker-checked PSUs and cases in
 data/fit_builds.json) run sealed rounds through demo.round.run_round (real Shield, claim check, fit checker and
@@ -45,8 +45,11 @@ ARCHETYPES = {  # cap range (USD), allowed conditions, case pool. Caps sit aroun
     "new_only_mid": ((1250, 1350), ["new"], ["north", "q300l"]),
     "open_box_ok": ((1200, 1320), ["new", "open-box"], ["north", "lancool216"]),
     "small_case": ((1250, 1400), ["new"], ["nr200p"]),
+    # Added for #73 item 5, committed before any run with them and with no learner change (sim/CONTROL.md):
+    "sff_open_box": ((1200, 1300), ["new", "open-box"], ["nr200p"]),
+    "new_only_tight": ((1230, 1280), ["new"], ["north", "q300l"]),
 }
-HELD_OUT = ("open_box_ok", "small_case")  # never seen in training
+HELD_OUT = ("open_box_ok", "small_case", "sff_open_box", "new_only_tight")  # never seen in training
 
 
 def median_control():
@@ -212,7 +215,7 @@ def main() -> None:
     (HERE / "out").mkdir(exist_ok=True)
     tag = f"{out['run_at'][:10]}-b{a.builders}x{a.seeds}"
     (HERE / "out" / f"wind_tunnel-{tag}.json").write_text(json.dumps(out, indent=1, default=list))
-    (HERE / "RESULTS.md").write_text(markdown(out))
+    (HERE / f"RESULTS-{tag}.md").write_text(markdown(out))  # one file per run, never overwritten by a smaller run
     print(markdown(out))
 
 

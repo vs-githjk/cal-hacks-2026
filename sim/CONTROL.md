@@ -7,7 +7,7 @@ from its own loss reports (banded gap, never a rival's price), clamped at its fl
 Known asymmetry, stated up front: the learner also carries an open-box line and the control does not, so builders who
 accept open box can favor the learner for reasons other than learning. The runner reports an untrained-learner
 column (price_step 0) so the lift from learning alone is visible.
-Neither seller's definition may change after a run is recorded in sim/RESULTS.md.
+Neither seller's definition may change after a run is recorded in a sim/RESULTS-<tag>.md.
 
 ## Second control (added Fri Oct 23 23:30 PDT for issue #34, written before the rerun)
 **Median Market PC** (`median-market-pc`, SIM, defined in `sim/wind_tunnel.py`, not in demo/): one new line, list $1,248.50,
@@ -20,3 +20,9 @@ second control can. The median of new-condition bid lines alone was $1,289.00, t
 ## What the learner is
 The learner's update is `demo.learning.update_strategy`: a Lane D SIM stand-in that changes only the price step, from
 the loss report's gap band. It is **not** Abhinav's a7 strategy (agents/sellers), which the wind tunnel does not use yet.
+
+## Two more held-out archetypes (added Sat Oct 24 01:54 PDT for #73 item 5, committed before any run with them)
+`sff_open_box` (cap $1,200 to $1,300, new or open-box, NR200P case, 330 mm) and `new_only_tight` (cap $1,230 to
+$1,280, new only, North or Q300L). Both are held out: never in training. The learner, both controls and the quote gate
+(2 winning archetypes) are unchanged. Adding archetypes changes the builder rotation, so the training rounds differ from
+earlier runs; earlier RESULTS files are not comparable round by round.

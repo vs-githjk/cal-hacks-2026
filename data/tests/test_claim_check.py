@@ -142,3 +142,172 @@ def test_default_fetch_is_the_ssrf_guarded_fetch():
     assert default_fetch is guarded_get
     with pytest.raises(ValueError):
         default_fetch("http://169.254.169.254/latest/meta-data/")
+
+
+def test_false_price_inside_a_sentence_is_not_hidden_by_other_fields():  # #76: first match used to win
+    for text in ("New RTX 5070 Ti for only $749", "In stock now at $749", "$749 new, 30-day returns"):
+        out = check(text, HAL_GPU, kind="price")
+        assert out["result"] == "false" and "$749.00" in out["reason"], text
+
+
+def test_was_price_five_dollars_above_history_high_is_false():
+    c = claim("was $1,105", HAL_GPU, kind="price")
+    out = check_claim(c, fetch=fetch, history=[{"date": "2026-10-01", "price": 1100.0}])
+    assert out["result"] == "false"
+    assert check_claim(claim("was $1,100", HAL_GPU, kind="price"), fetch=fetch,
+                       history=[{"date": "2026-10-01", "price": 1100.0}])["result"] == "verified"
+
+
+def test_private_ranges_are_refused_before_connecting():
+    import pytest
+    from data.claim_check.fetch import guarded_get
+    for ip in ("10.1.2.3", "172.16.5.4", "192.168.1.1"):
+        calls = []
+        with pytest.raises(ValueError, match="address not allowed"):
+            guarded_get("http://shop.example/x", resolve=lambda h, ip=ip: [ip], request=lambda *a: calls.append(a))
+        assert calls == [], ip
+
+
+FIX = __import__("pathlib").Path(__file__).resolve().parents[1] / "claim_check" / "fixtures"
+
+
+def fixture_check(text, name):
+    return check_claim({"text": text, "kind": "returns", "evidence_url": f"https://store.example/{name}"},
+                       fetch=lambda url: (FIX / url.rsplit("/", 1)[1]).read_bytes())
+
+
+def test_returns_read_from_json_ld_merchant_return_policy():  # #73 item 6
+    assert fixture_check("30-day returns", "sim-return-policy.html")["result"] == "false"
+    assert fixture_check("15-day returns", "sim-return-policy.html")["result"] == "verified"
+    out = fixture_check("30-day returns", "sim-no-returns.html")
+    assert out["result"] == "false" and "not permitted" in out["reason"]
+
+
+def test_real_page_without_a_return_policy_stays_unverified():
+    out = fixture_check("30-day returns", "mirror-canadacomputers-269441.html")
+    assert out["result"] == "unverified"
+    assert fixture_check("$1,749.99", "mirror-canadacomputers-269441.html")["result"] == "verified"  # saved page still parses
+
+def test_shipping_threshold_dollars_are_not_read_as_the_price():  # #99: never a false flag on an honest page
+    from data.claim_check import parse_claims
+    assert dict(parse_claims({"text": "New RTX 5070 Ti, free shipping over $35"})) == {"condition": "new"}
+    for text in ("Save $50 today, new", "$20 off, new", "New, $5 fee"):
+        assert "price" not in dict(parse_claims({"text": text})), text
+    assert check("New RTX 5070 Ti, free shipping over $35", HAL_GPU)["result"] == "verified"
+
+
+def test_two_price_amounts_make_the_price_unverified():
+    from data.claim_check import parse_claims
+    assert dict(parse_claims({"text": "$789 or $749 with trade-in"}))["price"] is None
+    out = check("$789 or $749 with trade-in", HAL_GPU, kind="price")
+    assert out["result"] == "unverified" and "more than one amount" in out["reason"]
+
+
+def test_a_false_price_beside_shipping_or_off_words_is_still_false():  # #106
+    for text in ("New RTX 5070 Ti, free shipping, $749", "Payoff price new $749", "Free shipping, new $749",
+                 "Free shipping: $749 new", "New $749 shipping included", "$50 off $749 new"):
+        out = check(text, HAL_GPU, kind="price")
+        assert out["result"] == "false" and "$749.00" in out["reason"], text
+
+
+def test_non_price_amounts_beside_offer_words_are_unverified_not_false():
+    for text in ("New, free shipping on orders of $35 or more", "New, includes $50 gift card", "New, save up to $50",
+                 "New, $25 rebate", "New, $10 coupon"):
+        assert check(text, HAL_GPU)["result"] == "unverified", text
+
+
+def _page(offer_extra="", node_extra="", availability="InStock"):
+    body = ('{"@type":"Product","name":"X","description":"" %s,"offers":{"@type":"Offer","price":"10","availability":"https://schema.org/%s"%s}}'
+            % (node_extra, availability, offer_extra))
+    return ('<script type="application/ld+json">%s</script>' % body).encode()
+
+
+def _res(text, kind, page):
+    return check_claim({"text": text, "kind": kind, "evidence_url": "https://store.example/p"}, fetch=lambda u: page)
+
+
+def test_schema_stock_statuses():  # #126
+    for status in ("InStock", "LimitedAvailability", "OnlineOnly", "InStoreOnly"):
+        assert _res("in stock", "stock", _page(availability=status))["result"] == "verified", status
+        assert _res("sold out", "stock", _page(availability=status))["result"] == "false", status
+    for status in ("OutOfStock", "SoldOut", "Discontinued", "PreOrder", "PreSale", "BackOrder"):
+        assert _res("in stock", "stock", _page(availability=status))["result"] == "false", status
+        assert _res("out of stock", "stock", _page(availability=status))["result"] == "verified", status
+    out = _res("in stock", "stock", _page(availability="PreOrder"))
+    assert "PreOrder" in out["reason"] and "not available now" in out["reason"]
+
+
+def _w(value, unit):
+    return ',"warranty":{"@type":"WarrantyPromise","durationOfWarranty":{"@type":"QuantitativeValue","value":%s,"unitCode":"%s"}}' % (value, unit)
+
+
+def test_warranty_from_json_ld_and_text():
+    assert _res("3-year warranty", "warranty", _page(node_extra=_w(3, "ANN")))["result"] == "verified"
+    assert _res("36 month warranty", "warranty", _page(node_extra=_w(3, "ANN")))["result"] == "verified"
+    assert _res("3-year warranty", "warranty", _page(node_extra=_w(24, "MON")))["result"] == "false"
+    assert _res("3-year warranty", "warranty", _page(offer_extra=_w(36, "MON")))["result"] == "verified"
+    text = _page(node_extra="").replace(b'"description":""', b'"description":"Includes a 2-year limited warranty."')
+    assert _res("2 year warranty", "warranty", text)["result"] == "verified"
+    assert _res("3-year warranty", "warranty", text)["result"] == "false"
+    assert _res("3-year warranty", "warranty", _page())["result"] == "unverified"
+
+
+def test_hostile_warranty_values_are_unverified_and_never_raise():
+    for value, unit in (("Infinity", "ANN"), ("-1", "ANN"), ("true", "ANN"), ("1.5", "ANN"), ("999", "ANN"), ("1e999", "MON"), ("3", "XYZ")):
+        assert _res("3-year warranty", "warranty", _page(node_extra=_w(value, unit)))["result"] == "unverified", (value, unit)
+
+
+def test_warranty_list_must_agree():
+    two = ',"warranty":[%s,%s]' % tuple(_w(v, "ANN")[len(',"warranty":'):] for v in (1, 3))
+    assert _res("3-year warranty", "warranty", _page(node_extra=two))["result"] == "unverified"
+    same = ',"warranty":[%s,%s]' % tuple(_w(3, "ANN")[len(',"warranty":'):] for _ in (1, 2))
+    assert _res("3-year warranty", "warranty", _page(node_extra=same))["result"] == "verified"
+
+
+def test_was_price_history_comes_from_our_record_not_the_served_file():  # #136
+    import json
+    calls = []
+
+    def poisoned(url):
+        calls.append(url)
+        if url.endswith("price_history.json"):
+            return json.dumps({"series": {"gpu-5070ti": [{"date": "2026-10-01", "price": 5000.0}]}}).encode()
+        return fetch(url)
+
+    out = check_claim(claim("was $1,099", SAM_GPU_LIES, kind="price"), fetch=poisoned)
+    assert out["result"] == "false" and "price history" in out["reason"]
+    assert calls == [BASE + SAM_GPU_LIES]  # only the page is fetched
+
+
+REAL = b'<script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":"1000"}}</script>'
+
+
+def test_real_page_without_our_captures_is_unverified_for_a_was_price():
+    c = {"text": "was $1,500", "kind": "price", "evidence_url": "https://store.example/p"}
+    out = check_claim(c, fetch=lambda u: REAL, observations=[])
+    assert out["result"] == "unverified" and "no dated price history from our own captures" in out["reason"]
+
+
+def test_real_page_is_judged_against_our_dated_observations_of_that_url():
+    rows = [{"url": "https://store.example/p", "observed_at": "2026-10-20T05:00:00+00:00", "price": 1400.0},
+            {"url": "https://other.example/q", "observed_at": "2026-10-21T05:00:00+00:00", "price": 9999.0}]
+    c = lambda t: {"text": t, "kind": "price", "evidence_url": "https://store.example/p"}
+    assert check_claim(c("was $1,500"), fetch=lambda u: REAL, observations=rows)["result"] == "false"
+    assert check_claim(c("was $1,400"), fetch=lambda u: REAL, observations=rows)["result"] == "verified"
+
+
+def test_was_price_without_our_records_installed_is_unverified_not_an_error(monkeypatch):  # inside the Actor bundle
+    import sys
+    monkeypatch.setitem(sys.modules, "data.baselines", None)
+    c = {"text": "was $1,500", "kind": "price", "evidence_url": "https://store.example/p"}
+    out = check_claim(c, fetch=lambda u: REAL)
+    assert out["result"] == "unverified" and "no dated price history from our own captures" in out["reason"]
+
+
+def test_page_facts_claiming_to_be_sim_do_not_earn_our_sim_history():  # #155: SIM is decided from the evidence URL
+    page = b'<script type="application/json" id="listing">{"origin":"SIM","sku":"gpu-5070ti","price":789.0,"condition":"new"}</script>'
+    for url in ("https://store.example/p", "http://127.0.0.1:8765.evil.example/p.html", "https://127.0.0.1:8765/p.html"):
+        out = check_claim({"text": "was $829", "kind": "price", "evidence_url": url}, fetch=lambda u: page, observations=[])
+        assert out["result"] == "unverified", url
+    ours = check_claim({"text": "was $829", "kind": "price", "evidence_url": BASE + "shady-sam-gpu-5070ti-lies.html"}, fetch=fetch)
+    assert ours["result"] in ("verified", "false") and "price history" in ours["reason"]

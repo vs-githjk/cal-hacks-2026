@@ -1,0 +1,12 @@
+{
+ "actorOutputSchemaVersion": 1,
+ "title": "Claim check output",
+ "properties": {
+  "results": {
+   "type": "string",
+   "title": "Claim check results",
+   "description": "One row per claim: verified, unverified or false, with the page, time, method and page hash",
+   "template": "{{links.apiDefaultDatasetUrl}}/items?view=results"
+  }
+ }
+}

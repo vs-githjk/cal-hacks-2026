@@ -1,0 +1,9 @@
+{
+ "origin": "SIM ownership",
+ "model": "Corsair RM750e (2023)",
+ "wattage": 750,
+ "pcie_16pin": 1,
+ "pcie_8pin": 3,
+ "note": "12VHPWR cable plus dual and single PCIe 8-pin cables (2+1 connectors)",
+ "source": "https://www.corsair.com/us/en/p/psu/cp-9020262-na/rme-series-rm750e-fully-modular-low-noise-atx-power-supply-cp-9020262-na"
+}

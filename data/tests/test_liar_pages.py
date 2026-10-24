@@ -37,3 +37,27 @@ def test_every_page_carries_the_demo_banner():
             text = (build.__globals__["SITE"] / name).read_text()
             assert "SIM: simulated listing for a security demo" in text, name
             assert ("Prompt-injection test page" in text) == ("injected" in name), name
+
+
+def test_renew_refurb_page_says_refurbished_and_claim_new_is_false():  # #97
+    from data.claim_check import check_claim
+    from data.liar_pages.build import SITE
+    names = build()
+    assert {"renew-refurb-gpu-5070ti.html", "renew-refurb-gpu-5070ti-lies.html"} <= set(names)
+    h = (SITE / "renew-refurb-gpu-5070ti-lies.html").read_text()
+    assert listing(h)["condition"] == "refurbished" and "condition" in listing(h)["planted_lies"] and "BRAND NEW" in h
+    fetch = lambda url: (SITE / url.rsplit("/", 1)[1]).read_bytes()
+    out = check_claim({"text": "Brand new, sealed", "kind": "spec", "evidence_url": "http://localhost:8765/renew-refurb-gpu-5070ti-lies.html"},
+                      fetch=fetch)
+    assert out["result"] == "false" and "refurbished" in out["reason"]
+    honest = check_claim({"text": "Refurbished", "kind": "spec", "evidence_url": "http://localhost:8765/renew-refurb-gpu-5070ti.html"},
+                         fetch=fetch)
+    assert honest["result"] == "verified"
+
+
+def test_existing_pages_unchanged_by_new_sellers():
+    from data.liar_pages.build import SITE
+    import subprocess
+    build()
+    diff = subprocess.run(["git", "diff", "--name-only", "--", str(SITE)], capture_output=True, text=True).stdout.split()
+    assert not [d for d in diff if not d.endswith(("sellers.json", "index.html"))], diff

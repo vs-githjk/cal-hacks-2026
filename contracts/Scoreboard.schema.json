@@ -5,12 +5,13 @@
  "type": "object",
  "properties": {
   "generated_at": {"type": "string"},
+  "price_position": {"type": "object", "description": "Optional. Where the demo winner's price sits among dated listings that fit (data/baselines/position.py). Show `sentence` as is; origin MIRROR."},
   "tiles": {
    "type": "array",
    "items": {
     "type": "object",
     "properties": {
-     "id": {"type": "string", "enum": ["verified_savings", "attacks_blocked", "fit_accuracy", "learning_lift"]},
+     "id": {"type": "string", "enum": ["verified_savings", "attacks_blocked", "fit_accuracy", "learning_lift", "voice_attacks", "hyphenate_blind"]},
      "title": {"type": "string"},
      "status": {"type": "string", "enum": ["measured", "not_quotable", "none_yet"]},
      "value": {"type": ["number", "null"]},

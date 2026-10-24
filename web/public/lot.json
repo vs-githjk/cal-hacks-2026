@@ -126,13 +126,13 @@
    "need_id": "need-b7-06",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1245.0,
+   "cap": 1265.0,
    "conditions": [
     "new",
     "open-box"
    ],
-   "archetype": "tight_budget",
-   "case_max_gpu_mm": 360,
+   "archetype": "sff_open_box",
+   "case_max_gpu_mm": 330,
    "psu_watts": 750,
    "deadline": "by Friday"
   },
@@ -145,11 +145,11 @@
    "need_id": "need-b7-07",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1295.0,
+   "cap": 1235.0,
    "conditions": [
     "new"
    ],
-   "archetype": "comfort",
+   "archetype": "new_only_tight",
    "case_max_gpu_mm": 355,
    "psu_watts": 750,
    "deadline": "by Friday"
@@ -163,12 +163,13 @@
    "need_id": "need-b7-08",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1500.0,
+   "cap": 1185.0,
    "conditions": [
-    "new"
+    "new",
+    "open-box"
    ],
-   "archetype": "premium",
-   "case_max_gpu_mm": 392,
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 360,
    "psu_watts": 750,
    "deadline": "by Friday"
   },
@@ -181,13 +182,13 @@
    "need_id": "need-b7-09",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1340.0,
+   "cap": 1315.0,
    "conditions": [
     "new"
    ],
-   "archetype": "new_only_mid",
-   "case_max_gpu_mm": 355,
-   "psu_watts": 750,
+   "archetype": "comfort",
+   "case_max_gpu_mm": 392,
+   "psu_watts": 850,
    "deadline": "by Friday"
   },
   {
@@ -199,14 +200,13 @@
    "need_id": "need-b7-10",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1235.0,
+   "cap": 1535.0,
    "conditions": [
-    "new",
-    "open-box"
+    "new"
    ],
-   "archetype": "open_box_ok",
+   "archetype": "premium",
    "case_max_gpu_mm": 392,
-   "psu_watts": 850,
+   "psu_watts": 750,
    "deadline": "by Friday"
   },
   {
@@ -218,13 +218,13 @@
    "need_id": "need-b7-11",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1385.0,
+   "cap": 1315.0,
    "conditions": [
     "new"
    ],
-   "archetype": "small_case",
-   "case_max_gpu_mm": 330,
-   "psu_watts": 750,
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 1000,
    "deadline": "by Friday"
   },
   {
@@ -236,14 +236,14 @@
    "need_id": "need-b7-12",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1245.0,
+   "cap": 1215.0,
    "conditions": [
     "new",
     "open-box"
    ],
-   "archetype": "tight_budget",
-   "case_max_gpu_mm": 360,
-   "psu_watts": 1000,
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 750,
    "deadline": "by Friday"
   },
   {
@@ -255,12 +255,12 @@
    "need_id": "need-b7-13",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1295.0,
+   "cap": 1380.0,
    "conditions": [
     "new"
    ],
-   "archetype": "comfort",
-   "case_max_gpu_mm": 355,
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
    "psu_watts": 750,
    "deadline": "by Friday"
   },
@@ -273,13 +273,14 @@
    "need_id": "need-b7-14",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1530.0,
+   "cap": 1290.0,
    "conditions": [
-    "new"
+    "new",
+    "open-box"
    ],
-   "archetype": "premium",
-   "case_max_gpu_mm": 392,
-   "psu_watts": 750,
+   "archetype": "sff_open_box",
+   "case_max_gpu_mm": 330,
+   "psu_watts": 850,
    "deadline": "by Friday"
   },
   {
@@ -291,13 +292,13 @@
    "need_id": "need-b7-15",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1340.0,
+   "cap": 1235.0,
    "conditions": [
     "new"
    ],
-   "archetype": "new_only_mid",
+   "archetype": "new_only_tight",
    "case_max_gpu_mm": 355,
-   "psu_watts": 850,
+   "psu_watts": 1000,
    "deadline": "by Friday"
   },
   {
@@ -309,14 +310,14 @@
    "need_id": "need-b7-16",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1215.0,
+   "cap": 1185.0,
    "conditions": [
     "new",
     "open-box"
    ],
-   "archetype": "open_box_ok",
-   "case_max_gpu_mm": 355,
-   "psu_watts": 1000,
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 750,
    "deadline": "by Friday"
   },
   {
@@ -328,13 +329,13 @@
    "need_id": "need-b7-17",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1255.0,
+   "cap": 1365.0,
    "conditions": [
     "new"
    ],
-   "archetype": "small_case",
-   "case_max_gpu_mm": 330,
-   "psu_watts": 750,
+   "archetype": "comfort",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 1000,
    "deadline": "by Friday"
   },
   {
@@ -346,13 +347,12 @@
    "need_id": "need-b7-18",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1245.0,
+   "cap": 1470.0,
    "conditions": [
-    "new",
-    "open-box"
+    "new"
    ],
-   "archetype": "tight_budget",
-   "case_max_gpu_mm": 360,
+   "archetype": "premium",
+   "case_max_gpu_mm": 392,
    "psu_watts": 1000,
    "deadline": "by Friday"
   },
@@ -365,12 +365,12 @@
    "need_id": "need-b7-19",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1370.0,
+   "cap": 1295.0,
    "conditions": [
     "new"
    ],
-   "archetype": "comfort",
-   "case_max_gpu_mm": 392,
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 360,
    "psu_watts": 1000,
    "deadline": "by Friday"
   },
@@ -402,13 +402,14 @@
    "need_id": "need-b7-20",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1445.0,
+   "cap": 1310.0,
    "conditions": [
-    "new"
+    "new",
+    "open-box"
    ],
-   "archetype": "premium",
-   "case_max_gpu_mm": 392,
-   "psu_watts": 1000,
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
+   "psu_watts": 850,
    "deadline": "by Friday"
   },
   {
@@ -420,12 +421,12 @@
    "need_id": "need-b7-21",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1285.0,
+   "cap": 1340.0,
    "conditions": [
     "new"
    ],
-   "archetype": "new_only_mid",
-   "case_max_gpu_mm": 355,
+   "archetype": "small_case",
+   "case_max_gpu_mm": 330,
    "psu_watts": 850,
    "deadline": "by Friday"
   },
@@ -438,13 +439,13 @@
    "need_id": "need-b7-22",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1245.0,
+   "cap": 1275.0,
    "conditions": [
     "new",
     "open-box"
    ],
-   "archetype": "open_box_ok",
-   "case_max_gpu_mm": 355,
+   "archetype": "sff_open_box",
+   "case_max_gpu_mm": 330,
    "psu_watts": 750,
    "deadline": "by Friday"
   },
@@ -457,13 +458,13 @@
    "need_id": "need-b7-23",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1365.0,
+   "cap": 1265.0,
    "conditions": [
     "new"
    ],
-   "archetype": "small_case",
-   "case_max_gpu_mm": 330,
-   "psu_watts": 1000,
+   "archetype": "new_only_tight",
+   "case_max_gpu_mm": 360,
+   "psu_watts": 750,
    "deadline": "by Friday"
   },
   {
@@ -482,7 +483,7 @@
    ],
    "archetype": "tight_budget",
    "case_max_gpu_mm": 355,
-   "psu_watts": 1000,
+   "psu_watts": 750,
    "deadline": "by Friday"
   },
   {
@@ -585,13 +586,13 @@
    "need_id": "need-b7-30",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1255.0,
+   "cap": 1275.0,
    "conditions": [
     "new",
     "open-box"
    ],
-   "archetype": "tight_budget",
-   "case_max_gpu_mm": 355,
+   "archetype": "sff_open_box",
+   "case_max_gpu_mm": 330,
    "psu_watts": 750,
    "deadline": "by Friday"
   },
@@ -604,12 +605,12 @@
    "need_id": "need-b7-31",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1290.0,
+   "cap": 1235.0,
    "conditions": [
     "new"
    ],
-   "archetype": "comfort",
-   "case_max_gpu_mm": 392,
+   "archetype": "new_only_tight",
+   "case_max_gpu_mm": 360,
    "psu_watts": 850,
    "deadline": "by Friday"
   },
@@ -622,12 +623,13 @@
    "need_id": "need-b7-32",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1510.0,
+   "cap": 1190.0,
    "conditions": [
-    "new"
+    "new",
+    "open-box"
    ],
-   "archetype": "premium",
-   "case_max_gpu_mm": 392,
+   "archetype": "tight_budget",
+   "case_max_gpu_mm": 355,
    "psu_watts": 1000,
    "deadline": "by Friday"
   },
@@ -640,13 +642,13 @@
    "need_id": "need-b7-33",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1295.0,
+   "cap": 1325.0,
    "conditions": [
     "new"
    ],
-   "archetype": "new_only_mid",
+   "archetype": "comfort",
    "case_max_gpu_mm": 355,
-   "psu_watts": 850,
+   "psu_watts": 750,
    "deadline": "by Friday"
   },
   {
@@ -658,12 +660,11 @@
    "need_id": "need-b7-34",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1310.0,
+   "cap": 1510.0,
    "conditions": [
-    "new",
-    "open-box"
+    "new"
    ],
-   "archetype": "open_box_ok",
+   "archetype": "premium",
    "case_max_gpu_mm": 392,
    "psu_watts": 1000,
    "deadline": "by Friday"
@@ -681,8 +682,8 @@
    "conditions": [
     "new"
    ],
-   "archetype": "small_case",
-   "case_max_gpu_mm": 330,
+   "archetype": "new_only_mid",
+   "case_max_gpu_mm": 360,
    "psu_watts": 750,
    "deadline": "by Friday"
   },
@@ -695,36 +696,38 @@
    "need_id": "need-b7-36",
    "sku_spec": "rtx 5070 ti",
    "quantity": 1,
-   "cap": 1235.0,
+   "cap": 1255.0,
    "conditions": [
     "new",
     "open-box"
    ],
-   "archetype": "tight_budget",
-   "case_max_gpu_mm": 360,
+   "archetype": "open_box_ok",
+   "case_max_gpu_mm": 355,
    "psu_watts": 1000,
    "deadline": "by Friday"
   }
  ],
  "summary": {
   "orders": 38,
-  "cap_min": 1190.0,
-  "cap_max": 1530.0,
-  "cap_median": 1295.0,
+  "cap_min": 1185.0,
+  "cap_max": 1535.0,
+  "cap_median": 1290.0,
   "by_archetype": {
-   "comfort": 6,
-   "new_only_mid": 6,
-   "open_box_ok": 6,
-   "premium": 6,
+   "comfort": 5,
+   "new_only_mid": 5,
+   "new_only_tight": 4,
+   "open_box_ok": 5,
+   "premium": 5,
    "real": 1,
-   "small_case": 6,
-   "tight_budget": 7
+   "sff_open_box": 4,
+   "small_case": 4,
+   "tight_budget": 5
   },
-  "open_box_ok": 14,
+  "open_box_ok": 15,
   "demand_at": [
    [
     1200,
-    37
+    34
    ],
    [
     1250,
@@ -736,11 +739,11 @@
    ],
    [
     1350,
-    11
+    9
    ],
    [
     1400,
-    6
+    5
    ],
    [
     1450,
@@ -748,7 +751,7 @@
    ],
    [
     1500,
-    3
+    2
    ]
   ]
  },
