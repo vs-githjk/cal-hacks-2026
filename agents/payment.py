@@ -12,10 +12,10 @@ from pay.mandate import mandate_hash, parse_ts, verify as verify_mandate
 
 
 def make_mandate(deal_id: str, amount: float, payee: str, buyer_id: str, within_allowance: bool,
-                 goal_id: str | None = None, now: datetime | None = None) -> dict:
+                 goal_id: str | None = None, now: datetime | None = None, origin: str = "SIM") -> dict:
     """Use the shared canonical mandate builder and schema."""
     return _new_mandate(deal_id=deal_id, amount=amount, payee=payee, buyer_id=buyer_id,
-                        within_allowance=within_allowance, goal_id=goal_id, now=now)
+                        within_allowance=within_allowance, goal_id=goal_id, now=now, origin=origin)
 
 
 def payment_request(mandate: dict, recipient: str) -> RequestPayment:

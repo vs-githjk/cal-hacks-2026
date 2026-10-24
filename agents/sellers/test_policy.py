@@ -45,7 +45,9 @@ def test_below_floor_price_is_raised_to_floor():
     s = dict(s, discount=0.9)
     bid = make_bid(need(GPU), s)
     assert bid["lines"][0]["unit_price"] == s["listings"][GPU]["floor"]
-    assert bid["floor_check_passed"] and "floor" in bid["decision_trace"]
+    assert bid["floor_check_passed"]
+    assert "pricing constraint applied" in bid["decision_trace"]
+    assert "floor" not in bid["decision_trace"].lower()
 
 
 def test_sim_offer_refuses_nonfinite_price_or_nonpositive_quantity():

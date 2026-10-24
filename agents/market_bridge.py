@@ -11,6 +11,7 @@ import math
 import os
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Mapping, Sequence
@@ -41,6 +42,53 @@ def _safe_id(value: Any, label: str) -> str:
 def _quote(value: str) -> str:
     # Inputs are also constrained by _safe_id; escaping is retained as defense in depth.
     return "'" + value.replace("'", "''") + "'"
+
+
+def _timestamp_iso(value: Any) -> str:
+    """Normalize only aware ISO adapters or the SDK's exact one-field SATN timestamp product."""
+    try:
+        if isinstance(value, datetime):
+            stamp = value
+        elif isinstance(value, str):
+            stamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        elif isinstance(value, list) and len(value) == 1:
+            micros = value[0]
+            if (isinstance(micros, Mapping) and set(micros) ==
+                    {"__timestamp_micros_since_unix_epoch__"}):
+                micros = micros["__timestamp_micros_since_unix_epoch__"]
+            if isinstance(micros, bool) or not isinstance(micros, int):
+                raise ValueError
+            stamp = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=micros)
+        else:
+            raise ValueError
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            raise ValueError
+        return stamp.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    except (TypeError, ValueError, OverflowError, OSError):
+        raise MarketBridgeError("market_timestamp_invalid") from None
+
+
+def _option_value(value: Any) -> Any:
+    """Decode only documented SATS SumValue option arms; malformed products fail closed."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping) or len(value) != 1:
+        raise MarketBridgeError("market_option_invalid")
+    key, payload = next(iter(value.items()))
+    if key in {"0", "some"}:
+        return payload
+    if key in {"1", "none"} and payload == []:
+        return None
+    raise MarketBridgeError("market_option_invalid")
+
+
+def _same_deadline(actual: Any, expected: Any) -> bool:
+    try:
+        left = datetime.fromisoformat(_timestamp_iso(actual).replace("Z", "+00:00"))
+        right = datetime.fromisoformat(_timestamp_iso(expected).replace("Z", "+00:00"))
+        return left == right
+    except (TypeError, ValueError, OverflowError, MarketBridgeError):
+        return False
 
 
 def _finite(value: Any, label: str, *, minimum: float = 0.0) -> float:
@@ -178,6 +226,7 @@ class MarketBridge:
         self.role = role
         self._client = client
         if client is not None:
+            self.identity = getattr(client, "identity", None)
             return
 
         path = Path(token_file) if token_file is not None else None
@@ -193,6 +242,7 @@ class MarketBridge:
         if (not isinstance(saved, Mapping) or not isinstance(saved.get("token"), str) or not saved["token"]
                 or not isinstance(saved.get("identity"), str) or not saved["identity"]):
             raise MarketBridgeError("market_identity_invalid")
+        self.identity = saved["identity"]
         factory = market_factory or Market
         try:
             self._client = factory(token_file=str(path))
@@ -236,16 +286,46 @@ class MarketBridge:
                           "variant": item.get("variant", "retail"),
                           "quantity": _finite(item.get("quantity"), "goal_quantity", minimum=0.000000001),
                           "skipped_owned_part_id": item.get("skipped_owned_part_id", "")})
-        self._call("post_goal", id=goal_id, buyer_id=_safe_id(buyer_id, "buyer_id"), type=goal.get("type"),
-                   cap=_finite(goal.get("cap"), "goal_cap", minimum=0.000000001), deadline=goal.get("deadline"),
-                   po_number="", origin="SIM", items=items)
-        rows = self._sql("SELECT id, buyer_id, cap FROM my_goals WHERE id = " + _quote(goal_id))
-        if len(rows) != 1:
+        expected = {"id": goal_id, "buyer_id": buyer_id, "type": goal.get("type"),
+                    "cap": _finite(goal.get("cap"), "goal_cap", minimum=0.000000001),
+                    "deadline": goal.get("deadline"), "items": items}
+        if self._goal_readback(goal_id, expected):
+            return
+        try:
+            self._call("post_goal", id=goal_id, buyer_id=_safe_id(buyer_id, "buyer_id"), type=goal.get("type"),
+                       cap=expected["cap"], deadline=goal.get("deadline"), po_number="", origin="SIM", items=items)
+        except MarketBridgeError:
+            if self._goal_readback(goal_id, expected):
+                return
+            raise
+        if not self._goal_readback(goal_id, expected):
             raise MarketBridgeError("goal_readback_missing")
-        observed = _project(rows[0], ("id", "buyer_id", "cap"))
-        if (observed.get("id") != goal_id or observed.get("buyer_id") != buyer_id
-                or _finite(observed.get("cap"), "goal_cap") != _finite(goal.get("cap"), "goal_cap")):
+
+    def _goal_readback(self, goal_id: str, expected: Mapping[str, Any]) -> bool:
+        rows = self._sql("SELECT id, buyer_id, type, cap, deadline FROM my_goals WHERE id = " + _quote(goal_id))
+        if not rows:
+            return False
+        if len(rows) != 1:
+            raise MarketBridgeError("goal_readback_ambiguous")
+        row = _project(rows[0], ("id", "buyer_id", "type", "cap", "deadline"))
+        try:
+            matches = (row.get("id") == expected["id"] and row.get("buyer_id") == expected["buyer_id"]
+                       and row.get("type") == expected["type"]
+                       and _finite(row.get("cap"), "goal_cap") == expected["cap"]
+                       and _same_deadline(row.get("deadline"), expected["deadline"]))
+        except MarketBridgeError:
+            matches = False
+        if not matches:
             raise MarketBridgeError("goal_readback_mismatch")
+        item_rows = self._sql("SELECT sku_spec, condition, variant, quantity, skipped_owned_part_id "
+                              "FROM my_goal_items WHERE goal_id = " + _quote(goal_id))
+        actual = [_project(item, ("sku_spec", "condition", "variant", "quantity", "skipped_owned_part_id"))
+                  for item in item_rows]
+        for item in actual:
+            item["quantity"] = _finite(item.get("quantity"), "goal_quantity", minimum=0.000000001)
+        actual.sort(key=lambda item: (item["sku_spec"], item["condition"], item["variant"]))
+        expected_items = sorted(expected["items"], key=lambda item: (item["sku_spec"], item["condition"], item["variant"]))
+        return _json_equal(actual, expected_items)
 
     def post_need(self, need: Mapping[str, Any], *, buyer_id: str, goal_id: str) -> None:
         if self.role != "buyer" or not isinstance(need, Mapping):
@@ -283,6 +363,9 @@ class MarketBridge:
         row = _project(rows[0], ("id", "need_id", "state", "deadline", "review_deadline"))
         if row.get("id") != round_id or row.get("state") not in {"open", "review", "closed"}:
             raise MarketBridgeError("round_readback_invalid")
+        for field in ("deadline", "review_deadline"):
+            if row.get(field) is not None:
+                row[field] = _timestamp_iso(row[field])
         return row
 
     def close_round(self, round_id: str) -> None:
@@ -291,7 +374,8 @@ class MarketBridge:
         self._call("close_round", round_id=_safe_id(round_id, "round_id"))
 
     def attach_verdict(self, *, bid_id: str, verdict: str, rule_ids: Sequence[str], origin: str = "SIM") -> None:
-        if self.role != "referee" or verdict not in {"allow", "quarantine", "block"}:
+        if (self.role != "referee" or verdict not in {"allow", "quarantine", "block"}
+                or not isinstance(origin, str) or origin not in {"LIVE", "MIRROR", "SIM"}):
             raise MarketBridgeError("market_review_invalid")
         self._call("attach_verdict", bid_id=_safe_id(bid_id, "bid_id"), verdict=verdict,
                    rule_ids=[str(rule)[:128] for rule in rule_ids[:32]], origin=origin)
@@ -311,6 +395,155 @@ class MarketBridge:
                 and _finite(row.get("stated_total"), "stated_total") == stated_total
                 and _decode(row.get("perks")) == list(perks) and _decode(row.get("claims")) == list(claims)
                 and row.get("origin") == origin and row.get("source") == source)
+
+    def loss_reports(self) -> list[dict[str, Any]]:
+        """Read only reports addressed to this authenticated seller through its private view."""
+        if self.role != "seller":
+            raise MarketBridgeError("loss_reports_role_mismatch")
+        columns = ("id", "round_id", "seller_id", "won", "gap_band", "reason", "source_url",
+                   "strategy_diff", "what_to_change", "what_to_change_origin", "origin", "created_at")
+        rows = self._sql("SELECT " + ", ".join(columns) + " FROM my_loss_reports")
+        output = []
+        for raw in rows:
+            row = _project(raw, columns)
+            row["created_at"] = _timestamp_iso(row.get("created_at"))
+            if (any(not isinstance(row.get(key), str) or not row[key] for key in
+                    ("id", "round_id", "seller_id", "source_url", "what_to_change", "what_to_change_origin"))
+                    or not isinstance(row.get("won"), bool)
+                    or row.get("gap_band") not in {"within5", "within10", "within20", "over20"}
+                    or row.get("reason") not in {"price", "fit", "condition", "delivery", "record", "advocate_veto"}
+                    or row.get("origin") not in {"SIM", "MIRROR", "LIVE"}
+                    or not isinstance(row.get("strategy_diff"), list)):
+                raise MarketBridgeError("loss_report_readback_invalid")
+            for step in row["strategy_diff"]:
+                if (not isinstance(step, Mapping) or set(step) != {"key", "from", "to"}
+                        or any(not isinstance(step.get(key), str) for key in ("key", "from", "to"))):
+                    raise MarketBridgeError("loss_report_readback_invalid")
+            output.append(row)
+        return output
+
+    def purchase_status(self, mandate_hash: str) -> dict[str, Any]:
+        """Read the exact buyer-private purchase projection; never query raw money tables."""
+        if self.role != "buyer" or not _HASH.fullmatch(str(mandate_hash)):
+            raise MarketBridgeError("purchase_status_binding_invalid")
+        columns = ("mandate_hash", "mandate_id", "deal_id", "goal_id", "need_id", "amount", "payee",
+                   "expiry", "origin", "within_allowance", "retired", "reservation_matches", "settled",
+                   "approval_method", "approved_at", "payment_ref", "payment_amount", "payment_mode", "paid_at")
+        rows = self._sql("SELECT " + ", ".join(columns) + " FROM my_purchase_status WHERE mandate_hash = "
+                         + _quote(mandate_hash))
+        if len(rows) != 1:
+            raise MarketBridgeError("purchase_status_readback_missing")
+        row = _project(rows[0], columns)
+        for field in ("approval_method", "approved_at", "payment_ref", "payment_amount", "payment_mode", "paid_at"):
+            row[field] = _option_value(row.get(field))
+        for field in ("expiry", "approved_at", "paid_at"):
+            if row.get(field) is not None:
+                row[field] = _timestamp_iso(row[field])
+        if (row.get("mandate_hash") != mandate_hash or not isinstance(row.get("mandate_id"), str)
+                or not isinstance(row.get("deal_id"), str) or not isinstance(row.get("goal_id"), str)
+                or not isinstance(row.get("need_id"), str) or _decimal_cents(row.get("amount"), "purchase_amount") <= 0
+                or not isinstance(row.get("payee"), str) or not row["payee"]
+                or row.get("origin") not in {"SIM", "MIRROR", "LIVE"}
+                or any(not isinstance(row.get(k), bool) for k in
+                       ("within_allowance", "retired", "reservation_matches", "settled"))):
+            raise MarketBridgeError("purchase_status_readback_invalid")
+        return row
+
+    def create_mandate(self, mandate: Mapping[str, Any], *, need_id: str, buyer_id: str,
+                       requested_by: str = "", now: datetime) -> dict[str, Any]:
+        if self.role != "buyer" or not isinstance(mandate, Mapping):
+            raise MarketBridgeError("market_role_mismatch")
+        required = ("hash", "id", "deal_id", "buyer_id", "payee", "nonce", "expires_at", "origin", "goal_id")
+        if (any(not isinstance(mandate.get(k), str) or not mandate[k] for k in required)
+                or _finite(mandate.get("amount"), "mandate_amount", minimum=0.000000001) <= 0):
+            raise MarketBridgeError("mandate_binding_invalid")
+        if (not _HASH.fullmatch(mandate["hash"]) or mandate["buyer_id"] != _safe_id(buyer_id, "buyer_id")
+                or self.role != "buyer"
+                or mandate.get("status") != "pending" or mandate.get("within_allowance") is not False):
+            raise MarketBridgeError("mandate_binding_invalid")
+        current = now
+        try:
+            expires = datetime.fromisoformat(mandate["expires_at"].replace("Z", "+00:00"))
+            if (not isinstance(current, datetime) or current.tzinfo is None or current.utcoffset() != timezone.utc.utcoffset(current)
+                    or expires.tzinfo is None or expires.utcoffset() != timezone.utc.utcoffset(expires)):
+                raise ValueError
+            remaining = (expires.astimezone(timezone.utc) - current.astimezone(timezone.utc)).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            raise MarketBridgeError("mandate_expiry_invalid") from None
+        if not 0 < remaining <= 600:
+            raise MarketBridgeError("mandate_expiry_invalid")
+        args = {"hash": mandate["hash"], "id": mandate["id"], "deal_id": mandate["deal_id"],
+                "buyer_id": mandate["buyer_id"], "amount": _finite(mandate["amount"], "mandate_amount", minimum=0.000000001),
+                "payee": mandate["payee"], "expiry_minutes": max(1, min(10, int(remaining // 60))),
+                "nonce": mandate["nonce"], "requested_by": requested_by, "origin": mandate["origin"],
+                "goal_id": mandate["goal_id"], "need_id": _safe_id(need_id, "need_id")}
+        try:
+            self._call("create_mandate", **args)
+        except MarketBridgeError:
+            status = self.purchase_status(mandate["hash"])
+            if not self._mandate_matches(status, mandate, need_id, current):
+                raise
+            return status
+        status = self.purchase_status(mandate["hash"])
+        if not self._mandate_matches(status, mandate, need_id, current):
+            raise MarketBridgeError("mandate_readback_mismatch")
+        return status
+
+    @staticmethod
+    def _mandate_matches(row: Mapping[str, Any], mandate: Mapping[str, Any], need_id: str,
+                         now: datetime) -> bool:
+        try:
+            server_expiry = datetime.fromisoformat(_timestamp_iso(row.get("expiry")).replace("Z", "+00:00"))
+            local_expiry = datetime.fromisoformat(mandate["expires_at"].replace("Z", "+00:00"))
+            current = now.astimezone(timezone.utc)
+            return (row.get("mandate_hash") == mandate.get("hash") and row.get("mandate_id") == mandate.get("id")
+                    and row.get("deal_id") == mandate.get("deal_id")
+                    and row.get("goal_id") == mandate.get("goal_id") and row.get("need_id") == need_id
+                    and _decimal_cents(row.get("amount"), "purchase_amount") == _decimal_cents(mandate.get("amount"), "mandate_amount")
+                    and row.get("payee") == mandate.get("payee") and row.get("origin") == mandate.get("origin")
+                    and row.get("reservation_matches") is True and row.get("retired") is False
+                    and row.get("settled") is False and row.get("within_allowance") is False
+                    and current < server_expiry <= local_expiry)
+        except (MarketBridgeError, ValueError, TypeError, OverflowError):
+            return False
+
+    def record_approval(self, *, mandate_hash: str, method: str, approved_by: str) -> dict[str, Any]:
+        if self.role != "buyer" or method not in {"voice_code", "typed_code"}:
+            raise MarketBridgeError("approval_binding_invalid")
+        before = self.purchase_status(mandate_hash)
+        if before.get("approval_method") is not None or before.get("retired"):
+            raise MarketBridgeError("approval_not_pending")
+        try:
+            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"))
+        except MarketBridgeError:
+            after = self.purchase_status(mandate_hash)
+            if after.get("approval_method") != method:
+                raise
+            return after
+        after = self.purchase_status(mandate_hash)
+        if after.get("approval_method") != method or not after.get("approved_at") or after.get("retired"):
+            raise MarketBridgeError("approval_readback_mismatch")
+        return after
+
+    def record_payment(self, *, mandate_hash: str, payment_ref: str, amount: float, mode: str) -> dict[str, Any]:
+        if self.role != "referee" or mode not in {"sim", "stripe_test"}:
+            raise MarketBridgeError("payment_binding_invalid")
+        args = {"mandate_hash": mandate_hash, "payment_ref": _safe_id(payment_ref, "payment_ref"),
+                "amount": _finite(amount, "payment_amount", minimum=0.000000001), "mode": mode}
+        self._call("record_payment", **args)
+        # The referee can mutate this row but cannot read the buyer-private confirmation view.
+        # The caller must verify through its buyer-role client before proceeding.
+        return {"recorded": True}
+
+    def settle_goal(self, *, goal_id: str, deal_id: str, mandate_hash: str, payment_ref: str) -> dict[str, Any]:
+        if self.role != "buyer":
+            raise MarketBridgeError("market_role_mismatch")
+        self._call("settle_goal", goal_id=_safe_id(goal_id, "goal_id"), deal_id=_safe_id(deal_id, "deal_id"),
+                   mandate_hash=mandate_hash, payment_ref=_safe_id(payment_ref, "payment_ref"))
+        status = self.purchase_status(mandate_hash)
+        if not status.get("settled") or status.get("payment_ref") != payment_ref:
+            raise MarketBridgeError("goal_settlement_readback_mismatch")
+        return status
 
     def publish_bid(self, *, bid_id: str, round_id: str, seller_id: str, persona: str, lines: Sequence[Mapping[str, Any]],
                     line_metadata: Sequence[Mapping[str, Any]], stated_total: float = 0.0,
