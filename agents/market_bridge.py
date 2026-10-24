@@ -24,7 +24,7 @@ _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _HASH = re.compile(r"^[a-f0-9]{64}$")
 _META_KEYS = ("lineIndex", "shipping", "listingId", "listingHash", "source", "snapshotId", "provenance", "attrs")
 _BID_COLUMNS = ("id", "round_id", "seller_id", "persona", "lines", "stated_total", "perks", "claims", "origin", "source", "line_meta_json")
-_RESULT_COLUMNS = ("bid_id", "seller_id", "rank", "landed", "reasons", "lines", "line_meta_json", "origin", "source")
+_RESULT_COLUMNS = ("bid_id", "seller_id", "rank", "landed", "reasons", "lines", "line_meta_json", "origin", "source", "binding_hash")
 _CANDIDATE_COLUMNS = ("round_id", "need_id", "bid_id", "seller_id", "origin", "rank", "landed", "lines_json", "line_meta_json", "binding_hash")
 
 
@@ -345,7 +345,7 @@ class MarketBridge:
             if sku in expected:
                 raise MarketBridgeError("need_items_duplicate")
             expected[sku] = _finite(item.get("quantity"), "need_quantity", minimum=0.000000001)
-        query = ("SELECT bid_id, seller_id, rank, landed, reasons, lines, line_meta_json, origin, source "
+        query = ("SELECT bid_id, seller_id, rank, landed, reasons, lines, line_meta_json, origin, source, binding_hash "
                  "FROM round_result WHERE round_id = " + _quote(round_id) + " ORDER BY rank ASC")
         rows = self._sql(query)
         result = [_project(raw, _RESULT_COLUMNS) for raw in rows]
@@ -355,6 +355,9 @@ class MarketBridge:
         if len(ranked) != 1:
             raise MarketBridgeError("winner_readback_ambiguous")
         winner = ranked[0]
+        binding_hash = winner.get("binding_hash")
+        if not isinstance(binding_hash, str) or not _HASH.fullmatch(binding_hash):
+            raise MarketBridgeError("winner_binding_missing")
         reasons = _decode(winner.get("reasons"))
         lines = _decode(winner.get("lines"))
         metadata = _decode(winner.get("line_meta_json"))
@@ -394,13 +397,19 @@ class MarketBridge:
         landed = _finite(winner.get("landed"), "landed")
         authoritative_total = Decimal(total_cents) / 100
         try:
+            canonical_total = float(authoritative_total)
+            if not math.isfinite(canonical_total) or canonical_total <= 0:
+                raise ValueError
+            float_ulp = Decimal(str(math.ulp(canonical_total)))
+            if float_ulp >= Decimal("0.005"):
+                raise ValueError
             server_total = Decimal(str(landed))
-            float_ulp = Decimal(str(math.ulp(float(authoritative_total))))
         except (InvalidOperation, ValueError, OverflowError):
-            raise MarketBridgeError("winner_amount_invalid") from None
+            raise MarketBridgeError("winner_amount_unrepresentable") from None
         if abs(server_total - authoritative_total) > float_ulp * 2:
             raise MarketBridgeError("winner_amount_mismatch")
         return {"round_id": round_id, "bid_id": winner.get("bid_id"), "seller_id": winner.get("seller_id"),
-                "landed": float(authoritative_total), "landed_cents": total_cents,
-                "lines": order_lines, "origin": winner.get("origin"), "source": winner.get("source")}
+                "landed": canonical_total, "landed_cents": total_cents,
+                "lines": order_lines, "origin": winner.get("origin"), "source": winner.get("source"),
+                "binding_hash": binding_hash}
 

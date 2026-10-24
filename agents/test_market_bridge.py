@@ -119,13 +119,14 @@ def test_authoritative_winner_bills_need_quantity_and_shipping_once_not_availabl
     market = FakeMarket(sql_rows=[[{
         "bidId": "bid-1", "sellerId": "seller-a", "rank": 1, "landed": 92.0,
         "reasons": [], "lines": [{"skuSpec": "gpu", "unitPrice": 40.0, "quantity": 5}],
-        "lineMetaJson": json.dumps(META), "origin": "SIM", "source": "fixture",
+        "lineMetaJson": json.dumps(META), "origin": "SIM", "source": "fixture", "bindingHash": "b" * 64,
     }]])
     winner = MarketBridge("buyer", client=market).authoritative_winner(
         "round-1", [{"sku_spec": "gpu", "quantity": 2}],
     )
     assert winner is not None
     assert winner["landed"] == 92
+    assert winner["binding_hash"] == "b" * 64
     assert winner["lines"] == [{
         "sku_spec": "gpu", "unit_price": 40.0, "quantity": 2.0, "qty_available": 5.0,
         "original_line_index": 0, "listing_id": "https://example.test/listing",
@@ -139,7 +140,7 @@ def test_decimal_cent_order_total_tolerates_only_server_float_representation_noi
     market = FakeMarket(sql_rows=[[{
         "bidId": "bid-1", "sellerId": "seller-a", "rank": 1, "landed": 61.849999999999994,
         "reasons": [], "lines": [{"skuSpec": "gpu", "unitPrice": 19.95, "quantity": 5}],
-        "lineMetaJson": json.dumps(meta), "origin": "SIM", "source": "fixture",
+        "lineMetaJson": json.dumps(meta), "origin": "SIM", "source": "fixture", "bindingHash": "b" * 64,
     }]])
     winner = MarketBridge("buyer", client=market).authoritative_winner(
         "round-1", [{"sku_spec": "gpu", "quantity": 3}],
@@ -147,6 +148,18 @@ def test_decimal_cent_order_total_tolerates_only_server_float_representation_noi
     assert winner is not None
     assert winner["landed"] == 61.85
     assert winner["landed_cents"] == 6185
+
+
+def test_unrepresentable_large_amount_cannot_use_a_wide_float_tolerance():
+    market = FakeMarket(sql_rows=[[{
+        "bidId": "bid-1", "sellerId": "seller-a", "rank": 1, "landed": 2e16,
+        "reasons": [], "lines": [{"skuSpec": "gpu", "unitPrice": 1e16, "quantity": 2}],
+        "lineMetaJson": json.dumps([{**META[0], "shipping": 0}]), "origin": "SIM", "source": "fixture",
+        "bindingHash": "b" * 64,
+    }]])
+    bridge = MarketBridge("buyer", client=market)
+    with pytest.raises(MarketBridgeError, match="winner_amount_unrepresentable"):
+        bridge.authoritative_winner("round-1", [{"sku_spec": "gpu", "quantity": 2}])
 
 
 @pytest.mark.parametrize("mutation", [
@@ -157,7 +170,7 @@ def test_decimal_cent_order_total_tolerates_only_server_float_representation_noi
 def test_incomplete_or_nonwinning_result_never_becomes_order(mutation):
     row = {"bidId": "bid-1", "sellerId": "seller-a", "rank": 1, "landed": 92.0,
            "reasons": [], "lines": [{"skuSpec": "gpu", "unitPrice": 40.0, "quantity": 5}],
-           "lineMetaJson": json.dumps(META), "origin": "SIM", "source": "fixture"}
+           "lineMetaJson": json.dumps(META), "origin": "SIM", "source": "fixture", "bindingHash": "b" * 64}
     row.update(mutation)
     bridge = MarketBridge("buyer", client=FakeMarket(sql_rows=[[row]]))
     if row["rank"] != 1:
