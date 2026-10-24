@@ -294,3 +294,11 @@ def test_real_page_is_judged_against_our_dated_observations_of_that_url():
     c = lambda t: {"text": t, "kind": "price", "evidence_url": "https://store.example/p"}
     assert check_claim(c("was $1,500"), fetch=lambda u: REAL, observations=rows)["result"] == "false"
     assert check_claim(c("was $1,400"), fetch=lambda u: REAL, observations=rows)["result"] == "verified"
+
+
+def test_was_price_without_our_records_installed_is_unverified_not_an_error(monkeypatch):  # inside the Actor bundle
+    import sys
+    monkeypatch.setitem(sys.modules, "data.baselines", None)
+    c = {"text": "was $1,500", "kind": "price", "evidence_url": "https://store.example/p"}
+    out = check_claim(c, fetch=lambda u: REAL)
+    assert out["result"] == "unverified" and "no dated price history from our own captures" in out["reason"]

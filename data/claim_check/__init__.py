@@ -212,10 +212,16 @@ def _history(url, facts, fetch, history, observations=None):
     if history is not None:
         return history
     if facts.get("origin") == "SIM" and facts.get("sku"):
-        from data.liar_pages.build import PRICE_HISTORY
+        try:
+            from data.liar_pages.build import PRICE_HISTORY
+        except ImportError:  # the Actor bundle ships no records
+            return None
         return PRICE_HISTORY.get(facts["sku"])
     if observations is None:
-        from data.baselines import observations as load_observations
+        try:
+            from data.baselines import observations as load_observations
+        except ImportError:  # the Actor bundle ships no records
+            return None
         observations = load_observations()
     series = sorted(({"date": str(r["observed_at"])[:10], "price": r["price"]} for r in observations if r.get("url") == url),
                     key=lambda p: p["date"])
