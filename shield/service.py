@@ -11,7 +11,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from pay.replay import NonceStore
 from pay.tap import keyring
+from shield.agent import verify_agent
 from shield.core import screen
+from shield.registry import Registry, load_registry
 from shield.verify import verify_mandate
 
 log = logging.getLogger("shield")
@@ -21,7 +23,7 @@ _ATTACK_TYPE = {
     "override": "instruction_override", "hidden": "hidden_payload", "payee": "payee_swap",
     "money": "approval_pressure", "price": "price_claim", "exfil": "exfiltration",
     "encoded": "encoded_payload", "impersonation": "impersonation", "mandate": "mandate_mismatch",
-    "classifier": "classifier_flag", "error": "error",
+    "classifier": "classifier_flag", "error": "error", "agent": "agent_identity",
 }
 
 
@@ -71,6 +73,20 @@ def handle_verify_mandate(payload: Any, keys: Optional[Mapping], store: Optional
     log.info("verify-mandate verdict=%s rules=%s latency_ms=%s", out["verdict"],
              ",".join(out["rule_ids"]) or "-", out["latency_ms"])
     return _legacy(out, payload)
+
+
+def handle_verify_agent(payload: Any, registry: Registry) -> dict:
+    out = verify_agent(payload, registry)
+    addr = payload.get("agent_address") if isinstance(payload, Mapping) else None
+    digest = hashlib.sha256(addr.encode("utf-8", "replace")).hexdigest()[:16] if isinstance(addr, str) else "none"
+    log.info("verify-agent sha256=%s verdict=%s rules=%s latency_ms=%s", digest, out["verdict"],
+             ",".join(out["rule_ids"]) or "-", out["latency_ms"])
+    return _legacy(out, {"sender_agent": addr if isinstance(addr, str) else "unknown", "message_id": out["request_id"]})
+
+
+def registry_from_env() -> Registry:
+    """SHIELD_REGISTRY: path of the registry JSON (default shield/registry.json). A bad file raises at startup."""
+    return load_registry()
 
 
 def keys_from_env() -> dict:

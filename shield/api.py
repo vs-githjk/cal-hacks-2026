@@ -2,6 +2,7 @@
 
 POST /v1/shield/screen          screen one message (also at /screen for Lane A's agents)
 POST /v1/shield/verify-mandate  verify a signed payment request against its mandate
+POST /v1/shield/verify-agent    check an agent address, claimed role and seller of record against the registry
 GET  /v1/shield/rules           the rule ids
 GET  /v1/shield/health
 Lane C wraps this core with OpenAPI docs, keys, rate limits and metering.
@@ -14,6 +15,7 @@ from fastapi import Body, FastAPI
 
 from pay.replay import NonceStore
 from shield import VERSION, service
+from shield.registry import Registry
 from shield.rules import RULES
 
 
@@ -61,9 +63,11 @@ class BodyLimit:
         await send({"type": "http.response.body", "body": body})
 
 
-def create_app(keys: Optional[Mapping] = None, store: Optional[NonceStore] = None) -> FastAPI:
+def create_app(keys: Optional[Mapping] = None, store: Optional[NonceStore] = None,
+               registry: Optional[Registry] = None) -> FastAPI:
     keys = service.keys_from_env() if keys is None else keys
     store = service.store_from_env() if store is None else store
+    registry = service.registry_from_env() if registry is None else registry
     app = FastAPI(title="Bazaar Shield", version=VERSION)
     app.add_middleware(BodyLimit)
 
@@ -78,6 +82,10 @@ def create_app(keys: Optional[Mapping] = None, store: Optional[NonceStore] = Non
     @app.post("/v1/shield/verify-mandate")
     def verify_route(payload: dict[str, Any] = Body(...)):
         return service.handle_verify_mandate(payload, keys, store)
+
+    @app.post("/v1/shield/verify-agent")
+    def verify_agent_route(payload: dict[str, Any] = Body(...)):
+        return service.handle_verify_agent(payload, registry)
 
     @app.get("/v1/shield/rules")
     def rules_route():
