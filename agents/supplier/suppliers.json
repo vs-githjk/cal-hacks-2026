@@ -1,0 +1,274 @@
+{
+  "source": "simulated",
+  "mirror_snapshot_id": "sim-mirror-2026-10-23",
+  "catalog": {
+    "yellow onions": {
+      "grade": "US No. 1",
+      "pack_size": "50 lb",
+      "unit_price": 24.5
+    },
+    "russet potatoes": {
+      "grade": "US No. 1",
+      "pack_size": "50 lb",
+      "unit_price": 27.0
+    },
+    "roma tomatoes": {
+      "grade": "US No. 1",
+      "pack_size": "25 lb",
+      "unit_price": 31.0
+    },
+    "chicken thighs": {
+      "grade": "USDA Grade A",
+      "pack_size": "40 lb case",
+      "unit_price": 98.0
+    },
+    "canola oil": {
+      "grade": "Refined",
+      "pack_size": "35 lb",
+      "unit_price": 46.0
+    },
+    "all-purpose flour": {
+      "grade": "Enriched Bleached",
+      "pack_size": "50 lb",
+      "unit_price": 22.0
+    }
+  },
+  "suppliers": [
+    {
+      "supplier_id": "sup-honest-hal",
+      "name": "Honest Hal",
+      "archetype": "steady veteran who never oversells",
+      "voice_id": "",
+      "model_url": "",
+      "spec_swapper": false,
+      "discount": 0.04,
+      "delivery_fee": 35.0,
+      "perks": [
+        "net-30 terms",
+        "free pallet return"
+      ],
+      "claims": [
+        "delivers next morning before 7am"
+      ],
+      "items": {
+        "yellow onions": {
+          "grade": "US No. 1",
+          "pack_size": "50 lb",
+          "unit_price": 24.0,
+          "floor": 21.5
+        },
+        "russet potatoes": {
+          "grade": "US No. 1",
+          "pack_size": "50 lb",
+          "unit_price": 26.5,
+          "floor": 23.0
+        },
+        "roma tomatoes": {
+          "grade": "US No. 1",
+          "pack_size": "25 lb",
+          "unit_price": 30.5,
+          "floor": 27.0
+        },
+        "chicken thighs": {
+          "grade": "USDA Grade A",
+          "pack_size": "40 lb case",
+          "unit_price": 97.0,
+          "floor": 88.0
+        },
+        "canola oil": {
+          "grade": "Refined",
+          "pack_size": "35 lb",
+          "unit_price": 45.0,
+          "floor": 41.0
+        },
+        "all-purpose flour": {
+          "grade": "Enriched Bleached",
+          "pack_size": "50 lb",
+          "unit_price": 21.5,
+          "floor": 19.0
+        }
+      }
+    },
+    {
+      "supplier_id": "sup-shady-sam",
+      "name": "Shady Sam",
+      "archetype": "fast-talking discounter who swaps specs",
+      "voice_id": "",
+      "model_url": "",
+      "spec_swapper": true,
+      "discount": 0.12,
+      "delivery_fee": 0.0,
+      "perks": [
+        "free delivery"
+      ],
+      "claims": [
+        "ships today"
+      ],
+      "items": {
+        "yellow onions": {
+          "grade": "US No. 2",
+          "pack_size": "50 lb",
+          "unit_price": 19.0,
+          "floor": 15.0
+        },
+        "russet potatoes": {
+          "grade": "US No. 2",
+          "pack_size": "50 lb",
+          "unit_price": 21.0,
+          "floor": 17.0
+        },
+        "roma tomatoes": {
+          "grade": "US No. 2",
+          "pack_size": "25 lb",
+          "unit_price": 24.0,
+          "floor": 19.0
+        },
+        "chicken thighs": {
+          "grade": "USDA Grade B",
+          "pack_size": "40 lb case",
+          "unit_price": 82.0,
+          "floor": 70.0
+        },
+        "canola oil": {
+          "grade": "Refined Blend",
+          "pack_size": "35 lb",
+          "unit_price": 38.0,
+          "floor": 33.0
+        },
+        "all-purpose flour": {
+          "grade": "Unenriched",
+          "pack_size": "50 lb",
+          "unit_price": 16.0,
+          "floor": 14.0
+        }
+      }
+    },
+    {
+      "supplier_id": "sup-valley-produce",
+      "name": "Valley Produce Co.",
+      "archetype": "produce specialist",
+      "voice_id": "",
+      "model_url": "",
+      "spec_swapper": false,
+      "discount": 0.06,
+      "delivery_fee": 45.0,
+      "perks": [
+        "same-week credit on spoiled cases"
+      ],
+      "claims": [
+        "picked within 48 hours"
+      ],
+      "items": {
+        "yellow onions": {
+          "grade": "US No. 1",
+          "pack_size": "50 lb",
+          "unit_price": 23.0,
+          "floor": 21.0
+        },
+        "russet potatoes": {
+          "grade": "US No. 1",
+          "pack_size": "50 lb",
+          "unit_price": 25.5,
+          "floor": 23.5
+        },
+        "roma tomatoes": {
+          "grade": "US No. 1",
+          "pack_size": "25 lb",
+          "unit_price": 28.0,
+          "floor": 26.5
+        }
+      }
+    },
+    {
+      "supplier_id": "sup-bay-broadline",
+      "name": "Bay Broadline Foods",
+      "archetype": "big broadline distributor",
+      "voice_id": "",
+      "model_url": "",
+      "spec_swapper": false,
+      "discount": 0.02,
+      "delivery_fee": 25.0,
+      "perks": [
+        "one invoice for everything",
+        "online ordering"
+      ],
+      "claims": [
+        "99% fill rate"
+      ],
+      "items": {
+        "yellow onions": {
+          "grade": "US No. 1",
+          "pack_size": "50 lb",
+          "unit_price": 25.5,
+          "floor": 23.0
+        },
+        "russet potatoes": {
+          "grade": "US No. 1",
+          "pack_size": "50 lb",
+          "unit_price": 28.0,
+          "floor": 25.0
+        },
+        "roma tomatoes": {
+          "grade": "US No. 1",
+          "pack_size": "25 lb",
+          "unit_price": 32.0,
+          "floor": 28.5
+        },
+        "chicken thighs": {
+          "grade": "USDA Grade A",
+          "pack_size": "40 lb case",
+          "unit_price": 99.0,
+          "floor": 90.0
+        },
+        "canola oil": {
+          "grade": "Refined",
+          "pack_size": "35 lb",
+          "unit_price": 44.5,
+          "floor": 40.0
+        },
+        "all-purpose flour": {
+          "grade": "Enriched Bleached",
+          "pack_size": "50 lb",
+          "unit_price": 22.5,
+          "floor": 20.0
+        }
+      }
+    },
+    {
+      "supplier_id": "sup-golden-mill",
+      "name": "Golden Mill Supply",
+      "archetype": "dry-goods and protein jobber with steep discounts but hard floors",
+      "voice_id": "",
+      "model_url": "",
+      "spec_swapper": false,
+      "discount": 0.15,
+      "delivery_fee": 30.0,
+      "perks": [
+        "bulk pricing on 10+ units"
+      ],
+      "claims": [
+        "family owned since 1978"
+      ],
+      "items": {
+        "chicken thighs": {
+          "grade": "USDA Grade A",
+          "pack_size": "40 lb case",
+          "unit_price": 96.0,
+          "floor": 89.0
+        },
+        "canola oil": {
+          "grade": "Refined",
+          "pack_size": "35 lb",
+          "unit_price": 44.0,
+          "floor": 40.5
+        },
+        "all-purpose flour": {
+          "grade": "Enriched Bleached",
+          "pack_size": "40 lb",
+          "unit_price": 18.0,
+          "floor": 16.5
+        }
+      }
+    }
+  ]
+}
