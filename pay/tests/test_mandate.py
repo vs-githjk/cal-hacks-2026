@@ -42,6 +42,13 @@ def approved(m, approval_id="appr-1"):
     return m
 
 
+def guard(m, now=NOW, **kw):
+    """can_charge with the expectations the merchant would hold for the default mandate."""
+    args = dict(deal_id="deal-A", amount=1119.0, payee="seller-x", store=NonceStore())
+    args.update(kw)
+    return can_charge(m, now, **args)
+
+
 # ---------- hash ----------
 
 def test_canonical_is_sorted_no_spaces_and_only_hash_fields():
@@ -206,11 +213,11 @@ def test_verify_rejects_schema_violation():
 def test_mark_used_is_single_use():
     store = NonceStore()
     m = approved(make())
-    mark_used(m, store, now=NOW)
+    mark_used(m, store=store, deal_id="deal-A", amount=1119.0, payee="seller-x", now=NOW)
     assert m["status"] == "used"
     again = approved(dict(m))
     with pytest.raises(MandateError) as e:
-        mark_used(again, store, now=NOW)
+        mark_used(again, store=store, deal_id="deal-A", amount=1119.0, payee="seller-x", now=NOW)
     assert e.value.reason == "replayed_mandate"
 
 
@@ -218,7 +225,7 @@ def test_mark_used_refuses_unverifiable_mandate():
     m = approved(make())
     m["amount"] = 2.0
     with pytest.raises(MandateError) as e:
-        mark_used(m, NonceStore(), now=NOW)
+        mark_used(m, store=NonceStore(), deal_id="deal-A", amount=2.0, payee="seller-x", now=NOW)
     assert e.value.reason == "hash_mismatch"
     assert m["status"] == "approved"
 
@@ -226,10 +233,10 @@ def test_mark_used_refuses_unverifiable_mandate():
 def test_replayed_mandate_fails_can_charge_even_if_status_is_reset():
     store = NonceStore()
     m = approved(make())
-    assert can_charge(m, NOW, store).ok
-    mark_used(m, store, now=NOW)
+    assert guard(m, store=store).ok
+    mark_used(m, store=store, deal_id="deal-A", amount=1119.0, payee="seller-x", now=NOW)
     forged = approved(dict(m))  # attacker flips status back to approved
-    r = can_charge(forged, NOW, store)
+    r = guard(forged, store=store)
     assert not r.ok and r.reason == "replayed_mandate"
 
 
@@ -242,23 +249,23 @@ def test_idempotency_key_is_bound_to_hash():
 
 def test_mandate_for_deal_a_cannot_authorize_deal_b():
     m = approved(make(deal_id="deal-A"))
-    assert can_charge(m, NOW, deal_id="deal-A").ok
-    r = can_charge(m, NOW, deal_id="deal-B")
+    assert guard(m, deal_id="deal-A").ok
+    r = guard(m, deal_id="deal-B")
     assert not r.ok and r.reason == "deal_mismatch"
 
 
 def test_relabelling_mandate_to_deal_b_breaks_the_hash():
     m = approved(make(deal_id="deal-A"))
     m["deal_id"] = "deal-B"
-    r = can_charge(m, NOW, deal_id="deal-B")
+    r = guard(m, deal_id="deal-B")
     assert not r.ok and r.reason == "hash_mismatch"
 
 
 def test_amount_and_payee_expectations_are_enforced():
     m = approved(make())
-    assert can_charge(m, NOW, amount=1119, payee="seller-x").ok
-    assert can_charge(m, NOW, amount=1118.99).reason == "amount_mismatch"
-    assert can_charge(m, NOW, payee="seller-z").reason == "payee_mismatch"
+    assert guard(m, amount=1119, payee="seller-x").ok
+    assert guard(m, amount=1118.99).reason == "amount_mismatch"
+    assert guard(m, payee="seller-z").reason == "payee_mismatch"
 
 
 # ---------- charge guard ----------
@@ -266,27 +273,67 @@ def test_amount_and_payee_expectations_are_enforced():
 def test_cannot_charge_without_approved_status_and_approval_id():
     now = NOW
     pending = make()
-    assert can_charge(pending, now).reason == "not_approved"
+    assert guard(pending, now).reason == "not_approved"
     for status in ("denied", "expired", "used"):
         m = make()
         m["status"] = status
         m["approval_id"] = "appr-1"
-        assert not can_charge(m, now).ok
+        assert not guard(m, now).ok
     no_id = make()
     no_id["status"] = "approved"
-    assert can_charge(no_id, now).reason == "no_approval_id"
+    assert guard(no_id, now).reason == "no_approval_id"
     blank = make()
     blank["status"] = "approved"
     blank["approval_id"] = "  "
-    assert can_charge(blank, now).reason == "no_approval_id"
+    assert guard(blank, now).reason == "no_approval_id"
 
 
 def test_can_charge_ok_when_approved_with_id_and_fresh():
     m = approved(make())
-    r = can_charge(m, NOW + timedelta(minutes=2))
+    r = guard(m, NOW + timedelta(minutes=2))
     assert r.ok and r.reason == "ok"
 
 
 def test_can_charge_refuses_expired_even_if_approved():
     m = approved(make())
-    assert can_charge(m, NOW + timedelta(minutes=11)).reason == "expired"
+    assert guard(m, NOW + timedelta(minutes=11)).reason == "expired"
+
+
+# ---------- fix 1: required expectations, bad amounts, buyer ----------
+
+def test_can_charge_and_mark_used_require_deal_amount_payee_and_store_keywords():
+    m = approved(make())
+    with pytest.raises(TypeError):
+        can_charge(m, NOW)  # a deal-A mandate must never pass with no expectations
+    for missing in ("deal_id", "amount", "payee", "store"):
+        kw = dict(deal_id="deal-A", amount=1119.0, payee="seller-x", store=NonceStore())
+        del kw[missing]
+        with pytest.raises(TypeError):
+            can_charge(m, NOW, **kw)
+        kw2 = dict(kw, now=NOW)
+        with pytest.raises(TypeError):
+            mark_used(m, **kw2)
+
+
+@pytest.mark.parametrize("bad", [0, -1, -0.01, float("nan"), float("inf"), True, "10"])
+def test_expected_amount_that_is_not_positive_finite_is_a_verdict_not_a_raise(bad):
+    m = approved(make())
+    r = guard(m, amount=bad)
+    assert not r.ok and r.reason == "bad_amount"
+
+
+@pytest.mark.parametrize("bad", [0, -5, float("nan")])
+def test_mandate_with_nonpositive_or_nan_amount_is_refused_with_a_verdict(bad):
+    m = approved(make())
+    m["amount"] = bad
+    m["hash"] = "0" * 64  # an attacker can recompute this; the guard must not rely on it
+    r = guard(m, amount=1119.0)
+    assert not r.ok and r.reason == "bad_amount"
+    assert verify(m, NOW).reason == "bad_amount"
+
+
+def test_buyer_id_expectation():
+    m = approved(make(buyer_id="buyer-1"))
+    assert guard(m, buyer_id="buyer-1").ok
+    r = guard(m, buyer_id="buyer-2")
+    assert not r.ok and r.reason == "buyer_mismatch"

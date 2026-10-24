@@ -21,18 +21,20 @@ m = new_mandate(deal_id="deal-A", buyer_id="b1", amount=1119.00, payee="seller-x
 verify(m)                       # Verdict(ok, reason): hash, ttl cap, expiry, status (not approval)
 m["status"], m["approval_id"] = "approved", "appr-1"   # set only by the approval flow
 can_charge(m, store=store, deal_id="deal-A", amount=1119.00, payee="seller-x")   # the guard before any charge
-mark_used(m, store)             # spends it once; a second call raises MandateError("replayed_mandate")
+mark_used(m, store=store, deal_id="deal-A", amount=1119.00, payee="seller-x")    # spends it once; a second call raises MandateError("replayed_mandate")
 ```
 - `mandate_hash(m)` is sha256 hex over canonical JSON (sorted keys, no spaces) of `deal_id, amount, currency, payee,
   tier_price, nonce, expires_at`. Other fields (status, approval_id, buyer_id, tap_signature) are not hashed.
   A whole-number float and an int hash the same (1119.0 and 1119).
 - `new_mandate` draws a random 128-bit nonce and sets `expires_at` at most 10 minutes out (default 10).
 - `can_charge` refuses unless the mandate is valid, unexpired, status `approved`, has a non-blank `approval_id`,
-  matches the expected deal, amount and payee when you pass them, and its nonce is unused. A mandate for deal A
+  matches the expected deal, amount and payee (keyword-required on `can_charge` and `mark_used`, as is `store`;
+  `buyer_id` is optional), and its nonce is unused. Pass it only a mandate loaded from the server's own approval
+  row: status and approval_id are not hashed. A mandate for deal A
   cannot authorize deal B. Use `idempotency_key(m)` (`"mandate:" + hash`) as the Stripe idempotency key.
 - Every check returns a `Verdict` with a stable `reason`: `hash_mismatch`, `expired`, `already_used`, `denied`,
   `ttl_too_long`, `schema_invalid`, `not_approved`, `no_approval_id`, `deal_mismatch`, `amount_mismatch`,
-  `payee_mismatch`, `replayed_mandate`.
+  `payee_mismatch`, `buyer_mismatch`, `bad_amount`, `replayed_mandate`.
 
 ## TAP-style signing (`pay/tap.py`)
 Signs every buyer-agent request with an RFC 9421 HTTP Message Signature (Ed25519). The signature covers

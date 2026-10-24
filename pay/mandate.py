@@ -211,11 +211,22 @@ def new_mandate(
 
 # ---------- verify ----------
 
+def _positive_amount(v: Any) -> Optional[Any]:
+    """The amount normalized, or None when it is not a positive finite number (NaN, 0, negative, bool, str)."""
+    try:
+        n = _norm_number(v)
+    except ValueError:
+        return None
+    return n if n is not None and n > 0 else None
+
+
 def _integrity(m: Mapping[str, Any]) -> Optional[Verdict]:
     """Schema, hash and ttl cap: the checks that do not depend on the clock or status."""
     errors = validate_schema(m)
     if errors:
         return _no("schema_invalid", errors[0])
+    if _positive_amount(m["amount"]) is None:
+        return _no("bad_amount", "amount must be a positive, finite number")
     if mandate_hash(m) != m["hash"]:
         return _no("hash_mismatch", "fields do not match the mandate hash")
     try:
@@ -248,31 +259,42 @@ def verify(m: Mapping[str, Any], now: Optional[datetime] = None) -> Verdict:
     return bad if bad is not None else _ok()
 
 
-def _expectations(m: Mapping[str, Any], deal_id, amount, payee) -> Optional[Verdict]:
-    if deal_id is not None and m["deal_id"] != deal_id:
+def _expectations(m: Mapping[str, Any], deal_id, amount, payee, buyer_id) -> Optional[Verdict]:
+    expected_amount = _positive_amount(amount)
+    if expected_amount is None:
+        return _no("bad_amount", "expected amount must be a positive, finite number")
+    if m["deal_id"] != deal_id:
         return _no("deal_mismatch", "mandate is for a different deal")
-    if amount is not None and _norm_number(m["amount"]) != _norm_number(amount):
+    if _norm_number(m["amount"]) != expected_amount:
         return _no("amount_mismatch", "mandate is for a different amount")
-    if payee is not None and m["payee"] != payee:
+    if m["payee"] != payee:
         return _no("payee_mismatch", "mandate is for a different payee")
+    if buyer_id is not None and m["buyer_id"] != buyer_id:
+        return _no("buyer_mismatch", "mandate is for a different buyer")
     return None
 
 
 def can_charge(
     m: Mapping[str, Any],
     now: Optional[datetime] = None,
-    store: Optional[NonceStore] = None,
     *,
-    deal_id: Optional[str] = None,
-    amount: Optional[float] = None,
-    payee: Optional[str] = None,
+    deal_id: str,
+    amount: float,
+    payee: str,
+    store: NonceStore,
+    buyer_id: Optional[str] = None,
 ) -> Verdict:
     """The guard in front of every charge. Needs a valid, unexpired mandate with status "approved" and
-    an approval_id, matching the expected deal, amount and payee when given, and an unused nonce."""
+    an approval_id, matching the deal, amount and payee the caller expects (all required: a mandate for
+    deal A must never pass without saying which deal is being paid), and an unused nonce in `store`.
+    `buyer_id` is checked too when given.
+
+    `m` must only be a mandate loaded from the server's own approval row. The hash does not cover
+    `status` or `approval_id`, so a mandate taken from a request body proves nothing about approval."""
     bad = _integrity(m)
     if bad is not None:
         return bad
-    bad = _expectations(m, deal_id, amount, payee)
+    bad = _expectations(m, deal_id, amount, payee, buyer_id)
     if bad is not None:
         return bad
     bad = _status_and_expiry(m, _now(now))
@@ -283,15 +305,25 @@ def can_charge(
     approval_id = m.get("approval_id")
     if not isinstance(approval_id, str) or not approval_id.strip():
         return _no("no_approval_id", "an approval_id is required before payment")
-    if store is not None and store.seen(NS_MANDATE, m["nonce"]):
+    if store.seen(NS_MANDATE, m["nonce"]):
         return _no("replayed_mandate", "this mandate nonce was already used")
     return _ok()
 
 
-def mark_used(m: dict, store: NonceStore, now: Optional[datetime] = None) -> dict:
-    """Spend the mandate once. Re-runs `can_charge`, records the nonce atomically, sets status "used".
-    Raises MandateError (reason "replayed_mandate" on a second use). Mutates and returns `m`."""
-    verdict = can_charge(m, now, store)
+def mark_used(
+    m: dict,
+    *,
+    deal_id: str,
+    amount: float,
+    payee: str,
+    store: NonceStore,
+    now: Optional[datetime] = None,
+    buyer_id: Optional[str] = None,
+) -> dict:
+    """Spend the mandate once. Re-runs `can_charge` with the same expectations, records the nonce
+    atomically, sets status "used". Raises MandateError (reason "replayed_mandate" on a second use).
+    Mutates and returns `m`."""
+    verdict = can_charge(m, now, deal_id=deal_id, amount=amount, payee=payee, store=store, buyer_id=buyer_id)
     if not verdict:
         raise MandateError(verdict.reason, verdict.detail)
     if not store.consume(NS_MANDATE, m["nonce"]):
