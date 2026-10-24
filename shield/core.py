@@ -22,7 +22,7 @@ MAX_SPANS = 32
 MAX_EXCERPT = 80
 MAX_CHARS = 20000  # longer messages are quarantined before any parsing (regex cost grows with size)
 OVERSIZE_RULE = "shield.encoded.payload"
-MAX_CANDIDATE_CHARS = 3900  # what one classifier call carries (shield.classifier.MAX_CHARS is 4000)
+MAX_CANDIDATE_CHARS = MAX_CHARS - 100  # what one classifier call carries (shield.classifier.MAX_CHARS is the same window)
 _DEFAULT = object()
 
 
@@ -39,7 +39,7 @@ def _verdict(verdict: str, rule_ids: list[str], severity: str, spans: list[dict]
     }
 
 
-_BUYER_SIDE = frozenset({"buyer", "advocate", "marketplace"})
+from shield.rules.base import BUYER_SIDE as _BUYER_SIDE  # noqa: E402  (one list, shared with the rules)
 
 
 def _seller_side(ctx: Mapping) -> bool:

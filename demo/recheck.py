@@ -60,6 +60,10 @@ def recheck(listing: dict, *, fetch: Optional[Callable] = None, status: Optional
         rows = fetch(urls=[listing["url"]])
     except brightdata.NotConfigured:
         return {"state": "not_configured", "price": None, "fetched_at": None, "origin": MIRROR}
+    except Exception:  # #190: anything else the fetch raises is "nothing readable", never a crash of beat 4
+        return {"state": "empty", "price": None, "fetched_at": None, "origin": MIRROR, "detail": "error"}
+    if not isinstance(rows, list):
+        return {"state": "empty", "price": None, "fetched_at": None, "origin": MIRROR, "detail": "error"}
     here = [r for r in rows if r.get("url") == listing["url"] and r.get("price") is not None]
     mine = [r for r in here if _live_price(r["price"]) is not None]
     if not mine:
