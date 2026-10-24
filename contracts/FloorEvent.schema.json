@@ -6,19 +6,40 @@
    "type": "string"
   },
   "kind": {
+   "type": "string",
+   "enum": [
+    "need_posted",
+    "bid_sealed",
+    "auction_closed",
+    "bid_rejected",
+    "claim_checked",
+    "verdict",
+    "order_placed",
+    "delivery_checked"
+   ]
+  },
+  "ref_table": {
    "type": "string"
   },
   "ref_id": {
    "type": "string"
   },
+  "supplier_id": {
+   "type": "string"
+  },
   "at": {
+   "type": "string"
+  },
+  "label": {
    "type": "string"
   }
  },
  "required": [
   "id",
   "kind",
+  "ref_table",
   "ref_id",
-  "at"
+  "at",
+  "label"
  ]
 }

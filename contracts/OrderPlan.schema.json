@@ -1,0 +1,102 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "properties": {
+  "id": {
+   "type": "string"
+  },
+  "need_id": {
+   "type": "string"
+  },
+  "mode": {
+   "type": "string",
+   "enum": [
+    "cheapest_per_line",
+    "optimizer"
+   ]
+  },
+  "allocations": {
+   "type": "array",
+   "items": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+     "supplier_id": {
+      "type": "string"
+     },
+     "bid_id": {
+      "type": "string"
+     },
+     "lines": {
+      "type": "array",
+      "items": {
+       "$schema": "https://json-schema.org/draft/2020-12/schema",
+       "type": "object",
+       "properties": {
+        "sku_spec": {
+         "type": "string"
+        },
+        "quantity": {
+         "type": "number"
+        },
+        "unit_price": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "sku_spec",
+        "quantity",
+        "unit_price"
+       ]
+      }
+     }
+    },
+    "required": [
+     "supplier_id",
+     "bid_id",
+     "lines"
+    ]
+   }
+  },
+  "subtotal": {
+   "type": "number"
+  },
+  "fees": {
+   "type": "number"
+  },
+  "total": {
+   "type": "number"
+  },
+  "savings_vs_baseline": {
+   "type": "number"
+  },
+  "explanation": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "source": {
+   "type": "string",
+   "enum": [
+    "live",
+    "mirror",
+    "simulated",
+    "sandbox",
+    "recorded"
+   ]
+  }
+ },
+ "required": [
+  "id",
+  "need_id",
+  "mode",
+  "allocations",
+  "subtotal",
+  "fees",
+  "total",
+  "savings_vs_baseline",
+  "explanation",
+  "source"
+ ]
+}
