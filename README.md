@@ -39,7 +39,7 @@ You set an **allowance**, which starts at $0 and rises with each clean delivery.
 
 Losing sellers get a **loss report** (a banded gap and the reason with its source) and their agents adjust a small, inspectable strategy inside their owner's rules.
 
-**The multiverse.** The demo is one universe of one order. The real market has many buyers whose requests pool by exact SKU, and sellers bid a price ladder by quantity on the pooled lot. The **Lot Wall** (a later item, built from real lot rows once the core loop works) shows it: Joe's brick is gold and labelled REAL, the rest are grey and labelled SIM, and the sealed bids slide down the price tiers. One or two bids are real, the rest are labelled simulated. We do not claim many people use it.
+**The multiverse.** The demo is one universe of one order. The real market has many buyers whose requests pool by exact SKU, and sellers bid a price ladder by quantity on the pooled lot. The **Lot Wall** (a later item, built from real lot rows once the core loop works) shows it: Tony's brick is gold and labelled REAL, the rest are grey and labelled SIM, and the sealed bids slide down the price tiers. One or two bids are real, the rest are labelled simulated. We do not claim many people use it.
 
 **Fully agentic:** every seller is a Fetch.ai uAgent on Agentverse. A real non-agent seller side is coming later, or only if time remains after the agentic path.
 
