@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { asOrigin, asSim, bidsFromRows, feedFromRows, latestRound, linesFromRows, originCounts, reviewFromRows, roundFromRows } from "./screens.ts";
+import { asOrigin, asSim, bidsFromRows, clusterArrivals, feedFromRows, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as any;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -100,6 +100,52 @@ test("linesFromRows marks the picked line, alt lines and floor refusals", () => 
 
 test("originCounts counts each origin", () => {
   assert.deepEqual(originCounts([{ origin: "SIM" }, { origin: "LIVE" }, { origin: "SIM" }]), { LIVE: 1, MIRROR: 0, SIM: 2 });
+});
+
+test("#213 originMixLabel names the noun and totals the bids, dropping zero counts from the breakdown", () => {
+  assert.equal(originMixLabel({ LIVE: 0, MIRROR: 12, SIM: 6 }), "18 bids · 12 MIRROR · 6 SIM");
+  assert.equal(originMixLabel({ LIVE: 1, MIRROR: 0, SIM: 0 }), "1 bid · 1 LIVE");
+  assert.equal(originMixLabel({ LIVE: 0, MIRROR: 0, SIM: 0 }), "");
+});
+
+test("#213 origin mix counts round.arrivals (one per bid), not seller lines (one per condition line, alt and refused included)", () => {
+  const rows = [
+    result({ lines: [{ offeredCondition: "new", unitPrice: 1200 }, { offeredCondition: "open-box", unitPrice: 1100 }], landed: 1100, origin: "MIRROR" }),
+  ];
+  const events = [
+    event({ kind: "round_opened", refTable: "round", refId: "round-1", label: "Sealed round open for 6 s" }),
+    event({ id: 2n, kind: "bid_sealed", refId: "bid-a", sellerId: "fair-price-pc", origin: "MIRROR", at: ts(T0 + 1000) }),
+  ];
+  const r = round();
+  const lines = linesFromRows(rows, events, r);
+  assert.equal(lines.length, 2, "sanity: the bid's two condition lines both show in the seller table");
+  assert.equal(originCounts(lines).MIRROR, 2, "seller lines double count a two-line bid, the bug");
+  const roundView = roundFromRows(r, events, rows);
+  assert.equal(originCounts(roundView.arrivals).MIRROR, 1, "the round's arrivals count the bid once, the fix's data source");
+});
+
+test("#167 clusterArrivals keeps every arrival, merging a dense run into one cluster", () => {
+  const a = (atMs: number, label = `b${atMs}`) => ({ label, atMs, origin: "MIRROR" as const, refused: false });
+  // 18 arrivals inside a 6000 ms window, 17 of them within the first 150 ms (a demo flood), one late.
+  const flood = Array.from({ length: 17 }, (_, i) => a(i * 8));
+  const clusters = clusterArrivals([...flood, a(5000, "late")], 6000, 0.03);
+  assert.equal(clusters.flat().length, 18, "no arrival is dropped");
+  assert.equal(clusters.length, 2);
+  assert.equal(clusters[0]!.length, 17);
+  assert.deepEqual(clusters[1], [a(5000, "late")]);
+});
+
+test("#167 clusterArrivals keeps well-spaced arrivals apart, one per cluster", () => {
+  const a = (atMs: number) => ({ label: `b${atMs}`, atMs, origin: "SIM" as const, refused: false });
+  const clusters = clusterArrivals([a(0), a(1000), a(2000)], 6000, 0.03); // 1000 ms apart, gap threshold 180 ms
+  assert.equal(clusters.length, 3);
+  assert.ok(clusters.every((c) => c.length === 1));
+});
+
+test("clusterArrivals on an empty round is empty, and a single arrival is its own cluster", () => {
+  assert.deepEqual(clusterArrivals([], 6000), []);
+  const only = [{ label: "b", atMs: 10, origin: "SIM" as const, refused: false }];
+  assert.deepEqual(clusterArrivals(only, 6000), [only]);
 });
 
 test("reviewFromRows shows the latest expiring code, with the origin normalized", () => {
