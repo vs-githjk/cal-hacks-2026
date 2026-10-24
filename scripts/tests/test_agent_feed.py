@@ -433,3 +433,25 @@ def test_a_second_not_found_after_registration_goes_local_again(tmp_path):
     run = write_run(tmp_path, {"sellers": alive_rec(tmp_path / ".run" / "logs" / "sellers.log")},
                     {"sellers": seller4_log(REGISTERED, NOT_FOUND.format(t="seller_4"))})
     assert [r["status"] for r in F.agent_rows(run) if r["role"] == "seller"] == ["local"]
+
+
+
+# ---------------------------------------------------------------- GET /v1/memory (#189)
+
+def test_memory_endpoint_returns_entries_from_the_memory_dir(tmp_path):
+    import shutil
+    from fastapi.testclient import TestClient
+    sample = SCRIPTS.parent / "demo" / "out" / "sample-run.json"
+    shutil.copy(sample, tmp_path / "run-20261024T120000Z.json")
+    client = TestClient(F.create_app(tmp_path / "run", memory_dir=tmp_path))
+    body = client.get("/v1/memory").json()
+    assert body["entries"] and {e["kind"] for e in body["entries"]} == {"goal", "purchase", "veto", "lesson"}
+    assert all(e["origin"] in ("LIVE", "MIRROR", "SIM") for e in body["entries"])
+    vetoes = client.get("/v1/memory", params={"kind": "veto", "limit": 1}).json()["entries"]
+    assert len(vetoes) == 1 and vetoes[0]["kind"] == "veto"
+
+
+def test_memory_endpoint_with_nothing_recorded_says_so(tmp_path):
+    from fastapi.testclient import TestClient
+    body = TestClient(F.create_app(tmp_path / "run", memory_dir=tmp_path / "none")).get("/v1/memory").json()
+    assert body == {"entries": [], "sources": [], "note": "no demo runs or market snapshots recorded yet"}

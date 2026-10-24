@@ -69,6 +69,14 @@ def good_sql(query):
     raise AssertionError(query)
 
 
+@pytest.fixture(autouse=True)
+def memory_in_tmp(tmp_path, monkeypatch):
+    """The end-of-rehearsal memory snapshot (#189) goes to a temp dir, never to demo/out."""
+    from demo import memory
+    monkeypatch.setattr(memory, "OUT_DIR", tmp_path / "memory")
+    return tmp_path / "memory"
+
+
 def no_shots(url, path):
     return True, ""
 
@@ -282,3 +290,14 @@ def test_unflushed_stage_output_still_gives_real_beat_times_and_spread_out_scree
     assert all(v >= 0.25 for v in r["beats"].values()), r["beats"]
     assert len(shot_times) == 10
     assert max(shot_times) - min(shot_times) >= 0.9, "screenshots must be taken as the beats happen, not all at the end"
+
+
+
+def test_a_rehearsal_saves_the_market_rows_for_the_memory_panel(tmp_path, memory_in_tmp):
+    say = []
+    out = tmp_path / "out"
+    code = rehearse.main(["--stage-cmd", stage(tmp_path, "ok.py", OK_STAGE), "--out", str(out), "--runs", "1"],
+                         probe=up, sql=good_sql, shoot=no_shots, say=say.append)
+    snaps = list(memory_in_tmp.glob("market-memory-*.json"))
+    assert code == 0 and len(snaps) == 1
+    assert any(line.startswith("memory: market-memory-") for line in say)
