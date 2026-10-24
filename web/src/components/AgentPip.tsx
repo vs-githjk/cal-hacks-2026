@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
 import { AgentAvatar, useAgents } from "@/components/useAgents";
+import { planLines, SAMPLE_BUILD, type BuildResult, type StepKind } from "@/lib/build";
 import {
   ASI_ONE_URL,
   NEXT_CORNER,
@@ -32,6 +33,30 @@ const CORNER_CLASS: Record<Corner, string> = {
   tr: "top-[64px] right-3",
   tl: "top-[64px] left-3",
 };
+// Plan and re-plan lines: the clash is the one red line, the swap and the lock are green, a budget move is amber.
+const PLAN_TONE: Partial<Record<StepKind, string>> = { clash: "text-coral", swap: "text-mint", locked: "text-mint", reallocate: "text-amber", blocked: "text-coral" };
+const PLAN_LABEL: Partial<Record<StepKind, string>> = { plan: "Plan", clash: "Clash", swap: "Re-plan", reallocate: "Budget", locked: "Locked", blocked: "Blocked" };
+
+/** The buyer agent's build plan and re-plans, above the agent rows. SAMPLE_BUILD (SIM) until a live build is passed in. */
+function BuildPlan({ build, origin }: { build: BuildResult; origin: string }) {
+  return (
+    <section aria-label="Build plan" className="border-b border-line pb-2">
+      <div className="flex items-center gap-2 py-1">
+        <span className="flex-1 font-semibold">Buyer agent: build plan</span>
+        <OriginChip origin={origin} />
+      </div>
+      <ol className="grid gap-1">
+        {planLines(build).map((s, i) => (
+          <li key={i} className="grid grid-cols-[52px_1fr] gap-2">
+            <span className={`text-[11px] font-bold uppercase tracking-[0.04em] ${PLAN_TONE[s.kind] ?? "text-muted"}`}>{PLAN_LABEL[s.kind]}</span>
+            <span className="min-w-0 text-ink-2">{s.line}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 const DOT: Record<AgentStatus, string> = { agentverse: "bg-mint", local: "bg-sky", down: "bg-coral" };
 
 interface Prefs {
@@ -151,6 +176,7 @@ function AgentPipTile() {
       {prefs.open ? (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
+            <BuildPlan build={SAMPLE_BUILD} origin="SIM" />
             {offline || pending || shown.length === 0 ? (
               <p className="py-3 text-muted">
                 {pending

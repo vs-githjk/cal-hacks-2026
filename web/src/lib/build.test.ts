@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAt, partRows, SAMPLE_BUILD, stepsUpTo } from "./build.ts";
+import { buildAt, partRows, planLines, SAMPLE_BUILD, stepsUpTo } from "./build.ts";
 
 test("partRows lists the six parts in plan order with the swapped board marked", () => {
   const rows = partRows(SAMPLE_BUILD);
@@ -38,4 +38,8 @@ test("buildAt replays the build: parts lock as their step arrives, locked only a
   assert.equal(end.status, "locked");
   assert.equal(end.totalCents, SAMPLE_BUILD.totalCents);
   assert.deepEqual(end.sellers, SAMPLE_BUILD.sellers);
+});
+
+test("planLines keeps the plan and the re-plan, in order, and drops picks and plain knockouts", () => {
+  assert.deepEqual(planLines(SAMPLE_BUILD).map((s) => s.kind), ["plan", "clash", "swap", "reallocate", "locked"]);
 });

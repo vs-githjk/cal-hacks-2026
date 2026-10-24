@@ -178,3 +178,9 @@ export function buildAt(b: BuildResult, upTo: number): BuildResult {
     sellers: [...new Set(Object.values(picks).map((p) => p.seller))].sort(),
   };
 }
+
+/** The Fetch tile's lines: the plan and every re-plan (clash, swap, budget moved), then how it ended. Picks and plain knockouts stay on the board. */
+export const PLAN_KINDS: readonly StepKind[] = ["plan", "clash", "swap", "reallocate", "locked", "blocked"];
+export function planLines(b: BuildResult): BuildStep[] {
+  return b.steps.filter((s) => PLAN_KINDS.includes(s.kind));
+}
