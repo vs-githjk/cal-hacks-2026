@@ -99,7 +99,7 @@ An AI agent with a stablecoin wallet and **no Apify account** can pay for this A
 2. The agent's wallet pays it (for example `npx awal x402 pay ...`, `mppx ...` or `pay.sh`), and Apify returns a token with a hard spend cap: at least $1, it expires after 14 days, and unused balance is not refunded.
 3. The agent runs this Actor with `Authorization: Bearer <token>`, and each claim is metered against that balance. This works because the Actor uses limited permissions.
 
-**What we have verified (Oct 24 2026):** our probe, [`scripts/apify_agent_pay_probe.py`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/scripts/apify_agent_pay_probe.py), reaches the 402 pay wall for a prepaid token and for a proxied run of this Actor. That is *reached, not paid*. This section will say LIVE only after a real paid run.
+**What we have verified (Oct 24 2026):** our probe, [`data/claim_check/agent_pay_probe.py`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/data/claim_check/agent_pay_probe.py), sends unpaid requests only and reaches the 402 pay wall for a prepaid token (x402 and MPP) and for a proxied run of this Actor ($1.00 USDC on Base). Its saved output is [`data/claim_check/agent_pay_probe.txt`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/data/claim_check/agent_pay_probe.txt). That is *reached, not paid*. This section will say LIVE only after a real paid run.
 
 ## Our other Actor
 
