@@ -148,5 +148,14 @@ def test_g_nothing_is_real_that_is_not_built():
         if "What is real" in line:
             assert "a teammate purchase" not in line
             assert "call client" in line and "approval judge" in line
+    for n, line in lines("docs/PITCH.md"):
+        if "real sellers really bid" in line.lower():
+            assert "bids are real" not in line, f"docs/PITCH.md:{n}: no outside seller has bid; do not say bids are real"
+    for n, line in lines("docs/SPONSORS.md"):
+        if "Cartesia call" in line:
+            assert "default and fallback" not in line, f"docs/SPONSORS.md:{n}: the in-browser Cartesia call is not built"
+    corrections = read("docs/README_CORRECTIONS.md")
+    status = corrections.split("## 3. Status", 1)[1].split("\n## ", 2)[1] if "## 3. Status" in corrections else ""
+    assert "test_readme_honesty" not in status, "the pasted Status block cites a test that is not on this branch"
     assert "demo/README.md" not in pitch, "demo/README.md is run 1's file and still names the old winner"
     assert "demo/out/sample-run.json" in pitch and "demo/tests/test_demo_winner.py" in pitch

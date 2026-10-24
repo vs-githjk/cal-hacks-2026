@@ -96,7 +96,7 @@ Voice is the trust step: above the allowance, a call asks for a one-time word-pa
 - Cartesia does not document how long after a call ends the transcript is complete, or a call-cancel endpoint, so a wait timeout denies and the call may still be ringing.
 - The call is a phone call to one registered number. An in-browser Cartesia call is planned, not built; the typed card is the fallback today. A rehearsed live call is not recorded in this repo.
 
-**Phone for the call:** Photon SIP first (the team used it at LA Hacks and won its voice prize), with Cartesia over SIP. Anoop spikes it (decision Sat 09:00); the in-browser Cartesia call is the default and fallback. Do not buy Twilio before Photon is proven.
+**Phone for the call:** Photon SIP first (the team used it at LA Hacks and won its voice prize), with Cartesia over SIP. Anoop spikes it (decision Sat 09:00); the phone call (pay/voice_cartesia.py) is what runs today, the typed card is the fallback, and an in-browser Cartesia call is planned, not built. Do not buy Twilio before Photon is proven.
 
 **Credits in hand: Apify and CRS.** CRS is planned, not built. Anything else that costs money (Twilio, more Bright Data credits beyond the in progress smoke calls; Stripe is test mode and free) needs Vidyut's OK first.
 

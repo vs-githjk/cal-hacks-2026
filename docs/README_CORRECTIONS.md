@@ -41,7 +41,7 @@ Also: the Lot Wall, persona voices, the receiving-check photos and the seller de
 
 ## Status
 
-Updated with every merge. States: **planned**, **in progress**, **built** (the Code column names the files; the test `scripts/tests/test_readme_honesty.py` (not on this branch, see Guidance below) checks that a built row's files exist and a planned row's do not).
+Updated with every merge. States: **planned**, **in progress**, **built** (the Code column names the files).
 
 | Piece | State | Code |
 |---|---|---|
