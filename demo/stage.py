@@ -205,6 +205,8 @@ def make_parser() -> argparse.ArgumentParser:
     ap.add_argument("--delays", default=",".join(str(DEFAULT_DELAYS[n]) for n in range(1, 6)),
                     help="seconds between a beat's cue and the beat starting in --auto, five numbers (default %(default)s)")
     ap.add_argument("--step-delay", type=float, default=2.0, help="seconds between visible steps inside a beat (default 2)")
+    ap.add_argument("--bid-window", type=bridge.bid_window_arg, default=None,
+                    help="seconds each sealed round stays open, e.g. 20 for the video; steps inside run faster to fit")
     ap.add_argument("--live-call", action="store_true",
                     help="beat 4 places ONE real Cartesia phone call; approval and payment are recorded only if it approves")
     ap.add_argument("--env-file", type=Path, default=None, help="where the CARTESIA_* names are read from for --live-call")
@@ -232,7 +234,8 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
     say = make_say(out)
 
     run = run_all(say=Narrator(False))
-    steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, live_call=args.live_call)
+    steps = bridge.plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=2, live_call=args.live_call,
+                        bid_window=args.bid_window)
     beats = assign_beats(steps)
 
     out.note("Tech Bazaar stage runner: five beats, real lane code, existing SpacetimeDB reducers")

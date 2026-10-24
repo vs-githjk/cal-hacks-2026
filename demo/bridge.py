@@ -41,6 +41,7 @@ SECOND_ACTOR = "buyer2"
 BUYER_TOKEN, REFEREE_TOKEN = "buyer-vidyut.json", "referee.json"
 MANDATE_MINUTES = 10           # the market keeps the mandate as long as pay.mandate does (10 minute quote TTL)
 MIN_WINDOW_S = 6
+MIN_BID_WINDOW_S = 12          # --bid-window floor: 6 s for the steps, 6 s of margin before the close (snipe window is 3 s)
 LIVE_TAGS = {"MIRROR", "SIM", "LIVE"}
 
 
@@ -76,9 +77,11 @@ def bid_id(bid: dict, round_no: int) -> str:
 
 
 def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict, sellers: dict, shield: list[dict],
-                claims: dict, cards: list[dict], delay: float, pace: float) -> list[Step]:
+                claims: dict, cards: list[dict], delay: float, pace: float, window_s: Optional[int] = None) -> list[Step]:
     """open_round, every seller's floor and sealed bid in arrival order, then the Shield, claim-check and advocate results.
-    A bid carries ALL its condition lines (alternatives for one SKU); the market picks the cheapest allowed one."""
+    A bid carries ALL its condition lines (alternatives for one SKU); the market picks the cheapest allowed one.
+    `window_s` (stage pacing, #183) sets the sealed window; the steps inside the round are paced faster so every bid and
+    check still lands at least 6 s before the deadline. Only the timing changes, never what the referee decides."""
     round_id = f"round-{round_no}"
     sku = bids[0]["lines"][0]["sku_spec"]
     entry = _entries(ranking)
@@ -130,15 +133,24 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
                                     f"{why['rule_id']}: {why['summary']}"))
     paused = sum(s.pace for s in [*seller_steps, *check_steps] if s.pause)
     window = max(MIN_WINDOW_S, math.ceil(paused * delay) + 6)
+    open_pace = pace
+    if window_s is not None and window_s < window:
+        window = max(MIN_WINDOW_S, int(window_s))
+        inside = (paused + pace) * delay                  # the opener's own pause runs inside the window too
+        scale = min(1.0, (window - 6) / inside) if inside > 0 else 1.0
+        for s in (*seller_steps, *check_steps):
+            s.pace *= scale
+        open_pace = pace * scale
     opener = Step("referee", "open_round", {"round_id": round_id, "need_id": need_id, "window_s": window}, window_s=window,
-                  tag=SIM, pause=True, pace=pace, say=f"round {round_no} opens sealed for {window} s")
+                  tag=SIM, pause=True, pace=open_pace, say=f"round {round_no} opens sealed for {window} s")
     closer = Step("referee", "close_round", {"round_id": round_id}, close=True, tag=SIM, pause=True, pace=pace,
                   say=f"round {round_no} closes at its deadline: the market ranks and reveals every bid")
     return [opener, *seller_steps, *check_steps, closer]
 
 
 def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: int = 1,
-         mandate: Optional[dict] = None, live_call: bool = False, two_buyers: bool = False) -> list[Step]:
+         mandate: Optional[dict] = None, live_call: bool = False, two_buyers: bool = False,
+         bid_window: Optional[int] = None) -> list[Step]:
     """Map a demo run (demo.run_demo.run_all) to reducer calls, in the order the stage story tells it.
     `mandate` (with `live_call`) replaces the run's beat-4 mandate with the pending one the real call will judge."""
     b = run["beats"]
@@ -173,7 +185,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
 
     # beat 2: the sealed round (Shield and claim checks attach before the close; the market ranks)
     steps += round_steps(round_no=1, need_id=need["id"], bids=b2["bids"], ranking=b2["ranking"], sellers=sellers, shield=b2["shield"],
-                         claims=b2["claims"], cards=b2["cards"], delay=delay, pace=1.0)
+                         claims=b2["claims"], cards=b2["cards"], delay=delay, pace=1.0, window_s=bid_window)
 
     # beat 3: Shield blocks Shady Sam's injected re-post (after the close, as in the demo; Sam is already out on his claims)
     inj = b["3"]["injected"]
@@ -212,13 +224,13 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     if rounds >= 2:
         r2 = b["5"]["round2"]
         steps += round_steps(round_no=2, need_id=need["id"], bids=r2["bids"], ranking=r2["ranking"], sellers=sellers,
-                             shield=b2["shield"], claims=b2["claims"], cards=r2["cards"], delay=delay, pace=0.5)
+                             shield=b2["shield"], claims=b2["claims"], cards=r2["cards"], delay=delay, pace=0.5, window_s=bid_window)
     if two_buyers:
-        steps += second_buyer_steps(goal, need, b2, delay=delay, round_no=3 if rounds >= 2 else 2)
+        steps += second_buyer_steps(goal, need, b2, delay=delay, round_no=3 if rounds >= 2 else 2, bid_window=bid_window)
     return steps
 
 
-def second_buyer_steps(goal: dict, need: dict, b2: dict, *, delay: float, round_no: int) -> list[Step]:
+def second_buyer_steps(goal: dict, need: dict, b2: dict, *, delay: float, round_no: int, bid_window: Optional[int] = None) -> list[Step]:
     """--two-buyers (SIM): after Vidyut's deal, buyer-2 sets the same goal and the same sealed round runs again with the same sellers.
     Every seller states one unit, so the unit Vidyut's round won is held or sold: that line is skipped with the market's own reason
     'sold out to an earlier round' and the next best bid wins. Nothing here fakes the result; the market decides at the close."""
@@ -241,7 +253,7 @@ def second_buyer_steps(goal: dict, need: dict, b2: dict, *, delay: float, round_
              pause=True, say="the second need goes to the same sellers, who each have one unit"),
     ]
     steps += round_steps(round_no=round_no, need_id=n_id, bids=b2["bids"], ranking=b2["ranking"], sellers=sellers, shield=b2["shield"],
-                         claims=b2["claims"], cards=b2["cards"], delay=delay, pace=0.5)
+                         claims=b2["claims"], cards=b2["cards"], delay=delay, pace=0.5, window_s=bid_window)
     return steps
 
 
@@ -524,6 +536,17 @@ def make_charger(gate: DealGate, env: Any, *, use_stripe: bool, stripe_test: Opt
     return charge
 
 
+def bid_window_arg(text: str) -> int:
+    """argparse type for --bid-window: whole seconds, at least MIN_BID_WINDOW_S."""
+    try:
+        v = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be whole seconds") from None
+    if v < MIN_BID_WINDOW_S:
+        raise argparse.ArgumentTypeError(f"must be at least {MIN_BID_WINDOW_S} s")
+    return v
+
+
 def compare_to_db(rows: list, run: dict) -> list[str]:
     """Lines saying whether the market's round-1 ranking matches the demo's. Rows are round_result rows in table order:
     id, round_id, bid_id, seller_id, persona, rank, landed, reasons, ... (round-1 only)."""
@@ -587,6 +610,8 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--buyer-id", default=DB_BUYER_ID, help="DB buyer id (default vidyut, the id /buyer pairs with)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
     ap.add_argument("--server", default=os.environ.get("SPACETIMEDB_SERVER", "local"))
+    ap.add_argument("--bid-window", type=bid_window_arg, default=None,
+                    help=f"seconds each sealed round stays open (at least {MIN_BID_WINDOW_S}); steps inside run faster to fit")
     args = ap.parse_args(argv)
     if args.stripe and not args.live_call:
         ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (the scripted approval is SIM)")
@@ -595,7 +620,7 @@ def main(argv: Optional[list] = None) -> int:
     run = run_all(say=Narrator(False))       # never a Stripe call here: this run builds the plan, before any round or call
     gate = DealGate(run)                     # beat 4's mandate is made from the market's rank 1 when beat 4 starts
     steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, live_call=args.live_call,
-                 two_buyers=args.two_buyers)
+                 two_buyers=args.two_buyers, bid_window=args.bid_window)
     out = Narrator(True)
     out.note("Tech Bazaar screen bridge: demo beats (real lane code) -> existing SpacetimeDB reducers")
     out.note(f"{len(steps)} reducer calls, {args.step_delay} s between visible steps. Open /buyer (pair as {args.buyer_id}) and /market.")
