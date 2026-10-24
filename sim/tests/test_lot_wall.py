@@ -71,7 +71,7 @@ def test_stage_line_is_exact_and_in_the_lot():
 
 def test_no_dashes_in_any_text_and_no_pronouns():
     text = json.dumps(build_lot())
-    assert "—" not in text and "–" not in text
+    assert chr(0x2014) not in text and chr(0x2013) not in text
 
 
 def test_committed_lot_json_matches_the_generator():
