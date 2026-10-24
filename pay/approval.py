@@ -42,6 +42,10 @@ MAX_ATTEMPTS = 3
 COOLDOWN_SECONDS = 30
 LISTEN_WINDOW_SECONDS = 10
 MAX_TOKENS = 12
+# A spoken amount is not consent to this deal's amount ("<code> approve nine hundred dollars" must not approve a
+# $1,249.99 mandate). Only money words and multi-digit numbers count, so ordinary speech ("the two words on my
+# screen are ...") still works.
+AMOUNT_WORDS = frozenset({"hundred", "thousand", "grand", "dollar", "dollars", "bucks", "cent", "cents"})
 MIN_CONFIDENCE = 0.6
 APPROVE_TOKEN = "approve"
 APPROVE_TOKENS = frozenset({APPROVE_TOKEN, "approved"})  # speech-to-text often hears "approve" as "approved"; exactly these two
@@ -340,6 +344,8 @@ class ApprovalSession:
             return "no_code"
         if NEGATIONS & set(tokens):
             return "no_code"
+        if AMOUNT_WORDS & set(tokens) or any(t.isdigit() and len(t) > 1 for t in tokens):
+            return "no_code"                   # an amount was spoken; consent must be the code and "approve" only
         words = [_as_code_word(t) for t in tokens]
         pair_hashes = [hashlib.sha256(f"{a} {b}".encode("utf-8")).hexdigest()
                        for a, b in zip(words, words[1:]) if a in WORD_SET and b in WORD_SET]
