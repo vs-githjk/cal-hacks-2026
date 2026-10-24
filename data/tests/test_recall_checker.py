@@ -197,3 +197,55 @@ def test_upc_lists_with_other_separators_match_each_code(tmp_path, listed):
     rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=[listed])
     r = check_product("Charger", "Anker", upc="841234567891", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
     assert r["status"] == "recalled"
+
+
+# --- #331 probes ---------------------------------------------------------------------------------------------------
+@pytest.mark.parametrize("product", ["Anker 20000mAh Power Bank", "Anker Power Bank 5000mAh"])
+def test_a_capacity_never_turns_a_category_lead_into_none(tmp_path, product):  # item 1: "Anker Power Bank" is possible
+    r = check(product, "Anker", "anker", tmp_path)
+    assert r["status"] == "possible" and r["matches"] == []
+
+
+@pytest.mark.parametrize("product", ["Anker 1000GB", "Anker 1080p webcam", "Anker 2024"])
+def test_a_size_or_year_alone_is_never_a_product_signal(tmp_path, product):  # item 1
+    assert check(product, "Anker", "anker", tmp_path)["status"] == "unverified"
+
+
+@pytest.mark.parametrize("product", ["Anker 3-in-1 Charger", "Anker Charger 2-pack", "Anker USB3.0 Charger", "Anker Qi2 Charger",
+                                     "Anker wifi6 Charger", "Anker 65W 2-port Charger", "Anker 3 pack", "Anker Charger kit",
+                                     "Anker Charger pair", "Anker 2nd gen Charger"])
+def test_spec_words_are_not_model_tokens(tmp_path, product):  # item 2: "Anker Charger" is unverified, so these must be too
+    r = check(product, "Anker", "anker", tmp_path)
+    assert r["status"] == check("Anker Charger", "Anker", "anker", tmp_path / "plain")["status"] != "none"
+    assert r["matches"] == []
+
+
+def test_spec_words_leave_the_real_model_token():
+    model, _ = _tokens("Anker 3-in-1 Charger 2-pack USB3.0 Qi2 wifi6 2-port A2345", "Anker")
+    assert model == {"a2345"}
+
+
+def test_several_input_upcs_match_any_of_them(tmp_path):  # item 3
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["841234567891"])
+    r = check_product("Charger", "Anker", upc="841234567890, 841234567891", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled" and r["matches"][0]["match_on"] == "UPC 841234567891"
+    assert r["upc"] == "841234567890, 841234567891"
+
+
+def test_a_long_spaced_field_splits_into_whole_codes(tmp_path):  # item 4
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["8 41234 56789 0 8 41234 56789 1"])
+    r = check_product("Charger", "Anker", upc="841234567891", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled"
+
+
+def test_a_spaced_upc_in_one_code_still_matches(tmp_path):
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["8 41234 56789 1"])
+    r = check_product("Charger", "Anker", upc="8-41234-56789-1", fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] == "recalled"
+
+
+@pytest.mark.parametrize("upc", ["12", "12345"])
+def test_a_upc_shorter_than_six_digits_is_ignored(tmp_path, upc):  # item 5
+    rec = item("Anker Recalls Chargers", products=[("Anker charger", "B77")], upcs=["12", "12345, 841234567890"])
+    r = check_product("Charger", "Anker", upc=upc, fetch=fake([rec]), now=NOW, cache_dir=tmp_path)
+    assert r["status"] != "recalled" and r["matches"] == []

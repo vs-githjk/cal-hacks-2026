@@ -22,7 +22,7 @@
    "title": "UPC (optional)",
    "type": "string",
    "editor": "textfield",
-   "description": "The barcode number, if you have it. A UPC listed on a recall is an exact match."
+   "description": "The barcode number, if you have it (several codes separated by commas also work). A UPC listed on a recall is an exact match."
   },
   "products": {
    "title": "Many products",

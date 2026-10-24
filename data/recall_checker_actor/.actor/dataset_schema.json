@@ -23,11 +23,11 @@
      "string",
      "null"
     ],
-    "description": "UPC as given (digits only)"
+    "description": "UPC as given (digits only; several codes are separated by commas)"
    },
    "status": {
     "type": "string",
-    "description": "recalled (exact model or UPC), possible (same product line or product name, not this model), none, or unverified (no brand, no model, product line or product word, or the lookup failed)"
+    "description": "recalled (exact model or UPC), possible (same product line or product name, not this model), none, or unverified (no brand, no model, product line or product word, or the lookup failed; a size, a year or a spec word alone is never enough for none)"
    },
    "summary": {
     "type": "string",
