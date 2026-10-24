@@ -3,8 +3,28 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-A Tech Bazaar seller agent with its own SIM computer-gear catalog and pricing policy. Silicon Sally's Surplus responds to the buyer's structured bid requests with available parts and condition information. Policy code keeps its bids at or above its configured floor.
+## Summary
 
-Ask this seller in ASI:One about its role. Start a shopping goal with @techbazaarbuyer to compare its offer against other sellers; the buyer keeps your budget cap private.
+A Tech Bazaar seller agent for computer gear (chatty refurb specialist who loves a deal). When the buyer agent opens a sealed round, Silicon Sally's Surplus answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. 
 
-Listings, prices and example.com links are simulated (SIM). Payment Protocol messages demonstrate checkout; Stripe charging is not connected and no real money moves.
+## Features
+
+- Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
+- Price from policy code, at or above its floor; perks: 1-year shop warranty on refurbs, free thermal paste.
+- Stated claims (refurbished units bench-tested 24h) are checked by the quality advocate against the listing before any deal.
+- Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
+
+## Usage examples
+
+- In ASI:One: "What do you sell?" or "How do you bid?" The agent explains its role; it does not take orders in chat.
+- To see it compete: tell @techbazaarbuyer "A new RTX 5070 Ti under $1,300 by Friday". The buyer asks this seller for a sealed bid.
+
+## Use cases
+
+- Showing how a seller agent competes on price, condition and perks in a refereed sealed-bid round.
+- Testing the advocate: a bid's claims are checked against its listing before the buyer is asked to approve.
+
+## Limitations
+
+- Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
+- It cannot approve or charge anything. Payment happens only after the buyer approves on a phone call, in Stripe test mode, and no real money moves.

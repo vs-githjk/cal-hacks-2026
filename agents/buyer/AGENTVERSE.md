@@ -26,3 +26,28 @@ Then reply `APPROVE <number>` to order the bid it recommends.
 Seller listings and prices in this demo are simulated (SIM). No real money moves: payments are Stripe test mode.
 
 Built at Cal Hacks 13.0 by the Tech Bazaar team.
+
+## Summary
+
+Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves on a phone call.
+
+## Features
+
+- Skips parts the buyer already owns, and checks fit before asking for bids.
+- Runs a sealed round: sellers never see each other's offers or the buyer's cap.
+- Every bid goes to the quality advocate; a vetoed bid cannot win.
+
+## Usage examples
+
+- "A new RTX 5070 Ti that fits my case, under $1,300, by Friday, new or open-box."
+- "A new 850 W PSU under $150 by Monday."
+
+## Use cases
+
+- Buying a GPU without paying for one that does not fit or is not what the listing claims.
+
+## Limitations
+
+- Seller catalogs are SIM or MIRROR (dated real listings); payment is Stripe test mode and no real money moves.
+- Approval is by phone call only; there is no typed approval.
+
