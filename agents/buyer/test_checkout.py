@@ -289,3 +289,46 @@ def test_300_second_voice_approval_passes_adapter_merchant_and_commit(tx, tmp_pa
               payment_ref=settlement["settlement_result"]["charge_id"])
     committed = commit_payment(req, tx, now=current)
     assert committed.transaction_id == "pi_test_voice_300"
+
+
+@pytest.mark.parametrize("uncertain", [False, True])
+def test_settle_offer_returns_the_tap_signed_mandate_used_by_merchant(tx, tmp_path, uncertain):
+    set_approved(tx)
+    original_mandate = copy.deepcopy(tx["mandate"])
+    req = payment_request(tx["mandate"], "seller-1")
+    body = req.model_dump_json().encode("utf-8")
+    message_id = "req:" + hashlib.sha256(b"buyer-1\n" + body).hexdigest()
+    tap_private, receipt_private = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    now = datetime.now(timezone.utc)
+    receipt = sign_allow_receipt(private_key=receipt_private, message_id=message_id,
+        request_json=body, deal_id="deal-1", mandate_hash=tx["mandate"]["hash"],
+        amount_cents=7999, currency="USD", payee="seller-1", now=now)
+
+    class FakeStripe:
+        def charge(self, **_kwargs):
+            if uncertain:
+                raise TimeoutError("test-only unknown outcome")
+            return {"id": "pi_test_signed_mandate", "status": "succeeded"}
+
+    merchant = MerchantSim(keys=keyring(tap_private.public_key()),
+        receipt_keys=keyring(receipt_private.public_key()),
+        store=NonceStore(str(tmp_path / "signed-mandate.sqlite")),
+        approvals=lambda deal_id, buyer_id: tx if (deal_id, buyer_id) == ("deal-1", "buyer-1") else None,
+        charger=FakeStripe())
+    submitted = {}
+    handle = merchant.handle
+
+    def capture_request(**kwargs):
+        submitted.update(kwargs)
+        return handle(**kwargs)
+
+    merchant.handle = capture_request
+    envelope = checkout.settle_offer(tx, req, merchant, receipt=receipt, message_id=message_id,
+        tap_private_key=tap_private, merchant_url="https://merchant.test/pay", now=now)
+    assert envelope["settlement_result"]["status"] == ("uncertain" if uncertain else "charged")
+    assert verify_request(method=submitted["method"], url=submitted["url"],
+        headers=submitted["headers"], body=submitted["body"],
+        keys=keyring(tap_private.public_key()), store=NonceStore(), now=now,
+        expected_mandate_hash=tx["mandate"]["hash"], mandate=envelope["mandate"])
+    assert envelope["mandate"]["tap_signature"] == submitted["headers"]["Signature"]
+    assert tx["mandate"] == original_mandate
