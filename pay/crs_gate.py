@@ -21,7 +21,7 @@ FUTURE_SKEW = timedelta(minutes=5)
 SIM_SELLER_NOTE = "identity not checked: SIM seller"
 _SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "contracts", "CrsCheck.schema.json")
-_CODE = re.compile(r"^[a-z0-9_]{1,48}$")
+_CODE = re.compile(r"^[A-Za-z0-9_]{1,48}$")
 _schema_cache: Optional[dict] = None
 
 
@@ -72,7 +72,7 @@ def _manual_errors(rec: Mapping[str, Any], schema: Mapping[str, Any]) -> list[st
             if not isinstance(v, list) or len(v) > spec.get("maxItems", 1 << 30):
                 errors.append(f"{key} must be a short list")
             elif not all(_is_str(c) and _CODE.match(c) for c in v):
-                errors.append(f"{key} items must be short lowercase codes")
+                errors.append(f"{key} items must be short codes (letters, digits, underscore)")
     return errors
 
 

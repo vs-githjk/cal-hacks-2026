@@ -28,9 +28,9 @@ Remove every "$800" goal; the goal is under $1,300 everywhere.
 |---|---|
 | Fetch.ai, uAgents (README sponsor table, the whole-request claim) | "Every agent is a uAgent registered on Agentverse with a mailbox. The buyer's goal is typed in ASI:One and replies are seen there; the rest of the request (bids, veto, approval, payment) does not complete inside an ASI:One chat today and checkout is not exercised ([evidence](agents/ISSUE14_EVIDENCE.md))." Depth: Core, built, checkout not exercised. These are the overclaims in the original rows, for Abhinav's #95. |
 | Fetch.ai, Payment Protocol, Interactive Cards | "Payment Protocol checkout is planned, not built end to end. Interactive Cards are planned, not built; a plain-text fallback (numbered bids, reply `APPROVE <id>`) is what runs." Drop "appear as cards" and "Core". |
-| Bright Data | "A second, dated price source. In progress: key set, one smoke call passed Sat 02:55 (agent-board); the integration code is night task T6 and not on this branch, where [data/baselines/brightdata.py](data/baselines/brightdata.py) is still a stub that raises not configured. Nothing in the demo uses it." State: In progress. |
-| CRS | "Identity and fraud check on business sellers. Planned, not built: there is no CRS code on this branch; it goes through Abhinav's client (#121, #128)." State: Planned. |
-| Tiger Data (MLH) | "Time series behind dated savings and the learning curve. Planned, not built: key set and a connection checked Sat 02:53, no code until night task T13." State: Planned. Do not call it live. |
+| Bright Data | "A second, dated price source through the Scraper API, built and env-gated ([data/baselines/brightdata.py](data/baselines/brightdata.py)); not run live (no key in the run). The demo works without it." State: Built, not run live. |
+| CRS | "Identity and fraud check on business sellers. The adapter is Abhinav's client (#121, #128); [pay/crs_gate.py](pay/crs_gate.py) refuses a business payee without a fresh verified check. Built, env-gated, not run live (no key in the run); nothing calls the gate before the charge yet." State: Built, not run live. |
+| Tiger Data (MLH) | "Time series behind dated savings and the learning curve. Built and env-gated ([data/tiger/store.py](data/tiger/store.py)); not run live (no key in the run)." State: Built, not run live. Do not call it live. |
 | Armadin | Add "The 'Hack the market' console is planned, not built." |
 | Spacetime | Add "The 3D floor is planned, not built (no three.js in web/package.json)." |
 | Anthropic | "The advocate is code ([agents/advocate/checks.py](agents/advocate/checks.py)), not a model. Claude is optional: a seller's one-line persona and Shield's ambiguous-case classifier (off by default)." Also remove "Claude-based" for the advocate in docs/ARCHITECTURE.md line 112. |
@@ -61,9 +61,9 @@ Updated with every merge. States: **planned**, **in progress**, **built** (the C
 | Stripe test-mode charge | built in the runner (SIM stub by default, one real test charge with `--stripe`); through the Payment Protocol: not exercised | `demo/approval_flow.py` |
 | Hyphenate IT buyer purchasing | built | `hyphenate/` |
 | Wind tunnel | built, SIM, no headline lift yet | `sim/wind_tunnel.py` |
-| Bright Data price source | in progress: key set, one smoke call passed Sat 02:55 (agent-board); integration code is night task T6 and not on this branch, where the file is still a stub; LIVE only when T6 lands | `data/baselines/brightdata.py` |
-| CRS seller stability check | planned | none yet |
-| Tiger Data time series | planned: key set, connection checked Sat 02:53 (agent-board); no code until night task T13 | none yet |
+| Bright Data price source | built, env-gated, not run live (no key in the run); LIVE only when a keyed run records a result | `data/baselines/brightdata.py` |
+| CRS seller stability check | built, env-gated, not run live (no key in the run); gate not yet called before the charge | `pay/crs_gate.py` |
+| Tiger Data time series | built, env-gated, not run live (no key in the run) | `data/tiger/store.py` |
 | Seller demand and trend dashboard | planned | none yet |
 | "Hack the market" console | planned | none yet |
 | 3D floor | planned | none yet |

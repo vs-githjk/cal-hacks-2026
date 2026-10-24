@@ -11,14 +11,14 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 | Seller catalogs and prices (Newegg, Amazon, Best Buy, Micro Center, B&H, eBay) | MIRROR (Apify, dated snapshots) | `data/mirror/snapshots/`, `data/RESULTS.md` | C |
 | Demo winner | MIRROR listing (ASUS Prime RTX 5070 Ti OC Edition, 304 mm, Best Buy, $1,299.99 before sales tax, shipping: not captured), bid by a SIM seller | `demo/tests/test_demo_winner.py` | D |
 | Price baseline | MIRROR: eBay sold listings (mixed condition, never in the median) and a dated open dataset | `data/RESULTS.md` | C |
-| Bright Data price source | in progress: key set, one smoke call passed Sat 02:55 (agent-board); the integration code is night task T6 and not on this branch, where `data/baselines/brightdata.py` is still a stub that raises not configured; not used by the demo. Flips to LIVE only when T6 lands | `data/baselines/brightdata.py` | C |
+| Bright Data price source | built, env-gated, not run live (no key in the run): reads Bright Data's Scraper API only when `BRIGHT_DATA_API_KEY` is set, and beat 4 re-checks the winner's price through it only then; the demo runs without it. One raw smoke call passed Sat 02:55 (agent-board). See [docs/changes/0330-D-brightdata.md](changes/0330-D-brightdata.md) | `data/baselines/brightdata.py` | C |
 | Price history series | SIM unless a real source works; labelled on screen | `agents/advocate/mock_data.py` | C |
 | Seller bids | SIM over MIRROR: code that bids from real listings, plus labelled SIM sellers. Any real seller that joins would bid LIVE; none has | `demo/sellers.py` | A |
 | Agentverse agents (buyer, advocate, three sellers, Shield client) | LIVE on Agentverse (mailbox), listings SIM; checkout not exercised | `agents/ISSUE14_EVIDENCE.md` | A |
 | Claim checks | LIVE against our hosted pages; MIRROR for real stores, in neutral wording | `data/claim_check/`, `data/liar_pages/` | C |
 | Fit checks (socket, RAM, PSU, clearance) | LIVE code over a dated open dataset plus small tables we wrote; unknown means uncertain | `data/fit_checker/` | C |
 | CPSC recalls | SIM fixture: one unrelated entry; the live CPSC API is not called | `agents/advocate/mock_data.py` | A |
-| Seller stability and identity (CRS) | planned, not built: no CRS code on this branch | none yet | D |
+| Seller stability and identity (CRS) | built, env-gated, not run live (no key in the run): the payee gate refuses a business payee without a fresh verified CrsCheck (band only, under 24 h); the CRS adapter itself is main's `agents/crs.py`, and nothing calls the gate before the charge yet. See [docs/changes/0400-D-crs-payee.md](changes/0400-D-crs-payee.md) | `pay/crs_gate.py` | D |
 | Allowance approval and voice call | The approval judge is LIVE code; the Cartesia phone call client is built, a rehearsed live call is not recorded here; in-browser Cartesia call is planned | `pay/approval.py`, `pay/voice_cartesia.py` | D |
 | Payments | SIM stub by default; SANDBOX with `--stripe` (one Stripe test charge on a Visa test card; no real money) | `demo/approval_flow.py` | D |
 | Request signatures (Visa TAP style) | LIVE code, verified by our own merchant simulator; Visa does not verify them | `pay/tap.py`, `pay/merchant_sim.py` | D |
@@ -27,8 +27,8 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 | Claude | Optional: a seller persona line and Shield's classifier (off by default); the advocate is code | `agents/sellers/seller_agent.py`, `shield/classifier.py` | A |
 | Hyphenate IT buyer purchasing | SIM company around a real rule engine; blind planted-error run reported | `hyphenate/RESULTS-blind.md` | D |
 | Receiving check photos (buyer path) | planned, not built | none yet | C |
-| Seller demand and trend dashboard | planned, not built | none yet | C |
-| Tiger Data time series | planned, not built: key set, connection checked Sat 02:53 (agent-board); no code until night task T13 | none yet | C |
+| Seller demand and trend dashboard | the data layer is built, SIM-labelled, not run live (no key in the run); the dashboard screen is planned, not built. See [docs/changes/0500-D-tiger.md](changes/0500-D-tiger.md) | `data/tiger/trends.py` | C |
+| Tiger Data time series | built, env-gated, not run live (no key in the run): schema, loader and store for bid curves and market series, with a dry run that needs no env; connection checked Sat 02:53 (agent-board). See [docs/changes/0500-D-tiger.md](changes/0500-D-tiger.md) | `data/tiger/store.py` | C |
 | Wind tunnel builders | SIM by design; no headline lift yet | `sim/RESULTS-2026-10-24-b48x3.md` | D |
 | Seller learning | SIM stand-in (price step); Claude writing the change line is planned | `demo/learning.py` | D |
 | 3D floor | planned, not built: no three.js in `web/package.json` | none yet | B |

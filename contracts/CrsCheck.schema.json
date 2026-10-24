@@ -14,10 +14,10 @@
   },
   "reason_codes": {
    "type": "array",
-   "description": "Short machine codes for why a check failed (for example risk_score_high, email_new). Empty when verified.",
+   "description": "Short machine codes for the outcome of a check, lower or upper case (for example risk_score_high, email_new, CRS_NOT_CONFIGURED). The adapter sends CRS_IDENTITY_VERIFIED when verified, so a verified check need not be empty.",
    "items": {
     "type": "string",
-    "pattern": "^[a-z0-9_]{1,48}$"
+    "pattern": "^[A-Za-z0-9_]{1,48}$"
    },
    "maxItems": 16
   },

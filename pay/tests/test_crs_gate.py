@@ -159,6 +159,40 @@ def test_malformed_check_is_refused(bad):
     assert not v.ok and v.reason == "crs_malformed"
 
 
+# (a2) the adapter on main (agents/crs.py to_crs_check) emits UPPERCASE codes and sends one even when verified
+
+def adapter_check(codes, verified=True, origin="SANDBOX", age=timedelta(hours=2)):
+    """The dict main's agents/test_crs.py:314 builds for a verified_stable seller_1 (product tu_identity). checked_at is
+    written the way crs.py normalize() writes it (ends in Z); the test there passes a +00:00 string, which the gate refuses."""
+    return {"seller_id": "seller_1", "product": "tu_identity", "verified": verified, "reason_codes": codes,
+            "origin": origin, "checked_at": ts(NOW - age)}
+
+
+def test_a_the_adapters_verified_check_with_an_uppercase_code_clears_a_business_payee():
+    c = adapter_check(["CRS_IDENTITY_VERIFIED"])
+    assert validate_check(c) == []
+    v = payee_ok(c, business=True, now=NOW, seller_id="seller_1")
+    assert v.ok and v.reason == "ok"
+
+
+def test_a_the_adapters_not_configured_check_is_refused_for_the_right_reason_not_as_malformed():
+    c = adapter_check(["CRS_NOT_CONFIGURED"], verified=False, origin="NOT_CONFIGURED")
+    assert validate_check(c) == []
+    assert payee_ok(c, business=True, now=NOW, seller_id="seller_1").reason == "crs_not_configured"
+
+
+def test_a_the_adapters_invalid_and_unavailable_checks_are_refused_as_not_verified():
+    for code in ("CRS_INVALID", "CRS_UNAVAILABLE"):
+        v = payee_ok(adapter_check([code], verified=False), business=True, now=NOW, seller_id="seller_1")
+        assert not v.ok and v.reason == "crs_not_verified" and code in v.detail
+
+
+def test_a_the_adapters_verified_check_binds_to_a_mandate():
+    c = adapter_check(["CRS_IDENTITY_VERIFIED"])
+    m = new_mandate(deal_id="deal-crs", buyer_id="vidyut", amount=1299.99, payee="seller-one", now=NOW, crs_check_id=check_id(c))
+    assert bound_ok(m, c, business=True, seller_id="seller_1", now=NOW).ok
+
+
 # (f) existing hashes unchanged
 def test_f_mandate_without_crs_check_id_hashes_exactly_as_before():
     m = {"deal_id": "deal-crs", "amount": 1299.99, "currency": "USD", "payee": "seller-grace-nakamura",
@@ -268,5 +302,7 @@ def test_the_manual_fallback_agrees_with_jsonschema(monkeypatch):
     assert validate_check(P19_GRACE) == []
     assert validate_check(dict(P19_GRACE, ssn="x"))
     assert validate_check(dict(P19_GRACE, reason_codes=["Free Text"]))
+    assert validate_check(dict(P19_GRACE, reason_codes=["CRS_IDENTITY_VERIFIED", "x" * 49]))
+    assert validate_check(dict(P19_GRACE, reason_codes=["CRS_IDENTITY_VERIFIED", "risk_score_high"])) == []
     assert validate_check(dict(P19_GRACE, reason_codes="none"))
     assert validate_check(dict(P19_GRACE, verified="yes"))

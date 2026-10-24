@@ -25,16 +25,16 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 - Demo moment: beat 2, the veto shows the live page link.
 - Hard requirements: Apify used in a meaningful way (Best Use of Apify); Best Actor asks for an Actor built for this event, so the claim-check Actor is published to the Apify Store (a14) with cost per run documented.
 
-**Bright Data** (Lane C, in progress)
-- Carries (in progress, not built end to end): a dated second price source through the Scraper API, live only when `BRIGHT_DATA_API_KEY` is set. Status: key set, one smoke call passed Sat 02:55 (agent-board); the integration code is night task T6 and not on this branch, where `data/baselines/brightdata.py` is still a stub that raises not configured and no demo path uses it. It flips to LIVE only when T6 lands. Any spend needs Vidyut's OK first.
-- Proof: none beyond the stub and the dated smoke call on the board; not built end to end.
+**Bright Data** (Lane C, built, env-gated, not run live)
+- Carries (built, env-gated, not run live: no key in the run): a dated second price source through the Scraper API, live only when `BRIGHT_DATA_API_KEY` is set, plus beat 4's price re-check of the winner and a Google Shopping lead finder (`data/baselines/brightdata_discover.py`). One raw smoke call passed Sat 02:55 (agent-board); the code has not made a live call. Any spend needs Vidyut's OK first.
+- Proof: `data/baselines/brightdata.py`, its tests in `data/tests/test_brightdata.py`, and [docs/changes/0330-D-brightdata.md](changes/0330-D-brightdata.md); no live result recorded.
 - Breaks without it: the savings tile loses its second source and reads "unverified".
 - Demo moment: the savings tile with two dated sources (shown with the beat 4 receipt).
 - Hard requirements (Bright Data is in progress): track text not yet read (prize text is in the guide or "coming soon"); owner posts it at kickoff. Meanwhile: Bright Data used for a real, named step (the second baseline and one blocked page), recorded in data/README.md.
 
-**CRS** (planned, not built; Lane A gate; credits in hand; Lane C supplies sandbox test identities)
-- Carries (planned, not built): identity and fraud check on business sellers. Sandbox test identities only, band output, consent card; individual used-part sellers are not credit-checked (FCRA caution). There is no CRS code on this branch.
-- Proof: none; planned.
+**CRS** (built, env-gated, not run live; Lane A adapter, Lane D payee gate; credits in hand; Lane C supplies sandbox test identities)
+- Carries (built, env-gated, not run live: no key in the run): identity and fraud check on business sellers. Sandbox test identities only, band output, consent card; individual used-part sellers are not credit-checked (FCRA caution). The adapter is main's `agents/crs.py`; `pay/crs_gate.py` refuses a business payee without a fresh verified check, and nothing calls it before the charge yet.
+- Proof: `pay/crs_gate.py`, `pay/tests/test_crs_gate.py`, [docs/changes/0400-D-crs-payee.md](changes/0400-D-crs-payee.md); no live check recorded.
 - Breaks without it: unverified sellers bid, and the greyed-out seller beat disappears.
 - Demo moment: one business seller's bid is greyed out with the reason, inside beat 2.
 - Hard requirements (CRS is planned, not built): the CRS sandbox shown live (calhacks.crscreditapi.com or the CRS MCP server), provided test identities only; Best Identity and Fraud Innovation asks for protecting people or businesses from fraud; Best Financial AI Agent asks for an agent doing real work with CRS data through the API or MCP.
@@ -73,7 +73,7 @@ Every sponsor below is a main sponsor and gets the same depth: each carries some
 - Demo moment: two laptops show the same round at once (beats 1, 2 and 5).
 - Hard requirements: Spacetime is the core real-time backend (live shared state, instant sync between agents and users, "AI systems coordinating in a persistent world state"), meaningfully used and not added on the side. README names the Python bridge as the single point of failure.
 
-**Tiger Data** (MLH track, Lane C): planned, not built. Key set and a connection checked Sat 02:53 (agent-board); no code until night task T13. Time series behind dated savings and the learning curve; plain Postgres could do this, say so. Do not opt in on Devpost until the code exists.
+**Tiger Data** (MLH track, Lane C): built, env-gated, not run live (no key in the run). Connection checked Sat 02:53 (agent-board); schema, loader and store are `data/tiger/store.py`, `data/tiger/schema.sql` and `data/tiger/load.py` ([docs/changes/0500-D-tiger.md](changes/0500-D-tiger.md)), with no live load recorded. Time series behind dated savings and the learning curve; plain Postgres could do this, say so. Do not opt in on Devpost until a live load has run.
 
 **Capital One (Nessie):** maybe, only if Capital One is present at the event. Not planned; no lane has time for it.
 

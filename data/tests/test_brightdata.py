@@ -66,6 +66,7 @@ def test_b_200_maps_to_apify_shaped_rows(monkeypatch):
     # same keys the Apify rows carry, so baseline() needs no change
     from data.baselines import observations as apify_rows
     assert set(apify_rows()[0]) <= set(r)
+    assert "sold_date" in r and r["sold_date"] is None   # main's Apify rows carry sold_date; an ask has none (baseline reads it with .get)
     req = fake.requests[0]
     assert req.method == "POST" and req.url.path == "/datasets/v3/scrape"
     q = dict(req.url.params)

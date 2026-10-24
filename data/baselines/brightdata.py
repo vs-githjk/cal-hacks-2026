@@ -144,7 +144,7 @@ def _rows_from(records, target: dict, store_info: dict, now: datetime, snapshot_
         rows.append({"provider": "brightdata", "store": target["store"], "sku": target.get("sku", DEFAULT_SKU), "price": price,
                      "in_stock": _in_stock(rec.get("availability")),
                      "availability": rec["availability"] if isinstance(rec.get("availability"), str) else None, "condition": "new", "kind": "ask",
-                     "observed_at": _iso(now), "url": target["url"], "snapshot_id": snapshot_id, "origin": "LIVE",
+                     "observed_at": _iso(now), "sold_date": None, "url": target["url"], "snapshot_id": snapshot_id, "origin": "LIVE",
                      "title": rec.get("title") if isinstance(rec.get("title"), str) else None,
                      "retailer_sku": str(rec["sku"]) if rec.get("sku") not in (None, "") else None,
                      "mapping": store_info.get("mapping", "unverified")})

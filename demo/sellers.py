@@ -84,22 +84,41 @@ def _stock_ok(listing: dict) -> bool:
     return not (stock is False or (isinstance(stock, str) and stock.lower() in ("out_of_stock", "out of stock")))
 
 
+_DELIVERY_COST = re.compile(r"\$\s*([\d,]+(?:\.\d{1,2})?)\s*(?:delivery|shipping)", re.I)
+
+
+def stated_shipping(listing: dict) -> Optional[float]:
+    """The delivery cost a listing states, or None when it states none. A numeric listing.shipping_cost wins;
+    then 'free delivery/shipping' (0.0) or '+$29.95 delivery' (29.95). A delivery date range is not a cost."""
+    cost = listing.get("shipping_cost")
+    if isinstance(cost, (int, float)) and not isinstance(cost, bool):
+        return float(cost)
+    text = str(listing.get("shipping") or "")
+    if re.search(r"free (delivery|shipping)", text, re.I):
+        return 0.0
+    m = _DELIVERY_COST.search(text)
+    return float(m.group(1).replace(",", "")) if m else None
+
+
 def load_offers() -> tuple[list[dict], list[str]]:
     """Real RTX 5070 Ti offers from the newest snapshot of each retailer, plus one printable note per retailer
     whose listings cannot bid (out of stock, no price). Sold-listing snapshots are comps, not offers."""
-    offers, dropped = [], {}
-    for path in sorted(SNAPSHOTS.glob("*.json")):
+    latest: dict[str, tuple[str, dict]] = {}   # listing URL -> (prefix, card): a URL seen in two snapshots is one listing, the newest
+    for path in sorted(SNAPSHOTS.glob("*.json")):   # file names end in a UTC stamp, so sorted order is oldest to newest
         prefix = path.name.split("-")[0]
         if prefix == "ebay_sold":
             continue
         for card in json.loads(path.read_text(encoding="utf-8")):
             if (card.get("attrs") or {}).get("chipset") != CHIPSET:
                 continue
-            listing = card.get("listing") or {}
-            if card.get("price") is None or not _stock_ok(listing):
-                dropped.setdefault(prefix, []).append(card["id"])
-                continue
-            offers.append({"prefix": prefix, "card": card, "listing": listing})
+            latest[card.get("source") or card["id"]] = (prefix, card)
+    offers, dropped = [], {}
+    for prefix, card in latest.values():
+        listing = card.get("listing") or {}
+        if card.get("price") is None or not _stock_ok(listing):
+            dropped.setdefault(prefix, []).append(card["id"])
+            continue
+        offers.append({"prefix": prefix, "card": card, "listing": listing})
     skips = [f"{SELLER_OF_RECORD.get(prefix, prefix)}: {len(ids)} real listing(s) out of stock or unpriced in the snapshot, no bid"
              for prefix, ids in sorted(dropped.items())]
     return offers, skips
@@ -177,11 +196,11 @@ def mirror_sellers(offers: list[dict]) -> list[Seller]:
             withheld += [_withheld(o, CASE_CLEARANCE_MM) for o in too_long]
         lines = [_mirror_line(o, cond) for cond, o in sorted(by_cond.items())]
         shipping_txt = next((o["listing"].get("shipping") for o in group if o["listing"].get("shipping")), "")
-        free = bool(re.search(r"free (delivery|shipping)", str(shipping_txt), re.I))
+        stated = [c for o in by_cond.values() if (c := stated_shipping(o["listing"])) is not None]   # of the lines it bids
         first = group[0]
         claims = [{"text": f"{l.condition} per the listing", "kind": "spec", "field": "condition", "value": l.condition,
                    "evidence_url": l.listing_url} for l in lines if l.origin == MIRROR and l.condition != "unknown"]
-        sellers.append(Seller(id=sid, name=names[sid], origin=MIRROR, lines=lines, shipping=0.0, shipping_captured=free,
+        sellers.append(Seller(id=sid, name=names[sid], origin=MIRROR, lines=lines, shipping=max(stated, default=0.0), shipping_captured=bool(stated),
                               returns_days=0, claims=claims, payee=f"{sid}@pay.example.test", withheld=withheld,
                               note=f"delivery per listing: {shipping_txt or 'not captured'}; first listing {first['card']['id']}; "
                                    "payee is a SIM test address, no real merchant is paid"))

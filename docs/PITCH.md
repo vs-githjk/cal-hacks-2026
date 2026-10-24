@@ -20,7 +20,7 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 4. The two-way call approves above the allowance (word-pair code, amount read back, replay fails).
 5. The seller's loss report and learning (one deterministic strategy diff; the "what to change" line is a SIM template today, and Claude writing it is planned, not built).
 
-Hyphenate is built (`hyphenate/`) and is an add-on, not a beat. CRS and the IT fleet view are planned, not built. Bright Data is in progress: key set, one smoke call passed Sat 02:55, and the integration code is night task T6, not on this branch (`data/baselines/brightdata.py` is still a stub). Tiger Data is planned, not built: key set and a connection checked at 02:53, no code until T13. Do not claim any of them on stage.
+Hyphenate is built (`hyphenate/`) and is an add-on, not a beat. The IT fleet view is planned, not built. Bright Data (`data/baselines/brightdata.py`), the CRS payee gate (`pay/crs_gate.py`) and Tiger Data (`data/tiger/store.py`) are built, env-gated and not run live (no key in the run). Do not claim any of them as live on stage.
 
 ## The multiverse line (say it exactly)
 
@@ -45,6 +45,6 @@ Hyphenate is built (`hyphenate/`) and is an add-on, not a beat. CRS and the IT f
 - **Is it a chatbot?** No. The agent runs the hunt and calls you only above the allowance.
 - **Why did Micro Center at $1,199.99 lose?** Its listing states no condition in our snapshot, so it cannot be ranked as new or open-box, and we do not guess one (`demo/out/sample-run.json` shows "Micro Center: unknown 1,199.99"; the winner is pinned in `demo/tests/test_demo_winner.py`).
 - **Does a model decide the veto?** No. The advocate is code (`agents/advocate/checks.py`); Claude is optional for a seller's persona line and Shield's classifier (`shield/classifier.py`, off by default).
-- **Do you use Bright Data, CRS or Tiger Data?** Not in the demo yet. Bright Data is in progress: key set, one smoke call passed Sat 02:55, integration code is night task T6 and not on this branch. CRS is planned, not built. Tiger Data is planned, not built: key set, connection checked 02:53, no code until T13.
+- **Do you use Bright Data, CRS or Tiger Data?** Built, env-gated, not run live (no key in the run): Bright Data (`data/baselines/brightdata.py`), the CRS payee gate (`pay/crs_gate.py`, nothing calls it before the charge yet) and Tiger Data (`data/tiger/store.py`). The demo runs without any of them.
 
 Every clause must be built, or labelled SIM or planned, by the Sun 03:00 freeze; cut any clause that is not.
