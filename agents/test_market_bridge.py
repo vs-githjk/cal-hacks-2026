@@ -77,6 +77,25 @@ def test_market_reducer_roles_are_not_interchangeable():
         MarketBridge("buyer", client=FakeMarket()).open_round("r", "n", 12)
 
 
+@pytest.mark.parametrize("review_deadline, expected", [
+    ({"1": []}, None),
+    ({"0": [1_798_848_000_000_000]}, "2027-01-02T00:00:00Z"),
+])
+def test_round_status_decodes_optional_sats_review_deadline(review_deadline, expected):
+    bridge = MarketBridge("referee", client=FakeMarket(sql_rows=[[{
+        "id": "round-1", "needId": "need-1", "state": "review",
+        "deadline": [1_798_848_000_000_000], "reviewDeadline": review_deadline}]]))
+    assert bridge.round_status("round-1")["review_deadline"] == expected
+
+
+def test_round_status_rejects_unknown_optional_deadline_arm():
+    bridge = MarketBridge("referee", client=FakeMarket(sql_rows=[[{
+        "id": "round-1", "needId": "need-1", "state": "review",
+        "deadline": [1_798_848_000_000_000], "reviewDeadline": {"2": []}}]]))
+    with pytest.raises(MarketBridgeError, match="market_option_invalid"):
+        bridge.round_status("round-1")
+
+
 def test_publish_bid_sets_original_index_metadata_then_reads_back_canonical_value():
     canonical = [{**META[0], "provenance": {"origin": "SIM", "source": "fixture"},
                   "attrs": {"category": "gpu", "power_connector": ["8pin", 1], "z": "last"}}]
@@ -93,6 +112,28 @@ def test_publish_bid_sets_original_index_metadata_then_reads_back_canonical_valu
     assert market.calls[1][1]["line_meta_json"] == stored
     assert all("WHERE id = 'bid-1'" in query for query in market.queries)
     assert result["line_metadata"] == canonical
+
+
+def test_publish_bid_accepts_exact_spacetime_product_line_arrays_on_sql_readback():
+    canonical = [{**META[0], "provenance": {"origin": "SIM", "source": "fixture"},
+                  "attrs": {"category": "gpu", "power_connector": ["8pin", 1], "z": "last"}}]
+    stored = json.dumps(canonical, separators=(",", ":"))
+    row = ["bid-1", "round-1", "seller-a", "Seller A", [["gpu", "", "", 40.0, 5.0]],
+           0.0, [], [], "SIM", "simulated", stored]
+    market = FakeMarket(sql_rows=[[row], [row]])
+    bridge = MarketBridge("seller", client=market)
+    bridge.publish_bid(bid_id="bid-1", round_id="round-1", seller_id="seller-a", persona="Seller A",
+        lines=[{"sku_spec": "gpu", "unit_price": 40.0, "quantity": 5}], line_metadata=META)
+    assert [call[0] for call in market.calls] == ["set_bid_line_meta"]
+
+
+@pytest.mark.parametrize("line", [["gpu", "", "", 40.0], ["gpu", "", "", 40.0, True]])
+def test_publish_bid_refuses_malformed_spacetime_product_lines(line):
+    row = ["bid-1", "round-1", "seller-a", "Seller A", [line], 0.0, [], [], "SIM", "simulated", "[]"]
+    bridge = MarketBridge("seller", client=FakeMarket(sql_rows=[[row]]))
+    with pytest.raises(MarketBridgeError):
+        bridge.publish_bid(bid_id="bid-1", round_id="round-1", seller_id="seller-a", persona="Seller A",
+            lines=[{"sku_spec": "gpu", "unit_price": 40.0, "quantity": 5}], line_metadata=META)
 
 
 def test_exact_existing_bid_retry_resumes_only_metadata_write():
@@ -161,6 +202,23 @@ def test_authoritative_winner_bills_need_quantity_and_shipping_once_not_availabl
         "listing_hash": "a" * 64, "shipping": 12.0,
     }]
     assert "spend_limit" not in market.queries[0] and "floor" not in market.queries[0]
+
+
+def test_authoritative_winner_normalizes_spacetime_outer_and_bidline_products():
+    row = ["bid-1", "seller-a", 1, 92.0, [], [["gpu", "", "", 40.0, 5.0]],
+           json.dumps(META), "SIM", "fixture", "b" * 64]
+    winner = MarketBridge("buyer", client=FakeMarket(sql_rows=[[row]])).authoritative_winner(
+        "round-1", [{"sku_spec": "gpu", "quantity": 2}])
+    assert winner is not None and winner["landed"] == 92.0
+    assert winner["lines"][0]["original_line_index"] == 0
+
+
+@pytest.mark.parametrize("line", [["gpu", "", "", 40.0], ["gpu", "", "", 40.0, True]])
+def test_authoritative_winner_rejects_malformed_spacetime_bidline_products(line):
+    row = ["bid-1", "seller-a", 1, 92.0, [], [line], json.dumps(META), "SIM", "fixture", "b" * 64]
+    bridge = MarketBridge("buyer", client=FakeMarket(sql_rows=[[row]]))
+    with pytest.raises(MarketBridgeError):
+        bridge.authoritative_winner("round-1", [{"sku_spec": "gpu", "quantity": 2}])
 
 
 def test_decimal_cent_order_total_tolerates_only_server_float_representation_noise():
@@ -263,16 +321,17 @@ def test_purchase_status_rejects_missing_foreign_and_malformed_rows():
 def test_seller_loss_report_projection_is_role_checked_and_normalizes_timestamp():
     row = {"id": "loss-1", "roundId": "round-1", "sellerId": "seller-a", "won": False,
         "gapBand": "within5", "reason": "price", "sourceUrl": "https://example.test/listing",
-        "strategyDiff": [{"key": "price_step", "from": "0", "to": "0.02"}],
-        "whatToChange": "Review the quoted price.", "whatToChangeOrigin": "SIM", "origin": "SIM",
         "createdAt": [1_798_848_000_000_000]}
     bridge = MarketBridge("seller", client=FakeMarket(sql_rows=[[row]]))
-    report = bridge.loss_reports()[0]
+    report = bridge.my_loss_reports()[0]
     assert report["seller_id"] == "seller-a" and report["created_at"].endswith("Z")
+    assert set(report) == {"id", "round_id", "seller_id", "won", "gap_band", "reason", "source_url", "created_at"}
+    from agents.sellers.learning import _validate_report
+    assert _validate_report(report, "seller-a")["id"] == "loss-1"
     assert "FROM my_loss_reports" in bridge._client.queries[0]
     assert "SELECT *" not in bridge._client.queries[0]
     with pytest.raises(MarketBridgeError, match="loss_reports_role_mismatch"):
-        MarketBridge("buyer", client=FakeMarket()).loss_reports()
+        MarketBridge("buyer", client=FakeMarket()).my_loss_reports()
 
 
 @pytest.mark.parametrize("change", [
