@@ -878,8 +878,9 @@ async def conclude(ctx: Context, reviewed: bool):
                if pick else "No next best.")
         for _, b in vetoed_bids:
             c = cards[b["id"]]
-            out.append(f"Vetoed {b['persona']}: {chat_trace_safe(c.get('reason'))} "
-                       f"(source {chat_trace_source(c.get('source_url'))}).")
+            src = chat_trace_source(c.get("source_url"))
+            src = "no source" if src == "source unavailable" else f"source {src}"
+            out.append(f"Vetoed {b['persona']}: {chat_trace_safe(c.get('reason')).rstrip('.')} ({src}).")
         if len(vetoed_bids) == 1:
             out[-1] += f" {nxt}"
         else:

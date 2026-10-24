@@ -297,7 +297,7 @@ def _veto_round(buyer, extra, cards):
 
 def test_one_veto_names_seller_reason_source_and_next_best(buyer):
     text = _veto_round(buyer, [('Bad Seller', 400)], {'bid-1': card(), 'bid-2': _veto_card('bid-2')})
-    assert ('Vetoed Bad Seller: Does not fit: needs a 750W supply. (source https://example.test/psu-spec). '
+    assert ('Vetoed Bad Seller: Does not fit: needs a 750W supply (source https://example.test/psu-spec). '
             'Next best: bid #1, Good Seller at $582.00.') in text.splitlines()
 
 
@@ -307,15 +307,22 @@ def test_two_vetoes_get_a_line_each_and_one_next_best(buyer):
                         'bid-3': _veto_card('bid-3', reason='Price is above the listed cap.',
                                             source_url='https://example.test/cap')})
     lines = text.splitlines()
-    assert 'Vetoed Bad One: Does not fit: needs a 750W supply. (source https://example.test/psu-spec).' in lines
-    assert 'Vetoed Bad Two: Price is above the listed cap. (source https://example.test/cap).' in lines
+    assert 'Vetoed Bad One: Does not fit: needs a 750W supply (source https://example.test/psu-spec).' in lines
+    assert 'Vetoed Bad Two: Price is above the listed cap (source https://example.test/cap).' in lines
     assert 'Next best: bid #1, Good Seller at $582.00.' in lines
     assert text.count('Next best') == 1
 
 
+def test_veto_with_an_invalid_source_url_says_no_source(buyer):
+    text = _veto_round(buyer, [('Bad Seller', 400)],
+                       {'bid-1': card(), 'bid-2': _veto_card('bid-2', source_url='javascript:alert(1)')})
+    assert 'Vetoed Bad Seller: Does not fit: needs a 750W supply (no source). Next best:' in text
+    assert 'source source' not in text
+
+
 def test_all_vetoed_says_there_is_no_next_best(buyer):
     text = _veto_round(buyer, [], {'bid-1': _veto_card('bid-1')})
-    assert 'Vetoed Good Seller: Does not fit: needs a 750W supply. (source https://example.test/psu-spec). No next best.' in text
+    assert 'Vetoed Good Seller: Does not fit: needs a 750W supply (source https://example.test/psu-spec). No next best.' in text
     assert 'Next best: bid' not in text
 
 
