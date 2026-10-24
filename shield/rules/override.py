@@ -9,7 +9,13 @@ PATTERNS = [
        r"(?:previous\s+|prior\s+|above\s+|earlier\s+|system\s+|safety\s+)?"
        r"(?:instructions?|rules?|prompts?|guidelines?|programming|safeguards?)"),
     rx(r"\bnew\s+instructions?\s*:"),
-    rx(r"(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}(?:system|assistant|developer)[ \t]{0,5}(?:prompt|message|note|override)?[ \t]{0,5}[:\]]"),
+    # A role label: "System prompt:", "[system]", "assistant:" always; a bare "System:" only with an instruction after it,
+    # so a spec line ("System: Windows 11 Home") passes (#250)
+    rx(r"(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}(?:system[ \t]{0,5}(?:prompt|message|note|override)|assistant|developer)[ \t]{0,5}[:\]]"
+       r"|(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}system[ \t]{0,5}\][ \t]{0,5}"
+       r"|(?:^|[\n\r>\[\(\{\"'])[ \t]{0,20}system[ \t]{0,5}:[ \t]{0,5}(?:\w+[ \t]+){0,2}?"
+       r"(?:approve|ignore|disregard|forget|override|bypass|skip|pay|charge|send|transfer|release|confirm|accept|grant|you|always"
+       r"|do\s+not|don'?t|must|act|stop|cancel|buy|choose|select|pick)\b"),
     rx(r"\byou\s+are\s+now\s+(?:a|an|the|in|my|acting|operating|unrestricted|free|dan|no\s+longer)\b"),
     rx(r"\bfrom\s+now\s+on,?\s+(?:you|ignore|always|only)\b"),
     rx(r"\bpretend\s+(?:to\s+be|you\s+are)\b"),
@@ -94,7 +100,7 @@ I18N_PATTERNS = [
     rx(r"新的?(?:指令|指示|命令)\s*[:：]"),
     rx(r"(?:致|给)(?:所有)?[^。！？\n]{0,6}?(?:代理|智能体|助手|机器人|ai)[^。！？\n]{0,3}?[:：]"),
     # labels in all three: système, Systemhinweis, 系统提示, with an imperative right after them
-    rx(r"(?:^|[\n\r>\[\(\{\"'【「])[ \t]{0,20}(?:(?:instruction|message|note|consigne)\s+syst[eè]me|syst[eè]me|d[eé]veloppeur"
+    rx(r"(?:^|[\n\r>\[\(\{\"'【「])[ \t]{0,20}(?:(?:instruction|message|note|consigne)\s+syst[eè]me|syst[eè]me|system|d[eé]veloppeur"
        r"|systemhinweis|systemnachricht|systemanweisung|entwickler|系统(?:提示|消息|通知|指令)?|开发者)[ \t]{0,5}[\]】」]?[ \t]{0,5}[:：\]】」][ \t]{0,5}"
        r"(?:\w+[ \t]+){0,2}?(?:" + _FR_ACTION + "|" + _DE_ACTION + r")"),
     rx(r"(?:^|[\n\r>\[\(\{\"'【「])[ \t]{0,20}(?:系统(?:提示|消息|通知|指令)?|开发者)[ \t]{0,5}[\]】」]?[ \t]{0,5}[:：\]】」][ \t]{0,5}"
