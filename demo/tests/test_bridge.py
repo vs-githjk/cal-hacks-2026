@@ -126,13 +126,22 @@ def test_round_two_cards_use_round_two_bid_ids(run):
     assert len(cards) == 2 * len(run["beats"]["2"]["cards"]) and sum(c.endswith("-r2") for c in cards) == len(cards) // 2
 
 
-def test_payment_mode_follows_the_charge(run, steps):
+def test_a_scripted_approval_never_records_a_live_payment(run, steps):
+    """#193: without a real call the plan's payment is the SIM stub, even if the run's beat 4 made a Stripe test charge."""
     pays = [s for s in steps if s.reducer == "record_payment"]
     assert run["beats"]["4"]["charge"]["mode"] == "SIM stub"
     assert [p.args["mode"] for p in pays] == ["sim", "sim"] and pays[0].tag == bridge.SIM
-    live = {**run, "beats": {**run["beats"], "4": {**run["beats"]["4"], "charge": {**run["beats"]["4"]["charge"], "mode": "Stripe test mode"}}}}
+    live = {**run, "beats": {**run["beats"], "4": {**run["beats"]["4"], "charge": {**run["beats"]["4"]["charge"], "mode": "Stripe test mode",
+                                                                                        "id": "pi_test_scripted"}}}}
     lp = [s for s in bridge.plan(live) if s.reducer == "record_payment"]
-    assert [p.args["mode"] for p in lp] == ["stripe_test", "stripe_test"] and lp[0].tag == "LIVE"
+    assert [p.args["mode"] for p in lp] == ["sim", "sim"] and lp[0].tag == bridge.SIM
+    assert all(p.args["payment_ref"].startswith("ch_sim_") for p in lp) and "pi_test_scripted" not in lp[0].say
+
+
+def test_a_scripted_approval_is_labelled_sim_script_not_voice(steps):
+    appr = next(s for s in steps if s.reducer == "record_approval")
+    assert appr.args["method"] == "sim_script" and appr.tag == bridge.SIM
+    assert "no phone call" in appr.say
 
 
 def test_money_steps_use_the_demos_real_mandate(run, steps):
@@ -141,7 +150,7 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     assert mand["hash"] == m["hash"] and mand["amount"] == 1299.99 and mand["payee"] == m["payee"]
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
-    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut"}
+    assert appr == {"mandate_hash": m["hash"], "method": "sim_script", "approved_by": "vidyut"}
     pays = [s.args for s in steps if s.reducer == "record_payment"]
     assert len(pays) == 2 and pays[0] == pays[1] and pays[0]["payment_ref"] == run["beats"]["4"]["charge"]["id"]
 
@@ -343,11 +352,97 @@ def test_an_expired_mandate_is_denied_even_if_the_buyer_said_the_code(run):
 
 
 def test_live_call_flags_and_refusals(capsys):
-    with pytest.raises(SystemExit):
-        bridge.main(["--live-call", "--stripe", "--dry-run"])        # a Stripe charge must never run before the call approves
     assert bridge.main(["--dry-run", "--live-call", "--env-file", "/nonexistent/none.env"]) == 0
     out = capsys.readouterr().out
     assert "live call" in out.lower() and "CARTESIA" in out
+
+
+def test_stripe_without_a_live_call_is_refused(monkeypatch):
+    """#193: a Stripe test charge needs a real call; the scripted approval can never lead to one."""
+    from demo import approval_flow
+    monkeypatch.setattr(approval_flow, "stripe_charge_test", lambda *a, **k: pytest.fail("no Stripe call without a live call"))
+    with pytest.raises(SystemExit):
+        bridge.main(["--stripe", "--dry-run"])
+    with pytest.raises(SystemExit):
+        bridge.main(["--stripe"])
+
+
+def test_live_call_with_stripe_makes_no_charge_before_the_round(monkeypatch, capsys):
+    """#193: the run that builds the plan never charges; the Stripe call waits behind the approval gate."""
+    from demo import approval_flow
+    monkeypatch.setattr(approval_flow, "stripe_charge_test", lambda *a, **k: pytest.fail("charged before the call"))
+    monkeypatch.setenv(approval_flow.STRIPE_ENV, "sk_test_FAKEKEY1234567890")
+    assert bridge.main(["--dry-run", "--live-call", "--stripe", "--env-file", "/nonexistent/none.env"]) == 0
+    out = capsys.readouterr().out
+    assert "after the call approves" in out and "sk_test_FAKEKEY1234567890" not in out
+
+
+def stripe_parts(run, says, key="sk_test_FAKEKEY1234567890"):
+    mandate, client, shown, approver = live_parts(run, says)
+    charged = []
+
+    def fake_stripe(m, k):
+        charged.append((m["hash"], k))
+        return {"mode": "Stripe test mode", "id": "pi_test_1", "object": "payment_intent", "amount_cents": int(round(m["amount"] * 100)),
+                "currency": "usd", "payment_method": "pm_card_visa (Stripe test card)", "status": "succeeded",
+                "idempotency_key": "mandate:" + m["hash"]}
+    notes = []
+    charger = bridge.make_charger(mandate, {"STRIPE_SECRET_KEY": key}, use_stripe=True, stripe_test=fake_stripe)
+    return mandate, approver, charger, charged, notes
+
+
+def run_with_charger(run, approver, mandate, charger, order=None):
+    log = []
+    cl = clients(log)
+    if order is not None:
+        real = charger
+
+        def charger(step):
+            order.append(("charge", [r for _, r, _ in log]))
+            return real(step)
+    outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, mandate=mandate, live_call=True), cl, delay=0, say=lambda s: None,
+                              sleep=lambda x: None, clock=lambda: 0.0, approver=approver, charger=charger)
+    return log, outcomes
+
+
+def test_live_call_with_stripe_charges_once_only_after_the_market_records_the_approval(run):
+    mandate, approver, charger, charged, _ = stripe_parts(run, lambda code: f"{code} approve")
+    order = []
+    log, outcomes = run_with_charger(run, approver, mandate, charger, order)
+    assert outcomes[0]["approved"] is True and charged == [(mandate["hash"], "sk_test_FAKEKEY1234567890")]
+    before = order[0][1]
+    assert "record_approval" in before and "record_payment" not in before        # approval row first, then the charge
+    pays = [a for _, r, a in log if r == "record_payment"]
+    assert len(pays) == 2 and all(p["mode"] == "stripe_test" and p["payment_ref"] == "pi_test_1" and p["mandate_hash"] == mandate["hash"]
+                                  for p in pays)
+    appr = next(a for _, r, a in log if r == "record_approval")
+    assert appr["method"] == "voice_code"                                          # a real call is the only voice approval
+
+
+def test_a_denied_or_silent_live_call_never_charges(run):
+    for says in ("hello there", ""):
+        mandate, approver, charger, charged, _ = stripe_parts(run, says)
+        log, outcomes = run_with_charger(run, approver, mandate, charger)
+        assert outcomes[0]["approved"] is False and charged == []
+        assert "record_payment" not in [r for _, r, _ in log]
+
+
+def test_the_charger_never_runs_without_an_approver(run):
+    """Fail closed: a charger handed to execute without a live-call gate is ignored, and the SIM stub is what gets recorded."""
+    mandate, _, charger, charged, _ = stripe_parts(run, "")
+    log = []
+    bridge.execute(bridge.plan(run, delay=0, rounds=1), clients(log), delay=0, say=lambda s: None, sleep=lambda x: None,
+                   clock=lambda: 0.0, approver=None, charger=charger)
+    assert charged == [] and all(a["mode"] == "sim" for _, r, a in log if r == "record_payment")
+
+
+def test_charger_without_a_test_key_records_the_sim_stub_and_says_why(run):
+    mandate = bridge.fresh_pending_mandate(run["beats"]["4"]["mandate"])
+    charger = bridge.make_charger(mandate, {"STRIPE_SECRET_KEY": "sk_live_notatestkey"}, use_stripe=True,
+                                  stripe_test=lambda *a: pytest.fail("never with a live key"))
+    paid = charger(None)
+    assert paid["args"]["mode"] == "sim" and paid["tag"] == bridge.SIM and paid["args"]["payment_ref"].startswith("ch_sim_")
+    assert "is not an sk_test_ key" in paid["note"] and "sk_live_notatestkey" not in str(paid)
 
 
 def test_the_screen_code_gap_is_listed():
