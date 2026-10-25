@@ -81,6 +81,56 @@ def test_a_seller_with_two_ambiguous_bids_is_asked_once():
     assert len(wire.sent) == 1 and set(out) == {"b1", "b2"} and out["b2"]["status"] == "answered"
 
 
+def test_two_concurrent_requests_to_one_seller_both_get_the_one_answer():
+    """The first request must not lose its answer when a second request asks the same seller while it waits."""
+    wire = Wire()
+    c = make(wire, timeout=0.5)
+
+    async def run():
+        first = asyncio.create_task(c.ask_all(NEED, [bid("b1", "seller_1", 590, offered="new", page="")]))
+        await asyncio.sleep(0.05)
+        second = asyncio.create_task(c.ask_all(NEED, [bid("b2", "seller_1", 600, offered="new", page="")]))
+        await asyncio.sleep(0.05)
+        assert c.offer(AGENT, "it is open box") is True  # one reply, two waiting requests
+        return await first, await second
+    a, b = asyncio.run(run())
+    assert a["b1"]["status"] == "answered" and a["b1"]["condition"] == "open box"
+    assert b["b2"]["status"] == "answered" and b["b2"]["condition"] == "open box"
+    assert len(wire.sent) == 1 and a["b1"]["question"] == b["b2"]["question"] == wire.sent[0][1]  # ONE question; the record cites what was sent
+    assert c.is_waiting(AGENT) is False
+
+
+def test_the_first_request_timing_out_does_not_cut_off_a_later_one():
+    wire = Wire()
+    c = make(wire, timeout=0.15)
+
+    async def run():
+        first = asyncio.create_task(c.ask_all(NEED, [bid("b1", "seller_1", 590, offered="new", page="")]))
+        await asyncio.sleep(0.1)
+        second = asyncio.create_task(c.ask_all(NEED, [bid("b2", "seller_1", 600, offered="new", page="")]))
+        a = await first  # times out at 0.15 s
+        assert c.is_waiting(AGENT) is True  # the second request is still waiting on the same question
+        c.offer(AGENT, "refurbished")
+        return a, await second
+    a, b = asyncio.run(run())
+    assert a["b1"]["status"] == "no_answer" and b["b2"]["status"] == "answered" and b["b2"]["condition"] == "refurbished"
+
+
+def test_a_failing_send_fails_every_waiter_not_just_the_sender():
+    async def broken(address, text):
+        await asyncio.sleep(0.05)
+        raise OSError("down")
+    c = clarify.Clarifier(broken, lambda sid: AGENT, timeout=0.5)
+
+    async def run():
+        first = asyncio.create_task(c.ask_all(NEED, [bid("b1", "seller_1", 590, offered="new", page="")]))
+        await asyncio.sleep(0.01)
+        second = asyncio.create_task(c.ask_all(NEED, [bid("b2", "seller_1", 600, offered="new", page="")]))
+        return await first, await second
+    a, b = asyncio.run(run())
+    assert a["b1"]["status"] == "cannot_ask" and b["b2"]["status"] == "cannot_ask"
+
+
 def test_a_bid_with_nothing_ambiguous_sends_nothing():
     wire = Wire()
     assert ask(make(wire), [bid("b1", "seller_1", 590)]) == {} and wire.sent == []

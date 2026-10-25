@@ -137,7 +137,8 @@ async def answer(text: str, *, inputs=None, phrase=phrasing.phrase) -> str:
                                  "Price history and recall lookups could not run, so those checks were not made.")]
     cards = checks.advise(need, bids, baseline, records, recalls, owned)
     card = explain.attach(real_data.with_notes(cards, notes)[0])  # notes are info warnings: the explanation is rebuilt, the decision is not
-    parts = [phrase(card["explanation"]), _fit_line(bids[0], owned)]
+    # phrase() may block for its whole deadline (a model call), so it runs in a thread, never on the agent's event loop
+    parts = [await asyncio.to_thread(phrase, card["explanation"]), _fit_line(bids[0], owned)]
     if facts["price"]:
         parts.append(f"Worth it: {card['worth_it_note']}")
     else:
