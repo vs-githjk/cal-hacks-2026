@@ -38,8 +38,8 @@ test("recordedLine never claims a time it cannot read", () => {
 });
 
 test("the recorded Hyphenate snapshot and its screen name no teammate: the requester is the buyer (#412)", () => {
-  const fixture = readFileSync(new URL("./fixtures/hyphenate-recorded.json", import.meta.url), "utf8");
-  assert.doesNotMatch(fixture, /vidyut|vedant/i);
+  for (const name of ["hyphenate-recorded.json", "sell-recorded.json"])
+    assert.doesNotMatch(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"), /vidyut|vedant/i, name);
   const screen = readFileSync(new URL("../components/hyphenate.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(screen, /vidyut|vedant/i);
   const s = parseSnapshot(load("hyphenate-recorded.json").raw)!;

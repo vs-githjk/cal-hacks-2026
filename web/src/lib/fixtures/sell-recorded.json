@@ -6,7 +6,7 @@
  "needs": [
   {
    "id": "need-sim-gpu",
-   "buyer_id": "vidyut",
+   "buyer_id": "the-buyer",
    "sku_spec": "rtx 5070 ti",
    "allowed_conditions": [
     "new",
@@ -19,7 +19,7 @@
   },
   {
    "id": "need-sim-psu",
-   "buyer_id": "vidyut",
+   "buyer_id": "the-buyer",
    "sku_spec": "psu 750w",
    "allowed_conditions": [
     "new",
@@ -45,7 +45,7 @@
   },
   {
    "id": "need-sim-case",
-   "buyer_id": "vidyut",
+   "buyer_id": "the-buyer",
    "sku_spec": "case",
    "allowed_conditions": [
     "new",
