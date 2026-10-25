@@ -74,7 +74,7 @@ export function AgentAvatar({ row, size = 28 }: { row: AgentRow; size?: number }
     );
   }
   return (
-    <span aria-hidden style={box} className="inline-flex shrink-0 items-center justify-center rounded-full bg-soft text-[12px] font-semibold text-muted">
+    <span aria-hidden style={box} className="inline-flex shrink-0 items-center justify-center rounded-full bg-surface-2 text-[12px] font-semibold text-ink-2">
       {row.name.trim().charAt(0).toUpperCase() || "?"}
     </span>
   );
@@ -87,7 +87,7 @@ export function AgentProfiles({ className = "" }: { className?: string }) {
       {AGENTS.map((a) => (
         <li key={a.key} className="flex items-center gap-2 py-1">
           <span className="min-w-0 flex-1 truncate font-semibold">{a.name}</span>
-          <a href={AGENTVERSE_URL(a.address)} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline">
+          <a href={AGENTVERSE_URL(a.address)} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center font-medium text-pulse underline-offset-2 hover:underline">
             Agentverse profile
           </a>
         </li>
