@@ -85,6 +85,7 @@ body {
 
 /* One card style for every panel. Keep .panel so untouched pages still render. */
 .panel,
+.card { position: relative; isolation: isolate; }
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -121,21 +122,6 @@ body::before {
 main, header, footer { position: relative; z-index: 1; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
-/* Touch the lines: a card's border lights up under the pointer (--mx, --my set by the shell). */
-.card { position: relative; isolation: isolate; }
-.card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  border-radius: inherit;
-  padding: 1px;
-  background: radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), var(--accent), transparent 70%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
 
 @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 @keyframes orbit { to { transform: rotate(360deg) } }

@@ -8,7 +8,6 @@ import { Mark } from "@/components/shell";
 import { OriginChip, Label, clock } from "@/components/ui";
 import { Question, BoutBadge } from "@/components/arena";
 import { roman } from "@/lib/roman";
-import { DotPattern } from "@/components/ui/dot-pattern";
 import { asOrigin, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
@@ -66,8 +65,6 @@ export default function Home() {
           </div>
         </div>
         <div className="relative order-1 grid place-items-center md:order-2">
-          <DotPattern width={18} height={18} cx={1.4} cy={1.4} cr={1.4} className="fill-accent/25 [mask-image:radial-gradient(circle_at_center,white,transparent_65%)]" />
-          <span className="absolute h-[260px] w-[260px] rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)] motion-safe:animate-[beacon_4s_ease-in-out_infinite] md:h-[440px] md:w-[440px]" aria-hidden />
           <span className="hidden md:block"><Mark size={300} spin /></span>
           <span className="md:hidden"><Mark size={160} spin /></span>
         </div>

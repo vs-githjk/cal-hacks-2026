@@ -1,0 +1,12 @@
+{
+ "actorOutputSchemaVersion": 1,
+ "title": "Recall check output",
+ "properties": {
+  "recalls": {
+   "type": "string",
+   "title": "Recall checks",
+   "description": "One row per product: recalled, possible, none or unverified, with the recall page, hazard and remedy",
+   "template": "{{links.apiDefaultDatasetUrl}}/items?view=recalls"
+  }
+ }
+}

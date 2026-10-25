@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { clearCorner, cornerRect } from "./agents.ts";
-import { STATUS_TEXT, agentLink, agentverseUrl, ago, fetchAgents, headline, isStale, latestActivity, parseAgents, summary, type AgentRow } from "./agentFeed.ts";
+import { STATUS_TEXT, agentLink, agentverseUrl, ago, feedBase, fetchAgents, headline, isStale, latestActivity, parseAgents, summary, type AgentRow } from "./agentFeed.ts";
 
 const VIEW = { w: 1280, h: 800 };
 const TILE = { w: 220, h: 120 };
@@ -139,11 +139,22 @@ test("fetchAgents answers null for an offline feed: unreachable, HTTP error, not
       async () => new Response(JSON.stringify({ rows: [] }), { status: 200 }),
     ]) {
       globalThis.fetch = impl as typeof fetch;
-      assert.equal(await fetchAgents(), null);
+      assert.equal(await fetchAgents("http://feed.test"), null);
     }
     globalThis.fetch = (async () => new Response(JSON.stringify([{ name: "Buyer", role: "buyer", address: null, status: "down", last_message: null, at: null, origin: "SIM" }]), { status: 200 })) as typeof fetch;
-    assert.equal((await fetchAgents())!.length, 1);
+    assert.equal((await fetchAgents("http://feed.test"))!.length, 1);
   } finally {
     globalThis.fetch = real;
   }
+});
+
+test("feedBase skips the fetch when unset or when a loopback feed is seen from a deployed page", () => {
+  assert.equal(feedBase(undefined, "localhost"), null);
+  assert.equal(feedBase("", "localhost"), null);
+  assert.equal(feedBase("not a url", "localhost"), null);
+  assert.equal(feedBase("http://127.0.0.1:8790", "tech-bazaar.vercel.app"), null);
+  assert.equal(feedBase("http://localhost:8790", "judge.example"), null);
+  assert.equal(feedBase("http://127.0.0.1:8790", "localhost"), "http://127.0.0.1:8790");
+  assert.equal(feedBase("http://[::1]:8790", "127.0.0.1"), "http://[::1]:8790");
+  assert.equal(feedBase("https://feed.example/", "tech-bazaar.vercel.app"), "https://feed.example");
 });

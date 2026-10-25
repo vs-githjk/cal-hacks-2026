@@ -1,7 +1,7 @@
 // The build panel: the planner's parts, sellers and total for one build, against the cap, with the owned parts kept.
 // Pure: give it a BuildResult (SAMPLE_BUILD until the market's build rounds are live) and it draws.
 
-import { partRows, PART_NAMES, type BuildResult } from "@/lib/build";
+import { capPercent, partRows, PART_NAMES, type BuildResult } from "@/lib/build";
 import { Card, Label, OriginChip, Pill, Stat, money } from "./ui";
 import { BoutBadge, type BoutStatus } from "./arena";
 import { roman } from "@/lib/roman";
@@ -12,9 +12,14 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
   const rows = partRows(b);
   const total = b.totalCents / 100;
   const cap = b.capCents / 100;
-  const firstOpen = rows.findIndex((r) => r.state === "open");
-  // locked and swapped parts are won; the first open part of a running build is in the arena; other open parts wait.
-  const boutOf = (state: string, i: number): BoutStatus => (state !== "open" ? "won" : b.status === "open" && i === firstOpen ? "in-arena" : "waiting");
+  // A pick won its bout, except a MIRROR listing: it is a comparison, never a winner, so it gets no badge.
+  // No pick: the part's own status says whether its round is running, failed (no eligible bid) or not started.
+  const boutOf = (r: (typeof rows)[number]): BoutStatus | null => {
+    if (r.price !== null) return r.origin === "MIRROR" ? null : "won";
+    const st = b.partStatus?.[r.part];
+    return st === "failed" ? "knocked" : st === "bidding" ? "in-arena" : "waiting";
+  };
+  const badge = (s: BoutStatus | null) => s && <span className="mb-0.5 block"><BoutBadge status={s} /></span>;
   const locked = b.status === "locked";
   return (
     <Card stripe={b.status === "locked" ? "mint" : b.status === "open" ? "ink" : "amber"}>
@@ -31,7 +36,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
         <Stat label="Sellers" value={String(b.sellers.length)} />
       </dl>
       <div role="img" aria-label={`${money(total)} of the ${money(cap)} cap`} className="mb-3 h-2 overflow-hidden rounded-full bg-soft">
-        <div className="h-full bg-accent" style={{ width: `${Math.min(100, (total / cap) * 100)}%` }} />
+        <div className="h-full bg-accent" style={{ width: `${capPercent(b.totalCents, b.capCents)}%` }} />
       </div>
       <ul className="grid gap-1.5">
         {rows.map((r, i) => (
@@ -47,7 +52,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
               </span>
             </span>
             <span className="text-right tabular-nums">
-              <span className="mb-0.5 block"><BoutBadge status={boutOf(r.state, i)} /></span>
+              {badge(boutOf(r))}
               <span className="block text-[14px] font-semibold">{r.price === null ? "?" : money(r.price)}</span>
               <span className={`block text-[11px] ${r.overBy ? "text-amber" : "text-muted"}`}>
                 {r.overBy ? `${money(r.overBy)} over ${money(r.budget)}` : `budget ${money(r.budget)}`}
@@ -56,6 +61,33 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
           </li>
         ))}
       </ul>
+      {!!b.comparisons?.length && (
+        <div className="mt-3 rounded-lg border border-line px-2 py-1.5">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">Comparison, not a bid</p>
+          <ul className="mt-1 grid gap-1">
+            {b.comparisons.map((c) => (
+              <li key={`${c.part}-${c.seller}`} className="text-[12px] text-muted">
+                {PART_NAMES[c.part] ?? c.part}, {c.seller} <OriginChip origin={c.origin} /> <span className="tabular-nums">{money(c.priceCents / 100)}</span>. {c.note}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {!!b.checks?.length && (
+        <div className="mt-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">Fit checks</p>
+          <ul className="mt-1 grid gap-1">
+            {b.checks.map((c, i) => (
+              <li key={i} className="text-[12px]">
+                {PART_NAMES[c.a] ?? c.a} and {PART_NAMES[c.b] ?? c.b}: {c.detail}{" "}
+                <span className={c.state === "clash" ? "font-semibold text-coral" : c.state === "unknown" ? "text-muted" : ""}>{c.state}</span>{" "}
+                <span className="font-mono text-muted">{c.source}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {b.approval && <p className="mt-3 text-[12px]">Approval: {b.approval.state}, {money(b.approval.total)} across {b.approval.sellers} sellers</p>}
       <div className={`mt-3 flex items-baseline justify-between border-t-2 pt-2.5 ${locked ? "border-accent" : "border-line-2"}`}>
         <span className="font-display text-[13px] uppercase tracking-[0.14em] text-ink-2">Build total</span>
         <span className={`font-display text-[22px] tabular-nums ${locked ? "text-accent" : "text-ink-2"}`}>{money(total)}</span>

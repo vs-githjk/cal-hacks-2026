@@ -105,7 +105,8 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
-_ONE_PRICE = re.compile(r"\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?")   # one plain US price: 1299.99, $1,299.99, $ 1,299
+# one plain US price: 1299.99, $1,299.99, $ 1,299. ASCII digits only: "$１２９９" is unreadable (#237)
+_ONE_PRICE = re.compile(r"\$?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(\.[0-9]{1,2})?")
 
 
 def _price(v) -> float | None:
@@ -121,10 +122,10 @@ def _price(v) -> float | None:
     if not isinstance(v, (int, float, str)):
         return None
     try:
-        p = float(v)
-    except (TypeError, ValueError):
+        p = round(float(v), 2)
+    except (TypeError, ValueError, OverflowError):   # a JSON int of 10**400 overflows float (#237)
         return None
-    return round(p, 2) if math.isfinite(p) and p > 0 else None
+    return p if math.isfinite(p) and p > 0 else None   # 0.001 rounds to 0: unreadable
 
 
 def stock_state(availability) -> str:

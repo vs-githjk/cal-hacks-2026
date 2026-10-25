@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, Overflow
 from typing import Any, Mapping, Optional
 from urllib.parse import urlsplit
 
@@ -81,12 +81,15 @@ def _cents(amount: Any) -> int:
         d = Decimal(str(amount))
     except InvalidOperation as e:
         raise ScriptError("amount must be a number") from e
-    if not d.is_finite() or d <= 0:
-        raise ScriptError("amount must be positive")
-    cents = d * 100
-    if cents != cents.to_integral_value():
-        raise ScriptError("amount must be a whole number of cents")
-    return int(cents)
+    if not d.is_finite() or d <= 0 or d.adjusted() > 11:
+        raise ScriptError("amount must be positive and within the supported read-back range")
+    try:
+        cents = d * 100
+        if cents <= 0 or cents != cents.to_integral_value():
+            raise ScriptError("amount must be a whole number of cents")
+        return int(cents)
+    except (InvalidOperation, Overflow, OverflowError, ValueError) as e:
+        raise ScriptError("amount must be a finite whole number of cents") from e
 
 
 def amount_words(amount: Any) -> str:
@@ -160,12 +163,32 @@ def _host(url: str) -> Optional[str]:
     return host[4:] if host.startswith("www.") else host
 
 
+_LEET = str.maketrans("034579", "oeastg")   # "0fficial", "4pprove"; a "1" is tried as both i and l below
+_SINGLES = re.compile(r"(?<![a-z0-9])[a-z0-9](?: [a-z0-9](?![a-z0-9])){2,}")   # "a p p r o v e"
+
+
+def _steers(v: str, blocked: frozenset) -> bool:
+    """True when v holds a blocked word, also behind leetspeak ("Offic1al"), letter spacing ("a p p r o v e"), a split
+    ("of ficial") or a run-on ("alreadyagreed") (#237). The run-on and split check is for words of 7 or more letters,
+    so short words ("pin", "now") inside honest names ("Spinner", "Snowblind") stay allowed."""
+    low = _SINGLES.sub(lambda m: m.group(0).replace(" ", ""), v.lower())
+    for one in ("i", "l"):
+        folded = low.translate(_LEET).replace("1", one)
+        tokens = re.findall(r"[a-z]+", folded)
+        if set(tokens) & blocked:
+            return True
+        joined = "".join(tokens)
+        if any(len(w) >= 7 and w in joined for w in blocked):
+            return True
+    return False
+
+
 def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY_BLOCKED) -> Optional[str]:
     """The value when it is a short plain string that passes `pattern` and holds no steering word, else None."""
     if not isinstance(value, str):
         return None
     v = " ".join(value.split())
-    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & blocked:
+    if not pattern.fullmatch(v) or _steers(v, blocked):
         return None
     return v
 

@@ -142,10 +142,10 @@ test("memoryForBuyer shows only rows recorded for the paired buyer and fails clo
     veto({ id: "v", buyer_id: "" }),
     goal({ id: "g", buyer_id: "" }),
   ])).entries;
-  assert.deepEqual(memoryForBuyer(entries, "vidyut").map((e) => e.id), ["a"]);
-  assert.deepEqual(memoryForBuyer(entries, "buyer-b").map((e) => e.id), ["b"]);
+  assert.deepEqual(memoryForBuyer(entries, "vidyut").map((e) => e.id), ["a", "v"]);
+  assert.deepEqual(memoryForBuyer(entries, "buyer-b").map((e) => e.id), ["b", "v"]);
   assert.deepEqual(memoryForBuyer(entries, ""), [], "no identity, no rows");
-  assert.deepEqual(memoryForBuyer(entries, "stranger"), []);
+  assert.deepEqual(memoryForBuyer(entries, "stranger").map((e) => e.id), ["v"], "only the buyer-less market veto");
 });
 
 test("a seller lesson has no buyer by design: it shows for any paired buyer, but another buyer's lesson never does", () => {
@@ -211,4 +211,23 @@ test("an identity switch aborts the pending read: the signal is passed through a
     },
   );
   assert.equal(seen, ctl.signal);
+});
+
+test("a market veto has no buyer (buyer_id empty): kept for any paired buyer, another buyer's veto is dropped", () => {
+  const entries = parseMemoryResponse(envelope([
+    veto({ id: "mv", buyer_id: "" }),
+    veto({ id: "vy", buyer_id: "buyer-y" }),
+  ])).entries;
+  assert.deepEqual(memoryForBuyer(entries, "buyer-x").map((e) => e.id), ["mv"]);
+  assert.deepEqual(memoryForBuyer(entries, ""), []);
+});
+
+test("approval is by phone call only: no typed-code field or wiring on /buyer, and an old typed row reads as retired (#335)", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const f of ["src/components/buyer.tsx", "src/components/screens.tsx", "src/app/buyer/page.tsx"]) {
+    const src = readFileSync(f, "utf8");
+    assert.doesNotMatch(src, /onTyped|approveTyped|Typed fallback/, f);
+  }
+  assert.match(readFileSync("src/components/buyer.tsx", "utf8"), /Only the call approves/);
+  assert.equal(approvalLabel("typed_code"), "Typed code (retired)");
 });

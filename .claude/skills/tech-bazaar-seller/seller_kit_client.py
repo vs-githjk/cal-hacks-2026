@@ -230,7 +230,7 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None, s
     ap.add_argument("answers", nargs="?", help="answers JSON file, or - for stdin")
     ap.add_argument("--url", default=None, help=f"Seller Kit address (default SELLER_KIT_URL or {DEFAULT_URL})")
     ap.add_argument("--dry-run", action="store_true", help="print the SellerConfig and call nothing")
-    ap.add_argument("--replace", action="store_true", help="overwrite a shop that already has this id")
+    ap.add_argument("--replace", action="store_true", help="operator only: overwrite a shop that already has this id (the kit refuses it without the operator token)")
     ap.add_argument("--needs", action="store_true", help="list open needs instead of adding a shop")
     try:
         args = ap.parse_args(argv)
@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None, *, transport: Transport | None = None, s
         for item in e.errors:
             print(f"  {item.get('field', 'config')}: {item.get('message', '')}", file=err)
         if e.status == 409:
-            print("  (to overwrite the existing shop, run again with --replace)", file=err)
+            print("  (pick another shop id; only the Tech Bazaar operator can replace an existing shop)", file=err)
         return 1
     except ClientError as e:
         print(str(e), file=err)
