@@ -64,7 +64,7 @@ test("Heat 1 knocks out advocate vetoes with the rule id and source", () => {
   assert.equal(k.length, 1);
   assert.deepEqual(k[0], {
     id: "bid-bargain-bin", reasonCode: "advocate_veto", ruleId: "fit.gpu_length", sourceUrl: "https://bargainbin.example.test/rtx-5070-ti",
-    reasonText: "Advocate veto (fit.gpu_length)",
+    reasonText: "Failed the appraiser's check", label: "Vetoed by Advocate",
   });
 });
 
@@ -72,7 +72,8 @@ test("a live veto with detail in the parens keeps the rule id alone and the full
   const rows = [row({ bidId: "v", reasons: ["Advocate veto (fit.gpu_length: The card is longer than your case allows) [source: https://www.gigabyte.com/x]"] })];
   const k = buildBracket(rows, "round-1").stages[1]!.heats[0]!.knocked[0]!;
   assert.equal(k.ruleId, "fit.gpu_length");
-  assert.equal(k.reasonText, "Advocate veto (fit.gpu_length: The card is longer than your case allows)");
+  assert.equal(k.reasonText, "The card is longer than your case allows");
+  assert.equal(k.label, "Vetoed by Advocate");
   assert.equal(k.sourceUrl, "https://www.gigabyte.com/x");
 });
 

@@ -296,7 +296,7 @@ test("round focus and captions: Shield, other refusal, veto and ranked each name
   assert.deepEqual(r1!.focus, ["shield", offerKey("b-shield")]);
   assert.equal(r1!.caption, "Round 1: Bazaar Shield blocks Shield Co.");
   assert.deepEqual(r2!.focus, ["referee", offerKey("b-floor")]);
-  assert.equal(r2!.caption, "Round 2: Floor Co is out, below this seller floor.");
+  assert.equal(r2!.caption, "Round 2: Floor Co is out, below this seller's floor price.");
   assert.deepEqual(r3!.focus, ["advocate", offerKey("b-veto")]);
   assert.equal(r3!.caption, "Round 3: the advocate vetoes Veto Co, with a cited source.");
   assert.deepEqual(r4!.focus, [offerKey("b-second")]);
@@ -505,7 +505,7 @@ test("SAMPLES.ssd: three ranked sellers and a refused Seller D make three rounds
   assert.deepEqual(s.offers.map((o) => o.name), ["Seller A", "Seller B", "Seller C", "Seller D"]);
   assert.deepEqual(s.offers.map((o) => o.outcome), ["winner", "ranked", "ranked", "knocked"]);
   assert.deepEqual(s.beats.map((b) => b.name), ["Offers opened", "Round 1", "Round 2", "Round 3", "Winner"]);
-  assert.equal(s.beats[1]!.caption, "Round 1: Seller D is out, below this seller floor.");
+  assert.equal(s.beats[1]!.caption, "Round 1: Seller D is out, below this seller's floor price.");
   assert.equal(s.beats[2]!.caption, "Round 2: Seller C is out at $131, ranked #3.");
   assert.equal(s.beats[3]!.caption, "Round 3: Seller B is out at $124.50, ranked #2.");
   assert.equal(s.winnerBidId, s.offers[0]!.bidId);
@@ -793,4 +793,15 @@ test("T8: SAMPLES keep their winners and beat counts", () => {
   assert.deepEqual([g.phase, g.winnerBidId, g.beats.length], ["closed", "bid-round-sample-gpu-seller_1", 6]);
   const d = projectArenaScene(SAMPLES.ssd, { sample: true });
   assert.deepEqual([d.phase, d.winnerBidId, d.beats.length], ["closed", "bid-round-sample-ssd-seller-a", 5]);
+});
+
+test("board tally for a round with no winner still sums, with winner 0", () => {
+  const results = [result("a", { reasons: [SHIELD] }), result("b", { reasons: [VETO] })];
+  const s = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results, events: [closedBy("")] }));
+  for (let b = 0; b <= s.beats.length; b++) {
+    const t = boardAt(s, b).tally;
+    assert.equal(t.winner, 0);
+    assert.equal(t.winner + t.outbid + t.caught + t.stillIn, t.bids);
+  }
+  assert.equal(boardAt(s, s.beats.length).tallyLine, "2 bids: 0 winner, 0 outbid, 2 caught");
 });

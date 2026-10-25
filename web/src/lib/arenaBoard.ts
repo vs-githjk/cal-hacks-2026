@@ -20,8 +20,9 @@ export interface BoardCard {
   condition: string; // SceneOffer.condition
   state: CardState;
   rank: number | null; // final frame only, survivors that are not the winner and have outcome "ranked": SceneOffer.rank; else null
-  reason: string | null; // out cards only: "Blocked by Shield" | "Vetoed by Advocate" | "Claim check failed" | "Refused by referee"
-  reasonText: string | null; // out cards only: the Knock's reasonText (the referee's sentence)
+  reason: string | null; // out cards only: the Knock's label ("Blocked by Shield", "Vetoed by Advocate", "Not orderable here", "Claim check failed", "Refused"), or "Ranked #n" / "Outranked"
+  reasonText: string | null; // out cards only: the Knock's plain-words reasonText
+  kind: "caught" | "outbid" | null; // out cards only: outbid when outranked, else caught; null while still in
   sourceUrl: string | null; // the advocate's cited source for a veto, or the offer's listing URL; safeUrl-checked upstream
 }
 export type OfficialKey = "advocate" | "shield" | "referee";
@@ -37,15 +38,16 @@ export interface BoardState {
   track: BoardCard[]; // scene.offers order, out cards removed; at the final frame the winner comes first
   out: BoardCard[]; // in knock order: by beat, then by the beat's knocked order
   winner: BoardCard | null; // final frame of a closed round with winnerBidId, else null
+  tally: { bids: number; winner: 0 | 1; outbid: number; caught: number; stillIn: number }; // winner + outbid + caught + stillIn === bids
+  tallyLine: string; // "5 bids: 1 winner, 1 outbid, 3 caught"
 }
 
-const REASONS: Record<string, string> = {
-  shield_block: "Blocked by Shield",
-  advocate_veto: "Vetoed by Advocate",
-  claim_false: "Claim check failed",
-};
-const reasonOf = (code: string, rank: number | null | undefined) =>
-  code === "outranked" ? (rank ? `Ranked #${rank}` : "Outranked") : (REASONS[code] ?? "Refused by referee");
+const reasonOf = (k: { reasonCode: string; label: string }, rank: number | null | undefined) =>
+  k.reasonCode === "outranked" && rank ? `Ranked #${rank}` : k.label;
+const tallyOf = (bids: number, winner: 0 | 1, outbid: number, caught: number, stillIn: number) => ({
+  tally: { bids, winner, outbid, caught, stillIn },
+  tallyLine: `${bids} ${bids === 1 ? "bid" : "bids"}: ${winner} winner, ${outbid} outbid, ${caught} caught`,
+});
 const OFFICIALS = new Set<string>(["buyer", "advocate", "shield", "referee"]);
 
 export function boardAt(scene: ArenaScene, beat: number): BoardState {
@@ -60,6 +62,7 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
     return {
       phase: scene.phase, request, stageName: null, stageNote: null, sealedCount: scene.sealedCount,
       buyerLine: storyFor(scene, p).caption, stillIn: null, lit: [], track: [], out: [], winner: null,
+      ...tallyOf(0, 0, 0, 0, 0),
     };
   }
 
@@ -70,7 +73,7 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
     initial: o.name ? o.name.charAt(0).toUpperCase() : "?",
     color: looks[o.key]?.color ?? 0,
     price: opened ? formatMoney(o.landed) : null,
-    condition: o.condition, state, rank: null, reason: null, reasonText: null,
+    condition: o.condition, state, rank: null, reason: null, reasonText: null, kind: null,
     sourceUrl: o.knock?.sourceUrl ?? o.sourceUrl ?? null,
   });
 
@@ -78,6 +81,7 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
     return {
       phase: scene.phase, request, stageName: null, stageNote: null, sealedCount: scene.offers.length,
       buyerLine: wantsLine, stillIn: null, lit: [], track: scene.offers.map((o) => card(o, "sealed", false)), out: [], winner: null,
+      ...tallyOf(scene.offers.length, 0, 0, 0, scene.offers.length),
     };
   }
 
@@ -89,7 +93,7 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
   for (const k of knocks) {
     const o = byBid.get(k.id);
     if (!o) continue;
-    out.push({ ...card(o, "out", true), reason: reasonOf(k.reasonCode, o.rank), reasonText: k.reasonText });
+    out.push({ ...card(o, "out", true), reason: reasonOf(k, o.rank), reasonText: k.reasonText, kind: k.reasonCode === "outranked" ? "outbid" : "caught" });
   }
   const outIds = new Set(out.map((c) => c.bidId));
   const focus = new Set<ActorKey>(final ? [] : current?.focus ?? []);
@@ -115,6 +119,10 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
     }
   }
 
+  const outbid = out.filter((c) => c.kind === "outbid").length;
+  const caught = out.length - outbid;
+  const won = winner ? 1 : 0;
+  const stillIn = track.length - won;
   return {
     phase: scene.phase, request,
     stageName: current?.name ?? null, stageNote: current?.caption ?? null,
@@ -122,5 +130,6 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
     stillIn: b >= 1 ? { k: track.length, n: scene.offers.length } : null,
     lit: (current?.focus ?? []).filter((k): k is "buyer" | OfficialKey => OFFICIALS.has(k)),
     track, out, winner,
+    ...tallyOf(scene.offers.length, won, outbid, caught, stillIn),
   };
 }

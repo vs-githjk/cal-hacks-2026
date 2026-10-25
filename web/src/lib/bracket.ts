@@ -28,7 +28,7 @@ export interface Entrant {
   landed: number;
   sourceUrl?: string;
 }
-export interface Knock { id: string; reasonCode: ReasonCode; reasonText: string; ruleId?: string; sourceUrl?: string }
+export interface Knock { id: string; reasonCode: ReasonCode; reasonText: string; label: string; ruleId?: string; sourceUrl?: string }
 export interface Heat { entrants: string[]; advances: string | null; knocked: Knock[]; bye: boolean }
 export interface Stage { name: string; kind: "gate" | "advocate" | "knockout" | "champion"; heats: Heat[] }
 export interface Bracket { roundId: string; entrants: Record<string, Entrant>; stages: Stage[]; champion: string | null; problem?: string }
@@ -50,14 +50,50 @@ export function reasonCode(reason: string): ReasonCode {
   return "refused";
 }
 
+const SHIELD_WORDS: Record<string, string> = {
+  "shield.override.instruction": "Hidden instructions aimed at the buying agent",
+  "shield.payee.swap": "Tried to send payment to a different payee",
+  "shield.exfil.send": "Tried to send data out to someone else",
+  "shield.intent.override": "Tried to override what the buyer asked for",
+  "shield.agent.denylisted": "Seller agent is on the deny list",
+  "shield.agent.unregistered": "Seller agent is not registered",
+  "shield.agent.role_mismatch": "Seller agent is not in the role it claimed",
+  "shield.unavailable": "Could not be checked by Bazaar Shield",
+  "shield.invalid_message": "Message was not in a valid form",
+};
+const ID_LIKE = /[a-z]+[._][a-z_.]+/;
+const plain = (t: string | undefined) => (t && !ID_LIKE.test(t) ? t : undefined);
+const GATE_WORDS: Partial<Record<ReasonCode, string>> = {
+  below_floor: "Below this seller's floor price",
+  over_cap: "Over the buyer's price cap",
+  off_need: "Not what the buyer asked for",
+  sold_out: "Sold out to an earlier round",
+};
+
 function knockFor(id: string, reason: string): Knock {
   const code = reasonCode(reason);
   const v = code === "advocate_veto" ? VETO.exec(reason) : null;
-  if (!v) return { id, reasonCode: code, reasonText: reason };
+  if (code === "shield_block") {
+    const ids = reason.match(/shield\.[\w.]+/g) ?? [];
+    const text = [...new Set(ids.map((r) => SHIELD_WORDS[r] ?? "Failed a Bazaar Shield check"))].join("; ") || "Failed a Bazaar Shield check";
+    return { id, reasonCode: code, reasonText: text, label: "Blocked by Shield" };
+  }
+  if (code === "claim_false") {
+    const detail = plain(/^claim did not match the page:\s*(.*)$/.exec(reason)?.[1]?.trim() || undefined);
+    return { id, reasonCode: code, reasonText: detail ?? "The listing's claim did not check out", label: "Claim check failed" };
+  }
+  if (!v) {
+    const text = GATE_WORDS[code] ?? plain(reason) ?? "Failed a Bazaar check";
+    return { id, reasonCode: code, reasonText: text, label: "Refused" };
+  }
   const src = v[2] ? safeUrl(v[2]) : null;
   // close_round writes the card detail in the parens: "fit.gpu_length" or "fit.gpu_length: The card is longer ...".
   const rule = /^[\w.]+/.exec(v[1]!)?.[0];
-  return { id, reasonCode: code, reasonText: `Advocate veto (${v[1]})`, ...(rule ? { ruleId: rule } : {}), ...(src ? { sourceUrl: src } : {}) };
+  const detail = plain(/^[\w.]+:\s*(.*)$/.exec(v[1]!)?.[1]?.trim() || undefined);
+  const mirror = rule === "mirror_not_orderable";
+  const label = mirror ? "Not orderable here" : "Vetoed by Advocate";
+  const text = mirror ? "Real store listing, not orderable here" : detail ?? "Failed the appraiser's check";
+  return { id, reasonCode: code, reasonText: text, label, ...(rule ? { ruleId: rule } : {}), ...(src ? { sourceUrl: src } : {}) };
 }
 
 /** Seed order for a field of `size` (a power of 2): 1 v size, then the halves, so the top seeds meet last. */
@@ -116,7 +152,7 @@ export function buildBracket(results: readonly ResultRow[], roundId: string): Br
   for (const r of out) {
     const g = r.reasons.find((x) => GATE.includes(reasonCode(x)));
     const a = r.reasons.find((x) => !GATE.includes(reasonCode(x)));
-    if (g || !a) gate.push(g ? knockFor(r.bidId, g) : { id: r.bidId, reasonCode: "refused", reasonText: "Not ranked by the referee" });
+    if (g || !a) gate.push(g ? knockFor(r.bidId, g) : { id: r.bidId, reasonCode: "refused", reasonText: "Not ranked by the referee", label: "Refused" });
     else vetoed.push(knockFor(r.bidId, a));
   }
   const all = rows.map((r) => r.bidId);
@@ -144,7 +180,7 @@ export function buildBracket(results: readonly ResultRow[], roundId: string): Br
         }
         const [win, lose] = byRank(a, b) <= 0 ? [a, b] : [b, a];
         const reasonText = `Referee ranked ${win.persona || win.sellerId} #${win.rank} ahead: ${formatMoney(win.landed)} vs ${formatMoney(lose.landed)}`;
-        heats.push({ entrants: [a.bidId, b.bidId], advances: win.bidId, knocked: [{ id: lose.bidId, reasonCode: "outranked", reasonText }], bye: false });
+        heats.push({ entrants: [a.bidId, b.bidId], advances: win.bidId, knocked: [{ id: lose.bidId, reasonCode: "outranked", reasonText, label: "Outranked" }], bye: false });
         next.push(win);
       }
       stages.push({ name: roundName(field.length), kind: "knockout", heats });

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useReducedMotion } from "motion/react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
-import { Arena2D } from "@/components/Arena2D";
+import { ArenaWest } from "@/components/ArenaWest";
 import dynamic from "next/dynamic";
 import { Card, Code, OriginChip, SourceLink } from "@/components/ui";
 import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
@@ -185,7 +185,7 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
       <div className="overflow-hidden rounded-[24px] shadow-[0_18px_48px_rgba(110,70,30,0.16)] ring-1 ring-[#E2D3BE]">
         <div className="relative flex min-w-0 flex-col sm:block">
           {board ? (
-            <Arena2D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} chrome={{ sim: sample !== null, countdown, bids: bids(false) }} />
+            <ArenaWest scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} chrome={{ sim: sample !== null, countdown, bids: bids(false) }} />
           ) : webgl ? (
             <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
           ) : (
@@ -300,7 +300,7 @@ function Controls({ pb, scene, act, sceneView, onView, threeAvailable }: { pb: P
               onClick={() => onView(v)}
               className={`min-h-11 rounded-lg px-3 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${sceneView === v ? "bg-[#2F3E66] text-white" : "text-[#2B2A33] hover:bg-[#F6F1EA]"}`}
             >
-              {v === "board" ? "Board" : "3D"}
+              {v === "board" ? "2D" : "3D"}
             </button>
           ))}
         </div>

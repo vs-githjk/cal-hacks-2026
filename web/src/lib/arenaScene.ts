@@ -192,7 +192,7 @@ function beatsOf(bracket: Bracket, offers: readonly SceneOffer[], winner: string
   for (const o of refused) round(o, "gate", ["referee"], o.knock!, (r) => `Round ${r}: ${o.name} is out, ${lower(o.knock!.reasonText)}.`);
   for (const o of vetoed) round(o, "advocate", ["advocate"], o.knock!, (r) => `Round ${r}: the advocate vetoes ${o.name}${o.knock!.sourceUrl ? ", with a cited source" : ""}.`);
   for (const o of losers) {
-    const knock: Knock = o.knock ?? { id: o.bidId, reasonCode: "outranked", reasonText: `Ranked #${o.rank} by the referee` };
+    const knock: Knock = o.knock ?? { id: o.bidId, reasonCode: "outranked", reasonText: `Ranked #${o.rank} by the referee`, label: "Outranked" };
     round(o, "knockout", [], knock, (r) => {
       const extra = o.condition && winnerCondition && o.condition !== winnerCondition ? ` Its ${o.condition} offer ranks below ${winnerCondition}.` : "";
       return `Round ${r}: ${o.name} is out at ${formatMoney(o.landed)}, ranked #${o.rank}.${extra}`;

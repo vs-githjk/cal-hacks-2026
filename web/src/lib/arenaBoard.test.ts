@@ -5,11 +5,6 @@ import { boardAt } from "./arenaBoard.ts";
 import { SAMPLES } from "./arenaFixture.ts";
 
 const scene = projectArenaScene(SAMPLES.gpu, { sample: true });
-const words: Record<string, string> = {
-  shield_block: "Blocked by Shield",
-  advocate_veto: "Vetoed by Advocate",
-  claim_false: "Claim check failed",
-};
 
 test("beat 0 after close: sealed cards, nothing revealed", () => {
   assert.equal(scene.phase, "closed");
@@ -40,7 +35,7 @@ test("first knocking beat moves the offer to the Out rail with its reason", () =
   assert.ok(outCard);
   assert.ok(!s.track.some((c) => c.bidId === knock.id));
   const o = scene.offers.find((x) => x.bidId === knock.id)!;
-  const expected = knock.reasonCode === "outranked" ? (o.rank ? `Ranked #${o.rank}` : "Outranked") : (words[knock.reasonCode] ?? "Refused by referee");
+  const expected = knock.reasonCode === "outranked" ? (o.rank ? `Ranked #${o.rank}` : "Outranked") : knock.label;
   assert.equal(outCard.reason, expected);
   assert.equal(outCard.reasonText, knock.reasonText);
   assert.equal(s.stillIn?.k, s.track.length);
@@ -73,7 +68,7 @@ test("beat beyond the end clamps to the final frame", () => {
   assert.deepEqual(boardAt(scene, scene.beats.length + 7), boardAt(scene, scene.beats.length));
 });
 
-test("an outranked knock reads Ranked #n, never Refused by referee", () => {
+test("an outranked knock reads Ranked #n, never Refused", () => {
   const out = boardAt(scene, scene.beats.length).out;
   const outranked = scene.offers.filter((o) => o.knock?.reasonCode === "outranked");
   assert.ok(outranked.length > 0);
@@ -87,7 +82,7 @@ test("gpu final frame: Central is on the Out rail, vetoed, and no MIRROR card wi
   const s = boardAt(scene, scene.beats.length);
   const central = s.out.find((c) => c.sellerId === "seller_6");
   assert.ok(central);
-  assert.equal(central.reason, "Vetoed by Advocate");
+  assert.equal(central.reason, "Not orderable here");
   assert.equal(central.origin, "MIRROR");
   assert.ok(![...s.track, ...s.out].some((c) => c.origin === "MIRROR" && c.state === "winner"));
 });
@@ -96,7 +91,8 @@ test("ssd final frame: Seller D is out, refused by the referee", () => {
   const ssd = projectArenaScene(SAMPLES.ssd, { sample: true });
   const d = boardAt(ssd, ssd.beats.length).out.find((c) => c.sellerId === "seller-d");
   assert.ok(d);
-  assert.equal(d.reason, "Refused by referee");
+  assert.equal(d.reason, "Refused");
+  assert.equal(d.reasonText, "Below this seller's floor price");
 });
 
 test("gpu final frame: Out cards carry the advocate's cited source, else the listing URL", () => {
@@ -107,4 +103,35 @@ test("gpu final frame: Out cards carry the advocate's cited source, else the lis
   assert.equal(frankie.sourceUrl, knock.sourceUrl);
   const central = out.find((c) => c.sellerId === "seller_6");
   assert.ok(central?.sourceUrl?.startsWith("https://www.centralcomputer.com/"));
+});
+
+const RAW = /\b[a-z]+[._][a-z_.]+\b|Advocate veto \(|Bazaar Shield block:/;
+
+test("every out card reads in plain words at every beat, never a raw rule id", () => {
+  for (const key of ["gpu", "ssd"] as const) {
+    const sc = projectArenaScene(SAMPLES[key], { sample: true });
+    for (let b = 0; b <= sc.beats.length; b++) {
+      for (const c of boardAt(sc, b).out) {
+        assert.ok(c.reason && !RAW.test(c.reason), `${key}@${b} reason: ${c.reason}`);
+        assert.ok(c.reasonText && !RAW.test(c.reasonText), `${key}@${b} reasonText: ${c.reasonText}`);
+      }
+    }
+  }
+  const out = boardAt(scene, scene.beats.length).out;
+  assert.match(out.find((c) => c.sellerId === "seller_2")!.reasonText!, /Hidden instructions/);
+  assert.equal(out.find((c) => c.sellerId === "seller_6")!.reason, "Not orderable here");
+});
+
+test("the tally sums to the bids at every beat, and the gpu final line is exact", () => {
+  for (const key of ["gpu", "ssd"] as const) {
+    const sc = projectArenaScene(SAMPLES[key], { sample: true });
+    for (let b = 0; b <= sc.beats.length; b++) {
+      const t = boardAt(sc, b).tally;
+      assert.equal(t.winner + t.outbid + t.caught + t.stillIn, t.bids, `${key}@${b}`);
+    }
+  }
+  const end = boardAt(scene, scene.beats.length);
+  assert.equal(end.tallyLine, "5 bids: 1 winner, 1 outbid, 3 caught");
+  assert.ok(end.out.every((c) => c.kind === (c.reason?.startsWith("Ranked") || c.reason === "Outranked" ? "outbid" : "caught")));
+  assert.ok(end.track.every((c) => c.kind === null));
 });
