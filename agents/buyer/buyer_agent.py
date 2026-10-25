@@ -731,7 +731,7 @@ async def start_round(ctx: Context, need: dict | None = None):
             raise MarketBridgeError("round_open_readback_invalid")
         ROUND.update(market_round_id=round_id)
     except Exception as exc:
-        ctx.logger.warning(f"Market round setup failed: {type(exc).__name__}")
+        ctx.logger.warning(f"Market round setup failed: {type(exc).__name__}: {str(exc)[:200]}")
         ROUND.update(phase="done", round_token=uuid4().hex)
         await tell_owner(ctx, "Market setup could not be verified. Nothing ordered.")
         return False
