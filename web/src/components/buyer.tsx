@@ -2,54 +2,50 @@
 // web/src/components/buyer.tsx
 // Cards for the buyer screen. Each takes a view model from lib/screens.ts; none reads SpacetimeDB directly,
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
-import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
+import { Fragment, createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
-import { Card, Code, Details, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import { type ApprovalView, type BuyerKpi, type FeedItem, type KpiDot, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
+import { Card, Code, Details, Label, OriginChip, SourceLink, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
 import { SHIELD } from "@/lib/brand";
 
-const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
+/** When every row on the page is SIM the shell already says so; then only a row that is not SIM gets its own chip. */
+export const QuietOrigin = createContext(false);
+function Chip({ origin, label }: { origin: string; label?: string }) {
+  const quiet = useContext(QuietOrigin);
+  if (quiet && origin === "SIM") return null;
+  return <OriginChip origin={origin} label={label} />;
+}
 
-export function GoalCard({ goal }: { goal: GoalView }) {
-  const a = goal.allowance;
+
+
+const DOT_CLASS = { live: "bg-live", mint: "bg-mint-mark", muted: "bg-muted" } as const;
+
+/** A status as a small dot and a plain word, never a filled pill. */
+export function StatusDot({ dot, children }: { dot: KpiDot; children: ReactNode }) {
   return (
-    <Card tactile>
-      <div className="flex items-start justify-between gap-2">
-        <Label>Goal</Label>
-        <StatePill state={goal.state} />
-      </div>
-      <p className="mb-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">
-        <q>{goal.text}</q>
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        {goal.conditions.map((c) => <Tag key={c}>{c}</Tag>)}
-        {goal.variant && <Tag>{goal.variant}</Tag>}
-        <OriginChip origin={goal.origin} />
-        <span className="text-[13px] text-muted">{GOAL_TYPE[goal.type]}</span>
-      </div>
-      <dl className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        <Stat label="Cap" value={money(goal.cap)} />
-        <Stat
-          label="Allowance per buy"
-          value={a ? money(a.perPurchase) : money(0)}
-          sub={a && a.perPurchase > 0 ? `${money(a.spent)} of ${money(a.periodLimit)} this ${a.period}, step ${a.ladderStep}` : "every buy calls you first"}
-        />
-        <Stat label="Deadline" value={goal.deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} />
-        <Stat label="Reserved" value={money(goal.reserved)} sub={goal.state === "DONE" ? "released after payment" : undefined} />
-      </dl>
-      {goal.latestNote && <p className="mt-2.5 text-[13px] text-muted">{goal.latestNote}</p>}
-      {goal.skipped.map((s) => (
-        <p key={s.part} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the {s.part}.</b> {s.text}</p>
-      ))}
-    </Card>
+    <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
+      <span className={`size-2 shrink-0 rounded-full ${DOT_CLASS[dot]}`} aria-hidden />
+      {children}
+    </span>
   );
 }
 
 export function StatePill({ state }: { state: GoalView["state"] }) {
-  if (state === "DONE") return <Pill tone="done">{stateLabel(state)}</Pill>;
-  if (state === "HOLD_FOR_CALL" || state === "FAILED") return <Pill tone="hold">{stateLabel(state)}</Pill>;
-  return <Pill tone="hunting">{stateLabel(state)}</Pill>;
+  const dot: KpiDot = state === "DONE" ? "mint" : state === "EXPIRED" || state === "FAILED" || state === "PAUSED" ? "muted" : "live";
+  return <StatusDot dot={dot}>{stateLabel(state)}</StatusDot>;
+}
+
+/** One KPI: a muted label, one bold value, one muted line and an optional status dot. The whole card links to its section. */
+export function KpiCard({ kpi }: { kpi: BuyerKpi }) {
+  return (
+    <a href={kpi.href} className="card flex min-w-0 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4 transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-pulse md:p-5">
+      <span className="text-[13px] text-muted">{kpi.label}</span>
+      <span className="truncate text-[20px]/[26px] font-semibold tabular-nums tracking-[-0.01em] text-ink sm:text-[22px]/[28px]">{kpi.value}</span>
+      <span className="text-[13px] leading-[18px] text-muted">{kpi.line}</span>
+      {kpi.dot && kpi.word && <StatusDot dot={kpi.dot}>{kpi.word}</StatusDot>}
+    </a>
+  );
 }
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */
@@ -72,7 +68,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
     field.current?.style.removeProperty("--my");
   };
   return (
-    <Card hero tactile className="flex flex-col justify-between">
+    <Card hero className="flex flex-col justify-between">
       <div onPointerMove={spot} onPointerLeave={unspot}>
         <Label>{win ? "Best price" : "Hunting"}</Label>
         {win ? (
@@ -81,7 +77,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
               <div className="relative z-10 my-1 text-[clamp(44px,5vw,56px)] font-medium leading-[1.08] tracking-[-0.025em] tabular-nums">{money(win.landed)}</div>
             </div>
             <div className="text-[15px] text-muted">
-              <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
+              <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <Chip origin={win.origin} />
             </div>
             {win.recommendation === "caution" && <div className="text-[15px] text-muted">Fit not confirmed on the page</div>}
           </>
@@ -132,7 +128,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
   }, [revealKey, reduce]);
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   return (
-    <Card tactile>
+    <Card>
       <Label>{roundLabel}</Label>
       <Details summary="How bids are ranked" className="mb-3 mt-0"><p>Ranked by quality-adjusted landed price: the referee applies one fixed rule, ties break in a fixed order, and the seller fee never enters the ranking.</p></Details>
       {bids.length === 0 ? (
@@ -177,7 +173,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pulse ${won ? "bg-mint-soft" : `hover:bg-surface-2 ${out ? "text-muted" : ""}`}`}
                     >
                       <Td className={`font-mono font-semibold ${edge} ${won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} />{won && <> <Tag>Winner</Tag></>}</Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <Chip origin={b.origin} />{won && <> <Tag>Winner</Tag></>}</Td>
                       <Td>
                         <Tag>{b.condition}</Tag>
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] tabular-nums text-muted">{l.condition} {money(l.unitPrice)}</span>)}
@@ -209,7 +205,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
 }
 
 function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
-  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted ${right ? "text-right" : "text-left"}`}>{children}</th>;
+  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px]/[16px] font-medium text-muted ${right ? "text-right" : "text-left"}`}>{children}</th>;
 }
 function Td({ children, right, className = "" }: { children: React.ReactNode; right?: boolean; className?: string }) {
   return <td className={`border-b border-line p-2.5 align-top ${right ? "whitespace-nowrap text-right" : ""} ${className}`}>{children}</td>;
@@ -236,6 +232,7 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
 }
 
 export function ShieldCard({ shield }: { shield: ShieldView | null }) {
+  const quiet = useContext(QuietOrigin);
   if (!shield) {
     return <Card stripe="ink"><Label>{SHIELD}</Label><p className="text-muted">Every listing is screened first. Blocks land here.</p></Card>;
   }
@@ -265,7 +262,9 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
       </div>
       <p className="mt-2 text-[13px] text-muted">
         {shield.control && <>Control page ({shield.control.name}, same SKU) {shield.control.verdict} in {shield.control.latencyMs.toFixed(1)} ms. </>}
-        <OriginChip origin={shield.pageOrigin} /> page, <OriginChip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.
+        {quiet
+          ? shield.version && <>Verdict from {shield.version}.</>
+          : <><Chip origin={shield.pageOrigin} /> page, <Chip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.</>}
       </p>
     </Card>
   );
@@ -285,7 +284,7 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
       {approval.wordPair && (
         <>
           <div className="my-3 rounded-xl bg-surface-2 px-4 py-4 text-center">
-            <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+            <div className="mb-1 text-[12px] font-medium text-muted">Say this, then &quot;approve&quot;</div>
             <div className="font-mono text-[32px]/[36px] font-medium tracking-[0.04em] md:text-[40px]/[44px]">{approval.wordPair}</div>
           </div>
           <p className="text-[13px] text-muted">One use. {done ? "Expired" : "Expires"} {clock(approval.codeExpiresAt)}.</p>
@@ -323,7 +322,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
       </h3>
       <p className="text-[13px] tabular-nums text-muted">{allowance === null ? "No allowance set" : `Above your ${money(allowance)} allowance`}. We are calling you.</p>
       <div className="my-3 rounded-xl bg-surface-2 px-4 py-4 text-center">
-        <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+        <div className="mb-1 text-[12px] font-medium text-muted">Say this, then &quot;approve&quot;</div>
         <div className="font-mono text-[32px]/[36px] font-medium tracking-[0.04em] md:text-[40px]/[44px]">{review.code}</div>
       </div>
       <p className="text-[13px] font-semibold">Only the call approves. Nothing on this screen can.</p>
@@ -379,8 +378,8 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
             <li key={f.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(f.at)}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
-                <span className={`mb-px block text-[12px]/[16px] font-medium uppercase tracking-[0.04em] ${FEED_STYLE[f.kind]}`}>{f.title}</span>
-                {f.text} {f.origin && <OriginChip origin={f.origin} />}
+                <span className={`mb-px block text-[12px]/[16px] font-medium ${FEED_STYLE[f.kind]}`}>{f.title.charAt(0) + f.title.slice(1).toLowerCase()}</span>
+                {f.text} {f.origin && <Chip origin={f.origin} />}
               </span>
             </li>
           ))}

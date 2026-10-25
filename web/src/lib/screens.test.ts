@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, buyerKpis, myRounds, partName, feedLabel } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -395,4 +395,73 @@ test("stateLabel: FAILED and the other states read in plain words", () => {
   assert.equal(stateLabel("FAILED"), "Could not finish");
   assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
   assert.equal(stateLabel("HUNTING"), "hunting");
+});
+
+const goalV = (over: Record<string, unknown> = {}) => ({ id: "g1", text: "A 1 TB NVMe drive", type: "part_by_date", state: "HUNTING", cap: 90, reserved: 0, deadline: new Date(T0), conditions: [], variant: "", origin: "SIM", skipped: [], allowance: null, ...over }) as unknown as Parameters<typeof buyerKpis>[0][number];
+const bidV = (over: Record<string, unknown> = {}) => ({ rank: 1, seller: "A", origin: "SIM", condition: "new", landed: 80, recommendation: "buy", why: "", won: false, ...over }) as unknown as Parameters<typeof buyerKpis>[1][number];
+
+test("buyerKpis: empty inputs give the empty-state values", () => {
+  const k = buyerKpis([], [], null, null, 0);
+  assert.deepEqual(k.map((x) => x.value), ["None yet", "No bids yet", "Nothing", "Not set"]);
+  assert.equal(k[0]!.line, "Start a search below.");
+  assert.equal(k[3]!.line, "No purchases yet");
+  assert.equal(k[2]!.dot, "mint");
+});
+
+test("buyerKpis: best offer is the lowest landed live bid, skipping vetoed and unranked", () => {
+  const bids = [bidV({ landed: 95 }), bidV({ landed: 70, recommendation: "veto" }), bidV({ landed: 60, rank: null, recommendation: "ineligible" }), bidV({ landed: 82 })];
+  const k = buyerKpis([goalV()], bids, null, null, 0);
+  assert.equal(k[1]!.value, "$82");
+  assert.equal(k[1]!.line, "vs your cap $90");
+});
+
+test("buyerKpis: a sealed open round never exposes a price", () => {
+  const k = buyerKpis([goalV()], [bidV({ landed: 75 })], null, null, 0, true);
+  assert.equal(k[1]!.value, "Sealed");
+  assert.ok(!/\d{2}/.test(k[1]!.value) && !k[1]!.line.includes("$75"));
+});
+
+test("buyerKpis: review, goal state, allowance and purchases", () => {
+  const rv = { mandateHash: "h" } as unknown as Parameters<typeof buyerKpis>[2];
+  const al = { perPurchase: 120, periodLimit: 500, period: "week", spent: 0, ladderStep: 1 };
+  const k = buyerKpis([goalV({ state: "DONE" })], [], rv, al, 2);
+  assert.equal(k[0]!.dot, "mint");
+  assert.equal(k[2]!.value, "Approve on the call");
+  assert.equal(k[2]!.dot, "live");
+  assert.equal(k[3]!.value, "$120");
+  assert.equal(k[3]!.line, "2 purchases");
+});
+
+test("feedFromRows with a scope drops events of another buyer's goal", () => {
+  const evs = [event({ id: 1n, kind: "bid_sealed", refTable: "goal", refId: "goal-mine", label: "A buyer set a goal" }), event({ id: 2n, kind: "bid_sealed", refTable: "goal", refId: "goal-other", label: "A buyer set a goal" })];
+  const all = feedFromRows(evs, []);
+  const scoped = feedFromRows(evs, [], new Set(["goal-mine"]));
+  assert.equal(scoped.length, all.length - 1);
+  assert.ok(scoped.every((f) => f.key !== "e2"));
+});
+
+test("buyerKpis: a zero allowance says every purchase needs your OK", () => {
+  const al = { perPurchase: 0, periodLimit: 0, period: "week", spent: 0, ladderStep: 0 };
+  assert.equal(buyerKpis([], [], null, al, 0)[3]!.line, "Every purchase needs your OK");
+  assert.equal(buyerKpis([], [], null, al, 2)[3]!.line, "Every purchase needs your OK · 2 purchases");
+});
+
+test("myRounds ignores another buyer's newer round and returns none without checks", () => {
+  const rs = [round({ id: "round-mine", openedAt: ts(T0) }), round({ id: "round-other", openedAt: ts(T0 + 5000) })];
+  assert.deepEqual(myRounds(rs, [{ roundId: "round-mine" }]).map((r) => r.id), ["round-mine"]);
+  assert.deepEqual(myRounds(rs, []), []);
+});
+
+test("feed renames the market's Shield label to the Smell Test", () => {
+  assert.equal(feedLabel("Bazaar Shield: block"), "Smell Test: block");
+  assert.equal(feedLabel("Shield: allow"), "Smell Test: allow");
+  assert.equal(feedLabel("Shielded by a rule"), "Shielded by a rule");
+  const f = feedFromRows([event({ kind: "verdict", label: "Bazaar Shield: block" })], []);
+  assert.equal(f[0]!.text, "Smell Test: block");
+});
+
+test("partName uses the catalog label, else title-cases the sku", () => {
+  assert.equal(partName("rtx 5070 ti"), "RTX 5070 Ti");
+  assert.equal(partName("m.2 nvme 1tb"), "M.2 Nvme 1tb");
+  assert.equal(partName(undefined), undefined);
 });
