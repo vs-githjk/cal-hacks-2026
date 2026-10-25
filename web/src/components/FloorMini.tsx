@@ -6,8 +6,9 @@
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { SHIELD } from "@/lib/brand";
+import { FISH_PATH } from "./BrandMark";
 
-const LINES = ["Goal received", "4 bids sealed", `${SHIELD} passed 3 of 4`, "Phone code confirmed"];
+const LINES = ["Goal received", "4 bids sealed", `${SHIELD}: 3 of 4 pass`, "Code confirmed"];
 const GHOSTS = [
   { color: "var(--color-ghost-1)", lap: "9s", delay: "0s" },
   { color: "var(--color-ghost-2)", lap: "11s", delay: "-3s" },
@@ -37,7 +38,9 @@ export function FloorMini({ className = "" }: { className?: string }) {
       <div className="relative mx-auto mt-5 h-[160px] w-[320px] max-w-full" aria-hidden>
         <div className="absolute inset-x-[40px] inset-y-[28px] rounded-[18px] border border-[rgba(238,243,248,0.14)]" />
         <div className="absolute inset-x-[72px] inset-y-[56px] rounded-[14px] border border-dashed border-[rgba(238,243,248,0.1)]" />
-        <div className="fm-ring absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-pac" />
+        <div className="fm-ring absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full">
+          <svg viewBox="0 0 24 24" className="h-7 w-7 text-pac"><path d={FISH_PATH} fill="currentColor" /><circle cx="16.3" cy="8.6" r="1.6" fill="var(--koi)" /></svg>
+        </div>
         {GHOSTS.map((g) => (
           <span
             key={g.color}
