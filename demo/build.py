@@ -460,7 +460,8 @@ class BuildRun:
                  sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
                  now: Callable[[], datetime] = lambda: datetime.now(timezone.utc), delay: float = 2.0, bid_window: Optional[int] = None,
                  plan_events: Optional[list] = None, checks: Optional[list] = None, on_code: Optional[Callable[[str], None]] = None,
-                 recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True):
+                 recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True,
+                 relay_signals: Optional[Callable[[], Any]] = None):
         self.plan, self.clients, self.allowance = plan, clients, allowance
         self.catalog = catalog or default_catalog
         self.price_check, self.crs_check, self.cartesia, self.secret = price_check, crs_check, cartesia, secret
@@ -468,6 +469,7 @@ class BuildRun:
         self.out_dir, self._say, self.note, self.sleep, self.clock, self.now = out_dir, say, note, sleep, clock, now
         self.delay, self.bid_window, self.on_code = delay, bid_window, on_code
         self.recheck_timeout, self.call_timing, self.real_gpu_round = recheck_timeout, call_timing or {}, real_gpu_round
+        self.relay_signals = relay_signals   # demo/crs_relay.py, run right before each round opens (best effort); None in tests
         self.plan_events = list(plan_events or [])
         self.checks = list(checks or [])
         self.ledger: dict[str, dict] = {}
@@ -552,7 +554,8 @@ class BuildRun:
 
     def _execute(self, steps: list) -> None:
         from demo import bridge
-        bridge.execute(steps, self.clients, delay=self.delay, say=self._hook, sleep=self.sleep, clock=self.clock, note=self.note)
+        bridge.execute(steps, self.clients, delay=self.delay, say=self._hook, sleep=self.sleep, clock=self.clock, note=self.note,
+                       before_round=self.relay_signals)
 
     def _run_part(self, index: int, spec: PartSpec) -> None:
         steps, ledger = part_steps(self.plan, spec, index, self.catalog(spec, index), now=self.now(), delay=self.delay,
@@ -1025,8 +1028,9 @@ def main(argv: Optional[list] = None) -> int:
             out.note("reset_demo (referee): clearing the demo tables")
             clients["referee"].call("reset_demo")
             time.sleep(1)
+        from demo import crs_relay
         from demo.run_demo import stripe_env
-        run = BuildRun(plan, clients, allowance=allowance, price_check=price_check, crs_check=bridge.default_crs_check, cartesia=cartesia,
+        run = BuildRun(plan, clients, relay_signals=lambda: crs_relay.relay_best_effort(clients["referee"], note=out.note), allowance=allowance, price_check=price_check, crs_check=bridge.default_crs_check, cartesia=cartesia,
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
                        env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=args.out_dir, say=say,
                        note=out.note, delay=args.step_delay, bid_window=args.bid_window)
