@@ -117,8 +117,8 @@ export function Arena2D({ scene, beat, frozen, reducedMotion, selected, onPick, 
           </div>
 
           {b.out.length > 0 && (
-            <div className="grid min-w-0 max-w-full gap-1.5 sm:justify-self-end">
-              <h3 className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-accent-ink/80">Out</h3>
+            <div className="grid min-w-0 max-w-full gap-1.5 rounded-xl bg-panel px-2.5 py-2 text-ink sm:justify-self-end">
+              <h3 className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-2">Out</h3>
               <div className="grid min-w-0 gap-1">
                 {b.out.map((card) => (
                   <button
@@ -126,20 +126,20 @@ export function Arena2D({ scene, beat, frozen, reducedMotion, selected, onPick, 
                     type="button"
                     onClick={() => onPick(card.key)}
                     aria-pressed={selected === card.key}
-                    className={`terrace-walk grid min-h-[44px] min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-lg px-1 py-1 text-left text-[13px] ${selected === card.key ? "ring-2 ring-accent-ink/70" : ""}`}
+                    className={`terrace-walk grid min-h-[44px] min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-lg px-1 py-1 text-left text-[13px] ${selected === card.key ? "ring-2 ring-accent" : ""}`}
                   >
                     <span className="row-span-2 self-center"><Figure color={hex(card.color)} initial={card.initial} small dim /></span>
                     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="min-w-0 break-words text-accent-ink/75 line-through">{card.name}</span>
-                      <span className="rounded bg-panel"><OriginChip origin={card.origin} /></span>
-                      {card.price && <span className="font-mono tabular-nums text-accent-ink/75">{card.price}</span>}
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-panel px-2 text-[12px] font-semibold text-coral">
+                      <span className="min-w-0 break-words text-ink-2 line-through">{card.name}</span>
+                      <OriginChip origin={card.origin} />
+                      {card.price && <span className="font-mono tabular-nums text-ink-2">{card.price}</span>}
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-soft px-2 text-[12px] font-semibold text-coral">
                         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-coral" />
                         {card.reason}
                       </span>
                     </span>
                     {(card.reasonText || sourceOf(card)) && (
-                      <span className="col-start-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12px] leading-[1.3] text-accent-ink/80">
+                      <span className="col-start-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12px] leading-[1.3] text-ink-2">
                         {card.reasonText && <span className="min-w-0 break-words">{card.reasonText}</span>}
                         {sourceOf(card) && (
                           <a
@@ -147,7 +147,7 @@ export function Arena2D({ scene, beat, frozen, reducedMotion, selected, onPick, 
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex min-h-[44px] items-center font-semibold text-accent-ink underline decoration-accent-ink/50 underline-offset-2 sm:min-h-0"
+                            className="inline-flex min-h-[44px] items-center font-semibold text-sky underline underline-offset-2 sm:min-h-0"
                           >
                             source
                           </a>
