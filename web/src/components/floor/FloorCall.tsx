@@ -84,15 +84,19 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   const floorTile: MotionStyle = { ...tileBase, ...GLASS };
   const chatTile: MotionStyle = { ...tileBase, ...WHITE };
   const bigFloor: MotionStyle = { position: "relative", width: "100%", zIndex: 0, overflow: "hidden" };
-  // The big chat is a card sized to its content: centred, at most 720 px wide, at least 260 px tall, growing with the messages up to the stage height, then it scrolls.
-  // It steps out of the way of the floor tile (below it on narrow frames, beside it otherwise).
+  // The big chat is a card sized to its content (at least 260 px tall, growing with the messages up to the stage height, then it scrolls); the frame hugs it
+  // with 24 px above and below. On wide frames the floor tile sits beside the card, in its corner; on narrow ones the card steps below (or above) the tile.
   const tileW = frameW * (frameW < PHONE ? 0.34 : 0.24);
-  const cardW = Math.min(CARD_MAX, frameW);
-  const clear = (frameW - cardW) / 2 >= tileW + INSET * 1.5;
-  const shift = clear ? 0 : tileW * 0.625 + INSET * 2;
+  const tileH = tileW * 0.625;
+  const sideW = Math.min(CARD_MAX, frameW - tileW - INSET * 2);
+  const wide = sideW >= 420;
+  const cardW = wide ? sideW : Math.min(CARD_MAX, frameW);
+  const room = frameW - cardW;
+  const left = wide ? Math.max(0, corner.endsWith("l") ? Math.max(room / 2, tileW + INSET * 2) : Math.min(room / 2, room - tileW - INSET * 2)) : room / 2;
+  const stack = wide ? 0 : Math.max(0, tileH + INSET + 12 - 24);
   const bigChat: MotionStyle = {
-    position: "relative", width: cardW, minHeight: CARD_MIN, maxHeight: bigH, margin: "0 auto", zIndex: 0, overflow: "hidden", ...WHITE,
-    marginTop: corner.startsWith("t") ? shift : 0, marginBottom: corner.startsWith("b") ? shift : 0,
+    position: "relative", width: cardW, minHeight: CARD_MIN, maxHeight: bigH, marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
+    marginTop: corner.startsWith("t") ? stack : 0, marginBottom: corner.startsWith("b") ? stack : 0,
   };
 
   const onDragEnd = () => {
@@ -128,7 +132,7 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   } as const;
 
   return (
-    <div ref={frame} className="relative w-full min-w-0 max-w-full">
+    <div ref={frame} className="relative w-full min-w-0 max-w-full" style={swapped ? { padding: "24px 0" } : undefined}>
       <motion.div ref={floorPane} layout layoutId="call-floor" transition={transition} style={swapped ? floorTile : bigFloor} {...(swapped ? tileProps : {})}>
         {floor(swapped)}
         {swapped && swapButton("Show floor full screen")}

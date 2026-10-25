@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useReducedMotion } from "motion/react";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
+import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { SAMPLES } from "@/lib/arenaFixture";
 import type { ArenaRows } from "@/lib/arenaScene";
@@ -83,7 +83,6 @@ function ReplayView({ theme, t }: { theme: Theme; t: number }) {
 const BTN = "inline-flex min-h-11 items-center rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] font-medium text-[#eef3f8] hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8fb0ff]";
 
 function FloorView({ theme: initialTheme, sample, t, paused }: { theme: Theme; sample: SampleName | null; t: number; paused: boolean }) {
-  const conn = useSpacetimeDB();
   const [rounds] = useTable(tables.round);
   const [needs] = useTable(tables.sellerNeeds);
   const [results] = useTable(tables.roundResult);
@@ -109,12 +108,6 @@ function FloorView({ theme: initialTheme, sample, t, paused }: { theme: Theme; s
 
   return (
     <div className="grid w-full min-w-0 max-w-full gap-4 overflow-hidden rounded-[24px] p-4 sm:p-6" style={{ background: INK, color: TEXT }}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-white/10 pb-3">
-        <h1 className="text-[18px] font-bold tracking-[-0.01em]">Floor</h1>
-        <p className="text-[14px] text-[#8fa0b2]">
-          {!sample && !conn.isActive ? "Connecting to the market..." : script === REFERENCE ? "No round on the market yet. Playing the reference round (SIM)." : script.sim ? "A SIM round on the market." : "The market, live."}
-        </p>
-      </div>
       <div ref={box} className="mx-auto w-full min-w-0 max-w-full" style={{ maxWidth: MAX_STAGE }}>
         <FloorCall lines={chat.lines} live={chat.live} reducedMotion={reduced} floor={(follow) => <Stage script={script} phase={clock.phase} theme={theme} reducedMotion={reduced} width={width} follow={follow} />} />
       </div>
