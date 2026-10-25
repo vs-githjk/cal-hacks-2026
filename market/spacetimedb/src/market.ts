@@ -1261,6 +1261,13 @@ export function myBidChecksView(ctx: VCtx) {
   ).sort((x, y) => (x.id < y.id ? -1 : 1));
 }
 
+/** #449 PL-3: the rounds of this buyer's own needs. The public round row carries only a need id, so /buyer cannot tell whose round is the newest without this. */
+export function myRoundsView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  if (!id) return [];
+  return [...ctx.db.need.buyerId.filter(id)].flatMap((n) => [...ctx.db.round.needId.filter(n.id)]);
+}
+
 /** #191-5: this buyer's mandates with their approval and payment rows, so /buyer shows the live approval and receipt cards. */
 export function myDealsView(ctx: VCtx) {
   const id = myBuyerId(ctx);
