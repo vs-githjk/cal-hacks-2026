@@ -3,7 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { Timestamp } from "spacetimedb";
-import { BUILD_CAP_CENTS, allowanceForBuyer, buildQuestion, homeRound, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, buildQuestion, homeRound, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import * as screens from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -332,12 +333,11 @@ test("homeRound on a round id that is not a build round says latest round, never
   assert.ok(!h.pill.includes("round-1"));
 });
 
-test("the home question uses the build's own cap, the one demo/build.py plans with", () => {
-  const py = readFileSync(new URL("../../../demo/build.py", import.meta.url), "utf8");
-  const m = /^PLANNER_CAP_CENTS = ([\d_]+)/m.exec(py);
-  assert.ok(m, "PLANNER_CAP_CENTS not found in demo/build.py");
-  assert.equal(BUILD_CAP_CENTS, Number(m[1]!.replaceAll("_", "")));
-  assert.equal(buildQuestion(BUILD_CAP_CENTS), "Who builds the best 1440p gaming PC under $2,100?");
+test("the home question names no dollar figure: the cap is the buyer's own, so no number is hard-coded (#410)", () => {
+  const q = buildQuestion();
+  assert.equal(q, "Who builds the best 1440p gaming PC under the buyer's cap?");
+  assert.doesNotMatch(q, /\$|\d,\d{3}/);
+  assert.ok(!("BUILD_CAP_CENTS" in screens), "the hard-coded build cap is gone");
 });
 
 // ---- The skipped-owned-part line names the part that was skipped, not always the PSU (rehearsal 22:17).

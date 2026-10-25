@@ -7,7 +7,7 @@ import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
 import { OriginChip, Label, clock } from "@/components/ui";
 import { Question } from "@/components/arena";
-import { BUILD_CAP_CENTS, asOrigin, buildQuestion, homeRound, latestRound } from "@/lib/screens";
+import { asOrigin, buildQuestion, homeRound, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
@@ -74,7 +74,7 @@ export default function Home() {
       </section>
 
       <Question
-        question={buildQuestion(BUILD_CAP_CENTS)}
+        question={buildQuestion()}
         status={home.status === "none" ? "none" : home.status === "open" ? "open" : "verdict"}
         detail={home.status === "none" ? undefined : home.title}
         origin="SIM"

@@ -286,12 +286,9 @@ export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undef
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
-/** The demo build's cap: demo/build.py PLANNER_CAP_CENTS, which the market's build rounds are planned with (a test keeps them equal). SIM. */
-export const BUILD_CAP_CENTS = 210_000;
-
-/** The home question, worded with the build's cap in whole dollars. */
-export function buildQuestion(capCents: number): string {
-  return `Who builds the best 1440p gaming PC under $${Math.round(capCents / 100).toLocaleString("en-US")}?`;
+/** The home question. It names no dollar figure: the cap is the buyer's own (demo/build.py), so a number here would drift from it. */
+export function buildQuestion(): string {
+  return "Who builds the best 1440p gaming PC under the buyer's cap?";
 }
 
 export interface HomeRound { status: "none" | "open" | "closed"; title: string; pill: string }
