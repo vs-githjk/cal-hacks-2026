@@ -1,4 +1,4 @@
-/* Tech Bazaar design system v2 (docs/design-system/handoff.md). Cool canvas, one action colour (pulse), Geist + Geist Mono.
+/* Fish Market design system v2 (docs/design-system/handoff.md). Cool canvas, one action colour (pulse), Geist + Geist Mono.
    Every colored state also says its word (LIVE, MIRROR, SIM, WON, VETOED); hue never carries meaning alone. */
 @import "tailwindcss";
 
@@ -44,6 +44,9 @@
   --color-checker: #0f9d76;
   --color-tag-bg: #eef3f8;
   --color-tag-ink: #0b1b2b;
+  /* The one Fish Market brand accent (koi): the mark's eye and brand moments only, never a state. */
+  --color-koi: #ff7a45;
+  --color-koi-soft: #fff1ea;
   --shadow-ring: 0 0 0 1.5px #0b1b2b24, 0 1px 2px #0b1b2b14;
   --shadow-card: 0 1px 2px #0b1b2b0f, 0 8px 24px #0b1b2b0f;
   --shadow-lift: 0 24px 60px #0b1b2b2e;
@@ -121,6 +124,7 @@
   --shadow-lift: 0 24px 60px #000000a6;
   --shadow-glass: inset 0 0.5px 0 #ffffff1f, 0 0 0 0.5px #eef3f81f, 0 4px 40px 8px #00000066, 0 34px 70px -34px #00000099;
   --shadow-focus: 0 0 0 4px #8fb0ff4d;
+  --color-koi-soft: #ff7a4529;
 }
 
 :root {
@@ -157,6 +161,17 @@
   --slate: var(--color-slate);
   --slate-soft: var(--color-slate-soft);
   --radius: var(--radius-lg);
+  --shadow: var(--shadow-lift);
+  --koi: var(--color-koi);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --pulse: var(--color-pulse);
+  --pulse-ink: var(--color-pulse-ink);
+  --live: var(--color-live);
+  --live-soft: var(--color-live-soft);
+  --mint-mark: var(--color-mint-mark);
+  --coral-mark: var(--color-coral-mark);
+  --referee: var(--color-referee);
   color-scheme: light;
 }
 
@@ -218,6 +233,13 @@ body {
 
 main, header, footer { position: relative; z-index: 1; }
 ::selection { background: var(--color-pulse); color: var(--color-pulse-ink); }
+
+/* Glass card (one per screen), the live dot (Prism's heartbeat) and the 8 px rise. */
+.glass { background: var(--color-glass); border-radius: 20px; box-shadow: var(--shadow-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.dot { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: currentColor; opacity: 0.5; animation: tb-pulse var(--t-pulse) var(--ease-out) infinite; }
+.rise { animation: tb-rise var(--t-slow) cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes tb-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* In-arena pulse, kept by name for the screens that use it. */
 @keyframes torch {

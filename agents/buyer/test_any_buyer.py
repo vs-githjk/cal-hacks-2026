@@ -43,12 +43,10 @@ def test_hunt_and_handoff_carry_the_fresh_buyer_id(runtime, monkeypatch):
     buyer.MARKET_BUYER.reset_mock()
     ready_for_requote(buyer)
     buyer.ROUND.update(market_buyer_id=BID)
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_k: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True, "within_allowance": False, "retired": False}
     asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
     tx = buyer.ROUND["transaction"]
     assert tx["buyer_id"] == BID
-    assert buyer.MARKET_BUYER.create_mandate.call_args.kwargs["buyer_id"] == BID
+    assert buyer.MARKET_REFEREE.create_mandate.call_args.kwargs["buyer_id"] == BID  # the referee creates it, never the buyer identity
     assert tx["mandate"]["buyer_id"] == BID
     calls = repr(buyer.MARKET_BUYER.mock_calls) + repr(tx)
     assert "vidyut" not in calls.lower()
@@ -250,7 +248,7 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
     assert referee.create_mandate.call_args.kwargs["buyer_id"] == BID
     referee.issue_approval_code.assert_called_once_with(mandate_hash, "424242")
     assert referee.record_approval.call_args.kwargs == {"mandate_hash": mandate_hash, "method": "voice_code", "approved_by": BID,
-                                                        "voice_approval_id": "va-1", "code": "424242"}
+                                                        "voice_approval_id": "va-1", "code": "424242"}  # the code issued for this call
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
     assert not any(isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no owner chat message at all
@@ -645,7 +643,6 @@ def test_chat_owner_off_the_allowlist_is_told_the_beta_limit(runtime, monkeypatc
     ready_for_requote(buyer)
     buyer.ROUND["market_buyer_id"] = BID
     buyer.MARKET_REFEREE.buyer_contact.return_value = {"display_name": "Asha", "phone": "+14155550111"}
-    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
     monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "")
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
     _beta_env(monkeypatch)
@@ -701,7 +698,6 @@ def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, 
     _real_service(buyer, monkeypatch)
     ready_for_requote(buyer)
     buyer.ROUND["market_buyer_id"] = BID
-    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
     ctx = Context()
     transaction = buyer._create_pending_transaction(1)
     asyncio.run(buyer._run_owner_approval(ctx, 1, buyer.ROUND["owner"], transaction))
@@ -710,7 +706,7 @@ def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, 
     assert not buyer.MARKET_REFEREE.record_approval.called
 
 STRANGER = "agent1qstranger"
-GOAL_TEXT = "a new GPU under $800 by Friday"
+GOAL_TEXT = "a new RTX 4070 Super under $800 by Friday"  # a named card: a bare GPU gets a question (RT-15)
 
 
 @pytest.fixture(autouse=True)

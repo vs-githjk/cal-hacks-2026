@@ -1,16 +1,17 @@
 import type { MetadataRoute } from "next";
+import { BRAND, BRAND_SHORT, DESCRIPTION } from "@/lib/brand";
 
-// The dashboard lives under /buyer, so the installed app opens there. Colours are the Frontier sand and ink.
+// The dashboard lives under /buyer, so the installed app opens there. Colours are the design system v2 canvas; the icons are the Fish Market mark (public/icons/mark.svg).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Tech Bazaar",
-    short_name: "Bazaar",
-    description: "A refereed arena where seller agents bid for a buyer's computer gear.",
+    name: BRAND,
+    short_name: BRAND_SHORT,
+    description: DESCRIPTION,
     start_url: "/buyer",
     scope: "/",
     display: "standalone",
-    background_color: "#f1e7d3",
-    theme_color: "#f1e7d3",
+    background_color: "#eef3f8",
+    theme_color: "#0b1b2b",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

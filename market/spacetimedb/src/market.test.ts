@@ -2056,7 +2056,7 @@ describe('sealed rounds leak nothing before close (supersedes #416)', () => {
 });
 
 describe('#374 sign_up_buyer', () => {
-  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana' }) =>
+  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana', phone: '+14155550100' }) =>
     run(who, (ctx) => m.signUpBuyer(ctx, a)) as string;
 
   it('creates a b_<8> buyer bound to the caller with a $0 per-buy allowance', () => {
@@ -2087,13 +2087,21 @@ describe('#374 sign_up_buyer', () => {
     expect(() => signUp(OWNER)).toThrow(/already/);
   });
 
-  it('phone is optional and validated; the name is required and capped', () => {
-    const a = signUp(as('new-3'), { displayName: 'Bo' });
-    expect(h.db.buyerProfile.buyerId.find(a)!.phone).toBe('');
+  it('#449 PL-15 a sign-up without a phone is refused: purchases are approved by a call', () => {
+    for (const phone of [undefined, '', '   ']) {
+      const who = as(`nophone-${phone ?? 'none'}`);
+      expect(() => signUp(who, { displayName: 'Bo', phone })).toThrow('a phone number is required: purchases are approved by a call');
+      expect(h.db.role.identity.find(idOf(who))).toBeFalsy();
+    }
+    expect([...h.db.buyerProfile.iter()].filter((p) => p.displayName === 'Bo')).toHaveLength(0);
+    expect(signUp(as('new-3'), { displayName: 'Bo', phone: '+442079460958' })).toMatch(/^b_/);
+  });
+
+  it('the phone is validated; the name is required and capped', () => {
     for (const bad of ['abc', '4155550100', '+0123456789'])
       expect(() => signUp(as(`bad-${bad}`), { displayName: 'Bo', phone: bad })).toThrow('phone must start with + and a country code, like +14155550100');
-    expect(() => signUp(as('new-5'), { displayName: '   ' })).toThrow();
-    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100) });
+    expect(() => signUp(as('new-5'), { displayName: '   ', phone: '+14155550100' })).toThrow(/display name required/);
+    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100), phone: '+14155550100' });
     expect(h.db.buyerProfile.buyerId.find(b)!.displayName).toHaveLength(60);
   });
 
@@ -2121,7 +2129,7 @@ describe('#374 telemetry', () => {
   };
 
   it('counts the market with one row and no per-user data', () => {
-    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
@@ -2179,7 +2187,7 @@ describe('#374 post_need referee path', () => {
   let NEW: Auth, buyerId: string;
   beforeEach(() => {
     NEW = as('need-new');
-    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-r', buyerId })));
   });
 
