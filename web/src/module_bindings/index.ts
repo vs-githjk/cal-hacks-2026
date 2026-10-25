@@ -61,6 +61,7 @@ import SetAllowanceReducer from "./set_allowance_reducer";
 import SetBuyerProfileReducer from "./set_buyer_profile_reducer";
 import SetFloorReducer from "./set_floor_reducer";
 import SetFloorForConditionReducer from "./set_floor_for_condition_reducer";
+import SignUpBuyerReducer from "./sign_up_buyer_reducer";
 
 // Import all procedure arg schemas
 
@@ -307,6 +308,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_buyer_profile", SetBuyerProfileReducer),
   __reducerSchema("set_floor", SetFloorReducer),
   __reducerSchema("set_floor_for_condition", SetFloorForConditionReducer),
+  __reducerSchema("sign_up_buyer", SignUpBuyerReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

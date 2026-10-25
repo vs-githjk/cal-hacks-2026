@@ -158,7 +158,10 @@ export const lossReport = table(
 );
 
 /** The buyer's display name for screens (#37 item 9). Private: only that buyer sees it (my_buyer_profile). */
-export const buyerProfile = table({ name: 'buyer_profile' }, { buyerId: t.string().primaryKey(), displayName: t.string(), origin: t.string() });
+export const buyerProfile = table({ name: 'buyer_profile' }, { buyerId: t.string().primaryKey(), displayName: t.string(), origin: t.string(), phone: t.string().default('') }); // phone appended last so a publish migrates in place
+
+/** #374: fixed-window counter for open sign-ups (single row, id 0). Private. */
+export const signupThrottle = table({ name: 'signup_throttle' }, { id: t.u32().primaryKey(), windowStart: t.timestamp(), count: t.u32() });
 
 /** Failed pairing attempts per caller, across every code. */
 export const pairAttempt = table({ name: 'pair_attempt' }, { identity: t.identity().primaryKey(), failures: t.u32() });
@@ -412,7 +415,7 @@ export const roundTimer = table(
 );
 
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, approvalCode, lossReport,
+  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, signupThrottle, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer,

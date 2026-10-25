@@ -1551,3 +1551,59 @@ describe('#191 approval and mandate holes', () => {
     for (const who of [BOB, A, STRANGER]) expect(m.myDealsView(h.viewContext(who) as any)).toHaveLength(0);
   });
 });
+
+describe('#374 sign_up_buyer', () => {
+  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana' }) =>
+    run(who, (ctx) => m.signUpBuyer(ctx, a)) as string;
+
+  it('creates a b_<8> buyer bound to the caller with a $0 per-buy allowance', () => {
+    const who = as('new-1');
+    const buyerId = signUp(who, { displayName: '  Ana  ', phone: '+1 415 555 0100' });
+    expect(buyerId).toMatch(/^b_[a-z0-9]{8}$/);
+    const r = h.db.role.identity.find(idOf(who))!;
+    expect({ role: r.role, subjectId: r.subjectId }).toEqual({ role: 'buyer', subjectId: buyerId });
+    const p = h.db.buyerProfile.buyerId.find(buyerId)!;
+    expect(p.displayName).toBe('Ana');
+    expect(p.phone).toBe('+14155550100');
+    expect(h.db.allowance.buyerId.find(buyerId)!.perPurchaseLimit).toBe(0);
+  });
+
+  it('a deal for the new buyer needs their call', () => {
+    const who = as('new-1');
+    const buyerId = signUp(who);
+    const w = win(780, C, 'seller-c', who, buyerId);
+    mint(mandateArgs({ ...w, buyerId, hash: 'hx', id: 'mdt-x', nonce: 'nx' }));
+    expect(h.db.mandate.hash.find('hx')!.withinAllowance).toBe(false);
+  });
+
+  it('refuses a second sign-up, an existing buyer and the owner', () => {
+    const who = as('new-2');
+    signUp(who);
+    expect(() => signUp(who)).toThrow(/already/);
+    expect(() => signUp(VIDYUT)).toThrow(/already/);
+    expect(() => signUp(OWNER)).toThrow(/already/);
+  });
+
+  it('phone is optional and validated; the name is required and capped', () => {
+    const a = signUp(as('new-3'), { displayName: 'Bo' });
+    expect(h.db.buyerProfile.buyerId.find(a)!.phone).toBe('');
+    expect(() => signUp(as('new-4'), { displayName: 'Bo', phone: 'abc' })).toThrow();
+    expect(() => signUp(as('new-5'), { displayName: '   ' })).toThrow();
+    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100) });
+    expect(h.db.buyerProfile.buyerId.find(b)!.displayName).toHaveLength(60);
+  });
+
+  it('throttles at 30 per 10 minutes', () => {
+    for (let i = 0; i < m.SIGNUP_MAX; i++) signUp(as(`t-${i}`));
+    expect(() => signUp(as('t-over'))).toThrow(/try again/);
+    advance(10 * 60 * 1000 + 1);
+    expect(signUp(as('t-later'))).toMatch(/^b_/);
+  });
+
+  it('my_role shows the owner, nothing for a stranger', () => {
+    const v = m.myRoleView(h.viewContext(OWNER) as any);
+    expect(v).toHaveLength(1);
+    expect(v[0]!.role).toBe('owner');
+    expect(m.myRoleView(h.viewContext(STRANGER) as any)).toEqual([]);
+  });
+});
