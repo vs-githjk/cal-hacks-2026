@@ -1,0 +1,85 @@
+[
+ {
+  "name": "TEAMGROUP 32GB T-Create Expert DDR5 6000 MHz UDIMM Memory Kit (2 x 16GB, Black)",
+  "price": 569.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1845648-REG/team_group_ctced532g6000hc30dc01_t_create_classic_32gb_ddr5.html",
+  "sku": 1845648,
+  "mpn": "CTCED532G6000HC30DC01",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Silicon Power 32GB Zenith 6000 MT/s DDR5 Desktop Memory Kit (2 x 16GB, Black)",
+  "price": 579.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1801353-REG/silicone_power_sp032gxlwu60afde_32gb_2x16gb_zenith_ddr5_6000.html",
+  "sku": 1801353,
+  "mpn": "SP032GXLWU60AFDE",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Silicon Power 32GB Zenith 6000 MT/s DDR5 Desktop Memory Kit (2 x 16GB, White)",
+  "price": 579.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1801354-REG/silicone_power_sp032gxlwu60afdg_32gb_2x16gb_zenith_ddr5_6000.html",
+  "sku": 1801354,
+  "mpn": "SP032GXLWU60AFDG",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "AMD Ryzen Threadripper 7970X 32-Core & 128GB T-Create Master DDR5 6000 MHz ECC RDIMM Memory Kit (4 x 32GB)",
+  "price": 7149.98,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1984640-REG/amd_ryzen_threadripper_7970x_32_core.html",
+  "sku": 1984640,
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ }
+]

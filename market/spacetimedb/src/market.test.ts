@@ -1587,7 +1587,8 @@ describe('#374 sign_up_buyer', () => {
   it('phone is optional and validated; the name is required and capped', () => {
     const a = signUp(as('new-3'), { displayName: 'Bo' });
     expect(h.db.buyerProfile.buyerId.find(a)!.phone).toBe('');
-    expect(() => signUp(as('new-4'), { displayName: 'Bo', phone: 'abc' })).toThrow();
+    for (const bad of ['abc', '4155550100', '+0123456789'])
+      expect(() => signUp(as(`bad-${bad}`), { displayName: 'Bo', phone: bad })).toThrow('phone must start with + and a country code, like +14155550100');
     expect(() => signUp(as('new-5'), { displayName: '   ' })).toThrow();
     const b = signUp(as('new-6'), { displayName: 'x'.repeat(100) });
     expect(h.db.buyerProfile.buyerId.find(b)!.displayName).toHaveLength(60);
@@ -1642,5 +1643,55 @@ describe('#374 telemetry', () => {
       expect(names.length).toBeGreaterThan(1);
       for (const n of names) expect(n).not.toMatch(/amount|price|total|cap|spend|limit|payee|phone|name|card|email/i);
     }
+  });
+});
+
+describe('#374 agent views', () => {
+  const views = (who: Auth) => {
+    const v = h.viewContext(who) as any;
+    return [m.agentBuyerContactView(v), m.agentOpenGoalsView(v), m.agentGoalItemsView(v)];
+  };
+  let NEW: Auth, buyerId: string;
+  beforeEach(() => {
+    NEW = as('agent-new');
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+1 415 555 0100' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ buyerId, id: 'goal-n' })));
+  });
+
+  it('the referee sees contacts, open goals and their items', () => {
+    const [contacts, goals, items] = views(REF);
+    expect(contacts).toContainEqual({ buyerId, displayName: 'Ana', phone: '+14155550100' });
+    expect(goals.map((g: any) => g.id)).toContain('goal-n');
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i: any) => goals.some((g: any) => g.id === i.goalId))).toBe(true);
+  });
+
+  it('everyone else gets nothing, the owner and the buyer included', () => {
+    for (const who of [STRANGER, VIDYUT, NEW, OWNER]) for (const v of views(who)) expect(v).toEqual([]);
+  });
+});
+
+describe('#374 post_need referee path', () => {
+  const NOT_ONLY = /only for one of that buyer/;
+  let NEW: Auth, buyerId: string;
+  beforeEach(() => {
+    NEW = as('need-new');
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-r', buyerId })));
+  });
+
+  it('the referee posts a need for the buyer\'s own goal', () => {
+    run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-r' })));
+    expect(h.db.need.id.find('need-r')?.buyerId).toBe(buyerId);
+  });
+
+  it('refuses an unknown goal and another buyer\'s goal', () => {
+    expect(() => run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'nope' })))).toThrow(NOT_ONLY);
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-v' })));
+    expect(() => run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-v' })))).toThrow(NOT_ONLY);
+  });
+
+  it('another buyer still cannot post for this buyer', () => {
+    expect(() => run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-r' })))).toThrow(/acts only for/);
   });
 });

@@ -1,5 +1,6 @@
 """#260 Market Pulse orchestrator: windows, "only N days", CRS counts, no rival price or cap in a seller note, SIM labels.
 No network, no key, no agent started: Tiger Data is a fake source or a fake connection, the CRS cache is a temp file."""
+import asyncio
 import copy
 import json
 import sys
@@ -15,6 +16,27 @@ from data.tiger import store, trends  # noqa: E402
 
 FIXTURE = ROOT / "agents" / "pulse" / "fixtures" / "round1_sample.json"
 NOW = datetime(2026, 10, 24, 18, 0, tzinfo=timezone.utc)
+
+
+def fresh_loop():
+    """Make a new current loop (never run) for the thread. A helper that builds an agent after an earlier asyncio.run in the
+    same test calls this again, since asyncio.run clears the current loop each time it returns."""
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
+
+@pytest.fixture(autouse=True)
+def _own_event_loop():
+    """uagents' Agent() takes the thread's current event loop when it is built. Python 3.12 raises "no current event loop"
+    once an earlier asyncio.run (in this file or in any test file that ran before it) has cleared it, so every test here
+    gets a fresh loop that is never run (the manifest publish the agent schedules would be a network call), and the
+    thread is left with none afterwards, the state asyncio.run leaves."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield
+    asyncio.set_event_loop(None)
+    loop.close()
+
+
 CAP = 1234.56            # the buyer's cap: no module under test is ever given it, and no note may carry it
 CATALOG = {"seller_1": {"name": "Byte Bros Outlet", "skus": ["rtx 4070 super 12gb", "psu 750w"]},
            "seller_3": {"name": "FlashDeal Frankie", "skus": ["rtx 4070 super 12gb", "psu 850w"]},
@@ -552,14 +574,11 @@ class FakeCtx:
 
 
 def _run_chat(tmp_path, monkeypatch, verdict, text):
-    import asyncio
 
     from uagents_core.contrib.protocols.chat import ChatMessage, TextContent
     monkeypatch.delenv("PULSE_MAILBOX", raising=False)
     monkeypatch.delenv("AGENTS_MAILBOX", raising=False)
-    # uagents grabs the current event loop when an agent is built; asyncio.run below leaves none, so give it a fresh one that is
-    # never run (the manifest publish it schedules would be a network call)
-    asyncio.set_event_loop(asyncio.new_event_loop())
+    fresh_loop()
     agent = O.build_agent(pulse(tmp_path), port=8921)
     import common
     monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": verdict, "reasons": []})
@@ -658,15 +677,14 @@ def _round_handler(agent):
 
 
 def _feed(tmp_path, monkeypatch, sender, senders_env, verdict="allow"):
-    import asyncio
     monkeypatch.delenv("PULSE_MAILBOX", raising=False)
     monkeypatch.delenv("AGENTS_MAILBOX", raising=False)
     if senders_env is None:
         monkeypatch.delenv("PULSE_ROUND_SENDERS", raising=False)
     else:
         monkeypatch.setenv("PULSE_ROUND_SENDERS", senders_env)
-    asyncio.set_event_loop(asyncio.new_event_loop())
     p = pulse(tmp_path)
+    fresh_loop()
     agent = O.build_agent(p, port=8922)
     import common
     monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": verdict, "reasons": []})
@@ -710,7 +728,6 @@ def test_round_senders_parse_commas_and_spaces_and_drop_blanks(monkeypatch):
 
 
 def _seller_chat(tmp_path, monkeypatch, mode):
-    import asyncio
 
     from uagents_core.contrib.protocols.chat import ChatMessage, TextContent
     monkeypatch.delenv("PULSE_MAILBOX", raising=False)
@@ -719,7 +736,7 @@ def _seller_chat(tmp_path, monkeypatch, mode):
         monkeypatch.delenv("PULSE_SELLER_CHAT", raising=False)
     else:
         monkeypatch.setenv("PULSE_SELLER_CHAT", mode)
-    asyncio.set_event_loop(asyncio.new_event_loop())
+    fresh_loop()
     agent = O.build_agent(pulse(tmp_path), port=8923)
     import common
     monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": "allow", "reasons": []})

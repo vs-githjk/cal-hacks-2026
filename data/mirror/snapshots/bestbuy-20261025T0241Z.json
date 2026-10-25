@@ -1,0 +1,77 @@
+[
+ {
+  "id": "bestbuy:9a072ed6c281",
+  "category": "gpu",
+  "name": "MSI - NVIDIA GeForce RTX 5070 Ti 16G GAMING TRIO OC 16GB GDDR7 PCI Express Gen 5 Graphics Card - Black",
+  "model_number": "G507T-16GTC",
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+  "snapshot_id": "bestbuy-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:21+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
+   "price": 1249.99,
+   "was_price": 1249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  }
+ },
+ {
+  "id": "bestbuy:eae46d340516",
+  "category": "gpu",
+  "name": "GIGABYTE - NVIDIA GeForce RTX 5070 Ti GAMING OC 16G GDDR7 PCI Express 5.0 Graphics Card - Black",
+  "model_number": "GV-N507TGAMING OC-16GD",
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+  "snapshot_id": "bestbuy-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:21+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-nvidia-geforce-rtx-5070-ti-gaming-oc-16g-gddr7-pci-express-5-0-graphics-card-black/J3ZW9X7J5X/sku/6618884",
+   "price": 1249.99,
+   "was_price": 1249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  }
+ },
+ {
+  "id": "bestbuy:96ed4374c759",
+  "category": "gpu",
+  "name": "PNY - NVIDIA GeForce RTX 5080 Overclocked 16GB GDDR7 PCI Express 5.0 Graphics Card with Triple Fan - Black",
+  "model_number": "VCG508016TFXPB1-O",
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5080"
+  },
+  "price": 1849.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/pny-nvidia-geforce-rtx-5080-overclocked-16gb-gddr7-pci-express-5-0-graphics-card-with-triple-fan-black/JXF2C46ZZH/sku/6616903",
+  "snapshot_id": "bestbuy-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:21+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/pny-nvidia-geforce-rtx-5080-overclocked-16gb-gddr7-pci-express-5-0-graphics-card-with-triple-fan-black/JXF2C46ZZH/sku/6616903",
+   "price": 1849.99,
+   "was_price": 1849.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  }
+ }
+]

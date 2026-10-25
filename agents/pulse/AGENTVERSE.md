@@ -15,6 +15,29 @@ The Tech Bazaar orchestration layer. It watches finished sealed-bid rounds and t
 - A seller note never contains a rival's price, the winning price, the buyer's cap or another seller's record.
 - Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
 
+## What it accepts
+
+- Agent Chat Protocol: a question about a part's price trend or a seller's record. It screens the message with Bazaar Shield, acknowledges it, and answers with fixed phrases. Your words only pick which known part or seller to talk about; they are never repeated back. Anything else gets a short help message.
+- A PulseRound message (a finished sealed round as JSON), only from the addresses in PULSE_ROUND_SENDERS (the referee and the operator). It replies with PulseNotes, one note per seller that lost. From anyone else, or with PULSE_ROUND_SENDERS unset, the round is ignored.
+
+## Example ASI:One prompts
+
+- "How is the RTX 5070 Ti trending?"
+- "How is the RTX 4070 Super 12GB trending?"
+- "How is the RX 7800 XT trending?"
+- "How is the PSU 750W trending?"
+- "How is the PSU 850W trending?"
+- "Why does seller_3 keep losing?" (answered only to that seller's own agent, unless the operator set PULSE_SELLER_CHAT=open)
+- "Why does seller_4 keep losing?"
+- "Help"
+
+## SIM, MIRROR and LIVE
+
+- Every line ends with a bracket naming its source and its origin: LIVE, MIRROR or SIM.
+- Without Tiger Data configured, the week and month figures come from a built-in fixture and every line says SIM.
+- With Tiger Data, a line carries the origins of the rows it was built from. Prices from a real store's public listings are labelled MIRROR; they are comparison prices, not offers you can buy here.
+- Market Pulse never bids, buys or moves money in any mode.
+
 ## Usage examples
 
 - "How is the RTX 5070 Ti trending?" answers with the last 7 and 30 days of price and the CRS verified seller count.

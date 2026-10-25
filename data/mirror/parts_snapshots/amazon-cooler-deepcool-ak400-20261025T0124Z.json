@@ -1,0 +1,23 @@
+[
+ {
+  "id": "amazon:74c171f84112",
+  "category": "cooler",
+  "name": "",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": null,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "amazon",
+  "snapshot_id": "amazon-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:20+00:00",
+  "listing": {
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]

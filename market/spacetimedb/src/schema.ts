@@ -420,6 +420,7 @@ export const TelemetryRow = t.object('TelemetryRow', {
   shieldCatches: t.u32(), callsPlaced: t.u32(), approvals: t.u32(), denials: t.u32(), errors: t.u32(),
   roundP50Ms: t.u32(), roundP95Ms: t.u32(),
 });
+export const AgentBuyerContactRow = t.object('AgentBuyerContactRow', { buyerId: t.string(), displayName: t.string(), phone: t.string() });
 export const TelemetryAgentRow = t.object('TelemetryAgentRow', { agent: t.string(), events: t.u32() });
 
 const spacetimedb = schema({

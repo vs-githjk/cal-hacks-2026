@@ -1,0 +1,127 @@
+[
+ {
+  "id": "microcenter:64ff5cb1f1ff",
+  "category": "memory",
+  "name": "Vengeance LPX 32GB (2 x 16GB) DDR4-3200 PC4-25600 CL16 Dual Channel Desktop Memory Kit CMK32GX4M2E3200C16 - Black",
+  "model_number": "046201",
+  "condition": "unknown",
+  "attrs": {
+   "type": "DDR4",
+   "speed_mhz": 3200,
+   "modules": 2,
+   "form": "DIMM"
+  },
+  "price": 399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/616299/corsair-vengeance-lpx-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-cmk32gx4m2e3200c16-black",
+  "snapshot_id": "microcenter-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:29+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/616299/corsair-vengeance-lpx-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-cmk32gx4m2e3200c16-black",
+   "price": 399.99,
+   "stock": "14 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "14 IN STOCK"
+  },
+  "maker_model": "CMK32GX4M2E3200C16"
+ },
+ {
+  "id": "microcenter:6b0ef5be4dfa",
+  "category": "memory",
+  "name": "T-FORCE VULCAN Z 32GB (2 x 16GB) DDR4-3200 PC4-25600 CL16 Dual Channel Desktop Memory Kit TLZGD432G3200H - Gray",
+  "model_number": "226266",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/632929/teamgroup-t-force-vulcan-z-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-tlzgd432g3200h-gray",
+  "snapshot_id": "microcenter-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:29+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/632929/teamgroup-t-force-vulcan-z-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-tlzgd432g3200h-gray",
+   "price": 249.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:d09969016f4f",
+  "category": "memory",
+  "name": "Vengeance Performance 32GB (2 x 16GB) DDR4-3200 PC4-25600 CL22 Dual Channel Laptop Memory Kit CMSX32GX4M2A3200C22 - Black",
+  "model_number": "965442",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/705087/corsair-vengeance-performance-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl22-dual-channel-laptop-memory-kit-cmsx32gx4m2a3200c22-black",
+  "snapshot_id": "microcenter-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:29+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/705087/corsair-vengeance-performance-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl22-dual-channel-laptop-memory-kit-cmsx32gx4m2a3200c22-black",
+   "price": 259.99,
+   "stock": "8 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "8 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:002180d17ddb",
+  "category": "memory",
+  "name": "T-FORCE Delta RGB 32GB (2 x 16GB) DDR4-3200 PC4-25600 CL16 Dual Channel Desktop Memory Kit TF4D432G3200HC1 - White",
+  "model_number": "226308",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/632934/teamgroup-t-force-delta-rgb-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-tf4d432g3200hc1-white",
+  "snapshot_id": "microcenter-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:29+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/632934/teamgroup-t-force-delta-rgb-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-tf4d432g3200hc1-white",
+   "price": 259.99,
+   "stock": "2 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "2 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:baf7d42fb4a0",
+  "category": "memory",
+  "name": "Viper Steel 32GB (2 x 16GB) DDR4-3200 PC4-25600 CL16 Dual Channel Desktop Memory Kit PVS432G320C6K - Black",
+  "model_number": "915090",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/699047/patriot-viper-steel-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-pvs432g320c6k-black",
+  "snapshot_id": "microcenter-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:29+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/699047/patriot-viper-steel-32gb-(2-x-16gb)-ddr4-3200-pc4-25600-cl16-dual-channel-desktop-memory-kit-pvs432g320c6k-black",
+   "price": 299.99,
+   "stock": "6 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "6 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

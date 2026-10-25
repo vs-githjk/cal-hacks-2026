@@ -27,7 +27,7 @@ import payment
 import status
 import state as buyer_state
 from market_bridge import MarketBridge, MarketBridgeError
-from advocate.mock_data import BASELINE
+from advocate.real_data import cached_shield_baseline
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
@@ -36,7 +36,7 @@ from data.mirror import not_partners  # common put the repo root on sys.path
 
 ADVICE_TIMEOUT_S = 15
 RETIRED_NEED_HISTORY = 8
-ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs the buyer's APPROVE
+ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs a phone-call approval
 CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
 SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
@@ -451,6 +451,9 @@ HELD_PHASES = {"pending_approval", "paused", "approved", "submitted", "uncertain
 
 
 async def handle_text(ctx: Context, sender: str, text: str):
+    if sender == ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "approve":
+        await tell(ctx, sender, "Approval happens on a phone call, not in chat. Nothing was approved or ordered.")
+        return
     if ROUND.get("pending_hold"):
         if sender == ROUND.get("owner"):
             await tell(ctx, sender, "A previous approved or submitted purchase is unresolved. I cannot start another goal yet.")
@@ -459,11 +462,6 @@ async def handle_text(ctx: Context, sender: str, text: str):
         return
     tx = ROUND.get("transaction")
     if isinstance(tx, dict) and tx.get("phase") in {"pending_approval", "paused", "approved", "submitted", "uncertain"}:
-        pending_command = hunt.command(text)
-        if (tx.get("phase") == "pending_approval" and sender == ROUND.get("owner")
-                and pending_command and pending_command[0] == "approve"):
-            await approve(ctx, pending_command[1], sender=sender)
-            return
         if sender == ROUND.get("owner"):
             await tell(ctx, sender, "A purchase is pending approval or settlement. It remains held; no new goal can start.")
         else:
@@ -483,9 +481,6 @@ async def handle_text(ctx: Context, sender: str, text: str):
     terminal = (ROUND.get("phase") in ("done", "expired", "paused")
                 or state in ("DONE", "EXPIRED", "PAUSED"))
     cmd = hunt.command(text)
-    if cmd and cmd[0] == "approve" and ROUND.get("owner") == sender:
-        await approve(ctx, cmd[1], sender=sender)
-        return
     if cmd and cmd[0] == "cancel" and ROUND.get("owner") == sender:
         if ROUND.get("order"):
             await tell_owner(ctx, "An order has already been placed; CANCEL cannot reverse it. Nothing was canceled.")
@@ -503,8 +498,8 @@ async def handle_text(ctx: Context, sender: str, text: str):
         # never let that text start a new round or approve anything.
         if not ROUND.get("told_waiting"):
             ROUND["told_waiting"] = True
-            await tell(ctx, sender, "A deal is waiting for your decision. Reply APPROVE followed by the bid number, "
-                                    "or CANCEL to drop it and start a new goal.")
+            await tell(ctx, sender, "A deal is waiting for your approval call. "
+                                    "Reply CANCEL to drop it and start a new goal.")
         return
     if ROUND.get("order") and not released:
         # Keep the uncertain payment and its ids bound until a completion signal exists.
@@ -661,7 +656,8 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
             and bid.get("supplier_id") == SELLER_ADDRS[sender]):
         ctx.logger.info("stale bid ignored")
         return
-    verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, BASELINE)
+    references = cached_shield_baseline(i.get("sku_spec") for i in ROUND.get("need", {}).get("items", []) if isinstance(i, dict))
+    verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, references)  # real dated prices, re-read past the TTL
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     reasons = None if verdict.get("verdict") == "allow" else "; ".join(verdict.get("reasons", [])) or verdict.get("verdict")
@@ -869,8 +865,6 @@ async def conclude(ctx: Context, reviewed: bool):
         else:
             status = f"CRS: {'exempt' if b['supplier_id'] in eligible_suppliers else 'ineligible'} - {reason}"
         out.append(f"   {status}")
-        if ROUND["personas"].get(b["id"]):
-            out.append(f'   "{ROUND["personas"][b["id"]]}"')
         out.append(f"   Advocate: {rec}")
         for w in card.get("warnings", [])[:3]:
             out.append(f"   ! {w['text']} (source: {w['source_url']})")
@@ -913,43 +907,29 @@ async def conclude(ctx: Context, reviewed: bool):
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     set_state("HOLD_FOR_CALL")
-    out.append(f"This purchase needs your private approval. Reply APPROVE {best} to refresh bid #{best} "
-               f"(quote good for {hunt.QUOTE_TTL_S // 60} minutes).")
+    ready = eligible_for_order(best)
+    out.append(f"This purchase needs your approval by phone call. Getting a fresh quote for bid #{best} "
+               f"(good for {hunt.QUOTE_TTL_S // 60} minutes), then calling you." if ready
+               else f"Bid #{best} is unreviewed or vetoed, so I will not order it. Nothing ordered.")
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     await tell_owner(ctx, "\n".join(out))
+    if ready and ROUND.get("round_token") == token and ROUND.get("need", {}).get("id") == need_id:
+        await _start_requote(ctx, best)
 
-async def approve(ctx: Context, n: int, *, sender: str | None = None):
+async def _start_requote(ctx: Context, n: int):
+    """Ask the seller to reconfirm bid n; on_requote then saves the deal and starts the approval call."""
     bids = ROUND.get("bids", [])
-    tx = ROUND.get("transaction")
-    if ROUND.get("phase") == "decided" and tx is None:
-        if (sender != ROUND.get("owner") or sender in (None, WEB) or ROUND.get("owner_context") is not ctx
-                or ROUND.get("owner_session") != getattr(ctx, "session", None)
-                or not 1 <= n <= len(bids) or not eligible_for_order(n)):
-            await tell_owner(ctx, f"No reviewed bid #{n} is ready for approval.")
-            return
-        if business_now().timestamp() - ROUND.get("quoted_at", 0) > hunt.QUOTE_TTL_S:
-            await restart_card(ctx, f"Bid #{n}'s quote expired; the round needs a fresh review.")
-            return
-        ROUND.update(phase="requote", pick=n, deadline=business_now().timestamp() + ADVICE_TIMEOUT_S)
-        log_msg(ctx, "buyer", bids[n - 1]["supplier_id"], "bid_request")
-        await ctx.send(common.address(bids[n - 1]["supplier_id"]),
-                       common.BidRequest(need_json=json.dumps(sealed(ROUND["need"]))))
+    if ROUND.get("phase") != "decided" or ROUND.get("transaction") is not None or not eligible_for_order(n):
+        await tell_owner(ctx, f"No reviewed bid #{n} is ready for approval.")
         return
-    if ROUND.get("order"):
-        await tell_owner(ctx, f"Already ordered: {ROUND['order']['id']}.")
-    elif (ROUND.get("phase") != "pending_approval" or not isinstance(tx, dict)
-          or tx.get("phase") != "pending_approval" or not 1 <= n <= len(bids)):
-        await tell_owner(ctx, f"No bid #{n} is waiting for approval.")
-    elif (sender != ROUND.get("owner") or sender in (None, WEB) or ROUND.get("owner_context") is not ctx
-          or ROUND.get("owner_session") != getattr(ctx, "session", None)):
-        await tell_owner(ctx, "Open the original private buyer chat to approve this deal. Nothing was ordered.")
-    elif (not eligible_for_order(n) or bids[n - 1].get("id") != tx.get("bid_id")
-          or tx.get("need_id") != ROUND.get("need", {}).get("id")
-          or bids[n - 1].get("total_landed_price") != tx.get("deal", {}).get("amount")):
-        await tell_owner(ctx, f"Bid #{n} is unreviewed, vetoed, or CRS-ineligible; not ordering it. Cancel or wait for a reviewed round.")
-    else:
-        await _run_owner_approval(ctx, n, sender, tx)
+    if business_now().timestamp() - ROUND.get("quoted_at", 0) > hunt.QUOTE_TTL_S:
+        await restart_card(ctx, f"Bid #{n}'s quote expired; the round needs a fresh review.")
+        return
+    ROUND.update(phase="requote", pick=n, deadline=business_now().timestamp() + ADVICE_TIMEOUT_S)
+    log_msg(ctx, "buyer", bids[n - 1]["supplier_id"], "bid_request")
+    await ctx.send(common.address(bids[n - 1]["supplier_id"]),
+                   common.BidRequest(need_json=json.dumps(sealed(ROUND["need"]))))
 
 
 def _approval_service():
@@ -1017,7 +997,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
     key = (owner, transaction["deal_id"], transaction["mandate"]["hash"])
     if ROUND.get("approval_wait_key") == key:
         return  # this exact approval call is already in progress
-    # Install before the call starts so a repeated APPROVE cannot start a second call.
+    # Install before the call starts so this deal can never start a second call.
     ROUND["approval_wait_key"] = key
 
     async def send_private(text: str):
@@ -1029,15 +1009,16 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         if client is None:
             # Fail closed: no approval without the phone call. The transaction is left as it was.
             ROUND["phase"] = "pending_approval"
-            await send_private("Phone approval is not set up, so this deal cannot be approved. "
-                               "Nothing was approved and nothing was ordered.")
+            await send_private("Phone approval is not set up, so I could not place the call. "
+                               "Nothing was approved, nothing was ordered and nothing was paid.")
             return
         result = await _phone_approval(transaction, send_private, client, _approval_service())
         if not result.approved or not isinstance(result.record, dict) or result.record.get("channel") != "phone":
             transaction["phase"] = "denied" if result.record and result.record.get("result") == "denied" else "paused"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
-            await tell_owner(ctx, "Approval was not granted. No order was placed; the deal remains held until it expires.")
+            await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
+                                  "the deal remains held until it expires.")
             return
         record = result.record
         mandate = dict(transaction["mandate"])
@@ -1145,10 +1126,13 @@ async def on_requote(ctx: Context, fresh: dict):
         buyer_state.save_transaction(state_db(), transaction)
         ROUND["transaction"] = transaction
         ROUND["phase"] = "pending_approval"
-        await tell_owner(ctx, f"Fresh quote saved for deal {deal_id}. Reply APPROVE {n} to start your private approval.")
+        await tell_owner(ctx, f"Fresh quote saved for deal {deal_id}. Calling you now to approve bid #{n}: "
+                              f"{bid['persona']} at ${amount:.2f}.")
     except Exception as exc:
         ctx.logger.warning(f"Purchase approval could not be prepared: {type(exc).__name__}")
         await tell_owner(ctx, "Private purchase state is unavailable. Nothing was ordered.")
+    else:
+        await _run_owner_approval(ctx, n, ROUND["owner"], transaction)
 
 
 def eligible_for_order(n: int) -> bool:

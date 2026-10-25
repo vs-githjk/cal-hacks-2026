@@ -1,0 +1,160 @@
+[
+ {
+  "id": "ebay_sold:dd0536357aea",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE V3 120mm CPU Cooler 2000RPM 4-Pin",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 28.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/336858090643?nordt=true",
+  "snapshot_id": "ebay_sold-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:06+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/336858090643?nordt=true",
+   "price": 28.0,
+   "shipping_type": "paid",
+   "shipping": "6.39",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 6.39,
+   "shipping_captured": true,
+   "landed_price": 34.39,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "ebay_sold:7e1fb78d7500",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE Black CPU Air Cooler, 6 Heat Pipes Heat..",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 39.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/287528953466?nordt=true",
+  "snapshot_id": "ebay_sold-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:06+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/287528953466?nordt=true",
+   "price": 39.99,
+   "shipping_type": "free",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 39.99,
+   "availability": null
+  },
+  "maker_model": "Peerless Assassin 120 SE"
+ },
+ {
+  "id": "ebay_sold:61fd2e611a52",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE Black CPU Air Cooler, 6 Heat Pipes Heat..",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 39.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/227476077931?nordt=true",
+  "snapshot_id": "ebay_sold-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:06+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/227476077931?nordt=true",
+   "price": 39.95,
+   "shipping_type": "free",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 39.95,
+   "availability": null
+  },
+  "maker_model": "Peerless Assassin 120 SE"
+ },
+ {
+  "id": "ebay_sold:6ab0b5c2f589",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 SE CPU Air Cooler 6 Heat Pipes Dual 120Mm TL-C12C PWM Fan",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 35.7,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/278096331847?nordt=true",
+  "snapshot_id": "ebay_sold-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:06+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/278096331847?nordt=true",
+   "price": 35.7,
+   "shipping_type": "paid",
+   "shipping": "23.27",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 23.27,
+   "shipping_captured": true,
+   "landed_price": 58.97,
+   "availability": null
+  },
+  "maker_model": "Peerless Assassin 120 SE"
+ },
+ {
+  "id": "ebay_sold:efced1bf5748",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 SE ARGB White CPU Air Cooler 6 Heat Pipes Dual 120mm",
+  "model_number": null,
+  "condition": "open-box",
+  "attrs": {},
+  "price": 30.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/336858141334?nordt=true",
+  "snapshot_id": "ebay_sold-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:06+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/336858141334?nordt=true",
+   "price": 30.0,
+   "shipping_type": "paid",
+   "shipping": "6.86",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 6.86,
+   "shipping_captured": true,
+   "landed_price": 36.86,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]

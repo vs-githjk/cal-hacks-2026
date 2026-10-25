@@ -1,0 +1,467 @@
+{
+ "approval": {
+  "sellers": 3,
+  "state": "waiting",
+  "total": 1964.92
+ },
+ "budget": 2100.0,
+ "buyerId": "vidyut",
+ "checks": [
+  {
+   "a": "cpu",
+   "b": "board",
+   "detail": "socket AM5 matches",
+   "rule": "socket",
+   "source": "fit.cpu_socket",
+   "state": "ok"
+  },
+  {
+   "a": "board",
+   "b": "ram",
+   "detail": "DDR5 matches",
+   "rule": "ddr",
+   "source": "fit.ram_type",
+   "state": "ok"
+  },
+  {
+   "a": "gpu",
+   "b": "psu",
+   "detail": "750 W PSU covers est. load 517 W, need 750 W (25% headroom, maker recommends 750 W); PSU has a native 16-pin (12V-2x6) cable",
+   "rule": "power",
+   "source": "fit.psu_wattage",
+   "state": "ok"
+  },
+  {
+   "a": "gpu",
+   "b": "case",
+   "detail": "GPU length 303 mm within case clearance 305 mm",
+   "rule": "case_room",
+   "source": "fit.gpu_length",
+   "state": "ok"
+  },
+  {
+   "a": "cpu",
+   "b": "cooler",
+   "detail": "cooler supports AM5",
+   "rule": "socket",
+   "source": "fit.cooler_socket",
+   "state": "ok"
+  },
+  {
+   "a": "cooler",
+   "b": "case",
+   "detail": "cooler height 155 mm within case clearance 160 mm",
+   "rule": "cooler_height",
+   "source": "fit.cooler_height",
+   "state": "ok"
+  },
+  {
+   "a": "board",
+   "b": "case",
+   "detail": "ATX board fits a case for ATX, Micro ATX",
+   "rule": "case_room",
+   "source": "fit.form_factor",
+   "state": "ok"
+  },
+  {
+   "a": "psu",
+   "b": "case",
+   "detail": "ATX PSU fits a case for ATX",
+   "rule": "case_room",
+   "source": "fit.psu_form_factor",
+   "state": "ok"
+  }
+ ],
+ "events": [
+  {
+   "at": "2026-10-25T04:31:19Z",
+   "kind": "plan",
+   "origin": "SIM",
+   "parts": [],
+   "text": "Plan: 6 parts to buy, PSU and case owned, budget $2,100"
+  },
+  {
+   "at": "2026-10-25T04:31:19Z",
+   "kind": "round_open",
+   "origin": "SIM",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: round open"
+  },
+  {
+   "at": "2026-10-25T04:31:19Z",
+   "kind": "round_open",
+   "origin": "SIM",
+   "parts": [
+    "cpu"
+   ],
+   "text": "8-core CPU: round open"
+  },
+  {
+   "at": "2026-10-25T04:31:19Z",
+   "kind": "round_open",
+   "origin": "SIM",
+   "parts": [
+    "ram"
+   ],
+   "text": "32 GB DDR5: round open"
+  },
+  {
+   "at": "2026-10-25T04:31:19Z",
+   "kind": "round_open",
+   "origin": "SIM",
+   "parts": [
+    "ssd"
+   ],
+   "text": "2 TB NVMe: round open"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "clash",
+   "origin": "SIM",
+   "parts": [
+    "board",
+    "cpu"
+   ],
+   "text": "Clash: Bargain Bin Hardware (SIM)'s ATX motherboard vs the 8-core CPU: CPU socket AM5 does not match board socket LGA1700"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "replan",
+   "origin": "SIM",
+   "parts": [
+    "board"
+   ],
+   "text": "Re-plan: ATX motherboard: Bargain Bin Hardware (SIM) is out, a new round for ATX motherboard for AM5 (need-goal-build-1-board-2)"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "board",
+    "cpu"
+   ],
+   "text": "ATX motherboard for AM5: fit re-check green, socket AM5 matches"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Amazon.com (sells direct) out, condition: offered unknown, goal asks for new or open-box"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "SIM",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Bargain Bin Hardware (SIM) out, advocate veto (fit.gpu_length): The card is longer than your case allows"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...020083 (handle not captured) out, condition: offered used, goal asks for new or open-box"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...082384 (handle not captured) out, over the cap"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...263900 (handle not captured) out, over the cap"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...405699 (handle not captured) out, over the cap"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...442526 (handle not captured) out, over the cap"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...801385 (handle not captured) out, over the cap"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: eBay seller of item ...824742 (handle not captured) out, advocate veto (fit.gpu_length): The card is longer than your case allows"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "SIM",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Fair Price PC (SIM) out, over the cap"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "SIM",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Lowball Direct (SIM) out, referee: below the seller's own floor"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "MIRROR",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Micro Center out, condition: offered unknown, goal asks for new or open-box"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "knockout",
+   "origin": "SIM",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Shady Sam's Deals (SIM) out, advocate veto (advocate.condition): The listing page shows a different condition than the seller claims"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "gpu"
+   ],
+   "text": "RTX 5070 Ti: Gadget Grove (Vedant) locked at $1,286.02"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "cpu"
+   ],
+   "text": "8-core CPU: Bargain Bin Hardware (SIM) locked at $265.05"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "round_open",
+   "origin": "SIM",
+   "parts": [
+    "board"
+   ],
+   "text": "ATX motherboard: round open"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "board"
+   ],
+   "text": "ATX motherboard: Fair Price PC (SIM) locked at $158.10"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "ram"
+   ],
+   "text": "32 GB DDR5: Gadget Grove (SIM) locked at $93.00"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "ssd"
+   ],
+   "text": "2 TB NVMe: Bargain Bin Hardware (SIM) locked at $111.60"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "round_open",
+   "origin": "SIM",
+   "parts": [
+    "cooler"
+   ],
+   "text": "Tower cooler: round open"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [
+    "cooler"
+   ],
+   "text": "Tower cooler: Fair Price PC (SIM) locked at $51.15"
+  },
+  {
+   "at": "2026-10-25T04:31:20Z",
+   "kind": "locked",
+   "origin": "SIM",
+   "parts": [],
+   "text": "Build ready: 6 parts, 3 sellers, $1,964.92"
+  }
+ ],
+ "goalId": "goal-build-1",
+ "origin": "SIM",
+ "parts": [
+  {
+   "budget": 0,
+   "label": "750 W PSU",
+   "origin": "SIM",
+   "part": "psu",
+   "status": "owned"
+  },
+  {
+   "budget": 0,
+   "label": "Case (305 mm GPU room)",
+   "origin": "SIM",
+   "part": "case",
+   "status": "owned"
+  },
+  {
+   "budget": 1300.0,
+   "champion": {
+    "bidId": "bid-need-goal-build-1-gpu-gadget-grove",
+    "landed": 1286.02,
+    "origin": "SIM",
+    "persona": "Gadget Grove (Vedant)",
+    "sellerId": "gadget-grove",
+    "sourceUrl": ""
+   },
+   "label": "RTX 5070 Ti",
+   "needId": "need-goal-build-1-gpu",
+   "origin": "SIM",
+   "part": "gpu",
+   "roundId": "round-goal-build-1-gpu",
+   "status": "locked"
+  },
+  {
+   "budget": 285.0,
+   "champion": {
+    "bidId": "bid-need-goal-build-1-cpu-bargain-bin",
+    "landed": 265.05,
+    "origin": "SIM",
+    "persona": "Bargain Bin Hardware (SIM)",
+    "sellerId": "bargain-bin",
+    "sourceUrl": ""
+   },
+   "label": "8-core CPU",
+   "needId": "need-goal-build-1-cpu",
+   "origin": "SIM",
+   "part": "cpu",
+   "roundId": "round-goal-build-1-cpu",
+   "status": "locked"
+  },
+  {
+   "budget": 170.0,
+   "champion": {
+    "bidId": "bid-need-goal-build-1-board-2-fair-price-pc",
+    "landed": 158.1,
+    "origin": "SIM",
+    "persona": "Fair Price PC (SIM)",
+    "sellerId": "fair-price-pc",
+    "sourceUrl": ""
+   },
+   "label": "ATX motherboard",
+   "needId": "need-goal-build-1-board-2",
+   "origin": "SIM",
+   "part": "board",
+   "reason": "Re-plan: ATX motherboard: Bargain Bin Hardware (SIM) is out, a new round for ATX motherboard for AM5 (need-goal-build-1-board-2)",
+   "roundId": "round-goal-build-1-board-2",
+   "status": "replanned"
+  },
+  {
+   "budget": 100.0,
+   "champion": {
+    "bidId": "bid-need-goal-build-1-ram-gadget-grove",
+    "landed": 93.0,
+    "origin": "SIM",
+    "persona": "Gadget Grove (SIM)",
+    "sellerId": "gadget-grove",
+    "sourceUrl": ""
+   },
+   "label": "32 GB DDR5",
+   "needId": "need-goal-build-1-ram",
+   "origin": "SIM",
+   "part": "ram",
+   "roundId": "round-goal-build-1-ram",
+   "status": "locked"
+  },
+  {
+   "budget": 120.0,
+   "champion": {
+    "bidId": "bid-need-goal-build-1-ssd-bargain-bin",
+    "landed": 111.6,
+    "origin": "SIM",
+    "persona": "Bargain Bin Hardware (SIM)",
+    "sellerId": "bargain-bin",
+    "sourceUrl": ""
+   },
+   "label": "2 TB NVMe",
+   "needId": "need-goal-build-1-ssd",
+   "origin": "SIM",
+   "part": "ssd",
+   "roundId": "round-goal-build-1-ssd",
+   "status": "locked"
+  },
+  {
+   "budget": 55.0,
+   "champion": {
+    "bidId": "bid-need-goal-build-1-cooler-fair-price-pc",
+    "landed": 51.15,
+    "origin": "SIM",
+    "persona": "Fair Price PC (SIM)",
+    "sellerId": "fair-price-pc",
+    "sourceUrl": ""
+   },
+   "label": "Tower cooler",
+   "needId": "need-goal-build-1-cooler",
+   "origin": "SIM",
+   "part": "cooler",
+   "roundId": "round-goal-build-1-cooler",
+   "status": "locked"
+  }
+ ],
+ "spent": 1964.92
+}

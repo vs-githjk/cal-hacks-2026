@@ -194,7 +194,7 @@ export function issuePairCode(ctx: Ctx, buyerId: string) {
 export const SIGNUP_MAX = 30;
 export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
-const PHONE_RE = /^\+?[0-9][0-9 ()-]{6,19}$/;
+const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;
 
 /**
  * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
@@ -205,8 +205,8 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
   if (isOwner(ctx) || had) throw new SenderError(`already signed up: this identity is ${had ? `a ${had.role}` : 'the owner'}`);
   const name = displayName.trim().slice(0, 60);
   if (!name) throw new SenderError('display name required');
-  const ph = (phone ?? '').trim();
-  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must be 7 to 20 digits, optionally starting with +');
+  const ph = (phone ?? '').trim().replace(/[ ()-]/g, '');
+  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
   const now = ms(ctx.timestamp);
   const th = ctx.db.signupThrottle.id.find(0);
   const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;
@@ -221,7 +221,7 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
     buyerId = `b_${raw}`;
   } while ([...ctx.db.role.subjectId.filter(buyerId)].length || ctx.db.buyerProfile.buyerId.find(buyerId) || ctx.db.allowance.buyerId.find(buyerId));
   ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
-  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph.replace(/[ ()-]/g, '') });
+  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph });
   ctx.db.allowance.insert(fromRule({ ...newAllowance(buyerId, now), per_purchase_limit: 0 }));
   event(ctx, 'buyer_signed_up', 'buyer_profile', buyerId, 'A new buyer signed up');
   return buyerId;
@@ -279,8 +279,14 @@ export interface PostNeedArgs {
   items: { skuSpec: string; condition: string; allowedConditions: string[]; variant: string; quantity: number; unit: string }[];
 }
 
+/** The referee path is for the buyer agent acting for a self-signed-up buyer, and only against that buyer's active goal. */
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
-  requireRole(ctx, 'post_need', ['buyer'], a.buyerId);
+  const who = requireRole(ctx, 'post_need', ['buyer', 'referee'], a.buyerId);
+  if (who.role === 'referee') {
+    const g = ctx.db.goal.id.find(a.goalId);
+    if (!g || g.buyerId !== a.buyerId) throw new SenderError(`not allowed: the referee posts a need only for one of that buyer's goals; ${a.goalId || 'no goal'} is not ${a.buyerId}'s`);
+    if (g.state !== 'ACTIVE') throw new SenderError(`not allowed: goal ${a.goalId} is not active`);
+  }
   allowanceFor(ctx, a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');
@@ -1021,4 +1027,26 @@ export function telemetryAgentView(ctx: AVCtx) {
   const by = new Map<string, number>();
   for (const e of ctx.db.agentEvent.iter()) by.set(e.agentName, (by.get(e.agentName) ?? 0) + 1);
   return [...by].map(([agent, events]) => ({ agent, events })).sort((a, b) => (a.agent < b.agent ? -1 : a.agent > b.agent ? 1 : 0));
+}
+
+// ---------------------------------------------------------------- #374 referee-only views for the buyer and caller agents
+// The agents act for every buyer through the referee identity; my_* views show only the caller's own rows.
+
+const isReferee = (ctx: VCtx) => roleOf(ctx)?.role === 'referee';
+
+/** Referee only: who to call for each buyer. */
+export function agentBuyerContactView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.buyerProfile.iter()].map((p) => ({ buyerId: p.buyerId, displayName: p.displayName, phone: p.phone }));
+}
+
+/** Referee only: goals still open. Open means state ACTIVE, the only state postGoal writes. */
+export function agentOpenGoalsView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.goal.iter()].filter((g) => g.state === 'ACTIVE');
+}
+
+/** Referee only: the items of the open goals. */
+export function agentGoalItemsView(ctx: VCtx) {
+  return agentOpenGoalsView(ctx).flatMap((g) => [...ctx.db.goalItem.goalId.filter(g.id)]);
 }
