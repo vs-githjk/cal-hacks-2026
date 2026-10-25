@@ -13,10 +13,13 @@ import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
 from data.mirror import not_partners
 
+from advocate import explain, tco
+
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
-VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller", "mirror_not_orderable"}
+# unverified_veto: the seller was asked about an unclear field and did not answer (advocate.clarify); never made by advise alone
+VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller", "mirror_not_orderable", "unverified_veto"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
@@ -273,8 +276,43 @@ def _group_shills(bids):
     return out
 
 
+NO_ANSWER_WHY = {"no_answer": "did not answer in time", "unclear": "gave an answer that did not name a condition",
+                 "blocked": "sent a reply that Smell Test would not pass on", "cannot_ask": "could not be asked over chat"}
+
+
+def _is_condition_gap(w) -> bool:
+    return w["kind"] == "unverified" and "does not state a condition" in w["text"]
+
+
+def _clarification_warnings(bid, clar, wanted):
+    """What a seller's answer (or silence) to ONE clarifying question about a condition the page does not state means.
+    Decided here by code from a closed answer (clarify.parse_answer gives one of CONDITIONS or nothing); the reply text
+    never reaches a warning. An answered question cites the seller's reply; silence is an unverified veto."""
+    lines = [l for l in bid["lines"] if l["sku_spec"] in (clar.get("skus") or [])] or bid["lines"][:1]
+    sku = _item(lines[0]["sku_spec"], wanted)
+    url = lines[0].get("listing_url", "")
+    total = bid["total_landed_price"]
+    if clar.get("status") == "answered" and clar.get("condition") in CONDITIONS:
+        said = _cond(clar["condition"])
+        claimed = {_norm(l.get("offered_condition")) for l in lines} & CONDITIONS
+        if claimed and clar["condition"] not in claimed:
+            return [_warn("condition", f"{sku} is listed as {_cond(next(iter(claimed)))}, the seller's own chat reply says {said}. "
+                          "The condition claim did not match the seller's reply.", url, total)]
+        out = [_warn("seller_confirmed", f"{sku}: the listing page does not state a condition; the seller said {said} in chat, "
+                     "which is the seller's word only.", url, 0, rule_id="advocate.unsourced")]
+        asked = _norm((wanted or {}).get(lines[0]["sku_spec"]))
+        if asked and clar["condition"] != asked:
+            out.append(_warn("spec", f"You asked for {_cond(asked)}; the seller says this is {said}.", url, 0))
+        return out
+    why = NO_ANSWER_WHY.get(clar.get("status"), NO_ANSWER_WHY["no_answer"])
+    return [_warn("unverified_veto", f"{sku}: the listing does not confirm the condition and the seller {why}, "
+                  "so this stays unverified.", url, total, rule_id="advocate.unverified")]
+
+
 def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls: list[dict],
-           owned: dict | None = None) -> list[dict]:
+           owned: dict | None = None, clarifications: dict | None = None, track: dict | None = None) -> list[dict]:
+    """One card per bid. `clarifications` is {bid_id: answer record} from advocate.clarify (the seller's reply to one
+    question, or its absence); `track` is the seller track record tco.py reads. Both default to none: nothing changes."""
     owned = owned if owned is not None else need.get("owned", {})
     wanted = {i["sku_spec"]: i.get("condition") for i in need.get("items", [])}
     cards = []
@@ -283,6 +321,9 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
     staged = []
     for bid in bids:
         warnings = _card_warnings(bid, owned, baseline, records, recalls, wanted)
+        clar = (clarifications or {}).get(bid["id"])
+        if clar and bid.get("lines"):
+            warnings = [w for w in warnings if not _is_condition_gap(w)] + _clarification_warnings(bid, clar, wanted)
         if bid["id"] in shills:
             kept, key_type = shills[bid["id"]]
             warnings.append(_warn("same_seller", f"Same seller as {kept['supplier_id']}: shares {key_type}. "
@@ -303,9 +344,20 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
         reason = call_reason(warnings, bid)  # from the full list, so a veto reason is never cut
         warnings = sorted(warnings, key=lambda w: -w["dollar_impact"])[:MAX_WARNINGS]
         # #89 closed output: recommendation, rule_id, reason (template only) and source_url at the top level
-        cards.append({"need_id": need["id"], "bid_id": bid["id"], "recommendation": rec,
-                      "rule_id": reason["rule_id"], "reason": reason["summary"], "source_url": reason["source_url"],
-                      "warnings": warnings, "wait_until": "", "call_reason": reason})
+        card = {"need_id": need["id"], "bid_id": bid["id"], "recommendation": rec,
+                "rule_id": reason["rule_id"], "reason": reason["summary"], "source_url": reason["source_url"],
+                "warnings": warnings, "wait_until": "", "call_reason": reason}
+        if clarifications and bid["id"] in clarifications:  # the cited question and answer; closed fields, no free text
+            card["clarification"] = {k: clarifications[bid["id"]].get(k) for k in
+                                     ("status", "question", "condition", "answer_excerpt", "answered_at", "seller")}
+        cards.append(explain.attach(card))
+    ranking = tco.rank(need, bids, cards, track)  # advisory: never changes a recommendation or best_bid
+    rows = {r["bid_id"]: r for r in ranking["ranking"]}
+    for card in cards:
+        row = rows.get(card["bid_id"])
+        card["tco"] = ({"rank": row["rank"], "landed": row["landed"], "tco": row["tco"], "components": row["components"],
+                        "missing": row["missing"], "thin_record": row["thin_record"]} if row else {"rank": None})
+        card["worth_it_note"] = ranking["note"]
     return cards
 
 
