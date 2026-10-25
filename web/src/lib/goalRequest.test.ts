@@ -387,3 +387,11 @@ test("a deadline of today picked at 7:30 pm is still in the future", () => {
   assert.ok(Date.parse(args.deadline) > evening.getTime());
   assert.match(args.deadline, /^\d{4}-\d{2}-\d{2}T/);
 });
+
+test("#465 a price followed by w/ (with) is never read as a power supply wattage", () => {
+  assert.deepEqual(matchCatalog("RTX 5070 Ti, $700 w/ warranty"), { sku: "rtx 5070 ti" });
+  assert.deepEqual(matchCatalog("rtx 4070 super under $700 w/ free shipping"), { sku: "rtx 4070 super 12gb" });
+  assert.equal(catalogSku("$750 w/ warranty, a 750W PSU"), "psu 750w"); // a real wattage still maps
+  assert.equal(catalogSku("850 watt power supply"), "psu 850w");
+  assert.equal(catalogSku("a 750w psu"), "psu 750w");
+});

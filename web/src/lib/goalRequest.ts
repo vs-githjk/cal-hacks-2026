@@ -133,7 +133,8 @@ export function matchCatalog(text: string): { sku: string } | { problem: string 
   }
   if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) gpu.add("other");
   const psu = new Set<string>(); // named wattages: "psu 850w", "psu 750w", or "other" for one sellers do not carry
-  for (const w of t.matchAll(/\b(\d{3,4})\s*-?\s*w(?:atts?)?\b/g)) psu.add(w[1] === "850" ? "psu 850w" : w[1] === "750" ? "psu 750w" : "other");
+  // #465: never a price ("$700") and never "w/" (with): "$700 w/ warranty" is not a 700 W power supply
+  for (const w of t.matchAll(/(?<![$\d,.])\b(\d{3,4})\s*-?\s*w(?:atts?)?\b(?!\/)/g)) psu.add(w[1] === "850" ? "psu 850w" : w[1] === "750" ? "psu 750w" : "other");
   const vagueGpu = gpu.size === 0 && /\b(?:gpu|graphics card|video card)\b/.test(t);
   const vaguePsu = psu.size === 0 && /\b(?:psu|power supply)\b/.test(t);
   // "in case", "case of" and the buyer's own case ("fits my case", "my mid-tower case") are not a request for a PC case
