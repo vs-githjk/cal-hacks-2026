@@ -46,7 +46,7 @@ def test_an_approval_with_only_a_note_shows_the_note():
 def test_no_explanation_has_a_long_dash_or_a_model_in_it():
     for b in (bid("b1", "seller_1", 540, offered="new", page="open-box"), bid("b2", "seller_2", 590), bid("b3", "seller_3", 700)):
         text = cards([b])[0]["explanation"]
-        assert "—" not in text and "–" not in text
+        assert "\u2014" not in text and "\u2013" not in text
 
 
 def test_the_model_may_reword_but_the_card_keeps_its_decision():

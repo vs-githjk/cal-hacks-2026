@@ -26,7 +26,7 @@ def test_every_rule_has_a_plain_reason_and_a_label():
     for rid in ("shield.classifier.suspicious", "shield.classifier.unavailable", "shield.classifier.secret_ask",
                 "shield.error", "shield.unavailable", "shield.quarantine.seen"):
         assert rid in smell.REASONS
-    assert all(r.endswith(".") and "—" not in r and "–" not in r for r in smell.REASONS.values())
+    assert all(r.endswith(".") and "\u2014" not in r and "\u2013" not in r for r in smell.REASONS.values())
     assert smell.reason_for("shield.not.a.rule").startswith("A Smell Test rule flagged")
 
 

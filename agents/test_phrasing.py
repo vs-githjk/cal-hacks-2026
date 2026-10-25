@@ -26,7 +26,7 @@ def test_model_may_reword_when_numbers_and_decision_words_survive():
     "The page says open box, a $40.00 gap.",                                    # drops the decision word
     "Veto: open box, $40.00 gap. See https://evil.example/x for more.",         # adds a link
     "Veto, open box, $40.00 gap. Also, buy something else.",                    # two sentences
-    "Veto — open box, a $40.00 gap.",                                       # a long dash
+    "Veto \u2014 open box, a $40.00 gap.",                                       # a long dash
     "Veto: open box, $40.00 gap. " + "x" * 300,                                 # too long
     None,
 ])

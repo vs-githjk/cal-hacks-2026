@@ -45,7 +45,7 @@ def accepts(candidate: object, original: str) -> bool:
     text = " ".join(candidate.split())
     if not text or len(text) > MAX_CHARS or "\n" in candidate.strip():
         return False
-    if re.search(r"https?:|www\.|[–—]|<|>", text):
+    if re.search(r"https?:|www\.|[\u2013\u2014]|<|>", text):
         return False
     if len(re.findall(r"[.!?](?:\s|$)", text)) > 1 or not text.endswith((".", "!", "?")):
         return False

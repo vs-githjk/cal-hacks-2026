@@ -69,7 +69,7 @@ def test_one_question_goes_to_the_seller_and_the_answer_is_recorded_with_its_tim
     out = ask(make(wire), [bid("b1", "seller_1", 590, offered="new", page="")])
     assert len(wire.sent) == 1 and wire.sent[0][0] == AGENT
     q = wire.sent[0][1]
-    assert "rtx 4070 super 12gb" in q and "new, open-box, refurbished or used" in q and "—" not in q
+    assert "rtx 4070 super 12gb" in q and "new, open-box, refurbished or used" in q and "\u2014" not in q
     r = out["b1"]
     assert r["status"] == "answered" and r["condition"] == "open box" and r["answered_at"] and r["question"] == q
     assert r["answer_excerpt"] == "It is open box"
@@ -136,9 +136,9 @@ def test_a_failing_send_is_cannot_ask_not_a_crash():
 
 
 def test_the_excerpt_keeps_only_plain_characters():
-    wire = Wire(reply="open box <script>alert(1)</script> — http://x.y " + "z" * 300)
+    wire = Wire(reply="open box <script>alert(1)</script> \u2014 http://x.y " + "z" * 300)
     r = ask(make(wire), [bid("b1", "seller_1", 590, offered="new", page="")])["b1"]
-    assert "<" not in r["answer_excerpt"] and "—" not in r["answer_excerpt"] and len(r["answer_excerpt"]) <= 120
+    assert "<" not in r["answer_excerpt"] and "\u2014" not in r["answer_excerpt"] and len(r["answer_excerpt"]) <= 120
 
 
 # --- deciding with the answer cited --------------------------------------------------------------------------------
