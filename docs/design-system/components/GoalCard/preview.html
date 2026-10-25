@@ -1,0 +1,40 @@
+<!-- @dsCard group="Outside" height=420 subtitle="/start and /buyer: the goal, the allowance, the owned parts the agent skips" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; max-width: 900px; }
+  label { display:grid; gap:6px; font:500 13px/18px var(--font-sans); color:var(--ink-2); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:var(--radius-pill); border:1px solid var(--line-2); font:500 13px/18px var(--font-sans); color:var(--ink); background:var(--surface); }
+  .chip s { text-decoration:none; color:var(--muted); font-weight:400; }
+  @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
+</style></head>
+<body>
+<div class="tb">
+  <div class="grid">
+    <form class="card" style="display:grid;gap:14px" onsubmit="return false">
+      <div class="spread"><span class="title" style="font:600 18px/24px var(--font-sans)">What should the buyer find?</span><span class="pill pill-sim">Goal · SIM</span></div>
+      <label>Goal<input class="field" value="RTX 5070 Ti under $1,400 by Friday"></label>
+      <label>Allowance (pays without a call up to this)<input class="field mono" value="$1,000.00"></label>
+      <label>Phone for approval above the allowance<input class="field mono" value="+1 (415) 555 0100"></label>
+      <div class="sm muted">Above the allowance the buyer calls this number, reads the deal, and only the one-time word pair on your screen plus "approve" passes.</div>
+      <button class="btn btn-primary" type="submit">Open sealed round</button>
+    </form>
+    <div class="card" style="display:grid;gap:14px;align-content:start">
+      <div class="spread"><span style="font:600 18px/24px var(--font-sans)">Already owned (skipped)</span><span class="pill pill-sim">Rig · SIM</span></div>
+      <div class="chips">
+        <span class="chip">Ryzen 7 7800X3D <s>CPU</s></span>
+        <span class="chip">B650 Tomahawk <s>board</s></span>
+        <span class="chip">32 GB DDR5-6000 <s>RAM</s></span>
+        <span class="chip">850 W Gold <s>PSU</s></span>
+        <span class="chip">Lancool 216 <s>case</s></span>
+      </div>
+      <div class="well sm ink2">The agent never re-buys a part you own unless you ask. Fit is checked against these: socket, length, wattage.</div>
+      <div class="spread"><span class="cap">Empty state</span></div>
+      <div class="sm muted">"No parts yet. Tell the buyer what you own and it will skip them."  One ghost button: Add a part.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

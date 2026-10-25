@@ -1,0 +1,1 @@
+The /start goal form and the owned-parts card. The consumer provides the goal text, allowance, phone and the owned list (SIM rig for the demo). States: empty (no parts yet), filled, submitting (button shows a spinner, fields disabled), error (coral line with the reason). The call-code sentence under the phone field is required copy.
