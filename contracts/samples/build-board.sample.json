@@ -1,0 +1,37 @@
+{
+  "goalId": "goal-build-1", "buyerId": "vidyut", "budget": 2000, "spent": 1968, "origin": "SIM",
+  "parts": [
+    {"part": "psu", "label": "750 W PSU", "status": "owned", "budget": 0},
+    {"part": "case", "label": "Case (305 mm GPU room)", "status": "owned", "budget": 0},
+    {"part": "gpu", "label": "RTX 5070 Ti", "status": "locked", "budget": 1260, "needId": "need-gpu", "roundId": "round-gpu",
+     "champion": {"bidId": "b-gpu-2", "sellerId": "seller_4", "persona": "Micro Center", "landed": 1249.99, "origin": "SIM", "sourceUrl": ""}},
+    {"part": "cpu", "label": "8-core CPU", "status": "locked", "budget": 280, "needId": "need-cpu", "roundId": "round-cpu",
+     "champion": {"bidId": "b-cpu-1", "sellerId": "seller_1", "persona": "Best Buy", "landed": 279.0, "origin": "SIM", "sourceUrl": ""}},
+    {"part": "board", "label": "AM5 B650 board", "status": "replanned", "budget": 190, "needId": "need-board-2", "roundId": "round-board-2",
+     "champion": {"bidId": "b-board-4", "sellerId": "seller_2", "persona": "B&H", "landed": 169.0, "origin": "SIM", "sourceUrl": ""},
+     "reason": "First winner was LGA1700; swapped to AM5"},
+    {"part": "ram", "label": "32 GB DDR5", "status": "locked", "budget": 100, "needId": "need-ram", "roundId": "round-ram",
+     "champion": {"bidId": "b-ram-3", "sellerId": "seller_3", "persona": "Amazon", "landed": 99.0, "origin": "SIM", "sourceUrl": ""}},
+    {"part": "ssd", "label": "2 TB NVMe", "status": "locked", "budget": 120, "needId": "need-ssd", "roundId": "round-ssd",
+     "champion": {"bidId": "b-ssd-1", "sellerId": "seller_1", "persona": "Best Buy", "landed": 119.0, "origin": "SIM", "sourceUrl": ""}},
+    {"part": "cooler", "label": "Tower cooler", "status": "locked", "budget": 55, "needId": "need-cooler", "roundId": "round-cooler",
+     "champion": {"bidId": "b-cool-2", "sellerId": "seller_2", "persona": "B&H", "landed": 52.0, "origin": "SIM", "sourceUrl": ""}}
+  ],
+  "checks": [
+    {"a": "cpu", "b": "board", "rule": "socket", "state": "ok", "detail": "AM5 and AM5", "source": "fit.socket"},
+    {"a": "board", "b": "ram", "rule": "ddr", "state": "ok", "detail": "DDR5 and DDR5", "source": "fit.ddr"},
+    {"a": "gpu", "b": "case", "rule": "case_room", "state": "ok", "detail": "304 mm card, 305 mm case", "source": "fit.gpu_length"},
+    {"a": "gpu", "b": "psu", "rule": "power", "state": "ok", "detail": "300 W card on a 750 W PSU with 12V-2x6", "source": "fit.power"},
+    {"a": "cooler", "b": "case", "rule": "cooler_height", "state": "ok", "detail": "155 mm cooler, 160 mm room", "source": "fit.cooler_height"}
+  ],
+  "events": [
+    {"at": "2026-10-24T20:00:00Z", "kind": "plan", "text": "Plan: 6 parts to buy, PSU and case owned, budget $2,000", "parts": []},
+    {"at": "2026-10-24T20:00:02Z", "kind": "round_open", "text": "6 rounds open", "parts": ["gpu","cpu","board","ram","ssd","cooler"]},
+    {"at": "2026-10-24T20:00:20Z", "kind": "knockout", "text": "GPU: Shady Sam's vetoed, page says open box", "parts": ["gpu"]},
+    {"at": "2026-10-24T20:00:31Z", "kind": "clash", "text": "Clash: the CPU is AM5, the board winner is LGA1700", "parts": ["cpu","board"]},
+    {"at": "2026-10-24T20:00:33Z", "kind": "replan", "text": "Swapped to an AM5 board, moved $20 from the SSD budget", "parts": ["board","ssd"]},
+    {"at": "2026-10-24T20:00:50Z", "kind": "locked", "text": "Build ready: 6 parts, 4 sellers, $1,968", "parts": []},
+    {"at": "2026-10-24T20:01:00Z", "kind": "call", "text": "Calling Vidyut for the whole build", "parts": []}
+  ],
+  "approval": {"state": "calling", "total": 1968.0, "sellers": 4, "mandates": []}
+}

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { asOrigin, asSim, bidsFromRows, clusterArrivals, dealFromRows, feedFromRows, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -155,6 +155,69 @@ test("reviewFromRows shows the latest expiring code, with the origin normalized"
   assert.equal(r.mandateHash, "b");
   assert.equal(r.origin, "SIM");
   assert.equal(reviewFromRows([]), null);
+});
+
+// ---- Task 1: the buyer app only ever shows the paired buyer's own goals.
+
+const roleRow = (role: string, subjectId: string) => ({ role, subjectId });
+const goalRow = (over: Record<string, unknown> = {}) => ({
+  id: "goal-a1", buyerId: "buyer-a", type: "budget_cap", cap: 1300, deadline: ts(T0 + 86_400_000), state: "ACTIVE", reservedAmount: 0, origin: "SIM", createdAt: ts(T0), ...over,
+});
+const goalItemRow = (goalId: string, skuSpec: string) => ({ goalId, skuSpec, condition: "new", variant: "", quantity: 1, skippedOwnedPartId: "" });
+const allowanceRow = (buyerId: string) => ({ buyerId, perPurchaseLimit: 800, periodLimit: 2000, period: "month", spentThisPeriod: 100, ladderStep: 1 });
+
+test("buyerSession: nothing is a buyer until connected, the roles loaded, and one buyer role says so", () => {
+  assert.deepEqual(buyerSession(false, true, [roleRow("buyer", "buyer-a")]), { status: "connecting" });
+  assert.deepEqual(buyerSession(true, false, [roleRow("buyer", "buyer-a")]), { status: "connecting" });
+  assert.deepEqual(buyerSession(true, true, []), { status: "unpaired" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("seller", "seller-a")]), { status: "unpaired" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "")]), { status: "unpaired" }, "an unknown subject is not an identity");
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-a")]), { status: "buyer", buyerId: "buyer-a" });
+});
+
+test("buyerSession: switching from buyer A to buyer B follows the role row, and two different buyers fail closed", () => {
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-b")]), { status: "buyer", buyerId: "buyer-b" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-a"), roleRow("buyer", "buyer-a")]), { status: "buyer", buyerId: "buyer-a" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-a"), roleRow("buyer", "buyer-b")]), { status: "unpaired" });
+});
+
+test("goalsForBuyer: an empty dashboard is an empty list, and an unknown buyer sees nothing", () => {
+  assert.deepEqual(goalsForBuyer([], [], undefined, "buyer-a"), []);
+  assert.deepEqual(goalsForBuyer([goalRow()], [goalItemRow("goal-a1", "RTX 5070")], allowanceRow("buyer-a"), ""), []);
+});
+
+test("goalsForBuyer: buyer B's newer goal never shows for buyer A, and switching shows only B's rows and allowance", () => {
+  const goals = [
+    goalRow(),
+    goalRow({ id: "goal-b1", buyerId: "buyer-b", createdAt: ts(T0 + 5000) }), // newer than A's goal
+  ];
+  const items = [goalItemRow("goal-a1", "RTX 5070"), goalItemRow("goal-b1", "Ryzen 7 9800X3D")];
+  const forA = goalsForBuyer(goals, items, allowanceRow("buyer-a"), "buyer-a");
+  assert.deepEqual(forA.map((g) => g.id), ["goal-a1"]);
+  assert.match(forA[0]!.text, /RTX 5070/);
+  assert.doesNotMatch(forA[0]!.text, /Ryzen/);
+  assert.equal(forA[0]!.allowance?.perPurchase, 800);
+  const forB = goalsForBuyer(goals, items, allowanceRow("buyer-a"), "buyer-b");
+  assert.deepEqual(forB.map((g) => g.id), ["goal-b1"]);
+  assert.equal(forB[0]!.allowance, null, "buyer A's allowance row is never attached to buyer B");
+});
+
+test("goalsForBuyer: open searches come first, newest first, and a newer finished goal does not hide an active one", () => {
+  const goals = [
+    goalRow({ id: "old-active", createdAt: ts(T0) }),
+    goalRow({ id: "new-done", state: "DONE", createdAt: ts(T0 + 9000) }),
+    goalRow({ id: "new-active", state: "HUNTING", createdAt: ts(T0 + 3000) }),
+  ];
+  assert.deepEqual(goalsForBuyer(goals, [], undefined, "buyer-a").map((g) => g.id), ["new-active", "old-active", "new-done"]);
+});
+
+test("allowanceForBuyer: only the paired buyer's own spending rule, else none", () => {
+  const rows = [allowanceRow("buyer-a"), { ...allowanceRow("buyer-b"), perPurchaseLimit: 50 }];
+  assert.equal(allowanceForBuyer(rows, "buyer-b")?.perPurchase, 50);
+  assert.equal(allowanceForBuyer(rows, "buyer-a")?.perPurchase, 800);
+  assert.equal(allowanceForBuyer(rows, "buyer-c"), null);
+  assert.equal(allowanceForBuyer(rows, ""), null);
+  assert.equal(allowanceForBuyer([], "buyer-a"), null);
 });
 
 test("#191 a ranked row the referee held back (advocate caution) shows as held back with its reason, never as the winner", () => {

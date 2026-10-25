@@ -10,6 +10,7 @@ const T0 = new Date("2026-10-24T06:02:42Z");
 const at = (s: number) => new Date(T0.getTime() + s * 1000);
 
 export const goal: GoalView = {
+  id: "sample-goal",
   text: "RTX 5070 Ti that fits my case, under $1,300, by Friday, new or open-box",
   type: "part_by_date",
   state: "DONE",

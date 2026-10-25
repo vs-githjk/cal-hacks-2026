@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS bid_ticks (
   sku TEXT NOT NULL,
   seller_id TEXT NOT NULL,
   price_cents INT,
-  event TEXT NOT NULL
+  event TEXT NOT NULL,
+  origin TEXT
 ) WITH (tsdb.hypertable, tsdb.partition_column = 'ts', tsdb.segmentby = 'round_id', tsdb.orderby = 'ts DESC');
 
 CREATE TABLE IF NOT EXISTS loss_reports (
@@ -30,8 +31,14 @@ CREATE TABLE IF NOT EXISTS loss_reports (
   seller_id TEXT NOT NULL,
   sku TEXT,
   lost_by_cents INT,
-  reason TEXT
+  reason TEXT,
+  origin TEXT
 ) WITH (tsdb.hypertable, tsdb.partition_column = 'ts', tsdb.segmentby = 'seller_id', tsdb.orderby = 'ts DESC');
+
+-- Tables made before #260 have no origin column: add it (nullable, so it works on a columnstore table). A row with none reads as SIM.
+ALTER TABLE bid_ticks ADD COLUMN IF NOT EXISTS origin TEXT;
+
+ALTER TABLE loss_reports ADD COLUMN IF NOT EXISTS origin TEXT;
 
 -- One observation per (time, sku, store, provider, listing url): a re-run of the loader inserts nothing new.
 CREATE UNIQUE INDEX IF NOT EXISTS price_obs_uniq ON price_obs (ts, sku, store, provider, url);
