@@ -9,7 +9,8 @@ a failed write is one console line and the deal goes on.
 from __future__ import annotations
 
 import concurrent.futures as cf
-import math
+import logging
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -42,11 +43,24 @@ def load_sponsor_env(path: Optional[Path]) -> list[str]:
 
 
 def _bounded(fn: Callable, timeout: float):
-    pool = cf.ThreadPoolExecutor(max_workers=1)
-    try:
-        return pool.submit(fn).result(timeout=timeout)
-    finally:
-        pool.shutdown(wait=False)
+    """fn() within `timeout` seconds: its value, its own exception, or cf.TimeoutError. It runs on a daemon thread, so a hung
+    network call or database statement can never hold the process at exit (an executor's threads are joined at exit)."""
+    box: dict = {}
+
+    def run() -> None:
+        try:
+            box["value"] = fn()
+        except BaseException as e:  # noqa: BLE001  (handed to the caller below, on its own thread)
+            box["error"] = e
+
+    worker = threading.Thread(target=run, daemon=True, name="sponsor-bounded")
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        raise cf.TimeoutError()
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
 
 
 def price_recheck(listing: dict, *, fetch: Optional[Callable] = None, timeout: float = RECHECK_TIMEOUT_S,
@@ -84,52 +98,61 @@ def price_note(result: dict, quoted: float, *, now: Optional[datetime] = None) -
 
 
 def round_ticks(rows: list, sku: str, *, now: Optional[datetime] = None) -> list[dict]:
-    """round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed, reasons) as Tiger bid_ticks:
-    rank 1 is the "win", the rest are "bid", prices in whole cents."""
-    ts = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    out = []
-    for r in rows:
-        try:
-            if isinstance(r[6], bool):
-                continue
-            price = float(r[6])
-            if not (math.isfinite(price) and price > 0):
-                continue                     # never a zero, negative or infinite price in the history
-        except (TypeError, ValueError, IndexError):
-            continue
-        rank = str(r[5])
-        event = "win" if rank == "1" else "blocked" if rank == "0" else "bid"   # rank 0: disqualified at the close
-        out.append({"ts": ts, "round_id": str(r[1]), "sku": sku, "seller_id": str(r[3]), "price_cents": int(round(price * 100)),
-                    "event": event})
-    return out
+    """round_result rows as Tiger bid_ticks, with each row's origin (data.tiger.history.round_ticks): rank 1 is the "win",
+    rank 0 is "blocked", the rest are "bid", prices in whole cents."""
+    from data.tiger import history
+    return history.round_ticks(rows, sku, now=now)
 
 
-def write_round_ticks(ticks: list[dict], *, timeout: float = TIGER_TIMEOUT_S) -> dict:
-    """data.tiger.store.write_bid_ticks, within `timeout`. {"state": written | not_configured | error, ...}."""
+def loss_rows(reports: list, rows: list, sku: str, *, now: Optional[datetime] = None) -> list[dict]:
+    """A round's LossReports as Tiger loss_reports rows (data.tiger.history.loss_rows)."""
+    from data.tiger import history
+    return history.loss_rows(reports, rows, sku, now=now)
+
+
+def _write(name: str, rows: list[dict], timeout: float) -> dict:
     from data.tiger import store
     if not store.status()["configured"]:
         return {"state": "not_configured", "n": 0}
-    if not ticks:
+    if not rows:
         return {"state": "empty", "n": 0}
     try:
-        res = _bounded(lambda: store.write_bid_ticks(ticks), timeout)
+        res = _bounded(lambda: getattr(store, name)(rows), timeout)
         n = res.get("inserted", 0) if isinstance(res, dict) else 0
         return {"state": "written" if n else "empty", "n": int(n), "result": res}
     except cf.TimeoutError:   # the write may still finish in the background: unconfirmed, not "not written"
         return {"state": "unconfirmed", "n": 0, "detail": f"over {timeout:g} s"}
-    except Exception as e:  # noqa: BLE001  (the connection string never reaches the message: store redacts it)
+    except store.TigerError as e:   # its message is redacted by the store: no connection string, password or host
+        return {"state": "error", "n": 0, "detail": str(e)[:120]}
+    except Exception as e:  # noqa: BLE001
         return {"state": "error", "n": 0, "detail": type(e).__name__}
 
 
-def tiger_note(result: dict, round_id: str) -> str:
+def write_round_ticks(ticks: list[dict], *, timeout: float = TIGER_TIMEOUT_S) -> dict:
+    """data.tiger.store.write_bid_ticks, within `timeout`. {"state": written | not_configured | error, ...}."""
+    return _write("write_bid_ticks", ticks, timeout)
+
+
+def write_loss_reports(rows: list[dict], *, timeout: float = TIGER_TIMEOUT_S) -> dict:
+    """data.tiger.store.write_loss_reports, within `timeout`; the same states as write_round_ticks."""
+    return _write("write_loss_reports", rows, timeout)
+
+
+def tiger_note(result: dict, round_id: str, what: str = "bid ticks") -> str:
+    """One console line for a Tiger write; it is also logged (logger demo.tiger) so a run's log shows the status."""
     state = result.get("state")
+    ticks = what == "bid ticks"
+    table, label, noun = ("bid_ticks", "", "prices") if ticks else ("loss_reports", f"{what} ", what)
     if state == "written":
-        return (f"Tiger Data: wrote {result.get('n', 0)} bid ticks for {round_id} (bid_ticks; the price history curve is "
-                f"market_1h and bid_curve_10s)")
-    if state == "not_configured":
-        return "Tiger Data: not configured (TIGER_DATA_SERVICE_URL), so the round's prices were not stored"
-    if state == "empty":
-        return f"Tiger Data: stored 0 bid ticks for {round_id} (nothing new to store)"
-    if state == "unconfirmed":
-        return f"Tiger Data: write not confirmed ({result.get('detail')}); the deal goes on"
-    return f"Tiger Data: not written ({result.get('detail') or 'error'}); the deal goes on"
+        tail = "; the price history curve is market_1h and bid_curve_10s" if ticks else ""
+        line = f"Tiger Data: wrote {result.get('n', 0)} {what} for {round_id} ({table}{tail})"
+    elif state == "not_configured":
+        line = f"Tiger Data: not configured (TIGER_DATA_SERVICE_URL), so the round's {noun} were not stored"
+    elif state == "empty":
+        line = f"Tiger Data: stored 0 {what} for {round_id} (nothing new to store)"
+    elif state == "unconfirmed":
+        line = f"Tiger Data: {label}write not confirmed ({result.get('detail')}); the deal goes on"
+    else:
+        line = f"Tiger Data: {label}not written ({result.get('detail') or 'error'}); the deal goes on"
+    logging.getLogger("demo.tiger").info("%s", line)
+    return line
