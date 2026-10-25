@@ -14,3 +14,8 @@ export function useApiBase(api: string): { ready: boolean; base: string | null; 
   const base = reachableFrom(api, host);
   return { ready: true, base, local: base === null };
 }
+
+/** The page's hostname, "" on the server and before hydration. */
+export function usePageHost(): string {
+  return useSyncExternalStore(noSubscribe, () => window.location.hostname, () => "");
+}

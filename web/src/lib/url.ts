@@ -11,7 +11,7 @@ export function safeUrl(s: string): string | null {
   }
 }
 
-const LOOPBACK = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/;
+export const LOOPBACK = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/;
 
 /** The API base to call from a page on `pageHost`, or null to skip it: empty, unparseable, or a loopback API seen from a page that is not
  * itself on loopback (a visitor's browser would hit its own machine and fail CORS). Null means "runs locally", never "offline". Never throws. */
@@ -23,4 +23,15 @@ export function reachableFrom(api: string, pageHost: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** The text to show for a source URL on a page at `pageHost`: the address without scheme or query, except a loopback address seen from a page
+ * that is not itself on loopback, which a visitor cannot open and must not read as a source ("local demo page"). Never throws. */
+export function sourceText(url: string, pageHost: string): string {
+  try {
+    if (LOOPBACK.test(new URL(url).hostname) && !LOOPBACK.test(pageHost)) return "local demo page (runs on the operator's machine)";
+  } catch {
+    /* not a URL: shown as plain text below */
+  }
+  return url.replace(/^https?:\/\/(www\.)?/, "").split("?")[0];
 }
