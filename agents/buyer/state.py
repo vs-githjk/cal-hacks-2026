@@ -6,6 +6,7 @@ import os
 import sqlite3
 import math
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -182,6 +183,11 @@ def _create_tables(db: sqlite3.Connection) -> None:
             phase TEXT NOT NULL,
             payload TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS handled_goals (
+            goal_id TEXT PRIMARY KEY,
+            buyer_id TEXT NOT NULL,
+            handled_at TEXT NOT NULL
+        );
     """)
 
 
@@ -310,6 +316,25 @@ def remember_owned(db: sqlite3.Connection, buyer_id: str, parts: list[dict]) -> 
         db.rollback()
         raise
     return load_owned_parts(db, buyer_id)
+
+
+def mark_goal_handled(db: sqlite3.Connection, goal_id: str, buyer_id: str) -> None:
+    goal_id, buyer_id = _nonempty(goal_id, "goal_id"), _nonempty(buyer_id, "buyer_id")
+    try:
+        db.execute("INSERT OR IGNORE INTO handled_goals (goal_id, buyer_id, handled_at) VALUES (?, ?, ?)",
+                   (goal_id, buyer_id, datetime.now(timezone.utc).isoformat()))
+        db.commit()
+    except BaseException:
+        db.rollback()
+        raise
+
+
+def goal_handled(db: sqlite3.Connection, goal_id: str) -> bool:
+    return db.execute("SELECT 1 FROM handled_goals WHERE goal_id=?", (goal_id,)).fetchone() is not None
+
+
+def goal_has_transaction(db: sqlite3.Connection, goal_id: str) -> bool:
+    return db.execute("SELECT 1 FROM transactions WHERE json_extract(payload, '$.goal_id')=?", (goal_id,)).fetchone() is not None
 
 
 def load_goal(db: sqlite3.Connection, goal_id: str, buyer_id: str) -> dict | None:
