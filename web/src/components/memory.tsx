@@ -75,22 +75,21 @@ function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empt
   if (m.state.status === "offline") {
     return (
       <Card>
-        <Label>Recorded history is not live here</Label>
-        <p className="text-[14px]">Purchases and decisions are read from the operator demo feed, which runs on the operator's machine and is not reachable from this site. Nothing is shown rather than a guess.</p>
+        <p className="flex items-center gap-2.5 text-[17px] font-semibold"><span className="h-2 w-2 rounded-full bg-slate" aria-hidden /> Your history is not live on this site yet.</p>
+        <p className="mt-1 text-[13px] text-muted">Purchases and decisions are recorded on the operator&apos;s machine. Nothing is shown rather than a guess.</p>
       </Card>
     );
   }
   if (m.state.status === "error") {
     return (
       <Card>
-        <Label>Memory unavailable</Label>
-        <p className="text-[14px]">{m.state.message}. Nothing is shown rather than a guess.</p>
+        <p className="flex items-center gap-2.5 text-[17px] font-semibold"><span className="h-2 w-2 rounded-full bg-slate" aria-hidden /> Your history is not available right now.</p>
+        <p className="mt-1 text-[13px] text-muted">Nothing is shown rather than a guess. Try again in a moment.</p>
         <RetryButton reload={m.reload} />
       </Card>
     );
   }
   const d = m.state.data;
-  const feedAddress = typeof window === "undefined" ? null : memoryFeed(window.location.hostname);
   const broken = d.sources.filter((s) => s.state === "error");
   return (
     <div className="grid gap-2 text-[13px] text-muted">
@@ -105,7 +104,7 @@ function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empt
           ))}
         </ul>
       </details>
-      <p>Operator demo feed{feedAddress ? ` at ${feedAddress}` : ""}. It is not buyer scoped on the server, so rows are filtered to this buyer here for display only.</p>
+      <p>Rows are filtered to you on this screen.</p>
     </div>
   );
 }
@@ -151,7 +150,7 @@ function PurchaseCard({ e }: { e: Purchase }) {
         <Fact label="Payment">{paymentModeLabel(d.payment_mode)}</Fact>
         <Fact label="Payment reference"><Code>{text(d.payment_ref)}</Code></Fact>
         <Fact label="Approval">{approvalLabel(d.approval_method)}</Fact>
-        <Fact label="Mandate"><Code>{text(d.mandate_id)}</Code></Fact>
+        <Fact label="Approval record"><Code>{text(d.mandate_id)}</Code></Fact>
         <Fact label="Deal"><Code>{text(d.deal_id)}</Code></Fact>
       </dl>
     </Card>
@@ -164,10 +163,10 @@ export function PurchasesView() {
   const rows = selectMemory(m.entries, "purchase", q).filter(isPurchase);
   return (
     <div className="grid gap-3.5">
-      <Search value={q} onChange={setQ} />
+      {m.state.status === "ready" && m.entries.length > 0 && <Search value={q} onChange={setQ} />}
       {rows.map((e) => <PurchaseCard key={e.id} e={e} />)}
       {q && m.entries.length > 0 && rows.length === 0 && <p className="text-muted">No recorded purchase matches that text.</p>}
-      <MemoryStatus m={m} empty="No purchases are recorded for you yet." />
+      <MemoryStatus m={m} empty="No purchases yet. A receipt appears here after each approved purchase." />
     </div>
   );
 }
@@ -248,7 +247,7 @@ export function DecisionsView() {
   const rows = selectMemory(decisions, kind, q).filter((e) => e.kind !== "lesson" || showLessons || kind === "lesson");
   return (
     <div className="grid gap-3.5">
-      <div className="flex flex-wrap items-center gap-2">
+      {m.state.status === "ready" && decisions.length > 0 && <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Show" className="flex gap-1">
           {FILTERS.map(([k, label]) => (
             <button
@@ -263,7 +262,7 @@ export function DecisionsView() {
           ))}
         </div>
         <Search value={q} onChange={setQ} />
-      </div>
+      </div>}
       {kind !== "lesson" && lessonCount > 0 && (
         <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start btn rounded-xl bg-surface px-5 shadow-ring text-[14px] font-medium text-muted hover:bg-surface-2 hover:text-ink">
           {showLessons ? `Hide ${lessonCount} seller lessons` : `Show ${lessonCount} seller lessons`}
@@ -271,7 +270,7 @@ export function DecisionsView() {
       )}
       {rows.map((e) => <DecisionCard key={e.id} e={e} />)}
       {(q || kind !== "all") && decisions.length > 0 && rows.length === 0 && <p className="text-muted">No recorded decision matches that filter.</p>}
-      <MemoryStatus m={m} empty="No decisions are recorded for you yet." />
+      <MemoryStatus m={m} empty="No decisions yet. Vetoes and the lessons sellers learned appear here after a round closes." />
     </div>
   );
 }
@@ -286,15 +285,14 @@ export function RecentPurchases() {
       {m.state.status === "loading" ? (
         <p className="text-[13px] text-muted">Loading...</p>
       ) : m.state.status === "offline" ? (
-        <p className="text-[13px] text-muted">Recorded history comes from the operator demo feed, which is not reachable from this site.</p>
+        <p className="text-[13px] text-muted">Your receipts appear here after your first approved purchase.</p>
       ) : m.state.status === "error" ? (
         <>
-          <p className="text-[18px] font-medium">Unavailable</p>
-          <p className="mt-1 text-[13px] text-muted">{m.state.message}.</p>
+          <p className="text-[15px] font-medium">Not available right now.</p>
           <RetryButton reload={m.reload} />
         </>
       ) : rows.length === 0 ? (
-        <p className="text-[13px] text-muted">No purchases yet.</p>
+        <p className="text-[13px] text-muted">No purchases yet. Your receipts appear here after your first approved purchase.</p>
       ) : (
         <ul className="grid gap-2">
           {rows.map((e) => (
