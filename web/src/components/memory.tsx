@@ -57,7 +57,7 @@ const Reason = ({ e, reason }: { e: MemoryEntry; reason: string }) => (reason &&
 
 function RetryButton({ reload }: { reload: () => void }) {
   return (
-    <button onClick={reload} className="mt-2 min-h-11 rounded-lg border border-line px-4 text-[14px] font-medium hover:bg-soft">
+    <button onClick={reload} className="btn mt-2 min-h-11 rounded-xl bg-surface px-5 shadow-ring text-[14px] font-medium hover:bg-surface-2">
       Try again
     </button>
   );
@@ -102,7 +102,7 @@ function Search({ value, onChange }: { value: string; onChange: (v: string) => v
       onChange={(e) => onChange(e.target.value)}
       aria-label="Filter recorded history by text"
       placeholder="Filter by seller, payee, rule or reason"
-      className="min-h-11 w-full rounded-lg border border-line bg-soft px-3 text-[14px] sm:max-w-sm"
+      className="min-h-11 w-full rounded-xl bg-surface px-4 shadow-ring text-[14px] sm:max-w-sm"
     />
   );
 }
@@ -122,7 +122,7 @@ function PurchaseCard({ e }: { e: Purchase }) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{amountLabel(d)}</p>
+          <p className="font-mono text-[34px] font-medium leading-none tabular-nums">{amountLabel(d)}</p>
           <p className="mt-1 text-[13px] text-muted">before tax</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -224,7 +224,7 @@ export function DecisionsView() {
               key={k}
               aria-pressed={kind === k}
               onClick={() => setKind(k)}
-              className={`min-h-11 rounded-full px-4 text-[14px] font-medium ${kind === k ? "bg-accent-soft text-accent-2" : "text-muted hover:bg-soft hover:text-ink"}`}
+              className={`min-h-11 rounded-full px-4 text-[14px] font-medium ${kind === k ? "bg-surface-2 text-ink" : "text-muted hover:bg-surface-2 hover:text-ink"}`}
             >
               {label}
               <span className="ml-1.5 font-mono text-[12px] opacity-70">{k === "all" ? decisions.length : decisions.filter((e) => e.kind === k).length}</span>
@@ -234,7 +234,7 @@ export function DecisionsView() {
         <Search value={q} onChange={setQ} />
       </div>
       {kind !== "lesson" && lessonCount > 0 && (
-        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start rounded-lg border border-line px-4 text-[14px] font-medium text-muted hover:bg-soft hover:text-ink">
+        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start btn rounded-xl bg-surface px-5 shadow-ring text-[14px] font-medium text-muted hover:bg-surface-2 hover:text-ink">
           {showLessons ? `Hide ${lessonCount} seller lessons` : `Show ${lessonCount} seller lessons`}
         </button>
       )}
@@ -272,7 +272,7 @@ export function RecentPurchases() {
           ))}
         </ul>
       )}
-      <Link href="/buyer/purchases" className="mt-3 inline-flex min-h-11 items-center text-[14px] text-sky underline underline-offset-4">All purchases</Link>
+      <Link href="/buyer/purchases" className="mt-3 inline-flex min-h-11 items-center text-[14px] text-pulse underline underline-offset-4">All purchases</Link>
     </Card>
   );
 }

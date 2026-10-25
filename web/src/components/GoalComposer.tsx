@@ -47,7 +47,7 @@ type Status =
   | { kind: "note"; text: string }
   | { kind: "error"; text: string };
 
-const input = "min-h-11 w-full rounded-lg border border-line bg-soft px-3 text-[15px] aria-[invalid=true]:border-coral";
+const input = "min-h-11 w-full text-[15px]/[20px] rounded-xl bg-surface px-4 shadow-ring focus:shadow-[var(--shadow-ring),var(--shadow-focus)] focus:outline-none aria-[invalid=true]:shadow-[0_0_0_1.5px_var(--color-coral-mark)]";
 
 /** buyerId is null before pairing. A draft typed then is adopted by the first buyer to pair; another buyer never sees it. */
 export function GoalComposer({ buyerId }: { buyerId: string | null }) {
@@ -122,7 +122,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
   return (
     <Card>
       <Label>Find a product</Label>
-      <label htmlFor="goal-text" className="mb-1.5 block text-[14px] text-muted">
+      <label htmlFor="goal-text" className="mb-1.5 block text-[13px]/[18px] font-medium text-ink-2">
         What do you want to buy?
       </label>
       <textarea
@@ -132,7 +132,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
         rows={2}
         aria-invalid={bad("text")}
         placeholder="For example: a 1 TB NVMe SSD under $90 by Friday"
-        className="min-h-[72px] w-full resize-y rounded-lg border border-line bg-soft px-3 py-2.5 text-[18px] leading-snug aria-[invalid=true]:border-coral"
+        className="min-h-[72px] w-full resize-y py-3 text-[17px]/[24px] rounded-xl bg-surface px-4 shadow-ring focus:shadow-[var(--shadow-ring),var(--shadow-focus)] focus:outline-none aria-[invalid=true]:shadow-[0_0_0_1.5px_var(--color-coral-mark)]"
       />
 
       <div className="mt-2 flex flex-wrap gap-2" aria-label="Parts sellers carry tonight">
@@ -141,7 +141,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
             key={c.sku}
             type="button"
             onClick={() => change({ text: c.label })}
-            className="min-h-11 rounded-lg border border-line px-3 text-[13px]"
+            className="btn min-h-11 rounded-full bg-surface px-4 text-[13px]/[18px] font-medium shadow-ring hover:bg-surface-2"
           >
             {c.label}
           </button>
@@ -190,10 +190,10 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" disabled={!canFindOffers(buyerId, status.kind === "sending")} onClick={findOffers} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink disabled:opacity-50">
+        <button type="button" disabled={!canFindOffers(buyerId, status.kind === "sending")} onClick={findOffers} className="btn min-h-11 rounded-xl bg-pulse px-5 font-medium text-pulse-ink disabled:opacity-50">
           Find offers
         </button>
-        <button type="button" onClick={viaAsiOne} className="min-h-11 rounded-lg border border-line px-4 font-medium">
+        <button type="button" onClick={viaAsiOne} className="btn min-h-11 rounded-xl bg-surface px-5 font-medium shadow-ring hover:bg-surface-2">
           Copy and open ASI:One
         </button>
         {/* ponytail: the Speak button returns when SPEECH_TRANSPORT exists. */}
