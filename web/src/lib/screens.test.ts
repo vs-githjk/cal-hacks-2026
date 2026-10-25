@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, recentRounds, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, recentRounds, roundTitle, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -293,4 +293,11 @@ test("winningBid returns the winner even when it is a MIRROR bid", () => {
   const w = winningBid([{ seller: "A", origin: "SIM", won: false }, { seller: "Central Computers", origin: "MIRROR", won: true }]);
   assert.equal(w?.seller, "Central Computers");
   assert.equal(w?.origin, "MIRROR");
+});
+
+test("roundTitle turns a build round id into a readable name", () => {
+  assert.equal(roundTitle("round-goal-build-1-board-2"), "Motherboard, round 2");
+  assert.equal(roundTitle("round-goal-build-3-gpu-1"), "Graphics card, round 1");
+  assert.equal(roundTitle("round-1"), null);
+  assert.equal(roundTitle("round-goal-build-1-board-x"), null);
 });
