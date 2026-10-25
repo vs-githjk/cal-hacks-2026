@@ -19,7 +19,7 @@ function StatusPill({ status, verdict }: { status: QuestionProps["status"]; verd
   const dot = <span className="h-[7px] w-[7px] rounded-full bg-current" aria-hidden />;
   if (status === "open") return <span className={`${PILL} torch bg-accent-soft text-accent`}>{dot}Open</span>;
   if (status === "sealed") return <span className={`${PILL} bg-amber-soft text-amber`}>{dot}Sealed</span>;
-  const tone = verdict?.kind === "knocked" ? "bg-coral-soft text-coral" : "bg-mint-soft text-mint";
+  const tone = !verdict ? "bg-accent-soft text-accent" : verdict.kind === "knocked" ? "bg-coral-soft text-coral" : "bg-mint-soft text-mint";
   return <span className={`${PILL} ${tone}`}>{dot}Verdict</span>;
 }
 

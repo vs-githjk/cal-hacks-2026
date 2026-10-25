@@ -9,6 +9,7 @@ import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, Sel
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
+import { Question, type QuestionProps } from "./arena";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
 
 
@@ -68,15 +69,35 @@ function Searches({ goals }: { goals: GoalView[] }) {
   );
 }
 
+/** The active goal put as one question. Built only from the goal and the bids already on the screen; null without a goal. */
+function goalQuestion(goal: GoalView | null, bids: RankedBid[], revealKey: string | undefined, simBids: boolean): QuestionProps | null {
+  if (!goal) return null;
+  // The buyer's own words, minus a leading "I want", "find me" or article, so "a 1 TB SSD" reads "the best 1 TB SSD".
+  const text = goal.text.trim().replace(/[.?!]+$/, "").replace(/^(i (want|need)( to buy)?|find( me)?|get( me)?|buy)\s+/i, "").replace(/^(a|an|the)\s+/i, "").replace(/^best\s+/i, "");
+  const capped = /\bunder\b|\$/i.test(text) || !(goal.cap > 0);
+  const question = `Who sells the best ${text}${capped ? "" : ` under ${money(goal.cap)}`}?`;
+  const win = bids.find((b) => b.won && b.origin !== "MIRROR");
+  const revealed = !!revealKey;
+  // Knocked out only when nothing won at all; a MIRROR "win" is a comparison, so it gets a verdict with no winner named.
+  const anyWon = bids.some((b) => b.won);
+  const knocked = revealed && !anyWon && bids.some((b) => b.recommendation === "veto");
+  const status: QuestionProps["status"] = revealed && (anyWon || knocked) ? "verdict" : bids.length > 0 ? "sealed" : "open";
+  const verdict: QuestionProps["verdict"] = win && revealed ? { kind: "won", text: `${win.seller} at ${money(win.landed)}` } : knocked ? { kind: "knocked", text: "every bid knocked out" } : undefined;
+  const origin = simBids ? "SIM" : (win ?? bids[0])?.origin;
+  return { question, status, contenders: bids.length, verdict, origin };
+}
+
 export function BuyerScreen(p: BuyerScreenProps) {
   const s = p.sample ?? {};
   const goal = p.goals[0] ?? null;
+  const q = goalQuestion(goal, p.bids, p.revealKey, !!s.bids);
   return (
     <div className="grid gap-3.5">
       {p.connecting ? (
         <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />
       ) : (
         <>
+          {q && <Question {...q} />}
           {p.composer}
           {p.review ? (
             <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
