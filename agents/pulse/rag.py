@@ -8,13 +8,15 @@ The index holds only our own rows, read from disk or Tiger Data on demand:
   - finished rounds: who won, the SKU, the origin. NO prices: a round row is indexed without any bid, so no seller's price can leave.
     Rounds come from PULSE_ROUND_DIR (default .run/rounds, written by the Pulse agent after each referee round) and the repo's
     sample round (agents/pulse/fixtures);
-  - dated MIRROR listings (data/baselines/feed.json, built from data/mirror/snapshots): real stores' public pages, so price and URL are shown;
-  - the CRS cache (CRS_SIGNAL_CACHE_PATH or .cache/crs-signals.json, else the repo's simulated fixture, labelled SIM);
+  - dated MIRROR listings: the GPU feed (data/baselines/feed.json, built from data/mirror/snapshots) and the Build Story parts
+    (data/mirror/parts_snapshots: cpu, motherboard, memory, storage, cooler; no PSU or case rows exist yet): real stores' public
+    pages, so price and URL are shown (Central Computers rows are marked comparison only);
+  - the CRS cache (CRS_SIGNAL_CACHE_PATH or .cache/crs-signals.json; labelled SANDBOX, or SIM for the repo fixture it falls back to);
   - Tiger Data price_obs when TIGER_DATA_SERVICE_URL is set (rows of origin SIM are left out).
 The SIM seller catalog (agents/sellers/sellers.json) is never read here, so a seller's listing price cannot reach another seller.
 
 Retrieval is BM25 over the rows (stdlib only, deterministic: ties break by row id). An answer is built from the retrieved rows by fixed
-phrases; each claim ends with the numbers of the sources it rests on and an origin label (LIVE, MIRROR or SIM); a line with no source
+phrases; each claim ends with the numbers of the sources it rests on and an origin label (LIVE, MIRROR, SIM or SANDBOX); a line with no source
 is only ever "I have no data". Optionally Claude (claude-haiku-5-5, PULSE_CLAUDE=1 and ANTHROPIC_API_KEY) rewords the lines, and a
 reworded line is used only if it keeps the same source numbers and adds no number; otherwise the fixed line stands. Nothing here ranks,
 recommends or decides anything. urllib/anthropic need a CA bundle on this Mac: SSL_CERT_FILE is set from certifi when the writer starts.
@@ -53,18 +55,20 @@ MOVE_WORDS = {"move", "moved", "moving", "movement", "change", "changed", "chang
               "drop", "dropped", "cheaper", "pricier"}
 LIST_WORDS = {"listing", "listings", "listed", "sells", "stock"}
 MONTH_WORDS = {"month", "30"}
+GENERIC = LIST_WORDS | {"listing", "part", "parts", "any", "there", "available", "have", "much", "price", "prices", "cost"}   # not part words
+NOT_PARTNER = "centralcomputer"   # a real store that never joined (data/mirror/not_partners.py): shown for comparison, never bought here
 GPU_SKU = re.compile(r"^(rtx|rx|gtx|arc)\b")
 CITE = re.compile(r"\[\d+(?:, \d+)*\]")
 NUMBER = re.compile(r"\$?\d[\d,]*(?:\.\d+)?%?")
 STABILITY = {"verified_stable": "verified stable", "caution": "caution (CRS returned a fraud alert, so more proof is required)",
              "not_verified": "not verified"}
-CRS_SOURCES = {"sandbox": ("CRS sandbox", "LIVE"), "recorded": ("CRS sandbox (a recorded result)", "LIVE"), "simulated": ("a simulated check", "SIM")}
+CRS_SOURCES = {"sandbox": ("CRS sandbox", "SANDBOX"), "recorded": ("CRS sandbox (a recorded result)", "SANDBOX"), "simulated": ("a simulated check", "SIM")}
 CRS_FRESH = timedelta(hours=24)
 MAX_DAYS_SHOWN = 8
 MAX_LISTINGS = 5
 INDEX_TTL_S = 30.0
 FLAT_BAND = 0.02                # = data.tiger.trends.FLAT_BAND: a move under 2 percent is "flat"
-ORIGINS = ("LIVE", "MIRROR", "SIM")
+ORIGINS = ("LIVE", "MIRROR", "SIM", "SANDBOX")
 
 
 # ---------------------------------------------------------------- BM25
@@ -78,7 +82,7 @@ class Doc:
     id: str
     kind: str                  # listing, round, crs
     text: str                  # what BM25 searches
-    origin: str                # LIVE, MIRROR or SIM
+    origin: str                # LIVE, MIRROR, SIM or SANDBOX
     source: str                # who said it
     date: str                  # when (a date, or a time for a CRS check)
     url: str                   # the page, "" when there is none
@@ -243,6 +247,57 @@ def default_crs() -> dict[str, dict]:
     return read_crs_rows(cache) or read_crs_rows(ROOT / "agents" / "fixtures" / "crs_signals.json")
 
 
+PARTS_DIR = ROOT / "data" / "mirror" / "parts_snapshots"
+STORE_NAMES = {"bhphotovideo": "bh", "centralcomputer": "centralcomputer"}
+
+
+def _stocked(stock: Any) -> bool:
+    """A part is in stock only when its page says so: True, or text that says in stock without "not"/"out of". Unknown is not in stock."""
+    if stock is True:
+        return True
+    text = str(stock).lower() if isinstance(stock, str) else ""
+    return "in stock" in text and "not in stock" not in text and "out of stock" not in text
+
+
+def parts_as_listings(rows: Iterable[dict]) -> list[dict]:
+    """Build Story part rows (data/mirror/parts_snapshots: cpu, motherboard, memory, storage, cooler, and any category added later)
+    as the dated listing rows the index reads: sku, title, price, url, store (the page's domain), observed_at, MIRROR. A row with no
+    price above zero is not a listing."""
+    out = []
+    for r in rows:
+        price = r.get("price")
+        if isinstance(price, bool) or not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 0:
+            continue
+        listing = r.get("listing") if isinstance(r.get("listing"), dict) else {}
+        url = FB._url(listing.get("url")) or FB._url(r.get("source"))
+        host = re.sub(r"^www\.", "", re.sub(r"^https?://", "", url).split("/")[0]).split(".")[0] if url else ""
+        name = str(r.get("name") or "")
+        sku = str(r.get("maker_model") or r.get("model_number") or name).strip().lower()
+        if not sku or not isinstance(r.get("snapshot_date"), str):
+            continue
+        out.append({"sku": sku, "title": name, "price": float(price), "url": url, "store": STORE_NAMES.get(host, host), "kind": "ask",
+                    "in_stock": _stocked(listing.get("stock")), "condition": r.get("condition") or "unknown", "category": r.get("category"),
+                    "observed_at": r["snapshot_date"], "origin": _origin(r.get("origin")), "snapshot_id": str(r.get("snapshot_id") or "")})
+    return out
+
+
+def default_parts() -> list[dict]:
+    rows = []
+    for path in sorted(PARTS_DIR.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(data, list):
+            rows.extend(r for r in data if isinstance(r, dict))
+    return parts_as_listings(rows)
+
+
+def default_listings() -> list[dict]:
+    """The GPU feed (data/baselines/feed.json) and the Build Story parts (data/mirror/parts_snapshots): every dated MIRROR listing."""
+    return FB.default_snapshots() + default_parts()
+
+
 def default_rounds() -> list[dict]:
     return load_rounds([round_dir(), ROOT / "agents" / "pulse" / "fixtures"])
 
@@ -302,6 +357,14 @@ def _plural(n: int, word: str) -> str:
     return f"{n} {word}" + ("" if n == 1 else "s")
 
 
+def _short_title(title: str, limit: int = 60) -> str:
+    """A listing title cut at a word boundary, with "..." when cut."""
+    title = " ".join(title.split())
+    if len(title) <= limit:
+        return title
+    return title[:limit].rsplit(" ", 1)[0].rstrip(",;:-") + "..."
+
+
 def _store(name: str) -> str:
     return name.replace("_", " ")
 
@@ -336,7 +399,7 @@ class Rag:
     @classmethod
     def default(cls, *, catalog: Optional[dict] = None, now: Optional[Callable[[], datetime]] = None, tiger: bool = True,
                 writer: Optional[Callable[[dict], Any]] = None) -> "Rag":
-        return cls(rounds=default_rounds, snapshots=FB.default_snapshots, crs=default_crs, catalog=catalog, now=now,
+        return cls(rounds=default_rounds, snapshots=default_listings, crs=default_crs, catalog=catalog, now=now,
                    tiger_rows=FB.tiger_prices if tiger else None, writer=writer if writer is not None else claude_writer())
 
     def invalidate(self) -> None:
@@ -370,7 +433,7 @@ class Rag:
             return self._index
 
     def name_of(self, seller_id: str, persona: str = "") -> str:
-        name = (self.catalog.get(seller_id) or {}).get("name") or re.sub(r"\s*\((SIM|MIRROR|LIVE)\)\s*$", "", persona or "")
+        name = (self.catalog.get(seller_id) or {}).get("name") or re.sub(r"\s*\((SIM|MIRROR|LIVE|SANDBOX)\)\s*$", "", persona or "")
         return seller_id if not name or name == seller_id else f"{seller_id} ({name})"
 
     def _docs(self) -> list[Doc]:
@@ -396,8 +459,9 @@ class Rag:
             store = str(r.get("store") or "")
             docs.append(Doc(id=f"listing:{r.get('snapshot_id', '')}:{i:05d}", kind="listing", origin=_origin(r.get("origin")), source=f"{_store(store)} listing",
                             date=day, url=url, ref=str(r.get("snapshot_id") or ""),
-                            text=f"listing {store} {r['sku']} {r.get('title', '')} {r.get('condition', '')} {r.get('kind', '')}",
+                            text=f"listing {store} {r.get('category', '')} {r['sku']} {r.get('title', '')} {r.get('condition', '')} {r.get('kind', '')}",
                             fields={"sku": r["sku"].strip().lower(), "store": store, "price": float(price), "kind": r.get("kind"),
+                                    "category": r.get("category"),
                                     "in_stock": bool(r.get("in_stock")), "condition": r.get("condition"), "title": str(r.get("title") or ""),
                                     "observed_at": r.get("observed_at")}))
         for sid, s in sorted((self.crs() or {}).items()):
@@ -421,8 +485,10 @@ class Rag:
         elif sku and words & MOVE_WORDS:
             built = self._price_move(sku, 30 if words & MONTH_WORDS else 7)
             intent = "price_move"
-        elif sku and words & LIST_WORDS:
-            built = self._listings(sku)
+        elif words & LIST_WORDS:
+            built = self._listings(sku, str(text))
+            if built is None:
+                return None
             intent = "listings"
         else:
             return None
@@ -446,7 +512,7 @@ class Rag:
             label, origin = CRS_SOURCES[s["source"]]
             when = _parse(s["checked_at"])
             old = " That check is older than 24 hours, so it is not a current check." if when and now - when > CRS_FRESH else ""
-            persona = " It used a synthetic representative identity." if origin == "LIVE" else ""
+            persona = " It used a synthetic representative identity." if origin == "SANDBOX" else ""
             eid = b.cite(d.source, d.date, "", origin)
             b.line(f"{self.name_of(sid)}: {label} says {STABILITY[s['stability']]}, checked {s['checked_at']}.{old}{persona}", [eid])
         return b
@@ -535,23 +601,40 @@ class Rag:
         b.line(f"From {first} to {last} the median {verb}{how} ({_usd(med[first])} to {_usd(med[last])}).", [eid[first], eid[last]])
         return b
 
-    def _listings(self, sku: str) -> Builder:
+    def _listings(self, sku: Optional[str], question: str = "") -> Optional[Builder]:
+        """Newest dated asks in stock for a part. A catalog SKU is matched exactly; otherwise (or when that finds nothing) the
+        question's own part words are searched with BM25 over the listing rows, which is how a Build Story part (a CPU, memory,
+        a PSU) is found. None when the question has no part word at all."""
         b = Builder()
-        hits, seen = [], set()
-        for _, d in self.index().search(f"listing {sku}", kinds={"listing"}, limit=100000):
-            key = (d.fields["store"], d.url, d.fields["price"], d.date)
-            if d.fields["sku"] == sku and d.fields["kind"] == "ask" and d.fields["in_stock"] and not (d.url and key in seen):
-                seen.add(key)                                   # the same page read twice counts once
-                hits.append(d)
+        terms = [t for t in tokens(question) if t not in GENERIC] if question else []
+        if not sku and not terms:
+            return None
+
+        def collect(rows: Iterable[Doc], exact: bool) -> list[Doc]:
+            out, seen = [], set()
+            for d in rows:
+                key = (d.fields["store"], d.url, d.fields["price"], d.date)
+                if (d.fields["kind"] == "ask" and d.fields["in_stock"] and (not exact or d.fields["sku"] == sku)
+                        and not (d.url and key in seen)):
+                    seen.add(key)                               # the same page read twice counts once
+                    out.append(d)
+            return out
+        hits = collect((d for _, d in self.index().search(f"listing {sku}", kinds={"listing"}, limit=100000)), True) if sku else []
+        if not hits and terms:
+            models = [t for t in terms if len(t) >= 3 and any(c.isdigit() for c in t)]      # "9700x", "750w", "ddr5": must all appear
+            hits = collect((d for _, d in self.index().search(" ".join(terms), kinds={"listing"}, limit=100000)
+                            if set(models) <= set(tokens(d.text))), False)
         hits.sort(key=lambda d: d.date, reverse=True)          # newest first (stable: BM25 order, relevance then id, within a day)
         if not hits:
-            b.line(f"I have no dated listings for {sku.upper()}.")
+            b.line(f"I have no dated listings for {sku.upper()}." if sku else "I have no dated listings for that part.")
             return b
         for d in hits[:MAX_LISTINGS]:
             f = d.fields
             eid = b.cite(f"{_store(f['store'])} listing, snapshot {d.ref}", d.date, d.url, d.origin)
             cond = f", {f['condition']}" if f["condition"] and f["condition"] != "unknown" else ""
-            b.line(f"{_store(f['store'])}: {_usd(f['price'])}{cond}, in stock, observed {d.date}.", [eid])
+            partner = ", comparison only, cannot be bought here" if NOT_PARTNER in f["store"] else ""
+            name = f" {_short_title(f['title'])}" if f.get("category") and f["title"] else ""
+            b.line(f"{_store(f['store'])}:{name} {_usd(f['price'])}{cond}, in stock, observed {d.date}{partner}.".replace(":  ", ": "), [eid])
         return b
 
     # ---- optional phrasing

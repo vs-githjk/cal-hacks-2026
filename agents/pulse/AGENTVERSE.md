@@ -14,7 +14,7 @@ Fish Market's price-discovery agent. Before each round it publishes a fair-price
 - Coaching notes for losing sellers: how far the seller lost (as a band), what the market's median and typical range for the part are, its own record, and what to change inside its own floor. A note never contains a rival's price, the winning price or the buyer's cap.
 - Going price and demand in chat: the band with its sources, when the pulse was published, and how many rounds ran for the part in the last day.
 - Every sentence is a fixed phrase filled with numbers it read from a source. No model text and no question text reaches a seller or a buyer.
-- Every number names its source in brackets (a Tiger Data table, the snapshot date, the CRS signals cache or a round id) and its origin (LIVE, MIRROR or SIM).
+- Every number names its source in brackets (a Tiger Data table, the snapshot date, the CRS signals cache or a round id) and its origin (LIVE, MIRROR, SIM or SANDBOX).
 - Screens incoming chat with Smell Test; a blocked message gets "No action taken".
 - Ask about its own data and get cited answers: it searches (BM25 keyword retrieval, no model needed) its finished rounds, dated MIRROR listings, CRS checks and Tiger Data prices, and every claim ends with the number of the source it rests on and a label (LIVE, MIRROR or SIM). A source line gives what it is, its date and its URL or round id. With no source, it says it has no data and makes no claim. Optionally Claude (claude-haiku-5-5) rewords the lines, but a reworded line is used only if it keeps the same source numbers and adds no figure. It describes; it never ranks sellers, recommends a purchase or decides anything, and a round is kept without any bid or price, so no seller's price reaches another seller.
 
@@ -53,9 +53,10 @@ price discovery, fair price, going price, price band, price history, price trend
 
 ## SIM, MIRROR and LIVE
 
-- Every line ends with a bracket naming its source and its origin: LIVE, MIRROR or SIM.
+- Every line ends with a bracket naming its source and its origin: LIVE, MIRROR, SIM or SANDBOX.
 - With Tiger Data price rows, a line carries the origins of the rows it was built from. Prices from a real store's public listings are labelled MIRROR; they are comparison prices, not offers you can buy here.
 - Without Tiger Data rows, the band falls back to dated MIRROR snapshots (and says Tiger Data has no rows), then to the SIM seller listings, labelled SIM with "no price history yet". A SIM band is shown only when enough sellers list the part (4 besides the asker, or 5 when the asker is unknown); with fewer it says "no data", because a band of two or three prices would give one seller's price away. The week and month trend figures come from a built-in fixture and every line says SIM until Tiger Data holds real rounds and prices.
+- A CRS check is labelled SANDBOX (a vendor's test mode, with a synthetic representative identity), or SIM when it is a simulated check. Nothing in Pulse's answers is labelled LIVE unless a real outside party was read now.
 - Market Pulse never bids, buys or moves money in any mode.
 
 ## Usage examples
@@ -74,6 +75,7 @@ price discovery, fair price, going price, price band, price history, price trend
 
 - Setup: run `python3 -m data.tiger.load` once per Tiger service (it creates the tables and loads the price history). `python3 -m agents.pulse.fair_band --tiger-check` says whether Tiger Data holds price rows.
 - It cannot place bids, approve purchases or move money.
+- Part listings (CPU, motherboard, memory, storage, cooler) come from dated MIRROR snapshots of real stores. There are no PSU or case rows in the snapshots yet, so a PSU or case question gets "I have no dated listings for that part" until they are captured.
 - Answers about "this week" rest on the dated listings it actually holds; with one day of data it says so instead of reporting a move. "Which seller won most rounds" counts only finished rounds it has kept (the Pulse agent saves each referee round; the repo's sample round is SIM). A CRS check older than 24 hours is shown with its age and is not called current.
 - A note shows how far a seller lost only as a band (less than 5, 10 or 20 percent, or more than 20), never an exact figure, so a seller cannot work out the winner's price from it. The only dollar figures in a note are the market's public fair band.
 - A seller's record is shown only to that seller's own agent. The operator can open it to anyone with PULSE_SELLER_CHAT=open.

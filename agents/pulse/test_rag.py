@@ -193,7 +193,7 @@ def test_is_byte_bros_crs_verified_cites_the_check_and_says_how_old_it_is():
     out = ask("is Byte Bros CRS verified?", catalog={**copy.deepcopy(CATALOG), "seller_1": {"name": "Byte Bros Outlet", "skus": []}})
     assert out["intent"] == "crs"
     assert "Byte Bros Outlet" in out["text"] and "verified stable" in out["text"] and "2026-10-24T08:00:00Z" in out["text"]
-    assert "CRS sandbox" in out["text"] and "(LIVE)" in out["text"] and "[1]" in out["text"]
+    assert "CRS sandbox" in out["text"] and "(SANDBOX)" in out["text"] and "LIVE" not in out["text"] and "[1]" in out["text"]
 
 
 def test_an_old_check_is_said_to_be_old_and_a_simulated_one_is_sim():
@@ -245,7 +245,7 @@ def test_no_citation_means_no_claim(q):
 @pytest.mark.parametrize("q", QUESTIONS)
 def test_every_answer_says_what_its_sources_are_labelled_and_never_ranks_or_decides(q):
     text = ask(q)["text"]
-    assert re.search(r"\((LIVE|MIRROR|SIM)\)", text) and "Sources:" in text
+    assert re.search(r"\((LIVE|MIRROR|SIM|SANDBOX)\)", text) and "Sources:" in text
     for banned in ("you should", "i recommend", "best choice", "buy it", "i approve", "cheapest seller"):
         assert banned not in text.lower()
 
@@ -280,6 +280,89 @@ def test_the_same_page_read_twice_counts_once_in_listings_and_in_the_daily_media
     assert "2026-10-24: 3 retail asks" in ask("how did RTX 5070 Ti prices move this week?", snapshots=lambda: twice)["text"]
     shown = ask("show me RTX 5070 Ti listings", snapshots=lambda: twice)["text"].split("Sources:")[0]
     assert len(set(shown.splitlines())) == len(shown.splitlines())
+
+
+def test_every_crs_source_has_the_readme_label_sandbox_or_sim_and_never_live():
+    assert {k: v[1] for k, v in R.CRS_SOURCES.items()} == {"sandbox": "SANDBOX", "recorded": "SANDBOX", "simulated": "SIM"}
+    assert set(R.ORIGINS) == {"LIVE", "MIRROR", "SIM", "SANDBOX"}
+    out = ask("which sellers are CRS verified?")
+    assert {e["origin"] for e in out["evidence"]} == {"SANDBOX", "SIM"}
+    for line in out["lines"]:
+        assert "(SANDBOX)" in line["text"] or "(SIM)" in line["text"]
+    stale = ask("is FlashDeal Frankie CRS verified?")["text"]                       # a recorded sandbox result is SANDBOX too
+    assert "(SANDBOX)" in stale and "It used a synthetic representative identity." in stale
+
+
+# ---- Build Story parts (data/mirror/parts_snapshots) as dated MIRROR listings ----------------------------------------------
+
+def part(category, name, price, store_url, *, stock="25+ IN STOCK", model=None, maker=None, day="2026-10-25", n=1):
+    return {"id": f"x:{n}", "category": category, "name": name, "model_number": model, "condition": "unknown", "attrs": {}, "price": price,
+            "currency": "USD", "origin": "MIRROR", "source": store_url, "snapshot_id": f"snap-{category}-{day}", "maker_model": maker,
+            "snapshot_date": f"{day}T01:23:48+00:00", "listing": {"url": store_url, "price": price, "stock": stock}}
+
+
+PARTS = [part("cpu", "AMD Ryzen 7 9700X Processor", 299.99, "https://www.microcenter.com/product/1/ryzen-7-9700x", maker="Ryzen 7 9700X", n=1),
+         part("cpu", "AMD Ryzen 7 9700X Box", 309.0, "https://www.bestbuy.com/product/ryzen-7-9700x-box", stock=True, n=2),
+         part("cpu", "AMD Ryzen 7 9700X Sold Out", 280.0, "https://www.bhphotovideo.com/c/product/9700x", stock="not in stock", n=3),
+         part("cpu", "AMD Ryzen 7 9700X Unknown Stock", 270.0, "https://www.amazon.com/dp/B0X", stock=None, n=4),
+         part("memory", "Corsair Vengeance 32GB DDR5 6000 CL30", 109.99, "https://www.centralcomputer.com/ddr5-32", n=5),
+         part("memory", "Old Kit 16GB DDR5", 60.0, "https://www.microcenter.com/old", day="2026-08-01", n=6),
+         part("cpu", "bad price", None, "https://x.example/1", n=7), part("cpu", "free", 0, "https://x.example/2", n=8)]
+
+
+def test_parts_snapshot_rows_become_dated_mirror_listing_rows():
+    rows = R.parts_as_listings(PARTS)
+    assert len(rows) == 6                                                      # no price or a zero price is not a listing
+    first = rows[0]
+    assert first["sku"] == "ryzen 7 9700x" and first["kind"] == "ask" and first["origin"] == "MIRROR" and first["in_stock"] is True
+    assert first["observed_at"] == "2026-10-25T01:23:48+00:00" and first["url"] == "https://www.microcenter.com/product/1/ryzen-7-9700x"
+    assert first["store"] == "microcenter" and first["category"] == "cpu" and first["title"].startswith("AMD Ryzen 7 9700X")
+    stock = {r["title"]: r["in_stock"] for r in rows}
+    assert stock["AMD Ryzen 7 9700X Sold Out"] is False and stock["AMD Ryzen 7 9700X Unknown Stock"] is False   # only a stated stock counts
+    assert stock["AMD Ryzen 7 9700X Box"] is True
+
+
+def test_the_repo_parts_snapshots_load_as_listing_rows():
+    rows = R.default_parts()
+    assert len(rows) > 100 and {r["category"] for r in rows} >= {"cpu", "memory", "motherboard", "storage", "cooler"}
+    assert all(r["origin"] == "MIRROR" and r["price"] > 0 and r["observed_at"] for r in rows)
+    assert len(R.default_listings()) > len(FB.default_snapshots())
+
+
+def test_a_part_question_without_a_catalog_sku_is_answered_from_the_parts_listings():
+    out = ask("show me Ryzen 7 9700X listings", snapshots=lambda: R.parts_as_listings(PARTS) + SNAPS)
+    assert out["intent"] == "listings" and "$299.99" in out["text"] and "$309.00" in out["text"]
+    assert "https://www.microcenter.com/product/1/ryzen-7-9700x" in out["text"] and "(MIRROR)" in out["text"] and "2026-10-25" in out["text"]
+    assert "$280.00" not in out["text"] and "$270.00" not in out["text"]       # out of stock and unknown stock are not offered
+    assert all(l["cites"] for l in out["lines"])
+
+
+def test_a_model_number_in_the_question_must_appear_in_the_row_so_a_7700x_never_answers_a_9700x():
+    rows = R.parts_as_listings(PARTS + [part("cpu", "AMD Ryzen 7 7700X Processor", 249.0, "https://www.microcenter.com/product/77/ryzen-7-7700x", n=11)])
+    text = ask("show me Ryzen 7 9700X listings", snapshots=lambda: rows)["text"]
+    assert "$299.99" in text and "$249.00" not in text and "7700X" not in text
+    assert R._short_title("AMD Ryzen 7 9700X, Gigabyte B850 Gaming X WiFi6E AM5, Corsair Vengeance 32GB") == "AMD Ryzen 7 9700X, Gigabyte B850 Gaming X WiFi6E AM5..."
+
+
+def test_psu_and_case_questions_get_an_honest_no_data_when_no_dated_listing_exists():
+    for q in ("show me PSU listings", "show me case listings", "what 750W PSU is in stock"):
+        out = ask(q, snapshots=lambda: R.parts_as_listings(PARTS) + SNAPS)
+        assert "no dated listings" in out["text"] and not lines_with_claims(out) and not MONEY.search(out["text"]), q
+
+
+def test_a_psu_listing_is_found_the_moment_a_snapshot_has_one():
+    psu = part("psu", "Corsair RM750e 750W 80+ Gold PSU", 99.99, "https://www.microcenter.com/product/9/rm750e", n=9)
+    out = ask("show me 750W PSU listings", snapshots=lambda: R.parts_as_listings(PARTS + [psu]))
+    assert "$99.99" in out["text"] and "rm750e" in out["text"] and "(MIRROR)" in out["text"]
+
+
+def test_a_store_that_is_not_a_partner_is_marked_comparison_only():
+    out = ask("show me DDR5 32GB memory listings", snapshots=lambda: R.parts_as_listings(PARTS))
+    assert "$109.99" in out["text"] and "comparison only" in out["text"] and "cannot be bought here" in out["text"]
+
+
+def test_a_listing_question_with_only_generic_words_is_left_to_the_other_answers():
+    assert ask("show me listings", snapshots=lambda: R.parts_as_listings(PARTS)) is None
 
 
 def test_listing_questions_show_newest_public_asks_with_url_and_date():
