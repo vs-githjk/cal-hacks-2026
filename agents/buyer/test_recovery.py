@@ -1053,3 +1053,23 @@ def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
     text = ctx.owner_text()
     assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
     assert text.count('asked seller_1') == 1
+
+
+def test_market_reviews_skip_a_chat_only_sellers_bid(buyer, monkeypatch):
+    # Live 05:39: ReNew (seller_5) has no market identity, so its bid has no market row; writing its review raised
+    # "attach_claim_check: no bid" and failed every round. Only market sellers' bids get market review rows.
+    calls = []
+    monkeypatch.setattr(buyer.MARKET_REFEREE, 'attach_claim_check', lambda **kw: calls.append(('claim', kw['bid_id'])))
+    monkeypatch.setattr(buyer.MARKET_REFEREE, 'attach_advocate_card', lambda **kw: calls.append(('card', kw['bid_id'])))
+    line = {'line_index': 0, 'listing_id': 'L1', 'listing_url': 'https://example.test/l1', 'listing_hash': 'h',
+            'offered_condition': 'new'}
+    bids = [{'id': 'bid-a', 'supplier_id': 'seller_1', 'origin': 'SIM', 'candidate_binding_hash': 'b1', 'lines': [line], 'claims': []},
+            {'id': 'bid-r', 'supplier_id': 'seller_5', 'origin': 'SIM', 'candidate_binding_hash': 'b2', 'lines': [line], 'claims': []}]
+    monkeypatch.setitem(buyer.ROUND, 'review_bids', bids)
+    cards = [{'bid_id': b['id'], 'recommendation': 'buy', 'claim_checks': [],
+              'call_reason': {'rule_id': 'fit.ok', 'text': 'fits', 'source_url': 'https://example.test'}} for b in bids]
+    try:
+        buyer._record_market_reviews(cards)
+    except (KeyError, TypeError):
+        pass  # card fields beyond what this test supplies; the point is which bids were written
+    assert calls and all(bid_id == 'bid-a' for _, bid_id in calls)

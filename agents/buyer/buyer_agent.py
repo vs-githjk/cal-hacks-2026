@@ -205,7 +205,10 @@ def _record_market_reviews(cards: list[dict]) -> None:
     cards_by_bid = {card["bid_id"]: card for card in cards}
     if set(cards_by_bid) != set(bids):
         raise MarketBridgeError("advocate_review_coverage_invalid")
+    market_suppliers = set(MARKET_SELLER_IDS.values())
     for bid_id, bid in bids.items():
+        if bid.get("supplier_id") not in market_suppliers:
+            continue  # a chat-only seller's bid has no market row (see _begin_market_review); it cannot win the market ranking
         card = cards_by_bid[bid_id]
         binding_hash = bid["candidate_binding_hash"]
         origin = bid["origin"]
@@ -934,7 +937,7 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
             raise MarketBridgeError("market_review_closed")
         ROUND["deadline"] = _market_timestamp(status.get("deadline"))
     except Exception as exc:
-        ctx.logger.warning(f"Market review write failed: {type(exc).__name__}")
+        ctx.logger.warning(f"Market review write failed: {type(exc).__name__}: {str(exc)[:200]}")
         await fail_round(ctx, "Market could not record the independent review. Nothing ordered.", always_notify=True)
         return
     ROUND["phase"] = "market_review_wait"
