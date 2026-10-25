@@ -134,9 +134,10 @@ export default function SellPage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
+    <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
       <header>
-        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[22px]/[28px] font-semibold tracking-[-0.01em]">
+        <p className="text-[13px] leading-[18px] text-muted">Seller Kit</p>
+        <h1 className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">
           Sell on {BRAND} <OriginChip origin="SIM" />
         </h1>
         <p className="mt-2 text-[15px]/[20px] text-ink-2">Describe your shop once. Your agent bids from it, never below your floor.</p>
