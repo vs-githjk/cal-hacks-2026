@@ -279,8 +279,14 @@ export interface PostNeedArgs {
   items: { skuSpec: string; condition: string; allowedConditions: string[]; variant: string; quantity: number; unit: string }[];
 }
 
+/** The referee path is for the buyer agent acting for a self-signed-up buyer, and only against that buyer's active goal. */
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
-  requireRole(ctx, 'post_need', ['buyer'], a.buyerId);
+  const who = requireRole(ctx, 'post_need', ['buyer', 'referee'], a.buyerId);
+  if (who.role === 'referee') {
+    const g = ctx.db.goal.id.find(a.goalId);
+    if (!g || g.buyerId !== a.buyerId) throw new SenderError(`not allowed: the referee posts a need only for one of that buyer's goals; ${a.goalId || 'no goal'} is not ${a.buyerId}'s`);
+    if (g.state !== 'ACTIVE') throw new SenderError(`not allowed: goal ${a.goalId} is not active`);
+  }
   allowanceFor(ctx, a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');

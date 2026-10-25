@@ -1669,3 +1669,28 @@ describe('#374 agent views', () => {
     for (const who of [STRANGER, VIDYUT, NEW, OWNER]) for (const v of views(who)) expect(v).toEqual([]);
   });
 });
+
+describe('#374 post_need referee path', () => {
+  const NOT_ONLY = /only for one of that buyer/;
+  let NEW: Auth, buyerId: string;
+  beforeEach(() => {
+    NEW = as('need-new');
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-r', buyerId })));
+  });
+
+  it('the referee posts a need for the buyer\'s own goal', () => {
+    run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-r' })));
+    expect(h.db.need.id.find('need-r')?.buyerId).toBe(buyerId);
+  });
+
+  it('refuses an unknown goal and another buyer\'s goal', () => {
+    expect(() => run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'nope' })))).toThrow(NOT_ONLY);
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-v' })));
+    expect(() => run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-v' })))).toThrow(NOT_ONLY);
+  });
+
+  it('another buyer still cannot post for this buyer', () => {
+    expect(() => run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-r' })))).toThrow(/acts only for/);
+  });
+});
