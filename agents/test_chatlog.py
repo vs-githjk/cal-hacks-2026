@@ -25,6 +25,12 @@ def _no_hidden():
     ("paid via pi_3NxAbC123def", "paid via ••••"),
     ("key sk_test_abcdef123456 here", "key •••• here"),
     ("Authorization: Bearer abc.def.ghi", "Authorization: ••••"),
+    ("key sk-ant-api03-AbCdEf123456_xyz-789 end", "key •••• end"),
+    ("key sk-proj-AbCdEf123456xyz end", "key •••• end"),
+    ("token ghp_AbCdEf1234567890xyz end", "token •••• end"),
+    ("slack xoxb-1234-abcdEFGH end", "slack •••• end"),
+    ("run with ANTHROPIC_API_KEY=abc123xyz now", "run with •••• now"),
+    ("secret: hunter2 and token = abc", "•••• and ••••"),
     ("the approval code is amber falcon, say approve", "the approval code is ••••, say approve"),
     ("One-time approval code: amber falcon. Calling now", "One-time approval code: ••••. Calling now"),
 ])
@@ -44,6 +50,13 @@ def test_clean_does_not_mask_ordinary_code_talk():
 def test_hidden_approval_code_words_are_masked_anywhere():
     chatlog.hide("amber falcon")
     assert chatlog.clean("they said Amber   Falcon twice, amber falcon") == "they said •••• twice, ••••"
+
+
+def test_hidden_code_words_are_masked_in_hyphen_and_underscore_forms_too():
+    chatlog.hide("amber falcon river")
+    assert chatlog.clean("said amber-falcon-river, then Amber_Falcon_River and amber falcon river") == "said ••••, then •••• and ••••"
+    chatlog.hide("amber-falcon-river")
+    assert len(chatlog._HIDDEN) == 1
 
 
 def test_clean_truncates_to_400_after_masking():

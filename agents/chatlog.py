@@ -24,7 +24,9 @@ KINDS = ("message", "thinking", "done")
 _DIGIT_RUN = re.compile(r"\d(?:[ \-]?\d){5,}")   # the same rule as web/src/lib/chatFeed.ts maskDigits
 _PHONE = re.compile(r"(?:\+\d{1,2}[\s.\-])?(?:\(\d{3}\)\s?|\d{3}[\s.\-])\d{3}[\s.\-]?\d{4}")
 _PAYMENT_ID = re.compile(r"\b(?:pi|ch|cs|pm|cus|re|sub|in|seti|src|tok|card|ba|acct|evt|txn|pay)_[A-Za-z0-9_]{4,}")
-_KEY = re.compile(r"\b(?:sk|pk|rk|whsec)_[A-Za-z0-9_]{6,}|eyJ[A-Za-z0-9_\-]{10,}|Bearer\s+\S+|AKIA[0-9A-Z]{12,}", re.I)
+_KEY = re.compile(r"\b(?:sk|pk|rk|whsec)_[A-Za-z0-9_]{6,}|eyJ[A-Za-z0-9_\-]{10,}|Bearer\s+\S+|AKIA[0-9A-Z]{12,}"
+                  r"|\bsk-[A-Za-z0-9_\-]{8,}|\bgh[pousr]_[A-Za-z0-9]{10,}|xox[abp]-[A-Za-z0-9\-]{8,}"
+                  r"|[A-Za-z0-9_]*(?:api[_-]?key|secret|token)\s*[=:]\s*\S+", re.I)   # the last one also catches ANTHROPIC_API_KEY=... and "token: ..."
 # "the code is amber falcon", "approval code: amber falcon" -> the words after it go; up to three words, as issue_approval_code's code is a phrase
 _CODE_PHRASE = re.compile(r"\b((?:pass|approval|one[- ]time|secret|verification)?[ -]?code\b\s*(?:is|are|was|:|=)\s*)"
                           r"(?!(?:required|needed|expired|invalid|wrong|not|sent|will|has|have|must|to|for|and|or|from|in|on)\b)"
@@ -39,7 +41,7 @@ _HIDDEN_MAX = 64
 
 def hide(secret: str | None) -> None:
     """Register an approval code (or any other secret string) so clean() masks it wherever it appears, whatever the words around it."""
-    s = " ".join(str(secret or "").split())
+    s = " ".join(re.split(r"[\s\-_]+", str(secret or "").strip()))   # "amber-falcon-river" and "amber falcon river" are one code
     if len(s) < 3 or s in _HIDDEN:
         return
     if len(_HIDDEN) >= _HIDDEN_MAX:
@@ -51,7 +53,7 @@ def clean(text: object, limit: int = MAX_TEXT) -> str:
     """The text with every private shape masked, whitespace collapsed, cut to `limit` characters."""
     t = " ".join(str(text if text is not None else "").split())
     for s in sorted(_HIDDEN, key=len, reverse=True):
-        t = re.sub(r"\s+".join(re.escape(w) for w in s.split()), MASK, t, flags=re.I)
+        t = re.sub(r"[\s\-_]+".join(re.escape(w) for w in re.split(r"[\s\-_]+", s) if w), MASK, t, flags=re.I)
     t = _CODE_PHRASE.sub(lambda m: m.group(1) + MASK, t)
     t = _KEY.sub(MASK, t)
     t = _PAYMENT_ID.sub(MASK, t)

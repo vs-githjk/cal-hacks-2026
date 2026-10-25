@@ -100,4 +100,5 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
 
 
 if __name__ == "__main__":
+    common.require_peer_seeds("advocate")   # #449 RT-27: production mode needs the buyer's private seed
     agent.run()

@@ -8,7 +8,7 @@ import sys
 import time
 import asyncio
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -43,7 +43,7 @@ MARKET_REVIEW_S = ADVICE_TIMEOUT_S + 10
 RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs a phone-call approval
 CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
-SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
+SELLER_ADDRS = {common.address(s): s for s in common.trusted_sellers()}  # #449 RT-27: no dev-seed seller in production
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
 # Agentverse profile, published on connect (README, short description, handle) for ASI:One discovery.
@@ -174,9 +174,20 @@ def _begin_market_review() -> list[dict]:
     # #447: review while the round is still open (the published market ranks at close); a closed round is too late
     if referee_market.round_status(round_id).get("state") != "open":
         raise MarketBridgeError("market_round_closed_before_review")
+    market_suppliers = set(MARKET_SELLER_IDS.values())
     for bid_id, check in ROUND.get("screened_bids", {}).items():
-        referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
-                                      rule_ids=check["rule_ids"], origin=check["origin"])
+        bid = ROUND.get("received_bids", {}).get(bid_id) or {}
+        # Only sellers with a market identity publish their bid to the market; a chat-only seller's bid (ReNew,
+        # the MIRROR) has no market row, so attaching to it fails "no bid" and used to abort the whole round.
+        # Such a bid can never be the market's winner, so skipping its market verdict changes no ranking.
+        if bid.get("supplier_id") not in market_suppliers:
+            continue
+        try:
+            referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
+                                          rule_ids=check["rule_ids"], origin=check["origin"])
+        except MarketBridgeError:
+            if check["verdict"] != "allow":
+                raise  # a block or quarantine that cannot be recorded must stop the round (fail closed)
     return _review_candidates()
 
 
@@ -1235,7 +1246,7 @@ def market_approval_matches(row, mandate: dict, buyer_id: str, voice_approval_id
 
 
 def _transport_request(ctx: Context, loop):
-    """request(mandate_hash, variables) for DelegatedVoiceClient: send one VoiceTransportRequest to the Caller and wait
+    """request(mandate_hash, variables) for DelegatedVoiceClient: send one ExpiringVoiceTransportRequest to the Caller and wait
     for its VoiceTransportResult (runs in the approval worker thread)."""
     import concurrent.futures
     from buyer.delegate import DELEGATE_TIMEOUT_S
@@ -1244,8 +1255,12 @@ def _transport_request(ctx: Context, loop):
         future = concurrent.futures.Future()
         PENDING_TRANSPORT[mandate_hash] = future
         try:
-            asyncio.run_coroutine_threadsafe(ctx.send(common.address("caller"), common.VoiceTransportRequest(
-                mandate_hash=mandate_hash, variables_json=json.dumps(variables))), loop).result(timeout=10.0)
+            # #449 RT-24: the Caller refuses a request past this time (the real clock, as the Caller reads its own), so a
+            # request still queued after we fell back to our direct call never rings a second time. The expiring message
+            # is separate from VoiceTransportRequest, whose schema digest is pinned (caller/test_expiry.py).
+            expires_at = (datetime.now(timezone.utc) + timedelta(seconds=DELEGATE_TIMEOUT_S)).isoformat()
+            asyncio.run_coroutine_threadsafe(ctx.send(common.address("caller"), common.ExpiringVoiceTransportRequest(
+                mandate_hash=mandate_hash, variables_json=json.dumps(variables), expires_at=expires_at)), loop).result(timeout=10.0)
             return future.result(timeout=DELEGATE_TIMEOUT_S)
         finally:
             PENDING_TRANSPORT.pop(mandate_hash, None)
@@ -1991,5 +2006,8 @@ agent.include(chat, publish_manifest=True)
 agent.include(pay, publish_manifest=True)
 
 if __name__ == "__main__":
+    import rest_gate
+    common.require_peer_seeds("buyer")   # #449 RT-27: production mode needs the advocate's (and caller's) private seed
+    rest_gate.install(agent)   # #449 RT-26: /chat answers loopback callers only (uagents binds 0.0.0.0)
     print(f"buyer address: {agent.address}")
     agent.run()
