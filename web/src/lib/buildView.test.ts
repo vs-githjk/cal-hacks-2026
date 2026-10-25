@@ -91,6 +91,21 @@ test("fetchBuild: 404 means no live build, a posted build is parsed", async () =
   }
 });
 
+test("fetchBuild passes the paired buyer as a query parameter and never a token (#449 PL-17)", async () => {
+  const real = globalThis.fetch;
+  try {
+    const seen: { url: string; init?: RequestInit }[] = [];
+    globalThis.fetch = (async (u: string, init?: RequestInit) => { seen.push({ url: u, init }); return Response.json(sample); }) as typeof fetch;
+    await fetchBuild("http://feed", undefined, "vidyut");
+    await fetchBuild("http://feed", undefined, "a b&c");
+    await fetchBuild("http://feed");
+    assert.deepEqual(seen.map((r) => r.url), ["http://feed/v1/build?buyer=vidyut", "http://feed/v1/build?buyer=a%20b%26c", "http://feed/v1/build"]);
+    assert.ok(seen.every((r) => !JSON.stringify(r.init ?? {}).toLowerCase().includes("authorization")));
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
 // web/src/lib/fixtures/build-feed.served.json is a real `python3 demo/build.py --dry-run --out-dir` view run through the feed's
 // buyer_view() (scripts/agent_feed.py GET /v1/build); scripts/tests/test_agent_feed.py pins it to what the feed serves.
 test("the live build the agent feed serves parses with nothing dropped and replaces the SIM sample in the panel", async () => {

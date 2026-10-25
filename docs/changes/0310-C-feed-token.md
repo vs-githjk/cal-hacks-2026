@@ -1,0 +1,3 @@
+# 0310 C Agent feed: optional token and buyer scoping (#449 PL-17)
+`scripts/agent_feed.py`: with env `AGENT_FEED_TOKEN` set, `GET /v1/memory` and `GET /v1/build` need `Authorization: Bearer <token>` (401) and `?buyer=<id>` (400), and return only that buyer's rows (`buyer_id` equal, or a lesson or veto with none: the same rule as `web/src/lib/memory.ts memoryForBuyer`) or, for the build, only when its `buyerId` matches (404). Unset: unchanged. `/v1/agents` and `/v1/health` stay open.
+The web pages send `?buyer=<paired buyer id>` and never a token (they cannot hold one; CORS allows no Authorization header), so a token-gated feed shows as unreachable in the browser; a server-side caller passes the token.
