@@ -148,10 +148,60 @@ def _topic(name: str, topic: str, sku: str, state: dict | None) -> str:
 OFFER_WORDS = ("offer", "quote", "how much", "price", "cost", "deal", "bid", "tradeoff", "trade-off", "difference", "cheaper")
 
 
+LAST_BID: dict[str, dict] = {}   # the bid each seller last sent, so a clarifying question is answered about that bid
+CLARIFY_ITEMS = re.compile(r"your bid for (.{1,200}?)\.\s+The listing page", re.I | re.S)
+CONDITION_WORDS = {"new": "New", "open-box": "Open box", "refurbished": "Refurbished", "used": "Used"}
+
+
+def remember_bid(name: str, bid: dict) -> None:
+    LAST_BID[name] = bid
+
+
+def is_clarify(text: str) -> bool:
+    """The Quality Advocate's ask-before-veto question (agents/advocate/clarify.py, PR #459): it names itself and says the
+    listing page does not state the condition."""
+    low = text.lower()
+    return "quality advocate" in low and "state the condition" in low
+
+
+def _line_terms(name: str, line: dict) -> str:
+    """Warranty and returns for one bid line, from the same data its listing page shows."""
+    if name == "seller_5":
+        t = refurb.TERMS[line["offered_condition"]]
+        return f"{refurb.warranty_words(t['warranty_months'])} warranty and {t['returns_days']}-day returns"
+    if name == "seller_3":   # what Frankie's page truly shows, not what its claims say
+        return (f"{trickster.TRUE_WARRANTY_MONTHS}-month seller warranty and {trickster.PAGE_RETURN_DAYS}-day returns")
+    return "the maker's warranty only and 30-day returns"
+
+
+def clarify_answer(name: str, text: str, state: dict | None) -> str:
+    """The reply to the Advocate's condition question: ONE condition word, what this seller's own listing page says for the
+    line it bid (the cheapest line of that part), then its warranty and returns. Frankie answers from its page too, so the lie
+    in its bid does not survive the question. The MIRROR's page states no condition and it says so with no condition word.
+    Code only, no model, so it is fast and cannot drift."""
+    if name == "seller_6":
+        return "The store's page does not state a condition, so I cannot say. I am not the store and cannot be ordered or paid."
+    asked = CLARIFY_ITEMS.search(text)
+    items = [i.strip().lower() for i in re.split(r"\s+and\s+|,", asked.group(1))] if asked else []
+    bid = LAST_BID.get(name)
+    if bid is None:
+        sku = next((i for i in items if i in load_seller(name)["listings"]), DEFAULT_SKU)
+        bid, _ = _quote(name, sku, state)
+    if bid is None:
+        return "I have no bid on that part, so I have no page to read."
+    lines = bid["lines"]
+    sku = next((i for i in items if any(l["sku_spec"] == i for l in lines)), lines[0]["sku_spec"])
+    line = min((l for l in lines if l["sku_spec"] == sku), key=lambda l: l["unit_price"])
+    page = line.get("page_condition") or line.get("offered_condition")
+    return f"{CONDITION_WORDS.get(page, 'Not stated')}. My listing page shows {_line_terms(name, line)}."
+
+
 def answer(name: str, text: str, *, db_path: str | Path | None = None) -> str:
     """The code-built reply: an order request is refused first, then what was asked (a term, the strategy, the offer);
     with nothing specific asked it says who it is and what it offers for the part."""
     state = minds.read_state(name, db_path)
+    if is_clarify(text):
+        return clarify_answer(name, text, state)
     low = text.lower()
     sku = part_of(text, name)
     ordering = any(w in low for w in ORDER_WORDS)
@@ -208,7 +258,9 @@ def phrase(name: str, facts: str) -> str:
 
 
 def respond(name: str, text: str, *, db_path: str | Path | None = None) -> str:
-    return phrase(name, answer(name, text, db_path=db_path))
+    """The reply. The Advocate's question is answered from code alone, fast: a model never touches it."""
+    reply = answer(name, text, db_path=db_path)
+    return reply if is_clarify(text) else phrase(name, reply)
 
 
 def responder(name: str, db_path_fn=lambda: None):

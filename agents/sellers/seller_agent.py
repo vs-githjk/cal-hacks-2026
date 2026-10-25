@@ -376,6 +376,7 @@ def build(name: str, cfg: dict | None = None) -> Agent:
         except Exception as exc:
             ctx.logger.warning(f"Market bid publication failed: {type(exc).__name__}")
             return
+        seller_chat.remember_bid(name, bid)  # the Advocate may ask about this bid's condition; answer from what was bid
         line = (_mirror_persona(s, bid["total_landed_price"], bid.get("price_anchor")) if mirror
                 else mind_line or persona_line(s, bid["total_landed_price"]))
         await ctx.send(sender, common.BidReply(bid_json=json.dumps(bid), persona_line=line))

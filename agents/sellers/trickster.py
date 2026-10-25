@@ -29,6 +29,7 @@ FEE_RATE = 0.06
 KEEP = 12
 KEEP_IDS = 100
 TRUE_WARRANTY_MONTHS = 1
+PAGE_RETURN_DAYS = 30
 CLAIMED_WARRANTY_YEARS = 3
 LIE_LINE = {"condition_lie": "Brand new, sealed in the box, lowest price on the floor.",
             "hidden_fee": "One price, all in, no fees. Ships today.",
@@ -129,7 +130,8 @@ def apply(trick: str, bid: dict) -> tuple[dict, dict]:
         page_price = price + _fee(price) if trick == "hidden_fee" else price
         extra = {"fees": f"processing fee ${_fee(price):.2f} added at checkout"} if trick == "hidden_fee" else {}
         facts = listing_pages.facts_for_line(line, seller_id="flashdeal-frankie", price=page_price,
-                                             warranty_months=TRUE_WARRANTY_MONTHS, return_days=30, extra=extra)
+                                             warranty_months=TRUE_WARRANTY_MONTHS, return_days=PAGE_RETURN_DAYS,
+                                             extra=extra)
         pages[line["listing_url"]] = listing_pages.render(facts, f"{line['sku_spec']} ({facts['condition']})")
     if trick == "hidden_fee":
         out["claims"] = [*out["claims"], f"all-in price ${first['unit_price']:,.2f}, no fees"]

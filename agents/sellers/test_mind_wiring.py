@@ -288,6 +288,19 @@ def test_exactly_the_four_named_sellers_are_live_and_seller_2_and_4_are_retired(
     assert common.live_sellers() == ["seller_1", "seller_3", "seller_5"]
 
 
+def test_the_bid_handler_remembers_what_it_bid_so_the_advocates_question_is_answered_about_that_bid(built):
+    from agents.sellers import seller_chat
+    seller_chat.LAST_BID.clear()
+    app, _ = built["make"]("seller_5")
+    only_open = need("need-1")
+    only_open["items"][0].update(condition="open-box", allowed_conditions=["open-box"])
+    built["ask"](app, only_open)
+    question = ("Fish Market Quality Advocate here, checking your bid for rtx 5070 ti. The listing page does not state the "
+                "condition. Is it new, open-box, refurbished or used? Please reply with one of those words.")
+    assert seller_chat.answer("seller_5", question).startswith("Open box. My listing page shows 1-year warranty")
+    seller_chat.LAST_BID.clear()
+
+
 # ---- Smell Test sees every mind's bid and floor line ------------------------------
 
 def _smell(bid, persona):
