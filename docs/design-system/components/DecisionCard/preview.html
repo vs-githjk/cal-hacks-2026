@@ -1,0 +1,42 @@
+<!-- @dsCard group="Outside" height=560 subtitle="/buyer/decisions: one sealed round as a ledger, the winner as the hero number, every loser with its reason and source" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .hero { display:grid; grid-template-columns: 1fr auto; gap:16px; align-items:end; padding-bottom:16px; border-bottom:1px solid var(--line); }
+  .n { font: 400 56px/60px var(--font-serif); }
+  .why { display:grid; gap:4px; font-size:13px; line-height:18px; color:var(--ink-2); }
+  .bid { display:grid; grid-template-columns: 8px 1fr auto; gap:12px; align-items:start; padding:12px 0; border-top:1px solid var(--line); }
+  .bid i { width:8px; height:8px; border-radius:50%; margin-top:6px; }
+  .bid .r { font-size:13px; line-height:18px; color:var(--muted); }
+  .bid .r a { color:var(--pulse); }
+  .bid .p { font:500 15px/20px var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; }
+  .bid.out .p { color:var(--muted); text-decoration: line-through; }
+  @media (max-width:640px) { .hero { grid-template-columns:1fr; } .n { font-size:44px; line-height:48px; } }
+</style></head>
+<body>
+<div class="tb">
+  <div class="card active" style="max-width:720px">
+    <div class="spread" style="margin-bottom:12px"><span class="cap">Round 3 of 3 · GPU · closed 16:37</span><span class="pill pill-referee">Referee call</span></div>
+    <div class="hero">
+      <div>
+        <div class="n">$1,299.99</div>
+        <div class="ink2" style="margin-top:4px">ASUS Prime RTX 5070 Ti OC Edition · Best Buy <span class="pill pill-mirror" style="height:20px">MIRROR · Oct 24</span></div>
+      </div>
+      <div class="why">
+        <span><span class="pill pill-verified">Fit confirmed</span> 304 mm card, case clears</span>
+        <span><span class="pill pill-verified">No recall</span> CPSC, by brand, cached 24 h</span>
+        <span><span class="pill pill-referee">CRS</span> verified_stable, payee bound to mandate</span>
+        <span><span class="pill pill-caution">Price</span> dated MIRROR; Bright Data re-check runs when its key is set</span>
+      </div>
+    </div>
+    <div style="margin-top:4px">
+      <div class="bid out"><i style="background:var(--ghost-2)"></i><div>Seller 2 · injected listing <span class="pill pill-blocked" style="height:20px">Blocked by Shield</span><div class="r">Listing text asked the agent to ignore its rules. Quarantined with the rules that fired. <a href="#">screen result</a></div></div><div class="p">$1,189.00</div></div>
+      <div class="bid out"><i style="background:var(--ghost-3)"></i><div>Seller 3 · eBay mirror <span class="pill pill-vetoed" style="height:20px">Vetoed</span><div class="r">Condition unknown, so fit is uncertain; uncertain never beats a confirmed fit. <a href="#">listing row</a></div></div><div class="p">$1,222.23</div></div>
+      <div class="bid out"><i style="background:var(--ghost-1)"></i><div>Seller 1 · control <span class="pill pill-eaten" style="height:20px">Eaten · price</span><div class="r">Highest landed price in round 1. Loss report sent: banded gap, reason, source.</div></div><div class="p">$1,329.00</div></div>
+    </div>
+    <div class="well sm" style="margin-top:16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>Sealed: no seller saw the budget or another bid. Fee never enters the ranking.</span><span class="mono muted">rule v1 · ties by fixed order</span></div>
+  </div>
+</div>
+</body>
+</html>

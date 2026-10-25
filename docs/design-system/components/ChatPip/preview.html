@@ -1,0 +1,51 @@
+<!-- @dsCard group="Floor" height=380 subtitle="The ASI:One picture-in-picture frame, as it sits over the floor and as a full panel on the outside" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .two { display:grid; grid-template-columns: 1fr 1fr; gap:16px; max-width:900px; }
+  .floor { background:var(--floor-bg); border-radius:var(--radius-lg); position:relative; min-height:300px; overflow:hidden; }
+  .floor .pip { position:absolute; right:16px; top:14px; width:220px; border-radius:24px; background:#121620eb; border:1px solid #ffffff2e; box-shadow:0 12px 32px #000000a6; overflow:hidden; color:#edf0f5; }
+  .head { display:flex; align-items:center; gap:6px; padding:10px 12px; border-bottom:1px solid #ffffff1a; font:500 10px/14px var(--font-mono); letter-spacing:0.06em; text-transform:uppercase; color:#b7bfcc; }
+  .head .d { width:6px; height:6px; border-radius:50%; background:var(--shield); box-shadow:0 0 0 3px #6f93ff40; }
+  .msgs { padding:10px 12px; display:grid; gap:6px; }
+  .m { font:400 11px/15px var(--font-sans); padding:6px 8px; border-radius:10px; background:#1a1f2b; max-width:95%; }
+  .m.you { background:var(--shield); color:#0b0d12; justify-self:end; }
+  .floor .spec { position:absolute; left:16px; bottom:14px; right:252px; font:400 11px/16px var(--font-mono); color:#8b95a7; }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); display:grid; grid-template-rows:auto 1fr auto; min-height:300px; }
+  .panel .head { font-family:var(--font-sans); text-transform:none; letter-spacing:0; font-size:13px; color:var(--ink); border-color:var(--line); padding:12px 16px; }
+  .panel .head .d { background:var(--pulse); box-shadow:0 0 0 3px var(--pulse-soft); }
+  .panel .msgs { padding:12px 16px; }
+  .panel .m { background:var(--surface-2); color:var(--ink); font-size:14px; line-height:20px; padding:8px 12px; border-radius:12px; max-width:85%; }
+  .panel .m.you { background:var(--pulse); color:var(--pulse-ink); }
+  .panel .in { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); }
+  @media (max-width:640px) { .two { grid-template-columns:1fr; } .floor .pip { width:128px; } .floor .spec { right:150px; } }
+</style></head>
+<body>
+<div class="tb">
+  <div class="two">
+    <div class="floor">
+      <div class="pip">
+        <div class="head"><span class="d"></span>ASI:One · the buyer</div>
+        <div class="msgs">
+          <div class="m you">RTX 5070 Ti under $1,400 by Friday</div>
+          <div class="m">4 sealed bids in. No seller sees your budget. Round 1 now.</div>
+          <div class="m">Shield blocked seller 2: override attempt in the listing.</div>
+        </div>
+      </div>
+      <div class="spec">PiP: 220 px wide at 1440 (22 percent of the stage, min 128 px at 390), radius 24, border 1 px white at 18 percent, shadow-pop, background surface dark at 92 percent. Last three messages only; it mirrors, it never takes input on the floor.</div>
+    </div>
+    <div class="panel">
+      <div class="head"><span class="d"></span>ASI:One · the buyer's front door</div>
+      <div class="msgs">
+        <div class="m you">RTX 5070 Ti under $1,400 by Friday</div>
+        <div class="m">Got it. I will skip the parts you own and open a sealed round for the GPU.</div>
+        <div class="m">Winner $1,299.99 at Best Buy. Above your allowance, so I am calling you with the code.</div>
+        <div class="m"><span class="pill pill-paid" style="height:20px">Paid · test mode</span> Receipt: ch_test_3QxK…</div>
+      </div>
+      <div class="in"><input class="field" placeholder="Ask the buyer…"><button class="btn btn-primary" type="button">Send</button></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

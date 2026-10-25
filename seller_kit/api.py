@@ -1,6 +1,8 @@
 """Seller Kit API (Lane D). Run from the repo root: python3 -m uvicorn seller_kit.api:app --port 8791
 
 POST /v1/sellers   a SellerConfig (contracts/SellerConfig.schema.json) -> 201 {id, name, origin, config_path, run_command}
+                   text the Listing Injection Screen flags -> 422 {errors: [{field, message}]} with the rule id; a screen that
+                   cannot run -> 503 (fails closed); either way nothing is written (seller_kit/screen.py)
                    a config agents/sellers/factory.py refuses -> 422 {errors: [{field, message}]} with every bad field
 GET  /v1/sellers   the shops written so far
 GET  /v1/needs/open  open needs a shop could bid on, each with an origin label (SIM when nothing real is wired in)
@@ -37,6 +39,7 @@ sys.path.insert(0, str(AGENTS / "sellers"))
 from factory import ConfigError, validate_config  # noqa: E402
 
 from shield.api import BodyLimit  # noqa: E402  (413 before any parsing, same limit as the other local APIs)
+from seller_kit import screen as shop_screen  # noqa: E402
 from seller_kit import ucp  # noqa: E402
 
 # SIM sample needs shown when no real source is wired in. Same SKUs the demo sellers list.
@@ -108,7 +111,7 @@ def fold_id(seller_id: str) -> str:
 
 
 def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], Any] | None = None,
-               operator_token: str | None = None):
+               operator_token: str | None = None, screener: Callable[[str], dict] | None = None):
     folder = Path(os.path.abspath(custom_dir or CUSTOM_DIR))
     # replace=true overwrites a shop's config, and the kit cannot tell one shop from another: only the operator may.
     operator = operator_token if operator_token is not None else os.environ.get(OPERATOR_ENV, "")
@@ -131,6 +134,15 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             cfg = json.loads(await request.body(), parse_constant=_no_constant)
         except (ValueError, UnicodeDecodeError, RecursionError):
             return _one(422, "config", "not valid JSON")
+        # #412: the Listing Injection Screen reads the shop's text before the factory sees it and before anything is written.
+        try:
+            screened = shop_screen.screen_shop(cfg, screener)
+        except shop_screen.TooDeep:
+            return _one(422, "config", "nested too deeply")
+        except shop_screen.ShopScreenUnavailable:
+            return _one(503, "config", shop_screen.UNAVAILABLE)   # fail closed: no screen, no shop
+        if screened:
+            return _errors(422, screened)
         errors: list[dict] = []
         try:
             norm = validate_config(cfg)

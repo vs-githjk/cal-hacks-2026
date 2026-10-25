@@ -149,3 +149,60 @@ def test_two_threads_with_the_same_mandate_place_one_call():
     for t in threads:
         t.join()
     assert sum(len(c.calls) for c in clients) == 1 and results.count("already_called") == len(clients) - 1
+
+
+# ---- #398 item 3: voice transport only ------------------------------------------------------------------------------
+VARS = {"buyer_name": "Vidyut", "deal_script": "One RTX 5070 Ti for $1,299.99 from Byte Bros.", "why_answer": "It fits."}
+
+
+class TransportClient:
+    approval_call_to = "+14155550123"
+
+    def __init__(self):
+        self.calls = 0
+
+    def create_call(self, _to, variables):
+        self.calls += 1
+        self.variables = variables
+        return "call-t1"
+
+    def get_call(self, call_id):
+        return {"id": call_id, "status": "completed", "end_reason": "client_hangup",
+                "transcript": [{"role": "user", "text": "lemon river approve", "start_timestamp": 1.0}]}
+
+
+def transport(request=None, *, sender=BUYER, client=None, seen=None):
+    client = client or TransportClient()
+    req = request if request is not None else {"mandate_hash": "a" * 64, "variables": dict(VARS)}
+    return relay.transport(sender, req, buyer_address=BUYER, client=client, seen=set() if seen is None else seen,
+                           sleep=lambda s: None), client
+
+
+def test_transport_returns_the_finished_call_and_its_transcript_and_judges_nothing():
+    out, client = transport()
+    assert out["error"] is None and out["call_id"] == "call-t1" and client.calls == 1
+    assert out["call"]["transcript"][0]["text"] == "lemon river approve"
+    assert "approved" not in out and "voice_approval_id" not in out   # no verdict, no record
+
+
+@pytest.mark.parametrize("req,error", [({"mandate_hash": "x", "variables": VARS}, "bad_request"),
+                                       ({"mandate_hash": "a" * 64, "variables": {**VARS, "code": "lemon river"}}, "bad_variables"),
+                                       ({"mandate_hash": "a" * 64, "variables": {"buyer_name": "V"}}, "bad_variables"),
+                                       ("junk", "bad_request")])
+def test_transport_refuses_anything_but_the_three_script_variables(req, error):
+    out, client = transport(req)
+    assert out["error"] == error and client.calls == 0
+
+
+def test_transport_only_for_the_buyer_and_one_call_per_mandate():
+    out, client = transport(sender="agent1stranger")
+    assert out["error"] == "not_the_buyer" and client.calls == 0
+    seen = set()
+    transport(seen=seen)
+    again, client2 = transport(seen=seen)
+    assert again["error"] == "already_called" and client2.calls == 0
+
+
+def test_the_existing_call_request_path_is_unchanged():
+    out, _ = call()
+    assert out["approved"] is True and set(out) == {"approved", "reason", "call_id", "voice_approval_id"}
