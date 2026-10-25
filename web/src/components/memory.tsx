@@ -212,8 +212,9 @@ export function DecisionsView() {
   const [kind, setKind] = useState<"all" | "veto" | "lesson">("all");
   const [q, setQ] = useState("");
   const decisions = useMemo(() => m.entries.filter((e) => e.kind === "veto" || e.kind === "lesson"), [m.entries]);
-  const rows = selectMemory(decisions, kind, q);
-  const lessons = rows.filter((e) => e.kind === "lesson"); // grouped: there can be dozens, one per seller per round
+  const [showLessons, setShowLessons] = useState(false);
+  const lessonCount = decisions.filter((e) => e.kind === "lesson").length;
+  const rows = selectMemory(decisions, kind, q).filter((e) => e.kind !== "lesson" || showLessons || kind === "lesson");
   return (
     <div className="grid gap-3.5">
       <div className="flex flex-wrap items-center gap-2">
@@ -232,13 +233,12 @@ export function DecisionsView() {
         </div>
         <Search value={q} onChange={setQ} />
       </div>
-      {rows.filter((e) => e.kind === "veto").map((e) => <DecisionCard key={e.id} e={e} />)}
-      {lessons.length > 0 && (
-        <details open={kind === "lesson" || !!q} className="grid gap-3.5">
-          <summary className="inline-flex min-h-11 cursor-pointer items-center text-[14px] font-medium">Seller lessons ({lessons.length})</summary>
-          <div className="mt-2 grid gap-3.5">{lessons.map((e) => <DecisionCard key={e.id} e={e} />)}</div>
-        </details>
+      {kind !== "lesson" && lessonCount > 0 && (
+        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start rounded-lg border border-line px-4 text-[14px] font-medium text-muted hover:bg-soft hover:text-ink">
+          {showLessons ? `Hide ${lessonCount} seller lessons` : `Show ${lessonCount} seller lessons`}
+        </button>
       )}
+      {rows.map((e) => <DecisionCard key={e.id} e={e} />)}
       {(q || kind !== "all") && decisions.length > 0 && rows.length === 0 && <p className="text-muted">No recorded decision matches that filter.</p>}
       <MemoryStatus m={m} empty="No decisions are recorded for you yet." />
     </div>

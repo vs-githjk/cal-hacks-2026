@@ -6,7 +6,9 @@ evidence_hash, reason}. Every way the Actor can fail gives result "unverified", 
   down (no connection or a 5xx) | slow (no answer within `timeout`, or Apify's own run timeout 408) |
   quota (402 or 429) | empty (the run returned no row for this claim) | error (any other status or an unreadable body).
 One request per claim and no retry: a retry after a slow run could start a second run and charge twice (#172 keeps one
-charge per run; this keeps one run per claim). An unverified claim is not a veto, so money still moves only through
+charge per run; this keeps one run per claim). The one exception (#329): when APIFY_AGENT_TOKEN is refused with 401, 402
+or 403 (expired or spent, so Apify started no run) and APIFY_TOKEN is set, the call is made once more with APIFY_TOKEN,
+and `paid_by` says so. An unverified claim is not a veto, so money still moves only through
 the normal approval (agents/tests/test_containment.py). Reads APIFY_TOKEN from the environment; never logs it.
 """
 from __future__ import annotations
@@ -20,6 +22,9 @@ ACTOR = "anoopibrampur~tech-bazaar-claim-check"
 URL = f"https://api.apify.com/v2/acts/{ACTOR}/run-sync-get-dataset-items"
 TIMEOUT = 6.0  # docs/ARCHITECTURE.md: external calls time out after 4 to 6 seconds
 UNAVAILABLE = "claim check unavailable"
+PAID_BY_AGENT = "using a prepaid agent token (set in the env)"  # #290: an env var, not proof of a paid run
+NO_TOKEN = "no Apify token set"  # #329: neither APIFY_AGENT_TOKEN nor APIFY_TOKEN, so nobody paid
+REFUSED = (401, 402, 403)  # Apify refused the token before starting a run, so falling back once cannot charge twice
 RESULTS = ("verified", "unverified", "false")
 
 
@@ -55,8 +60,27 @@ def _unavailable(claim, case, detail=""):
 def check_via_actor(claim: dict, post=None, timeout: float = TIMEOUT) -> dict:
     claim = claim if isinstance(claim, dict) else {}
     post = post or _http_post
-    token = os.environ.get("APIFY_TOKEN", "")
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    agent = os.environ.get("APIFY_AGENT_TOKEN", "")  # #270: a prepaid token the agent bought itself (x402 or MPP at agi.apify.com)
+    ours = os.environ.get("APIFY_TOKEN", "")
+    if not agent:
+        return {**_check(claim, post, timeout, _auth(ours)), "paid_by": "our Apify account" if ours else NO_TOKEN}
+    seen = []
+
+    def watched(url, body, headers, timeout):
+        status, rows = post(url, body, headers, timeout)
+        seen.append(status)
+        return status, rows
+    out = _check(claim, watched, timeout, _auth(agent))
+    if ours and seen and seen[0] in REFUSED:  # #329: an expired or spent agent token; Apify refused it, so no run started
+        return {**_check(claim, post, timeout, _auth(ours)), "paid_by": f"our Apify account (the agent token was refused: HTTP {seen[0]})"}
+    return {**out, "paid_by": PAID_BY_AGENT}
+
+
+def _auth(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"} if token else {}
+
+
+def _check(claim: dict, post, timeout: float, headers: dict) -> dict:
     try:
         status, rows = post(f"{URL}?timeout={max(1, math.ceil(timeout))}", {"claims": [claim]}, headers, timeout)
     except Slow:
