@@ -6,8 +6,8 @@ that places the approval phone call) is the one pink tile. Made by `python3 -m s
 | File | Agent |
 |---|---|
 | buyer.png | Tech Bazaar Buyer (@techbazaarbuyer) |
-| advocate.png | Bazaar Advocate (@techbazaaradvocate) |
-| shield.png | Bazaar Shield (@techbazaarshield) |
+| advocate.png | Tech Bazaar Quality Advocate (@techbazaaradvocate) |
+| shield.png | Tech Bazaar Shield Client (@techbazaarshield) |
 | caller.png | Bazaar Caller (@techbazaarcaller) |
 | seller_1.png ... seller_5.png | the five seller agents (@techbazaarseller1 ... 5) |
 

@@ -10,14 +10,15 @@ Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 
 | Agent | Role | Agentverse address | Status |
 |---|---|---|---|
 | Tech Bazaar Buyer (@techbazaarbuyer) | Goal in ASI:One (Chat Protocol), ownership memory, sealed round, approval, Payment Protocol (buyer side) | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered on Agentverse (mailbox) |
-| Bazaar Advocate (@techbazaaradvocate) | Checks fit with Lane C's checker; compares condition fields and SIM price history, recall and seller-record fixtures. At most 3 warnings with sources; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered on Agentverse (mailbox) |
+| Tech Bazaar Quality Advocate (@techbazaaradvocate) | Checks fit with Lane C's checker; compares condition fields and SIM price history, recall and seller-record fixtures. At most 3 warnings with sources; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered on Agentverse (mailbox) |
 | Byte Bros Outlet (@techbazaarseller1) | Seller agent: bids from its listings, price from policy code, never below floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered on Agentverse (mailbox) |
 | Silicon Sally's Surplus (@techbazaarseller2) | Seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` | Registered on Agentverse (mailbox) |
 | FlashDeal Frankie (@techbazaarseller3) | Seller agent; SIM planted trap (claims new, fixture page condition says open box) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered on Agentverse (mailbox) |
 | Bay Area PC Shop (@techbazaarseller4) | Seller agent; SIM local physical shop, fixed margin on its own cost, port 8014 | assigned when registered | Not registered yet: manual mailbox step, see below |
 | ReNew Refurb (@techbazaarseller5) | Seller agent; SIM refurbisher, refurbished and open-box lines of one SKU in one bid, port 8015 | assigned when registered | Not registered yet: manual mailbox step, see below |
-| Bazaar Shield (@techbazaarshield) | Chat front door to the existing Shield HTTP screening service; no purchases or payments | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered on Agentverse (mailbox) |
-| Bazaar Caller (@techbazaarcaller) | Places the one approval phone call for a mandate through pay/ (caller/relay.py) and returns a CallResult; requests only from the buyer, one call per mandate; approves and charges nothing itself. Port 8006 | assigned when registered | Runs locally (`python caller/caller_agent.py`); not registered yet |
+| Tech Bazaar Shield Client (@techbazaarshield) | Chat front door to the existing Shield HTTP screening service; no purchases or payments | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered on Agentverse (mailbox) |
+| Bazaar Caller (@techbazaarcaller) | Places the one approval phone call for a mandate through pay/ (caller/relay.py) and returns a CallResult; requests only from the buyer, one call per mandate; approves and charges nothing itself. Port 8006 | assigned when registered | Runs locally (`python caller/caller_agent.py`); not registered yet: manual mailbox step with `CALLER_MAILBOX=1`, see docs/FETCH_DISCOVERABILITY.md |
+| Market Pulse (@techbazaarpulse) | Answers price-trend and seller-record questions in chat from Tiger Data, the CRS cache and finished rounds; accepts a finished round only from PULSE_ROUND_SENDERS. Port 8018 | assigned when registered | Runs locally (`python pulse/orchestrator.py --serve`); not registered yet: manual mailbox step, see docs/FETCH_DISCOVERABILITY.md |
 
 The five existing addresses come from private seeds in `agents/.env`; the Shield address comes from `agents/.env.shield`, injected into its process environment. Both files are gitignored and never committed. Seller listings, prices and records are SIM (simulated, example.com links).
 
@@ -171,7 +172,7 @@ Live sandbox proof: the CRS login returned HTTP 200, and the operator-approved o
 
 ## Names and avatars (#259)
 
-Display names are under 20 characters and share one family: Tech Bazaar Buyer, Bazaar Advocate, Bazaar Shield,
+Display names share one family: Tech Bazaar Buyer, Tech Bazaar Quality Advocate, Tech Bazaar Shield Client,
 Bazaar Caller, plus the five seller personas. A rename keeps the Agentverse address, because the address comes from
 the agent's seed. Still to rename after the stacked Lane A PRs land (they edit the same files): seller_2 "Silicon
 Sally's Surplus" (23 characters). Avatars are in `avatars/` with the upload steps.

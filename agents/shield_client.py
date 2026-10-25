@@ -9,7 +9,7 @@ from uagents_core.contrib.protocols.chat import ChatAcknowledgement, ChatMessage
 import common
 
 agent = Agent(**common.agent_args(
-    'shield', 8004, name='Bazaar Shield', handle='techbazaarshield',
+    'shield', 8004, name='Tech Bazaar Shield Client', handle='techbazaarshield',
     readme_path=str(Path(__file__).with_name('SHIELD_AGENTVERSE.md')),
     description='Screens a message through Bazaar Shield and returns its verdict and rule IDs. '
                 'A client of the existing Shield API; no purchases or payments.'))
