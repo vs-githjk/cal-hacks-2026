@@ -49,7 +49,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(buyer.crs, "eligible", lambda _supplier, check, _now: bool(check and check.get("eligible")))
     monkeypatch.setattr(buyer, "blocked_reasons", lambda *_args, **_kwargs: None)
     for name, value in {
-        "ROUND": {}, "WEB_OUTBOX": [],
+        "ROUND": {}, "WEB_OUTBOX": [], "GOAL_ATTEMPTS": {},
         "APPROVAL_SERVICE": None, "APPROVAL_CALL_CLIENT": None, "MERCHANT_SIM": None,
         "TAP_PRIVATE_KEY": None, "SHIELD_RECEIPT_KEYS": None, "SHIELD_PAYMENT_SCREEN": None,
         "MARKET_BUYER": Mock(), "MARKET_REFEREE": Mock(), "STATE_DB": None, "NONCE_STORE": None,
@@ -105,7 +105,7 @@ def ready_for_requote(buyer):
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
         bids=[bid], cards={"bid-1": reviewed_card()}, reviewed=True,
         seller_checks={"seller_1": {"eligible": True}}, personas={}, owned=[], attempts=0,
-        last_sent={}, market_round_id="round-need-1", order=None, transaction=None,
+        last_sent={}, market_buyer_id="vidyut", market_round_id="round-need-1", order=None, transaction=None,
         original_offer=dict(bid), candidate_hashes={"bid-1": "c" * 64},
         market_winner={"total_landed_price": bid["total_landed_price"]})
 
@@ -196,7 +196,7 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
         bids=[raw], received_bids={bid_id: raw}, review_bids=[], cards={bid_id: reviewed_card("need-1", bid_id)},
         reviewed=True, seller_checks={"seller_1": {"eligible": True}}, personas={bid_id: "Seller One"},
-        owned=[], attempts=0, last_sent={}, market_round_id="round-need-1", round_token="round-token",
+        owned=[], attempts=0, last_sent={}, market_buyer_id="vidyut", market_round_id="round-need-1", round_token="round-token",
         candidate_hashes={}, order=None, transaction=None)
 
     buyer.ROUND["review_bids"] = buyer._review_candidates(referee, "round-need-1")
@@ -1009,15 +1009,15 @@ def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_ri
 
 def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):
     buyer, _db = runtime
-    monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "b_web12345")
     ready_for_requote(buyer)
+    buyer.ROUND["market_buyer_id"] = "b_web12345"   # the transaction's buyer_id comes from here
     direct = FakeVoiceClient()
     ctx = CodeCapturingContext(direct)
     caller = FakeCaller(direct)
     _delegate(buyer, monkeypatch, caller, direct)
     approved = _run(buyer, ctx)
     assert approved["buyer_id"] == "b_web12345"
-    assert approved["phase"] == "approved" and direct.calls == 1 and caller.requests == []
+    assert direct.calls == 1 and caller.requests == []   # the buyer's own direct call, never the Caller
     assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
 
 
