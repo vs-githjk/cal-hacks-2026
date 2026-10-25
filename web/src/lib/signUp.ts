@@ -20,7 +20,10 @@ export function gateRoute(
 export function signUpErrorText(message: string): string {
   const m = message.trim();
   if (!m) return "Sign-up failed. Try again.";
-  if (/throttl|too many|rate/i.test(m)) return "Lots of people are signing up right now. Wait a few minutes and try again.";
+  if (/no such reducer|reducer.*not found/i.test(m)) return "Sign-up is not live on this market yet.";
+  if (/display name required/i.test(m)) return "Enter a name.";
+  if (/phone must be/i.test(m)) return "Enter a full phone number, or leave it blank.";
+  if (/busy|throttl|too many|rate/i.test(m)) return "Lots of people are signing up right now. Wait a few minutes and try again.";
   if (/already/i.test(m)) return "This browser already has an account. Use Continue below, or open a private window to start fresh.";
   return m;
 }
@@ -33,6 +36,6 @@ export function cleanSignUp(name: string, phone: string): { displayName: string;
   if (!raw) return { displayName };
   const cleaned = (raw.startsWith("+") ? "+" : "") + raw.replace(/\D/g, "");
   const digits = cleaned.replace(/\D/g, "").length;
-  if (digits < 10 || digits > 15) return { error: "Enter a full phone number, or leave it blank." };
+  if (digits < 7 || digits > 20) return { error: "Enter a full phone number, or leave it blank." };
   return { displayName, phone: cleaned };
 }

@@ -4,9 +4,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
-import { tables } from "@/module_bindings";
-import { signUpBuyer } from "@/lib/stdb";
+import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
+import { reducers, tables } from "@/module_bindings";
 import { cleanSignUp, gateRoute, signUpErrorText } from "@/lib/signUp";
 
 const field = "w-full min-h-11 rounded-lg border border-line bg-soft px-3 py-2";
@@ -16,6 +15,7 @@ export default function StartPage() {
   const conn = useSpacetimeDB();
   const [roles, rolesReady] = useTable(tables.myRole);
   const [profiles] = useTable(tables.myBuyerProfile);
+  const signUp = useReducer(reducers.signUpBuyer);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
@@ -37,8 +37,7 @@ export default function StartPage() {
     if ("error" in clean) return setError(clean.error);
     setSubmitting(true);
     try {
-      const c = conn as unknown as { getConnection?: () => unknown };
-      await signUpBuyer(c.getConnection?.() ?? conn, clean);
+      await signUp({ displayName: clean.displayName, phone: clean.phone });
       setSubmitted(true);
     } catch (err) {
       setError(signUpErrorText(err instanceof Error ? err.message : ""));

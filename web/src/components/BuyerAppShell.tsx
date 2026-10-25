@@ -41,7 +41,8 @@ export function BuyerAppShell({ children }: { children: ReactNode }) {
         </nav>
         <span className="flex items-center gap-2 text-[14px] text-muted">
           {name}
-          <OriginChip origin="SIM" label="SIM demo pairing" />
+          {/* Self-serve accounts (sign_up_buyer, ids b_...) are real; only the operator-paired demo buyer is SIM. */}
+          {!buyerId.startsWith("b_") && <OriginChip origin="SIM" label="SIM demo pairing" />}
         </span>
       </div>
       <MemoryProvider>{children}</MemoryProvider>

@@ -34,6 +34,12 @@ test("signUpErrorText maps throttle, already and empty, and passes other text th
   assert.match(signUpErrorText("identity already has a role"), /already has an account/);
   assert.equal(signUpErrorText(""), "Sign-up failed. Try again.");
   assert.equal(signUpErrorText("boom"), "boom");
+  // The market's own SenderError texts (sign_up_buyer), and a market that does not have the reducer yet.
+  assert.match(signUpErrorText("already signed up: this identity is a seller"), /already has an account/);
+  assert.match(signUpErrorText("sign-ups are busy right now, try again in a few minutes"), /Lots of people/);
+  assert.equal(signUpErrorText("display name required"), "Enter a name.");
+  assert.match(signUpErrorText("phone must be 7 to 20 digits, optionally starting with +"), /full phone number/);
+  assert.equal(signUpErrorText("No such reducer sign_up_buyer"), "Sign-up is not live on this market yet.");
 });
 
 test("cleanSignUp: name is required and capped", () => {
@@ -43,9 +49,9 @@ test("cleanSignUp: name is required and capped", () => {
   assert.deepEqual(cleanSignUp("x".repeat(40), "   "), { displayName: "x".repeat(40) });
 });
 
-test("cleanSignUp: phone keeps digits and a leading plus, needs 10 to 15 digits", () => {
+test("cleanSignUp: phone keeps digits and a leading plus, needs 7 to 20 digits like the market", () => {
   assert.deepEqual(cleanSignUp("Asha", "(415) 555-0100"), { displayName: "Asha", phone: "4155550100" });
   assert.deepEqual(cleanSignUp("Asha", "+1 415 555 0100"), { displayName: "Asha", phone: "+14155550100" });
-  assert.deepEqual(cleanSignUp("Asha", "555-0100"), { error: "Enter a full phone number, or leave it blank." });
-  assert.deepEqual(cleanSignUp("Asha", "1".repeat(16)), { error: "Enter a full phone number, or leave it blank." });
+  assert.deepEqual(cleanSignUp("Asha", "555-010"), { error: "Enter a full phone number, or leave it blank." });
+  assert.deepEqual(cleanSignUp("Asha", "1".repeat(21)), { error: "Enter a full phone number, or leave it blank." });
 });
