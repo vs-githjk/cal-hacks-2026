@@ -293,3 +293,6 @@ header { position: sticky; top: 0; z-index: 40; }
 @keyframes fm-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 .fm-weed { transform-origin: 50% 100%; animation: fm-sway var(--sway, 5s) ease-in-out infinite; animation-delay: var(--delay, 0s); }
 @media (prefers-reduced-motion: reduce) { .fm-weed { animation: none; } }
+
+/* /floor?replay=reference is a 1920 x 1080 video frame: no site chrome over it */
+html[data-replay] [data-shell] { display: none !important; }
