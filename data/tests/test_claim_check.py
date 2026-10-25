@@ -369,6 +369,23 @@ def test_a_claim_that_names_its_currency_is_compared_in_that_currency():
                        fetch=lambda u: _priced(1749.99, "CAD"))["result"] == "verified"
 
 
+def test_a_canadian_dollar_claim_is_unverified_on_a_page_with_no_currency():   # RT-19 low: no priceCurrency is not USD-and-CAD-alike
+    for page in (_priced(1749.99), _priced(1749.99, "$"), _priced(1749.99, "dollars"), _priced(1749.99, "")):
+        out = _price_check("C$1,749.99", page)
+        assert out["result"] == "unverified" and "CAD" in out["reason"] and "no currency" in out["reason"], page
+    assert _price_check("C$1,749.99", _priced(1749.99, "CAD"))["result"] == "verified"   # a stated CAD page still verifies
+    assert _price_check("$1,749.99", _priced(1749.99))["result"] == "verified"            # a USD claim keeps its old reading
+
+
+def test_an_open_box_page_on_a_used_condition_is_read_as_open_box():   # how our SIM pages state it in JSON-LD (no schema.org term exists)
+    page = lambda cond, name: ('<script type="application/ld+json">' + json.dumps({"@type": "Product", "name": name, "offers": {
+        "@type": "Offer", "price": 10, "itemCondition": "https://schema.org/" + cond}}) + '</script>').encode()
+    assert _price_check("open-box", page("UsedCondition", "X (open-box)"), kind="condition")["result"] == "verified"
+    assert _price_check("used", page("UsedCondition", "X (open-box)"), kind="condition")["result"] == "false"
+    assert _price_check("used", page("UsedCondition", "X"), kind="condition")["result"] == "verified"
+    assert _price_check("new", page("NewCondition", "X (open-box)"), kind="condition")["result"] == "verified"   # only a used page is refined
+
+
 def test_a_cad_page_does_not_hide_a_false_condition_in_the_same_claim():
     page = b'<script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":1749.99,"priceCurrency":"CAD","itemCondition":"https://schema.org/UsedCondition"}}</script>'
     assert _price_check("New, $1,749.99", page)["result"] == "false"   # the worst field still decides

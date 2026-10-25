@@ -6,7 +6,7 @@ check_claim(claim, fetch=None, history=None) ->
 Input is a Claim (contracts/Claim.schema.json); `result` maps to Claim.check. The page is claim["evidence_url"].
 Optional claim["field"] and claim["value"] skip text parsing. Page facts come from schema.org JSON-LD; our own SIM liar pages
 (is_our_liar_page) also carry a <script id="listing"> JSON block, read first on those pages only (RT-20: on any other host a
-seller could write that block, so it is ignored). A page we cannot read is "unverified", never "false".
+seller could write that block, so it is ignored). Our SIM seller pages state their facts as schema.org JSON-LD like any store. A page we cannot read is "unverified", never "false".
 A price claim is in USD unless it names another currency ("C$1,749.99", "$1,749.99 CAD", or claim["currency"]); when the page
 states a priceCurrency that differs, the price claim is "unverified" and the reason names both currencies (RT-19).
 Wording is neutral: "differs from the listing at time T", "did not match the price history", "could not verify".
@@ -287,8 +287,11 @@ def page_facts(html, url=None):
     avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
     structured = node.get("warranty") or offer.get("warranty")
     described = None if structured else _text_warranty(node.get("description"))
+    condition = LD_CONDITION.get(cond)
+    if condition == "used" and re.search(r"\bopen[- ]box\b", str(node.get("name") or ""), re.I):
+        condition = "open-box"   # schema.org has no open-box term: stores (and our SIM pages) say UsedCondition and name it so
     facts = {"title": node.get("name"), "price": _money(offer.get("price")), "currency": _ld_currency(offer),
-             "condition": LD_CONDITION.get(cond), "stock": avail or None,
+             "condition": condition, "stock": avail or None,
              "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
              "warranty_months": _ld_warranty(structured) if structured else described,
              "warranty_source": "description" if described is not None else None}
@@ -423,6 +426,8 @@ def judge(field, value, facts, at, series, currency="USD"):
         shown = facts.get("currency")
         if shown and shown != currency:   # 1,749.99 CAD is not $1,749.99: never verified, and never false either
             return "unverified", f"could not verify: the claim is in {currency} and the page prices in {shown}, so the amounts cannot be compared"
+        if not shown and currency != "USD":   # a page with no currency is read as USD: a claim in CAD cannot be checked against it
+            return "unverified", f"could not verify: the claim is in {currency} and the page states no currency, so the amounts cannot be compared"
         return ("verified", f"the page shows ${page:,.2f}") if abs(page - value) < 0.01 else \
             ("false", f"claim says ${value:,.2f}; differs from the listing at {at}: the page shows ${page:,.2f}")
     if field == "was_price":
