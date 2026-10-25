@@ -23,6 +23,7 @@ from data.mirror import central_computers as cc
 from demo import recheck as recheck_mod
 
 TIMEOUT_S = 8.0
+LAST: dict = {}   # the anchor of the most recent round's re-check, so chat quotes what the last bid said
 LIVE_STATES = {"ok", "price_changed", "stock_unknown"}
 WHY = {"not_configured": "no Bright Data key is set",
        "skipped": "live re-check is off in this run",
@@ -50,6 +51,11 @@ def _snapshot(s: dict, state: str) -> tuple[dict, dict]:
     anchor = {"source": "snapshot", "state": state, "price": listing["price"], "quoted": listing["price"],
               "as_of": capture_time(s["mirror_snapshot_id"]), "listing_url": listing["listing_url"], "label": label}
     return copy.deepcopy(s), anchor
+
+
+def snapshot_anchor(s: dict, state: str) -> dict:
+    """The anchor for the dated snapshot alone (no re-check run), for readers such as chat."""
+    return _snapshot(s, state)[1]
 
 
 def refresh(s: dict, *, recheck_fn: Optional[Callable] = None, now: datetime | None = None) -> tuple[dict | None, dict]:
@@ -95,5 +101,6 @@ async def refresh_async(s: dict, *, recheck_fn: Optional[Callable] = None, timeo
 
 
 def annotate(bid: dict, anchor: dict) -> dict:
-    """The bid with its price anchor (additive key: where the price came from and when)."""
+    """The bid with its price anchor (additive key: where the price came from and when). Remembers it for chat."""
+    LAST["anchor"] = dict(anchor)
     return {**bid, "price_anchor": dict(anchor)}
