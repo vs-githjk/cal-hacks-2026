@@ -63,28 +63,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. Proof: three boxed numbers with their caveats. */}
-      <section aria-label="Measured results" className="px-4">
-        <Reveal className="mx-auto max-w-[1120px] pb-10 pt-0 md:px-4 md:pb-14 md:pt-0">
-          <div className="grid gap-4 md:grid-cols-3">
-            {PROOF.map((p) => (
-              <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <span className={`text-[36px] font-medium leading-10 tracking-[-0.02em] tabular-nums md:text-[44px] md:leading-[48px] ${p.measured ? "" : "text-muted"}`}>{p.value}</span>
-                  <OriginChip origin="SIM" />
-                </div>
-                <p className="mt-2 text-[15px] font-medium leading-5">{p.label}</p>
-                <p className="mt-1 text-[13px] leading-[18px] text-muted">{p.caveat}</p>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 text-[13px] leading-[18px] text-muted">Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
-        </Reveal>
-      </section>
-
       {/* 3. The product: the dashboard in miniature. */}
       <section aria-labelledby="dash" className="px-4">
-        <Reveal className="mx-auto grid max-w-[1120px] gap-6 py-10 md:px-4 md:py-16">
+        <Reveal className="mx-auto grid max-w-[1120px] gap-6 pb-10 pt-4 md:px-4 md:pb-16 md:pt-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 id="dash" className="text-[28px] font-semibold leading-[34px] tracking-[-0.02em] md:text-[40px] md:leading-[44px] md:tracking-[-0.025em]">Your dashboard, in one glance.</h2>
             <Link href="/start" className="inline-flex min-h-11 items-center gap-1.5 text-[15px] font-medium text-pulse">Open yours <span aria-hidden>→</span></Link>
@@ -115,6 +96,26 @@ export default function Home() {
             </summary>
             <HomeMore />
           </details>
+        </Reveal>
+      </section>
+
+      {/* 4b. Proof: three measured numbers with their caveats, once the visitor knows what the product is. */}
+      <section aria-label="Measured results" className="px-4">
+        <Reveal className="mx-auto max-w-[1120px] pb-10 md:px-4 md:pb-14">
+          <h2 className="mb-6 text-[28px] font-semibold leading-[34px] tracking-[-0.02em] md:text-[40px] md:leading-[44px] md:tracking-[-0.025em]">Measured, not promised.</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {PROOF.map((p) => (
+              <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <span className={`text-[36px] font-medium leading-10 tracking-[-0.02em] tabular-nums md:text-[44px] md:leading-[48px] ${p.measured ? "" : "text-muted"}`}>{p.value}</span>
+                  <OriginChip origin="SIM" />
+                </div>
+                <p className="mt-2 text-[15px] font-medium leading-5">{p.label}</p>
+                <p className="mt-1 text-[13px] leading-[18px] text-muted">{p.caveat}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-[13px] leading-[18px] text-muted">Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
         </Reveal>
       </section>
 
