@@ -3,6 +3,7 @@
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
 import { type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, RefereeCard, RoundTimeline, SellerLines } from "./market";
@@ -90,6 +91,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
           </div>
           {goal && (
             <>
+              <p className="text-[12.5px] text-muted">Latest public round. Not yet matched to this search: a round carries a need id, not a goal id.</p>
               <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
               <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
               {/* When every end-of-round card is a SIM sample, fold them into one collapsed block; the feed is live data and stays out. */}
@@ -164,6 +166,7 @@ export function MarketScreen(p: MarketScreenProps) {
             <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
           </div>
           <SampleOnly on={!!s.lines}><SellerLines lines={p.lines} cap={p.cap} /></SampleOnly>
+          <p className="text-[13px] text-muted">Sellers get a loss report and a learning note after each round. <Link href="/seller/seller-a" className="text-sky underline-offset-2 hover:underline">See a seller&apos;s view</Link></p>
           <FloorEvents events={p.events} />
         </>
       )}
