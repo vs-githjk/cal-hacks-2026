@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { AgentBuyerContactRow, BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, round, roundTimer, AgentApprovalRow, AgentPaymentRow } from './schema';
+import spacetimedb, { AgentApprovalRow, AgentBuyerContactRow, AgentPaymentRow, BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, round, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;

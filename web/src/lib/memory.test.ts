@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, parseMemoryResponse, selectMemory, sourceUrl } from "./memory.ts";
+import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, parseMemoryResponse, plainName, selectMemory, shortReceipt, sourceUrl } from "./memory.ts";
 
 const base = { at: "2026-10-24T10:00:00Z", origin: "SIM", source: "demo_run", source_ref: "run-1", buyer_id: "vidyut", seller_id: "fair-price-pc" };
 const purchase = (over: Record<string, unknown> = {}, detail: Record<string, unknown> = {}) => ({
@@ -189,6 +189,19 @@ test("fetchMemory reads /v1/memory without the sample flag and parses it", async
   assert.match(url, /\/v1\/memory$/);
 });
 
+test("fetchMemory passes the paired buyer as a query parameter, encoded, and never a token (#449 PL-17)", async () => {
+  const seen: { url: string; init?: RequestInit }[] = [];
+  await withFetch(async (u, init) => { seen.push({ url: String(u), init }); return json(envelope([purchase()], [src()])); }, async () => {
+    await fetchMemory(undefined, "http://127.0.0.1:8790", "vidyut");
+    await fetchMemory(undefined, "http://127.0.0.1:8790", "a b&c=d/é");
+    await fetchMemory(undefined, "http://127.0.0.1:8790", "");
+  });
+  assert.equal(seen[0]!.url, "http://127.0.0.1:8790/v1/memory?buyer=vidyut");
+  assert.equal(seen[1]!.url, "http://127.0.0.1:8790/v1/memory?buyer=a%20b%26c%3Dd%2F%C3%A9");
+  assert.equal(seen[2]!.url, "http://127.0.0.1:8790/v1/memory", "no paired buyer: no parameter");
+  assert.ok(seen.every((r) => !JSON.stringify(r.init ?? {}).toLowerCase().includes("authorization")), "the page never holds the feed token");
+});
+
 test("fetchMemory fails visibly: HTTP errors, unreachable feed, non JSON and wrong shapes all throw", async () => {
   await withFetch(async () => json({ detail: "boom" }, { status: 500 }), async () => { await assert.rejects(fetchMemory(), /500/); });
   await withFetch(async () => { throw new TypeError("fetch failed"); }, async () => { await assert.rejects(fetchMemory(), /memory/i); });
@@ -241,4 +254,19 @@ test("memoryFeed skips the loopback feed on a hosted page and uses it on a loopb
   assert.equal(memoryFeed("127.0.0.1", "http://127.0.0.1:8790/"), "http://127.0.0.1:8790");
   assert.equal(memoryFeed("tech-bazaar.vercel.app", "https://feed.example/"), "https://feed.example");
   assert.equal(memoryFeed("localhost", "not a url"), null);
+});
+
+// ---- #449 PL-13: /buyer/purchases and /buyer/decisions show names and plain words, never raw ids
+
+test("plainName: a readable name stays, a slug becomes words, an id or address becomes the seller", () => {
+  assert.equal(plainName("Fair Price PC (SIM)"), "Fair Price PC (SIM)");
+  assert.equal(plainName("fair-price-pc"), "Fair Price Pc");
+  for (const raw of ["agent1q" + "w".repeat(30), "seller_4", "b_9f3a2c1d", "deal-round-1:bid-2", "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633", ""]) {
+    assert.equal(plainName(raw), "the seller", raw);
+  }
+});
+
+test("shortReceipt keeps only the last 6 characters of the payment reference", () => {
+  assert.equal(shortReceipt("pi_3QxYz1AbCdEf"), "AbCdEf");
+  assert.equal(shortReceipt(""), "");
 });

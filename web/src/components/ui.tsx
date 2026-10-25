@@ -101,6 +101,39 @@ export function Pill({ tone, children }: { tone: "done" | "hold" | "hunting"; ch
   );
 }
 
+/** A v2 status chip for any state word (LIVE, SEALED, APPROVED, PAID, TEST MODE, ...). The word is always shown; colour never carries it alone. */
+export type Tone = "live" | "sealed" | "bad" | "good" | "caution" | "referee" | "action";
+const TONE: Record<Tone, string> = {
+  live: "bg-live-soft text-ink",
+  sealed: "bg-slate-soft text-slate",
+  bad: "bg-coral-soft text-coral",
+  good: "bg-mint-soft text-mint",
+  caution: "bg-amber-soft text-amber",
+  referee: "bg-referee-soft text-referee",
+  action: "bg-pulse-soft text-pulse-soft-ink",
+};
+export function StatusPill({ tone, children, pulse }: { tone: Tone; children: ReactNode; pulse?: boolean }) {
+  return (
+    <span className={`inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium ${TONE[tone]}`}>
+      {pulse && <span className={`dot ${tone === "live" ? "text-live" : "text-current"}`} aria-hidden />}
+      {children}
+    </span>
+  );
+}
+
+/** Progressive disclosure: the detail lives one tap away. The summary is a short label; nothing inside is lost. */
+export function Details({ summary, children, className = "" }: { summary: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={`group mt-3 ${className}`}>
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-pulse [&::-webkit-details-marker]:hidden">
+        {summary}
+        <span className="text-muted transition-transform group-open:rotate-45" aria-hidden>+</span>
+      </summary>
+      <div className="mt-2 grid gap-2 text-[13px] leading-[18px] text-ink-2">{children}</div>
+    </details>
+  );
+}
+
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="min-w-0 rounded-xl bg-surface-2 px-3 py-2.5">

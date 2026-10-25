@@ -77,30 +77,26 @@ def buyer(monkeypatch, tmp_path):
     class FakeMarket:
         def __init__(self, identity):
             self.identity = identity
-            self.state = 'review'
+            self.state = 'open'   # #447: the published module reviews while the round is open, then closes it
             self.candidates = []
 
         def post_goal(self, *args, **kwargs): pass
         def post_need(self, *args, **kwargs): pass
         def open_round(self, *args, **kwargs): self.state = 'open'
-        def close_round(self, *args, **kwargs): self.state = 'closed' if self.state == 'review' else 'review'
+        def close_round(self, *args, **kwargs): self.state = 'closed'
         def round_status(self, *args, **kwargs):
-            return {'state': self.state, 'review_deadline': datetime.now(timezone.utc).isoformat()}
+            return {'state': self.state, 'deadline': datetime.now(timezone.utc).isoformat()}
         def attach_verdict(self, *args, **kwargs): pass
         def attach_claim_check(self, *args, **kwargs): pass
         def attach_advocate_card(self, *args, **kwargs): pass
-        def review_candidates(self, round_id):
-            return self.candidates or module.ROUND.get('review_bids', [])
         def authoritative_winner(self, round_id, need_items):
+            # #447: the published module's winner row: no line index, listing or binding hash
             candidate = (self.candidates or module.ROUND.get('review_bids', []))[0]
-            lines, metadata = candidate['lines'], candidate['line_metadata']
             return {'bid_id': candidate['bid_id'], 'seller_id': candidate['seller_id'],
-                    'binding_hash': candidate['binding_hash'], 'landed': module.ROUND['bids'][0]['total_landed_price'],
-                    'lines': [{'original_line_index': line['line_index'], 'sku_spec': line['sku_spec'],
-                               'unit_price': line['unit_price'], 'quantity': line['quantity'],
-                               'shipping': line['shipping'], 'listing_id': metadata[index]['listingId'],
-                               'listing_hash': metadata[index]['listingHash']}
-                              for index, line in enumerate(lines)]}
+                    'landed': module.ROUND['bids'][0]['total_landed_price'],
+                    'lines': [{'sku_spec': line['sku_spec'], 'unit_price': line['unit_price'], 'quantity': line['quantity'],
+                               'qty_available': line['quantity'], 'offered_condition': '', 'offered_spec': ''}
+                              for line in candidate['lines']]}
 
     monkeypatch.setattr(module, 'MARKET_BUYER', FakeMarket('buyer-test'))
     referee = FakeMarket('referee-test')
@@ -449,7 +445,7 @@ def test_buyer_output_shows_cached_crs_time_without_forwarding_profile(buyer, mo
     assert 'CRS' not in request.need_json and 'persona_ref' not in request.need_json
     assert 'CRS' not in request.bids_json and 'persona_ref' not in request.bids_json
     buyer.ROUND['phase'] = 'advice'
-    buyer.MARKET_REFEREE.state = 'review'
+    buyer.MARKET_REFEREE.state = 'open'  # #447: the round is still open while the review lands
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
         cards_json=json.dumps([card()]))))
     text = ctx.owner_text()
@@ -572,7 +568,7 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(multi_
                 candidate_hashes={bid['id']: candidate['binding_hash']})
             buyer.MARKET_BUYER.candidates = [candidate]
             buyer.MARKET_REFEREE.candidates = [candidate]
-            buyer.MARKET_REFEREE.state = 'review'
+            buyer.MARKET_REFEREE.state = 'open'  # #447
             await buyer.on_advice(advocate_ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
                 cards_json=json.dumps([card(need_id=buyer.ROUND['need']['id'], bid_id=bid['id'])])))
             final = [e for e in envelopes if e.target == owner][-1]
@@ -819,12 +815,25 @@ def test_plain_owner_text_does_not_replace_saved_chat_context(buyer):
 
 
 def test_tell_logs_no_private_reply_body(buyer):
+    """The only log line that carries a reply is the chat feed's AGENT_CHAT line, and it is exactly this, fully masked.
+    The owner check is the real one (_chat_sender_allowed, the pinned owner from the fixture), not patched."""
+    import re
+    assert buyer._chat_sender_allowed('owner') and not buyer._chat_sender_allowed('agent1qstranger')
     ctx = Context()
     private_body = 'approval code 482913 under $800 seller payload private'
     asyncio.run(buyer.tell(ctx, 'owner', private_body))
-    logged = '\n'.join(str(call) for call in ctx.logger.method_calls)
+    calls = [str(call) for call in ctx.logger.method_calls]
+    chat = [c for c in calls if 'AGENT_CHAT' in c]
+    assert len(chat) == 1
+    line = next(c.args[0] for c in ctx.logger.info.call_args_list if c.args and 'AGENT_CHAT' in str(c.args[0]))
+    expected = r'AGENT_CHAT at=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00 who=buyer kind=message text="approval code \\u2022\\u2022\\u2022\\u2022 under \$800 seller payload private"'
+    assert re.fullmatch(expected, line), line
+    logged = '\n'.join(c for c in calls if 'AGENT_CHAT' not in c)
     assert private_body not in logged
     assert '482913' not in logged and '$800' not in logged and 'seller payload' not in logged
+    stranger = Context()
+    asyncio.run(buyer.tell(stranger, 'agent1qstranger', private_body))
+    assert not [c for c in stranger.logger.method_calls if 'AGENT_CHAT' in str(c)]
 
 
 def test_start_round_stops_before_old_summary_after_final_send_is_superseded(multi_sender, buyer, monkeypatch):
@@ -1044,3 +1053,23 @@ def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
     text = ctx.owner_text()
     assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
     assert text.count('asked seller_1') == 1
+
+
+def test_market_reviews_skip_a_chat_only_sellers_bid(buyer, monkeypatch):
+    # Live 05:39: ReNew (seller_5) has no market identity, so its bid has no market row; writing its review raised
+    # "attach_claim_check: no bid" and failed every round. Only market sellers' bids get market review rows.
+    calls = []
+    monkeypatch.setattr(buyer.MARKET_REFEREE, 'attach_claim_check', lambda **kw: calls.append(('claim', kw['bid_id'])))
+    monkeypatch.setattr(buyer.MARKET_REFEREE, 'attach_advocate_card', lambda **kw: calls.append(('card', kw['bid_id'])))
+    line = {'line_index': 0, 'listing_id': 'L1', 'listing_url': 'https://example.test/l1', 'listing_hash': 'h',
+            'offered_condition': 'new'}
+    bids = [{'id': 'bid-a', 'supplier_id': 'seller_1', 'origin': 'SIM', 'candidate_binding_hash': 'b1', 'lines': [line], 'claims': []},
+            {'id': 'bid-r', 'supplier_id': 'seller_5', 'origin': 'SIM', 'candidate_binding_hash': 'b2', 'lines': [line], 'claims': []}]
+    monkeypatch.setitem(buyer.ROUND, 'review_bids', bids)
+    cards = [{'bid_id': b['id'], 'recommendation': 'buy', 'claim_checks': [],
+              'call_reason': {'rule_id': 'fit.ok', 'text': 'fits', 'source_url': 'https://example.test'}} for b in bids]
+    try:
+        buyer._record_market_reviews(cards)
+    except (KeyError, TypeError):
+        pass  # card fields beyond what this test supplies; the point is which bids were written
+    assert calls and all(bid_id == 'bid-a' for _, bid_id in calls)

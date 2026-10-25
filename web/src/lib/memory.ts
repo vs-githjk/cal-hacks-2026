@@ -123,12 +123,16 @@ export function memoryFeed(pageHost: string, env: string | undefined = FEED_ENV)
   return feedBase(env, pageHost);
 }
 
-/** The one read path. Throws visibly (HTTP error, unreachable feed, not JSON, wrong shape); an aborted read rethrows its AbortError. */
-export async function fetchMemory(signal?: AbortSignal, feed: string = FEED_URL): Promise<MemoryResponse> {
+/**
+ * The one read path. Throws visibly (HTTP error, unreachable feed, not JSON, wrong shape); an aborted read rethrows its AbortError.
+ * `buyerId` goes as ?buyer= so a feed run with AGENT_FEED_TOKEN (#449 PL-17) can return only this buyer's rows. The page never holds
+ * that token, so it sends none: a feed that needs one answers 401 here and shows as an error, as an unreachable feed does.
+ */
+export async function fetchMemory(signal?: AbortSignal, feed: string = FEED_URL, buyerId?: string): Promise<MemoryResponse> {
   const aborted = (e: unknown) => !!signal?.aborted || (e as { name?: string } | null)?.name === "AbortError";
   let res: Response;
   try {
-    res = await fetch(`${feed}/v1/memory`, { signal, cache: "no-store" });
+    res = await fetch(`${feed}/v1/memory${buyerId ? `?buyer=${encodeURIComponent(buyerId)}` : ""}`, { signal, cache: "no-store" });
   } catch (e) {
     if (aborted(e)) throw e;
     throw new Error(`memory feed unreachable at ${feed}`);
@@ -184,4 +188,21 @@ export function paymentModeLabel(m: PurchaseDetail["payment_mode"]): string {
 
 export function approvalLabel(method: string): string {
   return ({ voice_code: "Approved by phone code", allowance: "Within allowance", sim_script: "Scripted SIM approval", typed_code: "Typed code (retired)", none: "No approval method recorded" } as Record<string, string>)[method] ?? "Unavailable";
+}
+
+// ---- #449 PL-13: no raw ids on the customer path (/buyer/purchases and /buyer/decisions)
+
+const RAW_ID = /^(agent1q|seller[_-]?\d|b_[a-z0-9]{4,}|mdt|ch_|pi_|deal[-_]|round[_-]|bid[-_]|va-)|^[0-9a-f]{12,}$|\d{3,}/i;
+
+/** A seller or payee as a person would say it: a readable name stays; a slug becomes words; an id, address or hash becomes "the seller". */
+export function plainName(id: string): string {
+  const s = id.trim();
+  if (!s || RAW_ID.test(s)) return "the seller";
+  if (/\s/.test(s)) return s;
+  return s.split(/[-_]+/).filter(Boolean).map((w) => w[0]!.toUpperCase() + w.slice(1)).join(" ") || "the seller";
+}
+
+/** The last 6 characters of a payment reference, the only part of it a customer sees ("" when there is none). */
+export function shortReceipt(ref: string): string {
+  return ref.trim().slice(-6);
 }

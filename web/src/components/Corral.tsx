@@ -9,6 +9,7 @@ import type { RankedBid } from "@/lib/screens";
 import { rankedBids as sampleBids, goal as sampleGoal } from "@/lib/sample";
 import { OriginChip, Tag, Verdict, money } from "@/components/ui";
 import { SHIELD } from "@/lib/brand";
+import { FISH_PATH } from "@/components/BrandMark";
 
 const STEPS = ["Request", "Offers", "Review", "Selected"] as const;
 const STEP_MS = 2600;
@@ -174,16 +175,14 @@ export function Corral({ bids, goalLine }: { bids: RankedBid[]; goalLine: string
 }
 
 function Figure({ x, y, label, scale = 1 }: { x: number; y: number; label: string; scale?: number }) {
+  // A fish (the brand mark's shape), never a person (#448): the market is fish, the floor is Pac-Man.
   return (
     <g transform={`translate(${x} ${y}) scale(${scale})`}>
-      <ellipse cx="0" cy="55" rx="17" ry="4.5" fill="var(--ink)" opacity="0.14" />
-      <path d="M-15 -7 Q0 -25 15 -7 L15 -3 L-15 -3 Z" fill="url(#hatGrad)" />
-      <circle cx="0" cy="0" r="10" fill="var(--ink-2)" />
-      <rect x="-7" y="9" width="14" height="27" rx="7" fill="var(--ink-2)" />
-      <line x1="0" y1="17" x2="-13" y2="27" stroke="var(--ink-2)" strokeWidth="4" strokeLinecap="round" />
-      <line x1="0" y1="17" x2="13" y2="27" stroke="var(--ink-2)" strokeWidth="4" strokeLinecap="round" />
-      <line x1="-3" y1="35" x2="-10" y2="52" stroke="var(--ink-2)" strokeWidth="4.5" strokeLinecap="round" />
-      <line x1="3" y1="35" x2="10" y2="52" stroke="var(--ink-2)" strokeWidth="4.5" strokeLinecap="round" />
+      <ellipse cx="0" cy="52" rx="20" ry="4.5" fill="var(--ink)" opacity="0.14" />
+      <g transform="translate(-26 -6) scale(2.2)">
+        <path d={FISH_PATH} fill="var(--ink-2)" />
+        <circle cx="16.3" cy="8.6" r="1.5" fill="var(--koi)" />
+      </g>
       <text x="0" y="72" textAnchor="middle" fontSize="13" fontWeight="700" className="fill-ink-2">
         {label}
       </text>

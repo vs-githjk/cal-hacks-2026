@@ -479,10 +479,11 @@ test("#449 PL-13 the sample cards a customer can see carry no id either", async 
 test("goalsForBuyer: each goal carries its own state and the text of the latest note written for that goal", () => {
   const goals = [goalRow({ id: "g1", state: "HUNTING" }), goalRow({ id: "g2", state: "FAILED", createdAt: ts(T0 + 1000) })];
   const notes = [
-    { id: 1n, goalId: "g1", text: "Goal set. The agent is hunting." },
-    { id: 3n, goalId: "g1", text: "Calling you now to approve." },
-    { id: 2n, goalId: "g2", text: "We could not call you: there is no phone number on your account. Nothing was paid." },
-    { id: 9n, goalId: "", text: "Approval denied elsewhere." },
+    { id: 1n, goalId: "g1", klass: "state", text: "Goal set. The agent is hunting." },
+    { id: 3n, goalId: "g1", klass: "state", text: "Calling you now to approve." },
+    { id: 4n, goalId: "g1", klass: "veto", text: "Your advocate vetoed a cheaper bid." },  // a veto note is not the goal's state line
+    { id: 2n, goalId: "g2", klass: "state", text: "We could not call you: there is no phone number on your account. Nothing was paid." },
+    { id: 9n, goalId: "", klass: "state", text: "Approval denied elsewhere." },
   ];
   const [g1, g2] = goalsForBuyer(goals, [], undefined, "buyer-a", notes); // the open goal sorts first
   assert.equal(g1.state, "HUNTING");

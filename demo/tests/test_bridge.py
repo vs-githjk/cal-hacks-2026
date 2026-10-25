@@ -383,7 +383,8 @@ def test_the_code_stays_off_buyer_while_the_market_has_typed_approval(run, tmp_p
     gate.typed_approval_present = lambda: True
     log, outcomes = run_with(run, approver, gate)
     assert "issue_approval_code" not in [r for _, r, _ in log]
-    assert "approve_typed" in shown[0][1] and outcomes[0]["approved"] is True       # the call still judges the same code
+    assert "approve_typed" in shown[0][1] and outcomes[0]["approved"] is False       # no code on /buyer, so no call
+    assert outcomes[0]["reason"].startswith("code_not_on_screen") and client.calls == []
     with_typed, without, missing = tmp_path / "a.ts", tmp_path / "b.ts", tmp_path / "none.ts"
     with_typed.write_text("export const approve_typed = spacetimedb.reducer(")
     without.write_text("export const issue_approval_code = spacetimedb.reducer(")
@@ -392,13 +393,16 @@ def test_the_code_stays_off_buyer_while_the_market_has_typed_approval(run, tmp_p
     assert bridge.DealGate(run).typed_approval_present is bridge.market_has_typed_approval
 
 
-def test_a_refused_issue_approval_code_falls_back_to_the_console_and_says_why(run):
+def test_a_refused_issue_approval_code_denies_the_beat_and_never_dials(run):
     gate, client, shown, approver = live_parts(run, lambda code: f"{code} approve")
-    run_with(run, approver, gate, fail={"issue_approval_code": ["no such reducer"]})
+    log, outcomes = run_with(run, approver, gate, fail={"issue_approval_code": ["no such reducer"]})
     assert shown[0][1] and "issue_approval_code refused" in shown[0][1]
+    assert client.calls == [], "no call is placed when the code is not on /buyer"
+    assert outcomes[0]["approved"] is False and outcomes[0]["reason"].startswith("code_not_on_screen")
+    assert "record_approval" not in [r for _, r, _ in log] and "record_payment" not in [r for _, r, _ in log]
 
 
-def test_live_approver_for_prints_the_code_only_when_buyer_could_not_show_it(run, capsys, monkeypatch):
+def test_live_approver_for_never_prints_the_code_and_says_the_call_is_not_placed_when_it_is_not_on_buyer(run, capsys, monkeypatch):
     import argparse
     seen = {}
 
@@ -411,7 +415,8 @@ def test_live_approver_for_prints_the_code_only_when_buyer_could_not_show_it(run
     seen["on_code"]("charlie delta", "issue_approval_code refused (x)")
     text = capsys.readouterr().out
     assert "alpha bravo" not in text and "on /buyer now" in text
-    assert "SCREEN CODE: charlie delta" in text
+    assert "charlie delta" not in text and "SCREEN CODE" not in text and "say approve" not in text.split("on /buyer now", 1)[1].split("\n", 1)[1]
+    assert "NOT on /buyer" in text and "NOT placed" in text
 
 
 def test_without_live_call_the_plan_is_unchanged(run, steps):

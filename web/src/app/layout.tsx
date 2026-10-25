@@ -4,14 +4,14 @@ import { Providers } from "@/components/Providers";
 import { PwaRegister } from "@/components/PwaRegister";
 import { AppHeader, RunModeFooter } from "@/components/shell";
 import { fontVars } from "./fonts";
-import { BRAND, BRAND_SHORT, DESCRIPTION } from "@/lib/brand";
+import { BRAND, BRAND_SHORT, TAGLINE } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: { default: BRAND, template: `%s · ${BRAND}` },
-  description: DESCRIPTION,
+  description: TAGLINE,
   applicationName: BRAND,
   appleWebApp: { capable: true, title: BRAND_SHORT, statusBarStyle: "default" },
-  openGraph: { title: BRAND, description: DESCRIPTION, siteName: BRAND },
+  openGraph: { title: BRAND, description: TAGLINE, siteName: BRAND },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 

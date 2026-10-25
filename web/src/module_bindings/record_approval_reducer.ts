@@ -15,4 +15,5 @@ export default {
   method: __t.string(),
   approvedBy: __t.string(),
   voiceApprovalId: __t.string(),
+  code: __t.string(),
 };

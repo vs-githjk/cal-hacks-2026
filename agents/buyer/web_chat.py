@@ -8,6 +8,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 BUYER = os.getenv("BUYER_REST_URL", "http://localhost:8001/chat")
 PORT = int(os.getenv("WEB_CHAT_PORT", "8080"))
 
+
+def buyer_headers() -> dict:
+    """Headers for the call to the buyer's REST chat; #449 RT-26: the bearer token too when BUYER_REST_TOKEN is set."""
+    headers = {"Content-Type": "application/json"}
+    token = (os.getenv("BUYER_REST_TOKEN") or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 PAGE = b"""<!doctype html><meta charset=utf-8><title>Fish Market buyer</title>
 <style>body{font:15px system-ui;max-width:720px;margin:2em auto;padding:0 16px}#log{white-space:pre-wrap}
 .me{color:#555;margin-top:1em}.ag{background:#f3f3f3;padding:.5em;margin:.3em 0}form{display:flex;gap:8px}input{flex:1;padding:.5em}</style>
@@ -33,7 +43,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _forward(self, data: bytes | None):
         req = urllib.request.Request(BUYER, data=data, method="POST" if data else "GET",
-                                     headers={"Content-Type": "application/json"})
+                                     headers=buyer_headers())
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 return r.read()
