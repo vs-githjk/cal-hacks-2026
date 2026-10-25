@@ -20,8 +20,8 @@ def offers(boards=None):
                 offer("Central Computers", 1249, name="RTX 5070 Ti", chipset="RTX 5070 Ti", length_mm=304)],
         "cpu": [offer("Best Buy", 279, name="Ryzen 7 7700X", socket="AM5", tdp_w=105, vendor="AMD")],
         "motherboard": boards or [offer("B&H", 169, name="B650 board", **AM5)],
-        "memory": [offer("Amazon", 99, name="32 GB DDR5", memory_type="DDR5", memory_form="DIMM", modules=2)],
-        "storage": [offer("Best Buy", 119, name="2 TB NVMe", interface="NVMe")],
+        "memory": [offer("Amazon", 99, name="32 GB DDR5", type="DDR5", form="DIMM", modules=2)],
+        "storage": [offer("Best Buy", 119, name="2 TB NVMe", interface="M.2 PCIe NVMe")],
         "cooler": [offer("Amazon", 45, name="Tall cooler", height_mm=165, sockets=["AM5"]),
                    offer("Central Computers", 53, name="Low cooler", height_mm=155, sockets=["AM5"])],
     }

@@ -71,3 +71,29 @@ def test_demo_lines_have_no_dashes_and_tell_the_story():
     lines = [s["line"] for s in run()["steps"]]
     assert not any("\u2014" in x or "\u2013" in x for x in lines)
     assert lines[0].startswith("Plan:") and lines[-1] == "Build locked: 6 parts, 4 sellers, $1,988."
+
+
+def test_resolve_returns_checks_and_a_swap_carries_its_own():
+    r = run()
+    assert r["status"] == "locked" and r["checks"] and all(c["verdict"] != "fail" for c in r["checks"])
+    swap = next(s for s in r["steps"] if s["kind"] == "swap")
+    assert swap["checks"] and not [c for c in swap["checks"] if c["verdict"] == "fail" and "B650 board" in c["parts"]]
+    assert {c["rule_id"] for c in swap["checks"]} >= {"fit.cpu_socket"}
+    assert "checks" not in next(s for s in r["steps"] if s["kind"] == "pick")
+
+
+def test_blocked_build_still_returns_checks():
+    boards = [offer("B&H", 149, name="B760 board", **{**AM5, "socket": "LGA1700"})]
+    assert "checks" in resolve(plan(200_000, OWNED), offers(boards))
+
+
+def test_uncertain_check_needs_a_check_and_does_not_lock():
+    unknown_type = {k: v for k, v in AM5.items() if k != "memory_type"}
+    r = resolve(plan(200_000, OWNED), offers([offer("B&H", 169, name="B650 board", **unknown_type)]))
+    assert r["status"] == "needs_check" and len(r["picks"]) == 6
+    assert any(c["verdict"] == "uncertain" for c in r["checks"])
+    kinds = [s["kind"] for s in r["steps"]]
+    assert "locked" not in kinds and kinds[-1] == "needs_check"
+    assert "swap" not in kinds and "B650 board" in r["picks"]["motherboard"]["spec"]["name"]
+    line = r["steps"][-1]["line"]
+    assert "board" in line and "\u2014" not in line and "\u2013" not in line

@@ -48,10 +48,14 @@ def _spec(part, offer):
     return spec
 
 
+def _checks(build):
+    """The fit checks (check_build()["checks"]) for the parts picked so far plus the owned ones."""
+    return check_build({k: ([v] if k == "storage" else v) for k, v in build.items()})["checks"]
+
+
 def _fit_fails(build, part, spec):
     """Failing fit checks that involve this part, given the parts already picked plus the owned ones."""
-    cards = {k: ([v] if k == "storage" else v) for k, v in {**build, part: spec}.items()}
-    return [c for c in check_build(cards)["checks"]
+    return [c for c in _checks({**build, part: spec})
             if c["verdict"] == "fail" and part in RULE_PARTS.get(c["rule_id"], ())]
 
 
@@ -97,8 +101,11 @@ def resolve(p, offers):
             picks[part] = {"seller": seller, "price_cents": price, "spec": spec, "source": offer.get("source", "")}
             build[part] = spec
             kind = "swap" if clashed else "pick"
-            steps.append({"kind": kind, "part": part, "line": (f"Swapped the {NAMES[part]} to {spec['name']} "
-                          if clashed else f"{NAMES[part]}: {spec['name']} ") + f"from {seller}, {dollars(price)}."})
+            step = {"kind": kind, "part": part, "line": (f"Swapped the {NAMES[part]} to {spec['name']} "
+                    if clashed else f"{NAMES[part]}: {spec['name']} ") + f"from {seller}, {dollars(price)}."}
+            if clashed:
+                step["checks"] = _checks(build)  # fresh, so the UI can turn the red line green
+            steps.append(step)
             if over > 0:
                 steps.append({"kind": "reallocate", "part": part, "line": f"{NAMES[part]} is {dollars(over)} over its "
                               f"{dollars(budgets[part])} budget; moved {dollars(over)} from the parts still open."})
@@ -108,9 +115,20 @@ def resolve(p, offers):
         else:
             steps.append({"kind": "blocked", "part": part, "line": f"No {NAMES[part]} offer fits and stays in budget. Nothing was paid."})
             return {"status": "blocked", "picks": picks, "knockouts": knockouts, "budgets": budgets,
-                    "total_cents": sum(x["price_cents"] for x in picks.values()), "steps": steps}
+                    "total_cents": sum(x["price_cents"] for x in picks.values()), "steps": steps,
+                    "checks": _checks(build) if len(build) > len(owned) else []}
     total = sum(x["price_cents"] for x in picks.values())
     sellers = sorted({x["seller"] for x in picks.values()})
-    steps.append({"kind": "locked", "line": f"Build locked: {len(picks)} parts, {len(sellers)} sellers, {dollars(total)}."})
-    return {"status": "locked", "picks": picks, "knockouts": knockouts, "budgets": budgets, "total_cents": total,
-            "sellers": sellers, "steps": steps}
+    checks = _checks(build)
+    unsure = [c for c in checks if c["verdict"] == "uncertain" and any(k in picks for k in RULE_PARTS.get(c["rule_id"], ()))]
+    if unsure:  # an unknown spec never locks a build; nothing is swapped over it
+        c = unsure[0]
+        who = next(NAMES[k] for k in RULE_PARTS[c["rule_id"]] if k in picks)
+        steps.append({"kind": "needs_check", "line": f"Needs a check: the {who} fit ({c['rule_id'].removeprefix('fit.').replace('_', ' ')}) "
+                      f"is not confirmed, {c['reason']}."})
+        status = "needs_check"
+    else:
+        steps.append({"kind": "locked", "line": f"Build locked: {len(picks)} parts, {len(sellers)} sellers, {dollars(total)}."})
+        status = "locked"
+    return {"status": status, "picks": picks, "knockouts": knockouts, "budgets": budgets, "total_cents": total,
+            "sellers": sellers, "steps": steps, "checks": checks}
