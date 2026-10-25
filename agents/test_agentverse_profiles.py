@@ -60,4 +60,6 @@ def test_the_caller_profile_says_what_it_is_and_why_the_buyer_cannot_approve_alo
 def test_the_pulse_profile_names_the_fair_band_the_coaching_numbers_and_the_going_price():
     text = (ROOT / "pulse/AGENTVERSE.md").read_text(encoding="utf-8")
     assert "fair-price band" in text and "you lost by less than 5 percent" in text and "3.1%" not in text and "going price" in text.lower()
-    assert "PulseBandRequest" in text and "SIM" in text and "MIRROR" in text
+    assert "PulseBandRequest" in text and "SIM" in text and "MIRROR" in text and "SANDBOX" in text
+    for q in ("How did RTX 5070 Ti prices move this week?", "Which seller won the most GPU rounds", "Is Byte Bros CRS verified?"):
+        assert q in text, q                                                  # the phase 2 (cited retrieval) starter prompts
