@@ -52,6 +52,18 @@ test("a MIRROR champion is dropped and counted; checks and approval carry; a pla
   assert.equal(partRows(toBuildResult(parseBuildView(p))).find((r) => r.part === "cpu")!.name, "Planned");
 });
 
+test("a failed part with no champion says the round ended, with the feed's reason when given", () => {
+  const f = structuredClone(sample);
+  const cpu = f.parts.find((x: { part: string }) => x.part === "cpu");
+  cpu.status = "failed";
+  delete cpu.champion;
+  const note = () => partRows(toBuildResult(parseBuildView(f))).find((r) => r.part === "cpu")!.note;
+  assert.equal(note(), "Round ended with no eligible bid");
+  assert.notEqual(note(), "Waiting for its round");
+  cpu.reason = "Every bid failed the socket check";
+  assert.equal(note(), "Every bid failed the socket check");
+});
+
 test("fetchBuild: 404 means no live build, a posted build is parsed", async () => {
   const real = globalThis.fetch;
   try {

@@ -46,7 +46,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
             <span className="min-w-0">
               <span className="block truncate text-[14px] font-medium">{r.name}</span>
               <span className="block text-[12px] text-muted">
-                {r.seller || "Waiting for its round"}
+                {r.seller || r.note}
                 {r.origin && <span className="ml-1.5"><OriginChip origin={r.origin} /></span>}
                 {r.state === "swapped" && <span className="ml-1.5 font-semibold text-amber">swapped after a clash</span>}
               </span>

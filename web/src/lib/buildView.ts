@@ -105,6 +105,7 @@ export function toBuildResult(v: BuildView): BuildResult {
     origin: v.origin,
     rejected: v.rejected,
     partStatus: Object.fromEntries(bought.map((p) => [PANEL_KEY[p.part], p.status as NonNullable<BuildResult["partStatus"]>[string]])),
+    partReason: Object.fromEntries(bought.flatMap((p) => (p.reason ? [[PANEL_KEY[p.part], p.reason]] : []))),
     checks: v.checks.map((c) => ({ ...c, a: PANEL_KEY[c.a], b: PANEL_KEY[c.b] })),
     approval: v.approval,
   };
