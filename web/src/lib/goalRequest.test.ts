@@ -8,6 +8,8 @@ import {
   SpeechError,
   applyDictation,
   buildGoalRequest,
+  canFindOffers,
+  postGoalArgs,
   dictate,
   draftFor,
   fallbackMessage,
@@ -225,4 +227,43 @@ test("every message the buyer can read here is free of em and en dashes", async 
   for (const e of [await submitGoal(request({ requestId: "d1" })).catch((e) => e), await submitGoal(request({ requestId: "d2" }), undefined, { command: never, timeoutMs: 10 }).catch((e) => e), await dictate(null, new AbortController().signal).catch((e) => e), await dictate({ listen: async () => { throw new DOMException("n", "NotAllowedError"); } }, new AbortController().signal).catch((e) => e)]) msgs.push((e as Error).message);
   assert.ok(msgs.length >= 8);
   for (const m of msgs) assert.doesNotMatch(m, /[\u2013\u2014]/, m);
+});
+
+// ---- posting the goal to the market (reducers.postGoal)
+
+test("postGoalArgs maps a request with a cap and a deadline to the exact reducer args", () => {
+  const args = postGoalArgs(request({ requestText: "  RTX 5070  ", cap: 650, deadline: "2026-11-02" }), "b_ab12cd34", TODAY);
+  assert.deepEqual(args, {
+    id: "g_req1",
+    buyerId: "b_ab12cd34",
+    type: "budget_cap",
+    cap: 650,
+    deadline: "2026-11-02T23:59:00Z",
+    poNumber: "",
+    origin: "LIVE",
+    items: [{ skuSpec: "RTX 5070", condition: "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
+  });
+});
+
+test("postGoalArgs defaults the deadline to 7 days after today", () => {
+  const args = postGoalArgs(request({ cap: 90 }), "b_ab12cd34", TODAY);
+  assert.ok(!("error" in args));
+  assert.equal(args.deadline, "2026-10-31T23:59:00Z");
+});
+
+test("postGoalArgs asks for a cap instead of guessing one", () => {
+  assert.deepEqual(postGoalArgs(request({ cap: null }), "b_ab12cd34", TODAY), { error: "Add a top price so sellers know your cap." });
+});
+
+test("postGoalArgs passes the first chosen condition through and makes a short safe id", () => {
+  const args = postGoalArgs(request({ requestId: "3f2b8c1e-9a4d-4e7f-8b21-0c5d6e7f8a9b", cap: 90, conditions: ["refurbished", "used"] }), "b_ab12cd34", TODAY);
+  assert.ok(!("error" in args));
+  assert.equal(args.items[0]!.condition, "refurbished");
+  assert.match(args.id, /^g_[A-Za-z0-9]{1,12}$/);
+});
+
+test("canFindOffers is true for a b_ buyer that is not busy, false for no buyer or while sending", () => {
+  assert.equal(canFindOffers("b_ab12cd34", false), true);
+  assert.equal(canFindOffers(null, false), false);
+  assert.equal(canFindOffers("b_ab12cd34", true), false);
 });

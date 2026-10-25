@@ -78,6 +78,37 @@ export function buildGoalRequest(draft: GoalDraft, requestId: string, today: Dat
   };
 }
 
+// ---- Posting the goal to the market (reducers.postGoal). The market checks the rest: type, cap > 0, ISO deadline, new id, caller.
+
+export interface PostGoalArgs {
+  id: string;
+  buyerId: string;
+  type: string;
+  cap: number;
+  deadline: string;
+  poNumber: string;
+  origin: string;
+  items: { skuSpec: string; condition: string; variant: string; quantity: number; skippedOwnedPartId: string }[];
+}
+
+export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date): PostGoalArgs | { error: string } {
+  if (request.cap === null) return { error: "Add a top price so sellers know your cap." };
+  const day = request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7));
+  return {
+    id: `g_${request.requestId.replace(/[^A-Za-z0-9]/g, "").slice(0, 12)}`,
+    buyerId,
+    type: "budget_cap",
+    cap: request.cap,
+    deadline: `${day}T23:59:00Z`,
+    poNumber: "",
+    origin: "LIVE",
+    items: [{ skuSpec: request.requestText.trim(), condition: request.conditions[0] ?? "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
+  };
+}
+
+/** Find offers needs a signed-up buyer and no send in flight. */
+export const canFindOffers = (buyerId: string | null, busy: boolean): boolean => buyerId !== null && !busy;
+
 // ---- The draft: kept through pairing, never shown to a different buyer.
 
 export interface StoredDraft {
