@@ -9,7 +9,7 @@ import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, Sel
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
-import { Card, Details, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
+import { Card, Details, Label, SampleOnly, Unavailable, money } from "./ui";
 
 
 export interface BuyerScreenProps {
@@ -138,34 +138,37 @@ export function MarketScreen(p: MarketScreenProps) {
           <p className="text-[13px] leading-[18px] text-muted">The referee&apos;s floor</p>
           <h1 className="mt-2 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">Market</h1>
         </div>
-        <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
-          {p.round && (roundTitle(p.round.id) ? <span className="text-ink" title={`${p.round.id}, ${p.round.needId}`}>{roundTitle(p.round.id)}</span> : <span title={p.round.needId}>{p.round.id}</span>)}
-          {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}
-          {mixLabel && <span className="font-mono text-[12px]">{mixLabel}</span>}
-        </div>
+        {p.round && (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-ink-2">
+            <span className={`h-2 w-2 rounded-full ${p.round.state === "closed" ? "bg-mint-mark" : "bg-live"}`} aria-hidden />
+            <span className="font-medium text-ink">{roundTitle(p.round.id) ?? "Latest round"}</span>
+            <span>· {p.round.state === "closed" ? "closed" : "open, bids sealed"}</span>
+            {mixLabel && <span className="text-muted">· {mixLabel}</span>}
+          </p>
+        )}
       </div>
-      <p className="text-[13px] leading-[18px] text-muted">Every bid carries its origin: {c.LIVE} LIVE · {c.MIRROR} MIRROR · {c.SIM} SIM.</p>
       {p.connecting ? (
         <p className="text-muted">Connecting...</p>
       ) : !p.round ? (
         <section className="card p-[18px]">
           <p className="text-[22px] font-medium">No rounds yet.</p>
-          <p className="mt-1 text-muted">When a buyer posts a need, a sealed round opens here with its 12 second window.</p>
+          <p className="mt-1 text-muted">When a buyer posts a request, a sealed round opens here and bids stay sealed until it closes.</p>
         </section>
       ) : (
         <>
-          <div className="grid gap-6 lg:grid-cols-[8fr_4fr]">
-            <SampleOnly on={!!s.round}><RoundTimeline round={p.round} /></SampleOnly>
-            <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
-          </div>
+          <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
           <SampleOnly on={!!s.lines}><SellerLines lines={p.lines} cap={p.cap} /></SampleOnly>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <SampleOnly on={!!s.lossReports}><LossReports reports={p.lossReports} note={p.lossNote} /></SampleOnly>
-            <div className="grid content-start gap-6">
-              <SampleOnly on={!!s.learning}><SellerLearns learning={p.learning} /></SampleOnly>
+          <p className="text-[13px] leading-[18px] text-muted">Every bid carries its origin: {c.LIVE} LIVE · {c.MIRROR} MIRROR · {c.SIM} SIM.</p>
+          <Details summary="Round history: the timeline, why sellers lost, what they learned, every event" className="mt-0">
+            <div className="grid gap-6">
+              <SampleOnly on={!!s.round}><RoundTimeline round={p.round} /></SampleOnly>
+              <div className="grid items-start gap-6 lg:grid-cols-2">
+                <SampleOnly on={!!s.lossReports}><LossReports reports={p.lossReports} note={p.lossNote} /></SampleOnly>
+                <SampleOnly on={!!s.learning}><SellerLearns learning={p.learning} /></SampleOnly>
+              </div>
               <FloorEvents events={p.events} />
             </div>
-          </div>
+          </Details>
         </>
       )}
     </div>
