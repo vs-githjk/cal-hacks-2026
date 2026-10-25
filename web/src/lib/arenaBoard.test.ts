@@ -1,0 +1,72 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { projectArenaScene } from "./arenaScene.ts";
+import { boardAt } from "./arenaBoard.ts";
+import { SAMPLES } from "./arenaFixture.ts";
+
+const scene = projectArenaScene(SAMPLES.gpu, { sample: true });
+const words: Record<string, string> = {
+  shield_block: "Blocked by Shield",
+  advocate_veto: "Vetoed by Advocate",
+  claim_false: "Claim check failed",
+};
+
+test("beat 0 after close: sealed cards, nothing revealed", () => {
+  assert.equal(scene.phase, "closed");
+  const s = boardAt(scene, 0);
+  assert.equal(s.track.length, scene.offers.length);
+  assert.ok(s.track.every((c) => c.state === "sealed" && c.price === null && c.rank === null));
+  assert.deepEqual(s.out, []);
+  assert.deepEqual(s.lit, []);
+  assert.equal(s.sealedCount, scene.offers.length);
+  assert.equal(s.stillIn, null);
+});
+
+test("beat 1: offers open with prices; lit follows the first beat", () => {
+  const s = boardAt(scene, 1);
+  assert.ok(s.track.every((c) => c.state !== "sealed" && c.price !== null));
+  const focus = scene.beats[0]!.focus;
+  if (focus.includes("referee")) assert.ok(s.lit.includes("referee"));
+  assert.equal(s.sealedCount, 0);
+  assert.equal(s.stageName, scene.beats[0]!.name);
+});
+
+test("first knocking beat moves the offer to the Out rail with its reason", () => {
+  const i = scene.beats.findIndex((b) => b.knocked.length > 0);
+  assert.ok(i >= 0);
+  const knock = scene.beats[i]!.knocked[0]!;
+  const s = boardAt(scene, i + 1);
+  const outCard = s.out.find((c) => c.bidId === knock.id);
+  assert.ok(outCard);
+  assert.ok(!s.track.some((c) => c.bidId === knock.id));
+  assert.equal(outCard.reason, words[knock.reasonCode] ?? "Refused by referee");
+  assert.equal(outCard.reasonText, knock.reasonText);
+  assert.equal(s.stillIn?.k, s.track.length);
+  assert.equal(s.stillIn?.n, scene.offers.length);
+});
+
+test("final frame: winner first, ranks on survivors, buyer pays", () => {
+  const s = boardAt(scene, scene.beats.length);
+  assert.ok(s.winner);
+  assert.equal(s.track[0]!.state, "winner");
+  assert.equal(s.winner.bidId, scene.winnerBidId);
+  assert.equal(s.track.filter((c) => c.state === "winner").length, 1);
+  for (const c of s.track.slice(1)) {
+    const o = scene.offers.find((x) => x.bidId === c.bidId)!;
+    assert.equal(c.rank, o.outcome === "ranked" ? o.rank : null);
+  }
+  assert.ok(s.buyerLine.includes(s.winner.name) && s.buyerLine.includes(s.winner.price!));
+});
+
+test("open round: empty track, sealed envelopes, a sentence", () => {
+  const open = projectArenaScene(SAMPLES["gpu-open"], { sample: true });
+  assert.equal(open.phase, "open");
+  const s = boardAt(open, 0);
+  assert.deepEqual(s.track, []);
+  assert.equal(s.sealedCount, open.sealedCount);
+  assert.ok(s.buyerLine.length > 0);
+});
+
+test("beat beyond the end clamps to the final frame", () => {
+  assert.deepEqual(boardAt(scene, scene.beats.length + 7), boardAt(scene, scene.beats.length));
+});
