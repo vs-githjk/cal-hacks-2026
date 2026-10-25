@@ -345,12 +345,12 @@ def _stamp(dt: datetime) -> str:
 
 
 def goal_steps(plan: BuildPlan, allowance: Optional[dict] = None) -> list:
-    """The goal (type "build", one goal_item per part; an owned part is skipped with its owned id) and the buyer's allowance."""
+    """The goal (type "build_by_date", one goal_item per part; an owned part is skipped with its owned id) and the buyer's allowance."""
     from demo.bridge import Step
     items = [{"sku_spec": o.sku, "condition": "new", "variant": "retail", "quantity": 1, "skipped_owned_part_id": f"owned-{o.part}"}
              for o in plan.owned]
     items += [{"sku_spec": p.sku, "condition": "new", "variant": "retail", "quantity": 1, "skipped_owned_part_id": ""} for p in plan.parts]
-    steps = [Step("buyer", "post_goal", {"id": plan.goal_id, "buyer_id": plan.buyer_id, "type": "build", "cap": plan.cap,
+    steps = [Step("buyer", "post_goal", {"id": plan.goal_id, "buyer_id": plan.buyer_id, "type": "build_by_date", "cap": plan.cap,
                                          "deadline": plan.deadline, "po_number": "", "origin": SIM, "items": items},
                   pause=True, say=f"{plan.buyer_id} sets a build goal: {len(plan.parts)} parts to buy, "
                                   f"{len(plan.owned)} owned, cap {money(plan.cap)} (SIM)")]
@@ -491,7 +491,7 @@ class BuildRun:
         p = self.plan
         items = [{"part": o.part, "label": o.label, "skippedOwnedPartId": f"owned-{o.part}", "budget": 0.0} for o in p.owned]
         items += [{"part": s.part, "label": s.label, "skippedOwnedPartId": "", "budget": s.budget} for s in p.parts]
-        return {"goal": {"id": p.goal_id, "buyerId": p.buyer_id, "cap": p.cap, "origin": SIM, "type": "build"}, "goalItems": items,
+        return {"goal": {"id": p.goal_id, "buyerId": p.buyer_id, "cap": p.cap, "origin": SIM, "type": "build_by_date"}, "goalItems": items,
                 "needs": self.needs, "rounds": self.rounds, "roundResults": self.results, "mandates": self.mandates, "approvals": [],
                 "payments": self.payments, "approval": self.approval, "liveChecks": self.live}
 
@@ -699,17 +699,21 @@ class BuildRun:
             return self._deny(e.code, f"No call: {e}. Nothing was paid.")
         total = round(sum(float(c["landed"]) for c in champs.values()), 2)
         sellers = len({c["sellerId"] for c in champs.values()})
-        # the market's own allowance row is the truth (its spent this period counts); the given one only if the row cannot be read
-        allowance = self._market_allowance() or self.allowance or {"per_purchase_limit": 0.0, "period_limit": 0.0, "period": "week",
-                                                                   "spent_this_period": 0.0}
-        call, why = needs_call({"spent_this_period": 0.0, **allowance}, total)
+        # the buyer's allowance as the market holds it (its spent this period counts, and a limit the buyer tightened stays tightened), read
+        # before any call or mandate. There is no fallback to the plan's numbers: an allowance that cannot be read cannot be put back.
+        allowance = self._market_allowance()
+        if allowance is None:
+            return self._deny("allowance_unreadable", "No call: the buyer's allowance could not be read, so it could not be put back after "
+                                                      "a call. Nothing was paid.")
+        self._allowance_before = allowance
+        call, why = needs_call(allowance, total)
         voice_id: Optional[str] = None
         if call:
             out = self._call(champs, checks, total, sellers)
             if isinstance(out, dict):
                 return out
             voice_id = out
-            denied = self._mandates_zeroed(champs, crs_ids, voice_id)
+            denied = self._mandates_zeroed(champs, crs_ids, voice_id, allowance)
         else:
             self._mandates(champs, crs_ids, None)
             denied = None
@@ -725,9 +729,10 @@ class BuildRun:
     # ---- the market's allowance, and approvals read back
 
     def _market_allowance(self) -> Optional[dict]:
-        """The buyer's allowance row as the market holds it, or None when it cannot be read (the referee may not read private tables)."""
+        """The buyer's allowance row, read as the BUYER through the my_allowance view (the referee cannot read the private table, HTTP 400),
+        or None when it cannot be read."""
         try:
-            for r in self.clients["referee"].sql("SELECT * FROM allowance"):
+            for r in self.clients["buyer"].sql("SELECT * FROM my_allowance"):
                 if r[0] == self.plan.buyer_id:
                     return {"per_purchase_limit": float(r[2]), "period_limit": float(r[3]), "period": str(r[4]), "spent_this_period": float(r[5])}
         except (RuntimeError, OSError, ValueError, TypeError, IndexError):
@@ -738,15 +743,12 @@ class BuildRun:
         self.clients["referee"].call("set_allowance", buyer_id=self.plan.buyer_id, per_purchase_limit=per,
                                      period_limit=original["period_limit"], period=original["period"])
 
-    def _mandates_zeroed(self, champs: dict, crs_ids: dict, voice_id: str) -> Optional[dict]:
+    def _mandates_zeroed(self, champs: dict, crs_ids: dict, voice_id: str, original: dict) -> Optional[dict]:
         """Make the per-part mandates after the call approved, with the buyer's per-purchase limit at $0 for the duration: the market
         approves any mandate at or under that limit by itself (method allowance, no voice id) and swallows the voice approval after it,
         so a part under the limit would be paid on the allowance instead of on the call. At $0 the market's own rule says "call" for every
-        mandate. The limit is restored in a `finally`; a restore that fails leaves it at $0 (fail closed) and says so. None, or a _deny dict."""
-        original = self._market_allowance() or (dict(self.allowance, spent_this_period=0.0) if self.allowance else None)
-        if original is None:
-            return self._deny("allowance_unreadable", "The buyer's allowance could not be read, so it could not be put back after the call. "
-                                                      "No mandate was made and nothing was paid.")
+        mandate. `original` is the row read before the call; the limit is restored to it in a `finally`; a restore that fails (or a hard kill
+        between the zero and the restore) leaves it at $0, which fails closed, and says so. None, or a _deny dict."""
         if float(original["per_purchase_limit"]) <= 0:
             self._mandates(champs, crs_ids, voice_id)
             return None
@@ -761,12 +763,12 @@ class BuildRun:
         return None
 
     def _approval_state(self) -> tuple[Optional[dict], Optional[dict]]:
-        """(approvals by mandate hash {method, id} from the approval table, methods by mandate hash from the public floor events). Each is
-        None when it cannot be read."""
+        """(approvals by mandate hash {method, id} from the buyer's my_deals view, methods by mandate hash from the public floor events).
+        Each is None when it cannot be read. my_deals: r[0] mandate hash, r[8] approval method, r[9] VoiceApproval id ('' for an allowance)."""
         referee = self.clients["referee"]
         rows = events = None
         try:
-            rows = {r[1]: {"method": r[2], "id": str(r[5] if len(r) > 5 else "")} for r in referee.sql("SELECT * FROM approval")}
+            rows = {r[0]: {"method": str(r[8]), "id": str(r[9])} for r in self.clients["buyer"].sql("SELECT * FROM my_deals")}
         except (RuntimeError, OSError, ValueError, TypeError, IndexError):
             pass
         try:
@@ -780,7 +782,7 @@ class BuildRun:
         """Before any payment: every mandate must carry the approval this build expects, read back from the market. After the call that is a
         voice_code row with the call's VoiceApproval id; inside the allowance, an allowance row. Anything else (a part the market approved on
         the allowance, a swallowed approval, a table that cannot be read at all) denies the build visibly, releases the held units and pays
-        nothing. The approval table gives method and id; if it cannot be read the public floor events give the method alone."""
+        nothing. The buyer's my_deals view gives method and id; if it cannot be read the public floor events give the method alone."""
         want = "voice_code" if voice_id else "allowance"
         rows, events = self._approval_state()
         bad = []

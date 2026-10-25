@@ -24,7 +24,18 @@ class FakeMarket:
         # the market's allowance row starts at $0 (a new buyer's first buy always calls); set_allowance changes it
         self.allow = {"per": 0.0, "period_limit": 0.0, "period": "week", "spent": spent}
         # switches for the checks that read the market back
-        self.private_readable, self.events_readable, self.swallow_approval, self.never_close, self.knockout = True, True, False, False, set()
+        # the real referee cannot read private tables (HTTP 400); the buyer reads its own rows through the my_allowance and my_deals views
+        self.allowance_readable, self.deals_readable, self.events_readable = True, True, True
+        self.swallow_approval, self.never_close, self.knockout = False, False, set()
+        self.goals = {}
+
+    def post_goal(self, a):
+        # market.ts GOAL_TYPES, which is also the enum of contracts/Goal.schema.json
+        if a["type"] not in ("budget_cap", "part_by_date", "build_by_date"):
+            raise RuntimeError("goal type must be one of budget_cap, part_by_date, build_by_date")
+        if a["id"] in self.goals:
+            raise RuntimeError(f"goal {a['id']} already exists")
+        self.goals[a["id"]] = a
 
     def set_allowance(self, a):
         if a["per_purchase_limit"] > a["period_limit"]:
@@ -135,15 +146,18 @@ class _Client:
             return list(m.rows)
         if query == "SELECT * FROM round":   # id, need_id, opened_at, deadline, extensions, state, sealed_count, closed_at, origin
             return [(rid, m.rounds[rid]["need_id"], "t", "t", 0, st, 0, None, "SIM") for rid, st in m.round_state.items()]
-        if query == "SELECT * FROM allowance":
-            if not m.private_readable:
-                raise RuntimeError("sql failed (400): no such table `allowance`")
+        if query in ("SELECT * FROM allowance", "SELECT * FROM approval", "SELECT * FROM mandate"):   # private: the referee cannot read them
+            raise RuntimeError("sql failed (400): no such table")
+        if query == "SELECT * FROM my_allowance":      # buyer only
+            if self.name != "buyer" or not m.allowance_readable:
+                raise RuntimeError("sql failed (400)")
             a = m.allow
             return [("vidyut", "USD", a["per"], a["period_limit"], a["period"], a["spent"], 0, "t")]
-        if query == "SELECT * FROM approval":
-            if not m.private_readable:
-                raise RuntimeError("sql failed (400): no such table `approval`")
-            return [(i, h, v["method"], "vidyut", "t", v["voice_approval_id"]) for i, (h, v) in enumerate(m.approvals.items(), 1)]
+        if query == "SELECT * FROM my_deals":          # buyer only: hash, id, deal, amount, payee, expiry, within, origin, method, voice id, ...
+            if self.name != "buyer" or not m.deals_readable:
+                raise RuntimeError("sql failed (400)")
+            return [(h, mm["id"], mm["deal_id"], mm["amount"], mm["payee"], "t", False, mm["origin"], m.approvals.get(h, {}).get("method", ""),
+                     m.approvals.get(h, {}).get("voice_approval_id", ""), None, "", "", None) for h, mm in m.mandates.items()]
         if query == "SELECT * FROM floor_event":   # id, kind, ref_table, ref_id, seller_id, label, origin, at
             if not m.events_readable:
                 raise RuntimeError("sql failed (500)")
@@ -236,7 +250,8 @@ def test_a_plan_we_cannot_read_raises_before_anything_is_bid(edit):
 def test_one_goal_of_type_build_with_an_item_per_part_and_owned_parts_skipped(tmp_path):
     r, out, m, *_ = run_build(tmp_path=tmp_path)
     goal = calls(m, "post_goal")
-    assert len(goal) == 1 and goal[0]["type"] == "build" and goal[0]["id"] == "goal-build-1" and goal[0]["buyer_id"] == "vidyut"
+    contract = json.loads((build.ROOT / "contracts" / "Goal.schema.json").read_text())["properties"]["type"]["enum"]
+    assert len(goal) == 1 and goal[0]["type"] in contract and goal[0]["type"] == "build_by_date" and goal[0]["id"] == "goal-build-1" and goal[0]["buyer_id"] == "vidyut"
     skipped = {i["sku_spec"]: i["skipped_owned_part_id"] for i in goal[0]["items"] if i["skipped_owned_part_id"]}
     assert skipped == {"750 w psu": "owned-psu", "case (305 mm gpu room)": "owned-case"} and len(goal[0]["items"]) == 8
 
@@ -471,20 +486,31 @@ def test_the_build_is_denied_with_no_payment_when_a_mandate_has_no_voice_code_ro
     assert len(calls(m, "deny_approval")) == 6, "the held units go back on sale"
 
 
+def test_an_approval_row_carrying_another_calls_id_is_not_the_calls_approval(tmp_path):
+    m = FakeMarket()
+    real = m.record_approval
+
+    def wrong_id(a):
+        real({**a, "voice_approval_id": "va-someone-else"})
+    m.record_approval = wrong_id
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "denied" and out["reason"] == "approval_missing" and m.payments == {}
+
+
 def test_without_the_private_tables_the_public_floor_events_still_prove_the_method(tmp_path):
     m = FakeMarket()
-    m.private_readable = False
+    m.deals_readable = False
     r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
     assert out["status"] == "paid"
     m2 = FakeMarket()
-    m2.private_readable, m2.swallow_approval = False, True
+    m2.deals_readable, m2.swallow_approval = False, True
     r, out, m2, client, notes = run_build(m2, tmp_path=tmp_path / "b", allowance=dict(ALLOW))
     assert out["status"] == "denied" and m2.payments == {}
 
 
 def test_a_build_that_cannot_be_read_back_at_all_pays_nothing(tmp_path):
     m = FakeMarket()
-    m.private_readable = m.events_readable = False
+    m.deals_readable = m.events_readable = False
     r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
     assert out["status"] == "denied" and m.payments == {} and "record_payment" not in kinds(m)
 
@@ -506,11 +532,26 @@ def test_the_markets_own_spent_this_period_decides_not_a_hard_coded_zero(tmp_pat
     assert {v["method"] for v in m.approvals.values()} == {"voice_code"} and m.allow["spent"] == 8500.0
 
 
-def test_an_allowance_that_cannot_be_read_or_restored_stops_before_any_mandate(tmp_path):
+def test_an_allowance_that_cannot_be_read_stops_before_any_call_or_mandate_even_when_the_plan_gave_one(tmp_path):
     m = FakeMarket()
-    m.private_readable = False
-    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=None)
-    assert out["status"] == "denied" and "create_mandate" not in kinds(m) and m.payments == {}
+    m.allowance_readable = False
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "denied" and out["reason"] == "allowance_unreadable"
+    assert client.calls == [] and "create_mandate" not in kinds(m) and m.payments == {}
+    assert allowance_calls(m) == [(250.0, 500.0, "month")], "the allowance was never touched"
+
+
+def test_a_per_buy_limit_the_buyer_tightened_is_restored_as_it_was_not_as_the_plan_had_it(tmp_path):
+    m = FakeMarket()
+    real = m.set_allowance
+
+    def once(a):
+        real(a)
+        if len(allowance_calls(m)) == 1:
+            m.allow = {**m.allow, "per": 60.0}      # the buyer tightens their own limit after the build set it
+    m.set_allowance = once
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "paid" and allowance_calls(m)[-2:] == [(0.0, 500.0, "month"), (60.0, 500.0, "month")] and m.allow["per"] == 60.0
 
 
 def test_inside_the_allowance_a_part_the_market_would_not_auto_approve_denies_before_any_payment(tmp_path):
