@@ -826,16 +826,13 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
     class PulseBands(Model):
         pulse_json: str          # the public pulse ({"kind": "market-pulse", "bands": {...}}) or {"error": "..."}
 
-    own_addresses: dict[str, str] = {}
+    own_addresses: dict[str, Optional[str]] = {}
     band_limit = RateLimit()
     public_bands = FB.CachedBands(pulse.bands)      # an open request reads each part at most once a minute, whoever asks
 
     def address_of(seller_id: str) -> Optional[str]:
         if seller_id not in own_addresses:
-            try:
-                own_addresses[seller_id] = common.address(seller_id)
-            except Exception:  # noqa: BLE001
-                return None
+            own_addresses[seller_id] = common.seller_address(seller_id)   # #449 RT-27: None for a public dev seed in mailbox mode
         return own_addresses[seller_id]
 
     def allowed(sender: str):

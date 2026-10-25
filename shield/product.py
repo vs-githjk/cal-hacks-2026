@@ -138,7 +138,7 @@ def create_product_app(keys: Optional[KeyStore] = None, meter: Optional[Meter] =
                        claim_fetch: Optional[Callable[[str], bytes]] = None):
     keys, meter, limit = keys or KeyStore(), meter or Meter(), RateLimit(per_minute)
     claim_fetch = claim_fetch or public_fetch
-    app = create_app()
+    app = create_app(api_token="")   # #449 RT-26: the product gates on its own API keys, not SHIELD_API_TOKEN
     app.title = "Smell Test API"
     app.description = ("Nothing fishy gets through. Screen agent-to-agent commerce messages for prompt injection, payee swaps and other attacks. "
                        "Send `X-API-Key` on every /v1 call. Any non-200 response must be treated as block.")
