@@ -8,7 +8,7 @@
 - Sample row (from the dated run below): `{"text": "in stock", "result": "false", "reason": "claim says in stock; differs from the listing ...: the page shows out of stock", "evidence_url": "https://www.canadacomputers.com/...", "evidence_hash": "sha256 of the page", "checked_at": "2026-10-24T18:28:40+00:00"}`
 - Price: **$0.01 per claim** that comes back verified or false; unverified is free (plus Apify's $0.00005 run start).
 
-Built for **AI shopping agents** (our own, [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), uses it to catch sellers whose words do not match their listing before money moves), and useful to marketplaces, price-match teams and anyone who buys on someone else's word.
+Built for **AI shopping agents** (our own, [Fish Market](https://github.com/vs-githjk/fish-market-nothing-fishy), uses it to catch sellers whose words do not match their listing before money moves), and useful to marketplaces, price-match teams and anyone who buys on someone else's word.
 
 **Results are evidence, not a verdict.** A page we cannot read is `unverified`, never `false`, and the wording is neutral: a mismatch means "the page differed at that time", never that a store lied.
 
@@ -109,7 +109,7 @@ An AI agent with a stablecoin wallet and **no Apify account** can pay for this A
 2. The agent's wallet pays it (for example `npx awal x402 pay ...`, `mppx ...` or `pay.sh`), and Apify returns a token with a hard spend cap: at least $1, it expires after 14 days, and unused balance is not refunded.
 3. The agent runs this Actor with `Authorization: Bearer <token>`, and each claim is metered against that balance. This works because the Actor uses limited permissions.
 
-**What we have verified (Oct 24 2026):** our probe, [`data/claim_check/agent_pay_probe.py`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/data/claim_check/agent_pay_probe.py), sends unpaid requests only and reaches the 402 pay wall for a prepaid token (x402 and MPP) and for a proxied run of this Actor ($1.00 USDC on Base). Its saved output is [`data/claim_check/agent_pay_probe.txt`](https://github.com/vs-githjk/cal-hacks-2026/blob/main/data/claim_check/agent_pay_probe.txt). That is *reached, not paid*. This section will say LIVE only after a real paid run.
+**What we have verified (Oct 24 2026):** our probe, [`data/claim_check/agent_pay_probe.py`](https://github.com/vs-githjk/fish-market-nothing-fishy/blob/main/data/claim_check/agent_pay_probe.py), sends unpaid requests only and reaches the 402 pay wall for a prepaid token (x402 and MPP) and for a proxied run of this Actor ($1.00 USDC on Base). Its saved output is [`data/claim_check/agent_pay_probe.txt`](https://github.com/vs-githjk/fish-market-nothing-fishy/blob/main/data/claim_check/agent_pay_probe.txt). That is *reached, not paid*. This section will say LIVE only after a real paid run.
 
 ## Our other Actor
 
@@ -132,4 +132,4 @@ An AI agent with a stablecoin wallet and **no Apify account** can pay for this A
 
 ## Labels
 
-Results on real store pages are MIRROR (a dated read of a public page). Source: [github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/claim_check/`. Developers: `./bundle.sh` copies the checker into `src/data/` before a push.
+Results on real store pages are MIRROR (a dated read of a public page). Source: [github.com/vs-githjk/fish-market-nothing-fishy](https://github.com/vs-githjk/fish-market-nothing-fishy), `data/claim_check/`. Developers: `./bundle.sh` copies the checker into `src/data/` before a push.

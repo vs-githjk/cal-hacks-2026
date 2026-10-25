@@ -1,7 +1,8 @@
 // web/src/lib/sample.ts
-// Vidyut's run from demo/out/sample-run.json (generated 2026-10-24T06:02:42Z = Oct 23, 11:02:42 PM PDT).
+// The buyer's recorded run from demo/out/sample-run.json (generated 2026-10-24T06:02:42Z = Oct 23, 11:02:42 PM PDT).
 // Every number below is copied from that file. The word-pair code is the one value the file redacts
 // (code_redacted: true); "velvet falcon" stands in and must be replaced by the code the mandate issues.
+import { SHIELD } from "./brand.ts";
 import type {
   ApprovalView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView,
 } from "./screens";
@@ -114,61 +115,49 @@ export const feed: FeedItem[] = [
   { key: "f5", at: at(11), kind: "bid", title: "Bid in", text: "11 sealed bids, round extended once" },
 ];
 
+// The /market sample (RT-18): the four current sellers (Byte Bros Outlet seller_1, FlashDeal Frankie seller_3, ReNew Refurb seller_5,
+// Central Comp seller_6), same shape as the SIM round in arenaFixture.ts. Three are scripted SIM bids with this sample's prices. Central
+// Comp is MIRROR: a real dated listing (data/mirror/snapshots/centralcomputers-20261024T2112Z.json, RTX 5070 Ti, $1,249.99, no
+// condition stated). The page keeps each row's own origin; it no longer flattens MIRROR to SIM. The old Shady Sam / Fair Price roster is
+// not shown here. The winner, $1,299.99, is under the sample goal's $1,300 cap.
+const CENTRAL_COMP_URL = "https://www.centralcomputer.com/msi-g507t-16v3zcb-nvidia-geforce-rtx-5070-ti-ventus-3x-pz-oc-black-graphics-card-16gb-gddr7-pci-express-5-0.html";
+const FRANKIE_URL = "https://example.com/sim/flashdeal-frankie/rtx-5070-ti";
+
 export const round: RoundView = {
   id: "round-1",
   needId: "need-vidyut-5070ti",
   openedAt: T0,
   windowMs: 12000,
-  closedMs: 17000,
-  extensions: 1,
-  sealedCount: 11,
+  closedMs: 12000,
+  extensions: 0,
+  sealedCount: 4,
   state: "closed",
   origin: "SIM",
   arrivals: [
-    { label: "Amazon", atMs: 300, origin: "MIRROR", refused: false },
-    { label: "Best Buy", atMs: 1200, origin: "MIRROR", refused: false },
-    { label: "eBay ..900", atMs: 2100, origin: "MIRROR", refused: false },
-    { label: "eBay ..526", atMs: 3000, origin: "MIRROR", refused: false },
-    { label: "eBay ..742", atMs: 3900, origin: "MIRROR", refused: false },
-    { label: "Micro Ctr", atMs: 4800, origin: "MIRROR", refused: false },
-    { label: "Shady Sam", atMs: 5700, origin: "SIM", refused: false },
-    { label: "Bargain Bin", atMs: 6600, origin: "SIM", refused: false },
-    { label: "Lowball", atMs: 7500, origin: "SIM", refused: true },
-    { label: "Fair Price", atMs: 8400, origin: "SIM", refused: false },
-    { label: "Gadget Grove (Vedant)", atMs: 10600, origin: "SIM", refused: false },
+    { label: "Central Comp", atMs: 1200, origin: "MIRROR", refused: false },
+    { label: "FlashDeal Frankie", atMs: 4800, origin: "SIM", refused: false },
+    { label: "ReNew Refurb", atMs: 8400, origin: "SIM", refused: false },
+    { label: "Byte Bros Outlet", atMs: 10600, origin: "SIM", refused: false },
   ],
   seenBeforeClose: { buyer: 0, public: 0 },
 };
 
 export const sellerLines: SellerLine[] = [
-  { seller: "Best Buy", origin: "MIRROR", condition: "new", landed: 1249.99, referee: "passed", outcome: { kind: "won", rank: 3 } },
-  { seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "new", landed: 1315.27, referee: "passed", outcome: { kind: "alt", note: "not the cheapest allowed line" } },
-  { seller: "Gadget Grove (Vedant)", origin: "SIM", condition: "open-box", landed: 1247.02, referee: "passed", outcome: { kind: "ranked", rank: 5 } },
-  { seller: "eBay seller ...824742", origin: "MIRROR", condition: "open-box", landed: 1239.99, referee: "passed", outcome: { kind: "ranked", rank: 6 } },
-  { seller: "Fair Price PC", origin: "SIM", condition: "new", landed: 1289, referee: "passed", outcome: { kind: "ranked", rank: 4 } },
-  { seller: "Bargain Bin Hardware", origin: "SIM", condition: "new", landed: 1199, referee: "passed", outcome: { kind: "veto", rank: 2, note: "336 mm > 305 mm" } },
-  { seller: "Shady Sam's Deals", origin: "SIM", condition: "new", landed: 757.44, referee: "passed", outcome: { kind: "veto", rank: 1, note: "page says open-box" } },
-  { seller: "Micro Center", origin: "MIRROR", condition: "unknown", landed: 1199.99, referee: "passed", outcome: { kind: "ineligible", note: "condition unknown" } },
-  { seller: "Amazon.com (sells direct)", origin: "MIRROR", condition: "unknown", landed: 1299.99, referee: "passed", outcome: { kind: "ineligible", note: "condition unknown" } },
-  { seller: "eBay seller ...442526", origin: "MIRROR", condition: "new", landed: 1399.99, referee: "passed", outcome: { kind: "ineligible", note: "over cap" } },
-  { seller: "eBay seller ...263900", origin: "MIRROR", condition: "new", landed: 1489, referee: "passed", outcome: { kind: "ineligible", note: "over cap" } },
-  { seller: "Lowball Direct", origin: "SIM", condition: "new", landed: 1090, referee: "refused", refereeReason: "below own floor", outcome: { kind: "refused" } },
+  { seller: "Byte Bros Outlet", origin: "SIM", condition: "new", landed: 1299.99, referee: "passed", outcome: { kind: "won", rank: 1 } },
+  { seller: "ReNew Refurb", origin: "SIM", condition: "new", landed: 1315.27, referee: "passed", outcome: { kind: "alt", note: "not the cheapest allowed line" } },
+  { seller: "ReNew Refurb", origin: "SIM", condition: "open-box", landed: 1247.02, referee: "passed", outcome: { kind: "ranked", rank: 2 } },
+  { seller: "FlashDeal Frankie", origin: "SIM", condition: "new", landed: 1199, referee: "passed", outcome: { kind: "veto", note: "page says open-box" } },
+  { seller: "Central Comp", origin: "MIRROR", condition: "unknown", landed: 1249.99, referee: "passed", outcome: { kind: "ineligible", note: "condition unknown" } },
 ];
 
 export const lossReports: LossReport[] = [
-  { seller: "Gadget Grove (Vedant)", origin: "SIM", gapBand: "within5", reason: "price", sourceUrl: "https://example.com/sim/gadget-grove/rtx-5070-ti" },
-  { seller: "Fair Price PC", origin: "SIM", gapBand: "within5", reason: "price", sourceUrl: "https://example.com/sim/fair-price-pc/rtx-5070-ti" },
-  { seller: "eBay ...824742", origin: "MIRROR", gapBand: "within5", reason: "price", sourceUrl: "https://www.ebay.com/itm/800825824742" },
-  { seller: "Amazon.com", origin: "MIRROR", gapBand: "within5", reason: "condition", sourceUrl: "https://www.amazon.com/dp/B0DXL8NFLF" },
-  { seller: "Micro Center", origin: "MIRROR", gapBand: "within5", reason: "condition", sourceUrl: "https://www.microcenter.com" },
-  { seller: "Bargain Bin", origin: "SIM", gapBand: "within5", reason: "fit", sourceUrl: "https://example.com/sim/bargain-bin/rtx-5070-ti" },
-  { seller: "Shady Sam's Deals", origin: "SIM", gapBand: "within5", reason: "advocate_veto", sourceUrl: "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html" },
-  { seller: "eBay ...442526", origin: "MIRROR", gapBand: "within20", reason: "price", sourceUrl: "https://www.ebay.com/itm/298743442526" },
-  { seller: "eBay ...263900", origin: "MIRROR", gapBand: "within20", reason: "price", sourceUrl: "https://www.ebay.com/itm/900035263900" },
+  { seller: "ReNew Refurb", origin: "SIM", gapBand: "within5", reason: "price", sourceUrl: "https://example.com/sim/renew-refurb/rtx-5070-ti" },
+  { seller: "FlashDeal Frankie", origin: "SIM", gapBand: "within20", reason: "advocate_veto", sourceUrl: FRANKIE_URL },
+  { seller: "Central Comp", origin: "MIRROR", gapBand: "within5", reason: "condition", sourceUrl: CENTRAL_COMP_URL },
 ];
 
 export const learning: LearningView = {
-  seller: "Gadget Grove (Vedant)",
+  seller: "ReNew Refurb",
   origin: "SIM",
   whatToChange: "You lost on price by less than 5 percent. Lower your price by about 3%, and keep it above your floor.",
   whatToChangeOrigin: "SIM template",
@@ -176,13 +165,13 @@ export const learning: LearningView = {
     { key: "price_step", from: "0.00", to: "0.03" },
     { key: "round 1 to 2", from: "$1,247.02", to: "$1,209.61", note: "floor $1,190.00, stayed above" },
   ],
-  control: "Fair Price PC unchanged at $1,289.00",
+  control: "Byte Bros Outlet unchanged at $1,299.99",
 };
 
 export const floorEvents: FloorEventView[] = [
   { key: "e7", at: at(66), kind: "payment_recorded", label: "Best Buy paid $1,249.99 under mandate", origin: "MIRROR", ref: "payment/1" },
-  { key: "e6", at: at(66), kind: "approval_recorded", label: "voice_code, approved by vidyut on try 3", origin: "SIM", ref: "approval/1" },
-  { key: "e5", at: at(17), kind: "verdict", label: "Shield blocked msg-shady-sam-injected: 9 rules", origin: "LIVE", ref: "bid_check/11" },
+  { key: "e6", at: at(66), kind: "approval_recorded", label: "voice_code, approved by the buyer on try 3", origin: "SIM", ref: "approval/1" },
+  { key: "e5", at: at(17), kind: "verdict", label: `${SHIELD} blocked msg-shady-sam-injected: 9 rules`, origin: "LIVE", ref: "bid_check/11" },
   { key: "e4", at: at(17), kind: "verdict", label: "Advocate vetoed bid shady-sam: advocate.condition", origin: "SIM", ref: "bid_check/7" },
   { key: "e3", at: at(17), kind: "auction_closed", label: "round-1 closed, winner best-buy, 11 sealed", origin: "SIM", ref: "round/round-1" },
   { key: "e2", at: at(7), kind: "bid_rejected", label: "lowball: below floor (reason kept private to the bidder)", origin: "SIM", ref: "bid/lowball" },

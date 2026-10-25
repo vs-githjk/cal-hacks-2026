@@ -14,6 +14,7 @@ import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorK
 import type { ReasonCode } from "@/lib/bracket";
 import { FIXED_ACTORS, actorFor } from "@/lib/floor";
 import { formatMoney } from "@/lib/money";
+import { SHIELD } from "@/lib/brand";
 
 type SampleName = keyof typeof SAMPLES;
 const LEAD_MS = 1200; // the sealed table holds this long before a close starts to play
@@ -371,7 +372,7 @@ function OffersList({ scene, reveal, picked, onPick }: { scene: ArenaScene; reve
   );
 }
 
-const ROLE: Record<string, string> = { buyer: "Buyer agent", advocate: "Advocate", shield: "Bazaar Shield", referee: "Referee" };
+const ROLE: Record<string, string> = { buyer: "Buyer agent", advocate: "Advocate", shield: SHIELD, referee: "Referee" };
 
 /** The selected actor: its name and kind, its round_result row (offers), and the floor_event rows behind it. */
 const STATUS_WORD: Record<AgentStatus, string> = { agentverse: "On Agentverse", local: "Running locally", down: "Down" };
