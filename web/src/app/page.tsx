@@ -4,7 +4,6 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useSpacetimeDB } from "spacetimedb/react";
 import { DashboardPreview } from "@/components/DashboardPreview";
 import { FloorMini } from "@/components/FloorMini";
 import { HomeMore } from "@/components/HomeMore";
@@ -34,7 +33,6 @@ const BUBBLES = [
 ];
 
 export default function Home() {
-  const conn = useSpacetimeDB();
   return (
     <div className="-mx-4 grid grid-cols-[minmax(0,1fr)]">
       <ScrollProgress />
@@ -50,10 +48,7 @@ export default function Home() {
         ))}
         <div className="relative z-[2] mx-auto grid max-w-[1120px] items-center gap-10 pb-16 pt-14 md:px-4 md:pb-24 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-2 shadow-ring backdrop-blur">
-              <span className="dot text-pulse" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
-            </span>
-            <h1 className="mt-5 text-[40px] font-semibold leading-[44px] tracking-[-0.03em] text-balance md:text-[62px] md:leading-[66px] md:tracking-[-0.035em]">
+            <h1 className=" text-[40px] font-semibold leading-[44px] tracking-[-0.03em] text-balance md:text-[62px] md:leading-[66px] md:tracking-[-0.035em]">
               The <span className="fm-headline-accent">secure agentic</span> marketplace.
             </h1>
             <p className="mt-5 max-w-[36ch] text-[18px] leading-[27px] text-ink-2 md:text-[20px] md:leading-[30px]">

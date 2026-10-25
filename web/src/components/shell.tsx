@@ -20,7 +20,6 @@ const NAV: { href: string; label: string; match?: string }[] = [
 /** Header: wordmark, links, the market's live pill and the one primary action. On a phone the links scroll in a second row. */
 export function AppHeader() {
   const path = usePathname();
-  const conn = useSpacetimeDB();
   const links = NAV.map((n) => {
     const on = n.match ? path.startsWith(n.match) : path === n.href;
     return (
@@ -44,7 +43,6 @@ export function AppHeader() {
         </Link>
         <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 sm:flex">{links}</div>
         <div className="flex items-center gap-2.5">
-          <span className="hidden lg:inline-flex"><LivePill on={conn.isActive} /></span>
           {path !== "/start" && !path.startsWith("/buyer") && (
             <Link href="/start" className="btn fm-btn fm-grad inline-flex min-h-10 items-center rounded-xl px-4 text-[14px] font-medium text-white">
               Start a goal
@@ -57,15 +55,6 @@ export function AppHeader() {
   );
 }
 
-/** Market connection as a v2 pill: cyan heartbeat when live, a neutral word while connecting or offline. */
-export function LivePill({ on }: { on: boolean }) {
-  return (
-    <span className={`hidden h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium sm:inline-flex ${on ? "bg-live-soft text-ink" : "bg-slate-soft text-slate"}`}>
-      {on ? <span className="dot text-live" aria-hidden /> : <span className="h-2 w-2 rounded-full border border-current" aria-hidden />}
-      {on ? "Market live" : "Connecting"}
-    </span>
-  );
-}
 
 /** Kept for screens that showed the old ring mark: now the Fish Market tile. `spin` is accepted and ignored. */
 export function Mark({ size = 24 }: { size?: number; spin?: boolean }) {
