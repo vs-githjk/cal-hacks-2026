@@ -52,6 +52,10 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+# Smell Test can call the Claude classifier, which takes longer than the 1.5 s local default; the live stack raises it.
+SHIELD_TIMEOUT_S = max(0.5, float(os.getenv("SHIELD_TIMEOUT_S", "1.5")))
+
+
 def _open_shield(req, timeout: float):
     return urllib.request.build_opener(_NoRedirect()).open(req, timeout=timeout)
 
@@ -91,7 +95,7 @@ def _screen(message_id: str, sender: str, text: str, context: dict | None = None
                                                   "context": context}).encode(),
                                  headers=_shield_headers())
     try:
-        with _open_shield(req, timeout=1.5) as r:
+        with _open_shield(req, timeout=SHIELD_TIMEOUT_S) as r:
             if r.status != 200:
                 raise ValueError("non-200 Shield response")
             result = json.loads(r.read())
