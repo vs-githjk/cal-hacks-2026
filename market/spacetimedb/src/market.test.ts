@@ -1587,7 +1587,8 @@ describe('#374 sign_up_buyer', () => {
   it('phone is optional and validated; the name is required and capped', () => {
     const a = signUp(as('new-3'), { displayName: 'Bo' });
     expect(h.db.buyerProfile.buyerId.find(a)!.phone).toBe('');
-    expect(() => signUp(as('new-4'), { displayName: 'Bo', phone: 'abc' })).toThrow();
+    for (const bad of ['abc', '4155550100', '+0123456789'])
+      expect(() => signUp(as(`bad-${bad}`), { displayName: 'Bo', phone: bad })).toThrow('phone must start with + and a country code, like +14155550100');
     expect(() => signUp(as('new-5'), { displayName: '   ' })).toThrow();
     const b = signUp(as('new-6'), { displayName: 'x'.repeat(100) });
     expect(h.db.buyerProfile.buyerId.find(b)!.displayName).toHaveLength(60);

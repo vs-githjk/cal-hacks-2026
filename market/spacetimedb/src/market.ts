@@ -194,7 +194,7 @@ export function issuePairCode(ctx: Ctx, buyerId: string) {
 export const SIGNUP_MAX = 30;
 export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
-const PHONE_RE = /^\+?[0-9][0-9 ()-]{6,19}$/;
+const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;
 
 /**
  * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
@@ -205,8 +205,8 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
   if (isOwner(ctx) || had) throw new SenderError(`already signed up: this identity is ${had ? `a ${had.role}` : 'the owner'}`);
   const name = displayName.trim().slice(0, 60);
   if (!name) throw new SenderError('display name required');
-  const ph = (phone ?? '').trim();
-  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must be 7 to 20 digits, optionally starting with +');
+  const ph = (phone ?? '').trim().replace(/[ ()-]/g, '');
+  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
   const now = ms(ctx.timestamp);
   const th = ctx.db.signupThrottle.id.find(0);
   const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;
@@ -221,7 +221,7 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
     buyerId = `b_${raw}`;
   } while ([...ctx.db.role.subjectId.filter(buyerId)].length || ctx.db.buyerProfile.buyerId.find(buyerId) || ctx.db.allowance.buyerId.find(buyerId));
   ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
-  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph.replace(/[ ()-]/g, '') });
+  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph });
   ctx.db.allowance.insert(fromRule({ ...newAllowance(buyerId, now), per_purchase_limit: 0 }));
   event(ctx, 'buyer_signed_up', 'buyer_profile', buyerId, 'A new buyer signed up');
   return buyerId;
