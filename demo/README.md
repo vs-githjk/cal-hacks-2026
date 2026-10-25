@@ -27,6 +27,19 @@ The charge happens after `can_charge` passes at charge time, never before: one `
 the PaymentIntent id and status. A refused call prints Stripe's error type and code, not the request, and the SIM stub is recorded instead.
 This is not Visa settlement: it is a Stripe test charge on a Visa test card under a TAP-style signed mandate.
 
+## A full build in the market (`demo/build.py`, #345)
+```
+python3 demo/build.py --dry-run                 # the goal and the six part rounds as reducer calls, nothing written
+python3 demo/build.py --live-call --reset       # one real call for the whole build, only above the allowance
+python3 -m pytest demo/tests/test_build.py demo/tests/test_build_view.py   # fake market, fake call, fake Bright Data: no network
+```
+One goal (`type: "build_by_date"`, an owned part is a skipped goal item), then one need and one sealed round per part to buy, each closed before the next opens
+(the GPU runs the bridge's own round: real MIRROR listings plus the planted sellers, judged by the real advocate). The market's rank 1 is a part's champion;
+a held-back, vetoed or non-partner champion is never mandated, and a part with no eligible bid is `failed`: no call, nothing paid. Each MIRROR champion's price is re-checked
+live with Bright Data (parallel, bounded; a failed read keeps the dated price and says so). Above the allowance: ONE call ("6 parts from 3 sellers, <total>"), then one mandate,
+approval, payment and receipt per part; inside it: no call (method `allowance`). `demo/out/build-view.json` (the board's BuildView) is rewritten at every step.
+Details and the keys added to the board's shape: `docs/changes/1705-D-build-in-the-market.md`.
+
 ## Screen bridge (`demo/bridge.py`): watch the run on /buyer and /market
 ```
 python3 demo/bridge.py --step-delay 2 --reset   # about 90 s; --reset calls reset_demo first (keeps roles and pair codes)

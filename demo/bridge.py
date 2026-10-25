@@ -77,12 +77,15 @@ def bid_id(bid: dict, round_no: int) -> str:
 
 
 def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict, sellers: dict, shield: list[dict],
-                claims: dict, cards: list[dict], delay: float, pace: float, window_s: Optional[int] = None) -> list[Step]:
+                claims: dict, cards: list[dict], delay: float, pace: float, window_s: Optional[int] = None,
+                round_id: Optional[str] = None, label: str = "") -> list[Step]:
     """open_round, every seller's floor and sealed bid in arrival order, then the Shield, claim-check and advocate results.
     A bid carries ALL its condition lines (alternatives for one SKU); the market picks the cheapest allowed one.
     `window_s` (stage pacing, #183) sets the sealed window; the steps inside the round are paced faster so every bid and
-    check still lands at least 6 s before the deadline. Only the timing changes, never what the referee decides."""
-    round_id = f"round-{round_no}"
+    check still lands at least 6 s before the deadline. Only the timing changes, never what the referee decides.
+    `round_id` and `label` (#345, one round per part of a build) name the round and its console lines; bid ids stay as `round_no` makes them."""
+    round_id = round_id or f"round-{round_no}"
+    label = label or f"round {round_no}"
     sku = bids[0]["lines"][0]["sku_spec"]
     entry = _entries(ranking)
     seller_steps: list[Step] = []
@@ -142,9 +145,9 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
             s.pace *= scale
         open_pace = pace * scale
     opener = Step("referee", "open_round", {"round_id": round_id, "need_id": need_id, "window_s": window}, window_s=window,
-                  tag=SIM, pause=True, pace=open_pace, say=f"round {round_no} opens sealed for {window} s")
+                  tag=SIM, pause=True, pace=open_pace, say=f"{label} opens sealed for {window} s")
     closer = Step("referee", "close_round", {"round_id": round_id}, close=True, tag=SIM, pause=True, pace=pace,
-                  say=f"round {round_no} closes at its deadline: the market ranks and reveals every bid")
+                  say=f"{label} closes at its deadline: the market ranks and reveals every bid")
     return [opener, *seller_steps, *check_steps, closer]
 
 
