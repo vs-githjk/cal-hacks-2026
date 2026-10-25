@@ -18,6 +18,7 @@ class Engine(ProcurementMixin, PayablesMixin, Company):
     """Pixel Forge Games (SIM). Every method takes an explicit `at` timestamp so runs are reproducible."""
 
 
+NOT_IN_MEDIAN = frozenset({"centralcomputers"})  # = data.mirror.not_partners.STORES (tested in data/tests)
 SNAP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "mirror", "snapshots")
 
 
@@ -31,7 +32,8 @@ def mirror_refs(snap_dir: str = SNAP_DIR, min_listings: int = 3) -> dict:
     if not os.path.isdir(snap_dir):
         return {}
     for fn in sorted(os.listdir(snap_dir)):
-        if not fn.endswith(".json") or "sold" in fn:
+        # a mirrored store that never joined is an agent's bid, not a retail ask (data/mirror/not_partners.STORES, #333)
+        if not fn.endswith(".json") or "sold" in fn or fn.split("-")[0] in NOT_IN_MEDIAN:
             continue
         try:
             rows = json.load(open(os.path.join(snap_dir, fn), encoding="utf-8"))
