@@ -410,6 +410,7 @@ if __name__ == "__main__":
     ap.add_argument("name", nargs="?", default="seller_1", help="a catalog seller (seller_1 to seller_5) or seller_6 (MIRROR)")
     ap.add_argument("--config", help="path to a SellerConfig JSON file (custom seller); overrides name")
     args = ap.parse_args()
+    common.require_peer_seeds(args.name if not args.config else "seller")   # #449 RT-27: production mode needs the buyer's private seed
     if args.config:
         try:
             cfg = load_config(args.config)

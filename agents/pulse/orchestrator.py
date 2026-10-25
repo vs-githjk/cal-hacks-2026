@@ -714,11 +714,8 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
             if os.environ.get("PULSE_SELLER_CHAT") == "open":     # the default is own: a record goes to its own seller agent
                 return True
             if seller_id not in own_addresses:
-                try:
-                    own_addresses[seller_id] = common.address(seller_id)
-                except Exception:  # noqa: BLE001
-                    return False
-            return own_addresses[seller_id] == sender
+                own_addresses[seller_id] = common.seller_address(seller_id)   # #449 RT-27: None for a public dev seed in mailbox mode
+            return own_addresses[seller_id] is not None and own_addresses[seller_id] == sender
         return check
 
     chat = Protocol(spec=chat_protocol_spec)

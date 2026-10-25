@@ -50,6 +50,15 @@ def shield_context(sender: str, payee_of_record: str | None = None, price_histor
             "sender_role": role}
 
 
+def _shield_headers() -> dict:
+    """#449 RT-26: the bearer token when SHIELD_API_TOKEN is set (shield/api.py then requires it), nothing otherwise."""
+    headers = {"Content-Type": "application/json"}
+    token = (os.getenv("SHIELD_API_TOKEN") or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
     """Invariant 3: every agent-to-agent message goes through Shield before we act on it.
     Calls Lane D at SHIELD_URL and fails closed when Shield is unavailable."""
@@ -64,7 +73,7 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
     req = urllib.request.Request(f"{url.rstrip('/')}/screen", method="POST",
                                  data=json.dumps({"message_id": message_id, "sender_agent": sender, "text": text,
                                                   "context": context}).encode(),
-                                 headers={"Content-Type": "application/json"})
+                                 headers=_shield_headers())
     try:
         with _open_shield(req, timeout=1.5) as r:
             if r.status != 200:
@@ -269,6 +278,46 @@ def mailbox_ready(role: str) -> bool:
     """False only when mailbox mode is on for this role and it still has the public dev seed (agent_args would exit).
     Multi-agent runners use it to skip that one agent instead of losing the whole process."""
     return not (mailbox_on(role) and public_seed(role))
+
+
+def trusted_sellers() -> list[str]:
+    """The sellers whose address the buyer accepts as a sender (#449 RT-27). Locally every seller; in mailbox mode only
+    those with a private seed: a public *-dev seed is in the repo, so anyone could bid, or take an order, as that seller."""
+    return [s for s in SELLERS if mailbox_ready(s)]
+
+
+def seller_address(seller_id: str) -> str | None:
+    """The address of a seller we may trust as a sender (Market Pulse gives a seller its own record to that address), or None:
+    an unknown seller, or one on a public *-dev seed in mailbox mode (#449 RT-27)."""
+    if seller_id in SELLERS and seller_id not in trusted_sellers():
+        return None
+    try:
+        return address(seller_id)
+    except (KeyError, ValueError):
+        return None
+
+
+def peer_roles(role: str) -> list[str]:
+    """The built-in agents whose addresses `role` derives from SEEDS and trusts (#449 RT-27). The buyer's sellers are
+    handled by trusted_sellers(); Smell Test and Market Pulse trust no agent address."""
+    if role in ("shield", "pulse"):
+        return []
+    if role == "buyer":
+        return ["advocate", *(["caller"] if os.getenv("BUYER_DELEGATE_CALL") == "1" else [])]
+    return ["buyer"]
+
+
+def require_peer_seeds(role: str) -> None:
+    """#449 RT-27: in production mode (this role runs on the Agentverse mailbox, e.g. AGENTS_MAILBOX=1) a peer whose seed
+    is missing falls back to a public *-dev default, and that address is open to anyone. Raise at startup instead of
+    silently trusting it. Local mode keeps the dev defaults. Names only the env vars, never a seed."""
+    if not mailbox_on(role):
+        return
+    missing = [p for p in peer_roles(role) if not SEEDS.get(p, "").strip() or public_seed(p)]
+    if missing:
+        names = ", ".join(f"{p.upper()}_AGENT_SEED" for p in missing)
+        raise RuntimeError(f"{role} is on Agentverse (production mode) but {names} is not a private seed, so the "
+                           f"{', '.join(missing)} address it trusts is the public dev one. Set it in agents/.env first.")
 
 
 AVATARS = Path(__file__).resolve().parent / "avatars"

@@ -38,7 +38,7 @@ ADVICE_TIMEOUT_S = 15
 RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs a phone-call approval
 CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
-SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
+SELLER_ADDRS = {common.address(s): s for s in common.trusted_sellers()}  # #449 RT-27: no dev-seed seller in production
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
 # Agentverse profile, published on connect (README, short description, handle) for ASI:One discovery.
@@ -1783,5 +1783,8 @@ agent.include(chat, publish_manifest=True)
 agent.include(pay, publish_manifest=True)
 
 if __name__ == "__main__":
+    import rest_gate
+    common.require_peer_seeds("buyer")   # #449 RT-27: production mode needs the advocate's (and caller's) private seed
+    rest_gate.install(agent)   # #449 RT-26: /chat answers loopback callers only (uagents binds 0.0.0.0)
     print(f"buyer address: {agent.address}")
     agent.run()
