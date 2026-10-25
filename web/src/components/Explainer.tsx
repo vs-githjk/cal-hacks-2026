@@ -1,5 +1,5 @@
 // web/src/components/Explainer.tsx
-// The plain-language pitch for a first-time visitor: what Tech Bazaar is, how the five beats work, and what
+// The plain-language pitch for a first-time visitor: what Fish Market is, how the five beats work, and what
 // each side (buyer, seller) gets out of it. Sits between the hero and the live Corral demo on the home page.
 import Link from "next/link";
 import type { ReactNode, SVGProps } from "react";

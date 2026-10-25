@@ -149,7 +149,8 @@ def find_tool(name: str, which=shutil.which, home_bin: Path | None = None) -> st
     return str(p) if p.is_file() else None
 
 
-MAILBOX_FLAGS = {"buyer": "BUYER_MAILBOX", "advocate": "ADVOCATE_MAILBOX", "sellers": "SELLERS_MAILBOX"}
+MAILBOX_FLAGS = {"buyer": "BUYER_MAILBOX", "advocate": "ADVOCATE_MAILBOX", "sellers": "SELLERS_MAILBOX",
+                 "caller": "CALLER_MAILBOX", "pulse": "PULSE_MAILBOX", "shield-agent": "SHIELD_MAILBOX"}   # = agents/common.py mailbox_on
 
 
 def mailbox_record(svc: Service, file_env: dict[str, str] | None = None, agents_env: dict[str, str] | None = None) -> bool:
@@ -178,11 +179,17 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
                 [sys.executable, "-m", "uvicorn", "shield.api:app", "--host", HOST, "--port", str(a.shield_port)], repo,
                 health_path="/v1/shield/health", wait=30, group="shield"),
         Service("sellers", 8010, [py, "sellers/run_all.py"], repo / "agents", health="tcp", wait=90, group="agents",
-                extra_env=agent_env("SELLERS_MAILBOX"), note=f"3 seller agents in one Bureau, {mode} (port fixed in code)"),
+                extra_env=agent_env("SELLERS_MAILBOX"), note=f"the live seller agents in one Bureau, {mode} (port fixed in code)"),
         Service("advocate", 8003, [py, "-m", "advocate.advocate_agent"], repo / "agents", health="tcp", wait=90,
                 group="agents", extra_env=agent_env("ADVOCATE_MAILBOX"), note=f"{mode}; port fixed in code"),
         Service("buyer", 8001, [py, "buyer/buyer_agent.py"], repo / "agents", health="tcp", wait=90, group="agents",
                 extra_env=agent_env("BUYER_MAILBOX"), note=f"{mode}; port fixed in code"),
+        Service("shield-agent", 8004, [py, "shield_client.py"], repo / "agents", health="tcp", wait=90, group="agents",
+                extra_env=agent_env("SHIELD_MAILBOX"), note=f"Smell Test chat front door for the Shield API; {mode}; port fixed in code"),
+        Service("caller", 8006, [py, "caller/caller_agent.py"], repo / "agents", health="tcp", wait=90, group="agents",
+                extra_env=agent_env("CALLER_MAILBOX"), note=f"the second-factor agent; {mode}; port fixed in code"),
+        Service("pulse", 8018, [py, "-m", "agents.pulse.orchestrator", "--serve"], repo, health="tcp", wait=90, group="agents",
+                extra_env=agent_env("PULSE_MAILBOX"), note=f"Market Pulse: fair-price bands and seller coaching; {mode}; port fixed in code"),
         Service("agent-feed", 8790,
                 [sys.executable, "-m", "uvicorn", "agent_feed:app", "--app-dir", str(repo / "scripts"), "--host", HOST, "--port", "8790"],
                 repo, health_path="/v1/health", wait=30, group="feed",
@@ -753,7 +760,8 @@ def cmd_down(a) -> int:
 
 def make_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="launch.py", description="Bring Fish Market up locally and say what is really up.",
-                                epilog="The agent ports (sellers 8010, advocate 8003, buyer 8001) are fixed in agents/ code and have no flag.")
+                                epilog="The agent ports (buyer 8001, advocate 8003, shield-agent 8004, caller 8006, sellers 8010, pulse 8018) are fixed in agents/ code "
+                                       "and have no flag.")
     p.add_argument("command", choices=["up", "status", "down"])
     p.add_argument("--env-file", default=str(DEFAULT_ENV_FILE), help="KEY=VALUE file loaded into child environments only (default: %(default)s)")
     p.add_argument("--run-dir", default=str(REPO / ".run"), help="pidfile and logs directory (default: %(default)s)")
@@ -762,9 +770,10 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--stdb-port", type=int, default=3000, help="SpacetimeDB listen port")
     p.add_argument("--maincloud", action="store_true",
                    help="the market runs on Maincloud (the env file names it): start no local SpacetimeDB, only the Python services and web")
-    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, agent-feed, seller-kit, web)")
+    p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, shield-agent, caller, pulse, agent-feed, seller-kit, web)")
     p.add_argument("--mailbox", action="store_true",
-                   help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX); register each once with agents/connect.py <port>")
+                   help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX, SHIELD_MAILBOX, "
+                        "CALLER_MAILBOX, PULSE_MAILBOX); register each once with scripts/register_agents.sh")
     p.add_argument("--strict", action="store_true", help="status: also exit 1 when a service is SKIPPED")
     return p
 

@@ -14,6 +14,22 @@ from uagents_core.contrib.protocols.chat import ChatAcknowledgement, ChatMessage
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = ROOT / "contracts"
 sys.path.insert(0, str(ROOT))  # so agents can import other lanes' code, e.g. `from data.fit_checker import check_fit`
+try:  # the shared quarantine list screen() reads; a sibling of common.py
+    import smell_memory
+except ImportError:  # common.py loaded by file path (demo/bridge.py), so its folder is not on sys.path
+    import importlib.util as _util
+    _spec = _util.spec_from_file_location("smell_memory", Path(__file__).with_name("smell_memory.py"))
+    smell_memory = _util.module_from_spec(_spec)
+    sys.modules["smell_memory"] = smell_memory
+    _spec.loader.exec_module(smell_memory)
+
+try:  # one-line structured chat records for the floor's chat tile (agents/chatlog.py); same loading rule as smell_memory
+    import chatlog
+except ImportError:
+    _cspec = _util.spec_from_file_location("chatlog", Path(__file__).with_name("chatlog.py"))
+    chatlog = _util.module_from_spec(_cspec)
+    sys.modules["chatlog"] = chatlog
+    _cspec.loader.exec_module(chatlog)
 
 # Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
 _ENV = Path(__file__).resolve().parent / ".env"
@@ -36,6 +52,10 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+# Smell Test can call the Claude classifier, which takes longer than the 1.5 s local default; the live stack raises it.
+SHIELD_TIMEOUT_S = max(0.5, float(os.getenv("SHIELD_TIMEOUT_S", "1.5")))
+
+
 def _open_shield(req, timeout: float):
     return urllib.request.build_opener(_NoRedirect()).open(req, timeout=timeout)
 
@@ -50,7 +70,16 @@ def shield_context(sender: str, payee_of_record: str | None = None, price_histor
             "sender_role": role}
 
 
-def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
+def _shield_headers() -> dict:
+    """#449 RT-26: the bearer token when SHIELD_API_TOKEN is set (shield/api.py then requires it), nothing otherwise."""
+    headers = {"Content-Type": "application/json"}
+    token = (os.getenv("SHIELD_API_TOKEN") or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
     """Invariant 3: every agent-to-agent message goes through Shield before we act on it.
     Calls Lane D at SHIELD_URL and fails closed when Shield is unavailable."""
     context = context or shield_context(sender)
@@ -64,9 +93,9 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
     req = urllib.request.Request(f"{url.rstrip('/')}/screen", method="POST",
                                  data=json.dumps({"message_id": message_id, "sender_agent": sender, "text": text,
                                                   "context": context}).encode(),
-                                 headers={"Content-Type": "application/json"})
+                                 headers=_shield_headers())
     try:
-        with _open_shield(req, timeout=1.5) as r:
+        with _open_shield(req, timeout=SHIELD_TIMEOUT_S) as r:
             if r.status != 200:
                 raise ValueError("non-200 Shield response")
             result = json.loads(r.read())
@@ -88,7 +117,8 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
             if record and result["verdict"] == "allow" and _structured_payee_mismatch(text, record):
                 result.update(verdict="quarantine", reasons=["shield.payee.swap"],
                               rule_ids=["shield.payee.swap"], attack_type="payee_swap")
-            return result
+            memory = smell_memory.default()  # the shared quarantine list: a trick caught once is flagged for every agent
+            return memory.apply(text, result, context) if memory is not None else result
     except Exception:  # fail closed without echoing response bodies or transport details
         return {"message_id": message_id, "sender_agent": sender, "verdict": "block",
                 "reasons": ["shield.unavailable"], "attack_type": "unknown",
@@ -116,6 +146,17 @@ def _structured_payee_mismatch(text: str, record: str) -> bool:
                 if isinstance(value, str) and value.strip().lower() != record:
                     return True
     return False
+
+
+def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
+    """_screen plus one Smell Test chat line (rule ids and a reason cut to 80 characters, never the screened text) when it blocks."""
+    result = _screen(message_id, sender, text, context)
+    try:
+        if isinstance(result, dict) and result.get("verdict") in ("block", "quarantine"):
+            chatlog.emit(None, "shield", "message", chatlog.block_text(result.get("rule_ids") or [], result.get("reasons") or []))
+    except Exception:  # noqa: BLE001  (the chat line never changes a verdict)
+        pass
+    return result
 
 
 def screen_bid(message_id: str, sender: str, bid_json: str, persona_line: str, references: dict) -> dict:
@@ -184,6 +225,15 @@ class VoiceTransportRequest(Model):
     variables_json: str   # exactly buyer_name, deal_script, why_answer (pay.voice_cartesia.build_variables)
 
 
+# RT-24: the same request with a deadline. A NEW message, because adding a field to VoiceTransportRequest would change its schema
+# digest and a buyer still on the old code would be silently dropped by the Caller (test_voice_transport_digest pins the old
+# digest). The Caller answers both with VoiceTransportResult: the old one unchanged, this one only while fresh.
+class ExpiringVoiceTransportRequest(Model):
+    mandate_hash: str
+    variables_json: str   # exactly as in VoiceTransportRequest
+    expires_at: str       # ISO 8601 with a zone, at most 10 minutes ahead (agents/caller/relay.py check_expiry)
+
+
 class VoiceTransportResult(Model):
     mandate_hash: str
     call_id: str = ""
@@ -213,10 +263,21 @@ SELLERS = [*CATALOG_SELLERS, *_MIRROR_SEEDS]  # each its own uAgent; seller_6 on
 # tests stay): each only repeats a job above, which Fetch asked us not to show as separate agents.
 RETIRED_SELLERS = {"seller_2": "not run (same job as ReNew Refurb, seller_5)",
                    "seller_4": "not run (same job as Byte Bros Outlet, seller_1)"}
-SELLER_JOBS = {"seller_1": "learns from a loss report: steps its price, never below its floor",
-               "seller_3": "lies: the bid says new, its page says open-box, and the Advocate vetoes it with the source",
-               "seller_5": "bundles refurbished and open-box lines of one part in one bid, condition on every line",
-               "seller_6": "real store: bids a San Francisco store's dated listings (MIRROR) and can never be ordered or paid"}
+SELLER_JOBS = {"seller_1": "learner: steps its margin across rounds from its own losses and wins, never below its floor, and "
+                           "shows a strategy note",
+               "seller_3": "adaptive trickster: rotates a condition lie and an injection line (plus a fee and a warranty lie behind a flag), "
+                           "learns which got caught, and every trick stays catchable",
+               "seller_5": "honest refurbisher: labelled refurbished and open-box lines, the tradeoff in plain words, truthful "
+                           "answers to the Advocate",
+               "seller_6": "live mirror: bids a real store's dated listing as a price anchor, re-checked each round when a Bright "
+                           "Data key is set, and can never be ordered or paid"}
+
+
+def live_sellers() -> list[str]:
+    """The sellers that run: SELLERS without the retired ones (seller_6 only when its private seed is set)."""
+    return [s for s in SELLERS if s not in RETIRED_SELLERS]
+
+
 SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
                 "seller_6": 8016}
 BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)
@@ -271,6 +332,46 @@ def mailbox_ready(role: str) -> bool:
     return not (mailbox_on(role) and public_seed(role))
 
 
+def trusted_sellers() -> list[str]:
+    """The sellers whose address the buyer accepts as a sender (#449 RT-27). Locally every seller; in mailbox mode only
+    those with a private seed: a public *-dev seed is in the repo, so anyone could bid, or take an order, as that seller."""
+    return [s for s in SELLERS if mailbox_ready(s)]
+
+
+def seller_address(seller_id: str) -> str | None:
+    """The address of a seller we may trust as a sender (Market Pulse gives a seller its own record to that address), or None:
+    an unknown seller, or one on a public *-dev seed in mailbox mode (#449 RT-27)."""
+    if seller_id in SELLERS and seller_id not in trusted_sellers():
+        return None
+    try:
+        return address(seller_id)
+    except (KeyError, ValueError):
+        return None
+
+
+def peer_roles(role: str) -> list[str]:
+    """The built-in agents whose addresses `role` derives from SEEDS and trusts (#449 RT-27). The buyer's sellers are
+    handled by trusted_sellers(); Smell Test and Market Pulse trust no agent address."""
+    if role in ("shield", "pulse"):
+        return []
+    if role == "buyer":
+        return ["advocate", *(["caller"] if os.getenv("BUYER_DELEGATE_CALL") == "1" else [])]
+    return ["buyer"]
+
+
+def require_peer_seeds(role: str) -> None:
+    """#449 RT-27: in production mode (this role runs on the Agentverse mailbox, e.g. AGENTS_MAILBOX=1) a peer whose seed
+    is missing falls back to a public *-dev default, and that address is open to anyone. Raise at startup instead of
+    silently trusting it. Local mode keeps the dev defaults. Names only the env vars, never a seed."""
+    if not mailbox_on(role):
+        return
+    missing = [p for p in peer_roles(role) if not SEEDS.get(p, "").strip() or public_seed(p)]
+    if missing:
+        names = ", ".join(f"{p.upper()}_AGENT_SEED" for p in missing)
+        raise RuntimeError(f"{role} is on Agentverse (production mode) but {names} is not a private seed, so the "
+                           f"{', '.join(missing)} address it trusts is the public dev one. Set it in agents/.env first.")
+
+
 AVATARS = Path(__file__).resolve().parent / "avatars"
 AVATAR_BASE = "https://raw.githubusercontent.com/vs-githjk/cal-hacks-2026/main/agents/avatars"
 
@@ -304,15 +405,26 @@ def address(role: str) -> str:
     return Identity.from_seed(SEEDS[role], 0).address
 
 
-def include_profile_chat(agent, role_text: str):
-    """Discoverability chat explains the role; structured protocols do the work."""
+def include_profile_chat(agent, role_text: str, answer=None, intercept=None):
+    """Discoverability chat explains the role; structured protocols do the work.
+    answer(text) -> str|None: a reply to a screened message (None means send role_text).
+    intercept(ctx, sender, text) -> bool: True when the message belongs to the agent's own conversation (for example a
+    seller's answer to a question the agent asked); it is acknowledged and gets no profile reply."""
     chat = Protocol(spec=chat_protocol_spec)
 
     @chat.on_message(ChatMessage)
     async def on_chat(ctx, sender: str, msg: ChatMessage):
+        if intercept is not None and await intercept(ctx, sender, msg):
+            await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
+            return
         verdict = screen(str(msg.msg_id), sender, msg.text())
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
         text = role_text if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
+        if answer is not None and verdict.get("verdict") == "allow":
+            try:
+                text = await answer(msg.text()) or role_text
+            except Exception:  # a failed answer falls back to the profile text, never a silent chat
+                text = role_text
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)

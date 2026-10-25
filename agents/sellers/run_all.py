@@ -22,7 +22,7 @@ def build_all(names=None) -> list:
     if not names:
         for name, why in common.RETIRED_SELLERS.items():
             print(f"{name} {why}")
-    for name in names or [n for n in common.SELLERS if n not in common.RETIRED_SELLERS]:
+    for name in names or common.live_sellers():
         if not common.mailbox_ready(name):
             print(f"{name} skipped: set {name.upper()}_AGENT_SEED")
             continue
@@ -33,6 +33,7 @@ def build_all(names=None) -> list:
 
 
 if __name__ == "__main__":
+    common.require_peer_seeds("seller_1")   # #449 RT-27: every seller trusts the buyer; production mode needs its private seed
     bureau = Bureau(port=8010, endpoint=["http://localhost:8010/submit"])
     for a in build_all():
         bureau.add(a)

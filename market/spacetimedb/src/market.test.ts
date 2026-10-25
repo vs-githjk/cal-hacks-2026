@@ -44,6 +44,16 @@ const bidArgs = (id: string, lines: ReturnType<typeof line>[]) => ({
   id, roundId: 'round-1', persona: 'p', lines, statedTotal: 0, perks: [], claims: [], origin: 'SIM', source: 'sim:fixture',
 });
 
+// #449 item 3 RT-11: a voice approval now carries the code the call checked. `relayApproval` is the referee relaying a finished
+// call: it makes sure the word pair was issued for the mandate (as the buyer agent does before dialling), then records the approval with it.
+const CALL_CODE = 'amber falcon';
+const relayApproval = (ctx: any, a: Omit<Parameters<typeof m.recordApproval>[1], 'code'> & { code?: string }) => {
+  if (!ctx.db.approvalCode.mandateHash.find(a.mandateHash)) {
+    try { m.issueApprovalCode(ctx, { mandateHash: a.mandateHash, code: CALL_CODE }); } catch { /* not a referee, or no such mandate: recordApproval says why */ }
+  }
+  return m.recordApproval(ctx, { code: CALL_CODE, ...a });
+};
+
 const mandateArgs = (over: Partial<Parameters<typeof m.createMandate>[1]> = {}) => ({
   hash: 'h1', id: 'mdt-1', dealId: 'round-1:bid-a', buyerId: 'vidyut', amount: 780, payee: 'seller-a', expiryMinutes: 10, nonce: 'n1', requestedBy: '', origin: 'SIM', ...over,
 });
@@ -248,13 +258,13 @@ describe('INVARIANT-1 approval before payment', () => {
   it('INVARIANT-1: an approval for a different hash does not unlock this one', () => {
     mk();
     mint(mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', ...win(10, B, 'seller-b') }));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h2', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h2', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/no approval/);
   });
 
   it('INVARIANT-1: with an approval, one payment is recorded; the amount must equal the mandate', () => {
     mk();
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 781, mode: 'sim' }))).toThrow(/amount/);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'sim' }));
     expect([...h.db.payment.iter()]).toHaveLength(1);
@@ -262,8 +272,8 @@ describe('INVARIANT-1 approval before payment', () => {
 
   it('INVARIANT-1: a second approval for the same hash is rejected and shown; a second payment too', () => {
     mk();
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect([...h.db.approval.iter()]).toHaveLength(1);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_1', amount: 780, mode: 'sim' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_2', amount: 780, mode: 'sim' }));
@@ -274,7 +284,7 @@ describe('INVARIANT-1 approval before payment', () => {
   it('INVARIANT-1: an expired mandate cannot be approved', () => {
     mk();
     advance(11 * 60_000);
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/expired/);
+    expect(() => run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/expired/);
   });
 });
 
@@ -291,7 +301,7 @@ describe('SECURITY caller identity', () => {
     ['attach_verdict', (ctx) => m.attachVerdict(ctx, { bidId: 'bid-b', verdict: 'block', ruleIds: ['x'], origin: 'SIM' })],
     ['attach_claim_check', (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-b', claim: 'new', check: 'false', evidenceUrl: '', origin: 'SIM' })],
     ['create_mandate', (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h9' }))],
-    ['record_approval', (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' })],
+    ['record_approval', (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' })],
     ['record_payment', (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' })],
     ['attach_advocate_card', (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'x', sourceUrl: 'https://x', origin: 'SIM' })],
     ['assign_role', (ctx) => m.assignRole(ctx, { identity: ctx.sender, role: 'referee', subjectId: 'market' })],
@@ -303,7 +313,7 @@ describe('SECURITY caller identity', () => {
     mint(mandateArgs(win()));
     setupRound();
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     advance(16_000);
     expect(() => run(A, call)).toThrow(/not allowed/);
   });
@@ -328,9 +338,9 @@ describe('SECURITY caller identity', () => {
 
   it('SECURITY: a seller cannot approve or pay its own deal', () => {
     mint(mandateArgs(win(780, A, 'seller-a')));
-    expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/not allowed/);
-    expect(() => run(A, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'seller-a', voiceApprovalId: 'va-1' }))).toThrow(/not allowed/);
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    expect(() => run(A, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/not allowed/);
+    expect(() => run(A, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'seller-a', voiceApprovalId: 'va-1' }))).toThrow(/not allowed/);
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(() => run(A, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/not allowed/);
     expect([...h.db.payment.iter()]).toHaveLength(0);
   });
@@ -345,8 +355,8 @@ describe('SECURITY caller identity', () => {
 
   it('SECURITY: approvedBy must equal the mandate buyer, even when the referee relays it', () => {
     mint(mandateArgs(win()));
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'mallory', voiceApprovalId: 'va-1' }))).toThrow(/approvedBy/);
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'bob', voiceApprovalId: 'va-1' }))).toThrow(/approvedBy/);
+    expect(() => run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'mallory', voiceApprovalId: 'va-1' }))).toThrow(/approvedBy/);
+    expect(() => run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'bob', voiceApprovalId: 'va-1' }))).toThrow(/approvedBy/);
     expect([...h.db.approval.iter()]).toHaveLength(0);
   });
 
@@ -355,7 +365,7 @@ describe('SECURITY caller identity', () => {
     expect(() => run(BOB, (ctx) => m.createMandate(ctx, mandateArgs(w)))).toThrow(/not allowed/);
     expect(() => run(VIDYUT, (ctx) => m.createMandate(ctx, mandateArgs(w)))).toThrow(/not allowed/);
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs(w)));
-    expect(() => run(BOB, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/not allowed/);
+    expect(() => run(BOB, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/not allowed/);
   });
 
   it('SECURITY: only the module owner assigns roles', () => {
@@ -385,7 +395,7 @@ describe('every state change writes a floor event', () => {
     advance(16_000);
     run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }));
     expect(events().slice(n0).map((e) => e.kind)).toEqual([
       'bid_sealed', 'verdict', 'stock_held', 'auction_closed', 'mandate_created', 'approval_recorded', 'stock_sold', 'payment_recorded',
@@ -457,7 +467,7 @@ describe('b2 allowance ladder', () => {
   const allowance = () => h.db.allowance.buyerId.find('vidyut');
   const paidDeal = (hash: string, amount: number) => {
     mint(mandateArgs({ hash, id: `m-${hash}`, nonce: hash, ...win(amount) }));
-    if (!h.db.approval.mandateHash.find(hash)) run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    if (!h.db.approval.mandateHash.find(hash)) run(REF, (ctx) => relayApproval(ctx, { mandateHash: hash, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: hash, paymentRef: `pi_${hash}`, amount, mode: 'sim' }));
   };
   let n = 0;
@@ -521,7 +531,7 @@ describe('b2 allowance ladder', () => {
 
   it('the requester can never approve their own purchase', () => {
     mint(mandateArgs({ requestedBy: 'vidyut', ...win() }));
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/requester/);
+    expect(() => run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/requester/);
     expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
   });
 
@@ -531,7 +541,7 @@ describe('b2 allowance ladder', () => {
   it('set_allowance: the referee sets Vidyut\'s demo allowance, creating the row and an event; the starting $0 stays for others', () => {
     setAllow(REF, 'vidyut', 250, 500);
     expect(allowance()).toMatchObject({ perPurchaseLimit: 250, periodLimit: 500, ladderStep: 2, period: 'week' });
-    expect(events().some((e) => e.kind === 'allowance_set' && e.refId === 'vidyut')).toBe(true);
+    expect(events().some((e) => e.kind === 'allowance_set' && e.refId === '')).toBe(true); // #449 item 3 PL-16: no buyer id
     expect(h.db.allowance.buyerId.find('bob')).toBeFalsy();
   });
 
@@ -760,7 +770,7 @@ describe('allowed conditions, alternative lines and the cap at close', () => {
 describe('record_payment mode (sim or stripe_test)', () => {
   const ready = () => {
     mint(mandateArgs(win()));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
   };
   const last = () => events().filter((e) => e.kind === 'payment_recorded').pop()!;
 
@@ -1002,15 +1012,15 @@ describe('b5 approval code on the buyer screen (shown only; the call approves, #
   });
 
   it('an approved mandate never gets a code (nothing to approve)', () => {
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(() => issue()).toThrow(/already approved/);
   });
 
   it('the shown code approves nothing by itself: the buyer screen cannot record an approval, the call relay can', () => {
     issue();
-    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: CODE }))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: CODE }))).toThrow(/not allowed/);
     expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1', code: CODE }));
     expect(m.myPendingApprovalsView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
   });
 });
@@ -1070,8 +1080,8 @@ describe('whole-build approval code on the buyer screen (issued before the call,
 
   it('shows the code to the buyer and approves nothing: no approval row, no payment, the call relay needs a mandate', () => {
     issue();
-    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: CODE }))).toThrow(/not allowed/);
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/no mandate/);
+    expect(() => run(VIDYUT, (ctx) => relayApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: CODE }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => relayApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/no mandate/);
     expect([...h.db.approval.iter()]).toHaveLength(0);
   });
 
@@ -1313,7 +1323,7 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     twoBuyerRounds();
     close('round-1');
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 700, dealId: 'deal-bid-a1' })));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(holds()[0]!.state).toBe('held');
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 700, mode: 'sim' }));
     expect(holds()[0]!.state).toBe('sold');
@@ -1327,7 +1337,7 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     twoBuyerRounds();
     close('round-1');
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 700, dealId: 'deal-bid-a1' })));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 700, mode: 'sim' }));
     expect(holds()[0]!.state).toBe('sold');
     // The demo's round 2: the same need again, the same sellers, minutes later.
@@ -1397,7 +1407,7 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect(() => run(BOB, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'x' }))).toThrow(/not allowed/);
     expect(() => run(A, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'x' }))).toThrow(/not allowed/);
     expect(() => run(REF, (ctx) => m.denyApproval(ctx, { mandateHash: 'nope', reason: 'x' }))).toThrow(/no mandate/);
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(() => run(REF, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'x' }))).toThrow(/already approved/);
     expect(holds()[0]!.state).toBe('held');
   });
@@ -1425,7 +1435,7 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     twoBuyerRounds();
     close('round-1');
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 700, dealId: 'deal-bid-a1' })));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 700, mode: 'sim' }));
     expect(holds()[0]!.state).toBe('sold');
     expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', amount: 700, dealId: 'deal-bid-a1' })))).toThrow(/sold out to an earlier round/);
@@ -1434,14 +1444,15 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect(holds()).toHaveLength(1);
   });
 
-  it('a mandate made before the sale cannot pay for the same unit afterwards', () => {
+  it('#449 item 3 RT-11: a second live mandate on the same unit is refused at create time, so only one can ever be paid', () => {
+    // Before #449 item 3 this test made two mandates for one deal and let the sale settle which paid; now the second never exists.
     twoBuyerRounds();
     close('round-1');
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 700, dealId: 'deal-bid-a1' })));
-    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', amount: 700, dealId: 'deal-bid-a1' })));
-    for (const hash of ['h1', 'h2']) run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: hash, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', amount: 700, dealId: 'deal-bid-a1' })))).toThrow(/live mandate/);
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi1', amount: 700, mode: 'sim' }));
-    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h2', paymentRef: 'pi2', amount: 700, mode: 'sim' }))).toThrow(/sold out to an earlier round/);
+    expect([...h.db.mandate.iter()].map((x) => x.hash)).toEqual(['h1']);
     expect([...h.db.payment.iter()].map((x) => x.mandateHash)).toEqual(['h1']);
     expect(holds()).toHaveLength(1);
   });
@@ -1455,7 +1466,7 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
     expect(holds()[0]!.expiresAt.microsSinceUnixEpoch - h.db.round.id.find('round-1')!.closedAt!.microsSinceUnixEpoch).toBe(120_000_000n);
     // The owner of the deal is unaffected and still buys the unit.
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: 700, dealId: 'deal-bid-a1' })));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 700, mode: 'sim' }));
     expect([...h.db.payment.iter()].map((x) => x.mandateHash)).toEqual(['h1']);
   });
@@ -1558,23 +1569,23 @@ describe('#191 approval and mandate holes', () => {
   it('#191-1 a buyer cannot record an approval; only the referee relays the call', () => {
     wonByA();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, voice()))).toThrow(/not allowed/);
+    expect(() => run(VIDYUT, (ctx) => relayApproval(ctx, voice()))).toThrow(/not allowed/);
     expect([...h.db.approval.iter()]).toHaveLength(0);
   });
 
   it('#191-1 the method is voice_code or allowance only (typed_code is refused)', () => {
     wonByA();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    for (const method of ['typed_code', 'sms', '']) expect(() => run(REF, (ctx) => m.recordApproval(ctx, voice({ method })))).toThrow(/method/);
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, voice({ method: 'allowance' })))).toThrow(/allowance/);
+    for (const method of ['typed_code', 'sms', '']) expect(() => run(REF, (ctx) => relayApproval(ctx, voice({ method })))).toThrow(/method/);
+    expect(() => run(REF, (ctx) => relayApproval(ctx, voice({ method: 'allowance' })))).toThrow(/allowance/);
     expect([...h.db.approval.iter()]).toHaveLength(0);
   });
 
   it('#191-1 a voice approval needs the VoiceApproval id, and the approval row keeps it', () => {
     wonByA();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    expect(() => run(REF, (ctx) => m.recordApproval(ctx, voice({ voiceApprovalId: '' })))).toThrow(/VoiceApproval/);
-    run(REF, (ctx) => m.recordApproval(ctx, voice()));
+    expect(() => run(REF, (ctx) => relayApproval(ctx, voice({ voiceApprovalId: '' })))).toThrow(/VoiceApproval/);
+    run(REF, (ctx) => relayApproval(ctx, voice()));
     expect(h.db.approval.mandateHash.find('h1')).toMatchObject({ method: 'voice_code', voiceApprovalId: 'va-1' });
   });
 
@@ -1703,7 +1714,7 @@ describe('#191 approval and mandate holes', () => {
     run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
     wonByA(); // 780: over the per-buy limit, needs the call
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
-    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2' })));
     run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
     run(C, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-c2', [line(200)]), roundId: 'round-2' }));
@@ -1729,7 +1740,7 @@ describe('#191 approval and mandate holes', () => {
     wonByA();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
     expect(m.myDealsView(h.viewContext(VIDYUT) as any)[0]).toMatchObject({ mandateHash: 'h1', amount: 780, payee: 'seller-a', approvalMethod: '', paymentRef: '' });
-    run(REF, (ctx) => m.recordApproval(ctx, voice()));
+    run(REF, (ctx) => relayApproval(ctx, voice()));
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'ch_sim_1', amount: 780, mode: 'sim' }));
     const d = m.myDealsView(h.viewContext(VIDYUT) as any);
     expect(d).toHaveLength(1);
@@ -2049,7 +2060,7 @@ describe('sealed rounds leak nothing before close (supersedes #416)', () => {
 });
 
 describe('#374 sign_up_buyer', () => {
-  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana' }) =>
+  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana', phone: '+14155550100' }) =>
     run(who, (ctx) => m.signUpBuyer(ctx, a)) as string;
 
   it('creates a b_<8> buyer bound to the caller with a $0 per-buy allowance', () => {
@@ -2080,17 +2091,25 @@ describe('#374 sign_up_buyer', () => {
     expect(() => signUp(OWNER)).toThrow(/already/);
   });
 
-  it('phone is optional and validated; the name is required and capped', () => {
-    const a = signUp(as('new-3'), { displayName: 'Bo' });
-    expect(h.db.buyerProfile.buyerId.find(a)!.phone).toBe('');
+  it('#449 PL-15 a sign-up without a phone is refused: purchases are approved by a call', () => {
+    for (const phone of [undefined, '', '   ']) {
+      const who = as(`nophone-${phone ?? 'none'}`);
+      expect(() => signUp(who, { displayName: 'Bo', phone })).toThrow('a phone number is required: purchases are approved by a call');
+      expect(h.db.role.identity.find(idOf(who))).toBeFalsy();
+    }
+    expect([...h.db.buyerProfile.iter()].filter((p) => p.displayName === 'Bo')).toHaveLength(0);
+    expect(signUp(as('new-3'), { displayName: 'Bo', phone: '+442079460958' })).toMatch(/^b_/);
+  });
+
+  it('the phone is validated; the name is required and capped', () => {
     for (const bad of ['abc', '4155550100', '+0123456789'])
       expect(() => signUp(as(`bad-${bad}`), { displayName: 'Bo', phone: bad })).toThrow('phone must start with + and a country code, like +14155550100');
-    expect(() => signUp(as('new-5'), { displayName: '   ' })).toThrow();
-    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100) });
+    expect(() => signUp(as('new-5'), { displayName: '   ', phone: '+14155550100' })).toThrow(/display name required/);
+    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100), phone: '+14155550100' });
     expect(h.db.buyerProfile.buyerId.find(b)!.displayName).toHaveLength(60);
   });
 
-  it('throttles at 30 per 10 minutes', () => {
+  it('throttles at SIGNUP_MAX per 10 minutes', () => {
     for (let i = 0; i < m.SIGNUP_MAX; i++) signUp(as(`t-${i}`));
     expect(() => signUp(as('t-over'))).toThrow(/try again/);
     advance(10 * 60 * 1000 + 1);
@@ -2114,7 +2133,7 @@ describe('#374 telemetry', () => {
   };
 
   it('counts the market with one row and no per-user data', () => {
-    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
@@ -2172,7 +2191,7 @@ describe('#374 post_need referee path', () => {
   let NEW: Auth, buyerId: string;
   beforeEach(() => {
     NEW = as('need-new');
-    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-r', buyerId })));
   });
 
@@ -2189,5 +2208,282 @@ describe('#374 post_need referee path', () => {
 
   it('another buyer still cannot post for this buyer', () => {
     expect(() => run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-r', buyerId, goalId: 'goal-r' })))).toThrow(/acts only for/);
+  });
+});
+
+// ============================================================================================
+// #449 item 3: claim_goal, set_goal_state, approval code check, one live mandate per deal, origin and refId hygiene.
+// ============================================================================================
+describe('#449 item 3 PL-9 claim_goal', () => {
+  let NEW: Auth, buyerId: string;
+  beforeEach(() => {
+    NEW = as('claim-new');
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-c', buyerId })));
+  });
+  const claim = (who: Auth, goalId = 'goal-c') => run(who, (ctx) => m.claimGoal(ctx, { goalId }));
+  const open = () => m.agentOpenGoalsView(h.viewContext(REF) as any).map((g: any) => g.id);
+
+  it('the first referee claim moves ACTIVE to HUNTING and the goal leaves every agent poll', () => {
+    expect(open()).toContain('goal-c');
+    claim(REF);
+    expect(h.db.goal.id.find('goal-c')!.state).toBe('HUNTING');
+    expect(open()).not.toContain('goal-c');
+    expect(m.agentGoalItemsView(h.viewContext(REF) as any).filter((i: any) => i.goalId === 'goal-c')).toHaveLength(0);
+  });
+
+  it('a second claim throws, so only one agent hunts the goal', () => {
+    claim(REF);
+    expect(() => claim(REF)).toThrow('goal already claimed or closed');
+    expect(h.db.goal.id.find('goal-c')!.state).toBe('HUNTING');
+  });
+
+  it('a goal in any other state, and an unknown goal, cannot be claimed', () => {
+    claim(REF);
+    run(REF, (ctx) => m.setGoalState(ctx, { goalId: 'goal-c', state: 'DONE', text: 'done' }));
+    expect(() => claim(REF)).toThrow('goal already claimed or closed');
+    expect(() => claim(REF, 'nope')).toThrow(/no goal/);
+  });
+
+  it('a buyer, a seller and a stranger cannot claim', () => {
+    for (const who of [NEW, VIDYUT, A, STRANGER]) expect(() => claim(who)).toThrow(/not allowed/);
+    expect(h.db.goal.id.find('goal-c')!.state).toBe('ACTIVE');
+  });
+
+  it('the referee can still post the need of a goal it claimed', () => {
+    claim(REF);
+    run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-c', buyerId, goalId: 'goal-c' })));
+    expect(h.db.need.id.find('need-c')?.goalId).toBe('goal-c');
+  });
+
+  it('the referee cannot post a need for a closed goal', () => {
+    claim(REF);
+    run(REF, (ctx) => m.setGoalState(ctx, { goalId: 'goal-c', state: 'FAILED', text: 'x' }));
+    expect(() => run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-c', buyerId, goalId: 'goal-c' })))).toThrow(/not active/);
+  });
+});
+
+describe('#449 item 3 PL-4 set_goal_state', () => {
+  let NEW: Auth, buyerId: string;
+  beforeEach(() => {
+    NEW = as('state-new');
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-s', buyerId })));
+    run(REF, (ctx) => m.claimGoal(ctx, { goalId: 'goal-s' }));
+  });
+  const setState = (who: Auth, state: string, text = 'hello') => run(who, (ctx) => m.setGoalState(ctx, { goalId: 'goal-s', state, text }));
+  const notes = () => [...h.db.notification.buyerId.filter(buyerId)].filter((n) => n.goalId === 'goal-s');
+
+  it('is referee only', () => {
+    for (const who of [NEW, VIDYUT, A, STRANGER]) expect(() => setState(who, 'DONE')).toThrow(/not allowed/);
+    expect(h.db.goal.id.find('goal-s')!.state).toBe('HUNTING');
+  });
+
+  it('refuses a state outside the allowed list, and an unknown goal', () => {
+    for (const bad of ['ACTIVE', 'active', 'SOLD', '']) expect(() => setState(REF, bad)).toThrow(/state must be one of/);
+    expect(() => run(REF, (ctx) => m.setGoalState(ctx, { goalId: 'nope', state: 'DONE', text: 'x' }))).toThrow(/no goal/);
+  });
+
+  it('writes the state and one notification for that buyer and goal, text trimmed to 200 characters', () => {
+    const before = notes().length;
+    setState(REF, 'HOLD_FOR_CALL', 'y'.repeat(300));
+    expect(h.db.goal.id.find('goal-s')!.state).toBe('HOLD_FOR_CALL');
+    const added = notes().slice(before);
+    expect(added).toHaveLength(1);
+    expect(added[0]).toMatchObject({ buyerId, goalId: 'goal-s', klass: 'state', push: false });
+    expect(added[0]!.text).toHaveLength(200);
+  });
+
+  it('a terminal state pushes; a closed goal cannot change again', () => {
+    for (const s of ['DONE', 'EXPIRED', 'FAILED']) {
+      run(REF, (ctx) => m.setGoalState(ctx, { goalId: 'goal-s', state: 'PAUSED', text: 'p' }));
+      run(REF, (ctx) => ctx.db.goal.id.update({ ...ctx.db.goal.id.find('goal-s'), state: 'HUNTING' }));
+      setState(REF, s, `closed ${s}`);
+      expect(notes().slice(-1)[0]).toMatchObject({ text: `closed ${s}`, push: true });
+      expect(() => setState(REF, 'HUNTING')).toThrow(/closed/);
+      expect(h.db.goal.id.find('goal-s')!.state).toBe(s);
+      run(REF, (ctx) => ctx.db.goal.id.update({ ...ctx.db.goal.id.find('goal-s'), state: 'HUNTING' }));
+    }
+  });
+
+  it('the buyer sees the state and the text on its own feed only', () => {
+    setState(REF, 'DONE', 'Paid in Stripe test mode.');
+    expect(m.myNotificationsView(h.viewContext(NEW) as any).map((n: any) => n.text)).toContain('Paid in Stripe test mode.');
+    expect(m.myNotificationsView(h.viewContext(VIDYUT) as any).map((n: any) => n.text)).not.toContain('Paid in Stripe test mode.');
+  });
+});
+
+describe('#449 item 3 RT-11 approval code, expiry, one live mandate per deal', () => {
+  const CODE = 'amber falcon';
+  const ready = () => {
+    const w = win();
+    mint(mandateArgs(w));
+    run(REF, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code: CODE }));
+    return w;
+  };
+  const approve = (code: string, over: Partial<Parameters<typeof m.recordApproval>[1]> = {}) =>
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1', code, ...over }));
+
+  it('the right code passes, ignoring case and spacing', () => {
+    ready();
+    approve('  Amber   FALCON ');
+    expect(h.db.approval.mandateHash.find('h1')).toMatchObject({ method: 'voice_code' });
+  });
+
+  it('a voice approval with no issued code row is refused', () => {
+    mint(mandateArgs(win()));
+    expect(() => approve(CODE)).toThrow(/code/);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+  });
+
+  it('a wrong or empty code throws and no approval is written', () => {
+    ready();
+    for (const bad of ['wrong words', '']) expect(() => approve(bad)).toThrow(/code/);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+  });
+
+  it('three wrong codes inside one committed transaction count 3 failures and lock the row; a locked row refuses even the right code', () => {
+    // This exercises the counting only. Each call below throws, but its failure is caught inside ONE transaction, so the harness commits.
+    // On a real server every throwing reducer call rolls back on its own, so there the count and the lock do not persist (see the notes).
+    ready();
+    run(REF, (ctx) => {
+      for (let i = 0; i < 3; i++) {
+        try { m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1', code: `wrong ${i}` }); } catch { /* counted */ }
+      }
+    });
+    expect(h.db.approvalCode.mandateHash.find('h1')).toMatchObject({ failures: 3, locked: true });
+    expect(() => approve(CODE)).toThrow(/locked/);
+    expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
+  });
+
+  it('one wrong code across separate calls throws and, as on a real server, leaves the row as it was (the throw rolls the count back)', () => {
+    ready();
+    expect(() => approve('nope')).toThrow(/does not match/);
+    expect(h.db.approvalCode.mandateHash.find('h1')).toMatchObject({ failures: 0, locked: false });
+  });
+
+  it('the allowance method needs no code', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'week' }));
+    mint(mandateArgs(win(500)));
+    expect(h.db.approval.mandateHash.find('h1')?.method).toBe('allowance'); // approved at create time, no code
+  });
+
+  it('record_payment refuses an expired mandate', () => {
+    ready();
+    approve(CODE);
+    advance(11 * 60_000);
+    expect(() => run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi', amount: 780, mode: 'sim' }))).toThrow(/expired/);
+    expect([...h.db.payment.iter()]).toHaveLength(0);
+  });
+
+  it('a second live mandate for one deal throws; a paid, denied or expired one frees the deal', () => {
+    const w = win();
+    mint(mandateArgs(w));
+    expect(() => mint(mandateArgs({ ...w, hash: 'h2', id: 'mdt-2', nonce: 'n2' }))).toThrow(/live mandate/);
+    run(REF, (ctx) => m.denyApproval(ctx, { mandateHash: 'h1', reason: 'no' }));
+    mint(mandateArgs({ ...w, hash: 'h2', id: 'mdt-2', nonce: 'n2' }));
+    expect(h.db.mandate.hash.find('h2')).toBeTruthy();
+  });
+
+  it('an expired mandate no longer blocks a new one for the deal', () => {
+    const w = win();
+    mint(mandateArgs(w));
+    advance(11 * 60_000);
+    mint(mandateArgs({ ...w, hash: 'h2', id: 'mdt-2', nonce: 'n2' }));
+    expect(h.db.mandate.hash.find('h2')).toBeTruthy();
+  });
+});
+
+describe('#449 item 3 RT-14 sign-up ceiling', () => {
+  it('SIGNUP_MAX is 60 per 10 minutes and a second sign-up by one identity still throws', () => {
+    expect(m.SIGNUP_MAX).toBe(60);
+    const who = as('once');
+    run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
+    expect(() => run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }))).toThrow(/already/);
+  });
+});
+
+describe('#449 item 3 RT-31 the server sets origin for buyer posts', () => {
+  it('a buyer posting a goal and a need with origin LIVE gets the profile origin (SIM when it has none)', () => {
+    run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs({ origin: 'LIVE' })));
+    expect(h.db.goal.id.find('goal-1')!.origin).toBe('SIM');
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ origin: 'LIVE' })));
+    expect(h.db.need.id.find('need-1')!.origin).toBe('SIM');
+    expect(events().filter((e) => e.kind === 'goal_posted' || e.kind === 'need_posted').map((e) => e.origin)).toEqual(['SIM', 'SIM']);
+  });
+
+  it('a buyer with a MIRROR profile origin gets MIRROR whatever it sends', () => {
+    run(OWNER, (ctx) => ctx.db.buyerProfile.insert({ buyerId: 'bob', displayName: 'Bob', origin: 'MIRROR', phone: '' }));
+    run(BOB, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-b', buyerId: 'bob', origin: 'SIM' })));
+    expect(h.db.goal.id.find('goal-b')!.origin).toBe('MIRROR');
+    run(BOB, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-b', buyerId: 'bob', origin: 'LIVE' })));
+    expect(h.db.need.id.find('need-b')!.origin).toBe('MIRROR');
+  });
+
+  it('the referee keeps the origin it passes for a need', () => {
+    const NEW = as('origin-new');
+    const buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-o', buyerId })));
+    run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-o', buyerId, goalId: 'goal-o', origin: 'MIRROR' })));
+    expect(h.db.need.id.find('need-o')!.origin).toBe('MIRROR');
+  });
+});
+
+describe('#449 item 3 PL-16 no buyer id on the public floor', () => {
+  it('sign-up, allowance set and allowance raised write no event whose refId is a buyer id', () => {
+    const NEW = as('pl16-new');
+    const buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId, perPurchaseLimit: 600, periodLimit: 1500, period: 'week' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-p', buyerId })));
+    const w = win(780, C, 'seller-c', NEW, buyerId);
+    mint(mandateArgs({ ...w, buyerId, hash: 'hp', id: 'mdt-p', nonce: 'np' }));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'hp', method: 'voice_code', approvedBy: buyerId, voiceApprovalId: 'va-p' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'hp', paymentRef: 'pi_p', amount: 780, mode: 'sim' }));
+    run(NEW, (ctx) => m.recordReceiving(ctx, { id: 'rcv-p', orderId: 'hp', skuSpec: GPU, photoUrl: 'sim://p', expectedSpecId: 's', result: 'accepted', reasons: [], checkedBy: 'owner', origin: 'SIM' }));
+    const kinds = events().map((e) => e.kind);
+    expect(kinds).toEqual(expect.arrayContaining(['buyer_signed_up', 'allowance_set', 'allowance_raised']));
+    for (const e of events().filter((x) => ['buyer_signed_up', 'allowance_set', 'allowance_raised'].includes(x.kind))) expect(e.refId).toBe('');
+    for (const e of events()) expect(e.refId).not.toBe(buyerId);
+  });
+
+  it('the pairing_locked and pairing_throttled events carry no pair key', () => {
+    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }));
+    const wrong = as('pl16-wrong');
+    for (let i = 0; i < m.PAIR_MAX_FAILURES; i++) run(wrong, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: 'AAAAA-AAAAA' }));
+    const locked = events().filter((e) => e.kind === 'pairing_locked');
+    expect(locked).toHaveLength(1);
+    expect(locked[0]!.refId).toBe('');
+    // the code-wide throttle trips on misses from many identities
+    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }));
+    for (let i = 0; i < m.PAIR_THROTTLE_MISSES; i++) run(as(`pl16-t-${i}`), (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: 'AAAAA-AAAAA' }));
+    const throttled = events().filter((e) => e.kind === 'pairing_throttled');
+    expect(throttled.length).toBeGreaterThan(0);
+    expect(throttled.every((e) => e.refId === '')).toBe(true);
+  });
+});
+
+describe('#449 item 3 agent_approvals and agent_payments (referee-only reads for the buyer agent)', () => {
+  const read = (who: Auth) => {
+    const v = h.viewContext(who) as any;
+    return { approvals: m.agentApprovalsView(v), payments: m.agentPaymentsView(v) };
+  };
+  beforeEach(() => {
+    mint(mandateArgs(win()));
+    run(REF, (ctx) => relayApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'ch_1', amount: 780, mode: 'stripe_test' }));
+  });
+
+  it('the referee sees the approval and payment rows', () => {
+    const { approvals, payments } = read(REF);
+    expect(approvals).toHaveLength(1);
+    expect(approvals[0]).toMatchObject({ mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' });
+    expect(approvals[0]!.at).toBeTruthy();
+    expect(payments).toHaveLength(1);
+    expect(payments[0]).toMatchObject({ mandateHash: 'h1', paymentRef: 'ch_1', amount: 780, mode: 'stripe_test' });
+  });
+
+  it('a buyer, a seller, the owner and a stranger see nothing', () => {
+    for (const who of [VIDYUT, BOB, A, OWNER, STRANGER]) expect(read(who)).toEqual({ approvals: [], payments: [] });
   });
 });

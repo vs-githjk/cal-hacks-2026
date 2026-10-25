@@ -1,3 +1,4 @@
+import { SHIELD } from "./brand.ts";
 // What each service is doing right now, read from the market's own public floor events (never hardcoded).
 // A service that has written no event yet says so; one that has says which origin tag its events carry.
 
@@ -10,7 +11,7 @@ export interface EventLike {
 
 const SERVICES: { name: string; kind: string }[] = [
   { name: "Advocate", kind: "advocate_card" },
-  { name: "Shield", kind: "verdict" },
+  { name: SHIELD, kind: "verdict" },
   { name: "Claim check", kind: "claim_checked" },
   { name: "Payments", kind: "payment_recorded" },
 ];

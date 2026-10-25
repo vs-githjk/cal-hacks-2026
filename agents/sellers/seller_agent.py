@@ -19,7 +19,7 @@ import payment
 from factory import load_config, pick_port, seller_from_config
 from market_bridge import MarketBridge
 from agents.buyer import checkout, state
-from agents.sellers import learning
+from agents.sellers import learning, mind_store, minds, mirror_live, seller_chat
 from pay.mandate import mandate_hash
 from pay.replay import NonceStore
 from policy import make_bid, mirror_seller, seller as load_seller
@@ -44,9 +44,10 @@ def _mirror_for(name: str, need: dict | None = None) -> dict | None:
     return None if s is None else {**s, "id": name, "orderable": False}
 
 
-def _mirror_persona(s: dict, total: float) -> str:
+def _mirror_persona(s: dict, total: float, anchor: dict | None = None) -> str:
     """Fixed text for a MIRROR seller: never a model speaking in character as a real store."""
-    return f"{s['mirror_label']} Listed at ${total:,.2f}, shown for comparison."
+    return (f"{s['mirror_label']} Listed at ${total:,.2f}, shown for comparison."
+            + (f" {anchor['label']}" if anchor else ""))
 
 
 def _learned_price_step(name: str, db_path=None) -> float:
@@ -61,6 +62,10 @@ def _learned_price_step(name: str, db_path=None) -> float:
 
     db = learning.open_learning_state(db_path or state.DEFAULT_DB_PATH)
     try:
+        mind = None
+        if minds.is_stateful(name):  # Byte Bros learns its margin, Frankie learns which trick got caught
+            mind_store.ensure(db)
+            mind = minds.load(db, name)
         if market is not None:
             try:
                 reports = market.my_loss_reports()
@@ -69,10 +74,46 @@ def _learned_price_step(name: str, db_path=None) -> float:
             if isinstance(reports, list):
                 for report in reports:
                     try:
-                        learning.apply_loss(db, report, seller_id)
+                        applied = learning.apply_loss(db, report, seller_id)
                     except (TypeError, ValueError):
                         continue
+                    if applied is not None and mind is not None:  # a new, valid loss report: the mind learns from it once
+                        minds.observe_loss(name, mind, report, seller_id)
+        if mind is not None:
+            minds.save(db, name, mind)
+            if name == "seller_1":
+                return mind["cut"]  # the learner's own margin step replaces the one-way price_step ratchet
         return learning.load_strategy(db, seller_id)["price_step"]
+    finally:
+        db.close()
+
+
+def _apply_mind(name: str, need: dict, bid: dict, s: dict, db_path=None) -> tuple[dict, str | None]:
+    """The seller's mind applied to its built bid (strategy note, trick, tradeoff) and the floor line it says, or None for
+    the default line. State is saved here; a state file that will not load fails the bid closed, like learning does."""
+    if name not in minds.KINDS:
+        return bid, None
+    if not minds.is_stateful(name):
+        return minds.apply_to_bid(name, need, bid, s, None)
+    db = mind_store.open_store(db_path or state.DEFAULT_DB_PATH)
+    try:
+        mind = minds.load(db, name)
+        out, line = minds.apply_to_bid(name, need, bid, s, mind)
+        minds.save(db, name, mind)
+        return out, line
+    finally:
+        db.close()
+
+
+def _record_win(name: str, need_id, db_path=None) -> None:
+    """A trusted order reached this agent: tell its mind it won that round. Best effort, never blocks the payment path."""
+    if not minds.is_stateful(name) or not isinstance(need_id, str):
+        return
+    db = mind_store.open_store(db_path or state.DEFAULT_DB_PATH)
+    try:
+        mind = minds.load(db, name)
+        minds.observe_order(name, mind, need_id)
+        minds.save(db, name, mind)
     finally:
         db.close()
 
@@ -285,16 +326,21 @@ def build(name: str, cfg: dict | None = None) -> Agent:
                         f"{s['mirror_label']} Shown for comparison, cannot be bought here."))
         common.include_profile_chat(agent, f"I am Fish Market's MIRROR agent for {s['name']} listings, not the store. "
                                     f"{s['mirror_label']} My bids are shown for comparison and cannot be bought "
-                                    "here. Send buying goals to @techbazaarbuyer.")
+                                    "here. Send buying goals to @techbazaarbuyer.",
+                                    answer=seller_chat.responder(name, lambda: state.DEFAULT_DB_PATH))
     else:
         labelled = "simulated (SIM)" if origin == "SIM" else "LIVE, owner supplied"
         agent = Agent(**common.agent_args(
             name, port, name=s['name'][:32], **profile,
             description=f"Seller agent ({s['archetype']}) that bids in Fish Market's sealed rounds for computer gear. "
                         f"Prices come from policy code, never below its floor. Listings are {labelled}."))
-        common.include_profile_chat(agent, f"I am {s['name']}, a Fish Market {origin} seller. I bid on structured "
-                                    "sealed rounds using policy prices. Send buying goals to @techbazaarbuyer; "
-                                    "this chat cannot place orders or approve purchases.")
+        role_text = (f"I am {s['name']}, a Fish Market {origin} seller. I bid on structured "
+                     "sealed rounds using policy prices. Send buying goals to @techbazaarbuyer; "
+                     "this chat cannot place orders or approve purchases.")
+        if cfg is None and name in minds.KINDS:  # the four named sellers answer in character; a custom seller keeps the fixed text
+            common.include_profile_chat(agent, role_text, answer=seller_chat.responder(name, lambda: state.DEFAULT_DB_PATH))
+        else:
+            common.include_profile_chat(agent, role_text)
 
     @agent.on_message(model=common.BidRequest)
     async def on_bid_request(ctx: Context, sender: str, msg: common.BidRequest):
@@ -304,12 +350,21 @@ def build(name: str, cfg: dict | None = None) -> Agent:
             ctx.logger.warning(f"ignored BidRequest from {sender}: {verdict['reasons']}")
             return
         need = json.loads(msg.need_json)
+        mind_line = None
         try:
-            if mirror:  # listed price as captured, no learning; the card is picked for this buyer's case
+            if mirror:  # the real listing as a price anchor, re-checked now (Bright Data) or the dated snapshot
                 s_bid = _mirror_for(name, need)
-                bid = make_bid(need, s_bid) if s_bid else None
+                if s_bid and any(str(i.get("sku_spec", "")).lower() == mirror_live.cc.SKU for i in need.get("items", [])):
+                    s_bid, anchor = await mirror_live.refresh_async(s_bid)
+                    bid = mirror_live.annotate(make_bid(need, s_bid), anchor) if s_bid else None
+                    if bid is None:
+                        ctx.logger.warning(f"MIRROR no bid: {anchor['label']}")
+                else:
+                    bid = make_bid(need, s_bid) if s_bid else None
             else:
                 bid = _make_bid_with_learning(need, s, name)
+                if bid is not None:
+                    bid, mind_line = _apply_mind(name, need, bid, s)
         except Exception as exc:
             ctx.logger.warning(f"seller learning unavailable: {type(exc).__name__}")
             return
@@ -321,8 +376,9 @@ def build(name: str, cfg: dict | None = None) -> Agent:
         except Exception as exc:
             ctx.logger.warning(f"Market bid publication failed: {type(exc).__name__}")
             return
-        line = (_mirror_persona(s, bid["total_landed_price"]) if mirror
-                else persona_line(s, bid["total_landed_price"]))
+        seller_chat.remember_bid(name, bid)  # the Advocate may ask about this bid's condition; answer from what was bid
+        line = (_mirror_persona(s, bid["total_landed_price"], bid.get("price_anchor")) if mirror
+                else mind_line or persona_line(s, bid["total_landed_price"]))
         await ctx.send(sender, common.BidReply(bid_json=json.dumps(bid), persona_line=line))
 
     pay = Protocol(spec=payment_protocol_spec, role="seller")
@@ -360,6 +416,10 @@ def build(name: str, cfg: dict | None = None) -> Agent:
             ctx.logger.warning("ignored OrderPlaced without a matching fresh approved local transaction")
             return
         ctx.logger.info("trusted order received; sending its exact payment request")
+        try:
+            _record_win(name, order.get("need_id"))  # this round was won: the mind learns it
+        except Exception as exc:
+            ctx.logger.warning(f"seller mind could not record the win: {type(exc).__name__}")
         await ctx.send(sender, request)
 
     @pay.on_message(CommitPayment)
@@ -410,6 +470,7 @@ if __name__ == "__main__":
     ap.add_argument("name", nargs="?", default="seller_1", help="a catalog seller (seller_1 to seller_5) or seller_6 (MIRROR)")
     ap.add_argument("--config", help="path to a SellerConfig JSON file (custom seller); overrides name")
     args = ap.parse_args()
+    common.require_peer_seeds(args.name if not args.config else "seller")   # #449 RT-27: production mode needs the buyer's private seed
     if args.config:
         try:
             cfg = load_config(args.config)

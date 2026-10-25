@@ -52,9 +52,9 @@ export function Label({ children }: { children: ReactNode }) {
   return <h2 className="mb-3 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">{children}</h2>;
 }
 
-export const README_URL = "https://github.com/vs-githjk/cal-hacks-2026#readme";
+export const README_URL = "https://github.com/vs-githjk/fish-market-nothing-fishy#readme";
 
-/** A part of Tech Bazaar that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
+/** A part of Fish Market that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
 export function RunsLocally({ what, children }: { what: string; children: ReactNode }) {
   return (
     <Card>
@@ -101,6 +101,39 @@ export function Pill({ tone, children }: { tone: "done" | "hold" | "hunting"; ch
       <span className={`size-2 rounded-full ${tone === "hunting" ? "bg-live" : "bg-current"}`} aria-hidden />
       {children}
     </span>
+  );
+}
+
+/** A v2 status chip for any state word (LIVE, SEALED, APPROVED, PAID, TEST MODE, ...). The word is always shown; colour never carries it alone. */
+export type Tone = "live" | "sealed" | "bad" | "good" | "caution" | "referee" | "action";
+const TONE: Record<Tone, string> = {
+  live: "bg-live-soft text-ink",
+  sealed: "bg-slate-soft text-slate",
+  bad: "bg-coral-soft text-coral",
+  good: "bg-mint-soft text-mint",
+  caution: "bg-amber-soft text-amber",
+  referee: "bg-referee-soft text-referee",
+  action: "bg-pulse-soft text-pulse-soft-ink",
+};
+export function StatusPill({ tone, children, pulse }: { tone: Tone; children: ReactNode; pulse?: boolean }) {
+  return (
+    <span className={`inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium ${TONE[tone]}`}>
+      {pulse && <span className={`dot ${tone === "live" ? "text-live" : "text-current"}`} aria-hidden />}
+      {children}
+    </span>
+  );
+}
+
+/** Progressive disclosure: the detail lives one tap away. The summary is a short label; nothing inside is lost. */
+export function Details({ summary, children, className = "" }: { summary: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={`group mt-3 ${className}`}>
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-pulse [&::-webkit-details-marker]:hidden">
+        {summary}
+        <span className="text-muted transition-transform group-open:rotate-45" aria-hidden>+</span>
+      </summary>
+      <div className="mt-2 grid gap-2 text-[13px] leading-[18px] text-ink-2">{children}</div>
+    </details>
   );
 }
 

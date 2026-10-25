@@ -15,6 +15,7 @@ test("the home page no longer says nothing is paid without a spoken approval", (
 });
 
 test("the home page says the allowance can pay on its own and that above it only the call approves", () => {
+  assert.ok(!/only your spoken code pays/i.test(home));
   assert.match(home, /inside the allowance you set, a deal can pay on its own/i);
   assert.match(home, /above it, only your phone call approves/i);
 });
@@ -27,7 +28,7 @@ test("no other home or receipt line says nothing is paid before a spoken word, a
   assert.ok(!/until you say the word/i.test(home));
   assert.ok(!/nothing is paid until the condition matches/i.test(home));
   assert.ok(!/nothing is paid until you approve\./i.test(buyer));
-  assert.match(buyer, /above it, nothing is paid until you approve by phone/i);
+  assert.ok(!/nothing is paid without your (spoken|phone) approval/i.test(buyer));
 });
 
 test("the home copy has no em or en dashes", () => {

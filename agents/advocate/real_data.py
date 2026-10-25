@@ -26,7 +26,7 @@ from data.recall_checker import check_product
 from advocate import checks  # CALL_SUMMARIES, the closed set of spoken reasons
 
 
-REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
+REPO = "https://github.com/vs-githjk/fish-market-nothing-fishy/blob/main"
 NOTE_SOURCE = f"{REPO}/agents/advocate/real_data.py"
 BRANDS = ("msi", "asus", "gigabyte", "pny", "zotac", "sapphire", "powercolor", "xfx", "evga", "nvidia", "amd", "palit", "inno3d")
 RECALL_BUDGET_S = 10.0  # all CPSC lookups together, inside the buyer's 15 s ADVICE_TIMEOUT_S

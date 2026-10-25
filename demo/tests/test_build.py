@@ -113,7 +113,7 @@ def test_each_reducer_is_called_by_the_role_it_demands(tmp_path):
     r, out, m, *_ = run_build(tmp_path=tmp_path)
     allowed = {"post_goal": "buyer", "post_need": "buyer", "set_allowance": "referee", "open_round": "referee", "close_round": "referee",
                "attach_verdict": "referee", "attach_advocate_card": "referee", "create_mandate": "referee", "record_approval": "referee",
-               "record_payment": "referee", "issue_build_approval_code": "referee", "clear_build_approval_code": "referee"}
+               "record_payment": "referee", "issue_approval_code": "referee", "issue_build_approval_code": "referee", "clear_build_approval_code": "referee"}
     for who, reducer, _ in m.log:
         if reducer in ("set_floor", "place_bid"):
             assert who.startswith("seller:")
@@ -166,6 +166,11 @@ def test_above_the_allowance_one_call_reads_the_whole_build_then_a_mandate_per_p
     appr = calls(m, "record_approval")
     assert len(appr) == 6 and {a["method"] for a in appr} == {"voice_code"} and len({a["voice_approval_id"] for a in appr}) == 1
     assert all(a["voice_approval_id"] for a in appr)
+    # #449 item 3 RT-11: each mandate gets the call's code issued first, then its approval repeats the code the call judged
+    assert {a["code"] for a in appr} == {client.shown["code"]}
+    per_mandate = [(r, a["mandate_hash"]) for _, r, a in m.log if r in ("issue_approval_code", "record_approval")]
+    for h in {a["mandate_hash"] for a in appr}:
+        assert [r for r, hh in per_mandate if hh == h] == ["issue_approval_code", "record_approval"]
     pays = calls(m, "record_payment")
     assert len(pays) == 6 and {p["mode"] for p in pays} == {"sim"} and {p["mandate_hash"] for p in pays} == {a["hash"] for a in mands}
     v = out["view"]
