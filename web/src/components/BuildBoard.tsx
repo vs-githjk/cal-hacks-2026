@@ -8,8 +8,8 @@ import { BuildPanel } from "./build";
 import { Card, Label } from "./ui";
 
 const TONE: Record<StepKind, [string, string]> = {
-  plan: ["text-ink", "Plan"], pick: ["text-mint", "Won"], knockout: ["text-slate", "Out"], clash: ["text-coral", "Clash"],
-  swap: ["text-mint", "Swap"], reallocate: ["text-amber", "Budget"], locked: ["text-mint", "Locked"], blocked: ["text-coral", "Blocked"],
+  plan: ["text-ink-2", "Plan"], pick: ["text-mint", "Won"], knockout: ["text-coral", "Out"], clash: ["text-coral", "Clash"],
+  swap: ["text-accent", "Swap"], reallocate: ["text-accent", "Budget"], locked: ["text-mint", "Locked"], blocked: ["text-coral", "Blocked"],
 };
 const STEP_MS = 1200;
 
