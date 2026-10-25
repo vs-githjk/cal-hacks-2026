@@ -13,6 +13,7 @@ const MemoryContext = createContext<{ state: MemoryState; reload: () => void } |
 
 /** One read for every buyer screen. It lives below BuyerGate, so a buyer switch unmounts it and aborts the pending request. */
 export function MemoryProvider({ children }: { children: ReactNode }) {
+  const buyerId = useBuyerId();   // sent as ?buyer= so a token-gated feed (AGENT_FEED_TOKEN) can scope the rows (#449 PL-17)
   const [state, setState] = useState<MemoryState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -23,14 +24,14 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       setState({ status: "offline" });
       return;
     }
-    fetchMemory(ctl.signal, feed).then(
+    fetchMemory(ctl.signal, feed, buyerId).then(
       (data) => setState({ status: "ready", data }),
       (e: unknown) => {
         if (!ctl.signal.aborted) setState({ status: "error", message: e instanceof Error ? e.message : "memory feed failed" });
       },
     );
     return () => ctl.abort();
-  }, [attempt]);
+  }, [attempt, buyerId]);
   const reload = () => {
     setState({ status: "loading" });
     setAttempt((n) => n + 1);

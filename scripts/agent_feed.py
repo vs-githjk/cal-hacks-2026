@@ -12,6 +12,14 @@ and a part's Tiger Data history keeps only {state, origin, windows [{days, low, 
 GET /v1/memory -> {entries: [MemoryEntry], sources, note} for the dashboard memory panel (#189, demo/memory.py):
 past goals, purchases, vetoes and seller lessons from demo/out (MEMORY_DIR overrides). ?kind=, ?limit=, ?sample=1.
 
+AGENT_FEED_TOKEN (optional, #449 PL-17). /v1/memory and /v1/build carry every buyer's goals, caps, spend and payees, and the web
+client only filters them for display. Unset: today's behaviour, open to whoever can reach the port; the launcher binds only
+127.0.0.1, so on a single-user machine that is the operator's own pages. Set: both routes need `Authorization: Bearer <token>` (constant-time
+compare, 401 otherwise) and a `buyer` query parameter (400 without), and return only that buyer's rows (memory_for_buyer, the same rule as
+web/src/lib/memory.ts memoryForBuyer) or, for /v1/build, the build only when its buyerId matches (404 otherwise). The token is server-side
+only: CORS allows no Authorization header, so a browser page cannot send it, and a page that cannot hold it shows the feed as unreachable (as the
+hosted site already does). A server-side caller (curl, a route handler that holds the token) passes ?buyer=<id>. /v1/agents and /v1/health stay open.
+
 status is decided per agent from its own log lines, never from a pidfile flag: "agentverse" only when the process is alive
 and that agent logged "Starting mailbox client for" (the uagents mailbox loop running) and none of the mailbox or manifest
 failure lines (no mailbox created yet, cannot reach the mailbox server, 401 on retrieve, manifest not published); "local" when
@@ -31,6 +39,7 @@ Run (the launcher does this): python3 -m uvicorn agent_feed:app --app-dir script
 """
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import re
@@ -41,6 +50,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(1, str(Path(__file__).resolve().parent.parent))  # the repo root, for demo.memory
 import launch  # noqa: E402  (stdlib-only launcher: pidfile reader and liveness check)
+
+try:  # module level on purpose: with `from __future__ import annotations` FastAPI resolves a route's "Request" from these globals
+    from fastapi import Request  # noqa: E402
+except ImportError:  # the parsing helpers still import without fastapi; create_app needs it
+    Request = None  # type: ignore[assignment,misc]
 
 REPO = Path(__file__).resolve().parent.parent
 MAX_MESSAGE = 140
@@ -313,9 +327,38 @@ def read_build_view(build_dir: Path) -> dict | None:
     return view
 
 
-def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None = None, build_dir: Path | str | None = None):
+BUYERLESS_KINDS = ("lesson", "veto")   # rows the producer writes with no buyer id on purpose; the web client shows them to any buyer
+MAX_BUYER_ID = 200
+
+
+def memory_for_buyer(entries: list, buyer: str) -> list:
+    """The rows for one buyer: buyer_id equal to it, or a lesson or veto with no buyer id. The same rule as web/src/lib/memory.ts
+    memoryForBuyer (a test keeps the two equal). A goal or purchase with no buyer id belongs to nobody."""
+    return [e for e in entries if isinstance(e, dict) and (e.get("buyer_id") == buyer or (e.get("kind") in BUYERLESS_KINDS and e.get("buyer_id") == ""))]
+
+
+def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None = None, build_dir: Path | str | None = None,
+               token: str | None = None):
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
+
+    secret = (token if token is not None else os.environ.get("AGENT_FEED_TOKEN") or "").strip().encode("utf-8")
+
+    def gate(request: Request, buyer: str | None):
+        """(buyer id or None, refusal or None). No token set: open (None, None). Token set: the bearer first (401), then the buyer (400)."""
+        if not secret:
+            return None, None
+        supplied = b""
+        scheme, _, value = request.headers.get("authorization", "").partition(" ")
+        if scheme.lower() == "bearer":
+            supplied = value.strip().encode("utf-8")
+        if not hmac.compare_digest(supplied, secret):
+            return None, JSONResponse({"detail": "missing or wrong bearer token"}, status_code=401, headers={"WWW-Authenticate": "Bearer"})
+        who = (buyer or "").strip()
+        if not who or len(who) > MAX_BUYER_ID:
+            return None, JSONResponse({"detail": "a buyer query parameter is required"}, status_code=400)
+        return who, None
 
     run = Path(run_dir or os.environ.get("AGENT_FEED_RUN_DIR") or REPO / ".run")
     app = FastAPI(title="Fish Market agent feed", docs_url=None, redoc_url=None, openapi_url=None)
@@ -333,21 +376,32 @@ def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None 
     mem = Path(memory_dir or os.environ.get("MEMORY_DIR") or REPO / "demo" / "out")
 
     @app.get("/v1/memory")
-    def memory(kind: str | None = None, limit: int | None = None, sample: bool = False) -> dict:
+    def memory(request: Request, kind: str | None = None, limit: int | None = None, sample: bool = False, buyer: str | None = None):
         from demo import memory as M
-        return M.load(mem, include_sample=sample, kind=kind, limit=limit)
+        who, refused = gate(request, buyer)
+        if refused is not None:
+            return refused
+        if who is None:
+            return M.load(mem, include_sample=sample, kind=kind, limit=limit)
+        body = M.load(mem, include_sample=sample, kind=kind, limit=None)   # the limit counts this buyer's rows, not everyone's
+        mine = memory_for_buyer(body["entries"], who)
+        return {**body, "entries": mine if limit is None else mine[:max(0, limit)]}
 
     built = Path(build_dir or os.environ.get("BUILD_VIEW_DIR") or default_build_dir())
 
     @app.get("/v1/build")
-    def build():
-        from fastapi.responses import JSONResponse
+    def build(request: Request, buyer: str | None = None):
+        who, refused = gate(request, buyer)
+        if refused is not None:
+            return refused
         try:
             view = read_build_view(built)
         except ValueError as e:  # a half-written or odd file is a transient, never a 500; the panel keeps its SIM sample meanwhile
             return JSONResponse({"detail": str(e)}, status_code=503)
         if view is None:
             return JSONResponse({"detail": "no build run has written a view yet"}, status_code=404)
+        if who is not None and view.get("buyerId") != who:   # a build with no buyerId matches nobody
+            return JSONResponse({"detail": "no build for this buyer"}, status_code=404)
         return JSONResponse(view, headers={"Cache-Control": "no-store"})
 
     return app
