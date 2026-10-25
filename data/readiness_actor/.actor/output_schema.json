@@ -1,0 +1,12 @@
+{
+ "actorOutputSchemaVersion": 1,
+ "title": "Readiness report output",
+ "properties": {
+  "report": {
+   "type": "string",
+   "title": "Readiness report",
+   "description": "One row per listing: blocks, warns, ready or unreadable, with every finding and its fix",
+   "template": "{{links.apiDefaultDatasetUrl}}/items?view=report"
+  }
+ }
+}

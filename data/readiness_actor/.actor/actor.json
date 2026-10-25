@@ -1,0 +1,13 @@
+{
+ "actorSpecification": 1,
+ "name": "seller-agent-readiness-report",
+ "title": "Seller Agent-Readiness Report: What Do AI Shoppers See?",
+ "description": "Checks your product pages the way an AI shopping agent reads them: price, stock, condition, shipping, returns, model number and title claims. Each listing gets blocks, warns or ready, with the fix for every finding. For sellers.",
+ "version": "0.1",
+ "input": "./input_schema.json",
+ "dockerfile": "../Dockerfile",
+ "storages": {
+  "dataset": "./dataset_schema.json"
+ },
+ "output": "./output_schema.json"
+}

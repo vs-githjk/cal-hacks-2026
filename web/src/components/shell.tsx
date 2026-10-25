@@ -43,6 +43,11 @@ export function AppHeader() {
             );
           })}
         </div>
+        {path !== "/start" && !path.startsWith("/buyer") && (
+          <Link href="/start" className="btn hidden shrink-0 items-center rounded-full border-2 border-line-2 px-5 text-[15px] font-semibold text-ink hover:bg-soft sm:inline-flex min-h-11">
+            Start as a buyer
+          </Link>
+        )}
         <span className="hidden items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.08em] text-muted md:flex">
           <span className={`h-2.5 w-2.5 rounded-full ${conn.isActive ? "bg-mint" : "border border-ink bg-transparent"}`} aria-hidden />
           {conn.isActive ? "market live" : "offline"}

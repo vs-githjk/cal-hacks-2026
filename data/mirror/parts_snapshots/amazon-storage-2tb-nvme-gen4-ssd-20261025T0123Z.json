@@ -84,7 +84,10 @@
   "name": "Samsung SSD 990 PRO 2TB, PCIe 4.0 M.2 2280, Up to 7,450 MB/s",
   "model_number": null,
   "condition": "unknown",
-  "attrs": {},
+  "attrs": {
+   "interface": "NVMe",
+   "form": "M.2"
+  },
   "price": 409.99,
   "currency": "USD",
   "origin": "MIRROR",
@@ -103,7 +106,7 @@
    "landed_price": null,
    "availability": "in stock"
   },
-  "maker_model": null
+  "maker_model": "MZ-V9P2T0B/AM"
  },
  {
   "id": "amazon:6e3dbbf8e1e1",
