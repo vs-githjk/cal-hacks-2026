@@ -61,8 +61,52 @@ test("layout is deterministic", () => {
 });
 
 test("scale values", () => {
-  assert.equal(westLayout(3, 0, false).scale, 1.5);
-  assert.equal(westLayout(6, 0, false).scale, 1.2);
+  assert.equal(westLayout(3, 0, false).scale, 1.7);
+  assert.equal(westLayout(6, 0, false).scale, 1.3);
   assert.equal(westLayout(3, 0, true).scale, 1.1);
   assert.equal(westLayout(6, 0, true).scale, 0.9);
+});
+
+const rect = (x: number, y: number, hw: number, hh: number) => ({ l: x - hw, r: x + hw, t: y - hh, b: y + hh });
+const overlap = (a: ReturnType<typeof rect>, b: ReturnType<typeof rect>, m: number) => a.l < b.r + m && b.l < a.r + m && a.t < b.b + m && b.t < a.b + m;
+const cardBox = (c: { x: number; y: number; scale: number }) => rect(c.x, c.y, 36 * c.scale, 24 * c.scale);
+
+function eachCards(fn: (l: ReturnType<typeof westLayout>, n: number, p: boolean) => void) {
+  for (const p of [false, true]) for (let n = 1; n <= 8; n++) fn(westLayout(n, 0, p), n, p);
+}
+
+test("price cards never overlap each other", () => {
+  eachCards((l, n, p) => {
+    assert.equal(l.cards.length, n);
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) assert.ok(!overlap(cardBox(l.cards[i]), cardBox(l.cards[j]), 4), `cards ${i},${j} n=${n} p=${p}`);
+  });
+});
+
+test("each card is nearer its own seller than any other", () => {
+  eachCards((l, n, p) => {
+    l.cards.forEach((c, i) => {
+      const d = (s: { x: number; y: number }) => Math.hypot(c.x - s.x, c.y - s.y);
+      l.sellers.forEach((s, j) => { if (j !== i) assert.ok(d(l.sellers[i]) < d(s), `card ${i} vs seller ${j} n=${n} p=${p}`); });
+    });
+  });
+});
+
+test("no card covers another seller's figure", () => {
+  eachCards((l, n, p) => {
+    l.cards.forEach((c, i) => l.sellers.forEach((s, j) => {
+      if (j === i) return;
+      const fig = { l: s.x - 35 * l.scale, r: s.x + 35 * l.scale, t: s.y - 132 * l.scale, b: s.y };
+      assert.ok(!overlap(cardBox(c), fig, 0), `card ${i} on figure ${j} n=${n} p=${p}`);
+    }));
+  });
+});
+
+test("cards are inside the viewBox, tilted a little, scaled within bounds", () => {
+  eachCards((l, n, p) => {
+    for (const c of l.cards) {
+      const b = cardBox(c);
+      assert.ok(b.l >= 0 && b.r <= l.w && b.t >= 0 && b.b <= l.h, `card outside n=${n} p=${p}`);
+      assert.ok(Math.abs(c.rot) <= 10 && c.scale > 0 && c.scale <= (p ? 1.5 : 1.8), `rot/scale n=${n} p=${p}`);
+    }
+  });
 });

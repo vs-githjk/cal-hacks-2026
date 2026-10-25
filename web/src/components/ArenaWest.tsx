@@ -9,9 +9,10 @@ import { boardAt, type BoardCard } from "@/lib/arenaBoard";
 import { looksFor, type HatKind as LookHat } from "@/lib/arenaLayout";
 import { westLayout, type Pt } from "@/lib/arenaWest";
 import {
-  Appraiser, Auctioneer, Backdrop, Bubble, Cowboy, DustPuff, Fence, Platform, PriceCard, Referee, Sheriff, Sign, Spotlight,
-  type HatKind, type Pose,
-} from "@/components/west/placeholder";
+  ANCHORS, Appraiser, Auctioneer, Backdrop, Bubble, Cowboy, DustPuff, Fence, Gavel, Platform, PriceCard, Sheriff, Sign, Spotlight,
+  type CowboyPose, type HatKind,
+} from "@/components/west/art";
+import { Referee } from "@/components/west/placeholder"; // art.tsx has no referee yet
 
 export interface ArenaWestProps {
   scene: ArenaScene;
@@ -40,42 +41,53 @@ const usePortrait = () => useSyncExternalStore(subscribe, () => window.matchMedi
 
 const trunc = (t: string, n: number): string => (t.length > n ? `${t.slice(0, n)}...` : t);
 
-/** Split into at most two lines of about `max` characters; text beyond two lines is cut with "...". */
-function wrap(text: string, max = 24): string[] {
+/** Greedy wrap into at most `maxLines` lines of about `max` characters; whatever does not fit is cut with "...". */
+function wrap(text: string, max: number, maxLines = 2): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let cur = "";
-  let cut = false;
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    if (cur && (cur + " " + word).length > max) {
-      if (lines.length === 1) { cut = true; break; }
-      lines.push(cur);
-      cur = word;
-    } else cur = cur ? `${cur} ${word}` : word;
+  let i = 0;
+  for (; i < words.length; i++) {
+    const next = cur ? `${cur} ${words[i]}` : words[i]!;
+    if (!cur || next.length <= max) { cur = next; continue; }
+    if (lines.length === maxLines - 1) break;
+    lines.push(cur);
+    cur = words[i]!;
   }
+  const overflow = i < words.length;
   if (cur) lines.push(cur);
-  const out = lines.slice(0, 2).map((l) => trunc(l, max));
-  if (cut) out[out.length - 1] = `${out[out.length - 1]!.slice(0, Math.max(0, max - 3))}...`;
-  return out;
+  const last = lines.length - 1;
+  return lines.map((l, k) => (l.length > max || (overflow && k === last) ? `${l.slice(0, max - 3)}...` : l));
 }
 
-function Lines({ lines, size, lh, dy = 0 }: { lines: string[]; size: number; lh: number; dy?: number }) {
+/** Centred text lines around y = cy. A line wider than `avail` (estimated) is squeezed to fit with textLength. */
+function Lines({ lines, size, lh, cy = 0, avail }: { lines: string[]; size: number; lh: number; cy?: number; avail: number }) {
   return (
     <text textAnchor="middle" fontSize={size} fill={INK} stroke="none">
-      {lines.map((l, i) => <tspan key={i} x="0" y={dy + (i - (lines.length - 1) / 2) * lh}>{l}</tspan>)}
+      {lines.map((l, i) => {
+        const est = l.length * size * 0.52;
+        return (
+          <tspan key={i} x="0" y={cy + (i - (lines.length - 1) / 2) * lh + size * 0.35} textLength={est > avail ? avail : undefined} lengthAdjust="spacingAndGlyphs">{l}</tspan>
+        );
+      })}
     </text>
   );
 }
 
-/** A speech bubble sized from its text; the tail tip is at `at` (the speaker's head). */
-function Said({ at, text }: { at: Pt; text: string }) {
-  const lines = wrap(text, 24);
-  const w = 10 * Math.max(1, ...lines.map((l) => l.length)) + 28;
-  const h = 24 * lines.length + 20;
-  const y = Math.max(at.y, h + 26);
+/** A speech bubble over the art Bubble (kind down); the tail tip is at `at`. Text is at least 28 units wide-view, 34 in portrait, two lines at most. */
+function Said({ at, text, portrait, vw }: { at: Pt; text: string; portrait: boolean; vw: number }) {
+  const fs = portrait ? 34 : 28;
+  const s = portrait ? 1.55 : 1.3;
+  const box = ANCHORS.bubble.down.box;
+  const bw = box.w * s;
+  const avail = bw - 24;
+  const lines = wrap(text, Math.floor(avail / (fs * 0.52)), 2);
+  const x = Math.max(110 * s + 6, Math.min(vw - 110 * s - 6, at.x));
+  const y = Math.max(at.y, 6 + (ANCHORS.bubble.h + 18) * s);
   return (
-    <g transform={`translate(${at.x} ${y})`}>
-      <Bubble w={w} h={h} tail="down" />
-      <g transform={`translate(0 ${-18 - h / 2})`}><Lines lines={lines} size={16} lh={24} dy={5} /></g>
+    <g transform={`translate(${x} ${y})`}>
+      <Bubble kind="down" scale={s} />
+      <g transform={`translate(0 ${(box.y + box.h / 2) * s})`}><Lines lines={lines} size={fs} lh={fs * 1.1} avail={avail} /></g>
     </g>
   );
 }
@@ -85,7 +97,10 @@ function Actor({ at, label, lit, scale, children }: { at: Pt; label: string; lit
     <g transform={`translate(${at.x} ${at.y})`}>
       {lit && <Spotlight />}
       <g transform={`scale(${scale})`}>{children}</g>
-      <g transform="translate(0 6)"><Sign w={140} h={44} /><text y="-28" textAnchor="middle" fontSize="26" fill={INK} stroke="none">{label}</text></g>
+      <g transform="translate(0 70)">
+        <Sign kind="small" />
+        <text y="-54" textAnchor="middle" fontSize="22" fill={INK} stroke="none" textLength={Math.min(96, label.length * 12)} lengthAdjust="spacingAndGlyphs">{label}</text>
+      </g>
     </g>
   );
 }
@@ -96,7 +111,7 @@ interface SellerProps {
   scale: number;
   signScale: number;
   hat: HatKind;
-  pose: Pose;
+  pose: CowboyPose;
   selected: boolean;
   spot: boolean;
   onPick: (key: string) => void;
@@ -117,8 +132,8 @@ function Seller({ card, at, scale, signScale, hat, pose, selected, spot, onPick,
     onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter") pick?.(); } } : {};
   const name = card ? trunc(card.name, 20) : "";
   const chipW = card ? card.origin.length * 8 + 10 : 0;
-  const nameX = -94;
-  const avail = 94 - chipW - 8 - nameX; // room for the name left of the chip
+  const nameX = -88;
+  const avail = 88 - chipW - 8 - nameX; // room for the name left of the chip
   const rankWord = card && showRank ? (card.state === "winner" ? "Winner" : card.rank !== null ? `Ranked #${card.rank}` : null) : null;
   return (
     <g transform={`translate(${at.x} ${at.y})`} style={{ cursor: card ? "pointer" : undefined, outline: "none" }} {...interactive}>
@@ -126,18 +141,18 @@ function Seller({ card, at, scale, signScale, hat, pose, selected, spot, onPick,
         <g transform={`scale(${scale})`}>
           {spot && <Spotlight />}
           <rect x="-70" y="-130" width="140" height="220" fill="transparent" stroke="none" />
-          <Cowboy hat={hat} pose={leaving ? "tip" : pose} />
+          <Cowboy kind={hat} pose={leaving ? "tip" : pose} />
         </g>
         {card && (
-          <g transform={`translate(0 18) scale(${signScale})`}>
-            <Sign w={200} h={44} />
-            {selected && <rect x="-106" y="-66" width="212" height="54" rx="4" fill="none" stroke={INK} strokeWidth="3" />}
-            <text x={nameX} y="-32" fontSize="18" fill={INK} stroke="none" textLength={Math.min(avail, name.length * 9.5)} lengthAdjust="spacingAndGlyphs">{name}</text>
-            <g transform={`translate(${94 - chipW} -52)`}>
+          <g transform={`translate(0 70) scale(${signScale})`}>
+            <Sign kind="wide" />
+            {selected && <rect x="-104" y="-100" width="208" height="64" rx="6" fill="none" stroke={INK} strokeWidth="3" />}
+            <text x={nameX} y="-68" fontSize="18" fill={INK} stroke="none" textLength={Math.min(avail, name.length * 9.5)} lengthAdjust="spacingAndGlyphs">{name}</text>
+            <g transform={`translate(${88 - chipW} -88)`}>
               <rect width={chipW} height="18" fill="none" stroke={INK} strokeWidth="2" />
               <text x={chipW / 2} y="13" textAnchor="middle" fontSize="12" fill={INK} stroke="none">{card.origin}</text>
             </g>
-            {rankWord && <text y="14" textAnchor="middle" fontSize="15" fill={GREY} stroke="none">{rankWord}</text>}
+            {rankWord && <text y="-50" textAnchor="middle" fontSize="14" fill={GREY} stroke="none">{rankWord}</text>}
           </g>
         )}
       </motion.g>
@@ -150,25 +165,28 @@ function Seller({ card, at, scale, signScale, hat, pose, selected, spot, onPick,
 
 /** A price card. Its resting state comes from data: no price means sealed at the seller's hand; a price means open at its fan slot.
  * Mounted open (jumping to a late beat) it renders there at once; a change from sealed to open while mounted flies and cross-fades. */
-function Card({ card, hand, to, delay }: { card: BoardCard; hand: Pt; to: { x: number; y: number; rot: number }; delay: number }) {
+function Card({ card, hand, to, delay }: { card: BoardCard; hand: Pt; to: { x: number; y: number; rot: number; scale: number }; delay: number }) {
   const open = card.price !== null;
   const pos = open ? { x: to.x, y: to.y, rot: to.rot } : { x: hand.x, y: hand.y, rot: 0 };
   const fly = { duration: 0.6, ease: "easeOut" as const, delay };
   const fade = { duration: 0.35, delay: open ? delay + 0.4 : 0 };
   const price = card.price ?? "";
-  const cond = trunc(card.condition, 18);
+  const cond = trunc(card.condition, 12);
+  const face = ANCHORS.priceCard.face;
   return (
     <motion.g initial={false} animate={{ x: pos.x, y: pos.y, rotate: pos.rot }} transition={{ x: fly, y: fly, rotate: fly }} style={{ pointerEvents: "none" }}>
-      <motion.g initial={false} animate={{ opacity: open ? 0 : 1 }} transition={fade}><PriceCard w={130} h={80} sealed /></motion.g>
-      <motion.g initial={false} animate={{ opacity: open ? 1 : 0 }} transition={fade}>
-        <PriceCard w={130} h={80} sealed={false} />
-        {open && (
-          <>
-            <text textAnchor="middle" y="6" fontSize="38" fill={INK} stroke="none" textLength={Math.min(118, price.length * 21)} lengthAdjust="spacingAndGlyphs">{price}</text>
-            <text textAnchor="middle" y="28" fontSize="16" fill={INK} stroke="none">{cond}</text>
-          </>
-        )}
-      </motion.g>
+      <g transform={`scale(${to.scale})`}>
+        <motion.g initial={false} animate={{ opacity: open ? 0 : 1 }} transition={fade}><PriceCard pose="sealed" /></motion.g>
+        <motion.g initial={false} animate={{ opacity: open ? 1 : 0 }} transition={fade}>
+          <PriceCard pose="open" />
+          {open && (
+            <>
+              <text textAnchor="middle" x={face.x + face.w / 2} y="-3" fontSize="20" fill={INK} stroke="none" textLength={Math.min(face.w - 4, price.length * 11)} lengthAdjust="spacingAndGlyphs">{price}</text>
+              <text textAnchor="middle" x={face.x + face.w / 2} y="13" fontSize="9" fill={INK} stroke="none">{cond}</text>
+            </>
+          )}
+        </motion.g>
+      </g>
     </motion.g>
   );
 }
@@ -216,13 +234,16 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
   const final = !!b.winner || (b.phase !== "open" && beat >= scene.beats.length && b.track.length > 0);
   const sealedAnon = b.track.length > 0 && b.track.every((c) => c.price === null);
   const note = b.stageNote ?? (b.phase === "closed" ? null : b.buyerLine);
-  const aY = L.auctioneer.y - 120; // feet on the platform deck
+  const standY = L.auctioneer.y + ANCHORS.platform.stand.y; // the auctioneer's feet, on the deck
+  const cs = L.cards[0]?.scale ?? 1.5;
+  const cardOf = (i: number) => L.cards[i] ?? L.cards[0] ?? { x: L.ring.cx, y: L.ring.cy, rot: 0, scale: cs };
+  const hand = ANCHORS.auctioneer.gavelHand[gavel];
   const hatOf = (c: BoardCard): HatKind => HAT[looks[c.key]?.hat ?? "party"];
-  const handOf = (p: Pt): Pt => ({ x: p.x + 30 * L.scale, y: p.y - 70 * L.scale });
+  const handOf = (p: Pt): Pt => ({ x: p.x + 48 * L.scale, y: p.y - 56 * L.scale });
   const said = (key: string) => bubbles?.[key];
-  const bubbleAt = (p: Pt): Pt => ({ x: p.x, y: p.y - 128 * L.scale });
-  const sellerSign = fitScale(minGap(L.sellers), 200);
-  const outSign = fitScale(minGap(L.outs), 190);
+  const bubbleAt = (p: Pt): Pt => ({ x: p.x, y: p.y - 140 * L.scale });
+  const sellerSign = fitScale(minGap(L.sellers), ANCHORS.sign.wide.w);
+  const outSign = fitScale(minGap(L.outs), ANCHORS.sign.small.w);
 
   const showResults = b.track.some((c) => c.price !== null) || b.out.length > 0;
   const rows = useMemo(() => {
@@ -238,22 +259,30 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
       <div className="relative bg-white text-[#1A1A1A]" style={{ fontFamily: "var(--font-hand), 'Comic Sans MS', cursive" }}>
         <svg className="block h-auto w-full" viewBox={`0 0 ${L.w} ${L.h}`} preserveAspectRatio="xMidYMid meet" role="group" aria-label="Price showdown">
           <rect width={L.w} height={L.h} fill="#FFFFFF" />
-          <Backdrop w={L.w} h={L.h} />
-          <Fence {...L.ring} />
+          <Backdrop scale={L.w / ANCHORS.backdrop.w} />
+          <g transform={`translate(${L.ring.cx} ${L.ring.cy}) scale(${L.ring.rx / ANCHORS.fence.rx} ${L.ring.ry / ANCHORS.fence.ry})`}><Fence /></g>
 
-          <g transform={`translate(${L.auctioneer.x} ${L.auctioneer.y})`}>
-            {lit("buyer") && <Spotlight />}
-            <Platform />
-            <text y="-142" textAnchor="middle" fontSize="26" fill={INK} stroke="none">Buyer agent</text>
-          </g>
-          <g transform={`translate(${L.auctioneer.x} ${aY}) scale(${L.scale})`}><Auctioneer gavel={gavel} /></g>
+          {lit("buyer") && <Spotlight x={L.auctioneer.x} y={L.auctioneer.y} scale={1.8} />}
+          <Auctioneer x={L.auctioneer.x} y={standY} scale={L.scale} pose={gavel} />
+          <Platform x={L.auctioneer.x} y={L.auctioneer.y} />
+          <Gavel x={L.auctioneer.x + hand.x * L.scale} y={standY + hand.y * L.scale} scale={L.scale} pose={gavel} />
+          <text x={L.auctioneer.x - 24} y={L.auctioneer.y - 136} textAnchor="middle" fontSize="26" fill={INK} stroke="none">Buyer agent</text>
           <Actor at={L.sheriff} label="Shield" lit={lit("shield")} scale={L.scale}><Sheriff /></Actor>
           <Actor at={L.appraiser} label="Advocate" lit={lit("advocate")} scale={L.scale}><Appraiser /></Actor>
           <Actor at={L.referee} label="Referee" lit={lit("referee")} scale={L.scale}><Referee /></Actor>
 
-          {b.phase === "inconsistent" && (
-            <g transform={`translate(${L.ring.cx} ${L.ring.cy - 90})`}><Sign w={320} h={64} /><text y="-30" textAnchor="middle" fontSize="34" fill={INK} stroke="none">Winner under review</text></g>
-          )}
+          {b.phase === "inconsistent" && (() => {
+            const k = portrait ? 2.6 : 1.9;
+            const fs = portrait ? 30 : 26;
+            const box = ANCHORS.sign.wide.box;
+            const avail = box.w * k - 24;
+            return (
+              <g transform={`translate(${L.ring.cx} ${L.ring.cy - 100 + 40 * k})`}>
+                <Sign kind="wide" scale={k} />
+                <g transform={`translate(0 ${(box.y + box.h / 2) * k})`}><Lines lines={wrap(b.buyerLine, Math.floor(avail / (fs * 0.52)), 3)} size={fs} lh={fs * 1.1} avail={avail} /></g>
+              </g>
+            );
+          })()}
 
           <AnimatePresence>
             {!anon && b.track.slice(0, 8).map((c, i) => (
@@ -267,13 +296,13 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
           {anon && Array.from({ length: anonCount }, (_, i) => L.sellers[i] && (
             <g key={i}>
               <Seller card={null} at={L.sellers[i]!} scale={L.scale} signScale={1} hat="wide" pose="idle" selected={false} spot={false} onPick={onPick} showRank={false} />
-              <g transform={`translate(${handOf(L.sellers[i]!).x} ${handOf(L.sellers[i]!).y})`}><PriceCard w={130} h={80} sealed /></g>
+              <g transform={`translate(${handOf(L.sellers[i]!).x} ${handOf(L.sellers[i]!).y})`}><PriceCard pose="sealed" scale={cs} /></g>
             </g>
           ))}
           {anon && b.sealedCount > 8 && <text x={L.ring.cx} y={L.ring.cy + L.ring.ry * 0.9} textAnchor="middle" fontSize="28" fill={INK} stroke="none">+{b.sealedCount - 8} more</text>}
 
           {b.track.length > 0 && b.track.slice(0, 8).map((c, i) => (
-            <Card key={c.key} card={c} hand={handOf(L.sellers[i] ?? L.ring)} to={L.cards[i] ?? L.cards[0] ?? { x: L.ring.cx, y: L.ring.cy, rot: 0 }} delay={i * 0.08} />
+            <Card key={c.key} card={c} hand={handOf(L.sellers[i] ?? L.ring)} to={cardOf(i)} delay={i * 0.08} />
           ))}
 
           {b.winner && (() => {
@@ -291,33 +320,33 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
             if (!p) return null;
             return (
               <g key={c.key}>
-                <g transform={`translate(${p.x} ${p.y - 20}) scale(0.7)`}><Cowboy hat={hatOf(c)} pose="ghost" /></g>
+                <g transform={`translate(${p.x} ${p.y - 56}) scale(0.7)`}><Cowboy kind={hatOf(c)} pose="ghost" /></g>
                 <g
                   transform={`translate(${p.x} ${p.y}) scale(${outSign})`} role="button" tabIndex={0} style={{ cursor: "pointer", outline: "none" }}
                   aria-label={`${c.name}, ${c.reason ?? "out"}${c.reasonText ? `, ${c.reasonText}` : ""}`}
                   onClick={() => onPick(c.key)} onKeyDown={(e) => { if (e.key === "Enter") onPick(c.key); }}
                 >
-                  <Sign w={190} h={52} />
-                  {selected === c.key && <rect x="-100" y="-74" width="200" height="62" rx="4" fill="none" stroke={INK} strokeWidth="3" />}
-                  <text y="-46" textAnchor="middle" fontSize="20" fill={INK} stroke="none">{OUT_WORD(c.reason)}</text>
-                  <text y="-27" textAnchor="middle" fontSize="14" fill="#555555" stroke="none">{trunc(c.name, 24)}</text>
+                  <Sign kind="small" />
+                  {selected === c.key && <rect x="-64" y="-88" width="128" height="52" rx="6" fill="none" stroke={INK} strokeWidth="3" />}
+                  <text y="-62" textAnchor="middle" fontSize="20" fill={INK} stroke="none" textLength={Math.min(100, OUT_WORD(c.reason).length * 11)} lengthAdjust="spacingAndGlyphs">{OUT_WORD(c.reason)}</text>
+                  <text y="-49" textAnchor="middle" fontSize="12" fill="#555555" stroke="none">{trunc(c.name, 15)}</text>
                 </g>
               </g>
             );
           })}
 
-          <Said at={{ x: L.auctioneer.x + 20, y: aY - 122 * L.scale }} text={request} />
+          <Said at={{ x: L.auctioneer.x, y: standY - 140 * L.scale }} text={request} portrait={portrait} vw={L.w} />
           {(["shield", "advocate", "referee"] as const).map((k) => {
             const t = said(k);
             const at = k === "shield" ? L.sheriff : k === "advocate" ? L.appraiser : L.referee;
-            return t ? <Said key={k} at={bubbleAt(at)} text={t} /> : null;
+            return t ? <Said key={k} at={bubbleAt(at)} text={t} portrait={portrait} vw={L.w} /> : null;
           })}
 
           {chrome?.sim && (
             <g transform={`translate(${L.w - 200} 50)`}><rect x="-8" y="-30" width="184" height="42" fill="none" stroke={INK} strokeWidth="3" /><text fontSize="28" fill={INK} stroke="none">SIM example</text></g>
           )}
         </svg>
-        {note && <p className="pointer-events-none absolute left-3 top-2 m-0 line-clamp-2 max-w-[55%] text-[15px] leading-tight sm:text-[20px]">{note}</p>}
+        {note && <p className="pointer-events-none absolute left-3 top-2 m-0 line-clamp-2 max-w-[36%] text-[13px] leading-tight sm:text-[18px]">{note}</p>}
         {chrome?.countdown && <div className="absolute right-3 top-14 sm:top-16">{chrome.countdown}</div>}
         {showResults && <Results rows={rows} />}
         {chrome?.bids}

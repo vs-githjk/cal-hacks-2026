@@ -135,3 +135,15 @@ test("the tally sums to the bids at every beat, and the gpu final line is exact"
   assert.ok(end.out.every((c) => c.kind === (c.reason?.startsWith("Ranked") || c.reason === "Outranked" ? "outbid" : "caught")));
   assert.ok(end.track.every((c) => c.kind === null));
 });
+
+test("sealed rounds at beat 0 leak no price: no dollar sign anywhere in the board", () => {
+  let sealed = 0;
+  for (const key of Object.keys(SAMPLES) as (keyof typeof SAMPLES)[]) {
+    const sc = projectArenaScene(SAMPLES[key], { sample: true });
+    const s = boardAt(sc, 0);
+    if (!(s.track.length > 0 && s.track.every((c) => c.state === "sealed"))) continue;
+    sealed++;
+    assert.ok(!JSON.stringify(s).includes("$"), `${key} leaks a price at beat 0`);
+  }
+  assert.ok(sealed > 0);
+});

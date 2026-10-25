@@ -5,10 +5,57 @@ export interface WestLayout {
   ring: { cx: number; cy: number; rx: number; ry: number }; // the fenced ring (an ellipse)
   auctioneer: Pt; referee: Pt; sheriff: Pt; appraiser: Pt; // fixed actors (feet points)
   sellers: Pt[]; // feet points of n sellers on an arc inside the ring, left to right
-  cards: { x: number; y: number; rot: number }[]; // where seller i's card lands, fanned near the ring's center
+  cards: { x: number; y: number; rot: number; scale: number }[]; // seller i's tossed price card (center, tilt in degrees, scale): beside that seller, upper right (left if the right would leave the ring or hit a neighbour); one shared scale, as big as fits without overlap
   outs: Pt[]; // where the k-th eliminated seller's reason sign sits: a row below the ring (two rows in portrait with more than 4)
   request: Pt; // the request speech bubble's tail anchor, above the auctioneer's head
-  scale: number; // figure scale: 1.5 at landscape with up to 5 sellers, 1.2 with 6 to 8, 1.1 in portrait (0.9 with 6 to 8)
+  scale: number; // figure scale: 1.7 at landscape with up to 5 sellers, 1.3 with 6 to 8, 1.1 in portrait (0.9 with 6 to 8)
+}
+
+const SCALE_L = 1.7, SCALE_L_MANY = 1.3, SCALE_P = 1.1, SCALE_P_MANY = 0.9;
+
+const FIG_W = 70, FIG_H = 132, CARD_W = 72, CARD_H = 48, GAP = 4;
+type Box = { l: number; r: number; t: number; b: number };
+const hit = (a: Box, b: Box, m: number): boolean => a.l < b.r + m && b.l < a.r + m && a.t < b.b + m && b.t < a.b + m;
+const figBox = (p: Pt, s: number): Box => ({ l: p.x - (FIG_W / 2) * s, r: p.x + (FIG_W / 2) * s, t: p.y - FIG_H * s, b: p.y });
+
+// Greedy placement at one shared card scale cs; null when some seller finds no free spot.
+function tryCards(sellers: Pt[], s: number, w: number, h: number, cs: number): { x: number; y: number; rot: number; scale: number }[] | null {
+  const hw = (CARD_W * cs) / 2, hh = (CARD_H * cs) / 2;
+  const figs = sellers.map((p) => figBox(p, s));
+  const placed: Box[] = [];
+  const out: { x: number; y: number; rot: number; scale: number }[] = [];
+  for (let i = 0; i < sellers.length; i++) {
+    const p = sellers[i];
+    let found: { x: number; y: number; rot: number; scale: number } | null = null;
+    // right side first, then left; chest height up to above the head; tight gap first
+    search: for (const side of [1, -1]) {
+      for (const f of [0.8, 0.95, 1.1, 0.65, 1.25, 1.4, 1.6, 0.5]) {
+        for (const gap of [0, 8, 16, 28, -0.3 * hw, -0.6 * hw, -0.9 * hw]) {
+          const x = p.x + side * ((FIG_W / 2) * s + hw + gap), y = p.y - FIG_H * s * f;
+          const box: Box = { l: x - hw, r: x + hw, t: y - hh, b: y + hh };
+          if (box.l < 0 || box.r > w || box.t < 0 || box.b > h) continue;
+          if (figs.some((fb) => hit(box, fb, 0))) continue;
+          if (placed.some((pb) => hit(box, pb, GAP))) continue;
+          const mine = Math.hypot(x - p.x, y - p.y);
+          if (sellers.some((q, j) => j !== i && Math.hypot(x - q.x, y - q.y) <= mine)) continue;
+          found = { x, y, rot: side * (4 + (i % 3) * 3), scale: cs };
+          placed.push(box);
+          break search;
+        }
+      }
+    }
+    if (!found) return null;
+    out.push(found);
+  }
+  return out;
+}
+
+function placeCards(sellers: Pt[], s: number, w: number, h: number, maxScale: number): { x: number; y: number; rot: number; scale: number }[] {
+  for (let cs = maxScale; cs > 0.3; cs -= 0.05) {
+    const r = tryCards(sellers, s, w, h, cs);
+    if (r) return r;
+  }
+  return tryCards(sellers, s, w, h, 0.3) ?? [];
 }
 
 const clamp8 = (v: number): number => Math.max(0, Math.min(8, Math.floor(Number.isFinite(v) ? v : 0)));
@@ -30,12 +77,6 @@ export function westLayout(n: number, outs: number, portrait: boolean): WestLayo
     const t = n === 1 ? 0 : half + (i * -2 * half) / (n - 1); // -0.94 .. 0.94 left to right
     sellers.push({ x: ring.cx + rx * t, y: ring.cy + ry * Math.sqrt(1 - t * t) });
   }
-  const step = portrait ? 90 : 120;
-  const cards = Array.from({ length: n }, (_, i) => ({
-    x: ring.cx + (i - (n - 1) / 2) * step,
-    y: ring.cy - (portrait ? 70 : 60),
-    rot: (i % 2 === 0 ? -1 : 1) * (6 + (i % 3) * 3),
-  }));
   // Out signs: a row (landscape) or up to two rows (portrait, more than 4) below the ring, evenly spread.
   const spread = (k: number, lo: number, hi: number, i: number) => (k === 1 ? (lo + hi) / 2 : lo + (i * (hi - lo)) / (k - 1));
   const outPts: Pt[] = [];
@@ -49,7 +90,8 @@ export function westLayout(n: number, outs: number, portrait: boolean): WestLayo
     const rest = outs - first;
     for (let k = 0; k < rest; k++) outPts.push({ x: spread(rest, 120, 780, k), y: y + 70 });
   }
-  const scale = portrait ? (n >= 6 ? 0.9 : 1.1) : n >= 6 ? 1.2 : 1.5;
+  const scale = portrait ? (n >= 6 ? SCALE_P_MANY : SCALE_P) : n >= 6 ? SCALE_L_MANY : SCALE_L;
+  const cards = placeCards(sellers, scale, w, h, portrait ? 1.5 : 1.8);
   return {
     w, h, ring,
     auctioneer: portrait ? { x: 450, y: 450 } : { x: 800, y: 420 },
