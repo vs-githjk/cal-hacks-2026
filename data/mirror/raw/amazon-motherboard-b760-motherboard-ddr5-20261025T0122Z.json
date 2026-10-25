@@ -1,0 +1,144 @@
+[
+ {
+  "title": "ASUS Prime B760M-A AX LGA 1700(Intel\u00ae 12th&13th Gen) microATX Motherboard (PCIe\u00ae 4.0, 2xM.2 Slots, DDR5,Realtek 2.5 Gb LAN,WiFi 6, DP,Rear USB 3.2 Gen 2, Front USB 3.2 Gen 1 Type-C\u00ae)",
+  "url": "https://www.amazon.com/dp/B0BZTB5LKJ",
+  "price": {
+   "value": 129,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 139.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "MSI B760 Gaming Plus WiFi Gaming Motherboard (DDR5 Memory ONLY) for 12th/13th/14th Gen Intel Processors, LGA 1700, PCIe 4.0, M.2, 2.5Gbps LAN, USB 3.2 Gen2, HDMI/DP, Wi-Fi 6E, Bluetooth 5.3, ATX",
+  "url": "https://www.amazon.com/dp/B0C15THTK7",
+  "price": {
+   "value": 199.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": null,
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "ASRock B760 Pro RS WiFi 6E LGA1700 HDMI DisplayPort eDP Intel B760 ATX Motherboard DDR5 192GB 7200+ (OC) MHz SATA3 6.0 Gb/s USB3.2 Gen2 2.5G LAN PCIe5.0 M.2 64Bit",
+  "url": "https://www.amazon.com/dp/B0CBNP35BD",
+  "price": {
+   "value": 129.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": null,
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "ASRock USA",
+   "id": "A39LAUWR53IY4G",
+   "url": "https://www.amazon.com/sp?seller=A39LAUWR53IY4G",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "ASUS TUF GAMING B760-PLUS WIFI Intel B760 LGA 1700 ATX motherboard, Ready for 14th, 13th & 12th Gen Intel\u00ae Core CPU, 12+1+1 Stages, PCIe 5.0, 3x M.2, DDR5, 2.5G, USB 3.2 Type-C\u00ae, Thunderbolt 4\u2122, USB4\u00ae",
+  "url": "https://www.amazon.com/dp/B0BZT9KYNB",
+  "price": {
+   "value": 169.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 182.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "MSI PRO B760M-P Motherboard, Micro-ATX - Supports Intel 14th, 13th & 12th Gen Core Processors, LGA 1700 - DDR5 Memory Boost 6800+MHz/OC, PCIe 4.0 x16 Slot, M.2 Gen4 Slots",
+  "url": "https://www.amazon.com/dp/B0CRK43T2Y",
+  "price": {
+   "value": 109.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 119.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ }
+]

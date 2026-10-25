@@ -1,0 +1,37 @@
+[
+ {
+  "name": "KLEVV - K02TBM2SP0-10G CRAS C910G SSD 2TB, M.2 NVMe 2280, PCIe Gen4x4 SSD with Heatsink",
+  "url": "https://www.bestbuy.com/product/klevv-k02tbm2sp0-10g-cras-c910g-ssd-2tb-m-2-nvme-2280-pcie-gen4x4-ssd-with-heatsink/CGC7TFFW7C/sku/12611251",
+  "price": 289.99,
+  "regularPrice": 299.99,
+  "condition": "new"
+ },
+ {
+  "name": "Western Digital - WD_BLACK 2TB SN850X NVMe SSD - 7300 MB/s, PS5, Gen4, M.2 2280",
+  "url": "https://www.bestbuy.com/product/western-digital-wd_black-2tb-sn850x-nvme-ssd-7300-mb-s-ps5-gen4-m-2-2280/JXTHCC7JCY/sku/11018063",
+  "price": 439.99,
+  "regularPrice": 518.15,
+  "condition": "new"
+ },
+ {
+  "name": "HUADISK - 2TB M.2 2280 PCIe 4.0 NVMe SSD, 5000MB/s Read, 3D NAND, for PS5, PC & Laptops",
+  "url": "https://www.bestbuy.com/product/huadisk-2tb-m-2-2280-pcie-4-0-nvme-ssd-5000mb-s-read-3d-nand-for-ps5-pc-laptops/JXT65SKQJ9/sku/13113001",
+  "price": 239.99,
+  "regularPrice": 249.99,
+  "condition": "new"
+ },
+ {
+  "name": "Micron Technology - 2TB PCIe Gen4 NVMe M.2 Solid State Drive",
+  "url": "https://www.bestbuy.com/product/micron-technology-2tb-pcie-gen4-nvme-m-2-solid-state-drive/JX8PSKC64R/sku/12352032",
+  "price": 249.99,
+  "regularPrice": 291.93,
+  "condition": "new"
+ },
+ {
+  "name": "Samsung - 990 PRO 2TB Internal SSD PCle Gen 4x4 NVMe",
+  "url": "https://www.bestbuy.com/product/samsung-990-pro-2tb-internal-ssd-pcle-gen-4x4-nvme/J3ZYG28J3S/sku/6523595",
+  "price": 409.99,
+  "regularPrice": 639.99,
+  "condition": "new"
+ }
+]

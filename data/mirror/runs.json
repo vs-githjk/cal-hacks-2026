@@ -359,5 +359,1920 @@
    "was_price"
   ],
   "secs": 11
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "Ryzen 7 9700X",
+   "maxProducts": 5
+  },
+  "run_id": "PckixJd55I0yIuUa3",
+  "status": "SUCCEEDED",
+  "cost_usd": 5e-05,
+  "items": 4,
+  "snapshot_id": "bestbuy-cpu-ryzen-7-9700x-20261025T0119Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 6,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "Ryzen 7 9700X"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "eTUM5lZrqC1eJ4Kl0",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-cpu-ryzen-7-9700x-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 58,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=Ryzen%207%209700X"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "LLo0lNwEocsbskIWT",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-cpu-ryzen-7-9700x-20261025T0119Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 6,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=Ryzen+7+9700X"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "6JayEGBhgAy2hx0bg",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "amazon-cpu-ryzen-7-9700x-20261025T0119Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 18,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "ryzen 7 9700x"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "tN3wG9RF50H0YWWT5",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-9700x-20261025T0119Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 12,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "Ryzen 7 9700X",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "CJ9e2rKfwJPLOT8nR",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-9700x-20261025T0119Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 6,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 9700X",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "Ryzen 7 9700X",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "vidLwxJCgkepXiv1f",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-cpu-ryzen-7-9700x-20261025T0120Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 41,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "Ryzen 7 7700X",
+   "maxProducts": 5
+  },
+  "run_id": "hdVTNrGuXcBshjNhW",
+  "status": "SUCCEEDED",
+  "cost_usd": 5e-05,
+  "items": 4,
+  "snapshot_id": "bestbuy-cpu-ryzen-7-7700x-20261025T0119Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 5,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "Ryzen 7 7700X"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "7EkqZ02NKcyX7e9qc",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-cpu-ryzen-7-7700x-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 46,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=Ryzen%207%207700X"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "mwc8DO0LqNxyzzbOA",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-cpu-ryzen-7-7700x-20261025T0119Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 7,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=Ryzen+7+7700X"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "0xFRYrmNbXcPAflqx",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "amazon-cpu-ryzen-7-7700x-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 13,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "ryzen 7 7700x"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "DvFM55ODhGtUkVTjz",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-7700x-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 7,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "Ryzen 7 7700X",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "lpSXQpidbqD4TQLR4",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0002,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-7700x-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Ryzen 7 7700X",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "Ryzen 7 7700X",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "4Dg99gEPDhDjwER5S",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-cpu-ryzen-7-7700x-20261025T0121Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 55,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "Core i5-14600K",
+   "maxProducts": 5
+  },
+  "run_id": "H4t2YVzGNrTiYocEf",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-cpu-core-i5-14600k-20261025T0120Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "Core i5-14600K"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "jyH3M8GRFAhiUntug",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-cpu-core-i5-14600k-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 10,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=Core%20i5-14600K"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "VNADHeF2SHlCJelSW",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 1,
+  "snapshot_id": "bh-cpu-core-i5-14600k-20261025T0120Z",
+  "cards": 1,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=Core+i5-14600K"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "C8fSueeG4MgVLndKB",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 5,
+  "snapshot_id": "amazon-cpu-core-i5-14600k-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 26,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "core i5-14600k"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "mucEpfJMELWi1pVXO",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-cpu-core-i5-14600k-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "Core i5-14600K",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "z5GCUbj3ErAxDPQUq",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0002,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-cpu-core-i5-14600k-20261025T0120Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "Core i5-14600K",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "Core i5-14600K",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "PfWKZ8UrYk4VPScIe",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-cpu-core-i5-14600k-20261025T0121Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 50,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "B650 motherboard",
+   "maxProducts": 5
+  },
+  "run_id": "vcrQKhhmDuagmFEEM",
+  "status": "SUCCEEDED",
+  "cost_usd": 5e-05,
+  "items": 4,
+  "snapshot_id": "bestbuy-motherboard-b650-motherboard-20261025T0120Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 11,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "B650 motherboard"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "gMlEPeX5FliWbJCJM",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-motherboard-b650-motherboard-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 22,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=B650%20motherboard"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "SAB9rvQABDk9bqmxx",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-motherboard-b650-motherboard-20261025T0121Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 23,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=B650+motherboard"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "01laYPXJMkjwA3VMK",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 5,
+  "snapshot_id": "amazon-motherboard-b650-motherboard-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 39,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "b650 motherboard"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "GLRhM0N7DKAuA0mgW",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-motherboard-b650-motherboard-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 13,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "B650 motherboard",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "htWZMrKVJcKr5I2BK",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-motherboard-b650-motherboard-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 5,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B650 motherboard",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "B650 motherboard",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "UiN6K3E49XsolGCnb",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-motherboard-b650-motherboard-20261025T0122Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 51,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "B760 motherboard DDR5",
+   "maxProducts": 5
+  },
+  "run_id": "XHHCNVdls6ajGKfmG",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "B760 motherboard DDR5"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "kAnfTMWfXWtE7Edfa",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 9,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=B760%20motherboard%20DDR5"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "wdgTdeVX6PAhEsaCP",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 10,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=B760+motherboard+DDR5"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "eJfroiKLq7oQdZKQw",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 5,
+  "snapshot_id": "amazon-motherboard-b760-motherboard-ddr5-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 24,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "b760 motherboard ddr5"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "EBu9gFskgFTEenAes",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 9,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "B760 motherboard DDR5",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "gyvJvKpl8XYpDL6EY",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0002,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 6,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "B760 motherboard DDR5",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "B760 motherboard DDR5",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "gD1JNANxtJLwUz3Lq",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-motherboard-b760-motherboard-ddr5-20261025T0122Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 59,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "DDR5 32GB 6000 CL30",
+   "maxProducts": 5
+  },
+  "run_id": "tYhfFs5VZRgy6mra1",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 5,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "DDR5 32GB 6000 CL30"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "ReiuqsMipGfkAnkoX",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=DDR5%2032GB%206000%20CL30"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "8VOjIZFVafhIoFga8",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 15,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=DDR5+32GB+6000+CL30"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "gCyQ3xMclNmMf6wjJ",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "amazon-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 15,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "ddr5 32gb 6000 cl30"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "e0rf3f95E08PhuBTj",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 9,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "DDR5 32GB 6000 CL30",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "1vzBNy9E4xtd27US7",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR5 32GB 6000 CL30",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "DDR5 32GB 6000 CL30",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "6Th8RTg9kfLAAMLq2",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-memory-ddr5-32gb-6000-cl30-20261025T0123Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 38,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "DDR4 32GB 3200",
+   "maxProducts": 5
+  },
+  "run_id": "FvRbvNhannSRKoCxe",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-memory-ddr4-32gb-3200-20261025T0122Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "DDR4 32GB 3200"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "XXLYVc7U4EnPXTjUw",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-memory-ddr4-32gb-3200-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 7,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=DDR4%2032GB%203200"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "wKt3exFhgf5VwuESu",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-memory-ddr4-32gb-3200-20261025T0122Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 11,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=DDR4+32GB+3200"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "GHVHXQ7g5tR57oy8Y",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 1,
+  "snapshot_id": "amazon-memory-ddr4-32gb-3200-20261025T0122Z",
+  "cards": 1,
+  "maker_models": 0,
+  "secs": 13,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "ddr4 32gb 3200"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "Jb5FGcTHGAFvCod7f",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-memory-ddr4-32gb-3200-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "DDR4 32GB 3200",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "QRT1E2APBqzOeNGUk",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0002,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-memory-ddr4-32gb-3200-20261025T0122Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 7,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "DDR4 32GB 3200",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "DDR4 32GB 3200",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "sc1AH9xZZFoQj9KIf",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-memory-ddr4-32gb-3200-20261025T0123Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 40,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "1TB NVMe Gen4 SSD",
+   "maxProducts": 5
+  },
+  "run_id": "Rgm07gpqqQfhD20Os",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-storage-1tb-nvme-gen4-ssd-20261025T0122Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 5,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "1TB NVMe Gen4 SSD"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "NmNgnKg1TVY3hlNfr",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 12,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=1TB%20NVMe%20Gen4%20SSD"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "xRk3uR6uUO0JgCZVn",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 4,
+  "snapshot_id": "bh-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 12,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=1TB+NVMe+Gen4+SSD"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "zydiNyPEH8YSly3jE",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "amazon-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 17,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "1tb nvme gen4 ssd"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "qjfjarAg3qGSJGLBU",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "1TB NVMe Gen4 SSD",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "CJF1qwhkiRzL9eCuh",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "1TB NVMe Gen4 SSD",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "1TB NVMe Gen4 SSD",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "eINow9qyXefTLcTmL",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-storage-1tb-nvme-gen4-ssd-20261025T0124Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 57,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "2TB NVMe Gen4 SSD",
+   "maxProducts": 5
+  },
+  "run_id": "TCnpqiYUAYgBu9iV8",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "2TB NVMe Gen4 SSD"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "t3yA2tjauCLv2vFDs",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=2TB%20NVMe%20Gen4%20SSD"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "rNNx8y6wolj4TyPa8",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 3,
+  "snapshot_id": "bh-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 3,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=2TB+NVMe+Gen4+SSD"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "LD8XkT1PbTmYJT1Tt",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 5,
+  "snapshot_id": "amazon-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 27,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "2tb nvme gen4 ssd"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "UMHKXgkOad5eJGz2a",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 15,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "2TB NVMe Gen4 SSD",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "9LRqcRSfmnluYNOVJ",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0002,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 3,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "2TB NVMe Gen4 SSD",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "2TB NVMe Gen4 SSD",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "anp520XegWO1aimdH",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-storage-2tb-nvme-gen4-ssd-20261025T0124Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 42,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "Thermalright Peerless Assassin 120 SE",
+   "maxProducts": 5
+  },
+  "run_id": "xDbCTc8ZHRw1APJRJ",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bestbuy-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "Thermalright Peerless Assassin 120 SE"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "1pm7PLriSELBNzPab",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 7,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=Thermalright%20Peerless%20Assassin%20120%20SE"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "crvWStkaXtoKStYPb",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 4,
+  "snapshot_id": "bh-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "cards": 4,
+  "maker_models": 0,
+  "secs": 5,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=Thermalright+Peerless+Assassin+120+SE"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "UexPnYEitm9DJNLJa",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.005,
+  "items": 5,
+  "snapshot_id": "amazon-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 21,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "thermalright peerless assassin 120 se"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "gUrAhKmJ1CIdLkBjU",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 13,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "Thermalright Peerless Assassin 120 SE",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "IPXqlt0C5BZnpgTKG",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 3,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "Thermalright Peerless Assassin 120 SE",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "Thermalright Peerless Assassin 120 SE",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "5U4PmnQ4IupVFD59T",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-cooler-thermalright-peerless-assassin-120-se-20261025T0125Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 54,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "DeepCool AK400",
+   "maxProducts": 5
+  },
+  "run_id": "rUmhdmZNnOF1GdEtZ",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 0,
+  "snapshot_id": "bestbuy-cooler-deepcool-ak400-20261025T0124Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 4,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "DeepCool AK400"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 5
+  },
+  "run_id": "a0zpkzyRxO33YHWdt",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 5,
+  "snapshot_id": "microcenter-cooler-deepcool-ak400-20261025T0124Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 8,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=DeepCool%20AK400"
+    }
+   ],
+   "results_wanted": 5,
+   "max_pages": 1
+  },
+  "run_id": "AQUPcCoK4mAecXxnB",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 2,
+  "snapshot_id": "bh-cooler-deepcool-ak400-20261025T0124Z",
+  "cards": 2,
+  "maker_models": 0,
+  "secs": 9,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "amazon",
+  "actor": "junglee/Amazon-crawler",
+  "input": {
+   "categoryOrProductUrls": [
+    {
+     "url": "https://www.amazon.com/s?k=DeepCool+AK400"
+    }
+   ],
+   "maxItemsPerStartUrl": 5,
+   "maxSearchPagesPerStartUrl": 1
+  },
+  "run_id": "JY7yHZOajdaQLRRX9",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 1,
+  "snapshot_id": "amazon-cooler-deepcool-ak400-20261025T0124Z",
+  "cards": 1,
+  "maker_models": 0,
+  "secs": 7,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "deepcool ak400"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "1QD30wymLYBa4bLYV",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-cooler-deepcool-ak400-20261025T0124Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 9,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "DeepCool AK400",
+   "maxResults": 5,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "Wn1hQL65FYFYVnPlA",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 5,
+  "snapshot_id": "bestbuy-b-cooler-deepcool-ak400-20261025T0124Z",
+  "cards": 5,
+  "maker_models": 0,
+  "secs": 3,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "DeepCool AK400",
+  "store": "microcenter",
+  "actor": "fortuitous_pirate/microcenter-scraper",
+  "input": {
+   "searchQuery": "DeepCool AK400",
+   "maxProducts": 5,
+   "scrapeDetails": false
+  },
+  "family": "b",
+  "run_id": "EX3Vw1T83HokW4Wxr",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.02,
+  "items": 0,
+  "snapshot_id": "microcenter-b-cooler-deepcool-ak400-20261025T0125Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 73,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/cpus.html"
+    }
+   ],
+   "maxCrawlDepth": 1,
+   "maxCrawlPages": 25,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "status": "ERROR HTTPError: HTTP Error 402: Payment Required",
+  "secs": 1,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/motherboards.html"
+    }
+   ],
+   "maxCrawlDepth": 1,
+   "maxCrawlPages": 25,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "status": "ERROR HTTPError: HTTP Error 402: Payment Required",
+  "secs": 1,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "memory",
+  "query": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/memory.html"
+    }
+   ],
+   "maxCrawlDepth": 1,
+   "maxCrawlPages": 25,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "status": "ERROR HTTPError: HTTP Error 402: Payment Required",
+  "secs": 1,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "storage",
+  "query": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html"
+    }
+   ],
+   "maxCrawlDepth": 1,
+   "maxCrawlPages": 25,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "status": "ERROR HTTPError: HTTP Error 402: Payment Required",
+  "secs": 1,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cooler",
+  "query": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html"
+    }
+   ],
+   "maxCrawlDepth": 1,
+   "maxCrawlPages": 25,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "run_id": "gVI4gU6aUEA33Rfb4",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.011645231313842866,
+  "items": 1,
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "cards": 0,
+  "maker_models": 0,
+  "secs": 31,
+  "approval": "Anoop, confirmed in this session (and in the planning chat 2026-10-24 17:20 PDT), cap 5 USD; cap $5.00"
+ },
+ {
+  "part": "cpu",
+  "query": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/cpus.html"
+    }
+   ],
+   "maxCrawlDepth": 0,
+   "maxCrawlPages": 1,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "run_id": "09ZMfxiud0oQYEJor",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.002976893824181623,
+  "items": 1,
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "cards": 59,
+  "maker_models": 4,
+  "secs": 14,
+  "approval": "Anoop, confirmed in this session; retry of 4 Central Computers pages that returned 402 under the same 5 USD cap; cap $1.00"
+ },
+ {
+  "part": "motherboard",
+  "query": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/motherboards.html"
+    }
+   ],
+   "maxCrawlDepth": 0,
+   "maxCrawlPages": 1,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "run_id": "Wd1BJt0cT5FSZmez0",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0034477745326608415,
+  "items": 1,
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "cards": 60,
+  "maker_models": 0,
+  "secs": 14,
+  "approval": "Anoop, confirmed in this session; retry of 4 Central Computers pages that returned 402 under the same 5 USD cap; cap $1.00"
+ },
+ {
+  "part": "memory",
+  "query": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/memory.html"
+    }
+   ],
+   "maxCrawlDepth": 0,
+   "maxCrawlPages": 1,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "run_id": "Y7XBfjfd1cXPXAkm0",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0025630308411270382,
+  "items": 1,
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "cards": 60,
+  "maker_models": 0,
+  "secs": 10,
+  "approval": "Anoop, confirmed in this session; retry of 4 Central Computers pages that returned 402 under the same 5 USD cap; cap $1.00"
+ },
+ {
+  "part": "storage",
+  "query": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+  "store": "centralcomputers",
+  "actor": "apify/website-content-crawler",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html"
+    }
+   ],
+   "maxCrawlDepth": 0,
+   "maxCrawlPages": 1,
+   "crawlerType": "cheerio",
+   "saveMarkdown": true
+  },
+  "run_id": "xxaoicCcDKhzejy5C",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0030677510394470555,
+  "items": 1,
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "cards": 60,
+  "maker_models": 0,
+  "secs": 11,
+  "approval": "Anoop, confirmed in this session; retry of 4 Central Computers pages that returned 402 under the same 5 USD cap; cap $1.00"
  }
 ]

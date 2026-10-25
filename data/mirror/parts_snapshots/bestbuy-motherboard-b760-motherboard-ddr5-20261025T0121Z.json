@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bestbuy:7032501fb0bd",
+  "category": "motherboard",
+  "name": "MSI - B760 GAMING PLUS WIFI LGA 1700 DDR5 ATX - SATA 6Gbps, Wi-Fi 6E, PCIe 4.0",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 211.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/msi-b760-gaming-plus-wifi-lga-1700-ddr5-atx-sata-6gbps-wi-fi-6e-pcie-4-0/J3P7TXLSJZ/sku/11061905",
+  "snapshot_id": "bestbuy-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:31+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/msi-b760-gaming-plus-wifi-lga-1700-ddr5-atx-sata-6gbps-wi-fi-6e-pcie-4-0/J3P7TXLSJZ/sku/11061905",
+   "price": 211.99,
+   "was_price": 211.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:e616939e95b3",
+  "category": "motherboard",
+  "name": "GIGABYTE - B760M DS3H WIFI6E GEN5 LGA 1700 DDR5 M.2 PCIe 5.0 USB 3.2 Type-C 2.5GbE LAN",
+  "model_number": "B760M DS3H WIFI6E GEN5",
+  "condition": "new",
+  "attrs": {},
+  "price": 161.49,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-b760m-ds3h-wifi6e-gen5-lga-1700-ddr5-m-2-pcie-5-0-usb-3-2-type-c-2-5gbe-lan/J3ZW9X73ZG/sku/11944735",
+  "snapshot_id": "bestbuy-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:31+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-b760m-ds3h-wifi6e-gen5-lga-1700-ddr5-m-2-pcie-5-0-usb-3-2-type-c-2-5gbe-lan/J3ZW9X73ZG/sku/11944735",
+   "price": 161.49,
+   "was_price": 185.73,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:4bc5fc02b146",
+  "category": "motherboard",
+  "name": "GIGABYTE - B650 EAGLE AX (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - Black",
+  "model_number": "B650 EAGLE AX",
+  "condition": "new",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-b650-eagle-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92VHW2/sku/6582206",
+  "snapshot_id": "bestbuy-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:31+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-b650-eagle-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92VHW2/sku/6582206",
+   "price": 139.99,
+   "was_price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:ed012bd6079b",
+  "category": "motherboard",
+  "name": "GIGABYTE - B650 AORUS ELITE AX (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - Black",
+  "model_number": "B650 AORUS ELITE AX",
+  "condition": "new",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-b650-aorus-elite-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92V2KF/sku/6523178",
+  "snapshot_id": "bestbuy-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:31+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-b650-aorus-elite-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92V2KF/sku/6523178",
+   "price": 159.99,
+   "was_price": 229.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]

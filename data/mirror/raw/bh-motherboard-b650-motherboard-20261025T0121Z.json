@@ -1,0 +1,88 @@
+[
+ {
+  "name": "ASUS ROG STRIX B650-A GAMING WIFI AM5 ATX Motherboard",
+  "price": 159.99,
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1730802-REG/asus_rog_strix_b650_a_gaming.html",
+  "sku": 1730802,
+  "mpn": "ROG STRIX B650-A GAMING WIFI",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipTime": "2-4  Weeks",
+   "shipsAlone": false,
+   "shipTimeMessageType": "EXPECTED_AVAILABLITY_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "ASUS B650E MAX GAMING WIFI AM5 ATX Motherboard",
+  "price": 167.32,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1957666-REG/asus_b650e_max_gaming_wifi.html",
+  "sku": 1957666,
+  "mpn": "B650E MAX GAMING WIFI",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "CALCULATE_SHIPPING",
+   "shippingLongMessageType": "CALCULATE_SHIPPING",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "ASUS TUF GAMING B650E-PLUS WIFI AM5 ATX Motherboard",
+  "price": 149.99,
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1896718-REG/asus_tuf_gaming_b650e_plus_wifi.html",
+  "sku": 1896718,
+  "mpn": "TUF GAMING B650E-PLUS WIFI",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipTime": "Oct 30, 2026",
+   "shipsAlone": false,
+   "shipTimeMessageType": "EXPECTED_AVAILABLITY_DATE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Gigabyte B650 AORUS ELITE AX AM5 ATX Motherboard",
+  "price": 159.99,
+  "in_stock": false,
+  "stock_availability": "discontinued",
+  "url": "https://www.bhphotovideo.com/c/product/1736690-REG/gigabyte_b650_aorus_elite_ax.html",
+  "sku": 1736690,
+  "mpn": "B650 AORUS ELITE AX",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "NO_MESSAGE",
+   "shippingLongMessageType": "NO_MESSAGE",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ }
+]
