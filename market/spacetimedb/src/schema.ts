@@ -474,6 +474,9 @@ export const TelemetryRow = t.object('TelemetryRow', {
   roundP50Ms: t.u32(), roundP95Ms: t.u32(),
 });
 export const AgentBuyerContactRow = t.object('AgentBuyerContactRow', { buyerId: t.string(), displayName: t.string(), phone: t.string() });
+// #449 item 3: referee-only reads of the approval and payment tables (no ids), for the buyer agent's readback.
+export const AgentApprovalRow = t.object('AgentApprovalRow', { mandateHash: t.string(), method: t.string(), approvedBy: t.string(), at: t.timestamp(), voiceApprovalId: t.string() });
+export const AgentPaymentRow = t.object('AgentPaymentRow', { mandateHash: t.string(), paymentRef: t.string(), amount: t.f64(), mode: t.string(), at: t.timestamp() });
 export const TelemetryAgentRow = t.object('TelemetryAgentRow', { agent: t.string(), events: t.u32() });
 
 const spacetimedb = schema({

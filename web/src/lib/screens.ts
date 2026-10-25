@@ -10,7 +10,8 @@ export interface GoalView {
   id: string;
   text: string; // the buyer's own words
   type: "budget_cap" | "part_by_date" | "build_by_date";
-  state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED";
+  state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED" | "FAILED";
+  latestNote?: string; // #449 item 3 PL-4: the newest notification text written for this goal ("" when none)
   cap: number;
   reserved: number;
   deadline: Date;
@@ -241,21 +242,43 @@ export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItem
   return g ? goalView(g, items, allowance) : null;
 }
 
-const OPEN_GOAL_STATES = ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "PAUSED"];
+const OPEN_GOAL_STATES = ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "PAUSED"]; // DONE, EXPIRED and FAILED are closed
+
+/** Plain words for the goal pill. FAILED is "Could not finish" so a buyer never reads an error code. */
+export function stateLabel(state: GoalView["state"]): string {
+  if (state === "DONE") return "Done";
+  if (state === "HOLD_FOR_CALL") return "Hold for call";
+  if (state === "FAILED") return "Could not finish";
+  return state.toLowerCase().replaceAll("_", " ");
+}
+
+interface GoalNoteRow { id: bigint; goalId: string; klass: string; text: string }
+
+/** The text of the newest state note (highest id, klass "state") for each goal id. Veto and other notes are feed lines, not the card's
+ * state. Notes with no goal id belong to no card. */
+function latestNotes(notes: readonly GoalNoteRow[]): Map<string, string> {
+  const best = new Map<string, GoalNoteRow>();
+  for (const n of notes) {
+    const cur = best.get(n.goalId);
+    if (n.goalId && n.klass === "state" && (!cur || cur.id < n.id)) best.set(n.goalId, n);
+  }
+  return new Map([...best].map(([k, v]) => [k, v.text]));
+}
 
 /**
  * One buyer's goals, open searches first and newest first within each group. Rows owned by anyone else (a stale
  * cache from a previous identity) and another buyer's allowance are dropped. Display hygiene only: the market's
  * my_* views are what authorize, this just keeps a stale row from rendering.
  */
-export function goalsForBuyer(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined, buyerId: string): GoalView[] {
+export function goalsForBuyer(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined, buyerId: string, notes: readonly GoalNoteRow[] = []): GoalView[] {
   if (!buyerId) return [];
+  const latest = latestNotes(notes);
   const mine = allowance?.buyerId === buyerId ? allowance : undefined;
   const open = (g: GoalRow) => (OPEN_GOAL_STATES.includes(g.state) ? 0 : 1);
   return goals
     .filter((g) => g.buyerId === buyerId)
     .sort((a, b) => open(a) - open(b) || (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1))
-    .map((g) => goalView(g, items, mine));
+    .map((g) => ({ ...goalView(g, items, mine), latestNote: latest.get(g.id) ?? "" }));
 }
 
 interface RoleRow { role: string; subjectId: string }

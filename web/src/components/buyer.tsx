@@ -4,7 +4,7 @@
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, winningBid } from "@/lib/screens";
+import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import type { CrsView } from "@/lib/crs";
 import { CrsSignal } from "./crs";
@@ -40,6 +40,7 @@ export function GoalCard({ goal }: { goal: GoalView }) {
         <Stat label="Deadline" value={goal.deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} />
         <Stat label="Reserved" value={money(goal.reserved)} sub={goal.state === "DONE" ? "released after payment" : undefined} />
       </dl>
+      {goal.latestNote && <p className="mt-2.5 text-[13px] text-muted">{goal.latestNote}</p>}
       {goal.skipped.map((s) => (
         <p key={s.part} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the {s.part}.</b> {s.text}</p>
       ))}
@@ -48,9 +49,9 @@ export function GoalCard({ goal }: { goal: GoalView }) {
 }
 
 export function StatePill({ state }: { state: GoalView["state"] }) {
-  if (state === "DONE") return <Pill tone="done">Done</Pill>;
-  if (state === "HOLD_FOR_CALL") return <Pill tone="hold">Hold for call</Pill>;
-  return <Pill tone="hunting">{state.toLowerCase().replaceAll("_", " ")}</Pill>;
+  if (state === "DONE") return <Pill tone="done">{stateLabel(state)}</Pill>;
+  if (state === "HOLD_FOR_CALL" || state === "FAILED") return <Pill tone="hold">{stateLabel(state)}</Pill>;
+  return <Pill tone="hunting">{stateLabel(state)}</Pill>;
 }
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */

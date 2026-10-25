@@ -29,7 +29,7 @@ export default function BuyerPage() {
   const [checks] = useTable(tables.myBidChecks);
   const [deals] = useTable(tables.myDeals);
 
-  const goals = useMemo(() => goalsForBuyer(goalRows, goalItems, allowances[0], buyerId), [goalRows, goalItems, allowances, buyerId]);
+  const goals = useMemo(() => goalsForBuyer(goalRows, goalItems, allowances[0], buyerId, notes), [goalRows, goalItems, allowances, buyerId, notes]);
   const allowance = useMemo(() => allowanceForBuyer(allowances, buyerId), [allowances, buyerId]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
