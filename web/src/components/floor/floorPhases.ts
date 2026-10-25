@@ -119,16 +119,20 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
   const scene = projectArenaScene(rows);
   const part = scene.requestLabel || "Part";
 
-  if (scene.phase === "open") {
+  const sealed = (callText: string | null, pip: string[]): FloorScript => {
     const round = rows.rounds.find((r) => r.id === scene.roundId);
     const origin = round?.origin === "LIVE" || round?.origin === "MIRROR" ? round.origin : "SIM";
     const n = Math.max(scene.sealedCount, 0);
     const sellers: FloorSeller[] = Array.from({ length: n }, (_, i) => ({ id: `sealed-${i + 1}`, name: `Seller ${i + 1}`, origin, slot: ((i % 4) + 1) as Slot }));
     const b = new Builder(sellers.map((s) => s.id), {}, 1, part);
-    b.pip = [`${n} sealed ${n === 1 ? "bid is" : "bids are"} in. Prices stay hidden until the round closes.`];
-    b.push(0, "sealed");
+    b.pip = pip;
+    b.push(0, "sealed", { callText });
     return { sim: origin === "SIM", part, sellers, phases: b.phases, duration: 24 };
-  }
+  };
+  const bids = `${Math.max(scene.sealedCount, 0)} sealed ${scene.sealedCount === 1 ? "bid is" : "bids are"} in.`;
+  if (scene.phase === "open") return sealed(null, [`${bids} Prices stay hidden until the round closes.`]);
+  if (scene.phase === "closing") return sealed("Round closed. Waiting for the referee's result.", [`${bids} Prices stay hidden until the referee's result.`]);
+  if (scene.phase === "closed" && scene.offers.length === 0) return sealed("Round closed. No offer passed the checks.", []);
 
   if ((scene.phase !== "closed" && scene.phase !== "inconsistent") || scene.offers.length === 0) return REFERENCE;
 

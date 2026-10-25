@@ -76,6 +76,24 @@ test("floorScript(gpu-open) never shows a price", () => {
   assert.equal(s.sellers.length, 3);
 });
 
+test("a closing round stays sealed with the waiting call, never REFERENCE", () => {
+  const open = SAMPLES["gpu-open"];
+  const s = floorScript({ ...open, rounds: open.rounds.map((r) => ({ ...r, state: "closed" })) });
+  assert.notEqual(s, REFERENCE);
+  assert.equal(s.sellers.length, 3);
+  for (const p of s.phases) for (const v of Object.values(p.sellers)) assert.equal(v.price, null);
+  assert.equal(s.phases[0]!.callText, "Round closed. Waiting for the referee's result.");
+});
+
+test("a closed round with no offers says no offer passed", () => {
+  const open = SAMPLES["gpu-open"];
+  const closedEvent = { ...SAMPLES.gpu.events.find((e) => e.kind === "auction_closed")!, refId: open.rounds[0]!.id, sellerId: "" };
+  const s = floorScript({ ...open, rounds: open.rounds.map((r) => ({ ...r, state: "closed" })), results: [], events: [closedEvent] });
+  assert.notEqual(s, REFERENCE);
+  assert.equal(s.phases[0]!.callText, "Round closed. No offer passed the checks.");
+  for (const v of Object.values(s.phases[0]!.sellers)) assert.equal(v.price, null);
+});
+
 test("phaseAt wraps and clamps", () => {
   assert.equal(phaseAt(REFERENCE, 0), REFERENCE.phases[0]);
   assert.equal(phaseAt(REFERENCE, 4), REFERENCE.phases.find((p) => p.at === 3.6));

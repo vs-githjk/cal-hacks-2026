@@ -24,12 +24,15 @@ const subscribeResize = (cb: () => void) => {
   window.addEventListener("resize", cb);
   return () => window.removeEventListener("resize", cb);
 };
+const subscribeNone = () => () => {};
 const windowSize = () => `${window.innerWidth}x${window.innerHeight}`;
 
 export default function FloorPage() {
-  // Read once on mount from window.location, not with useSearchParams (cacheComponents would demand a Suspense boundary for it).
-  const [params] = useState(() => {
-    const q = new URLSearchParams(window.location.search);
+  // Read from window.location, not with useSearchParams (cacheComponents would demand a Suspense boundary for it); null while server rendering.
+  const search = useSyncExternalStore(subscribeNone, () => window.location.search, () => null);
+  const params = useMemo(() => {
+    if (search === null) return null;
+    const q = new URLSearchParams(search);
     const sample = q.get("sample");
     return {
       replay: q.get("replay") === "reference",
@@ -38,7 +41,8 @@ export default function FloorPage() {
       paused: q.get("paused") === "1",
       sample: sample !== null && Object.hasOwn(SAMPLES, sample) ? (sample as SampleName) : null,
     };
-  });
+  }, [search]);
+  if (!params) return null;
   return params.replay ? <ReplayView theme={params.theme} t={params.t} /> : <FloorView theme={params.theme} sample={params.sample} t={params.t} paused={params.paused} />;
 }
 
@@ -97,7 +101,7 @@ function FloorView({ theme: initialTheme, sample, t, paused }: { theme: Theme; s
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-white/10 pb-3">
         <h1 className="text-[18px] font-bold tracking-[-0.01em]">Floor</h1>
         <p className="text-[14px] text-[#8fa0b2]">
-          {!sample && !conn.isActive ? "Connecting to the market..." : script.sim ? "A labelled SIM round, until the market has bids." : "The market, live."}
+          {!sample && !conn.isActive ? "Connecting to the market..." : script === REFERENCE ? "No round on the market yet. Playing the reference round (SIM)." : script.sim ? "A SIM round on the market." : "The market, live."}
         </p>
       </div>
       <div ref={box} className="mx-auto w-full min-w-0 max-w-full" style={{ maxWidth: MAX_STAGE }}>
