@@ -202,6 +202,20 @@ body {
   box-shadow: var(--shadow-card), var(--shadow-focus);
 }
 
+/* The top nav scrolls sideways on a phone: fade the edge that hides more links (data attributes set in shell.tsx). */
+[data-nav-scroll][data-more-right="true"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+[data-nav-scroll][data-more-left="true"] {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent);
+}
+[data-nav-scroll][data-more-left="true"][data-more-right="true"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
 /* Pressed state: scale 0.98 over 160 ms. */
 .btn {
   transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out), background-color var(--t-fast) var(--ease-out);

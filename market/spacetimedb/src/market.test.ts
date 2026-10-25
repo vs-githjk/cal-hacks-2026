@@ -783,11 +783,15 @@ describe('record_payment mode (sim or stripe_test)', () => {
     expect(h.db.payment.mandateHash.find('h1')!.mode).toBe('sim');
   });
 
-  it('a Stripe test payment says Stripe test mode and is tagged LIVE', () => {
+  it('a Stripe test payment says Stripe test mode and is tagged SANDBOX, never LIVE (#449 RT-32)', () => {
     ready();
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'stripe_test' }));
     expect(last().label).toMatch(/Stripe test mode/);
-    expect(last().origin).toBe('LIVE');
+    expect(last().label).toMatch(/SANDBOX/);
+    expect(last().label).not.toMatch(/LIVE/);
+    expect(last().origin).toBe('SANDBOX');
+    expect(m.PAYMENT_MODES.stripe_test.origin).toBe('SANDBOX');
+    expect(m.PAYMENT_MODES.sim.origin).toBe('SIM');
     expect(h.db.payment.mandateHash.find('h1')!.mode).toBe('stripe_test');
   });
 

@@ -1,6 +1,7 @@
 "use client";
 // The header and the run mode footer for every page (design system v2 Nav).
 
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
@@ -8,6 +9,7 @@ import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
 import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
 import { BRAND } from "@/lib/brand";
+import { navEdges, scrollToShow } from "@/lib/navScroll";
 import { BrandMark, Wordmark } from "./BrandMark";
 
 const NAV: { href: string; label: string; match?: string }[] = [
@@ -50,18 +52,45 @@ export function AppHeader() {
           )}
         </div>
       </nav>
-      <div className="mx-auto mb-1 flex w-max max-w-full gap-1 overflow-x-auto [scrollbar-width:none] sm:hidden">{links}</div>
+      <NavScroll path={path} className="mx-auto mb-1 flex w-max max-w-full gap-1 overflow-x-auto [scrollbar-width:none] sm:hidden">{links}</NavScroll>
     </header>
   );
 }
 
+/** The phone nav row. On a 390 px phone the links scroll sideways; a fade on the edge that hides more links says so (#449 RT-33),
+ * and the current page's link is scrolled into view. The fade is a CSS mask driven by data-more-left / data-more-right. */
+function NavScroll({ path, className, children }: { path: string; className: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const measure = useCallback(() => {
+    const el = box.current;
+    if (el) setEdges(navEdges(el));
+  }, []);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const observer = new ResizeObserver(measure);   // also fires once on observe(), which sets the first state
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measure]);
+  useEffect(() => {
+    const el = box.current;
+    const current = el?.querySelector<HTMLElement>("[aria-current='page']");
+    if (el && current) el.scrollLeft = scrollToShow(el, current);
+  }, [path]);
+  return (
+    <div ref={box} onScroll={measure} data-nav-scroll data-more-left={edges.left} data-more-right={edges.right} className={className}>
+      {children}
+    </div>
+  );
+}
 
 /** Kept for screens that showed the old ring mark: now the Fish Market tile. `spin` is accepted and ignored. */
 export function Mark({ size = 24 }: { size?: number; spin?: boolean }) {
   return <BrandMark size={size} />;
 }
 
-const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint-mark", mirror: "bg-slate", sim: "bg-amber", none: "bg-slate opacity-40" };
+const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint-mark", mirror: "bg-slate", sandbox: "bg-mint", sim: "bg-amber", none: "bg-slate opacity-40" };
 
 /** Footer: one honest line about what ran. Each service's dot comes from the origin tags on the floor events it wrote (lib/runMode.ts), never a hardcoded claim. */
 export function RunModeFooter() {

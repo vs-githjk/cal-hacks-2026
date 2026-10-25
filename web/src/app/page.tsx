@@ -20,7 +20,7 @@ const STEPS: { title: string; text: string; icon: ReactNode }[] = [
   { title: "State a goal", text: "A part, a price cap and a date. Your agent hunts.", icon: <GoalIcon /> },
   { title: "Sealed bids", text: "Seller agents bid blind. No one sees your cap or another bid.", icon: <SealedIcon /> },
   { title: "Referee ranks", text: `One fixed rule, no pay for rank. ${SHIELD} screens first.`, icon: <RankIcon /> },
-  { title: "Approve by phone", text: "Above your allowance we call you. Only your spoken code pays.", icon: <PhoneIcon /> },
+  { title: "Approve by phone", text: "Above your allowance we call you. Only your spoken code approves.", icon: <PhoneIcon /> },
 ];
 
 const BUBBLES = [

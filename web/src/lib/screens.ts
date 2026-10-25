@@ -4,7 +4,11 @@
 // approval and receipt cards need rows not yet in the public bindings (bidCheck, mandate, approval, payment),
 // so they take plain props and are fed from demo/out/sample-run.json until those tables are exposed.
 
+import { asChipOrigin, type ChipOrigin } from "./origin.ts";
+
 export type Origin = "LIVE" | "MIRROR" | "SIM";
+/** What a floor event can carry: a bid's three origins, plus SANDBOX for a vendor's test mode (a Stripe test charge, #449 RT-32). */
+export type EventOrigin = ChipOrigin;
 
 export interface GoalView {
   id: string;
@@ -118,7 +122,7 @@ export interface ReceiptView {
 }
 
 export type FeedKind = "deal" | "bid" | "veto" | "block" | "progress";
-export interface FeedItem { key: string; at: Date; kind: FeedKind; title: string; text: string; origin?: Origin }
+export interface FeedItem { key: string; at: Date; kind: FeedKind; title: string; text: string; origin?: EventOrigin }
 
 export interface RoundView {
   id: string;
@@ -157,7 +161,7 @@ export interface LearningView {
   control: string;
 }
 
-export interface FloorEventView { key: string; at: Date; kind: string; label: string; origin: Origin; ref: string }
+export interface FloorEventView { key: string; at: Date; kind: string; label: string; origin: EventOrigin; ref: string }
 
 // ---- Row to view mapping (see docs/design/2026-10-23-web/README.md). Plain row shapes so this stays testable.
 
@@ -167,6 +171,7 @@ import { safeUrl } from "./url.ts";
 
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 export const asOrigin = (o: string): Origin => (o === "LIVE" || o === "MIRROR" ? o : "SIM");
+export const asEventOrigin = (o: string): EventOrigin => asChipOrigin(o);
 
 /** The round's winning bid, whatever its origin (the market and the producer enforce eligibility). */
 export function winningBid<T extends { won?: boolean }>(bids: readonly T[]): T | undefined {
@@ -364,7 +369,7 @@ interface NoteRow { id: bigint; klass: string; text: string; at: Timestamp }
 export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[]): FeedItem[] {
   const fromEvents = events.flatMap((e): FeedItem[] => {
     const kind = classify(e.kind, e.label);
-    return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: e.label, origin: asOrigin(e.origin) }] : [];
+    return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: e.label, origin: asEventOrigin(e.origin) }] : [];
   });
   const fromNotes = notes.map((n): FeedItem => {
     const kind: FeedKind = n.klass === "veto" ? "veto" : "progress";
@@ -431,7 +436,7 @@ export function linesFromRows(results: readonly ResultRow[], events: readonly Ev
 export function eventsFromRows(events: readonly EventRow[]): FloorEventView[] {
   return [...events]
     .sort((a, b) => (a.id < b.id ? 1 : -1))
-    .map((e) => ({ key: String(e.id), at: d(e.at), kind: e.kind, label: e.label, origin: asOrigin(e.origin), ref: `${e.refTable}/${e.refId}` }));
+    .map((e) => ({ key: String(e.id), at: d(e.at), kind: e.kind, label: e.label, origin: asEventOrigin(e.origin), ref: `${e.refTable}/${e.refId}` }));
 }
 
 export function originCounts(items: readonly { origin: Origin }[]): { LIVE: number; MIRROR: number; SIM: number } {

@@ -1081,7 +1081,8 @@ export function denyApproval(ctx: Ctx, a: { mandateHash: string; reason: string 
 /** INVARIANT-1: no payment row without an approval row for the same mandate hash. */
 export const PAYMENT_MODES: Record<string, { label: string; origin: string }> = {
   sim: { label: 'Payment recorded (SIM stub, no money moved)', origin: 'SIM' },
-  stripe_test: { label: 'Payment recorded (Stripe test mode)', origin: 'LIVE' },
+  // #449 RT-32: Stripe's test API is a vendor sandbox, not a live payment: SANDBOX (docs/ARCHITECTURE.md), never LIVE.
+  stripe_test: { label: 'Payment recorded (SANDBOX: Stripe test mode, no real money)', origin: 'SANDBOX' },
 };
 
 /** `mode` says how the money moved, so the label is honest: sim (our stub) or stripe_test (Stripe's test API). */

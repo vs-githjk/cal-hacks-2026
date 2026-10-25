@@ -33,7 +33,7 @@ export function HowItWorks() {
     <section aria-label="How it works">
       <h2 className="text-center font-display text-[clamp(26px,3.4vw,38px)] font-normal">How the arena works</h2>
       <p className="mx-auto mt-2 max-w-[60ch] text-center text-[17px] text-ink-2">
-        Five steps, every time. Nothing is paid until you say the word.
+        Five steps, every time. Inside your allowance a deal can pay on its own; above it, nothing is paid until you approve by phone.
       </p>
       <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {BEATS.map((b, i) => (
@@ -65,8 +65,8 @@ export function Sides() {
         </p>
         <ul className="grid gap-2 text-[15px] text-ink-2">
           <li className="flex gap-2"><span className="text-mint" aria-hidden>✓</span>Never overpay: sellers compete in a sealed round, so the price is the real price.</li>
-          <li className="flex gap-2"><span className="text-mint" aria-hidden>✓</span>Never get scammed: every claim is checked against the live listing, with a source.</li>
-          <li className="flex gap-2"><span className="text-mint" aria-hidden>✓</span>Never lose control: nothing is paid without your spoken approval.</li>
+          <li className="flex gap-2"><span className="text-mint" aria-hidden>✓</span>Never get scammed: each claim is checked against the seller&apos;s own listing page when it can be read, with a source.</li>
+          <li className="flex gap-2"><span className="text-mint" aria-hidden>✓</span>Never lose control: inside the allowance you set, a deal can pay on its own; above it, only your phone call approves.</li>
         </ul>
         <Link href="/buyer" className="btn mt-auto inline-flex min-h-12 w-fit items-center gap-2 rounded-full bg-accent px-6 text-[15px] font-semibold text-accent-ink">
           Open the buyer screen <span aria-hidden>→</span>
