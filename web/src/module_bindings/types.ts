@@ -480,3 +480,31 @@ export const StrategyStep = __t.object("StrategyStep", {
 });
 export type StrategyStep = __Infer<typeof StrategyStep>;
 
+export const Telemetry = __t.object("Telemetry", {});
+export type Telemetry = __Infer<typeof Telemetry>;
+
+export const TelemetryAgent = __t.object("TelemetryAgent", {});
+export type TelemetryAgent = __Infer<typeof TelemetryAgent>;
+
+export const TelemetryAgentRow = __t.object("TelemetryAgentRow", {
+  agent: __t.string(),
+  events: __t.u32(),
+});
+export type TelemetryAgentRow = __Infer<typeof TelemetryAgentRow>;
+
+export const TelemetryRow = __t.object("TelemetryRow", {
+  accountsCreated: __t.u32(),
+  goalsPosted: __t.u32(),
+  roundsOpened: __t.u32(),
+  roundsClosed: __t.u32(),
+  bids: __t.u32(),
+  shieldCatches: __t.u32(),
+  callsPlaced: __t.u32(),
+  approvals: __t.u32(),
+  denials: __t.u32(),
+  errors: __t.u32(),
+  roundP50Ms: __t.u32(),
+  roundP95Ms: __t.u32(),
+});
+export type TelemetryRow = __Infer<typeof TelemetryRow>;
+

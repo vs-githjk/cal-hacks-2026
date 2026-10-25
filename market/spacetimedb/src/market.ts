@@ -976,3 +976,49 @@ export function myBuyerProfileView(ctx: VCtx) {
   const row = id ? ctx.db.buyerProfile.buyerId.find(id) : undefined;
   return row ? [row] : [];
 }
+
+// ---------------------------------------------------------------- #374 public telemetry
+// Counts only. No amounts, prices, payees, phones or names; nothing per user.
+
+const pct = (sorted: number[], p: number) => (sorted.length ? sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]! : 0);
+
+export function telemetryView(ctx: AVCtx) {
+  const count = (it: Iterable<unknown>) => { let n = 0; for (const _ of it) n++; return n; };
+  const durations: number[] = [];
+  let roundsOpened = 0, roundsClosed = 0;
+  for (const r of ctx.db.round.iter()) {
+    roundsOpened++;
+    if (r.state === 'closed' && r.closedAt) { roundsClosed++; durations.push(Math.max(0, ms(r.closedAt) - ms(r.openedAt))); }
+  }
+  durations.sort((a, b) => a - b);
+  let accountsCreated = 0;
+  for (const p of ctx.db.buyerProfile.iter()) if (p.buyerId.startsWith('b_')) accountsCreated++; // self sign-ups
+  let shieldCatches = 0;
+  for (const c of ctx.db.bidCheck.iter()) if (c.kind === 'shield' && c.result !== 'allow') shieldCatches++; // Shield quarantine or block
+  let denials = 0, errors = 0;
+  for (const x of ctx.db.rejectedAttempt.iter()) {
+    if (x.kind === 'approval' && x.reason.startsWith('Approval denied')) denials++; // deny_approval writes this row
+    else errors++; // every other refused attempt
+  }
+  return [{
+    accountsCreated,
+    goalsPosted: count(ctx.db.goal.iter()), // goal rows
+    roundsOpened, // round rows
+    roundsClosed, // rounds with state closed and a close time
+    bids: count(ctx.db.bid.iter()), // bid rows
+    shieldCatches,
+    callsPlaced: count(ctx.db.approvalCode.iter()), // approval_code rows: one per approval call issued
+    approvals: count(ctx.db.approval.iter()), // approval rows
+    denials,
+    errors,
+    roundP50Ms: pct(durations, 50), // closedAt minus openedAt, nearest rank
+    roundP95Ms: pct(durations, 95),
+  }];
+}
+
+/** One row per agent name in agent_event, sorted by name. */
+export function telemetryAgentView(ctx: AVCtx) {
+  const by = new Map<string, number>();
+  for (const e of ctx.db.agentEvent.iter()) by.set(e.agentName, (by.get(e.agentName) ?? 0) + 1);
+  return [...by].map(([agent, events]) => ({ agent, events })).sort((a, b) => (a.agent < b.agent ? -1 : a.agent > b.agent ? 1 : 0));
+}

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { ConnectionId, TimeDuration, Timestamp, type Identity } from 'spacetimedb';
 import { createModuleTestHarness, TestAuth } from 'spacetimedb/server/test-utils';
 import type { InferSchema } from 'spacetimedb/server';
-import spacetimedb from './schema';
+import spacetimedb, { TelemetryAgentRow, TelemetryRow } from './schema';
 import * as mod from './index';
 import * as m from './market';
 
@@ -1605,5 +1605,42 @@ describe('#374 sign_up_buyer', () => {
     expect(v).toHaveLength(1);
     expect(v[0]!.role).toBe('owner');
     expect(m.myRoleView(h.viewContext(STRANGER) as any)).toEqual([]);
+  });
+});
+
+describe('#374 telemetry', () => {
+  const AGENT = 'agent1q' + 'a'.repeat(24);
+  const telemetry = () => run(STRANGER, (ctx) => m.telemetryView(ctx));
+  const fieldNames = (row: any): string[] => {
+    const els = row.algebraicType.value.elements ?? [];
+    return els.map((e: any) => (typeof e.name === 'string' ? e.name : e.name?.value));
+  };
+
+  it('counts the market with one row and no per-user data', () => {
+    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const rows = telemetry();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ accountsCreated: 1, roundsOpened: 1, roundsClosed: 1, bids: 2, approvals: 0, denials: 0 });
+    expect(rows[0]!.roundP50Ms).toBeGreaterThan(0);
+    expect(rows[0]!.roundP95Ms).toBeGreaterThanOrEqual(rows[0]!.roundP50Ms);
+  });
+
+  it('telemetry_agent counts events per agent, sorted', () => {
+    for (const [name, n] of [['zed', 1], ['ada', 2]] as const)
+      for (let i = 0; i < n; i++) run(REF, (ctx) => m.recordAgentEvent(ctx, { agentName: name, address: AGENT, text: 't', ts: '', origin: 'SIM' }));
+    expect(run(STRANGER, (ctx) => m.telemetryAgentView(ctx))).toEqual([{ agent: 'ada', events: 2 }, { agent: 'zed', events: 1 }]);
+  });
+
+  it('row types carry no money, phone or name field', () => {
+    for (const row of [TelemetryRow, TelemetryAgentRow]) {
+      const names = fieldNames(row);
+      expect(names.length).toBeGreaterThan(1);
+      for (const n of names) expect(n).not.toMatch(/amount|price|total|cap|spend|limit|payee|phone|name|card|email/i);
+    }
   });
 });
