@@ -79,21 +79,23 @@ def test_a_call_that_blows_up_still_takes_the_code_down(tmp_path):
     assert len(calls(m, ISSUE)) == 1 and len(calls(m, CLEAR)) == 1
 
 
-def test_a_market_that_refuses_the_code_does_not_stop_the_call_and_the_console_says_where_the_code_is(tmp_path):
+def test_a_market_that_refuses_the_code_stops_the_build_before_any_call_and_the_console_says_why(tmp_path):
     m = FakeMarket()
     m.fail[ISSUE] = "issue_build_approval_code refused (no buyer with that id)"
     r, out, m, cart, notes = run(m, tmp_path=tmp_path)
-    assert out["status"] == "paid" and len(cart.calls) == 1
+    assert out["status"] == "denied" and cart.calls == [], "no call is placed without the code on /buyer"
+    assert "create_mandate" not in kinds(m) and "record_payment" not in kinds(m)
     assert calls(m, CLEAR) == [], "nothing was shown, so nothing to take down"
     text = "\n".join(notes)
-    assert "NOT on /buyer" in text and "no buyer with that id" in text and "console" in text
+    assert "NOT on /buyer" in text and "no buyer with that id" in text and "NOT placed" in text
+    assert "say approve" not in text and "on this console" not in text
 
 
-def test_a_market_that_was_not_republished_says_so_and_the_call_goes_on(tmp_path):
+def test_a_market_that_was_not_republished_says_so_and_no_call_is_placed(tmp_path):
     m = FakeMarket()
     m.fail[ISSUE] = "HTTP 404: No such procedure issue_build_approval_code"
     r, out, m, cart, notes = run(m, tmp_path=tmp_path)
-    assert out["status"] == "paid" and len(calls(m, CLEAR)) == 0
+    assert out["status"] == "denied" and cart.calls == [] and len(calls(m, CLEAR)) == 0
     assert any("NOT on /buyer" in n and "republished" in n for n in notes)
 
 
@@ -101,6 +103,7 @@ def test_typed_approval_in_the_module_keeps_the_code_off_the_screen(tmp_path, mo
     monkeypatch.setattr("demo.bridge.market_has_typed_approval", lambda *a, **k: True)
     r, out, m, cart, notes = run(tmp_path=tmp_path)
     assert calls(m, ISSUE) == [] and calls(m, CLEAR) == []
+    assert out["status"] == "denied" and cart.calls == []
     assert any("NOT on /buyer" in n and "approve_typed" in n for n in notes)
 
 
