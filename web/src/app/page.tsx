@@ -43,7 +43,7 @@ export default function Home() {
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#eaf7fc_0%,#d4edf8_55%,#eef3f8_100%)] px-4">
+      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#d7eef9_0%,#d4edf8_45%,#eef3f8_100%)] px-4 pt-[84px] max-md:-mt-[132px] max-md:pt-[132px]">
         <div className="fm-caustic" aria-hidden />
         <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.22)]" aria-hidden />
         <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.12)]" aria-hidden />
