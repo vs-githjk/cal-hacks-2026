@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { approvalLabel, entryDate, fetchMemory, memoryForBuyer, paymentModeLabel, parseMemoryResponse, selectMemory, sourceUrl } from "./memory.ts";
+import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, parseMemoryResponse, selectMemory, sourceUrl } from "./memory.ts";
 
 const base = { at: "2026-10-24T10:00:00Z", origin: "SIM", source: "demo_run", source_ref: "run-1", buyer_id: "vidyut", seller_id: "fair-price-pc" };
 const purchase = (over: Record<string, unknown> = {}, detail: Record<string, unknown> = {}) => ({
@@ -230,4 +230,15 @@ test("approval is by phone call only: no typed-code field or wiring on /buyer, a
   }
   assert.match(readFileSync("src/components/buyer.tsx", "utf8"), /Only the call approves/);
   assert.equal(approvalLabel("typed_code"), "Typed code (retired)");
+});
+
+// ---- memoryFeed: a hosted page never fetches the loopback operator feed (RT-17).
+test("memoryFeed skips the loopback feed on a hosted page and uses it on a loopback page", () => {
+  assert.equal(memoryFeed("tech-bazaar.vercel.app", undefined), null);
+  assert.equal(memoryFeed("tech-bazaar.vercel.app", "http://127.0.0.1:8790"), null);
+  assert.equal(memoryFeed("tech-bazaar.vercel.app", "http://localhost:8790"), null);
+  assert.equal(memoryFeed("localhost", undefined), "http://127.0.0.1:8790");
+  assert.equal(memoryFeed("127.0.0.1", "http://127.0.0.1:8790/"), "http://127.0.0.1:8790");
+  assert.equal(memoryFeed("tech-bazaar.vercel.app", "https://feed.example/"), "https://feed.example");
+  assert.equal(memoryFeed("localhost", "not a url"), null);
 });

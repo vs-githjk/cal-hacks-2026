@@ -49,7 +49,7 @@ After restoring the advocate, the scheduled automatic retry visibly delivered a 
 
 The [Claude hub plan](https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU) names a Shield client among its agent roles. The sixth agent here adds that role while keeping the issue's buyer, advocate and three sellers. A separate seller gateway is not implemented.
 
-The [issue owner's October 23 update](https://github.com/vs-githjk/cal-hacks-2026/issues/14#issuecomment-6380938238) specifies local processes with Agentverse mailboxes and explicitly says no cloud server is needed. This updates the earlier cloud-hosting instruction in the plan. Keep the laptop awake during judging. Use the mailbox run instructions below.
+The [issue owner's October 23 update](https://github.com/vs-githjk/fish-market-nothing-fishy/issues/14#issuecomment-6380938238) specifies local processes with Agentverse mailboxes and explicitly says no cloud server is needed. This updates the earlier cloud-hosting instruction in the plan. Keep the laptop awake during judging. Use the mailbox run instructions below.
 
 ## Issue #143 offline containment probe
 

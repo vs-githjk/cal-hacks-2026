@@ -2,7 +2,7 @@
 // Recorded history only: every row is validated against the contract, a bad row is dropped and counted (never repaired),
 // and nothing here ranks, searches semantically, or joins rows that the source did not link.
 
-import { FEED_URL } from "./agentFeed.ts";
+import { FEED_ENV, FEED_URL, feedBase } from "./agentFeed.ts";
 import { safeUrl } from "./url.ts";
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
@@ -118,15 +118,20 @@ export function parseMemoryResponse(value: unknown): MemoryResponse {
   };
 }
 
+/** The memory feed to read from a page on `pageHost`, or null when this page must not fetch it (a loopback feed seen from a hosted page). Never throws. */
+export function memoryFeed(pageHost: string, env: string | undefined = FEED_ENV): string | null {
+  return feedBase(env, pageHost);
+}
+
 /** The one read path. Throws visibly (HTTP error, unreachable feed, not JSON, wrong shape); an aborted read rethrows its AbortError. */
-export async function fetchMemory(signal?: AbortSignal): Promise<MemoryResponse> {
+export async function fetchMemory(signal?: AbortSignal, feed: string = FEED_URL): Promise<MemoryResponse> {
   const aborted = (e: unknown) => !!signal?.aborted || (e as { name?: string } | null)?.name === "AbortError";
   let res: Response;
   try {
-    res = await fetch(`${FEED_URL}/v1/memory`, { signal, cache: "no-store" });
+    res = await fetch(`${feed}/v1/memory`, { signal, cache: "no-store" });
   } catch (e) {
     if (aborted(e)) throw e;
-    throw new Error(`memory feed unreachable at ${FEED_URL}`);
+    throw new Error(`memory feed unreachable at ${feed}`);
   }
   if (!res.ok) throw new Error(`memory feed answered HTTP ${res.status}`);
   let body: unknown;

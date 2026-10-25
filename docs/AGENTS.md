@@ -4,7 +4,7 @@ Read this first. Append what you learn at the bottom (one line, `[HH:MM] agent: 
 ## Ground truth (read, do not re-derive)
 - Product: Tech Bazaar, "the refereed arena for agent commerce". Security API: Bazaar Shield. Scope: all computer gear. Five beats: goal set; sellers bid + advocate vetoes a trap with source; Shield blocks an injected listing live; two-way call approves above allowance; losing seller gets loss report and learns.
 - Decisions: (conductor file) (LOCKED wins; SUPERSEDED lines at the end override older ones). Idea: (conductor file) (rulings at top). Lane plans: repo docs/kickoff/*.md.
-- Repo: github.com/vs-githjk/cal-hacks-2026. Main clone (local path) (watcher uses it; do not leave it dirty). Lane D worktree (local path) (branch lane-d-pay-trust).
+- Repo: github.com/vs-githjk/fish-market-nothing-fishy. Main clone (local path) (watcher uses it; do not leave it dirty). Lane D worktree (local path) (branch lane-d-pay-trust).
 - Only Vidyut and the conductor push to main. Teammates use PRs. Squash-merge on reviewer PASS.
 - Hub page: https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU (source (conductor file)). Survey: https://claude.ai/artifact/Mn4FGTUteLBhUiDJSRTvad.
 - Progress tracker: (conductor file) Review log: (conductor file)
