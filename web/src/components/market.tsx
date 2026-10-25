@@ -229,15 +229,15 @@ export function FloorEvents({ events, max = 60 }: { events: FloorEventView[]; ma
     <Card>
       <Label>Floor events</Label>
       {events.length === 0 ? (
-        <p className="text-muted">No events yet. Every reducer that moves the round writes one line here.</p>
+        <p className="text-muted">No events yet. Every step of a round writes one line here as it happens.</p>
       ) : (
         <ol className="grid">
           {events.slice(0, max).map((e) => (
             <li key={e.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(e.at)}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
-                <span className={`mb-px block text-[11px] font-bold uppercase tracking-[0.06em] ${KIND_STYLE[e.kind] ?? "text-muted"}`}>{e.kind}</span>
-                {e.label} <OriginChip origin={e.origin} /> <span className="font-mono text-[11px] text-muted">{e.ref}</span>
+                <span className={`mb-px block text-[11px] font-semibold uppercase tracking-[0.06em] ${KIND_STYLE[e.kind] ?? "text-muted"}`}>{e.kind.replaceAll("_", " ")}</span>
+                {e.label} <OriginChip origin={e.origin} />
               </span>
             </li>
           ))}
