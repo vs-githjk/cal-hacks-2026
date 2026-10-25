@@ -857,6 +857,14 @@ def test_web_no_phone_reports_a_terminal_state_in_plain_words(runtime, monkeypat
     assert not buyer.MARKET_REFEREE.record_payment.called
 
 
+def test_web_beta_limited_number_reports_failed_with_the_beta_limit_text(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b="": (None, "beta_limited", "Asha"))
+    _web_approval(buyer, monkeypatch)
+    assert _state_calls(buyer) == [(buyer.ROUND["goal"]["id"], "FAILED", buyer.BETA_LIMIT_TEXT)]
+    assert not buyer.MARKET_REFEREE.record_payment.called
+
+
 @pytest.mark.parametrize("kind,text", [("denied", "The approval call was not approved. Nothing was paid."),
                                         ("paused", "We could not reach you for the approval call. Nothing was paid.")])
 def test_web_denied_or_unanswered_call_reports_failed(runtime, monkeypatch, kind, text):

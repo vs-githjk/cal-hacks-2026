@@ -1332,6 +1332,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             transaction["phase"] = "expired"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=None, pending_hold=False, phase="done")
+            if web:  # the web goal card must show the terminal state, not stay on HUNTING
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT)
             await tell_owner(ctx, BETA_LIMIT_TEXT)
             return
         if client is None:
