@@ -33,8 +33,8 @@ const PREFS_KEY = "tb-agent-pip-2";
 const CORNER_CLASS: Record<Corner, string> = {
   br: "bottom-4 right-4",
   bl: "bottom-4 left-4",
-  tr: "top-4 right-4",
-  tl: "top-4 left-4",
+  tr: "top-[72px] right-4",
+  tl: "top-[72px] left-4",
 };
 // Plan and re-plan lines: the clash is the one red line, the swap and the lock are green, a budget move is amber.
 const PLAN_TONE: Partial<Record<StepKind, string>> = { plan: "text-ink-2", clash: "text-coral", knockout: "text-coral", swap: "text-accent", locked: "text-mint", reallocate: "text-accent", blocked: "text-coral" };
@@ -187,6 +187,7 @@ function AgentPipTile() {
         <span className="min-w-0 flex-1 truncate font-semibold" aria-live="polite">
           {head}
         </span>
+        {head === planHead && <OriginChip origin={liveBuild?.origin ?? "SIM"} />}
         <button
           type="button"
           onClick={() => update({ corner: NEXT_CORNER[prefs.corner] })}

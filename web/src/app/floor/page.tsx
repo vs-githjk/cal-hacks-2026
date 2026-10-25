@@ -358,6 +358,7 @@ function OffersList({ scene, reveal, picked, onPick }: { scene: ArenaScene; reve
   return (
     <>
       {scene.phase === "inconsistent" && <p className="mb-2 text-muted">The result rows disagree, so no winner is shown.</p>}
+      <p className="mb-1 px-2 text-[12px] text-muted">Prices are before sales tax.</p>
       <ul className="grid gap-1">
         {scene.offers.map((o) => {
           const shown = reveal.shown(o);
