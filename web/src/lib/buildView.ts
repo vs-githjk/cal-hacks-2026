@@ -94,7 +94,7 @@ export function toBuildResult(v: BuildView): BuildResult {
   const picks = Object.fromEntries(bought.flatMap((p) => (p.champion ? [[PANEL_KEY[p.part], { seller: p.champion.persona || p.champion.sellerId, priceCents: cents(p.champion.landed), name: p.label, origin: p.champion.origin }]] : [])));
   return {
     owned: Object.fromEntries(v.parts.filter((p) => p.status === "owned").map((p) => [PANEL_KEY[p.part], p.label])),
-    status: bought.some((p) => p.status === "failed") ? "blocked" : bought.length > 0 && bought.every((p) => p.champion) ? "locked" : "open",
+    status: bought.some((p) => p.status === "failed") ? "blocked" : v.rejected === 0 && bought.length > 0 && bought.every((p) => p.champion) ? "locked" : "open",
     totalCents: cents(v.spent),
     capCents: cents(v.budget),
     sellers: [...new Set(Object.values(picks).map((p) => p.seller))].sort(),
@@ -102,6 +102,7 @@ export function toBuildResult(v: BuildView): BuildResult {
     budgets: Object.fromEntries(bought.map((p) => [PANEL_KEY[p.part], cents(p.budget)])),
     steps,
     origin: v.origin,
+    rejected: v.rejected,
   };
 }
 

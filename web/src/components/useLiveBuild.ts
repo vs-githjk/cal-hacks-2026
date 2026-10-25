@@ -9,13 +9,13 @@ export function useLiveBuild(): BuildResult | null {
   const [build, setBuild] = useState<BuildResult | null>(null);
   useEffect(() => {
     const ctl = new AbortController();
-    const read = () =>
-      fetchBuild(FEED_URL, ctl.signal)
-        .then((v) => {
-          if (v?.rejected) console.warn(`build feed: ${v.rejected} rows failed the BuildView shape and were left out`);
-          setBuild(v ? toBuildResult(v) : null);
-        })
-        .catch((e) => { if (!ctl.signal.aborted) { console.warn(e); setBuild(null); } });
+    let seq = 0;
+    const read = () => {
+      const mine = ++seq;
+      return fetchBuild(FEED_URL, ctl.signal)
+        .then((v) => { if (mine === seq) setBuild(v ? toBuildResult(v) : null); })
+        .catch((e) => { if (!ctl.signal.aborted && mine === seq) { console.warn(e); setBuild(null); } });
+    };
     read();
     const t = setInterval(read, 3000);
     return () => { clearInterval(t); ctl.abort(); };

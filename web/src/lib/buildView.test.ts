@@ -16,7 +16,10 @@ test("Lane D's build sample parses, bad rows drop, and the panel reads parts, se
   assert.equal(v.parts.length, 8);
   assert.throws(() => parseBuildView({ ...sample, budget: "2000" }));
 
-  const b = toBuildResult(v);
+  const dropped = toBuildResult(v);
+  assert.equal(dropped.status, "open");
+  assert.equal(dropped.rejected, 3);
+  const b = toBuildResult(parseBuildView(sample));
   assert.equal(b.status, "locked");
   assert.deepEqual(b.owned, { psu: "750 W PSU", case: "Case (305 mm GPU room)" });
   assert.equal(b.totalCents, 196800);
