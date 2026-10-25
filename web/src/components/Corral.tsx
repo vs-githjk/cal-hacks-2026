@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { RankedBid } from "@/lib/screens";
 import { rankedBids as sampleBids, goal as sampleGoal } from "@/lib/sample";
 import { OriginChip, Tag, Verdict, money } from "@/components/ui";
+import { SHIELD } from "@/lib/brand";
 
 const STEPS = ["Request", "Offers", "Review", "Selected"] as const;
 const STEP_MS = 2600;
@@ -82,8 +83,8 @@ export function Corral({ bids, goalLine }: { bids: RankedBid[]; goalLine: string
           </g>
         )}
 
-        {/* Shield (left) and Advocate (right), flanking the corral */}
-        <Figure x={120} y={172} label="Shield" scale={1.05} />
+        {/* The Smell Test (left) and the advocate (right), flanking the corral */}
+        <Figure x={120} y={172} label={SHIELD} scale={1.05} />
         <Figure x={840} y={172} label="Advocate" scale={1.05} />
 
         {/* Sellers */}

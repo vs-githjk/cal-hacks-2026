@@ -207,7 +207,9 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
   const name = displayName.trim().slice(0, 60);
   if (!name) throw new SenderError('display name required');
   const ph = (phone ?? '').trim().replace(/[ ()-]/g, '');
-  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
+  // #449 PL-15: every purchase is approved by a call to this number, so an account without one could never buy.
+  if (!ph) throw new SenderError('a phone number is required: purchases are approved by a call');
+  if (!PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
   const now = ms(ctx.timestamp);
   const th = ctx.db.signupThrottle.id.find(0);
   const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;

@@ -1,6 +1,6 @@
 # Central Comp MIRROR (Central Computers SF listings)
 
-**Job: the real store (MIRROR).** It bids a real San Francisco store's dated listings for comparison, and it can never be ordered or paid.
+**Job: the live mirror.** It bids a real San Francisco store's dated listing as a price anchor, re-checks it each round through Bright Data when a key is set (else it bids the snapshot and says when it was captured), and it can never be ordered or paid.
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)

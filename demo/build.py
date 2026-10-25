@@ -1727,6 +1727,9 @@ def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None], lookup: 
     except vc.NoPhone as e:
         note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
         return None, "no_phone"
+    except vc.CallLimited as e:   # #449 item 1
+        note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
+        return None, "call_limited"
     except vc.CartesiaError as e:
         note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
         return None, "not_configured"

@@ -1075,6 +1075,9 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
     except vc.NoPhone as e:
         client, unconfigured = None, f"no_phone: {e}"
         where = f"live call: NO PHONE on file ({e}), so the approval beat will be DENIED: no call, nothing is paid"
+    except vc.CallLimited as e:   # #449 item 1: not on the beta allowlist
+        client, unconfigured = None, f"call_limited: {e.reason}"
+        where = "live call: this phone is not on the beta allowlist, so the approval beat will be DENIED: no call, nothing is paid"
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
         where = f"live call: Cartesia NOT configured ({unconfigured}; names {', '.join(vc.ENV_NAMES[:3])}), so the approval beat will be DENIED and nothing is paid"
