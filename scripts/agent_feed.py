@@ -1,6 +1,12 @@
 """Agent feed: what the Fetch agents are doing, read from the launcher's own run dir (pids.json and .run/logs).
 
 GET /v1/agents -> [{name, role, address, status, last_message, at, origin}]
+GET /v1/build -> the latest BuildView demo/build.py wrote (build-view.json in its out dir, BUILD_VIEW_DIR overrides), for the /buyer
+build panel (web/src/lib/buildView.ts): 404 until a run wrote one, 503 when the file is half written or not a BuildView.
+Local and operator-only like the rest of this feed (127.0.0.1, CORS for localhost pages only). It is NOT the public copy that goes to the
+hosted board (build.public_view): it keeps the buyer's own budget, spent and approval totals because the panel parses them, and
+buyer_view() strips everything else private (mandates, hashes, payees, per-mandate amounts, approval method and reason, the call,
+approval and receipt events, live-check and any key it does not know).
 GET /v1/memory -> {entries: [MemoryEntry], sources, note} for the dashboard memory panel (#189, demo/memory.py):
 past goals, purchases, vetoes and seller lessons from demo/out (MEMORY_DIR overrides). ?kind=, ?limit=, ?sample=1.
 
@@ -37,7 +43,7 @@ import launch  # noqa: E402  (stdlib-only launcher: pidfile reader and liveness 
 REPO = Path(__file__).resolve().parent.parent
 MAX_MESSAGE = 140
 ROLES = {"buyer": "buyer", "advocate": "advocate", "sellers": "seller"}
-DEFAULT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Tech Bazaar Quality Advocate", "sellers": "Seller agents"}
+DEFAULT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Bazaar Advocate", "sellers": "Seller agents"}
 
 LINE_RE = re.compile(r"^(?:INFO|WARNING|ERROR|CRITICAL|DEBUG):\s+\[([^\]]+)\]: (.*)$")
 START_RE = re.compile(r"Starting agent with address: (agent1q[0-9a-z]{40,70})")
@@ -56,6 +62,9 @@ MAILBOX_FAILURES = ("Failed to connect to mailbox server", "Failed to retrieve m
 MAILBOX_REGISTERED = "Successfully registered as mailbox agent"
 SELLERS_JSON = REPO / "agents" / "sellers" / "sellers.json"
 ORIGINS = ("LIVE", "MIRROR", "SIM")
+BUILD_VIEW_FILE = "build-view.json"   # the name demo.build.VIEW_FILE writes (tested equal); the path comes from demo.build.OUT_DIR
+MAX_BUILD_VIEW_BYTES = 2_000_000
+BUILD_EVENT_KINDS = ("plan", "round_open", "knockout", "locked", "clash", "replan")  # no call, approved, denied or receipt lines
 
 
 def clean(text: str) -> str:
@@ -209,7 +218,60 @@ def agent_rows(run_dir: Path | str) -> list[dict]:
     return rows
 
 
-def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None = None):
+def default_build_dir() -> Path:
+    """The folder demo/build.py writes build-view.json to by default (its own OUT_DIR, not a copy of the path)."""
+    from demo.build import OUT_DIR
+    return OUT_DIR
+
+
+def _pick(d: dict, keys: tuple) -> dict:
+    return {k: d[k] for k in keys if k in d}
+
+
+def _rows(v: object) -> list[dict]:
+    return [x for x in v if isinstance(x, dict)] if isinstance(v, list) else []
+
+
+def buyer_view(v: dict) -> dict:
+    """The BuildView for the buyer's own panel, rebuilt from an allow-list of keys so nothing unknown or private can ride along.
+    Raises ValueError when v is not a BuildView (no goal id, or parts, checks or events that are not lists)."""
+    if not isinstance(v, dict) or not isinstance(v.get("goalId"), str) or not v["goalId"] or any(
+            not isinstance(v.get(k), list) for k in ("parts", "checks", "events")):
+        raise ValueError("not a BuildView")
+    parts = []
+    for p in _rows(v["parts"]):
+        q = _pick(p, ("part", "label", "status", "origin", "budget", "needId", "roundId", "reason"))
+        if isinstance(p.get("champion"), dict):
+            q["champion"] = _pick(p["champion"], ("bidId", "sellerId", "persona", "landed", "origin", "sourceUrl"))
+        parts.append(q)
+    approval = v.get("approval") if isinstance(v.get("approval"), dict) else None
+    return {**_pick(v, ("goalId", "buyerId", "budget", "spent", "origin")), "parts": parts,
+            "checks": [_pick(c, ("a", "b", "rule", "state", "detail", "source")) for c in _rows(v["checks"])],
+            "events": [_pick(e, ("at", "kind", "text", "parts", "origin")) for e in _rows(v["events"]) if e.get("kind") in BUILD_EVENT_KINDS],
+            "approval": _pick(approval, ("state", "total", "sellers")) if approval is not None else None}
+
+
+def read_build_view(build_dir: Path) -> dict | None:
+    """The served view, None when no run wrote one yet. Raises ValueError for a file that is unreadable, too big or not a BuildView."""
+    path = build_dir / BUILD_VIEW_FILE
+    try:
+        with open(path, "rb") as f:
+            raw = f.read(MAX_BUILD_VIEW_BYTES + 1)
+    except FileNotFoundError:
+        return None
+    except OSError as e:
+        raise ValueError(f"cannot read {BUILD_VIEW_FILE}: {type(e).__name__}") from e
+    if len(raw) > MAX_BUILD_VIEW_BYTES:
+        raise ValueError(f"{BUILD_VIEW_FILE} is over {MAX_BUILD_VIEW_BYTES} bytes")
+    try:
+        view = buyer_view(json.loads(raw.decode("utf-8")))
+        json.dumps(view, ensure_ascii=False).encode("utf-8")  # a lone surrogate would break the response, so refuse it here
+    except (ValueError, RecursionError) as e:  # JSONDecodeError and UnicodeError are ValueErrors
+        raise ValueError(f"{BUILD_VIEW_FILE} is not a readable BuildView") from e
+    return view
+
+
+def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None = None, build_dir: Path | str | None = None):
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
@@ -232,6 +294,19 @@ def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None 
     def memory(kind: str | None = None, limit: int | None = None, sample: bool = False) -> dict:
         from demo import memory as M
         return M.load(mem, include_sample=sample, kind=kind, limit=limit)
+
+    built = Path(build_dir or os.environ.get("BUILD_VIEW_DIR") or default_build_dir())
+
+    @app.get("/v1/build")
+    def build():
+        from fastapi.responses import JSONResponse
+        try:
+            view = read_build_view(built)
+        except ValueError as e:  # a half-written or odd file is a transient, never a 500; the panel keeps its SIM sample meanwhile
+            return JSONResponse({"detail": str(e)}, status_code=503)
+        if view is None:
+            return JSONResponse({"detail": "no build run has written a view yet"}, status_code=404)
+        return JSONResponse(view, headers={"Cache-Control": "no-store"})
 
     return app
 

@@ -27,6 +27,39 @@ The charge happens after `can_charge` passes at charge time, never before: one `
 the PaymentIntent id and status. A refused call prints Stripe's error type and code, not the request, and the SIM stub is recorded instead.
 This is not Visa settlement: it is a Stripe test charge on a Visa test card under a TAP-style signed mandate.
 
+## A full build in the market (`demo/build.py`, #345)
+```
+python3 demo/build.py --dry-run                 # the goal and the six part rounds as reducer calls, nothing written
+python3 demo/build.py --live-call --reset       # one real call for the whole build, only above the allowance
+python3 -m pytest demo/tests/test_build.py demo/tests/test_build_view.py   # fake market, fake call, fake Bright Data: no network
+```
+One goal (`type: "build_by_date"`, an owned part is a skipped goal item), then one need and one sealed round per part to buy, each closed before the next opens
+(the GPU runs the bridge's own round: real MIRROR listings plus the planted sellers, judged by the real advocate). The market's rank 1 is a part's champion;
+a held-back, vetoed or non-partner champion is never mandated, and a part with no eligible bid is `failed`: no call, nothing paid. Each MIRROR champion's price is re-checked
+live with Bright Data (parallel, bounded; a failed read keeps the dated price and says so). Above the allowance: ONE call ("6 parts from 3 sellers, <total>"), then one mandate,
+approval, payment and receipt per part; inside it: no call (method `allowance`). `demo/out/build-view.json` (the board's BuildView) is rewritten at every step.
+Details and the keys added to the board's shape: `docs/changes/1705-D-build-in-the-market.md`.
+The local agent feed serves that file to the `/buyer` build panel as `GET /v1/build` (scripts/agent_feed.py; private fields stripped). Step-by-step local rehearsal with a real call: `demo/REHEARSAL.md`.
+
+**Whose build.** With no flag the run builds the demo plan under `goal-build-1` for `vidyut` (unchanged). `--buyer-id X` with no `--goal-id` and no `--plan` builds from X's own
+latest ACTIVE `build_by_date` goal: the cap, deadline, owned items and the items to buy come from the goal row, and the run REUSES that goal (it posts no second one). The goal row
+holds no per-part budget, so the budgets are the demo plan's split, scaled down to fit the cap, and the plan line says so (SIM). `--plan FILE` takes a `planner.plan()` JSON
+(`cap_cents`, `owned`, `parts`) through `plan_from_planner` and posts it as a new goal. An unreadable or missing goal is one `error:` line and exit 1. `--dry-run` runs on an in-memory market,
+so it cannot read a goal: use `--plan FILE` to dry-run a plan. Goals are private to the buyer (the `my_goals` view answers the caller's own buyer role; the referee reads none), so
+reading X's goal needs X's identity token: `buyer-vidyut.json` for Vidyut, or `--buyer-token FILE` for another buyer (a self-serve buyer's token lives in their browser). For another
+buyer the run leaves their allowance alone unless `--per-buy` or `--period-limit` is given.
+
+**Whose phone.** Above the allowance the call rings the buyer's own approval phone (`pay.voice_cartesia.approval_phone`). Today only Vidyut has one (`APPROVAL_CALL_TO`); any other buyer
+has none until the market's `buyer_profile` phone lands (#374), and a build or bridge run for them above the allowance is DENIED (`no_phone`): no call, no mandate, no payment, and no
+scripted fallback.
+
+**Which Shield.** Every runner prints one `Shield:` line at the start. The default is the deterministic rule screen only. The Claude classifier (`claude-haiku-5-5`, `SHIELD_MODEL` to
+change) adds a quarantine on text the rules allowed, and is on only when `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` are both exported in the shell that runs the command; the runner's
+env file is not read for them. Example: `SHIELD_CLASSIFIER=1 python3 demo/build.py --live-call` with the key already in the shell. Its timeouts are Shield's own and are not changed here.
+
+**LIVE proof lines.** The Fetch tile gets a `LIVE` line (referee `record_agent_event`) only for a value the run actually fetched: a Bright Data price read (`ok`, origin LIVE), a Tiger Data
+write that stored rows, a CRS band from a sandbox request made in this run (never a cached or SIM seller's). Anything else posts no proof line, and the agents' own lines stay `SIM`.
+
 ## Screen bridge (`demo/bridge.py`): watch the run on /buyer and /market
 ```
 python3 demo/bridge.py --step-delay 2 --reset   # about 90 s; --reset calls reset_demo first (keeps roles and pair codes)
@@ -55,11 +88,13 @@ python3 demo/bridge.py --live-call --env-file /path/to/.env --dry-run   # says w
 ```
 When beat 4 starts the bridge reads the market's own `round_result` and takes rank 1 (not the demo's winner): a fresh pending mandate for exactly that
 bid's deal, landed amount and seller's payee, 10 minutes (`MANDATE_MINUTES`), sent with `create_mandate`. No single readable rank 1, or a #1 that is not a bid
-this run placed, stops the run there with no mandate and nothing paid; this holds for the scripted run too. With `--live-call` it then runs
+this run placed, stops the run there with no mandate and nothing paid; this holds for a run without `--live-call` too. A rank 1 the market marks `held back: advocate caution (...)` in its `reasons` (every bid carries a
+caution, so rank 1 is only the least bad) is refused the same way (#251): no mandate, no call, "nothing was paid". The gate reads the market again after the
+call, so a rank 1 that turns held back during it is not paid either. With `--live-call` it then runs
 `pay.voice_cartesia.run_approval_call` for that mandate: one call to `APPROVAL_CALL_TO` only, the two-word code sent to /buyer with `issue_approval_code`
 (the same code the call judges; printed as `SCREEN CODE` when the market refuses it, and also while the market module still
 exports `approve_typed`, because a code on /buyer would arm that typed approval; see #191), three tries. The code reaches /buyer
-only on a `--live-call` run: the scripted run issues no code. After the call the market is read again, and only an
+only on a `--live-call` run: a run without it issues no code. After the call the market is read again, and only an
 approved call plus a `pay.mandate.can_charge` pass against the market's rank 1 makes the bridge call `record_approval` and then `record_payment`. A denial (wrong code, silence, no
 answer, dial failure, expired mandate) or a missing Cartesia setup prints the denial, records no approval and no payment, leaves the mandate pending and ends the run there: nothing is charged.
 Before the call, the winning seller gets one CRS identity check (#257, `agents/crs.py` `check_payee`, cached per
@@ -77,8 +112,11 @@ nothing is paid; a slow or failed read keeps the quoted MIRROR price and the con
 price was checked live just now" or "the price is from a dated listing snapshot". After the close, the round's
 prices go to Tiger Data as bid ticks (rank 1 is the win); a Tiger failure is one console line and the deal goes on.
 `python3 -m scripts.sponsor_status` reads the same env file (`--env-file` to point elsewhere).
-`--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). Without `--live-call` the approval is
-SIM scripted (`record_approval` method `sim_script`, never `voice_code`) and the payment is the SIM stub. Tests use a fake client and place no call.
+`--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). There is no scripted approval (#251, decided by Vidyut):
+without `--live-call` the bridge makes the mandate, then stops at the approval gate with
+"approval needs the real phone call (--live-call); nothing was paid": no `record_approval`, no `record_payment`, the held unit released with `deny_approval`,
+beat 5 not played, exit 1. The only `record_approval` method the bridge sends is `voice_code`, with the call's VoiceApproval id. Rehearsals and the video
+run with `--live-call`; a deal inside the buyer's allowance keeps #240's `allowance` method and needs no call. Tests use a fake client and place no call.
 
 ## Stage runner (`demo/stage.py`): one command for the video and the room
 ```
@@ -93,15 +131,17 @@ It wraps `bridge.py` (same reducers, same tokens, same live-call gate) and adds 
 2. **Reset.** `reset_demo` (referee), which keeps roles and pair codes, then the beats.
 3. **Five beats, in order.** 1 goal and need, 2 sealed round (open to close), 3 Shield blocks the injected listing, 4 mandate, approval, payment, 5 round 2 with the learner's lower price. Before each beat the console prints `BEAT n of 5` and one **SAY THIS** line for the narrator.
 4. **Pacing.** Without `--auto` it waits for Enter before each beat (`q` stops). With `--auto` it waits `--delays` seconds between a beat's cue and the beat (five numbers, default `7,8,6,9,8`, time to say the line); `--step-delay` (default 2) is the pause between visible steps inside a beat, as in the bridge.
-5. **Live call.** `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. The mandate the call judges is made when beat 4 starts (a mandate lives 10 minutes, so a long wait at the Enter prompts cannot expire it). Retake by running again (it resets). The two-word code shows on /buyer (`issue_approval_code`); it prints as `SCREEN CODE` on this console only if the market refuses it. `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
+5. **Live call.** Approval needs the real phone call: without `--live-call` the run stops at beat 4's approval gate with exit 1 ("approval needs the real phone call (--live-call); nothing was paid"; no approval, no payment, beat 5 not played). `--live-call` is passed straight to the bridge's gate. A denial, silence or missing Cartesia setup stops the run at beat 4 with exit 1: no approval and no payment recorded, nothing charged, beat 5 not played. The mandate the call judges is made when beat 4 starts (a mandate lives 10 minutes, so a long wait at the Enter prompts cannot expire it). Retake by running again (it resets). The two-word code shows on /buyer (`issue_approval_code`); it prints as `SCREEN CODE` on this console only if the market refuses it. `--live-call` has no `--stripe` pairing: the stage runner never makes a Stripe call.
 After beat 2 the runner reads the market's `round_result` back and prints its ranking; if the market's #1 is not the demo's winner it prints DIVERGENCE before beat 3, and `--auto` pauses once for Enter so the operator sees it before the beat 4 cue (the mandate that follows is the demo's winner).
 Exit codes: 0 all beats played, 1 refused or stopped (service down, market refusal, denial, `q`), 130 Ctrl-C. Open /buyer (paired as `vidyut`) and /market first; the console reminds you.
-The cue text for beat 4 changes with `--live-call` (simulated third-try approval versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2, the loss report itself is console only (NOT BRIDGED).
+The cue text for beat 4 changes with `--live-call` (the run stops at the gate versus the phone ringing); the other four cues are fixed in `stage.CUES`. The Gadget Grove (Vedant) price change in beat 5 shows on /market through the replayed round 2. Beat 5 opens with round 1's loss reports through `record_loss_report` (SIM rows: banded gap, reason and cited source, and the learner's strategy step and "what to change" line), so each seller's own screen shows its report (#216).
 
 The bridge sets Vidyut's standing allowance ($250 per buy, $500 a month, SIM) with the referee's `set_allowance` right after the goal, so /buyer shows it and the deal still needs the call. The market starts spending this period at $0 (the run's $120 spent is not bridged).
 
-Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: loss reports, goal state, denied approval attempts, personas and the
-buyer name, and a floor per seller, SKU and condition (the market keeps one floor per SKU).
+Not bridged, so it is printed as NOT BRIDGED at the end of every run and is the Lane B gap list: goal state, denied approval attempts, seller personas,
+and a floor per seller, SKU and condition (the market keeps one floor per SKU). Bridged since #216: the buyer name (`set_buyer_profile`, SIM), loss reports
+(`record_loss_report`) and one SIM line per demo agent on the Fetch tile (`record_agent_event`, with the agents' own addresses from agents/common; no rows
+when agents/ cannot be loaded, and the run says so).
 
 ## Tags
 Every line that shows data carries one: **LIVE** (a real outside party right now; offline there is none, Stripe's test API with `bridge.py --live-call --stripe` after a real call is the only one),
@@ -114,11 +154,16 @@ listings in the snapshots run $1,239.99 to $1,489.00. One or two bids are real, 
 - **Best Buy (MIRROR) wins at $1,249.99**, its real new listing. The advocate marks it CAUTION: the snapshot has no card length, so fit is "not confirmed", said and not guessed.
 - One more real bid is inside the cap (an eBay seller, open-box $1,239.99, ranked last). The other real listings are over the cap or state no condition (Micro Center, Amazon), and are out.
 - **Shady Sam (SIM) bids $757.44**, far under the market, and is vetoed by Lane A's real advocate: his page shows open-box while he claims new, and his "was $1,099" does not match the price history (highest recorded $829.00). Both cite his page.
+  With `SHIELD_CLASSIFIER=1` and a key, the classifier quarantines his page first (`shield.classifier.suspicious`). Option C (locked Oct 24): Shield screens every round and
+  records the catch, a caught bid is never ranked, never the winner and never payable, but the advocate still judges it, so beat 2 prints
+  "Caught by Shield in round N" with the same veto card and cited sources (`caught: {by, rule, round}` on the card; `beats.2.caught` and `artifacts.verdicts.caught` in the JSON).
+  The beat 2 check passes when the cheapest bid is vetoed, ranked (keyless) or caught-and-vetoed (keyed); `beat2_caught_listing_never_ranked_or_payable` appears only when something was caught.
+  A classifier that could not answer holds a bid closed and is labelled "Held by Shield (classifier unavailable)", never "Caught". The market bridge reads the same Shield verdicts, so it quarantines the caught bid and needs no change.
 - **Bargain Bin (SIM)** is vetoed by the real fit checker (336 mm card, 305 mm case). **Lowball (SIM)** bids under its floor and the referee rejects it before anyone sees it.
 - **Gadget Grove (Vedant)** (a SIM seller, Vedant is the learner seller) is one seller with two condition lines, new and open-box. **Fair Price PC (SIM)** is the static control.
 - Honest Hal's page is used by beat 3 only (the clean control). At $789 his honest listing would undercut every real seller, so he does not bid in the market round.
 SIM listing prices (Bargain Bin, Lowball, Gadget Grove (Vedant), Fair Price PC) sit inside the real $1,200 to $1,300 band by construction; Sam's price is Lane C's page price ($789).
-Real merchants are never contacted or paid: the payee on a MIRROR seller is a SIM test address (`best-buy@pay.example.test`).
+Real merchants are never contacted or paid: the payee on a MIRROR seller is a SIM test address (`best-buy@pay.example.test`) in the offline run, and on the market (the bridge, #240) the mandate's payee is the winning seller's id (`best-buy`); no money reaches either.
 
 ## Seller model (LOCKED Fri 22:36)
 One seller agent per seller of record (Amazon direct is one agent, each eBay listing is its own because the snapshot has no seller handle). The lines of a bid are
@@ -175,3 +220,15 @@ reports validate against `contracts/` (all on main); the tests check all of them
 - Not checked: a real Cartesia call, a real merchant simulator, the TypeScript market rules themselves (parity is by shared fixtures only), and Lane A's agents running
   under uagents (only their pure functions run).
 - The Shield, fit and claim wording is the real code's output; the quality-adjustment weights are SIM.
+
+## CRS signals into the market (`python3 -m demo.crs_relay`)
+```
+python3 -m demo.crs_relay --dry-run     # list the record_supplier_signal calls from .cache/crs-signals.json, touch nothing
+python3 -m demo.crs_relay               # send them as the referee (needs the market to have record_supplier_signal, Lane B PR 320)
+```
+Reads the sanitized cache `agents/crs.py --live` writes (override with `--cache PATH` or `CRS_SIGNAL_CACHE_PATH`). Mapping, in one place
+(`MARKET_SELLER`): seller_1 to seller-a, seller_2 to seller-b, seller_3 to seller-c. Only a signal with exactly the four fields, a known
+band, source sandbox or recorded, and a time within the last 24 hours (not in the future) is sent; the rest are skipped with the reason, so
+a seller with no signal has no row and is never shown as verified. If the market lacks the reducer the relay says so and sends nothing.
+`demo/bridge.py` and `demo/build.py` run it right before each round opens, best effort (a problem is one note and the round opens anyway).
+Exit 0 all sent, 1 a call was refused, 2 nothing sent.

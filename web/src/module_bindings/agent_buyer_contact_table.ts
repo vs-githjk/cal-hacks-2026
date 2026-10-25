@@ -10,7 +10,8 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export default {
-  mandateHash: __t.string(),
-  code: __t.string(),
-};
+export default __t.row({
+  buyerId: __t.string().name("buyer_id"),
+  displayName: __t.string().name("display_name"),
+  phone: __t.string(),
+});

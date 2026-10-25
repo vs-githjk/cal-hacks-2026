@@ -2,12 +2,15 @@
 // The Fetch tile: an activity feed pinned in a screen corner (top right on a desktop, a compact pill at the bottom on a phone),
 // not a video call. Collapsed it shows the latest recorded activity and its age; expanded it lists every agent, links to the
 // directory, and links out to ASI:One and Agentverse. Drag it to a corner, or use Move.
-// Reads only the agent feed (lib/agentFeed.ts); when the feed is down it says "agents offline" and shows no rows.
+// Reads only the agent feed (lib/agentFeed.ts); when the feed is down it says "agents offline" and shows no rows. With no
+// reachable feed configured (a deployed site) it lists the Agentverse profile links instead.
 
 import Link from "next/link";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
-import { AgentAvatar, useAgents } from "@/components/useAgents";
+import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
+import { useLiveBuild } from "@/components/useLiveBuild";
+import { planLines, SAMPLE_BUILD, showBuildPlan, type BuildResult, type StepKind } from "@/lib/build";
 import {
   ASI_ONE_URL,
   NEXT_CORNER,
@@ -26,12 +29,37 @@ import {
 // A new key: the first version defaulted to the bottom right on every screen, and a saved corner would keep that.
 const PREFS_KEY = "tb-agent-pip-2";
 // Bottom corners clear the fixed run-mode footer, top corners clear the header.
+// On a phone the collapsed tile sits in the page flow after the content, so it never covers anything; opening it overlays.
 const CORNER_CLASS: Record<Corner, string> = {
   br: "bottom-12 right-3",
   bl: "bottom-12 left-3",
   tr: "top-[64px] right-3",
   tl: "top-[64px] left-3",
 };
+// Plan and re-plan lines: the clash is the one red line, the swap and the lock are green, a budget move is amber.
+const PLAN_TONE: Partial<Record<StepKind, string>> = { plan: "text-ink-2", clash: "text-coral", knockout: "text-coral", swap: "text-accent", locked: "text-mint", reallocate: "text-accent", blocked: "text-coral" };
+const PLAN_LABEL: Partial<Record<StepKind, string>> = { plan: "Plan", clash: "Clash", swap: "Re-plan", reallocate: "Budget", locked: "Locked", blocked: "Blocked" };
+
+/** The buyer agent's build plan and re-plans, above the agent rows. The live build (useLiveBuild); SAMPLE_BUILD, labelled SIM, only while none is posted. */
+function BuildPlan({ build, origin }: { build: BuildResult; origin: string }) {
+  return (
+    <section aria-label="Build plan" className="border-b border-line pb-2">
+      <div className="flex items-center gap-2 py-1">
+        <span className="flex-1 font-semibold">Buyer agent: build plan</span>
+        <OriginChip origin={origin} />
+      </div>
+      <ol className="grid gap-1">
+        {planLines(build).map((s, i) => (
+          <li key={i} className="grid grid-cols-[52px_1fr] gap-2">
+            <span className={`text-[11px] font-bold uppercase tracking-[0.04em] ${PLAN_TONE[s.kind] ?? "text-muted"}`}>{PLAN_LABEL[s.kind]}</span>
+            <span className="min-w-0 text-ink-2">{s.line}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 const DOT: Record<AgentStatus, string> = { agentverse: "bg-mint", local: "bg-sky", down: "bg-coral" };
 
 interface Prefs {
@@ -67,7 +95,8 @@ export function AgentPip() {
 
 function AgentPipTile() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
-  const { rows, now } = useAgents();
+  const { rows, now, noFeed } = useAgents();
+  const liveBuild = useLiveBuild();
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const box = useRef<HTMLElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -81,11 +110,11 @@ function AgentPipTile() {
   }, []);
 
   const shown = rows ? realRows(rows) : [];
-  const offline = rows === null;
+  const offline = rows === null && !noFeed;
   const pending = rows === undefined;
   const latest = latestActivity(shown);
   const fresh = !!latest && !isStale(latest.at, now);
-  const head = headline(rows ? shown : rows, now);
+  const head = noFeed ? "Fetch agents on Agentverse" : headline(rows ? shown : rows, now);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
@@ -114,7 +143,7 @@ function AgentPipTile() {
       }}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined}
       className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-line bg-panel text-[13px] shadow-lg ${CORNER_CLASS[prefs.corner]} ${
-        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px]"
+        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px] max-sm:static max-sm:mx-4 max-sm:mb-16 max-sm:max-w-none"
       } ${drag ? "" : "transition-[width,height] duration-150 motion-reduce:transition-none"}`}
     >
       <div
@@ -151,7 +180,13 @@ function AgentPipTile() {
       {prefs.open ? (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
-            {offline || pending || shown.length === 0 ? (
+            {showBuildPlan(!!liveBuild, window.location.search) && <BuildPlan build={liveBuild ?? SAMPLE_BUILD} origin={liveBuild?.origin ?? "SIM"} />}
+            {noFeed ? (
+              <>
+                <p className="pt-2 text-muted">No live agent feed on this site. Each agent&apos;s public Agentverse profile:</p>
+                <AgentProfiles />
+              </>
+            ) : offline || pending || shown.length === 0 ? (
               <p className="py-3 text-muted">
                 {pending
                   ? "Checking the agent feed..."
@@ -202,7 +237,7 @@ function AgentPipTile() {
         </>
       ) : (
         <p className="hidden truncate px-3 pb-2.5 text-muted sm:block" title={latest?.last_message ?? undefined}>
-          {pending ? "Checking..." : offline ? "No feed" : (latest?.last_message ?? "No recorded activity")}
+          {noFeed ? "Open for Agentverse profiles" : pending ? "Checking..." : offline ? "No feed" : (latest?.last_message ?? "No recorded activity")}
         </p>
       )}
     </aside>

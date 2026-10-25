@@ -36,8 +36,8 @@
    "storeId": "025",
    "sort": "match",
    "userTier": "FREE",
-   "actorRunId": "UL50v8YifPbekhXsd",
-   "scrapedAt": "2026-10-24T09:36:34.311Z"
+   "actorRunId": "erP610gErNSHF2GwP",
+   "scrapedAt": "2026-10-25T02:41:21.514Z"
   }
  },
  {
@@ -62,7 +62,7 @@
   "store_id": null,
   "store_name": null,
   "in_stock": true,
-  "availability": "2 IN STOCK",
+  "availability": "1 IN STOCK",
   "in_store_quantity": null,
   "category": "Graphics Cards",
   "breadcrumbs": [],
@@ -77,33 +77,33 @@
    "storeId": "025",
    "sort": "match",
    "userTier": "FREE",
-   "actorRunId": "UL50v8YifPbekhXsd",
-   "scrapedAt": "2026-10-24T09:36:34.311Z"
+   "actorRunId": "erP610gErNSHF2GwP",
+   "scrapedAt": "2026-10-25T02:41:21.514Z"
   }
  },
  {
-  "product_id": "702482",
-  "productTitle": "NVIDIA GeForce RTX 5070 Ti Solid Core Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
-  "thumbnail": "https://productimages.microcenter.com/0702482_938118.jpg",
-  "sku": "938118",
-  "url": "https://www.microcenter.com/product/702482/zotac-nvidia-geforce-rtx-5070-ti-solid-core-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+  "product_id": "706503",
+  "productTitle": "NVIDIA GeForce RTX 5070 Ti SOLID SFF Overclocked Triple-Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+  "thumbnail": "https://productimages.microcenter.com/0706503_985101.jpg",
+  "sku": "985101",
+  "url": "https://www.microcenter.com/product/706503/zotac-nvidia-geforce-rtx-5070-ti-solid-sff-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
   "source": "overview",
   "brand": "Zotac",
   "mpn": null,
   "upc": null,
-  "price": 1499.99,
+  "price": 1449.99,
   "original_price": null,
   "savings": null,
   "currency": "USD",
   "on_sale": null,
   "rating": null,
   "review_count": null,
-  "image": "https://productimages.microcenter.com/0702482_938118.jpg",
+  "image": "https://productimages.microcenter.com/0706503_985101.jpg",
   "images": [],
   "store_id": null,
   "store_name": null,
   "in_stock": true,
-  "availability": "13 IN STOCK",
+  "availability": "7 IN STOCK",
   "in_store_quantity": null,
   "category": "Graphics Cards",
   "breadcrumbs": [],
@@ -118,8 +118,8 @@
    "storeId": "025",
    "sort": "match",
    "userTier": "FREE",
-   "actorRunId": "UL50v8YifPbekhXsd",
-   "scrapedAt": "2026-10-24T09:36:34.311Z"
+   "actorRunId": "erP610gErNSHF2GwP",
+   "scrapedAt": "2026-10-25T02:41:21.514Z"
   }
  }
 ]

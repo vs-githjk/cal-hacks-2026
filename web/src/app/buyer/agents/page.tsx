@@ -1,7 +1,6 @@
 "use client";
 
-import { AgentWire } from "@/components/AgentWire";
-import { AgentAvatar, useAgents } from "@/components/useAgents";
+import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
 import { Card, Code, Label, OriginChip, Tag } from "@/components/ui";
 import { shortAddress } from "@/lib/agents";
 import { ASI_ONE_URL, STATUS_TEXT, agentLink, ago, headline, isStale, realRows, type AgentRow, type AgentStatus } from "@/lib/agentFeed";
@@ -43,13 +42,13 @@ function AgentCard({ r, now }: { r: AgentRow; now: number }) {
 
 /** The agent directory, reached from the Fetch tile. Same feed and the same single poll as the tile. */
 export default function AgentsPage() {
-  const { rows, now } = useAgents();
+  const { rows, now, noFeed } = useAgents();
   const shown = rows ? realRows(rows) : [];
   return (
     <div className="grid gap-3.5">
       <Card>
         <Label>Fetch agents</Label>
-        <p className="text-[22px] font-medium text-balance">{headline(rows ? shown : rows, now)}</p>
+        <p className="text-[22px] font-medium text-balance">{noFeed ? "Fetch agents on Agentverse" : headline(rows ? shown : rows, now)}</p>
         <p className="mt-2 text-[13px] text-muted">
           Status is read from the launcher run log, not checked live from this page. An address or a published profile alone does not mean an agent is online.
         </p>
@@ -57,8 +56,12 @@ export default function AgentsPage() {
           Open in ASI:One
         </a>
       </Card>
-      <AgentWire />
-      {rows === undefined ? (
+      {noFeed ? (
+        <Card>
+          <p className="text-[14px] text-muted">No live agent feed on this site. Each agent's public Agentverse profile:</p>
+          <AgentProfiles className="text-[14px]" />
+        </Card>
+      ) : rows === undefined ? (
         <p className="text-muted">Checking the agent feed...</p>
       ) : rows === null ? (
         <p className="text-muted">The agent feed is not answering, so no agent rows are shown. Start it with python3 scripts/launch.py up.</p>

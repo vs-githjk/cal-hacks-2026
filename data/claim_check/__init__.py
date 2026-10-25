@@ -96,34 +96,132 @@ def parse_claim(claim):
 from .fetch import guarded_get as default_fetch  # noqa: E402  (http(s) only, public addresses, redirects re-checked, 2 MB cap)
 
 
-def page_facts(html):
-    m = re.search(r'<script type="application/json" id="listing">(.*?)</script>', html, re.S)
-    if m:
-        data = json.loads(m.group(1))
-        if isinstance(data, dict) and "warranty_months" not in data:
+_ASCII_LOWER = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")  # keeps the length, unlike str.lower
+LISTING_TAG = '<script type="application/json" id="listing">'
+PRODUCT_TYPES = {"Product", "IndividualProduct", "SomeProducts", "ProductModel", "ProductGroup"}
+
+
+def script_blocks(html):
+    """[(opening tag, body)] for every <script ...>...</script> in one linear scan (#317: the old regex was cubic on
+    "<script x application/ld+json" * N). Each search starts where the last one ended, so no character is rescanned."""
+    low, out, i = html.translate(_ASCII_LOWER), [], 0
+    while True:
+        s = low.find("<script", i)
+        if s < 0:
+            break
+        if low[s + 7:s + 8] not in ("", ">", "/") and not low[s + 7:s + 8].isspace():
+            i = s + 7  # <scripty is another tag
+            continue
+        e = low.find(">", s + 7)
+        if e < 0:
+            break
+        c = low.find("</script", e + 1)
+        if c < 0:
+            break  # no closing tag: nothing after this can close either
+        out.append((html[s:e + 1], html[e + 1:c]))
+        i = c + 8
+    return out
+
+
+def _loads(text, what):
+    try:
+        return json.loads(text)
+    except RecursionError as e:  # deeply nested JSON: a parse failure, never a crash
+        raise ValueError(f"{what} is nested too deeply") from e
+
+
+def _is_product(node):
+    t = node.get("@type")
+    types = [t] if isinstance(t, str) else t if isinstance(t, list) else []
+    return any(isinstance(x, str) and re.sub(r"^(https?://schema\.org/|schema:)", "", x.strip()) in PRODUCT_TYPES for x in types)
+
+
+def _same_url(a, b):
+    norm = lambda u: u.strip().split("#", 1)[0].rstrip("/") if isinstance(u, str) else None
+    return norm(a) is not None and norm(a) == norm(b)
+
+
+def _page_key(u, base):
+    """(host, path) of u resolved against base, ignoring scheme, query, fragment and a trailing slash; None if not a URL."""
+    from urllib.parse import urljoin, urlparse
+    if not isinstance(u, str) or not u.strip():
+        return None
+    p = urlparse(urljoin(base, u.strip()))
+    host = (p.hostname or "").lower()
+    host = host[4:] if host.startswith("www.") else host  # #397: www.shop.example and shop.example are one store's page
+    return (host, p.path.rstrip("/")) if p.hostname else None
+
+
+def _names_another_page(node, url):
+    """True when the Product's url is a different page (a related product or a carousel item, not this listing)."""
+    there, here = _page_key(node.get("url"), url), _page_key(url, url)
+    return there is not None and here is not None and there != here
+
+
+def ld_product(html, url=None, notes=None):
+    """The schema.org Product node an agent reads: the one whose @id or url is this page (a leading www. ignored), else the
+    first with offers, else the first; {} when there is none. With the page url given, a Product whose url is another page
+    is not read when another Product is there (#334); when it is the only Product (a canonical on another path) it is kept
+    and a note is appended to `notes` (#397). Raises ValueError for JSON-LD too deeply nested to parse."""
+    nodes = []
+    for tag, body in script_blocks(html):
+        if "application/ld+json" not in tag.translate(_ASCII_LOWER):
+            continue
+        try:
+            data = _loads(body, "JSON-LD")
+        except ValueError as e:
+            if isinstance(e.__cause__, RecursionError):
+                raise
+            continue  # one broken block does not hide the others
+        items = data if isinstance(data, list) else data.get("@graph", [data]) if isinstance(data, dict) else []
+        nodes += [n for n in (items if isinstance(items, list) else [items]) if isinstance(n, dict) and _is_product(n)]
+    if url:
+        here = _page_key(url, url)
+        for n in nodes:
+            if _same_url(n.get("@id"), url) or _same_url(n.get("url"), url) or \
+                    (here is not None and here in (_page_key(n.get("@id"), url), _page_key(n.get("url"), url))):
+                return n
+        kept = [n for n in nodes if not _names_another_page(n, url)]
+        if not kept and len(nodes) == 1:
+            if notes is not None:
+                notes.append(f"the only Product names another url ({str(nodes[0].get('url'))[:120]}), read as this listing")
+            return nodes[0]
+        nodes = kept
+    return next((n for n in nodes if n.get("offers")), nodes[0] if nodes else {})
+
+
+def ld_offer(product):
+    offer = product.get("offers") or {}
+    offer = offer[0] if isinstance(offer, list) and offer else offer
+    return offer if isinstance(offer, dict) else {}
+
+
+def page_facts(html, url=None):
+    """(facts, how) from our SIM <script id="listing"> JSON, else the page's schema.org Product (see ld_product).
+    Raises ValueError when the listing JSON is not a JSON object or the page's JSON is too deeply nested to parse."""
+    body = next((b for tag, b in script_blocks(html) if tag == LISTING_TAG), None)
+    if body is not None:
+        data = _loads(body, "listing JSON")
+        if not isinstance(data, dict):
+            raise ValueError("listing JSON is not an object")
+        if "warranty_months" not in data:
             wm = _text_warranty(data.get("warranty"), data.get("description"))
             if wm is not None:
                 data["warranty_months"] = wm
         return data, "page listing JSON"
-    for block in re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', html, re.S):
-        try:
-            data = json.loads(block)
-        except ValueError:
-            continue
-        for node in data if isinstance(data, list) else data.get("@graph", [data]):
-            if not isinstance(node, dict) or "Product" not in str(node.get("@type")):
-                continue
-            offer = node.get("offers") or {}
-            offer = offer[0] if isinstance(offer, list) else offer
-            cond = str(offer.get("itemCondition") or "").rsplit("/", 1)[-1]
-            avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
-            facts = {"title": node.get("name"), "price": _money(offer.get("price")),
-                     "condition": LD_CONDITION.get(cond), "stock": avail or None,
-                     "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
-                     "warranty_months": _ld_warranty(node.get("warranty") or offer.get("warranty"))
-                     if (node.get("warranty") or offer.get("warranty")) else _text_warranty(node.get("description"))}
-            return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD"
-    return {}, "no structured data"
+    notes = []
+    node = ld_product(html, url, notes)
+    if not node:
+        return {}, "no structured data"
+    offer = ld_offer(node)
+    cond = str(offer.get("itemCondition") or "").rsplit("/", 1)[-1]
+    avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
+    facts = {"title": node.get("name"), "price": _money(offer.get("price")),
+             "condition": LD_CONDITION.get(cond), "stock": avail or None,
+             "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
+             "warranty_months": _ld_warranty(node.get("warranty") or offer.get("warranty"))
+             if (node.get("warranty") or offer.get("warranty")) else _text_warranty(node.get("description"))}
+    return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD" + "".join(f"; {n}" for n in notes)
 
 
 def _return_days(days):
@@ -322,10 +420,10 @@ def check_claim(claim, fetch=None, history=None, observations=None):
         return unverified("page body was not text")
     out["evidence_hash"] = hashlib.sha256(body).hexdigest()
     try:  # a malformed page must not abort a batch or turn into "false"
-        facts, source = page_facts(body.decode("utf-8", "replace"))
+        facts, source = page_facts(body.decode("utf-8", "replace"), url)
         results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history, observations) if f == "was_price" else None))
                    for f, v in fields]
-    except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as e:
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError, RecursionError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")
     rank = {"false": 0, "unverified": 1, "verified": 2}  # the worst field decides: one false part makes the claim false
     result = min((r for _, r, _ in results), key=rank.get)

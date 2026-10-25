@@ -1,0 +1,570 @@
+[
+ {
+  "id": "centralcomputers:a716bb8cffea",
+  "category": "gpu",
+  "name": "MSI G507T-16V3ZCB NVIDIA GeForce RTX 5070 Ti VENTUS 3X PZ OC BLACK Graphics Card 16GB GDDR7 PCI Express 5.0",
+  "model_number": "G507T-16V3ZCB",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-g507t-16v3zcb-nvidia-geforce-rtx-5070-ti-ventus-3x-pz-oc-black-graphics-card-16gb-gddr7-pci-express-5-0.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-g507t-16v3zcb-nvidia-geforce-rtx-5070-ti-ventus-3x-pz-oc-black-graphics-card-16gb-gddr7-pci-express-5-0.html",
+   "price": 1249.99,
+   "stock": "3 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAMSIR57T6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:a91fc33b50ea",
+  "category": "gpu",
+  "name": "ASUS ProArt RTX 5070 TI OC Gaming 16GB Graphics Card 16GB GDDR7 7680 x 4320 PCIE 5.0 8960 CUDA Core 2x HDMI 2.1a3x DisplayPort 2.1a 1x 16-pin Power Connector 3 Year Warranty",
+  "model_number": "PROART-RTX5070TI-O16G",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1389.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-proart-rtx-5070-ti-oc-gaming-16gb-graphics-card-16gb-gddr7-7680-x-4320-pcie-5-0-8960-cuda-core-2x-hdmi-2-1a.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-proart-rtx-5070-ti-oc-gaming-16gb-graphics-card-16gb-gddr7-7680-x-4320-pcie-5-0-8960-cuda-core-2x-hdmi-2-1a.html",
+   "price": 1389.99,
+   "stock": "3 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAASUR57T7R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:cab470f955c1",
+  "category": "gpu",
+  "name": "ASUS ROG STRIX RTX 5070 TI OC Gaming 16GB Graphics Card 16GB GDDR7 7680 x 4320 PCIE 5.0 8960 CUDA Core 2x HDMI 2.1a3x DisplayPort 2.1a 1x 16-pin Power Connector 3 Year Warranty",
+  "model_number": "ROG-STRIX-RTX5070TI-O16G-GAMIN",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-strix-rtx-5070-ti-oc-gaming-16gb-graphics-card-16gb-gddr7-7680-x-4320-pcie-5-0-8960-cuda-core-2x-hdmi-2-1a.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-strix-rtx-5070-ti-oc-gaming-16gb-graphics-card-16gb-gddr7-7680-x-4320-pcie-5-0-8960-cuda-core-2x-hdmi-2-1a.html",
+   "price": 1499.99,
+   "stock": "1 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAASUR57T5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:6ddb18e66d6a",
+  "category": "gpu",
+  "name": "ASUS PRIME-RTX5070TI-16G PRIME GeForce RTX 5070 Ti Graphics Card 16GB GDDR7 PCI Express 5.0 1x HDMI 2.1a3x DisplayPort 2.1a 1x 16-pin Power Connector 3 Year Warranty",
+  "model_number": "PRIME-RTX5070TI-16G",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-prime-rtx5070ti-16g-prime-geforce-rtx-5070-ti-graphics-card-16gb-gddr7-pci-express-5-0-1x-hdmi-2-1a.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-prime-rtx5070ti-16g-prime-geforce-rtx-5070-ti-graphics-card-16gb-gddr7-pci-express-5-0-1x-hdmi-2-1a.html",
+   "price": 1299.99,
+   "stock": "2 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAASUR57T2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 6
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:c8d47a28d3bf",
+  "category": "gpu",
+  "name": "ASUS PRIME-RTX5070TI-O16G PRIME GeForce RTX 5070 Ti OC Edition Graphics Card 16GB GDDR7 PCI Express 5.0 1x HDMI 2.1a3x DisplayPort 2.1a 1x 16-pin Power Connector 3 Year Warranty",
+  "model_number": "PRIME-RTX5070TI-O16G",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1349.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-prime-rtx5070ti-o16g-prime-geforce-rtx-5070-ti-oc-edition-graphics-card-16gb-gddr7-pci-express-5-0-1x-hdmi-2-1a.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-prime-rtx5070ti-o16g-prime-geforce-rtx-5070-ti-oc-edition-graphics-card-16gb-gddr7-pci-express-5-0-1x-hdmi-2-1a.html",
+   "price": 1349.99,
+   "stock": "6 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAASUR57T1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 6,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 6
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 26
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 7
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:38b85e2dddcf",
+  "category": "gpu",
+  "name": "ASUS TUF-RTX5070TI-O16G-WHITE-GAMING RTX 5070 TIOC 16GB GDDR7 White Graphics Card PCIE 5.0 1x HDMI 2.1a 3x 3x DisplayPort 2.1a 1x 16-pin Power Connector 3 Year Warranty",
+  "model_number": "TUF-RTX5070TI-O16G-WHITE-GAMIN",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-rtx5070ti-o16g-white-gaming-rtx-5070-tioc-16gb-gddr7-white-graphics-card-pcie-5-0-1x-hdmi-2-1a-3x-3x-displayport-2-1a.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-rtx5070ti-o16g-white-gaming-rtx-5070-tioc-16gb-gddr7-white-graphics-card-pcie-5-0-1x-hdmi-2-1a-3x-3x-displayport-2-1a.html",
+   "price": 1399.99,
+   "stock": "1 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAASUR57TWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:be8f2e1b850b",
+  "category": "gpu",
+  "name": "ASUS TUF-RTX5070TI-O16G-GAMINGTUF Gaming GeForce RTX 5070 Ti OC Edition Graphics Card 16GB GDDR7 PCI Express 5.0 1x HDMI 2.1a3x DisplayPort 2.1a 1x 16-pin Power Connector 3 Year Warranty",
+  "model_number": "TUF-RTX5070TI-O16G-GAMING",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1389.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-rtx5070ti-o16g-gamingtuf-gaming-geforce-rtx-5070-ti-oc-edition-graphics-card-16gb-gddr7-pci-express-5-0-1x-hdmi-2-1a.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-rtx5070ti-o16g-gamingtuf-gaming-geforce-rtx-5070-ti-oc-edition-graphics-card-16gb-gddr7-pci-express-5-0-1x-hdmi-2-1a.html",
+   "price": 1389.99,
+   "stock": "2 in stock at SF store (837 Howard St)",
+   "availability": "in_stock_sf_store",
+   "sku": "VGAASUR57T3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:4aacf099abee",
+  "category": "gpu",
+  "name": "Gigabyte GV-N507TWF3OC-16GD GeForce RTX 5070 Ti WindForce 16GB GDDR7 PCI Express 5.0 Video Card 1 x HDMI 2.1b 3 x DisplayPort 2.1a 1x 16-pin Power Connector",
+  "model_number": "GV-N507TWF3OC-16GD",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-gv-n507twf3oc-16gd-geforce-rtx-5070-ti-windforce-16gb-gddr7-pci-express-5-0-video-card-1-x-hdmi-2-1b.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-gv-n507twf3oc-16gd-geforce-rtx-5070-ti-windforce-16gb-gddr7-pci-express-5-0-video-card-1-x-hdmi-2-1b.html",
+   "price": 1249.99,
+   "stock": "0 at SF store (837 Howard St); 2 across other Central Computers stores",
+   "availability": "not_in_sf_store",
+   "sku": "VGAGIGR57T4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:3294e9238b39",
+  "category": "gpu",
+  "name": "MSI G507T-16GTCW NVIDIA GeForce RTX 5070 Ti TRIO OC WHITE Graphics Card 16GB GDDR7 PCI Express 5.01x HDMI 2.1a 3x DisplayPort 2.1a",
+  "model_number": "G507T-16GTCW",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-g507t-16gtcw-nvidia-geforce-rtx-5070-ti-trio-oc-white-graphics-card-16gb-gddr7-pci-express-5-0.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-g507t-16gtcw-nvidia-geforce-rtx-5070-ti-trio-oc-white-graphics-card-16gb-gddr7-pci-express-5-0.html",
+   "price": 1399.99,
+   "stock": "Special Order (Out of Stock): not in store; ships to store for free pickup in 2 to 7 business days (per page)",
+   "availability": "special_order",
+   "sku": "VGAMSIR57T5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": null,
+   "store_inventory": [],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:e55e58d627f0",
+  "category": "gpu",
+  "name": "PNY VCG5070T16TFXPB1 Nvidia GeForce RTX 5070 Ti 16GB 256-Bit GDDR7 DLSS 4.0 PCI Express 5.0 x16 Video Card",
+  "model_number": "VCG5070T16TFXPB1",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/pny-vcg5070t16tfxpb1-nvidia-geforce-rtx-5070-ti-16gb-256-bit-gddr7-dlss-4-0-pci-express-5-0-x16-video-card.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/pny-vcg5070t16tfxpb1-nvidia-geforce-rtx-5070-ti-16gb-256-bit-gddr7-dlss-4-0-pci-express-5-0-x16-video-card.html",
+   "price": 1199.99,
+   "stock": "Special Order (Out of Stock): not in store; ships to store for free pickup in 2 to 7 business days (per page)",
+   "availability": "special_order",
+   "sku": "VGAPNYR57T1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": null,
+   "store_inventory": [],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:cf9dfc4a5547",
+  "category": "gpu",
+  "name": "MSI G507T-16I3C NVIDIA GeForce RTX 5070 Ti INSPIRE 3X OC Graphics Card 16GB GDDR7 PCI Express 5.01x HDMI 2.1a 3x DisplayPort 2.1a 1x 16-pin Power Connector",
+  "model_number": "G507T-16I3C",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-g507t-16i3c-nvidia-geforce-rtx-5070-ti-inspire-3x-oc-graphics-card-16gb-gddr7-pci-express-5-0.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-g507t-16i3c-nvidia-geforce-rtx-5070-ti-inspire-3x-oc-graphics-card-16gb-gddr7-pci-express-5-0.html",
+   "price": 1299.99,
+   "stock": "Special Order (Out of Stock): not in store; ships to store for free pickup in 2 to 7 business days (per page)",
+   "availability": "special_order",
+   "sku": "VGAMSIR57T3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": null,
+   "store_inventory": [],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ },
+ {
+  "id": "centralcomputers:51226bc441fe",
+  "category": "gpu",
+  "name": "MSI G507T-16S3C NVIDIA GeForce RTX 5070 Ti SHADOW 3X OC Graphics Card 16GB GDDR7 PCI Express 5.01x HDMI 2.1a 3x DisplayPort 2.1a",
+  "model_number": "G507T-16S3C",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-g507t-16s3c-nvidia-geforce-rtx-5070-ti-shadow-3x-oc-graphics-card-16gb-gddr7-pci-express-5-0.html",
+  "snapshot_id": "centralcomputers-20261024T2112Z",
+  "snapshot_date": "2026-10-24T21:12:13+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-g507t-16s3c-nvidia-geforce-rtx-5070-ti-shadow-3x-oc-graphics-card-16gb-gddr7-pci-express-5-0.html",
+   "price": 1299.99,
+   "stock": "Special Order (Out of Stock): not in store; ships to store for free pickup in 2 to 7 business days (per page)",
+   "availability": "special_order",
+   "sku": "VGAMSIR57T4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": null,
+   "store_inventory": [],
+   "apify_actor": "apify/website-content-crawler",
+   "apify_run_id": "K0YOWTRV573VJkfis",
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/video-cards/rtx-50-series.html"
+  }
+ }
+]

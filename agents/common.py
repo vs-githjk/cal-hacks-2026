@@ -177,16 +177,36 @@ class OrderPlaced(Model):
 
 
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
-SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named seller agents, each its own uAgent
-SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015}
-BUILT_IN_ROLES = ("buyer", "advocate", "shield", *SELLERS)
+CATALOG_SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named SIM seller agents
+# #342: seller_6 bids Central Computers (SF) listings as MIRROR. That store never joined, so its bids are shown for
+# comparison and never ordered or paid (data/mirror/not_partners.py). It has NO default seed: it runs only when
+# SELLER_6_AGENT_SEED is set to a private seed (agents/.env, never committed); otherwise it stays off.
+MIRROR_SELLERS = ("seller_6",)
+MIN_PRIVATE_SEED = 16
+
+
+def _private_seed(env: str) -> str | None:
+    """The env seed when it is private enough to sign with: set, 16+ characters, not a public *-dev default."""
+    value = (os.getenv(env) or "").strip()
+    return value if len(value) >= MIN_PRIVATE_SEED and not value.endswith("-dev") else None
+
+
+_MIRROR_SEEDS = {name: seed for name in MIRROR_SELLERS if (seed := _private_seed(f"{name.upper()}_AGENT_SEED"))}
+SELLERS = [*CATALOG_SELLERS, *_MIRROR_SEEDS]  # each its own uAgent; seller_6 only when its private seed is set
+SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
+                "seller_6": 8016}
+BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)
 SEEDS = {
     "buyer": os.getenv("BUYER_AGENT_SEED", "tech-bazaar-buyer-dev"),
     "advocate": os.getenv("ADVOCATE_AGENT_SEED") or os.getenv("ADVOCATE_SEED", "tech-bazaar-advocate-dev"),
     "shield": os.getenv("SHIELD_AGENT_SEED") or os.getenv("SHIELD_SEED", "tech-bazaar-shield-dev"),
     **{s: os.getenv(f"{s.upper()}_AGENT_SEED") or os.getenv(f"{s.upper()}_SEED", f"tech-bazaar-{s}-dev")
-       for s in SELLERS},
+       for s in CATALOG_SELLERS},
+    **_MIRROR_SEEDS,  # never a default: no private seed, no seller_6
 }
+
+
+_CUSTOM_ENVS: dict[str, str] = {}  # env name -> the custom role that owns it
 
 
 def register_custom_seller(role: str) -> None:
@@ -201,7 +221,10 @@ def register_custom_seller(role: str) -> None:
     if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
         raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
                          "built-in agent, a custom seller must not reuse its key")
-    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
+    if _CUSTOM_ENVS.get(env, role) != role:
+        raise ValueError(f"{role!r} and {_CUSTOM_ENVS[env]!r} map to the same seed name {env}_AGENT_SEED")
+    _CUSTOM_ENVS[env] = role
+    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED", f"tech-bazaar-{role}-dev")
 
 
 def public_seed(role: str) -> bool:
@@ -212,7 +235,7 @@ def public_seed(role: str) -> bool:
 
 def mailbox_on(role: str) -> bool:
     """True when this role should go on Agentverse (AGENTS_MAILBOX, or its own flag; sellers share SELLERS_MAILBOX)."""
-    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
+    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield", "caller") else "SELLERS_MAILBOX"
     return bool(os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag))
 
 
@@ -222,10 +245,24 @@ def mailbox_ready(role: str) -> bool:
     return not (mailbox_on(role) and public_seed(role))
 
 
+AVATARS = Path(__file__).resolve().parent / "avatars"
+AVATAR_BASE = "https://raw.githubusercontent.com/vs-githjk/cal-hacks-2026/main/agents/avatars"
+
+
+def avatar_url(role: str) -> str | None:
+    """Public URL of the role's avatar (agents/avatars/<role>.png, served from the public repo), or None when the
+    role has no avatar file. AGENT_AVATAR_BASE overrides the host, e.g. to serve them from the web app."""
+    if not (AVATARS / f"{role}.png").is_file():
+        return None
+    return f"{os.getenv('AGENT_AVATAR_BASE', AVATAR_BASE).rstrip('/')}/{role}.png"
+
+
 def agent_args(role: str, port: int, **profile) -> dict:
     """Constructor args for an agent. AGENTS_MAILBOX=1 puts it on Agentverse (register once with
     `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
-    readme_path, handle, published to Agentverse on connect."""
+    readme_path, handle, avatar_url (defaults to the role's avatar), published to Agentverse on connect."""
+    if "avatar_url" not in profile and (url := avatar_url(role)):
+        profile["avatar_url"] = url
     args = dict(seed=SEEDS[role], port=port, publish_agent_details=True, **profile)
     if mailbox_on(role):
         if public_seed(role):
@@ -235,6 +272,9 @@ def agent_args(role: str, port: int, **profile) -> dict:
 
 
 def address(role: str) -> str:
+    if role not in SEEDS and role in MIRROR_SELLERS:
+        raise ValueError(f"{role} is off: set {role.upper()}_AGENT_SEED in agents/.env to a private seed of "
+                         f"{MIN_PRIVATE_SEED}+ characters. It has no default seed.")
     return Identity.from_seed(SEEDS[role], 0).address
 
 

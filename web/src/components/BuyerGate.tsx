@@ -1,16 +1,17 @@
 "use client";
 // The private boundary for every /buyer route. Children render only once the market's own my_role row says this
-// screen is paired as one buyer; the buyer id is read from that row, never from the URL or local state.
+// screen is a buyer (signed up at /start, or paired with a code); a visitor with no role is sent to /start; the buyer id is read from that row, never from the URL or local state.
 // Switching buyers remounts everything below (key), so no private row, draft or pending request outlives the identity it belonged to.
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { buyerSession } from "@/lib/screens";
+import { gateRoute, pairCodeToSend } from "@/lib/signUp";
 import { GoalComposer } from "./GoalComposer";
 import { PanelPreviews } from "./panels";
 
-// Demo pairing: the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
+// Operator pairing (/buyer?pair=1): the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
 const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;
@@ -36,15 +37,20 @@ function PairScreen() {
     <section className="card mx-auto max-w-md p-6">
       <h1 className="mb-2 text-lg font-semibold">Pair this screen with the buyer</h1>
       <p className="mb-4 text-sm text-muted">
-        Enter the pairing code from the demo operator. Sellers can never pair.
+        Enter the pairing code from the operator, like DJAAG-FRM3M. Sellers can never pair.
       </p>
       <form
         className="flex gap-2"
         onSubmit={async (e) => {
           e.preventDefault();
           setError("");
+          const toSend = pairCodeToSend(code);
+          if (!toSend) {
+            setError("Type the pairing code first.");
+            return;
+          }
           try {
-            await pair({ buyerId: DEMO_BUYER, code: code.trim() });
+            await pair({ buyerId: DEMO_BUYER, code: toSend });
             setTried(true);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Pairing failed");
@@ -54,10 +60,14 @@ function PairScreen() {
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          inputMode="numeric"
-          placeholder="6-digit code"
+          inputMode="text"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="off"
+          placeholder="Like DJAAG-FRM3M"
           aria-label="Pairing code"
-          className="flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono"
+          className="w-full min-w-0 flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono"
         />
         <button className="min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink">Pair</button>
       </form>
@@ -76,9 +86,15 @@ function PairScreen() {
 export function BuyerGate({ children }: { children: ReactNode }) {
   const conn = useSpacetimeDB();
   const [roles, rolesReady] = useTable(tables.myRole);
-  const session = buyerSession(conn.isActive, rolesReady, roles);
-  if (session.status === "connecting") return <PanelPreviews reason="Connecting to the market. If this stays, the market is not reachable from this page; the panels fill in when it answers." />;
-  if (session.status === "unpaired") {
+  const router = useRouter();
+  // Providers renders client-only, so window exists here.
+  const [wantsPair] = useState(() => new URLSearchParams(window.location.search).get("pair") === "1");
+  const route = gateRoute(conn.isActive, rolesReady, roles, wantsPair);
+  useEffect(() => {
+    if (route === "signup") router.replace("/start");
+  }, [route, router]);
+  if (route === "connecting" || route === "signup") return <PanelPreviews reason="Connecting to the market. If this stays, the market is not reachable from this page; the panels fill in when it answers." />;
+  if (route === "pair") {
     return (
       <div className="grid gap-3.5">
         <GoalComposer buyerId={null} />
@@ -87,8 +103,9 @@ export function BuyerGate({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  const buyerId = roles.find((r) => r.role === "buyer")!.subjectId;
   return (
-    <BuyerIdContext.Provider key={session.buyerId} value={session.buyerId}>
+    <BuyerIdContext.Provider key={buyerId} value={buyerId}>
       {children}
     </BuyerIdContext.Provider>
   );

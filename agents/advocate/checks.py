@@ -11,23 +11,26 @@ from urllib.parse import urlsplit
 
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
+from data.mirror import not_partners
 
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
-VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller"}
+VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller", "mirror_not_orderable"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
 CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unconfirmed": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
                 "note": f"{REPO}/data/fit_checker/README.md", "same_seller": f"{REPO}/agents/advocate/checks.py", "record": f"{REPO}/agents/advocate/checks.py",
-                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py"}
+                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py",
+                "mirror_not_orderable": f"{REPO}/data/mirror/not_partners.py"}
 
 # Closed-schema reason for the voice call: summary comes only from this table, never from seller text or a model.
 # Every summary must pass pay.callscript.clean_advocate_reason (tested).
 CALL_SUMMARIES = {
     "advocate.condition": "The listing page shows a different condition than the seller claims",
     "advocate.recall": "This product matches a CPSC recall entry",
+    "advocate.recall_partial": "A CPSC recall names a similar model, so check the exact model",
     "advocate.price": "The price is more than 10 percent above its price history",
     "advocate.spec": "This offer is not the condition you asked for",
     "advocate.record": "This seller has a caution record",
@@ -35,6 +38,7 @@ CALL_SUMMARIES = {
     "advocate.same_seller": "Another bid in this round comes from the same seller",
     "advocate.unsourced": "A claim on this bid could not be checked against its listing",
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
+    "advocate.mirror_not_orderable": "This store is shown for comparison only and cannot be bought from here",
     "fit.gpu_length": "The card is longer than your case allows",
     "fit.psu_wattage": "Your power supply is below what this card needs",
     "fit.gpu_connectors": "Your power supply lacks the connectors this card needs",
@@ -46,6 +50,7 @@ CALL_SUMMARIES = {
     "fit.cooler_socket": "The cooler does not support this processor socket",
     "fit": "This part does not fit your build",
     "advocate.ok": "No problems found in the checks",
+    "advocate.unverified": "Some checks could not run",
 }
 
 
@@ -110,11 +115,12 @@ def _fit_warnings(bid, owned):
 # #89: seller-supplied strings never reach card text. Conditions map to this closed set, item names come from the
 # buyer's own need, seller ids must match our pattern, and fit text comes from the rule templates.
 CONDITIONS = {"new", "open box", "refurbished", "used"}
+UNSTATED = {"unknown", "not stated", "unverified"}  # the listing page gives no condition (#308)
 
 
 def _cond(value) -> str:
     v = _norm(value)
-    return v if v in CONDITIONS else "an unrecognized condition"
+    return v if v in CONDITIONS else "not stated" if v in UNSTATED else "an unrecognized condition"
 
 
 def _item(sku, wanted) -> str:
@@ -125,41 +131,76 @@ def _seller(supplier_id) -> str:
     return f"Seller {supplier_id}" if re.fullmatch(r"seller_\d{1,3}", str(supplier_id)) else "This seller"
 
 
+def _amount(v):
+    """A finite, non-negative number (not a bool, not a string), else None."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (float("inf"), float("-inf")) or v < 0:
+        return None
+    return v
+
+
 def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
     out = _fit_warnings(bid, owned)
     for line in bid["lines"]:
         sku = _item(line["sku_spec"], wanted)
-        total = line["unit_price"] * line["quantity"]
         url = line.get("listing_url", "")
+        price, qty = _amount(line.get("unit_price")), _amount(line.get("quantity"))
+        if price is None or qty is None:  # #397 B6: an unreadable price or quantity was a crash; now it is unverified, never a buy
+            out.append(_warn("unverified", f"{sku}: the price or quantity on this line could not be read, so no price "
+                             "check was made.", url, 0, rule_id="advocate.unsourced"))
+            line = {**line, "unit_price": 0.0, "quantity": 1}
+            price, qty = 0.0, 1
+        total = price * qty
+
+        offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
+        # #308: a page that does not state the condition (MIRROR Central Computers) proves nothing either way.
+        # It is unverified (a caution, never shown or treated as new) only when neither side states anything concrete.
+        # #333: one concrete side against an unstated or different other side is still a mismatch veto, as before.
+        unstated = bool(UNSTATED & {offered, page}) and {offered, page} <= UNSTATED | {""}
 
         # an honest offer of a different condition than asked for: caution, not a veto
         asked = _norm((wanted or {}).get(line["sku_spec"]))
-        if asked and _norm(line.get("offered_condition")) not in ("", asked):
+        if asked and not unstated and offered not in ("", asked):
             out.append(_warn("spec", f"You asked for {_cond(asked)}; this offer is {_cond(line['offered_condition'])}.",
                              url, 0))
 
-        offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
-        if offered and page and offered != page:
+        if unstated:
+            out.append(_warn("unverified", f"{sku}: the listing does not state a condition, so the condition is "
+                             "unverified, not confirmed as asked.", url, 0, rule_id="advocate.unsourced"))
+        elif offered and page and offered != page:
             offered, page = _cond(offered), _cond(page)
             out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
                              "The condition claim did not match the listing.", url, total))
 
-        base = baseline.get(_norm(line["sku_spec"]))
+        base = baseline.get(_norm(line["sku_spec"])) if price else None
         if base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
             over = (line["unit_price"] - base["unit_price"]) * line["quantity"]
+            dated = (f" ({base['label']})" if base.get("label") else  # #291: MIRROR baseline as of <date>, N sources
+                     f" ({base['source']}, dated {base['as_of'][:10]})" if base.get("as_of") else "")
             out.append(_warn("price", f"{sku} at ${line['unit_price']:.2f} is above the price history baseline "
-                             f"of ${base['unit_price']:.2f}; the price claim did not match the price history "
+                             f"of ${base['unit_price']:.2f}{dated}; the price claim did not match the price history "
                              f"by ${over:.2f}.", base["source_url"], over))
 
-        hit = next((r for r in recalls if r["match"] in _norm(line["sku_spec"])), None)
+        # a recall applies only to the bid it was looked up for (bid_ids), when the entry says so; #291
+        hits = [r for r in recalls if r["match"] in _norm(line["sku_spec"])
+                and (r.get("bid_ids") is None or bid.get("id") in r["bid_ids"])]
+        hit = next((r for r in hits if not r.get("partial")), None)
         if hit:
-            out.append(_warn("recall", f"{sku} matches a CPSC recall entry ('{hit['match']}').",
+            out.append(_warn("recall", f"{sku} matches a CPSC recall entry ({hit.get('text') or repr(hit['match'])}).",
                              hit["source_url"], total))
+        elif hits:  # same brand, a similar model: a caution with the recall link, never a veto
+            out.append(_warn("recall_partial", f"A CPSC recall names a similar model to {sku} ({hits[0].get('text') or 'see the recall'}); "
+                             "check the exact model before you buy.", hits[0]["source_url"], 0))
 
     rec = records.get(bid["supplier_id"])
     if rec and rec["record"] != "good":
         out.append(_warn("record", f"{_seller(bid['supplier_id'])} has a '{_norm(rec['record'])}' record.",
                          rec.get("source_url", ""), 0))
+
+    # #333: a real store we mirror that never joined is shown for comparison only. Never orderable, so a veto.
+    if not not_partners.orderable(bid):
+        url = (bid.get("lines") or [{}])[0].get("listing_url", "")
+        out.append(_warn("mirror_not_orderable", f"{not_partners.NOT_ORDERABLE} This MIRROR listing is from a real "
+                         "store that never joined, so it is never ordered, charged or paid.", url, 0))
 
     if not bid.get("floor_check_passed", True):
         out.append(_warn("floor", "Bid did not pass the price floor check; the price may not hold.", FLOOR_URL, 0))

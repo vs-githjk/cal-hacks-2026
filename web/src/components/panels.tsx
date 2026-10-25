@@ -38,7 +38,7 @@ export function AllowancePanel({ allowance: a, cap }: { allowance: GoalView["all
           ) : (
             <p className="text-[13px] text-muted">The goal cap is needed to draw this to scale.</p>
           )}
-          <p className="text-[13px] text-muted">
+          <p className="text-[13px] tabular-nums text-muted">
             {money(a.spent)} of {money(a.periodLimit)} used this {a.period}. Ladder step {a.ladderStep}: each clean delivery raises it.
           </p>
         </div>

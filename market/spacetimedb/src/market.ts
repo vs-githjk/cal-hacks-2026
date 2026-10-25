@@ -5,7 +5,7 @@ import { SenderError, type InferSchema, type ReducerCtx, type ViewCtx, type Anon
 import { ScheduleAt, Timestamp, type Identity } from 'spacetimedb';
 import type spacetimedb from './schema';
 import { ANY_CONDITION, checkFloorByCondition } from '../../rules/floor';
-import { rankBids } from '../../rules/scoring';
+import { adjustmentReason, rankBids } from '../../rules/scoring';
 import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
@@ -101,11 +101,23 @@ function writeFloor(ctx: Ctx, what: string, skuSpec: string, condition: string, 
 }
 
 export const PAIR_MAX_FAILURES = 5;
+// #135: identities are free, so a per-identity lock alone lets an attacker brute-force the code by rotating
+// identities. This soft, code-wide throttle backs it up: PAIR_THROTTLE_MISSES wrong codes on the same code
+// within PAIR_THROTTLE_WINDOW_MS make every new attempt on that code (right or wrong, any identity) wait
+// PAIR_THROTTLE_WAIT_MS. It never locks the code; the owner always gets through once the wait is over.
+export const PAIR_THROTTLE_MISSES = 20;
+export const PAIR_THROTTLE_WINDOW_MS = 10 * 60 * 1000;
+export const PAIR_THROTTLE_WAIT_MS = 60 * 1000;
+// Crockford base32: no I L O U, so a misread character is never mistaken for another. 10 characters, shown
+// grouped as XXXXX-XXXXX; compared case-insensitively with the grouping ignored (normPairCode).
+const PAIR_CODE_CHARS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const normPairCode = (s: string) => s.toUpperCase().replace(/[^0-9A-Z]/g, '');
 
 /**
  * A browser screen takes the buyer role with the demo pairing code (SIM sign-in). A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
  * roll the count back). 5 failures lock that caller (identity) across every code; the code itself only counts failures for the
- * operator, so a stranger's misses can never lock the owner's screen out.
+ * operator, so a stranger's misses can never lock the owner's screen out. The code-wide throttle above backs
+ * this up: it is a wait, not a lock, so the operator never has to reissue just because it tripped.
  * The code itself never appears in a message.
  */
 export function pairBuyerScreen(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
@@ -130,12 +142,22 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   if (want.locked) throw new SenderError('pairing is locked after too many wrong codes; ask the operator for a new code');
   const mine = ctx.db.pairAttempt.identity.find(ctx.sender);
   if (mine && mine.failures >= PAIR_MAX_FAILURES) throw new SenderError('this screen is locked after too many wrong codes; ask the operator');
-  if (want.code !== code) {
-    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: want.failedAttempts + 1 });
+  const now = ms(ctx.timestamp);
+  if (now < ms(want.throttledUntil)) {
+    throw new SenderError(`too many wrong codes on this screen recently; wait ${Math.ceil((ms(want.throttledUntil) - now) / 1000)} s and try again`);
+  }
+  if (normPairCode(want.code) !== normPairCode(code)) {
+    const windowAge = now - ms(want.windowStart);
+    const freshWindow = windowAge > PAIR_THROTTLE_WINDOW_MS;
+    const windowStart = freshWindow ? ctx.timestamp : want.windowStart;
+    const windowMisses = (freshWindow ? 0 : want.windowMisses) + 1;
+    const throttledUntil = windowMisses >= PAIR_THROTTLE_MISSES ? tsFromMs(now + PAIR_THROTTLE_WAIT_MS) : want.throttledUntil;
+    ctx.db.pairCode.buyerId.update({ ...want, failedAttempts: want.failedAttempts + 1, windowStart, windowMisses, throttledUntil });
     const failures = (mine?.failures ?? 0) + 1;
     if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures });
     else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures });
     if (failures >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', key, 'A screen is locked after too many wrong codes');
+    if (windowMisses >= PAIR_THROTTLE_MISSES) event(ctx, 'pairing_throttled', 'pair_code', key, 'Pairing on a screen is throttled after many wrong codes');
     return { paired: false, reason: 'wrong pairing code' };
   }
   if (cur) ctx.db.role.identity.update({ ...cur, subjectId });
@@ -143,7 +165,7 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   return { paired: true, reason: '' };
 }
 
-/** Owner only: a fresh code for this buyer, unlocked, with its counter reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
+/** Owner only: a fresh code for this buyer, unlocked, with its counter and its throttle reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
 export function reissuePairCode(ctx: Ctx, { buyerId }: { buyerId: string }) {
   requireRole(ctx, 'reissue_pair_code', ['owner']);
   issuePairCode(ctx, buyerId);
@@ -158,10 +180,51 @@ export function reissueSellerScreenCode(ctx: Ctx, { sellerId }: { sellerId: stri
 }
 
 export function issuePairCode(ctx: Ctx, buyerId: string) {
-  const code = String(ctx.random.integerInRange(100000, 999999));
+  let raw = '';
+  for (let i = 0; i < 10; i++) raw += PAIR_CODE_CHARS[ctx.random.integerInRange(0, PAIR_CODE_CHARS.length - 1)];
+  const code = `${raw.slice(0, 5)}-${raw.slice(5)}`;
+  const fresh = { buyerId, code, failedAttempts: 0, locked: false, windowStart: ctx.timestamp, windowMisses: 0, throttledUntil: Timestamp.UNIX_EPOCH };
   const cur = ctx.db.pairCode.buyerId.find(buyerId);
-  if (cur) ctx.db.pairCode.buyerId.update({ buyerId, code, failedAttempts: 0, locked: false });
-  else ctx.db.pairCode.insert({ buyerId, code, failedAttempts: 0, locked: false });
+  if (cur) ctx.db.pairCode.buyerId.update(fresh);
+  else ctx.db.pairCode.insert(fresh);
+}
+
+// ---------------------------------------------------------------- #374 open buyer sign-up
+
+export const SIGNUP_MAX = 30;
+export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
+const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;
+
+/**
+ * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
+ * (every deal needs their call). One sign-up per identity; 30 per 10 minutes across the market.
+ */
+export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: string; phone?: string }) {
+  const had = roleOf(ctx);
+  if (isOwner(ctx) || had) throw new SenderError(`already signed up: this identity is ${had ? `a ${had.role}` : 'the owner'}`);
+  const name = displayName.trim().slice(0, 60);
+  if (!name) throw new SenderError('display name required');
+  const ph = (phone ?? '').trim().replace(/[ ()-]/g, '');
+  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
+  const now = ms(ctx.timestamp);
+  const th = ctx.db.signupThrottle.id.find(0);
+  const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;
+  if (!fresh && th.count >= SIGNUP_MAX) throw new SenderError('sign-ups are busy right now, try again in a few minutes');
+  const next = { id: 0, windowStart: fresh ? ctx.timestamp : th.windowStart, count: fresh ? 1 : th.count + 1 };
+  if (th) ctx.db.signupThrottle.id.update(next);
+  else ctx.db.signupThrottle.insert(next);
+  let buyerId = '';
+  do {
+    let raw = '';
+    for (let i = 0; i < 8; i++) raw += ID_CHARS[ctx.random.integerInRange(0, ID_CHARS.length - 1)];
+    buyerId = `b_${raw}`;
+  } while ([...ctx.db.role.subjectId.filter(buyerId)].length || ctx.db.buyerProfile.buyerId.find(buyerId) || ctx.db.allowance.buyerId.find(buyerId));
+  ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
+  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph });
+  ctx.db.allowance.insert(fromRule({ ...newAllowance(buyerId, now), per_purchase_limit: 0 }));
+  event(ctx, 'buyer_signed_up', 'buyer_profile', buyerId, 'A new buyer signed up');
+  return buyerId;
 }
 
 // ---------------------------------------------------------------- allowance (D's shape, rules/allowance)
@@ -216,8 +279,14 @@ export interface PostNeedArgs {
   items: { skuSpec: string; condition: string; allowedConditions: string[]; variant: string; quantity: number; unit: string }[];
 }
 
+/** The referee path is for the buyer agent acting for a self-signed-up buyer, and only against that buyer's active goal. */
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
-  requireRole(ctx, 'post_need', ['buyer'], a.buyerId);
+  const who = requireRole(ctx, 'post_need', ['buyer', 'referee'], a.buyerId);
+  if (who.role === 'referee') {
+    const g = ctx.db.goal.id.find(a.goalId);
+    if (!g || g.buyerId !== a.buyerId) throw new SenderError(`not allowed: the referee posts a need only for one of that buyer's goals; ${a.goalId || 'no goal'} is not ${a.buyerId}'s`);
+    if (g.state !== 'ACTIVE') throw new SenderError(`not allowed: goal ${a.goalId} is not active`);
+  }
   allowanceFor(ctx, a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');
@@ -492,6 +561,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   const rows = [...ctx.db.bid.roundId.filter(roundId)];
   const rejections = new Map<string, string[]>();
+  const heldBack = new Map<string, string>();
   const verified = new Map<string, number>();
   for (const b of rows) {
     const reasons: string[] = [];
@@ -502,6 +572,10 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       if (c.kind === 'claim' && c.result === 'verified') verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
       if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
     }
+    // #191: the latest advocate card decides; caution (fit unconfirmed) ranks below confirmed bids and says so.
+    const cards = [...ctx.db.bidCheck.bidId.filter(b.id)].filter((c) => c.kind === 'advocate').sort((x, y) => (x.id < y.id ? -1 : 1));
+    const card = cards[cards.length - 1];
+    if (card?.result === 'caution') heldBack.set(b.id, `held back: advocate caution (${card.detail})`);
     if (reasons.length) rejections.set(b.id, reasons);
   }
   // The seller fee is deliberately not passed: it never feeds ranking (invariant 8).
@@ -521,17 +595,27 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   const lineRejects = new Map(rows.map((b) => [b.id, b.lines.map((_: Line, i: number) => b.lineRejects[i] || soldOut.get(b.id)![i] || '')]));
   const ranked = rankBids(rows.map(toBid), {
-    needItems, rejections, lineRejects, spendLimit, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
+    needItems, rejections, lineRejects, spendLimit, heldBack, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
   });
   const byId = new Map(rows.map((b) => [b.id, b]));
   for (const x of ranked.ranked) {
     const b = byId.get(x.bid.id)!;
     // The lines are the picked alternatives (the cheapest allowed line per SKU), the ones the rank is about.
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source });
+    // adjusted_total is the real score rankBids sorted on (equal to landed when nothing adjusted it).
+    const pickedLines = x.picked.map((i) => x.bid.lines[i]!);
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
+      lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
+      adjustedTotal: x.score, adjustmentReason: adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality),
+    });
   }
   for (const d of ranked.disqualified) {
     const b = byId.get(d.bid.id)!;
-    ctx.db.roundResult.insert({ id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons, lines: b.lines, origin: b.origin, source: b.source });
+    // Never ranked, so there is no adjusted score to show: adjusted_total stays the landed price.
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons,
+      lines: b.lines, origin: b.origin, source: b.source, adjustedTotal: d.landed, adjustmentReason: '',
+    });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
   const top = ranked.ranked[0];
@@ -555,6 +639,9 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
 
 // ---------------------------------------------------------------- mandate, approval, payment
 
+export const MANDATE_MAX_EXPIRY_MIN = 10;
+export const APPROVAL_METHODS = ['voice_code', 'allowance'];
+
 /** MOCK until Vidyut's Mandate lands: same fields as the 00-shared shape. */
 export function createMandate(
   ctx: Ctx,
@@ -563,8 +650,17 @@ export function createMandate(
     requestedBy: string; origin: string;
   },
 ) {
-  requireRole(ctx, 'create_mandate', ['buyer', 'referee'], a.buyerId);
+  requireRole(ctx, 'create_mandate', ['referee']);
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
+  // #191: a mandate exists only for the round's real winner, paid to that seller, at its landed price, for minutes.
+  const bid = ctx.db.bid.id.find(bidIdOfDeal(a.dealId));
+  const won = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].find((r) => r.bidId === bid.id) : undefined;
+  if (!bid || !won || won.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
+  if (a.payee !== bid.sellerId) throw new SenderError(`payee must be the winning seller (${bid.sellerId})`);
+  if (Math.abs(a.amount - won.landed) > 1e-9) throw new SenderError('amount must equal the winning landed price');
+  if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {
+    throw new SenderError(`expiry must be 1 to ${MANDATE_MAX_EXPIRY_MIN} minutes`);
+  }
   claimDealUnits(ctx, a.dealId, a.buyerId, 'held');
   const allow = allowanceFor(ctx, a.buyerId);
   const d = decide(allow, a.amount, ms(ctx.timestamp));
@@ -574,10 +670,11 @@ export function createMandate(
     expiry: tsFromMs(ms(ctx.timestamp) + a.expiryMinutes * 60_000), nonce: a.nonce, withinAllowance: within,
     requestedBy: a.requestedBy, origin: a.origin,
   });
-  event(ctx, 'mandate_created', 'mandate', a.hash, within ? 'Deal within the allowance' : 'Deal needs the buyer call', a.payee, a.origin);
+  // #191: one neutral public label, so the floor never shows which side of the allowance a deal fell.
+  event(ctx, 'mandate_created', 'mandate', a.hash, 'Deal ready for approval', a.payee, a.origin);
   if (within) {
     // Inside the allowance: approved by the buyer's own standing rule, with a receipt.
-    ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp });
+    ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp, voiceApprovalId: '' });
     saveAllowance(ctx, recordAutoSpend(allow, a.amount, ms(ctx.timestamp)));
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Bought within your allowance: ${d.reason}. Receipt for deal ${a.dealId}.`, push: false, at: ctx.timestamp });
     event(ctx, 'approval_recorded', 'approval', a.hash, 'Approved within the allowance', a.payee, a.origin);
@@ -586,19 +683,21 @@ export function createMandate(
   }
 }
 
-export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string }) {
-  requireRole(ctx, 'record_approval', ['buyer', 'referee']);
+export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string; voiceApprovalId: string }) {
+  // #191 (LOCKED: approval by phone call only): the referee relays the call result; no buyer screen records an approval.
+  requireRole(ctx, 'record_approval', ['referee']);
+  if (!APPROVAL_METHODS.includes(a.method)) throw new SenderError(`method must be one of ${APPROVAL_METHODS.join(', ')}`);
   const md = ctx.db.mandate.hash.find(a.mandateHash);
   if (!md) throw new SenderError('no mandate with that hash');
-  // Only the mandate's own buyer, or the referee relaying that buyer's verified code.
-  requireRole(ctx, 'record_approval', ['buyer', 'referee'], md.buyerId);
+  if (a.method === 'allowance' && !md.withinAllowance) throw new SenderError('this deal is over the allowance; only the call approves it');
+  if (a.method === 'voice_code' && !a.voiceApprovalId.trim()) throw new SenderError('a voice approval needs the VoiceApproval id from the call');
   if (a.approvedBy !== md.buyerId) throw new SenderError(`approvedBy must be the mandate's buyer (${md.buyerId})`);
   const sep = requesterMayApprove(md.requestedBy, a.approvedBy);
   if (!sep.ok) throw new SenderError(sep.reasons.join('; '));
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
-  ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp });
+  ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp, voiceApprovalId: a.voiceApprovalId.trim() });
   event(ctx, 'approval_recorded', 'approval', a.mandateHash, `Approved by ${a.method.replace('_', ' ')}`, md.payee, md.origin);
 }
 
@@ -718,9 +817,12 @@ function myBuyerId(ctx: VCtx) {
   return r?.role === 'buyer' ? r.subjectId : undefined;
 }
 
+/** The caller's role row; the owner has none, so it gets a synthetic one (the /admin page gates on role owner or referee). */
 export function myRoleView(ctx: VCtx) {
   const r = roleOf(ctx);
-  return r ? [r] : [];
+  if (r) return [r];
+  const o = ctx.db.owner.id.find(0);
+  return o && o.identity.isEqual(ctx.sender) ? [{ identity: ctx.sender, role: 'owner', subjectId: '' }] : [];
 }
 
 export function myGoalsView(ctx: VCtx) {
@@ -778,27 +880,6 @@ export function issueApprovalCode(ctx: Ctx, { mandateHash, code }: { mandateHash
   else ctx.db.approvalCode.insert(row);
 }
 
-/**
- * The typed fallback: the mandate's own buyer types the code shown on its screen. A match records the same approval the call
- * would (method typed_code) for that exact mandate. A miss returns { approved: false } without throwing, so it is counted; 5 lock it.
- * The code never appears in a message.
- */
-export function approveTyped(ctx: Ctx, { mandateHash, code }: { mandateHash: string; code: string }) {
-  const md = ctx.db.mandate.hash.find(mandateHash);
-  if (!md) throw new SenderError('no mandate with that hash');
-  requireRole(ctx, 'approve_typed', ['buyer'], md.buyerId);
-  const ac = ctx.db.approvalCode.mandateHash.find(mandateHash);
-  if (!ac) throw new SenderError('no code issued for this mandate yet; wait for the call');
-  if (ac.locked) throw new SenderError('typed approval is locked after too many wrong codes; approve on the call');
-  if (normCode(code) !== ac.code) {
-    const failures = ac.failures + 1;
-    ctx.db.approvalCode.mandateHash.update({ ...ac, failures, locked: failures >= APPROVAL_MAX_FAILURES });
-    return { approved: false, reason: 'wrong code' };
-  }
-  recordApproval(ctx, { mandateHash, method: 'typed_code', approvedBy: md.buyerId });
-  return { approved: true, reason: '' };
-}
-
 /** This buyer's mandates still waiting for approval, with the code to show on this screen only. */
 export function myPendingApprovalsView(ctx: VCtx) {
   const id = myBuyerId(ctx);
@@ -810,6 +891,38 @@ export function myPendingApprovalsView(ctx: VCtx) {
       mandateHash: md.hash, mandateId: md.id, amount: md.amount, payee: md.payee, expiry: md.expiry, code: ac.code,
       failures: ac.failures, locked: ac.locked, issuedAt: ac.issuedAt, origin: md.origin,
     }];
+  });
+}
+
+/**
+ * #191-5: the checks on bids in this buyer's own rounds (advocate cards, Shield verdicts, claim checks), so /buyer shows the
+ * live veto and Shield cards. Never another buyer's rounds; sellers and strangers see nothing.
+ */
+export function myBidChecksView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  if (!id) return [];
+  return [...ctx.db.need.buyerId.filter(id)].flatMap((n) =>
+    [...ctx.db.round.needId.filter(n.id)].flatMap((r) => [...ctx.db.bid.roundId.filter(r.id)]).flatMap((b) =>
+      [...ctx.db.bidCheck.bidId.filter(b.id)].map((c) => ({
+        id: c.id, bidId: b.id, roundId: b.roundId, sellerId: b.sellerId, persona: b.persona, bidOrigin: b.origin, kind: c.kind,
+        result: c.result, detail: c.detail, evidenceUrl: c.evidenceUrl, origin: c.origin, at: c.at,
+      })),
+    ),
+  ).sort((x, y) => (x.id < y.id ? -1 : 1));
+}
+
+/** #191-5: this buyer's mandates with their approval and payment rows, so /buyer shows the live approval and receipt cards. */
+export function myDealsView(ctx: VCtx) {
+  const id = myBuyerId(ctx);
+  if (!id) return [];
+  return [...ctx.db.mandate.iter()].filter((md) => md.buyerId === id).map((md) => {
+    const ap = ctx.db.approval.mandateHash.find(md.hash);
+    const pay = ctx.db.payment.mandateHash.find(md.hash);
+    return {
+      mandateHash: md.hash, mandateId: md.id, dealId: md.dealId, amount: md.amount, payee: md.payee, expiry: md.expiry,
+      withinAllowance: md.withinAllowance, origin: md.origin, approvalMethod: ap?.method ?? '', voiceApprovalId: ap?.voiceApprovalId ?? '',
+      approvedAt: ap?.at, paymentRef: pay?.paymentRef ?? '', paymentMode: pay?.mode ?? '', paidAt: pay?.at,
+    };
   });
 }
 
@@ -858,8 +971,9 @@ export function setBuyerProfile(ctx: Ctx, { buyerId, displayName }: { buyerId: s
   requireRole(ctx, 'set_buyer_profile', ['referee', 'owner']);
   const name = displayName.trim();
   if (!name) throw new SenderError('display name required');
-  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM' };
-  if (ctx.db.buyerProfile.buyerId.find(buyerId)) ctx.db.buyerProfile.buyerId.update(row);
+  const existing = ctx.db.buyerProfile.buyerId.find(buyerId);
+  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM', phone: existing?.phone ?? '' };
+  if (existing) ctx.db.buyerProfile.buyerId.update(row);
   else ctx.db.buyerProfile.insert(row);
 }
 
@@ -867,4 +981,72 @@ export function myBuyerProfileView(ctx: VCtx) {
   const id = myBuyerId(ctx);
   const row = id ? ctx.db.buyerProfile.buyerId.find(id) : undefined;
   return row ? [row] : [];
+}
+
+// ---------------------------------------------------------------- #374 public telemetry
+// Counts only. No amounts, prices, payees, phones or names; nothing per user.
+
+const pct = (sorted: number[], p: number) => (sorted.length ? sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]! : 0);
+
+export function telemetryView(ctx: AVCtx) {
+  const count = (it: Iterable<unknown>) => { let n = 0; for (const _ of it) n++; return n; };
+  const durations: number[] = [];
+  let roundsOpened = 0, roundsClosed = 0;
+  for (const r of ctx.db.round.iter()) {
+    roundsOpened++;
+    if (r.state === 'closed' && r.closedAt) { roundsClosed++; durations.push(Math.max(0, ms(r.closedAt) - ms(r.openedAt))); }
+  }
+  durations.sort((a, b) => a - b);
+  let accountsCreated = 0;
+  for (const p of ctx.db.buyerProfile.iter()) if (p.buyerId.startsWith('b_')) accountsCreated++; // self sign-ups
+  let shieldCatches = 0;
+  for (const c of ctx.db.bidCheck.iter()) if (c.kind === 'shield' && c.result !== 'allow') shieldCatches++; // Shield quarantine or block
+  let denials = 0, errors = 0;
+  for (const x of ctx.db.rejectedAttempt.iter()) {
+    if (x.kind === 'approval' && x.reason.startsWith('Approval denied')) denials++; // deny_approval writes this row
+    else errors++; // every other refused attempt
+  }
+  return [{
+    accountsCreated,
+    goalsPosted: count(ctx.db.goal.iter()), // goal rows
+    roundsOpened, // round rows
+    roundsClosed, // rounds with state closed and a close time
+    bids: count(ctx.db.bid.iter()), // bid rows
+    shieldCatches,
+    callsPlaced: count(ctx.db.approvalCode.iter()), // approval_code rows: one per approval call issued
+    approvals: count(ctx.db.approval.iter()), // approval rows
+    denials,
+    errors,
+    roundP50Ms: pct(durations, 50), // closedAt minus openedAt, nearest rank
+    roundP95Ms: pct(durations, 95),
+  }];
+}
+
+/** One row per agent name in agent_event, sorted by name. */
+export function telemetryAgentView(ctx: AVCtx) {
+  const by = new Map<string, number>();
+  for (const e of ctx.db.agentEvent.iter()) by.set(e.agentName, (by.get(e.agentName) ?? 0) + 1);
+  return [...by].map(([agent, events]) => ({ agent, events })).sort((a, b) => (a.agent < b.agent ? -1 : a.agent > b.agent ? 1 : 0));
+}
+
+// ---------------------------------------------------------------- #374 referee-only views for the buyer and caller agents
+// The agents act for every buyer through the referee identity; my_* views show only the caller's own rows.
+
+const isReferee = (ctx: VCtx) => roleOf(ctx)?.role === 'referee';
+
+/** Referee only: who to call for each buyer. */
+export function agentBuyerContactView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.buyerProfile.iter()].map((p) => ({ buyerId: p.buyerId, displayName: p.displayName, phone: p.phone }));
+}
+
+/** Referee only: goals still open. Open means state ACTIVE, the only state postGoal writes. */
+export function agentOpenGoalsView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.goal.iter()].filter((g) => g.state === 'ACTIVE');
+}
+
+/** Referee only: the items of the open goals. */
+export function agentGoalItemsView(ctx: VCtx) {
+  return agentOpenGoalsView(ctx).flatMap((g) => [...ctx.db.goalItem.goalId.filter(g.id)]);
 }

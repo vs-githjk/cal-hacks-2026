@@ -1,0 +1,13 @@
+{
+ "actorSpecification": 1,
+ "name": "pc-build-compatibility-checker",
+ "title": "PC Build Compatibility Checker: Will These Parts Fit?",
+ "description": "Checks a PC build before you buy: CPU socket, RAM type and slots, PSU wattage and GPU power cables, GPU length and cooler height against the case, board and PSU form factor. Pass, fail or uncertain for each rule, citing maker spec pages. No guessing.",
+ "version": "0.1",
+ "input": "./input_schema.json",
+ "dockerfile": "../Dockerfile",
+ "storages": {
+  "dataset": "./dataset_schema.json"
+ },
+ "output": "./output_schema.json"
+}

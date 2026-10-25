@@ -2,6 +2,7 @@
 // goal text, cap, allowance, other sellers' bids before close) lives in a private table and
 // reaches clients only through the views in index.ts.
 import { schema, table, t } from 'spacetimedb/server';
+import { Timestamp } from 'spacetimedb';
 
 export const BidLine = t.object('BidLine', {
   skuSpec: t.string(),
@@ -111,7 +112,12 @@ export const role = table(
   { identity: t.identity().primaryKey(), role: t.string(), subjectId: t.string().index('btree') },
 );
 
-/** Demo pairing code per buyer, so a browser screen can take the buyer role (SIM sign-in). */
+/**
+ * Demo pairing code per buyer, so a browser screen can take the buyer role (SIM sign-in). The code is a
+ * 10-character Crockford base32 string (no ambiguous characters), shown grouped as XXXXX-XXXXX.
+ * windowStart/windowMisses/throttledUntil are the soft, code-wide brute-force throttle (#135): they never
+ * lock the code, only make a caller wait, so the per-identity lock above stays the only permanent block.
+ */
 export const pairCode = table(
   { name: 'pair_code' },
   {
@@ -119,6 +125,9 @@ export const pairCode = table(
     code: t.string(),
     failedAttempts: t.u32().default(0), // appended last so a publish migrates in place
     locked: t.bool().default(false),
+    windowStart: t.timestamp().default(Timestamp.UNIX_EPOCH),
+    windowMisses: t.u32().default(0),
+    throttledUntil: t.timestamp().default(Timestamp.UNIX_EPOCH),
   },
 );
 
@@ -149,7 +158,10 @@ export const lossReport = table(
 );
 
 /** The buyer's display name for screens (#37 item 9). Private: only that buyer sees it (my_buyer_profile). */
-export const buyerProfile = table({ name: 'buyer_profile' }, { buyerId: t.string().primaryKey(), displayName: t.string(), origin: t.string() });
+export const buyerProfile = table({ name: 'buyer_profile' }, { buyerId: t.string().primaryKey(), displayName: t.string(), origin: t.string(), phone: t.string().default('') }); // phone appended last so a publish migrates in place
+
+/** #374: fixed-window counter for open sign-ups (single row, id 0). Private. */
+export const signupThrottle = table({ name: 'signup_throttle' }, { id: t.u32().primaryKey(), windowStart: t.timestamp(), count: t.u32() });
 
 /** Failed pairing attempts per caller, across every code. */
 export const pairAttempt = table({ name: 'pair_attempt' }, { identity: t.identity().primaryKey(), failures: t.u32() });
@@ -263,9 +275,10 @@ export const approval = table(
   {
     id: t.u64().primaryKey().autoInc(),
     mandateHash: t.string().unique(),
-    method: t.string(), // voice_code | typed_code | allowance
+    method: t.string(), // voice_code | allowance (#191: no typed fallback)
     approvedBy: t.string(),
     at: t.timestamp(),
+    voiceApprovalId: t.string().default(''), // #191: the VoiceApproval id the call produced ('' for allowance); appended last
   },
 );
 
@@ -312,6 +325,11 @@ export const roundResult = table(
     lines: t.array(BidLine),
     origin: t.string(),
     source: t.string(),
+    // #135: the real quality-adjusted score rankBids used to order this row (equal to landed when not
+    // ranked or when nothing adjusted it), plus the short reason it differs from landed. Appended last so a
+    // publish migrates in place.
+    adjustedTotal: t.f64().default(0),
+    adjustmentReason: t.string().default(''),
   },
 );
 
@@ -396,8 +414,17 @@ export const roundTimer = table(
   },
 );
 
+/** #374 public telemetry row types: counts only, no money, names or per-user data. */
+export const TelemetryRow = t.object('TelemetryRow', {
+  accountsCreated: t.u32(), goalsPosted: t.u32(), roundsOpened: t.u32(), roundsClosed: t.u32(), bids: t.u32(),
+  shieldCatches: t.u32(), callsPlaced: t.u32(), approvals: t.u32(), denials: t.u32(), errors: t.u32(),
+  roundP50Ms: t.u32(), roundP95Ms: t.u32(),
+});
+export const AgentBuyerContactRow = t.object('AgentBuyerContactRow', { buyerId: t.string(), displayName: t.string(), phone: t.string() });
+export const TelemetryAgentRow = t.object('TelemetryAgentRow', { agent: t.string(), events: t.u32() });
+
 const spacetimedb = schema({
-  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, approvalCode, lossReport,
+  need, needItem, goal, goalItem, notification, owner, role, pairCode, pairAttempt, buyerProfile, signupThrottle, approvalCode, lossReport,
   sellerFloor, bid, bidCheck,
   mandate, approval, payment, allowance, receivingEvent,
   round, roundResult, rejectedAttempt, floorEvent, agentEvent, stockHold, persona, roundTimer,

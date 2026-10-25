@@ -1,5 +1,6 @@
 """Quality Advocate uAgent. Run from the agents folder: python -m advocate.advocate_agent
 Every word on a card comes from checks.py code; no model rewrites it, so seller text cannot steer a warning."""
+import asyncio
 import json
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from uagents import Agent, Context
 
 import common
 import status
-from advocate import checks, mock_data
+from advocate import checks, real_data
 
 agent = Agent(**common.agent_args(
     "advocate", 8003, name="Tech Bazaar Quality Advocate", handle="techbazaaradvocate",
@@ -15,7 +16,7 @@ agent = Agent(**common.agent_args(
     description="Argues for the buyer: checks fit with code and condition claims, price history, recalls and "
                 "seller records using SIM fixtures; vetoes traps with cited warnings."))
 
-common.include_profile_chat(agent, "I am Tech Bazaar's Quality Advocate. I review structured seller bids for fit "
+common.include_profile_chat(agent, "I am the Tech Bazaar Quality Advocate, Tech Bazaar's quality advocate. I review structured seller bids for fit "
                             "and claims with cited warnings. Current checks use SIM fixtures. "
                             "Send buying goals to @techbazaarbuyer; this chat cannot approve purchases.")
 
@@ -34,8 +35,9 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
         ctx.logger.warning(f"shield {verdict['verdict']} from {sender}: {verdict['reasons']}")
         return
     need, bids = json.loads(msg.need_json), json.loads(msg.bids_json)
-    cards = checks.advise(need, bids, mock_data.BASELINE, mock_data.RECORDS, mock_data.RECALLS,
-                          owned=need.get("owned", {}))
+    # dated baseline, CPSC; unverified lookups become notes. In a thread: the CPSC lookups take up to 10 s (#330)
+    baseline, records, recalls, notes = await asyncio.to_thread(real_data.advice_inputs, need, bids)
+    cards = real_data.with_notes(checks.advise(need, bids, baseline, records, recalls, owned=need.get("owned", {})), notes)
     for c in cards:
         common.validate("AdvocateCard", c)
     ctx.logger.info(status.msg_line("advocate", "buyer", "advice"))

@@ -1,21 +1,27 @@
 {
  "origin": "MIRROR",
  "scanned": {
-  "listings": 42,
-  "distinct_listings": 29,
+  "listings": 71,
+  "distinct_listings": 48,
   "files": [
    "amazon-20261024T0509Z.json",
    "bestbuy-20261024T0508Z.json",
    "bestbuy-20261024T0936Z.json",
+   "bestbuy-20261025T0241Z.json",
    "bh-20261024T0508Z.json",
+   "bh-20261025T0241Z.json",
+   "centralcomputers-20261024T2112Z.json",
    "ebay_live-20261024T0508Z.json",
    "ebay_live-20261024T1217Z.json",
    "ebay_sold-20261024T0508Z.json",
    "ebay_sold-20261024T0955Z.json",
+   "ebay_sold-20261025T0241Z.json",
    "microcenter-20261024T0509Z.json",
    "microcenter-20261024T0938Z.json",
+   "microcenter-20261025T0242Z.json",
    "newegg-20261024T0936Z.json",
-   "bestbuy-20261024T0851Z.json"
+   "bestbuy-20261024T0851Z.json",
+   "bestbuy-20261025T0241Z.json"
   ],
   "rules": [
    "condition",
@@ -23,7 +29,7 @@
    "stock"
   ],
   "claims_judged": {
-   "verified": 4
+   "verified": 5
   }
  },
  "catches": []

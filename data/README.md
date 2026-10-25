@@ -33,6 +33,11 @@ Second source (provider apify-b, #47):
 apify-b re-checks listings the first set already has (Best Buy only); the baseline counts each listing URL once.
 
 Total for the test round: about $0.17 of the $205 credit.
+
+Central Computers (SF), #308: `compass/crawler-google-places` run 6SmKVMYDvJoTjqxwh found the SF stores, and
+`apify/website-content-crawler` runs K0YOWTRV573VJkfis and xu69poHiWFOfd54LI read the store's RTX 50 series page; about $0.21 in all.
+12 RTX 5070 Ti rows in `mirror/snapshots/centralcomputers-20261024T2112Z.json` (no `runs.json` record, so `--renormalize` never rewrites it).
+Condition is `unknown` (the pages do not say); per-store stock is the store's own figure. Central Computers is not a partner.
 - Return policy: no actor returned it in overview mode. Seller: only eBay and Amazon. Condition: only Best Buy and eBay; first-party stores leave it `unknown` (never guessed).
 - Newegg (keywords, then a search URL) and PCPartPicker both returned 0 items; low-use actors, skipped for now.
 - Prices are as listed at the snapshot time; show them with the MIRROR badge, URL and date. Do not compare them to a store's claims without a dated baseline (c11).
@@ -46,3 +51,11 @@ Total for the test round: about $0.17 of the $205 credit.
 ## c11 baselines
 - `python3 -m data.baselines` writes `data/baselines/feed.json` (recorded price feed, MIRROR, dated) and prints the RTX 5070 Ti reference. `baseline(sku, at)` needs two dated providers within 24 h; until Bright Data is approved it reports `one_source`. Retail, in-stock, new or unstated asks only; eBay sold and eBay live are separate series, never in the median.
 - Second Apify family (provider label `apify-b`, run with `python3 -m data.mirror.run_actors --second <store>`; Best Buy and Micro Center only, other stores print "no second-family actor"): `axlymxp/bestbuy-scraper` (Best Buy, 3 items, $0 logged) and `fortuitous_pirate/microcenter-scraper` (Micro Center, 0 items, $0.02 logged, no snapshot file kept). apify-b re-checked the same Best Buy listings, so the baseline keeps one observation per listing URL and `n` counts distinct listings.
+
+## Refreshing the dated baseline before a demo (#355; costs Apify credits)
+The advocate's price check is valid only while a retail ask is under 24 h old and each data owner (retailer listings via Apify, eBay sold) has at least 2 prices. When it lapses, every advocate card says "Some checks could not run". The Sat Oct 24 snapshots (newest retail ask 09:38 UTC) go stale at about 02:38 PDT Sun Oct 25.
+- Check first, free: `python3 -m data.baselines.refresh --dry-run` prints the plan, the estimated cost, whether APIFY_TOKEN is set (never its value) and the current baseline with its stale time. It runs nothing.
+- Run: `python3 -m data.baselines.refresh --yes-spend` (or omit `--yes-spend` in a terminal and type SPEND). It re-runs the existing Actors through `data.mirror.run_actors.run` (Best Buy, Micro Center, B&H, eBay sold, and the Best Buy second family; no new Actors), writes new dated files to `mirror/snapshots/` and `mirror/snapshots_b/`, appends to `mirror/runs.json`, regenerates `baselines/feed.json`, and prints status, median, n, owners, from/to and when the new baseline goes stale (UTC and PDT). Exit 0 means status ok; 1 means it ran but the baseline is not ok; 2 means refused.
+- Spend caps: estimated about $0.14 per refresh (highest logged cost per Actor, at least $0.01 each; Micro Center is most of it). `--max-usd` (default 0.50) refuses if the estimate is over it and is split across the runs as Apify's `maxTotalChargeUsd`; `--max-items` (1 to 10, default 10) caps items per run. Spending needs Vidyut's OK.
+- When (Vidyut's schedule on #355): Sat Oct 24 about 22:00 PDT, then Sun Oct 25 at 06:00, 12:00 and 16:00 PDT, so the data stays fresh through Sun 18:00 (each refresh lasts 24 h; 6 to 8 h apart leaves margin). CPSC recalls need no scrape: they are read live per brand and cached for 24 h, so an old cache refreshes itself on the next lookup. After each run, commit the new snapshot files, `mirror/runs.json` and `baselines/feed.json`. A refresh at 22:00 PDT stays fresh until about 22:00 PDT Sunday if both runs return at least 2 in-stock asks.
+- Tests use a fake Apify client only: `data/tests/test_baselines_refresh.py`.

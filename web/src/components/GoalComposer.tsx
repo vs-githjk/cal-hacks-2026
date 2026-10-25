@@ -1,20 +1,22 @@
 "use client";
 // The product request: one typed field with optional details, above everything else on the dashboard. It works before
-// pairing (the draft is kept through it) and never shows a draft to a different buyer. Two things are not connected and
-// say so instead of pretending: sending from this screen (lib/goalRequest.ts GOAL_COMMAND) and voice entry
-// (SPEECH_TRANSPORT). Until they are, the working route is to copy the request and send it to the buyer agent in ASI:One.
+// signing up (the draft is kept through it) and never shows a draft to a different buyer. Find offers posts the goal to
+// the market (reducers.postGoal) for a signed-up buyer. Copying the request to ASI:One is the secondary route.
 
+import { useReducer } from "spacetimedb/react";
 import { useRef, useState } from "react";
+import { reducers } from "@/module_bindings";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
 import {
+  CATALOG,
   CONDITIONS,
   EMPTY_DRAFT,
-  GoalSubmitError,
   buildGoalRequest,
+  canFindOffers,
   draftFor,
   fallbackMessage,
   parseStoredDraft,
-  submitGoal,
+  postGoalArgs,
   type GoalDraft,
   type Problem,
 } from "@/lib/goalRequest";
@@ -41,7 +43,7 @@ function writeStored(owner: string | null, draft: GoalDraft) {
 type Status =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "done"; goalId: string }
+  | { kind: "done"; label: string }
   | { kind: "note"; text: string }
   | { kind: "error"; text: string };
 
@@ -57,6 +59,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const postGoal = useReducer(reducers.postGoal);
   const requestId = useRef<string | null>(null);
   const bad = (f: keyof GoalDraft) => problems.some((p) => p.field === f);
   const detailsBad = bad("cap") || bad("deadline") || bad("conditions");
@@ -95,22 +98,24 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
   };
 
   const findOffers = async () => {
-    if (status.kind === "sending") return; // a second tap while one is in flight does nothing
+    if (!canFindOffers(buyerId, status.kind === "sending")) return;
     const request = build();
-    if (!request) return;
-    if (buyerId === null) {
-      setStatus({ kind: "error", text: "Pair this screen with the buyer below first. Your request is kept." });
+    if (!request || buyerId === null) return;
+    const args = postGoalArgs(request, buyerId, new Date());
+    if ("error" in args) {
+      setDetailsOpen(true); // the cap field lives under Details
+      setStatus({ kind: "error", text: args.error });
       return;
     }
     setStatus({ kind: "sending" });
     try {
-      const { goalId } = await submitGoal(request);
-      setStatus({ kind: "done", goalId });
+      await postGoal(args);
+      setStatus({ kind: "done", label: CATALOG.find((c) => c.sku === args.items[0]!.skuSpec)?.label ?? args.items[0]!.skuSpec });
       setDraft(EMPTY_DRAFT);
       writeStored(buyerId, EMPTY_DRAFT);
       requestId.current = null;
     } catch (e) {
-      setStatus({ kind: "error", text: e instanceof GoalSubmitError ? e.message : "The request could not be sent." });
+      setStatus({ kind: "error", text: e instanceof Error && e.message ? e.message : "The request could not be sent." });
     }
   };
 
@@ -130,13 +135,26 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
         className="min-h-[72px] w-full resize-y rounded-lg border border-line bg-soft px-3 py-2.5 text-[18px] leading-snug aria-[invalid=true]:border-coral"
       />
 
+      <div className="mt-2 flex flex-wrap gap-2" aria-label="Parts sellers carry tonight">
+        {CATALOG.map((c) => (
+          <button
+            key={c.sku}
+            type="button"
+            onClick={() => change({ text: c.label })}
+            className="min-h-11 rounded-lg border border-line px-3 text-[13px]"
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
       <details className="mt-1" open={detailsOpen || detailsBad} onToggle={(e) => setDetailsOpen(e.currentTarget.open)}>
         <summary className="inline-flex min-h-11 cursor-pointer items-center text-[14px] text-muted">
           Details (optional){filled ? `: ${filled}` : ""}
         </summary>
         <div className="grid gap-3 pt-1 sm:grid-cols-[1fr_1fr_2fr]">
           <div>
-            <label htmlFor="goal-cap" className="mb-1 block text-[13px] text-muted">Budget cap (dollars, optional)</label>
+            <label htmlFor="goal-cap" className="mb-1 block text-[13px] text-muted">Budget cap in dollars (needed to find offers)</label>
             <input id="goal-cap" value={draft.cap} onChange={(e) => change({ cap: e.target.value })} inputMode="decimal" autoComplete="off" placeholder="650" aria-invalid={bad("cap")} className={input} />
           </div>
           <div>
@@ -171,29 +189,24 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
         </ul>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={viaAsiOne} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink">
-          Copy and open ASI:One
-        </button>
-        <button type="button" aria-disabled="true" aria-describedby="goal-blocked" onClick={findOffers} className="min-h-11 rounded-lg border border-line px-4 font-medium text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button type="button" disabled={!canFindOffers(buyerId, status.kind === "sending")} onClick={findOffers} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink disabled:opacity-50">
           Find offers
         </button>
-        <button type="button" aria-disabled="true" aria-describedby="goal-blocked" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 font-medium text-muted">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <rect x="9" y="3" width="6" height="12" rx="3" />
-            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-          </svg>
-          Speak
+        <button type="button" onClick={viaAsiOne} className="min-h-11 rounded-lg border border-line px-4 font-medium">
+          Copy and open ASI:One
         </button>
+        {/* ponytail: the Speak button returns when SPEECH_TRANSPORT exists. */}
       </div>
-
-      <p id="goal-blocked" className="mt-3 text-[13px] text-muted">
-        Sending from this screen and voice entry are not connected yet. Copy the request to the buyer agent in ASI:One to start a search.
-      </p>
+      {buyerId === null && (
+        <p className="mt-2 text-[13px] text-muted">
+          <a href="/start" className="underline">Sign up to post a goal.</a>
+        </p>
+      )}
 
       <p role="status" aria-live="polite" className={`mt-2 text-[14px] ${status.kind === "error" ? "text-coral" : ""}`}>
         {status.kind === "sending" && "Sending..."}
-        {status.kind === "done" && `Recorded as goal ${status.goalId}. It shows under Active searches once the market lists it.`}
+        {status.kind === "done" && `Posted. Looking for offers on ${status.label}.`}
         {(status.kind === "note" || status.kind === "error") && status.text}
       </p>
     </Card>

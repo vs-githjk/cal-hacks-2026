@@ -3,8 +3,54 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-A Tech Bazaar seller agent for a local, physical PC shop. Bay Area PC Shop prices every part as its own cost plus a fixed margin and never bids below its configured floor. It answers the buyer's structured bid requests with new, sealed parts, including RTX 5070 Ti cards.
+## Summary
 
-Ask this seller in ASI:One about its role. Start a shopping goal with @techbazaarbuyer to see its offer next to the other sellers' offers; the buyer keeps your budget cap private.
+A Tech Bazaar seller agent for computer gear (local physical PC shop, fixed margin on its own cost, helps with builds in store). When the buyer agent opens a sealed round, Bay Area PC Shop answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. It prices from a fixed margin on its own cost, as a local shop does.
 
-This is an invented example shop, not a real business. Listings, prices and example.com links are simulated (SIM). Payment Protocol messages demonstrate checkout; Stripe charging is not connected and no real money moves.
+## Features
+
+- Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
+- Price from policy code, at or above its floor; perks: same-day local pickup, free shipping, 30-day returns.
+- Stated claims (all items new retail, sealed; in stock at the shop counter) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
+- Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
+
+## What it accepts
+
+- Agent Chat Protocol: a plain text message gets an acknowledgement and a fixed description of its role. Chat is screened by Bazaar Shield first; a blocked message gets "No action taken". Chat cannot start a bid, take an order or approve anything.
+- A structured sealed-round bid request (BidRequest) from a Tech Bazaar buyer agent. It answers with one BidReply holding its bid and one persona line. The request is screened by Shield before it is read, and the buyer's spending cap is removed from it.
+- Payment Protocol messages, only from the Tech Bazaar buyer agent and only for a local transaction the buyer already approved: an order, then a commit that must match a charged local attempt. Everything else is ignored.
+
+## Example ASI:One prompts
+
+Ask this agent directly (it explains itself):
+
+- "What do you sell?"
+- "How do you bid?"
+- "Can I buy from you here?"
+- "Do you see the other sellers' prices?"
+
+Ask the buyer to make it bid (@techbazaarbuyer):
+
+- "A new RTX 5070 Ti under $1,300 by Friday."
+- "A new 750 W PSU under $120 by Monday."
+
+## SIM, MIRROR and LIVE
+
+- SIM: this seller's listings, prices, shipping and example.com links are simulated, and every bid it makes is labelled SIM. It is the only mode this agent has.
+- MIRROR: this agent never makes a MIRROR bid. The agent that does is the separate Central Comp MIRROR seller, for a real store's public listings, shown for comparison and never ordered or paid.
+- LIVE: nothing here is LIVE. No real store is contacted and no real money moves; payment is Stripe test mode or a SIM stub.
+
+## Usage examples
+
+- In ASI:One: "What do you sell?" or "How do you bid?" The agent explains its role; it does not take orders in chat.
+- To see it compete: tell @techbazaarbuyer "A new RTX 5070 Ti under $1,300 by Friday". The buyer asks this seller for a sealed bid.
+
+## Use cases
+
+- Showing how a seller agent competes on price, condition and perks in a refereed sealed-bid round.
+- Testing the advocate: a bid's offered condition is checked against its listing before the buyer is asked to approve.
+
+## Limitations
+
+- Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
+- It cannot approve or charge anything. Payment is Stripe test mode or a SIM stub, and no real money moves.
