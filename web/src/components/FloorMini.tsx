@@ -8,7 +8,7 @@ import { useReducedMotion } from "motion/react";
 import { SHIELD } from "@/lib/brand";
 import { FISH_PATH } from "./BrandMark";
 
-const LINES = ["Goal received", "4 bids sealed", `${SHIELD}: 3 of 4 pass`, "Code confirmed"];
+const LINES = ["Goal received", "4 bids sealed", "3 of 4 pass", "Code confirmed"];
 const GHOSTS = [
   { color: "var(--color-ghost-1)", lap: "9s", delay: "0s" },
   { color: "var(--color-ghost-2)", lap: "11s", delay: "-3s" },
@@ -49,13 +49,16 @@ export function FloorMini({ className = "" }: { className?: string }) {
           />
         ))}
       </div>
-      <ol className="mt-5 grid gap-1.5 font-mono text-[13px] leading-[18px] text-floor-line/80 sm:grid-cols-2">
-        {LINES.map((l, i) => (
-          <li key={l} className={`flex items-center gap-2 transition-opacity duration-300 ${i < shown ? "opacity-100" : "opacity-0"}`} aria-hidden={i >= shown}>
-            <span className={`h-1.5 w-1.5 rounded-full ${i === shown - 1 ? "bg-shield" : "bg-ghost-1"}`} aria-hidden />
-            {l}
-          </li>
-        ))}
+      <ol className="mt-6 grid grid-cols-4 gap-2" aria-label="Round progress">
+        {LINES.map((l, i) => {
+          const done = i < shown - 1; const now = i === shown - 1;
+          return (
+            <li key={l} className="grid gap-2">
+              <span className={`h-1 rounded-full transition-colors duration-300 ${done ? "bg-shield/70" : now ? "bg-shield" : "bg-[rgba(238,243,248,0.14)]"}`} aria-hidden />
+              <span className={`whitespace-nowrap text-[11px] font-medium leading-[14px] transition-colors duration-300 md:text-[12px] ${done || now ? "text-floor-line" : "text-floor-line/40"}`}>{l}</span>
+            </li>
+          );
+        })}
       </ol>
     </div>
   );

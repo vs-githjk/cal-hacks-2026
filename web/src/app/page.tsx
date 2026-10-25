@@ -40,16 +40,15 @@ export default function Home() {
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}
-      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#d7eef9_0%,#d4edf8_40%,#eef3f8_100%)] px-4 pb-10 pt-[84px] max-md:-mt-[132px] max-md:pt-[132px]">
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,transparent,var(--color-canvas))]" aria-hidden />
+      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#9fd3f3_0%,#bfe2f7_38%,#dceef9_72%,#eef3f8_100%)] px-4 pt-[84px] max-sm:-mt-[132px] max-sm:pt-[132px]">
         <div className="fm-caustic" aria-hidden />
-        <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.22)]" aria-hidden />
-        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.12)]" aria-hidden />
+        <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(255,255,255,0.55)]" aria-hidden />
+        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.16)]" aria-hidden />
         <div className="fm-orb fm-orb-a bottom-[-30%] left-[40%] h-[260px] w-[360px] bg-[rgba(255,122,69,0.12)]" aria-hidden />
         {BUBBLES.map((b) => (
           <span key={b.left} className="fm-bubble" style={{ left: b.left, width: b.size, height: b.size, ["--rise" as string]: b.rise, ["--delay" as string]: b.delay }} aria-hidden />
         ))}
-        <div className="relative mx-auto grid max-w-[1120px] items-center gap-10 py-16 md:px-4 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+        <div className="relative mx-auto grid max-w-[1120px] items-center gap-10 pb-12 pt-14 md:px-4 md:pb-16 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-2 shadow-ring backdrop-blur">
               <span className="dot text-live" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
@@ -71,7 +70,7 @@ export default function Home() {
 
       {/* 2. Proof: three boxed numbers with their caveats. */}
       <section aria-label="Measured results" className="px-4">
-        <div className="mx-auto max-w-[1120px] py-12 md:px-4 md:py-16">
+        <div className="mx-auto max-w-[1120px] pb-10 pt-2 md:px-4 md:pb-14 md:pt-4">
           <div className="grid gap-4 md:grid-cols-3">
             {PROOF.map((p) => (
               <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
@@ -100,7 +99,7 @@ export default function Home() {
       </section>
 
       {/* 4. How it works: four steps on one line. */}
-      <section aria-labelledby="how" className="px-4 pb-32">
+      <section aria-labelledby="how" className="px-4">
         <div className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
           <h2 id="how" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">How it works</h2>
           <ol className="relative mt-8 grid gap-3 md:grid-cols-4 md:gap-4">
@@ -125,10 +124,8 @@ export default function Home() {
       </section>
 
       {/* 5 and 6. The floor, and the two guards, on ink. */}
-      <section aria-labelledby="floor" className="relative mt-6 bg-floor-bg px-4 text-floor-line">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 -translate-y-full bg-[linear-gradient(180deg,transparent,var(--color-floor-bg))]" aria-hidden />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 translate-y-full bg-[linear-gradient(180deg,var(--color-floor-bg),transparent)]" aria-hidden />
-        <div className="mx-auto grid max-w-[1120px] gap-10 py-14 md:px-4 md:py-20">
+      <section aria-labelledby="floor" className="relative px-4 py-[260px] text-floor-line [background:linear-gradient(180deg,#eef3f8_0px,#e8edf2_26px,#d6dde3_52px,#bdc4cc_78px,#9ea7b0_104px,#7c8792_130px,#5b6773_156px,#3c4a57_182px,#233140_208px,#112131_234px,#0b1b2b_260px,#0b1b2b_calc(100%-260px),#112131_calc(100%-234px),#233140_calc(100%-208px),#3c4a57_calc(100%-182px),#5b6773_calc(100%-156px),#7c8792_calc(100%-130px),#9ea7b0_calc(100%-104px),#bdc4cc_calc(100%-78px),#d6dde3_calc(100%-52px),#e8edf2_calc(100%-26px),#eef3f8_calc(100%-0px))]">
+        <div className="mx-auto grid max-w-[1120px] gap-10 md:px-4">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
             <div>
               <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ghost-1"><span className="dot text-shield" aria-hidden /> The floor</span>
@@ -145,8 +142,8 @@ export default function Home() {
       </section>
 
       {/* 7. Payment. */}
-      <section aria-labelledby="pay" className="px-4 pt-32">
-        <div className="mx-auto grid max-w-[1120px] gap-8 py-10 md:px-4 md:py-14 lg:grid-cols-[1fr_1fr] lg:items-center">
+      <section aria-labelledby="pay" className="px-4">
+        <div className="mx-auto grid max-w-[1120px] gap-8 pb-14 md:px-4 md:pb-20 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
             <h2 id="pay" className="text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Nothing pays without you.</h2>
             <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ink-2">We call. You say the code. Then a test charge and a receipt.</p>
