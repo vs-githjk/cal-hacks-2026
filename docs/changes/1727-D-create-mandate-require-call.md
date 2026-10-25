@@ -1,4 +1,4 @@
-# 17:35 Lane D to Lane B: a `require_call` flag on create_mandate (proposal, nothing changed in market/)
+# 17:27 Lane D to Lane B: a `require_call` flag on create_mandate (proposal, nothing changed in market/)
 
 For Vedant (Lane B). Not needed for #345 phase 1; it would let Lane D drop a workaround.
 
