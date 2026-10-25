@@ -522,7 +522,7 @@ def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:
 
 
 def crs_module():
-    """agents/crs.py, loaded once as lane_d_crs so every caller shares one login latch and one payee cache."""
+    """agents/crs.py, loaded once as lane_d_crs so every caller shares one session latch and one payee cache."""
     import importlib.util
     mod = sys.modules.get("lane_d_crs")
     if mod is None:
