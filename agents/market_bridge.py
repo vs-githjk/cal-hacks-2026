@@ -35,6 +35,11 @@ _RESULT_COLUMNS = ("bid_id", "seller_id", "rank", "landed", "reasons", "lines", 
 _LINE_COLUMNS = ("sku_spec", "offered_spec", "offered_condition", "unit_price", "quantity")
 
 
+def _rank_key(row: Mapping[str, Any]) -> float:
+    rank = row.get("rank")
+    return float(rank) if isinstance(rank, (int, float)) and not isinstance(rank, bool) else float("inf")
+
+
 class MarketBridgeError(RuntimeError):
     """A safe, fixed-label failure suitable for user-facing handling."""
 
@@ -728,10 +733,10 @@ class MarketBridge:
             expected[sku] = _finite(item.get("quantity"), "need_quantity", minimum=0.000000001)
         # #447: only round_result columns the published module has. It ranks at close on unit price x requested quantity
         # (no shipping, no line metadata), so the buyer binds these lines to its own reviewed copy of the bid.
-        query = ("SELECT " + ", ".join(_RESULT_COLUMNS) + " FROM round_result WHERE round_id = " + _quote(round_id)
-                 + " ORDER BY rank ASC")
-        rows = self._sql(query)
+        query = ("SELECT " + ", ".join(_RESULT_COLUMNS) + " FROM round_result WHERE round_id = " + _quote(round_id))
+        rows = self._sql(query)  # no ORDER BY: Maincloud sql answers 400 Unsupported, so rank order is applied here
         result = [_project(raw, _RESULT_COLUMNS) for raw in rows]
+        result.sort(key=_rank_key)
         ranked = [row for row in result if row.get("rank") == 1]
         if not ranked:
             return None

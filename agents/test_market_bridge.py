@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -38,6 +39,9 @@ class FakeMarket:
 
     def sql(self, query):
         self.queries.append(query)
+        # Maincloud answers 400 Unsupported to these (verified live), so every fake refuses them too.
+        if re.search(r"\b(ORDER\s+BY|LIMIT|JOIN)\b", query, re.IGNORECASE):
+            raise RuntimeError("400 Unsupported: ORDER BY / LIMIT / JOIN")
         return self.sql_rows.pop(0) if self.sql_rows else []
 
 
@@ -180,6 +184,22 @@ def test_authoritative_winner_bills_need_quantity_not_available_stock_and_no_shi
                                 "offered_condition": "new", "offered_spec": ""}]
     assert "spend_limit" not in market.queries[0] and "floor" not in market.queries[0]
     assert "line_meta_json" not in market.queries[0] and "binding_hash" not in market.queries[0]
+
+
+def test_authoritative_winner_sends_no_order_by_and_sorts_by_rank_itself():
+    losing = {"bidId": "bid-2", "sellerId": "seller-b", "rank": 2, "landed": 95.0, "reasons": [], "lines": [], "origin": "SIM"}
+    winning = {"bidId": "bid-1", "sellerId": "seller-a", "rank": 1, "landed": 80.0, "reasons": [],
+               "lines": [{"skuSpec": "gpu", "offeredSpec": "", "offeredCondition": "", "unitPrice": 40.0, "quantity": 5}],
+               "origin": "SIM"}
+    market = FakeMarket(sql_rows=[[losing, winning]])  # server order is not rank order
+    winner = MarketBridge("buyer", client=market).authoritative_winner("round-1", [{"sku_spec": "gpu", "quantity": 2}])
+    assert winner["bid_id"] == "bid-1"
+    assert "ORDER BY" not in market.queries[0].upper()
+
+
+def test_fake_market_rejects_order_by_like_maincloud():
+    with pytest.raises(RuntimeError, match="Unsupported"):
+        FakeMarket().sql("SELECT rank FROM round_result ORDER BY rank ASC")
 
 
 def test_authoritative_winner_refuses_a_landed_price_that_is_not_price_times_quantity():
