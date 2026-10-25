@@ -1,7 +1,7 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import { originMixLabel, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
+import { originMixLabel, roundTitle, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
@@ -139,7 +139,7 @@ export function MarketScreen(p: MarketScreenProps) {
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
         <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee&apos;s floor</span></div>
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
-          {p.round && <span>{p.round.id} · {p.round.needId}</span>}
+          {p.round && (roundTitle(p.round.id) ? <span className="text-ink" title={`${p.round.id}, ${p.round.needId}`}>{roundTitle(p.round.id)}</span> : <span title={p.round.needId}>{p.round.id}</span>)}
           {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}
           {mixLabel && <span className="font-mono text-[12px]">{mixLabel}</span>}
         </div>
