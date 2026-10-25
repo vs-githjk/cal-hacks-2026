@@ -86,6 +86,8 @@ import RoundRow from "./round_table";
 import RoundResultRow from "./round_result_table";
 import SellerNeedsRow from "./seller_needs_table";
 import StockHoldRow from "./stock_hold_table";
+import TelemetryRow from "./telemetry_table";
+import TelemetryAgentRow from "./telemetry_agent_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -277,6 +279,20 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, SellerNeedsRow),
+  telemetry: __table({
+    name: 'telemetry',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, TelemetryRow),
+  telemetryAgent: __table({
+    name: 'telemetry_agent',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, TelemetryAgentRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -343,6 +359,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_role": Omit<typeof tablesSchema.schemaType.tables["myRole"], "accessorName"> & { readonly accessorName: "my_role" };
     /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
     readonly "seller_needs": Omit<typeof tablesSchema.schemaType.tables["sellerNeeds"], "accessorName"> & { readonly accessorName: "seller_needs" };
+    /** @deprecated Use `telemetryAgent` instead. This alias will be removed in the next major version. */
+    readonly "telemetry_agent": Omit<typeof tablesSchema.schemaType.tables["telemetryAgent"], "accessorName"> & { readonly accessorName: "telemetry_agent" };
   };
 };
 
@@ -374,6 +392,7 @@ const tableAccessorAliases = {
   "my_pending_approvals": "myPendingApprovals",
   "my_role": "myRole",
   "seller_needs": "sellerNeeds",
+  "telemetry_agent": "telemetryAgent",
 } as const;
 
 function __withTableAccessorAliases<T extends object>(target: T, freeze = false): T {
@@ -420,6 +439,8 @@ export type DbView = __DbViewBase & {
   readonly "my_role": __DbViewBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
   readonly "seller_needs": __DbViewBase["sellerNeeds"];
+  /** @deprecated Use `telemetryAgent` instead. This alias will be removed in the next major version. */
+  readonly "telemetry_agent": __DbViewBase["telemetryAgent"];
 };
 
 type __TablesBase = __QueryBuilder<typeof tablesSchema.schemaType>;
@@ -450,6 +471,8 @@ export type Tables = __TablesBase & {
   readonly "my_role": __TablesBase["myRole"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
   readonly "seller_needs": __TablesBase["sellerNeeds"];
+  /** @deprecated Use `telemetryAgent` instead. This alias will be removed in the next major version. */
+  readonly "telemetry_agent": __TablesBase["telemetryAgent"];
 };
 
 /** The tables available in this remote SpacetimeDB module. Each table reference doubles as a query builder. */

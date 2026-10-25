@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, StrategyStep, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
+import spacetimedb, { BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -162,3 +162,7 @@ const DealRow = t.object('DealRow', {
 export const my_deals = spacetimedb.view({ name: 'my_deals', public: true }, t.array(DealRow), (ctx) => m.myDealsView(ctx));
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
 export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));
+
+/** #374 public telemetry: one row of market-wide counts. No money, no names, nothing per user. */
+export const telemetry = spacetimedb.anonymousView({ name: 'telemetry', public: true }, t.array(TelemetryRow), (ctx) => m.telemetryView(ctx));
+export const telemetry_agent = spacetimedb.anonymousView({ name: 'telemetry_agent', public: true }, t.array(TelemetryAgentRow), (ctx) => m.telemetryAgentView(ctx));
