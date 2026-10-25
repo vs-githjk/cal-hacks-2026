@@ -509,6 +509,15 @@ class MarketBridge:
             raise MarketBridgeError("approval_code_binding_invalid")
         self._call("issue_approval_code", mandate_hash=mandate_hash, code=code)
 
+    def deny_approval(self, mandate_hash: str, reason: str) -> None:
+        """Release the units held for a mandate whose approval call failed or was denied (referee or the buyer; the market refuses it
+        once approved). The market writes its own notification and floor event; the reason is a short plain sentence."""
+        if self.role not in {"buyer", "referee"}:
+            raise MarketBridgeError("market_role_mismatch")
+        if not _HASH.fullmatch(str(mandate_hash)) or not isinstance(reason, str) or not reason.strip():
+            raise MarketBridgeError("approval_denial_invalid")
+        self._call("deny_approval", mandate_hash=mandate_hash, reason=reason.strip()[:200])
+
     def purchase_status(self, mandate_hash: str) -> dict[str, Any]:
         """Read the exact buyer-private purchase projection; never query raw money tables."""
         if self.role != "buyer" or not _HASH.fullmatch(str(mandate_hash)):

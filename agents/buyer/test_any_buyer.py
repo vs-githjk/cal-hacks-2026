@@ -651,6 +651,27 @@ def test_web_denied_or_unanswered_call_reports_failed(runtime, monkeypatch, kind
     assert _state_calls(buyer) == [(buyer.ROUND["goal"]["id"], "FAILED", text)]
 
 
+def test_web_denied_or_unanswered_call_releases_the_held_units(runtime, monkeypatch):
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch, voice=_voice("denied"))
+    (mandate_hash, reason), = [c.args for c in buyer.MARKET_REFEREE.deny_approval.call_args_list]
+    assert mandate_hash == buyer.MARKET_REFEREE.create_mandate.call_args.args[0]["hash"] and reason
+    assert not buyer.MARKET_REFEREE.record_approval.called and not buyer.MARKET_REFEREE.record_payment.called
+
+
+def test_a_failed_release_never_blocks_the_failed_report(runtime, monkeypatch):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.deny_approval.side_effect = MarketBridgeError("market_reducer_failed")
+    _web_approval(buyer, monkeypatch, voice=_voice("paused"))
+    assert _state_calls(buyer)[0][1] == "FAILED"
+
+
+def test_an_approved_call_never_denies_the_approval(runtime, monkeypatch):
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch)
+    assert not buyer.MARKET_REFEREE.deny_approval.called
+
+
 def test_web_wrong_code_reports_failed_in_plain_words(runtime, monkeypatch):
     from pay.voice_cartesia import VoiceResult
     buyer, _db = runtime

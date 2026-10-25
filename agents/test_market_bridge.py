@@ -197,6 +197,18 @@ def test_authoritative_winner_sends_no_order_by_and_sorts_by_rank_itself():
     assert "ORDER BY" not in market.queries[0].upper()
 
 
+def test_deny_approval_releases_the_hold_through_a_referee_or_buyer_client_only():
+    market = FakeMarket()
+    MarketBridge("referee", client=market).deny_approval("a" * 64, "the call was not approved")
+    assert market.calls == [("deny_approval", {"mandate_hash": "a" * 64, "reason": "the call was not approved"})]
+    with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
+        MarketBridge("seller", client=FakeMarket()).deny_approval("a" * 64, "x")
+    with pytest.raises(MarketBridgeError):
+        MarketBridge("referee", client=FakeMarket()).deny_approval("not-a-hash", "x")
+    with pytest.raises(MarketBridgeError, match="market_reducer_failed"):
+        MarketBridge("referee", client=FakeMarket(fail_call="deny_approval")).deny_approval("a" * 64, "x")
+
+
 def test_fake_market_rejects_order_by_like_maincloud():
     with pytest.raises(RuntimeError, match="Unsupported"):
         FakeMarket().sql("SELECT rank FROM round_result ORDER BY rank ASC")

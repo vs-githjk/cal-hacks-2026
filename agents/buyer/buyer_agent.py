@@ -396,6 +396,16 @@ def set_state(state: str):
         ROUND["goal"]["state"] = state
 
 
+async def _release_held_units(transaction: dict, reason: str) -> None:
+    """The call failed or was denied and this deal is finished: tell the market so the held units go back on sale now, not at expiry.
+    Best effort and never blocks the failure path (the hold still expires by itself): a failure logs the exception type only."""
+    try:
+        await asyncio.to_thread(market_clients()[1].deny_approval, owner_approval.market_hash(transaction), reason)
+    except Exception as exc:
+        import logging
+        logging.getLogger("buyer_agent").warning(f"deal {transaction.get('deal_id')}: could not release the held units ({type(exc).__name__})")
+
+
 async def _report_web_goal(state: str, text: str) -> None:
     """#449 item 3 PL-4: tell the market where a WEB buyer's goal stands, in plain words (their /buyer goal card shows it).
     Best effort and never blocks a purchase: a failure logs the exception type only. A chat goal (it has an owner) is skipped."""
@@ -1331,6 +1341,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             transaction["phase"] = "expired"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=None, pending_hold=False, phase="done")
+            await _release_held_units(transaction, "Approval calls are limited during the beta")
             if web:
                 await _report_web_goal("FAILED", BETA_LIMIT_TEXT)  # #455: the web buyer is told on /buyer, not left ACTIVE
             await tell_owner(ctx, BETA_LIMIT_TEXT)
@@ -1342,6 +1353,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"
                 buyer_state.save_transaction(state_db(), transaction)
                 ROUND["transaction"] = None
+                await _release_held_units(transaction, "Phone approval is not set up")
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
             if web:
@@ -1360,6 +1372,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
             limited = any(t.get("outcome") == "CallLimited" for t in (result.trace or []))   # #449 item 1: rate cap hit, never re-dialled
+            if web or limited or transaction["phase"] == "denied":   # finished deals only: a paused chat deal keeps its hold for a retry
+                await _release_held_units(transaction, "The approval call was denied" if transaction["phase"] == "denied"
+                                          else "The approval call could not be completed")
             if web:
                 why = str(getattr(result, "reason", "") or "").split(":", 1)[0]
                 await _report_web_goal("FAILED", BETA_LIMIT_TEXT if limited
