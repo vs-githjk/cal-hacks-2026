@@ -29,6 +29,7 @@ import {
 // A new key: the first version defaulted to the bottom right on every screen, and a saved corner would keep that.
 const PREFS_KEY = "tb-agent-pip-2";
 // Bottom corners clear the fixed run-mode footer, top corners clear the header.
+// On a phone the collapsed tile sits in the page flow after the content, so it never covers anything; opening it overlays.
 const CORNER_CLASS: Record<Corner, string> = {
   br: "bottom-12 right-3",
   bl: "bottom-12 left-3",
@@ -142,7 +143,7 @@ function AgentPipTile() {
       }}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined}
       className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-line bg-panel text-[13px] shadow-lg ${CORNER_CLASS[prefs.corner]} ${
-        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px]"
+        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px] max-sm:static max-sm:mx-4 max-sm:mb-16 max-sm:max-w-none"
       } ${drag ? "" : "transition-[width,height] duration-150 motion-reduce:transition-none"}`}
     >
       <div
