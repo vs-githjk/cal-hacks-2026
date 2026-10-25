@@ -30,7 +30,8 @@ from market_bridge import MarketBridge, MarketBridgeError
 from advocate.real_data import cached_shield_baseline
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
-from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
+from goal import need_from_goal, owned_attrs, remember, skip_lines
+import explain, fair_band, purchases, understand  # Lane D depth: understanding, round explanation, price check, purchase memory
 from logic import advice_need_for, decide, make_order, sealed
 from data.mirror import not_partners  # common put the repo root on sys.path
 
@@ -272,6 +273,7 @@ async def _finish_market_round(ctx: Context):
             ctx.logger.info(round_trace(common.SELLERS, ROUND.get("review_bids", []), reviewed_cards,
                                         ROUND.get("market_winner")))
             ROUND["trace_written"] = True
+        ROUND["round_summary"] = explain.from_round(ROUND, reviewed_cards)  # read before ROUND["cards"] narrows to the winner
         if ROUND.get("market_winner"):
             ROUND["cards"] = {ROUND["market_winner"]["id"]: reviewed_cards[ROUND["market_winner"]["id"]]}
     except Exception as exc:
@@ -281,6 +283,8 @@ async def _finish_market_round(ctx: Context):
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     if ROUND.get("market_winner") is None:
+        if ROUND.get("round_summary"):
+            await tell_owner(ctx, ROUND["round_summary"])
         await fail_round(ctx, "No reviewed Market bid passed the authoritative ranking. Nothing ordered.",
                          always_notify=True)
         return
@@ -528,16 +532,16 @@ async def handle_text(ctx: Context, sender: str, text: str):
             await tell(ctx, sender, "A sealed round is already running; results soon.")
         return
     buyer_id = sender  # one ownership memory per chat identity
-    try:
-        goal, told = parse_goal(text, buyer_id)
-    except ValueError as e:
-        await tell(ctx, sender, f"I could not read a goal from that. {e}")
+    heard = await understand.understand(text, buyer_id, sender)  # a goal, or ONE question (the draft is remembered 10 min)
+    if heard.reply:
+        await tell(ctx, sender, heard.reply)
         return
+    goal, told = heard.goal, heard.owned
     try:
         db = state_db()
         buyer_state.remember_owned(db, buyer_id, told)
         owned = buyer_state.load_owned_parts(db, buyer_id)
-        goal = apply_owned(goal, owned)
+        goal, dup_notes = purchases.apply_all(goal, owned)
         buyer_state.save_goal(db, goal)
     except Exception as exc:
         ctx.logger.warning(f"Private buyer state unavailable: {type(exc).__name__}")
@@ -555,7 +559,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
                  attempts=0, last_sent={}, retired_need_ids=retired_need_ids, market_goal_posted=False,
                  received_bids={})
     log_msg(ctx, "owner", "buyer", "goal")
-    out = skip_lines(goal, owned)
+    out = skip_lines(goal, owned) + heard.notes + dup_notes
     if not need["items"]:
         set_state("DONE")
         ROUND["phase"] = "done"
@@ -974,6 +978,7 @@ async def conclude(ctx: Context, reviewed: bool):
             and not_partners.orderable(winner) and not_partners.orderable(bids[0]) else None)
     asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
     out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
+    out += [x for x in (ROUND.get("round_summary"), fair_band.price_line(bids[best - 1]) if best else None) if x]
     vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
     if vetoed:
         await emit(ctx, "veto", f"Advocate vetoed {len(vetoed)} bid(s): {', '.join(vetoed)}.")
@@ -1719,6 +1724,7 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
         goal.update(state="DONE", po_number=tx["deal_id"], reserved_amount=0)
         buyer_state.save_goal(state_db(), goal)
         buyer_state.save_transaction(state_db(), tx)
+        purchases.record(state_db(), owner, ROUND.get("bids", []), tx)  # remember what was bought; never raises
         ROUND.update(transaction=tx, goal=goal, pending_hold=False, phase="done", order=None, mandate=None,
                      payment_commit=None)
     except Exception as exc:
