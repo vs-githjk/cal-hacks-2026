@@ -2,6 +2,12 @@
 
 AI shopping agents are starting to buy for people. They do not look at your photos or read your page the way a person does. They read the structured product data on the page, and when a fact is missing or contradicts the title, they skip the listing or flag it to their buyer. This Actor reads each of your product pages the way such an agent does and tells you, per listing, what it could not read and how to fix it.
 
+## What you get
+
+- One row per listing URL: **blocks**, **warns**, **ready** or **unreadable**, each finding with what an AI shopper sees and the fix.
+- Sample row (the default input): `{"url": "https://www.canadacomputers.com/...", "status": "warns", "findings": [{"rule_id": "listing.returns_unknown", "severity": "warns", "fix": "..."}, {"rule_id": "listing.shipping_unknown", ...}]}`
+- Price: **$0.02 per listing read**; an unreadable page is free.
+
 Give it your own listing URLs. For each one you get **blocks** (an agent would skip it), **warns** (an agent cannot confirm something), **ready** (nothing found), or **unreadable** (the page could not be fetched, so nothing is known, and it is free). Every finding names the rule, says what an agent sees, links the page, and gives the fix.
 
 It is public on the Apify Store: [anoopibrampur/seller-agent-readiness-report](https://apify.com/anoopibrampur/seller-agent-readiness-report).
