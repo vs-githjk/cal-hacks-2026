@@ -21,6 +21,8 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     const feed = memoryFeed(window.location.hostname);
     if (!feed) {
       // The hosted site: the operator feed runs on the operator's machine, so never fetch a loopback address from a visitor's browser.
+      // The hostname is only known in the browser after hydration, so this one state change has to happen here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ status: "offline" });
       return;
     }

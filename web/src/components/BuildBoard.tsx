@@ -17,13 +17,13 @@ const STEP_MS = 1200;
 export function BuildBoard({ build, origin }: { build: BuildResult; origin?: string }) {
   const total = build.steps.length;
   const [upTo, setUpTo] = useState(total);
-  const [playing, setPlaying] = useState(false);
+  const [started, setPlaying] = useState(false);
+  const playing = started && upTo < total; // the replay stops itself at the last step: derived, so no setState inside the effect
   useEffect(() => {
     if (!playing) return;
-    if (upTo >= total) return setPlaying(false);
     const t = setTimeout(() => setUpTo((n) => n + 1), STEP_MS);
     return () => clearTimeout(t);
-  }, [playing, upTo, total]);
+  }, [playing, upTo]);
   // A live build (it carries its feed origin) is drawn as it stands: its events have no per-part pick step to replay.
   const live = !!build.origin;
   const now = live ? build : buildAt(build, upTo);
