@@ -30,7 +30,7 @@ function OrderCard({ o }: { o: LotOrder }) {
   return (
     <Card stripe="amber">
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <Label>{o.label === "REAL" ? "Your goal" : "Order"}</Label>
+        <Label>{o.label === "REAL" ? "The buyer's order" : "Order"}</Label>
         <span className={`rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-bold ${o.label === "REAL" ? GOLD : "border-line bg-slate-soft text-slate"}`}>{o.label}</span>
       </div>
       <p className="text-[28px] font-semibold tracking-[-0.01em] tabular-nums">{money(o.cap)}</p>
