@@ -10,12 +10,14 @@ from __future__ import annotations
 import json
 import secrets as _secrets
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 MARKET_MODULE = Path(__file__).resolve().parents[2] / "market" / "spacetimedb" / "src" / "index.ts"
 MAX_REQUEST_CHARS = 20000          # Shield's own cap: a longer request is refused, never screened in part
 MAX_REQUEST_BODY_BYTES = 60 * 1024  # under Shield's 64 KB body cap, with room for the context (#298)
+MIN_PRIVATE_BUYER_SEED = 16         # the same floor as common.MIN_PRIVATE_SEED (#449 PL-22)
 _SEEN_LOCK = threading.Lock()       # on_call runs handle in worker threads: the one-call check and add are one step (#298)
 
 
@@ -28,6 +30,17 @@ def precheck(sender: str, text: str, *, buyer_address: str) -> Optional[str]:
     if len(text) > MAX_REQUEST_CHARS or len(json.dumps(text)) > MAX_REQUEST_BODY_BYTES:
         return "too_large"
     return None
+
+
+def buyer_seed_problem(seed: Optional[str]) -> Optional[str]:
+    """#449 PL-22: the Caller trusts one sender, the address derived from BUYER_AGENT_SEED. A missing, short or public
+    *-dev seed (common.SEEDS defaults are in the public repo) lets anyone sign as that buyer, so the Caller must not
+    start on it. Returns the message to exit with, or None."""
+    value = (seed or "").strip()
+    if len(value) >= MIN_PRIVATE_BUYER_SEED and not value.endswith("-dev"):
+        return None
+    return ("Set BUYER_AGENT_SEED in agents/.env to a private seed (16+ characters, not a *-dev default) before starting "
+            "the Caller: it only obeys the buyer agent's address, and a public seed would let anyone sign as the buyer.")
 
 
 def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:
@@ -85,11 +98,27 @@ def handle(sender: str, request: Any, *, buyer_address: str, client: Any, show_c
 TRANSPORT_KEYS = {"buyer_name", "deal_script", "why_answer"}
 
 
+def _expired(expires_at: Any, now: Optional[Callable[[], datetime]]) -> bool:
+    """#449 RT-24: True when expires_at is missing, not an ISO time with a zone, or not after now. A request the buyer
+    stopped waiting for must not ring a phone: the buyer has already fallen back to its own direct call."""
+    if not isinstance(expires_at, str):
+        return True
+    try:
+        when = datetime.fromisoformat(expires_at.strip())
+    except ValueError:
+        return True
+    if when.tzinfo is None:
+        return True            # "ISO UTC" only: a time with no zone is ambiguous, so refused
+    return when <= (now or (lambda: datetime.now(timezone.utc)))()
+
+
 def transport(sender: str, request: Any, *, buyer_address: str, client: Any, seen: set,
-              unconfigured: Optional[str] = None, **timing) -> dict:
+              unconfigured: Optional[str] = None, now: Optional[Callable[[], datetime]] = None, **timing) -> dict:
     """#398 item 3, voice only: place ONE call with the buyer's script variables and return the ended call with its
     transcript, {call_id, call, error}. It never sees a code or a secret, never judges what was said and never writes
-    a record: the buyer verifies the utterance in its own ApprovalService. Additive: handle() is unchanged."""
+    a record: the buyer verifies the utterance in its own ApprovalService. Additive: handle() is unchanged.
+    #449 RT-24: the request carries expires_at (the buyer's now + DELEGATE_TIMEOUT_S); a missing, unreadable or past
+    one is "stale_request" and places no call, so a request queued past the buyer's wait never rings a second time."""
     import re
     from pay.voice_cartesia import CartesiaError, place_call, transcript, wait_for_end
 
@@ -105,6 +134,8 @@ def transport(sender: str, request: Any, *, buyer_address: str, client: Any, see
     if (not isinstance(variables, dict) or set(variables) != TRANSPORT_KEYS
             or not all(isinstance(v, str) and len(v) < 2000 for v in variables.values())):
         return no("bad_variables")
+    if _expired(request.get("expires_at"), now):
+        return no("stale_request")                  # before the seen-set: a stale request burns nothing
     with _SEEN_LOCK:
         if ("transport", mh) in seen:
             return no("already_called")            # one voice call per mandate, ever

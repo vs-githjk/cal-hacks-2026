@@ -182,6 +182,7 @@ class OrderPlaced(Model):
 class VoiceTransportRequest(Model):
     mandate_hash: str
     variables_json: str   # exactly buyer_name, deal_script, why_answer (pay.voice_cartesia.build_variables)
+    expires_at: str = ""  # #449 RT-24: ISO UTC, the buyer's now + DELEGATE_TIMEOUT_S; empty or past is refused as stale
 
 
 class VoiceTransportResult(Model):

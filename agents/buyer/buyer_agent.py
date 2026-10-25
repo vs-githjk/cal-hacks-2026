@@ -8,7 +8,7 @@ import sys
 import time
 import asyncio
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -1196,8 +1196,11 @@ def _transport_request(ctx: Context, loop):
         future = concurrent.futures.Future()
         PENDING_TRANSPORT[mandate_hash] = future
         try:
+            # #449 RT-24: the Caller refuses a request past this time (the real clock, as the Caller reads its own), so a
+            # request still queued after we fell back to our direct call never rings a second time.
+            expires_at = (datetime.now(timezone.utc) + timedelta(seconds=DELEGATE_TIMEOUT_S)).isoformat()
             asyncio.run_coroutine_threadsafe(ctx.send(common.address("caller"), common.VoiceTransportRequest(
-                mandate_hash=mandate_hash, variables_json=json.dumps(variables))), loop).result(timeout=10.0)
+                mandate_hash=mandate_hash, variables_json=json.dumps(variables), expires_at=expires_at)), loop).result(timeout=10.0)
             return future.result(timeout=DELEGATE_TIMEOUT_S)
         finally:
             PENDING_TRANSPORT.pop(mandate_hash, None)

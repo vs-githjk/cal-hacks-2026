@@ -1086,3 +1086,30 @@ def test_only_the_caller_can_answer_a_delegated_call(runtime):
     asyncio.run(buyer.on_voice_transport(Context(), buyer.common.address("caller"), msg))
     assert fut.result()["call_id"] == "x"
     buyer.PENDING_TRANSPORT.clear()
+
+
+def test_the_transport_request_expires_when_the_buyer_stops_waiting(runtime):
+    """#449 RT-24: the VoiceTransportRequest carries expires_at = now + DELEGATE_TIMEOUT_S (real clock, ISO UTC), so a
+    request still queued after the buyer fell back to its direct call is refused as stale instead of ringing again."""
+    from datetime import datetime, timezone
+    from buyer.delegate import DELEGATE_TIMEOUT_S
+    buyer, _db = runtime
+    mh = "b" * 64
+
+    async def go():
+        ctx, loop = Context(), asyncio.get_running_loop()
+        before = datetime.now(timezone.utc)
+        task = asyncio.create_task(asyncio.to_thread(buyer._transport_request(ctx, loop), mh, {"buyer_name": "V"}))
+        for _ in range(500):
+            if ctx.sent and mh in buyer.PENDING_TRANSPORT:
+                break
+            await asyncio.sleep(0.01)
+        buyer.PENDING_TRANSPORT[mh].set_result({"mandate_hash": mh})
+        await task
+        return ctx, before, datetime.now(timezone.utc)
+    ctx, before, after = asyncio.run(asyncio.wait_for(go(), timeout=20))
+    (to, msg), = ctx.sent
+    assert isinstance(msg, buyer.common.VoiceTransportRequest) and msg.mandate_hash == mh
+    expires = datetime.fromisoformat(msg.expires_at)
+    assert expires.tzinfo is not None and expires.utcoffset().total_seconds() == 0
+    assert before.timestamp() + DELEGATE_TIMEOUT_S <= expires.timestamp() <= after.timestamp() + DELEGATE_TIMEOUT_S

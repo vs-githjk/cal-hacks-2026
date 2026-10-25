@@ -103,7 +103,7 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
 async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequest):
     """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
     what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate."""
-    text = " ".join((msg.mandate_hash, msg.variables_json))
+    text = " ".join((msg.mandate_hash, msg.variables_json, msg.expires_at))
     refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
     if refused:
         await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error=refused))
@@ -122,7 +122,8 @@ async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequ
         client, unconfigured = vc.CartesiaClient.from_env(vc.load_env(vc.DEFAULT_ENV_FILE)), None
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
-    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": msg.mandate_hash, "variables": variables},
+    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": msg.mandate_hash, "variables": variables,
+                                                            "expires_at": msg.expires_at},     # #449 RT-24: stale = no call
                                   buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured)
     await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, call_id=out["call_id"] or "",
                                                        call_json=json.dumps(out["call"]) if out["call"] else "",
@@ -134,5 +135,14 @@ common.include_profile_chat(agent, "I am Fish Market Caller, Fish Market's appro
                             "agent asks me to confirm a purchase, and I only take structured requests from it. I cannot approve "
                             "or charge anything from this chat. Send buying goals to @techbazaarbuyer.")
 
+def require_private_buyer_seed(seed: str | None = None) -> None:
+    """#449 PL-22: exit with a clear message unless BUYER_AGENT_SEED is set and private. The Caller obeys only the address
+    that seed derives; common.SEEDS falls back to a public *-dev default, which anyone could sign as."""
+    problem = relay.buyer_seed_problem(os.getenv("BUYER_AGENT_SEED") if seed is None else seed)
+    if problem:
+        sys.exit(problem)
+
+
 if __name__ == "__main__":
+    require_private_buyer_seed()
     agent.run()
