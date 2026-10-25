@@ -2,7 +2,7 @@
 // A bad file gives no wall, never made up bricks. REAL means Vidyut's own order; every other order is SIM.
 
 export const LOT_URL = "/lot.json";
-export const STAGE_LINE = "This is one real request, Vidyut's. When many requests pool, this is what a seller sees.";
+export const STAGE_LINE = "This is one real request, the buyer's. When many requests pool, this is what a seller sees.";
 
 export interface LotOrder {
   id: string;
