@@ -10,7 +10,7 @@
 
 It never guesses. A spec nobody knows makes that rule **uncertain**, not a pass. A build with parts missing never gets a plain PASS: its verdict is **partial**, and the summary says which rules could run and which parts were not given, for example `PASS for the 1 rule(s) that could run; not given: memory, gpu, psu, case, cooler`. A part we cannot read, an unknown key or a bad number makes the build **uncertain** and names it.
 
-Built for **AI shopping agents**. Our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), uses it to veto a part that will not fit before any money moves. It is just as useful to PC builders, resellers and anyone quoting a build.
+Built for **AI shopping agents**. Our own, [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), uses it to veto a part that will not fit before any money moves. It is just as useful to PC builders, resellers and anyone quoting a build.
 
 ## What it checks
 

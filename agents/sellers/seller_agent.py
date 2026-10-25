@@ -281,18 +281,18 @@ def build(name: str, cfg: dict | None = None) -> Agent:
     if mirror:
         agent = Agent(**common.agent_args(
             name, port, name=MIRROR_NAMES[name], **profile,
-            description=f"Tech Bazaar MIRROR agent that bids {s['name']} public listings at their listed price. "
+            description=f"Fish Market MIRROR agent that bids {s['name']} public listings at their listed price. "
                         f"{s['mirror_label']} Shown for comparison, cannot be bought here."))
-        common.include_profile_chat(agent, f"I am Tech Bazaar's MIRROR agent for {s['name']} listings, not the store. "
+        common.include_profile_chat(agent, f"I am Fish Market's MIRROR agent for {s['name']} listings, not the store. "
                                     f"{s['mirror_label']} My bids are shown for comparison and cannot be bought "
                                     "here. Send buying goals to @techbazaarbuyer.")
     else:
         labelled = "simulated (SIM)" if origin == "SIM" else "LIVE, owner supplied"
         agent = Agent(**common.agent_args(
             name, port, name=s['name'][:32], **profile,
-            description=f"Seller agent ({s['archetype']}) that bids in Tech Bazaar's sealed rounds for computer gear. "
+            description=f"Seller agent ({s['archetype']}) that bids in Fish Market's sealed rounds for computer gear. "
                         f"Prices come from policy code, never below its floor. Listings are {labelled}."))
-        common.include_profile_chat(agent, f"I am {s['name']}, a Tech Bazaar {origin} seller. I bid on structured "
+        common.include_profile_chat(agent, f"I am {s['name']}, a Fish Market {origin} seller. I bid on structured "
                                     "sealed rounds using policy prices. Send buying goals to @techbazaarbuyer; "
                                     "this chat cannot place orders or approve purchases.")
 
@@ -406,7 +406,7 @@ def build(name: str, cfg: dict | None = None) -> Agent:
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Run one Tech Bazaar seller agent")
+    ap = argparse.ArgumentParser(description="Run one Fish Market seller agent")
     ap.add_argument("name", nargs="?", default="seller_1", help="a catalog seller (seller_1 to seller_5) or seller_6 (MIRROR)")
     ap.add_argument("--config", help="path to a SellerConfig JSON file (custom seller); overrides name")
     args = ap.parse_args()

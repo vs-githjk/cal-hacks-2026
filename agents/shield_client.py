@@ -9,12 +9,12 @@ from uagents_core.contrib.protocols.chat import ChatAcknowledgement, ChatMessage
 import common
 
 agent = Agent(**common.agent_args(
-    'shield', 8004, name='Tech Bazaar Shield Client', handle='techbazaarshield',
+    'shield', 8004, name='Fish Market Smell Test', handle='techbazaarshield',
     readme_path=str(Path(__file__).with_name('SHIELD_AGENTVERSE.md')),
-    description='Screens a message through Bazaar Shield and returns its verdict and rule IDs. '
+    description='Screens a message through Smell Test (nothing fishy gets through) and returns its verdict and rule IDs. '
                 'A client of the existing Shield API; no purchases or payments.'))
 chat = Protocol(spec=chat_protocol_spec)
-UNAVAILABLE = 'Shield unavailable. Verdict: block. No action taken.'
+UNAVAILABLE = 'Smell Test unavailable. Verdict: block. No action taken.'
 
 
 @chat.on_message(ChatMessage)
@@ -29,7 +29,7 @@ async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
                     and all(isinstance(rule, str) and re.fullmatch(r'[a-z][a-z0-9_.-]{0,95}', rule)
                             for rule in result['rule_ids'])):
                 rules = ', '.join(result['rule_ids']) or 'none'
-                text = f"Shield verdict: {result['verdict']}. Rules: {rules}. No action taken."
+                text = f"Smell Test verdict: {result['verdict']}. Rules: {rules}. No action taken."
         except Exception:
             pass  # Transport or malformed tool failure must still return a safe chat reply.
     await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))

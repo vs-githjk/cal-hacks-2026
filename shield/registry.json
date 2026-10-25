@@ -2,7 +2,7 @@
  "origin": "SIM",
  "note": "Allowlist for POST /v1/shield/verify-agent. Every entry is SIM (demo data). The six agent addresses are the public addresses in agents/README.md (Lane A); the two sim- entries are Lane C's liar-page sellers, which have no Agentverse address. Add an entry here to register an agent; an address that is not here is quarantined as unregistered.",
  "agents": [
-  {"address": "agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8", "name": "tech_bazaar_buyer", "role": "buyer", "seller_of_record": null, "label": "SIM"},
+  {"address": "agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8", "name": "tech_bazaar_buyer", "aliases": ["Fish Market Buyer"], "role": "buyer", "seller_of_record": null, "label": "SIM"},
   {"address": "agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05", "name": "quality_advocate", "role": "advocate", "seller_of_record": null, "label": "SIM"},
   {"address": "agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m", "name": "Byte Bros Outlet", "role": "seller", "seller_of_record": "byte-bros-outlet", "label": "SIM"},
   {"address": "agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np", "name": "Silicon Sally's Surplus", "role": "seller", "seller_of_record": "silicon-sallys-surplus", "label": "SIM"},

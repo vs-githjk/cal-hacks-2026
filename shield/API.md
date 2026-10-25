@@ -1,4 +1,6 @@
-# Bazaar Shield API (keyed product layer, Lane C)
+# Smell Test API (keyed product layer, Lane C)
+Nothing fishy gets through.
+
 Screens agent-to-agent commerce messages (listings, bids, seller replies) for prompt injection, payee swaps and other
 attacks before another agent acts on them. Core rules: Lane D (`shield/core.py`). This page: the keyed API around it.
 

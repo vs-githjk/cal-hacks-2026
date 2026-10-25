@@ -4,12 +4,11 @@
 
 import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { FEED_URL } from "@/lib/agentFeed";
-import { approvalLabel, entryDate, fetchMemory, memoryForBuyer, paymentModeLabel, selectMemory, sourceUrl, type MemoryEntry, type MemoryResponse } from "@/lib/memory";
+import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, selectMemory, sourceUrl, type MemoryEntry, type MemoryResponse } from "@/lib/memory";
 import { useBuyerId } from "./BuyerGate";
 import { Card, Code, Label, OriginChip, SourceLink, Tag, Verdict, clock, money } from "./ui";
 
-type MemoryState = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; data: MemoryResponse };
+type MemoryState = { status: "loading" } | { status: "offline" } | { status: "error"; message: string } | { status: "ready"; data: MemoryResponse };
 const MemoryContext = createContext<{ state: MemoryState; reload: () => void } | null>(null);
 
 /** One read for every buyer screen. It lives below BuyerGate, so a buyer switch unmounts it and aborts the pending request. */
@@ -18,7 +17,13 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const ctl = new AbortController();
-    fetchMemory(ctl.signal).then(
+    const feed = memoryFeed(window.location.hostname);
+    if (!feed) {
+      // The hosted site: the operator feed runs on the operator's machine, so never fetch a loopback address from a visitor's browser.
+      setState({ status: "offline" });
+      return;
+    }
+    fetchMemory(ctl.signal, feed).then(
       (data) => setState({ status: "ready", data }),
       (e: unknown) => {
         if (!ctl.signal.aborted) setState({ status: "error", message: e instanceof Error ? e.message : "memory feed failed" });
@@ -53,11 +58,11 @@ const when = (e: MemoryEntry) => {
 };
 const text = (s: string) => s || "Unavailable";
 /** The reason on its own line only when the supplied summary does not already say it. */
-const Reason = ({ e, reason }: { e: MemoryEntry; reason: string }) => (reason && !e.summary.includes(reason) ? <p className="mt-1 text-[14px]"><span className="text-muted">Reason:</span> {reason}</p> : null);
+const Reason = ({ e, reason }: { e: MemoryEntry; reason: string }) => (reason && !e.summary.includes(reason) ? <p className="mt-1 text-[13px]/[18px] text-ink-2"><span className="text-muted">Reason:</span> {reason}</p> : null);
 
 function RetryButton({ reload }: { reload: () => void }) {
   return (
-    <button onClick={reload} className="mt-2 min-h-11 rounded-lg border border-line px-4 text-[14px] font-medium hover:bg-soft">
+    <button onClick={reload} className="btn mt-2 min-h-11 rounded-xl bg-surface px-5 shadow-ring text-[14px] font-medium hover:bg-surface-2">
       Try again
     </button>
   );
@@ -66,9 +71,17 @@ function RetryButton({ reload }: { reload: () => void }) {
 /** Loading, failure and feed health: everything the history screens say about where the rows came from. */
 function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empty: string }) {
   if (m.state.status === "loading") return <p className="text-muted">Loading recorded history...</p>;
+  if (m.state.status === "offline") {
+    return (
+      <Card>
+        <Label>Recorded history is not live here</Label>
+        <p className="text-[14px]">Purchases and decisions are read from the operator demo feed, which runs on the operator's machine and is not reachable from this site. Nothing is shown rather than a guess.</p>
+      </Card>
+    );
+  }
   if (m.state.status === "error") {
     return (
-      <Card stripe="coral">
+      <Card>
         <Label>Memory unavailable</Label>
         <p className="text-[14px]">{m.state.message}. Nothing is shown rather than a guess.</p>
         <RetryButton reload={m.reload} />
@@ -76,6 +89,7 @@ function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empt
     );
   }
   const d = m.state.data;
+  const feedAddress = typeof window === "undefined" ? null : memoryFeed(window.location.hostname);
   const broken = d.sources.filter((s) => s.state === "error");
   return (
     <div className="grid gap-2 text-[13px] text-muted">
@@ -83,14 +97,14 @@ function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empt
       {d.rejected > 0 && <p>{d.rejected} {d.rejected === 1 ? "row" : "rows"} from the feed did not match the contract and {d.rejected === 1 ? "is" : "are"} not shown.</p>}
       {broken.length > 0 && <p>A source could not be read: {broken.map((s) => s.ref).join(", ")}.</p>}
       <details>
-        <summary className="inline-flex min-h-11 cursor-pointer items-center">Sources ({d.sources.length})</summary>
+        <summary className="inline-flex min-h-11 cursor-pointer items-center font-medium text-ink-2">Sources ({d.sources.length})</summary>
         <ul className="grid gap-1 font-mono text-[12px]">
           {d.sources.map((s) => (
             <li key={`${s.kind}:${s.ref}`}>{s.ref} · {s.kind} · {s.state} · {s.rows} {s.rows === 1 ? "row" : "rows"}{s.sample ? " · sample" : ""}</li>
           ))}
         </ul>
       </details>
-      <p>Operator demo feed at {FEED_URL}. It is not buyer scoped on the server, so rows are filtered to this buyer here for display only.</p>
+      <p>Operator demo feed{feedAddress ? ` at ${feedAddress}` : ""}. It is not buyer scoped on the server, so rows are filtered to this buyer here for display only.</p>
     </div>
   );
 }
@@ -102,16 +116,16 @@ function Search({ value, onChange }: { value: string; onChange: (v: string) => v
       onChange={(e) => onChange(e.target.value)}
       aria-label="Filter recorded history by text"
       placeholder="Filter by seller, payee, rule or reason"
-      className="min-h-11 w-full rounded-lg border border-line bg-soft px-3 text-[14px] sm:max-w-sm"
+      className="min-h-11 w-full rounded-xl bg-surface px-4 text-[15px] shadow-ring placeholder:text-muted sm:max-w-sm"
     />
   );
 }
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-[12px] text-muted">{label}</dt>
-      <dd className="break-words text-[14px]">{children}</dd>
+    <div className="flex min-w-0 items-baseline justify-between gap-4 border-t border-line py-2.5 first:border-t-0">
+      <dt className="shrink-0 text-[14px]/[20px] text-muted">{label}</dt>
+      <dd className="min-w-0 break-words text-right font-mono text-[13px]/[20px] tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -120,18 +134,16 @@ function PurchaseCard({ e }: { e: Purchase }) {
   const d = e.detail;
   return (
     <Card>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums">{amountLabel(d)}</p>
-          <p className="mt-1 text-[13px] text-muted">before tax</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">Receipt, before tax</span>
         <div className="flex flex-wrap items-center gap-2">
           <OriginChip origin={e.origin} />
           <OriginChip origin={d.listing_origin} label={`listing ${d.listing_origin}`} />
         </div>
       </div>
-      <p className="mt-3 text-[15px] text-balance">{e.summary}</p>
-      <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+      <p className="mt-3 text-[44px]/[48px] font-medium tracking-[-0.02em] tabular-nums md:text-[48px]/[52px]">{amountLabel(d)}</p>
+      <p className="mt-1 text-[15px]/[20px] text-ink-2 text-balance">{e.summary}</p>
+      <dl className="mt-4">
         <Fact label="Payee">{text(d.payee)}</Fact>
         <Fact label="Seller">{text(e.seller_id)}</Fact>
         <Fact label="Recorded">{when(e)}</Fact>
@@ -166,22 +178,36 @@ const BAND: Record<Extract<MemoryEntry, { kind: "lesson" }>["detail"]["gap_band"
   over20: "price gap over 20%",
 };
 
+/** One ledger row: a dot, what it says, and the detail underneath. */
+function LedgerRow({ dot, children }: { dot: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[8px_minmax(0,1fr)] items-start gap-3 border-t border-line py-3">
+      <i className={`mt-1.5 size-2 rounded-full ${dot}`} aria-hidden />
+      <div className="min-w-0 break-words text-[13px]/[18px] text-muted">{children}</div>
+    </div>
+  );
+}
+
 function DecisionCard({ e }: { e: MemoryEntry }) {
   if (e.kind === "veto") {
     const url = sourceUrl(e);
     return (
-      <Card stripe="coral">
+      <Card>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Verdict kind="veto">Vetoed</Verdict>
           <span className="flex items-center gap-2 text-[13px] text-muted">{when(e)} <OriginChip origin={e.origin} /></span>
         </div>
-        <p className="mt-2 text-[18px] font-medium text-balance">{e.summary}</p>
-        <Reason e={e} reason={e.detail.reason} />
-        <p className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-muted">
-          Seller {text(e.seller_id)} · rule <Code>{text(e.detail.rule_id)}</Code>
-          {e.buyer_id === "" && <span>· not tied to a buyer</span>}
-        </p>
-        <p className="mt-1 text-[13px]">{url ? <SourceLink href={url} /> : <span className="text-muted">No source link recorded.</span>}</p>
+        <p className="mt-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">{e.summary}</p>
+        <div className="mt-4">
+          <LedgerRow dot="bg-coral-mark">
+            <p className="flex flex-wrap items-center gap-2 text-ink-2">
+              Seller {text(e.seller_id)} · rule <Code>{text(e.detail.rule_id)}</Code>
+              {e.buyer_id === "" && <span className="text-muted">· not tied to a buyer</span>}
+            </p>
+            <Reason e={e} reason={e.detail.reason} />
+            <p className="mt-1">{url ? <SourceLink href={url} /> : <span>No source link recorded.</span>}</p>
+          </LedgerRow>
+        </div>
       </Card>
     );
   }
@@ -193,14 +219,18 @@ function DecisionCard({ e }: { e: MemoryEntry }) {
         <Verdict kind={d.won ? "buy" : "out"}>{d.won ? "Won" : "Lost"} round <Code>{text(d.round_id)}</Code></Verdict>
         <span className="flex items-center gap-2 text-[13px] text-muted">{when(e)} <OriginChip origin={e.origin} /></span>
       </div>
-      <p className="mt-2 text-[18px] font-medium text-balance">{e.summary}</p>
-      <Reason e={e} reason={d.reason} />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Tag>seller {text(e.seller_id)}</Tag>
-        {!e.buyer_id && <Tag>seller lesson, not tied to a buyer</Tag>}
-        {!d.won && <Tag>{BAND[d.gap_band]}</Tag>}
+      <p className="mt-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">{e.summary}</p>
+      <div className="mt-4">
+        <LedgerRow dot={d.won ? "bg-mint-mark" : "bg-ghost-1"}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Tag>seller {text(e.seller_id)}</Tag>
+            {!e.buyer_id && <Tag>seller lesson, not tied to a buyer</Tag>}
+            {!d.won && <Tag>{BAND[d.gap_band]}</Tag>}
+          </div>
+          <Reason e={e} reason={d.reason} />
+        </LedgerRow>
       </div>
-      <p className="mt-2 text-[14px]">{d.what_to_change ? <><b className="font-semibold">Recorded lesson.</b> {d.what_to_change}</> : <span className="text-muted">No change recorded for this loss.</span>}</p>
+      <p className="rounded-xl bg-surface-2 px-4 py-3 text-[13px]/[18px]">{d.what_to_change ? <><b className="font-semibold">Recorded lesson.</b> {d.what_to_change}</> : <span className="text-muted">No change recorded for this loss.</span>}</p>
     </Card>
   );
 }
@@ -224,7 +254,7 @@ export function DecisionsView() {
               key={k}
               aria-pressed={kind === k}
               onClick={() => setKind(k)}
-              className={`min-h-11 rounded-full px-4 text-[14px] font-medium ${kind === k ? "bg-accent-soft text-accent-2" : "text-muted hover:bg-soft hover:text-ink"}`}
+              className={`min-h-11 rounded-full px-4 text-[14px] font-medium ${kind === k ? "bg-pulse-soft text-pulse-soft-ink" : "text-muted hover:bg-surface-2 hover:text-ink"}`}
             >
               {label}
               <span className="ml-1.5 font-mono text-[12px] opacity-70">{k === "all" ? decisions.length : decisions.filter((e) => e.kind === k).length}</span>
@@ -234,7 +264,7 @@ export function DecisionsView() {
         <Search value={q} onChange={setQ} />
       </div>
       {kind !== "lesson" && lessonCount > 0 && (
-        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start rounded-lg border border-line px-4 text-[14px] font-medium text-muted hover:bg-soft hover:text-ink">
+        <button type="button" aria-pressed={showLessons} onClick={() => setShowLessons((v) => !v)} className="min-h-11 justify-self-start btn rounded-xl bg-surface px-5 shadow-ring text-[14px] font-medium text-muted hover:bg-surface-2 hover:text-ink">
           {showLessons ? `Hide ${lessonCount} seller lessons` : `Show ${lessonCount} seller lessons`}
         </button>
       )}
@@ -254,6 +284,8 @@ export function RecentPurchases() {
       <Label>Recent purchases</Label>
       {m.state.status === "loading" ? (
         <p className="text-[13px] text-muted">Loading recorded history...</p>
+      ) : m.state.status === "offline" ? (
+        <p className="text-[13px] text-muted">Recorded history comes from the operator demo feed, which is not reachable from this site.</p>
       ) : m.state.status === "error" ? (
         <>
           <p className="text-[18px] font-medium">Unavailable</p>
@@ -272,7 +304,7 @@ export function RecentPurchases() {
           ))}
         </ul>
       )}
-      <Link href="/buyer/purchases" className="mt-3 inline-flex min-h-11 items-center text-[14px] text-sky underline underline-offset-4">All purchases</Link>
+      <Link href="/buyer/purchases" className="mt-3 inline-flex min-h-11 items-center text-[14px] text-pulse underline underline-offset-4">All purchases</Link>
     </Card>
   );
 }

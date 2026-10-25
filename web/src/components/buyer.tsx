@@ -18,7 +18,7 @@ export function GoalCard({ goal }: { goal: GoalView }) {
         <Label>Goal</Label>
         <StatePill state={goal.state} />
       </div>
-      <p className="mb-3 text-[22px] font-medium leading-[1.3] tracking-[-0.01em] text-balance">
+      <p className="mb-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">
         <q>{goal.text}</q>
       </p>
       <div className="flex flex-wrap items-center gap-2">
@@ -76,7 +76,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
         {win ? (
           <>
             <div ref={field} className="relative -mx-2 px-2">
-              <div className="relative z-10 my-1 text-[clamp(48px,6vw,76px)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{money(win.landed)}</div>
+              <div className="relative z-10 my-1 text-[clamp(44px,5vw,56px)] font-medium leading-[1.08] tracking-[-0.025em] tabular-nums">{money(win.landed)}</div>
             </div>
             <div className="text-[15px] text-muted">
               <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
@@ -84,7 +84,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
             {win.recommendation === "caution" && <div className="text-[15px] text-muted">Fit not confirmed on the page</div>}
           </>
         ) : (
-          <div className="my-1 text-[clamp(40px,5vw,64px)] font-semibold leading-none tracking-[-0.04em] text-muted">no deal yet</div>
+          <div className="my-1 text-[clamp(36px,4vw,48px)] font-medium leading-none tracking-[-0.02em] text-muted">no deal yet</div>
         )}
       </div>
       <div className="mt-3.5 grid gap-1 border-t border-line pt-3 text-[14px]">
@@ -167,11 +167,11 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       initial={play ? { rotateX: -90, opacity: 0 } : false}
                       animate={
                         play && won
-                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(24,19,13,0)", "inset 0 0 0 2px rgba(24,19,13,0.55)", "inset 0 0 0 0 rgba(24,19,13,0)"] }
+                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(30,78,216,0)", "inset 0 0 0 2px rgba(30,78,216,0.5)", "inset 0 0 0 0 rgba(30,78,216,0)"] }
                           : { rotateX: 0, opacity: 1 }
                       }
                       transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
-                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}`}
+                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pulse ${won ? "bg-mint-soft" : `hover:bg-surface-2 ${out ? "text-muted" : ""}`}`}
                     >
                       <Td className={`font-mono font-semibold ${edge} ${won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
                       <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} />{won && <> <Tag>Winner</Tag></>}</Td>
@@ -184,7 +184,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
                     </motion.tr>
                     {expanded && (
-                      <tr className={won ? "bg-mint-soft" : "bg-soft"}>
+                      <tr className={won ? "bg-mint-soft" : "bg-surface-2"}>
                         <td colSpan={6} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
                           <p>{b.why || "No reason recorded."}</p>
                           <p className="mt-1 text-muted">
@@ -206,7 +206,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
 }
 
 function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
-  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted ${right ? "text-right" : "text-left"}`}>{children}</th>;
+  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted ${right ? "text-right" : "text-left"}`}>{children}</th>;
 }
 function Td({ children, right, className = "" }: { children: React.ReactNode; right?: boolean; className?: string }) {
   return <td className={`border-b border-line p-2.5 align-top ${right ? "whitespace-nowrap text-right" : ""} ${className}`}>{children}</td>;
@@ -221,7 +221,7 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
   return (
     <Card stripe="coral">
       <Label>Advocate veto</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">Bid vetoed: {veto.seller}{veto.landed ? `, ${money(veto.landed)}` : ""}</h3>
+      <h3 className="mb-1.5 text-[17px]/[22px] font-semibold tabular-nums">Bid vetoed: {veto.seller}{veto.landed ? `, ${money(veto.landed)}` : ""}</h3>
       <p className="text-[14px]">{veto.claim ? <>Listed as &quot;{veto.claim}&quot;. </> : null}{veto.finding}</p>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
         <dt className="text-muted">Rule</dt><dd><Code>{veto.ruleId}</Code></dd>
@@ -240,7 +240,7 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
   return (
     <Card stripe="ink">
       <Label>Bazaar Shield</Label>
-      <div className={`text-[15px] font-bold ${blocked ? "text-coral" : "text-mint"}`}>
+      <div className={`text-[15px] font-semibold ${blocked ? "text-coral" : "text-mint"}`}>
         {blocked ? "Blocked before the advocate saw it" : "Allowed"}
       </div>
       <p className="mt-1.5 text-[13px] text-muted">
@@ -252,7 +252,7 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
         ].filter(Boolean).join(" · ")}
       </p>
       {shield.evidence.length > 0 && (
-        <div className="mt-2.5 overflow-hidden rounded-[10px] border border-line bg-soft px-3 py-2.5 font-mono text-[12px] leading-[1.5] [overflow-wrap:anywhere]">
+        <div className="mt-2.5 overflow-hidden rounded-xl bg-surface-2 px-3 py-2.5 font-mono text-[12px] leading-[1.5] [overflow-wrap:anywhere]">
           {shield.evidence.map((e, i) => (e.hit ? <mark key={i} className="rounded-[3px] bg-coral-soft px-0.5 text-coral">{e.text}</mark> : <span key={i}>{e.text}</span>))}
         </div>
       )}
@@ -276,13 +276,13 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
   return (
     <Card stripe="amber">
       <Label>Approval call</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">
+      <h3 className="mb-1.5 text-[17px]/[22px] font-semibold tabular-nums">
         {approval.within ? `${money(approval.amount)} to ${approval.payee}, within your allowance` : `${money(approval.amount)} is above your ${money(approval.allowance)} allowance, so it called`}
       </h3>
       {approval.wordPair && (
         <>
           <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-            <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{approval.wordPair}</span>
+            <span className="rounded-xl bg-surface-2 px-4 py-3 font-mono text-[28px]/[32px] font-medium tracking-[0.04em]">{approval.wordPair}</span>
             <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
           </div>
           <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
@@ -310,14 +310,14 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
   return (
     <Card stripe="amber">
       <Label>Review and approve</Label>
-      <h3 className="mb-1.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">
+      <h3 className="mb-1.5 text-[17px]/[22px] font-semibold tabular-nums">
         {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
       </h3>
       <p className="text-[13px] tabular-nums text-muted">
         {isWholeBuild(review) ? "One call approves the whole build" : <>Mandate <Code>{review.mandateId}</Code></>} · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
       </p>
       <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-        <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{review.code}</span>
+        <span className="rounded-xl bg-surface-2 px-4 py-3 font-mono text-[28px]/[32px] font-medium tracking-[0.04em]">{review.code}</span>
         <small className="text-[12px] text-muted">one-time code for {isWholeBuild(review) ? "this call" : "this mandate"}, this screen only</small>
       </div>
       <p className="text-[13px] font-semibold">Say this code on the call. Only the call approves; nothing on this screen can.</p>
@@ -334,7 +334,7 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
     <Card stripe="mint">
       <Label>Receipt</Label>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="motion-safe:animate-[pop_.4s_ease-out] inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-mint text-[13px] font-bold text-mint-soft" aria-hidden>✓</span>
+        <span className="motion-safe:animate-[pop_.4s_ease-out] inline-flex size-6 items-center justify-center rounded-full bg-mint-soft text-[13px] font-semibold text-mint" aria-hidden>✓</span>
         <h3 className="m-0 text-[17px] font-semibold tracking-[-0.01em]">Paid under a signed mandate</h3>
         <OriginChip origin={receipt.chargeOrigin ?? "SIM"} label={receipt.chargeStatus} />
       </div>
@@ -342,7 +342,7 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 text-[14px] tabular-nums">
           <div>{[receipt.seller, receipt.item, receipt.condition].filter(Boolean).join(" · ")}</div><div>{money(receipt.amount)}</div>
           {receipt.shipping !== undefined && <><div className="text-muted">Shipping</div><div className="text-muted">{money(receipt.shipping)}</div></>}
-          <div className="border-t border-line pt-2 text-[18px] font-bold">Charged</div><div className="border-t border-line pt-2 text-[18px] font-bold">{money(receipt.amount + (receipt.shipping ?? 0))}</div>
+          <div className="border-t border-line pt-2 text-[18px] font-semibold">Charged</div><div className="border-t border-line pt-2 font-mono text-[18px] font-medium">{money(receipt.amount + (receipt.shipping ?? 0))}</div>
           <div className="text-[13px] text-muted">{receipt.paymentMethod} · {receipt.chargeId}</div><div className="text-[13px] text-muted">{clock(receipt.paidAt)}</div>
         </dl>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
@@ -357,7 +357,7 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
   );
 }
 
-const FEED_STYLE: Record<FeedItem["kind"], string> = { deal: "text-mint", bid: "text-sky", veto: "text-coral", block: "text-coral", progress: "text-muted" };
+const FEED_STYLE: Record<FeedItem["kind"], string> = { deal: "text-mint", bid: "text-slate", veto: "text-coral", block: "text-coral", progress: "text-muted" };
 
 export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number }) {
   return (
@@ -371,7 +371,7 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
             <li key={f.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(f.at)}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
-                <span className={`mb-px block text-[11px] font-bold uppercase tracking-[0.06em] ${FEED_STYLE[f.kind]}`}>{f.title}</span>
+                <span className={`mb-px block text-[12px]/[16px] font-medium uppercase tracking-[0.04em] ${FEED_STYLE[f.kind]}`}>{f.title}</span>
                 {f.text} {f.origin && <OriginChip origin={f.origin} />}
               </span>
             </li>

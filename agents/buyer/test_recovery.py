@@ -49,6 +49,14 @@ def projected_market_bid(bid, candidate):
 
 
 @pytest.fixture
+def multi_sender(buyer, monkeypatch):
+    """#449 item 2: only the pinned owner reaches a round, so the second-sender gates below (told_foreign, release,
+    takeover) are defence in depth. Open the chat-sender check to reach them; approval still uses the real owner pin."""
+    monkeypatch.setattr(buyer, '_chat_sender_allowed', lambda _sender: True)
+    return buyer
+
+
+@pytest.fixture
 def buyer(monkeypatch, tmp_path):
     # Agent construction writes local identity storage; handlers need no running agent.
     fake_agent = Mock()
@@ -64,6 +72,8 @@ def buyer(monkeypatch, tmp_path):
     fake_agent.address = module.common.address('buyer')
     monkeypatch.setattr(module, 'ALLOWANCE', 1000)
     monkeypatch.setattr(module, 'MARKET_BUYER_ID', 'vidyut')
+    monkeypatch.setenv('MARKET_BUYER_OWNER_SENDER', 'owner')  # #449 item 2: only the pinned owner reaches a round
+    module.STRANGER_TOLD.clear()
     class FakeMarket:
         def __init__(self, identity):
             self.identity = identity
@@ -210,7 +220,7 @@ def test_shield_blocked_review_retries(buyer, monkeypatch):
     ctx = Context()
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(cards_json=json.dumps([card()]))))
     assert buyer.ROUND['phase'] == 'waiting'
-    assert 'Shield' in ctx.owner_text() and 'Nothing ordered' in ctx.owner_text()
+    assert 'Smell Test' in ctx.owner_text() and 'Nothing ordered' in ctx.owner_text()
 
 
 def test_missing_card_in_multi_bid_round_retries(buyer):
@@ -522,7 +532,7 @@ def test_not_configured_row_does_not_relabel_configured_adverse_row(buyer, monke
     assert text.count('CRS not configured') == 1
 
 
-def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer, monkeypatch):
+def test_async_review_result_keeps_original_asi_chat_session_and_protocol(multi_sender, buyer, monkeypatch):
     from uagents.context import ExternalContext
     from uagents.crypto import Identity
     from uagents.types import MsgInfo
@@ -628,7 +638,7 @@ def test_local_round_counts_the_three_running_catalog_sellers(buyer, monkeypatch
     assert 'with 3 sellers' in text
 
 
-def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buyer):
+def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(multi_sender, buyer):
     ctx = Context()
     buyer.ROUND.update(owner='authenticated-owner', phase='decided', bids=[
         {'id': 'secret-bid', 'persona': 'Private Seller Name', 'total_landed_price': 582}],
@@ -650,7 +660,7 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
 
 @pytest.mark.parametrize(('phase', 'state'), [
     ('done', 'ACTIVE'), ('decided', 'DONE'), ('bidding', 'EXPIRED'), ('advice', 'PAUSED')])
-def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase, state):
+def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(multi_sender, buyer, phase, state):
     ctx = Context()
     buyer.ROUND.update(owner='alice', owner_context=object(), phase=phase,
                        goal={'id': 'old-goal', 'state': state}, order=None)
@@ -661,7 +671,7 @@ def test_terminal_owner_can_be_replaced_by_a_valid_new_sender_goal(buyer, phase,
     assert buyer.ROUND['phase'] == 'bidding'
 
 
-def test_foreign_busy_notice_resets_for_a_new_round(buyer):
+def test_foreign_busy_notice_resets_for_a_new_round(multi_sender, buyer):
     ctx = Context()
     buyer.ROUND.update(owner='alice', phase='bidding', told_foreign=True)
     asyncio.run(buyer.start_round(ctx, dict(buyer.ROUND['need'])))
@@ -685,7 +695,7 @@ def test_malformed_new_sender_goal_preserves_terminal_owner(buyer):
     assert buyer.ROUND['owner'] == 'alice'
 
 
-def test_late_bid_from_old_need_cannot_enter_replacement_goal(buyer, monkeypatch):
+def test_late_bid_from_old_need_cannot_enter_replacement_goal(multi_sender, buyer, monkeypatch):
     buyer.ROUND.update(owner='alice', owner_context=object(), phase='done',
                        goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
     ctx = Context()
@@ -717,7 +727,7 @@ def test_shield_blocked_retired_bid_does_not_notify_current_owner(buyer, monkeyp
     assert not ctx.sent
 
 
-def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(buyer, monkeypatch):
+def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(multi_sender, buyer, monkeypatch):
     ctx = Context()
     old_need_id = buyer.ROUND['need']['id']
     asyncio.run(buyer.handle_text(ctx, 'owner', 'CANCEL'))
@@ -735,7 +745,7 @@ def test_cancelled_round_need_stays_retired_after_new_owner_takes_over(buyer, mo
     assert not ctx.sent
 
 
-def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(buyer, monkeypatch):
+def test_late_advocate_review_from_old_need_cannot_fail_replacement_goal(multi_sender, buyer, monkeypatch):
     ctx = Context()
     buyer.ROUND['need']['id'] = 'alice-need'
     buyer.ROUND.update(owner='alice', phase='done', goal={'id': 'old-goal', 'state': 'EXPIRED'}, order=None)
@@ -776,7 +786,7 @@ def test_unknown_foreign_invalid_advocate_reply_fails_current_round(buyer):
     assert 'Nothing ordered' in ctx.owner_text()
 
 
-def test_ordered_round_cannot_be_cleared_by_cancel_or_new_goal(buyer):
+def test_ordered_round_cannot_be_cleared_by_cancel_or_new_goal(multi_sender, buyer):
     ctx = Context()
     buyer.ROUND.update(owner='alice', phase='decided', goal={'id': 'goal-1', 'state': 'DONE'},
                        order={'id': 'order-1', 'payment_ref': 'payment-1'},
@@ -817,7 +827,7 @@ def test_tell_logs_no_private_reply_body(buyer):
     assert '482913' not in logged and '$800' not in logged and 'seller payload' not in logged
 
 
-def test_start_round_stops_before_old_summary_after_final_send_is_superseded(buyer, monkeypatch):
+def test_start_round_stops_before_old_summary_after_final_send_is_superseded(multi_sender, buyer, monkeypatch):
     async def run():
         started, release = asyncio.Event(), asyncio.Event()
         async def checks(now):
@@ -989,7 +999,7 @@ def goal_text():
 
 
 @pytest.mark.parametrize('finish', ['done', 'expired', 'paused', 'ordered'])
-def test_finished_round_releases_owner_gate(buyer, finish):
+def test_finished_round_releases_owner_gate(multi_sender, buyer, finish):
     r = buyer.ROUND
     if finish == 'done':
         r['phase'] = 'done'

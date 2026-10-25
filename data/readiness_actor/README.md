@@ -12,7 +12,7 @@ Give it your own listing URLs. For each one you get **blocks** (an agent would s
 
 It is public on the Apify Store: [anoopibrampur/seller-agent-readiness-report](https://apify.com/anoopibrampur/seller-agent-readiness-report).
 
-It was built for [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
+It was built for [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
 
 ## Real example (the default input)
 

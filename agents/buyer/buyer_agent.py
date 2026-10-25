@@ -43,7 +43,7 @@ WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue 
 
 # Agentverse profile, published on connect (README, short description, handle) for ASI:One discovery.
 agent = Agent(**common.agent_args(
-    "buyer", 8001, name="Tech Bazaar Buyer",
+    "buyer", 8001, name="Fish Market Buyer",
     readme_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "AGENTVERSE.md"),
     description="Your buying agent for computer gear: give it a goal, it skips parts you own, makes seller agents "
                 "bid in a sealed round, vetoes traps with a cited source, and pays only after you approve.",
@@ -455,9 +455,29 @@ def round_finished() -> bool:
 
 
 HELD_PHASES = {"pending_approval", "paused", "approved", "submitted", "uncertain"}
+STRANGER_TOLD: dict[str, float] = {}  # sender -> when they last got the sign-up reply (#449 item 2)
+STRANGER_REPLY_S = 600  # ASI:One's assistant recaps our replies back to us: never answer one sender in a loop
+STRANGER_REPLY = "I buy for my owner only. To shop with Fish Market, sign up at https://fishmarket.dev/start"
+
+
+def _chat_sender_allowed(sender: Any) -> bool:
+    """#449 item 2: the pinned owner, or the local web chat (WEB). No other chat sender may touch ROUND or the market."""
+    return sender == WEB or _configured_market_owner_matches(sender)
 
 
 async def handle_text(ctx: Context, sender: str, text: str):
+    # #449 item 2: this agent has ONE global ROUND and buys under the operator's market buyer id, so a chat sender who
+    # is not the pinned owner must never reach ROUND, the market or the "session is active" line, whatever the text says.
+    # First check on purpose: every path that can start or touch a round (goal, CANCEL, busy replies) is below it.
+    # WEB is the local web chat (web_chat.py); web goals from the goal poller never come through here.
+    if not _chat_sender_allowed(sender):
+        now = business_now().timestamp()
+        if now - STRANGER_TOLD.get(sender, float("-inf")) >= STRANGER_REPLY_S:
+            if len(STRANGER_TOLD) >= 256:
+                STRANGER_TOLD.clear()
+            STRANGER_TOLD[sender] = now
+            await tell(ctx, sender, STRANGER_REPLY)
+        return
     if sender == ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "approve":
         await tell(ctx, sender, "Approval happens on a phone call, not in chat. Nothing was approved or ordered.")
         return
@@ -768,7 +788,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
     except Exception as exc:
         ctx.logger.warning(f"invalid bid dropped: {type(exc).__name__}")
         if reasons:  # Shield's verdict still reaches the owner even when the payload is not a valid Bid
-            await tell_owner(ctx, f"Shield blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
+            await tell_owner(ctx, f"Smell Test blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
         return
     if bid["need_id"] != ROUND["need"]["id"]:
         return
@@ -786,7 +806,7 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
         "origin": bid["origin"],
     }
     if reasons:
-        await tell_owner(ctx, f"Shield blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
+        await tell_owner(ctx, f"Smell Test blocked a bid from {SELLER_ADDRS[sender]}: {reasons}")
         return
     if ROUND["phase"] == "requote":
         await on_requote(ctx, bid)
@@ -824,7 +844,7 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
         except Exception:
             cards = None
     if reasons:
-        await fail_round(ctx, f"Shield blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
+        await fail_round(ctx, f"Smell Test blocked the advocate's reply: {reasons}. Nothing ordered.", always_notify=True)
         return
     try:
         if not isinstance(raw, list):
@@ -1047,6 +1067,9 @@ def _approval_service():
     return APPROVAL_SERVICE
 
 
+BETA_LIMIT_TEXT = "Approval calls are limited during the beta. Nothing was paid."
+
+
 def _approval_call(buyer_id: str = ""):
     """(client, reason, buyer_name) for the approval phone call. Approval is only ever the spoken code on that call,
     so with no client configured the buyer fails closed: no approval, no payment. The number is the buyer's own
@@ -1068,6 +1091,12 @@ def _approval_call(buyer_id: str = ""):
         import logging
         logging.getLogger("buyer_agent").warning(f"approval call refused for buyer {buyer_id}: no phone on file")
         return None, "not_configured", name
+    from pay.voice_cartesia import ALLOW_ENV, on_allowlist, parse_allowlist
+    target = phone or env.get(TO_ENV)
+    if target and not on_allowlist(target, parse_allowlist(env.get(ALLOW_ENV))):  # #449 item 1: beta allowlist, no client, no digits logged
+        import logging
+        logging.getLogger("buyer_agent").warning(f"approval call refused for buyer {buyer_id}: not on the beta allowlist")
+        return None, "beta_limited", name
     try:
         return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env), "", name
     except CartesiaError:
@@ -1200,7 +1229,7 @@ async def _delegated_approval(ctx: Context, transaction: dict, send_private, dir
     result = await _phone_approval(transaction, send_private, delegated, service, buyer_name)
     if result.approved or not (delegated.transport_failed or delegated.refused):
         return result
-    ctx.logger.warning("Bazaar Caller did not deliver a usable call; placing the approval call directly")
+    ctx.logger.warning("Fish Market Caller did not deliver a usable call; placing the approval call directly")
     return await _phone_approval(transaction, send_private, direct_client, service, buyer_name)
 
 
@@ -1264,6 +1293,13 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
     try:
         ROUND["phase"] = "approval"
         client, unavailable, buyer_name = await asyncio.to_thread(_approval_call, transaction["buyer_id"])
+        if client is None and unavailable == "beta_limited":
+            # #449 item 1: terminal for web and chat alike (this number can never be called), so nothing stays held
+            transaction["phase"] = "expired"
+            buyer_state.save_transaction(state_db(), transaction)
+            ROUND.update(transaction=None, pending_hold=False, phase="done")
+            await tell_owner(ctx, BETA_LIMIT_TEXT)
+            return
         if client is None:
             # Fail closed: no approval without the phone call. The transaction is left as it was.
             ROUND["phase"] = "pending_approval"
@@ -1284,6 +1320,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"  # terminal: recovery ignores it, so a restart cannot wedge the agent
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
+            if any(t.get("outcome") == "CallLimited" for t in (result.trace or [])):   # #449 item 1: rate cap hit, never re-dialled
+                await tell_owner(ctx, BETA_LIMIT_TEXT)
+                return
             await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
                                   "the deal remains held until it expires.")
             return
@@ -1354,7 +1393,7 @@ async def on_requote(ctx: Context, fresh: dict):
         return
     if not (not_partners.orderable(old) and not_partners.orderable(fresh)
             and not_partners.orderable(ROUND.get("original_offer"))):
-        ROUND["phase"] = "decided"  # #333: no mandate, no payee, no order for a store that never joined
+        ROUND["phase"] = "done"  # #333: no mandate, no payee, no order for a store that never joined; #449 item 2: terminal, so release
         await tell_owner(ctx, f"Bid #{n} is a MIRROR listing from a store that never joined. "
                               f"{not_partners.NOT_ORDERABLE} Nothing was reserved or ordered.")
         return
@@ -1379,7 +1418,7 @@ async def on_requote(ctx: Context, fresh: dict):
         await tell_owner(ctx, "This exact offer already has a pending approval record.")
         return
     if not _configured_market_owner_matches(ROUND.get("owner")):
-        ROUND["phase"] = "decided"
+        ROUND["phase"] = "done"  # #449 item 2: terminal (no owner action continues it), so release the round for the next goal
         await tell_owner(ctx, "Private purchase approval is not configured for this owner. Nothing was reserved.")
         return
     try:
