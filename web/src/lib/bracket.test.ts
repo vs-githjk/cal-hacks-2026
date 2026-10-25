@@ -3,7 +3,7 @@
 // offline run in demo/out/sample-run.json (same sellers and prices), with reason strings exactly as close_round writes them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildBracket, reasonCode, roundWinner } from "./bracket.ts";
+import { buildBracket, inconsistency, reasonCode, roundWinner } from "./bracket.ts";
 
 let nextId = 1n;
 const row = (over: Record<string, unknown> = {}) => ({
@@ -151,16 +151,70 @@ test("no dash characters in any label or reason the bracket writes", () => {
   assert.doesNotMatch(text, /[\u2012\u2013\u2014\u2015]/);
 });
 
-test("a vetoed MIRROR bid that the referee rows rank first: who takes the champion slot", () => {
-  const mirror = row({ bidId: "bid-mirror", sellerId: "mirror", persona: "Central Computers", rank: 1, landed: 1000, origin: "MIRROR",
-    reasons: ["Advocate veto (mirror_not_orderable) [source: https://example.com/x]"] });
-  const sim = row({ bidId: "bid-sim", sellerId: "sim", persona: "Sim Seller", rank: 2, landed: 1100, origin: "SIM" });
-  const rows = [mirror, sim];
-  const champion = buildBracket(rows, "round-1").champion;
-  // Finding: bracket.ts ranks by `rank > 0` only and never reads the veto reasons, so if close_round ever wrote rank 1 on a
-  // non-orderable MIRROR row it would be crowned. Documented as is; the guard today is that close_round gives vetoed rows rank 0.
-  assert.equal(champion, "bid-mirror");
-  assert.equal(roundWinner(rows, "round-1", []), "bid-mirror");
-  // an auction_closed naming the SIM seller does not rescue it: roundWinner throws instead of picking the orderable bid
-  assert.throws(() => roundWinner(rows, "round-1", [{ kind: "auction_closed", refId: "round-1", sellerId: "sim" }]), /winner/);
+const MIRROR_VETO = "Advocate veto (mirror_not_orderable) [source: https://example.com/x]";
+const mirrorRow = (over: Record<string, unknown> = {}) =>
+  row({ bidId: "bid-mirror", sellerId: "mirror", persona: "Central Computers", rank: 1, landed: 1000, origin: "MIRROR", reasons: [MIRROR_VETO], ...over });
+const simRow = (over: Record<string, unknown> = {}) => row({ bidId: "bid-sim", sellerId: "sim", persona: "Sim Seller", rank: 2, landed: 1100, origin: "SIM", ...over });
+const closed = (sellerId: string) => ({ kind: "auction_closed", refId: "round-1", sellerId });
+const knocksOf = (b: ReturnType<typeof buildBracket>, stage: string) => b.stages.find((s) => s.name === stage)!.heats.flatMap((h) => h.knocked);
+
+test("T1: a vetoed MIRROR row ranked first makes the round inconsistent; the veto lands in Heat 1 and the SIM bid is never crowned", () => {
+  const rows = [mirrorRow(), simRow()];
+  const b = buildBracket(rows, "round-1");
+  assert.equal(b.champion, null);
+  assert.match(b.problem!, /inconsistent/);
+  assert.match(b.problem!, /mirror is ranked #1 but was advocate_veto/);
+  assert.deepEqual(knocksOf(b, "Heat 1").map((k) => [k.id, k.reasonCode]), [["bid-mirror", "advocate_veto"]]);
+  assert.deepEqual(knocksOf(b, "Gate"), []);
+  assert.equal(b.stages.filter((s) => s.kind === "knockout").length, 0);
+  assert.equal(b.stages.at(-1)!.name, "No champion");
+  for (const sellerId of ["mirror", "sim", ""]) assert.throws(() => roundWinner(rows, "round-1", [closed(sellerId)]), /inconsistent/);
+  assert.throws(() => roundWinner(rows, "round-1", []), /inconsistent/);
+});
+
+test("T2: a Shield-blocked row at rank 1 is knocked at the Gate and the round has no champion", () => {
+  const b = buildBracket([row({ bidId: "sh", sellerId: "sh", rank: 1, reasons: ["Bazaar Shield block: x", MIRROR_VETO] }), simRow()], "round-1");
+  assert.deepEqual(knocksOf(b, "Gate").map((k) => [k.id, k.reasonCode]), [["sh", "shield_block"]]);
+  assert.equal(b.champion, null);
+  assert.ok(b.problem);
+});
+
+test("T3: a caught row at rank 3 with clean rows at ranks 1 and 2 is still inconsistent and plays in no heat", () => {
+  const rows = [row({ bidId: "c1", sellerId: "c1", rank: 1 }), row({ bidId: "c2", sellerId: "c2", rank: 2 }), mirrorRow({ rank: 3 })];
+  const b = buildBracket(rows, "round-1");
+  assert.equal(b.champion, null);
+  assert.ok(b.problem);
+  assert.equal(inconsistency(rows), "market record inconsistent: mirror is ranked #3 but was advocate_veto");
+  assert.ok(b.stages.filter((s) => s.kind === "knockout").every((s) => s.heats.every((h) => !h.entrants.includes("bid-mirror"))));
+  assert.equal(b.stages.filter((s) => s.kind === "knockout").length, 0);
+});
+
+test("T4: a ranked claim_false row is inconsistent", () => {
+  const rows = [row({ bidId: "cf", sellerId: "cf", rank: 1, reasons: ["claim did not match the page: open-box"] })];
+  const b = buildBracket(rows, "round-1");
+  assert.equal(b.champion, null);
+  assert.match(b.problem!, /cf is ranked #1 but was claim_false/);
+  assert.deepEqual(knocksOf(b, "Heat 1").map((k) => k.reasonCode), ["claim_false"]);
+});
+
+test("T5: a clean MIRROR row at rank 1 is champion; origin alone never blocks a win", () => {
+  const rows = [mirrorRow({ reasons: [] }), simRow()];
+  const b = buildBracket(rows, "round-1");
+  assert.equal(b.champion, "bid-mirror");
+  assert.equal(b.problem, undefined);
+  assert.equal(roundWinner(rows, "round-1", [closed("mirror")]), "bid-mirror");
+});
+
+test("T6: a ranked row whose reasons are only unknown text plays normally", () => {
+  const rows = [row({ bidId: "u", sellerId: "u", rank: 1, reasons: ["something odd"] }), simRow()];
+  const b = buildBracket(rows, "round-1");
+  assert.equal(b.champion, "u");
+  assert.equal(b.problem, undefined);
+  assert.equal(roundWinner(rows, "round-1", []), "u");
+});
+
+test("T8: the sample round keeps its champion and no problem", () => {
+  const b = buildBracket(sampleRound(), "round-1");
+  assert.equal(b.champion, "bid-ebay-824742");
+  assert.equal(b.problem, undefined);
 });

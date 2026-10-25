@@ -217,6 +217,8 @@ export function isEmptyMarket(rows: ArenaRows): boolean {
   return rows.rounds.length + rows.needs.length + rows.results.length + rows.events.length <= 1;
 }
 
+const warnedRounds = new Set<string>();
+
 /** The scene for the latest round (by openedAt). Pure and deterministic. */
 export function projectArenaScene(rows: ArenaRows, opts: { sample?: boolean } = {}): ArenaScene {
   const sample = opts.sample === true;
@@ -241,6 +243,11 @@ export function projectArenaScene(rows: ArenaRows, opts: { sample?: boolean } = 
   let problem: string | null = null;
   try { winner = roundWinner(results, round.id, rows.events); } catch (e) { problem = errorMessage(e); }
   try { bracket = buildBracket(results, round.id); } catch (e) { problem ??= errorMessage(e); }
+  problem ??= bracket?.problem ?? null;
+  if (problem !== null && !warnedRounds.has(round.id)) {
+    warnedRounds.add(round.id);
+    console.warn("[arena] inconsistent round", round.id, problem);
+  }
 
   if (problem !== null) {
     return { ...base, phase: "inconsistent", offers: offersOf(results, bracket, null, rows.events), beats: [], winnerBidId: null, problem };

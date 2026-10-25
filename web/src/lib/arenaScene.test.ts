@@ -7,6 +7,7 @@ import {
   type ArenaRows, type ArenaScene, type EventRow, type LineRow, type NeedRow, type Playback, type ResultRow, type RoundRow,
 } from "./arenaScene.ts";
 import { SAMPLES } from "./arenaFixture.ts";
+import { boardAt } from "./arenaBoard.ts";
 
 // ---- row builders
 
@@ -772,4 +773,24 @@ test("isEmptyMarket is true for 0 or 1 rows in total and false for 2", () => {
   assert.equal(isEmptyMarket(rows()), true);
   assert.equal(isEmptyMarket(rows({ rounds: [round()] })), true);
   assert.equal(isEmptyMarket(rows({ rounds: [round()], needs: [need()] })), false);
+});
+
+test("T7: a caught MIRROR row ranked first gives an inconsistent scene with the safe buyer line", () => {
+  const mirror = ranked("b-mirror", 1, 1000, { sellerId: "mirror", origin: "MIRROR", reasons: ["Advocate veto (mirror_not_orderable) [source: https://example.com/x]"] });
+  const sim = ranked("b-sim", 2, 1100, { sellerId: "sim" });
+  const scene = projectArenaScene(rows({ rounds: [round({ state: "closed" })], results: [mirror, sim], events: [closedBy("mirror")] }));
+  assert.equal(scene.phase, "inconsistent");
+  assert.equal(scene.winnerBidId, null);
+  assert.deepEqual(scene.beats, []);
+  assert.equal(scene.offers.length, 2);
+  assert.equal(scene.offers.find((o) => o.bidId === "b-mirror")!.knock?.reasonCode, "advocate_veto");
+  assert.equal(boardAt(scene, 0).buyerLine, "Winner under review: the market record ranks a caught listing. Nobody is crowned.");
+  assert.equal(boardAt(scene, 99).buyerLine, "Winner under review: the market record ranks a caught listing. Nobody is crowned.");
+});
+
+test("T8: SAMPLES keep their winners and beat counts", () => {
+  const g = projectArenaScene(SAMPLES.gpu, { sample: true });
+  assert.deepEqual([g.phase, g.winnerBidId, g.beats.length], ["closed", "bid-round-sample-gpu-seller_1", 6]);
+  const d = projectArenaScene(SAMPLES.ssd, { sample: true });
+  assert.deepEqual([d.phase, d.winnerBidId, d.beats.length], ["closed", "bid-round-sample-ssd-seller-a", 5]);
 });

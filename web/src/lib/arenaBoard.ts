@@ -107,7 +107,9 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
         buyerLine = `Pays ${winner.price} to ${winner.name}, before sales tax.`;
       }
     } else if (scene.phase === "inconsistent") {
-      buyerLine = scene.problem ?? "The rows disagree. Nobody is crowned.";
+      buyerLine = scene.problem?.startsWith("market record inconsistent")
+        ? "Winner under review: the market record ranks a caught listing. Nobody is crowned."
+        : scene.problem ?? "The rows disagree. Nobody is crowned.";
     } else {
       buyerLine = "No offer passed the checks, so nobody won this round.";
     }

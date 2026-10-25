@@ -31,9 +31,11 @@ export interface Entrant {
 export interface Knock { id: string; reasonCode: ReasonCode; reasonText: string; ruleId?: string; sourceUrl?: string }
 export interface Heat { entrants: string[]; advances: string | null; knocked: Knock[]; bye: boolean }
 export interface Stage { name: string; kind: "gate" | "advocate" | "knockout" | "champion"; heats: Heat[] }
-export interface Bracket { roundId: string; entrants: Record<string, Entrant>; stages: Stage[]; champion: string | null }
+export interface Bracket { roundId: string; entrants: Record<string, Entrant>; stages: Stage[]; champion: string | null; problem?: string }
 
 const GATE: ReasonCode[] = ["shield_block", "below_floor", "over_cap", "off_need", "sold_out", "refused"];
+// Reasons that mean the listing was caught. Only these decide it; origin alone never does, and unknown text maps to "refused".
+const CAUGHT: ReasonCode[] = ["shield_block", "advocate_veto", "claim_false"];
 const VETO = /^Advocate veto \(([^)]*)\)(?: \[source: (.*)\])?/;
 
 /** The code for one reason string, matching what close_round and rankBids write. */
@@ -74,8 +76,21 @@ function roundName(fieldSize: number): string {
 
 const byRank = (a: ResultRow, b: ResultRow) => a.rank - b.rank || (a.bidId < b.bidId ? -1 : a.bidId > b.bidId ? 1 : 0);
 
+const caughtCode = (r: ResultRow): ReasonCode | undefined => CAUGHT.find((c) => r.reasons.some((x) => reasonCode(x) === c));
+
+/** A message when a row the referee ranked (rank > 0) was caught by its own reasons, else null. Takes one round's rows. */
+export function inconsistency(rows: readonly ResultRow[]): string | null {
+  for (const r of rows) {
+    const code = r.rank > 0 ? caughtCode(r) : undefined;
+    if (code) return `market record inconsistent: ${r.sellerId} is ranked #${r.rank} but was ${code}`;
+  }
+  return null;
+}
+
 /** The round's winner: its rank 1 bid id. Throws when auction_closed names a different seller, so a bracket never crowns the wrong one. */
 export function roundWinner(results: readonly ResultRow[], roundId: string, events: readonly EventRow[]): string | null {
+  const bad = inconsistency(results.filter((r) => r.roundId === roundId));
+  if (bad) throw new Error(bad);
   const top = results.filter((r) => r.roundId === roundId && r.rank > 0).sort(byRank)[0];
   const closed = events.find((e) => e.kind === "auction_closed" && e.refId === roundId);
   if (closed && closed.sellerId !== (top?.sellerId ?? "")) throw new Error(`round winner mismatch: auction_closed names ${closed.sellerId || "nobody"}, rank 1 is ${top?.sellerId ?? "nobody"}`);
@@ -94,7 +109,8 @@ export function buildBracket(results: readonly ResultRow[], roundId: string): Br
   }
 
   // Gate and Heat 1: the referee's refusals first (a Shield block outranks a veto on the same bid), then the advocate.
-  const out = rows.filter((r) => r.rank <= 0);
+  const problem = inconsistency(rows);
+  const out = rows.filter((r) => r.rank <= 0 || caughtCode(r));
   const gate: Knock[] = [];
   const vetoed: Knock[] = [];
   for (const r of out) {
@@ -111,7 +127,7 @@ export function buildBracket(results: readonly ResultRow[], roundId: string): Br
   ];
 
   // Knockout: ranked rows seeded by rank, 1v1, byes for the top seeds; the better (lower) rank advances.
-  const ranked = rows.filter((r) => r.rank > 0).sort(byRank);
+  const ranked = problem ? [] : rows.filter((r) => r.rank > 0 && !caughtCode(r)).sort(byRank);
   if (ranked.length > 1) {
     const size = 2 ** Math.ceil(Math.log2(ranked.length));
     let field: (ResultRow | null)[] = seedOrder(size).map((s) => ranked[s - 1] ?? null);
@@ -140,5 +156,5 @@ export function buildBracket(results: readonly ResultRow[], roundId: string): Br
   stages.push({ name: champion ? "Champion" : "No champion", kind: "champion", heats: champion ? [{ entrants: [champion], advances: champion, knocked: [], bye: false }] : [] });
   const last = stages.filter((s) => s.kind === "knockout").at(-1)?.heats[0]?.advances ?? champion;
   if (last !== champion) throw new Error(`bracket champion ${last} is not the rank 1 bid ${champion}`);
-  return { roundId, entrants, stages, champion };
+  return { roundId, entrants, stages, champion, ...(problem ? { problem } : {}) };
 }
