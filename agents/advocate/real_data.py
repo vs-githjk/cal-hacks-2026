@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # the repo root, for data.* (no uagents needed, so it tests anywhere)
 from data import baselines as price_baselines
-from data import recalls as cpsc
+from data.recall_checker import check_product
 from advocate import checks  # CALL_SUMMARIES, the closed set of spoken reasons
 
 
@@ -197,13 +197,22 @@ def brand_of(line: dict) -> str | None:
     return sorted(brands)[0] if brands else None
 
 
+def _as_answer(r: dict) -> dict:
+    """The one recall matcher's answer (data.recall_checker.check_product, the same call the Recall Checker Actor makes) in the shape
+    recalls_for_bids reads: recalled -> found (a full model match, may veto), possible -> partial (a caution), the rest as they are.
+    A failed lookup carries no reason, so the note says "the CPSC lookup failed"."""
+    status = {"recalled": "found", "possible": "partial"}.get(r["status"], r["status"])
+    reason = None if r.get("error") else r.get("summary", "").removeprefix("UNVERIFIED: ") or None
+    return {"status": status, "recalls": r["matches"], "partial": r["possible"], "source_url": r.get("source_url"), "reason": reason}
+
+
 def _lookup_brand(brand, skus, fetch, now, cache_dir) -> dict:
     """All recall answers for one brand, in one thread (the first call fills the per-brand cache for the rest)."""
     out = {}
     for sku in skus:
         try:
-            out[sku] = cpsc.recalls_for(f"{brand} {sku}", brand, fetch=fetch, now=now, cache_dir=cache_dir)
-        except Exception as e:  # anything escaping recalls_for is unverified, never a crash that drops every card
+            out[sku] = _as_answer(check_product(f"{brand} {sku}", brand, fetch=fetch, now=now, cache_dir=cache_dir))
+        except Exception as e:  # anything escaping check_product is unverified, never a crash that drops every card
             out[sku] = {"status": "unverified", "reason": f"the CPSC lookup failed ({type(e).__name__})", "source_url": None}
     return out
 
