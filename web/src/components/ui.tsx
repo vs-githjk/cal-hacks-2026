@@ -58,17 +58,6 @@ export function Unavailable({ title, children }: { title: string; children: Reac
   );
 }
 
-/** A card for something with no recorded source yet. Says so plainly; never fills the gap with a sample. */
-export function Unavailable({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card>
-      <Label>{title}</Label>
-      <p className="text-[18px] font-medium">Unavailable</p>
-      <p className="mt-1 text-[13px] text-muted">{children}</p>
-    </Card>
-  );
-}
-
 export function Pill({ tone, children }: { tone: "done" | "hold" | "hunting"; children: ReactNode }) {
   const t = { done: "bg-mint-soft text-mint", hold: "bg-amber-soft text-amber", hunting: "bg-sky-soft text-sky" }[tone];
   return (
