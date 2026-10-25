@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -225,7 +227,7 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
                                                         "voice_approval_id": "va-1"}
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
-    assert not ctx.sent  # no owner chat and no OrderPlaced: the web flow stops at approval
+    assert not any(isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no owner chat message at all
 
 
 def test_web_buyer_fails_closed_when_the_code_cannot_be_issued(runtime, monkeypatch):
@@ -235,21 +237,100 @@ def test_web_buyer_fails_closed_when_the_code_cannot_be_issued(runtime, monkeypa
     assert not any(not isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no OrderPlaced either
 
 
-def test_web_approval_stops_before_payment_and_frees_the_next_web_goal(runtime, monkeypatch, caplog):
-    buyer, _db = runtime
+def _fake_stripe(monkeypatch, result=None, error=None):
+    import urllib.request
+    from pay import merchant_sim
+    calls = []
+
+    def charge(self, **kw):
+        calls.append(kw)
+        if error:
+            raise error
+        return result if result is not None else {"id": "pi_test_1", "status": "succeeded"}
+
+    monkeypatch.setattr(merchant_sim.StripeTestCharger, "charge", charge)
+    monkeypatch.setattr(urllib.request, "urlopen", Mock(side_effect=AssertionError("network call")))
+    return calls
+
+
+def _orders(buyer, ctx):
+    return [(to, m) for to, m in ctx.sent if isinstance(m, buyer.common.OrderPlaced)]
+
+
+def test_web_approval_pays_in_stripe_test_mode_then_sends_order_and_frees_the_next_web_goal(runtime, monkeypatch, caplog):
+    import json
+    buyer, db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    calls = _fake_stripe(monkeypatch)
     with caplog.at_level("INFO", logger="buyer_agent"):
         ctx, _used, _make = _web_approval(buyer, monkeypatch)
+    mandate = buyer.ROUND["mandate"]
+    assert len(calls) == 1
+    assert calls[0]["amount_cents"] == buyer.payment._cents(mandate["amount"])
+    assert calls[0]["idempotency_key"] == "mandate:" + mandate["hash"]
+    assert calls[0]["metadata"]["mandate_hash"] == mandate["hash"] and calls[0]["currency"] == "USD"
+    assert buyer.MARKET_REFEREE.record_payment.call_args.kwargs == {
+        "mandate_hash": mandate["hash"], "payment_ref": "pi_test_1", "amount": mandate["amount"], "mode": "stripe_test"}
+    (to, placed), = _orders(buyer, ctx)
+    assert to == buyer.common.address(buyer.ROUND["bids"][0]["supplier_id"])
+    assert json.loads(placed.order_json)["payment_ref"] == "pi_test_1"
+    assert _stored_phases(db) == ["settled"]
     assert buyer.ROUND["phase"] == "done" and not buyer.ROUND.get("pending_hold")
-    assert f"web buyer {BID}: approved; payment leg not wired for web buyers (SIM)" in caplog.text
-    assert not ctx.sent
-    for name in ("purchase_status", "settle_goal", "record_payment"):
-        assert not getattr(buyer.MARKET_BUYER, name).called and not getattr(buyer.MARKET_REFEREE, name).called
-    buyer.LAST_GOAL_POLL = float("-inf")
-    buyer.buyer_state.mark_goal_handled(_db, "goal-web1", BID)
-    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer), {**_open_goal_row(buyer), "id": "goal-web2"}]
-    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
-    assert asyncio.run(buyer.adopt_open_goal(Context())) is True
+    assert f"web buyer {BID}: paid deal" in caplog.text and "pi_test_1 (Stripe test mode)" in caplog.text
+    assert "424242" not in caplog.text and "sk_test_x" not in caplog.text and "+1415" not in caplog.text
+    assert not buyer.MARKET_BUYER.mock_calls
+    assert _next_web_goal_adopted(buyer, db) is True
     assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+@pytest.mark.parametrize("key", [None, "", "sk_live_x", "rk_test_x"])
+def test_web_approval_without_a_test_key_uses_a_labelled_sim_stub_and_never_the_network(runtime, monkeypatch, caplog, key):
+    buyer, db = runtime
+    monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
+    if key is not None:
+        monkeypatch.setenv("STRIPE_SECRET_KEY", key)
+    calls = _fake_stripe(monkeypatch)
+    with caplog.at_level("INFO", logger="buyer_agent"):
+        ctx, _used, _make = _web_approval(buyer, monkeypatch)
+    assert not calls
+    kw = buyer.MARKET_REFEREE.record_payment.call_args.kwargs
+    assert kw["mode"] == "sim" and kw["payment_ref"].startswith("ch_sim_")
+    assert len(_orders(buyer, ctx)) == 1 and _stored_phases(db) == ["settled"]
+    assert "SIM stub, no money moved" in caplog.text
+    assert not key or key not in caplog.text
+
+
+@pytest.mark.parametrize("kind", ["denied", "paused"])
+def test_web_denied_or_unanswered_call_never_charges_or_orders(runtime, monkeypatch, kind):
+    buyer, _db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    calls = _fake_stripe(monkeypatch)
+    ctx, _used, _make = _web_approval(buyer, monkeypatch, voice=_voice(kind))
+    assert not calls and not buyer.MARKET_REFEREE.record_payment.called and not _orders(buyer, ctx)
+
+
+@pytest.mark.parametrize("kw", [{"error": RuntimeError("card_declined")},
+                                {"result": {"id": "pi_x", "status": "requires_action"}},
+                                {"result": {"id": "evil_1", "status": "succeeded"}}])
+def test_web_failed_stripe_charge_sends_no_order_and_releases_the_round(runtime, monkeypatch, kw):
+    buyer, db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    calls = _fake_stripe(monkeypatch, **kw)
+    ctx, _used, _make = _web_approval(buyer, monkeypatch)
+    assert len(calls) == 1 and not _orders(buyer, ctx) and not buyer.MARKET_REFEREE.record_payment.called
+    assert _stored_phases(db) == ["expired"]
+    assert buyer.ROUND["phase"] == "done" and not buyer.ROUND.get("pending_hold") and buyer.ROUND.get("transaction") is None
+
+
+def test_web_market_payment_row_failure_does_not_undo_the_charge_or_block_the_order(runtime, monkeypatch, caplog):
+    buyer, db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    _fake_stripe(monkeypatch)
+    buyer.MARKET_REFEREE.record_payment.side_effect = buyer.MarketBridgeError("down")
+    with caplog.at_level("WARNING", logger="buyer_agent"):
+        ctx, _used, _make = _web_approval(buyer, monkeypatch)
+    assert len(_orders(buyer, ctx)) == 1 and _stored_phases(db) == ["settled"]
+    assert "market row failed" in caplog.text
 
 
 def _adopt(buyer):
@@ -365,7 +446,7 @@ def test_chat_goal_during_web_round_does_not_wipe_it(runtime):
     assert buyer.ROUND["phase"] == "waiting"
 
 
-def test_failed_start_round_leaves_goal_unmarked(runtime, monkeypatch):
+def test_failed_start_round_leaves_goal_unmarked_until_the_third_failure(runtime, monkeypatch):
     buyer, db = runtime
     buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
 
@@ -373,9 +454,46 @@ def test_failed_start_round_leaves_goal_unmarked(runtime, monkeypatch):
         return False
 
     monkeypatch.setattr(buyer, "start_round", boom)
+    for _ in range(2):
+        assert _adopt(buyer) is False
+        assert not buyer.buyer_state.goal_handled(db, "goal-web1")
     assert _adopt(buyer) is False
-    assert not buyer.buyer_state.goal_handled(db, "goal-web1")
+    assert buyer.buyer_state.goal_handled(db, "goal-web1")
 
+
+def _two_goal_rows(buyer):
+    return [_open_goal_row(buyer), {**_open_goal_row(buyer), "id": "goal-web2"}]
+
+
+def test_one_always_refused_goal_is_given_up_after_three_tries_and_the_next_goal_is_adopted(runtime):
+    buyer, db = runtime
+    referee = buyer.MARKET_REFEREE
+    referee.open_goals.return_value = _two_goal_rows(buyer)
+    referee.round_status.return_value = {"state": "open"}
+
+    def post_need(need, *, buyer_id, goal_id):
+        if goal_id == "goal-web1":
+            raise MarketBridgeError("refused")
+
+    referee.post_need.side_effect = post_need
+    for _ in range(3):
+        assert _adopt(buyer) is False
+    assert [c.kwargs["goal_id"] for c in referee.post_need.call_args_list] == ["goal-web1"] * 3
+    assert buyer.buyer_state.goal_handled(db, "goal-web1")
+    assert _adopt(buyer) is True
+    assert referee.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def test_goal_with_nothing_left_to_buy_is_marked_handled_at_once(runtime, monkeypatch):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = _two_goal_rows(buyer)
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    real = buyer.need_from_goal
+    monkeypatch.setattr(buyer, "need_from_goal", lambda g: {**real(g), "items": []} if g["id"] == "goal-web1" else real(g))
+    assert _adopt(buyer) is False
+    assert buyer.buyer_state.goal_handled(db, "goal-web1") and not buyer.MARKET_REFEREE.post_need.called
+    assert _adopt(buyer) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
 
 
 def _stored_phases(db):

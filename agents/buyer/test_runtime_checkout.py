@@ -49,7 +49,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(buyer.crs, "eligible", lambda _supplier, check, _now: bool(check and check.get("eligible")))
     monkeypatch.setattr(buyer, "blocked_reasons", lambda *_args, **_kwargs: None)
     for name, value in {
-        "ROUND": {}, "WEB_OUTBOX": [],
+        "ROUND": {}, "WEB_OUTBOX": [], "GOAL_ATTEMPTS": {},
         "APPROVAL_SERVICE": None, "APPROVAL_CALL_CLIENT": None, "MERCHANT_SIM": None,
         "TAP_PRIVATE_KEY": None, "SHIELD_RECEIPT_KEYS": None, "SHIELD_PAYMENT_SCREEN": None,
         "MARKET_BUYER": Mock(), "MARKET_REFEREE": Mock(), "STATE_DB": None, "NONCE_STORE": None,
