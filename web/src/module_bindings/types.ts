@@ -115,6 +115,7 @@ export const BuyerProfile = __t.object("BuyerProfile", {
   buyerId: __t.string(),
   displayName: __t.string(),
   origin: __t.string(),
+  phone: __t.string(),
 });
 export type BuyerProfile = __Infer<typeof BuyerProfile>;
 
@@ -451,6 +452,13 @@ export type SellerNeedRow = __Infer<typeof SellerNeedRow>;
 
 export const SellerNeeds = __t.object("SellerNeeds", {});
 export type SellerNeeds = __Infer<typeof SellerNeeds>;
+
+export const SignupThrottle = __t.object("SignupThrottle", {
+  id: __t.u32(),
+  windowStart: __t.timestamp(),
+  count: __t.u32(),
+});
+export type SignupThrottle = __Infer<typeof SignupThrottle>;
 
 export const StockHold = __t.object("StockHold", {
   id: __t.u64(),
