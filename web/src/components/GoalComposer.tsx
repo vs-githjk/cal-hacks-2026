@@ -43,7 +43,7 @@ function writeStored(owner: string | null, draft: GoalDraft) {
 type Status =
   | { kind: "idle" }
   | { kind: "sending" }
-  | { kind: "done" }
+  | { kind: "done"; label: string }
   | { kind: "note"; text: string }
   | { kind: "error"; text: string };
 
@@ -110,7 +110,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
     setStatus({ kind: "sending" });
     try {
       await postGoal(args);
-      setStatus({ kind: "done" });
+      setStatus({ kind: "done", label: CATALOG.find((c) => c.sku === args.items[0]!.skuSpec)?.label ?? args.items[0]!.skuSpec });
       setDraft(EMPTY_DRAFT);
       writeStored(buyerId, EMPTY_DRAFT);
       requestId.current = null;
@@ -206,7 +206,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
 
       <p role="status" aria-live="polite" className={`mt-2 text-[14px] ${status.kind === "error" ? "text-coral" : ""}`}>
         {status.kind === "sending" && "Sending..."}
-        {status.kind === "done" && "Posted. Your agent is looking for offers."}
+        {status.kind === "done" && `Posted. Looking for offers on ${status.label}.`}
         {(status.kind === "note" || status.kind === "error") && status.text}
       </p>
     </Card>

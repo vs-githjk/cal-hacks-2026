@@ -47,3 +47,9 @@ export function pairCodeToSend(raw: string): string | null {
   const code = raw.trim().toUpperCase().replace(/\s+/g, "");
   return code.toUpperCase().replace(/[^0-9A-Z]/g, "") ? code : null;
 }
+
+/** True only when the market explicitly refused the stored token (the SDK's token exchange got 401 or 403), never for flaky data. */
+export function isTokenRejected(err: unknown): boolean {
+  const e = err as { name?: string; status?: number } | null;
+  return e?.name === "WebSocketTokenError" && (e.status === 401 || e.status === 403);
+}

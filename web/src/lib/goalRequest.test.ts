@@ -239,7 +239,7 @@ test("postGoalArgs maps a request with a cap and a deadline to the exact reducer
     buyerId: "b_ab12cd34",
     type: "budget_cap",
     cap: 650,
-    deadline: "2026-11-02T23:59:00Z",
+    deadline: new Date(2026, 10, 2, 23, 59).toISOString(),
     poNumber: "",
     origin: "SIM",
     items: [{ skuSpec: "rtx 5070 ti", condition: "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
@@ -249,7 +249,8 @@ test("postGoalArgs maps a request with a cap and a deadline to the exact reducer
 test("postGoalArgs defaults the deadline to 7 days after today", () => {
   const args = postGoalArgs(request({ cap: 90 }), "b_ab12cd34", TODAY);
   assert.ok(!("error" in args));
-  assert.equal(args.deadline, "2026-10-31T23:59:00Z");
+  assert.equal(args.deadline, new Date(2026, 9, 31, 23, 59).toISOString());
+  assert.match(args.deadline, /^\d{4}-\d{2}-\d{2}T/);
 });
 
 test("postGoalArgs asks for a cap instead of guessing one", () => {
@@ -281,6 +282,11 @@ test("catalogSku maps typed part names to the exact seller sku", () => {
     ["graphics card under $600", "rtx 4070 super 12gb"],
     ["RTX 5090", null],
     ["a keyboard", null],
+    ["1000W power supply", null],
+    ["650W PSU", null],
+    ["tower cooler", null],
+    ["RTX 5090 in a mid-tower case", null],
+    ["850 W PSU", "psu 850w"],
   ];
   for (const [text, sku] of cases) assert.equal(catalogSku(text), sku, text);
 });
@@ -294,4 +300,12 @@ test("postGoalArgs says plainly when sellers do not carry the part", () => {
 test("catalogSku: a price is not a GPU model", () => {
   assert.equal(catalogSku("graphics card under $1000"), "rtx 4070 super 12gb");
   assert.equal(catalogSku("a 5090 graphics card"), null);
+});
+
+test("a deadline of today picked at 7:30 pm is still in the future", () => {
+  const evening = new Date(2026, 9, 24, 19, 30);
+  const args = postGoalArgs(request({ cap: 90, deadline: "2026-10-24" }), "b_ab12cd34", evening);
+  assert.ok(!("error" in args));
+  assert.ok(Date.parse(args.deadline) > evening.getTime());
+  assert.match(args.deadline, /^\d{4}-\d{2}-\d{2}T/);
 });

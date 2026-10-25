@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanSignUp, gateRoute, pairCodeToSend, signUpErrorText } from "./signUp.ts";
+import { cleanSignUp, gateRoute, pairCodeToSend, signUpErrorText, isTokenRejected } from "./signUp.ts";
 
 const buyer = [{ role: "buyer", subjectId: "b-1" }];
 const seller = [{ role: "seller", subjectId: "s-1" }];
@@ -73,4 +73,13 @@ test("pairCodeToSend returns null when nothing is left after the market's normal
   assert.equal(pairCodeToSend(""), null);
   assert.equal(pairCodeToSend("   "), null);
   assert.equal(pairCodeToSend("--"), null);
+});
+
+test("isTokenRejected: only an explicit 401 or 403 from the token exchange clears the token", () => {
+  const tokenError = (status: number) => Object.assign(new Error("x"), { name: "WebSocketTokenError", status });
+  assert.equal(isTokenRejected(tokenError(401)), true);
+  assert.equal(isTokenRejected(tokenError(403)), true);
+  assert.equal(isTokenRejected(tokenError(503)), false, "a server hiccup keeps the account");
+  assert.equal(isTokenRejected(new Error("WebSocket closed")), false, "flaky data keeps the account");
+  assert.equal(isTokenRejected(undefined), false);
 });

@@ -1,5 +1,6 @@
 import { DbConnection } from "@/module_bindings";
 import type { Timestamp } from "spacetimedb";
+import { isTokenRejected } from "./signUp";
 
 export const STDB_URI = process.env.NEXT_PUBLIC_SPACETIMEDB_URI || "ws://127.0.0.1:3000";
 export const STDB_DB = process.env.NEXT_PUBLIC_SPACETIMEDB_DB || "tech-bazaar";
@@ -27,8 +28,18 @@ export function connectionBuilder() {
     .withUri(STDB_URI)
     .withDatabaseName(STDB_DB)
     .withToken(stored)
-    // No token clearing on connect errors: a browser WebSocket failure cannot tell an auth rejection from flaky data, and a token with no role already routes to sign-up.
-    .onConnect((_conn, _identity, token) => saveToken(token));
+    .onConnect((_conn, _identity, token) => saveToken(token))
+    // Only an explicit token refusal clears it (then one reload with a fresh identity); flaky data keeps the account.
+    .onConnectError((_ctx, err) => {
+      if (stored && isTokenRejected(err)) {
+        try {
+          localStorage.removeItem(TOKEN_KEY);
+        } catch {
+          return;
+        }
+        location.reload();
+      }
+    });
 }
 
 export const toDate = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));

@@ -107,10 +107,11 @@ export function catalogSku(text: string): string | null {
   if (/\b(?:rtx\s*)?5070\s*ti\b/.test(t)) return "rtx 5070 ti";
   if (/\b(?:rtx\s*)?4070\s*super\b/.test(t)) return "rtx 4070 super 12gb";
   if (/\b(?:rx\s*)?7800\s*xt\b/.test(t)) return "rx 7800 xt 16gb";
-  if (/\b850\s*-?\s*w/.test(t)) return "psu 850w";
-  if (/\b750\s*-?\s*w/.test(t) || /\b(?:psu|power supply)\b/.test(t)) return "psu 750w";
-  if (/\b(?:case|mid-tower|full-tower|tower)\b/.test(t)) return "case";
   if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) return null;
+  const watts = /\b(\d{3,4})\s*-?\s*w\b/.exec(t);
+  if (watts) return watts[1] === "850" ? "psu 850w" : watts[1] === "750" ? "psu 750w" : null;
+  if (/\b(?:psu|power supply)\b/.test(t)) return "psu 750w";
+  if (/\b(?:pc case|case|mid-tower|full-tower|mini-tower)\b/.test(t)) return "case";
   if (/\b(?:gpu|graphics card|video card)\b/.test(t)) return "rtx 4070 super 12gb";
   return null;
 }
@@ -119,13 +120,13 @@ export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date)
   if (request.cap === null) return { error: "Add a top price so sellers know your cap." };
   const skuSpec = catalogSku(request.requestText);
   if (skuSpec === null) return { error: "Sellers tonight don't carry that part. Tap one above: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case." };
-  const day = request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7));
+  const [y, m, d] = (request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7))).split("-").map(Number);
   return {
     id: `g_${request.requestId.replace(/[^A-Za-z0-9]/g, "").slice(0, 12)}`,
     buyerId,
     type: "budget_cap",
     cap: request.cap,
-    deadline: `${day}T23:59:00Z`,
+    deadline: new Date(y!, m! - 1, d!, 23, 59).toISOString(), // the buyer's local end of day
     poNumber: "",
     origin: "SIM",
     items: [{ skuSpec, condition: request.conditions[0] ?? "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
