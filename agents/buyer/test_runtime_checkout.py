@@ -49,7 +49,7 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(buyer.crs, "eligible", lambda _supplier, check, _now: bool(check and check.get("eligible")))
     monkeypatch.setattr(buyer, "blocked_reasons", lambda *_args, **_kwargs: None)
     for name, value in {
-        "ROUND": {}, "WEB_OUTBOX": [],
+        "ROUND": {}, "WEB_OUTBOX": [], "GOAL_ATTEMPTS": {},
         "APPROVAL_SERVICE": None, "APPROVAL_CALL_CLIENT": None, "MERCHANT_SIM": None,
         "TAP_PRIVATE_KEY": None, "SHIELD_RECEIPT_KEYS": None, "SHIELD_PAYMENT_SCREEN": None,
         "MARKET_BUYER": Mock(), "MARKET_REFEREE": Mock(), "STATE_DB": None, "NONCE_STORE": None,
@@ -105,7 +105,7 @@ def ready_for_requote(buyer):
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
         bids=[bid], cards={"bid-1": reviewed_card()}, reviewed=True,
         seller_checks={"seller_1": {"eligible": True}}, personas={}, owned=[], attempts=0,
-        last_sent={}, market_round_id="round-need-1", order=None, transaction=None,
+        last_sent={}, market_buyer_id="vidyut", market_round_id="round-need-1", order=None, transaction=None,
         original_offer=dict(bid), candidate_hashes={"bid-1": "c" * 64},
         market_winner={"total_landed_price": bid["total_landed_price"]})
 
@@ -196,7 +196,7 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
         bids=[raw], received_bids={bid_id: raw}, review_bids=[], cards={bid_id: reviewed_card("need-1", bid_id)},
         reviewed=True, seller_checks={"seller_1": {"eligible": True}}, personas={bid_id: "Seller One"},
-        owned=[], attempts=0, last_sent={}, market_round_id="round-need-1", round_token="round-token",
+        owned=[], attempts=0, last_sent={}, market_buyer_id="vidyut", market_round_id="round-need-1", round_token="round-token",
         candidate_hashes={}, order=None, transaction=None)
 
     buyer.ROUND["review_bids"] = buyer._review_candidates(referee, "round-need-1")
@@ -875,3 +875,198 @@ def test_postcharge_delivery_failure_can_finish_from_durable_charge_on_exact_ack
     assert len(charger.calls) == 1
     assert events.count("charge") == 1
     assert not any(isinstance(message, RejectPayment) for _, message in ctx.sent)
+
+
+# ---- #398 item 3: Bazaar Caller carries the voice only, behind BUYER_DELEGATE_CALL (off by default) -----------------
+class FakeCaller:
+    """Stands in for Bazaar Caller over uAgents: returns what the owner 'said' on a call it placed. It never knows the
+    code; the test hands it the code the owner saw, as a person on the phone would speak it."""
+
+    def __init__(self, owner, *, says="approve", reply=None, raise_=None, call_id="caller-call-1"):
+        self.owner, self.says, self.reply, self.raise_, self.call_id = owner, says, reply, raise_, call_id
+        self.requests = []
+
+    def __call__(self, mandate_hash, variables):
+        self.requests.append((mandate_hash, variables))
+        if self.raise_:
+            raise self.raise_
+        if self.reply is not None:
+            return self.reply(mandate_hash)
+        return {"mandate_hash": mandate_hash, "call_id": self.call_id, "error": "", "call": {
+            "id": self.call_id, "status": "completed", "end_reason": "agent_hangup",
+            "start_time": (NOW + timedelta(seconds=1)).isoformat(),
+            "transcript": [{"role": "user", "text": f"{self.owner.code} {self.says}", "start_timestamp": 1.0}]}}
+
+
+def _delegate(buyer, monkeypatch, caller, direct):
+    monkeypatch.setenv("BUYER_DELEGATE_CALL", "1")
+    monkeypatch.setattr(buyer, "USED_CALL_IDS", set())
+    monkeypatch.setattr(buyer, "_transport_request", lambda ctx, loop: caller)
+    _wire_voice(buyer, direct, "buyer-runtime-delegate-secret")
+    buyer.MARKET_BUYER.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
+
+
+def _market_row(buyer, **override):
+    m = buyer.ROUND["transaction"]["mandate"]
+    return {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": m["hash"],
+            "amount": m["amount"], "payee": m["payee"], "retired": False, **override}
+
+
+def _run(buyer, ctx):
+    asyncio.run(asyncio.wait_for(buyer.on_requote(ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    t = buyer.ROUND["transaction"]
+    return state.load_transaction(buyer.STATE_DB, t["deal_id"], t["buyer_id"])
+
+
+def test_delegation_is_off_by_default_and_today_s_direct_call_runs(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.delenv("BUYER_DELEGATE_CALL", raising=False)
+    assert not buyer.delegate_call_enabled()
+    ready_for_requote(buyer)
+    buyer.MARKET_BUYER.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    client = FakeVoiceClient()
+    _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
+    ctx = CodeCapturingContext(client)
+    assert _run(buyer, ctx)["phase"] == "approved" and client.calls == 1
+    assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
+    assert not buyer.MARKET_BUYER.purchase_status.called   # the delegated re-read is not on today's path
+
+
+def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_reads_the_market(runtime, monkeypatch):
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    caller = FakeCaller(direct)
+    _delegate(buyer, monkeypatch, caller, direct)
+    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer)
+    approved = _run(buyer, ctx)
+    assert approved["phase"] == "approved" and direct.calls == 0 and len(caller.requests) == 1
+    assert approved["voice_approval"]["recording_ref"] == "cartesia:caller-call-1"
+    assert approved_voice_record_matches(approved["voice_approval"], approved["mandate"], now=NOW + timedelta(seconds=2))
+    hash_, variables = caller.requests[0]
+    assert set(variables) == {"buyer_name", "deal_script", "why_answer"}
+    assert direct.code not in json.dumps(variables)                       # the Caller never sees the code
+    assert any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+
+
+@pytest.mark.parametrize("forge", ["wrong_mandate", "replayed_call_id", "unfinished_call"])
+def test_a_forged_caller_reply_never_approves_and_the_direct_call_decides(runtime, monkeypatch, forge):
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient(transcript="no")       # the owner declines on the real direct call
+    ctx = CodeCapturingContext(direct)
+    good = FakeCaller(direct)
+    replies = {
+        "wrong_mandate": lambda h: {**good(h, {}), "mandate_hash": "f" * 64},
+        "replayed_call_id": lambda h: good(h, {}),
+        "unfinished_call": lambda h: {**good(h, {}), "call": {**good(h, {})["call"], "status": "in_progress"}},
+    }
+    caller = FakeCaller(direct, reply=replies[forge])
+    _delegate(buyer, monkeypatch, caller, direct)
+    if forge == "replayed_call_id":
+        buyer.USED_CALL_IDS.add("caller-call-1")
+    held = _run(buyer, ctx)
+    assert held["phase"] != "approved" and held["order"] is None
+    assert len(caller.requests) == 1                          # never retried through the Caller
+    assert direct.calls == 1   # a refused reply (it fails the buyer's checks) falls back to its own direct call, once
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+
+
+@pytest.mark.parametrize("says", [
+    "alpha bravo approve",                # a guessed code
+    "{wrong_code} approve",               # the right shape, one word wrong
+    "{code} no",                          # denied
+    "no {code}",                          # denied, code after
+    "{code}",                             # the code without approve
+    "",                                   # connected, but the owner said nothing
+])
+def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_rings_again(runtime, monkeypatch, says):
+    """A guessed code, a wrong code, a spoken no, the code without approve, or silence after the call connected: the call
+    reached the owner and finished, so the answer stands. The buyer never rings again, through the Caller or directly,
+    and nothing is paid (#405 review, #412 item 2)."""
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    good = FakeCaller(direct)
+
+    def reply(h):
+        r = good(h, {})
+        words = (direct.code or "").split()
+        wrong_code = " ".join(["zulu"] + words[1:]) if words else "zulu"
+        text = says.format(code=direct.code, wrong_code=wrong_code).strip()
+        transcript = [{"role": "user", "text": text, "start_timestamp": 1.0}] if text else []
+        return {**r, "call": {**r["call"], "transcript": transcript}}
+    caller = FakeCaller(direct, reply=reply)
+    _delegate(buyer, monkeypatch, caller, direct)
+    held = _run(buyer, ctx)
+    assert held["phase"] != "approved" and held["order"] is None
+    assert len(caller.requests) == 1 and direct.calls == 0   # exactly one ring: no second call, direct or delegated
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+    assert not buyer.MARKET_BUYER.record_approval.called
+
+
+def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    buyer.ROUND["market_buyer_id"] = "b_web12345"   # the transaction's buyer_id comes from here
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    caller = FakeCaller(direct)
+    _delegate(buyer, monkeypatch, caller, direct)
+    approved = _run(buyer, ctx)
+    assert approved["buyer_id"] == "b_web12345"
+    assert direct.calls == 1 and caller.requests == []   # the buyer's own direct call, never the Caller
+    assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
+
+
+def test_only_a_non_web_buyer_may_delegate(runtime, monkeypatch):
+    buyer, _db = runtime
+    delegation_allowed = buyer.delegation_allowed
+    monkeypatch.setenv("BUYER_DELEGATE_CALL", "1")
+    assert delegation_allowed({"buyer_id": "vidyut"})
+    assert not delegation_allowed({"buyer_id": "b_ab12cd34"})
+    assert not delegation_allowed({})
+    monkeypatch.delenv("BUYER_DELEGATE_CALL")
+    assert not delegation_allowed({"buyer_id": "vidyut"})
+
+
+def test_a_caller_timeout_falls_back_to_the_direct_call_once(runtime, monkeypatch):
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    caller = FakeCaller(direct, raise_=TimeoutError())
+    _delegate(buyer, monkeypatch, caller, direct)
+    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer)
+    approved = _run(buyer, ctx)
+    assert approved["phase"] == "approved" and direct.calls == 1 and len(caller.requests) == 1
+
+
+@pytest.mark.parametrize("field,value", [("payee", "someone-else"), ("amount", 1.0), ("mandate_hash", "e" * 64),
+                                         ("approval_method", None), ("retired", True)])
+def test_a_market_re_read_mismatch_blocks_the_order_and_payment(runtime, monkeypatch, field, value):
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    _delegate(buyer, monkeypatch, FakeCaller(direct), direct)
+    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer, **{field: value})
+    held = _run(buyer, ctx)
+    assert held["phase"] == "uncertain"
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+    assert any("could not be confirmed safely" in t for t in owner_texts(ctx))
+
+
+def test_only_the_caller_can_answer_a_delegated_call(runtime):
+    import concurrent.futures
+    buyer, _db = runtime
+    fut = concurrent.futures.Future()
+    buyer.PENDING_TRANSPORT["a" * 64] = fut
+    msg = buyer.common.VoiceTransportResult(mandate_hash="a" * 64, call_id="x", call_json="{}")
+    asyncio.run(buyer.on_voice_transport(Context(), "agent1someone-else", msg))
+    assert not fut.done()
+    asyncio.run(buyer.on_voice_transport(Context(), buyer.common.address("caller"), msg))
+    assert fut.result()["call_id"] == "x"
+    buyer.PENDING_TRANSPORT.clear()

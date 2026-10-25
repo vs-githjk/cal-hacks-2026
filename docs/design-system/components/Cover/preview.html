@@ -1,0 +1,34 @@
+<!-- @dsCard height=300 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: var(--canvas); }
+  .cover { position: relative; width: 960px; height: 300px; overflow: hidden; }
+  svg { position: absolute; inset: 0; }
+  .ink { fill: var(--ink); } .pulse { fill: var(--pulse); } .pac { fill: var(--pac); } .tint { fill: var(--surface-2); } .coral { fill: var(--coral); } .ground { fill: var(--canvas); }
+  .name { position: absolute; left: 48px; bottom: 60px; font: 400 96px/0.92 var(--font-serif); letter-spacing: -0.01em; color: var(--ink); max-width: 440px; }
+  .tag { position: absolute; left: 50px; bottom: 32px; font: 400 14px/18px var(--font-sans); color: var(--muted); max-width: 440px; }
+</style></head>
+<body>
+<div class="cover">
+  <!--
+    blocks: ink 240x300 slab (space-16 multiples, radius-lg 16) · pulse 192x144 (radius-lg) · pac 144x144 disc (rx 72 = radius-pill at half side) · surface-2 tint 96x300 band · coral 48x48 (radius-sm)
+    arrangement: one tall ink slab bleeding off the right edge with satellites stepping down and left, a tint band between them; every unit right of x = 480
+    pattern: literal motif (the buyer is a Pac-Man): the pac disc has a wedge cut out in ground colour, and quarter-circle arcs at radius-xl 24 step across the pulse block; chosen because the product's one figure is a Pac-Man eating the worst bid
+    scales: steps 48 / 96 / 144 / 192 (space-12 multiples), radii 8 / 16 / 24 / pill
+  -->
+  <svg viewBox="0 0 960 300" width="960" height="300" aria-hidden="true">
+    <rect class="tint" x="528" y="0" width="96" height="300"/>
+    <rect class="ink" x="720" y="0" width="240" height="300" rx="16"/>
+    <rect class="pulse" x="576" y="132" width="192" height="144" rx="16"/>
+    <g class="ground"><path d="M600 156 a24 24 0 0 1 24 24 h-24z"/><path d="M648 156 a24 24 0 0 1 24 24 h-24z"/><path d="M696 156 a24 24 0 0 1 24 24 h-24z"/><path d="M624 204 a24 24 0 0 1 24 24 h-24z"/><path d="M672 204 a24 24 0 0 1 24 24 h-24z"/><path d="M744 204 a24 24 0 0 1 24 24 h-24z"/></g>
+    <circle class="pac" cx="816" cy="96" r="72"/>
+    <path class="ink" d="M816 96 L888 54 A72 72 0 0 0 888 138 Z"/>
+    <rect class="coral" x="480" y="228" width="48" height="48" rx="8"/>
+  </svg>
+  <div class="name">Tech Bazaar</div>
+  <div class="tag">Your agent shops. You approve.</div>
+</div>
+</body>
+</html>

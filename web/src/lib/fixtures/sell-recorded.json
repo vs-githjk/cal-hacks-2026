@@ -1,0 +1,60 @@
+{
+ "recorded_at": "2026-10-25T06:03:14Z",
+ "origin": "SIM",
+ "source": "seller_kit/api.py GET /v1/sellers and /v1/needs/open, no shops written",
+ "shops": [],
+ "needs": [
+  {
+   "id": "need-sim-gpu",
+   "buyer_id": "the-buyer",
+   "sku_spec": "rtx 5070 ti",
+   "allowed_conditions": [
+    "new",
+    "open-box"
+   ],
+   "quantity": 1,
+   "unit": "each",
+   "delivery_window": "by Friday",
+   "origin": "SIM"
+  },
+  {
+   "id": "need-sim-psu",
+   "buyer_id": "the-buyer",
+   "sku_spec": "psu 750w",
+   "allowed_conditions": [
+    "new",
+    "open-box",
+    "refurbished"
+   ],
+   "quantity": 1,
+   "unit": "each",
+   "delivery_window": "by Friday",
+   "origin": "SIM"
+  },
+  {
+   "id": "need-sim-gpu-2",
+   "buyer_id": "studio-pixel-forge",
+   "sku_spec": "rtx 4070 super 12gb",
+   "allowed_conditions": [
+    "new"
+   ],
+   "quantity": 4,
+   "unit": "each",
+   "delivery_window": "within 7 days",
+   "origin": "SIM"
+  },
+  {
+   "id": "need-sim-case",
+   "buyer_id": "the-buyer",
+   "sku_spec": "case",
+   "allowed_conditions": [
+    "new",
+    "used"
+   ],
+   "quantity": 1,
+   "unit": "each",
+   "delivery_window": "within 10 days",
+   "origin": "SIM"
+  }
+ ]
+}

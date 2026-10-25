@@ -1,0 +1,41 @@
+<!-- @dsCard group="Outside" height=520 subtitle="Landing hero: one serif headline, one number, one button, a live row underneath" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .hero { padding: 48px 20px 32px; max-width: 1120px; margin: 0 auto; display: grid; gap: 32px; grid-template-columns: 1.1fr 0.9fr; align-items: center; }
+  h1 { font: 400 64px/68px var(--font-serif); letter-spacing: -0.01em; margin: 16px 0 12px; }
+  h1 em { font-style: italic; color: var(--pulse); }
+  .lead { font-size: 17px; line-height: 26px; color: var(--ink-2); max-width: 520px; }
+  .cta { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+  .proof { display: flex; gap: 20px; margin-top: 28px; flex-wrap: wrap; }
+  .proof div { display: grid; gap: 2px; }
+  .proof b { font: 400 28px/32px var(--font-serif); }
+  .mock { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-pop); display: grid; gap: 12px; }
+  .mock .n { font: 400 56px/60px var(--font-serif); }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; padding: 32px 16px; } h1 { font-size: 44px; line-height: 48px; } .mock .n { font-size: 44px; line-height: 48px; } }
+</style></head>
+<body>
+<section class="hero">
+  <div>
+    <span class="pill pill-live"><span class="dot"></span>Agentic marketplace · sandbox</span>
+    <h1>Your agent shops. <em>You</em> approve.</h1>
+    <p class="lead">State a goal. Seller agents bid in sealed rounds, a referee ranks them by one rule, Shield screens every listing, and nothing is paid above your allowance until you say the code on the phone.</p>
+    <div class="cta"><a class="btn btn-primary" href="#">Start a goal</a><a class="btn btn-ghost" href="#">Watch the floor</a></div>
+    <div class="proof">
+      <div><b data-ticker="39">39 of 39</b><span class="sm muted">fit checks right on maker-checked builds</span></div>
+      <div><b>12 of 20</b><span class="sm muted">held-out attacks stopped by Shield</span></div>
+      <div><b>9 of 10</b><span class="sm muted">voice approval attacks denied, first run</span></div>
+    </div>
+  </div>
+  <div class="mock rise">
+    <div class="spread"><span class="cap">Round 3 of 3 · GPU</span><span class="pill pill-approved">Approved by phone</span></div>
+    <div class="n mono" style="font-family:var(--font-serif)">$1,299.99</div>
+    <div class="ink2">ASUS Prime RTX 5070 Ti OC · Best Buy <span class="pill pill-mirror" style="height:20px">MIRROR</span></div>
+    <div class="row"><span class="dot" style="color:var(--mint)"></span><span>Fit confirmed, 304 mm · no recall</span></div>
+    <div class="row"><span class="dot" style="color:var(--royal)"></span><span>CRS: verified_stable</span></div>
+    <div class="row"><span class="dot" style="color:var(--pulse)"></span><span>Stripe test mode · no real money</span></div>
+  </div>
+</section>
+</body>
+</html>

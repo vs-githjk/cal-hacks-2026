@@ -44,7 +44,7 @@ def _no(reason: str) -> dict:
 
 
 def handle(sender: str, request: Any, *, buyer_address: str, client: Any, show_code: Optional[Callable[[str], None]],
-           seen: set, unconfigured: Optional[str] = None, secret: Optional[str] = None, buyer_name: str = "Vidyut",
+           seen: set, unconfigured: Optional[str] = None, secret: Optional[str] = None, buyer_name: str = "there",
            run: Optional[Callable] = None, **timing) -> dict:
     """{approved, reason, call_id, voice_approval_id}. Every refusal places no call."""
     from pay.approval import ApprovalService
@@ -80,3 +80,46 @@ def handle(sender: str, request: Any, *, buyer_address: str, client: Any, show_c
     if not voice_id:
         return {"approved": False, "reason": "no_voice_approval_id", "call_id": res.call_id, "voice_approval_id": None}
     return {"approved": True, "reason": None, "call_id": res.call_id, "voice_approval_id": voice_id}
+
+
+TRANSPORT_KEYS = {"buyer_name", "deal_script", "why_answer"}
+
+
+def transport(sender: str, request: Any, *, buyer_address: str, client: Any, seen: set,
+              unconfigured: Optional[str] = None, **timing) -> dict:
+    """#398 item 3, voice only: place ONE call with the buyer's script variables and return the ended call with its
+    transcript, {call_id, call, error}. It never sees a code or a secret, never judges what was said and never writes
+    a record: the buyer verifies the utterance in its own ApprovalService. Additive: handle() is unchanged."""
+    import re
+    from pay.voice_cartesia import CartesiaError, place_call, transcript, wait_for_end
+
+    def no(error: str) -> dict:
+        return {"call_id": None, "call": None, "error": error}
+    if sender != buyer_address:
+        return no("not_the_buyer")
+    if not isinstance(request, dict):
+        return no("bad_request")
+    mh, variables = request.get("mandate_hash"), request.get("variables")
+    if not isinstance(mh, str) or not re.fullmatch(r"[0-9a-f]{64}", mh):
+        return no("bad_request")
+    if (not isinstance(variables, dict) or set(variables) != TRANSPORT_KEYS
+            or not all(isinstance(v, str) and len(v) < 2000 for v in variables.values())):
+        return no("bad_variables")
+    with _SEEN_LOCK:
+        if ("transport", mh) in seen:
+            return no("already_called")            # one voice call per mandate, ever
+        if client is None:
+            return no(f"not_configured: {unconfigured or 'no Cartesia client'}")
+        seen.add(("transport", mh))
+    try:
+        call_id = place_call(client, variables)
+        ended = wait_for_end(client, call_id, **{k: v for k, v in timing.items() if k in ("max_wait", "poll", "sleep", "clock")})
+        if ended is None:
+            return {"call_id": call_id, "call": None, "error": "call_timeout"}
+        try:
+            entries, full = transcript(client, call_id, ended, **({"sleep": timing["sleep"]} if "sleep" in timing else {}))
+        except CartesiaError:
+            entries, full = [], ended
+        return {"call_id": call_id, "call": {**full, "transcript": entries}, "error": None}
+    except Exception as e:  # noqa: BLE001  (a transport error: no call evidence, and said)
+        return no(f"call_error: {type(e).__name__}")

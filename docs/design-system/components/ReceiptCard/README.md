@@ -1,0 +1,1 @@
+One receipt per part for /buyer/purchases, sent after the charge and again at settlement. The consumer provides amount, listing, charge reference, mandate hash, signature line, settlement state and shipping state (SIM). Always shows the test-mode pill and the no-real-money line. Empty state: one sentence and a ghost link back to the goal.

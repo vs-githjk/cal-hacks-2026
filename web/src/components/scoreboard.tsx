@@ -1,5 +1,5 @@
 "use client";
-// Four scoreboard tiles from data/scoreboard.json (via /api/scoreboard). A tile with no trustworthy number shows its status.
+// Four scoreboard tiles from the bundled scoreboard (via /api/scoreboard). A tile with no trustworthy number shows its status.
 import { useEffect, useState } from "react";
 import { scoreboardTiles, type TileView } from "@/lib/scoreboard";
 import { OriginChip } from "./ui";
@@ -15,7 +15,7 @@ export function ScoreboardTiles() {
     return () => { live = false; };
   }, []);
   if (tiles === null) return <p className="text-[13px] text-muted">Loading the scoreboard...</p>;
-  if (tiles.length === 0) return <p className="text-[13px] text-muted">No scoreboard yet. Lane C writes data/scoreboard.json from its source runs.</p>;
+  if (tiles.length === 0) return <p className="text-[13px] text-muted">The scoreboard is not available right now. Please check back soon.</p>;
   return (
     <section aria-label="Scoreboard" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {tiles.map((t) => (

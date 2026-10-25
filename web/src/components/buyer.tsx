@@ -170,7 +170,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey, crs
                       initial={play ? { rotateX: -90, opacity: 0 } : false}
                       animate={
                         play && won
-                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(255,255,255,0)", "inset 0 0 0 2px rgba(255,255,255,0.55)", "inset 0 0 0 0 rgba(255,255,255,0)"] }
+                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(24,19,13,0)", "inset 0 0 0 2px rgba(24,19,13,0.55)", "inset 0 0 0 0 rgba(24,19,13,0)"] }
                           : { rotateX: 0, opacity: 1 }
                       }
                       transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
