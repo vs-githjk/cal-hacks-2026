@@ -40,10 +40,12 @@ import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
 import ClearBuildApprovalCodeReducer from "./clear_build_approval_code_reducer";
 import CloseRoundReducer from "./close_round_reducer";
+import CloseStageReducer from "./close_stage_reducer";
 import CreateMandateReducer from "./create_mandate_reducer";
 import DenyApprovalReducer from "./deny_approval_reducer";
 import IssueApprovalCodeReducer from "./issue_approval_code_reducer";
 import IssueBuildApprovalCodeReducer from "./issue_build_approval_code_reducer";
+import OpenKnockoutRoundReducer from "./open_knockout_round_reducer";
 import OpenRoundReducer from "./open_round_reducer";
 import PairBuyerScreenReducer from "./pair_buyer_screen_reducer";
 import PairSellerScreenReducer from "./pair_seller_screen_reducer";
@@ -85,6 +87,7 @@ import MyNotificationsRow from "./my_notifications_table";
 import MyPairAttemptsRow from "./my_pair_attempts_table";
 import MyPendingApprovalsRow from "./my_pending_approvals_table";
 import MyRoleRow from "./my_role_table";
+import MyStandingRow from "./my_standing_table";
 import PersonaRow from "./persona_table";
 import RejectedAttemptRow from "./rejected_attempt_table";
 import RoundRow from "./round_table";
@@ -298,6 +301,13 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyRoleRow),
+  myStanding: __table({
+    name: 'my_standing',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyStandingRow),
   sellerNeeds: __table({
     name: 'seller_needs',
     indexes: [
@@ -329,10 +339,12 @@ const reducersSchema = __reducers(
   __reducerSchema("attach_verdict", AttachVerdictReducer),
   __reducerSchema("clear_build_approval_code", ClearBuildApprovalCodeReducer),
   __reducerSchema("close_round", CloseRoundReducer),
+  __reducerSchema("close_stage", CloseStageReducer),
   __reducerSchema("create_mandate", CreateMandateReducer),
   __reducerSchema("deny_approval", DenyApprovalReducer),
   __reducerSchema("issue_approval_code", IssueApprovalCodeReducer),
   __reducerSchema("issue_build_approval_code", IssueBuildApprovalCodeReducer),
+  __reducerSchema("open_knockout_round", OpenKnockoutRoundReducer),
   __reducerSchema("open_round", OpenRoundReducer),
   __reducerSchema("pair_buyer_screen", PairBuyerScreenReducer),
   __reducerSchema("pair_seller_screen", PairSellerScreenReducer),
@@ -391,6 +403,8 @@ type __SchemaWithTableAccessorAliases = Omit<typeof tablesSchema.schemaType, "ta
     readonly "my_pending_approvals": Omit<typeof tablesSchema.schemaType.tables["myPendingApprovals"], "accessorName"> & { readonly accessorName: "my_pending_approvals" };
     /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
     readonly "my_role": Omit<typeof tablesSchema.schemaType.tables["myRole"], "accessorName"> & { readonly accessorName: "my_role" };
+    /** @deprecated Use `myStanding` instead. This alias will be removed in the next major version. */
+    readonly "my_standing": Omit<typeof tablesSchema.schemaType.tables["myStanding"], "accessorName"> & { readonly accessorName: "my_standing" };
     /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
     readonly "seller_needs": Omit<typeof tablesSchema.schemaType.tables["sellerNeeds"], "accessorName"> & { readonly accessorName: "seller_needs" };
     /** @deprecated Use `telemetryAgent` instead. This alias will be removed in the next major version. */
@@ -428,6 +442,7 @@ const tableAccessorAliases = {
   "my_pair_attempts": "myPairAttempts",
   "my_pending_approvals": "myPendingApprovals",
   "my_role": "myRole",
+  "my_standing": "myStanding",
   "seller_needs": "sellerNeeds",
   "telemetry_agent": "telemetryAgent",
 } as const;
@@ -480,6 +495,8 @@ export type DbView = __DbViewBase & {
   readonly "my_pending_approvals": __DbViewBase["myPendingApprovals"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __DbViewBase["myRole"];
+  /** @deprecated Use `myStanding` instead. This alias will be removed in the next major version. */
+  readonly "my_standing": __DbViewBase["myStanding"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
   readonly "seller_needs": __DbViewBase["sellerNeeds"];
   /** @deprecated Use `telemetryAgent` instead. This alias will be removed in the next major version. */
@@ -518,6 +535,8 @@ export type Tables = __TablesBase & {
   readonly "my_pending_approvals": __TablesBase["myPendingApprovals"];
   /** @deprecated Use `myRole` instead. This alias will be removed in the next major version. */
   readonly "my_role": __TablesBase["myRole"];
+  /** @deprecated Use `myStanding` instead. This alias will be removed in the next major version. */
+  readonly "my_standing": __TablesBase["myStanding"];
   /** @deprecated Use `sellerNeeds` instead. This alias will be removed in the next major version. */
   readonly "seller_needs": __TablesBase["sellerNeeds"];
   /** @deprecated Use `telemetryAgent` instead. This alias will be removed in the next major version. */
