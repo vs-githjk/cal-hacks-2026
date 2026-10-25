@@ -693,6 +693,10 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       if (c.kind === 'claim' && c.result === 'verified') verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
       if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
     }
+    // #266: a caution bid (fit unconfirmed) must be held back here too, or it can be crowned champion on price alone.
+    const cards = [...ctx.db.bidCheck.bidId.filter(b.id)].filter((c) => c.kind === 'advocate').sort((x, y) => (x.id < y.id ? -1 : 1));
+    const card = cards[cards.length - 1];
+    if (card?.result === 'caution') heldBack.set(b.id, `held back: advocate caution (${card.detail})`);
     if (reasons.length) rejections.set(b.id, reasons);
   }
   const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
@@ -745,7 +749,7 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       const pickedLines = x.picked.map((i) => x.bid.lines[i]!);
       ctx.db.roundResult.insert({
         id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: isChamp ? 1 : x.rank + 1, landed: x.landed,
-        reasons: isChamp ? [] : ['did not advance: final stage'], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
+        reasons: isChamp ? (heldBack.has(b.id) ? [heldBack.get(b.id)!] : []) : ['did not advance: final stage'], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
         adjustedTotal: x.score, adjustmentReason: isChamp ? adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality) : '',
         stage, status: isChamp ? 'champion' : 'knocked_out',
       });
@@ -766,11 +770,14 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     return;
   }
 
+  // #266: round_result is public; a mid-round 'advancing' row must never reveal a still-live seller's price
+  // (landed, lines, adjusted_total) to a role-less reader before the round actually closes. Only who is still
+  // in, and why, is public; the sealed bid table (private) keeps the real numbers until a stage crowns a champion.
   for (const x of survivors) {
     const b = byId.get(x.bid.id)!;
     ctx.db.roundResult.insert({
-      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: [],
-      lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source, adjustedTotal: x.score, adjustmentReason: '',
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: 0, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
+      lines: [], origin: b.origin, source: b.source, adjustedTotal: 0, adjustmentReason: '',
       stage, status: 'advancing',
     });
   }
@@ -797,10 +804,14 @@ export function createMandate(
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
   // #191: a mandate exists only for the round's real winner, paid to that seller, at its landed price, for minutes.
   const bid = ctx.db.bid.id.find(bidIdOfDeal(a.dealId));
+  const round = bid ? ctx.db.round.id.find(bid.roundId) : undefined;
   // #336: a knockout round can carry a seller's bid id forward across stages, so take its latest-stage result.
   const myResults = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].filter((r) => r.bidId === bid.id) : [];
   const won = myResults.length ? myResults.reduce((a, b) => (b.stage > a.stage ? b : a)) : undefined;
-  if (!bid || !won || won.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
+  // #266: a knockout stage's rank-1 'advancing' row is not a win yet; only round.state closed and, for a
+  // knockout round, status champion actually crowns a winner. A stale advancing row must never get a mandate.
+  const actuallyWon = won && round?.state === 'closed' && (round.maxStages <= 1 || won.status === 'champion');
+  if (!bid || !round || !actuallyWon || won!.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
   if (a.payee !== bid.sellerId) throw new SenderError(`payee must be the winning seller (${bid.sellerId})`);
   if (Math.abs(a.amount - won.landed) > 1e-9) throw new SenderError('amount must equal the winning landed price');
   if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {

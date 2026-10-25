@@ -1637,4 +1637,47 @@ describe('#336 sealed knockout rounds', () => {
     expect(aStanding[0]).toMatchObject({ lastOfferPrice: 790 });
     expect(m.myStandingView(h.viewContext(STRANGER) as any)).toHaveLength(0);
   });
+
+  it('#266-1 a caution-flagged lone bidder is still crowned champion, but carries the held-back reason', () => {
+    openKnockout(3, 15);
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(700)])));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b1', recommendation: 'caution', ruleId: 'fit.unconfirmed', text: 'card length not on the listing', sourceUrl: 'https://x.test/b', origin: 'SIM' }));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' })); // only bidder: no one to knock out, crowned at once
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    const champ = [...h.db.roundResult.roundId.filter('round-1')].find((x) => x.sellerId === 'seller-b')!;
+    expect(champ.status).toBe('champion');
+    expect(champ.reasons).toEqual(['held back: advocate caution (fit.unconfirmed: card length not on the listing)']);
+  });
+
+  it('#266-2 a mid-round advancing row never reveals the survivor\'s price', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' })); // seller-a knocked out; b and c advance (not the final stage)
+    const advancing = [...h.db.roundResult.roundId.filter('round-1')].filter((x) => x.status === 'advancing');
+    expect(advancing).toHaveLength(2);
+    for (const row of advancing) {
+      expect(row.landed).toBe(0);
+      expect(row.lines).toEqual([]);
+      expect(row.adjustedTotal).toBe(0);
+    }
+    const prices = advancing.map((row) => ({ landed: row.landed, lines: row.lines, adjustedTotal: row.adjustedTotal }));
+    expect(JSON.stringify(prices)).not.toContain('760');
+    expect(JSON.stringify(prices)).not.toContain('700');
+  });
+
+  it('#266-3 create_mandate refuses a stale advancing-stage row from a round still open', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' })); // seller-a knocked out; b and c advancing, round open (stage 2 of 3)
+    expect(h.db.round.id.find('round-1')!.state).toBe('open');
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'round-1:bid-c1', payee: 'seller-c', amount: 700 }))))
+      .toThrow(/closed round/);
+  });
 });
