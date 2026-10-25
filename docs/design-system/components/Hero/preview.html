@@ -1,41 +1,60 @@
-<!-- @dsCard group="Outside" height=520 subtitle="Landing hero: one serif headline, one number, one button, a live row underneath" -->
+<!-- @dsCard group="Outside" height=560 subtitle="Landing hero: one Geist 500 headline, one primary button, one glass result card on the cool canvas, a proof row underneath" -->
 <!doctype html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  .hero { padding: 48px 20px 32px; max-width: 1120px; margin: 0 auto; display: grid; gap: 32px; grid-template-columns: 1.1fr 0.9fr; align-items: center; }
-  h1 { font: 400 64px/68px var(--font-serif); letter-spacing: -0.01em; margin: 16px 0 12px; }
-  h1 em { font-style: italic; color: var(--pulse); }
-  .lead { font-size: 17px; line-height: 26px; color: var(--ink-2); max-width: 520px; }
-  .cta { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
-  .proof { display: flex; gap: 20px; margin-top: 28px; flex-wrap: wrap; }
+  body { background: var(--canvas); }
+  .wash { position: relative; overflow: hidden; }
+  .wash::before { content: ""; position: absolute; inset: -20% -10% auto -10%; height: 70%; background: radial-gradient(60% 80% at 18% 30%, var(--live-soft), transparent 70%); pointer-events: none; }
+  .hero { position: relative; padding: 72px 32px 40px; max-width: 1120px; margin: 0 auto; display: grid; gap: 48px; grid-template-columns: 1.05fr 0.95fr; align-items: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 500 15px/20px var(--font-sans); color: var(--ink-2); }
+  .eyebrow .dot { color: var(--live); }
+  h1 { font: 500 56px/60px var(--font-sans); letter-spacing: -0.025em; margin: 16px 0 16px; text-wrap: balance; color: var(--ink); }
+  h1 span { color: var(--muted); }
+  .lead { font-size: 17px; line-height: 26px; color: var(--ink-2); max-width: 44ch; }
+  .cta { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+  .fine { margin-top: 16px; font-size: 13px; line-height: 18px; color: var(--muted); }
+  .proof { display: flex; gap: 24px; margin-top: 40px; flex-wrap: wrap; padding-top: 24px; border-top: 1px solid var(--line); }
   .proof div { display: grid; gap: 2px; }
-  .proof b { font: 400 28px/32px var(--font-serif); }
-  .mock { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-pop); display: grid; gap: 12px; }
-  .mock .n { font: 400 56px/60px var(--font-serif); }
-  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; padding: 32px 16px; } h1 { font-size: 44px; line-height: 48px; } .mock .n { font-size: 44px; line-height: 48px; } }
+  .proof b { font: 500 24px/30px var(--font-sans); letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+  .mock { padding: 24px; display: grid; gap: 16px; }
+  .mock .n { font: 500 48px/52px var(--font-sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .mock .n small { font-size: 15px; line-height: 20px; letter-spacing: 0; color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .mock .row { font-size: 15px; line-height: 20px; }
+  .mock .row .dot::after { animation: none; display: none; }
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; padding: 40px 16px 24px; gap: 32px; }
+    h1 { font-size: 40px; line-height: 44px; letter-spacing: -0.02em; }
+    .mock .n { font-size: 40px; line-height: 44px; }
+    .proof { gap: 20px; }
+  }
 </style></head>
 <body>
+<div class="wash">
 <section class="hero">
   <div>
-    <span class="pill pill-live"><span class="dot"></span>Agentic marketplace · sandbox</span>
-    <h1>Your agent shops. <em>You</em> approve.</h1>
-    <p class="lead">State a goal. Seller agents bid in sealed rounds, a referee ranks them by one rule, Shield screens every listing, and nothing is paid above your allowance until you say the code on the phone.</p>
+    <span class="eyebrow"><span class="dot"></span>Live sandbox. Sealed rounds, test-mode money.</span>
+    <h1>Your agent shops.<br><span>You approve.</span></h1>
+    <p class="lead">State a goal. Seller agents bid in sealed rounds, a referee ranks them by one rule, Shield screens every listing, and nothing above your allowance is paid until you say the code on the phone.</p>
     <div class="cta"><a class="btn btn-primary" href="#">Start a goal</a><a class="btn btn-ghost" href="#">Watch the floor</a></div>
+    <p class="fine">Free while Tech Bazaar is a project. Prices are dated listings until Bright Data re-checks them.</p>
     <div class="proof">
-      <div><b data-ticker="39">39 of 39</b><span class="sm muted">fit checks right on maker-checked builds</span></div>
-      <div><b>12 of 20</b><span class="sm muted">held-out attacks stopped by Shield</span></div>
+      <div><b>39 of 39</b><span class="sm muted">fit checks right on maker-checked builds</span></div>
+      <div><b>13 of 20</b><span class="sm muted">held-out attacks stopped by Shield</span></div>
       <div><b>9 of 10</b><span class="sm muted">voice approval attacks denied, first run</span></div>
     </div>
   </div>
-  <div class="mock rise">
-    <div class="spread"><span class="cap">Round 3 of 3 · GPU</span><span class="pill pill-approved">Approved by phone</span></div>
-    <div class="n mono" style="font-family:var(--font-serif)">$1,299.99</div>
-    <div class="ink2">ASUS Prime RTX 5070 Ti OC · Best Buy <span class="pill pill-mirror" style="height:20px">MIRROR</span></div>
-    <div class="row"><span class="dot" style="color:var(--mint)"></span><span>Fit confirmed, 304 mm · no recall</span></div>
-    <div class="row"><span class="dot" style="color:var(--royal)"></span><span>CRS: verified_stable</span></div>
-    <div class="row"><span class="dot" style="color:var(--pulse)"></span><span>Stripe test mode · no real money</span></div>
+  <div class="glass mock rise">
+    <div class="spread"><span class="cap">Round 3 of 3 · GPU · closed 16:37</span><span class="pill pill-approved">Approved by phone</span></div>
+    <div class="n">$1,299.99<small>landed</small></div>
+    <div class="ink2">ASUS Prime RTX 5070 Ti OC · Best Buy <span class="pill pill-mirror" style="height:20px">MIRROR · Oct 24</span></div>
+    <div>
+      <div class="row"><span class="dot" style="color:var(--mint-mark)"></span><span>Fit confirmed, 304 mm card clears the case. No recall.</span></div>
+      <div class="row"><span class="dot" style="color:var(--referee)"></span><span>CRS: verified_stable, payee bound to the mandate</span></div>
+      <div class="row"><span class="dot" style="color:var(--pulse)"></span><span>Stripe test mode. No real money moved.</span></div>
+    </div>
   </div>
 </section>
+</div>
 </body>
 </html>

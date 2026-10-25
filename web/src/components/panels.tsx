@@ -17,14 +17,14 @@ export function AllowancePanel({ allowance: a, cap }: { allowance: GoalView["all
         <p className="text-[18px] font-medium">Every buy calls you first.</p>
       ) : (
         <div className="grid gap-3">
-          <p className="text-[34px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
+          <p className="font-mono text-[34px] font-medium leading-none tabular-nums">
             {money(a.perPurchase)}
             <small className="ml-2 text-[12px] font-normal tracking-normal text-muted">per buy without a call</small>
           </p>
           {line && cap !== null ? (
             <div role="img" aria-label={`Allowance ${money(a.perPurchase)} drawn against the ${money(cap)} cap. Above the allowance the agent calls you first.`}>
-              <div className="relative h-[26px] rounded-md border border-line-2 bg-[repeating-linear-gradient(135deg,var(--soft)_0_6px,var(--panel)_6px_12px)]">
-                <div className="absolute inset-y-0 left-0 rounded-l-[5px] bg-ink" style={{ width: `${line.autoPct}%` }} />
+              <div className="relative h-[26px] rounded-md bg-[repeating-linear-gradient(135deg,var(--color-surface-2)_0_6px,var(--color-line)_6px_12px)]">
+                <div className="absolute inset-y-0 left-0 rounded-l-[5px] bg-pulse" style={{ width: `${line.autoPct}%` }} />
               </div>
               <div className="mt-1 flex justify-between font-mono text-[11px] text-muted tabular-nums">
                 <span>$0</span>
@@ -32,7 +32,7 @@ export function AllowancePanel({ allowance: a, cap }: { allowance: GoalView["all
               </div>
               <p className="mt-2 flex flex-wrap gap-x-4 text-[12px] text-ink-2">
                 <span><i className="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm bg-ink align-[-1px]" />Buys itself, sends a receipt</span>
-                <span><i className="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-line-2 bg-[repeating-linear-gradient(135deg,var(--line-2)_0_3px,var(--panel)_3px_6px)] align-[-1px]" />Calls you first</span>
+                <span><i className="mr-1.5 inline-block h-2.5 w-3.5 rounded-sm border border-line-2 bg-[repeating-linear-gradient(135deg,var(--color-line-2)_0_3px,var(--color-surface)_3px_6px)] align-[-1px]" />Calls you first</span>
               </p>
             </div>
           ) : (
@@ -110,7 +110,7 @@ export function PanelPreviews({ reason }: { reason: string }) {
   ];
   return (
     <div className="grid gap-3.5">
-      <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted" role="status">{reason}</p>
+      <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-[13px] text-muted" role="status">{reason}</p>
       <div className="grid gap-3.5 md:grid-cols-2">
         {panels.map(([title, text]) => (
           <Card key={title}>

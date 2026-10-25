@@ -48,6 +48,8 @@ APPROVAL_CALL_TO, optional APPROVAL_BUYER_NAME and CARTESIA_PHONE_NUMBER_ID (the
 from __future__ import annotations
 
 import argparse
+import fcntl
+import hashlib
 import json
 import os
 import re
@@ -64,7 +66,7 @@ from typing import Any, Callable, Mapping, Optional
 
 from pay.approval import (APPROVE_TOKENS, VOICE_CODE_TTL_SECONDS, ApprovalError, ApprovalService, Decision,
                           normalize)
-from pay.callscript import CallScript, ScriptError, script_for
+from pay.callscript import CallScript, ScriptError, is_clean_name, script_for
 from pay.words import WORD_SET
 
 API_BASE = "https://api.cartesia.ai"
@@ -74,7 +76,13 @@ SYSTEM_CA = "/etc/ssl/cert.pem"
 KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV = (
     "CARTESIA_API_KEY", "CARTESIA_AGENT_ID", "APPROVAL_CALL_TO", "CARTESIA_PHONE_NUMBER_ID", "APPROVAL_SECRET",
     "APPROVAL_BUYER_NAME")
-ENV_NAMES = (KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV)
+# #449 item 1: who may be called (comma-separated E.164) and where the persisted rate cap lives
+ALLOW_ENV, RATE_ENV = "APPROVAL_CALL_ALLOWLIST", "APPROVAL_CALL_RATE_FILE"
+ENV_NAMES = (KEY_ENV, AGENT_ENV, TO_ENV, FROM_ENV, SECRET_ENV, NAME_ENV, ALLOW_ENV, RATE_ENV)
+DEFAULT_RATE_FILE = Path(__file__).resolve().parents[1] / "agents" / ".state" / "approval_call_rate.json"   # agents/.state is gitignored
+RATE_PER_NUMBER_S = 300
+RATE_DAY_S = 24 * 3600
+RATE_DAY_MAX = 20
 DEFAULT_BUYER_NAME = "Vidyut"
 DEFAULT_ENV_FILE = Path(__file__).resolve().parents[2] / "lane-d" / ".env"   # main lane-d checkout, gitignored
 
@@ -98,6 +106,16 @@ class NumberNotAllowed(CartesiaError):
     """A call was requested to a number other than APPROVAL_CALL_TO."""
 
 
+class CallLimited(CartesiaError):
+    """#449 item 1: no call, by policy. `reason` is "beta_allowlist" (number not on APPROVAL_CALL_ALLOWLIST) or "rate_limited"
+    (per-number or daily cap, or the rate file is unusable: fail closed). The message never holds the number."""
+
+    def __init__(self, reason: str):
+        super().__init__({"beta_allowlist": "approval calls are limited to the beta allowlist",
+                          "rate_limited": "approval call rate limit reached"}.get(reason, reason))
+        self.reason = reason
+
+
 class NoPhone(CartesiaError):
     """The buyer has no phone number to approve on. Above the allowance that means no call and no approval: the phone call is the only way."""
 
@@ -106,21 +124,151 @@ class NoPhone(CartesiaError):
 DEFAULT_APPROVAL_BUYER = "vidyut"
 
 
-def approval_phone(buyer_id: str, env: Mapping[str, str], default_buyer_id: str = DEFAULT_APPROVAL_BUYER) -> Optional[str]:
+# The market view only the referee can read: one row per buyer with the phone they gave at sign-up (market/spacetimedb/src/schema.ts AgentBuyerContactRow).
+BUYER_CONTACT_VIEW = "agent_buyer_contact"
+_BUYER_ID = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+PhoneLookup = Callable[[str], Optional[str]]
+
+
+def valid_e164(number: Any) -> bool:
+    return isinstance(number, str) and _E164.fullmatch(number) is not None
+
+
+def parse_allowlist(raw: Any) -> Optional[frozenset]:
+    """#449 item 1: the numbers in APPROVAL_CALL_ALLOWLIST (comma-separated, spaces stripped, non-E.164 entries ignored).
+    None when it is unset or blank (no limit); a set (possibly empty, so nobody) as soon as anything is written there."""
+    if not isinstance(raw, str) or not raw.strip(", \t\n"):
+        return None
+    return frozenset(p for p in (x.strip() for x in raw.split(",")) if valid_e164(p))
+
+
+def on_allowlist(number: Any, allowlist: Optional[frozenset]) -> bool:
+    return allowlist is None or number in allowlist
+
+
+class CallRateLimiter:
+    """#449 item 1: at most 1 call per number per 300 s and 20 per rolling 24 h across all numbers, in a small JSON file shared by
+    the buyer agent, the Caller and the demo scripts. Numbers are stored as sha256 hex only. Writes are atomic (temp file +
+    os.replace) under an flock on a sidecar lock file. A missing file is empty; an unreadable or corrupt one fails closed."""
+
+    def __init__(self, path: Path, clock: Callable[[], float] = time.time):
+        self.path, self._clock = Path(path), clock
+
+    def _load(self) -> list:
+        try:
+            raw = self.path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return []
+        try:
+            calls = json.loads(raw)["calls"]
+            if not isinstance(calls, list) or not all(
+                    isinstance(c, dict) and isinstance(c.get("h"), str) and isinstance(c.get("t"), (int, float))
+                    and not isinstance(c.get("t"), bool) for c in calls):
+                raise ValueError
+        except (ValueError, KeyError, TypeError):
+            raise CallLimited("rate_limited") from None
+        return calls
+
+    def reserve(self, number: str) -> None:
+        """Record one call for `number` now, or raise CallLimited("rate_limited") and record nothing."""
+        key = hashlib.sha256(number.encode("utf-8")).hexdigest()
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with open(str(self.path) + ".lock", "a") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                now = self._clock()
+                calls = self._load()
+                recent = [c for c in calls if now - c["t"] < RATE_DAY_S]
+                if len(recent) >= RATE_DAY_MAX or any(c["h"] == key and now - c["t"] < RATE_PER_NUMBER_S for c in recent):
+                    raise CallLimited("rate_limited")
+                tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.tmp")
+                tmp.write_text(json.dumps({"calls": recent + [{"h": key, "t": now}]}), encoding="utf-8")
+                os.replace(tmp, self.path)
+        except OSError:
+            raise CallLimited("rate_limited") from None
+
+
+def phone_lookup_from_sql(sql: Callable[[str], Any]) -> PhoneLookup:
+    """A lookup for one buyer's own phone, from a referee-identity `sql(query)` (market/scripts/stdb.py Market.sql: positional rows
+    [buyer_id, phone]; dict rows work too). Only a row whose own buyer_id equals the one asked for counts, so another buyer's row can
+    never be returned. Any odd id or any failure is None (the caller then fails closed). The number is never logged or put in an error."""
+    def lookup(buyer_id: str) -> Optional[str]:
+        if not isinstance(buyer_id, str) or not _BUYER_ID.fullmatch(buyer_id):
+            return None
+        try:
+            rows = sql(f"SELECT buyer_id, phone FROM {BUYER_CONTACT_VIEW} WHERE buyer_id = '{buyer_id}'")
+            for row in rows or []:
+                rid, phone = (row.get("buyer_id"), row.get("phone")) if isinstance(row, Mapping) else (row[0], row[1])
+                if rid == buyer_id:
+                    return phone if isinstance(phone, str) else None
+        except Exception:
+            return None
+        return None
+    return lookup
+
+
+def name_lookup_from_sql(sql: Callable[[str], Any]) -> PhoneLookup:
+    """Like phone_lookup_from_sql, for the buyer's own display_name from the same agent_buyer_contact view (rows [buyer_id, display_name]).
+    Only the row whose own buyer_id matches counts; any odd id or failure is None."""
+    def lookup(buyer_id: str) -> Optional[str]:
+        if not isinstance(buyer_id, str) or not _BUYER_ID.fullmatch(buyer_id):
+            return None
+        try:
+            rows = sql(f"SELECT buyer_id, display_name FROM {BUYER_CONTACT_VIEW} WHERE buyer_id = '{buyer_id}'")
+            for row in rows or []:
+                rid, name = (row.get("buyer_id"), row.get("display_name")) if isinstance(row, Mapping) else (row[0], row[1])
+                if rid == buyer_id:
+                    return name if isinstance(name, str) else None
+        except Exception:
+            return None
+        return None
+    return lookup
+
+
+GENERIC_GREETING = "there"
+
+
+def greeting_name(buyer_id: str, env: Mapping[str, str], name_lookup: Optional[PhoneLookup] = None,
+                  default_buyer_id: str = DEFAULT_APPROVAL_BUYER) -> str:
+    """The name the approval call greets this buyer by. APPROVAL_BUYER_NAME (else "Vidyut") is for the default buyer ONLY. Any other buyer
+    is greeted by their own display_name, or "there" when it is missing, empty or not a plain name the call script accepts."""
+    if buyer_id and buyer_id == default_buyer_id:
+        return env.get(NAME_ENV) or DEFAULT_BUYER_NAME
+    if not buyer_id or name_lookup is None:
+        return GENERIC_GREETING
+    try:
+        name = (name_lookup(buyer_id) or "").strip()
+    except Exception:
+        return GENERIC_GREETING
+    return name if _NAME.fullmatch(name) and is_clean_name(name) else GENERIC_GREETING   # #449 item 1: no steering words aloud
+
+
+def approval_phone(buyer_id: str, env: Mapping[str, str], default_buyer_id: str = DEFAULT_APPROVAL_BUYER,
+                   lookup: Optional[PhoneLookup] = None) -> Optional[str]:
     """The number the approval call rings for this buyer, or None when there is none. The default buyer gets the env-configured
-    APPROVAL_CALL_TO (unchanged). Any other buyer gets None for now and is never given the default buyer's number.
-    TODO(#374): read the buyer's own phone from the market's buyer_profile (reducer in the unmerged PRs #378-#380) for every other buyer."""
+    APPROVAL_CALL_TO (unchanged, the market is not asked). Any other buyer gets their OWN phone from `lookup` (the market's agent-only
+    contact view), only when it is a valid E.164 number; with no lookup, no row, no phone or a bad number it is None. Never the default
+    buyer's number and never another buyer's."""
     if buyer_id and buyer_id == default_buyer_id:
         return env.get(TO_ENV) or None
-    return None
+    if not buyer_id or lookup is None:
+        return None
+    try:
+        phone = lookup(buyer_id)
+    except Exception:
+        return None
+    return phone if valid_e164(phone) else None
 
 
-def client_for_buyer(buyer_id: str, env: Mapping[str, str], **kw) -> "CartesiaClient":
+def client_for_buyer(buyer_id: str, env: Mapping[str, str], lookup: Optional[PhoneLookup] = None, **kw) -> "CartesiaClient":
     """The Cartesia client whose only number is this buyer's approval phone. NoPhone for a buyer with none (never the default number);
     the default buyer's missing or bad setup is the same CartesiaError as before."""
-    phone = approval_phone(buyer_id, env)
+    phone = approval_phone(buyer_id, env, lookup=lookup)
     if phone is None and buyer_id != DEFAULT_APPROVAL_BUYER:
         raise NoPhone(f"no approval phone number for buyer {buyer_id}")
+    target = phone or env.get(TO_ENV)
+    if target and not on_allowlist(target, parse_allowlist(env.get(ALLOW_ENV))):
+        raise CallLimited("beta_allowlist")   # #449 item 1: early and friendly; create_call enforces it again
     return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env, **kw)
 
 
@@ -165,7 +313,9 @@ class CartesiaClient:
     """Thin stdlib client. `approval_call_to` is the ONLY number it will ever dial."""
 
     def __init__(self, api_key: str, agent_id: str, approval_call_to: str, from_number_id: Optional[str] = None, *,
-                 opener: Optional[Callable] = None, base_url: str = API_BASE, timeout: float = 20.0):
+                 opener: Optional[Callable] = None, base_url: str = API_BASE, timeout: float = 20.0,
+                 allowlist: Optional[frozenset] = None, rate_file: Optional[Path] = None,
+                 clock: Callable[[], float] = time.time):
         if not api_key or not agent_id:
             raise CartesiaError(f"{KEY_ENV} and {AGENT_ENV} are required")
         if not isinstance(approval_call_to, str) or not _E164.fullmatch(approval_call_to):
@@ -177,12 +327,16 @@ class CartesiaClient:
         self._opener = opener or urllib.request.urlopen
         self._base = base_url.rstrip("/")
         self._timeout = timeout
+        self.allowlist = allowlist   # #449 item 1: None = no limit; from_env sets both from the env
+        self._limiter = CallRateLimiter(rate_file, clock) if rate_file else None
 
     @classmethod
     def from_env(cls, env: Mapping[str, str], **kw) -> "CartesiaClient":
         missing = [k for k in (KEY_ENV, AGENT_ENV, TO_ENV) if not env.get(k)]
         if missing:
             raise CartesiaError("missing " + ", ".join(missing))
+        kw.setdefault("allowlist", parse_allowlist(env.get(ALLOW_ENV)))
+        kw.setdefault("rate_file", Path(env.get(RATE_ENV) or DEFAULT_RATE_FILE))
         return cls(env[KEY_ENV], env[AGENT_ENV], env[TO_ENV], env.get(FROM_ENV) or None, **kw)
 
     def _request(self, method: str, path: str, body: Optional[dict] = None) -> Any:
@@ -228,6 +382,11 @@ class CartesiaClient:
         """Start ONE outbound call. Refuses any number but approval_call_to. Returns agent_call_id."""
         if to_number != self.approval_call_to:
             raise NumberNotAllowed(f"refusing to call {mask_number(str(to_number))}: only {TO_ENV} is allowed")
+        # #449 item 1: the one choke point, before any HTTP request. Reserve (record) first, then send.
+        if not on_allowlist(to_number, self.allowlist):
+            raise CallLimited("beta_allowlist")
+        if self._limiter is not None:
+            self._limiter.reserve(to_number)
         body = {"from_number_id": self.resolve_from_number_id(), "agent_id": self.agent_id,
                 "ringing_timeout_seconds": RINGING_TIMEOUT_S, "max_call_duration_minutes": MAX_CALL_MINUTES,
                 "outbound_calls": [{"to_number": to_number, "dynamic_variables": dict(variables)}]}
@@ -250,7 +409,7 @@ class CartesiaClient:
 def build_variables(script: CallScript, buyer_name: str) -> dict:
     """The only values sent to Cartesia. Amount and payee come from the mandate through script_for and the why
     answer from the advocate's closed-schema reason, so neither the code nor any seller text is in here."""
-    if not isinstance(buyer_name, str) or not _NAME.fullmatch(buyer_name):
+    if not isinstance(buyer_name, str) or not _NAME.fullmatch(buyer_name) or not is_clean_name(buyer_name):
         raise ScriptError("buyer_name must be a plain name")
     return {"buyer_name": buyer_name,
             "deal_script": f"{script.deal_line}. {script.opening}.",

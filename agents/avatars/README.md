@@ -1,14 +1,14 @@
 # Agent avatars (#259)
 
-One theme for every Tech Bazaar agent: a navy tile, the agent's colour ring and its initials. The caller (the agent
+One theme for every Fish Market agent: a navy tile, the agent's colour ring and its initials. The caller (the agent
 that places the approval phone call) is the one pink tile. Made by `python3 -m scripts.make_avatars` (stdlib only).
 
 | File | Agent |
 |---|---|
-| buyer.png | Tech Bazaar Buyer (@techbazaarbuyer) |
-| advocate.png | Tech Bazaar Quality Advocate (@techbazaaradvocate) |
-| shield.png | Tech Bazaar Shield Client (@techbazaarshield) |
-| caller.png | Bazaar Caller (@techbazaarcaller) |
+| buyer.png | Fish Market Buyer (@techbazaarbuyer) |
+| advocate.png | Fish Market Quality Advocate (@techbazaaradvocate) |
+| shield.png | Fish Market Smell Test (@techbazaarshield) |
+| caller.png | Fish Market Caller (@techbazaarcaller) |
 | seller_1.png ... seller_5.png | the five seller agents (@techbazaarseller1 ... 5) |
 
 Each agent publishes its own avatar. `common.agent_args` sets `avatar_url` to this folder's PNG on the public repo

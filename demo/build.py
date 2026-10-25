@@ -715,7 +715,7 @@ def stage_steps(placed: dict, survivors: list, rid: str, stage: int, *, delay: f
         if p.get("shield"):
             v = p["shield"]
             steps.append(bridge.Step("referee", "attach_verdict", {"bid_id": nid_, "verdict": v["verdict"], "rule_ids": list(v["rule_ids"]), "origin": SIM},
-                                     tag=SIM, pause=False, say=f"Bazaar Shield on {b['persona']}'s stage {stage} offer: {v['verdict']}"))
+                                     tag=SIM, pause=False, say=f"Smell Test on {b['persona']}'s stage {stage} offer: {v['verdict']}"))
         if p.get("card"):
             c = _cards_for_market([p["card"]], True)[0]
             why = c["call_reason"]
@@ -1711,15 +1711,19 @@ def _buyer_client(args) -> Any:
     return Market(token_file=str(args.buyer_token or tokens / bridge.BUYER_TOKEN))
 
 
-def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None]) -> tuple[Any, str]:
+def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None], lookup: Optional[Callable[[str], Optional[str]]] = None) -> tuple[Any, str]:
     """(the Cartesia client for this buyer's approval phone, "") or (None, why): "no_phone" for a buyer with no number (the call is the only
-    approval, so a build above the allowance is denied), "not_configured" for a setup that is missing or wrong. One masked note either way."""
+    approval, so a build above the allowance is denied), "not_configured" for a setup that is missing or wrong. One masked note either way.
+    `lookup` reads a non-default buyer's own phone from the market's agent-only contact view (bridge.referee_phone_lookup)."""
     from pay import voice_cartesia as vc
     try:
-        client = vc.client_for_buyer(buyer_id, env)
+        client = vc.client_for_buyer(buyer_id, env, lookup=lookup)
     except vc.NoPhone as e:
         note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
         return None, "no_phone"
+    except vc.CallLimited as e:   # #449 item 1
+        note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
+        return None, "call_limited"
     except vc.CartesiaError as e:
         note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
         return None, "not_configured"
@@ -1771,7 +1775,7 @@ def main(argv: Optional[list] = None) -> int:
     if args.stripe and not args.live_call:
         ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (there is no scripted approval)")
     out = Narrator(True)
-    out.note("Tech Bazaar build: one goal, a sealed round per part, one call for the whole build (#345)")
+    out.note("Fish Market build: one goal, a sealed round per part, one call for the whole build (#345)")
     out.note("Sellers: SIM, plus the real dated MIRROR listings for the GPU. Payment is the SIM stub unless --live-call --stripe. Tags: [MIRROR] [SIM] [LIVE].")
     out.note(shield_mode_line())
     from_goal = args.buyer_id is not None and args.goal_id is None and args.plan is None   # #253: build from this buyer's own goal row
@@ -1836,8 +1840,8 @@ def main(argv: Optional[list] = None) -> int:
     if args.live_call:
         from pay import voice_cartesia as vc
         env = vc.load_env(approver_env)
-        buyer_name, secret = env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME, env.get(vc.SECRET_ENV)
-        cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note)
+        buyer_name, secret = vc.greeting_name(args.buyer_id, env, bridge.referee_name_lookup(args)), env.get(vc.SECRET_ENV)   # H3: the default name is the default buyer's only
+        cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note, lookup=bridge.referee_phone_lookup(args))
     else:
         out.note("No --live-call: a build above the allowance stops before any call. Nothing is paid.")
     target = bridge.live_target(args)

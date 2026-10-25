@@ -6,11 +6,11 @@
   .wrap { display:grid; grid-template-columns: 1.3fr 1fr; gap:16px; max-width:1000px; }
   .bar { height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; }
   .bar i { display:block; height:100%; background:var(--pulse); border-radius:999px; }
-  .bar.ok i { background:var(--mint); }
+  .bar.ok i { background: var(--mint-mark); }
   .bar.warn i { background:var(--amber); }
   .m { display:grid; gap:6px; padding:12px 0; border-top:1px solid var(--line); }
   .m:first-of-type { border-top:0; }
-  .m b { font:400 28px/32px var(--font-serif); }
+  .m b { font: 500 28px/32px var(--font-sans); letter-spacing: -0.02em; }
   .tunnel { display:grid; gap:10px; }
   .lane { display:grid; grid-template-columns: auto 1fr auto; gap:10px; align-items:center; font-size:13px; line-height:18px; }
   @media (max-width:640px) { .wrap { grid-template-columns:1fr; } }
@@ -21,7 +21,7 @@
     <div class="card">
       <div class="spread" style="margin-bottom:6px"><span style="font:600 24px/30px var(--font-sans);letter-spacing:-0.01em">Measured results</span><span class="mono sm muted">runs dated 2026-10-24</span></div>
       <div class="m"><div class="spread"><span>Fit checker, maker-checked builds</span><b>39 of 39</b></div><div class="bar ok"><i style="width:100%"></i></div><span class="sm muted">48 of 49 on all; 0 false OK. Tuned set, not held out.</span></div>
-      <div class="m"><div class="spread"><span>Shield, held-out attacks stopped</span><b>12 of 20</b></div><div class="bar"><i style="width:60%"></i></div><span class="sm muted">2 of 10 honest listings wrongly blocked. Never pooled with the 30 of 30 dev set. Never "secure".</span></div>
+      <div class="m"><div class="spread"><span>Shield, held-out attacks stopped</span><b>13 of 20</b></div><div class="bar"><i style="width:60%"></i></div><span class="sm muted">2 of 10 honest listings wrongly blocked. Never pooled with the 30 of 30 dev set. Never "secure".</span></div>
       <div class="m"><div class="spread"><span>Voice approval attacks denied</span><b>9 of 10</b></div><div class="bar ok"><i style="width:90%"></i></div><span class="sm muted">First run. 10 of 10 after one fix, not blind.</span></div>
       <div class="m"><div class="spread"><span>Purchasing controls, blind planted errors</span><b>26 of 27</b></div><div class="bar ok"><i style="width:96%"></i></div><span class="sm muted">2 of 7 clean cases falsely flagged.</span></div>
       <div class="m"><div class="spread"><span>Verified savings</span><b class="muted">none yet</b></div><div class="bar warn"><i style="width:0"></i></div><span class="sm muted">Price reference ready (7 retail asks, 2 providers); no verified purchase recorded.</span></div>
@@ -31,7 +31,7 @@
       <div class="sm ink2">Simulated buyers test seller strategies against fixed controls, and 20 held-out attacks hit Shield.</div>
       <div class="lane"><span class="pill pill-sealed">48 builders</span><div class="bar"><i style="width:100%"></i></div><span class="mono">x3 seeds</span></div>
       <div class="lane"><span class="pill pill-caution">Learner lift</span><div class="bar warn"><i style="width:25%"></i></div><span class="mono">1 of 4 types</span></div>
-      <div class="lane"><span class="pill pill-blocked">Attacks</span><div class="bar"><i style="width:60%"></i></div><span class="mono">12 of 20</span></div>
+      <div class="lane"><span class="pill pill-blocked">Attacks</span><div class="bar"><i style="width:60%"></i></div><span class="mono">13 of 20</span></div>
       <div class="well sm">No lift to quote. Say so on screen; a judge trusts the number that admits what it did not prove.</div>
       <div class="mono sm muted">python3 -m sim.wind_tunnel --builders 48 --seeds 3</div>
     </div>

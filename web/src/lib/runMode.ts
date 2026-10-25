@@ -1,3 +1,4 @@
+import { SHIELD } from "./brand.ts";
 // What each service is doing right now, read from the market's own public floor events (never hardcoded).
 // A service that has written no event yet says so; one that has says which origin tag its events carry.
 
@@ -8,7 +9,7 @@ export interface EventLike {
 
 const SERVICES: { name: string; kind: string }[] = [
   { name: "Advocate", kind: "advocate_card" },
-  { name: "Shield", kind: "verdict" },
+  { name: SHIELD, kind: "verdict" },
   { name: "Claim check", kind: "claim_checked" },
   { name: "Payments", kind: "payment_recorded" },
 ];
@@ -38,7 +39,7 @@ export type ConnectionState = "connecting" | "live" | "disconnected";
 /** The market's own connection, as three states instead of a flipping boolean: neutral "connecting" until
  * the first connect (or the first connect error), then "live", then red "disconnected" only once a live
  * connection actually drops or errors. Never a red flash during the first second while it is still trying. */
-export function connectionState(isActive: boolean, everActive: boolean): ConnectionState {
+export function connectionState(isActive: boolean, everActive: boolean, error?: unknown): ConnectionState {
   if (isActive) return "live";
-  return everActive ? "disconnected" : "connecting";
+  return everActive || error ? "disconnected" : "connecting";
 }

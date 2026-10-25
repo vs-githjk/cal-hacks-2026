@@ -1,14 +1,25 @@
 {
-  "v": 3,
-  "layout": "files",
-  "createdOnFiles": { "v": 1, "at": "2026-10-25T07:05:00Z" },
-  "title": "Tech Bazaar Design System",
-  "namespace": "TechBazaar",
-  "libraries": [],
-  "sections": {},
-  "groups": [],
-  "assetGroups": {},
-  "blobs": {},
-  "docs": { "readme": "project/README.md", "sections": [] },
-  "lastChange": { "by": "Vidyut", "at": "2026-10-25T07:05:00Z", "via": "Claude Code · master-designer", "note": "First system: outside tokens light and dark, floor tokens, 13 previews, screen map, floor spec, handoff." }
+ "v": 3,
+ "layout": "files",
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-25T07:05:00Z"
+ },
+ "title": "Tech Bazaar Design System",
+ "namespace": "TechBazaar",
+ "libraries": [],
+ "sections": {},
+ "groups": [],
+ "assetGroups": {},
+ "blobs": {},
+ "docs": {
+  "readme": "project/README.md",
+  "sections": []
+ },
+ "lastChange": {
+  "by": "Vidyut",
+  "at": "2026-10-25T08:05:00Z",
+  "via": "Claude Code \u00b7 master-designer",
+  "note": "v2: values measured from BetterBill and Prism, Geist only, layered shadows, floor restyled on the ink stage as SVG/CSS, floor-3d.md added."
+ }
 }

@@ -88,7 +88,7 @@ def discover(shop_url: str, *, transport: Optional[Transport] = None) -> dict:
     handlers = ((p.get("payment") or {}).get("handlers") or []) if isinstance(p.get("payment"), dict) else []
     h = next((x for x in handlers if isinstance(x, dict) and x.get("name") == HANDLER), None)
     if h is None or not isinstance(h.get("id"), str):
-        raise UcpError("the shop has no Tech Bazaar phone-approval payment handler, so it cannot be paid safely")
+        raise UcpError("the shop has no Fish Market phone-approval payment handler, so it cannot be paid safely")
     tb = p.get("tech_bazaar") if isinstance(p.get("tech_bazaar"), dict) else {}
     return {"endpoint": endpoint, "handler_id": h["id"], "payee": (h.get("config") or {}).get("payee"),
             "shop_id": tb.get("shop_id"), "label": "UCP draft spec 2026-01-11, not certified"}

@@ -15,3 +15,12 @@ test("connectionState: live once the connection is active", () => {
 test("connectionState: disconnected (red) only after a live connection has actually dropped", () => {
   assert.equal(connectionState(false, true), "disconnected");
 });
+
+test("connectionState: a failed first connect (error, never active) is disconnected, not connecting forever", () => {
+  assert.equal(connectionState(false, false, new Error("refused")), "disconnected");
+  assert.equal(connectionState(false, false, undefined), "connecting");
+});
+
+test("connectionState: live wins over a stale error", () => {
+  assert.equal(connectionState(true, false, new Error("old")), "live");
+});

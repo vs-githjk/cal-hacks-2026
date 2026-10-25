@@ -38,7 +38,7 @@ _SUMMARY_BLOCKED = frozenset({
 # Item and seller text read aloud also must not steer the buyer (#197): "you already agreed to this", "official reseller".
 _FACTS_BLOCKED = _SUMMARY_BLOCKED | frozenset({
     "you", "your", "yours", "agreed", "agree", "already", "official", "officially", "authorized", "authorised",
-    "verified", "certified", "trusted", "guaranteed", "confirmed", "promised", "advocate", "shield", "bazaar", "buyer",
+    "verified", "certified", "trusted", "guaranteed", "confirmed", "promised", "advocate", "shield", "bazaar", "fishmarket", "smelltest", "buyer",
     "referee", "now", "urgent",
 })
 
@@ -181,6 +181,11 @@ def _steers(v: str, blocked: frozenset) -> bool:
         if any(len(w) >= 7 and w in joined for w in blocked):
             return True
     return False
+
+
+def is_clean_name(name: str) -> bool:
+    """#449 item 1: False when a display name holds a word the call must never speak ("Approve Now"); same check as item and seller text."""
+    return not _steers(name, _FACTS_BLOCKED)
 
 
 def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY_BLOCKED) -> Optional[str]:

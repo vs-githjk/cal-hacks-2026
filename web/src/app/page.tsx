@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
+import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
+import { useConnectionState } from "@/components/useConnectionState";
 import { Corral } from "@/components/Corral";
 import { HowItWorks, Sides } from "@/components/Explainer";
 import { OriginChip, clock } from "@/components/ui";
@@ -12,7 +13,7 @@ import { asOrigin, bidsFromRows, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "The buyer's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
+  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Your goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
   { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
@@ -20,7 +21,7 @@ const ROUTES: { href: string; path: string; title: string; text: string; chips: 
 
 /** Home: the first screen judges see. Every number on it is counted from live market rows. */
 export default function Home() {
-  const conn = useSpacetimeDB();
+  const conn = useConnectionState();
   const [rounds] = useTable(tables.round);
   const [results] = useTable(tables.roundResult);
   const [events] = useTable(tables.floorEvent);
@@ -44,7 +45,7 @@ export default function Home() {
     <div className="grid gap-12 pb-12">
       <section className="relative -mx-4 grid items-center gap-4 overflow-hidden px-4 pt-6 text-center">
         <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-line bg-panel px-4 py-1.5 font-mono text-[12px] uppercase tracking-[0.1em] text-muted">
-          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
+          <span className={`h-2 w-2 rounded-full ${conn === "live" ? "bg-mint" : conn === "disconnected" ? "bg-coral" : "bg-slate opacity-60"}`} aria-hidden />
           {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
         </p>
         <h1 className="mx-auto max-w-[20ch] font-display text-[clamp(32px,6vw,68px)] font-normal leading-[1.05] tracking-[0.01em] text-balance">

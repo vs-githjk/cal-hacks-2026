@@ -317,3 +317,29 @@ test("goalsForBuyer: each skipped owned part is named by its own id, so the case
   assert.equal(g!.skipped[0]!.text, "You already own the PSU, so it is not in this hunt.");
   assert.equal(g!.skipped[1]!.text, "You already own the case, so it is not in this hunt.");
 });
+
+test("sealed rounds: an open round has no arrivals yet, and the revealed bid events keep their original arrival moments", () => {
+  const open = round({ state: "open", closedAt: undefined, deadline: ts(T0 + 8000), sealedCount: 2 });
+  const view = roundFromRows(open, [], []);
+  assert.deepEqual(view.arrivals, []);
+  assert.equal(view.sealedCount, 2);
+  // At close the market writes the bid events stamped with each bid's own sealed time (earlier than closedAt).
+  const closed = round({ closedAt: ts(T0 + 8200) });
+  const events = [
+    event({ id: 20n, kind: "bid_sealed", refId: "bid-a", sellerId: "a", at: ts(T0 + 1000) }),
+    event({ id: 21n, kind: "bid_rejected", refId: "bid-b", sellerId: "b", at: ts(T0 + 3000) }),
+  ];
+  const arrivals = roundFromRows(closed, events, [result({ bidId: "bid-a", persona: "A" }), result({ id: 2n, bidId: "bid-b", persona: "B", rank: 0 })]).arrivals;
+  assert.deepEqual(arrivals.map((a) => [a.label, a.atMs, a.refused]), [["A", 1000, false], ["B", 3000, true]]);
+});
+
+test("sealed rounds: a knocked-out row held back mid-round (rank 0, landed 0, no lines) renders as out with its reason and no price line", () => {
+  const held = result({ id: 7n, bidId: "bid-c", persona: "C", rank: 0, landed: 0, lines: [], reasons: ["knocked out: last placed this stage"] });
+  const bids = bidsFromRows([held], [], "round-1");
+  assert.equal(bids.length, 1);
+  assert.equal(bids[0]!.rank, null);
+  assert.equal(bids[0]!.landed, 0);
+  assert.equal(bids[0]!.recommendation, "ineligible");
+  assert.equal(bids[0]!.why, "knocked out: last placed this stage");
+  assert.deepEqual(linesFromRows([held], [], round({ state: "open", closedAt: undefined })), []);
+});

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AGENTS } from "./agents.ts";
-import { advance, edgeForAgent, type EdgeId } from "./wire.ts";
+import { advance, displayNameFor, edgeForAgent, type EdgeId } from "./wire.ts";
 
 const row = (id: number, agentName: string) => ({ id: BigInt(id), agentName });
 
@@ -17,15 +17,25 @@ test("every registered agent lights the edge of its role", () => {
   };
   assert.equal(AGENTS.length, Object.keys(want).length);
   for (const a of AGENTS) assert.equal(edgeForAgent(a.name), want[a.key], a.name);
-  assert.equal(edgeForAgent("  shield client "), "shield-buyer", "trimmed, case-insensitive");
+  assert.equal(edgeForAgent("  smell test client "), "shield-buyer", "trimmed, case-insensitive");
 });
 
-test("the demo bridge names map, and any other name lights nothing", () => {
+test("the demo bridge names and the pre-rename names map, and any other name lights nothing", () => {
   assert.equal(edgeForAgent("Bazaar Advocate"), "buyer-advocate");
   assert.equal(edgeForAgent("Bazaar Shield"), "shield-buyer");
+  assert.equal(edgeForAgent("Tech Bazaar Buyer"), "buyer-advocate", "demo/bridge.py still emits the old buyer name (#448)");
+  assert.equal(edgeForAgent("Shield Client"), "shield-buyer");
+  assert.equal(edgeForAgent("Quality Advocate"), "buyer-advocate");
   for (const bad of ["Bazaar Caller", "Market Pulse", "Central Comp MIRROR", "", "   ", "Some New Store"]) {
     assert.equal(edgeForAgent(bad), null, JSON.stringify(bad));
   }
+});
+
+test("an old or bridge name displays as the registry's current name; a stranger's name shows as is", () => {
+  assert.equal(displayNameFor("Tech Bazaar Buyer"), "Fish Market Buyer");
+  assert.equal(displayNameFor("bazaar shield"), "Smell Test Client");
+  assert.equal(displayNameFor("Byte Bros Outlet"), "Byte Bros Outlet");
+  assert.equal(displayNameFor("Some New Store"), "Some New Store");
 });
 
 test("rows already there at the first ready call never pulse", () => {

@@ -1,112 +1,92 @@
 "use client";
-// The header and the run mode footer for every page.
+// The header and the run mode footer for every page (design system v2 Nav).
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
+import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
-import { connectionState, serviceStatuses, type ServiceStatus } from "@/lib/runMode";
-
-/** Three states instead of a flipping boolean (lib/runMode.ts): neutral "connecting" until the first
- * connect, then "live", then red "disconnected" only once a live connection actually drops. Matches the
- * same rule the floor page already follows (app/floor/page.tsx). */
-function useConnectionState(isActive: boolean) {
-  const [everActive, setEverActive] = useState(false);
-  if (isActive && !everActive) setEverActive(true);
-  return connectionState(isActive, everActive);
-}
+import { serviceStatuses, type ConnectionState, type ServiceStatus } from "@/lib/runMode";
+import { useConnectionState } from "./useConnectionState";
+import { BRAND } from "@/lib/brand";
+import { BrandMark, Wordmark } from "./BrandMark";
 
 const NAV: { href: string; label: string; match?: string }[] = [
-  { href: "/", label: "Home" },
-  { href: "/buyer", label: "Buyer" },
+  { href: "/buyer", label: "Buyer", match: "/buyer" },
   { href: "/market", label: "Market" },
   { href: "/floor", label: "Floor" },
-  { href: "/seller/seller-a", label: "Seller", match: "/seller" },
+  { href: "/sell", label: "Sell", match: "/sell" },
 ];
 
-/** Header: mark, pill nav and market status. */
+/** Header: wordmark, links, the market's live pill and the one primary action. On a phone the links scroll in a second row. */
 export function AppHeader() {
   const path = usePathname();
-  const conn = useSpacetimeDB();
-  const state = useConnectionState(conn.isActive);
+  const state = useConnectionState();
+  const links = NAV.map((n) => {
+    const on = n.match ? path.startsWith(n.match) : path === n.href;
+    return (
+      <Link
+        key={n.href}
+        href={n.href}
+        aria-current={on ? "page" : undefined}
+        className={`inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-[14px] font-medium transition-colors ${on ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`}
+      >
+        {n.label}
+      </Link>
+    );
+  });
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
-      <nav className="mx-auto flex max-w-[1360px] items-center gap-4 px-4 py-3">
-        <Link href="/" aria-label="Tech Bazaar" className="inline-flex min-h-12 shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-[20px] tracking-[0.06em] text-ink">
-          <Badge />
-          <span className="hidden sm:inline">TECH BAZAAR</span>
+    <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-xl">
+      <nav aria-label="Main" className="mx-auto flex h-[60px] max-w-[1120px] items-center justify-between gap-4 px-4 md:px-8">
+        <Link href="/" aria-label={`${BRAND} home`} className="inline-flex min-h-11 shrink-0 items-center">
+          <Wordmark />
         </Link>
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full border border-line bg-soft/70 p-1.5 [scrollbar-width:none]">
-          {NAV.map((n) => {
-            const on = n.match ? path.startsWith(n.match) : path === n.href;
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                aria-current={on ? "page" : undefined}
-                className={`btn inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full px-5 text-[15px] font-semibold ${on ? "bg-accent text-accent-ink" : "text-ink-2 hover:bg-panel hover:text-ink"}`}
-              >
-                {n.label}
-              </Link>
-            );
-          })}
+        <div className="hidden items-center gap-1 md:flex">{links}</div>
+        <div className="flex items-center gap-2.5">
+          <LivePill state={state} />
+          {path !== "/start" && !path.startsWith("/buyer") && (
+            <Link href="/start" className="btn inline-flex min-h-10 items-center rounded-xl bg-pulse px-4 text-[14px] font-medium text-pulse-ink hover:shadow-card">
+              Start a goal
+            </Link>
+          )}
         </div>
-        {path !== "/start" && !path.startsWith("/buyer") && (
-          <Link href="/start" className="btn hidden shrink-0 items-center rounded-full border-2 border-line-2 px-5 text-[15px] font-semibold text-ink hover:bg-soft sm:inline-flex min-h-11">
-            Start as a buyer
-          </Link>
-        )}
-        <span className="hidden items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.08em] text-muted md:flex">
-          <span className={`h-2.5 w-2.5 rounded-full ${state === "live" ? "bg-mint" : state === "disconnected" ? "bg-coral" : "border border-ink bg-transparent"}`} aria-hidden />
-          {state === "live" ? "market live" : state === "disconnected" ? "offline" : "connecting..."}
-        </span>
       </nav>
+      <div className="flex gap-1 overflow-x-auto px-3 pb-1.5 [scrollbar-width:none] md:hidden">{links}</div>
     </header>
   );
 }
 
-/** Badge mark: a six-point sheriff star. */
-function Badge() {
+/** Market connection as a v2 pill: cyan heartbeat when live, a neutral word while connecting or offline. */
+export function LivePill({ state }: { state: ConnectionState }) {
+  const on = state === "live";
   return (
-    <svg width={27} height={27} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden className="shrink-0 text-accent">
-      <path d="M12 2.5 13.6 8l5.4-2-2 5.4 5.4 1.6-5.4 1.6 2 5.4-5.4-2L12 23.5 10.4 18l-5.4 2 2-5.4L1.6 13l5.4-1.6-2-5.4 5.4 2L12 2.5Z" />
-      <circle cx="12" cy="12" r="3.1" />
-    </svg>
+    <span className={`hidden h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium sm:inline-flex ${on ? "bg-live-soft text-ink" : "bg-slate-soft text-slate"}`}>
+      {on ? <span className="dot text-live" aria-hidden /> : <span className="h-2 w-2 rounded-full border border-current" aria-hidden />}
+      {on ? "Market live" : state === "disconnected" ? "Disconnected" : "Connecting..."}
+    </span>
   );
 }
 
-/** The Tech Bazaar mark: a referee ring with a sealed bid at its center. */
-export function Mark({ size = 24, spin = false }: { size?: number; spin?: boolean }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="shrink-0">
-      <circle cx="50" cy="50" r="44" fill="none" stroke="var(--line-2)" strokeWidth="3" />
-      <g className={spin ? "origin-center motion-safe:animate-[orbit_18s_linear_infinite]" : ""} style={{ transformBox: "fill-box" }}>
-        <circle cx="50" cy="50" r="44" fill="none" stroke="var(--accent)" strokeWidth="6" strokeDasharray="70 207" strokeLinecap="round" />
-      </g>
-      <rect x="32" y="32" width="36" height="36" rx="9" fill="var(--accent)" />
-      <rect x="42" y="42" width="16" height="16" rx="4" fill="var(--accent-ink)" />
-    </svg>
-  );
+/** Kept for screens that showed the old ring mark: now the Fish Market tile. `spin` is accepted and ignored. */
+export function Mark({ size = 24 }: { size?: number; spin?: boolean }) {
+  return <BrandMark size={size} />;
 }
 
-const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint", mirror: "bg-sky", sim: "bg-amber", none: "bg-slate opacity-40" };
+const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint-mark", mirror: "bg-slate", sim: "bg-amber", none: "bg-slate opacity-40" };
 
 /** Footer: one honest line about what ran. Each service's dot comes from the origin tags on the floor events it wrote (lib/runMode.ts), never a hardcoded claim. */
 export function RunModeFooter() {
-  const conn = useSpacetimeDB();
-  const live = conn.isActive;
-  const state = useConnectionState(live);
+  const state = useConnectionState();
+  const live = state === "live";
   const [events] = useTable(tables.floorEvent);
   const services = serviceStatuses(events, live);
   return (
-    <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-panel px-4 py-2 font-mono text-[12px] text-muted">
-      <div className="mx-auto flex max-w-[1360px] items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap sm:flex-wrap">
+    <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-glass px-4 py-2 font-mono text-[11.5px] text-muted backdrop-blur-xl">
+      <div className="mx-auto flex max-w-[1120px] items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:flex-wrap md:px-4">
         <span className="flex shrink-0 items-center gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${state === "live" ? "bg-mint" : state === "disconnected" ? "bg-coral" : "bg-slate opacity-40"}`} aria-hidden />
-          Market: {state === "live" ? "live" : state === "disconnected" ? "disconnected" : "connecting..."} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
+          <span className={`h-2 w-2 rounded-full ${live ? "bg-live" : state === "disconnected" ? "bg-coral" : "bg-slate opacity-60"}`} aria-hidden />
+          Market: {live ? "live" : state === "disconnected" ? "disconnected" : "connecting..."} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
         </span>
         {services.map((s) => (
           <span key={s.name} className="flex shrink-0 items-center gap-1.5">
@@ -114,6 +94,7 @@ export function RunModeFooter() {
             {s.name}: {s.text}
           </span>
         ))}
+        <span className="shrink-0 text-muted">Sandbox only: test cards, test identities, no real money</span>
       </div>
     </footer>
   );
