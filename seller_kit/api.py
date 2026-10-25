@@ -4,6 +4,7 @@ POST /v1/sellers   a SellerConfig (contracts/SellerConfig.schema.json) -> 201 {i
                    text the Listing Injection Screen flags -> 422 {errors: [{field, message}]} with the rule id; a screen that
                    cannot run -> 503 (fails closed); either way nothing is written (seller_kit/screen.py)
                    a config agents/sellers/factory.py refuses -> 422 {errors: [{field, message}]} with every bad field
+                   the 201 also carries `readiness`: a summary of each listing page (seller_kit/readiness.py)
 GET  /v1/sellers   the shops written so far
 GET  /v1/needs/open  open needs a shop could bid on, each with an origin label (SIM when nothing real is wired in)
 
@@ -13,6 +14,7 @@ is SIM: the kit cannot verify a real shop, so origin LIVE is refused. Nothing he
 """
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 import os
@@ -39,6 +41,7 @@ sys.path.insert(0, str(AGENTS / "sellers"))
 from factory import ConfigError, validate_config  # noqa: E402
 
 from shield.api import BodyLimit  # noqa: E402  (413 before any parsing, same limit as the other local APIs)
+from seller_kit import readiness  # noqa: E402
 from seller_kit import screen as shop_screen  # noqa: E402
 from seller_kit import ucp  # noqa: E402
 
@@ -161,9 +164,20 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             given = request.headers.get(OPERATOR_HEADER) or ""
             if not operator or not hmac.compare_digest(given.encode(), operator.encode()):
                 return _one(403, "replace", f"replace=true needs the operator token ({OPERATOR_HEADER} header, set by {OPERATOR_ENV})")
-        return _write(norm, replace)
+        wrote = _write(norm, replace)
+        if isinstance(wrote, JSONResponse):
+            return wrote
+        path = wrote
+        # #412: readiness is advice read from the listing pages after the shop is safely written; it never stops the write. summarize blocks on page fetches (up to 25 s), so it runs off the event loop.
+        try:
+            ready = await asyncio.to_thread(readiness.summarize, norm)
+        except Exception:  # noqa: BLE001  (the shop is already written: a crash here must not become a 500 and then a 409 on retry)
+            ready = {"line": "Readiness: not checked (the check failed; the shop is saved)", "listings": [readiness._skipped(
+                sku, (l or {}).get("listing_url"), "the readiness check failed") for sku, l in (norm.get("listings") or {}).items()]}
+        return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
+                             "run_command": run_command(path), "readiness": ready}, status_code=201)
 
-    def _write(norm: dict, replace: bool):
+    def _write(norm: dict, replace: bool):   # a JSONResponse for a refusal, else the path written
         path = folder / f"{norm['id']}.json"
         with lock:
             if path.parent != folder or path.is_symlink():
@@ -190,8 +204,8 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
                 except OSError:
                     pass
                 raise
-        return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
-                             "run_command": run_command(path)}, status_code=201)
+        return path
+
 
     @app.get("/v1/sellers")
     def list_sellers() -> list[dict]:
