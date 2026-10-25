@@ -172,7 +172,7 @@ def card(**updates):
                 rule_id='advocate.ok', reason=reason, source_url=source) | updates
 
 
-VALID_GOAL = 'a new GPU under $800 by Friday'
+VALID_GOAL = 'a new RTX 4070 Super under $800 by Friday'  # a named card: a bare 'GPU' now gets a clarifying question (RT-15)
 
 
 @pytest.mark.parametrize('payload', ['{', '[]', '{}', '[1]', json.dumps([card(need_id='old')]),

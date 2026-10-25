@@ -656,7 +656,7 @@ def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, 
     assert not buyer.MARKET_REFEREE.record_approval.called
 
 STRANGER = "agent1qstranger"
-GOAL_TEXT = "a new GPU under $800 by Friday"
+GOAL_TEXT = "a new RTX 4070 Super under $800 by Friday"  # a named card: a bare GPU gets a question (RT-15)
 
 
 @pytest.fixture(autouse=True)
