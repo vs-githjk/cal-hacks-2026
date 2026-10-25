@@ -375,3 +375,13 @@ def test_referee_records_only_canonical_payment_mode(mode):
         "payment_ref": "ch_test", "amount": 40.0, "mode": mode})]
     with pytest.raises(MarketBridgeError, match="payment_binding_invalid"):
         bridge.record_payment(mandate_hash="a" * 64, payment_ref="ch_test", amount=40.0, mode="SIM")
+
+
+def test_referee_record_approval_forwards_voice_approval_id_and_refuses_empty():
+    market = FakeMarket()
+    bridge = MarketBridge("referee", client=market)
+    bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1", voice_approval_id="va-1")
+    assert market.calls == [("record_approval", {"mandate_hash": "a" * 64, "method": "voice_code",
+                                                 "approved_by": "b_1", "voice_approval_id": "va-1"})]
+    with pytest.raises(MarketBridgeError, match="approval_binding_invalid"):
+        bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1")
