@@ -14,6 +14,14 @@ from uagents_core.contrib.protocols.chat import ChatAcknowledgement, ChatMessage
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = ROOT / "contracts"
 sys.path.insert(0, str(ROOT))  # so agents can import other lanes' code, e.g. `from data.fit_checker import check_fit`
+try:  # the shared quarantine list screen() reads; a sibling of common.py
+    import smell_memory
+except ImportError:  # common.py loaded by file path (demo/bridge.py), so its folder is not on sys.path
+    import importlib.util as _util
+    _spec = _util.spec_from_file_location("smell_memory", Path(__file__).with_name("smell_memory.py"))
+    smell_memory = _util.module_from_spec(_spec)
+    sys.modules["smell_memory"] = smell_memory
+    _spec.loader.exec_module(smell_memory)
 
 # Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
 _ENV = Path(__file__).resolve().parent / ".env"
@@ -88,7 +96,8 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
             if record and result["verdict"] == "allow" and _structured_payee_mismatch(text, record):
                 result.update(verdict="quarantine", reasons=["shield.payee.swap"],
                               rule_ids=["shield.payee.swap"], attack_type="payee_swap")
-            return result
+            memory = smell_memory.default()  # the shared quarantine list: a trick caught once is flagged for every agent
+            return memory.apply(text, result, context) if memory is not None else result
     except Exception:  # fail closed without echoing response bodies or transport details
         return {"message_id": message_id, "sender_agent": sender, "verdict": "block",
                 "reasons": ["shield.unavailable"], "attack_type": "unknown",
@@ -304,15 +313,26 @@ def address(role: str) -> str:
     return Identity.from_seed(SEEDS[role], 0).address
 
 
-def include_profile_chat(agent, role_text: str):
-    """Discoverability chat explains the role; structured protocols do the work."""
+def include_profile_chat(agent, role_text: str, answer=None, intercept=None):
+    """Discoverability chat explains the role; structured protocols do the work.
+    answer(text) -> str|None: a reply to a screened message (None means send role_text).
+    intercept(ctx, sender, text) -> bool: True when the message belongs to the agent's own conversation (for example a
+    seller's answer to a question the agent asked); it is acknowledged and gets no profile reply."""
     chat = Protocol(spec=chat_protocol_spec)
 
     @chat.on_message(ChatMessage)
     async def on_chat(ctx, sender: str, msg: ChatMessage):
+        if intercept is not None and await intercept(ctx, sender, msg):
+            await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
+            return
         verdict = screen(str(msg.msg_id), sender, msg.text())
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
         text = role_text if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
+        if answer is not None and verdict.get("verdict") == "allow":
+            try:
+                text = await answer(msg.text()) or role_text
+            except Exception:  # a failed answer falls back to the profile text, never a silent chat
+                text = role_text
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)
