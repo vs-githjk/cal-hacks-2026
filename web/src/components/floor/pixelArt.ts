@@ -28,15 +28,30 @@ export const GHOST: Grid = [
   ".....XXXX.....", "...XXXXXXXX...", "..XXXXXXXXXX..", ".XXXXXXXXXXXX.", ".XWWXXXXWWXXX.", "XWWWWXXWWWWXXX", "XWWPPXXWWPPXXX",
   "XWWPPXXWWPPXXX", "XXWWXXXXWWXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XX.XXX..XXX.XX", "X...XX..XX...X",
 ];
-// 14x14 fish (theme "fish"), facing right, same colour keys as the ghost
+// 18x14 fish facing left (head left, forked tail right). X body, T belly band, S fins and tail, W eye highlight, P pupil
 export const FISH: Grid = [
-  "..............", "..............", "......XXXX....", "....XXXXXXXX..", "XX.XXXXXXXXXX.", "XXXXXXXXXWPXXX", ".XXXXXXXXXXXXX",
-  ".XXXXXXXXXXXXX", "XXXXXXXXXXXXXX", "XX.XXXXXXXXXX.", "....XXXXXXXX..", "......XXXX....", "..............", "..............",
+  ".......SSSS.......", ".....SSSSSSS......", "....XXXXXXXXXX....", "..XXXXXXXXXXXXXSSS", ".XXXXXXXXXXXXXXSSS", "XXXWPXXXXXXXXXXSS.",
+  "XXXPPXXXXXXXXXXS..", "XXXXXXXSSSXXXXXS..", "XXXXXXXXSSXXXXXS..", "TTTTTTTTTTTTTTTSS.", ".TTTTTTTTTTTTTTSSS", "..TTTTTTTTTTTTTSSS",
+  "....XXXXXXXXXX....", "......SSSS........",
 ];
-const flat = (g: Grid): Grid => g.map((r) => r.replace(/[WP]/g, "X"));
-/** Frightened (caught) variants: no eyes, one blue body. */
-export const GHOST_SCARED: Grid = flat(GHOST);
-export const FISH_SCARED: Grid = flat(FISH);
+const GHOST_FLAT: Grid = GHOST.map((r) => r.replace(/[WP]/g, "X"));
+/** Frightened (caught) ghost: no eyes, one blue body. */
+export const GHOST_SCARED: Grid = GHOST_FLAT;
+
+/** Cell size in SVG units for every sprite. */
+export const CELL = 5;
+
+/** Mix hex colour a toward b by t (0..1). */
+export function mix(a: string, b: string, t: number): string {
+  const n = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  const c = (i: number) => Math.round(n(a, i) + (n(b, i) - n(a, i)) * t).toString(16).padStart(2, "0");
+  return `#${c(0)}${c(1)}${c(2)}`;
+}
+/** Fish palette from a body colour: belly band is 35 percent toward white, fins 22 percent toward black. Caught fish: blue, blank eye. */
+export function fishColors(base: string, scared: boolean): Record<string, string> {
+  const x = scared ? PAL.scared : base;
+  return { X: x, T: mix(x, "#ffffff", 0.35), S: mix(x, "#000000", 0.22), W: PAL.white, P: scared ? PAL.white : PAL.ink };
+}
 
 // 11x14 Shield guard
 export const SHIELD: Grid = [

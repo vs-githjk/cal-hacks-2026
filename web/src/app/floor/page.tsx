@@ -33,7 +33,7 @@ export default function FloorPage() {
     const sample = q.get("sample");
     return {
       replay: q.get("replay") === "reference",
-      theme: (q.get("theme") === "fish" ? "fish" : "ghosts") as Theme,
+      theme: (q.get("theme") === "ghosts" ? "ghosts" : "fish") as Theme,
       t: Number.isFinite(Number(q.get("t"))) && q.get("t") !== null ? Math.max(0, Number(q.get("t"))) : 0,
       paused: q.get("paused") === "1",
       sample: sample !== null && Object.hasOwn(SAMPLES, sample) ? (sample as SampleName) : null,
