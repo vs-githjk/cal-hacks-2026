@@ -1837,7 +1837,7 @@ def main(argv: Optional[list] = None) -> int:
     if args.live_call:
         from pay import voice_cartesia as vc
         env = vc.load_env(approver_env)
-        buyer_name, secret = env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME, env.get(vc.SECRET_ENV)
+        buyer_name, secret = vc.greeting_name(args.buyer_id, env, bridge.referee_name_lookup(args)), env.get(vc.SECRET_ENV)   # H3: the default name is the default buyer's only
         cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note, lookup=bridge.referee_phone_lookup(args))
     else:
         out.note("No --live-call: a build above the allowance stops before any call. Nothing is paid.")
