@@ -25,8 +25,8 @@ type Line = { skuSpec: string; offeredSpec: string; offeredCondition: string; un
 const ms = (ts: Timestamp) => Number(ts.microsSinceUnixEpoch / 1000n);
 const tsFromMs = (x: number) => new Timestamp(BigInt(Math.round(x)) * 1000n);
 
-function event(ctx: Ctx, kind: string, refTable: string, refId: string, label: string, sellerId = '', origin = 'SIM') {
-  ctx.db.floorEvent.insert({ id: 0n, kind, refTable, refId, sellerId, label, origin, at: ctx.timestamp });
+function event(ctx: Ctx, kind: string, refTable: string, refId: string, label: string, sellerId = '', origin = 'SIM', at = ctx.timestamp) {
+  ctx.db.floorEvent.insert({ id: 0n, kind, refTable, refId, sellerId, label, origin, at });
 }
 
 function rejected(ctx: Ctx, kind: string, refId: string, reason: string) {
@@ -433,8 +433,43 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   const deadline = tsFromMs(timing.auction.deadline_ms);
   ctx.db.round.id.update({ ...r, sealedCount: r.sealedCount + 1, extensions: timing.auction.extensions, deadline });
   if (timing.extended) scheduleClose(ctx, a.roundId, deadline);
-  if (fc.ok) event(ctx, 'bid_sealed', 'bid', a.id, 'A sealed bid arrived', me.sellerId, a.origin);
-  else event(ctx, 'bid_rejected', 'bid', a.id, 'Bid rejected: below this seller floor', me.sellerId, a.origin);
+  // #H1: no public event here. A bid id embeds its seller and a rejection names the seller floor, so either
+  // one would tell a rival still bidding who is in and who is out; the round (or stage) close emits them,
+  // via emitBidArrivalEvents below. The public round row still counts sealed bids (sealedCount).
+}
+
+/**
+ * #H1: the public events for the bids a round or stage close just revealed: "A sealed bid arrived" or "Bid
+ * rejected: below this seller floor", each stamped with the moment its bid really arrived (not the close),
+ * in arrival order, so the web's arrival timeline is unchanged. Nothing about a bid is public before this.
+ */
+function emitBidArrivalEvents(ctx: Ctx, bids: Iterable<BidRow>) {
+  const sorted = [...bids].sort((x, y) => (x.sealedAt.microsSinceUnixEpoch < y.sealedAt.microsSinceUnixEpoch ? -1 : x.sealedAt.microsSinceUnixEpoch > y.sealedAt.microsSinceUnixEpoch ? 1 : x.id < y.id ? -1 : 1));
+  for (const b of sorted) {
+    if (b.floorCheckPassed) event(ctx, 'bid_sealed', 'bid', b.id, 'A sealed bid arrived', b.sellerId, b.origin, b.sealedAt);
+    else event(ctx, 'bid_rejected', 'bid', b.id, 'Bid rejected: below this seller floor', b.sellerId, b.origin, b.sealedAt);
+  }
+}
+
+/**
+ * #H1 (red team): emit the public event for one check row attached to a bid. Called immediately only when
+ * the bid's round is already closed (a late check, #389's defense in depth, leaks nothing new); otherwise
+ * the round or stage close that reveals this bid's outcome flushes it, via emitBidCheckEvents below. Before
+ * that, a rival still bidding must never learn from the public floor that this seller carries a flag.
+ */
+function emitOneBidCheckEvent(ctx: Ctx, bidId: string, c: { kind: string; result: string; detail: string; origin: string }) {
+  if (c.kind === 'shield') event(ctx, 'verdict', 'bid_check', bidId, `Bazaar Shield: ${c.result}`, '', c.origin);
+  else if (c.kind === 'claim') event(ctx, 'claim_checked', 'bid_check', bidId, `Claim check: ${c.result}`, '', c.origin);
+  else if (c.kind === 'advocate') {
+    const ruleId = c.detail.includes(': ') ? c.detail.slice(0, c.detail.indexOf(': ')) : c.detail;
+    event(ctx, 'advocate_card', 'bid_check', bidId, c.result === 'veto' ? `Advocate veto (${ruleId})` : `Advocate: ${c.result}`, '', c.origin);
+  }
+}
+
+/** #H1: flush every check already attached to a bid whose outcome a round close just revealed. None of
+ * them has had a public event yet, since attach deferred it until now (see the attach_* reducers below). */
+function emitBidCheckEvents(ctx: Ctx, bidId: string) {
+  for (const c of ctx.db.bidCheck.bidId.filter(bidId)) emitOneBidCheckEvent(ctx, bidId, c);
 }
 
 export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; ruleIds: string[]; origin: string }) {
@@ -443,18 +478,22 @@ export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; rul
   // #389: a Shield verdict is allowed on an already-closed round (the demo's beat 3 attaches a block right
   // after close_round) and never changes a ranking already computed. create_mandate re-checks every card on
   // the winning bid before it mints, so a late block still refuses the mandate; it just can't be dropped here.
-  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
+  const b = ctx.db.bid.id.find(a.bidId);
+  if (!b) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'shield', result: a.verdict, detail: a.ruleIds.join(', '), evidenceUrl: '', origin: a.origin, at: ctx.timestamp });
-  event(ctx, 'verdict', 'bid_check', a.bidId, `Bazaar Shield: ${a.verdict}`, '', a.origin);
+  // #H1: a block or quarantine on a still-open round must not reach the public floor before close; see above.
+  if (ctx.db.round.id.find(b.roundId)?.state === 'closed') event(ctx, 'verdict', 'bid_check', a.bidId, `Bazaar Shield: ${a.verdict}`, '', a.origin);
 }
 
 export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; check: string; evidenceUrl: string; origin: string }) {
   requireRole(ctx, 'attach_claim_check', ['referee']);
   if (!['verified', 'unverified', 'false'].includes(a.check)) throw new SenderError('check must be verified, unverified or false');
   // #389: late is fine, same as attach_verdict above; create_mandate is the enforcement point, not the attach.
-  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
+  const b = ctx.db.bid.id.find(a.bidId);
+  if (!b) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'claim', result: a.check, detail: a.claim, evidenceUrl: a.evidenceUrl, origin: a.origin, at: ctx.timestamp });
-  event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
+  // #H1: see attach_verdict above.
+  if (ctx.db.round.id.find(b.roundId)?.state === 'closed') event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
 }
 
 export const ADVOCATE_RECOMMENDATIONS = ['buy', 'caution', 'veto'];
@@ -480,7 +519,8 @@ export function attachAdvocateCard(
     id: 0n, bidId: a.bidId, kind: 'advocate', result: a.recommendation, detail: `${a.ruleId}: ${a.text}`, evidenceUrl: a.sourceUrl,
     origin: a.origin, at: ctx.timestamp,
   });
-  event(ctx, 'advocate_card', 'bid_check', a.bidId, veto ? `Advocate veto (${a.ruleId})` : `Advocate: ${a.recommendation}`, '', a.origin);
+  // #H1: a round already closed never reaches here (the guard above throws), so this event always waits
+  // for close to flush it (emitBidCheckEvents), the same as attach_verdict and attach_claim_check.
   if (veto) {
     const n = ctx.db.need.id.find(b.needId);
     if (n) {
@@ -661,6 +701,10 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+  // #H1 (red team): every bid arrival and every check attached while this round was open had its public
+  // event deferred; the round's result is revealed now anyway, so flush them all.
+  emitBidArrivalEvents(ctx, rows);
+  for (const b of rows) emitBidCheckEvents(ctx, b.id);
   const top = ranked.ranked[0];
   for (const b of rows) {
     if (soldOut.get(b.id)!.some((x) => x)) event(ctx, 'stock_sold_out', 'bid', b.id, `A bid line was ${SOLD_OUT_REASON}`, b.sellerId, b.origin);
@@ -678,6 +722,21 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     }
   }
   event(ctx, 'auction_closed', 'round', roundId, top ? `Round closed: ${ranked.ranked.length} ranked, ${ranked.disqualified.length} out` : 'Round closed: no eligible bid', top?.bid.seller_id ?? '', r.origin);
+}
+
+/**
+ * Close a knockout round (a champion, no survivor, or no bid at all) and reveal everything held back while it
+ * was open: the deferred check events of every bid in the round, and the real rank, landed price and lines of
+ * each knocked_out row a continuing stage published blank (see roundResultSealed in schema.ts).
+ */
+function closeKnockoutRound(ctx: Ctx, r: NonNullable<ReturnType<Ctx['db']['round']['id']['find']>>, allBids: readonly BidRow[]) {
+  ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+  for (const b of allBids) emitBidCheckEvents(ctx, b.id);
+  for (const held of [...ctx.db.roundResultSealed.roundId.filter(r.id)]) {
+    const pub = ctx.db.roundResult.id.find(held.resultId);
+    if (pub) ctx.db.roundResult.id.update({ ...pub, rank: held.rank, landed: held.landed, lines: held.lines, adjustedTotal: held.adjustedTotal });
+    ctx.db.roundResultSealed.resultId.delete(held.resultId);
+  }
 }
 
 /**
@@ -709,6 +768,9 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   }
   const allBids = [...ctx.db.bid.roundId.filter(roundId)];
   const thisStageBids = allBids.filter((b) => b.stage === stage);
+  // #H1: this stage's bids are revealed by this close (the result rows below name every one), so their
+  // arrival events go out now, before the knockout events; the next stage's bids stay hidden until theirs.
+  emitBidArrivalEvents(ctx, thisStageBids);
   const survivorIds = stage === 1
     ? [...new Set(thisStageBids.map((b) => b.sellerId))]
     : [...ctx.db.roundResult.roundId.filter(roundId)].filter((x) => x.stage === stage - 1 && x.status === 'advancing').map((x) => x.sellerId);
@@ -724,7 +786,7 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const rows = survivorIds.map((sid) => bySeller.get(sid)).filter((b): b is BidRow => !!b);
 
   if (rows.length === 0) {
-    ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+    closeKnockoutRound(ctx, r, allBids);
     event(ctx, 'auction_closed', 'round', roundId, 'Round closed: no eligible bid', '', r.origin);
     return;
   }
@@ -757,22 +819,36 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const condOfLine = (l: Line) => l.offeredCondition || needItems.get(l.skuSpec)?.condition || 'new';
   const needQtyOf = (sku: string) => needItems.get(sku)?.quantity ?? 1;
 
+  // Among the clean (non-rule-breaking) bids, the last-placed one also goes out, unless only one remains.
+  const clean = ranked.ranked;
+  const lastPlaced = clean.length > 1 ? clean[clean.length - 1]!.bid.id : undefined;
+  const survivors = clean.filter((x) => x.bid.id !== lastPlaced);
+  const atFinalStage = stage >= r.maxStages;
+  const championId = survivors.length === 1 ? survivors[0]!.bid.id : atFinalStage ? survivors[0]!.bid.id : undefined;
+
+  // #H2 (red team): when this stage leaves the round open, a knocked_out row is public while rivals still bid,
+  // so it shows no rank, landed price, lines or adjusted score; the real values wait in roundResultSealed
+  // until closeKnockoutRound reveals them. When this stage closes the round, the rows carry the real values.
+  const roundStaysOpen = survivors.length > 0 && !championId;
+  const insertKnockedOut = (row: Parameters<typeof ctx.db.roundResult.insert>[0]) => {
+    if (!roundStaysOpen) { ctx.db.roundResult.insert(row); return; }
+    const pub = ctx.db.roundResult.insert({ ...row, rank: 0, landed: 0, lines: [], adjustedTotal: 0 });
+    ctx.db.roundResultSealed.insert({ resultId: pub.id, roundId, rank: row.rank, landed: row.landed, lines: row.lines, adjustedTotal: row.adjustedTotal });
+  };
+
   for (const d of ranked.disqualified) {
     const b = byId.get(d.bid.id)!;
-    ctx.db.roundResult.insert({
+    insertKnockedOut({
       id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons,
       lines: b.lines, origin: b.origin, source: b.source, adjustedTotal: d.landed, adjustmentReason: '', stage, status: 'knocked_out',
     });
     event(ctx, 'knockout', 'bid', b.id, `Seller knocked out (stage ${stage})`, b.sellerId, b.origin);
   }
 
-  // Among the clean (non-rule-breaking) bids, the last-placed one also goes out, unless only one remains.
-  const clean = ranked.ranked;
-  const lastPlaced = clean.length > 1 ? clean[clean.length - 1]!.bid.id : undefined;
   if (lastPlaced) {
     const x = clean[clean.length - 1]!;
     const b = byId.get(lastPlaced)!;
-    ctx.db.roundResult.insert({
+    insertKnockedOut({
       id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed,
       reasons: ['knocked out: last placed this stage'], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
       adjustedTotal: x.score, adjustmentReason: '', stage, status: 'knocked_out',
@@ -780,15 +856,11 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     event(ctx, 'knockout', 'bid', b.id, `Seller knocked out (stage ${stage})`, b.sellerId, b.origin);
   }
 
-  const survivors = clean.filter((x) => x.bid.id !== lastPlaced);
   if (survivors.length === 0) {
-    ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+    closeKnockoutRound(ctx, r, allBids);
     event(ctx, 'auction_closed', 'round', roundId, 'Round closed: no eligible bid', '', r.origin);
     return;
   }
-
-  const atFinalStage = stage >= r.maxStages;
-  const championId = survivors.length === 1 ? survivors[0]!.bid.id : atFinalStage ? survivors[0]!.bid.id : undefined;
 
   if (championId) {
     for (const x of survivors) {
@@ -803,7 +875,7 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
       });
       if (!isChamp) event(ctx, 'knockout', 'bid', b.id, `Seller knocked out (stage ${stage})`, b.sellerId, b.origin);
     }
-    ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+    closeKnockoutRound(ctx, r, allBids);
     const champX = survivors.find((x) => x.bid.id === championId)!;
     const champ = byId.get(championId)!;
     for (const i of champX.picked) {
