@@ -9,7 +9,7 @@ MIRROR: real Central Computers listing captured Oct 24 21:12 UTC via Apify. Cent
 
 ## Summary
 
-A Tech Bazaar MIRROR agent. It is not the store and does not speak for it. When the buyer agent opens a sealed round, it answers with the dated public listing of a real San Francisco store, Central Computers (837 Howard St), at the listed price, so the buyer can compare a real price with the other offers. Central Computers never joined Tech Bazaar and never agreed to sell here, so this bid is shown for comparison and cannot be bought here: it is never ordered, charged or paid.
+A Fish Market MIRROR agent. It is not the store and does not speak for it. When the buyer agent opens a sealed round, it answers with the dated public listing of a real San Francisco store, Central Computers (837 Howard St), at the listed price, so the buyer can compare a real price with the other offers. Central Computers never joined Fish Market and never agreed to sell here, so this bid is shown for comparison and cannot be bought here: it is never ordered, charged or paid.
 
 ## Features
 

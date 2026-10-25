@@ -45,7 +45,7 @@ import launch  # noqa: E402  (stdlib-only launcher: pidfile reader and liveness 
 REPO = Path(__file__).resolve().parent.parent
 MAX_MESSAGE = 140
 ROLES = {"buyer": "buyer", "advocate": "advocate", "sellers": "seller"}
-DEFAULT_NAMES = {"buyer": "Tech Bazaar Buyer", "advocate": "Bazaar Advocate", "sellers": "Seller agents"}
+DEFAULT_NAMES = {"buyer": "Fish Market Buyer", "advocate": "Fish Market Advocate", "sellers": "Seller agents"}
 
 LINE_RE = re.compile(r"^(?:INFO|WARNING|ERROR|CRITICAL|DEBUG):\s+\[([^\]]+)\]: (.*)$")
 START_RE = re.compile(r"Starting agent with address: (agent1q[0-9a-z]{40,70})")
@@ -318,7 +318,7 @@ def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None 
     from fastapi.middleware.cors import CORSMiddleware
 
     run = Path(run_dir or os.environ.get("AGENT_FEED_RUN_DIR") or REPO / ".run")
-    app = FastAPI(title="Tech Bazaar agent feed", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Fish Market agent feed", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(CORSMiddleware, allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$", allow_methods=["GET"],
                        allow_headers=[])
 

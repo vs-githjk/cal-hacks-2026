@@ -727,7 +727,7 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
     async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
         verdict = common.screen(str(msg.msg_id), sender, msg.text())
-        text = pulse.answer(msg.text(), allowed(sender)) if verdict.get("verdict") == "allow" else "Shield blocked this message. No action taken."
+        text = pulse.answer(msg.text(), allowed(sender)) if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)

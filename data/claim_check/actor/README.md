@@ -8,7 +8,7 @@
 - Sample row (from the dated run below): `{"text": "in stock", "result": "false", "reason": "claim says in stock; differs from the listing ...: the page shows out of stock", "evidence_url": "https://www.canadacomputers.com/...", "evidence_hash": "sha256 of the page", "checked_at": "2026-10-24T18:28:40+00:00"}`
 - Price: **$0.01 per claim** that comes back verified or false; unverified is free (plus Apify's $0.00005 run start).
 
-Built for **AI shopping agents** (our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), uses it to catch sellers whose words do not match their listing before money moves), and useful to marketplaces, price-match teams and anyone who buys on someone else's word.
+Built for **AI shopping agents** (our own, [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), uses it to catch sellers whose words do not match their listing before money moves), and useful to marketplaces, price-match teams and anyone who buys on someone else's word.
 
 **Results are evidence, not a verdict.** A page we cannot read is `unverified`, never `false`, and the wording is neutral: a mismatch means "the page differed at that time", never that a store lied.
 
