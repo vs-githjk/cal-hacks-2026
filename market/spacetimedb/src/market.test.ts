@@ -6,6 +6,7 @@ import type { InferSchema } from 'spacetimedb/server';
 import spacetimedb, { TelemetryAgentRow, TelemetryRow } from './schema';
 import * as mod from './index';
 import * as m from './market';
+import { sha256Hex } from '../../rules/sha256';
 
 const T0 = new Timestamp(1_761_300_000_000_000n);
 let conn = 1n;
@@ -19,6 +20,13 @@ const idOf = (auth: Auth): Identity => run(auth, (ctx) => ctx.sender);
 const ms = (ts: Timestamp) => Number(ts.microsSinceUnixEpoch / 1000n);
 const advance = (ms: number) => h.clock.advance(TimeDuration.fromMillis(ms));
 const events = () => [...h.db.floorEvent.iter()];
+
+// #449 RT-2: a pairing code is made off-module by the owner and stored as a hash. These are fixed fake codes for tests only.
+const DEMO_CODE = 'K7Q2M-9XW4P';
+const SELLER_CODE = 'H3J6N-8RT5V';
+const issueCode = (buyerId = 'vidyut', code = DEMO_CODE) => run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId, code }));
+/** A ctx whose random source throws: a secret must never come from ctx.random (the seed is the public transaction time). */
+const noRandom = (ctx: any) => new Proxy(ctx, { get: (t, k) => { if (k === 'random') throw new Error('ctx.random must not make a secret'); return Reflect.get(t, k, t); } });
 
 const GPU = 'gpu-rtx5070ti-retail';
 const line = (price: number, extra: Partial<{ offeredSpec: string; offeredCondition: string; quantity: number }> = {}) => ({
@@ -366,7 +374,8 @@ describe('SECURITY caller identity', () => {
 
   it('SECURITY: a buyer screen pairs with the demo code only; a seller cannot pair', () => {
     run(OWNER, (ctx) => m.seedDemoChecked(ctx));
-    const code = h.db.pairCode.buyerId.find('vidyut')!.code;
+    issueCode();
+    const code = DEMO_CODE;
     const screen = as('vidyut-laptop');
     expect(run(screen, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: 'wrong-code' }))).toMatchObject({ paired: false });
     expect(() => run(A, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code }))).toThrow(/not allowed/);
@@ -450,9 +459,11 @@ describe('goals (Lane A Goal contract)', () => {
 });
 
 // ============================================================================================
-// b2 ALLOWANCE LADDER (D's Allowance shape). Starts at $0; only the buyer's own clean receiving
+// b2 ALLOWANCE LADDER (D's Allowance shape). Starts at $0; only a clean receiving
 // check raises it; inside the allowance a buy auto-approves with a receipt; requester never approves.
 // ============================================================================================
+// #449 PL-20: record_receiving is the referee's. A buyer who could report their own clean delivery from a browser console
+// would raise their own allowance, so the buyer role (the deal's own buyer included) is refused.
 describe('b2 allowance ladder', () => {
   const allowance = () => h.db.allowance.buyerId.find('vidyut');
   const paidDeal = (hash: string, amount: number) => {
@@ -472,12 +483,12 @@ describe('b2 allowance ladder', () => {
     expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
   });
 
-  it('one clean receiving check by the buyer raises the ladder one step, once per deal', () => {
+  it('one clean receiving check by the referee raises the buyer ladder one step, once per deal', () => {
     paidDeal('d1', 780);
-    receive(VIDYUT, 'd1');
+    receive(REF, 'd1');
     expect(allowance()!.ladderStep).toBe(1);
     expect(allowance()!.perPurchaseLimit).toBeGreaterThan(0);
-    receive(VIDYUT, 'd1');
+    receive(REF, 'd1');
     expect(allowance()!.ladderStep).toBe(1);
     expect(events().some((e) => e.kind === 'allowance_raised')).toBe(true);
     expect(events().some((e) => e.kind === 'delivery_checked')).toBe(true);
@@ -485,28 +496,32 @@ describe('b2 allowance ladder', () => {
 
   it('a failed receiving check does not raise the ladder and opens a credit request', () => {
     paidDeal('d1', 780);
-    receive(VIDYUT, 'd1', 'rejected');
+    receive(REF, 'd1', 'rejected');
     expect(allowance()?.ladderStep ?? 0).toBe(0);
     const ev = [...h.db.receivingEvent.orderId.filter('d1')][0]!;
     expect(ev.creditRequestId).not.toBe('');
   });
 
-  it('only the buyer may record receiving; a seller or the referee cannot raise the allowance', () => {
+  it('only the referee may record receiving; the deal buyer, another buyer, a seller or a stranger cannot raise the allowance', () => {
     paidDeal('d1', 780);
-    expect(() => receive(A, 'd1')).toThrow(/not allowed/);
-    expect(() => receive(REF, 'd1')).toThrow(/not allowed/);
-    expect(() => receive(BOB, 'd1')).toThrow(/not allowed/);
+    for (const who of [VIDYUT, BOB, A, STRANGER]) {
+      expect(() => receive(who, 'd1')).toThrow(/not allowed/);
+      expect(() => receive(who, 'd1', 'rejected')).toThrow(/not allowed/); // no buyer-reported problem path either: nothing in the web calls this
+    }
     expect(allowance()?.ladderStep ?? 0).toBe(0);
+    expect([...h.db.receivingEvent.iter()]).toHaveLength(0);
+    receive(REF, 'd1');
+    expect(allowance()!.ladderStep).toBe(1); // the raise goes to the mandate's buyer, whoever relays
   });
 
   it('receiving needs a paid deal', () => {
     mint(mandateArgs(win()));
-    expect(() => receive(VIDYUT, 'h1')).toThrow(/not paid/);
+    expect(() => receive(REF, 'h1')).toThrow(/not paid/);
   });
 
   it('inside the allowance a buy auto-approves with a receipt and counts against the period; above it, it calls', () => {
     paidDeal('d1', 780);
-    receive(VIDYUT, 'd1');
+    receive(REF, 'd1');
     const per = allowance()!.perPurchaseLimit;
     mint(mandateArgs({ hash: 'small', id: 'm-small', nonce: 's', ...win(per) }));
     expect(h.db.mandate.hash.find('small')!.withinAllowance).toBe(true);
@@ -577,7 +592,7 @@ describe('b2 allowance ladder', () => {
     mint(mandateArgs({ hash: 'over', id: 'm-over', nonce: 'over', ...win(251) }));
     expect(h.db.mandate.hash.find('over')!.withinAllowance).toBe(false);
     run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'in', paymentRef: 'pi_in', amount: 250, mode: 'sim' }));
-    receive(VIDYUT, 'in');
+    receive(REF, 'in');
     expect(allowance()).toMatchObject({ ladderStep: 3 });
     expect(allowance()!.perPurchaseLimit).toBeGreaterThanOrEqual(250);
   });
@@ -844,7 +859,8 @@ describe('pair code attempt limit', () => {
   const tryPair = (who: Auth, c: string) => run(who, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: c }));
   beforeEach(() => {
     run(OWNER, (ctx) => m.seedDemoChecked(ctx));
-    code = h.db.pairCode.buyerId.find('vidyut')!.code;
+    issueCode();
+    code = DEMO_CODE;
   });
   const wrong = () => (code === '111111' ? '222222' : '111111');
 
@@ -874,39 +890,40 @@ describe('pair code attempt limit', () => {
   });
 
   it('one caller is stopped after 5 failures even across different codes', () => {
-    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'bob' }));
+    issueCode('bob', 'B2C3D-4F5G6');
     const attacker = as('attacker');
     for (let i = 0; i < 3; i++) run(attacker, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: wrong() }));
     for (let i = 0; i < 2; i++) run(attacker, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'bob', code: '000001' }));
-    const bobCode = h.db.pairCode.buyerId.find('bob')!.code;
+    const bobCode = 'B2C3D-4F5G6';
     expect(() => run(attacker, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'bob', code: bobCode }))).toThrow(/locked/);
     expect(h.db.pairCode.buyerId.find('vidyut')!.locked).toBe(false);
   });
 
   it('the operator can reissue a fresh code that works', () => {
     for (let i = 0; i < 5; i++) tryPair(as('screen-0'), wrong());
-    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }));
+    issueCode('vidyut', 'R8T5V-2W9XA');
     const row = h.db.pairCode.buyerId.find('vidyut')!;
     expect(row).toMatchObject({ locked: false, failedAttempts: 0 });
-    expect(tryPair(as('fresh-screen'), row.code)).toMatchObject({ paired: true });
+    expect(tryPair(as('fresh-screen'), 'R8T5V-2W9XA')).toMatchObject({ paired: true });
+    expect(tryPair(as('old-code-screen'), code)).toMatchObject({ paired: false }); // the old code died with the reissue
   });
 
   it('reissue unlocks the same screen that locked itself; it pairs with the new code', () => {
     const screen = as('stage-screen');
     for (let i = 0; i < 5; i++) tryPair(screen, wrong());
     expect(() => tryPair(screen, code)).toThrow(/locked/);
-    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }));
-    expect(tryPair(screen, h.db.pairCode.buyerId.find('vidyut')!.code)).toMatchObject({ paired: true });
+    issueCode('vidyut', 'R8T5V-2W9XA');
+    expect(tryPair(screen, 'R8T5V-2W9XA')).toMatchObject({ paired: true });
   });
 
   it('a non-owner cannot reissue', () => {
     for (const who of [REF, VIDYUT, A, STRANGER]) {
-      expect(() => run(who, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut' }))).toThrow(/not allowed/);
+      expect(() => run(who, (ctx) => m.reissuePairCode(ctx, { buyerId: 'vidyut', code: 'R8T5V-2W9XA' }))).toThrow(/not allowed/);
     }
   });
 
   it('a successful pair resets nothing for other codes', () => {
-    run(OWNER, (ctx) => m.reissuePairCode(ctx, { buyerId: 'bob' }));
+    issueCode('bob', 'B2C3D-4F5G6');
     for (let i = 0; i < 3; i++) run(as(`b-${i}`), (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'bob', code: '000001' }));
     tryPair(as('vidyut-screen'), code);
     expect(h.db.pairCode.buyerId.find('bob')!.failedAttempts).toBe(3);
@@ -929,12 +946,27 @@ describe('#135 pairing code format and code-wide throttle', () => {
   const GUESS = 'ZZZZZ-ZZZZZ'; // never the real code: Crockford base32 excludes I L O U, so Z is valid but this exact string is astronomically unlikely to be drawn
   beforeEach(() => {
     run(OWNER, (ctx) => m.seedDemoChecked(ctx));
-    code = h.db.pairCode.buyerId.find('vidyut')!.code;
+    issueCode();
+    code = DEMO_CODE;
   });
 
-  it('the code is 10-character Crockford base32 (no I L O U), grouped as XXXXX-XXXXX', () => {
-    expect(code).toMatch(/^[0-9A-Z]{5}-[0-9A-Z]{5}$/);
-    expect(code).not.toMatch(/[ILOU]/);
+  it('#449 RT-2: the table keeps only the sha256 of the normalized code, never the code', () => {
+    const stored = h.db.pairCode.buyerId.find('vidyut')!.code;
+    expect(stored).toBe(sha256Hex('K7Q2M9XW4P'));
+    expect(stored).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify([...h.db.pairCode.iter()], (_, x) => (typeof x === 'bigint' ? String(x) : x))).not.toMatch(/K7Q2M/i);
+  });
+
+  it('#449 RT-2: the owner supplies a 10-character Crockford base32 code (no I L O U); any other shape is refused without echoing it', () => {
+    for (const bad of ['', 'K7Q2M', 'K7Q2M-9XW4PQ', 'K7Q2M-9XW4I', 'K7Q2M-9XW4L', 'K7Q2M-9XW4O', 'K7Q2M-9XW4U', 'K7Q2M-9XW4$', 'ÄÖÜÄÖÜÄÖÜÄÖ']) {
+      let msg = '';
+      try { issueCode('vidyut', bad); } catch (e) { msg = String(e); }
+      expect(msg, `shape ${JSON.stringify(bad)}`).toMatch(/pairing code/);
+      if (bad.length > 3) expect(msg).not.toContain(bad);
+    }
+    expect(h.db.pairCode.buyerId.find('vidyut')!.code).toBe(sha256Hex('K7Q2M9XW4P')); // the refusals changed nothing
+    issueCode('vidyut', 'k7q2m9xw4p'); // lower case, no dash: same normalized code
+    expect(h.db.pairCode.buyerId.find('vidyut')!.code).toBe(sha256Hex('K7Q2M9XW4P'));
   });
 
   it('pairing is case-insensitive and ignores the grouping dash', () => {
@@ -980,6 +1012,44 @@ describe('#135 pairing code format and code-wide throttle', () => {
     try { tryPair(as('q-20'), code); } catch (e) { msg = String(e); }
     expect(msg).toMatch(/wait/);
     expect(msg).not.toContain(code);
+  });
+});
+
+describe('#449 RT-2 pairing codes are made by the owner, never by the module', () => {
+  const tryPair = (who: Auth, c: string) => run(who, (ctx) => m.pairBuyerScreen(ctx, { buyerId: 'vidyut', code: c }));
+
+  it('seed_demo makes no code; the buyer has none until the owner issues one, and no ctx.random is used for a secret', () => {
+    run(OWNER, (ctx) => m.seedDemoChecked(noRandom(ctx)));
+    expect(h.db.pairCode.buyerId.find('vidyut')).toBeFalsy();
+    expect(() => tryPair(as('early'), DEMO_CODE)).toThrow(/no pairing code issued/);
+    run(OWNER, (ctx) => m.reissuePairCode(noRandom(ctx), { buyerId: 'vidyut', code: DEMO_CODE }));
+    run(OWNER, (ctx) => m.reissueSellerScreenCode(noRandom(ctx), { sellerId: 'seller-a', code: SELLER_CODE }));
+    expect(tryPair(as('late'), DEMO_CODE)).toMatchObject({ paired: true });
+  });
+
+  it('seed_demo run again leaves an issued code alone', () => {
+    issueCode();
+    run(OWNER, (ctx) => m.seedDemoChecked(ctx));
+    expect(h.db.pairCode.buyerId.find('vidyut')!.code).toBe(sha256Hex('K7Q2M9XW4P'));
+    expect(tryPair(as('still-works'), DEMO_CODE)).toMatchObject({ paired: true });
+  });
+
+  it('a row from before the hash (plaintext in the code column) never pairs; the owner reissues', () => {
+    issueCode();
+    run(OWNER, (ctx) => { const row = ctx.db.pairCode.buyerId.find('vidyut')!; ctx.db.pairCode.buyerId.update({ ...row, code: 'K7Q2M-9XW4P' }); });
+    expect(tryPair(as('legacy'), DEMO_CODE)).toMatchObject({ paired: false });
+    expect(tryPair(as('legacy-hash'), sha256Hex('K7Q2M9XW4P'))).toMatchObject({ paired: false }); // the hash is no password either
+    issueCode();
+    expect(tryPair(as('after-reissue'), DEMO_CODE)).toMatchObject({ paired: true });
+  });
+
+  it('only the owner issues a code, and an approval code still comes from the referee, not ctx.random', () => {
+    mint(mandateArgs(win()));
+    run(REF, (ctx) => m.issueApprovalCode(noRandom(ctx), { mandateHash: 'h1', code: 'velvet falcon' }));
+    expect(m.myPendingApprovalsView(h.viewContext(VIDYUT) as any)[0]).toMatchObject({ code: 'velvet falcon' });
+    for (const who of [REF, VIDYUT, A, STRANGER]) {
+      expect(() => run(who, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a', code: SELLER_CODE }))).toThrow(/not allowed/);
+    }
   });
 });
 
@@ -1111,9 +1181,10 @@ describe('b6 seller screen: pooled lot band, own loss reports, strategy diff', (
   });
 
   it('a seller screen pairs with its own code, sees its reports, and can never bid', () => {
-    run(OWNER, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a' }));
-    expect(() => run(A, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a' }))).toThrow(/not allowed/);
-    const code = h.db.pairCode.buyerId.find('seller:seller-a')!.code;
+    run(OWNER, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a', code: SELLER_CODE }));
+    expect(() => run(A, (ctx) => m.reissueSellerScreenCode(ctx, { sellerId: 'seller-a', code: SELLER_CODE }))).toThrow(/not allowed/);
+    expect(h.db.pairCode.buyerId.find('seller:seller-a')!.code).toBe(sha256Hex('H3J6N8RT5V')); // only the hash is stored
+    const code = SELLER_CODE;
     const screen = as('seller-a-laptop');
     expect(run(screen, (ctx) => m.pairSellerScreen(ctx, { sellerId: 'seller-a', code: 'nope' }))).toMatchObject({ paired: false });
     expect(run(screen, (ctx) => m.pairSellerScreen(ctx, { sellerId: 'seller-a', code }))).toMatchObject({ paired: true });
@@ -1875,6 +1946,65 @@ describe('#336 sealed knockout rounds', () => {
     expect(h.db.round.id.find('round-1')!.state).toBe('open');
     expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ dealId: 'round-1:bid-c1', payee: 'seller-c', amount: 700 }))))
       .toThrow(/closed round/);
+  });
+});
+
+// ============================================================================================
+// #449 RT-23: close_stage (the knockout close) runs the same hold sweep and sold-out check as close_round, so two
+// knockout rounds cannot both crown a champion on the one unit a seller has.
+// ============================================================================================
+describe('#449 RT-23 knockout rounds respect stock holds', () => {
+  const holds = () => [...h.db.stockHold.iter()];
+  const resultsOf = (roundId: string) => [...h.db.roundResult.roundId.filter(roundId)];
+  function twoKnockoutRounds(withB = true) {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(BOB, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2', buyerId: 'bob', goalId: 'goal-2' })));
+    run(REF, (ctx) => m.openKnockoutRound(ctx, { roundId: 'round-1', needId: 'need-1', stageWindowS: 15, maxStages: 2 }));
+    run(REF, (ctx) => m.openKnockoutRound(ctx, { roundId: 'round-2', needId: 'need-2', stageWindowS: 15, maxStages: 2 }));
+    // Seller A states one unit and bids both rounds; round 1 has A alone, round 2 has A (cheapest) and B.
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-a1', [line(700)]), roundId: 'round-1' }));
+    run(A, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-a2', [line(700)]), roundId: 'round-2' }));
+    if (withB) run(B, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-b2', [line(760)]), roundId: 'round-2' }));
+    advance(16_000);
+  }
+  const closeStage = (roundId: string) => run(REF, (ctx) => m.closeStage(ctx, { roundId }));
+
+  it('the second round cannot crown the seller whose last unit the first round already holds; the next clean bid wins', () => {
+    twoKnockoutRounds();
+    closeStage('round-1');
+    expect(resultsOf('round-1').find((x) => x.sellerId === 'seller-a')).toMatchObject({ status: 'champion', rank: 1 });
+    expect(holds()).toHaveLength(1);
+
+    closeStage('round-2');
+    const r2 = resultsOf('round-2');
+    expect(r2.find((x) => x.sellerId === 'seller-a')).toMatchObject({ status: 'knocked_out', rank: 0, reasons: ['sold out to an earlier round'] });
+    expect(r2.find((x) => x.sellerId === 'seller-b')).toMatchObject({ status: 'champion', rank: 1 });
+    expect(h.db.round.id.find('round-2')!.state).toBe('closed');
+    // Nobody is oversold: A has exactly one active hold (round 1), B holds its own unit for round 2.
+    expect(holds().filter((x) => x.sellerId === 'seller-a' && x.state === 'held')).toHaveLength(1);
+    expect(holds().find((x) => x.roundId === 'round-2')).toMatchObject({ sellerId: 'seller-b', state: 'held' });
+    expect(events().filter((e) => e.kind === 'stock_sold_out' && e.sellerId === 'seller-a')).toHaveLength(1);
+  });
+
+  it('the only bidder having no unit left ends the round with no deal and no second hold', () => {
+    twoKnockoutRounds(false);
+    closeStage('round-1');
+    closeStage('round-2');
+    expect(resultsOf('round-2')).toHaveLength(1);
+    expect(resultsOf('round-2')[0]).toMatchObject({ sellerId: 'seller-a', status: 'knocked_out', reasons: ['sold out to an earlier round'] });
+    expect(h.db.round.id.find('round-2')!.state).toBe('closed');
+    expect(holds()).toHaveLength(1);
+    expect(events().filter((e) => e.kind === 'auction_closed' && e.refId === 'round-2').map((e) => e.label)).toEqual(['Round closed: no eligible bid']);
+  });
+
+  it('a hold whose approval window ended is swept first, so the unit is free again for the next knockout round', () => {
+    twoKnockoutRounds();
+    closeStage('round-1');
+    advance(121_000); // past the 120 s approval window
+    closeStage('round-2');
+    expect(resultsOf('round-2').find((x) => x.sellerId === 'seller-a')).toMatchObject({ status: 'champion', rank: 1 });
+    expect(holds().find((x) => x.roundId === 'round-1')).toMatchObject({ state: 'released' });
+    expect(holds().filter((x) => x.state === 'held')).toHaveLength(1);
   });
 });
 

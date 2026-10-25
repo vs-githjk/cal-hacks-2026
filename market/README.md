@@ -45,7 +45,7 @@ spacetime generate --lang typescript --out-dir ../web/src/module_bindings --modu
 cd ../web && npm ci && npm run dev
 ```
 
-`spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes.
+`spacetime call -s local tech-bazaar reset_demo` then `seed_demo` resets everything except roles and pairing codes. `seed_demo` no longer makes a pairing code (#449 RT-2); issue one as below.
 
 For a rehearsal, run or project the demo, not `npm run dev`: `npm run demo --prefix web` (`next build && next start -p 3100`) so the screen is a production build with no dev indicator or Insight badge.
 
@@ -56,11 +56,12 @@ Every state-changing reducer checks the caller first (`requireRole` in `spacetim
 ```bash
 # once per database, as the owner (the spacetime CLI identity): creates agent tokens in .tokens/ (gitignored)
 python3 market/scripts/setup_roles.py
-# the buyer screen pairing code for Vidyut
-spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"
+# the buyer screen pairing code for Vidyut: made here with Python secrets, sent as the owner, printed once, to you.
+# The market keeps only its sha256 (the pair_code.code column), so it cannot be read back; run it again for a new one.
+python3 market/scripts/issue_pair_code.py vidyut
 ```
 
-Open http://localhost:3100/buyer and enter that code. A seller identity can never pair.
+Open http://localhost:3100/buyer and enter that code. A seller identity can never pair. After a publish over an older module, a pairing code stored in plain text stops matching: issue a new one.
 
 ## Python call path (Lane A)
 
@@ -98,7 +99,7 @@ Pass every name in snake_case. SpacetimeDB's HTTP API wants top-level reducer ar
 | `pair_buyer_screen(buyer_id, code)` | a screen with no role, or a buyer | demo sign-in (SIM); a seller or referee is refused. A wrong code does not throw (so the count sticks) and shows in `my_pair_attempts`; 5 wrong codes lock the code, and 5 lock the caller across every code; the code never appears in a message |
 | `issue_build_approval_code(mandate_hash, buyer_id, amount, payee, expiry_minutes, code, origin)` | referee | the word pair for the ONE call that approves a whole build, shown on that buyer's own `/buyer` card (`my_pending_approvals`, `mandate_id` = `whole build`). Keyed by the aggregate mandate hash (the build makes its mandates after the call), so no mandate row is needed; `expiry_minutes` 1 to 10; a new one retires the buyer's earlier build code; refuses a hash that is a real mandate (use `issue_approval_code`), an unknown buyer, an empty code or a zero amount |
 | `clear_build_approval_code(mandate_hash)` | referee | takes that build code off the buyer's screen when the call ends (approved, denied or crashed); the row stays so telemetry still counts the call; a no-op when there is none |
-| `reissue_pair_code(buyer_id)` | owner | fresh code, unlocked, counter reset |
+| `reissue_pair_code(buyer_id, code)` | owner | the owner makes the code off-module (`market/scripts/issue_pair_code.py`; 10 characters from 0-9 and A-Z without I, L, O, U, dash and case ignored) and the market stores only its sha256; unlocked, counter reset. A wrong shape is refused without echoing it. `reissue_seller_screen_code(seller_id, code)` is the same for a seller screen (#449 RT-2) |
 | `set_floor(sku_spec, floor)` | seller | a floor for every condition of that SKU (unchanged call; the Lane D bridge uses it); private |
 | `set_floor_for_condition(sku_spec, condition, floor)` | seller | a floor for one (seller, sku_spec, condition); it wins over `set_floor`; private |
 | `post_need(...)`, `post_goal(...)` | buyer, for its own buyer_id | goal follows Lane A's Goal contract; starts ACTIVE, reserved 0. Each need item carries `allowed_conditions` (empty means only its `condition`) |
@@ -111,8 +112,8 @@ Pass every name in snake_case. SpacetimeDB's HTTP API wants top-level reducer ar
 | `create_mandate(...)` | the mandate's buyer, or the referee | MOCK shape until the Mandate contract is wired in. Inside the buyer's allowance it auto-approves (method `allowance`) with a receipt; otherwise the deal waits for the call. `requested_by` names an IT seat that asked for it |
 | `record_approval(mandate_hash, method, approved_by)` | the mandate's buyer, or the referee relaying that buyer's code | approved_by must equal the mandate's buyer and must not be the requester; a second approval is refused and shown |
 | `record_payment(mandate_hash, payment_ref, amount, mode)` | referee | INVARIANT-1: refused without an approval for the same hash. `mode` is `sim` (our stub; label "SIM stub, no money moved", origin SIM) or `stripe_test` (Stripe's test API; label "Stripe test mode", origin LIVE) |
-| `record_receiving(id, order_id, sku_spec, photo_url, expected_spec_id, result, reasons, checked_by, origin)` | the deal's buyer | needs a paid deal; a clean check raises the allowance one step (once per deal); a failed one opens a credit request |
-| `reset_demo()`, `seed_demo()` | owner or referee | SIM data only; roles survive a reset |
+| `record_receiving(id, order_id, sku_spec, photo_url, expected_spec_id, result, reasons, checked_by, origin)` | referee (#449 PL-20: a buyer could report their own clean delivery) | needs a paid deal; a clean check raises the allowance one step (once per deal); a failed one opens a credit request |
+| `reset_demo()`, `seed_demo()` | owner or referee | SIM data only; roles and pairing codes survive a reset; `seed_demo` makes no pairing code (#449 RT-2) |
 
 The allowance ladder (`rules/allowance.ts`, amounts PROPOSED in `config.ts`) follows D's Allowance contract: it starts at $0, so a new buyer's first buy always calls.
 

@@ -63,8 +63,8 @@ ref.call("record_payment", mandate_hash=mh, payment_ref="pi_sim_" + run, amount=
 ref.call("record_approval", mandate_hash=mh, method="typed_code", approved_by="vidyut")
 print("refused attempts shown:", ref.sql("SELECT kind, reason FROM rejected_attempt"))
 
-vidyut.call("record_receiving", id=f"rcv-{run}", order_id=mh, sku_spec=GPU, photo_url="sim://box-photo", expected_spec_id="spec-gpu",
-         result="accepted", reasons=[], checked_by="owner", origin="SIM")
+ref.call("record_receiving", id=f"rcv-{run}", order_id=mh, sku_spec=GPU, photo_url="sim://box-photo", expected_spec_id="spec-gpu",
+         result="accepted", reasons=[], checked_by="owner", origin="SIM")   # #449 PL-20: the referee relays the delivery check, not the buyer
 print("allowance after a clean receiving check:", vidyut.sql("SELECT ladder_step, per_purchase_limit, period_limit FROM my_allowance"))
 for amount in (40, 60):
     before = vidyut.sql("SELECT spent_this_period FROM my_allowance")[0][0]

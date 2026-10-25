@@ -17,11 +17,11 @@ export const pair_buyer_screen = spacetimedb.reducer({ buyerId: t.string(), code
 export const sign_up_buyer = spacetimedb.reducer({ displayName: t.string(), phone: t.option(t.string()) }, (ctx, a) => {
   m.signUpBuyer(ctx, { displayName: a.displayName, phone: a.phone ?? undefined });
 });
-export const reissue_pair_code = spacetimedb.reducer({ buyerId: t.string() }, (ctx, a) => m.reissuePairCode(ctx, a));
+export const reissue_pair_code = spacetimedb.reducer({ buyerId: t.string(), code: t.string() }, (ctx, a) => m.reissuePairCode(ctx, a));
 export const pair_seller_screen = spacetimedb.reducer({ sellerId: t.string(), code: t.string() }, (ctx, a) => {
   m.pairSellerScreen(ctx, a);
 });
-export const reissue_seller_screen_code = spacetimedb.reducer({ sellerId: t.string() }, (ctx, a) => m.reissueSellerScreenCode(ctx, a));
+export const reissue_seller_screen_code = spacetimedb.reducer({ sellerId: t.string(), code: t.string() }, (ctx, a) => m.reissueSellerScreenCode(ctx, a));
 export const set_buyer_profile = spacetimedb.reducer({ buyerId: t.string(), displayName: t.string() }, (ctx, a) => m.setBuyerProfile(ctx, a));
 export const set_floor = spacetimedb.reducer({ skuSpec: t.string(), floor: t.f64() }, (ctx, a) => m.setFloor(ctx, a));
 export const set_floor_for_condition = spacetimedb.reducer(
