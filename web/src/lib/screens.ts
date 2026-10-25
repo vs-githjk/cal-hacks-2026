@@ -163,6 +163,11 @@ import { safeUrl } from "./url.ts";
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 export const asOrigin = (o: string): Origin => (o === "LIVE" || o === "MIRROR" ? o : "SIM");
 
+/** The round's winning bid, whatever its origin (the market and the producer enforce eligibility). */
+export function winningBid<T extends { won?: boolean }>(bids: readonly T[]): T | undefined {
+  return bids.find((b) => b.won);
+}
+
 /** A sample view shown in place of an empty table: every origin becomes SIM, so no sample number reads as LIVE or MIRROR. */
 export function asSim<T>(v: T): T {
   if (Array.isArray(v)) return v.map(asSim) as T;
