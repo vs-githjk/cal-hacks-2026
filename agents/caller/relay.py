@@ -20,6 +20,7 @@ MAX_EXPIRES_CHARS = 40
 MARKET_MODULE = Path(__file__).resolve().parents[2] / "market" / "spacetimedb" / "src" / "index.ts"
 MAX_REQUEST_CHARS = 20000          # Shield's own cap: a longer request is refused, never screened in part
 MAX_REQUEST_BODY_BYTES = 60 * 1024  # under Shield's 64 KB body cap, with room for the context (#298)
+MIN_PRIVATE_BUYER_SEED = 16         # the same floor as common.MIN_PRIVATE_SEED (#449 PL-22)
 _SEEN_LOCK = threading.Lock()       # on_call runs handle in worker threads: the one-call check and add are one step (#298)
 
 
@@ -66,6 +67,17 @@ def precheck(sender: str, text: str, *, buyer_address: str, expires_at: Optional
     if len(text) > MAX_REQUEST_CHARS or len(json.dumps(text)) > MAX_REQUEST_BODY_BYTES:
         return "too_large"
     return None
+
+
+def buyer_seed_problem(seed: Optional[str]) -> Optional[str]:
+    """#449 PL-22: the Caller trusts one sender, the address derived from BUYER_AGENT_SEED. A missing, short or public
+    *-dev seed (common.SEEDS defaults are in the public repo) lets anyone sign as that buyer, so the Caller must not
+    start on it. Returns the message to exit with, or None."""
+    value = (seed or "").strip()
+    if len(value) >= MIN_PRIVATE_BUYER_SEED and not value.endswith("-dev"):
+        return None
+    return ("Set BUYER_AGENT_SEED in agents/.env to a private seed (16+ characters, not a *-dev default) before starting "
+            "the Caller: it only obeys the buyer agent's address, and a public seed would let anyone sign as the buyer.")
 
 
 def market_has_typed_approval(module: Path = MARKET_MODULE) -> bool:

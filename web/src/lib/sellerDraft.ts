@@ -303,8 +303,7 @@ export async function requestDraft(text: string, opts: DraftOptions = {}): Promi
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 900,
-        temperature: 0,
+        max_tokens: 2000, // #486 review: no temperature (the model rejects non-default sampling); thinking counts against this
         system: SYSTEM,
         messages: [{ role: "user", content: `<owner_text>\n${text}\n</owner_text>` }],
       }),

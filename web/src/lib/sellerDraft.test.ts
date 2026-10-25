@@ -293,3 +293,15 @@ test("#484 the public draft route allows a few calls per caller a minute, so a d
   assert.equal(allowDraft("5.6.7.8", 1_010, seen), true, "another caller has its own budget");
   assert.equal(allowDraft("1.2.3.4", 1_000 + RATE_WINDOW_MS + 1, seen), true, "the window rolls");
 });
+
+test("#486 review: the request sends no temperature (claude-haiku-5-5 rejects non-default sampling) and room for thinking", async () => {
+  let sent: Record<string, unknown> = {};
+  const fetchFn = (async (_url: string, init: { body: string }) => {
+    sent = JSON.parse(init.body);
+    return new Response(JSON.stringify({ content: [{ type: "text", text: "{}" }] }), { status: 200 });
+  }) as unknown as typeof fetch;
+  await requestDraft("I sell two new RTX 5070 Ti cards and won't go below $700.", { apiKey: "k", fetchFn });
+  assert.equal("temperature" in sent, false);
+  assert.ok((sent.max_tokens as number) >= 2000);
+  assert.equal(sent.model, MODEL);
+});
