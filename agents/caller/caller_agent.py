@@ -93,7 +93,7 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
     show = (lambda code: sink(code, mandate_hash)) if sink else None
     out = await asyncio.to_thread(relay.handle, sender, request, buyer_address=common.address("buyer"), client=client,
                                   show_code=show, seen=SEEN, unconfigured=unconfigured, secret=env.get(vc.SECRET_ENV),
-                                  buyer_name=env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME)
+                                  buyer_name=env.get(vc.NAME_ENV) or "there")
     ctx.logger.info(f"approval call for {str(mandate_hash)[:12]}: {'approved' if out['approved'] else 'not approved'}")
     await ctx.send(sender, CallResult(approved=out["approved"], reason=out["reason"] or "", call_id=out["call_id"] or "",
                                       voice_approval_id=out["voice_approval_id"] or ""))

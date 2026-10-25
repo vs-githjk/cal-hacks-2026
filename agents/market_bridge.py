@@ -545,17 +545,22 @@ class MarketBridge:
         except (MarketBridgeError, ValueError, TypeError, OverflowError):
             return False
 
-    def record_approval(self, *, mandate_hash: str, method: str, approved_by: str) -> dict[str, Any]:
+    def record_approval(self, *, mandate_hash: str, method: str, approved_by: str,
+                        voice_approval_id: str = "") -> dict[str, Any]:
         if self.role not in {"buyer", "referee"} or method != "voice_code":
             raise MarketBridgeError("approval_binding_invalid")
         if self.role == "referee":
-            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"))
+            if not voice_approval_id:
+                raise MarketBridgeError("approval_binding_invalid")
+            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
+                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"))
             return {"mandate_hash": mandate_hash, "approval_method": method}
         before = self.purchase_status(mandate_hash)
         if before.get("approval_method") is not None or before.get("retired"):
             raise MarketBridgeError("approval_not_pending")
         try:
-            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"))
+            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
+                       **({"voice_approval_id": _safe_id(voice_approval_id, "voice_approval_id")} if voice_approval_id else {}))
         except MarketBridgeError:
             after = self.purchase_status(mandate_hash)
             if after.get("approval_method") != method:

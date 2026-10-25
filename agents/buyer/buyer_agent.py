@@ -567,7 +567,8 @@ def live_sellers() -> list[str]:
     return [s for s in common.SELLERS if common.mailbox_ready(s)]
 
 
-HANDLED_GOAL_IDS: set = set()
+GOAL_POLL_S = 8.0
+LAST_GOAL_POLL = float("-inf")
 
 
 def _web_goal(row: dict) -> dict:
@@ -586,15 +587,32 @@ async def adopt_open_goal(ctx: Context) -> bool:
     """Pick up a web buyer's ACTIVE market goal and hunt it. # ponytail: one round at a time; the rest wait their turn."""
     if ROUND.get("pending_hold") or ROUND.get("phase") not in (None, "done"):
         return False
+    global LAST_GOAL_POLL
+    if time.monotonic() - LAST_GOAL_POLL < GOAL_POLL_S:
+        return False
+    LAST_GOAL_POLL = time.monotonic()
     try:
-        goals = market_clients()[1].open_goals()
+        goals = await asyncio.to_thread(market_clients()[1].open_goals)
     except Exception:
         return False
-    row = next((g for g in goals if str(g.get("buyer_id", "")).startswith("b_")
-                and g.get("id") not in HANDLED_GOAL_IDS), None)
+    db, now = state_db(), business_now()
+
+    def _skip(g: dict) -> bool:
+        gid = str(g.get("id", ""))
+        try:
+            return (not gid or buyer_state.goal_handled(db, gid) or buyer_state.goal_has_transaction(db, gid)
+                    or datetime.fromisoformat(_web_goal(g)["deadline"].replace("Z", "+00:00")) <= now)
+        except Exception:
+            return True  # fail closed
+
+    row = next((g for g in goals if str(g.get("buyer_id", "")).startswith("b_") and not _skip(g)), None)
     if row is None:
         return False
-    HANDLED_GOAL_IDS.add(row["id"])
+    try:
+        buyer_state.mark_goal_handled(db, row["id"], row["buyer_id"])
+    except Exception:
+        ctx.logger.warning(f"Open goal {row.get('id')} not hunted: could not record it as handled")
+        return False
     try:
         goal = _web_goal(row)
         need = need_from_goal(goal)
@@ -1145,7 +1163,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         buyer_market = market_clients()[1 if web else 0]
         method = "voice_code"
         market_status = buyer_market.record_approval(mandate_hash=mandate["hash"], method=method,
-                                                       approved_by=transaction["buyer_id"])
+                                                       approved_by=transaction["buyer_id"],
+                                                       voice_approval_id=record["id"])
         if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
                 or (not web and not market_status.get("approved_at"))):  # the referee cannot read the buyer view back
             raise MarketBridgeError("market_approval_readback_mismatch")

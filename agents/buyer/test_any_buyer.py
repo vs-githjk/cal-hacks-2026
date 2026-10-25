@@ -168,7 +168,7 @@ def _open_goal_row(buyer):
 
 def test_open_web_goal_is_adopted_and_need_posted_by_referee_on_that_goal(runtime):
     buyer, _db = runtime
-    buyer.HANDLED_GOAL_IDS.clear()
+    buyer.LAST_GOAL_POLL = float("-inf")
     buyer.MARKET_REFEREE.open_goals.return_value = [{**_open_goal_row(buyer), "buyer_id": "vidyut"}, _open_goal_row(buyer)]
     buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
     assert asyncio.run(buyer.adopt_open_goal(Context())) is True
@@ -218,7 +218,8 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
     mandate_hash = referee.create_mandate.call_args.args[0]["hash"]
     assert referee.create_mandate.call_args.kwargs["buyer_id"] == BID
     referee.issue_approval_code.assert_called_once_with(mandate_hash, "424242")
-    assert referee.record_approval.call_args.kwargs == {"mandate_hash": mandate_hash, "method": "voice_code", "approved_by": BID}
+    assert referee.record_approval.call_args.kwargs == {"mandate_hash": mandate_hash, "method": "voice_code", "approved_by": BID,
+                                                        "voice_approval_id": "va-1"}
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
     assert not ctx.sent  # no owner chat and no OrderPlaced: the web flow stops at approval
@@ -240,9 +241,60 @@ def test_web_approval_stops_before_payment_and_frees_the_next_web_goal(runtime, 
     assert not ctx.sent
     for name in ("purchase_status", "settle_goal", "record_payment"):
         assert not getattr(buyer.MARKET_BUYER, name).called and not getattr(buyer.MARKET_REFEREE, name).called
-    buyer.HANDLED_GOAL_IDS.clear()
-    buyer.HANDLED_GOAL_IDS.add("goal-web1")
+    buyer.LAST_GOAL_POLL = float("-inf")
+    buyer.buyer_state.mark_goal_handled(_db, "goal-web1", BID)
     buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer), {**_open_goal_row(buyer), "id": "goal-web2"}]
     buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
     assert asyncio.run(buyer.adopt_open_goal(Context())) is True
     assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def _adopt(buyer):
+    buyer.LAST_GOAL_POLL = float("-inf")
+    return asyncio.run(buyer.adopt_open_goal(Context()))
+
+
+def test_handled_goal_survives_restart_and_is_not_hunted_again(runtime):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    assert _adopt(buyer) is True
+    buyer.ROUND.clear()  # a restart: no in-memory round, same DB
+    buyer.MARKET_REFEREE.post_need.reset_mock()
+    assert _adopt(buyer) is False
+    assert not buyer.MARKET_REFEREE.post_need.called
+
+
+def test_past_deadline_goal_is_skipped_and_a_later_one_adopted(runtime):
+    buyer, db = runtime
+    old = {**_open_goal_row(buyer), "id": "goal-old", "deadline": "2000-01-01T00:00:00Z"}
+    buyer.MARKET_REFEREE.open_goals.return_value = [old, _open_goal_row(buyer)]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    assert _adopt(buyer) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web1"
+
+
+def test_goal_with_an_existing_transaction_is_skipped(runtime):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+    import json as _json
+    db.execute("INSERT INTO transactions (deal_id, buyer_id, phase, payload) VALUES ('d1', ?, 'approved', ?)",
+               (BID, _json.dumps({"goal_id": "goal-web1"})))
+    db.commit()
+    assert _adopt(buyer) is False
+    assert not buyer.MARKET_REFEREE.post_need.called
+
+
+def test_goal_poll_is_rate_limited(runtime, monkeypatch):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = []
+    clock = [1000.0]
+    monkeypatch.setattr(buyer.time, "monotonic", lambda: clock[0])
+    buyer.LAST_GOAL_POLL = float("-inf")
+    asyncio.run(buyer.adopt_open_goal(Context()))
+    clock[0] += 3
+    asyncio.run(buyer.adopt_open_goal(Context()))
+    assert buyer.MARKET_REFEREE.open_goals.call_count == 1
+    clock[0] += 6
+    asyncio.run(buyer.adopt_open_goal(Context()))
+    assert buyer.MARKET_REFEREE.open_goals.call_count == 2
