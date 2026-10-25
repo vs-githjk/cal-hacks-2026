@@ -163,3 +163,9 @@ test("feedBase skips the fetch when unset on a deployed page or when a loopback 
   assert.equal(feedBase("http://[::1]:8790", "127.0.0.1"), "http://[::1]:8790");
   assert.equal(feedBase("https://feed.example/", "tech-bazaar.vercel.app"), "https://feed.example");
 });
+
+test("feedBase never returns a loopback address for a hosted page, so no 127.0.0.1 can reach the UI or a fetch", () => {
+  for (const env of [undefined, "", "http://127.0.0.1:8790", "http://localhost:8790", "http://[::1]:8790", "http://127.5.5.5:8790"]) {
+    assert.equal(feedBase(env, "tech-bazaar.vercel.app"), null);
+  }
+});
