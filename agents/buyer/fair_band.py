@@ -3,9 +3,9 @@
 ADVISORY ONLY. This produces one line of chat text. It never changes a ranking, a veto, an approval or a payment.
 
 Where the band comes from, in order:
-  1. Market Pulse, when it publishes one: `pulse.fair_band.fair_band(sku)` returning
-     {"low", "high", "source", "as_of", "source_url"}. Market Pulse has no such function on main today, so this step is
-     skipped until it lands; nothing here depends on it.
+  1. Market Pulse (PR #458): `from pulse.fair_band import fair_band`, returning
+     {"low", "high", "median", "as_of", "source_url", ...} or None. Until that is on main the import fails and this step
+     is skipped; nothing here depends on it.
   2. Otherwise the dated price-history baseline the Advocate already trusts (agents/advocate/real_data.py): real retail
      asks, median per SKU. The band is the median plus or minus the Advocate's own PRICE_TOLERANCE (10 percent);
      more than 25 percent below the median is "suspiciously low".
@@ -54,7 +54,9 @@ def verdict(price: float, band: dict) -> str:
         return "high"
     if price < median * LOW_FLOOR:
         return "suspiciously low"
-    return "fair"  # at or under the top of the band and not below the low floor
+    if price < band["low"]:
+        return "below"
+    return "fair"  # inside the band
 
 
 def _host(url) -> str:
@@ -86,9 +88,11 @@ def _price_line(bid: dict, lookup: Callable[[str], dict | None]) -> str | None:
         if not band:
             continue
         v = verdict(float(price), band)
-        src = f"{band['who']}, {band['as_of'][:10]}, {_host(band.get('source_url'))}" if band.get("as_of") else band["who"]
-        note = {"fair": "looks fair", "high": "looks high", "suspiciously low": "looks suspiciously low, so be careful"}[v]
-        parts.append(f"{catalog.label(sku)} at ${price:,.2f} {note} against ${band['low']:,.0f} to ${band['high']:,.0f} ({src})")
+        src = f"{band['who']}, {str(band['as_of'])[:10]}, {_host(band.get('source_url'))}" if band.get("as_of") else band["who"]
+        usual = f"the usual range of ${band['low']:,.0f} to ${band['high']:,.0f}"
+        note = {"fair": f"looks fair, inside {usual}", "high": f"looks high, above {usual}",
+                "below": f"is below {usual}", "suspiciously low": f"looks suspiciously low, well below {usual}, so be careful"}[v]
+        parts.append(f"{catalog.label(sku)} at ${price:,.2f} {note} ({src})")
     if not parts:
         return None
     return "Price check (advice only, it never changes the ranking): " + "; ".join(parts) + "."

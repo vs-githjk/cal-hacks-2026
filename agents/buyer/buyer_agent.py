@@ -978,7 +978,12 @@ async def conclude(ctx: Context, reviewed: bool):
             and not_partners.orderable(winner) and not_partners.orderable(bids[0]) else None)
     asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
     out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
-    out += [x for x in (ROUND.get("round_summary"), fair_band.price_line(bids[best - 1]) if best else None) if x]
+    if ROUND.get("round_summary"):  # the next step is chosen here, once we know whether this bid will really be ordered
+        out.append(f"{ROUND['round_summary']} " + explain.closing(
+            best, decide(need, bids[best - 1], 0) if best else None, bool(best and eligible_for_order(best)),
+            ROUND.get("attempts", 0)))
+    if best and (line := fair_band.price_line(bids[best - 1])):
+        out.append(line)
     vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
     if vetoed:
         await emit(ctx, "veto", f"Advocate vetoed {len(vetoed)} bid(s): {', '.join(vetoed)}.")

@@ -152,9 +152,9 @@ SYSTEM = (
     "typed, or null}), "
     '"use_case" (like "1440p" or null), "budget_usd" (a number they typed, or null), '
     '"conditions" (list from new|open-box|refurbished, or null), '
-    '"deadline" (their words for the date, or null), "option" (1-3 if they are answering a numbered question, else null). '
+    '"deadline" (their words for the date, or null). '
     "Never invent a model, number or date the message does not contain. If a question was just asked (see "
-    '"pending"), the message may be only its answer, for example "new" or "$1,300" or "2".'
+    '"pending"), the message may be only its answer, for example "new" or "$1,300".'
 )
 
 
@@ -190,34 +190,33 @@ def llm_draft(raw: object, text: str, now: datetime, pending: dict | None) -> di
             d["cats"].append(cat)
         model = p.get("model")
         if isinstance(model, str) and model.strip():
-            found = catalog.find_models(model, cat)
+            found = [s for s in catalog.find_models(model, cat) if s in catalog.find_models(text, cat)]  # the OWNER named it
             if len(found) == 1:
                 d["models"][cat] = found[0]
             elif len(found) > 1:
                 d["ambiguous"][cat] = found
-            elif cat in ("gpu", "psu"):
+            elif cat in ("gpu", "psu") and not catalog.find_models(model, cat) \
+                    and re.sub(r"\W", "", model).lower() in re.sub(r"\W", "", text).lower():
                 d["unknown"][cat] = [" ".join(model.split())[:40]]  # asked about, never turned into a SKU
     uc = raw.get("use_case")
     if isinstance(uc, str) and re.fullmatch(USE_CASES, uc.strip(), re.I):
         d["use_case"] = uc.strip().lower()
     budget = raw.get("budget_usd")
     if isinstance(budget, (int, float)) and not isinstance(budget, bool) and math.isfinite(budget) and budget > 0:
-        typed = re.sub(r"[,\s]", "", text)
-        if re.search(rf"(?<!\d){int(budget)}(?!\d)", typed) or re.search(rf"(?<!\d){budget:g}(?!\d)", typed):
-            d["cap"] = float(budget)  # a number the owner really typed, not one the model made up
+        # a budget is what the owner wrote as a budget ("under $1,300", "budget 900", "$800" for the budget question);
+        # a model number or a resolution that happens to be in the text ("4070", "1440p") is never one
+        stated = G._cap(text)
+        if stated is None and pending and pending.get("slot") == "budget":
+            stated = _bare_amount(text)
+        if stated is not None and float(budget) == stated:
+            d["cap"] = stated
     conds = raw.get("conditions")
     if isinstance(conds, list):
         d["conditions"] = [c for c in CONDITIONS if c in conds] or None
     dl = raw.get("deadline")
     if isinstance(dl, str) and dl.strip():
         d["day"], d["day_error"] = _day(dl, now)
-    opt = raw.get("option")
-    if pending and str(pending.get("slot", "")).startswith("model:") and isinstance(opt, int) and not isinstance(opt, bool):
-        if 1 <= opt <= len(pending.get("options", [])):
-            cat = pending["slot"].split(":", 1)[1]
-            d["models"][cat] = pending["options"][opt - 1]
-            if cat not in d["cats"]:
-                d["cats"].append(cat)
+    # the model's own pick of an option is never read: the owner's words choose the card (regex_draft/_option_index)
     return d
 
 
@@ -295,8 +294,10 @@ def _so_far(d: dict, cats: list) -> str:
 
 def _ask_model(d: dict, cats: list, cat: str, opts: list, why: str) -> str:
     d["pending"] = {"slot": f"model:{cat}", "options": opts}
-    lines = ", ".join(f"{i}) {catalog.label(s)}" + (f" (from {_money(catalog.floor()[s]['min_price'])})" if s in catalog.floor() else "")
-                      for i, s in enumerate(opts, 1))
+    def shown(s):  # the lowest listed price in the condition the owner asked for, never another condition's
+        p = catalog.price(s, d["conditions"]) if s in catalog.floor() else None
+        return f" (listed from {_money(p)})" if p else ""
+    lines = ", ".join(f"{i}) {catalog.label(s)}{shown(s)}" for i, s in enumerate(opts, 1))
     return f"{_so_far(d, cats)}{why} Which {catalog.NAMES[cat]}? {lines}. Reply with the number or the name. Prices are from the sandbox sellers."
 
 
@@ -311,7 +312,8 @@ def step(d: dict, buyer_id: str, now: datetime) -> tuple[str, object]:
     cats = _plan_cats(d)
     # 1. a model the catalog does not hold, or several at once: ask, never guess
     for cat, names in list(d["unknown"].items()) + [(c, None) for c in d["ambiguous"]]:
-        opts = d["ambiguous"].get(cat) or catalog.options(cat, 3, d["cap"] if d["cap"] else None) or catalog.options(cat, 3)
+        opts = (d["ambiguous"].get(cat) or catalog.options(cat, 3, d["cap"] if d["cap"] else None, d["conditions"])
+                or catalog.options(cat, 3, None, d["conditions"]) or catalog.options(cat, 3))
         if names:
             why = f"I don't have {', '.join(n.upper() for n in names)} in my catalog and I won't guess a part number."
         else:
@@ -326,17 +328,25 @@ def step(d: dict, buyer_id: str, now: datetime) -> tuple[str, object]:
     if not (d["cap"] > 0 and math.isfinite(d["cap"])):
         d["cap"], d["pending"] = None, {"slot": "budget", "options": []}
         return "ask", "The budget must be a positive amount. What is your maximum budget?"
-    # 2. a model for every part that has no safe default
+    # 2. the condition, before any model is offered: the options and their prices are for that condition
+    if d["conditions"] is None:
+        d["pending"] = {"slot": "condition", "options": []}
+        return "ask", f"{_so_far(d, cats)}What condition do you want: new or open-box?"
+    # 3. a model for every part that has no safe default
     told = {o["sku_spec"].split()[0] for o in G._owned(" ".join(d["texts"]), buyer_id, now)}
     for cat in cats:
         if cat in d["models"] or cat in ("psu", "case"):
             continue
         if cat == "gpu":
-            rest = sum(catalog.cheapest(c) or 0 for c in cats if c in ("psu", "case") and c not in told)
+            rest = sum(catalog.cheapest(c, d["conditions"]) or 0 for c in cats if c in ("psu", "case") and c not in told)
             room = d["cap"] - rest
-            fits = catalog.options("gpu", 3, room)
+            fits = catalog.options("gpu", 3, room, d["conditions"])
             if not fits:
-                low = catalog.cheapest("gpu")
+                low = catalog.cheapest("gpu", d["conditions"])
+                if low is None:  # no card is listed in the condition they asked for
+                    d["conditions"], d["pending"] = None, {"slot": "condition", "options": []}
+                    return "ask", ("No graphics card is listed in that condition on today's floor. "
+                                   "What condition do you want: new, open-box or refurbished?")
                 d["cap"], d["pending"] = None, {"slot": "budget", "options": []}
                 return "ask", (f"Under that budget I can't fit a graphics card: the cheapest one listed by today's sellers "
                                f"is {_money(low)}. What is your maximum budget?")
@@ -345,10 +355,8 @@ def step(d: dict, buyer_id: str, now: datetime) -> tuple[str, object]:
                 d["notes"].append(f"Only the {catalog.label(fits[0])} fits that budget on today's floor, so that is the card I will shop.")
                 continue
             return "ask", _ask_model(d, cats, "gpu", fits, f"{'For the build, ' if d['build'] else ''}I won't pick a card for you.")
-        return "ask", _ask_model(d, cats, cat, catalog.options(cat, 3), "I won't pick a part number for you.")
-    if d["conditions"] is None:
-        d["pending"] = {"slot": "condition", "options": []}
-        return "ask", f"{_so_far(d, cats)}What condition do you want: new or open-box?"
+        return "ask", _ask_model(d, cats, cat, catalog.options(cat, 3, None, d["conditions"]) or catalog.options(cat, 3),
+                                 "I won't pick a part number for you.")
     if d["day"] is None:
         d["pending"] = {"slot": "deadline", "options": []}
         err = f"{d['day_error']} " if d["day_error"] else ""

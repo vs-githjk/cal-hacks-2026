@@ -83,23 +83,49 @@ def round_summary(*, asked, received: dict, screened: dict, review_bids: list, c
                      f"(item plus shipping){under}.")
     else:
         parts.append("No bid survived the checks.")
-    parts.append(next_step)
+    if next_step:
+        parts.append(next_step)
     return " ".join(parts)
 
 
 NEXT_BUY = ("Next: I get a fresh quote and then call your phone for the approval code. "
             "Nothing is paid unless you approve on that call.")
-NEXT_NONE = "Next: nothing was ordered; I keep hunting until your deadline."
+
+
+def retry_line(attempts_so_far: int) -> str:
+    """What a failed round really leads to (buyer_agent.fail_round): a fresh round, or a paused goal after MAX_ATTEMPTS."""
+    import hunt
+    n = attempts_so_far + 1  # this round counts as a failure too
+    if hunt.after_failed_round(n) == "PAUSED":
+        return (f"Next: nothing was ordered. That was failed round {n} of {hunt.MAX_ATTEMPTS}, so I paused this goal; "
+                "send it again to restart.")
+    return (f"Next: nothing was ordered. That was failed round {n} of {hunt.MAX_ATTEMPTS}; "
+            f"I run a fresh round in {hunt.RETRY_S} seconds.")
+
+
+def closing(best: int | None, verdict: str | None, ready: bool, attempts_so_far: int) -> str:
+    """The true next step, chosen after conclude knows whether it will order: `best` is the index of an orderable bid
+    or None, `verdict` is logic.decide's answer for it, `ready` is eligible_for_order."""
+    if best is None:
+        return ("Next: I will not order any of these bids (a store that never joined, a failed seller check or a veto "
+                "rules each one out). " + retry_line(attempts_so_far).removeprefix("Next: "))
+    if verdict == "over_limit":
+        return "Next: the best eligible bid is over your cap. " + retry_line(attempts_so_far).removeprefix("Next: ")
+    if not ready:
+        return ("Next: I will not order this bid because it is unreviewed or vetoed. Nothing was ordered; "
+                "reply CANCEL to start a new goal.")
+    return NEXT_BUY
 
 
 def from_round(rnd: dict, cards: dict) -> str | None:
-    """round_summary from the Buyer's ROUND state. Never raises (a summary must not be able to fail a round)."""
+    """round_summary from the Buyer's ROUND state, without the next step when there is a winner (conclude adds the
+    true one with `closing`). Never raises (a summary must not be able to fail a round)."""
     try:
         import common
         winner = rnd.get("market_winner")
         return round_summary(asked=rnd.get("asked") or common.SELLERS, received=rnd.get("received_bids", {}),
                              screened=rnd.get("screened_bids", {}), review_bids=rnd.get("review_bids", []), cards=cards,
                              winner=winner, cap=(rnd.get("need") or {}).get("spend_limit"),
-                             next_step=NEXT_BUY if winner else NEXT_NONE)
+                             next_step="" if winner else retry_line(rnd.get("attempts", 0)))
     except Exception:
         return None

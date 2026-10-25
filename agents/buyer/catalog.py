@@ -56,27 +56,36 @@ def _category_of_listing(sku: str, listing: dict) -> str:
     return sku.split()[0] if sku.split()[0] in CATEGORIES else "gpu" if re.match(r"(rtx|rx|gtx)\b", sku) else "case"
 
 
-def _asking(listing: dict) -> float:
-    """A listing's lowest asking price: its price, else its lowest per-condition floor (a seller that prices from cost)."""
-    if listing.get("price"):
-        return float(listing["price"])
-    floors = [v for v in (listing.get("floor_by_condition") or {}).values() if v]
-    return float(min(floors)) if floors else float(listing.get("cost") or 0)
+def _offers(listing: dict) -> list[tuple[str, float]]:
+    """(condition, public price) for a listing's main line and its alternative lines. Never a seller's private floor when
+    the listing has a price; a seller that prices from cost shows its per-condition floor as its only number."""
+    main = listing.get("condition") or "new"
+    floors = listing.get("floor_by_condition") or {}
+    out = [(main, float(listing.get("price") or floors.get(main) or listing.get("cost") or 0))]
+    out += [(a["condition"], float(a["price"])) for a in listing.get("alt_lines") or [] if a.get("condition") and a.get("price")]
+    return [(c, p) for c, p in out if p > 0]
 
 
 @lru_cache(maxsize=1)
 def floor() -> dict:
-    """sku_spec -> {"category", "attrs", "min_price", "sellers": n} for every SKU a seller on the floor lists."""
+    """sku_spec -> {"category", "attrs", "by_condition": {condition: lowest price}, "sellers": n} for every SKU a seller
+    on the floor lists."""
     out: dict[str, dict] = {}
     for seller in _sellers().get("sellers", {}).values():
         for sku, listing in (seller.get("listings") or {}).items():
-            price = _asking(listing)
-            row = out.setdefault(sku, {"category": _category_of_listing(sku, listing),
-                                       "attrs": {k: v for k, v in (listing.get("attrs") or {}).items() if k != "category"},
-                                       "min_price": price, "sellers": 0})
+            row = out.setdefault(sku, {"category": _category_of_listing(sku, listing), "by_condition": {}, "sellers": 0,
+                                       "attrs": {k: v for k, v in (listing.get("attrs") or {}).items() if k != "category"}})
             row["sellers"] += 1
-            row["min_price"] = min(row["min_price"], price)
+            for cond, price in _offers(listing):
+                row["by_condition"][cond] = min(price, row["by_condition"].get(cond, price))
     return out
+
+
+def price(sku: str, conditions=None) -> float | None:
+    """The lowest listed price of this SKU in one of the wanted conditions (any condition when None), else None."""
+    by = floor().get(sku, {}).get("by_condition", {})
+    prices = [p for c, p in by.items() if conditions is None or c in conditions]
+    return min(prices) if prices else None
 
 
 def is_listed(sku: str) -> bool:
@@ -154,11 +163,12 @@ def unknown_models(text: str, category: str) -> list[str]:
     return []
 
 
-def options(category: str, limit: int = 3, max_price: float | None = None) -> list[str]:
-    """Up to `limit` concrete SKUs to offer: floor SKUs by price (high to low, so the best card fitting the budget leads),
-    then maker-spec parts. `max_price` keeps only floor SKUs whose lowest listing fits."""
-    listed = sorted((s for s in known_skus(category) if s in floor() and (max_price is None or floor()[s]["min_price"] <= max_price)),
-                    key=lambda s: -floor()[s]["min_price"])
+def options(category: str, limit: int = 3, max_price: float | None = None, conditions=None) -> list[str]:
+    """Up to `limit` concrete SKUs to offer: floor SKUs with a listing in a wanted condition, by price (high to low, so
+    the best card fitting the budget leads), then maker-spec parts. `max_price` keeps only floor SKUs whose lowest
+    wanted-condition listing fits."""
+    have = [s for s in known_skus(category) if s in floor() and price(s, conditions) is not None]
+    listed = sorted((s for s in have if max_price is None or price(s, conditions) <= max_price), key=lambda s: -price(s, conditions))
     rest = [s for s in known_skus(category) if s not in floor()] if max_price is None else []
     return (listed + rest)[:limit]
 
@@ -168,6 +178,6 @@ def attrs_of(sku: str) -> dict:
     return dict(floor().get(sku, {}).get("attrs") or {})
 
 
-def cheapest(category: str) -> float | None:
-    prices = [r["min_price"] for r in floor().values() if r["category"] == category]
+def cheapest(category: str, conditions=None) -> float | None:
+    prices = [p for sku in known_skus(category) if sku in floor() and (p := price(sku, conditions)) is not None]
     return min(prices) if prices else None
