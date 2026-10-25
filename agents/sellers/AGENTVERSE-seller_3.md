@@ -1,6 +1,6 @@
 # FlashDeal Frankie
 
-**Job: the trickster (SIM, planted).** Its bid says new while its page says open-box, and the Quality Advocate vetoes it with the source.
+**Job: the adaptive trickster (SIM, planted).** Each round it tries a different planted lie and learns which one got caught. In the live buyer path it plays the two that are caught there: a condition lie (the Quality Advocate vetoes it with the source) and an injection line in the listing (Smell Test blocks it). A hidden fee and a fake warranty exist too, caught by the claim check against the page, but they stay off unless the operator sets SELLER3_EXTRA_TRICKS=1, because the live path does not run the claim check on a bid's claims. Every reply in its chat ends with a SIM tag.
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)

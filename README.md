@@ -2,7 +2,7 @@
 
 # Fish Market
 
-### The agentic marketplace where buyers and sellers thrive.
+### The secure agentic marketplace where buyers and sellers thrive.
 
 Nothing fishy gets through.
 
@@ -39,7 +39,7 @@ Fish Market is a marketplace where your AI buyer agent shops for PC parts and se
 6. **CRS checks the payee.** A business seller needs a fresh, verified CRS identity check before it can be paid, and the check is bound into the payment mandate (`pay/crs_gate.py`, `agents/crs.py`).
 7. **Bright Data re-checks the price live.** Right before the call, each winning listing's price is read again from the store. A price that moved or a part that sold out stops the build (`demo/recheck.py`, `data/baselines/brightdata.py`).
 8. **Above your allowance, you approve by phone.** A Cartesia voice agent calls you, reads the build and its total, and answers "why not the cheaper one?" Code, not the voice agent, decides: only the one-time code on your screen plus "approve" passes. Silence, a hang-up or a wrong code denies, and nothing is paid (`pay/voice_cartesia.py`, `pay/approval.py`).
-9. **Stripe test charge.** With `--stripe`, each part is charged once in Stripe test mode, keyed to its mandate so a retry cannot charge twice; without it, a labelled SIM stub stands in. No real money moves (`demo/approval_flow.py`).
+9. **Stripe test charge.** With `--stripe`, each part is charged once in Stripe test mode, keyed to its mandate so a retry cannot charge twice; without it, a labelled SIM stub stands in. No real money moves (`demo/approval_flow.py`). This charge carries no TAP request signature and no Smell Test payment receipt; see Known limits.
 10. **Receipt.** You get a receipt for every part with the charge reference and the mandate.
 
 Losing sellers get a loss report: a banded gap and the reason with its source, never a rival's price or your budget. A seller agent can adjust its next bid, never below its floor.
@@ -53,7 +53,7 @@ Losing sellers get a loss report: a banded gap and the reason with its source, n
 - **Smell Test, agent security as an API.** `POST /v1/shield/screen`, `/verify-agent` and `/verify-mandate`, plus a claim check, with a published rule list ([shield/API.md](shield/API.md)). It fails closed: an unset URL, a timeout or an error blocks.
 - **Sealed knockout rounds in a shared market.** Rounds, floors, rankings, mandates and approvals live in SpacetimeDB reducers, so every screen and agent sees the same state, and payment needs a recorded approval.
 - **Voice is the trust step, never the credential.** The code on your screen is single use and bound to one mandate (amount, payee, expiry). A recording of your voice cannot approve a payment.
-- **Scoped, replay-proof mandates.** Each mandate binds deal, amount, payee, expiry and nonce, and only the market's real winner gets one.
+- **Scoped mandates.** Each mandate binds deal, amount, payee, expiry and nonce, and only the market's real winner gets one. The Stripe test charge is keyed to the mandate hash, so a retry cannot charge twice. TAP request signing and a Smell Test payment receipt are built and tested, but the live web purchase does not use them yet (see Known limits).
 - **Seller tools.** The Seller Kit turns a shop's prices, perks and floors into a seller agent config, and screens the shop's listing text with Smell Test before anything is saved ([seller_kit/](seller_kit/)).
 - **IT purchasing controls.** PO numbers, a requester who cannot approve their own order, three-way match and an audit trail ([hyphenate/](hyphenate/)).
 
@@ -74,16 +74,17 @@ Every bid, claim and screen carries a label driven by the `source` field in the 
 | CRS payee check | SANDBOX, env-gated | CRS sandbox with provided test identities. Run live on Oct 24 at 16:37 PDT: two simulated sellers came back verified_stable, one not_verified |
 | Approval call | LIVE | A real Cartesia outbound call to the buyer's own phone from sign-up |
 | Payment | SANDBOX | Stripe test mode only; every charging path refuses anything but an `sk_test_` key |
-| Request signing (Visa TAP) | LIVE code | Visa's Trusted Agent Protocol wire format (RFC 9421, Ed25519, nonce), verified against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/cal-hacks-2026/pull/387)). Used in the reference run and chat checkout. Not certified by Visa |
+| Request signing (Visa TAP) | built, not on the live purchase path | Visa's Trusted Agent Protocol wire format (RFC 9421, Ed25519, nonce), verified against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/387)). Code and tests: `pay/tap.py`, `pay/merchant_sim.py`, `pay/tests/test_tap.py`, `pay/tests/test_tap_conformance.py`. It runs in the scripted reference run (`demo/run_demo.py`, beat 4). The live web purchase charges Stripe test mode after the phone approval without it. Not certified by Visa |
+| Smell Test payment receipt | built, not on the live purchase path | `POST /v1/shield/screen-payment` returns a signed allow receipt that the checkout verifies before it charges (`shield/receipt.py`, `shield/tests/test_receipt.py`, `shield/tests/test_payment_receipt_api.py`, `agents/buyer/test_runtime_checkout.py`). In the buyer agent the keys and the screen callback start unset and nothing sets them outside tests, so the chat checkout refuses. The live web purchase does not ask for a receipt |
 | Receipts | LIVE | In the build runner and in chat. The emailed receipt goes through ASI:One's Gmail connector from the buyer's own account, tested once live |
 | Price history (Tiger Data) | built, env-gated | Each round's bid prices are written when the service is set, never on the money path |
 | Market state (SpacetimeDB) | LIVE | Maincloud, database `tech-bazaar` |
 | Wind tunnel buyers | SIM | Simulated by design |
 
 **Known limits, stated once.**
-- The website's purchase step is being fixed: a goal posted on fishmarket.dev reaches a winner but not yet the call ([#447](https://github.com/vs-githjk/cal-hacks-2026/pull/447)). The full flow above runs through the build runner today.
-- The website path does not yet run the CRS payee gate, TAP signing or the Smell Test payment receipt at charge time. The build runner runs CRS; TAP runs in the reference run and chat checkout.
-- Phone verification and call limits for new sign-ups are on the fix list ([#449](https://github.com/vs-githjk/cal-hacks-2026/issues/449)).
+- The website's purchase step is being fixed: a goal posted on fishmarket.dev reaches a winner but not yet the call ([#447](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/447)). The full flow above runs through the build runner today.
+- The website path does not yet run the CRS payee gate, TAP signing or the Smell Test payment receipt at charge time. It charges Stripe test mode right after the phone approval (`_pay_web_purchase` in `agents/buyer/buyer_agent.py`). In that file `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS` and `SHIELD_PAYMENT_SCREEN` start unset, so the chat checkout that uses them refuses to pay. The build runner runs CRS; TAP signing runs only in the scripted reference run. Check: `grep -n "^TAP_PRIVATE_KEY\|^MERCHANT_SIM" agents/buyer/buyer_agent.py`.
+- Phone verification and call limits for new sign-ups are on the fix list ([#449](https://github.com/vs-githjk/fish-market-nothing-fishy/issues/449)).
 - Speech-to-text can miss the code in a noisy room. The answer is a new code, never a looser match.
 
 Full component table: [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md).
@@ -101,7 +102,7 @@ Every number below comes from a command in this repo. Headlines are first runs; 
 | Seller learning lift (rerun 2026-10-25) | No lift: the learner beats the field-median control on 0 of 4 held-out buyer types (the bar is 2) | `python3 -m sim.wind_tunnel --builders 48 --seeds 3` |
 | Verified savings | None yet. The price reference is ready (median $1,279.99 for an RTX 5070 Ti across 8 in-stock retail asks from 2 providers), but no verified purchase is recorded | `python3 -m data.baselines` |
 
-Smell Test stops 30 of 30 on its development set, but its rules were written against that set, so we never pool it with the held-out result and never call it "secure." The wind tunnel writes `sim/RESULTS-<date>-b48x3.md`; the published scoreboard is [data/scoreboard.json](data/scoreboard.json).
+Smell Test stops 30 of 30 on its development set, but its rules were written against that set, so we never pool it with the held-out result. "Secure" is the goal we build toward, not a claim the numbers support yet. The wind tunnel writes `sim/RESULTS-<date>-b48x3.md`; the published scoreboard is [data/scoreboard.json](data/scoreboard.json).
 
 ## Sponsor integrations
 
@@ -115,7 +116,7 @@ Smell Test stops 30 of 30 on its development set, but its rules were written aga
 | Stripe | Test mode charges, idempotent on the mandate hash | `demo/approval_flow.py` | SANDBOX |
 | SpacetimeDB | Reducers and live state for rounds, floors, mandates and approvals | `market/spacetimedb/` | LIVE on Maincloud |
 | Tiger Data | Time-series Postgres for bid prices and Market Pulse trends | `data/tiger/` | built, env-gated |
-| Visa | Trusted Agent Protocol wire format; the Visa test card behind the Stripe charge | `pay/tap.py` | LIVE code, not certified |
+| Visa | Trusted Agent Protocol signing, built and tested, run in the reference run but not on the live web purchase; the Visa test card behind the Stripe test charge | `pay/tap.py` | built, not certified |
 | Anthropic | Claude Haiku 5.5 as an opt-in Smell Test classifier; it never decides money | `shield/classifier.py` | opt-in |
 | Vercel | Hosting for the web app | `web/` | LIVE |
 
@@ -182,7 +183,7 @@ Components, contracts and trust boundaries: [docs/ARCHITECTURE.md](docs/ARCHITEC
 **Local**
 
 ```bash
-git clone https://github.com/vs-githjk/cal-hacks-2026.git fish-market && cd fish-market
+git clone https://github.com/vs-githjk/fish-market-nothing-fishy.git fish-market && cd fish-market
 cp .env.example .env                                  # your own sandbox keys; .env is gitignored
 python3 scripts/launch.py up --env-file .env          # preflight, then start every service that can start
 python3 scripts/launch.py status                      # service, port, pid, health

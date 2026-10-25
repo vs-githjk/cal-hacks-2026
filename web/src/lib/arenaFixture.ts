@@ -2,8 +2,9 @@
 // SIM sample rounds for the 3D arena, in the exact shapes the market writes (round, seller_needs, round_result, floor_event),
 // so the scene projects them the same way it projects live rows. Every origin is SIM; nothing here is a real seller's price.
 // Sellers and names come from market/spacetimedb/src/demo.ts. Reasons follow close_round: "below this seller floor",
-// "Bazaar Shield <result>: <rule ids>", "Advocate veto (<rule>: <detail>) [source: <url>]".
+// "<SHIELD> <result>: <rule ids>", "Advocate veto (<rule>: <detail>) [source: <url>]".
 import type { ArenaRows, EventRow, NeedRow, ResultRow, RoundRow } from "./arenaScene.ts";
+import { SHIELD } from "./brand.ts";
 
 const OPENED_MS = Date.UTC(2026, 9, 24, 17, 0, 0);
 const WINDOW_S = 90;
@@ -45,7 +46,7 @@ function closedRound(roundId: string, needId: string, skuSpec: string, sellers: 
     const at = 10 + i * 12;
     if (s.belowFloor) return push("bid_rejected", "bid", bidId(s), s.sellerId, "Bid rejected: below this seller floor", at);
     push("bid_sealed", "bid", bidId(s), s.sellerId, "A sealed bid arrived", at);
-    if (s.shield) push("verdict", "bid_check", bidId(s), "", `Bazaar Shield: ${s.shield}`, at + 2);
+    if (s.shield) push("verdict", "bid_check", bidId(s), "", `${SHIELD}: ${s.shield}`, at + 2);
     if (s.advocate) push("advocate_card", "bid_check", bidId(s), "", s.advocate, at + 4);
   });
   const winner = sellers.find((s) => s.rank === 1);
@@ -68,7 +69,7 @@ const gpu = closedRound("round-sample-gpu", "need-sample-gpu", GPU, [
   },
   {
     sellerId: "seller_2", name: "Silicon Sally's Surplus", rank: 0, landed: 1150, unitPrice: 1130, offeredSpec: "rtx 5070 ti", condition: "open-box",
-    reasons: ["Bazaar Shield block: shield.override.instruction, shield.payee.swap"], shield: "block",
+    reasons: [`${SHIELD} block: shield.override.instruction, shield.payee.swap`], shield: "block",
   },
   { sellerId: "seller_4", name: "Bay Area PC Shop", rank: 0, landed: 1090, unitPrice: 1075, offeredSpec: "rtx 5070 ti", condition: "new", reasons: ["below this seller floor"], belowFloor: true },
 ]);

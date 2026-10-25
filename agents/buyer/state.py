@@ -20,7 +20,7 @@ _GOAL_KEYS = {"id", "buyer_id", "type", "items", "cap", "deadline", "state", "re
               "po_number", "created_at", "notes", "parent_goal_id", "parent_part"}
 _TRANSACTION_KEYS = {"deal_id", "buyer_id", "goal_id", "need_id", "bid_id", "phase", "deal", "order",
                      "advocate_card", "mandate", "voice_approval", "allowance_authorization",
-                     "settlement", "settlement_result", "payment_ref", "mode"}
+                     "settlement", "settlement_result", "payment_ref", "mode", "market_mandate"}
 _PHASES = {"pending_approval", "paused", "approved", "denied", "expired", "submitted", "uncertain",
            "settled", "refused", "failed"}
 _FORBIDDEN_KEYS = {"context", "owner_context", "runtime_context", "code", "approval_code", "passcode",
@@ -129,6 +129,13 @@ def _validate_transaction(transaction: dict) -> tuple[str, str, str]:
     _validate("Mandate", mandate)
     if mandate["deal_id"] != deal_id or mandate["buyer_id"] != buyer_id or mandate["goal_id"] != goal_id:
         raise ValueError("transaction and mandate IDs do not match")
+    market = transaction.get("market_mandate")
+    if market is not None:  # a chat purchase's second mandate: the one the market holds (owner_approval.py)
+        if not isinstance(market, dict):
+            raise ValueError("market_mandate must be an object")
+        _validate("Mandate", market)
+        if market["buyer_id"] != buyer_id or market["goal_id"] != goal_id:
+            raise ValueError("market mandate does not match the transaction")
     deal = transaction.get("deal")
     if not isinstance(deal, dict):
         raise ValueError("transaction deal is required")

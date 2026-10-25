@@ -45,12 +45,9 @@ def _deadline(text: str, now: datetime) -> str:
     return f"{day.isoformat()}T23:59:00Z"
 
 
-_CAP_WORDS = r"(?:under|below|max|up to|less than|budget(?: of| is)?)\s*\$?\s*(\d[\d,]*(?:\.\d+)?)"
-_CAP_DOLLARS = r"\$\s*(\d[\d,]*(?:\.\d+)?)"
-
-
 def _cap(text: str) -> float | None:
-    m = re.search(_CAP_WORDS, text, re.I) or re.search(_CAP_DOLLARS, text)
+    m = (re.search(r"(?:under|below|max|up to|less than|budget(?: of| is)?)\s*\$?\s*(\d[\d,]*(?:\.\d+)?)", text, re.I)
+         or re.search(r"\$\s*(\d[\d,]*(?:\.\d+)?)", text))
     return float(m.group(1).replace(",", "")) if m else None
 
 
@@ -142,15 +139,6 @@ def _owned(text: str, buyer_id: str, now: datetime) -> list[dict]:
     return out
 
 
-def _cats(text: str) -> list[str]:
-    """The part kinds a goal text names (a build means GPU, PSU and case)."""
-    t = text.lower()
-    cats = ["gpu", "psu", "case"] if re.search(r"\bbuild\b", t) else [c for c, rx in PARTS.items() if re.search(rf"\b(?:{rx})\b", t)]
-    if re.search(r"\b(?:RTX|RX|GTX)\s*\d{3,4}\b|\b\d{3,4}\s*(?:GPU|graphics card)\b", text, re.I) and "gpu" not in cats:
-        cats.append("gpu")
-    return cats
-
-
 def parse_goal(text: str, buyer_id: str, now: datetime | None = None) -> tuple[dict, list[dict]]:
     """Raise ValueError until the required budget, condition, deadline and item are explicit."""
     now = _now(now)
@@ -162,7 +150,9 @@ def parse_goal(text: str, buyer_id: str, now: datetime | None = None) -> tuple[d
     if cap is None:
         raise ValueError("Tell me a budget, e.g. 'under $800'.")
     build = re.search(r"\bbuild\b", t)
-    cats = _cats(text)
+    cats = ["gpu", "psu", "case"] if build else [c for c, rx in PARTS.items() if re.search(rf"\b(?:{rx})\b", t)]
+    if re.search(r"\b(?:RTX|RX|GTX)\s*\d{3,4}\b|\b\d{3,4}\s*(?:GPU|graphics card)\b", text, re.I) and "gpu" not in cats:
+        cats.append("gpu")
     if not cats:
         raise ValueError("Which part? I can hunt for a GPU, PSU or case (or a whole build).")
     sku = dict(SKUS, gpu=_gpu_sku(text), psu="psu 850w" if re.search(r"\b850\s*-?\s*w", t) else SKUS["psu"])
@@ -176,76 +166,6 @@ def parse_goal(text: str, buyer_id: str, now: datetime | None = None) -> tuple[d
             "reserved_amount": 0, "created_at": now.isoformat(),
             "notes": f"'{text.strip()}', {now.astimezone().strftime('%H:%M')}"}
     return common.validate("Goal", goal), _owned(text, buyer_id, now)
-
-
-# ---- #449 RT-6: a goal said over several chat messages ----
-# parse_goal reads one message alone, so "find me an RTX 5070 Ti under $1300" got "What condition?" and the answer "new" got
-# "What is your maximum budget?". The chat keeps what a sender has said so far and reads it together with their next message.
-DRAFT_TTL_S = 600        # a half-said goal is kept this long after that sender's last message
-DRAFT_MAX = 64           # senders kept at once; the oldest goes first
-DRAFT_MAX_CHARS = 1000   # a longer text is not kept
-DRAFTS: dict[str, tuple[datetime, str]] = {}  # sender -> (when it was kept, the goal so far); in memory, lost on restart
-_DATE_WORDS = rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\btomorrow\b|\b(?:{'|'.join(WEEKDAYS)})\b"
-
-
-def _is_draft(text: str, now: datetime) -> bool:
-    """A text worth keeping: it names a part and only needs more answers (budget, condition or deadline), not small talk."""
-    try:
-        return bool(_cats(text)) and _clarification_question(text, now) is not None
-    except ValueError:
-        return False
-
-
-def _merge_draft(draft: str, reply: str, now: datetime) -> str:
-    """The draft and the reply as one text. What the reply says again (budget, condition, deadline) replaces the draft's own
-    answer, so the latest reply wins."""
-    if _cap(reply) is not None:
-        draft = re.sub(_CAP_DOLLARS, " ", re.sub(_CAP_WORDS, " ", draft, flags=re.I))
-    if _allowed_conditions(reply) is not None:
-        draft = re.sub(r"\bnew\b|\bopen[- ]box\b", " ", draft, flags=re.I)
-    try:
-        dated = _deadline_day(reply, now) is not None
-    except ValueError:      # a past date in the reply is still the reply's answer; the parse reports it
-        dated = True
-    if dated:
-        draft = re.sub(_DATE_WORDS, " ", draft, flags=re.I)
-    draft = " ".join(draft.split()).rstrip(" ,")
-    return f"{draft}{' ' if draft.endswith(('.', '!', '?', ';')) else ', '}{reply.strip()}"
-
-
-def forget_draft(buyer_id: str, drafts: dict | None = None) -> bool:
-    """Drop a sender's half-said goal (CANCEL). True when there was one."""
-    return (DRAFTS if drafts is None else drafts).pop(buyer_id, None) is not None
-
-
-def parse_goal_draft(text: str, buyer_id: str, now: datetime | None = None, drafts: dict | None = None) -> tuple[dict, list[dict]]:
-    """parse_goal, plus the sender's half-said goal. A message that is a whole goal on its own is read alone. Otherwise, if this
-    sender said part of a goal in the last DRAFT_TTL_S seconds, the two are read together. A text that names a part and still
-    needs an answer is kept for the sender's next message; a parsed goal clears it. Another sender's draft is never used."""
-    now = _now(now)
-    store = DRAFTS if drafts is None else drafts
-    for gone in [k for k, (at, _) in store.items() if (now - at).total_seconds() > DRAFT_TTL_S]:
-        del store[gone]
-    draft = store.pop(buyer_id, None)
-
-    def keep(kept: str):
-        if len(kept) <= DRAFT_MAX_CHARS and _is_draft(kept, now):
-            store[buyer_id] = (now, kept)
-            while len(store) > DRAFT_MAX:
-                del store[min(store, key=lambda k: store[k][0])]
-
-    try:
-        return parse_goal(text, buyer_id, now)
-    except ValueError:
-        if draft is None:
-            keep(text)
-            raise
-    merged = _merge_draft(draft[1], text, now)
-    try:
-        return parse_goal(merged, buyer_id, now)
-    except ValueError:
-        keep(merged)
-        raise
 
 
 def remember(buyer_id: str, parts: list[dict]) -> list[dict]:

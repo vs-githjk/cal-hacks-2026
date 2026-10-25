@@ -16,13 +16,13 @@ The model is not the guard. The Seller Kit API refuses a negative floor, a floor
 The repository is also a plugin marketplace (`.claude-plugin/marketplace.json`).
 
 ```
-/plugin marketplace add vs-githjk/cal-hacks-2026
+/plugin marketplace add vs-githjk/fish-market-nothing-fishy
 /plugin install tech-bazaar-seller@tech-bazaar
 ```
 
 Then say "I want to sell on Tech Bazaar" or run `/tech-bazaar-seller:tech-bazaar-seller`. The Seller Kit must be running on the same machine (`python3 scripts/launch.py up` starts it as the `seller-kit` service). If it is not, the client says "The Seller Kit is not running at ... Nothing was saved" and exits with code 2.
 
-Install from a local checkout instead: `/plugin marketplace add /path/to/cal-hacks-2026`.
+Install from a local checkout instead: `/plugin marketplace add /path/to/fish-market-nothing-fishy`.
 
 The plugin loads one skill only. `plugin.json` sets `"agents": []` because this repo's `agents/` folder holds Fetch agent code and notes, which Claude Code would otherwise register as subagents.
 

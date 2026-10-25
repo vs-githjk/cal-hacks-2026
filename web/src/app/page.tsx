@@ -12,7 +12,7 @@ import { asOrigin, bidsFromRows, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Vidyut's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
+  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Your goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
   { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },

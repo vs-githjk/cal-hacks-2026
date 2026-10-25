@@ -11,7 +11,7 @@ import uuid
 from typing import Any, Mapping, Optional
 
 from shield import VERSION
-from shield.classifier import UNAVAILABLE_RULE, default_classifier, run_classifier, run_secret_ask
+from shield.classifier import UNAVAILABLE_RULE, default_classifier, rules_only, run_classifier, run_secret_ask
 from shield.rules import RULES
 from shield.rules import secret_ask
 from shield.rules.base import BLOCK, QUARANTINE, SEVERITY_ORDER
@@ -78,7 +78,15 @@ def _secret_ask(clf: Any, text: str, doc, ctx: Mapping) -> Optional[tuple[str, l
 
 def screen(message: Any, context: Optional[Mapping] = None, *, classifier: Any = _DEFAULT) -> dict:
     """Screen one message. `context` keys (all optional): payee_of_record, price_history, sender_role,
-    request_id. Returns the stable verdict dict."""
+    request_id. Returns the stable verdict dict. #449 PL-21: when SHIELD_CLASSIFIER=1 asked for the classifier but there is no
+    API key, the verdict also carries "rules_only": true (otherwise the key is absent) so a caller can say "rules only"."""
+    out = _screen(message, context, classifier)
+    if classifier is _DEFAULT and rules_only():
+        out["rules_only"] = True
+    return out
+
+
+def _screen(message: Any, context: Optional[Mapping], classifier: Any) -> dict:
     started = time.perf_counter()
     request_id = uuid.uuid4().hex
     try:
