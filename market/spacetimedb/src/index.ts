@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { AgentBuyerContactRow, BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
+import spacetimedb, { AgentBuyerContactRow, BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, round, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -172,6 +172,7 @@ const DealRow = t.object('DealRow', {
   paymentRef: t.string(), paymentMode: t.string(), paidAt: t.option(t.timestamp()),
 });
 export const my_deals = spacetimedb.view({ name: 'my_deals', public: true }, t.array(DealRow), (ctx) => m.myDealsView(ctx));
+export const my_rounds = spacetimedb.view({ name: 'my_rounds', public: true }, t.array(round.rowType), (ctx) => m.myRoundsView(ctx));
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
 export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));
 

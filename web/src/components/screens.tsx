@@ -95,9 +95,11 @@ export function BuyerScreen(p: BuyerScreenProps) {
           </div>
           {goal && (
             <>
-              <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
-                The cards below show the latest public round. They are not yet matched to a specific search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.
-              </p>
+              {p.goals.length > 1 && (
+                <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
+                  The cards below show your latest round, which may belong to any of your searches. Sample cards are labelled SIM.
+                </p>
+              )}
               <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
               <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
               <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
