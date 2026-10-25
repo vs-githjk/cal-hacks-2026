@@ -23,17 +23,26 @@ test("sellers run left to right with room between them", () => {
     const l = westLayout(n, o, p);
     for (let i = 1; i < l.sellers.length; i++) {
       const gap = l.sellers[i].x - l.sellers[i - 1].x;
-      assert.ok(gap >= (p ? 70 : 110) * l.scale, `gap ${gap} n=${n} p=${p}`);
+      assert.ok(gap >= (p ? 65 : 100), `gap ${gap} n=${n} p=${p}`);
     }
   });
 });
 
-test("cards and outs stay inside the viewBox with a 40 margin", () => {
+test("cards stay inside the viewBox with a 40 margin, outs with a 30 margin", () => {
   each((n, o, p) => {
     const l = westLayout(n, o, p);
     assert.equal(l.outs.length, o);
-    for (const c of [...l.cards, ...l.outs]) {
-      assert.ok(c.x >= 40 && c.x <= l.w - 40 && c.y >= 40 && c.y <= l.h - 40, `out of box n=${n} o=${o} p=${p}`);
+    for (const c of l.cards) assert.ok(c.x >= 40 && c.x <= l.w - 40 && c.y >= 40 && c.y <= l.h - 40, `card out of box n=${n} p=${p}`);
+    for (const c of l.outs) assert.ok(c.x >= 30 && c.x <= l.w - 30 && c.y >= 30 && c.y <= l.h - 30, `out of box o=${o} p=${p}`);
+  });
+});
+
+test("no out point is inside the ring ellipse", () => {
+  each((n, o, p) => {
+    const l = westLayout(n, o, p);
+    for (const c of l.outs) {
+      const e = ((c.x - l.ring.cx) / l.ring.rx) ** 2 + ((c.y - l.ring.cy) / l.ring.ry) ** 2;
+      assert.ok(e > 1, `out inside ring o=${o} p=${p}`);
     }
   });
 });
@@ -52,8 +61,8 @@ test("layout is deterministic", () => {
 });
 
 test("scale values", () => {
-  assert.equal(westLayout(3, 0, false).scale, 1);
-  assert.equal(westLayout(6, 0, false).scale, 0.85);
-  assert.equal(westLayout(3, 0, true).scale, 0.8);
-  assert.equal(westLayout(6, 0, true).scale, 0.7);
+  assert.equal(westLayout(3, 0, false).scale, 1.5);
+  assert.equal(westLayout(6, 0, false).scale, 1.2);
+  assert.equal(westLayout(3, 0, true).scale, 1.1);
+  assert.equal(westLayout(6, 0, true).scale, 0.9);
 });

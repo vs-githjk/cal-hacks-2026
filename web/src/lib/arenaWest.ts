@@ -6,9 +6,9 @@ export interface WestLayout {
   auctioneer: Pt; referee: Pt; sheriff: Pt; appraiser: Pt; // fixed actors (feet points)
   sellers: Pt[]; // feet points of n sellers on an arc inside the ring, left to right
   cards: { x: number; y: number; rot: number }[]; // where seller i's card lands, fanned near the ring's center
-  outs: Pt[]; // where the k-th eliminated seller's reason sign sits, outside the ring: left side first, then right, stacked
+  outs: Pt[]; // where the k-th eliminated seller's reason sign sits: a row below the ring (two rows in portrait with more than 4)
   request: Pt; // the request speech bubble's tail anchor, above the auctioneer's head
-  scale: number; // figure scale: 1 at landscape with up to 5 sellers, 0.85 with 6 to 8, 0.8 in portrait (0.7 with 6 to 8)
+  scale: number; // figure scale: 1.5 at landscape with up to 5 sellers, 1.2 with 6 to 8, 1.1 in portrait (0.9 with 6 to 8)
 }
 
 const clamp8 = (v: number): number => Math.max(0, Math.min(8, Math.floor(Number.isFinite(v) ? v : 0)));
@@ -36,14 +36,20 @@ export function westLayout(n: number, outs: number, portrait: boolean): WestLayo
     y: ring.cy - (portrait ? 70 : 60),
     rot: (i % 2 === 0 ? -1 : 1) * (6 + (i % 3) * 3),
   }));
-  const lx = portrait ? 70 : 110;
-  const rxo = portrait ? 830 : 1490;
-  const left = Math.ceil(outs / 2);
+  // Out signs: a row (landscape) or up to two rows (portrait, more than 4) below the ring, evenly spread.
+  const spread = (k: number, lo: number, hi: number, i: number) => (k === 1 ? (lo + hi) / 2 : lo + (i * (hi - lo)) / (k - 1));
   const outPts: Pt[] = [];
-  for (let k = 0; k < outs; k++) {
-    outPts.push(k < left ? { x: lx, y: 560 + k * 70 } : { x: rxo, y: 560 + (k - left) * 70 });
+  if (!portrait) {
+    const y = ring.cy + ring.ry + 36;
+    for (let k = 0; k < outs; k++) outPts.push({ x: spread(outs, 260, 1340, k), y });
+  } else {
+    const first = Math.min(outs, 4);
+    const y = ring.cy + ring.ry + 40;
+    for (let k = 0; k < first; k++) outPts.push({ x: spread(first, 120, 780, k), y });
+    const rest = outs - first;
+    for (let k = 0; k < rest; k++) outPts.push({ x: spread(rest, 120, 780, k), y: y + 70 });
   }
-  const scale = portrait ? (n >= 6 ? 0.7 : 0.8) : n >= 6 ? 0.85 : 1;
+  const scale = portrait ? (n >= 6 ? 0.9 : 1.1) : n >= 6 ? 1.2 : 1.5;
   return {
     w, h, ring,
     auctioneer: portrait ? { x: 450, y: 450 } : { x: 800, y: 420 },

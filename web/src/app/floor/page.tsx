@@ -4,15 +4,16 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useReducedMotion } from "motion/react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
+import { Arena2D } from "@/components/Arena2D";
 import { ArenaWest } from "@/components/ArenaWest";
 import dynamic from "next/dynamic";
 import { Card, Code, OriginChip, SourceLink } from "@/components/ui";
 import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
 import { FEED_ENV, POLL_MS, feedBase, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
 import { agentFor, bubbleText, bubblesFrom, type AgentEventLike } from "@/lib/arenaAgents";
+import { boardAt } from "@/lib/arenaBoard";
 import { SAMPLES, SAMPLE_AGENT_LINES } from "@/lib/arenaFixture";
 import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorKey, type ArenaRows, type ArenaScene, type Playback, type PlaybackAction, type SceneOffer } from "@/lib/arenaScene";
-import type { ReasonCode } from "@/lib/bracket";
 import { FIXED_ACTORS, actorFor } from "@/lib/floor";
 import { formatMoney } from "@/lib/money";
 import { hasWebGL } from "@/lib/webgl";
@@ -22,6 +23,9 @@ const LOADING_FLOOR = <div className="grid h-[440px] place-items-center bg-[#F6E
 const Floor3D = dynamic(() => import("@/components/Floor3D").then((m) => m.Floor3D), { ssr: false, loading: () => LOADING_FLOOR });
 
 type SampleName = keyof typeof SAMPLES;
+type Floor2D = "west" | "terrace";
+// Gate A: West takes the slot once it plays a full SIM round end to end
+const FLOOR_2D: "west" | "terrace" = "terrace";
 const LEAD_MS = 1200; // the sealed table holds this long before a close starts to play
 const SAMPLE_OPEN_LEFT_MS = 62_000; // a sample's open round counts down from here, since its recorded deadline is long past
 const LOOP_GAP_MS = 4000; // an empty market shows the gpu sample on a loop, with this pause before each replay
@@ -37,12 +41,14 @@ export default function FloorPage() {
     const q = new URLSearchParams(window.location.search);
     const name = q.get("sample");
     const beat = q.get("beat");
+    const f2d = q.get("floor2d");
     return {
+      floor2d: (f2d === "west" || f2d === "terrace" ? f2d : FLOOR_2D) as Floor2D,
       sample: name !== null && Object.hasOwn(SAMPLES, name) ? (name as SampleName) : null,
       beat: beat !== null && /^\d+$/.test(beat) ? Number(beat) : null,
     };
   });
-  return <FloorView sample={params.sample} sampleBeat={params.beat} />;
+  return <FloorView sample={params.sample} sampleBeat={params.beat} floor2d={params.floor2d} />;
 }
 
 const subscribeNever = () => () => {};
@@ -52,7 +58,7 @@ function useWebGL(enabled: boolean): boolean | null {
   return useSyncExternalStore(subscribeNever, () => (enabled ? (webglCache ??= hasWebGL()) : null), () => null);
 }
 
-function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | null; sampleBeat: number | null }) {
+function FloorView({ sample: sampleParam, sampleBeat, floor2d }: { sample: SampleName | null; sampleBeat: number | null; floor2d: Floor2D }) {
   const conn = useSpacetimeDB();
   const [rounds] = useTable(tables.round);
   const [needs] = useTable(tables.sellerNeeds);
@@ -147,13 +153,13 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
 
   const narration = <p role="status" className="sr-only">{story.caption}</p>;
   const countdown = scene.phase === "open" && scene.deadline ? <ClosesIn deadline={scene.deadline} sample={sample !== null} /> : null;
-  const knockedCount = scene.offers.filter((o) => o.outcome === "knocked" && reveal.shown(o)).length;
+  const tallyLine = useMemo(() => boardAt(scene, view.beat).tallyLine, [scene, view.beat]);
   const summary =
     scene.phase === "waiting"
       ? "No round yet"
       : scene.phase === "open" || scene.phase === "closing" || !reveal.opened
         ? `${scene.sealedCount} sealed bids`
-        : `${scene.offers.length} bids${knockedCount > 0 ? `, ${knockedCount} out` : ""}`;
+        : tallyLine;
 
   const board = sceneView === "board" || flat;
   const bids = (overlay: boolean) => (
@@ -185,7 +191,11 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
       <div className="overflow-hidden rounded-[24px] shadow-[0_18px_48px_rgba(110,70,30,0.16)] ring-1 ring-[#E2D3BE]">
         <div className="relative flex min-w-0 flex-col sm:block">
           {board ? (
-            <ArenaWest scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} chrome={{ sim: sample !== null, countdown, bids: bids(false) }} />
+            floor2d === "west" ? (
+              <ArenaWest scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} chrome={{ sim: sample !== null, countdown, bids: bids(false) }} />
+            ) : (
+              <Arena2D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} chrome={{ sim: sample !== null, countdown, bids: bids(false) }} />
+            )
           ) : webgl ? (
             <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
           ) : (
@@ -333,8 +343,7 @@ function Icon({ d }: { d: string }) {
 function outcomeWord(o: SceneOffer): string {
   if (o.outcome === "winner") return "Winner";
   if (o.outcome === "ranked") return `Ranked #${o.rank}`;
-  const code: ReasonCode | undefined = o.knock?.reasonCode;
-  return code === "shield_block" ? "Blocked by Shield" : code === "advocate_veto" ? "Vetoed by Advocate" : code === "claim_false" ? "Claim check failed" : "Refused by referee";
+  return o.knock?.label ?? "Refused";
 }
 
 /** How much of a closing round the side card may show at this beat, so it never gets ahead of the story: prices open with the offers,

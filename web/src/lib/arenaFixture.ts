@@ -70,7 +70,7 @@ const GPU_VETO = "Advocate veto (advocate.condition: Listed brand new, but the p
 
 // The locked roster (#398): four sellers with four jobs, plus one SIM scam listing the Shield catches (Sally, cut from the live roster).
 // Central Computers is MIRROR: a real dated listing (data/baselines/feed.json, snapshot 2026-10-24) that cannot be ordered here.
-const gpu = closedRound("round-sample-gpu", "need-sample-gpu", GPU, [
+const GPU_SELLERS: SellerSpec[] = [
   { sellerId: "seller_1", name: "Byte Bros Outlet", rank: 1, landed: 1299.99, unitPrice: 1279.99, offeredSpec: "asus prime rtx 5070 ti oc", condition: "new", shield: "allow", advocate: "Advocate: buy" },
   {
     sellerId: "seller_5", name: "ReNew Refurb", rank: 2, landed: 1247.02, unitPrice: 619.01, offeredSpec: "rtx 5070 ti", condition: "refurbished",
@@ -89,7 +89,11 @@ const gpu = closedRound("round-sample-gpu", "need-sample-gpu", GPU, [
     sellerId: "seller_2", name: "Silicon Sally's Surplus", rank: 0, landed: 1150, unitPrice: 1130, offeredSpec: "rtx 5070 ti", condition: "open-box",
     reasons: ["Bazaar Shield block: shield.override.instruction, shield.payee.swap"], shield: "block",
   },
-]);
+];
+const gpu = closedRound("round-sample-gpu", "need-sample-gpu", GPU, GPU_SELLERS);
+// The no-champion state: the market ranks a caught listing (Central Computers keeps its veto reasons but has rank 1), so nobody is crowned.
+const gpuReview = closedRound("round-sample-gpu-review", "need-sample-gpu-review", GPU, GPU_SELLERS.map((s) =>
+  s.sellerId === "seller_6" ? { ...s, rank: 1 } : s.sellerId === "seller_1" ? { ...s, rank: 2 } : s));
 
 const bidKey = (round: string, seller: string) => `offer:bid-${round}-${seller}`;
 const G = (seller: string) => bidKey("round-sample-gpu", seller);
@@ -146,4 +150,4 @@ const ssd = closedRound("round-sample-ssd", "need-sample-ssd", "nvme-ssd-2tb", [
 ]);
 
 /** Labelled SIM rounds for /floor when the market has none (or for a recorded replay): the scene projects them like live rows. */
-export const SAMPLES: Record<"gpu" | "gpu-open" | "ssd", ArenaRows> = { gpu, "gpu-open": gpuOpen, ssd };
+export const SAMPLES: Record<"gpu" | "gpu-open" | "ssd" | "gpu-review", ArenaRows> = { gpu, "gpu-open": gpuOpen, ssd, "gpu-review": gpuReview };

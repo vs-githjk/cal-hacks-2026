@@ -419,6 +419,13 @@ test("captions and names never use em or en dashes", () => {
 
 // ---- samples
 
+test("SAMPLES['gpu-review']: a caught listing ranked 1 projects to inconsistent, nobody crowned", () => {
+  const s = projectArenaScene(SAMPLES["gpu-review"], { sample: true });
+  assert.equal(s.phase, "inconsistent");
+  assert.equal(s.winnerBidId, null);
+  assert.ok(boardAt(s, 0).buyerLine.startsWith("Winner under review"));
+});
+
 test("SAMPLES.gpu: a closed GPU round, five sellers, Byte Bros Outlet wins over the open-box runner-up", () => {
   const sample = SAMPLES.gpu;
   assert.ok(sample.rounds.length === 1 && sample.results.length === 5);
