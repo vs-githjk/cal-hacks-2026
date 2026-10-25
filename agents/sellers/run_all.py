@@ -19,7 +19,10 @@ def build_all(names=None) -> list:
         if not names and name not in common.SELLERS:
             print(f"{name} off: set {name.upper()}_AGENT_SEED in agents/.env (private, {common.MIN_PRIVATE_SEED}+ "
                   "characters) to run it; it has no default seed")
-    for name in names or common.SELLERS:
+    if not names:
+        for name, why in common.RETIRED_SELLERS.items():
+            print(f"{name} {why}")
+    for name in names or [n for n in common.SELLERS if n not in common.RETIRED_SELLERS]:
         if not common.mailbox_ready(name):
             print(f"{name} skipped: set {name.upper()}_AGENT_SEED")
             continue

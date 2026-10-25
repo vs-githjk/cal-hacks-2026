@@ -1,5 +1,7 @@
 # Bay Area PC Shop
 
+**Not run in the live roster: same job as Byte Bros Outlet (seller_1). Its code and data stay for the web arena and tests.**
+
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
