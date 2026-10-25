@@ -121,6 +121,19 @@ export function StatusPill({ tone, children, pulse }: { tone: Tone; children: Re
   );
 }
 
+/** Progressive disclosure: the detail lives one tap away. The summary is a short label; nothing inside is lost. */
+export function Details({ summary, children, className = "" }: { summary: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={`group mt-3 ${className}`}>
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-pulse [&::-webkit-details-marker]:hidden">
+        {summary}
+        <span className="text-muted transition-transform group-open:rotate-45" aria-hidden>+</span>
+      </summary>
+      <div className="mt-2 grid gap-2 text-[13px] leading-[18px] text-ink-2">{children}</div>
+    </details>
+  );
+}
+
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="min-w-0 rounded-xl bg-surface-2 px-3 py-2.5">
