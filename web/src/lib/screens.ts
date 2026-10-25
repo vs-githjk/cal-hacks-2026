@@ -292,6 +292,7 @@ export function recentRounds(rounds: readonly RoundRow[], results: readonly Resu
         ...(w ? { winner: { seller: w.seller, landed: w.landed, origin: w.origin } } : {}),
       };
     });
+}
 
 const PART_WORD: Record<string, string> = { board: "Motherboard", gpu: "Graphics card", cpu: "Processor", ram: "Memory", ssd: "Storage", cooler: "CPU cooler", psu: "Power supply", case: "Case" };
 
