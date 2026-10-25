@@ -7,6 +7,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # for factory
+_REPO = str(Path(__file__).resolve().parents[2])
+if _REPO not in sys.path:  # repo root, for data.* (mirror sellers); added once, at import
+    sys.path.insert(0, _REPO)
 
 from factory import seller_from_config
 
@@ -84,6 +87,16 @@ def _in_stock(card: dict) -> bool:
             and "sold out" not in state and ("in stock" in state or "remaining" in state or "available" in state))
 
 
+def mirror_seller(name: str, clearance_mm: int | None = None) -> dict | None:
+    """A MIRROR seller (#283 T9): our agent bidding a real store's dated listings, labelled as such, never a partner.
+    Built from data/mirror, not sellers.json. None for an unknown name or when the store has no listing it may bid.
+    Its bids are shown for comparison and are never orderable (#333, data.mirror.not_partners)."""
+    from data.mirror import central_computers
+    sources = {central_computers.SELLER_ID: central_computers.seller}
+    build = sources.get(name)
+    return build(clearance_mm) if build else None
+
+
 def _lines_for(have: dict) -> list[dict]:
     """The primary condition line and any alternative condition lines of one listing."""
     primary = {k: have[k] for k in ("condition", "page_condition", "price", "floor", "listing_url")}
@@ -110,6 +123,10 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
     mirror_inputs = seller.get("mirror_inputs", {})
     own_origin = seller.get("origin", "SIM")
     own_source = "simulated" if own_origin == "SIM" else f"seller-config:{seller['id']}"
+    # A listing-based MIRROR seller (data/mirror, e.g. Central Computers) bids a real store's listing as captured:
+    # its page may not state a condition, so "unknown" is a valid line there (never shown as new, #308).
+    listing_mirror = own_origin == "MIRROR"
+    line_conditions = CONDITIONS | {"unknown"} if listing_mirror else CONDITIONS
     discount = seller.get("discount")
     for want in need["items"]:
         sku = want["sku_spec"]
@@ -120,8 +137,11 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
         if have and valid_quantity and _num(discount) and discount < 1:
             prices = []
             for index, alt in enumerate(_allowed_lines(want, have)):
-                if not (alt.get("condition") in CONDITIONS and _num(alt.get("price")) and _num(alt.get("floor"))):
+                if not (alt.get("condition") in line_conditions and _num(alt.get("price")) and _num(alt.get("floor"))):
                     continue
+                stock = have.get("qty_available")
+                if stock is not None and not (_num(stock) and quantity <= stock):
+                    continue  # #333: never bid more units than the listing has
                 price = round(alt["price"] * (1 - discount), 2)
                 if price < alt["floor"]:
                     notes.append(f"{sku} pricing constraint applied")
@@ -132,7 +152,13 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
                               "offered_condition": alt["condition"], "variant": have["variant"],
                               "listing_id": listing_id if index == 0 else f"{listing_id}:{alt['condition']}",
                               "listing_url": alt["listing_url"], "page_condition": alt["page_condition"],
-                              "attrs": dict(have["attrs"]), "origin": own_origin, "source": own_source})
+                              "attrs": dict(have["attrs"]), "origin": own_origin, "source": own_source,
+                              **({"qty_available": have["qty_available"]} if "qty_available" in have else {})})
+                if listing_mirror:  # the real listing is the source; its store is the seller of record, not a payee
+                    lines[-1].update(source=alt["listing_url"], shipping=float(seller.get("shipping", 0.0)),
+                                     seller_of_record=seller.get("seller_of_record", seller["name"]),
+                                     snapshot_id=seller["mirror_snapshot_id"],
+                                     snapshot_date=seller.get("mirror_snapshot_date", ""))
                 origins.add(own_origin)
             if prices:
                 cheapest.append(min(prices) * want["quantity"])
@@ -161,7 +187,7 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
                           "listing_id": card["id"], "listing_url": card["source"],
                           "attrs": dict(card.get("attrs") or {}),
                           "origin": "MIRROR", "source": card["source"], "seller_of_record": card["seller_of_record"],
-                          "model_number": card.get("model_number"),
+                          **({"model_number": card["model_number"]} if isinstance(card.get("model_number"), str) else {}),
                           "snapshot_id": card["snapshot_id"], "snapshot_date": card["snapshot_date"],
                           "floor_evidence": {k: inputs["floor"][k] for k in ("origin", "source", "observed_at")},
                           "shipping_evidence": {key: inputs["shipping"][key]
@@ -188,7 +214,10 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
     if origin == "MIRROR":
         snapshot_id = lines[0]["snapshot_id"]
         seller_of_record = lines[0]["seller_of_record"]
-        trace = f"MIRROR asking prices from {snapshot_id}; seller of record: {seller_of_record}; shipping and floor are sourced inputs."
+        trace = (f"{seller['trace_prefix']} Listed price = ${total:.2f} before delivery."
+                 if listing_mirror and seller.get("trace_prefix") else
+                 f"MIRROR asking prices from {snapshot_id}; seller of record: {seller_of_record}; "
+                 "shipping and floor are sourced inputs.")
     else:
         snapshot_id = CATALOG["mirror_snapshot_id"]
         margin = seller.get("margin_pct")
@@ -214,4 +243,9 @@ def make_bid(need: dict, seller: dict, now: datetime | None = None) -> dict | No
         # keep the quote live for the shared 600-second review/call allowance.
         "expires_at": (now + timedelta(seconds=QUOTE_TTL_S)).isoformat(),
         "origin": origin, "source": lines[0]["source"],
+        **({"mirror_label": seller["mirror_label"]} if seller.get("mirror_label") else {}),
+        # #333: a real store that never joined is shown for comparison only; nothing may order or pay it
+        **({"orderable": False} if seller.get("orderable") is False else {}),
+        # cheaper or other in-stock lines the agent did not bid, with the fit reason (additive key, not seller text)
+        **({"withheld_lines": [dict(w) for w in seller["withheld"]]} if seller.get("withheld") else {}),
     }

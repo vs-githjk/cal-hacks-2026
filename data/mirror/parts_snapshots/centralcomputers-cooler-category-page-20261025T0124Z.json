@@ -1,0 +1,3422 @@
+[
+ {
+  "id": "centralcomputers:15869db0ad1b",
+  "category": "cooler",
+  "name": "Noctua NH-D9 AMP-4926 4U CPU Cooler For AmpereAltra Family Processors LGA4926",
+  "model_number": "NH-D9 AMP-4926 4U",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d9-amp-4926-4u-cpu-cooler-for-amperealtra-family-processors-lga4926.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d9-amp-4926-4u-cpu-cooler-for-amperealtra-family-processors-lga4926.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZNOC49R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 7
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8e133c35f90a",
+  "category": "cooler",
+  "name": "Silverstone SST-XE02-SP5B 2U Small Form Factor Server/Workstation CPU Cooler for Socket SP5",
+  "model_number": "SST-XE02-SP5B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 83.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe02-sp5b-2u-small-form-factor-server-workstation-cpu-cooler-for-socket-sp5.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe02-sp5b-2u-small-form-factor-server-workstation-cpu-cooler-for-socket-sp5.html",
+   "price": 83.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSILXBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:bbd6eb89820c",
+  "category": "cooler",
+  "name": "Silverstone SST-XE04-SP5B  4U CPU Cooler for AMD SP5 Sockets 92mm 1500-5000RPM 400W TDP",
+  "model_number": "SST-XE04-SP5B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe04-sp5b-4u-cpu-cooler-for-amd-sp5-sockets-92mm-1500-5000rpm-400w-tdp.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe04-sp5b-4u-cpu-cooler-for-amd-sp5-sockets-92mm-1500-5000rpm-400w-tdp.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSILP5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 9
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8b55446c0fe1",
+  "category": "cooler",
+  "name": "Silverstone SST-XE02-TR5B 2U small form factor server/workstation CPU cooler for AMD sTR5/SP6 sockets",
+  "model_number": "XE02-TR5B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe02-tr5b-2u-small-form-factor-server-workstation-cpu-cooler-for-amd-str5-sp6-sockets.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe02-tr5b-2u-small-form-factor-server-workstation-cpu-cooler-for-amd-str5-sp6-sockets.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZSLXT5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:62988f1ffd88",
+  "category": "cooler",
+  "name": "Silverstone SST-XE02-AM5B 2U small form factor server/workstation CPU cooler for AMD AM5/AM4 sockets",
+  "model_number": "XE02-AM5B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 69.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe02-am5b-2u-small-form-factor-server-workstation-cpu-cooler-for-amd-am5-am4-sockets.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe02-am5b-2u-small-form-factor-server-workstation-cpu-cooler-for-amd-am5-am4-sockets.html",
+   "price": 69.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSLXA5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:00179748bf97",
+  "category": "cooler",
+  "name": "Silverstone SST-XE02-SP5 2U AMD SP5 CPU Cooler 60mm PWM Fan 400W TDP",
+  "model_number": "SST-XE02-SP5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe02-sp5-2u-amd-sp5-cpu-cooler-60mm-pwm-fan-400w-tdp.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe02-sp5-2u-amd-sp5-cpu-cooler-60mm-pwm-fan-400w-tdp.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSILX5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cfbb794e4038",
+  "category": "cooler",
+  "name": "TRYX TURRIS 620 CPU Air Cooler White 5.0in IPS Customizable Screen 280w TDP Reflow Soldering Dual Tower White CPU Cooler with  Display Powered by KANALI Rail-Mounted ROTA Intel LGA1851/1700 & AMD AM5",
+  "model_number": "H-T620N-DM2M-G0W",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/tryx-turris-620-cpu-air-cooler-white-5-0in-ips-customizable-screen-280w-tdp-reflow-soldering-dual-tower-white-cpu-cooler-with.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/tryx-turris-620-cpu-air-cooler-white-5-0in-ips-customizable-screen-280w-tdp-reflow-soldering-dual-tower-white-cpu-cooler-with.html",
+   "price": 109.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUTRY620NWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1b954b7a37b2",
+  "category": "cooler",
+  "name": "TRYX TURRIS 620 CPU Air Cooler Black 5.0in IPS Customizable Screen 280w TDP Reflow Soldering Dual Tower White CPU Cooler with  Display Powered by KANALI Rail-Mounted ROTA Intel LGA1851/1700 & AMD AM5",
+  "model_number": "H-T620N-DM2M-G0K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/tryx-turris-620-cpu-air-cooler-black-5-0in-ips-customizable-screen-280w-tdp-reflow-soldering-dual-tower-white-cpu-cooler-with.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/tryx-turris-620-cpu-air-cooler-black-5-0in-ips-customizable-screen-280w-tdp-reflow-soldering-dual-tower-white-cpu-cooler-with.html",
+   "price": 109.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUTRY620NKR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:480a6b683136",
+  "category": "cooler",
+  "name": "Silverstone XED120S 4U High-Performance CPU Cooler with 240W TDP for Mainstream AMD & Intel Processor Sockets Intel LGA1851/1700 and AMD Socket AM5/AM4",
+  "model_number": "RL-XED120S",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-xed120s-4u-high-performance-cpu-cooler-with-240w-tdp-for-mainstream-amd-intel-processor-sockets.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-xed120s-4u-high-performance-cpu-cooler-with-240w-tdp-for-mainstream-amd-intel-processor-sockets.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZSILX8R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5ea5e3ae8a28",
+  "category": "cooler",
+  "name": "be quiet! BK047 Pure Rock Slim 3 CPU Air CoolerIntel & AMD Socket Compatible 100mm PWM fan 130W TDP",
+  "model_number": "BK047",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 29.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk047-pure-rock-slim-3-cpu-air-coolerintel-amd-socket-compatible-100mm-pwm-fan-130w-tdp.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk047-pure-rock-slim-3-cpu-air-coolerintel-amd-socket-compatible-100mm-pwm-fan-130w-tdp.html",
+   "price": 29.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUBQ-BK047R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:91309d301fde",
+  "category": "cooler",
+  "name": "Silverstone XE02-4677B  2U CPU Coolerfor Intel  LGA4677",
+  "model_number": "XE02-4677B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-xe02-4677b-2u-cpu-coolerfor-intel-lga4677.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-xe02-4677b-2u-cpu-coolerfor-intel-lga4677.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZSILX6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 6
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:12d69dcbb621",
+  "category": "cooler",
+  "name": "Noctua NH-D15 G2 chromax.black CPU Coolerfor Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-D15 G2 ch.bk",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d15-g2-chromax-black-cpu-coolerfor-intel-lga1200-115x-1700-1851-amd-am5-am4.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d15-g2-chromax-black-cpu-coolerfor-intel-lga1200-115x-1700-1851-amd-am5-am4.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC2HR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b77282563c71",
+  "category": "cooler",
+  "name": "Cooler Master Hyper 212 Pro CPU Cooler forAMD Ryzen AM5/|AM4 Intel LGA 1851|1700 BracketsRR-212S-25PZ-R1",
+  "model_number": "RR-212S-25PZ-R1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 19.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/cooler-master-hyper-212-pro-cpu-cooler-foramd-ryzen-am5-am4-intel-lga-1851-1700-brackets.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/cooler-master-hyper-212-pro-cpu-cooler-foramd-ryzen-am5-am4-intel-lga-1851-1700-brackets.html",
+   "price": 19.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZCFCMA8",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 7,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 7
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 17
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 21
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 10
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "7 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ed4dd339cf5c",
+  "category": "cooler",
+  "name": "Silverstone AR09-AM4 Superior 2U Server ThermalSolution for AMD AM4",
+  "model_number": "AR09-AM4",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 49.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-ar09-am4-superior-2u-server-thermalsolution-for-amd-am4.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-ar09-am4-superior-2u-server-thermalsolution-for-amd-am4.html",
+   "price": 49.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSIL09R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7731a9ab96a3",
+  "category": "cooler",
+  "name": "Silverstone XED120 WS 4U Industrial-Grade 450W TDP CPU Cooler Compatible with SP5/SP6/sTR5/SP3/TR4/sWRX8/sWRX9And Intel LGA4677/4710",
+  "model_number": "SST-XED120S-WS",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 169.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-xed120-ws-4u-industrial-grade-450w-tdp-cpu-cooler.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-xed120-ws-4u-industrial-grade-450w-tdp-cpu-cooler.html",
+   "price": 169.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZSILX2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c21df90de892",
+  "category": "cooler",
+  "name": "be quiet! BK043 PURE ROCK PRO 3 LX CPU Cooler250W TDP 120mm Rifle ARGB Socket compatibility Intel 1851/1700/1200/1150/1151 / 1155 and AMD AM5",
+  "model_number": "BK043",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 69.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk043-pure-rock-pro-3-lx-cpu-cooler250w-tdp-120mm-rifle-argb-socket-compatibility-intel-1851-1700-1200-1150-1151.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk043-pure-rock-pro-3-lx-cpu-cooler250w-tdp-120mm-rifle-argb-socket-compatibility-intel-1851-1700-1200-1150-1151.html",
+   "price": 69.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK043R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:bc13d8566247",
+  "category": "cooler",
+  "name": "be quiet! BK042 Pure Rock Pro 3 Black 120mm Rifle CPU Cooler Socket compatibility Intel 1851 / 1700 / 1200 / 1150 / 1151 / 1155 and AMD AM5 / AM4",
+  "model_number": "BK042",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 64.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk042-pure-rock-pro-3-black-120mm-rifle-cpu-cooler-socket-compatibility-intel-1851-1700-1200-1150-1151-1155.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk042-pure-rock-pro-3-black-120mm-rifle-cpu-cooler-socket-compatibility-intel-1851-1700-1200-1150-1151-1155.html",
+   "price": 64.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK042R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:51b58cf368e3",
+  "category": "cooler",
+  "name": "be quiet! BK041 PURE ROCK PRO 3 CPU Cooler250W TDP 120mm Rifle Socket compatibility Intel 1851 / 1700 / 1200 / 1150 / 1151 / 1155 and AMD AM5",
+  "model_number": "BK041",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 49.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk041-pure-rock-pro-3-cpu-cooler250w-tdp-120mm-rifle-socket-compatibility-intel-1851-1700-1200-1150-1151.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk041-pure-rock-pro-3-cpu-cooler250w-tdp-120mm-rifle-socket-compatibility-intel-1851-1700-1200-1150-1151.html",
+   "price": 49.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK041R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:658fefc480d7",
+  "category": "cooler",
+  "name": "be quiet! BK039 Pure Rock 3 Black CPU Air Cooler 4 High Performance 6mm Heat Pipes with HDT Technology 120mm PWM Fan AMD:AM4 AM5/Intel LGA 1700/1150/1151/1200",
+  "model_number": "BK039",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 41.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk039-pure-rock-3-black-cpu-air-cooler-4-high-performance-6mm-heat-pipes-with-hdt-technology-120mm-pwm-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk039-pure-rock-3-black-cpu-air-cooler-4-high-performance-6mm-heat-pipes-with-hdt-technology-120mm-pwm-fan.html",
+   "price": 41.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK039R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:bd0b30fa51f2",
+  "category": "cooler",
+  "name": "Arctic Cooling ACFRE00133B Freezer 4U-M Rev. 2 CPU cooler - multi compatible for LGA4189 LGA4677 SP3 SP6 sTR5 sTRX4 sWRX8 TR4) - aluminum fins - 120 mm - 4U",
+  "model_number": "ACFRE00133B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 59.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/arctic-cooling-acfre00133b-freezer-4u-m-rev-2-cpu-cooler-multi-compatible-for-lga4189-lga4677-sp3-sp6-str5-strx4-swrx8.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/arctic-cooling-acfre00133b-freezer-4u-m-rev-2-cpu-cooler-multi-compatible-for-lga4189-lga4677-sp3-sp6-str5-strx4-swrx8.html",
+   "price": 59.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZAC133BR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 9
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 7
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c613b44f2e67",
+  "category": "cooler",
+  "name": "Noctua NH-C14S CPU Cooler for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-C14S",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-c14s-cpu-cooler-for-intel-lga1200-115x-1700-1851-amd-am5-am4.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-c14s-cpu-cooler-for-intel-lga1200-115x-1700-1851-amd-am5-am4.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZNOC15R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b6f7016bc1d9",
+  "category": "cooler",
+  "name": "Arctic Cooling ACFRE00121A Freezer 36 Processor cooler - multi compatible - (for: AM4 LGA1700 AM5 LGA1851) - copper heat pipes with aluminum fins - 120 mm - black",
+  "model_number": "ACFRE00121A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 29.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/arctic-cooling-acfre00121a-freezer-36-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/arctic-cooling-acfre00121a-freezer-36-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat.html",
+   "price": 29.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUARC0121AR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 10
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 7
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8721cd946af2",
+  "category": "cooler",
+  "name": "be quiet! BK035 Dark Rock 5 CPU Air CoolerSupports Intel & AMD Sockets 4-pin PWM Fan 2000rpm Black",
+  "model_number": "BK035",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk035-dark-rock-5-cpu-air-coolersupports-intel-amd-sockets-4-pin-pwm-fan-2000rpm-black.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk035-dark-rock-5-cpu-air-coolersupports-intel-amd-sockets-4-pin-pwm-fan-2000rpm-black.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK035R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7bc443ff0b76",
+  "category": "cooler",
+  "name": "Noctua NH-L12Sx77 Low-Profile CPU Cooler120mm Brown NF-A12x15 PWM Fan for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-L12Sx77",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-l12sx77-low-profile-cpu-cooler120mm-brown-nf-a12x15-pwm-fan-intel-amd-supported.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-l12sx77-low-profile-cpu-cooler120mm-brown-nf-a12x15-pwm-fan-intel-amd-supported.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOCS7R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 8,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 8
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 10
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "8 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:890dbc398e17",
+  "category": "cooler",
+  "name": "Noctua NH-D9L ch.bk CPU Cooler Intel/AMD Supportedfor Intel LGA1200/115x/1700/1851 & AMD AM5/AM4NF-A9 PWM Chromax.Black Premium Fan Black Heatsink",
+  "model_number": "NH-D9L ch.bk",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 84.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d9l-ch-bk-cpu-cooler-for-intel-amdnf-a9-pwm-chromax-black-premium-fan-black-heatsink.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d9l-ch-bk-cpu-cooler-for-intel-amdnf-a9-pwm-chromax-black-premium-fan-black-heatsink.html",
+   "price": 84.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC9LR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:57760374350f",
+  "category": "cooler",
+  "name": "Arctic Cooling ACFRE00124A Freezer 36 A-RGB Processor cooler - multi compatible - (for: AM4 LGA1700 AM5 LGA1851) - copper heat pipes with aluminum fins - 120 mm - black",
+  "model_number": "ACFRE00124A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 39.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/arctic-cooling-acfre00124a-freezer-36-a-rgb-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/arctic-cooling-acfre00124a-freezer-36-a-rgb-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat.html",
+   "price": 39.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUARC0124AR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:422751ae6c26",
+  "category": "cooler",
+  "name": "Arctic Cooling ACFRE00122A Freezer 36 CO Processor Cooler multi compatible for: AM4 LGA1700 AM5 LGA1851 copper heat pipes with aluminum fins - 120 mm - black",
+  "model_number": "ACFRE00122A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 24.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/arctic-cooling-acfre00122a-freezer-36-co-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat-pipes-with.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/arctic-cooling-acfre00122a-freezer-36-co-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat-pipes-with.html",
+   "price": 24.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUARC0122AR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 14,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 14
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 11
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 54
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 26
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 15
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "14 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a26fd6f35e6c",
+  "category": "cooler",
+  "name": "Arctic Cooling ACFRE00125A Freezer 36 A-RGB Processor cooler - multi compatible for: AM4 LGA1700 AM5 LGA1851 copper heat pipes with aluminum fins - 120 mm - white",
+  "model_number": "ACFRE00125A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 39.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/arctic-cooling-acfre00125a-freezer-36-a-rgb-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat-pipes.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/arctic-cooling-acfre00125a-freezer-36-a-rgb-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat-pipes.html",
+   "price": 39.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZAC125R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:26b22f61b527",
+  "category": "cooler",
+  "name": "Arctic Cooling ACFRE00123A Freezer 36 Black ProcessoCooler - multi compatible for: AM4 LGA1700 AM5 LGA1851 copper heat pipes with aluminum fins - 120 mm - black",
+  "model_number": "ACFRE00123A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 34.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/arctic-cooling-acfre00123a-freezer-36-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat-pipes-with.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/arctic-cooling-acfre00123a-freezer-36-processor-cooler-multi-compatible-for-am4-lga1700-am5-lga1851-copper-heat-pipes-with.html",
+   "price": 34.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZAC123R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 6
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a2a8d25a6330",
+  "category": "cooler",
+  "name": "Noctua NH-D15 G2 HBC CPU Cooler Specialized forIntel LGA1200/115x/1700/1851 Supports AMD AM4/AM5",
+  "model_number": "NH-D15 G2 HBC",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d15-g2-hbc-cpu-cooler-specialized-for-intel-lga1700.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d15-g2-hbc-cpu-cooler-specialized-for-intel-lga1700.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC5LR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5be4bebfe60b",
+  "category": "cooler",
+  "name": "Noctua NH-D15 G2 LBC CPU Cooler Specialized forAMD AM5/AM4 Supports Intel LGA1200/115x/1700/1851",
+  "model_number": "NH-D15 G2 LBC",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d15-g2-lbc-cpu-cooler-specialized-for-amd-am5-am4.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d15-g2-lbc-cpu-cooler-specialized-for-amd-am5-am4.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC5HR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b1fcbe8237d0",
+  "category": "cooler",
+  "name": "Noctua NH-D15 G2 CPU Cooler Intel/AMD Supportedfor Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-D15 G2",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d15-g2-cpu-cooler-intel-amd-supported.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d15-g2-cpu-cooler-intel-amd-supported.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC52R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a90c22c9579c",
+  "category": "cooler",
+  "name": "Noctua NH-L9x65 chromax.black Compact CPU Coolerfor Intel LGA1200/115x/1700/1851 & AMD AM5/AM4 NF-A9x14 HS-PWM chromax.black Fan",
+  "model_number": "NH-L9x65 ch.bk",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-l9x65-chromax-black-compact-cpu-cooler-intel-amd-noctua-nf-a9x14-hs-pwm-chromax-black-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-l9x65-chromax-black-compact-cpu-cooler-intel-amd-noctua-nf-a9x14-hs-pwm-chromax-black-fan.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZNOC6BR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 6
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d491a6858903",
+  "category": "cooler",
+  "name": "Noctua NH-D12L Chromax.Black Dual Tower CPU CoolerNF-A12x25r PWM chromax.black Fan for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-D12L ch.bk",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d12l-chromax-black-dual-tower-cpu-cooler-intel-amd-noctua-nf-a12x25r-pwm-chromax-black-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d12l-chromax-black-dual-tower-cpu-cooler-intel-amd-noctua-nf-a12x25r-pwm-chromax-black-fan.html",
+   "price": 109.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC2BR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 6
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:17e4420110c0",
+  "category": "cooler",
+  "name": "Silverstone XE04-SP6P Xenon 4U CPU CoolerSupports AMD Socket TR5/SP6 Copper Heat Pipes Aluminum Fins Silver",
+  "model_number": "XE04-SP6P",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-xe04-sp6p-xenon-4u-cpu-coolersupports-amd-socket-tr5-sp6-copper-heat-pipes-aluminum-fins-silver.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-xe04-sp6p-xenon-4u-cpu-coolersupports-amd-socket-tr5-sp6-copper-heat-pipes-aluminum-fins-silver.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZSILS6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e08077f678f1",
+  "category": "cooler",
+  "name": "be quiet! BK036 Dark Rock PRO 5 CPU Air CoolerSupports Intel & AMD Sockets 4-pin PWM Fan 2000rpm Black",
+  "model_number": "BK036",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk036-dark-rock-pro-5-cpu-air-coolersupports-intel-amd-sockets-4-pin-pwm-fan-2000rpm-black.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk036-dark-rock-pro-5-cpu-air-coolersupports-intel-amd-sockets-4-pin-pwm-fan-2000rpm-black.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUBQ-BK036R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:0f546e9ba8b5",
+  "category": "cooler",
+  "name": "Cooler Master RR-S4KK-25SN-R1 Hyper 212 Black CPU Air Cooler SickleFlow 120 Edge Fan Aluminum Top Cover 4 Copper Heat Pipes CryoFuze 152mmTall Brackets AMD Ryzen AM5|AM4 Intel LGA1700|1200",
+  "model_number": "RR-S4KK-25SN-R1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 19.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/cooler-master-rr-s4kk-25sn-r1-hyper-212-black-cpu-air-cooler-sickleflow-120-edge-fan-aluminum-top-cover-4-copper-heat-pipes.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/cooler-master-rr-s4kk-25sn-r1-hyper-212-black-cpu-air-cooler-sickleflow-120-edge-fan-aluminum-top-cover-4-copper-heat-pipes.html",
+   "price": 19.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZCM25SR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 6
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 7
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 14
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b0f2d6e2dcec",
+  "category": "cooler",
+  "name": "Thermal Grizzly TG-CF-i13G Intel 13th/14th Gen CPU Contact Frame",
+  "model_number": "TG-CF-i13G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 44.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/thermal-grizzly-tg-cf-i13g-intel-13th-14th-gen-cpu-contact-frame.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/thermal-grizzly-tg-cf-i13g-intel-13th-14th-gen-cpu-contact-frame.html",
+   "price": 44.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZTG13GR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 12
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:2052cb04b313",
+  "category": "cooler",
+  "name": "be quiet! BK037 Dark Rock Elite CPU Cooler Intel/AMD Supported 2x Silent Wings 135mm PWM Fans 280W TDP Black",
+  "model_number": "BK037",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk037-dark-rock-elite-cpu-cooler-intel-amd-supported-2x-silent-wings-135mm-pwm-fans-280w-tdp.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk037-dark-rock-elite-cpu-cooler-intel-amd-supported-2x-silent-wings-135mm-pwm-fans-280w-tdp.html",
+   "price": 139.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK037R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a144053299cc",
+  "category": "cooler",
+  "name": "Noctua NH-D9 TR5-SP6 4U Premium Quality Quiet 92mmCPU Cooler for AMD Threadripper (sTRX5/sWRX9) and Epyc 8004 (SP6)",
+  "model_number": "NH-D9 TR5-SP6 4U",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d9-tr5-sp6-4u-premium-quality-quiet-92mmcpu-cooler-for-amd-threadripper-strx5-swrx9-and-epyc-8004-sp6.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d9-tr5-sp6-4u-premium-quality-quiet-92mmcpu-cooler-for-amd-threadripper-strx5-swrx9-and-epyc-8004-sp6.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC64R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 9
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:227b4ef33fcf",
+  "category": "cooler",
+  "name": "Noctua NH-U14S TR5-SP6 Premium Quality Quiet 140mm CPU Cooler for AMD Threadripper (sTRX5/sWRX9) and Epyc 8004 (SP6)",
+  "model_number": "NH-U14S TR5-SP6",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-u14s-tr5-sp6-premium-quality-quiet-140mm-cpu-cooler-for-amd-threadripper-strx5-swrx9-and-epyc-8004-sp6.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-u14s-tr5-sp6-premium-quality-quiet-140mm-cpu-cooler-for-amd-threadripper-strx5-swrx9-and-epyc-8004-sp6.html",
+   "price": 139.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC56R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 7,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 7
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 8
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 14
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 8
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "7 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:73fbe529cc69",
+  "category": "cooler",
+  "name": "Silverstone SST-XE04-4189 4U Server/WorkstationCPU Cooler for Socket LGA 4189 1500-5000RPM",
+  "model_number": "SST-XE04-4189",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe04-4189-4u-server-workstationcpu-cooler-for-socket-lga-4189-1500-5000rpm.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe04-4189-4u-server-workstationcpu-cooler-for-socket-lga-4189-1500-5000rpm.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZSIL89R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:360c1f38ce11",
+  "category": "cooler",
+  "name": "Silverstone SST-XE04-4677V 4U CPU Coolerfor Intel LGA4677 Sockets 92mm 1500-5000 RPM 270W TDP",
+  "model_number": "SST-XE04-4677V",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe04-4677v-4u-cpu-coolerfor-intel-lga4677-sockets-92mm-1500-5000-rpm-270w-tdp.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe04-4677v-4u-cpu-coolerfor-intel-lga4677-sockets-92mm-1500-5000-rpm-270w-tdp.html",
+   "price": 109.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSIL4VR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:239a2b281865",
+  "category": "cooler",
+  "name": "Silverstone SST-XE04-SP3 4U Form Factor Server CPU Cooler for AMD SP3/TR4 sockets",
+  "model_number": "SST-XE04-SP3",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/silverstone-sst-xe04-sp3-4u-form-factor-server-cpu-cooler-for-amd-sp3-tr4-sockets.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/silverstone-sst-xe04-sp3-4u-form-factor-server-cpu-cooler-for-amd-sp3-tr4-sockets.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZSILP3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5e1d720052cf",
+  "category": "cooler",
+  "name": "Cooler Master RR-S4NA-17PA-R1 Hyper 212 SpectrumV3 CPU Cooler Intel/AMD 4-Pin (PWM) 120mm Fan Addressable RGB",
+  "model_number": "RR-S4NA-17PA-R1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 12.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/cooler-master-rr-s4na-17pa-r1-hyper-212-spectrumv3-cpu-cooler-intel-amd-4-pin-pwm-120mm-fan-addressable-rgb.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/cooler-master-rr-s4na-17pa-r1-hyper-212-spectrumv3-cpu-cooler-intel-amd-4-pin-pwm-120mm-fan-addressable-rgb.html",
+   "price": 12.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZCM2V3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 6
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a0f55bd654e9",
+  "category": "cooler",
+  "name": "Dynatron Q9 CPU Cooler 92mm Aluminum for Intel Socket LGA 1700 4000rpm Fan",
+  "model_number": "Q9",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 19.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/dynatron-q9-cpu-cooler-92mm-aluminum-for-intel-socket-lga-1700-4000rpm-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/dynatron-q9-cpu-cooler-92mm-aluminum-for-intel-socket-lga-1700-4000rpm-fan.html",
+   "price": 19.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUZZZDYNQ9R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 30
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1ef55e12180e",
+  "category": "cooler",
+  "name": "Noctua NA-HC8 chromax.white Heatsink Cover for NH-U12A White",
+  "model_number": "NA-HC8.white",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 19.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-na-hc8-chromax-white-heatsink-cover-for-nh-u12a-white.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-na-hc8-chromax-white-heatsink-cover-for-nh-u12a-white.html",
+   "price": 19.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC8WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6fce36ba2c59",
+  "category": "cooler",
+  "name": "Noctua NA-HC8 chromax.black Heatsink Cover forNH-U12A Black",
+  "model_number": "NA-HC8.black",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 19.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-na-hc8-chromax-black-heatsink-cover-fornh-u12a-black.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-na-hc8-chromax-black-heatsink-cover-fornh-u12a-black.html",
+   "price": 19.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC8BR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6d32c6f4dcc1",
+  "category": "cooler",
+  "name": "Noctua NH-D9 DX-4677 4U Premium CPU Coolerfor Intel Xeon LGA4677 2x NF-A9 Fans",
+  "model_number": "NH-D9 DX-4677 4U",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d9-dx-4677-4u-premium-cpu-coolerfor-intel-xeon-lga4677-2x-nf-a9-fans.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d9-dx-4677-4u-premium-cpu-coolerfor-intel-xeon-lga4677-2x-nf-a9-fans.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC7UR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 6,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 6
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 9
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 7
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "6 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c5b60d0d29b4",
+  "category": "cooler",
+  "name": "Noctua NH-U14S DX-4677 Premium CPU Coolerfor Intel Xeon LGA4677 2x 140mm NF-A15 Fans",
+  "model_number": "NH-U14S DX-4677",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-u14s-dx-4677-premium-cpu-coolerfor-intel-xeon-lga4677-2x-140mm-nf-a15-fans.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-u14s-dx-4677-premium-cpu-coolerfor-intel-xeon-lga4677-2x-140mm-nf-a15-fans.html",
+   "price": 139.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC46R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e292603b10ed",
+  "category": "cooler",
+  "name": "Cooler Master RR-S4WW-20PA-R1 Hyper 212 Halo White CPU Cooler Intel/AMD aRGB MF120 Halo Fan",
+  "model_number": "RR-S4WW-20PA-R1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 24.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/cooler-master-rr-s4ww-20pa-r1-hyper-212-halo-white-cpu-cooler-intel-amd-argb-mf120-halo-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/cooler-master-rr-s4ww-20pa-r1-hyper-212-halo-white-cpu-cooler-intel-amd-argb-mf120-halo-fan.html",
+   "price": 24.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZCFCHWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 10,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 10
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 11
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 21
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 18
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 17
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "10 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:361c0080a19f",
+  "category": "cooler",
+  "name": "Cooler Master RR-S4KK-20PA-R1 Hyper 212 Halo Black CPU Cooler Intel/AMD aRGB MF120 Halo Fan",
+  "model_number": "RR-S4KK-20PA-R1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 34.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/cooler-master-rr-s4kk-20pa-r1-hyper-212-halo-black-cpu-cooler-intel-amd-argb-mf120-halo-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/cooler-master-rr-s4kk-20pa-r1-hyper-212-halo-black-cpu-cooler-intel-amd-argb-mf120-halo-fan.html",
+   "price": 34.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZCFCHBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6ed1dd8ab2c1",
+  "category": "cooler",
+  "name": "Noctua NH-D12L Low Height 145mm Dual Tower CPU Cooler 120mm for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-D12L",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d12l-low-height-145mm-dual-tower-cpu-cooler-120mm-nf-a12x25r-pwm-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d12l-low-height-145mm-dual-tower-cpu-cooler-120mm-nf-a12x25r-pwm-fan.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC2LR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 28,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 28
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 6
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 9
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 6
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "28 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d188466155b0",
+  "category": "cooler",
+  "name": "Noctua NH-U12S Redux High Performance CPU CoolerNF-P12 redux-1700 PWM 120mm Fan for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-U12S redux",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 59.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-u12s-redux-high-performance-cpu-coolernf-p12-redux-1700-pwm-120mm-fan-grey.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-u12s-redux-high-performance-cpu-coolernf-p12-redux-1700-pwm-120mm-fan-grey.html",
+   "price": 59.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOCSRR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8e86e038f300",
+  "category": "cooler",
+  "name": "be quiet! BK032 Shadow Rock Slim 2 CPU Cooler160W TDP Silent Wings 3 135mm PWM Fan Silver Intel 1700 1200 11xx 2066 2011 AMD Socket AM5 AM4",
+  "model_number": "BK032",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 47.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk032-shadow-rock-slim-2-cpu-cooler160w-tdp-intel-amd-compatible-silent-wings-3-135mm-pwm-fan-silver.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk032-shadow-rock-slim-2-cpu-cooler160w-tdp-intel-amd-compatible-silent-wings-3-135mm-pwm-fan-silver.html",
+   "price": 47.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUBQ-BK032R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:306c3d74ef89",
+  "category": "cooler",
+  "name": "be quiet! BK006 Pure Rock 2 CPU Cooler 1x Pure Wings 2 120mm PWM Fan Brushed Aluminum 150W TDP Intel 1700 1200 11xx 2066 2011 AMD Socket AM5 AM4",
+  "model_number": "BK006",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 39.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk006-pure-rock-2-cpu-cooler-1x-pure-wings-2-120mm-pwm-fan-brushed-aluminum-150w-tdp.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk006-pure-rock-2-cpu-cooler-1x-pure-wings-2-120mm-pwm-fan-brushed-aluminum-150w-tdp.html",
+   "price": 39.95,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUBQ-BK006R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cb95290bc058",
+  "category": "cooler",
+  "name": "Noctua NH-U9S chromax.black CPU Cooler 92mm Black Fan for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-U9S CH.BK",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 74.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-u9s-chromax-black-cpu-cooler-92mm-black-fan-ntel-lga1150-lga1151-lga1155-lga1156-lga1200-lga2011-lga2066.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-u9s-chromax-black-cpu-cooler-92mm-black-fan-ntel-lga1150-lga1151-lga1155-lga1156-lga1200-lga2011-lga2066.html",
+   "price": 74.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC39R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a0841eb57c77",
+  "category": "cooler",
+  "name": "Noctua NH-D15S chromax.black Dual Tower CPU Cooler 140mm Fans for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4 Black",
+  "model_number": "NH-D15S CH.BK",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-d15s-chromax-black-dual-tower-cpu-cooler-140mm-fans-intel-lga1150-lga1151-lga1155-lga1156-lga1200.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-d15s-chromax-black-dual-tower-cpu-cooler-140mm-fans-intel-lga1150-lga1151-lga1155-lga1156-lga1200.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNOC35R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 7
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 7
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:fc70601eff50",
+  "category": "cooler",
+  "name": "be quiet! BK005 SHADOW ROCK 3 CPU Cooler White 190w TDP 1x Shadow Wings 2 120mm PWM Fan 24.4dB(A) AMD Socket AM4/AM3+ Intel 1700 1200 11xx 2066 2011 AMD Socket AM5 AM4",
+  "model_number": "BK005",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 59.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/be-quiet-bk005-shadow-rock-3-cpu-cooler-white-190w-tdp-1x-shadow-wings-2-120mm-pwm-fan-24-4db-a-amd-socket-am4-am3.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/be-quiet-bk005-shadow-rock-3-cpu-cooler-white-190w-tdp-1x-shadow-wings-2-120mm-pwm-fan-24-4db-a-amd-socket-am4-am3.html",
+   "price": 59.95,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUBQ-BK005R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a2aae65aab80",
+  "category": "cooler",
+  "name": "Noctua NH-L12S 70mm Low-Profile CPU Cooler with Quiet 120mm PWM Fan for Intel LGA1200/115x/1700/1851 & AMD AM5/AM4",
+  "model_number": "NH-L12S",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 74.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/noctua-nh-l12s-70mm-low-profile-cpu-cooler-with-quiet-120mm-pwm-fan.html",
+  "snapshot_id": "centralcomputers-cooler-category-page-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:00+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/noctua-nh-l12s-70mm-low-profile-cpu-cooler-with-quiet-120mm-pwm-fan.html",
+   "price": 74.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUZZZNHL12R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 7
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 6
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/fans-heatsinks/cpu-air-coolers.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ }
+]

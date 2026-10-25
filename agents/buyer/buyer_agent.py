@@ -32,6 +32,7 @@ from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
 from logic import advice_need_for, decide, make_order, sealed
+from data.mirror import not_partners  # common put the repo root on sys.path
 
 ADVICE_TIMEOUT_S = 15
 RETIRED_NEED_HISTORY = 8
@@ -844,6 +845,8 @@ async def conclude(ctx: Context, reviewed: bool):
         card = cards.get(b["id"], {})
         rec = card.get("recommendation", "not reviewed")
         out.append(f"{n}. {b['persona']}: ${b['total_landed_price']:.2f} [{b['source']}]")
+        if not not_partners.orderable(b):  # #333: code-owned label, never the bid's own text
+            out.append(f"   {not_partners.label(b) or 'MIRROR listing.'} {not_partners.NOT_ORDERABLE}")
         check = ROUND.get("seller_checks", {}).get(b["supplier_id"], {})
         signal = check.get("signal")
         supplier_not_configured = b["supplier_id"] in not_configured_suppliers
@@ -866,7 +869,8 @@ async def conclude(ctx: Context, reviewed: bool):
             out.append(f"   ! {w['text']} (source: {w['source_url']})")
     winner = ROUND.get("market_winner")
     best = (1 if winner and bids and winner.get("id") == bids[0].get("id")
-            and crs.eligible(winner["supplier_id"], seller_checks.get(winner["supplier_id"]), now_utc) else None)
+            and crs.eligible(winner["supplier_id"], seller_checks.get(winner["supplier_id"]), now_utc)
+            and not_partners.orderable(winner) and not_partners.orderable(bids[0]) else None)
     asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
     out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
     vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
@@ -881,6 +885,8 @@ async def conclude(ctx: Context, reviewed: bool):
         if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
             return
         why = ("No seller passed the CRS eligibility check. Nothing ordered." if not eligible_suppliers
+               else f"The best bid is a MIRROR listing from a store that never joined. {not_partners.NOT_ORDERABLE} "
+                    "Nothing ordered." if winner and not not_partners.orderable(winner)
                else "Every eligible bid was vetoed by the advocate.")
         await fail_round(ctx, why)
         return
@@ -1061,6 +1067,12 @@ async def on_requote(ctx: Context, fresh: dict):
     if (not isinstance(fresh, dict) or not isinstance(original, dict)
             or fresh.get("supplier_id") != old.get("supplier_id")):
         return
+    if not (not_partners.orderable(old) and not_partners.orderable(fresh)
+            and not_partners.orderable(ROUND.get("original_offer"))):
+        ROUND["phase"] = "decided"  # #333: no mandate, no payee, no order for a store that never joined
+        await tell_owner(ctx, f"Bid #{n} is a MIRROR listing from a store that never joined. "
+                              f"{not_partners.NOT_ORDERABLE} Nothing was reserved or ordered.")
+        return
     # Compare seller payload to the frozen pre-projection Bid, not Market's augmented winner lines.
     now = business_now()
     try:
@@ -1128,6 +1140,7 @@ def eligible_for_order(n: int) -> bool:
     bid = ROUND["bids"][n - 1]
     card = ROUND.get("cards", {}).get(ROUND["bids"][n - 1]["id"], {})
     return (ROUND.get("reviewed", False) and card.get("need_id") == ROUND["need"]["id"]
+            and not_partners.orderable(bid)  # #333: a store that never joined is shown for comparison only
             and card.get("recommendation") in ("buy", "caution")
             and crs.eligible(bid["supplier_id"], ROUND.get("seller_checks", {}).get(bid["supplier_id"]),
                              business_now()))
@@ -1253,7 +1266,9 @@ async def on_request_payment(ctx: Context, sender: str, req: RequestPayment):
             return
         ROUND.update(transaction=tx, payment_commit=out, pending_hold=True, phase="submitted")
         await ctx.send(sender, out)
-        await tell_owner(ctx, f"A confirmed charge was submitted for {tx['deal_id']}; waiting for the seller acknowledgement.")
+        from buyer.checkout import format_settlement_result
+        await tell_owner(ctx, f"A confirmed charge was submitted for {tx['deal_id']}: {format_settlement_result(envelope)} "
+                              "Waiting for the seller acknowledgement.")
     except Exception as exc:
         if durable_charge_saved:
             # The charge is known and durable; delivery/notification errors cannot turn it
@@ -1393,7 +1408,9 @@ async def on_complete(ctx: Context, sender: str, msg: CompletePayment):
         await tell_owner(ctx, "The seller acknowledgement arrived, but Market could not confirm settlement. This purchase remains held.")
         return
     try:
-        await tell(ctx, owner, f"Purchase {tx['deal_id']} settled and recorded after seller acknowledgement.")
+        from buyer.checkout import format_settlement_result
+        await tell(ctx, owner, f"Done: purchase {tx['deal_id']} settled and recorded after seller acknowledgement. "
+                               f"Receipt: {format_settlement_result(tx)}")
     except Exception as exc:
         # The settled state is already durable. A failed owner notice must not relock it.
         ctx.logger.warning(f"Settlement notice failed after durable completion: {type(exc).__name__}")

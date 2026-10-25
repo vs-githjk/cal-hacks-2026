@@ -602,6 +602,7 @@ def _open_round(buyer, monkeypatch, *, mailbox, seeded):
     monkeypatch.delenv('SELLERS_MAILBOX', raising=False)
     if mailbox:
         monkeypatch.setenv('AGENTS_MAILBOX', '1')
+    monkeypatch.setattr(common, 'SELLERS', list(common.CATALOG_SELLERS))  # seller_6 runs only with its own seed (#342)
     for s in common.SELLERS:
         monkeypatch.setitem(common.SEEDS, s, f'private-seed-{s}' if s in seeded else f'tech-bazaar-{s}-dev')
     buyer.ROUND.clear()

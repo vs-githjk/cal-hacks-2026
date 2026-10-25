@@ -23,11 +23,11 @@ def need(*skus):
 
 
 def test_sellers_match_common():
-    assert all(seller(n)["listings"] for n in common.SELLERS)
+    assert all(seller(n)["listings"] for n in common.CATALOG_SELLERS)
 
 
 def test_every_bid_validates_and_respects_floor():
-    for n in common.SELLERS:
+    for n in common.CATALOG_SELLERS:
         s = seller(n)
         bid = make_bid(need(GPU, PSU, CASE, "psu 750w", "rx 7800 xt 16gb"), s)
         common.validate("Bid", bid)
@@ -104,6 +104,22 @@ def _mirror_bid_with_shipping(shipping):
     n = need("rtx 5070 ti")
     n["source"] = "live"
     return make_bid(n, s)
+
+
+def test_a_mirror_card_with_no_model_number_still_makes_a_valid_bid(monkeypatch):
+    # #209 review: a None model_number failed Bid validation and raised in the seller handler
+    real = seller
+    def no_model(name):
+        s = real(name)
+        for c in s["mirror_listings"]:
+            c.pop("model_number", None)
+        return s
+    monkeypatch.setitem(globals(), "seller", no_model)
+    shipping = {"value": 0.0, "source": "https://www.bestbuy.com/shipping",
+                "observed_at": "2026-10-24T05:00:00Z", "origin": "MIRROR"}
+    bid = _mirror_bid_with_shipping(shipping)
+    assert "model_number" not in bid["lines"][0]
+    common.validate("Bid", bid)
 
 
 def test_mirror_bid_keeps_listing_provenance_and_uses_only_supplied_terms():

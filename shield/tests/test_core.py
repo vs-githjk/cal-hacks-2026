@@ -166,33 +166,66 @@ def test_oversized_message_is_quarantined_fast_before_any_parsing():
     assert screen("hello " * 3333, {})["verdict"] == "allow"  # exactly at the cap is still parsed
 
 
+def _growth(work, text, *, small=2500, repeats=7, patience=8.0):
+    """How the CPU time of work(text) grows from its first `small` characters to all of it: (ratio, full seconds).
+    Each size is judged by its BEST run after a warm-up, so a noise burst on a shared runner cannot inflate it (noise only
+    ever adds time), and the clock is process CPU time, so a descheduled runner adds nothing. A noisy patch can still
+    outlast `repeats` runs (CI read 24.5 against the bound on work that measures 9.5 on a quiet machine), so while the
+    ratio is over GROWTH_BOUND it keeps sampling, up to `patience` wall seconds, and stops the moment it is under. Extra
+    samples can only lower a best time toward the true cost, so genuinely quadratic work never gets under the bound."""
+    import gc
+    import time
+
+    best = {}
+    work(text[:small])          # warm-up: first-call imports, regex caches, allocator arenas
+    work(text)
+    deadline = time.monotonic() + patience
+    rounds = 0
+    while True:
+        rounds += 1
+        for size in (small, len(text)):         # interleaved, so a slow patch of the machine hits both sizes
+            gc.collect()
+            t = time.process_time()
+            work(text[:size])
+            took = time.process_time() - t
+            best[size] = min(best.get(size, took), took)
+        ratio = best[len(text)] / max(best[small], 0.002)   # the floor keeps a tiny small run from dividing noise
+        if rounds >= repeats and (ratio < GROWTH_BOUND or time.monotonic() > deadline):
+            return ratio, best[len(text)]
+
+
+# 8x the text. Linear time grows about 8x, quadratic about 64x; the bound sits at the geometric middle (slope 1.5, 22.6x).
+# The first bound, 4x the text against 8x, failed on a CI runner whose three steady pairs read 8.4 to 8.8 against linear
+# 4: a 2x cache effect, not a quadratic, and 4x text leaves no room for that. 8x text leaves a 2.8x margin.
+GROWTH_BOUND = 22.6
+
+
 @pytest.mark.parametrize("unit,count", [
     ("<!--", 5000), ("<div ", 4000), ("<p hidden>", 2000), ("<b style='display:none'>", 800),
     ("<a" + " x" * 50, 200), ("<div><!--", 2200),
 ])
 def test_adversarial_markup_at_the_cap_stays_fast(unit, count):
     """The quadratic version took 0.7 to 54 s at the cap. A wall-clock bound alone flaked on shared CI runners (#199:
-    0.56 s against 0.5 s), so the test checks how the time GROWS: 4x the text must take well under 8x the time
-    (linear is about 4x, quadratic about 16x). Five small and full runs are interleaved and the SMALLEST ratio is
-    judged: a noise burst inflates some pairs, a quadratic inflates every pair. A generous ceiling stays as well."""
-    import time
-
+    0.56 s against 0.5 s), so the test checks how the time GROWS (see _growth), with a generous ceiling as well."""
     payload = (unit * count)[:20000]
+    out = {}
 
-    def timed(text):
-        t = time.perf_counter()
-        result = screen(text, {})
-        return time.perf_counter() - t, result
+    def work(text):
+        out["result"] = screen(text, {})
 
-    ratios, fulls = [], []
-    for _ in range(5):
-        small, _ = timed(payload[:5000])
-        full, out = timed(payload)
-        fulls.append(full)
-        ratios.append(full / max(small, 0.005))   # the floor keeps a sub-millisecond small run from dividing noise
-    assert min(fulls) < 2.0, (unit, fulls)
-    assert min(ratios) < 8, (unit, [round(r, 1) for r in ratios])
-    assert out["verdict"] in ("allow", "quarantine", "block")
+    ratio, full = _growth(work, payload)
+    assert full < 2.0, (unit, full)
+    assert ratio < GROWTH_BOUND, (unit, round(ratio, 1))
+    assert out["result"]["verdict"] in ("allow", "quarantine", "block")
+
+
+def test_the_growth_check_tells_linear_work_from_quadratic_work():
+    """The guard above is only worth having if it can fail: a synthetic quadratic must trip it, a linear one must not."""
+    text = "x" * 20000
+    linear, _ = _growth(lambda t: sum(1 for _ in range(len(t) * 20)), text)
+    quadratic, _ = _growth(lambda t: sum(1 for _ in range(len(t) * len(t) // 200)), text, patience=1.0)
+    assert linear < GROWTH_BOUND, linear
+    assert quadratic > GROWTH_BOUND, quadratic
 
 
 def test_long_hidden_comment_and_many_decoys_cannot_hide_an_instruction():

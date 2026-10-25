@@ -17,6 +17,7 @@ from demo.pages import fixture_fetch
 from demo.sellers import Seller, make_bid
 from demo import advice
 from demo.standins import market
+from shield.classifier import UNAVAILABLE_RULE
 from shield.core import screen
 from shield.service import attack_type
 
@@ -63,6 +64,39 @@ def shield_screen(seller: Seller, bid: dict, ctx_extra: Optional[dict] = None) -
             "verdict": v["verdict"], "reasons": list(v["rule_ids"]), "attack_type": attack_type(v["rule_ids"]),
             "latency_ms": v["latency_ms"], "rule_ids": list(v["rule_ids"]), "severity": v["severity"],
             "evidence_spans": v["evidence_spans"], "version": v["version"], "request_id": v["request_id"]}
+
+
+def caught_label(entry: dict) -> str:
+    """How a held listing is named on screen. A classifier that could not answer holds a bid closed (fail closed); that is a
+    hold, not a catch, and the label says so instead of calling an honest seller a scam."""
+    if entry["rule"] == UNAVAILABLE_RULE:
+        return f"Held by Shield in round {entry['round']} (classifier unavailable, held closed)"
+    return f"Caught by Shield in round {entry['round']}"
+
+
+def caught_cards(need: dict, bids: list[dict], verdicts: dict, claims: dict, owned_attrs: dict, item: dict, cap: float,
+                 meta: dict, sealed_at: dict, round_no: int) -> list[dict]:
+    """Option C: Shield holds a bid, but the advocate still evaluates it so its card (a veto with its cited sources) can be shown.
+    The held bids are scored in a separate shadow ranking (same market rules, nothing rejected) only to pick the line and the
+    landed price the advocate judges; they never join the real ranking, the winner or a mandate. A held bid the market would
+    not rank anyway (over the cap, wrong condition) has no card. Each entry: who, which rule, which round, landed price, card."""
+    if not bids:
+        return []
+    verified = {b["id"]: sum(1 for c in claims[b["id"]] if c["check"] == "verified") for b in bids}
+    shadow = market.rank_bids(bids, item, cap, meta, sealed_at, None, verified)
+    by_id = {b["id"]: b for b in bids}
+    out = []
+    for r in shadow["ranked"]:
+        sv = verdicts[r["bid_id"]]
+        rule = sv["rule_ids"][0] if sv["rule_ids"] else sv["verdict"]
+        card = advice.advise(need, by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs)
+        card["caught"] = {"by": "shield", "rule": rule, "round": round_no}
+        validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")})
+        out.append({"seller_id": r["seller_id"], "bid_id": r["bid_id"], "by": "shield", "verdict": sv["verdict"], "rule": rule,
+                    "rule_ids": list(sv["rule_ids"]), "round": round_no, "landed": r["landed"], "line": r["line"],
+                    "condition": r["condition"], "card": card, "claims": claims[r["bid_id"]]})
+    out.sort(key=lambda e: (e["landed"], e["bid_id"]))
+    return out
 
 
 def run_claims(seller: Seller, bid: dict, now: datetime, check=None) -> list[dict]:
@@ -123,8 +157,10 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
         if problems:
             rejections[bid["id"]] = [f"referee: {p}" for p in problems]
 
-    # 3. Shield on every seller's text before the advocate sees the bid
-    shields = []
+    # 3. Shield (rules, plus the classifier when it is on) on every seller's text. A bid Shield holds is never ranked
+    #    and never payable; it is recorded as caught so the advocate can still judge it for the card (step 6)
+    referee_rejected = set(rejections)
+    shields, caught_by = [], {}
     for bid in bids:
         if bid["id"] in rejections:
             continue
@@ -132,9 +168,11 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
         shields.append(sv)
         if sv["verdict"] != "allow":
             rejections[bid["id"]] = [f"shield {sv['verdict']}: " + ", ".join(sv["rule_ids"])]
+            caught_by[bid["id"]] = sv
 
-    # 4. claims against their pages
-    claims = {bid["id"]: run_claims(by_id[bid["seller_id"]], bid, now, check) for bid in bids if bid["id"] not in rejections}
+    # 4. claims against their pages (a caught bid's claims are checked too: its veto card cites them, they go nowhere else)
+    all_claims = {bid["id"]: run_claims(by_id[bid["seller_id"]], bid, now, check) for bid in bids if bid["id"] not in referee_rejected}
+    claims = {b: cs for b, cs in all_claims.items() if b not in rejections}
     verified = {b: sum(1 for c in cs if c["check"] == "verified") for b, cs in claims.items()}
 
     # 5. score on quality-adjusted landed price
@@ -146,6 +184,7 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
     cards = []
     for r in ranking["ranked"]:
         cards.append(advice.advise(need, bid_by_id[r["bid_id"]], r, claims[r["bid_id"]], owned_attrs))
+    caught = caught_cards(need, [bid_by_id[b] for b in caught_by], caught_by, all_claims, owned_attrs, item, cap, meta, sealed_at, round_no)
     for card in cards:
         validate("AdvocateCard", {k: card[k] for k in ("need_id", "bid_id", "warnings", "recommendation", "wait_until")})
     winner = pick_winner(ranking["ranked"], cards)
@@ -154,4 +193,4 @@ def run_round(need: dict, sellers: list[Seller], owned_attrs: dict, cap: float, 
     return {"round_id": f"round-{round_no}", "claim_check": {"label": label, "real": real}, "arrivals": arrivals,
             "clock": {"opened_ms": 0, "closed_ms": close_ms, "extensions": clock.extensions}, "visibility": visibility,
             "bids": bids, "referee": referee, "shield": shields, "claims": claims, "ranking": ranking, "cards": cards,
-            "winner": winner, "winner_bid": bid_by_id[winner["bid_id"]] if winner else None}
+            "caught": caught, "winner": winner, "winner_bid": bid_by_id[winner["bid_id"]] if winner else None}

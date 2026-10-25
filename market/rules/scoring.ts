@@ -38,6 +38,9 @@ export interface RankOptions {
   quality?: QualityWeights;
   /** Per-line rejections from the floor check (no floor set for that condition), by bid id. */
   lineRejects?: Map<string, string[]>;
+  /** #191: bids the advocate held back (caution, e.g. fit unconfirmed), by bid id, with the reason. They still rank,
+   * but below every bid that was not held back, so a cheaper unconfirmed listing never wins over a confirmed one. */
+  heldBack?: Map<string, string>;
   /** Accepted so callers can pass the whole config; the fee in it is deliberately unused. */
   config?: MarketConfig;
 }
@@ -107,6 +110,17 @@ function qualityAdjusted(bid: Bid, picked: BidLine[], needItems: Map<string, Nee
   }, 0);
 }
 
+/** A short, human line for why the adjusted total differs from the landed price (empty when it does not). */
+export function adjustmentReason(bid: Bid, picked: BidLine[], needItems: Map<string, NeedItem>, w: QualityWeights): string {
+  const conds = [...new Set(picked.map((l) => l.offered_condition ?? needItems.get(l.sku_spec)?.condition ?? "new"))];
+  const condPct = Math.max(0, ...conds.map((c) => w.condition_adj[c] ?? 0));
+  const noReturns = returnsDays(bid.perks) < w.min_returns_days && w.no_returns_adj > 0;
+  const parts: string[] = [];
+  if (condPct > 0) parts.push(`${conds.filter((c) => (w.condition_adj[c] ?? 0) > 0).join("/")} condition, +${Math.round(condPct * 100)}%`);
+  if (noReturns) parts.push(`under ${w.min_returns_days}-day returns, +${Math.round(w.no_returns_adj * 100)}%`);
+  return parts.join("; ");
+}
+
 export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; disqualified: Disqualified[] } {
   const disqualified: Disqualified[] = [];
   const eligible: Omit<Ranked, "rank">[] = [];
@@ -135,6 +149,7 @@ export function rankBids(bids: Bid[], opts: RankOptions): { ranked: Ranked[]; di
   eligible.sort(
     (a, b) =>
       Number(b.complete) - Number(a.complete) ||
+      Number(opts.heldBack?.has(a.bid.id) ?? false) - Number(opts.heldBack?.has(b.bid.id) ?? false) ||
       a.score - b.score ||
       b.verified - a.verified ||
       a.bid.sealed_at - b.bid.sealed_at ||

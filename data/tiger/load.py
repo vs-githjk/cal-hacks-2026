@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import re
 import sys
 from collections import Counter
 from datetime import datetime
@@ -87,6 +88,24 @@ def _summary(rows: list[dict]) -> str:
     return ", ".join(f"{p}/{o} {n}" for (p, o), n in sorted(by.items())) or "none"
 
 
+_PLAN_LIMIT = re.compile(r"not (supported|available)|\bplan\b|\btier\b|upgrade|licen[sc]e|enterprise", re.I)
+
+
+def optional_lines(schema: dict) -> list[str]:
+    """One line per optional schema statement that did not apply, with the server's reason (redacted by the store):
+    "optional, skipped (...)", never a bare failure. A columnstore policy refused for the plan says so."""
+    reasons = schema.get("optional_reasons") or {}
+    out = []
+    for name in schema.get("optional_failed") or []:
+        why = str(reasons.get(name) or "no reason given")
+        if name == "add_columnstore_policy":
+            what = "plan does not support columnstore" if _PLAN_LIMIT.search(why) else f"the server has no columnstore policy: {why}"
+        else:
+            what = why
+        out.append(f"{name}: optional, skipped ({what})")
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python3 -m data.tiger.load")
     ap.add_argument("--dry-run", action="store_true", help="print counts only; make no connection and no network call")
@@ -121,7 +140,9 @@ def main(argv=None) -> int:
         return 1
     print(f"{head}")
     print(f"inserted {res['inserted']} of {res['submitted']} price_obs rows (market_1h: {schema['market_1h']}; "
-          f"optional statements failed: {schema['optional_failed'] or 'none'})")
+          f"optional statements skipped: {len(schema['optional_failed']) or 'none'})")
+    for line in optional_lines(schema):
+        print(line)
     return 0
 
 

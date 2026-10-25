@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { checkLineSpec, rankBids } from "./scoring";
+import { adjustmentReason, checkLineSpec, rankBids } from "./scoring";
 import type { Bid, NeedItem } from "./types";
 import { MARKET_CONFIG } from "../config";
 
@@ -243,6 +243,26 @@ describe("quality-adjusted price", () => {
     const bestBuy = mk("best-buy", 1250);
     expect(rankBids([bestBuy, ebay], { needItems: itemsOk }).ranked[0]!.bid.seller_id).toBe("ebay");
   });
+
+  it("#135 adjustmentReason names the condition step and the no-returns step that actually applied", () => {
+    const bestBuy = mk("best-buy", 1250, { perks: ["30-day returns"] });
+    expect(adjustmentReason(bestBuy, [ln(1250, "new")], itemsOk, quality)).toBe("");
+    const ebay = mk("ebay", 1240, { lines: [ln(1240, "open-box")] });
+    expect(adjustmentReason(ebay, [ln(1240, "open-box")], itemsOk, quality)).toBe("open-box condition, +4%; under 30-day returns, +2%");
+    const fair = mk("fair", 1289, { perks: ["30-day returns"] });
+    expect(adjustmentReason(fair, [ln(1289, "new")], itemsOk, quality)).toBe("");
+  });
+
+  it("#135 adjustmentReason is empty whenever the adjusted total equals the landed price", () => {
+    fc.assert(
+      fc.property(fc.constantFrom<"new" | "open-box" | "refurbished">("new", "open-box", "refurbished"), fc.boolean(), (cond, returns) => {
+        const bid = mk("s", 1000, { lines: [ln(1000, cond)], perks: returns ? ["30-day returns"] : [] });
+        const reason = adjustmentReason(bid, [ln(1000, cond)], itemsOk, quality);
+        const noAdj = cond === "new" && returns;
+        expect(reason === "").toBe(noAdj);
+      }),
+    );
+  });
 });
 
 describe("a line's quantity is stock available (qty_available)", () => {
@@ -305,5 +325,17 @@ describe("partial bids on a multi-item need (#136)", () => {
     const r = rankBids([a, b], { needItems: items });
     expect(r.ranked.map((x) => x.bid.id)).toEqual([b.id, a.id]);
     expect(r.ranked.every((x) => x.complete && x.missing.length === 0)).toBe(true);
+  });
+});
+
+describe("#191 held back (advocate caution) ranks below confirmed bids", () => {
+  it("a cheaper held-back bid still ranks, but below every confirmed bid; ties among held-back bids keep price order", () => {
+    const cheapUnconfirmed = mk("ebay", 1036.99);
+    const otherUnconfirmed = mk("ebay2", 1100);
+    const confirmed = mk("best-buy", 1299.99);
+    const heldBack = new Map([[cheapUnconfirmed.id, "held back: fit unconfirmed"], [otherUnconfirmed.id, "held back: fit unconfirmed"]]);
+    const r = rankBids([cheapUnconfirmed, otherUnconfirmed, confirmed], { needItems: items, heldBack });
+    expect(r.ranked.map((x) => x.bid.seller_id)).toEqual(["best-buy", "ebay", "ebay2"]);
+    expect(rankBids([cheapUnconfirmed, confirmed], { needItems: items }).ranked[0]!.bid.seller_id).toBe("ebay");
   });
 });

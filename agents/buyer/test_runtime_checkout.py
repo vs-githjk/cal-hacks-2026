@@ -48,7 +48,6 @@ def runtime(monkeypatch, tmp_path):
     monkeypatch.setattr(buyer, "business_now", lambda: NOW)
     monkeypatch.setattr(buyer.crs, "eligible", lambda _supplier, check, _now: bool(check and check.get("eligible")))
     monkeypatch.setattr(buyer, "blocked_reasons", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(buyer, "_approval_call", lambda: (buyer.APPROVAL_CALL_CLIENT, "not_configured"))  # never dial
     for name, value in {
         "ROUND": {}, "WEB_OUTBOX": [],
         "APPROVAL_SERVICE": None, "APPROVAL_CALL_CLIENT": None, "MERCHANT_SIM": None,
@@ -607,6 +606,10 @@ def test_exact_request_persists_charge_before_commitpayment(runtime, monkeypatch
     assert state.load_transaction(db, tx["deal_id"], tx["buyer_id"])["mode"] == "SIM"
     assert state.load_transaction(db, tx["deal_id"], tx["buyer_id"])["settlement_result"]["origin"] == "SIM"
     assert not any("Stripe" in message.text() for _, message in ctx.sent if hasattr(message, "text"))
+    owner_lines = [message.text() for _, message in ctx.sent if isinstance(message, buyer.ChatMessage)]
+    submitted = [t for t in owner_lines if "confirmed charge was submitted" in t]
+    assert submitted and "SIM payment confirmed" in submitted[0], owner_lines   # #209 review: say SIM, amount, reference
+    assert "ch_simulated_runtime" in submitted[0] and f"${tx['mandate']['amount']:.2f}" in submitted[0]
 
 
 def test_on_request_payment_passes_the_stored_transaction_to_guarded_settle_without_typeerror(runtime, monkeypatch):
@@ -722,6 +725,8 @@ def test_completepayment_rejects_mismatch_then_accepts_exact_late_ack(runtime):
     assert state.load_goal(db, tx["goal_id"], "owner")["state"] == "DONE"
     assert buyer.ROUND.get("pending_hold") is not True
     assert len(charger.calls) == 1
+    done = [m.text() for _, m in exact.sent if isinstance(m, buyer.ChatMessage) and "settled and recorded" in m.text()]
+    assert done and "SIM payment confirmed" in done[0] and "ch_simulated_runtime" in done[0], exact.sent   # the "I did this" receipt
     buyer.MARKET_REFEREE.record_payment.assert_called_once_with(
         mandate_hash=tx["mandate"]["hash"], payment_ref="ch_simulated_runtime",
         amount=tx["mandate"]["amount"], mode="sim")

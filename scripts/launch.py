@@ -170,7 +170,7 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
     mb = getattr(a, "mailbox", False)
     agent_env = lambda flag: {"SHIELD_URL": shield_url, **({flag: "1"} if mb else {})}  # noqa: E731
     mode = "Agentverse mailbox" if mb else "local mode, not Agentverse mailbox"
-    return [
+    services = [
         Service("market-stdb", a.stdb_port, [find_tool("spacetime") or "spacetime", "start", "--listen-addr", f"{HOST}:{a.stdb_port}"], repo / "market",
                 health_path="/v1/ping", wait=40, group="market",
                 note="SpacetimeDB; tech-bazaar module published and seed_demo run by `up`"),
@@ -198,6 +198,37 @@ def build_services(a, repo: Path = REPO) -> list[Service]:
                 defaults={"NEXT_PUBLIC_SPACETIMEDB_URI": f"ws://{HOST}:{a.stdb_port}",
                                         "NEXT_PUBLIC_SPACETIMEDB_DB": "tech-bazaar"}),
     ]
+    if getattr(a, "maincloud", False):   # #295: the market runs on Maincloud; only the Python services (and web) start here
+        services = [s for s in services if s.name != "market-stdb"]
+    return services
+
+
+def maincloud_check(file_env: dict[str, str]) -> "Check":
+    """#295: --maincloud needs a market that is not local, reached over https, and a web config pointing at the same
+    database over wss. Names are read from the env file; nothing is called."""
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from demo import market_target
+    env = {**{k: v for k, v in os.environ.items() if k.startswith("SPACETIMEDB")}, **file_env}
+    try:
+        t = market_target.resolve(None, env)
+    except market_target.TargetError as e:
+        return Check("maincloud market", False, str(e), "set SPACETIMEDB_SERVER, SPACETIMEDB_HTTP and SPACETIMEDB_DB in the env file")
+    uri, web_db = file_env.get("NEXT_PUBLIC_SPACETIMEDB_URI", ""), file_env.get("NEXT_PUBLIC_SPACETIMEDB_DB", "")
+    if t["local"]:
+        return Check("maincloud market", False, "the env file names the local market",
+                     "set SPACETIMEDB_SERVER=maincloud and SPACETIMEDB_HTTP=https://maincloud.spacetimedb.com")
+    from urllib.parse import urlsplit
+    try:
+        web = urlsplit(uri)
+        web.port                            # raises on a bad port
+        web_host = web.hostname
+    except ValueError:
+        web_host = None
+    if not uri.startswith("wss://") or web_db != t["db"] or web_host != urlsplit(t["http"]).hostname:
+        return Check("maincloud market", False, f"web points at {uri or 'nothing'} / {web_db or 'no db'}",
+                     f"set NEXT_PUBLIC_SPACETIMEDB_URI=wss://<maincloud host> and NEXT_PUBLIC_SPACETIMEDB_DB={t['db']}")
+    return Check("maincloud market", True, market_target.describe(t))
 
 
 # ---------------------------------------------------------------- preflight
@@ -237,6 +268,8 @@ def run_preflight(a, services: list[Service], file_env: dict[str, str], env_note
     if stdb:
         out.append(Check("market/node_modules", (repo / "market" / "node_modules").is_dir(), "", "",
                          auto="up runs `npm ci` in market/"))
+    if getattr(a, "maincloud", False):
+        out.append(maincloud_check(file_env))
     env_ok = bool(file_env)
     out.append(Check("env file", env_ok, env_note.removeprefix("env file "), f"create it from .env.example, or pass --env-file PATH"))
     names = key_names_from_example(repo / ".env.example")
@@ -274,7 +307,9 @@ def decide_skips(services: list[Service], checks: list[Check]) -> None:
     for s in services:
         if s.skip_reason:
             continue
-        if s.name == "market-stdb" and "spacetime CLI" in bad:
+        if "maincloud market" in bad:   # #295: no service starts against a market that does not parse or is the local one
+            s.skip_reason = f"--maincloud: {bad['maincloud market'].detail}. Fix: {bad['maincloud market'].fix}"
+        elif s.name == "market-stdb" and "spacetime CLI" in bad:
             s.skip_reason = f"spacetime CLI not installed. Install: {SPACETIME_INSTALL}"
         elif s.name in ("shield", "agent-feed", "seller-kit") and "shield deps (fastapi, uvicorn)" in bad:
             s.skip_reason = f"fastapi/uvicorn not importable. Fix: {SHIELD_DEPS_FIX}"
@@ -466,6 +501,8 @@ def exit_code(rows: list[dict], strict: bool = False) -> int:
 def web_note(rows_state: dict) -> None:
     """Be honest that the web screens have no live data when the market is not running."""
     sv = rows_state.get("services", {})
+    if rows_state.get("maincloud"):   # #295: the market is on Maincloud, not a local market-stdb service
+        return
     if "web" in sv and sv["web"].get("state") == "running" and sv.get("market-stdb", {}).get("state") != "running":
         sv["web"]["note"] = "market is not running: the screens load but show no live data (the SpacetimeDB socket will not connect)"
 
@@ -577,6 +614,8 @@ def cmd_up(a, repo: Path = REPO) -> int:
     decide_skips(services, checks)
 
     state: dict = carry_live({"started_at": time.strftime("%Y-%m-%d %H:%M:%S"), "services": {}}, live)
+    if getattr(a, "maincloud", False):
+        state["maincloud"] = True
     run_env = dict(os.environ)
     if shutil.which("node"):
         run_env["PATH"] = str(Path(shutil.which("node")).parent) + os.pathsep + run_env.get("PATH", "")
@@ -721,6 +760,8 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--shield-port", type=int, default=8787)
     p.add_argument("--web-port", type=int, default=3100)
     p.add_argument("--stdb-port", type=int, default=3000, help="SpacetimeDB listen port")
+    p.add_argument("--maincloud", action="store_true",
+                   help="the market runs on Maincloud (the env file names it): start no local SpacetimeDB, only the Python services and web")
     p.add_argument("--only", help="comma list of service or group names to start (market-stdb, shield, agents, sellers, advocate, buyer, agent-feed, seller-kit, web)")
     p.add_argument("--mailbox", action="store_true",
                    help="up: start the agents in Agentverse mailbox mode (BUYER_MAILBOX, ADVOCATE_MAILBOX, SELLERS_MAILBOX); register each once with agents/connect.py <port>")

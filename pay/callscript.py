@@ -199,6 +199,13 @@ CRS_LINES = {
 }
 
 
+MAX_BUILD_COUNT = 99   # parts or sellers in one build call; anything else is not a build we read aloud
+
+
+def _count(n: str, noun: str) -> str:
+    return f"{n} {noun}" if n == "1" else f"{n} {noun}s"
+
+
 PRICE_LINES = {
     "live": "The price was checked live just now",
     "mirror": "The price is from a dated listing snapshot",
@@ -216,7 +223,13 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
         return kept, dropped
     if not isinstance(deal, Mapping):
         return kept, ["deal"]
-    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "crs", "price")]
+    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "crs", "price", "parts", "sellers")]
+    if "parts" in deal or "sellers" in deal:   # #345: a whole build, read as "N parts from M sellers"; both counts or neither
+        counts = [deal.get(k) for k in ("parts", "sellers")]
+        if all(isinstance(c, int) and not isinstance(c, bool) and 1 <= c <= MAX_BUILD_COUNT for c in counts):
+            kept["parts"], kept["sellers"] = str(counts[0]), str(counts[1])
+        else:
+            dropped += [k for k in ("parts", "sellers") if k in deal]
     for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
         if key in deal:
             v = _plain(deal[key], pattern, _FACTS_BLOCKED)
@@ -276,11 +289,16 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
     payee = clean_payee(mandate.get("payee"))
     words, digits = amount_words(amount), amount_digits(amount)
     facts, deal_dropped = clean_deal_facts(deal)
-    deal_line = (f"One {facts['item']}" if "item" in facts else "One purchase")
-    if "condition" in facts:
-        deal_line += f", {facts['condition']}"
-    deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
-    deal_line += f", for {words}"
+    build = "parts" in facts   # #345: one call for the whole build; the counts come from our own market rows
+    if build:
+        build_text = f"{_count(facts['parts'], 'part')} from {_count(facts['sellers'], 'seller')}"
+        deal_line = f"Your whole build, {build_text}, for {words}"
+    else:
+        deal_line = (f"One {facts['item']}" if "item" in facts else "One purchase")
+        if "condition" in facts:
+            deal_line += f", {facts['condition']}"
+        deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
+        deal_line += f", for {words}"
     if "crs" in facts:
         deal_line += f". {facts['crs']}"
     if "price" in facts:
@@ -305,7 +323,8 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
         deal_line=deal_line,
         ask_line=ASK,
         why_answer=why,
-        approved_line=f"Approved. One payment of {words}, written {digits}, to {payee}. Nothing else is authorized",
+        approved_line=(f"Approved. Your build, {build_text}, {words}, written {digits}. Nothing else is authorized" if build else
+                       f"Approved. One payment of {words}, written {digits}, to {payee}. Nothing else is authorized"),
         denied_line="Not approved. Nothing was paid",
         amount_read_back=amount,
         payee_read_back=payee,

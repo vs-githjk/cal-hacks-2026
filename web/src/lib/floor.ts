@@ -9,7 +9,7 @@ export interface Actor {
 }
 
 export const FIXED_ACTORS: Actor[] = [
-  { key: "buyer", name: "Vidyut (buyer agent)", kind: "buyer", origin: "SIM" },
+  { key: "buyer", name: "Buyer agent", kind: "buyer", origin: "SIM" },
   { key: "advocate", name: "Advocate", kind: "advocate", origin: "SIM" },
   { key: "shield", name: "Bazaar Shield", kind: "shield", origin: "SIM" },
   { key: "referee", name: "Referee", kind: "referee", origin: "SIM" },
