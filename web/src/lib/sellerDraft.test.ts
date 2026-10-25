@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  FALLBACK_NOTE, MAX_QUESTIONS, MODEL, RATE_LIMIT, RATE_WINDOW_MS, allowDraft, draftToForm, handleDraftRequest, numbersIn, parseModelJson, requestDraft, vetDraft, type Vetted,
+  FALLBACK_NOTE, MAX_QUESTIONS, MODEL, dedupeQuestions, sellView, RATE_LIMIT, RATE_WINDOW_MS, allowDraft, draftToForm, handleDraftRequest, numbersIn, parseModelJson, requestDraft, vetDraft, type Vetted,
 } from "./sellerDraft.ts";
 
 const OAKLAND =
@@ -304,4 +304,21 @@ test("#486 review: the request sends no temperature (claude-haiku-5-5 rejects no
   assert.equal("temperature" in sent, false);
   assert.ok((sent.max_tokens as number) >= 2000);
   assert.equal(sent.model, MODEL);
+});
+
+test("#449 06:17: the same follow-up asked twice in other words is asked once", () => {
+  assert.deepEqual(dedupeQuestions(["What is your shop's name?", "What is the shop name?", "What is your floor price for the RTX 4070 Super?"]),
+    ["What is your shop's name?", "What is your floor price for the RTX 4070 Super?"]);
+  assert.deepEqual(dedupeQuestions(["What is the lowest price you accept (your floor)?", "What floor should the 750W PSU have?"]).length, 1);
+});
+
+test("#449 06:17: the hosted /sell always shows Claude and the form; only the create button needs the Seller Kit", () => {
+  const hosted = sellView(true);
+  assert.equal(hosted.showClaude, true);
+  assert.equal(hosted.showForm, true);
+  assert.equal(hosted.canCreate, false);
+  assert.match(hosted.createNote, /operator's machine/);
+  const local = sellView(false);
+  assert.equal(local.showClaude && local.showForm && local.canCreate, true);
+  assert.equal(local.createNote, "");
 });
