@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { AgentPip } from "@/components/AgentPip";
 import { PwaRegister } from "@/components/PwaRegister";
 import { AppHeader, RunModeFooter } from "@/components/shell";
 import { fontVars } from "./fonts";
@@ -9,11 +8,11 @@ import { fontVars } from "./fonts";
 export const metadata: Metadata = {
   title: "Tech Bazaar",
   description: "A refereed arena where seller agents bid for a buyer's computer gear.",
-  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#000000" };
+export const viewport: Viewport = { themeColor: "#f1e7d3" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -25,7 +24,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <RunModeFooter />
           <PwaRegister />
         </Providers>
-        <AgentPip />
       </body>
     </html>
   );
