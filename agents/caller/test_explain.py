@@ -33,7 +33,7 @@ def test_the_explanation_makes_no_claim_the_code_cannot_back():
     lowered = TEXT.lower()
     for banned in ("2fa", "biometric", "guarantee", "unhackable", "can't be fooled", "bank-grade"):
         assert banned not in lowered
-    assert "—" not in TEXT and "–" not in TEXT                    # no em or en dash
+    assert chr(0x2014) not in TEXT and chr(0x2013) not in TEXT    # no em or en dash
     assert len(TEXT) < 1400                                               # one readable chat message
 
 

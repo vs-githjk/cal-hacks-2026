@@ -46,7 +46,7 @@ def test_keywords_are_a_short_unique_list_that_names_fish_market(rel):
 @pytest.mark.parametrize("rel", PROFILES)
 def test_no_dash_characters_and_no_claim_the_code_cannot_back(rel):
     text = (ROOT / rel).read_text(encoding="utf-8")
-    assert "—" not in text and "–" not in text
+    assert chr(0x2014) not in text and chr(0x2013) not in text
     for banned in ("not wired yet", "2FA", "biometric authentication", "unhackable", "guaranteed safe"):
         assert banned not in text, banned
 
