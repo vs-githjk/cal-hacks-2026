@@ -199,7 +199,143 @@ def test_any_sender_may_ask_for_a_band_and_gets_the_public_pulse(tmp_path, monke
     to, reply = ctx.sent[0]
     body = json.loads(reply.pulse_json)
     assert to == "agent1qanyone" and body["bands"][SKU]["median"] == 1279.0 and body["kind"] == "market-pulse"
-    assert (tmp_path / "public" / "latest.json").exists()
+    assert not (tmp_path / "public" / "latest.json").exists()      # an open request never overwrites the shared pulse file
+
+
+def _ask(agent, sender, skus=(SKU,)):
+    Request, _ = agent.pulse_band_models
+    ctx = _ctx()
+    asyncio.run(_on_message(agent, Request)(ctx, sender, Request(skus_json=json.dumps(list(skus)))))
+    return json.loads(ctx.sent[0][1].pulse_json)
+
+
+def test_an_open_request_leaves_the_shared_pulse_and_the_remembered_pulse_alone(tmp_path, monkeypatch):
+    agent = _agent(tmp_path, monkeypatch)
+    shared = tmp_path / "public" / "latest.json"
+    shared.parent.mkdir()
+    shared.write_text('{"kind": "market-pulse", "mine": true}')
+    p = pulse_with(tmp_path)
+    fresh_loop()
+    agent = O.build_agent(p, port=8925)
+    _ask(agent, "agent1qstranger")
+    assert shared.read_text() == '{"kind": "market-pulse", "mine": true}' and p.latest_pulse == {}
+
+
+def test_a_sender_is_capped_per_minute_and_the_cap_is_per_sender(tmp_path, monkeypatch):
+    agent = _agent(tmp_path, monkeypatch)
+    answers = [_ask(agent, "agent1qflood") for _ in range(O.BAND_REQUESTS_PER_WINDOW + 3)]
+    assert [("error" in a) for a in answers] == [False] * O.BAND_REQUESTS_PER_WINDOW + [True] * 3
+    assert answers[-1] == {"error": "rate_limited"}
+    assert "bands" in _ask(agent, "agent1qsomeoneelse")
+
+
+def test_a_rate_limited_sender_costs_no_shield_call_and_no_read(tmp_path, monkeypatch):
+    agent = _agent(tmp_path, monkeypatch)
+    import common
+    calls = []
+    monkeypatch.setattr(common, "screen", lambda *a, **k: calls.append(a) or {"verdict": "allow"})
+    for _ in range(O.BAND_REQUESTS_PER_WINDOW):
+        _ask(agent, "agent1qflood")
+    before = len(calls)
+    assert _ask(agent, "agent1qflood") == {"error": "rate_limited"} and len(calls) == before
+
+
+def test_the_rate_limit_window_slides_and_the_sender_table_is_bounded():
+    t = [0.0]
+    rl = O.RateLimit(limit=2, window=60.0, clock=lambda: t[0], max_senders=3)
+    assert rl.allow("a") and rl.allow("a") and not rl.allow("a")
+    t[0] = 59.9
+    assert not rl.allow("a")
+    t[0] = 60.1
+    assert rl.allow("a")
+    for s in ("b", "c", "d", "e"):
+        rl.allow(s)
+    assert len(rl.seen) == 3 and "a" not in rl.seen
+
+
+def test_many_requests_for_the_same_part_cost_one_read_a_minute(tmp_path, monkeypatch):
+    agent = _agent(tmp_path, monkeypatch)
+    reads = []
+    inner = fake_bands()
+    real = inner.tiger_rows
+    inner.tiger_rows = lambda sku, days: reads.append((sku, days)) or real(sku, days)
+    p = pulse_with(tmp_path, bands=inner)
+    fresh_loop()
+    agent = O.build_agent(p, port=8926)
+    import common
+    monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": "allow"})
+    for sender in ("agent1qa", "agent1qb", "agent1qc"):
+        _ask(agent, sender, [SKU, "psu 750w"])
+    assert sorted(reads) == [("psu 750w", 30), (SKU, 30)]
+
+
+# ---- a SIM band never reveals one seller's price -------------------------------------------------
+
+class Recorder:
+    def __init__(self):
+        self.asked = []
+        self.inner = fake_bands()
+
+    def band(self, sku, exclude_seller=None):
+        self.asked.append((sku, exclude_seller))
+        return self.inner.band(sku)
+
+    def snapshots(self):
+        return []
+
+
+def test_a_note_and_an_answer_keep_the_askers_own_sim_listing_out(tmp_path):
+    rec = Recorder()
+    p = pulse_with(tmp_path, bands=rec)
+    p.process_round(rnd())
+    assert ("rtx 5070 ti", "ebay-072531") in rec.asked                    # each note asks as the seller it goes to
+    rec.asked.clear()
+    p.answer("going price for rtx 5070 ti", asker_seller="seller_1")
+    assert rec.asked == [("rtx 5070 ti", "seller_1")]
+    rec.asked.clear()
+    p.answer("going price for rtx 5070 ti")
+    assert rec.asked == [("rtx 5070 ti", None)]
+
+
+def test_a_chat_from_a_sellers_own_agent_asks_as_that_seller_and_a_stranger_asks_as_nobody(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    from uagents_core.contrib.protocols.chat import ChatMessage, TextContent
+    rec = Recorder()
+    monkeypatch.delenv("PULSE_MAILBOX", raising=False)
+    monkeypatch.delenv("AGENTS_MAILBOX", raising=False)
+    fresh_loop()
+    agent = O.build_agent(pulse_with(tmp_path, bands=rec), port=8927)
+    import common
+    monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": "allow", "reasons": []})
+    monkeypatch.setattr(common, "address", lambda role: f"agent1q{role}")
+    chat = next(fn for proto in agent.protocols.values() for fn in proto.signed_message_handlers.values() if fn.__name__ == "on_chat")
+    for sender in ("agent1qseller_1", "agent1qstranger"):
+        asyncio.run(chat(FakeCtx(), sender, ChatMessage(content=[TextContent(text="what's the going price for an RTX 5070 Ti?")])))
+    assert rec.asked == [("rtx 5070 ti", "seller_1"), ("rtx 5070 ti", None)]
+
+
+def two_sim_bands():
+    rx = [{"seller": "seller_1", "sku": "rx 7800 xt", "price": 489.99}, {"seller": "seller_3", "sku": "rx 7800 xt", "price": 449.0}]
+    return FB.FairBands(tiger_rows=lambda s, d: {"status": "not_configured", "rows": []}, snapshots=lambda: [], catalog=lambda: rx,
+                        now=lambda: NOW)
+
+
+def test_two_sim_listings_give_a_seller_no_numbers_in_chat_and_none_to_back_out_a_rivals_price(tmp_path):
+    p = pulse_with(tmp_path, bands=two_sim_bands())
+    p.catalog["seller_1"]["skus"].append("rx 7800 xt")
+    text = p.answer("what's the going price for an rx 7800 xt?", asker_seller="seller_1")
+    assert "$" not in text and "469" not in text and "449" not in text and "no data" in text
+    assert "$" not in p.answer("what's the going price for an rx 7800 xt?")
+
+
+def test_a_note_never_carries_a_sim_band_of_fewer_than_four_other_sellers(tmp_path):
+    three = [{"seller": f"seller_{i}", "sku": SKU, "price": 1200.0 + i * 25} for i in range(1, 4)]
+    b = FB.FairBands(tiger_rows=lambda s, d: {"status": "not_configured", "rows": []}, snapshots=lambda: [], catalog=lambda: three,
+                     now=lambda: NOW)
+    out = pulse_with(tmp_path, bands=b).process_round(rnd())
+    for note in out["seller_notes"]:
+        assert note["fair_band"]["n"] == 0 and note["fair_band"]["median"] is None
+        assert "$" not in " ".join(x for x in note["lines"] if x.startswith("You lost by"))
 
 
 @pytest.mark.parametrize("payload", ["not json", json.dumps({"a": 1}), json.dumps([]), json.dumps(["x" * 200]), json.dumps([5]),
@@ -226,7 +362,8 @@ def test_cli_publish_pulse_writes_the_file_and_prints_the_labels(tmp_path, monke
     monkeypatch.setenv("PULSE_PUBLIC_PATH", str(tmp_path / "p.json"))
     monkeypatch.delenv(O.store.ENV, raising=False)
     monkeypatch.setattr(FB, "default_snapshots", lambda: [])
-    monkeypatch.setattr(FB, "default_catalog", lambda: [{"seller": "s", "sku": SKU, "price": 1250.0}])
+    monkeypatch.setattr(FB, "default_catalog",
+                        lambda: [{"seller": f"s{i}", "sku": SKU, "price": 1250.0 + i * 10} for i in range(5)])   # 5 sellers: a public SIM band
     assert O.main(["--publish-pulse", SKU]) == 0
     out = capsys.readouterr().out
     assert "SIM" in out and json.loads((tmp_path / "p.json").read_text())["bands"][SKU]["origin"] == "SIM"

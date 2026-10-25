@@ -31,6 +31,8 @@ import os
 import re
 import sys
 import tempfile
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -43,7 +45,9 @@ from data.tiger import store  # noqa: E402
 
 WINDOWS = (7, 30)
 MIN_N = 3                         # fewer prices than this is a thin band: shown, labelled, never headline when 30 days is fuller
-MAX_ROWS = 5000                   # one SKU's 30 days of asks, never an unbounded read
+SIM_MIN_OTHERS = 4                # a SIM band for a known asker needs this many OTHER sellers listing the part: three numbers (25th, 50th,
+SIM_MIN_PUBLIC = 5                # 75th percentile) cannot pin down four unknown prices; with no asker known it may be one of the listers
+MAX_ROWS = 5000                  # one SKU's 30 days of asks, never an unbounded read
 FEED = ROOT / "data" / "baselines" / "feed.json"
 SELLERS_JSON = ROOT / "agents" / "sellers" / "sellers.json"
 RETAIL = {"bestbuy", "microcenter", "bh", "newegg"}   # = data.baselines.RETAIL: the comparable retail stores
@@ -225,7 +229,9 @@ class FairBands:
         self.catalog = catalog or default_catalog
         self.now = now or (lambda: datetime.now(timezone.utc))
 
-    def band(self, part_sku: str) -> dict:
+    def band(self, part_sku: str, exclude_seller: Optional[str] = None) -> dict:
+        """The band for one part. `exclude_seller` is the seller asking (a seller note, or a chat from its own agent): its own SIM
+        listing is left out of a SIM band. Dated prices (Tiger Data, MIRROR) are public retail asks and need no exclusion."""
         sku, now = _sku(part_sku), self.now()
         try:
             got = self.tiger_rows(sku, max(WINDOWS))
@@ -242,13 +248,24 @@ class FairBands:
         if snaps:
             dated = _iso_day(max(o[0] for o in snaps))
             return self._windowed(sku, now, snaps, f"{SNAPSHOT_SRC}, dated {dated}", state, note=f"Tiger Data has no rows to use ({state.replace('_', ' ')})")
-        sim = sorted(c["price"] for c in self.catalog() if c.get("sku") == sku)
-        if sim:
-            block = _stats([(now, p, "SIM", "") for p in sim], None)
+        # SIM listings are individual sellers' prices: a band of a few of them gives one away (the median of 2 prices, less your own,
+        # is the other's price; the median of 3 IS the middle one). So a SIM band needs enough sellers OTHER than the asker.
+        sim: dict[str, float] = {}
+        for i, c in enumerate(self.catalog()):
+            seller = c.get("seller") or f"#{i}"
+            if c.get("sku") == sku and seller != exclude_seller:
+                sim.setdefault(seller, c["price"])                       # one price per seller
+        need = SIM_MIN_OTHERS if exclude_seller else SIM_MIN_PUBLIC
+        if len(sim) >= need:
+            block = _stats([(now, p, "SIM", "") for p in sorted(sim.values())], None)
             return self._result(sku, block, {}, SIM_SRC, "SIM", state,
-                                f"{sku.upper()}: simulated price from {len(sim)} SIM listing{'' if len(sim) == 1 else 's'}, "
+                                f"{sku.upper()}: simulated price from {len(sim)} SIM listings, "
                                 f"no price history yet [{SIM_SRC}; SIM]")
         block = _stats([], None)
+        if sim:
+            return self._result(sku, block, {}, "no source", "no data", state,
+                                f"{sku.upper()}: no data, too few simulated listings to show a price without revealing one seller's "
+                                "price [no source; no data]")
         return self._result(sku, block, {}, "no source", "no data", state,
                             f"{sku.upper()}: no data, I have no price for this part yet [no source; no data]")
 
@@ -274,6 +291,33 @@ class FairBands:
                 "windows": {k: {kk: v[kk] for kk in ("window_days", "n", "low", "median", "high", "days_of_data", "as_of")}
                             for k, v in windows.items()},
                 "thin": 0 < head["n"] < MIN_N, "tiger": tiger}
+
+
+class CachedBands:
+    """FairBands behind a short cache, for an open request: each (part, asker) is read at most once per `ttl` seconds, so many
+    senders and many requests cost one Tiger read per part a minute. Holds at most `max_entries` answers."""
+
+    def __init__(self, bands: FairBands, *, ttl: float = 60.0, clock: Callable[[], float] = time.monotonic, max_entries: int = 256):
+        self.bands, self.ttl, self.clock, self.max_entries = bands, ttl, clock, max_entries
+        self.cache: dict[tuple, tuple[float, dict]] = {}
+        self.lock = threading.Lock()
+
+    def now(self) -> datetime:
+        return self.bands.now()
+
+    def band(self, part_sku: str, exclude_seller: Optional[str] = None) -> dict:
+        key = (_sku(part_sku), exclude_seller)
+        at = self.clock()
+        with self.lock:
+            hit = self.cache.get(key)
+            if hit and at - hit[0] < self.ttl:
+                return hit[1]
+        band = self.bands.band(part_sku, exclude_seller=exclude_seller)          # read outside the lock: a slow Tiger blocks no one
+        with self.lock:
+            if len(self.cache) >= self.max_entries:
+                self.cache.pop(next(iter(self.cache)))
+            self.cache[key] = (at, band)
+        return band
 
 
 def fair_band(part_sku: str, **providers) -> Optional[dict]:

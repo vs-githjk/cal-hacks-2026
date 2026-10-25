@@ -13,7 +13,7 @@ Fish Market's second-factor agent. The buyer agent cannot approve its own spend:
 - Two channels: the code appears on your own screen (your private chat or your buyer page), and only your voice on the phone call counts.
 - Transaction-bound: the code works only for that amount and that seller, and a different number said with it denies.
 - One call per mandate, ever. A second request for the same mandate is refused.
-- Fresh requests only: a CallRequest must carry `expires_at` (ISO 8601 with a zone, at most 10 minutes ahead). A stale, missing or far-future one is refused before any call, and a refused stale request burns nothing. The delegated voice request is checked the same way whenever it carries one, and must carry one once the operator sets CALLER_REQUIRE_EXPIRES=1.
+- Fresh requests only: a CallRequest must carry `expires_at` (ISO 8601 with a zone, at most 10 minutes ahead). A stale, missing or far-future one is refused before any call, and a refused stale request burns nothing. The delegated voice call has a message with a deadline (ExpiringVoiceTransportRequest), checked the same way; the older VoiceTransportRequest has no deadline field, so a buyer on older code keeps working, and it is refused only once the operator sets CALLER_REQUIRE_EXPIRES=1.
 - Requests are accepted only from the Fish Market buyer agent's address, and every request goes through Smell Test first.
 - Any failure (no answer, silence, a wrong code, an extra number) denies, and the result says nothing was paid.
 - It never asks for, holds or relays your passwords or one-time codes for other sites.
@@ -21,7 +21,7 @@ Fish Market's second-factor agent. The buyer agent cannot approve its own spend:
 ## What it accepts
 
 - CallRequest (mandate_json, reason_json, deal_json, expires_at), only from the Fish Market buyer agent. It answers with CallResult (approved, reason, call_id, voice_approval_id). This is the Fish Market approval-call protocol, version 0.1.0.
-- VoiceTransportRequest (mandate_hash, variables_json, expires_at), only from the buyer agent: the delegated path, voice only. This agent dials and returns what was said; the buyer issues the code, checks the words and writes the record.
+- VoiceTransportRequest (mandate_hash, variables_json) or ExpiringVoiceTransportRequest (the same plus expires_at), only from the buyer agent: the delegated path, voice only. This agent dials and returns what was said; the buyer issues the code, checks the words and writes the record.
 - Agent Chat Protocol, for discovery only. It screens the message with Smell Test, acknowledges it, and explains what the second-factor agent is. Chat cannot place a call, approve a purchase or charge anything.
 
 ## How the buyer uses it

@@ -197,27 +197,78 @@ def test_a_fresh_call_request_goes_on_to_shield(monkeypatch, agent_mod):
     assert len(screens) == 1 and sent[0][1].reason == "shield_blocked"
 
 
-def run_transport(mod, expires_at):
+# ---- the voice transport: the OLD message is unchanged, the deadline travels in a NEW one -----------------------------------
+
+MAIN_VOICE_REQUEST_DIGEST = "model:33587d8e1688b2bcacc9e9aab45c049b74e1bfe18ceffabb2b63035f60b1346f"   # origin/main's, Oct 25 02:46
+MAIN_VOICE_RESULT_DIGEST = "model:a206a095548bcb7c7d14ec0a328fc7bdd6c69a14db9991a694e0086c9a86bc4f"
+
+
+def test_voice_transport_digest_is_main_s_so_a_buyer_on_older_code_is_still_heard():
+    from uagents import Model
+
+    import common
+    assert Model.build_schema_digest(common.VoiceTransportRequest) == MAIN_VOICE_REQUEST_DIGEST
+    assert Model.build_schema_digest(common.VoiceTransportResult) == MAIN_VOICE_RESULT_DIGEST
+    assert list(common.VoiceTransportRequest.__fields__) == ["mandate_hash", "variables_json"]
+
+
+def test_the_expiring_request_is_a_different_message_with_the_deadline_required():
+    from uagents import Model
+
+    import common
+    assert Model.build_schema_digest(common.ExpiringVoiceTransportRequest) != MAIN_VOICE_REQUEST_DIGEST
+    assert list(common.ExpiringVoiceTransportRequest.__fields__) == ["mandate_hash", "variables_json", "expires_at"]
+    with pytest.raises(Exception):
+        common.ExpiringVoiceTransportRequest(mandate_hash="a" * 64, variables_json="{}")
+
+
+def test_the_caller_listens_for_both_voice_messages_and_the_old_digest_is_still_registered(agent_mod):
+    from uagents import Model
+
+    import common
+    registered = set(agent_mod.protocol.signed_message_handlers)
+    assert Model.build_schema_digest(common.VoiceTransportRequest) in registered
+    assert Model.build_schema_digest(common.ExpiringVoiceTransportRequest) in registered
+
+
+def run_old(mod):
     ctx = Ctx()
-    msg = mod.common.VoiceTransportRequest(mandate_hash="a" * 64, variables_json="{}", expires_at=expires_at)
+    msg = mod.common.VoiceTransportRequest(mandate_hash="a" * 64, variables_json="{}")
     asyncio.run(handler(mod, "on_transport")(ctx, BUYER, msg))
     return ctx.sent
 
 
-def test_a_stale_voice_transport_request_is_refused_before_shield(monkeypatch, agent_mod):
+def run_expiring(mod, expires_at):
+    ctx = Ctx()
+    msg = mod.common.ExpiringVoiceTransportRequest(mandate_hash="a" * 64, variables_json="{}", expires_at=expires_at)
+    asyncio.run(handler(mod, "on_expiring_transport")(ctx, BUYER, msg))
+    return ctx.sent
+
+
+def test_a_stale_expiring_request_is_refused_before_shield(monkeypatch, agent_mod):
     screens = spy_screen(monkeypatch, agent_mod)
-    sent = run_transport(agent_mod, "2020-01-01T00:00:00Z")
+    sent = run_expiring(agent_mod, "2020-01-01T00:00:00Z")
     assert sent[0][1].error == "request_expired" and screens == []
 
 
-def test_a_voice_transport_request_with_no_expiry_is_refused_only_when_required(monkeypatch, agent_mod):
+@pytest.mark.parametrize("value,error", [("", "missing_expires_at"), ("garbage", "bad_expires_at"), ("2099-01-01T00:00:00Z", "expires_too_far")])
+def test_a_bad_expiring_request_is_refused_whatever_the_operator_flag(monkeypatch, agent_mod, value, error):
+    screens = spy_screen(monkeypatch, agent_mod)
+    monkeypatch.delenv("CALLER_REQUIRE_EXPIRES", raising=False)
+    assert run_expiring(agent_mod, value)[0][1].error == error and screens == []
+
+
+def test_a_fresh_expiring_request_goes_on_to_shield(monkeypatch, agent_mod):
     screens = spy_screen(monkeypatch, agent_mod, verdict="block")
+    fresh = (datetime.now(timezone.utc) + timedelta(seconds=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert run_expiring(agent_mod, fresh)[0][1].error == "shield_blocked" and len(screens) == 1
+
+
+def test_the_old_request_keeps_working_with_no_deadline_until_the_operator_requires_one(monkeypatch, agent_mod):
+    screens = spy_screen(monkeypatch, agent_mod, verdict="block")
+    monkeypatch.delenv("CALLER_REQUIRE_EXPIRES", raising=False)
+    assert run_old(agent_mod)[0][1].error == "shield_blocked" and len(screens) == 1          # reaches Shield: not dropped, not refused
     monkeypatch.setenv("CALLER_REQUIRE_EXPIRES", "1")
-    assert run_transport(agent_mod, "")[0][1].error == "missing_expires_at" and screens == []
-    monkeypatch.delenv("CALLER_REQUIRE_EXPIRES")
-    assert run_transport(agent_mod, "")[0][1].error == "shield_blocked" and len(screens) == 1
+    assert run_old(agent_mod)[0][1].error == "missing_expires_at" and len(screens) == 1       # refused before Shield
 
 
-def test_the_voice_transport_request_has_an_expires_at_field_that_defaults_to_empty():
-    import common
-    assert common.VoiceTransportRequest(mandate_hash="a" * 64, variables_json="{}").expires_at == ""

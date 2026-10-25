@@ -47,8 +47,9 @@ def check_expiry(expires_at: Any, *, now: Optional[Callable[[], datetime]] = Non
 
 
 def expiry_required_for_transport() -> bool:
-    """The delegated voice call (VoiceTransportRequest) needs an expires_at only once the operator sets CALLER_REQUIRE_EXPIRES=1:
-    until the buyer sends one, requiring it would stop every delegated call. A value that is sent is always checked."""
+    """The old VoiceTransportRequest has no deadline field (its schema digest is pinned, so a buyer on older code is still heard).
+    It is refused as missing_expires_at only once the operator sets CALLER_REQUIRE_EXPIRES=1, i.e. when every buyer sends
+    ExpiringVoiceTransportRequest, which is always checked."""
     return os.environ.get("CALLER_REQUIRE_EXPIRES", "").strip() == "1"
 
 

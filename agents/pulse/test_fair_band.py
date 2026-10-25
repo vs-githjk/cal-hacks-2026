@@ -1,6 +1,7 @@
 """Market Pulse fair-price band: fair_band(part_sku) -> {low, median, high, n, as_of, source}.
 No network, no key: Tiger Data is a fake rows provider, the MIRROR snapshots and the SIM catalog are in-memory lists."""
 import json
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -124,11 +125,49 @@ def test_snapshots_that_are_not_comparable_asks_never_enter_the_band():
     assert out["n"] == 3 and (out["low"], out["median"], out["high"]) == (1255.0, 1260.0, 1265.0)
 
 
-def test_with_no_snapshot_either_the_sim_listings_give_a_band_labelled_sim():
-    out = bands(status="not_configured", catalog=CATALOG).band(SKU)
-    assert out["origin"] == "SIM" and out["n"] == 3 and out["median"] == 1259.5
+FIVE_SIM = [{"seller": f"seller_{i}", "sku": SKU, "price": p} for i, p in enumerate((1199.0, 1259.5, 1279.0, 1299.99, 1349.0), 1)]
+
+
+def test_with_no_snapshot_either_enough_sim_listings_give_a_band_labelled_sim():
+    out = bands(status="not_configured", catalog=FIVE_SIM).band(SKU)
+    assert out["origin"] == "SIM" and out["n"] == 5 and out["median"] == 1279.0
     assert out["window_days"] is None and out["windows"] == {}
     assert "SIM" in out["source"] and "no price history" in out["label"]
+
+
+@pytest.mark.parametrize("count", [1, 2, 3])
+def test_too_few_sim_listings_give_no_numbers_because_a_median_would_be_a_rivals_price(count):
+    out = bands(status="not_configured", catalog=FIVE_SIM[:count]).band(SKU)
+    assert out["n"] == 0 and out["low"] is out["median"] is out["high"] is None and out["origin"] == "no data"
+    assert "revealing" in out["label"] and not re.search(r"\$\d", out["label"])
+
+
+def test_two_sim_listings_cannot_be_turned_back_into_the_rivals_price():
+    """Seller_1 asks about rx 7800 xt with one rival listed: the median of 2 prices would give the rival's price away (2*median - own)."""
+    two = [{"seller": "seller_1", "sku": "rx 7800 xt", "price": 489.99}, {"seller": "seller_3", "sku": "rx 7800 xt", "price": 449.0}]
+    for asker in (None, "seller_1", "seller_3"):
+        out = bands(status="not_configured", catalog=two).band("rx 7800 xt", exclude_seller=asker)
+        assert out["median"] is None and out["low"] is None and out["high"] is None
+
+
+def test_the_askers_own_listing_is_left_out_and_four_others_are_needed():
+    four_others_plus_asker = FIVE_SIM + [{"seller": "asker", "sku": SKU, "price": 1111.0}]
+    out = bands(status="not_configured", catalog=four_others_plus_asker[:4] + four_others_plus_asker[5:]).band(SKU, exclude_seller="asker")
+    assert out["n"] == 4 and out["origin"] == "SIM" and 1111.0 not in (out["low"], out["median"], out["high"])
+    three_others = bands(status="not_configured", catalog=FIVE_SIM[:3] + [FIVE_SIM[3] | {"seller": "asker"}]).band(SKU, exclude_seller="asker")
+    assert three_others["n"] == 0                                  # 3 others + the asker is 4 listings, but only 3 rivals: refused
+    public_four = bands(status="not_configured", catalog=FIVE_SIM[:4]).band(SKU)
+    assert public_four["n"] == 0                                   # no asker known: it may be one of the 4, so 5 are needed
+
+
+def test_one_seller_listing_twice_counts_once():
+    dup = FIVE_SIM[:2] + [{"seller": "seller_1", "sku": SKU, "price": 1200.0}] * 5
+    assert bands(status="not_configured", catalog=dup).band(SKU)["n"] == 0
+
+
+def test_the_sim_rule_does_not_touch_dated_prices():
+    out = bands([trow(125000, 1)] * 3, catalog=FIVE_SIM[:1]).band(SKU, exclude_seller="seller_1")
+    assert out["origin"] == "MIRROR" and out["n"] == 3
 
 
 def test_a_part_nothing_knows_has_no_numbers_and_says_so():
@@ -288,7 +327,7 @@ def test_the_buyers_call_takes_the_page_of_a_dated_snapshot_when_tiger_has_no_ro
 def test_the_buyers_call_is_none_when_there_is_no_dated_data_even_if_sim_listings_exist():
     none = dict(tiger_rows=tiger([], "not_configured"), snapshots=lambda: [], now=lambda: NOW)
     assert FB.fair_band("unobtainium 9000", catalog=lambda: [], **none) is None
-    assert FB.fair_band(SKU, catalog=lambda: CATALOG, **none) is None                  # a SIM band is not dated price data
+    assert FB.fair_band(SKU, catalog=lambda: FIVE_SIM, **none) is None                  # a SIM band is not dated price data
     sim_rows = [trow(c, 1, "SIM") for c in (100000, 110000, 120000)]
     assert FB.fair_band(SKU, tiger_rows=tiger(sim_rows), snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW) is None
 

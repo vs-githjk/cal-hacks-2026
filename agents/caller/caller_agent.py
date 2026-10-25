@@ -100,36 +100,52 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
                                       voice_approval_id=out["voice_approval_id"] or ""))
 
 
-@protocol.on_message(common.VoiceTransportRequest, replies=common.VoiceTransportResult)
-async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequest):
-    """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
-    what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate."""
-    text = " ".join((msg.mandate_hash, msg.variables_json))
+async def voice_transport(ctx: Context, sender: str, mandate_hash: str, variables_json: str, expires_at):
+    """The delegated voice call for both request messages. `expires_at` None means the request carries no deadline (the old
+    VoiceTransportRequest): accepted unless the operator set CALLER_REQUIRE_EXPIRES=1. A string is always checked, and a blank one
+    is refused as missing."""
     require = relay.expiry_required_for_transport()
-    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"), expires_at=msg.expires_at, require_expiry=require)
+    if expires_at is None and require:
+        expires_at = ""
+    text = " ".join((mandate_hash, variables_json))
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"), expires_at=expires_at, require_expiry=True)
     if refused:
-        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error=refused))
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, error=refused))
         return
-    verdict = await asyncio.to_thread(common.screen, f"voice-{abs(hash(msg.mandate_hash)) % 10**12}", sender, text)
+    verdict = await asyncio.to_thread(common.screen, f"voice-{abs(hash(mandate_hash)) % 10**12}", sender, text)
     if verdict.get("verdict") != "allow":
-        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error="shield_blocked"))
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, error="shield_blocked"))
         return
     try:
-        variables = json.loads(msg.variables_json)
+        variables = json.loads(variables_json)
     except Exception:  # noqa: BLE001
-        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error="bad_request"))
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, error="bad_request"))
         return
     from pay import voice_cartesia as vc
     try:
         client, unconfigured = vc.CartesiaClient.from_env(vc.load_env(vc.DEFAULT_ENV_FILE)), None
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
-    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": msg.mandate_hash, "variables": variables},
+    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": mandate_hash, "variables": variables},
                                   buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured,
-                                  expires_at=msg.expires_at, require_expiry=require)
-    await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, call_id=out["call_id"] or "",
+                                  expires_at=expires_at, require_expiry=True)
+    await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, call_id=out["call_id"] or "",
                                                        call_json=json.dumps(out["call"]) if out["call"] else "",
                                                        error=out["error"] or ""))
+
+
+@protocol.on_message(common.VoiceTransportRequest, replies=common.VoiceTransportResult)
+async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequest):
+    """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
+    what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate. This message is UNCHANGED (a buyer on
+    older code keeps working) and has no deadline, so it is refused only when CALLER_REQUIRE_EXPIRES=1."""
+    await voice_transport(ctx, sender, msg.mandate_hash, msg.variables_json, None)
+
+
+@protocol.on_message(common.ExpiringVoiceTransportRequest, replies=common.VoiceTransportResult)
+async def on_expiring_transport(ctx: Context, sender: str, msg: common.ExpiringVoiceTransportRequest):
+    """RT-24: the same request with `expires_at`, always checked: stale, missing, malformed or far-future is refused before Shield."""
+    await voice_transport(ctx, sender, msg.mandate_hash, msg.variables_json, msg.expires_at)
 
 
 agent.include(protocol, publish_manifest=True)

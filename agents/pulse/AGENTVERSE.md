@@ -20,7 +20,7 @@ Fish Market's price-discovery agent. Before each round it publishes a fair-price
 ## What it accepts
 
 - Agent Chat Protocol: a question about a part's going price or price trend, or a seller's record. It screens the message with Smell Test, acknowledges it, and answers with fixed phrases. Your words only pick which known part or seller to talk about; they are never repeated back. Anything else gets a short help message.
-- PulseBandRequest (skus_json, for example ["rtx 5070 ti", "psu 750w"], at most 20 parts), from any agent. It replies with PulseBands, the public pulse, or a fixed error (shield_blocked, bad_request).
+- PulseBandRequest (skus_json, for example ["rtx 5070 ti", "psu 750w"], at most 20 parts), from any agent. It replies with PulseBands, the public pulse, or a fixed error (shield_blocked, bad_request, rate_limited). Each sender may ask 6 times a minute, and it never changes the pulse file the round refresh writes.
 - A PulseRound message (a finished sealed round as JSON), only from the addresses in PULSE_ROUND_SENDERS (the referee and the operator). It replies with PulseNotes, one note per seller that lost, then refreshes the public pulse for the parts that round priced. From anyone else, or with PULSE_ROUND_SENDERS unset, the round is ignored.
 
 ## Example ASI:One prompts
@@ -48,7 +48,7 @@ price discovery, fair price, going price, price band, price history, price trend
 
 - Every line ends with a bracket naming its source and its origin: LIVE, MIRROR or SIM.
 - With Tiger Data price rows, a line carries the origins of the rows it was built from. Prices from a real store's public listings are labelled MIRROR; they are comparison prices, not offers you can buy here.
-- Without Tiger Data rows, the band falls back to dated MIRROR snapshots (and says Tiger Data has no rows), then to the SIM seller listings, labelled SIM with "no price history yet". The week and month trend figures come from a built-in fixture and every line says SIM until Tiger Data holds real rounds and prices.
+- Without Tiger Data rows, the band falls back to dated MIRROR snapshots (and says Tiger Data has no rows), then to the SIM seller listings, labelled SIM with "no price history yet". A SIM band is shown only when enough sellers list the part (4 besides the asker, or 5 when the asker is unknown); with fewer it says "no data", because a band of two or three prices would give one seller's price away. The week and month trend figures come from a built-in fixture and every line says SIM until Tiger Data holds real rounds and prices.
 - Market Pulse never bids, buys or moves money in any mode.
 
 ## Usage examples

@@ -29,6 +29,9 @@ import math
 import os
 import re
 import sys
+import threading
+import time
+from collections import OrderedDict, deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
@@ -66,6 +69,8 @@ PRICE_WORDS = {"price", "prices", "pricing", "cost", "costs", "going", "worth", 
 TREND_WORDS = {"trend", "trends", "trending", "week", "month", "history", "direction", "lately"}
 SKU_SHAPE = re.compile(r"^[a-z0-9][a-z0-9 .+/-]{0,39}$")
 MAX_BAND_SKUS = 20
+BAND_REQUESTS_PER_WINDOW = 6     # an open PulseBandRequest: at most this many per sender per minute
+BAND_WINDOW_S = 60.0
 HELP = ("I am Market Pulse. Ask me the going price of a part, for example \"what's the going price for an RTX 5070 Ti?\", how a "
         "part is trending, for example \"how is the RTX 5070 Ti trending?\", or why a seller keeps losing, for example \"why does "
         "seller_3 keep losing?\". I answer from Tiger Data, dated MIRROR snapshots, the CRS signals cache and finished rounds, and "
@@ -528,10 +533,11 @@ class Pulse:
                 ids.append(r["seller_id"])
         return sorted(ids)
 
-    def band_for(self, sku: str) -> Optional[dict]:
-        """The sku's fair band, or None when reading it failed: a band never stops a note or an answer."""
+    def band_for(self, sku: str, asker_seller: Optional[str] = None) -> Optional[dict]:
+        """The sku's fair band, or None when reading it failed: a band never stops a note or an answer. `asker_seller` is the seller
+        the answer goes to: its own SIM listing is kept out of a SIM band (see FairBands.band)."""
         try:
-            return self.bands.band(sku)
+            return self.bands.band(sku, exclude_seller=asker_seller)
         except Exception:  # noqa: BLE001
             return None
 
@@ -539,7 +545,7 @@ class Pulse:
         d, c = self.source.demand(), self.source.coach(report["seller_id"])
         base = MP.note_for(report, sku, d, c, writer=self.writer)
         record = {str(w): record_block(self.source.record(report["seller_id"], w)) for w in WINDOWS}
-        band = self.band_for(sku)
+        band = self.band_for(sku, report["seller_id"])          # a note goes to this seller: its own SIM listing stays out of the band
         # a price loss says how far it lost as the report's BAND (never an exact gap), next to the market's public fair band
         coach_line = coaching.coaching_line(report["gap_band"], band) if report["reason"] == "price" and band else None
         lines = [f"Round {report['round_id']}: {base['what_to_change']} [round {report['round_id']}]",
@@ -592,9 +598,9 @@ class Pulse:
         self.latest_pulse = FB.publish_pulse(skus, path=path, bands=self.bands)
         return self.latest_pulse
 
-    def price_answer(self, sku: str) -> str:
+    def price_answer(self, sku: str, asker_seller: Optional[str] = None) -> str:
         """The going price: the band's sentence with its source, when it was published (if it was), and Tiger's demand for the part."""
-        band = self.band_for(sku)
+        band = self.band_for(sku, asker_seller)
         if band is None:
             return f"{sku.upper()}: I could not read a price for this part right now. [Market Pulse; not available]"
         lines = [band["label"]]
@@ -612,9 +618,10 @@ class Pulse:
                          f"Demand: no rounds with bids for this part in the last 24 hours. [Tiger Data bid_curve_10s; no data]")
         return "\n".join(lines)
 
-    def answer(self, text: str, sender_allowed: Callable[[str], bool] = lambda seller_id: True) -> str:
+    def answer(self, text: str, sender_allowed: Callable[[str], bool] = lambda seller_id: True,
+               asker_seller: Optional[str] = None) -> str:
         """A fixed-phrase answer to a chat question. The user's words only choose which known SKU or seller id to talk about;
-        none of them are repeated."""
+        none of them are repeated. `asker_seller` is the catalog seller whose own agent is asking, if the sender is one."""
         words = re.findall(r"[a-z0-9]+", str(text).lower())
         sku = match_sku(words, self.known_skus())
         seller = match_seller(str(text).lower(), self.catalog)
@@ -624,7 +631,7 @@ class Pulse:
                 return "I only answer a seller's record to that seller's own agent."
             return self.seller_answer(seller)
         if sku and set(words) & PRICE_WORDS and not set(words) & TREND_WORDS:
-            return self.price_answer(sku)
+            return self.price_answer(sku, asker_seller)
         if sku:
             return "\n".join([f"{sku.upper()}: the week and the month.", *self.buyer_trend(sku)["lines"]])
         if asks_losing:
@@ -742,6 +749,31 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 # ---------------------------------------------------------------- the uAgent
 
+class RateLimit:
+    """At most `limit` accepted requests per sender in any `window` seconds. Remembers at most `max_senders` senders (the least
+    recently seen is dropped first), so a flood of new addresses cannot grow it without bound."""
+
+    def __init__(self, limit: int = BAND_REQUESTS_PER_WINDOW, window: float = BAND_WINDOW_S, *,
+                 clock: Callable[[], float] = time.monotonic, max_senders: int = 1000):
+        self.limit, self.window, self.clock, self.max_senders = limit, window, clock, max_senders
+        self.seen: "OrderedDict[str, deque]" = OrderedDict()
+        self.lock = threading.Lock()
+
+    def allow(self, sender: str) -> bool:
+        now = self.clock()
+        with self.lock:
+            hits = self.seen.pop(sender, None) or deque()
+            while hits and now - hits[0] >= self.window:
+                hits.popleft()
+            ok = len(hits) < self.limit
+            if ok:
+                hits.append(now)
+            self.seen[sender] = hits                    # most recently seen goes last
+            while len(self.seen) > self.max_senders:
+                self.seen.popitem(last=False)
+            return ok
+
+
 def round_senders() -> set[str]:
     """Agent addresses allowed to send a PulseRound (PULSE_ROUND_SENDERS, comma separated: the referee and the operator).
     Unset means nobody: a round replaces what chat answers about, so an unknown sender never gets to send one."""
@@ -785,18 +817,27 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
         pulse_json: str          # the public pulse ({"kind": "market-pulse", "bands": {...}}) or {"error": "..."}
 
     own_addresses: dict[str, str] = {}
+    band_limit = RateLimit()
+    public_bands = FB.CachedBands(pulse.bands)      # an open request reads each part at most once a minute, whoever asks
+
+    def address_of(seller_id: str) -> Optional[str]:
+        if seller_id not in own_addresses:
+            try:
+                own_addresses[seller_id] = common.address(seller_id)
+            except Exception:  # noqa: BLE001
+                return None
+        return own_addresses[seller_id]
 
     def allowed(sender: str):
         def check(seller_id: str) -> bool:
             if os.environ.get("PULSE_SELLER_CHAT") == "open":     # the default is own: a record goes to its own seller agent
                 return True
-            if seller_id not in own_addresses:
-                try:
-                    own_addresses[seller_id] = common.address(seller_id)
-                except Exception:  # noqa: BLE001
-                    return False
-            return own_addresses[seller_id] == sender
+            return address_of(seller_id) == sender
         return check
+
+    def seller_of(sender: str) -> Optional[str]:
+        """The catalog seller whose own agent this is, so its SIM listing stays out of a price answer sent to it."""
+        return next((sid for sid in pulse.catalog if address_of(sid) == sender), None)
 
     chat = Protocol(spec=chat_protocol_spec)
 
@@ -804,7 +845,8 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
     async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
         verdict = common.screen(str(msg.msg_id), sender, msg.text())
-        text = pulse.answer(msg.text(), allowed(sender)) if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
+        text = (pulse.answer(msg.text(), allowed(sender), seller_of(sender)) if verdict.get("verdict") == "allow"
+                else "Smell Test blocked this message. No action taken.")
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)
@@ -840,6 +882,9 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
 
         def reply(body: dict) -> PulseBands:
             return PulseBands(pulse_json=json.dumps(body))
+        if not band_limit.allow(sender):         # before Shield and before any read: a flood costs nothing
+            await ctx.send(sender, reply({"error": "rate_limited"}))
+            return
         verdict = await asyncio.to_thread(common.screen, f"pulse-band-{ctx.session}", sender, msg.skus_json)
         if verdict.get("verdict") != "allow":
             await ctx.send(sender, reply({"error": "shield_blocked"}))
@@ -853,8 +898,8 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
         if not ok:
             await ctx.send(sender, reply({"error": "bad_request"}))
             return
-        try:
-            body = await asyncio.to_thread(pulse.publish_before_round, [s.strip().lower() for s in skus])
+        try:   # answered from build_pulse: it never writes the shared pulse file or the remembered pulse (only a round does that)
+            body = await asyncio.to_thread(FB.build_pulse, [s.strip().lower() for s in skus], bands=public_bands)
         except Exception:  # noqa: BLE001
             body = {"error": "unavailable"}
         await ctx.send(sender, reply(body))
