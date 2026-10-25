@@ -21,10 +21,10 @@ const PROOF: { value: string; label: string; caveat: string }[] = [
 ];
 
 const STEPS: { title: string; text: string; icon: ReactNode }[] = [
-  { title: "State a goal", text: "A part, a price cap, a date.", icon: <GoalIcon /> },
-  { title: "Sealed bids", text: "Seller agents bid blind.", icon: <SealedIcon /> },
-  { title: "Referee ranks", text: `One rule. ${SHIELD} throws out fishy listings first.`, icon: <RankIcon /> },
-  { title: "Approve by phone", text: "Above your allowance, you say the code.", icon: <PhoneIcon /> },
+  { title: "State a goal", text: "A part, a price cap and a date. Your agent does the hunting.", icon: <GoalIcon /> },
+  { title: "Sealed bids", text: "Seller agents bid blind. No one sees your cap or another bid.", icon: <SealedIcon /> },
+  { title: "Referee ranks", text: `One fixed rule, no pay for rank. ${SHIELD} removes fishy listings first.`, icon: <RankIcon /> },
+  { title: "Approve by phone", text: "Above your allowance we call you. Only your spoken code pays.", icon: <PhoneIcon /> },
 ];
 
 const BUBBLES = [
@@ -43,10 +43,10 @@ export default function Home() {
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#cdeaf8_0%,#a8daf0_50%,#e3eff7_100%)] px-4">
+      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#eaf7fc_0%,#d4edf8_55%,#eef3f8_100%)] px-4">
         <div className="fm-caustic" aria-hidden />
-        <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.35)]" aria-hidden />
-        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.22)]" aria-hidden />
+        <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.22)]" aria-hidden />
+        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.12)]" aria-hidden />
         <div className="fm-orb fm-orb-a bottom-[-30%] left-[40%] h-[260px] w-[360px] bg-[rgba(255,122,69,0.12)]" aria-hidden />
         {BUBBLES.map((b) => (
           <span key={b.left} className="fm-bubble" style={{ left: b.left, width: b.size, height: b.size, ["--rise" as string]: b.rise, ["--delay" as string]: b.delay }} aria-hidden />
@@ -57,7 +57,7 @@ export default function Home() {
               <span className="dot text-live" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
             </span>
             <h1 className="mt-5 text-[40px] font-medium leading-[44px] tracking-[-0.025em] text-balance md:text-[60px] md:leading-[64px] md:tracking-[-0.03em]">
-              The secure agentic marketplace.
+              The <span className="fm-headline-accent">secure agentic</span> marketplace.
             </h1>
             <p className="mt-5 max-w-[36ch] text-[18px] leading-[27px] text-ink-2 md:text-[20px] md:leading-[30px]">
               Where buyers and sellers thrive. {SHIELD_LINE}
@@ -76,7 +76,7 @@ export default function Home() {
         <div className="mx-auto max-w-[1120px] py-12 md:px-4 md:py-16">
           <div className="grid gap-4 md:grid-cols-3">
             {PROOF.map((p) => (
-              <div key={p.value} className="fm-tile rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
+              <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-[36px] font-medium leading-10 tracking-[-0.02em] tabular-nums md:text-[44px] md:leading-[48px]">{p.value}</span>
                   <OriginChip origin="SIM" />
@@ -106,16 +106,13 @@ export default function Home() {
         <div className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
           <h2 id="how" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">How it works</h2>
           <ol className="relative mt-8 grid gap-3 md:grid-cols-4 md:gap-4">
-            <span className="absolute left-0 right-0 top-[38px] hidden h-px bg-line-2 md:block" aria-hidden />
             {STEPS.map((s, i) => (
-              <li key={s.title} className="fm-tile relative grid gap-4 rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
-                <div className="flex items-center justify-between">
-                  <span className="grid h-12 w-12 place-items-center rounded-xl bg-pulse-soft text-pulse-soft-ink">{s.icon}</span>
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-[12px] text-canvas">{i + 1}</span>
-                </div>
-                <div>
-                  <p className="text-[17px] font-semibold leading-[22px]">{s.title}</p>
-                  <p className="mt-1 text-[15px] leading-5 text-ink-2">{s.text}</p>
+              <li key={s.title} className="fm-tile relative grid grid-cols-[44px_1fr] gap-x-3.5 gap-y-1 rounded-2xl p-4 md:grid-cols-1 md:gap-3 md:p-5">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-pulse-soft text-pulse-soft-ink md:h-12 md:w-12">{s.icon}</span>
+                <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-ink font-mono text-[11px] text-canvas md:right-5 md:top-5">{i + 1}</span>
+                <div className="col-start-2 md:col-start-1">
+                  <p className="text-[16px] font-semibold leading-5">{s.title}</p>
+                  <p className="mt-1 text-[13px] leading-[18px] text-ink-2">{s.text}</p>
                 </div>
               </li>
             ))}
