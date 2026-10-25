@@ -7,6 +7,7 @@
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 
 export interface GoalView {
+  id: string;
   text: string; // the buyer's own words
   type: "budget_cap" | "part_by_date" | "build_by_date";
   state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED";
@@ -173,23 +174,22 @@ export function asSim<T>(v: T): T {
   return v;
 }
 
-interface GoalRow { id: string; type: string; cap: number; deadline: Timestamp; state: string; reservedAmount: number; origin: string; createdAt: Timestamp }
+interface GoalRow { id: string; buyerId: string; type: string; cap: number; deadline: Timestamp; state: string; reservedAmount: number; origin: string; createdAt: Timestamp }
 interface GoalItemRow { goalId: string; skuSpec: string; condition: string; variant: string; quantity: number; skippedOwnedPartId: string }
-interface AllowanceRow { perPurchaseLimit: number; periodLimit: number; period: string; spentThisPeriod: number; ladderStep: number }
+interface AllowanceRow { buyerId: string; perPurchaseLimit: number; periodLimit: number; period: string; spentThisPeriod: number; ladderStep: number }
 
 export function latestGoal<G extends GoalRow>(goals: readonly G[]): G | undefined {
   return [...goals].sort((a, b) => (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
-export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView | null {
-  const g = latestGoal(goals);
-  if (!g) return null;
+function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView {
   const mine = items.filter((i) => i.goalId === g.id);
   const deadline = d(g.deadline);
   const conditions = [...new Set(mine.map((i) => i.condition).filter(Boolean))];
   const what = mine.map((i) => `${i.quantity > 1 ? `${i.quantity} x ` : ""}${i.skuSpec}`).join(", ") || "a goal";
   const when = deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   return {
+    id: g.id,
     text: `${what}${conditions.length ? `, ${conditions.join(" or ")}` : ""}, under ${formatMoney(Math.round(g.cap))} by ${when}`,
     type: (["budget_cap", "part_by_date", "build_by_date"].includes(g.type) ? g.type : "budget_cap") as GoalView["type"],
     state: g.state as GoalView["state"],
@@ -200,10 +200,50 @@ export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItem
     variant: mine.find((i) => i.variant)?.variant ?? "",
     origin: asOrigin(g.origin),
     skipped: mine.filter((i) => i.skippedOwnedPartId).map((i) => `Already owned (${i.skippedOwnedPartId}), so it is not in this hunt.`),
-    allowance: allowance
-      ? { perPurchase: allowance.perPurchaseLimit, periodLimit: allowance.periodLimit, period: allowance.period, spent: allowance.spentThisPeriod, ladderStep: allowance.ladderStep }
-      : null,
+    allowance: allowanceView(allowance),
   };
+}
+
+function allowanceView(a: AllowanceRow | undefined): GoalView["allowance"] {
+  return a ? { perPurchase: a.perPurchaseLimit, periodLimit: a.periodLimit, period: a.period, spent: a.spentThisPeriod, ladderStep: a.ladderStep } : null;
+}
+
+/** The spending rule for one buyer; another buyer's row (a stale cache) is never shown. */
+export function allowanceForBuyer(rows: readonly AllowanceRow[], buyerId: string): GoalView["allowance"] {
+  return allowanceView(buyerId ? rows.find((r) => r.buyerId === buyerId) : undefined);
+}
+
+/** The newest goal in the rows, whoever owns it. /market and the sample screens use this; buyer screens use goalsForBuyer. */
+export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView | null {
+  const g = latestGoal(goals);
+  return g ? goalView(g, items, allowance) : null;
+}
+
+const OPEN_GOAL_STATES = ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "PAUSED"];
+
+/**
+ * One buyer's goals, open searches first and newest first within each group. Rows owned by anyone else (a stale
+ * cache from a previous identity) and another buyer's allowance are dropped. Display hygiene only: the market's
+ * my_* views are what authorize, this just keeps a stale row from rendering.
+ */
+export function goalsForBuyer(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined, buyerId: string): GoalView[] {
+  if (!buyerId) return [];
+  const mine = allowance?.buyerId === buyerId ? allowance : undefined;
+  const open = (g: GoalRow) => (OPEN_GOAL_STATES.includes(g.state) ? 0 : 1);
+  return goals
+    .filter((g) => g.buyerId === buyerId)
+    .sort((a, b) => open(a) - open(b) || (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1))
+    .map((g) => goalView(g, items, mine));
+}
+
+interface RoleRow { role: string; subjectId: string }
+export type BuyerSession = { status: "connecting" } | { status: "unpaired" } | { status: "buyer"; buyerId: string };
+
+/** Who this screen is paired as, from the market's own my_role row. Anything unclear fails closed: no connection, no roles yet, no buyer role, or two different buyers. */
+export function buyerSession(connected: boolean, rolesReady: boolean, roles: readonly RoleRow[]): BuyerSession {
+  if (!connected || !rolesReady) return { status: "connecting" };
+  const ids = new Set(roles.filter((r) => r.role === "buyer" && r.subjectId).map((r) => r.subjectId));
+  return ids.size === 1 ? { status: "buyer", buyerId: [...ids][0]! } : { status: "unpaired" };
 }
 
 interface EventRow { id: bigint; kind: string; refTable: string; refId: string; sellerId: string; label: string; origin: string; at: Timestamp }

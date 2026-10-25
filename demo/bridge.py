@@ -77,12 +77,15 @@ def bid_id(bid: dict, round_no: int) -> str:
 
 
 def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict, sellers: dict, shield: list[dict],
-                claims: dict, cards: list[dict], delay: float, pace: float, window_s: Optional[int] = None) -> list[Step]:
+                claims: dict, cards: list[dict], delay: float, pace: float, window_s: Optional[int] = None,
+                round_id: Optional[str] = None, label: str = "") -> list[Step]:
     """open_round, every seller's floor and sealed bid in arrival order, then the Shield, claim-check and advocate results.
     A bid carries ALL its condition lines (alternatives for one SKU); the market picks the cheapest allowed one.
     `window_s` (stage pacing, #183) sets the sealed window; the steps inside the round are paced faster so every bid and
-    check still lands at least 6 s before the deadline. Only the timing changes, never what the referee decides."""
-    round_id = f"round-{round_no}"
+    check still lands at least 6 s before the deadline. Only the timing changes, never what the referee decides.
+    `round_id` and `label` (#345, one round per part of a build) name the round and its console lines; bid ids stay as `round_no` makes them."""
+    round_id = round_id or f"round-{round_no}"
+    label = label or f"round {round_no}"
     sku = bids[0]["lines"][0]["sku_spec"]
     entry = _entries(ranking)
     seller_steps: list[Step] = []
@@ -142,9 +145,9 @@ def round_steps(*, round_no: int, need_id: str, bids: list[dict], ranking: dict,
             s.pace *= scale
         open_pace = pace * scale
     opener = Step("referee", "open_round", {"round_id": round_id, "need_id": need_id, "window_s": window}, window_s=window,
-                  tag=SIM, pause=True, pace=open_pace, say=f"round {round_no} opens sealed for {window} s")
+                  tag=SIM, pause=True, pace=open_pace, say=f"{label} opens sealed for {window} s")
     closer = Step("referee", "close_round", {"round_id": round_id}, close=True, tag=SIM, pause=True, pace=pace,
-                  say=f"round {round_no} closes at its deadline: the market ranks and reveals every bid")
+                  say=f"{label} closes at its deadline: the market ranks and reveals every bid")
     return [opener, *seller_steps, *check_steps, closer]
 
 
@@ -351,8 +354,10 @@ NOT_BRIDGED = [
 def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[Step], None],
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
             approver: Optional[Callable[[Step], dict]] = None, note: Callable[[str], None] = lambda text: None,
-            charger: Optional[Callable[[Step], dict]] = None, deal_gate: Optional["DealGate"] = None) -> list[dict]:
-    """Run the steps in order. A reducer refusal stops the run with the market's own message.
+            charger: Optional[Callable[[Step], dict]] = None, deal_gate: Optional["DealGate"] = None,
+            before_round: Optional[Callable[[], None]] = None) -> list[dict]:
+    """Run the steps in order. A `before_round` hook (the CRS relay, demo/crs_relay.py) runs right before each open_round and
+    is best effort: whatever it raises is one note, and the round opens anyway. A reducer refusal stops the run with the market's own message.
     With an `approver`, the approval step runs only after it returns approved; a denial skips the approval and every payment
     step and ends the run there (the mandate stays pending, nothing is charged). Returns the approval outcomes.
     Without an `approver` there is no approval at all (#251: no scripted approval): the run ends at the approval gate with the
@@ -378,6 +383,11 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             note(deal_gate.crs_note())
             for line in deal_gate.drain_notes():
                 note(line)
+        if s.reducer == "open_round" and before_round is not None:
+            try:
+                before_round()
+            except Exception as e:  # noqa: BLE001  (a relay problem never stops a round)
+                note(f"CRS relay skipped ({type(e).__name__}); the round opens anyway")
         if deal_gate is not None and deal_gate.mandate is not None:
             s = deal_gate.bind(s)
         if s.reducer == "record_payment" and charger is not None and approver is not None and approved_and_recorded:
@@ -439,6 +449,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                     note(f"the market refused record_payment after Stripe test charge {s.args.get('payment_ref')}: "
                          "find it in the Stripe test dashboard (it is idempotent on the mandate hash)")
                 raise
+        if s.reducer == "record_loss_report" and deal_gate is not None:
+            deal_gate.note_loss(s.args)     # #260: written to Tiger Data in one batch once the run's steps are done
         if s.gate == "approval_call" and approver is not None:
             approved_and_recorded = True    # the approver said approved and the market took the approval row
         lag += clock() - t_call
@@ -452,6 +464,9 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             if want > 0:
                 sleep(want)
             lag = max(0.0, -want)
+    if deal_gate is not None:
+        for line in deal_gate.flush_losses():     # #260: after the payment, so a slow or failed Tiger never touches the money path
+            note(line)
     return outcomes
 
 
@@ -543,8 +558,30 @@ class DealGate:
         # #269, set by main on --live-call: the Bright Data re-check before the call and the Tiger Data write of the round
         self.price_check: Optional[Callable[[dict], dict]] = None
         self.tiger_writer: Optional[Callable[[list], dict]] = None
+        # #260: the loss reports the referee recorded, written to Tiger Data in one batch after the payment (never on the money path)
+        self.tiger_loss_writer: Optional[Callable[[list], dict]] = None
+        self._round_rows: list = []
+        self._losses: list[dict] = []
         self.price: Optional[dict] = None
         self._notes: list[str] = []
+
+    def note_loss(self, report: dict) -> None:
+        """A record_loss_report step the market accepted; kept for flush_losses."""
+        if self.tiger_loss_writer is not None:
+            self._losses.append(dict(report))
+
+    def flush_losses(self) -> list[str]:
+        """Write the kept loss reports to Tiger Data (best effort, bounded by the writer) and return the console line.
+        A failure is a line, never an exception: the round and its payment are already done."""
+        if self.tiger_loss_writer is None or not self._losses:
+            return []
+        from demo import sponsors_live as S
+        reports, self._losses = self._losses, []
+        try:
+            res = self.tiger_loss_writer(S.loss_rows(reports, self._round_rows, self.goal["items"][0]["sku_spec"]))
+        except Exception as e:  # noqa: BLE001
+            res = {"state": "error", "detail": type(e).__name__}
+        return [S.tiger_note(res, self.round_id, "loss reports")]
 
     def expectations(self, rows: list) -> dict:
         w = market_winner(rows, self.round_id)
@@ -570,15 +607,16 @@ class DealGate:
         from pay.mandate import new_mandate
         self._referee = referee
         rows = referee.sql("SELECT * FROM round_result")
-        w = self.expectations(rows)
-        self.winner = w
-        if self.tiger_writer is not None:   # #269: the round's prices to Tiger Data; never on the money path
+        self._round_rows = [r for r in rows if r[1] == self.round_id]
+        if self.tiger_writer is not None:   # #269: the round's prices to Tiger Data, even when the round has no payable winner
             from demo import sponsors_live as S
             try:
-                res = self.tiger_writer(S.round_ticks([r for r in rows if r[1] == self.round_id], self.goal["items"][0]["sku_spec"]))
+                res = self.tiger_writer(S.round_ticks(self._round_rows, self.goal["items"][0]["sku_spec"]))
             except Exception as e:  # noqa: BLE001
                 res = {"state": "error", "detail": type(e).__name__}
             self._notes.append(S.tiger_note(res, self.round_id))
+        w = self.expectations(rows)
+        self.winner = w
         # #257: one CRS check of the payee before the call and the charge. A business payee needs a verified check,
         # bound into the mandate; an error, a timeout, "not configured" or a failed check holds the payee gate.
         try:
@@ -874,8 +912,13 @@ def main(argv: Optional[list] = None) -> int:
         S.load_sponsor_env(args.env_file or vc.DEFAULT_ENV_FILE)
         gate.price_check = S.price_recheck
         gate.tiger_writer = S.write_round_ticks
+        gate.tiger_loss_writer = S.write_loss_reports
         approver, client_note = live_approver_for(args, run, gate, out)
         out.note(client_note)
+    elif os.environ.get("TIGER_DATA_SERVICE_URL"):   # #260: round history is written on any run when Tiger is configured
+        from demo import sponsors_live as S
+        gate.tiger_writer = S.write_round_ticks
+        gate.tiger_loss_writer = S.write_loss_reports
     if args.stripe:
         charger = make_charger(gate, {**os.environ, **stripe_env(DEFAULT_ENV_FILE)}, use_stripe=True)
         out.note("Stripe: ONE test-mode charge (sk_test_ key only) after the call approves and the market records the approval; "
@@ -975,8 +1018,10 @@ def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None
         clients["referee"].call("reset_demo")
         time.sleep(1)
     try:
+        from demo import crs_relay
         outcomes = execute(steps, clients, delay=args.step_delay, say=say, approver=approver, note=out.note, charger=charger,
-                           deal_gate=gate)
+                           deal_gate=gate,
+                           before_round=lambda: crs_relay.relay_best_effort(clients["referee"], note=out.note))
     except RuntimeError as e:
         out.blank()
         out.note(f"STOPPED by the market: {e}")

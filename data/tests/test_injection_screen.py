@@ -212,7 +212,7 @@ def test_empty_or_unscreenable_listings_are_free(monkeypatch):
 def test_texts_are_screened_one_listing_per_item(monkeypatch):
     a, _ = run(monkeypatch, {"texts": [CLEAN["description"], INJECTED["sellerNotes"]]})
     assert [r["verdict"] for r in a.rows] == ["pass", "block"] and a.rows[1]["fields_screened"] == ["description"]
-    assert all(r["origin"] == "LIVE" for r in a.rows)
+    assert all(r["origin"] == "UNVERIFIED" for r in a.rows)  # #342: no label from the caller, so never assumed LIVE
 
 
 def test_the_limit_stops_the_run_and_says_what_was_not_screened(monkeypatch):
@@ -368,3 +368,17 @@ def test_the_readme_numbers_match_results_md():
     k, n, pct = rows["held-out"]
     line = next(ln for ln in README.splitlines() if f"{k} of {n} ({pct}%)" in ln)
     assert "held-out" in line.lower() and "upper bound" in line.lower()
+
+
+@pytest.mark.parametrize("listing,want", [
+    ({"title": "x"}, "UNVERIFIED"), ({"origin": ""}, "UNVERIFIED"), ({"origin": "bogus"}, "UNVERIFIED"),
+    ({"origin": None}, "UNVERIFIED"), ("not a dict", "UNVERIFIED"),
+    ({"origin": "live"}, "LIVE"), ({"origin": " mirror "}, "MIRROR"), ({"origin": "SIM"}, "SIM")])
+def test_origin_never_defaults_to_live(monkeypatch, listing, want):  # #342
+    _, mod = run(monkeypatch, {"listings": []})
+    assert mod._origin(listing) == want
+
+
+def test_an_unlabelled_listing_row_is_unverified_not_live(monkeypatch):  # #342
+    a, _ = run(monkeypatch, {"listings": [{"id": "u1", "description": CLEAN["description"]}]})
+    assert a.rows[0]["origin"] == "UNVERIFIED"
