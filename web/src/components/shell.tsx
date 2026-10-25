@@ -28,7 +28,7 @@ export function AppHeader() {
         key={n.href}
         href={n.href}
         aria-current={on ? "page" : undefined}
-        className={`btn inline-flex min-h-10 shrink-0 items-center rounded-xl px-3.5 text-[15px] font-medium transition-[background-color,box-shadow,transform] ${on ? "bg-ink text-canvas shadow-[0_6px_16px_-6px_rgba(11,27,43,0.5)]" : "text-ink-2 hover:bg-white/70 hover:text-ink hover:shadow-ring"}`}
+        className={`btn inline-flex min-h-10 shrink-0 items-center rounded-xl px-3.5 text-[15px] font-medium transition-[background-color,transform] ${on ? "bg-ink/10 text-ink" : "text-ink-2 hover:bg-ink/5 hover:text-ink"}`}
       >
         {n.label}
       </Link>
@@ -42,7 +42,7 @@ export function AppHeader() {
           <Wordmark showName={false} />
           <span className="ml-2 hidden text-[16px] font-medium tracking-[-0.02em] text-ink lg:inline">{BRAND}</span>
         </Link>
-        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 rounded-2xl border border-white/70 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_-12px_rgba(11,27,43,0.25)] backdrop-blur-xl sm:flex">{links}</div>
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 sm:flex">{links}</div>
         <div className="flex items-center gap-2.5">
           <span className="hidden lg:inline-flex"><LivePill on={conn.isActive} /></span>
           {path !== "/start" && !path.startsWith("/buyer") && (
@@ -52,7 +52,7 @@ export function AppHeader() {
           )}
         </div>
       </nav>
-      <div className="mx-auto mb-2 flex w-max max-w-full gap-0.5 overflow-x-auto rounded-2xl border border-white/70 bg-white/45 p-1 [scrollbar-width:none] sm:hidden">{links}</div>
+      <div className="mx-auto mb-1 flex w-max max-w-full gap-1 overflow-x-auto [scrollbar-width:none] sm:hidden">{links}</div>
     </header>
   );
 }
