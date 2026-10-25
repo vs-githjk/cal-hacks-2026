@@ -76,10 +76,12 @@ const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint-mark", mirro
 
 /** Footer: one honest line about what ran. Each service's dot comes from the origin tags on the floor events it wrote (lib/runMode.ts), never a hardcoded claim. */
 export function RunModeFooter() {
+  const path = usePathname();
   const conn = useSpacetimeDB();
   const live = conn.isActive;
   const [events] = useTable(tables.floorEvent);
   const services = serviceStatuses(events, live);
+  if (path === "/") return null; // the landing has no status line (#448, Vidyut); app screens keep it
   return (
     <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-glass px-4 py-2 font-mono text-[11.5px] text-muted backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1120px] items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:flex-wrap md:px-4">
