@@ -23,6 +23,14 @@ except ImportError:  # common.py loaded by file path (demo/bridge.py), so its fo
     sys.modules["smell_memory"] = smell_memory
     _spec.loader.exec_module(smell_memory)
 
+try:  # one-line structured chat records for the floor's chat tile (agents/chatlog.py); same loading rule as smell_memory
+    import chatlog
+except ImportError:
+    _cspec = _util.spec_from_file_location("chatlog", Path(__file__).with_name("chatlog.py"))
+    chatlog = _util.module_from_spec(_cspec)
+    sys.modules["chatlog"] = chatlog
+    _cspec.loader.exec_module(chatlog)
+
 # Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
 _ENV = Path(__file__).resolve().parent / ".env"
 if _ENV.exists():
@@ -58,7 +66,7 @@ def shield_context(sender: str, payee_of_record: str | None = None, price_histor
             "sender_role": role}
 
 
-def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
+def _screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
     """Invariant 3: every agent-to-agent message goes through Shield before we act on it.
     Calls Lane D at SHIELD_URL and fails closed when Shield is unavailable."""
     context = context or shield_context(sender)
@@ -125,6 +133,17 @@ def _structured_payee_mismatch(text: str, record: str) -> bool:
                 if isinstance(value, str) and value.strip().lower() != record:
                     return True
     return False
+
+
+def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
+    """_screen plus one Smell Test chat line (rule ids and a reason cut to 80 characters, never the screened text) when it blocks."""
+    result = _screen(message_id, sender, text, context)
+    try:
+        if isinstance(result, dict) and result.get("verdict") in ("block", "quarantine"):
+            chatlog.emit(None, "shield", "message", chatlog.block_text(result.get("rule_ids") or [], result.get("reasons") or []))
+    except Exception:  # noqa: BLE001  (the chat line never changes a verdict)
+        pass
+    return result
 
 
 def screen_bid(message_id: str, sender: str, bid_json: str, persona_line: str, references: dict) -> dict:

@@ -818,7 +818,11 @@ def test_tell_logs_no_private_reply_body(buyer):
     ctx = Context()
     private_body = 'approval code 482913 under $800 seller payload private'
     asyncio.run(buyer.tell(ctx, 'owner', private_body))
-    logged = '\n'.join(str(call) for call in ctx.logger.method_calls)
+    calls = [str(call) for call in ctx.logger.method_calls]
+    # the one place a reply is logged is the floor chat feed's AGENT_CHAT line, and that is masked (agents/chatlog.py)
+    chat = [c for c in calls if 'AGENT_CHAT' in c]
+    assert len(chat) == 1 and 'who=buyer' in chat[0] and '482913' not in chat[0] and '\\u2022' in chat[0]
+    logged = '\n'.join(c for c in calls if 'AGENT_CHAT' not in c)
     assert private_body not in logged
     assert '482913' not in logged and '$800' not in logged and 'seller payload' not in logged
 
