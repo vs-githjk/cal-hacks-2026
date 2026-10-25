@@ -1147,8 +1147,14 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         market_status = buyer_market.record_approval(mandate_hash=mandate["hash"], method=method,
                                                        approved_by=transaction["buyer_id"])
         if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
-                or not market_status.get("approved_at")):
+                or (not web and not market_status.get("approved_at"))):  # the referee cannot read the buyer view back
             raise MarketBridgeError("market_approval_readback_mismatch")
+        if web:  # ponytail: payment leg needs a referee-readable purchase status; until then stop at approval
+            import logging
+            logging.getLogger("buyer_agent").info(
+                f"web buyer {transaction['buyer_id']}: approved; payment leg not wired for web buyers (SIM)")
+            ROUND.update(transaction=transaction, mandate=mandate, order=order, pending_hold=False, phase="done")
+            return
         ROUND.update(transaction=transaction, mandate=mandate, order=order,
                      pending_hold=True, phase="approved")
         await ctx.send(common.address(bid["supplier_id"]), common.OrderPlaced(

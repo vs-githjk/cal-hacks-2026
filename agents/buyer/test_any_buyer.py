@@ -221,7 +221,7 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
     assert referee.record_approval.call_args.kwargs == {"mandate_hash": mandate_hash, "method": "voice_code", "approved_by": BID}
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
-    assert not any(isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # only the seller order, never the owner
+    assert not ctx.sent  # no owner chat and no OrderPlaced: the web flow stops at approval
 
 
 def test_web_buyer_fails_closed_when_the_code_cannot_be_issued(runtime, monkeypatch):
@@ -229,3 +229,20 @@ def test_web_buyer_fails_closed_when_the_code_cannot_be_issued(runtime, monkeypa
     ctx, used, _make = _web_approval(buyer, monkeypatch, issue_error=RuntimeError("down"))
     assert not buyer.MARKET_REFEREE.record_approval.called
     assert not any(not isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no OrderPlaced either
+
+
+def test_web_approval_stops_before_payment_and_frees_the_next_web_goal(runtime, monkeypatch, caplog):
+    buyer, _db = runtime
+    with caplog.at_level("INFO", logger="buyer_agent"):
+        ctx, _used, _make = _web_approval(buyer, monkeypatch)
+    assert buyer.ROUND["phase"] == "done" and not buyer.ROUND.get("pending_hold")
+    assert f"web buyer {BID}: approved; payment leg not wired for web buyers (SIM)" in caplog.text
+    assert not ctx.sent
+    for name in ("purchase_status", "settle_goal", "record_payment"):
+        assert not getattr(buyer.MARKET_BUYER, name).called and not getattr(buyer.MARKET_REFEREE, name).called
+    buyer.HANDLED_GOAL_IDS.clear()
+    buyer.HANDLED_GOAL_IDS.add("goal-web1")
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer), {**_open_goal_row(buyer), "id": "goal-web2"}]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    assert asyncio.run(buyer.adopt_open_goal(Context())) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
