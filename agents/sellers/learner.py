@@ -10,7 +10,9 @@ clipped gradient step on its own results:
   - a win (a trusted order reached this agent): probe back toward margin by RECOVER, and remember the cheapest cut that
     ever won. If the probe loses, the next price loss steps it up again, so it searches for the highest winning price.
   - Market Pulse coaching (observe_coaching): a lower_price note raises `cut` to the note's step. Only the closed
-    fields action and price_step are read; the note's free text never reaches this state.
+    fields action and price_step are read; the note's free text never reaches this state. This is an input hook, tested
+    but NOT wired: nothing in the repo delivers a Pulse note to this agent yet (Pulse sends round notes to the referee
+    and answers a seller's record over chat only when asked), so today the learner learns from its own reports only.
 It never bids below its floor: make_bid clamps every line at the floor, and observe_bid records when that happened so
 the note says the price is at its limit. The note never names a floor amount.
 Sellers never see rivals' bids or the buyer's cap: the only inputs are this seller's own loss reports, its own orders

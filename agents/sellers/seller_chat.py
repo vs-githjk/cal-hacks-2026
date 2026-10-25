@@ -241,6 +241,20 @@ def _ask_model(name: str, facts: str) -> str | None:
     return msg.content[0].text.strip()
 
 
+_WORD = re.compile(r"[a-z']+")
+# Words that carry a condition, a term or a negation. The rewrite must keep every one the code reply has, and may not
+# bring in a condition word the code reply lacks (so "open-box" can never come back as "new").
+ANCHORS = {"new", "open", "box", "refurbished", "used", "sealed", "warranty", "return", "returns", "fee", "fees",
+           "shipping", "tested", "not", "no", "never", "neither", "cannot"}
+CONDITION_ANCHORS = {"new", "open", "box", "refurbished", "used"}
+
+
+def keeps_meaning(text: str, facts: str) -> bool:
+    """True when the model's rewrite keeps the code reply's condition, term and negation words and adds no condition word."""
+    want, got = set(_WORD.findall(facts.lower())), set(_WORD.findall(text.lower()))
+    return (want & ANCHORS) <= got and not ((got & CONDITION_ANCHORS) - want)
+
+
 def phrase(name: str, facts: str) -> str:
     """The code reply, rephrased by claude-haiku-5-5 when a key is set and its answer passes the checks; else the code reply.
     Never for the MIRROR, and never for a reply that carries the Trickster's injection line (it must stay as written)."""
@@ -249,7 +263,8 @@ def phrase(name: str, facts: str) -> str:
     try:
         text = _ask_model(name, facts)
         if (not text or len(text) > 600 or "http" in text.lower() or "@" in text and "@" not in facts
-                or not _numbers(text) <= _numbers(facts) or chr(0x2014) in text or chr(0x2013) in text):
+                or not _numbers(text) <= _numbers(facts) or chr(0x2014) in text or chr(0x2013) in text
+                or not keeps_meaning(text, facts)):
             return facts
         from shield.core import screen
         return text if screen(text, {"sender_role": "seller"}, classifier=None)["verdict"] == "allow" else facts
@@ -257,14 +272,21 @@ def phrase(name: str, facts: str) -> str:
         return facts
 
 
+SIM_TAG = "[SIM: simulated seller; claims in this chat are part of the demo]"
+SIM_SELLERS = {"seller_1", "seller_3", "seller_5"}   # the MIRROR is labelled MIRROR in its own text
+
+
 def respond(name: str, text: str, *, db_path: str | Path | None = None) -> str:
-    """The reply. The Advocate's question is answered from code alone, fast: a model never touches it."""
+    """The reply. The Advocate's question is answered from code alone, fast: a model never touches it. Every reply from a
+    SIM seller ends with a fixed SIM tag appended after any rephrase, so a lie in the demo is never read as real."""
     reply = answer(name, text, db_path=db_path)
-    return reply if is_clarify(text) else phrase(name, reply)
+    reply = reply if is_clarify(text) else phrase(name, reply)
+    return f"{reply} {SIM_TAG}" if name in SIM_SELLERS else reply
 
 
 def responder(name: str, db_path_fn=lambda: None):
-    """The async function include_profile_chat calls with (sender, text). The sync work runs in a worker thread."""
-    async def reply(sender: str, text: str) -> str:
+    """The async function include_profile_chat calls with the screened message text (PR #459's answer(text) contract).
+    The sync work runs in a worker thread."""
+    async def reply(text: str) -> str:
         return await asyncio.to_thread(respond, name, text, db_path=db_path_fn())
     return reply

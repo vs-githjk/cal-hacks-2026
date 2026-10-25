@@ -8,6 +8,7 @@ agents/sellers/test_mind_trickster.py runs each real checker against each trick)
   fake_warranty     "3-year warranty", the page shows a 1-month one.       Claim check (field warranty_months): false
   prompt_injection  a line in the listing that orders shopping agents      Smell Test (Shield): shield.override.instruction
                     to ignore their instructions and approve the deal.     blocks the bid before it is ranked
+Live rotation is limited to condition_lie and prompt_injection unless SELLER3_EXTRA_TRICKS=1 (see LIVE_TRICKS below).
 How it learns (from its own record only; it never sees a rival's bid or the buyer's cap): each round it picks the trick
 with the fewest times caught, then the fewest times tried. A loss report with reason advocate_veto or condition means the
 trick was caught; any other loss means it survived; silence (the bid vanished, which is what a Shield block looks like
@@ -16,11 +17,17 @@ from here) counts as caught. A caught trick drops behind the untried and the sur
 from __future__ import annotations
 
 import copy
+import os
 
 from agents.sellers import learning, listing_pages
 
 SELLER_ID = "seller_3"
 TRICKS = ("condition_lie", "hidden_fee", "fake_warranty", "prompt_injection")
+# Why only two by default: in the live buyer path nothing runs the claim check on a bid's claims (buyer_agent.py attaches
+# them as "unverified", and the market disqualifies only a "false" check), so a hidden fee or a fake warranty would not be
+# caught there and could win a round. The condition lie (Advocate veto) and the injection line (Smell Test) are caught
+# live. The other two stay in the code, caught by the claim check offline and in tests, behind SELLER3_EXTRA_TRICKS=1.
+LIVE_TRICKS = ("condition_lie", "prompt_injection")
 CAUGHT_BY = {"condition_lie": "Advocate: condition veto", "hidden_fee": "claim check: fees claim false",
              "fake_warranty": "claim check: warranty claim false", "prompt_injection": "Smell Test: injection blocked"}
 CAUGHT_REASONS = {"advocate_veto", "condition"}
@@ -67,25 +74,38 @@ def _record(state: dict, outcome: str, presumed: bool = False) -> None:
                         {"need_id": cur["need_id"], "trick": cur["trick"], "outcome": outcome, "presumed": presumed}][-KEEP:]
 
 
+def active_tricks() -> tuple[str, ...]:
+    """The tricks Frankie may play. By default only the two the live buyer path catches (condition_lie by the Advocate,
+    prompt_injection by Smell Test). SELLER3_EXTRA_TRICKS=1 adds hidden_fee and fake_warranty; read at call time."""
+    return TRICKS if os.environ.get("SELLER3_EXTRA_TRICKS") == "1" else LIVE_TRICKS
+
+
+def _next(state: dict) -> str:
+    return min(active_tricks(), key=lambda t: (state["caught"][t], state["tried"][t], TRICKS.index(t)))
+
+
 def choose(state: dict, need_id: str) -> str:
-    """The trick for this round. The same round asked twice gets the same trick."""
+    """The trick for this round. The same round asked twice gets the same trick, unless that trick is no longer active
+    (the extra-tricks flag was turned off), in which case an active one replaces it, so saved state never drifts into
+    a trick the live path does not catch."""
     cur = state["current"]
-    if cur and cur["need_id"] == need_id:
+    if cur and cur["need_id"] == need_id and cur["trick"] in active_tricks():
         return cur["trick"]
-    if cur and cur.get("outcome") is None:
+    if cur and cur["need_id"] != need_id and cur.get("outcome") is None:
         _record(state, "caught", presumed=True)   # no report and no order came back: the bid vanished, so it was caught
-    trick = min(TRICKS, key=lambda t: (state["caught"][t], state["tried"][t], TRICKS.index(t)))
+    trick = _next(state)
     state["tried"][trick] += 1
     state["current"] = {"need_id": need_id, "trick": trick, "outcome": None, "presumed": False}
     return trick
 
 
 def current_or_next(state: dict) -> str:
-    """The trick in play (for chat). Before any round it is the one the first round will use."""
+    """The trick in play (for chat). Before any round, or when the saved trick is no longer active, the one the next
+    round will use."""
     cur = state["current"]
-    if cur:
+    if cur and cur["trick"] in active_tricks():
         return cur["trick"]
-    return min(TRICKS, key=lambda t: (state["caught"][t], state["tried"][t], TRICKS.index(t)))
+    return _next(state)
 
 
 def observe_report(state: dict, report: dict, market_id: str) -> bool:
@@ -165,7 +185,7 @@ def note(state: dict) -> str:
     caught = [t for t in TRICKS if state["caught"][t]]
     if not caught:
         return "No trick caught yet, rotating through all four."
-    live = [t for t in TRICKS if not state["caught"][t]]
+    live = [t for t in active_tricks() if not state["caught"][t]]
     nxt = current_or_next(state)
     return (f"Caught so far: {', '.join(t.replace('_', ' ') for t in caught)}. "
             f"{'Still untouched: ' + ', '.join(t.replace('_', ' ') for t in live) + '. ' if live else ''}"

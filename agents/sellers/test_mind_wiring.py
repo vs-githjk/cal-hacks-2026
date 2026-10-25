@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # agents/, for 
 
 import common  # noqa: E402
 from agents.buyer import state
-from agents.sellers import learner, mind_store, mirror_live, minds, refurb, seller_agent, trickster
+from agents.sellers import learner, mind_store, mirror_live, minds, refurb, seller_agent, seller_chat, trickster
 from agents.sellers.test_seller_agent import (  # noqa: F401  (seller is a pytest fixture used by the order test)
     BUYER_AGENT, FakeAgent, FakeProtocol, Context, approved_transaction, save_transaction, seller)
 from data.mirror import not_partners
@@ -131,7 +131,27 @@ def test_a_trusted_order_tells_the_learner_it_won_and_probes_margin_back(built, 
 
 # ---- Frankie: the trickster -----------------------------------------------
 
-def test_frankie_rotates_its_trick_and_learns_from_a_veto(built):
+def test_by_default_frankie_plays_only_what_the_live_path_catches_and_learns_from_a_veto(built, monkeypatch):
+    monkeypatch.delenv("SELLER3_EXTRA_TRICKS", raising=False)
+    app, _ = built["make"]("seller_3")
+    ctx, [(one, _)] = built["ask"](app, need("need-1"))
+    assert one["lines"][0]["page_condition"] == "open-box"                   # round 1: the condition lie (Advocate veto)
+    REPORTS["rows"] = [loss("a", "round-need-1", "seller-c", reason="advocate_veto")]
+    ctx, [(two, persona2)] = built["ask"](app, need("need-2"))
+    assert trickster.INJECTION in two["claims"] and two["lines"][0]["page_condition"] == "new"   # round 2: the injection (Smell Test)
+    assert _smell(two, persona2)["verdict"] == "block"
+    seen = []
+    for n in range(3, 9):
+        ctx, [(bid, _)] = built["ask"](app, need(f"need-{n}"))
+        seen.append("condition_lie" if bid["lines"][0]["page_condition"] == "open-box" else
+                    "prompt_injection" if trickster.INJECTION in bid["claims"] else "EXTRA")
+    assert "EXTRA" not in seen and set(seen) == {"condition_lie", "prompt_injection"}
+    st = mind(built, "seller_3")
+    assert st["tried"]["hidden_fee"] == st["tried"]["fake_warranty"] == 0
+
+
+def test_frankie_rotates_through_all_four_tricks_only_with_the_extra_flag(built, monkeypatch):
+    monkeypatch.setenv("SELLER3_EXTRA_TRICKS", "1")
     app, _ = built["make"]("seller_3")
     ctx, [(one, persona1)] = built["ask"](app, need("need-1"))
     assert one["lines"][0]["offered_condition"] == "new" and one["lines"][0]["page_condition"] == "open-box"   # round 1: the condition lie
@@ -215,8 +235,9 @@ def test_the_mirror_skips_the_recheck_for_a_part_it_does_not_bid_and_bids_nothin
 def test_the_four_named_sellers_get_an_in_character_answer_in_their_profile_chat(built, name):
     app, (text, kw) = built["make"](name)
     assert callable(kw["answer"]) and "this chat cannot place orders" in text or name == "seller_6"
-    reply = asyncio.run(kw["answer"]("visitor", "who are you?"))
+    reply = asyncio.run(kw["answer"]("who are you?"))      # PR #459's contract: an async answer(text)
     assert {"seller_1": "Byte Bros", "seller_3": "Frankie", "seller_5": "ReNew", "seller_6": "MIRROR"}[name] in reply
+    assert reply.endswith(seller_chat.SIM_TAG) == (name != "seller_6")
 
 
 def test_a_custom_seller_keeps_the_fixed_chat_text(built):
@@ -258,21 +279,28 @@ def _run(handler, monkeypatch, verdict="allow"):
 
 def test_profile_chat_uses_the_answer_only_after_smell_test_allows(monkeypatch):
     called = []
-    handler = _chat_handler(lambda sender, text: called.append(text) or "in character reply")
+
+    async def answer(text):
+        called.append(text)
+        return "in character reply"
+    handler = _chat_handler(answer)
     assert _run(handler, monkeypatch) == "in character reply" and called == ["hello"]
     called.clear()
     assert "Smell Test blocked" in _run(handler, monkeypatch, "block") and called == []
 
 
 def test_profile_chat_awaits_an_async_answer_and_falls_back_to_the_role_text_on_failure_or_empty(monkeypatch):
-    async def fine(sender, text):
+    async def fine(text):
         return "async reply"
 
-    def boom(sender, text):
+    async def boom(text):
         raise RuntimeError("down")
+
+    async def empty(text):
+        return ""
     assert _run(_chat_handler(fine), monkeypatch) == "async reply"
     assert _run(_chat_handler(boom), monkeypatch) == "ROLE TEXT buyer"
-    assert _run(_chat_handler(lambda s, t: "   "), monkeypatch) == "ROLE TEXT buyer"
+    assert _run(_chat_handler(empty), monkeypatch) == "ROLE TEXT buyer"
     assert _run(_chat_handler(None), monkeypatch) == "ROLE TEXT buyer"
 
 
@@ -317,7 +345,8 @@ def test_the_honest_minds_pass_smell_test_with_their_notes_and_anchors_attached(
     assert _smell(bid, persona)["verdict"] == "allow"
 
 
-def test_frankies_first_three_tricks_slip_past_smell_test_and_the_injection_round_does_not(built):
+def test_frankies_first_three_tricks_slip_past_smell_test_and_the_injection_round_does_not(built, monkeypatch):
+    monkeypatch.setenv("SELLER3_EXTRA_TRICKS", "1")
     app, _ = built["make"]("seller_3")
     verdicts = []
     for n in range(1, 5):

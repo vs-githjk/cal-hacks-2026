@@ -35,7 +35,41 @@ def loss(rid, round_id, reason="price", band="within5"):
 
 # ---- rotation and learning -------------------------------------------------
 
-def test_every_caught_trick_rotates_out_and_all_four_are_used_before_any_repeats():
+def test_by_default_the_rotation_only_plays_tricks_the_live_path_catches(monkeypatch):
+    monkeypatch.delenv("SELLER3_EXTRA_TRICKS", raising=False)
+    assert trickster.LIVE_TRICKS == ("condition_lie", "prompt_injection") and trickster.active_tricks() == trickster.LIVE_TRICKS
+    st = trickster.fresh()
+    seen = []
+    for n in range(1, 21):   # caught, survived and silent rounds in turn
+        seen.append(trickster.choose(st, f"need-{n}"))
+        if n % 3 == 1:
+            trickster.observe_report(st, loss(f"l{n}", f"round-need-{n}", "advocate_veto"), MARKET_ID)
+        elif n % 3 == 2:
+            trickster.observe_report(st, loss(f"l{n}", f"round-need-{n}", "price"), MARKET_ID)
+    assert set(seen) == set(trickster.LIVE_TRICKS) and seen[:2] == ["condition_lie", "prompt_injection"]
+    assert st["tried"]["hidden_fee"] == st["tried"]["fake_warranty"] == 0
+    assert trickster.current_or_next(st) in trickster.LIVE_TRICKS
+
+
+def test_the_extra_tricks_need_the_flag_and_saved_state_never_drifts_into_them(monkeypatch):
+    monkeypatch.setenv("SELLER3_EXTRA_TRICKS", "1")
+    st = trickster.fresh()
+    trickster.choose(st, "need-1")
+    trickster.observe_report(st, loss("a", "round-need-1", "advocate_veto"), MARKET_ID)
+    assert trickster.choose(st, "need-2") == "hidden_fee"          # flag on: the extra trick is played
+    for off in ("", "0", "true"):                                  # only exactly 1 turns it on
+        monkeypatch.setenv("SELLER3_EXTRA_TRICKS", off)
+        assert trickster.active_tricks() == trickster.LIVE_TRICKS
+    monkeypatch.delenv("SELLER3_EXTRA_TRICKS", raising=False)
+    assert trickster.current_or_next(st) in trickster.LIVE_TRICKS  # chat no longer reports the extra trick
+    assert trickster.choose(st, "need-2") in trickster.LIVE_TRICKS  # the same round, but its trick is no longer active
+    assert st["current"]["trick"] in trickster.LIVE_TRICKS
+    for n in range(3, 12):
+        assert trickster.choose(st, f"need-{n}") in trickster.LIVE_TRICKS
+
+
+def test_every_caught_trick_rotates_out_and_all_four_are_used_before_any_repeats(monkeypatch):
+    monkeypatch.setenv("SELLER3_EXTRA_TRICKS", "1")
     st = trickster.fresh()
     seen = []
     for n in range(1, 5):
@@ -45,7 +79,8 @@ def test_every_caught_trick_rotates_out_and_all_four_are_used_before_any_repeats
     assert trickster.choose(st, "need-5") == trickster.TRICKS[0]   # all caught once: round robin starts over
 
 
-def test_a_trick_that_survived_is_preferred_over_one_that_was_caught():
+def test_a_trick_that_survived_is_preferred_over_one_that_was_caught(monkeypatch):
+    monkeypatch.setenv("SELLER3_EXTRA_TRICKS", "1")
     st = trickster.fresh()
     for n in range(1, 5):                               # try each once; only the hidden fee survives (lost on price)
         t = trickster.choose(st, f"need-{n}")
