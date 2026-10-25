@@ -983,7 +983,8 @@ async def conclude(ctx: Context, reviewed: bool):
     ROUND["reviewed"] = True
     need, bids, cards = ROUND["need"], ROUND["bids"], ROUND["cards"]
     ROUND["phase"] = "decided"
-    out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
+    came_in = len(ROUND.get("review_bids") or bids)  # #449 RT-22: ROUND["bids"] is cut to the winner; the reviewed bids are all that came in
+    out = [f"{came_in} sealed bid{'' if came_in == 1 else 's'} for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
     now_utc = business_now()
     seller_checks = ROUND.get("seller_checks", {})
     not_configured_suppliers = {
