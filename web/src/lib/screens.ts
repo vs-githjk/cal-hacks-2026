@@ -349,7 +349,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
-        why: r.reasons.join("; ") || card?.label || "",
+        why: feedLabel(r.reasons.join("; ")) || card?.label || "",
         sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
         ...(held ? { heldBack: held } : {}),

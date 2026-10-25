@@ -232,6 +232,7 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
 }
 
 export function ShieldCard({ shield }: { shield: ShieldView | null }) {
+  const quiet = useContext(QuietOrigin);
   if (!shield) {
     return <Card stripe="ink"><Label>{SHIELD}</Label><p className="text-muted">Every listing is screened first. Blocks land here.</p></Card>;
   }
@@ -261,7 +262,9 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
       </div>
       <p className="mt-2 text-[13px] text-muted">
         {shield.control && <>Control page ({shield.control.name}, same SKU) {shield.control.verdict} in {shield.control.latencyMs.toFixed(1)} ms. </>}
-        <Chip origin={shield.pageOrigin} /> page, <Chip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.
+        {quiet
+          ? shield.version && <>Verdict from {shield.version}.</>
+          : <><Chip origin={shield.pageOrigin} /> page, <Chip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.</>}
       </p>
     </Card>
   );
