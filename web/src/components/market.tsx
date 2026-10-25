@@ -160,7 +160,7 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
 }
 
 function Th({ children, right, className = "" }: { children: React.ReactNode; right?: boolean; className?: string }) {
-  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted ${right ? "text-right" : "text-left"} ${className}`}>{children}</th>;
+  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px] font-semibold text-muted ${right ? "text-right" : "text-left"} ${className}`}>{children}</th>;
 }
 function Td({ children, right, className = "" }: { children: React.ReactNode; right?: boolean; className?: string }) {
   return <td className={`border-b border-line p-2.5 align-top ${right ? "whitespace-nowrap text-right" : ""} ${className}`}>{children}</td>;
@@ -236,7 +236,7 @@ export function FloorEvents({ events, max = 60 }: { events: FloorEventView[]; ma
             <li key={e.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(e.at)}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
-                <span className={`mb-px block text-[11px] font-semibold uppercase tracking-[0.06em] ${KIND_STYLE[e.kind] ?? "text-muted"}`}>{e.kind.replaceAll("_", " ")}</span>
+                <span className={`mb-px block text-[11px] font-semibold ${KIND_STYLE[e.kind] ?? "text-muted"}`}>{e.kind.replaceAll("_", " ")}</span>
                 {e.label} <OriginChip origin={e.origin} />
               </span>
             </li>

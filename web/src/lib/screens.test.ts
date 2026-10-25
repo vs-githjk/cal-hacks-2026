@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, marketKpis, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -395,4 +395,33 @@ test("stateLabel: FAILED and the other states read in plain words", () => {
   assert.equal(stateLabel("FAILED"), "Could not finish");
   assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
   assert.equal(stateLabel("HUNTING"), "hunting");
+});
+
+test("marketKpis: empty input is all zeros and no winner", () => {
+  const k = marketKpis([], []);
+  assert.deepEqual(k, { roundsRun: 0, openNow: 0, bidsLatest: 0, latestOpen: false, sellersLatest: null, lastWinner: null });
+});
+
+test("marketKpis: an open latest round is sealed and shows no price", () => {
+  const k = marketKpis([round({ id: "r1" }), round({ id: "r2", state: "open", sealedCount: 3, closedAt: undefined, openedAt: ts(T0 + 1000) })], [result({ roundId: "r1", landed: 900 })]);
+  assert.equal(k.openNow, 1);
+  assert.equal(k.bidsLatest, 3);
+  assert.equal(k.sellersLatest, null);
+  assert.equal(k.lastWinner!.roundId, "r1"); // the older closed round, never the open one
+  const open = marketKpis([round({ id: "r2", state: "open", closedAt: undefined })], [result({ roundId: "r2", landed: 777 })]);
+  assert.equal(open.lastWinner, null);
+});
+
+test("marketKpis: last winner is rank 1 of the latest closed round", () => {
+  const rows = [
+    result({ id: 1n, roundId: "r1", sellerId: "a", persona: "A", rank: 1, landed: 500 }),
+    result({ id: 2n, roundId: "r2", sellerId: "b", persona: "B", rank: 2, landed: 700 }),
+    result({ id: 3n, roundId: "r2", sellerId: "c", persona: "C", rank: 1, landed: 650 }),
+    result({ id: 4n, roundId: "r2", sellerId: "c", persona: "C", rank: 0, landed: 800 }),
+  ];
+  const k = marketKpis([round({ id: "r1" }), round({ id: "r2", openedAt: ts(T0 + 5000) })], rows);
+  assert.deepEqual(k.lastWinner, { seller: "C", landed: 650, roundId: "r2" });
+  assert.equal(k.bidsLatest, 3);
+  assert.equal(k.sellersLatest, 2);
+  assert.equal(k.roundsRun, 2);
 });
