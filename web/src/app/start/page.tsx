@@ -1,5 +1,5 @@
 "use client";
-// Buyer sign-up: a name (and optional phone) creates the account, then the visitor lands on /buyer.
+// Buyer sign-up: a name and a phone (required: purchases are approved by a call) create the account, then the visitor lands on /buyer.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -66,8 +66,8 @@ export default function StartPage() {
             <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={40} autoComplete="name" className={field} />
           </label>
           <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
-            Phone (optional, only for the approval call)
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" autoComplete="tel" className={field} />
+            Phone (we call this number to approve a purchase)
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} required type="tel" autoComplete="tel" placeholder="+1 415 555 0100" className={field} />
           </label>
           <p className="rounded-xl bg-surface-2 px-4 py-3 text-[13px]/[18px] text-ink-2">We never see your card. Payments tonight are sandbox.</p>
           {error && <p role="alert" className="text-[13px]/[18px] text-coral">{error}</p>}
