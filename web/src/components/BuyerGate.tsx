@@ -8,6 +8,7 @@ import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
 import { buyerSession } from "@/lib/screens";
 import { GoalComposer } from "./GoalComposer";
+import { PanelPreviews } from "./panels";
 
 // Demo pairing: the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
 const DEMO_BUYER = "vidyut";
@@ -76,12 +77,13 @@ export function BuyerGate({ children }: { children: ReactNode }) {
   const conn = useSpacetimeDB();
   const [roles, rolesReady] = useTable(tables.myRole);
   const session = buyerSession(conn.isActive, rolesReady, roles);
-  if (session.status === "connecting") return <p className="text-muted">Connecting to the market...</p>;
+  if (session.status === "connecting") return <PanelPreviews reason="Connecting to the market. If this stays, the market is not reachable from this page; the panels fill in when it answers." />;
   if (session.status === "unpaired") {
     return (
       <div className="grid gap-3.5">
         <GoalComposer buyerId={null} />
         <PairScreen />
+        <PanelPreviews reason="Goal, allowance and purchase memory are private to a paired screen. Pair above to see them." />
       </div>
     );
   }

@@ -1,14 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { AgentPip } from "@/components/AgentPip";
+import { PwaRegister } from "@/components/PwaRegister";
 import { AppHeader, RunModeFooter } from "@/components/shell";
 import { fontVars } from "./fonts";
 
 export const metadata: Metadata = {
   title: "Tech Bazaar",
   description: "A refereed arena where seller agents bid for a buyer's computer gear.",
+  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "black-translucent" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
+
+export const viewport: Viewport = { themeColor: "#000000" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -18,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <AppHeader />
           <main className="mx-auto max-w-[1360px] px-4 py-6">{children}</main>
           <RunModeFooter />
+          <PwaRegister />
         </Providers>
         <AgentPip />
       </body>
