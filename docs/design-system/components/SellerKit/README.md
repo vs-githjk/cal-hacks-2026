@@ -1,0 +1,1 @@
+Seller Kit onboarding on /sell in four steps: store, pricing and perks, floors per condition, start the agent. The consumer provides the step state and the generated config name and command. The SIM label is required because the kit cannot verify a real shop. Floors copy must say the referee enforces them.

@@ -176,6 +176,21 @@ class OrderPlaced(Model):
     mandate_json: str  # payment.make_mandate(...) dict
 
 
+# #398 item 3: the buyer may delegate only the voice of the approval call to Bazaar Caller (BUYER_DELEGATE_CALL=1).
+# The request carries the call script variables (no code, no secret); the result carries the spoken evidence only.
+# The buyer issues the code, verifies the utterance and writes the record itself. Additive: CallRequest is unchanged.
+class VoiceTransportRequest(Model):
+    mandate_hash: str
+    variables_json: str   # exactly buyer_name, deal_script, why_answer (pay.voice_cartesia.build_variables)
+
+
+class VoiceTransportResult(Model):
+    mandate_hash: str
+    call_id: str = ""
+    call_json: str = ""   # the ended call as Cartesia returned it, with its transcript; never a verdict
+    error: str = ""
+
+
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
 CATALOG_SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named SIM seller agents
 # #342: seller_6 bids Central Computers (SF) listings as MIRROR. That store never joined, so its bids are shown for
@@ -213,6 +228,8 @@ SEEDS = {
        for s in CATALOG_SELLERS},
     **_MIRROR_SEEDS,  # never a default: no private seed, no seller_6
 }
+
+SEEDS.setdefault("caller", os.getenv("CALLER_AGENT_SEED") or "tech-bazaar-caller-dev")  # same default as caller_agent.py
 
 
 _CUSTOM_ENVS: dict[str, str] = {}  # env name -> the custom role that owns it

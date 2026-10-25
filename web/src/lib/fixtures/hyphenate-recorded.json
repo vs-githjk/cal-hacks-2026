@@ -1,0 +1,1516 @@
+{
+ "recorded_at": "2026-10-25T06:02:24Z",
+ "origin": "SIM",
+ "source": "hyphenate/api.py, story=moment; teammate names replaced with roles (the buyer) after recording, #412",
+ "raw": {
+  "company": {
+   "name": "Pixel Forge Games (SIM)",
+   "origin": "SIM",
+   "people": [
+    {
+     "id": "buyer",
+     "name": "The buyer",
+     "role": "employee",
+     "dept": "engineering",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "buyer-assistant",
+     "name": "Pepper's Assistant",
+     "role": "employee",
+     "dept": "engineering",
+     "acts_for": [
+      "buyer"
+     ],
+     "system": false
+    },
+    {
+     "id": "jess",
+     "name": "Jess Drew",
+     "role": "employee",
+     "dept": "art",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "rhodey",
+     "name": "James Rhodes",
+     "role": "dept_head",
+     "dept": "engineering",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "kara",
+     "name": "Kara Danvers",
+     "role": "dept_head",
+     "dept": "art",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "pepper",
+     "name": "Pepper Potts",
+     "role": "controller",
+     "dept": "finance",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "happy",
+     "name": "Happy Hogan",
+     "role": "it_receiver",
+     "dept": "it",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "maria",
+     "name": "Maria Hill",
+     "role": "vendor_admin",
+     "dept": "finance",
+     "acts_for": [],
+     "system": false
+    },
+    {
+     "id": "purchasing-agent",
+     "name": "Hyphenate Purchasing Agent (SIM)",
+     "role": "purchasing_agent",
+     "dept": "it",
+     "acts_for": [],
+     "system": true
+    },
+    {
+     "id": "ap-agent",
+     "name": "Hyphenate AP Clerk Agent (SIM)",
+     "role": "ap_agent",
+     "dept": "finance",
+     "acts_for": [],
+     "system": true
+    }
+   ],
+   "budgets": {
+    "engineering": 1200000,
+    "art": 600000,
+    "it": 300000
+   },
+   "budget_used": {
+    "engineering": 249998,
+    "art": 0,
+    "it": 0
+   },
+   "policy": {
+    "dept_head_limit": 250000,
+    "new_vendor_controller_over": 100000,
+    "price_tol_pct": 0.005,
+    "price_tol_abs": 100,
+    "mirror_above_pct": 0.15,
+    "mirror_below_pct": 0.4,
+    "duplicate_window_days": 60,
+    "max_replans": 2,
+    "serialized_skus_default": true
+   },
+   "clock": "2026-10-31T17:00:00Z",
+   "sod": "requesters never approve; receivers never requested or approved; payers never requested or approved; bank changes are verified by someone else"
+  },
+  "pos": {
+   "pos": [
+    {
+     "id": "PO-1001",
+     "requester": "buyer",
+     "dept": "engineering",
+     "vendor_id": "bestbuy",
+     "status": "replanned",
+     "total": 374997,
+     "justification": "render farm, 3 nodes",
+     "created_at": "2026-10-24T09:00:00Z",
+     "committed": 0,
+     "parent": null,
+     "replans": 0,
+     "bound": null,
+     "route": {
+      "needs": [
+       "controller"
+      ],
+      "two_person": false,
+      "peer_dept_head": false,
+      "flags": [
+       "over_limit"
+      ],
+      "notes": [
+       "$3,749.97 is above the $2,500.00 department limit"
+      ],
+      "evidence": [
+       {
+        "type": "mirror",
+        "id": "RTX-5070-TI",
+        "detail": "$1,299.99 as of 2026-10-25 MIRROR"
+       }
+      ],
+      "vendor_level": "normal"
+     },
+     "invoices": [],
+     "receipts": [],
+     "paid": 0,
+     "prepaid": 0,
+     "approvals": [],
+     "lines": [
+      {
+       "sku": "RTX-5070-TI",
+       "desc": "MSI GeForce RTX 5070 Ti 16GB (MIRROR-priced)",
+       "qty": 3,
+       "unit": 124999,
+       "condition": "new",
+       "allowed": [
+        "new"
+       ],
+       "serialized": true,
+       "accepted": 0,
+       "rejected": 0,
+       "billed": 0,
+       "accepted_conditions": [],
+       "reject_reasons": [],
+       "min_qty": 2,
+       "alternatives": []
+      }
+     ],
+     "replanned_to": "PO-1002"
+    },
+    {
+     "id": "PO-1002",
+     "requester": "buyer",
+     "dept": "engineering",
+     "vendor_id": "bestbuy",
+     "status": "partially_received",
+     "total": 249998,
+     "justification": "re-plan of PO-1001 after a no: RTX-5070-TI quantity -> 2",
+     "created_at": "2026-10-24T12:00:00Z",
+     "committed": 249998,
+     "parent": "PO-1001",
+     "replans": 1,
+     "bound": {
+      "deal_id": "PO-1002",
+      "payee": "best-buy@pay.example.test",
+      "currency": "USD",
+      "ceiling": 251248,
+      "approval_ids": [
+       "dec_0009"
+      ],
+      "hash": "c0d2fc87c9a5e28f735cb030d33e04df62b2a321f50ad1ce1d7ab43f9a1691f4"
+     },
+     "route": {
+      "needs": [
+       "dept_head"
+      ],
+      "two_person": false,
+      "peer_dept_head": false,
+      "flags": [],
+      "notes": [],
+      "evidence": [
+       {
+        "type": "mirror",
+        "id": "RTX-5070-TI",
+        "detail": "$1,299.99 as of 2026-10-25 MIRROR"
+       }
+      ],
+      "vendor_level": "normal"
+     },
+     "invoices": [
+      "INV-2"
+     ],
+     "receipts": [
+      "RCV-1"
+     ],
+     "paid": 124999,
+     "prepaid": 0,
+     "approvals": [
+      {
+       "by": "rhodey",
+       "role": "dept_head",
+       "fills": "dept_head",
+       "at": "2026-10-24T13:00:00Z",
+       "note": "",
+       "override_budget": false
+      }
+     ],
+     "lines": [
+      {
+       "sku": "RTX-5070-TI",
+       "desc": "MSI GeForce RTX 5070 Ti 16GB (MIRROR-priced)",
+       "qty": 2,
+       "unit": 124999,
+       "condition": "new",
+       "allowed": [
+        "new"
+       ],
+       "serialized": true,
+       "accepted": 1,
+       "rejected": 1,
+       "billed": 1,
+       "accepted_conditions": [
+        "new"
+       ],
+       "reject_reasons": [
+        "condition_not_allowed"
+       ],
+       "min_qty": 2,
+       "alternatives": []
+      }
+     ],
+     "replanned_to": null
+    }
+   ]
+  },
+  "invoices": {
+   "invoices": [
+    {
+     "id": "INV-1",
+     "po_id": "PO-1002",
+     "vendor_id": "bestbuy",
+     "number": "BB-88213",
+     "date": "2026-10-25",
+     "lines": [
+      {
+       "sku": "RTX-5070-TI",
+       "qty": 2,
+       "unit": 124999,
+       "condition": "new"
+      }
+     ],
+     "total": 249998,
+     "computed": 249998,
+     "remit_to": "acct_bb_0099",
+     "claim": null,
+     "status": "superseded",
+     "received_at": "2026-10-25T14:00:00Z",
+     "findings": [
+      {
+       "code": "remit_to_mismatch",
+       "sku": "",
+       "detail": "invoice asks to pay a different bank account than the verified vendor master",
+       "credit": 0,
+       "hold": true
+      },
+      {
+       "code": "qty_short",
+       "sku": "RTX-5070-TI",
+       "detail": "billed 2 units, received 1 accepted, 1 rejected",
+       "credit": 124999,
+       "hold": true
+      },
+      {
+       "code": "rejected_goods_billed",
+       "sku": "RTX-5070-TI",
+       "detail": "1 unit(s) were rejected at receiving (condition_not_allowed) and are still billed",
+       "credit": 0,
+       "hold": true
+      }
+     ],
+     "info": [],
+     "seq": 13,
+     "payable": 0,
+     "supersedes": null,
+     "match_decision": "dec_0017"
+    },
+    {
+     "id": "INV-2",
+     "po_id": "PO-1002",
+     "vendor_id": "bestbuy",
+     "number": "BB-88214",
+     "date": "2026-10-26",
+     "lines": [
+      {
+       "sku": "RTX-5070-TI",
+       "qty": 1,
+       "unit": 124999,
+       "condition": "new"
+      }
+     ],
+     "total": 124999,
+     "computed": 124999,
+     "remit_to": null,
+     "claim": null,
+     "status": "paid",
+     "received_at": "2026-10-26T09:00:00Z",
+     "findings": [],
+     "info": [],
+     "seq": 18,
+     "payable": 124999,
+     "supersedes": "INV-1",
+     "match_decision": "dec_0020",
+     "entry": "je_0002"
+    }
+   ]
+  },
+  "vendors": {
+   "vendors": [
+    {
+     "id": "bestbuy",
+     "name": "Best Buy (MIRROR listing, SIM payee)",
+     "payee_id": "best-buy@pay.example.test",
+     "bank_account": "acct_bb_5555",
+     "terms": "net30",
+     "origin": "SIM",
+     "bank_verified": true,
+     "events": [
+      {
+       "kind": "completed_order",
+       "at": "2026-06-12T17:00:00Z",
+       "by": "ap-agent",
+       "detail": "seed order"
+      },
+      {
+       "kind": "failed_receiving",
+       "at": "2026-10-25T09:00:00Z",
+       "by": "happy",
+       "detail": "condition_not_allowed"
+      },
+      {
+       "kind": "bank_change",
+       "at": "2026-10-26T15:00:00Z",
+       "by": "maria",
+       "detail": "acct_bb_4412 -> acct_bb_5555 via email"
+      },
+      {
+       "kind": "bank_verified",
+       "at": "2026-10-27T10:00:00Z",
+       "by": "pepper",
+       "detail": "call-back to the number on file"
+      }
+     ],
+     "risk": {
+      "level": "strict",
+      "reasons": [
+       "failed receiving check 6 days ago (condition_not_allowed)"
+      ],
+      "price_tolerance_zero": true,
+      "extra_approval": true,
+      "new_vendor": false
+     }
+    },
+    {
+     "id": "gadget-grove",
+     "name": "Gadget Grove",
+     "payee_id": "gadget-grove@pay.example.test",
+     "bank_account": "acct_gg_9087",
+     "terms": "net30",
+     "origin": "SIM",
+     "bank_verified": true,
+     "events": [
+      {
+       "kind": "completed_order",
+       "at": "2026-06-12T17:00:00Z",
+       "by": "ap-agent",
+       "detail": "seed order"
+      }
+     ],
+     "risk": {
+      "level": "normal",
+      "reasons": [],
+      "price_tolerance_zero": false,
+      "extra_approval": false,
+      "new_vendor": false
+     }
+    },
+    {
+     "id": "bargain-bin",
+     "name": "Bargain Bin Marketplace (SIM)",
+     "payee_id": "bargain-bin@pay.example.test",
+     "bank_account": "acct_bin_2210",
+     "terms": "prepay",
+     "origin": "SIM",
+     "bank_verified": true,
+     "events": [
+      {
+       "kind": "completed_order",
+       "at": "2026-06-12T17:00:00Z",
+       "by": "ap-agent",
+       "detail": "seed order"
+      }
+     ],
+     "risk": {
+      "level": "normal",
+      "reasons": [],
+      "price_tolerance_zero": false,
+      "extra_approval": false,
+      "new_vendor": false
+     }
+    },
+    {
+     "id": "newco",
+     "name": "NewCo Computers (SIM, no history)",
+     "payee_id": "newco@pay.example.test",
+     "bank_account": "acct_nc_7731",
+     "terms": "net30",
+     "origin": "SIM",
+     "bank_verified": true,
+     "events": [],
+     "risk": {
+      "level": "normal",
+      "reasons": [],
+      "price_tolerance_zero": false,
+      "extra_approval": false,
+      "new_vendor": true
+     }
+    }
+   ]
+  },
+  "audit": {
+   "decisions": [
+    {
+     "id": "dec_0001",
+     "at": "2026-10-24T09:00:00Z",
+     "kind": "po_draft",
+     "subject": "po:PO-1001",
+     "outcome": "drafted",
+     "codes": [],
+     "reason": "The buyer asked for 3x RTX-5070-TI from Best Buy (MIRROR listing, SIM payee) for $3,749.97",
+     "actor": {
+      "kind": "person",
+      "id": "buyer"
+     },
+     "rule": {
+      "id": "approval.route",
+      "text": "Route by amount, vendor history, budget and price reference; escalations are written down with their reason."
+     },
+     "evidence": [
+      {
+       "type": "requisition",
+       "id": "PO-1001",
+       "detail": "render farm, 3 nodes"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "genesis",
+     "hash": "61990a2daf88fdc721d5981a19b253a59fd2e1b04cabc722b2d96b4d8f4c68ad"
+    },
+    {
+     "id": "dec_0002",
+     "at": "2026-10-24T09:00:00Z",
+     "kind": "approval_route",
+     "subject": "po:PO-1001",
+     "outcome": "routed",
+     "codes": [
+      "over_limit"
+     ],
+     "reason": "needs controller; $3,749.97 is above the $2,500.00 department limit",
+     "actor": {
+      "kind": "rule",
+      "id": "approval.route"
+     },
+     "rule": {
+      "id": "approval.route",
+      "text": "Route by amount, vendor history, budget and price reference; escalations are written down with their reason."
+     },
+     "evidence": [
+      {
+       "type": "vendor",
+       "id": "bestbuy",
+       "detail": "level normal"
+      },
+      {
+       "type": "mirror",
+       "id": "RTX-5070-TI",
+       "detail": "$1,299.99 as of 2026-10-25 MIRROR"
+      }
+     ],
+     "parents": [
+      "dec_0001"
+     ],
+     "prev_hash": "61990a2daf88fdc721d5981a19b253a59fd2e1b04cabc722b2d96b4d8f4c68ad",
+     "hash": "9631eb9f03dc5f4a6bccf86f49590db1cfadc234c1e8b424458a7915a3308acd"
+    },
+    {
+     "id": "dec_0003",
+     "at": "2026-10-24T10:00:00Z",
+     "kind": "po_approval",
+     "subject": "po:PO-1001",
+     "outcome": "denied",
+     "codes": [
+      "self_approval"
+     ],
+     "reason": "The buyer requested this PO and cannot approve it",
+     "actor": {
+      "kind": "rule",
+      "id": "sod.requester_cannot_approve"
+     },
+     "rule": {
+      "id": "sod.requester_cannot_approve",
+      "text": "Whoever requests a purchase can never approve it, directly or through a delegate."
+     },
+     "evidence": [
+      {
+       "type": "person",
+       "id": "buyer",
+       "detail": "attempted by"
+      },
+      {
+       "type": "po",
+       "id": "PO-1001",
+       "detail": "requester buyer"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "9631eb9f03dc5f4a6bccf86f49590db1cfadc234c1e8b424458a7915a3308acd",
+     "hash": "c75a11ff4d8b25671cc96de194166b2ff127bac170cb3e05bc166b934fc21a72"
+    },
+    {
+     "id": "dec_0004",
+     "at": "2026-10-24T11:00:00Z",
+     "kind": "po_approval",
+     "subject": "po:PO-1001",
+     "outcome": "denied",
+     "codes": [
+      "above_authority"
+     ],
+     "reason": "$3,749.97 is above the $2,500.00 a department head can approve; the controller must",
+     "actor": {
+      "kind": "rule",
+      "id": "approval.authority"
+     },
+     "rule": {
+      "id": "approval.authority",
+      "text": "A department head approves only their department and only up to the policy limit; above it the controller approves."
+     },
+     "evidence": [
+      {
+       "type": "person",
+       "id": "rhodey",
+       "detail": "attempted by"
+      },
+      {
+       "type": "po",
+       "id": "PO-1001",
+       "detail": "requester buyer"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "c75a11ff4d8b25671cc96de194166b2ff127bac170cb3e05bc166b934fc21a72",
+     "hash": "22013f0ba146b748846f7297a8f3b83c3d4d63a14f08b1dceb0a9b4749993645"
+    },
+    {
+     "id": "dec_0005",
+     "at": "2026-10-24T12:00:00Z",
+     "kind": "po_reject",
+     "subject": "po:PO-1001",
+     "outcome": "rejected",
+     "codes": [
+      "controller_no"
+     ],
+     "reason": "Pepper Potts said no: quarter budget, ceiling $2,600 (will consider up to $2,600.00)",
+     "actor": {
+      "kind": "person",
+      "id": "pepper"
+     },
+     "rule": {
+      "id": "replan.after_no",
+      "text": "When a controller says no, re-plan inside what they allowed (cheaper allowed condition or fewer units), else drop and release the budget."
+     },
+     "evidence": [
+      {
+       "type": "person",
+       "id": "pepper",
+       "detail": "quarter budget, ceiling $2,600"
+      }
+     ],
+     "parents": [
+      "dec_0002"
+     ],
+     "prev_hash": "22013f0ba146b748846f7297a8f3b83c3d4d63a14f08b1dceb0a9b4749993645",
+     "hash": "dc8e51615f3fea4538af7f39b3268dd75145bac58e2b7762caaa7daf1c56d673"
+    },
+    {
+     "id": "dec_0006",
+     "at": "2026-10-24T12:00:00Z",
+     "kind": "po_draft",
+     "subject": "po:PO-1002",
+     "outcome": "drafted",
+     "codes": [],
+     "reason": "The buyer asked for 2x RTX-5070-TI from Best Buy (MIRROR listing, SIM payee) for $2,499.98",
+     "actor": {
+      "kind": "person",
+      "id": "buyer"
+     },
+     "rule": {
+      "id": "approval.route",
+      "text": "Route by amount, vendor history, budget and price reference; escalations are written down with their reason."
+     },
+     "evidence": [
+      {
+       "type": "requisition",
+       "id": "PO-1002",
+       "detail": "re-plan of PO-1001 after a no: RTX-5070-TI quantity -> 2"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "dc8e51615f3fea4538af7f39b3268dd75145bac58e2b7762caaa7daf1c56d673",
+     "hash": "4669b65ebfae506cad4d3c0833d15c6e7e1b07093c729d46617994564a5ce37d"
+    },
+    {
+     "id": "dec_0007",
+     "at": "2026-10-24T12:00:00Z",
+     "kind": "approval_route",
+     "subject": "po:PO-1002",
+     "outcome": "routed",
+     "codes": [
+      "standard"
+     ],
+     "reason": "needs dept_head; inside every limit",
+     "actor": {
+      "kind": "rule",
+      "id": "approval.route"
+     },
+     "rule": {
+      "id": "approval.route",
+      "text": "Route by amount, vendor history, budget and price reference; escalations are written down with their reason."
+     },
+     "evidence": [
+      {
+       "type": "vendor",
+       "id": "bestbuy",
+       "detail": "level normal"
+      },
+      {
+       "type": "mirror",
+       "id": "RTX-5070-TI",
+       "detail": "$1,299.99 as of 2026-10-25 MIRROR"
+      }
+     ],
+     "parents": [
+      "dec_0006"
+     ],
+     "prev_hash": "4669b65ebfae506cad4d3c0833d15c6e7e1b07093c729d46617994564a5ce37d",
+     "hash": "3afb80930e159b055e8abdd43b5d7512e4eae3a228569c581e64b2d398344ad9"
+    },
+    {
+     "id": "dec_0008",
+     "at": "2026-10-24T12:00:00Z",
+     "kind": "replan",
+     "subject": "po:PO-1001",
+     "outcome": "replanned",
+     "codes": [],
+     "reason": "re-planned as PO-1002 at $2,499.98 (was $3,749.97): RTX-5070-TI quantity -> 2. It needs approval again.",
+     "actor": {
+      "kind": "rule",
+      "id": "replan.after_no"
+     },
+     "rule": {
+      "id": "replan.after_no",
+      "text": "When a controller says no, re-plan inside what they allowed (cheaper allowed condition or fewer units), else drop and release the budget."
+     },
+     "evidence": [
+      {
+       "type": "po",
+       "id": "PO-1002",
+       "detail": "new PO"
+      }
+     ],
+     "parents": [
+      "dec_0005"
+     ],
+     "prev_hash": "3afb80930e159b055e8abdd43b5d7512e4eae3a228569c581e64b2d398344ad9",
+     "hash": "df3599848f9399849417e7c95451f852936cac14747b6be210d5638405d4bfaf"
+    },
+    {
+     "id": "dec_0009",
+     "at": "2026-10-24T13:00:00Z",
+     "kind": "po_approval",
+     "subject": "po:PO-1002",
+     "outcome": "approved",
+     "codes": [
+      "standard"
+     ],
+     "reason": "James Rhodes approved as dept_head. All required signatures are in.",
+     "actor": {
+      "kind": "person",
+      "id": "rhodey"
+     },
+     "rule": {
+      "id": "approval.route",
+      "text": "Route by amount, vendor history, budget and price reference; escalations are written down with their reason."
+     },
+     "evidence": [
+      {
+       "type": "po",
+       "id": "PO-1002",
+       "detail": "requester buyer"
+      }
+     ],
+     "parents": [
+      "dec_0007"
+     ],
+     "prev_hash": "df3599848f9399849417e7c95451f852936cac14747b6be210d5638405d4bfaf",
+     "hash": "e23a020553dd4cfce6fb7646c61ef02050015f00986d45568a97792c53b8d918"
+    },
+    {
+     "id": "dec_0010",
+     "at": "2026-10-24T13:00:00Z",
+     "kind": "approval_bind",
+     "subject": "po:PO-1002",
+     "outcome": "bound",
+     "codes": [],
+     "reason": "approval binds deal PO-1002, payee best-buy@pay.example.test, ceiling $2,512.48 (PO $2,499.98 plus immaterial tolerance); a charge can only match these terms",
+     "actor": {
+      "kind": "rule",
+      "id": "approval.bind"
+     },
+     "rule": {
+      "id": "approval.bind",
+      "text": "An approval binds the payee, deal and amount ceiling; a charge can only match the approved PO."
+     },
+     "evidence": [
+      {
+       "type": "binding_hash",
+       "id": "c0d2fc87c9a5e28f",
+       "detail": "sha256 over deal, payee, currency, ceiling"
+      }
+     ],
+     "parents": [
+      "dec_0009"
+     ],
+     "prev_hash": "e23a020553dd4cfce6fb7646c61ef02050015f00986d45568a97792c53b8d918",
+     "hash": "7260d668a20e5ad260a7989ec5319d987af51ac2e83dc6048cac3b0c7c4c1bd8"
+    },
+    {
+     "id": "dec_0011",
+     "at": "2026-10-25T09:00:00Z",
+     "kind": "receiving",
+     "subject": "po:PO-1002",
+     "outcome": "failed",
+     "codes": [
+      "condition_not_allowed"
+     ],
+     "reason": "Happy Hogan received 1 unit(s) accepted and 1 rejected (condition_not_allowed)",
+     "actor": {
+      "kind": "person",
+      "id": "happy"
+     },
+     "rule": {
+      "id": "receive.check",
+      "text": "Receiving counts units, checks condition against what the PO allows, and requires one unique serial per serialized unit."
+     },
+     "evidence": [
+      {
+       "type": "receiving",
+       "id": "RCV-1",
+       "detail": "RTX-5070-TI accepted 1 rejected 0 new; RTX-5070-TI accepted 0 rejected 1 open-box"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "7260d668a20e5ad260a7989ec5319d987af51ac2e83dc6048cac3b0c7c4c1bd8",
+     "hash": "51834c6c6235522473234b0fab8ae3a36550306d0116f02a45db0cfc2856ea1e"
+    },
+    {
+     "id": "dec_0012",
+     "at": "2026-10-25T09:00:00Z",
+     "kind": "vendor_history",
+     "subject": "vendor:bestbuy",
+     "outcome": "noted",
+     "codes": [
+      "failed_receiving"
+     ],
+     "reason": "Best Buy (MIRROR listing, SIM payee): failed receiving check recorded; strict matching and a second signature apply for 120 days",
+     "actor": {
+      "kind": "rule",
+      "id": "vendor.history"
+     },
+     "rule": {
+      "id": "vendor.history",
+      "text": "A vendor's dated history sets its risk level: strict means zero price tolerance and a second signature."
+     },
+     "evidence": [],
+     "parents": [
+      "dec_0011"
+     ],
+     "prev_hash": "51834c6c6235522473234b0fab8ae3a36550306d0116f02a45db0cfc2856ea1e",
+     "hash": "7c46a05d2da2354c19e70fc1f52d52f7a2d58bddde06f26a4cc9ac3ddd42e908"
+    },
+    {
+     "id": "dec_0013",
+     "at": "2026-10-25T09:00:00Z",
+     "kind": "accrual",
+     "subject": "po:PO-1002",
+     "outcome": "posted",
+     "codes": [
+      "accrued"
+     ],
+     "reason": "accrue goods received and not yet billed on PO-1002",
+     "actor": {
+      "kind": "rule",
+      "id": "receive.accrue"
+     },
+     "rule": {
+      "id": "receive.accrue",
+      "text": "Accepted goods are a liability before the bill arrives: accrue them at the PO price (or draw down the prepaid deposit)."
+     },
+     "evidence": [
+      {
+       "type": "journal_entry",
+       "id": "je_0001",
+       "detail": "2026-10"
+      }
+     ],
+     "parents": [
+      "dec_0011"
+     ],
+     "prev_hash": "7c46a05d2da2354c19e70fc1f52d52f7a2d58bddde06f26a4cc9ac3ddd42e908",
+     "hash": "0afae6bb7d34953bd5d2465ed7cebb86ec09036ea249a616a35d61b22f6d76da"
+    },
+    {
+     "id": "dec_0014",
+     "at": "2026-10-25T14:00:00Z",
+     "kind": "invoice_received",
+     "subject": "invoice:INV-1",
+     "outcome": "received",
+     "codes": [],
+     "reason": "invoice BB-88213 from Best Buy (MIRROR listing, SIM payee) for $2,499.98 against PO-1002",
+     "actor": {
+      "kind": "data",
+      "id": "invoice:INV-1"
+     },
+     "rule": {
+      "id": "match.three_way",
+      "text": "Bill only what the PO allows, what arrived accepted and what the contract priced; anything else is held with a credit memo request."
+     },
+     "evidence": [
+      {
+       "type": "invoice",
+       "id": "INV-1",
+       "detail": "1 line(s), dated 2026-10-25"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "0afae6bb7d34953bd5d2465ed7cebb86ec09036ea249a616a35d61b22f6d76da",
+     "hash": "7954883b31e3daf3cb86335c94338c3b19bdf3fead492532bec1599bb1ef2d21"
+    },
+    {
+     "id": "dec_0015",
+     "at": "2026-10-25T14:00:00Z",
+     "kind": "source_trust",
+     "subject": "invoice:INV-1",
+     "outcome": "resolved",
+     "codes": [
+      "trust_remit_account"
+     ],
+     "reason": "For remit_account I believed vendor_master (acct_bb_4412) over seller_claim (acct_bb_0099), because the vendor master was changed and verified by two different people.",
+     "actor": {
+      "kind": "rule",
+      "id": "match.three_way"
+     },
+     "rule": {
+      "id": "match.three_way",
+      "text": "Bill only what the PO allows, what arrived accepted and what the contract priced; anything else is held with a credit memo request."
+     },
+     "evidence": [
+      {
+       "type": "vendor_master",
+       "id": "vendor:bestbuy",
+       "detail": "acct_bb_4412"
+      },
+      {
+       "type": "seller_claim",
+       "id": "invoice:INV-1",
+       "detail": "acct_bb_0099"
+      }
+     ],
+     "parents": [
+      "dec_0014"
+     ],
+     "prev_hash": "7954883b31e3daf3cb86335c94338c3b19bdf3fead492532bec1599bb1ef2d21",
+     "hash": "21bf831ddff9f7dfb225a1e54d73c2bf0b751ccc345dec1f16356d485b35541c"
+    },
+    {
+     "id": "dec_0016",
+     "at": "2026-10-25T14:00:00Z",
+     "kind": "source_trust",
+     "subject": "invoice:INV-1",
+     "outcome": "resolved",
+     "codes": [
+      "trust_goods_quantity"
+     ],
+     "reason": "For goods_quantity I believed receiving (1) over seller_claim (2), because we counted what arrived.",
+     "actor": {
+      "kind": "rule",
+      "id": "match.three_way"
+     },
+     "rule": {
+      "id": "match.three_way",
+      "text": "Bill only what the PO allows, what arrived accepted and what the contract priced; anything else is held with a credit memo request."
+     },
+     "evidence": [
+      {
+       "type": "receiving",
+       "id": "receiving",
+       "detail": "1"
+      },
+      {
+       "type": "seller_claim",
+       "id": "invoice:INV-1",
+       "detail": "2"
+      }
+     ],
+     "parents": [
+      "dec_0014"
+     ],
+     "prev_hash": "21bf831ddff9f7dfb225a1e54d73c2bf0b751ccc345dec1f16356d485b35541c",
+     "hash": "767afe7bc85fbf8a8ecb3e47f1848bdc5f5d4d939c9bb6cc1073621dc9d7fb79"
+    },
+    {
+     "id": "dec_0017",
+     "at": "2026-10-25T14:00:00Z",
+     "kind": "invoice_match",
+     "subject": "invoice:INV-1",
+     "outcome": "hold",
+     "codes": [
+      "qty_short",
+      "rejected_goods_billed",
+      "remit_to_mismatch"
+     ],
+     "reason": "held: remit_to_mismatch (invoice asks to pay a different bank account than the verified vendor master); qty_short (billed 2 units, received 1 accepted, 1 rejected); rejected_goods_billed (1 unit(s) were rejected at receiving (condition_not_allowed) and are still billed)",
+     "actor": {
+      "kind": "rule",
+      "id": "match.remit_to"
+     },
+     "rule": {
+      "id": "match.remit_to",
+      "text": "Bank details on an invoice never override the verified vendor master."
+     },
+     "evidence": [
+      {
+       "type": "po",
+       "id": "PO-1002",
+       "detail": "$2,499.98"
+      },
+      {
+       "type": "invoice",
+       "id": "INV-1",
+       "detail": "$2,499.98"
+      },
+      {
+       "type": "receiving",
+       "id": "RCV-1",
+       "detail": ""
+      },
+      {
+       "type": "vendor",
+       "id": "bestbuy",
+       "detail": "level strict: failed receiving check 0 days ago (condition_not_allowed)"
+      }
+     ],
+     "parents": [
+      "dec_0014",
+      "dec_0015",
+      "dec_0016"
+     ],
+     "prev_hash": "767afe7bc85fbf8a8ecb3e47f1848bdc5f5d4d939c9bb6cc1073621dc9d7fb79",
+     "hash": "cc96782d8df481b532a6a3ae814364a2ced9d731a931c205ca20f2ace3f638c0"
+    },
+    {
+     "id": "dec_0018",
+     "at": "2026-10-25T14:00:00Z",
+     "kind": "credit_memo_request",
+     "subject": "memo:CM-1",
+     "outcome": "requested",
+     "codes": [
+      "remit_to_mismatch",
+      "qty_short",
+      "rejected_goods_billed"
+     ],
+     "reason": "asked Best Buy (MIRROR listing, SIM payee) for a credit of $1,249.99: remit_to_mismatch; qty_short; rejected_goods_billed",
+     "actor": {
+      "kind": "rule",
+      "id": "match.three_way"
+     },
+     "rule": {
+      "id": "match.three_way",
+      "text": "Bill only what the PO allows, what arrived accepted and what the contract priced; anything else is held with a credit memo request."
+     },
+     "evidence": [
+      {
+       "type": "invoice",
+       "id": "INV-1",
+       "detail": "Credit memo request CM-1 to Best Buy (MIRROR listing, SIM payee): invoice BB-88213 on PO-1002. remit_to_mismatch: invoice asks to pay a different bank account than the verified vendor master; qty_short: billed 2 units, received 1 accepted, 1 rejected; rejected_goods_billed: 1 unit(s) were rejected at receiving (condition_not_allowed) and are still billed. We ask for a credit of $1,249.99 or a corrected invoice."
+      }
+     ],
+     "parents": [
+      "dec_0017"
+     ],
+     "prev_hash": "cc96782d8df481b532a6a3ae814364a2ced9d731a931c205ca20f2ace3f638c0",
+     "hash": "05bdec741268f87ae21872c6c410bcfecdd3541063ee819ad2a4fcaa30781c0a"
+    },
+    {
+     "id": "dec_0019",
+     "at": "2026-10-26T09:00:00Z",
+     "kind": "invoice_received",
+     "subject": "invoice:INV-2",
+     "outcome": "received",
+     "codes": [],
+     "reason": "invoice BB-88214 from Best Buy (MIRROR listing, SIM payee) for $1,249.99 against PO-1002",
+     "actor": {
+      "kind": "data",
+      "id": "invoice:INV-2"
+     },
+     "rule": {
+      "id": "match.three_way",
+      "text": "Bill only what the PO allows, what arrived accepted and what the contract priced; anything else is held with a credit memo request."
+     },
+     "evidence": [
+      {
+       "type": "invoice",
+       "id": "INV-2",
+       "detail": "1 line(s), dated 2026-10-26"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "05bdec741268f87ae21872c6c410bcfecdd3541063ee819ad2a4fcaa30781c0a",
+     "hash": "281fe9679d50b95b58be9371b980adfb7176333adf198880725bddd02879d7fb"
+    },
+    {
+     "id": "dec_0020",
+     "at": "2026-10-26T09:00:00Z",
+     "kind": "bill_posting",
+     "subject": "invoice:INV-2",
+     "outcome": "posted",
+     "codes": [
+      "matched"
+     ],
+     "reason": "bill BB-88214: reverse accrual $1,249.99, book payable $1,249.99",
+     "actor": {
+      "kind": "rule",
+      "id": "post.bill"
+     },
+     "rule": {
+      "id": "post.bill",
+      "text": "A matched bill reverses its accrual and books the payable; price variance inside tolerance goes to variance expense."
+     },
+     "evidence": [
+      {
+       "type": "po",
+       "id": "PO-1002",
+       "detail": "$2,499.98"
+      },
+      {
+       "type": "receiving",
+       "id": "RCV-1",
+       "detail": ""
+      },
+      {
+       "type": "journal_entry",
+       "id": "je_0002",
+       "detail": "2026-10"
+      }
+     ],
+     "parents": [
+      "dec_0019"
+     ],
+     "prev_hash": "281fe9679d50b95b58be9371b980adfb7176333adf198880725bddd02879d7fb",
+     "hash": "9290dca13c01f6842ed38972f283f446ab0d7ffac90d9fcefa8b098db8eb2232"
+    },
+    {
+     "id": "dec_0021",
+     "at": "2026-10-26T15:00:00Z",
+     "kind": "vendor_bank_change",
+     "subject": "vendor:bestbuy",
+     "outcome": "pending_verification",
+     "codes": [
+      "bank_change"
+     ],
+     "reason": "Maria Hill changed Best Buy (MIRROR listing, SIM payee)'s bank account (email); no payment goes out until a different person verifies it by call-back",
+     "actor": {
+      "kind": "person",
+      "id": "maria"
+     },
+     "rule": {
+      "id": "sod.bank_change_verified_by_other",
+      "text": "A vendor bank change must be verified by a different person than the one who made it."
+     },
+     "evidence": [
+      {
+       "type": "vendor",
+       "id": "bestbuy",
+       "detail": "acct_bb_4412 -> acct_bb_5555"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "9290dca13c01f6842ed38972f283f446ab0d7ffac90d9fcefa8b098db8eb2232",
+     "hash": "a032310299fe392e335947c4badfa2f588cb83ccbc1c56d51fa425874051d3be"
+    },
+    {
+     "id": "dec_0022",
+     "at": "2026-10-27T09:00:00Z",
+     "kind": "payment_release",
+     "subject": "invoice:INV-2",
+     "outcome": "denied",
+     "codes": [
+      "bank_unverified"
+     ],
+     "reason": "Best Buy (MIRROR listing, SIM payee)'s bank details changed on 2026-10-26 by maria and no second person has verified them; payment held",
+     "actor": {
+      "kind": "rule",
+      "id": "pay.gate"
+     },
+     "rule": {
+      "id": "pay.gate",
+      "text": "A payment needs a matched bill, an approved PO, a verified bank account, an amount under the approved ceiling and a valid mandate."
+     },
+     "evidence": [
+      {
+       "type": "person",
+       "id": "ap-agent",
+       "detail": "attempted by"
+      },
+      {
+       "type": "vendor",
+       "id": "bestbuy",
+       "detail": "bank_change unverified"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "a032310299fe392e335947c4badfa2f588cb83ccbc1c56d51fa425874051d3be",
+     "hash": "2ba33a27345f8070b5c816259f55747e3387c22c07579b1c0fc4f04201438e37"
+    },
+    {
+     "id": "dec_0023",
+     "at": "2026-10-27T10:00:00Z",
+     "kind": "vendor_bank_verify",
+     "subject": "vendor:bestbuy",
+     "outcome": "verified",
+     "codes": [
+      "bank_verified"
+     ],
+     "reason": "Pepper Potts verified Best Buy (MIRROR listing, SIM payee)'s bank account by call-back to the number on file",
+     "actor": {
+      "kind": "person",
+      "id": "pepper"
+     },
+     "rule": {
+      "id": "sod.bank_change_verified_by_other",
+      "text": "A vendor bank change must be verified by a different person than the one who made it."
+     },
+     "evidence": [
+      {
+       "type": "vendor",
+       "id": "bestbuy",
+       "detail": "change by maria on 2026-10-26"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "2ba33a27345f8070b5c816259f55747e3387c22c07579b1c0fc4f04201438e37",
+     "hash": "1211b98fb92e21d8a772c8543f4fe6ad8d5f10dab97771c626fa3eccac2a4c2b"
+    },
+    {
+     "id": "dec_0024",
+     "at": "2026-10-27T11:00:00Z",
+     "kind": "payment_release",
+     "subject": "invoice:INV-2",
+     "outcome": "released",
+     "codes": [
+      "released"
+     ],
+     "reason": "pay invoice BB-88214 to Best Buy (MIRROR listing, SIM payee) under mandate 287273e132de",
+     "actor": {
+      "kind": "rule",
+      "id": "pay.gate"
+     },
+     "rule": {
+      "id": "pay.gate",
+      "text": "A payment needs a matched bill, an approved PO, a verified bank account, an amount under the approved ceiling and a valid mandate."
+     },
+     "evidence": [
+      {
+       "type": "mandate",
+       "id": "287273e132de44c9",
+       "detail": "deal PO-1002 payee best-buy@pay.example.test amount $1,249.99"
+      },
+      {
+       "type": "binding",
+       "id": "c0d2fc87c9a5e28f",
+       "detail": "approval binding"
+      },
+      {
+       "type": "journal_entry",
+       "id": "je_0003",
+       "detail": "2026-10"
+      }
+     ],
+     "parents": [
+      "dec_0020",
+      "dec_0009"
+     ],
+     "prev_hash": "1211b98fb92e21d8a772c8543f4fe6ad8d5f10dab97771c626fa3eccac2a4c2b",
+     "hash": "0c3ab98d95591051ed48a564edf50ca3fa0d5c70c7ae265176ff300359b7d1fa"
+    },
+    {
+     "id": "dec_0025",
+     "at": "2026-10-27T12:00:00Z",
+     "kind": "bank_reconcile",
+     "subject": "bank:ba_test_1",
+     "outcome": "corrected",
+     "codes": [
+      "bank_amount_differs",
+      "trust_cash_amount"
+     ],
+     "reason": "For cash_amount I believed bank (125499) over ledger (124999), because the bank (or Stripe test record) is an outside party that actually moved the money. Correcting entry: bank took $5.00 more than we paid; recoverable from Best Buy (MIRROR listing, SIM payee)",
+     "actor": {
+      "kind": "rule",
+      "id": "recon.trust"
+     },
+     "rule": {
+      "id": "recon.trust",
+      "text": "When bank, ledger and seller disagree on cash, the bank record wins and the difference is booked and flagged."
+     },
+     "evidence": [
+      {
+       "type": "bank_record",
+       "id": "ba_test_1",
+       "detail": "charge $1,254.99 stripe_test"
+      },
+      {
+       "type": "payment",
+       "id": "PAY-1",
+       "detail": "ledger $1,249.99 payee best-buy@pay.example.test"
+      },
+      {
+       "type": "journal_entry",
+       "id": "je_0004",
+       "detail": "2026-10"
+      }
+     ],
+     "parents": [
+      "dec_0024"
+     ],
+     "prev_hash": "0c3ab98d95591051ed48a564edf50ca3fa0d5c70c7ae265176ff300359b7d1fa",
+     "hash": "990bbb984bf0e53d61c237bdd62b3bae098a631b4b5800d00744035becd9644d"
+    },
+    {
+     "id": "dec_0026",
+     "at": "2026-10-31T17:00:00Z",
+     "kind": "period_close",
+     "subject": "period:2026-10",
+     "outcome": "closed",
+     "codes": [
+      "closed"
+     ],
+     "reason": "Pepper Potts closed 2026-10. Trial balance $3,754.97 each side; accrued received-not-billed $0.00; 0 held invoice(s) will post in the next open period when released",
+     "actor": {
+      "kind": "person",
+      "id": "pepper"
+     },
+     "rule": {
+      "id": "close.period",
+      "text": "Only the controller closes a period; the trial balance must balance and every payment must be reconciled to a bank record."
+     },
+     "evidence": [
+      {
+       "type": "trial_balance",
+       "id": "2026-10",
+       "detail": "debit 375497 credit 375497"
+      }
+     ],
+     "parents": [],
+     "prev_hash": "990bbb984bf0e53d61c237bdd62b3bae098a631b4b5800d00744035becd9644d",
+     "hash": "99463ee92f113d8891043cb21e7f603d76cc7c11b312fdb29d28aa0fb3628a6d"
+    }
+   ],
+   "total": 26
+  },
+  "journal": {
+   "entries": [
+    {
+     "id": "je_0001",
+     "date": "2026-10-25",
+     "period": "2026-10",
+     "reason": "accrue goods received and not yet billed on PO-1002",
+     "refs": [
+      "po:PO-1002",
+      "receiving:RCV-1",
+      "decision:dec_0013"
+     ],
+     "posted_at": "2026-10-25T09:00:00Z",
+     "posted_by": "ap-agent",
+     "reverses": null,
+     "lines": [
+      {
+       "account": "1500",
+       "debit": 124999,
+       "credit": 0,
+       "party": null
+      },
+      {
+       "account": "2100",
+       "debit": 0,
+       "credit": 124999,
+       "party": "bestbuy"
+      }
+     ]
+    },
+    {
+     "id": "je_0002",
+     "date": "2026-10-26",
+     "period": "2026-10",
+     "reason": "bill BB-88214: reverse accrual $1,249.99, book payable $1,249.99",
+     "refs": [
+      "po:PO-1002",
+      "invoice:INV-2",
+      "decision:dec_0020"
+     ],
+     "posted_at": "2026-10-26T09:00:00Z",
+     "posted_by": "ap-agent",
+     "reverses": null,
+     "lines": [
+      {
+       "account": "2100",
+       "debit": 124999,
+       "credit": 0,
+       "party": "bestbuy"
+      },
+      {
+       "account": "2000",
+       "debit": 0,
+       "credit": 124999,
+       "party": "bestbuy"
+      }
+     ]
+    },
+    {
+     "id": "je_0003",
+     "date": "2026-10-27",
+     "period": "2026-10",
+     "reason": "pay invoice BB-88214 to Best Buy (MIRROR listing, SIM payee) under mandate 287273e132de",
+     "refs": [
+      "po:PO-1002",
+      "invoice:INV-2",
+      "payment:PAY-1",
+      "decision:dec_0024"
+     ],
+     "posted_at": "2026-10-27T11:00:00Z",
+     "posted_by": "ap-agent",
+     "reverses": null,
+     "lines": [
+      {
+       "account": "2000",
+       "debit": 124999,
+       "credit": 0,
+       "party": "bestbuy"
+      },
+      {
+       "account": "1000",
+       "debit": 0,
+       "credit": 124999,
+       "party": null
+      }
+     ]
+    },
+    {
+     "id": "je_0004",
+     "date": "2026-10-27",
+     "period": "2026-10",
+     "reason": "For cash_amount I believed bank (125499) over ledger (124999), because the bank (or Stripe test record) is an outside party that actually moved the money. Correcting entry: bank took $5.00 more than we paid; recoverable from Best Buy (MIRROR listing, SIM payee)",
+     "refs": [
+      "bank:ba_test_1",
+      "payment:PAY-1",
+      "decision:dec_0025"
+     ],
+     "posted_at": "2026-10-27T12:00:00Z",
+     "posted_by": "ap-agent",
+     "reverses": null,
+     "lines": [
+      {
+       "account": "1300",
+       "debit": 500,
+       "credit": 0,
+       "party": "bestbuy"
+      },
+      {
+       "account": "1000",
+       "debit": 0,
+       "credit": 500,
+       "party": null
+      }
+     ]
+    }
+   ],
+   "closed_periods": {
+    "2026-10": {
+     "by": "pepper",
+     "at": "2026-10-31T17:00:00Z"
+    }
+   }
+  },
+  "trial": {
+   "rows": [
+    {
+     "account": "1000",
+     "name": "Cash",
+     "type": "asset",
+     "debit": 0,
+     "credit": 125499,
+     "balance": -125499
+    },
+    {
+     "account": "1300",
+     "name": "Vendor credits receivable",
+     "type": "asset",
+     "debit": 500,
+     "credit": 0,
+     "balance": 500
+    },
+    {
+     "account": "1500",
+     "name": "IT equipment",
+     "type": "asset",
+     "debit": 124999,
+     "credit": 0,
+     "balance": 124999
+    },
+    {
+     "account": "2000",
+     "name": "Accounts payable",
+     "type": "liability",
+     "debit": 124999,
+     "credit": 124999,
+     "balance": 0
+    },
+    {
+     "account": "2100",
+     "name": "Accrued liabilities (received, not billed)",
+     "type": "liability",
+     "debit": 124999,
+     "credit": 124999,
+     "balance": 0
+    }
+   ],
+   "debit": 375497,
+   "credit": 375497,
+   "balanced": true,
+   "subledger_problems": [],
+   "ap_by_vendor": {},
+   "accrued_by_vendor": {}
+  },
+  "recon": {
+   "rows": [
+    {
+     "payment": "PAY-1",
+     "invoice": "INV-2",
+     "po": "PO-1002",
+     "ledger": 124999,
+     "bank": 125499,
+     "seller_claim": 124999,
+     "mirror": [
+      {
+       "sku": "RTX-5070-TI",
+       "po_unit": 124999,
+       "mirror": 129999,
+       "mirror_as_of": "2026-10-25T02:42:11Z"
+      }
+     ],
+     "agreed": false,
+     "believed": "bank",
+     "reason": "For cash_amount I believed bank (125499) over ledger (124999) and seller_claim (124999), because the bank (or Stripe test record) is an outside party that actually moved the money.",
+     "origin": "SIM"
+    }
+   ]
+  }
+ }
+}
