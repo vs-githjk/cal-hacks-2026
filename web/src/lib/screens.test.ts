@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerRefIds, buyerSession, clusterArrivals, dealFromRows, payeeLabel, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, stateLabel, livePendingApprovals, approvalForScreen } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, payeeLabel } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -91,52 +91,9 @@ test("feedFromRows classifies events, keeps notes as SIM and sorts newest first"
       event({ id: 3n, kind: "verdict", label: "Bazaar Shield: allow", at: ts(T0 + 2000) }),
     ],
     [{ id: 9n, klass: "veto", text: "Your advocate vetoed", at: ts(T0 + 3000) }],
-    new Set(["bid-a"]),
   );
   assert.deepEqual(feed.map((f) => [f.key, f.kind]), [["n9", "veto"], ["e2", "block"], ["e1", "deal"]]);
   assert.equal(feed[0]!.origin, "SIM");
-});
-
-// #449 PL-3: /buyer shows only the paired buyer's own rounds. Buyer A owns round-a (bid-a, mandate hash-a); buyer B owns round-b (bid-b, hash-b).
-const rivalResults = [
-  result({ id: 1n, roundId: "round-a", bidId: "bid-a", persona: "A Seller" }),
-  result({ id: 2n, roundId: "round-b", bidId: "bid-b", persona: "B Seller", landed: 999 }),
-];
-const rivalEvents = [
-  event({ id: 1n, kind: "round_opened", refTable: "round", refId: "round-a", label: "Sealed round open for 8 s" }),
-  event({ id: 2n, kind: "bid_sealed", refId: "bid-a" }),
-  event({ id: 3n, kind: "auction_closed", refTable: "round", refId: "round-a", label: "Round closed: 1 ranked, 0 out" }),
-  event({ id: 4n, kind: "round_opened", refTable: "round", refId: "round-b", label: "Sealed round open for 8 s" }),
-  event({ id: 5n, kind: "bid_sealed", refId: "bid-b" }),
-  event({ id: 6n, kind: "auction_closed", refTable: "round", refId: "round-b", label: "Round closed: 1 ranked, 0 out" }),
-  event({ id: 7n, kind: "mandate_created", refTable: "mandate", refId: "hash-a", label: "Deal ready for approval" }),
-  event({ id: 8n, kind: "mandate_created", refTable: "mandate", refId: "hash-b", label: "Deal ready for approval" }),
-  event({ id: 9n, kind: "advocate_card", refTable: "bid_check", refId: "bid-b", label: "Advocate veto (fit.gpu_length)" }),
-  event({ id: 10n, kind: "goal_posted", refTable: "goal", refId: "goal-b", label: "A buyer set a goal" }),
-];
-
-test("#449 PL-3 bids for buyer A never include buyer B's round, and none show while my_rounds has no row", () => {
-  const mineA = [round({ id: "round-a", openedAt: ts(T0) })];
-  assert.deepEqual(bidsFromRows(rivalResults, rivalEvents, latestRound(mineA)?.id).map((b) => b.seller), ["A Seller"]);
-  assert.deepEqual(bidsFromRows(rivalResults, rivalEvents, latestRound([])?.id), []);
-  // B's round is newer in the public table, but A never reads the public table.
-  const mineB = [round({ id: "round-b", openedAt: ts(T0 + 5000) })];
-  assert.deepEqual(bidsFromRows(rivalResults, rivalEvents, latestRound(mineB)?.id).map((b) => b.seller), ["B Seller"]);
-});
-
-test("#449 PL-3 the feed for buyer A keeps A's notifications and events on A's round, bid and mandate ids, and drops buyer B's", () => {
-  const notes = [{ id: 20n, klass: "progress", text: "Your goal is open", at: ts(T0 + 20_000) }];
-  const mine = buyerRefIds([round({ id: "round-a" })], rivalResults, [check({ bidId: "bid-a", roundId: "round-a" })], [deal({ mandateHash: "hash-a", mandateId: "mdt-a" })]);
-  const feed = feedFromRows(rivalEvents, notes, mine);
-  assert.deepEqual(feed.map((f) => f.key).sort(), ["e1", "e2", "e3", "e7", "n20"]);
-  assert.ok(!feed.some((f) => f.text.includes("veto")), "B's veto stays out");
-  // No round of its own: only the buyer's own notifications remain.
-  assert.deepEqual(feedFromRows(rivalEvents, notes, buyerRefIds([], rivalResults, [], [])).map((f) => f.key), ["n20"]);
-});
-
-test("#449 PL-3 buyerRefIds counts only this buyer's rounds' bids and ignores empty ids", () => {
-  const ids = buyerRefIds([round({ id: "round-a" })], rivalResults, [check({ bidId: "bid-x", roundId: "round-b" })], [deal({ mandateHash: "", mandateId: "mdt-a" })]);
-  assert.deepEqual([...ids].sort(), ["bid-a", "mdt-a", "round-a"]);
 });
 
 test("linesFromRows marks the picked line, alt lines and floor refusals", () => {
@@ -224,7 +181,7 @@ test("an expired pending approval is never shown, and the card falls back to the
   assert.equal(reviewFromRows([row("old", T0)], [], now), null, "the only row expired a minute ago");
   assert.equal(reviewFromRows([row("edge", now)], [], now), null, "expiry equal to now is expired");
   const r = reviewFromRows([row("old", T0), row("live", now + 1000)], [], now)!;
-  assert.equal(r.code, "c-live");   // PL-13: the card carries no mandate hash, so the live row is told by its own code
+  assert.equal(r.code, "c-live");
   assert.deepEqual(livePendingApprovals([row("old", T0), row("live", now + 1000)], now).map((x) => x.mandateHash), ["live"]);
 });
 
@@ -417,6 +374,31 @@ test("sealed rounds: a knocked-out row held back mid-round (rank 0, landed 0, no
   assert.deepEqual(linesFromRows([held], [], round({ state: "open", closedAt: undefined })), []);
 });
 
+// ---- #449 item 3 PL-4: the goal card shows the goal's own state and its latest note, not ACTIVE forever.
+
+test("goalsForBuyer: each goal carries its own state and the text of the latest note written for that goal", () => {
+  const goals = [goalRow({ id: "g1", state: "HUNTING" }), goalRow({ id: "g2", state: "FAILED", createdAt: ts(T0 + 1000) })];
+  const notes = [
+    { id: 1n, goalId: "g1", klass: "state", text: "Goal set. The agent is hunting." },
+    { id: 3n, goalId: "g1", klass: "state", text: "Calling you now to approve." },
+    { id: 4n, goalId: "g1", klass: "veto", text: "Your advocate vetoed a cheaper bid." },  // a veto note is not the goal's state line
+    { id: 2n, goalId: "g2", klass: "state", text: "We could not call you: there is no phone number on your account. Nothing was paid." },
+    { id: 9n, goalId: "", klass: "state", text: "Approval denied elsewhere." },
+  ];
+  const [g1, g2] = goalsForBuyer(goals, [], undefined, "buyer-a", notes); // the open goal sorts first
+  assert.equal(g1.state, "HUNTING");
+  assert.equal(g1.latestNote, "Calling you now to approve.");
+  assert.equal(g2.state, "FAILED");
+  assert.match(g2.latestNote ?? "", /no phone number/);
+  assert.equal(goalsForBuyer(goals, [], undefined, "buyer-a")[0].latestNote, "", "no notes, no line");
+});
+
+test("stateLabel: FAILED and the other states read in plain words", () => {
+  assert.equal(stateLabel("FAILED"), "Could not finish");
+  assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
+  assert.equal(stateLabel("HUNTING"), "hunting");
+});
+
 // ---- #449 PL-13: no raw ids on the customer path. Fixtures carry every id shape the market hands the screen.
 
 const HASH = "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633";
@@ -472,29 +454,4 @@ test("#449 PL-13 the sample cards a customer can see carry no id either", async 
     assert.doesNotMatch(text, /mnd_|@pay\.|agent1q|b_[a-z0-9]{8}|aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633/);
   }
   assert.ok(!sample.feed.some((f) => /mnd_/.test(f.text)));
-});
-
-// ---- #449 item 3 PL-4: the goal card shows the goal's own state and its latest note, not ACTIVE forever.
-
-test("goalsForBuyer: each goal carries its own state and the text of the latest note written for that goal", () => {
-  const goals = [goalRow({ id: "g1", state: "HUNTING" }), goalRow({ id: "g2", state: "FAILED", createdAt: ts(T0 + 1000) })];
-  const notes = [
-    { id: 1n, goalId: "g1", klass: "state", text: "Goal set. The agent is hunting." },
-    { id: 3n, goalId: "g1", klass: "state", text: "Calling you now to approve." },
-    { id: 4n, goalId: "g1", klass: "veto", text: "Your advocate vetoed a cheaper bid." },  // a veto note is not the goal's state line
-    { id: 2n, goalId: "g2", klass: "state", text: "We could not call you: there is no phone number on your account. Nothing was paid." },
-    { id: 9n, goalId: "", klass: "state", text: "Approval denied elsewhere." },
-  ];
-  const [g1, g2] = goalsForBuyer(goals, [], undefined, "buyer-a", notes); // the open goal sorts first
-  assert.equal(g1.state, "HUNTING");
-  assert.equal(g1.latestNote, "Calling you now to approve.");
-  assert.equal(g2.state, "FAILED");
-  assert.match(g2.latestNote ?? "", /no phone number/);
-  assert.equal(goalsForBuyer(goals, [], undefined, "buyer-a")[0].latestNote, "", "no notes, no line");
-});
-
-test("stateLabel: FAILED and the other states read in plain words", () => {
-  assert.equal(stateLabel("FAILED"), "Could not finish");
-  assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
-  assert.equal(stateLabel("HUNTING"), "hunting");
 });

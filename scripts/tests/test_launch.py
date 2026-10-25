@@ -422,3 +422,56 @@ def test_the_deploy_script_dry_run_calls_nothing_and_never_deletes_data():
     bad = subprocess.run(["sh", str(script)], capture_output=True, text=True, timeout=30,
                          env={"PATH": "/usr/bin:/bin", "SPACETIMEDB_DB": "Bad DB"})
     assert bad.returncode == 2
+
+
+# ---------- Maincloud token files: a missing one is named by variable, never silent ----------
+
+TOKEN_VARS = ["SPACETIMEDB_SELLER_A_TOKEN_FILE", "SPACETIMEDB_SELLER_B_TOKEN_FILE", "SPACETIMEDB_SELLER_C_TOKEN_FILE",
+              "SPACETIMEDB_BUYER_TOKEN_FILE", "SPACETIMEDB_REFEREE_TOKEN_FILE"]
+
+
+def _clear_token_env(monkeypatch):
+    for k in TOKEN_VARS:
+        monkeypatch.delenv(k, raising=False)
+
+
+def test_market_tokens_check_names_every_unset_variable_and_no_value(monkeypatch, tmp_path):
+    _clear_token_env(monkeypatch)
+    secret_path = tmp_path / "private-dir" / "a.token"
+    check = L.market_tokens_check({"SPACETIMEDB_SELLER_A_TOKEN_FILE": str(secret_path)}, repo=tmp_path)
+    assert not check.ok
+    assert "SPACETIMEDB_SELLER_A_TOKEN_FILE points at a file that does not exist" in check.detail
+    for name in TOKEN_VARS[1:]:
+        assert f"{name} is not set" in check.detail
+    assert "private-dir" not in check.detail and "private-dir" not in check.fix
+
+
+def test_market_tokens_check_passes_when_all_five_files_exist_including_relative_ones(monkeypatch, tmp_path):
+    _clear_token_env(monkeypatch)
+    (tmp_path / "agents").mkdir()
+    env = {}
+    for i, name in enumerate(TOKEN_VARS):
+        f = (tmp_path / "agents" / f"t{i}.token") if i % 2 else (tmp_path / f"t{i}.token")
+        f.write_text("{}")
+        env[name] = f.name if i % 2 else str(f)    # a relative name resolves under agents/, an absolute path stands alone
+    assert L.market_tokens_check(env, repo=tmp_path).ok
+
+
+def test_the_token_check_runs_in_maincloud_preflight_only(monkeypatch, tmp_path):
+    _clear_token_env(monkeypatch)
+    for k in ("SPACETIMEDB_SERVER", "SPACETIMEDB_HTTP", "SPACETIMEDB_DB"):
+        monkeypatch.delenv(k, raising=False)
+    kw = dict(repo=tmp_path, which=lambda n: "/x/" + n, can_import=lambda m: True, port_busy=lambda p: False,
+              home_bin=tmp_path / "nobin")
+    names = lambda a, env: [c.name for c in L.run_preflight(a, L.build_services(a, tmp_path), env, "n", **kw)]
+    assert "market token files (names only)" in names(make_args(maincloud=True), MAINCLOUD_ENV)
+    assert "market token files (names only)" not in names(make_args(), {})
+
+
+def test_a_missing_token_file_does_not_skip_any_service(monkeypatch, tmp_path):
+    """The check is loud but advisory: a half-configured demo still starts, and the line says what to set."""
+    _clear_token_env(monkeypatch)
+    bad = [L.Check("market token files (names only)", False, "x is not set", "set it")]
+    svcs = L.build_services(make_args(maincloud=True), tmp_path)
+    L.decide_skips(svcs, bad)
+    assert not any(s.skip_reason for s in svcs)

@@ -134,9 +134,10 @@ export default function SellPage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
+    <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
       <header>
-        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[22px]/[28px] font-semibold tracking-[-0.01em]">
+        <p className="text-[13px] leading-[18px] text-muted">Seller Kit</p>
+        <h1 className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">
           Sell on {BRAND} <OriginChip origin="SIM" />
         </h1>
         <p className="mt-2 text-[15px]/[20px] text-ink-2">Describe your shop once. Your agent bids from it, never below your floor.</p>
@@ -154,11 +155,10 @@ export default function SellPage() {
       ) : (
       <>
       {offline && (
-        <Card>
-          <p className="flex items-center gap-2 font-medium"><span aria-hidden className="size-2 rounded-full bg-coral-mark" />Seller Kit offline.</p>
-          <p className="mt-1 text-muted">Nothing was sent.</p>
-          <Details summary="How to start it"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
-        </Card>
+        <div className="flex flex-wrap items-center gap-x-3 text-[14px] text-ink-2">
+          <span className="flex items-center gap-2"><span aria-hidden className="h-2 w-2 rounded-full bg-coral-mark" />Seller Kit offline. Nothing was sent.</span>
+          <Details summary="How to start it" className="mt-0"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
+        </div>
       )}
 
       <Card>
@@ -178,7 +178,7 @@ export default function SellPage() {
             />
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className={button} disabled={draft.kind === "busy" || !chat.trim()}>
+            <button type="submit" className="btn min-h-11 rounded-xl bg-pulse-soft px-5 py-2 font-medium text-pulse-soft-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] disabled:opacity-60" disabled={draft.kind === "busy" || !chat.trim()}>
               {draft.kind === "busy" ? "Drafting..." : "Draft with Claude"}
             </button>
             <button type="button" className="min-h-11 text-[14px] text-muted hover:text-ink" onClick={() => setChat(EXAMPLE)}>
@@ -385,6 +385,8 @@ export default function SellPage() {
         </Card>
       )}
 
+      <Details summary="Shops written and open requests" className="mt-0">
+        <div className="grid items-start gap-6 md:grid-cols-2">
       <Card>
         <Label>Shops written</Label>
         {shownShops === null ? (
@@ -406,11 +408,11 @@ export default function SellPage() {
       </Card>
 
       <Card>
-        <Label>Open needs</Label>
+        <Label>Open requests</Label>
         {shownNeeds === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
         ) : shownNeeds.length === 0 ? (
-          <p className="text-muted">No open needs.</p>
+          <p className="text-muted">No open requests. They appear when a buyer posts one.</p>
         ) : (
           <ul>
             {shownNeeds.map((n) => (
@@ -427,6 +429,8 @@ export default function SellPage() {
         )}
         <p className="mt-2 text-[12px] text-muted">Buyer caps are never shown.</p>
       </Card>
+        </div>
+      </Details>
     </div>
   );
 }

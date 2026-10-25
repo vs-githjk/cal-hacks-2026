@@ -328,7 +328,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
       </div>
       <p className="text-[13px] font-semibold">Only the call approves. Nothing on this screen can.</p>
       <Details summary="Details">
-        <p>{isWholeBuild(review) ? "One call approves the whole build." : "One call approves this purchase."} One-time code, this screen only. Expires {clock(review.expiry)}.</p>
+        <p>{isWholeBuild(review) ? "One call approves the whole build." : "One call approves this one deal."} One-time code, this screen only. Expires {clock(review.expiry)}.</p>
         <p>{CAP_RULE}</p>
       </Details>
     </Card>
@@ -353,10 +353,10 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
       <Details summary="Proof">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           <dt className="text-muted">Item</dt><dd className="tabular-nums">{money(receipt.amount)}{receipt.shipping !== undefined ? ` + ${money(receipt.shipping)} shipping` : ""}</dd>
-          <dt className="text-muted">Payment</dt><dd className="min-w-0 [overflow-wrap:anywhere]">{receipt.paymentMethod}{receipt.receiptRef && <> · Receipt <Code>{receipt.receiptRef}</Code></>} · {clock(receipt.paidAt)}</dd>
-          <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]">signed · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
+          <dt className="text-muted">Charge</dt><dd className="min-w-0 [overflow-wrap:anywhere]">{receipt.paymentMethod}{receipt.receiptRef && <> · Receipt <Code>{receipt.receiptRef}</Code></>} · {clock(receipt.paidAt)}</dd>
+          <dt className="text-muted">Approval record</dt><dd className="min-w-0 [overflow-wrap:anywhere]">signed · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
           {receipt.signature && <><dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd></>}
-          {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> same mandate sent twice; second charge rejected</> : "not tested"}</dd></>}
+          {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> the same approval sent twice; second charge rejected</> : "not tested"}</dd></>}
           <dt className="text-muted">Allowance</dt><dd>unchanged until the receiving check passes</dd>
         </dl>
       </Details>

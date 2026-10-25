@@ -64,8 +64,9 @@ export default function StartPage() {
   }
 
   return (
-    <section className="card mx-auto grid w-full max-w-md gap-4 p-4 md:p-6">
-      <h1 className="text-[22px]/[28px] font-semibold tracking-[-0.01em]">Start as a buyer</h1>
+    <div className="grid min-h-[calc(100dvh-140px)] place-items-center py-6">
+    <section className="card mx-auto grid w-full max-w-md gap-4 p-5 md:p-7">
+      <h1 className="text-center text-[24px]/[30px] font-semibold tracking-[-0.015em]">Start as a buyer</h1>
       {route === "connecting" ? (
         <p className="text-[15px]/[20px] text-muted">Connecting to the market...</p>
       ) : route === "buyer" ? (
@@ -82,13 +83,13 @@ export default function StartPage() {
             <input value={name} onChange={(e) => setName(e.target.value)} required={!code} maxLength={40} autoComplete="name" className={`${field} text-[17px]`} />
           </label>
           <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
+            <span className="flex justify-between">Pairing code <span className="font-normal text-muted">optional</span></span>
+            <input value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="off" placeholder="From the operator" className={`${field} font-mono text-[17px]`} />
+          </label>
+          <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
             Phone
             <input value={phone} onChange={(e) => setPhone(e.target.value)} required={!code} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 415 555 0100" className={`${field} text-[17px]`} />
             <span className="font-normal text-muted">We call you to approve purchases above your allowance.</span>
-          </label>
-          <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
-            <span className="flex justify-between">Pairing code <span className="font-normal text-muted">optional</span></span>
-            <input value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="off" placeholder="From the operator" className={`${field} font-mono text-[17px]`} />
           </label>
           {error && <p role="alert" className="text-[13px]/[18px] text-coral">{error}</p>}
           <button disabled={submitting} className={primary}>
@@ -98,5 +99,6 @@ export default function StartPage() {
         </form>
       )}
     </section>
+    </div>
   );
 }
