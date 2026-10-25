@@ -1,5 +1,12 @@
 # Arena UI: "Colosseum at night"
 
+> **v2, restraint (Sat 19:10, after review: "looks AI generated, too red").** This supersedes the motif and component notes below where they differ.
+> - One memorable element per screen. On the build panel it is the segmented budget bar (each part's price as a share of the cap), the only gold.
+> - Cinzel only in the wordmark and the landing headline. Labels are sentence case in the body sans; no all-caps eyebrows, no Roman numerals, no per-row WON pills.
+> - Red is a small dot or one word, only for something that went wrong (clash, out, blocked, failed). Never a fill or a border. Green is the build state "Locked" and a winning bid row.
+> - Status is a dot and a word, not a pill. The agent's steps are a quiet timeline with a dot per step.
+> - /buyer has no Question card: the goal card already is the question.
+
 The app stops being a black-and-white ledger and becomes the stands around the 3D arena. Dark warm stone, gold for the house,
 laurel green for a win, Pompeian red for a knockout, Tyrian purple only for the referee. Every round is framed as **one question**
 put to the arena ("Who sells the best RTX 5070 Ti under $750?"), and the six-part build is the **program of the day**: Bouts I to VI.

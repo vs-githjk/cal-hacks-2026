@@ -6,8 +6,7 @@ import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
 import { OriginChip, Label, clock } from "@/components/ui";
-import { Question, BoutBadge } from "@/components/arena";
-import { roman } from "@/lib/roman";
+import { Question } from "@/components/arena";
 import { asOrigin, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
@@ -72,17 +71,16 @@ export default function Home() {
 
       <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
 
-      <section aria-label="The program" className="grid gap-3">
+      <section aria-label="One round per part" className="grid gap-3">
         <div className="flex items-center justify-between gap-2">
-          <Label>The program</Label>
+          <Label>One sealed round per part</Label>
           <OriginChip origin="SIM" />
         </div>
-        <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <ol className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-6">
           {PARTS.map((p, i) => (
-            <li key={p} className="card flex flex-col items-start gap-2 p-4">
-              <span className="font-display text-[32px] font-semibold leading-none text-accent">{roman(i + 1)}</span>
-              <span className="text-[14px] font-medium text-ink">{p}</span>
-              <BoutBadge status="waiting" />
+            <li key={p} className="border-t-2 border-line-2 pt-2.5">
+              <span className="text-[12px] tabular-nums text-muted">{i + 1}</span>
+              <span className="block text-[14px] text-ink">{p}</span>
             </li>
           ))}
         </ol>
@@ -91,7 +89,7 @@ export default function Home() {
       <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
         {stats.map((s) => (
           <div key={s.label} className="bg-panel px-4 py-4">
-            <div className="font-display text-[clamp(26px,3vw,36px)] font-semibold leading-none tabular-nums text-ink">{s.value}</div>
+            <div className="text-[clamp(26px,3vw,36px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
             <div className="mt-2 flex items-center gap-1.5 text-[12px] text-muted">
               {s.label} <OriginChip origin={s.origin} />
             </div>
@@ -128,7 +126,7 @@ export default function Home() {
                 {t.path}
                 <span className="text-muted transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
               </div>
-              <div className="mt-2 font-display text-[17px] font-semibold tracking-[0.04em]">{t.title}</div>
+              <div className="mt-2 text-[17px] font-semibold tracking-[-0.01em]">{t.title}</div>
               <p className="mt-1 text-[13px] text-muted">{t.text}</p>
             </div>
             <div className="mt-3 flex gap-1.5">

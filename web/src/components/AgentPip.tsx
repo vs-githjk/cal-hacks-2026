@@ -44,7 +44,7 @@ function BuildPlan({ build, origin }: { build: BuildResult; origin: string }) {
   return (
     <section aria-label="Build plan" className="border-b border-line pb-2">
       <div className="flex items-center gap-2 py-1">
-        <span className="flex-1 font-display font-semibold text-accent">Buyer agent: build plan</span>
+        <span className="flex-1 font-semibold">Buyer agent: build plan</span>
         <OriginChip origin={origin} />
       </div>
       <ol className="grid gap-1">
@@ -153,7 +153,7 @@ function AgentPipTile() {
         className="flex min-h-11 cursor-grab touch-none select-none items-center gap-2 px-3 active:cursor-grabbing"
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${offline ? "bg-coral" : fresh ? "bg-mint" : "bg-slate opacity-40"}`} aria-hidden />
-        <span className="min-w-0 flex-1 truncate font-display font-semibold text-accent" aria-live="polite">
+        <span className="min-w-0 flex-1 truncate font-semibold" aria-live="polite">
           {head}
         </span>
         <button

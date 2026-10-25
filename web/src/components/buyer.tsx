@@ -76,7 +76,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
         {win ? (
           <>
             <div ref={field} className="relative -mx-2 px-2">
-              <div className="relative z-10 my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
+              <div className="relative z-10 my-1 text-[clamp(48px,6vw,76px)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{money(win.landed)}</div>
             </div>
             <div className="text-[15px] text-muted">
               <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
@@ -84,7 +84,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
             {win.recommendation === "caution" && <div className="text-[15px] text-muted">Fit not confirmed on the page</div>}
           </>
         ) : (
-          <div className="my-1 font-display text-[clamp(40px,5vw,64px)] leading-none text-muted">no deal yet</div>
+          <div className="my-1 text-[clamp(40px,5vw,64px)] font-semibold leading-none tracking-[-0.04em] text-muted">no deal yet</div>
         )}
       </div>
       <div className="mt-3.5 grid gap-1 border-t border-line pt-3 text-[14px]">
@@ -282,7 +282,7 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
       {approval.wordPair && (
         <>
           <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-            <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{approval.wordPair}</span>
+            <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{approval.wordPair}</span>
             <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
           </div>
           <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
@@ -317,7 +317,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
         Mandate <Code>{review.mandateId}</Code> · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
       </p>
       <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-        <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{review.code}</span>
+        <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{review.code}</span>
         <small className="text-[12px] text-muted">one-time code for this mandate, this screen only</small>
       </div>
       <p className="text-[13px] font-semibold">Say this code on the call. Only the call approves; nothing on this screen can.</p>
