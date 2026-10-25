@@ -270,7 +270,7 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
 
 export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
   if (!approval) {
-    return <Card stripe="amber"><Label>Approval call</Label><p className="text-muted">Any buy above your allowance calls you. The one-time code appears here, on this screen only.</p></Card>;
+    return <Card stripe="amber"><Label>Approval call</Label><p className="text-muted">Waiting for your call. Any buy above your allowance calls you, and the one-time code appears here, on this screen only.</p></Card>;
   }
   const done = approval.attempts.some((a) => a.approved);
   return (

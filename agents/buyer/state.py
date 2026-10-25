@@ -22,7 +22,7 @@ _TRANSACTION_KEYS = {"deal_id", "buyer_id", "goal_id", "need_id", "bid_id", "pha
                      "advocate_card", "mandate", "voice_approval", "allowance_authorization",
                      "settlement", "settlement_result", "payment_ref", "mode"}
 _PHASES = {"pending_approval", "paused", "approved", "denied", "expired", "submitted", "uncertain",
-           "settled", "refused", "failed"}
+           "settled", "refused", "failed", "charging"}  # #449 item 4 PL-10: "charging" = a web charge may be in flight
 _FORBIDDEN_KEYS = {"context", "owner_context", "runtime_context", "code", "approval_code", "passcode",
                    "one_time_code", "otp", "credential", "credentials", "password", "secret", "api_key",
                    "private_key", "access_token", "auth_token", "transcript", "call_transcript",

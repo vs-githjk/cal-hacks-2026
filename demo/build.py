@@ -1151,7 +1151,7 @@ class BuildRun:
             fn(t)
 
     def run(self) -> dict:
-        """The whole build. Returns {"status": "paid" | "denied" | "failed", "reason", "view"}. A reducer refusal raises RuntimeError with the
+        """The whole build. Returns {"status": "paid" | "denied" | "uncertain" | "failed", "reason", "view"}. A reducer refusal raises RuntimeError with the
         market's own message, after the view is written."""
         try:
             self.run_rounds()
@@ -1351,7 +1351,10 @@ class BuildRun:
         if voice_id is None:
             self._event("approved", f"Inside your allowance: {money(total)} for {len(champs)} parts, no call", origin=SIM)
             self.approval.update(state="approved", method="allowance")
-        self._pay()
+        if self._pay():   # #449 item 4 RT-10: a charge Stripe left uncertain is not paid; no payment row was written for it
+            self.approval.update(state="uncertain", reason="A Stripe test charge is uncertain; nothing is reported paid. Check the Stripe dashboard (test mode).")
+            self.publish()
+            return {"status": "uncertain", "reason": "charge_uncertain", "view": self.view()}
         return {"status": "paid", "reason": "", "view": self.view()}
 
     # ---- the market's allowance, and approvals read back
@@ -1558,7 +1561,7 @@ class BuildRun:
                              voice_approval_id=voice_id)
             self.publish()
 
-    def _pay(self) -> None:
+    def _pay(self) -> bool:
         """One payment and one receipt per part, through the same charger the bridge uses (the SIM stub, or a Stripe TEST charge)."""
         from demo.approval_flow import charge_or_stub
         referee = self.clients["referee"]
@@ -1568,6 +1571,11 @@ class BuildRun:
             ch, why = charge_or_stub(m, self.env, self.use_stripe, self.stripe_test)
             if why:
                 self.note(why)
+            if ch.get("status") == "uncertain":   # #449 item 4 RT-10: no id, no payment row, never reported as paid
+                self._event("uncertain", f"The Stripe test charge for {row['part']} is uncertain, so no payment was recorded. "
+                                         "Check the Stripe dashboard (test mode).", [row["part"]])
+                self.publish()
+                return True
             test = ch["mode"] == "Stripe test mode"
             cents = int(round(m["amount"] * 100))
             try:
@@ -1583,6 +1591,7 @@ class BuildRun:
                                   "text": f"{'stripe_test' if test else 'SIM'} payment confirmed for deal {m['deal_id']}: "
                                           f"${cents // 100}.{cents % 100:02d}, reference {ch['id']}, mandate {m['hash'][:12]}."})
             self.publish()
+        return False
 
 
 class _Refused(Exception):

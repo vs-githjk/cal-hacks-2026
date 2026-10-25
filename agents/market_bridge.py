@@ -581,6 +581,15 @@ class MarketBridge:
         # The caller must verify through its buyer-role client before proceeding.
         return {"recorded": True}
 
+    def record_agent_event(self, *, agent_name: str, address: str, text: str, origin: str = "SIM") -> None:
+        """#449 item 4 PL-10: one line on the Fetch agents tile (referee only), e.g. a payment the operator must look at."""
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        if (not isinstance(agent_name, str) or not agent_name or not isinstance(address, str) or not address
+                or not isinstance(text, str) or not text or origin not in {"SIM", "MIRROR", "LIVE"}):
+            raise MarketBridgeError("agent_event_invalid")
+        self._call("record_agent_event", agent_name=agent_name, address=address, text=text, ts="", origin=origin)
+
     def settle_goal(self, *, goal_id: str, deal_id: str, mandate_hash: str, payment_ref: str) -> dict[str, Any]:
         if self.role != "buyer":
             raise MarketBridgeError("market_role_mismatch")

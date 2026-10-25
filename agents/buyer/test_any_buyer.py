@@ -181,7 +181,12 @@ def test_open_web_goal_is_adopted_and_need_posted_by_referee_on_that_goal(runtim
     assert asyncio.run(buyer.adopt_open_goal(Context())) is False  # a round is in progress; the goal is handled
 
 
-def _web_approval(buyer, monkeypatch, issue_error=None, voice=None):
+def _approval_row(buyer_id=BID, method="voice_code", **over):
+    """#449 item 4 RT-12: the referee's read-back of the stored approval row (camelCase columns)."""
+    return lambda mandate_hash: {"mandateHash": mandate_hash, "method": method, "approvedBy": buyer_id, **over}
+
+
+def _web_approval(buyer, monkeypatch, issue_error=None, voice=None, approval_row=None):
     from buyer import checkout
     from pay.voice_cartesia import VoiceResult
     ready_for_requote(buyer)
@@ -192,6 +197,7 @@ def _web_approval(buyer, monkeypatch, issue_error=None, voice=None):
     referee.issue_approval_code.side_effect = issue_error
     referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
     referee.record_approval.return_value = {"approval_method": "voice_code"}
+    referee.approval_row.side_effect = approval_row or _approval_row()
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
     monkeypatch.setattr("pay.voice_cartesia.load_env", lambda *a, **k: {})
     used = []
@@ -324,13 +330,17 @@ def test_web_failed_stripe_charge_sends_no_order_and_releases_the_round(runtime,
 
 def test_web_market_payment_row_failure_does_not_undo_the_charge_or_block_the_order(runtime, monkeypatch, caplog):
     buyer, db = runtime
+
+    async def no_wait(_seconds):  # #449 item 4 PL-10: the row is retried, with no real sleep here
+        return None
+    monkeypatch.setattr(buyer, "_sleep", no_wait)
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
     _fake_stripe(monkeypatch)
     buyer.MARKET_REFEREE.record_payment.side_effect = buyer.MarketBridgeError("down")
     with caplog.at_level("WARNING", logger="buyer_agent"):
         ctx, _used, _make = _web_approval(buyer, monkeypatch)
     assert len(_orders(buyer, ctx)) == 1 and _stored_phases(db) == ["settled"]
-    assert "market row failed" in caplog.text
+    assert "payment row failed" in caplog.text and buyer.MARKET_REFEREE.record_agent_event.called
 
 
 def _adopt(buyer):

@@ -385,3 +385,13 @@ def test_referee_record_approval_forwards_voice_approval_id_and_refuses_empty():
                                                  "approved_by": "b_1", "voice_approval_id": "va-1"})]
     with pytest.raises(MarketBridgeError, match="approval_binding_invalid"):
         bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1")
+
+
+def test_referee_record_agent_event_forwards_one_line_and_other_roles_are_refused():
+    market = FakeMarket()
+    bridge = MarketBridge("referee", client=market)
+    bridge.record_agent_event(agent_name="Tech Bazaar Buyer", address="agent1q" + "a" * 30, text="needs the operator")
+    assert market.calls == [("record_agent_event", {"agent_name": "Tech Bazaar Buyer", "address": "agent1q" + "a" * 30,
+                                                    "text": "needs the operator", "ts": "", "origin": "SIM"})]
+    with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
+        MarketBridge("buyer", client=FakeMarket()).record_agent_event(agent_name="x", address="agent1q" + "a" * 30, text="t")
