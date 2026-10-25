@@ -16,6 +16,7 @@ type Auth = ReturnType<typeof as>;
 let h: ReturnType<typeof createModuleTestHarness<InferSchema<typeof spacetimedb>>>;
 const run = <T>(auth: Auth, f: (ctx: any) => T) => h.withReducerTx(auth, f);
 const idOf = (auth: Auth): Identity => run(auth, (ctx) => ctx.sender);
+const ms = (ts: Timestamp) => Number(ts.microsSinceUnixEpoch / 1000n);
 const advance = (ms: number) => h.clock.advance(TimeDuration.fromMillis(ms));
 const events = () => [...h.db.floorEvent.iter()];
 
@@ -966,6 +967,83 @@ describe('b5 approval code on the buyer screen (shown only; the call approves, #
     expect(h.db.approval.mandateHash.find('h1')).toBeFalsy();
     run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
     expect(m.myPendingApprovalsView(h.viewContext(VIDYUT) as any)).toHaveLength(0);
+  });
+});
+
+describe('whole-build approval code on the buyer screen (issued before the call, no mandate exists yet)', () => {
+  const CODE = 'amber harbor';
+  const BUILD = 'agg-hash-1';
+  const buildArgs = (over: Partial<Parameters<typeof m.issueBuildApprovalCode>[1]> = {}) => ({
+    mandateHash: BUILD, buyerId: 'vidyut', amount: 3412.5, payee: 'your whole build (8 parts, 4 sellers)', expiryMinutes: 5, code: CODE, origin: 'LIVE', ...over,
+  });
+  const issue = (over: Partial<Parameters<typeof m.issueBuildApprovalCode>[1]> = {}) => run(REF, (ctx) => m.issueBuildApprovalCode(ctx, buildArgs(over)));
+  const clear = (hash = BUILD) => run(REF, (ctx) => m.clearBuildApprovalCode(ctx, { mandateHash: hash }));
+  const seen = (who: Auth) => m.myPendingApprovalsView(h.viewContext(who) as any);
+
+  it('only the referee issues or clears; only the paired buyer sees the code, with amount, label and expiry', () => {
+    for (const who of [VIDYUT, A, STRANGER]) {
+      expect(() => run(who, (ctx) => m.issueBuildApprovalCode(ctx, buildArgs()))).toThrow(/not allowed/);
+    }
+    issue();
+    for (const who of [VIDYUT, A, STRANGER]) expect(() => run(who, (ctx) => m.clearBuildApprovalCode(ctx, { mandateHash: BUILD }))).toThrow(/not allowed/);
+    const mine = seen(VIDYUT);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ mandateHash: BUILD, amount: 3412.5, payee: 'your whole build (8 parts, 4 sellers)', code: CODE, origin: 'LIVE', failures: 0, locked: false });
+    expect(ms(mine[0]!.expiry)).toBe(ms(T0) + 5 * 60_000);
+    for (const who of [BOB, A, STRANGER]) expect(seen(who)).toHaveLength(0);
+  });
+
+  it('clearing hides it at once for the buyer and keeps the row (the call still counts as placed)', () => {
+    issue();
+    expect(seen(VIDYUT)).toHaveLength(1);
+    clear();
+    expect(seen(VIDYUT)).toHaveLength(0);
+    expect(h.db.approvalCode.mandateHash.find(BUILD)).toBeTruthy();
+    clear(); // idempotent: the runner clears in a finally and must never throw there
+    clear('never-issued');
+  });
+
+  it('a new build code retires the buyer\'s earlier one, so exactly one code is ever on screen', () => {
+    issue();
+    issue({ mandateHash: 'agg-hash-2', code: 'copper meadow', amount: 900 });
+    const rows = seen(VIDYUT);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ mandateHash: 'agg-hash-2', code: 'copper meadow' });
+  });
+
+  it('refuses bad input: empty code, no amount, expiry outside 1 to 10 minutes, a hash that is a real mandate, an unknown buyer', () => {
+    expect(() => issue({ code: '   ' })).toThrow(/empty code/);
+    expect(() => issue({ amount: 0 })).toThrow(/amount/);
+    expect(() => issue({ amount: Number.NaN })).toThrow(/amount/);
+    expect(() => issue({ expiryMinutes: 0 })).toThrow(/expiry/);
+    expect(() => issue({ expiryMinutes: 11 })).toThrow(/expiry/);
+    expect(() => issue({ buyerId: 'nobody' })).toThrow(/buyer/);
+    mint(mandateArgs(win()));
+    expect(() => issue({ mandateHash: 'h1' })).toThrow(/real mandate/);
+    expect(seen(VIDYUT)).toHaveLength(0);
+  });
+
+  it('shows the code to the buyer and approves nothing: no approval row, no payment, the call relay needs a mandate', () => {
+    issue();
+    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: CODE }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/no mandate/);
+    expect([...h.db.approval.iter()]).toHaveLength(0);
+  });
+
+  it('per-deal codes are untouched: one buyer can have a deal code and a build code, and each clears on its own terms', () => {
+    mint(mandateArgs(win()));
+    run(REF, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code: 'velvet falcon' }));
+    issue();
+    expect(seen(VIDYUT).map((r) => r.mandateHash).sort()).toEqual(['agg-hash-1', 'h1']);
+    clear();
+    expect(seen(VIDYUT).map((r) => r.mandateHash)).toEqual(['h1']);
+  });
+
+  it('reset_demo wipes build codes with the rest', () => {
+    issue();
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect(seen(VIDYUT)).toHaveLength(0);
+    expect([...h.db.approvalCode.iter()]).toHaveLength(0);
   });
 });
 
