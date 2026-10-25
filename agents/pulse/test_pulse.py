@@ -24,6 +24,12 @@ def test_without_claude_the_note_is_the_sim_template_with_tiger_facts():
                                                                                         "source": "Tiger Data loss_reports"}
 
 
+def test_a_real_tiger_read_with_no_demand_rows_says_no_data_not_sim():
+    n = note(demand={"status": "ok", "rows": []})
+    assert n["market"]["demand"]["round_hours_24h"] == 0 and n["market"]["demand"]["origin"] == "no data"
+    assert note()["market"]["demand"]["origin"] == "SIM"
+
+
 def test_tiger_not_configured_or_failing_says_so_and_invents_nothing():
     n = note(demand={"status": "not_configured", "rows": []}, coach={"status": "error", "rows": []})
     assert n["market"] == {"demand": {"state": "not_configured"}, "your_record": {"state": "error"}}

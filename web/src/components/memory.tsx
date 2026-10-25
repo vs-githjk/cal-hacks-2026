@@ -227,6 +227,7 @@ export function DecisionsView() {
               className={`min-h-11 rounded-full px-4 text-[14px] font-medium ${kind === k ? "bg-accent-soft text-accent-2" : "text-muted hover:bg-soft hover:text-ink"}`}
             >
               {label}
+              <span className="ml-1.5 font-mono text-[12px] opacity-70">{k === "all" ? decisions.length : decisions.filter((e) => e.kind === k).length}</span>
             </button>
           ))}
         </div>
