@@ -3,6 +3,7 @@
 // rows as recorded: nothing here decides a fit, it only maps the BuildView onto the panel's BuildResult.
 
 import type { BuildResult, BuildStep } from "./build.ts";
+import { HISTORY_STATES, LIVE_CHECK_STATES, type HistoryWindow, type LiveCheck, type PartProof, type PriceHistory } from "./proof.ts";
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 const ORIGINS = ["LIVE", "MIRROR", "SIM"] as const;
@@ -13,8 +14,8 @@ const EVENT_KINDS = ["plan", "round_open", "knockout", "locked", "clash", "repla
 const APPROVAL_STATES = ["waiting", "calling", "approved", "denied", "paid"] as const;
 
 type PartKey = (typeof PART_KEYS)[number];
-export interface Champion { bidId: string; sellerId: string; persona: string; landed: number; origin: Origin; sourceUrl: string }
-export interface BuildPart { part: PartKey; label: string; status: (typeof STATUSES)[number]; budget: number; needId?: string; roundId?: string; champion?: Champion; reason?: string }
+export interface Champion { bidId: string; sellerId: string; persona: string; landed: number; origin: Origin; sourceUrl: string; liveCheck?: LiveCheck }
+export interface BuildPart { part: PartKey; label: string; status: (typeof STATUSES)[number]; budget: number; needId?: string; roundId?: string; champion?: Champion; reason?: string; history?: PriceHistory }
 export interface BuildCheck { a: PartKey; b: PartKey; rule: (typeof RULES)[number]; state: "ok" | "clash" | "unknown"; detail: string; source: string }
 export interface BuildEvent { at: string; kind: (typeof EVENT_KINDS)[number]; text: string; parts: PartKey[] }
 export interface BuildView {
@@ -30,9 +31,26 @@ const str = (v: unknown): v is string => typeof v === "string";
 const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const oneOf = <T extends string>(v: unknown, set: readonly T[]): v is T => typeof v === "string" && (set as readonly string[]).includes(v);
 
+/** The Bright Data re-check as the feed serves it. A LIVE label without a time is not a read, so it is MIRROR. Bad: dropped (the line then says "did not run"). */
+function parseLiveCheck(c: unknown): LiveCheck | undefined {
+  if (!isObj(c) || !oneOf(c.state, LIVE_CHECK_STATES) || !oneOf(c.origin, ORIGINS) || !str(c.source)) return undefined;
+  const live = c.origin === "LIVE" && str(c.fetchedAt) && c.fetchedAt !== "";
+  return { state: c.state, origin: live ? "LIVE" : "MIRROR", source: c.source, ...(live ? { fetchedAt: c.fetchedAt as string } : {}) };
+}
+
+/** Tiger Data's read as the feed serves it. Stored rows are dated, so LIVE reads MIRROR. A window that is not the shape is dropped. */
+function parseHistory(h: unknown): PriceHistory | undefined {
+  if (!isObj(h) || !oneOf(h.state, HISTORY_STATES) || !oneOf(h.origin, ORIGINS) || !Array.isArray(h.windows)) return undefined;
+  const windows = h.windows.flatMap((w): HistoryWindow[] =>
+    isObj(w) && num(w.days) && num(w.low) && w.low > 0 && num(w.median) && w.median > 0 && num(w.n) && num(w.daysOfData)
+      ? [{ days: w.days, low: w.low, median: w.median, n: w.n, daysOfData: w.daysOfData }] : []);
+  return { state: h.state, origin: h.origin === "LIVE" ? "MIRROR" : h.origin, windows };
+}
+
 function parseChampion(c: unknown): Champion | null {
   if (!isObj(c) || !str(c.bidId) || !str(c.sellerId) || !str(c.persona) || !num(c.landed) || c.landed <= 0 || !oneOf(c.origin, ORIGINS) || !str(c.sourceUrl)) return null;
-  return { bidId: c.bidId, sellerId: c.sellerId, persona: c.persona, landed: c.landed, origin: c.origin, sourceUrl: c.sourceUrl };
+  const liveCheck = parseLiveCheck(c.liveCheck);
+  return { bidId: c.bidId, sellerId: c.sellerId, persona: c.persona, landed: c.landed, origin: c.origin, sourceUrl: c.sourceUrl, ...(liveCheck ? { liveCheck } : {}) };
 }
 
 function parsePart(p: unknown): BuildPart | null {
@@ -40,8 +58,9 @@ function parsePart(p: unknown): BuildPart | null {
   const champion = p.champion === undefined ? undefined : parseChampion(p.champion);
   if (champion === null) return null; // a champion that is present but malformed drops the row
   if ((p.status === "locked" || p.status === "replanned") && !champion) return null;
+  const history = parseHistory(p.history);
   return {
-    part: p.part, label: p.label, status: p.status, budget: p.budget,
+    part: p.part, label: p.label, status: p.status, budget: p.budget, ...(history && champion ? { history } : {}),
     ...(str(p.needId) ? { needId: p.needId } : {}), ...(str(p.roundId) ? { roundId: p.roundId } : {}),
     ...(champion ? { champion } : {}), ...(str(p.reason) ? { reason: p.reason } : {}),
   };
@@ -107,6 +126,8 @@ export function toBuildResult(v: BuildView): BuildResult {
     partReason: Object.fromEntries(bought.flatMap((p) => (p.reason ? [[PANEL_KEY[p.part], p.reason]] : []))),
     checks: v.checks.map((c) => ({ ...c, a: PANEL_KEY[c.a], b: PANEL_KEY[c.b] })),
     approval: v.approval,
+    proof: Object.fromEntries(bought.flatMap((p): [string, PartProof][] => p.champion
+      ? [[PANEL_KEY[p.part], { championOrigin: p.champion.origin, ...(p.champion.liveCheck ? { liveCheck: p.champion.liveCheck } : {}), ...(p.history ? { history: p.history } : {}) }]] : [])),
   };
 }
 

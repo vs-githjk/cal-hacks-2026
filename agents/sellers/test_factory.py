@@ -292,15 +292,16 @@ def test_run_all_in_mailbox_mode_skips_sellers_with_a_public_seed(monkeypatch, c
         monkeypatch.setitem(common.SEEDS, s, f"private-{s}")
     agents = run_all.build_all()  # must not raise SystemExit
     out = capsys.readouterr().out
-    assert [a.name for a in agents] == [seller(s)["name"] for s in ("seller_1", "seller_2", "seller_3")]
-    assert "seller_4 skipped: set SELLER_4_AGENT_SEED" in out and "seller_5 skipped: set SELLER_5_AGENT_SEED" in out
+    assert [a.name for a in agents] == [seller(s)["name"] for s in ("seller_1", "seller_3")]   # #398: seller_2 is not run
+    assert "seller_5 skipped: set SELLER_5_AGENT_SEED" in out and "seller_2 not run" in out and "seller_4 not run" in out
 
 
 def test_run_all_builds_every_seller_without_mailbox_mode(monkeypatch, event_loop_for_agents):
     for k in ("AGENTS_MAILBOX", "SELLERS_MAILBOX"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setattr(common, "SELLERS", list(common.CATALOG_SELLERS))  # seller_6 (MIRROR): test_seller_6.py
-    assert len(run_all.build_all()) == 5
+    assert len(run_all.build_all()) == 3   # #398: seller_1, seller_3, seller_5; seller_2 and seller_4 are not run
+    assert len(run_all.build_all(["seller_2", "seller_4"])) == 2   # named explicitly, a retired seller still builds
 
 
 def test_a_single_seller_agent_in_mailbox_mode_with_a_public_seed_still_exits(monkeypatch):
@@ -427,3 +428,19 @@ def test_seller_agent_cli_refuses_a_bad_config_with_the_field_names(tmp_path):
                          capture_output=True, text=True, timeout=60, cwd=str(tmp_path))
     assert run.returncode != 0
     assert f"listings.{GPU_TI}.floor_by_condition.new" in run.stderr
+
+
+
+def test_the_live_roster_is_four_sellers_with_four_distinct_jobs():  # #398
+    run = [n for n in [*common.CATALOG_SELLERS, *common.MIRROR_SELLERS] if n not in common.RETIRED_SELLERS]
+    assert run == ["seller_1", "seller_3", "seller_5", "seller_6"]
+    assert set(common.SELLER_JOBS) == set(run) and len(set(common.SELLER_JOBS.values())) == 4
+    assert set(common.RETIRED_SELLERS) == {"seller_2", "seller_4"} and all("same job as" in v for v in common.RETIRED_SELLERS.values())
+    for n in run:   # each kept seller's Agentverse README states its one job right under the title
+        assert (Path(__file__).parent / f"AGENTVERSE-{n}.md").read_text().split("\n")[2].startswith("**Job:")
+
+
+def test_the_buyer_never_asks_a_retired_seller(monkeypatch):
+    import buyer.buyer_agent as B
+    monkeypatch.setattr(common, "mailbox_ready", lambda s: True)
+    assert not set(B.live_sellers()) & set(common.RETIRED_SELLERS)

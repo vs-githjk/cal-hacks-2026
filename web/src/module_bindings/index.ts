@@ -38,10 +38,12 @@ import AssignRoleReducer from "./assign_role_reducer";
 import AttachAdvocateCardReducer from "./attach_advocate_card_reducer";
 import AttachClaimCheckReducer from "./attach_claim_check_reducer";
 import AttachVerdictReducer from "./attach_verdict_reducer";
+import ClearBuildApprovalCodeReducer from "./clear_build_approval_code_reducer";
 import CloseRoundReducer from "./close_round_reducer";
 import CreateMandateReducer from "./create_mandate_reducer";
 import DenyApprovalReducer from "./deny_approval_reducer";
 import IssueApprovalCodeReducer from "./issue_approval_code_reducer";
+import IssueBuildApprovalCodeReducer from "./issue_build_approval_code_reducer";
 import OpenRoundReducer from "./open_round_reducer";
 import PairBuyerScreenReducer from "./pair_buyer_screen_reducer";
 import PairSellerScreenReducer from "./pair_seller_screen_reducer";
@@ -325,10 +327,12 @@ const reducersSchema = __reducers(
   __reducerSchema("attach_advocate_card", AttachAdvocateCardReducer),
   __reducerSchema("attach_claim_check", AttachClaimCheckReducer),
   __reducerSchema("attach_verdict", AttachVerdictReducer),
+  __reducerSchema("clear_build_approval_code", ClearBuildApprovalCodeReducer),
   __reducerSchema("close_round", CloseRoundReducer),
   __reducerSchema("create_mandate", CreateMandateReducer),
   __reducerSchema("deny_approval", DenyApprovalReducer),
   __reducerSchema("issue_approval_code", IssueApprovalCodeReducer),
+  __reducerSchema("issue_build_approval_code", IssueBuildApprovalCodeReducer),
   __reducerSchema("open_round", OpenRoundReducer),
   __reducerSchema("pair_buyer_screen", PairBuyerScreenReducer),
   __reducerSchema("pair_seller_screen", PairSellerScreenReducer),

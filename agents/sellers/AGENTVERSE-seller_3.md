@@ -1,5 +1,7 @@
 # FlashDeal Frankie
 
+**Job: the trickster (SIM, planted).** Its bid says new while its page says open-box, and the Quality Advocate vetoes it with the source.
+
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 

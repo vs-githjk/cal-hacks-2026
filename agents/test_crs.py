@@ -678,3 +678,65 @@ def test_no_profile_file_says_so(monkeypatch, fresh_payee_cache):
     monkeypatch.setattr(crs, "_paths", lambda: (None, Path("/nonexistent/cache.json")))
     out = asyncio.run(crs.check_payee("best-buy", NOW))
     assert out["business"] is False and "CRS_TEST_IDENTITIES_PATH" in out["sim_reason"]
+
+
+# ---------------------------------------------------------------- #398: a payee's CRS status from local files only
+
+def no_network(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("payee_status must never reach the CRS sandbox")
+    for name in ("_login", "_get_token", "_request", "_open_request"):
+        monkeypatch.setattr(crs, name, boom)
+
+
+def recorded(tmp_path, supplier_id, stability, checked_at, persona="official-a"):
+    signal = {"supplier_id": supplier_id, "stability": stability, "checked_at": checked_at, "source": "sandbox"}
+    (tmp_path / "cache.json").write_text(json.dumps({supplier_id: {"persona_ref": persona, "signal": signal, "reason": "x"}}))
+
+
+def test_status_with_no_profile_file_is_sim_and_says_why(monkeypatch):
+    no_network(monkeypatch)
+    monkeypatch.setattr(crs, "_paths", lambda: (None, Path("/nonexistent/cache.json")))
+    out = crs.payee_status("fair-price-pc", NOW)
+    assert out["state"] == "sim" and "CRS_TEST_IDENTITIES_PATH" in out["reason"] and out["band"] is None
+
+
+def test_status_of_an_individual_or_unlisted_seller_is_sim(monkeypatch, tmp_path):
+    no_network(monkeypatch)
+    setup_profile(monkeypatch, tmp_path, seller_type="individual")
+    assert crs.payee_status("seller_1", NOW)["state"] == "sim"
+    out = crs.payee_status("gadget-grove", NOW)
+    assert out["state"] == "sim" and out["reason"] == "no business CRS profile for this seller"
+
+
+def test_status_of_a_business_with_no_recorded_result_is_not_checked(monkeypatch, tmp_path):
+    no_network(monkeypatch)
+    setup_profile(monkeypatch, tmp_path)
+    out = crs.payee_status("seller_1", NOW)
+    assert out["state"] == "business" and out["band"] is None and out["persona_ref"] == "official-a"
+
+
+def test_status_of_a_business_shows_a_fresh_recorded_band_and_its_time(monkeypatch, tmp_path):
+    no_network(monkeypatch)
+    setup_profile(monkeypatch, tmp_path)
+    recorded(tmp_path, "seller_1", "caution", "2026-10-24T07:00:00Z")
+    out = crs.payee_status("SELLER_1", NOW)
+    assert out["state"] == "business" and out["band"] == "caution" and out["checked_at"] == "2026-10-24T07:00:00Z"
+
+
+def test_status_never_shows_a_stale_or_other_persona_band(monkeypatch, tmp_path):
+    no_network(monkeypatch)
+    setup_profile(monkeypatch, tmp_path)
+    recorded(tmp_path, "seller_1", "verified_stable", "2026-10-23T07:00:00Z")
+    assert crs.payee_status("seller_1", NOW)["band"] is None
+    recorded(tmp_path, "seller_1", "verified_stable", "2026-10-24T07:00:00Z", persona="P99")
+    assert crs.payee_status("seller_1", NOW)["band"] is None
+
+
+def test_status_of_an_unreadable_file_is_unknown_never_sim(monkeypatch, tmp_path):
+    no_network(monkeypatch)
+    path = tmp_path / "private.json"
+    path.write_text("not json")
+    monkeypatch.setattr(crs, "_paths", lambda: (path, tmp_path / "cache.json"))
+    out = crs.payee_status("seller_1", NOW)
+    assert out["state"] == "unknown" and "unreadable" in out["reason"]

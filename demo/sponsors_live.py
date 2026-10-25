@@ -97,6 +97,23 @@ def price_note(result: dict, quoted: float, *, now: Optional[datetime] = None) -
     return f"Bright Data: live price not read ({why}); the quoted MIRROR price stays: {money(quoted)}"
 
 
+def price_history(sku: str, days: int, *, read: Optional[Callable] = None, timeout: float = TIGER_TIMEOUT_S) -> dict:
+    """data.tiger.trends.price_trend(sku, days) within `timeout` seconds, for the deal card's 7 and 30 day line. Without
+    TIGER_DATA_SERVICE_URL it is status "not_configured" and no connection is made; a slow or failed read is status "error".
+    Neither carries a number (the reason is never in the result: it could name a host)."""
+    from data.tiger import store
+    empty = {"sku": sku, "window_days": days, "days_of_data": 0, "n": 0, "min_cents": None, "median_cents": None, "origins": []}
+    if not store.status()["configured"]:
+        return {"status": "not_configured", **empty}
+    if read is None:
+        from data.tiger import trends
+        read = trends.price_trend
+    try:
+        return _bounded(lambda: read(sku, days), timeout)
+    except Exception:  # noqa: BLE001  (a timeout, a TigerError or a bad sku: no number, never a crash)
+        return {"status": "error", **empty}
+
+
 def round_ticks(rows: list, sku: str, *, now: Optional[datetime] = None) -> list[dict]:
     """round_result rows as Tiger bid_ticks, with each row's origin (data.tiger.history.round_ticks): rank 1 is the "win",
     rank 0 is "blocked", the rest are "bid", prices in whole cents."""
