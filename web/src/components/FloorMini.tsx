@@ -35,21 +35,21 @@ export function FloorMini({ className = "" }: { className?: string }) {
         <span className="inline-flex items-center gap-2"><span className="dot text-shield" aria-hidden /> The floor</span>
         <span>Round 1 of 3</span>
       </div>
-      <div className="relative mx-auto mt-5 h-[160px] w-[320px] max-w-full" aria-hidden>
-        <div className="absolute inset-x-[40px] inset-y-[28px] rounded-[18px] border border-[rgba(238,243,248,0.14)]" />
-        <div className="absolute inset-x-[72px] inset-y-[56px] rounded-[14px] border border-dashed border-[rgba(238,243,248,0.1)]" />
-        <div className="fm-ring absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full">
-          <svg viewBox="0 0 24 24" className="h-7 w-7 text-pac"><path d={FISH_PATH} fill="currentColor" /><circle cx="16.3" cy="8.6" r="1.6" fill="var(--koi)" /></svg>
+      <div className="relative mx-auto mt-6 h-[240px] w-[480px] max-w-full" aria-hidden>
+        <div className="absolute inset-x-[48px] inset-y-[36px] rounded-[22px] border border-[rgba(238,243,248,0.16)]" />
+        <div className="absolute inset-x-[96px] inset-y-[76px] rounded-[16px] border border-dashed border-[rgba(238,243,248,0.1)]" />
+        <div className="fm-ring absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full">
+          <svg viewBox="0 0 24 24" className="h-10 w-10 text-pac"><path d={FISH_PATH} fill="currentColor" /><circle cx="16.3" cy="8.6" r="1.6" fill="var(--koi)" /></svg>
         </div>
         {GHOSTS.map((g) => (
           <span
             key={g.color}
-            className="fm-ghost h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-t-full rounded-b-[3px]"
+            className="fm-ghost h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-t-full rounded-b-[4px]"
             style={{ background: g.color, ["--lap" as string]: g.lap, ["--delay" as string]: g.delay }}
           />
         ))}
       </div>
-      <ol className="mt-4 grid gap-1 font-mono text-[13px] leading-[18px] text-floor-line/80">
+      <ol className="mt-5 grid gap-1.5 font-mono text-[13px] leading-[18px] text-floor-line/80 sm:grid-cols-2">
         {LINES.map((l, i) => (
           <li key={l} className={`flex items-center gap-2 transition-opacity duration-300 ${i < shown ? "opacity-100" : "opacity-0"}`} aria-hidden={i >= shown}>
             <span className={`h-1.5 w-1.5 rounded-full ${i === shown - 1 ? "bg-shield" : "bg-ghost-1"}`} aria-hidden />

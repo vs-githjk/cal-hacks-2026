@@ -262,7 +262,7 @@ header { position: sticky; top: 0; z-index: 40; }
 .fm-orb-b { animation: fm-orb-b 18s ease-in-out infinite; }
 .fm-ticker { animation: fm-ticker 40s linear infinite; }
 .fm-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--color-shield); animation: fm-ring 2.4s ease-out infinite; }
-.fm-ghost { position: absolute; top: 0; left: 0; offset-path: path("M 40 28 H 280 V 132 H 40 Z"); offset-rotate: 0deg; animation: fm-lap var(--lap, 9s) linear infinite; animation-delay: var(--delay, 0s); }
+.fm-ghost { position: absolute; top: 0; left: 0; offset-path: path("M 48 36 H 432 V 204 H 48 Z"); offset-rotate: 0deg; animation: fm-lap var(--lap, 9s) linear infinite; animation-delay: var(--delay, 0s); }
 .fm-line { animation: fm-line 220ms var(--ease-out) both; }
 
 /* Aquarium hero (#448, round 3): water, caustic light and a few slow bubbles. Pauses under reduced motion. */
@@ -270,7 +270,7 @@ header { position: sticky; top: 0; z-index: 40; }
 .fm-caustic { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(45% 55% at 20% 5%, rgba(255,255,255,0.9), transparent 70%), radial-gradient(35% 40% at 80% 15%, rgba(34,211,238,0.22), transparent 70%), radial-gradient(55% 40% at 55% 100%, rgba(255,255,255,0.7), transparent 70%); }
 @keyframes fm-bubble { 0% { transform: translateY(0) scale(1); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.5; } 100% { transform: translateY(-520px) scale(1.25); opacity: 0; } }
 .fm-bubble { position: absolute; bottom: -24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.85); background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.9), rgba(255,255,255,0.1) 60%); animation: fm-bubble var(--rise, 14s) linear infinite; animation-delay: var(--delay, 0s); pointer-events: none; }
-.fm-tile { background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.72)); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.9); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(11,27,43,0.06), 0 12px 32px -8px rgba(11,27,43,0.18); transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out); }
+.fm-tile { background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.84)); border: 1px solid rgba(255,255,255,0.9); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(11,27,43,0.06), 0 12px 32px -8px rgba(11,27,43,0.18); transition: transform 90ms var(--ease-out), box-shadow 90ms var(--ease-out); will-change: transform; }
 .fm-tile:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 2px 4px rgba(11,27,43,0.06), 0 24px 48px -12px rgba(11,27,43,0.28); }
 .fm-tile:active { transform: translateY(0) scale(0.985); box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(11,27,43,0.08), 0 6px 16px -6px rgba(11,27,43,0.18); transition-duration: 80ms; }
 .fm-headline-accent { background: linear-gradient(90deg, var(--color-pulse), var(--color-live)); -webkit-background-clip: text; background-clip: text; color: transparent; }
