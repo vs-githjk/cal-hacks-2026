@@ -173,9 +173,20 @@ def _begin_market_review() -> list[dict]:
     # #447: review while the round is still open (the published market ranks at close); a closed round is too late
     if referee_market.round_status(round_id).get("state") != "open":
         raise MarketBridgeError("market_round_closed_before_review")
+    market_suppliers = set(MARKET_SELLER_IDS.values())
     for bid_id, check in ROUND.get("screened_bids", {}).items():
-        referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
-                                      rule_ids=check["rule_ids"], origin=check["origin"])
+        bid = ROUND.get("received_bids", {}).get(bid_id) or {}
+        # Only sellers with a market identity publish their bid to the market; a chat-only seller's bid (ReNew,
+        # the MIRROR) has no market row, so attaching to it fails "no bid" and used to abort the whole round.
+        # Such a bid can never be the market's winner, so skipping its market verdict changes no ranking.
+        if bid.get("supplier_id") not in market_suppliers:
+            continue
+        try:
+            referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
+                                          rule_ids=check["rule_ids"], origin=check["origin"])
+        except MarketBridgeError:
+            if check["verdict"] != "allow":
+                raise  # a block or quarantine that cannot be recorded must stop the round (fail closed)
     return _review_candidates()
 
 
