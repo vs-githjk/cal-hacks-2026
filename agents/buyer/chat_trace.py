@@ -62,3 +62,41 @@ def round_trace(
     else:
         parts.append("no reviewed recommendation")
     return "; ".join(parts) + "."
+
+
+def _number(value: object) -> float | None:
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and value == value else None
+
+
+def veto_notes(
+    bids: Sequence[Mapping[str, object]],
+    cards: Mapping[str, Mapping[str, object]],
+    pick: Mapping[str, object] | None,
+    limit: int = 3,
+) -> list[str]:
+    """#449 RT-22: one plain line per vetoed bid that was cheaper than `pick`, with the advocate's reason and its source, so the
+    owner sees why the cheaper bid did not win. At most `limit` lines: past that, the last line counts the rest. Seller and
+    advocate text is cut at the first control character, so it cannot add a line or a command."""
+    pick_price = _number(pick.get("total_landed_price")) if isinstance(pick, Mapping) else None
+    if pick_price is None or limit < 1 or not isinstance(cards, Mapping):
+        return []
+    found = []
+    for bid in bids:
+        card = cards.get(str(bid.get("id"))) if isinstance(bid, Mapping) else None
+        price = _number(bid.get("total_landed_price")) if isinstance(bid, Mapping) else None
+        if not isinstance(card, Mapping) or card.get("recommendation") != "veto" or price is None or price >= pick_price:
+            continue
+        reason_row = card.get("call_reason") if isinstance(card.get("call_reason"), Mapping) else {}
+        reason = _safe(reason_row.get("summary") or card.get("reason") or "").rstrip(".") or "no reason was given"
+        candidates = [reason_row.get("source_url"), card.get("source_url")]
+        warnings = card.get("warnings")
+        if isinstance(warnings, Sequence) and not isinstance(warnings, (str, bytes)):
+            candidates += [w.get("source_url") for w in warnings if isinstance(w, Mapping)]
+        source = next((u for u in map(_source, candidates) if u != "source unavailable"), "source unavailable")
+        name = _safe(bid.get("persona")) or _safe(bid.get("supplier_id")) or "a seller"
+        found.append((price, str(bid.get("id")), f"The advocate vetoed {name} (${price:.2f}), cheaper than the one I picked: {reason}. Source: {source}"))
+    lines = [line for _price, _id, line in sorted(found)]
+    if len(lines) > limit:
+        lines = lines[:limit - 1] + [f"The advocate vetoed {len(lines) - limit + 1} more cheaper bids too."]
+    return lines
+

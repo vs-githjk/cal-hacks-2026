@@ -29,8 +29,8 @@ import state as buyer_state
 from market_bridge import MarketBridge, MarketBridgeError
 from advocate.real_data import cached_shield_baseline
 from chat_diagnostics import ChatDiagnostics
-from chat_trace import round_trace
-from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
+from chat_trace import round_trace, veto_notes
+from goal import apply_owned, forget_draft, need_from_goal, owned_attrs, parse_goal_draft, remember, skip_lines
 from logic import advice_need_for, decide, make_order, sealed
 from data.mirror import not_partners  # common put the repo root on sys.path
 
@@ -237,6 +237,7 @@ async def _finish_market_round(ctx: Context):
     token, need_id = ROUND.get("round_token"), ROUND.get("need", {}).get("id")
     try:
         reviewed_cards = ROUND.get("cards", {})
+        ROUND["reviewed_cards"] = dict(reviewed_cards)  # #449 RT-22: ROUND["cards"] is cut to the winner below; the result still names the vetoes
         buyer_market, referee_market = market_clients()
         round_id = ROUND["market_round_id"]
         _ensure_market_round_state(referee_market, round_id, expected="closed", transition_from="review")
@@ -461,6 +462,10 @@ async def handle_text(ctx: Context, sender: str, text: str):
     if sender == ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "approve":
         await tell(ctx, sender, "Approval happens on a phone call, not in chat. Nothing was approved or ordered.")
         return
+    # #449 RT-6: CANCEL from a sender who only has a half-said goal (no round of theirs yet) drops it.
+    if sender != ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "cancel" and forget_draft(sender):
+        await tell(ctx, sender, "Cancelled. Nothing ordered. Send a new goal when you are ready.")
+        return
     if ROUND.get("pending_hold"):
         if sender == ROUND.get("owner"):
             await tell(ctx, sender, "A previous approved or submitted purchase is unresolved. I cannot start another goal yet.")
@@ -496,6 +501,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
                 or state in ("DONE", "EXPIRED", "PAUSED"))
     cmd = hunt.command(text)
     if cmd and cmd[0] == "cancel" and ROUND.get("owner") == sender:
+        forget_draft(sender)
         if ROUND.get("order"):
             await tell_owner(ctx, "An order has already been placed; CANCEL cannot reverse it. Nothing was canceled.")
             return
@@ -529,7 +535,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
         return
     buyer_id = sender  # one ownership memory per chat identity
     try:
-        goal, told = parse_goal(text, buyer_id)
+        goal, told = parse_goal_draft(text, buyer_id, now=business_now())  # #449 RT-6: this sender's earlier half-said goal counts too
     except ValueError as e:
         await tell(ctx, sender, f"I could not read a goal from that. {e}")
         return
@@ -663,7 +669,7 @@ async def start_round(ctx: Context, need: dict | None = None):
     if old_need_id and old_need_id != need["id"]:
         retired_need_ids = (retired_need_ids + [old_need_id])[-RETIRED_NEED_HISTORY:]
     token = uuid4().hex
-    ROUND.update(need=need, retired_need_ids=retired_need_ids, bids=[], personas={}, cards={}, seller_checks={},
+    ROUND.update(need=need, retired_need_ids=retired_need_ids, bids=[], personas={}, cards={}, reviewed_cards={}, seller_checks={},
                  received_bids={}, screened_bids={},
                  reviewed=False, order=None, mandate=None, told_foreign=False,
                  phase="checking", deadline=0, round_token=token)
@@ -928,7 +934,10 @@ async def conclude(ctx: Context, reviewed: bool):
     ROUND["reviewed"] = True
     need, bids, cards = ROUND["need"], ROUND["bids"], ROUND["cards"]
     ROUND["phase"] = "decided"
-    out = [f"{len(bids)} sealed bids for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
+    # #449 RT-22: ROUND["bids"] is cut to the market's winner, so the count and the vetoes come from every bid that was reviewed.
+    reviewed_bids = {b["id"]: b for b in [*ROUND.get("review_bids", []), *bids] if isinstance(b, dict) and "id" in b}
+    came_in = max(len(bids), len(reviewed_bids))
+    out = [f"{came_in} sealed bid{'' if came_in == 1 else 's'} for {need['id']} (your cap ${need['spend_limit']:.2f}):"]
     now_utc = business_now()
     seller_checks = ROUND.get("seller_checks", {})
     not_configured_suppliers = {
@@ -973,6 +982,8 @@ async def conclude(ctx: Context, reviewed: bool):
             and crs.eligible(winner["supplier_id"], seller_checks.get(winner["supplier_id"]), now_utc)
             and not_partners.orderable(winner) and not_partners.orderable(bids[0]) else None)
     asked = ROUND.get("asked") or [b["supplier_id"] for b in bids]
+    out.extend(veto_notes(list(reviewed_bids.values()), {**cards, **ROUND.get("reviewed_cards", {})},
+                          bids[best - 1] if best else winner))
     out.append(round_trace(asked, bids, cards, bids[best - 1] if best else None))
     vetoed = [b["persona"] for b in bids if cards.get(b["id"], {}).get("recommendation") == "veto"]
     if vetoed:
