@@ -1,11 +1,11 @@
 "use client";
 
 import { cloneElement, useCallback, useEffect, useState } from "react";
-import { Card, Code, Details, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
+import { Card, Code, Details, Label, OriginChip, RecordedBanner } from "@/components/ui";
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import { BRAND } from "@/lib/brand";
-import { draftToForm, type Vetted } from "@/lib/sellerDraft";
+import { draftToForm, sellView, type Vetted } from "@/lib/sellerDraft";
 import {
   CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
@@ -66,6 +66,7 @@ export default function SellPage() {
   const [chat, setChat] = useState("");
   const [draft, setDraft] = useState<DraftState>({ kind: "idle" });
   const kit = useApiBase(SELLER_KIT_URL);
+  const view = sellView(kit.local);
   // the hosted site shows the recorded SIM snapshot (#398); locally, what the kit answers
   const shownShops = kit.local ? parseShops(recorded.shops) : shops;
   const shownNeeds = kit.local ? parseNeeds(recorded.needs) : needs;
@@ -144,17 +145,10 @@ export default function SellPage() {
         <Details summary="What this does"><p>The Seller Kit checks your shop and writes a config your own seller agent runs from. It cannot verify a real shop, so every shop it writes is SIM.</p></Details>
       </header>
 
-      {kit.local ? (
-        <>
-        <RecordedBanner at={recorded.recorded_at} />
-        <RunsLocally what="The Seller Kit">
-          It checks your shop and writes a config file that your own seller agent runs from, on your machine. This hosted page cannot reach it,
-          so the form is not shown and nothing here is sent anywhere. Below is what the kit answered when it was recorded.
-        </RunsLocally>
-        </>
-      ) : (
+      {kit.local && <RecordedBanner at={recorded.recorded_at} />}
+      {/* #449 06:17: the Claude draft and the form always show; only the final create needs the Seller Kit (operator's machine) */}
       <>
-      {offline && (
+      {offline && !kit.local && (
         <div className="flex flex-wrap items-center gap-x-3 text-[14px] text-ink-2">
           <span className="flex items-center gap-2"><span aria-hidden className="h-2 w-2 rounded-full bg-coral-mark" />Seller Kit offline. Nothing was sent.</span>
           <Details summary="How to start it" className="mt-0"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
@@ -344,13 +338,13 @@ export default function SellPage() {
         )}
 
         <div>
-          <button type="submit" className={button} disabled={busy}>
+          <button type="submit" className={button} disabled={busy || !view.canCreate}>
             {busy ? "Checking..." : "Create my seller agent config"}
           </button>
+          {view.createNote && <p className="mt-2 text-[14px]/[20px] text-muted">{view.createNote}</p>}
         </div>
       </form>
       </>
-      )}
 
       {created && (
         <Card>

@@ -237,7 +237,7 @@ export function vetDraft(ownerText: string, raw: unknown): Vetted | null {
     return s && s.length <= 160 ? [s] : [];
   });
   const all = codeQuestions.length ? [...codeQuestions, ...modelQuestions] : [];
-  const questions = [...new Set(all)].slice(0, MAX_QUESTIONS);
+  const questions = dedupeQuestions(all).slice(0, MAX_QUESTIONS);
 
   return { draft: { name: keepName, owner: keepOwner, archetype: keepKind, perks, claims, lines: lines.slice(0, 50) }, questions, dropped };
 }
@@ -330,4 +330,35 @@ export async function handleDraftRequest(body: unknown, opts: DraftOptions): Pro
   if (!text) return { status: 400, body: { error: "Tell us about your shop in a sentence or two." } };
   if (text.length > MAX_TEXT) return { status: 400, body: { error: `Keep it under ${MAX_TEXT} characters.` } };
   return { status: 200, body: await requestDraft(text, opts) };
+}
+
+
+/** #449 06:17: one question per missing fact. Code and Claude can ask the same thing in other words ("What is your shop's name?",
+ * "What is the shop name?"), so a question is keyed by the fact it asks about, else by its normalized words. */
+export function dedupeQuestions(questions: readonly string[]): string[] {
+  const topic = (q: string) => {
+    const t = q.toLowerCase();
+    for (const [key, re] of [["name", /\bname\b/], ["floor", /\bfloor\b|lowest price/], ["price", /\b(?:list )?price\b/], ["condition", /\bcondition\b/]] as const) {
+      if (re.test(t)) return key;
+    }
+    return t.replace(/'s\b/g, "").replace(/\b(?:your|the|a|an)\b/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  };
+  const seen = new Set<string>();
+  return questions.filter((q) => {
+    const k = topic(q);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/** #449 06:17: what /sell shows. The Claude draft and the form always show; only the final create needs the Seller Kit, which runs
+ * on the operator's machine, so on the hosted site that one button is off with an honest line. */
+export function sellView(kitUnreachable: boolean): { showClaude: boolean; showForm: boolean; canCreate: boolean; createNote: string } {
+  return {
+    showClaude: true,
+    showForm: true,
+    canCreate: !kitUnreachable,
+    createNote: kitUnreachable ? "Creating the agent runs on the operator's machine; your draft is ready." : "",
+  };
 }

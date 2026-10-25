@@ -36,7 +36,7 @@ const css = `
 .cp { container-type: inline-size; position: relative; width: 100%; height: 100%; background: ${PANEL}; color: ${TEXT}; overflow: hidden; display: flex; flex-direction: column; border-radius: 18px; }
 .cp-full { height: 100%; }
 .cp * { box-sizing: border-box; min-width: 0; }
-.cp-head { display: flex; align-items: center; gap: 6px; flex: none; padding: max(4px, 2.4cqw) max(8px, 3.2cqw); background: #ffffff; border-bottom: 1px solid ${HAIR}; font-size: max(9px, 3.6cqw); line-height: 1.3; color: ${MUTED}; }
+.cp-head { display: flex; align-items: center; gap: 6px; flex: none; padding: max(4px, 2.4cqw) max(8px, 3.2cqw); background: #ffffff; border-bottom: 1px solid ${HAIR}; font-size: max(11px, 4cqw); font-weight: 500; line-height: 1.3; color: ${TEXT}; }
 .cp-full .cp-head { padding: 12px 20px; font-size: 13px; }
 .cp-dot { width: max(6px, 1.8cqw); height: max(6px, 1.8cqw); border-radius: 50%; flex: none; background: #b4bfcb; }
 .cp-full .cp-dot { width: 8px; height: 8px; }
@@ -46,7 +46,7 @@ const css = `
 .cp-unread { flex: none; min-width: 1.6em; padding: 0 0.4em; text-align: center; border-radius: 999px; background: ${BLUE}; color: #ffffff; font-weight: 600; }
 .cp-tilebody { position: relative; flex: 1 1 auto; overflow: hidden; }
 .cp-latest { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: max(6px, 3cqw) max(8px, 3.4cqw); }
-.cp-who { font-size: max(9px, 3.4cqw); line-height: 1.25; color: ${MUTED}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cp-who { font-size: max(10px, 3.8cqw); line-height: 1.25; color: ${MUTED}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cp-text { font-size: max(10px, 4.6cqw); line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; color: ${TEXT}; }
 .cp-empty { color: ${MUTED}; }
 .cp-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
