@@ -814,13 +814,14 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     return;
   }
 
-  // #266: round_result is public; a mid-round 'advancing' row must never reveal a still-live seller's price
-  // (landed, lines, adjusted_total) to a role-less reader before the round actually closes. Only who is still
-  // in, and why, is public; the sealed bid table (private) keeps the real numbers until a stage crowns a champion.
+  // #266/#363: round_result is public; a mid-round 'advancing' row must never reveal a still-live seller's price
+  // (landed, lines, adjusted_total) or relative standing (rank) to a role-less reader before the round actually
+  // closes. Only who is still in, and why, is public; the sealed bid table (private) keeps the real numbers and
+  // ranking until a stage crowns a champion.
   for (const x of survivors) {
     const b = byId.get(x.bid.id)!;
     ctx.db.roundResult.insert({
-      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: 0, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: 0, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
       lines: [], origin: b.origin, source: b.source, adjustedTotal: 0, adjustmentReason: '',
       stage, status: 'advancing',
     });

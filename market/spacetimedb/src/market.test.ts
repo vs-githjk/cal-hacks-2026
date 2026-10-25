@@ -1669,6 +1669,18 @@ describe('#336 sealed knockout rounds', () => {
     expect(JSON.stringify(prices)).not.toContain('700');
   });
 
+  it('#363 a mid-round advancing row never reveals relative standing either; rank stays 0 until a stage crowns a champion', () => {
+    openKnockout(3, 15);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' })); // seller-a knocked out; b and c advance (not the final stage)
+    const advancing = [...h.db.roundResult.roundId.filter('round-1')].filter((x) => x.status === 'advancing');
+    expect(advancing).toHaveLength(2);
+    for (const row of advancing) expect(row.rank).toBe(0);
+  });
+
   it('#266-3 create_mandate refuses a stale advancing-stage row from a round still open', () => {
     openKnockout(3, 15);
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
