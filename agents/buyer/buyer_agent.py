@@ -1131,6 +1131,10 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         if client is None:
             # Fail closed: no approval without the phone call. The transaction is left as it was.
             ROUND["phase"] = "pending_approval"
+            if web:  # no phone: terminal, so nothing stays held and chat buyers are not blocked
+                transaction["phase"] = "expired"
+                buyer_state.save_transaction(state_db(), transaction)
+                ROUND["transaction"] = None
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
             return
@@ -1180,6 +1184,17 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             order_json=json.dumps(order), mandate_json=json.dumps(mandate)))
         await tell_owner(ctx, f"Approval recorded for deal {transaction['deal_id']}. The seller was asked to request payment; no charge is confirmed yet.")
     except Exception as exc:
+        if web:  # web path: terminal "expired" (recovery ignores it); never leave the buyer agent held
+            transaction["phase"] = "expired"
+            try:
+                buyer_state.save_transaction(state_db(), transaction)
+            except Exception:
+                pass
+            ROUND.update(pending_hold=False, phase="done", transaction=None)
+            import logging
+            logging.getLogger("buyer_agent").warning(
+                f"web buyer {transaction.get('buyer_id')}: approval failed ({type(exc).__name__}); round released")
+            return
         if transaction.get("phase") == "approved":
             transaction["phase"] = "uncertain"
         try:
@@ -1299,6 +1314,7 @@ async def _auto_web_approval(ctx: Context, n: int) -> None:
     await _run_owner_approval(ctx, n, "", transaction, web=True)
     if ROUND.get("phase") == "pending_approval":  # not approved (no phone, denied, no answer): free the hunt for the next web goal
         ROUND["phase"] = "done"
+        ROUND["transaction"] = None
 
 
 def eligible_for_order(n: int) -> bool:

@@ -376,3 +376,52 @@ def test_failed_start_round_leaves_goal_unmarked(runtime, monkeypatch):
     assert _adopt(buyer) is False
     assert not buyer.buyer_state.goal_handled(db, "goal-web1")
 
+
+
+def _stored_phases(db):
+    return [r[0] for r in db.execute("SELECT phase FROM transactions")]
+
+
+def _next_web_goal_adopted(buyer, db):
+    buyer.LAST_GOAL_POLL = float("-inf")
+    buyer.buyer_state.mark_goal_handled(db, "goal-web1", BID)
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer), {**_open_goal_row(buyer), "id": "goal-web2"}]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    return asyncio.run(buyer.adopt_open_goal(Context()))
+
+
+def test_web_referee_record_failure_frees_the_agent(runtime, monkeypatch, caplog):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.record_approval.side_effect = buyer.MarketBridgeError("down")
+    with caplog.at_level("WARNING"):
+        _web_approval(buyer, monkeypatch)
+    assert buyer.ROUND["phase"] == "done" and not buyer.ROUND.get("pending_hold")
+    assert buyer.ROUND.get("transaction") is None
+    assert _stored_phases(db) == ["expired"]
+    assert "424242" not in caplog.text and "+1415" not in caplog.text
+    assert _next_web_goal_adopted(buyer, db) is True
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "agent1qchat", "a new GPU under $800 by Friday"))
+    texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+    assert "A buyer session is active" not in texts and "held" not in texts
+
+
+def test_web_buyer_without_phone_frees_the_agent(runtime, monkeypatch):
+    buyer, db = runtime
+    from buyer import checkout
+    called = []
+    monkeypatch.setattr(checkout, "approve_offer", lambda *a, **k: called.append(1))
+    ready_for_requote(buyer)
+    buyer.ROUND.update(owner=None, market_buyer_id=BID)
+    buyer.ROUND["goal"]["market_buyer_id"] = BID
+    referee = buyer.MARKET_REFEREE
+    referee.buyer_contact.return_value = {"display_name": "Web"}
+    referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    monkeypatch.setattr(buyer, "_approval_service", lambda: object())
+    monkeypatch.setattr("pay.voice_cartesia.load_env", lambda *a, **k: {})
+    asyncio.run(buyer._auto_web_approval(Context(), 1))
+    assert not called
+    assert buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None
+    assert not buyer.ROUND.get("pending_hold")
+    assert _stored_phases(db) == ["expired"]
+    assert _next_web_goal_adopted(buyer, db) is True
