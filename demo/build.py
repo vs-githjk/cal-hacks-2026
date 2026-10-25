@@ -664,8 +664,11 @@ class BuildRun:
                  recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True,
                  stagger: Optional[float] = None, knockout: bool = False, max_stages: int = MAX_STAGES, replan: bool = True,
                  replan_catalog: Optional[Callable] = None, publisher: Optional[Callable[[str, str], None]] = None,
-                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None, no_call_reason: str = "not_configured"):
+                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None, no_call_reason: str = "not_configured",
+                 agent_addresses: Optional[dict] = None):
         self.plan, self.clients, self.allowance = plan, clients, allowance
+        self.agent_addresses = agent_addresses or {}   # the Fetch tile's agents: with them, a value this run really fetched is posted as a LIVE line
+        self._proof_posted: set[str] = set()
         self.no_call_reason = no_call_reason   # why `cartesia` is None: "not_configured" (no setup) or "no_phone" (this buyer has no number)
         self.catalog = catalog or default_catalog
         self.replan_catalog = replan_catalog or default_replan_catalog
@@ -1073,8 +1076,26 @@ class BuildRun:
                 text += f" (dated listing{' of ' + date if date else ''})"
             self.live[part] = {"state": res.get("state"), "price": res.get("price"), "fetchedAt": res.get("fetched_at"),
                                "origin": LIVE if S.is_live(res) else MIRROR, "quoted": quoted, "at": _stamp(self.now()), "text": text}
+        self.post_proof_events()
         self.publish()
         return out
+
+    def post_proof_events(self) -> None:
+        """Each part whose price this run read live (self.live origin LIVE) becomes one LIVE referee event on the buyer agent's Fetch tile,
+        once. A part that kept its dated MIRROR price, or a SIM part, posts nothing. Best effort: it never stops a build."""
+        if not self.agent_addresses or "referee" not in self.clients:
+            return
+        from demo import bridge
+        label = {s.part: s.label for s in self.plan.parts}
+        steps = []
+        for part, v in self.live.items():
+            res = {"state": v.get("state"), "price": v.get("price"), "fetched_at": v.get("fetchedAt"), "origin": v.get("origin")}
+            for s in bridge.live_proof_steps(self.agent_addresses, price=res, quoted=float(v.get("quoted") or 0)):
+                text = f"{label.get(part, part)}: {s.args['text']}"
+                if text not in self._proof_posted:
+                    self._proof_posted.add(text)
+                    steps.append(replace(s, args={**s.args, "text": text}))
+        bridge.post_proof_steps(self.clients["referee"], steps, self.note)
 
     def _stop_reasons(self, checks: dict, champs: dict) -> list[str]:
         from demo import recheck as R
@@ -1105,7 +1126,17 @@ class BuildRun:
             if not verdict:
                 raise _Refused("crs_gate", f"CRS: {verdict.detail} ({verdict.reason}), so the payee gate holds for {sid}")
             out[sid] = check_id(res["check"]) if business else None
+            self._post_crs_proof(sid, res)
         return out
+
+    def _post_crs_proof(self, sid: str, res: dict) -> None:
+        """A CRS band read from the sandbox in this run (never a cached or SIM one) is one LIVE line on the buyer agent's tile, once per seller."""
+        if not self.agent_addresses or "referee" not in self.clients:
+            return
+        from demo import bridge
+        steps = [s for s in bridge.live_proof_steps(self.agent_addresses, crs=res, seller=sid) if s.args["text"] not in self._proof_posted]
+        self._proof_posted.update(s.args["text"] for s in steps)
+        bridge.post_proof_steps(self.clients["referee"], steps, self.note)
 
     def settle(self) -> dict:
         from demo.goal import needs_call
@@ -1587,7 +1618,7 @@ def main(argv: Optional[list] = None) -> int:
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
                        env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=out_dir, say=say,
                        note=out.note, delay=args.step_delay, bid_window=args.bid_window, stagger=stagger, knockout=knockout,
-                       publisher=publisher, no_call_reason=no_call_reason)
+                       publisher=publisher, no_call_reason=no_call_reason, agent_addresses=bridge.demo_agent_addresses())
         clock_of["run"] = run
         res = run.run()
     except RuntimeError as e:

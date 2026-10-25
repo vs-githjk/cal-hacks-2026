@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from demo.common import MIRROR, SIM, Narrator, money  # noqa: E402
+from demo.common import LIVE, MIRROR, SIM, Narrator, money  # noqa: E402
 
 DB_BUYER_ID = "vidyut"          # the id /buyer pairs with (web DEMO_BUYER) and the only one with a pairing code
 SECOND_BUYER_ID = "buyer-2"     # --two-buyers: a SIM buyer after the same single units (it has no screen and no pairing code)
@@ -171,12 +171,48 @@ def demo_agent_addresses() -> dict:
         return {}
 
 
-def _event(role: str, addresses: dict, text: str) -> Optional[Step]:
+def _event(role: str, addresses: dict, text: str, origin: str = SIM) -> Optional[Step]:
+    """One line on the Fetch tile. SIM unless the caller read the value in this run (live_proof_steps): LIVE is never the default."""
     if role not in addresses:
         return None
     return Step("referee", "record_agent_event",
-                {"agent_name": AGENT_NAMES[role], "address": addresses[role], "text": text, "ts": "", "origin": SIM},
-                say=f"{AGENT_NAMES[role]} (SIM line on the Fetch tile): {text}")
+                {"agent_name": AGENT_NAMES[role], "address": addresses[role], "text": text, "ts": "", "origin": origin},
+                say=f"{AGENT_NAMES[role]} ({origin} line on the Fetch tile): {text}", tag=origin)
+
+
+_CRS_BANDS = {"CRS_IDENTITY_VERIFIED": "verified and stable", "CRS_STEP_UP_REQUIRED": "caution (step-up required)",
+              "CRS_IDENTITY_NOT_VERIFIED": "not verified"}   # agents/crs.py REASON_CODES: the three answers a real sandbox response maps to
+
+
+def live_proof_steps(addresses: dict, *, price: Optional[dict] = None, quoted: float = 0.0, tiger: Optional[dict] = None, round_id: str = "",
+                     crs: Optional[dict] = None, seller: str = "") -> list[Step]:
+    """The sponsor proof lines a run can really stand behind, as LIVE referee events on the buyer agent's tile. Each line needs a value this run
+    fetched: a Bright Data price read (state ok, origin LIVE), a Tiger Data write that stored rows, a CRS sandbox band from a request made now
+    (origin SANDBOX, not served from the cache, one of the three real bands). A result that is MIRROR, cached, simulated, empty, slow, not
+    configured or an error posts nothing: there is no simulated proof line here and nothing is promoted to LIVE."""
+    from demo import sponsors_live as S
+    out: list[Optional[Step]] = []
+    if price is not None and S.is_live(price):
+        out.append(_event("buyer", addresses, "Bright Data re-check: " + S.price_note(price, quoted), LIVE))
+    if tiger is not None and tiger.get("state") == "written" and int(tiger.get("n") or 0) > 0:
+        out.append(_event("buyer", addresses, f"Tiger Data: stored {int(tiger['n'])} bid prices for {round_id or 'the round'}", LIVE))
+    check = crs.get("check") if isinstance(crs, dict) else None
+    if (isinstance(check, dict) and crs.get("business") and not crs.get("cached") and check.get("origin") == "SANDBOX"
+            and len(check.get("reason_codes") or []) == 1 and check["reason_codes"][0] in _CRS_BANDS):
+        out.append(_event("buyer", addresses, f"CRS sandbox: {seller or check.get('seller_id')} identity {_CRS_BANDS[check['reason_codes'][0]]}", LIVE))
+    return [s for s in out if s is not None]
+
+
+def post_proof_steps(referee: Any, steps: list[Step], note: Callable[[str], None]) -> int:
+    """Send proof steps through the referee, best effort: a refusal is one note and never stops the run. Returns how many went in."""
+    sent = 0
+    for s in steps:
+        try:
+            referee.call(s.reducer, **s.args)
+            sent += 1
+        except (RuntimeError, OSError) as e:
+            note(f"Fetch tile: a proof line was not posted ({type(e).__name__}); the run goes on")
+    return sent
 
 
 def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: int = 1,
@@ -383,6 +419,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             note(deal_gate.crs_note())
             for line in deal_gate.drain_notes():
                 note(line)
+            post_proof_steps(clients["referee"], deal_gate.proof_steps(), note)   # a real Tiger write and a fresh CRS band, as LIVE tile lines
         if s.reducer in ("open_round", "open_knockout_round") and before_round is not None:
             try:
                 before_round()
@@ -407,6 +444,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             outcomes.append(outcome)
             for line in (deal_gate.drain_notes() if deal_gate is not None else []):
                 note(line)
+            if deal_gate is not None and "referee" in clients:
+                post_proof_steps(clients["referee"], deal_gate.proof_steps(), note)   # the Bright Data re-check ran right before the call
             if not outcome["approved"]:
                 from pay.voice_cartesia import denial_line
                 line = denial_line(outcome["reason"])
@@ -564,6 +603,20 @@ class DealGate:
         self._losses: list[dict] = []
         self.price: Optional[dict] = None
         self._notes: list[str] = []
+        # the Fetch tile's agent addresses ({} = no proof lines) and what this run really fetched, for live_proof_steps
+        self.addresses: dict = {}
+        self.price_quoted = 0.0
+        self.tiger_result: Optional[dict] = None
+        self._proof_posted: set[str] = set()
+
+    def proof_steps(self) -> list[Step]:
+        """The LIVE sponsor proof lines this gate has real results for and has not handed out yet (each value once)."""
+        seller = (self.winner or {}).get("persona") or (self.winner or {}).get("seller_id") or ""
+        steps = live_proof_steps(self.addresses, price=self.price, quoted=self.price_quoted, tiger=self.tiger_result, round_id=self.round_id,
+                                 crs=self.crs, seller=seller)
+        fresh = [s for s in steps if s.args["text"] not in self._proof_posted]
+        self._proof_posted.update(s.args["text"] for s in fresh)
+        return fresh
 
     def note_loss(self, report: dict) -> None:
         """A record_loss_report step the market accepted; kept for flush_losses."""
@@ -614,6 +667,7 @@ class DealGate:
                 res = self.tiger_writer(S.round_ticks(self._round_rows, self.goal["items"][0]["sku_spec"]))
             except Exception as e:  # noqa: BLE001
                 res = {"state": "error", "detail": type(e).__name__}
+            self.tiger_result = res
             self._notes.append(S.tiger_note(res, self.round_id))
         w = self.expectations(rows)
         self.winner = w
@@ -747,6 +801,7 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
             from demo import recheck as R
             from demo.sponsors_live import price_note
             listing, quoted, cap = gate.listing()
+            gate.price_quoted = quoted
             try:
                 gate.price = gate.price_check(listing)
             except Exception as e:  # noqa: BLE001
@@ -894,8 +949,10 @@ def main(argv: Optional[list] = None) -> int:
     from demo.run_demo import run_all, stripe_env, DEFAULT_ENV_FILE
     run = run_all(say=Narrator(False))       # never a Stripe call here: this run builds the plan, before any round or call
     gate = DealGate(run)                     # beat 4's mandate is made from the market's rank 1 when beat 4 starts
+    addresses = demo_agent_addresses()
+    gate.addresses = addresses               # the LIVE sponsor proof lines go to the same Fetch tile as the SIM ones
     steps = plan(run, delay=args.step_delay, buyer_id=args.buyer_id, rounds=args.rounds, live_call=args.live_call,
-                 two_buyers=args.two_buyers, bid_window=args.bid_window, agent_addresses=demo_agent_addresses())
+                 two_buyers=args.two_buyers, bid_window=args.bid_window, agent_addresses=addresses)
     out = Narrator(True)
     out.note("Tech Bazaar screen bridge: demo beats (real lane code) -> existing SpacetimeDB reducers")
     out.note(f"{len(steps)} reducer calls, {args.step_delay} s between visible steps. Open /buyer (pair as {args.buyer_id}) and /market.")
