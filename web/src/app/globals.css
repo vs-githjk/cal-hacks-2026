@@ -35,6 +35,9 @@
   --royal-soft: rgba(122, 74, 134, 0.1);
   --slate: #8a7f72;
   --slate-soft: rgba(138, 127, 114, 0.1);
+  --terra: #a05a3a; /* the terrace wall at golden hour; cream text on it reads AA */
+  --terra-2: #87492e;
+  --stone: #e9dcc8; /* the terrace floor */
   --grid: transparent;
   --shadow: 0 12px 32px rgba(43, 42, 51, 0.12);
   --radius: 14px;
@@ -74,6 +77,9 @@
   --color-royal-soft: var(--royal-soft);
   --color-slate: var(--slate);
   --color-slate-soft: var(--slate-soft);
+  --color-terra: var(--terra);
+  --color-terra-2: var(--terra-2);
+  --color-stone: var(--stone);
   --radius-card: var(--radius);
   /* next/font sets these variables on <html>; see fonts.ts */
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -127,3 +133,23 @@ body {
 .tab-on::before, .tab-on::after { content: ""; position: absolute; bottom: 0; width: 12px; height: 12px; pointer-events: none; }
 .tab-on::before { left: -12px; background: radial-gradient(circle at 0 0, transparent 12px, var(--canvas) 12.5px); }
 .tab-on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, var(--canvas) 12.5px); }
+
+/* The 2D terrace (components/Arena2D.tsx): wall, arch, floor, hats, key light. Reduced motion and a frozen floor add .terrace-still. */
+.terrace-sky { background: linear-gradient(180deg, var(--terra-2), var(--terra)); }
+.terrace-arch { position: absolute; left: 50%; bottom: 0; width: 132px; height: 128px; transform: translateX(-50%); border-radius: 66px 66px 0 0; background: linear-gradient(180deg, rgba(255, 248, 238, 0.22), rgba(255, 248, 238, 0.06)); border: 3px solid rgba(255, 248, 238, 0.28); border-bottom: 0; pointer-events: none; }
+.terrace-floor { background: repeating-linear-gradient(90deg, transparent 0 84px, rgba(43, 42, 51, 0.045) 84px 86px), var(--stone); }
+.terrace-hat { position: absolute; left: 50%; top: -7px; transform: translateX(-50%); width: 20px; height: 9px; background: var(--hat, var(--accent)); border-radius: 3px 3px 0 0; z-index: 1; }
+.terrace-hat-party { width: 0; height: 0; background: none; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 14px solid var(--hat, var(--accent)); top: -12px; border-radius: 0; }
+.terrace-hat-top { height: 14px; width: 16px; top: -12px; }
+.terrace-hat-beanie { border-radius: 10px 10px 0 0; height: 10px; }
+.terrace-lit { box-shadow: 0 0 0 4px var(--gold-soft), 0 0 26px 8px rgba(233, 185, 73, 0.5); animation: terrace-glow 2s ease-in-out infinite; }
+.terrace-winner { box-shadow: 0 0 0 3px var(--gold), 0 0 0 8px var(--gold-soft); animation: pop .4s ease both; }
+.terrace-bob { animation: terrace-bob 3.2s ease-in-out infinite alternate; }
+.terrace-walk { animation: terrace-walk .5s ease-out both; }
+.terrace-bubble { animation: board-in .3s ease-out both; }
+.terrace-tag { animation: pop .3s ease both; }
+.terrace-still .terrace-lit, .terrace-still .terrace-bob, .terrace-still .terrace-walk, .terrace-still .terrace-winner, .terrace-still .terrace-tag, .terrace-still .terrace-bubble { animation: none; }
+@keyframes terrace-bob { from { transform: translateY(0) } to { transform: translateY(-3px) } }
+@keyframes terrace-glow { 0%, 100% { box-shadow: 0 0 0 4px var(--gold-soft), 0 0 26px 8px rgba(233, 185, 73, 0.5) } 50% { box-shadow: 0 0 0 4px var(--gold-soft), 0 0 34px 12px rgba(233, 185, 73, 0.65) } }
+@keyframes terrace-walk { from { opacity: 0; transform: translateX(-10px) } to { opacity: 1; transform: none } }
+@media (max-width: 639px) { .terrace-arch { opacity: .45 } }

@@ -1,9 +1,12 @@
 "use client";
-// The 2D round board: one sealed round as cards on a track, an Out rail and a winner. All state comes from boardAt (lib/arenaBoard.ts).
-import { useMemo, type ReactNode } from "react";
+// The 2D round board drawn as the golden hour terrace: officials on the back step under the arch, the knocked sellers walked out
+// beyond it, the sellers still in on the stone floor with their sealed envelope or price tag, the buyer at the left.
+// All state comes from boardAt (lib/arenaBoard.ts); looks (color, hat) from looksFor so the figures match the 3D ones.
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import { OriginChip } from "@/components/ui";
 import type { ArenaScene } from "@/lib/arenaScene";
 import { boardAt, type BoardCard, type OfficialKey } from "@/lib/arenaBoard";
+import { looksFor, type HatKind } from "@/lib/arenaLayout";
 
 export interface Arena2DProps {
   scene: ArenaScene;
@@ -16,165 +19,236 @@ export interface Arena2DProps {
   chrome?: { sim: boolean; countdown?: ReactNode; bids?: ReactNode };
 }
 
+// The house side keeps the token colors the rest of the app gives these roles (royal is the referee's, teal the buyer's).
 const OFFICIALS: { key: OfficialKey; name: string; initial: string; color: string }[] = [
-  { key: "advocate", name: "Advocate", initial: "A", color: "#4B4B4E" },
-  { key: "shield", name: "Shield", initial: "S", color: "#5B7FA6" },
-  { key: "referee", name: "Referee", initial: "R", color: "#2B2A33" },
+  { key: "shield", name: "Shield", initial: "S", color: "var(--accent)" },
+  { key: "referee", name: "Referee", initial: "R", color: "var(--royal)" },
+  { key: "advocate", name: "Advocate", initial: "A", color: "var(--mint)" },
 ];
+
+/** The veto's cited page, once lib/arenaBoard carries it on the card (optional until then, so this renders either way). */
+const sourceOf = (card: BoardCard) => (card as BoardCard & { sourceUrl?: string | null }).sourceUrl || undefined;
 
 const hex = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
 
-function Disc({ card, size }: { card: BoardCard; size: 28 | 18 }) {
+/** A clay figure: a round body with the seller's initial and a hat (none for officials). Lit figures sit in the key light. */
+function Figure({ color, hat, hatColor, initial, lit, dim, winner, small, light }: {
+  color: string; hat?: HatKind; hatColor?: string; initial: string; lit?: boolean; dim?: boolean; winner?: boolean; small?: boolean; light?: boolean;
+}) {
+  const size = small ? "h-7 w-7 text-[11px]" : "h-11 w-11 text-[15px]";
+  const ring = winner ? "terrace-winner" : lit ? "terrace-lit" : "";
   return (
-    <span
-      aria-hidden="true"
-      style={{ background: hex(card.color) }}
-      className={`grid shrink-0 place-items-center rounded-full font-bold text-[#2B2A33] ${size === 28 ? "h-7 w-7 text-[12px]" : "h-[18px] w-[18px] text-[10px] saturate-50"}`}
-    >
-      {card.initial}
+    <span aria-hidden="true" className={`relative inline-grid place-items-center ${dim ? "saturate-[.35] opacity-70" : ""}`}>
+      {hat && !small && <span className={`terrace-hat terrace-hat-${hat}`} style={{ "--hat": hatColor } as CSSProperties} />}
+      <span
+        style={{ background: color }}
+        className={`grid shrink-0 place-items-center rounded-full border-2 font-display font-bold ${size} ${light ? "border-white/40 text-accent-ink" : "border-ink/15 text-ink"} ${ring}`}
+      >
+        {initial}
+      </span>
     </span>
   );
 }
 
-function SealedCard({ label }: { label?: string }) {
+/** The sealed envelope: cream paper, red wax, no price. */
+function Envelope({ className = "" }: { className?: string }) {
   return (
-    <div className="grid min-h-[118px] max-w-[200px] flex-1 basis-[150px] content-center justify-items-center gap-2 rounded-2xl border border-[#E8DCCB] bg-[#FFF4E2] px-3.5 py-3 shadow-[0_4px_14px_rgba(60,40,30,0.10)] max-sm:min-h-0 max-sm:max-w-none max-sm:grid-cols-[auto_1fr] max-sm:justify-items-start">
-      <div aria-hidden="true" className="relative h-9 w-[54px] overflow-hidden rounded-[4px] border border-[#D9C8AE] bg-[#FBF4E6]">
-        <div className="absolute left-0 top-0 h-[55%] w-1/2" style={{ background: "linear-gradient(135deg, transparent 49%, #D9C8AE 49.5%, #D9C8AE 50.5%, transparent 51%)" }} />
-        <div className="absolute right-0 top-0 h-[55%] w-1/2" style={{ background: "linear-gradient(225deg, transparent 49%, #D9C8AE 49.5%, #D9C8AE 50.5%, transparent 51%)" }} />
-        <div className="absolute left-1/2 top-[52%] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#C8553D]" />
-      </div>
-      <span className="text-[12.5px] text-[#8A7A66]">{label ?? "Sealed"}</span>
-    </div>
+    <span aria-hidden="true" className={`terrace-envelope relative block h-[26px] w-[40px] overflow-hidden rounded-[3px] border border-line-2 bg-panel ${className}`}>
+      <span className="absolute left-0 top-0 h-[55%] w-1/2" style={{ background: "linear-gradient(135deg, transparent 49%, var(--line-2) 49.5%, var(--line-2) 50.5%, transparent 51%)" }} />
+      <span className="absolute right-0 top-0 h-[55%] w-1/2" style={{ background: "linear-gradient(225deg, transparent 49%, var(--line-2) 49.5%, var(--line-2) 50.5%, transparent 51%)" }} />
+      <span className="absolute left-1/2 top-[52%] h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coral" />
+    </span>
   );
 }
 
 function Word({ card }: { card: BoardCard }) {
-  if (card.state === "winner") return <span className="text-[12.5px] font-bold text-[#8A6A22]">Winner</span>;
-  if (card.rank !== null) return <span className="rounded-full bg-[#F3E8D6] px-2 text-[12px] font-semibold text-[#2B2A33]">Ranked #{card.rank}</span>;
+  if (card.state === "winner") return <span className="text-[12.5px] font-bold text-gold-ink">Winner</span>;
+  if (card.rank !== null) return <span className="rounded-full bg-soft px-2 text-[12px] font-semibold text-ink">Ranked #{card.rank}</span>;
   return null;
 }
 
 export function Arena2D({ scene, beat, frozen, reducedMotion, selected, onPick, bubbles, chrome }: Arena2DProps) {
   const b = useMemo(() => boardAt(scene, beat), [scene, beat]);
+  const looks = useMemo(() => looksFor(scene.offers), [scene.offers]);
   const still = reducedMotion || frozen;
-  const subline = b.stageNote ?? (b.phase !== "closed" ? b.buyerLine : null);
+  // The buyer card already says the buyer line while the round is open, so the header does not repeat it.
+  const subline = b.stageNote;
   const said = OFFICIALS.find((o) => bubbles?.[o.key]);
   const sealedShown = Math.min(b.sealedCount, 8);
   const sealedMore = b.sealedCount - sealedShown;
+  const picked = (key: string) => (selected === key ? "ring-2 ring-accent ring-offset-2 ring-offset-stone" : "");
 
   return (
-    <div className={`grid min-h-[380px] gap-4 bg-[linear-gradient(180deg,#FFF6EA,#F6E2CC)] px-5 py-5 text-[#2B2A33] sm:px-6 ${still ? "[&_*]:!transition-none [&_*]:!animate-none" : ""}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-[22px] font-bold leading-[1.1] tracking-[-0.02em]">{b.request || "Floor"}</div>
-          {subline && <p className="mt-0.5 text-[13px] text-[#6E675F]">{subline}</p>}
+    <div className={`terrace grid min-h-[380px] min-w-0 text-ink ${still ? "terrace-still [&_*]:!transition-none [&_*]:!animate-none" : ""}`}>
+      {/* The back wall at golden hour: the request, the officials on their step, and whoever has walked out through the arch. */}
+      <div className="terrace-sky relative grid gap-4 px-4 pb-4 pt-4 text-accent-ink sm:px-6">
+        <div aria-hidden="true" className="terrace-arch" />
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-display text-[24px] font-bold leading-[1.05] tracking-[-0.02em] sm:text-[30px]">{b.request || "Floor"}</div>
+            {subline && <p className="mt-1 max-w-[52ch] text-[13px] leading-[1.35] text-accent-ink/85">{subline}</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            {chrome?.countdown}
+            {chrome?.sim && (
+              <span title="Sample run, not this market" className="self-center rounded-md border border-dashed border-accent-ink/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-[0.06em]">SIM</span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {chrome?.countdown}
-          {chrome?.sim && (
-            <span title="Sample run, not this market" className="self-center rounded-md border border-dashed border-[#2B2A33]/50 px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-[0.06em]">SIM</span>
+
+        <div className="relative grid min-w-0 gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-end gap-3">
+              {OFFICIALS.map((o, i) => {
+                const lit = (b.lit as string[]).includes(o.key);
+                return (
+                  <span key={o.key} className={`terrace-bob grid justify-items-center gap-1 ${lit ? "terrace-focus" : ""}`} style={{ animationDelay: `${i * 0.45}s` }}>
+                    <Figure color={o.color} initial={o.initial} lit={lit} light />
+                    <span className={`font-mono text-[10.5px] uppercase tracking-[0.08em] ${lit ? "font-semibold" : "text-accent-ink/80"}`}>{o.name}</span>
+                  </span>
+                );
+              })}
+            </div>
+            {said && (
+              <p className="terrace-bubble w-fit max-w-[46ch] rounded-xl bg-panel px-3 py-1.5 text-[12.5px] italic text-ink shadow-[0_6px_18px_rgba(43,42,51,0.18)]">
+                <span className="not-italic font-semibold">{said.name}:</span> {bubbles?.[said.key]}
+              </p>
+            )}
+          </div>
+
+          {b.out.length > 0 && (
+            <div className="grid min-w-0 max-w-full gap-1.5 sm:justify-self-end">
+              <h3 className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-accent-ink/80">Out</h3>
+              <div className="grid min-w-0 gap-1">
+                {b.out.map((card) => (
+                  <button
+                    key={card.key}
+                    type="button"
+                    onClick={() => onPick(card.key)}
+                    aria-pressed={selected === card.key}
+                    className={`terrace-walk grid min-h-[44px] min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-lg px-1 py-1 text-left text-[13px] ${selected === card.key ? "ring-2 ring-accent-ink/70" : ""}`}
+                  >
+                    <span className="row-span-2 self-center"><Figure color={hex(card.color)} initial={card.initial} small dim /></span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="min-w-0 break-words text-accent-ink/75 line-through">{card.name}</span>
+                      <OriginChip origin={card.origin} />
+                      {card.price && <span className="font-mono tabular-nums text-accent-ink/75">{card.price}</span>}
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-panel px-2 text-[12px] font-semibold text-coral">
+                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-coral" />
+                        {card.reason}
+                      </span>
+                    </span>
+                    {(card.reasonText || sourceOf(card)) && (
+                      <span className="col-start-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12px] leading-[1.3] text-accent-ink/80">
+                        {card.reasonText && <span className="min-w-0 break-words">{card.reasonText}</span>}
+                        {sourceOf(card) && (
+                          <a
+                            href={sourceOf(card)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex min-h-[44px] items-center font-semibold text-accent-ink underline decoration-accent-ink/50 underline-offset-2 sm:min-h-0"
+                          >
+                            source
+                          </a>
+                        )}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="grid gap-1.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {OFFICIALS.map((o) => (
-            <span
-              key={o.key}
-              className={`inline-flex h-[30px] items-center gap-[7px] rounded-full border bg-white pl-[5px] pr-2.5 text-[13px] ${(b.lit as string[]).includes(o.key) ? "border-[#2F3E66] font-semibold shadow-[0_0_0_3px_rgba(47,62,102,0.18)]" : "border-[#E8DCCB] font-medium"}`}
-            >
-              <span aria-hidden="true" style={{ background: o.color }} className="grid h-5 w-5 place-items-center rounded-full text-[11px] font-bold text-white">{o.initial}</span>
-              {o.name}
+      {/* The stone floor: the buyer at the left, the sellers still in with their envelope or price tag. */}
+      <div className="terrace-floor grid gap-4 px-4 py-4 sm:px-6">
+        <div className="grid min-w-0 items-start gap-3.5 sm:grid-cols-[200px_1fr]">
+          <button
+            type="button"
+            onClick={() => onPick("buyer")}
+            aria-pressed={selected === "buyer"}
+            className={`grid content-start gap-2 rounded-2xl bg-teal p-3.5 text-left text-accent-ink sm:min-h-[148px] ${picked("buyer")}`}
+          >
+            <span className="flex items-center gap-2 text-[14px] font-semibold">
+              <Figure color="var(--accent-ink)" initial="B" small lit={b.lit.includes("buyer")} />
+              Buyer agent
             </span>
-          ))}
-        </div>
-        {said && <p className="text-[12.5px] italic text-[#6E675F]">{said.name}: {bubbles?.[said.key]}</p>}
-      </div>
+            <span className="text-[13.5px] leading-[1.35] opacity-95">{b.buyerLine}</span>
+            {b.stillIn && <span className="text-[12.5px] opacity-80">{b.stillIn.k} of {b.stillIn.n} offers still in.</span>}
+            {bubbles?.buyer && <span className="text-[12.5px] italic opacity-90">{bubbles.buyer}</span>}
+          </button>
 
-      <div className="grid items-start gap-3.5 sm:grid-cols-[200px_1fr]">
-        <button
-          type="button"
-          onClick={() => onPick("buyer")}
-          aria-pressed={selected === "buyer"}
-          className={`grid content-start gap-2 rounded-2xl bg-[#2F6F6A] p-3.5 text-left text-white sm:min-h-[148px] ${selected === "buyer" ? "ring-2 ring-[#2F3E66] ring-offset-2 ring-offset-[#F6E2CC]" : ""}`}
-        >
-          <span className="flex items-center gap-2 text-[14px] font-semibold">
-            <span aria-hidden="true" className={`grid h-5 w-5 place-items-center rounded-full bg-white text-[11px] font-bold text-[#2F6F6A] ${b.lit.includes("buyer") ? "ring-2 ring-white/70" : ""}`}>B</span>
-            Buyer agent
-          </span>
-          <span className="text-[13.5px] leading-[1.35] opacity-95">{b.buyerLine}</span>
-          {b.stillIn && <span className="text-[12.5px] opacity-80">{b.stillIn.k} of {b.stillIn.n} offers still in.</span>}
-          {bubbles?.buyer && <span className="text-[12.5px] italic opacity-90">{bubbles.buyer}</span>}
-        </button>
-
-        <div className="flex flex-wrap gap-3 max-sm:flex-col">
-          {b.track.length === 0 && b.sealedCount === 0 ? (
-            <p className="text-[13px] text-[#6E675F]">No sealed offers yet.</p>
-          ) : b.track.length === 0 ? (
-            <>
-              {Array.from({ length: sealedShown }, (_, i) => <SealedCard key={i} />)}
-              {sealedMore > 0 && <SealedCard label={`+${sealedMore} more`} />}
-            </>
-          ) : (
-            b.track.map((card) => {
-              if (card.state === "sealed") return <SealedCard key={card.key} />;
-              const stateCls =
-                card.state === "focus"
-                  ? "-translate-y-1 border-[#2F3E66] bg-white shadow-[0_10px_24px_rgba(60,40,30,0.18),0_0_0_3px_rgba(47,62,102,0.22)]"
-                  : card.state === "winner"
-                    ? "border-[#D4A548] bg-[#FFF6DD] shadow-[0_10px_24px_rgba(60,40,30,0.18),0_0_0_3px_rgba(212,165,72,0.35)]"
-                    : "border-[#E8DCCB] bg-white shadow-[0_4px_14px_rgba(60,40,30,0.10)]";
-              return (
-                <button
-                  key={card.key}
-                  type="button"
-                  onClick={() => onPick(card.key)}
-                  aria-pressed={selected === card.key}
-                  className={`grid max-w-[250px] flex-1 basis-[190px] grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 rounded-2xl border px-3.5 py-3 text-left transition-[transform,box-shadow,background-color] duration-300 max-sm:max-w-none max-sm:basis-auto max-sm:grid-cols-[auto_minmax(0,1fr)_auto] max-sm:gap-x-2.5 max-sm:gap-y-0.5 max-sm:px-3 max-sm:py-2.5 ${stateCls} ${selected === card.key ? "ring-2 ring-[#2F6F6A] ring-offset-2 ring-offset-[#F6E2CC]" : ""}`}
-                >
-                  <span className="col-start-1 row-start-1 max-sm:row-span-2"><Disc card={card} size={28} /></span>
-                  <span className="col-start-2 row-start-1 flex min-w-0 items-center gap-2">
-                    <span className="truncate text-[14px] font-semibold">{card.name}</span>
-                    <OriginChip origin={card.origin} />
+          <div className="flex min-w-0 flex-wrap items-end gap-2 sm:gap-3">
+            {b.track.length === 0 && b.sealedCount === 0 ? (
+              <p className="text-[13px] text-muted">No sealed offers yet.</p>
+            ) : b.track.length === 0 ? (
+              <>
+                {Array.from({ length: sealedShown }, (_, i) => (
+                  <span key={i} className="terrace-bob grid min-w-[72px] flex-1 basis-[72px] justify-items-center gap-1.5 rounded-2xl border border-line bg-panel/70 px-2 py-3 max-sm:max-w-[31%]" style={{ animationDelay: `${i * 0.3}s` }}>
+                    <Envelope />
+                    <span className="text-[12px] text-muted">Sealed</span>
                   </span>
-                  <span className="col-span-2 row-start-2 font-mono text-[22px] font-semibold tabular-nums tracking-[-0.01em] max-sm:col-span-1 max-sm:col-start-3 max-sm:row-span-2 max-sm:row-start-1 max-sm:text-[18px]">{card.price}</span>
-                  <span className="col-span-2 row-start-3 flex flex-wrap items-center gap-2 text-[12.5px] text-[#6E675F] max-sm:col-span-1 max-sm:col-start-2 max-sm:row-start-2">
-                    {card.condition}
-                    <Word card={card} />
+                ))}
+                {sealedMore > 0 && (
+                  <span className="grid min-w-[72px] flex-1 basis-[72px] justify-items-center gap-1.5 rounded-2xl border border-line bg-panel/70 px-2 py-3">
+                    <Envelope />
+                    <span className="text-[12px] text-muted">+{sealedMore} more</span>
                   </span>
-                  {bubbles?.[card.key] && <span className="col-span-full row-start-4 text-[12.5px] italic text-[#6E675F] max-sm:row-start-3">{bubbles[card.key]}</span>}
-                </button>
-              );
-            })
-          )}
+                )}
+              </>
+            ) : (
+              b.track.map((card, i) => {
+                const look = looks[card.key];
+                const color = hex(card.color);
+                const sealed = card.state === "sealed";
+                const focus = card.state === "focus";
+                const winner = card.state === "winner";
+                const box = winner
+                  ? "border-gold bg-gold-soft shadow-[0_10px_24px_rgba(43,42,51,0.14)]"
+                  : focus
+                    ? "-translate-y-1 border-accent bg-panel shadow-[0_10px_24px_rgba(43,42,51,0.16)]"
+                    : "border-line bg-panel/80";
+                return (
+                  <button
+                    key={card.key}
+                    type="button"
+                    onClick={() => onPick(card.key)}
+                    aria-pressed={selected === card.key}
+                    className={`terrace-bob grid min-w-[96px] flex-1 basis-[112px] justify-items-center gap-1 rounded-2xl border px-2 pb-2.5 pt-3 text-center transition-[transform,box-shadow,background-color,border-color] duration-300 max-sm:max-w-[48%] sm:max-w-[200px] ${box} ${picked(card.key)}`}
+                    style={{ animationDelay: `${i * 0.4}s` }}
+                  >
+                    {sealed || card.price === null ? (
+                      <Envelope />
+                    ) : (
+                      <span className={`terrace-tag rounded-md border px-1.5 font-mono text-[13px] font-semibold tabular-nums ${winner ? "border-gold bg-panel text-gold-ink" : "border-line-2 bg-panel text-ink"}`}>{card.price}</span>
+                    )}
+                    <Figure color={color} hat={look?.hat} hatColor={look ? hex(look.hatColor) : undefined} initial={sealed ? "" : card.initial} lit={focus} winner={winner} />
+                    {sealed ? (
+                      <span className="text-[12px] text-muted">Sealed bid</span>
+                    ) : (
+                      <>
+                        <span className="flex max-w-full items-center justify-center gap-1.5">
+                          <span className="truncate text-[13px] font-semibold">{card.name}</span>
+                          <OriginChip origin={card.origin} />
+                        </span>
+                        <span className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] text-muted">
+                          {card.condition}
+                          <Word card={card} />
+                        </span>
+                        {bubbles?.[card.key] && <span className="text-[12px] italic text-ink-2">{bubbles[card.key]}</span>}
+                      </>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
+
+        {chrome?.bids}
       </div>
-
-      {b.out.length > 0 && (
-        <div className="grid gap-1.5 border-t border-[#E2D3BE] pt-2.5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E675F]">Out</h3>
-          {b.out.map((card) => (
-            <button
-              key={card.key}
-              type="button"
-              onClick={() => onPick(card.key)}
-              aria-pressed={selected === card.key}
-              className="flex animate-[board-in_300ms_ease-out] flex-wrap items-center gap-2.5 text-left text-[13.5px] opacity-80"
-            >
-              <Disc card={card} size={18} />
-              <span className="text-[#6E675F] line-through">{card.name}</span>
-              <OriginChip origin={card.origin} />
-              <span className="font-mono tabular-nums text-[#6E675F]">{card.price}</span>
-              <span className="rounded-full bg-[#FBE9E4] px-2 text-[12px] font-semibold text-[#A8432F]">{card.reason}</span>
-              {card.reasonText && <span className="text-[12.5px] text-[#6E675F]">{card.reasonText}</span>}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {chrome?.bids}
     </div>
   );
 }
