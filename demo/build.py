@@ -713,7 +713,7 @@ class BuildRun:
             if isinstance(out, dict):
                 return out
             voice_id = out
-            denied = self._mandates_zeroed(champs, crs_ids, voice_id, allowance)
+            denied = self._mandates_zeroed(champs, crs_ids, voice_id)
         else:
             self._mandates(champs, crs_ids, None)
             denied = None
@@ -743,12 +743,18 @@ class BuildRun:
         self.clients["referee"].call("set_allowance", buyer_id=self.plan.buyer_id, per_purchase_limit=per,
                                      period_limit=original["period_limit"], period=original["period"])
 
-    def _mandates_zeroed(self, champs: dict, crs_ids: dict, voice_id: str, original: dict) -> Optional[dict]:
+    def _mandates_zeroed(self, champs: dict, crs_ids: dict, voice_id: str) -> Optional[dict]:
         """Make the per-part mandates after the call approved, with the buyer's per-purchase limit at $0 for the duration: the market
         approves any mandate at or under that limit by itself (method allowance, no voice id) and swallows the voice approval after it,
         so a part under the limit would be paid on the allowance instead of on the call. At $0 the market's own rule says "call" for every
-        mandate. `original` is the row read before the call; the limit is restored to it in a `finally`; a restore that fails (or a hard kill
-        between the zero and the restore) leaves it at $0, which fails closed, and says so. None, or a _deny dict."""
+        mandate. The allowance is read again here, right after the call approved: the call is the longest window in the run, and a buyer who
+        tightened their limit during it must get that limit back, not the one read before the call. The limit is restored in a `finally`; a
+        restore that fails (or a hard kill between the zero and the restore) leaves it at $0, which fails closed, and says so.
+        None, or a _deny dict."""
+        original = self._market_allowance()
+        if original is None:
+            return self._deny("allowance_unreadable", "The buyer's allowance could not be read after the call, so it could not be put back. "
+                                                      "No mandate was made and nothing was paid.")
         if float(original["per_purchase_limit"]) <= 0:
             self._mandates(champs, crs_ids, voice_id)
             return None

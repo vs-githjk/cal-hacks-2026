@@ -532,6 +532,38 @@ def test_the_markets_own_spent_this_period_decides_not_a_hard_coded_zero(tmp_pat
     assert {v["method"] for v in m.approvals.values()} == {"voice_code"} and m.allow["spent"] == 8500.0
 
 
+class TighteningCartesia(FakeCartesia):
+    """The buyer lowers their own per-purchase limit while the call is in progress."""
+    def __init__(self, market, says, to):
+        super().__init__(says)
+        self.market, self.to = market, to
+
+    def get_call(self, call_id):
+        self.market.allow = {**self.market.allow, "per": self.to}
+        return super().get_call(call_id)
+
+
+def test_a_limit_the_buyer_tightens_during_the_call_is_restored_as_tightened(tmp_path):
+    m = FakeMarket()
+    cart = TighteningCartesia(m, lambda code: f"{code} approve", 60.0)
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, cartesia=cart, allowance=dict(ALLOW))
+    assert out["status"] == "paid" and len(cart.calls) == 1
+    assert allowance_calls(m)[-2:] == [(0.0, 500.0, "month"), (60.0, 500.0, "month")] and m.allow["per"] == 60.0
+    assert {v["method"] for v in m.approvals.values()} == {"voice_code"}
+
+
+def test_an_allowance_that_cannot_be_read_after_the_call_makes_no_mandate(tmp_path):
+    m = FakeMarket()
+
+    class Blinding(FakeCartesia):
+        def get_call(self, call_id):
+            m.allowance_readable = False
+            return super().get_call(call_id)
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, cartesia=Blinding(lambda code: f"{code} approve"), allowance=dict(ALLOW))
+    assert out["status"] == "denied" and out["reason"] == "allowance_unreadable" and "create_mandate" not in kinds(m) and m.payments == {}
+    assert allowance_calls(m) == [(250.0, 500.0, "month")]
+
+
 def test_an_allowance_that_cannot_be_read_stops_before_any_call_or_mandate_even_when_the_plan_gave_one(tmp_path):
     m = FakeMarket()
     m.allowance_readable = False
