@@ -4,13 +4,13 @@ Store prices are real dated mirrors; the bidding agents are ours (SIM) until a s
 
 **The demo order:** an RTX 5070 Ti that fits a 305 mm case, under $1,300. The winner is the ASUS Prime RTX 5070 Ti OC Edition, 304 mm (maker spec), at Best Buy, $1,299.99 before sales tax, shipping: not captured (a MIRROR listing, bid by a SIM seller; proof: `demo/tests/test_demo_winner.py`). Say "before sales tax" every time.
 
-**One line:** Tech Bazaar is a buyer's agent that is hard to fool and can't pay without you, starting with computer gear. You give it a goal; it reads real store listings, an advocate vetoes the traps with a source, Shield blocks listings that try to hijack it, and above your allowance nothing is paid until you approve on a phone call.
+**One line:** Fish Market is a buyer's agent that is hard to fool and can't pay without you, starting with computer gear. You give it a goal; it reads real store listings, an advocate vetoes the traps with a source, Shield blocks listings that try to hijack it, and above your allowance nothing is paid until you approve on a phone call.
 
 **Category:** buyer protection for agent commerce, with a deterministic referee.
 
-**10 seconds:** Agents are starting to buy for us, and agents get fooled. Tech Bazaar is a buyer's agent for computer gear that checks every deal against its source and can't pay past your allowance without calling you. It works today on real store listings, with no seller agent needed.
+**10 seconds:** Agents are starting to buy for us, and agents get fooled. Fish Market is a buyer's agent for computer gear that checks every deal against its source and can't pay past your allowance without calling you. It works today on real store listings, with no seller agent needed.
 
-**30 seconds:** An RTX 5070 Ti lists 49 percent over launch price (Capital & Compute citing Tom's Hardware, Sep 1 2026). You give the agent a goal: this card, under $1,300, in a case that takes 305 mm, by Friday. It reads real, dated store listings and turns each into a sealed bid. Your advocate checks fit with code and every claim against the seller's page, and vetoes the trap, with the source. Bazaar Shield screens every listing before the agent acts on it. Above your allowance it calls you. You ask "why not the cheaper one?" and it answers aloud. Your spoken code signs that exact deal; if the call fails, nothing is paid. Everything on screen is labelled LIVE, MIRROR or SIM.
+**30 seconds:** An RTX 5070 Ti lists 49 percent over launch price (Capital & Compute citing Tom's Hardware, Sep 1 2026). You give the agent a goal: this card, under $1,300, in a case that takes 305 mm, by Friday. It reads real, dated store listings and turns each into a sealed bid. Your advocate checks fit with code and every claim against the seller's page, and vetoes the trap, with the source. Smell Test screens every listing before the agent acts on it. Above your allowance it calls you. You ask "why not the cheaper one?" and it answers aloud. Your spoken code signs that exact deal; if the call fails, nothing is paid. Everything on screen is labelled LIVE, MIRROR or SIM.
 
 **Shield, said honestly:** on 12 attacks written after we froze the rules it stopped 6 of 12 on the first run (`shield/corpus/RESULTS.md`, 2026-10-23); the misses are listed there, so a rerun is no longer blind. We say that number, not "secure".
 
