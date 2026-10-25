@@ -554,6 +554,14 @@ export const StrategyStep = __t.object("StrategyStep", {
 });
 export type StrategyStep = __Infer<typeof StrategyStep>;
 
+export const SupplierSignal = __t.object("SupplierSignal", {
+  supplierId: __t.string(),
+  stability: __t.string(),
+  checkedAt: __t.string(),
+  source: __t.string(),
+});
+export type SupplierSignal = __Infer<typeof SupplierSignal>;
+
 export const Telemetry = __t.object("Telemetry", {});
 export type Telemetry = __Infer<typeof Telemetry>;
 
