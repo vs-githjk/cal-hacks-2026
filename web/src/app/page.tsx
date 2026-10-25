@@ -9,7 +9,7 @@ import { FloorMini } from "@/components/FloorMini";
 import { HomeMore } from "@/components/HomeMore";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { Reveal } from "@/components/Reveal";
-import { OriginChip, README_URL, StatusPill } from "@/components/ui";
+import { OriginChip, README_URL } from "@/components/ui";
 import { proofStats } from "@/lib/scoreboard";
 import { BRAND, SHIELD } from "@/lib/brand";
 
@@ -85,7 +85,7 @@ export default function Home() {
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/10 text-white md:h-12 md:w-12">{s.icon}</span>
                 <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-white font-mono text-[11px] text-ink md:right-5 md:top-5">{i + 1}</span>
                 <div className="col-start-2 md:col-start-1">
-                  <p className="text-[16px] font-semibold leading-5">{s.title}</p>
+                  <p className="text-[16px] font-medium leading-5">{s.title}</p>
                   <p className="mt-1 text-[13px] leading-[18px] text-ghost-1">{s.text}</p>
                 </div>
               </li>
@@ -116,7 +116,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <p className="mt-4 text-[13px] leading-[18px] text-muted">Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
+          <p className="mt-4 text-[13px] leading-[18px] text-muted">Recorded example, not live. Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
         </Reveal>
       </section>
 
@@ -125,7 +125,7 @@ export default function Home() {
         <Reveal className="mx-auto grid max-w-[1120px] gap-10 md:px-4">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
             <div>
-              <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ghost-1"><span className="dot text-[#4f8df7]" aria-hidden /> The floor</span>
+              <span className="inline-flex items-center gap-2 text-[13px] font-medium text-ghost-1"><span className="dot text-[#4f8df7]" aria-hidden /> The floor</span>
               <h2 id="floor" className="mt-4 text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Every round, played live.</h2>
               <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ghost-1">Your agent eats the worst offer each round. Every move is a market row.</p>
             </div>
@@ -146,14 +146,14 @@ export default function Home() {
             <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ink-2">We call. You say the code. Then a test charge and a receipt.</p>
           </div>
           <div className="fm-glass grid gap-4 rounded-[22px] p-6">
-            <div className="flex flex-wrap gap-2">
-              <StatusPill tone="live" pulse>Calling you</StatusPill>
-              <StatusPill tone="good">Approved</StatusPill>
-              <StatusPill tone="good">Paid</StatusPill>
-              <StatusPill tone="caution">Test mode</StatusPill>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] font-medium">
+              <StatusDot color="bg-live">Calling you</StatusDot>
+              <StatusDot color="bg-mint-mark">Approved</StatusDot>
+              <StatusDot color="bg-mint-mark">Paid</StatusDot>
+              <StatusDot color="bg-amber">Test mode</StatusDot>
             </div>
             <div className="rounded-xl bg-surface-2 px-4 py-4 text-center">
-              <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+              <div className="mb-1 text-[13px] font-medium text-muted">Say this, then &quot;approve&quot;</div>
               <div className="font-mono text-[32px] font-medium leading-9 tracking-[0.04em]">word · pair</div>
             </div>
             <p className="text-[13px] leading-[18px] text-muted">One use, one deal. A wrong code pays nothing.</p>
@@ -180,11 +180,15 @@ export default function Home() {
   );
 }
 
+function StatusDot({ color, children }: { color: string; children: ReactNode }) {
+  return <span className="inline-flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${color}`} aria-hidden />{children}</span>;
+}
+
 function DarkCard({ eyebrow, title, children }: { eyebrow: string; title: string; children: ReactNode }) {
   return (
     <div className="fm-glass-dark grid gap-2 rounded-2xl p-6">
-      <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-shield">{eyebrow}</span>
-      <span className="text-[20px] font-semibold leading-6 tracking-[-0.01em]">{title}</span>
+      <span className="font-mono text-[13px] text-shield">{eyebrow}</span>
+      <span className="text-[20px] font-medium leading-6 tracking-[-0.01em]">{title}</span>
       <span className="text-[15px] leading-[22px] text-ghost-1">{children}</span>
     </div>
   );

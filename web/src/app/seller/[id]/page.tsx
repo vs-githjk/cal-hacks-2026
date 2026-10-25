@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { Card, Label, OriginChip, Pill, SourceLink, clock } from "@/components/ui";
+import { Card, OriginChip, SourceLink, clock } from "@/components/ui";
 import { roundTitle } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
@@ -31,7 +31,7 @@ export default function SellerPage() {
         <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {persona && <span>{persona.archetype}</span>}
           <OriginChip origin={persona?.origin ?? "SIM"} label={`${persona?.origin === "LIVE" || persona?.origin === "MIRROR" ? persona.origin : "SIM"} seller agent`} />
-          {paired && <Pill tone="done">Paired</Pill>}
+          {paired && <Dot color="bg-mint-mark">Paired</Dot>}
         </div>
       </div>
       {!conn.isActive || !rolesReady ? (
@@ -44,6 +44,14 @@ export default function SellerPage() {
       )}
     </div>
   );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <h2 className="mb-3 text-[13px]/[16px] font-medium text-muted">{children}</h2>;
+}
+
+function Dot({ color, children }: { color: string; children: React.ReactNode }) {
+  return <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-2"><span className={`h-2 w-2 rounded-full ${color}`} aria-hidden />{children}</span>;
 }
 
 function PooledLot() {
@@ -91,14 +99,14 @@ function LossReports({ sellerId }: { sellerId: string }) {
           <p className="text-muted">No reports yet. After each round you lose, the gap band, the reason and its source show here.</p>
         ) : (
           <div className="-mx-[18px] overflow-x-auto px-[18px]">
-            <table className="w-full border-collapse text-[14px]">
+            <table className="w-full border-collapse text-[14px] tabular-nums">
               <thead>
                 <tr><Th>Round</Th><Th>Gap</Th><Th>Reason</Th><Th>Source</Th></tr>
               </thead>
               <tbody>
                 {mine.map((r) => (
                   <tr key={r.id}>
-                    <Td className="text-[13px]">{roundTitle(r.roundId) ?? "A round"} {r.won && <Pill tone="done">Won</Pill>}</Td>
+                    <Td className="text-[13px]">{roundTitle(r.roundId) ?? "A round"} {r.won && <Dot color="bg-mint-mark">Won</Dot>}</Td>
                     <Td>
                       <span className="rounded-md bg-slate-soft px-1.5 py-0.5 font-mono text-[11px] text-slate">{BAND[r.gapBand] ?? r.gapBand}</span>{" "}
                       <OriginChip origin={r.origin} />
@@ -127,12 +135,12 @@ function LossReports({ sellerId }: { sellerId: string }) {
               </div>
             )}
             {learned.strategyDiff.length > 0 && (
-              <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 font-mono text-[13px]">
+              <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 font-mono text-[13px] tabular-nums">
                 {learned.strategyDiff.map((d) => (
                   <div key={d.key} className="contents">
                     <dt className="text-muted">{d.key}</dt>
                     <dd>
-                      <span className="text-coral line-through">{d.from}</span> → <span className="font-semibold text-mint">{d.to}</span> <OriginChip origin={learned.origin} />
+                      <span className="text-coral line-through">{d.from}</span> → <span className="font-medium text-mint">{d.to}</span> <OriginChip origin={learned.origin} />
                     </dd>
                   </div>
                 ))}
@@ -192,7 +200,7 @@ function SellerPair({ sellerId }: { sellerId: string }) {
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-left text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">{children}</th>;
+  return <th className="whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-left text-[13px] font-medium text-muted">{children}</th>;
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`border-b border-line p-2.5 align-top ${className}`}>{children}</td>;

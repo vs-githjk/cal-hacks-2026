@@ -1,7 +1,7 @@
 "use client";
 
 import { cloneElement, useCallback, useEffect, useState } from "react";
-import { Card, Code, Details, Label, OriginChip, RecordedBanner } from "@/components/ui";
+import { Card, Code, Details, OriginChip, RecordedBanner } from "@/components/ui";
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import { BRAND } from "@/lib/brand";
@@ -11,13 +11,17 @@ import {
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
-const input = "min-h-11 w-full rounded-xl bg-surface px-4 py-2 text-[15px]/[20px] shadow-ring placeholder:text-muted";
-const button = "btn min-h-11 rounded-xl bg-pulse px-5 py-2 font-medium text-pulse-ink hover:shadow-card disabled:opacity-60";
+const input = "tabular-nums min-h-11 w-full rounded-xl bg-surface px-4 py-2 text-[15px]/[20px] shadow-ring placeholder:text-muted";
+const button = "btn min-h-11 rounded-xl bg-pulse px-5 py-2 font-medium text-pulse-ink disabled:opacity-60";
 
 /** A numbered section heading, like the Seller Kit steps: a small mono disc, then the title. */
+function Label({ children }: { children: React.ReactNode }) {
+  return <h2 className="mb-3 text-[13px]/[16px] font-medium text-muted">{children}</h2>;
+}
+
 function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
-    <h2 className="mb-3 flex items-center gap-3 text-[17px]/[22px] font-semibold">
+    <h2 className="mb-3 flex items-center gap-3 text-[17px]/[22px] font-medium">
       <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 font-mono text-[12px] font-medium text-ink-2">{n}</span>
       {children}
     </h2>
@@ -157,7 +161,7 @@ export default function SellPage() {
 
       <Card>
         <form onSubmit={onDraft} className="grid gap-3">
-          <h2 className="text-[17px]/[22px] font-semibold">Create your seller agent with Claude</h2>
+          <h2 className="text-[17px]/[22px] font-medium">Create your seller agent with Claude</h2>
           <p className="text-[14px]/[20px] text-muted">
             Tell Claude about your shop in a few sentences. It fills in the form below. It only writes down what you say, and you decide every number.
           </p>
@@ -172,7 +176,7 @@ export default function SellPage() {
             />
           </label>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className="btn min-h-11 rounded-xl bg-pulse-soft px-5 py-2 font-medium text-pulse-soft-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] disabled:opacity-60" disabled={draft.kind === "busy" || !chat.trim()}>
+            <button type="submit" className="btn min-h-11 rounded-xl bg-pulse-soft px-5 py-2 font-medium text-pulse-soft-ink disabled:opacity-60" disabled={draft.kind === "busy" || !chat.trim()}>
               {draft.kind === "busy" ? "Drafting..." : "Draft with Claude"}
             </button>
             <button type="button" className="min-h-11 text-[14px] text-muted hover:text-ink" onClick={() => setChat(EXAMPLE)}>
@@ -264,7 +268,7 @@ export default function SellPage() {
           <div className="grid gap-4">
             {form.rows.map((r, i) => (
               <fieldset key={i} className="grid gap-3 rounded-xl bg-surface-2 p-3 sm:grid-cols-2">
-                <legend className="px-1 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">Listing {i + 1}</legend>
+                <legend className="px-1 text-[13px]/[16px] font-medium text-muted">Listing {i + 1}</legend>
                 <Field label="Part" hint="Lowercase, like: rtx 5070 ti or psu 750w">
                   <input className={input} value={r.sku} maxLength={80} required onChange={(e) => setRow(i, { sku: e.target.value })} />
                 </Field>
