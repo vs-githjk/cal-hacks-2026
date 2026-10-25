@@ -13,7 +13,6 @@ from pathlib import Path
 import pytest
 
 from demo import bridge, build, crs_relay
-from demo.common import Narrator
 
 NOW = datetime(2026, 10, 24, 20, 0, 0, tzinfo=timezone.utc)
 ROOT = Path(__file__).resolve().parents[2]
