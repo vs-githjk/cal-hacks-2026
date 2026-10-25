@@ -16,6 +16,7 @@ Fish Market's price-discovery agent. Before each round it publishes a fair-price
 - Every sentence is a fixed phrase filled with numbers it read from a source. No model text and no question text reaches a seller or a buyer.
 - Every number names its source in brackets (a Tiger Data table, the snapshot date, the CRS signals cache or a round id) and its origin (LIVE, MIRROR or SIM).
 - Screens incoming chat with Smell Test; a blocked message gets "No action taken".
+- Ask about its own data and get cited answers: it searches (BM25 keyword retrieval, no model needed) its finished rounds, dated MIRROR listings, CRS checks and Tiger Data prices, and every claim ends with the number of the source it rests on and a label (LIVE, MIRROR or SIM). A source line gives what it is, its date and its URL or round id. With no source, it says it has no data and makes no claim. Optionally Claude (claude-haiku-5-5) rewords the lines, but a reworded line is used only if it keeps the same source numbers and adds no figure. It describes; it never ranks sellers, recommends a purchase or decides anything, and a round is kept without any bid or price, so no seller's price reaches another seller.
 
 ## What it accepts
 
@@ -31,6 +32,9 @@ Fish Market's price-discovery agent. Before each round it publishes a fair-price
 - "What is a fair price for a PSU 750W?"
 - "How is the RX 7800 XT trending?"
 - "Why does seller_3 keep losing?" (answered only to that seller's own agent, unless the operator set PULSE_SELLER_CHAT=open)
+- "How did RTX 5070 Ti prices move this week?"
+- "Which seller won most GPU rounds?"
+- "Is Byte Bros CRS verified?"
 - "Help"
 
 ## Starter prompts
@@ -39,6 +43,9 @@ Fish Market's price-discovery agent. Before each round it publishes a fair-price
 - "Before my buyer agent opens a round for a 750 W PSU, tell me the going price and the demand for it in the last day, and name where each number comes from."
 - "I run a seller agent that keeps losing rounds on the RTX 5070 Ti. Show me my 7-day and 30-day record and how my last loss compares with the market median."
 - "Is the RTX 5070 Ti getting cheaper or more expensive over the last month, and how many days of data does that rest on?"
+- "How did RTX 5070 Ti prices move this week? Give me the median for each day from the dated listings you hold, and the source and URL behind every number."
+- "Which seller won the most GPU rounds on record, how many rounds is that out of, and which round does each win come from?"
+- "Is Byte Bros CRS verified? Tell me what the check said, when it was made, whether it is still current, and whether it was a real CRS sandbox call or a simulation."
 
 ## Keywords
 
@@ -67,6 +74,7 @@ price discovery, fair price, going price, price band, price history, price trend
 
 - Setup: run `python3 -m data.tiger.load` once per Tiger service (it creates the tables and loads the price history). `python3 -m agents.pulse.fair_band --tiger-check` says whether Tiger Data holds price rows.
 - It cannot place bids, approve purchases or move money.
+- Answers about "this week" rest on the dated listings it actually holds; with one day of data it says so instead of reporting a move. "Which seller won most rounds" counts only finished rounds it has kept (the Pulse agent saves each referee round; the repo's sample round is SIM). A CRS check older than 24 hours is shown with its age and is not called current.
 - A note shows how far a seller lost only as a band (less than 5, 10 or 20 percent, or more than 20), never an exact figure, so a seller cannot work out the winner's price from it. The only dollar figures in a note are the market's public fair band.
 - A seller's record is shown only to that seller's own agent. The operator can open it to anyone with PULSE_SELLER_CHAT=open.
 - A finished round is accepted only from the addresses in PULSE_ROUND_SENDERS (the referee and the operator, comma separated); with none set, none is accepted.

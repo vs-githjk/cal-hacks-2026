@@ -44,6 +44,7 @@ for _p in (str(ROOT), str(ROOT / "agents")):
 from agents.crs import CACHE_MAX_AGE  # noqa: E402
 from agents.pulse import coaching  # noqa: E402
 from agents.pulse import fair_band as FB  # noqa: E402
+from agents.pulse import rag as RAG  # noqa: E402
 from agents.pulse import market_pulse as MP  # noqa: E402
 from data.tiger import store, trends  # noqa: E402
 
@@ -73,8 +74,9 @@ BAND_REQUESTS_PER_WINDOW = 6     # an open PulseBandRequest: at most this many p
 BAND_WINDOW_S = 60.0
 HELP = ("I am Market Pulse. Ask me the going price of a part, for example \"what's the going price for an RTX 5070 Ti?\", how a "
         "part is trending, for example \"how is the RTX 5070 Ti trending?\", or why a seller keeps losing, for example \"why does "
-        "seller_3 keep losing?\". I answer from Tiger Data, dated MIRROR snapshots, the CRS signals cache and finished rounds, and "
-        "I name the source of every number. I cannot place bids or approve purchases.")
+        "seller_3 keep losing?\". I can also look through my own data: \"how did RTX 5070 Ti prices move this week?\", \"which seller "
+        "won most GPU rounds?\", \"is Byte Bros CRS verified?\". I answer from Tiger Data, dated MIRROR snapshots, the CRS signals "
+        "cache and finished rounds, and I cite the source of every claim. I cannot place bids or approve purchases.")
 
 
 class PulseError(ValueError):
@@ -514,7 +516,7 @@ class Pulse:
 
     def __init__(self, source: Optional[TigerSource] = None, *, catalog: Optional[dict] = None, crs_path: Optional[Path] = None,
                  now: Optional[Callable[[], datetime]] = None, writer: Optional[Callable[[dict], Any]] = None,
-                 bands: Optional[FB.FairBands] = None):
+                 bands: Optional[FB.FairBands] = None, rag: Optional[Any] = None):
         self.source = source or default_source()
         self.catalog = load_catalog() if catalog is None else catalog
         self.crs_path = crs_path
@@ -522,6 +524,8 @@ class Pulse:
         self.writer = writer
         # Tiger Data reads the band only for the real Tiger source; a fixture or fake source never reaches the network
         self.bands = bands or FB.FairBands(tiger=type(self.source) is TigerSource, now=self.now)
+        # phase 2: questions about our own rounds, listings and CRS checks are answered from retrieved rows, each claim cited
+        self.rag = rag if rag is not None else RAG.Rag.default(catalog=self.catalog, now=self.now, tiger=type(self.source) is TigerSource)
         self.latest: dict = {}
         self.latest_pulse: dict = {}
 
@@ -625,6 +629,12 @@ class Pulse:
         words = re.findall(r"[a-z0-9]+", str(text).lower())
         sku = match_sku(words, self.known_skus())
         seller = match_seller(str(text).lower(), self.catalog)
+        try:   # a question about our rounds, listings or CRS checks: answered from retrieved rows, every claim cited (rag.py)
+            found = self.rag.answer(text, sku=sku, seller=seller or self.rag.match_seller(str(text).lower())) if self.rag else None
+        except Exception:  # noqa: BLE001  (retrieval trouble never stops the other answers)
+            found = None
+        if found:
+            return found["text"]
         asks_losing = bool(set(words) & {"lose", "losing", "lost", "loss", "losses", "win", "winning", "record", "behind"})
         if seller and (asks_losing or not sku):
             if not sender_allowed(seller):
@@ -873,6 +883,11 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
             pulse.publish_before_round([t["sku"] for t in result["buyer_trends"]])
         except Exception:  # noqa: BLE001
             ctx.logger.warning("pulse not refreshed after the round")
+        try:   # keep who won (no prices) so later questions can be answered from finished rounds
+            if RAG.save_round(data) and pulse.rag is not None:
+                pulse.rag.invalidate()
+        except Exception:  # noqa: BLE001
+            ctx.logger.warning("round not saved for later questions")
 
     @agent.on_message(model=PulseBandRequest, replies=PulseBands)
     async def on_band_request(ctx: Context, sender: str, msg: PulseBandRequest):
