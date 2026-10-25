@@ -52,7 +52,7 @@ def find(category: str, model_number=None, title=None) -> dict | None:
     for r in rows(category):
         known = {_norm(r.get("model_number"))} | {_norm(m) for m in r.get("also_model_numbers") or []}
         known.discard("")
-        if have and have in known and not NOT_A_PART.search(title):
+        if have and have in known and not NOT_A_PART.search(title) and not (r.get("exclude") and re.search(r["exclude"], title, re.I)):
             return r
     for r in rows(category):
         pat = r.get("match")

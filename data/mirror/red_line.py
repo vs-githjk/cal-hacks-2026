@@ -100,12 +100,22 @@ def report(res: dict) -> list[str]:
     return lines
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    """python -m data.mirror.red_line [--budget part=cents ...]: a budget override shows a what-if, never the planner's real budget."""
+    import sys
     from data.mirror import parts
+    budgets = dict(BUDGETS)
+    for a in (argv if argv is not None else sys.argv[1:]):
+        if a == "--budget":
+            continue
+        k, _, v = a.partition("=")
+        if k in budgets and v.isdigit():
+            budgets[k] = int(v)
+            print(f"what-if: {k} budget {_usd(int(v))} instead of {_usd(BUDGETS[k])}")
     offers = {p: parts.offers(p) for p in ORDER}
     for p in ORDER:
         print(f"{p}: {len(offers[p])} offer(s) with a maker row, {len(parts.skipped(p))} captured listing(s) skipped")
-    for line in report(find(offers, case=CASE)):
+    for line in report(find(offers, budgets, case=CASE)):
         print(line)
     return 0
 

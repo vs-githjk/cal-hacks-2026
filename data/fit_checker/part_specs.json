@@ -1,8 +1,166 @@
 {
  "note": "Maker specs for the exact models we hold real listings for (#342). Each row: brand, model_number, match (strict title regex), optional exclude, the specs the fit rules read, source (the maker's own page) and checked (date). A model with no row is unknown and never bids.",
- "cpu": [],
- "motherboard": [],
- "memory": [],
+ "cpu": [
+  {
+   "brand": "AMD",
+   "name": "AMD Ryzen 7 9700X",
+   "model_number": "100-100001404WOF",
+   "match": "ryzen\\W*\\s*7\\s+9700x(?![0-9a-z])",
+   "exclude": "motherboard|\\bkit\\b|\\bcombo\\b|ddr[45]|computer|\\b(asus|msi|gigabyte|g\\.skill|corsair)\\b",
+   "socket": "AM5",
+   "tdp_w": 65,
+   "arch": "Zen 5",
+   "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-7-9700x.html",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "AMD",
+   "name": "AMD Ryzen 7 7700X",
+   "model_number": "100-100000591WOF",
+   "match": "ryzen\\W*\\s*7\\s+7700x(?![0-9a-z])",
+   "exclude": "motherboard|\\bkit\\b|\\bcombo\\b|ddr[45]|computer|\\b(asus|msi|gigabyte|g\\.skill|corsair)\\b",
+   "socket": "AM5",
+   "tdp_w": 105,
+   "arch": "Zen 4",
+   "source": "https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7700x.html",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "AMD",
+   "name": "AMD Ryzen 5 9600X",
+   "model_number": "100-100001405WOF",
+   "match": "ryzen\\W*\\s*5\\s+9600x(?![0-9a-z])",
+   "exclude": "motherboard|\\bkit\\b|\\bcombo\\b|ddr[45]|computer|\\b(asus|msi|gigabyte|g\\.skill|corsair)\\b",
+   "socket": "AM5",
+   "tdp_w": 65,
+   "arch": "Zen 5",
+   "source": "https://www.amd.com/en/products/processors/desktops/ryzen/9000-series/amd-ryzen-5-9600x.html",
+   "checked": "2026-10-24"
+  }
+ ],
+ "motherboard": [
+  {
+   "brand": "ASUS",
+   "name": "ASUS TUF GAMING B650E-PLUS WIFI",
+   "model_number": "TUF GAMING B650E-PLUS WIFI",
+   "match": "tuf gaming b650e-plus wifi",
+   "exclude": "combo|bundle|\\bkit\\b",
+   "socket": "AM5",
+   "chipset": "AMD B650",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "memory_slots": 4,
+   "memory_max_speed_mhz": 8000,
+   "form_factor": "ATX",
+   "m2_slots": 3,
+   "source": "https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b650e-plus-wifi/techspec/",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "ASUS",
+   "name": "ASUS TUF GAMING B760-PLUS WIFI",
+   "model_number": "TUF GAMING B760-PLUS WIFI",
+   "match": "tuf gaming b760-plus wifi",
+   "exclude": "combo|bundle|\\bkit\\b",
+   "socket": "LGA1700",
+   "chipset": "Intel B760",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "memory_slots": 4,
+   "memory_max_speed_mhz": 7200,
+   "form_factor": "ATX",
+   "m2_slots": 3,
+   "source": "https://www.asus.com/motherboards-components/motherboards/tuf-gaming/tuf-gaming-b760-plus-wifi/techspec/",
+   "checked": "2026-10-24"
+  }
+ ],
+ "memory": [
+  {
+   "brand": "Corsair",
+   "name": "CMK32GX4M2E3200C16",
+   "model_number": "CMK32GX4M2E3200C16",
+   "match": "cmk32gx4m2e3200c16",
+   "memory_type": "DDR4",
+   "speed_mhz": 3200,
+   "modules": 2,
+   "form": "DIMM",
+   "source": "https://www.corsair.com/us/en/p/memory/cmk32gx4m2e3200c16/vengeance-lpx-32gb-2-x-16gb-ddr4-dram-3200mhz-c16-memory-kit-black-cmk32gx4m2e3200c16",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "Corsair",
+   "name": "CMH32GX5M2B6000Z30K",
+   "model_number": "CMH32GX5M2B6000Z30K",
+   "match": "cmh32gx5m2b6000z30k",
+   "memory_type": "DDR5",
+   "speed_mhz": 6000,
+   "modules": 2,
+   "form": "DIMM",
+   "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000z30k/vengeance-rgb-32gb-2-x-16gb-ddr5-dram-6000mt-s-cl30-memory-kit-black-cmh32gx5m2b6000z30k",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "Corsair",
+   "name": "CMH32GX5M2B6000Z30W",
+   "model_number": "CMH32GX5M2B6000Z30W",
+   "match": "cmh32gx5m2b6000z30w",
+   "memory_type": "DDR5",
+   "speed_mhz": 6000,
+   "modules": 2,
+   "form": "DIMM",
+   "source": "https://www.corsair.com/us/en/p/memory/cmh32gx5m2b6000z30w/vengeance-rgb-32gb-2-x-16gb-ddr5-dram-6000mt-s-cl30-memory-kit-white-cmh32gx5m2b6000z30w",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "Corsair",
+   "name": "CMK32GX5M2B6000Z30W",
+   "model_number": "CMK32GX5M2B6000Z30W",
+   "match": "cmk32gx5m2b6000z30w",
+   "memory_type": "DDR5",
+   "speed_mhz": 6000,
+   "modules": 2,
+   "form": "DIMM",
+   "source": "https://www.corsair.com/us/en/p/memory/cmk32gx5m2b6000z30w/vengeance-32gb-2-x-16gb-ddr5-dram-6000mt-s-cl30-memory-kit-white-cmk32gx5m2b6000z30w",
+   "checked": "2026-10-24"
+  }
+ ],
  "storage": [],
- "cooler": []
+ "cooler": [
+  {
+   "brand": "Thermalright",
+   "name": "Thermalright Peerless Assassin 120 SE",
+   "model_number": "Peerless Assassin 120 SE",
+   "match": "peerless assassin 120 se",
+   "exclude": "argb|\\bv\\d\\b|mini|digital|white|plus|combo|bundle",
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "https://www.thermalright.com/product/peerless-assassin-120-se/",
+   "checked": "2026-10-24"
+  },
+  {
+   "brand": "Thermalright",
+   "name": "Thermalright Peerless Assassin 120 SE ARGB",
+   "model_number": "Peerless Assassin 120 SE ARGB",
+   "match": "peerless assassin 120 se argb",
+   "exclude": "white|\\bv\\d\\b|mini|digital|plus|combo|bundle",
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ],
+   "source": "https://www.thermalright.com/product/peerless-assassin-120-se-argb/",
+   "checked": "2026-10-24"
+  }
+ ]
 }

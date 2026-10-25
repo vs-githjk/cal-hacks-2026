@@ -123,7 +123,7 @@ def write(root, name, cards):
 
 @pytest.fixture
 def snaps(tmp_path, specs):
-    root = tmp_path / "snapshots_parts"
+    root = tmp_path / "parts_snapshots"
     write(root, "bestbuy-cpu-ryzen-7-9700x-20261024T2200Z", [
         card("bestbuy", "cpu", "AMD Ryzen 7 9700X", 299.99, "https://bb/9700x"),
         card("bestbuy", "cpu", "AMD Ryzen 5 7600X", 199.0, "https://bb/7600x"),           # no maker row
@@ -157,7 +157,7 @@ def test_sold_history_and_third_party_amazon_sellers_never_bid(snaps):
     got = parts.offers("cpu", root=snaps)
     assert not any("ebay" in str(o["source"]) or o["source"] == "https://amz/1" for o in got)
     reasons = " ".join(s["reason"] for s in parts.skipped("cpu", root=snaps))
-    assert "baseline only" in reasons and "third-party Amazon" in reasons
+    assert "baseline only" in reasons and "not Amazon itself" in reasons
 
 
 def test_central_computers_rows_are_never_orderable(tmp_path, specs):
@@ -231,7 +231,7 @@ class FakeApi:
 
 @pytest.fixture
 def sandbox(tmp_path, specs, monkeypatch):
-    monkeypatch.setattr(parts, "SNAPSHOTS", tmp_path / "snapshots_parts")
+    monkeypatch.setattr(parts, "SNAPSHOTS", tmp_path / "parts_snapshots")
     monkeypatch.setattr(parts, "RAW", tmp_path / "raw")
     monkeypatch.setattr(run_actors, "HERE", tmp_path)
     (tmp_path / "runs.json").write_text(json.dumps([{"actor": parts.actor_for("microcenter"), "cost_usd": 0.09}]))
@@ -267,10 +267,10 @@ def test_typing_spend_runs_writes_snapshots_and_logs_cost_and_approval(sandbox):
     assert run_actors.parts_main(["--parts", "cpu", "--cap", "5", "--approved-by", "Anoop in chat 17:20 PDT"], api=api,
                                  ask=lambda p: "SPEND", out=lambda l: None, workers=1) == 0
     log = json.loads((sandbox / "runs.json").read_text())[1:]
-    assert len(log) == 3 * 7 and all(r["cost_usd"] == 0.01 and "Anoop in chat 17:20 PDT; cap $5.00" == r["approval"] for r in log)
-    files = list((sandbox / "snapshots_parts").glob("*.json"))
-    assert len(files) == 21 and all(re.search(r"-\d{8}T\d{4}Z\.json$", f.name) for f in files)
-    cards = json.loads(files[0].read_text())
+    assert len(log) == 3 * 7 + 1 and all(r["cost_usd"] == 0.01 and "Anoop in chat 17:20 PDT; cap $5.00" == r["approval"] for r in log)
+    files = list((sandbox / "parts_snapshots").glob("*.json"))
+    assert len(files) == 22 and all(re.search(r"-\d{8}T\d{4}Z\.json$", f.name) for f in files)
+    cards = json.loads(next(f for f in files if not f.name.startswith('centralcomputers')).read_text())
     assert cards[0]["category"] == "cpu" and cards[0]["maker_model"]
 
 
@@ -386,3 +386,64 @@ def test_the_red_line_report_has_no_dashes(specs):
               "motherboard": [offer("motherboard", "Micro Center", 9999, "MSI PRO B760M-P DDR4"), offer("motherboard", "Best Buy", 15999, "MSI PRO B650-S WIFI")]}
     text = "\n".join(red_line.report(red_line.find(offers)))
     assert "–" not in text and "—" not in text and "RED" in text
+
+
+# ---- Central Computers category pages --------------------------------------------------------------------------------
+from data.mirror import central_parts   # noqa: E402
+
+CENTRAL_SAMPLE = (Path(__file__).parent / "fixtures" / "central_parts_cooler_sample.md").read_text()
+
+
+def test_a_central_computers_page_parses_title_link_model_sku_stock_and_price():
+    got = [central_parts.parse_entry(b) for b in central_parts.entries(CENTRAL_SAMPLE)]
+    assert len(got) == 3 and all(got)
+    assert got[0]["price"] == 99.99 and got[0]["sku"] == "CPUZZZNOC49R" and got[0]["model"] == "NH-D9 AMP-4926 4U"
+    assert got[0]["sf_store_qty"] == 0 and got[1]["sf_store_qty"] == 1 and len(got[0]["store_inventory"]) == 5
+    assert got[0]["url"].startswith("https://www.centralcomputer.com/") and got[0]["url"].endswith(".html")
+
+
+def test_a_sale_line_reads_the_special_price():
+    assert [central_parts.parse_entry(b)["price"] for b in central_parts.entries(CENTRAL_SAMPLE)][2] == 19.99
+
+
+def test_central_cards_say_in_stock_only_when_the_sf_store_has_one_and_never_state_a_condition(specs):
+    cards = central_parts.cards("cooler", [{"url": "https://www.centralcomputer.com/x.html", "markdown": CENTRAL_SAMPLE}], "s", "2026-10-25T01:24:00+00:00")
+    assert [c["listing"]["availability"] for c in cards] == ["not_in_sf_store", "in_stock_sf_store", "in_stock_sf_store"]
+    assert all(c["condition"] == "unknown" and c["origin"] == "MIRROR" and c["listing"]["seller"] == "Central Computers" for c in cards)
+    assert cards[1]["listing"]["source_page"] == "https://www.centralcomputer.com/x.html" and cards[1]["listing"]["sf_store_qty"] == 1
+
+
+def test_a_block_with_no_price_or_link_is_dropped_not_guessed():
+    assert central_parts.parse_entry("1.   no product here\n   Model: X\n") is None
+    assert central_parts.cards("cpu", [{"markdown": ""}, {}, None, "junk"], "s", "d") == []
+
+
+def test_a_central_computers_listing_not_in_the_sf_store_never_bids(tmp_path, specs):
+    root = tmp_path / "p"
+    c = card("centralcomputers", "cooler", "Thermalright Peerless Assassin 120 SE CPU Air Cooler", 39.99, "https://cc/pa")
+    c["listing"] = {"price": 39.99, "availability": "not_in_sf_store", "url": "https://cc/pa"}
+    write(root, "centralcomputers-cooler-category-page-20261025T0124Z", [c])
+    assert parts.offers("cooler", root=root) == []
+    assert "not in stock" in parts.skipped("cooler", root=root)[0]["reason"]
+
+
+def test_the_central_crawl_reads_one_page_and_the_stores_filter_and_workers_flags_work(sandbox):
+    plan = run_actors.parts_plan(5, ["cpu"], stores=["centralcomputers"])
+    assert [r["store"] for r in plan] == ["centralcomputers"] and plan[0]["input"]["maxCrawlPages"] == 1 and plan[0]["input"]["maxCrawlDepth"] == 0
+
+
+def test_renormalize_rebuilds_cards_from_raw_with_the_current_maker_rows(tmp_path, specs):
+    snaps, raw = tmp_path / "parts_snapshots", tmp_path / "raw"
+    snaps.mkdir(); raw.mkdir()
+    name = "bestbuy-cpu-ryzen-7-9700x-20261024T2200Z"
+    (raw / f"{name}.json").write_text(json.dumps([item("AMD Ryzen 7 9700X", 299.99, "https://bb/9700x")]))
+    (snaps / f"{name}.json").write_text(json.dumps([{"snapshot_date": "2026-10-24T22:00:00+00:00"}]))   # an old card with no maker model
+    assert parts.renormalize(snaps, raw) == [name]
+    c = json.loads((snaps / f"{name}.json").read_text())[0]
+    assert c["maker_model"] == "100-100001404WOF" and c["snapshot_date"] == "2026-10-24T22:00:00+00:00" and c["price"] == 299.99
+
+
+def test_an_amazon_listing_that_names_no_seller_never_bids(tmp_path, specs):
+    root = tmp_path / "p"
+    write(root, "amazon-cpu-x-20261024T2200Z", [card("amazon", "cpu", "AMD Ryzen 7 9700X", 280.0, "https://amz/none")])
+    assert parts.offers("cpu", root=root) == []

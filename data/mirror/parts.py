@@ -25,7 +25,7 @@ from data.mirror import not_partners
 from data.mirror.actors import ACTORS, SECOND_SOURCE
 
 HERE = Path(__file__).resolve().parent
-SNAPSHOTS = HERE / "snapshots_parts"
+SNAPSHOTS = HERE / "parts_snapshots"
 RAW = HERE / "raw"
 
 PART_SEARCHES = [
@@ -63,6 +63,18 @@ def central_cards(part: str, items: list, snapshot_id: str, snapshot_date: str) 
     """Central Computers crawl items -> cards. Filled in once the crawl output is known (data/mirror/central_parts.py)."""
     from data.mirror.central_parts import cards
     return cards(part, items, snapshot_id, snapshot_date)
+
+
+def raw_item(item):
+    """The saved raw copy of a store item: only the fields the cards are built from (title, url, price, model, seller, stock,
+    condition, shipping, returns), never the long description or feature text a store page carries."""
+    if not isinstance(item, dict):
+        return item
+    if "markdown" in item:   # a Central Computers crawl page: the product list is what the cards are read from
+        return {"url": item.get("url"), "markdown": item.get("markdown")}
+    from data.mirror.normalize import FIELDS
+    keep = {path.split(".")[0] for paths in FIELDS.values() for path in paths}
+    return {k: v for k, v in item.items() if k in keep}
 
 
 def search_input(store: str, query: str, second: bool = False, items: int = 5) -> dict:
@@ -129,8 +141,8 @@ def _card_offer(card: dict) -> tuple[dict | None, str | None]:
         return None, "no usable price"
     if str(listing.get("availability") or "").lower() in ("out of stock", "not_in_sf_store", "special_order"):
         return None, f"not in stock ({listing.get('availability')})"
-    if store == "amazon" and (listing.get("seller") or "Amazon") not in ("Amazon", "Amazon.com"):
-        return None, "a third-party Amazon seller is its own seller of record"
+    if store == "amazon" and str(listing.get("seller") or "") not in ("Amazon", "Amazon.com"):
+        return None, "the Amazon seller is not Amazon itself (or not stated), and a third-party seller is its own seller of record"
     row = part_specs.find(part, card.get("model_number"), card.get("name"))
     if row is None:
         return None, "exact model has no maker spec row, so it cannot be fit-checked"
@@ -184,3 +196,38 @@ def skipped(part: str, root: Path | None = None) -> list[dict]:
         if not o:
             out.append({"title": c.get("name"), "store": str(c.get("id", "")).split(":")[0], "reason": why})
     return out
+
+
+NAME = re.compile(r"(?P<store>[a-z_]+?)(?P<b>-b)?-(?P<part>cpu|motherboard|memory|storage|cooler)-.+-(?P<stamp>\d{8}T\d{4}Z)")
+
+
+def renormalize(snapshots: Path | None = None, raw: Path | None = None) -> list[str]:
+    """Rebuild every parts snapshot from its saved raw items (no network, no cost), so cards pick up the current maker rows.
+    The capture time stays the original one. Returns the snapshot ids rebuilt."""
+    from data.mirror.normalize import to_spec_card
+    snapshots, raw = Path(snapshots or SNAPSHOTS), Path(raw or RAW)
+    done = []
+    for f in sorted(snapshots.glob("*.json")):
+        m = NAME.fullmatch(f.stem)
+        src = raw / f.name
+        if not m or not src.exists():
+            continue
+        items = json.loads(src.read_text(encoding="utf-8"))
+        old = json.loads(f.read_text(encoding="utf-8"))
+        when = (old[0].get("snapshot_date") if old else None) or f"{m['stamp'][:4]}-{m['stamp'][4:6]}-{m['stamp'][6:8]}T{m['stamp'][9:11]}:{m['stamp'][11:13]}:00+00:00"
+        if m["store"] == CENTRAL:
+            cards = central_cards(m["part"], items, f.stem, when)
+        else:
+            cards = [to_spec_card(m["store"], it, f.stem, when, part=m["part"]) for it in items]
+        f.write_text(json.dumps(cards, indent=1), encoding="utf-8")
+        done.append(f.stem)
+    return done
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.argv[1:] == ["--renormalize"]:
+        for s in renormalize():
+            print("rebuilt", s)
+    else:
+        sys.exit("usage: python -m data.mirror.parts --renormalize")

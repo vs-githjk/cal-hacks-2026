@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bh:840039c9bf9b",
+  "category": "cooler",
+  "name": "AMD Ryzen 9 7900X 4.7 GHz 12-Core AM5 Processor",
+  "model_number": "100-100000589WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 339.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1723469-REG/amd_100_100000589wof_ryzen_9_7900x_4_7.html",
+  "snapshot_id": "bh-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:53+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1723469-REG/amd_100_100000589wof_ryzen_9_7900x_4_7.html",
+   "price": 339.0,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:0f2f40dd1a29",
+  "category": "cooler",
+  "name": "Sony MDR-7506 Headphones",
+  "model_number": "MDR-7506",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 113.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/49510-REG/Sony_MDR_7506_MDR_7506_Headphone.html",
+  "snapshot_id": "bh-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:53+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/49510-REG/Sony_MDR_7506_MDR_7506_Headphone.html",
+   "price": 113.0,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:1b9b62ba99b3",
+  "category": "cooler",
+  "name": "be quiet! Pure Rock Pro 3 CPU Air Cooler (Black)",
+  "model_number": "BK042",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 54.9,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1938148-REG/be_quiet_bk042_pure_rock_pro_3.html",
+  "snapshot_id": "bh-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:53+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1938148-REG/be_quiet_bk042_pure_rock_pro_3.html",
+   "price": 54.9,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:a09f6ec718f7",
+  "category": "cooler",
+  "name": "Lian Li Strimer Wireless 24-Pin ARGB Motherboard Extension Cable with L-Wireless Controller (White)",
+  "model_number": "PW24-1W-T",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 69.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1863958-REG/lian_li_pw24_1w_t_strimer_wireless_24_pin_cable.html",
+  "snapshot_id": "bh-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:53+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1863958-REG/lian_li_pw24_1w_t_strimer_wireless_24_pin_cable.html",
+   "price": 69.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

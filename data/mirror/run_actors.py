@@ -2,7 +2,7 @@
 python -m data.mirror.run_actors [store ...]
 python -m data.mirror.run_actors --second [store ...]   (second-source Actor family, #47: snapshots_b/, provider apify-b)
 python -m data.mirror.run_actors --parts [part ...] [--cap USD] [--items N] [--dry-run] [--approved-by TEXT]
-    real listings for the Build Story parts (cpu, motherboard, memory, storage, cooler; #342), saved to snapshots_parts/.
+    real listings for the Build Story parts (cpu, motherboard, memory, storage, cooler; #342), saved to parts_snapshots/.
     --dry-run prints the plan and the estimate and spends nothing. A real run needs the human to type SPEND (no flag skips it);
     --cap is in dollars (default 5, at most 10) and a run is not started if its worst case would pass it.
 python -m data.mirror.run_actors --renormalize   (rebuild snapshots from the logged runs; no new runs, no cost)   (reads APIFY_TOKEN from env or .env; never prints it)"""
@@ -110,22 +110,22 @@ def worst_cost(actor, log):
     return max(max(costs), FLOOR_USD) if costs else UNLOGGED_USD
 
 
-def parts_plan(items=5, parts=None, log=None):
+def parts_plan(items=5, parts=None, log=None, stores=None):
     """[{..planned run.., worst_usd}]: every run a parts capture would make, with its worst-case cost."""
     from . import parts as P
     log = log if log is not None else (json.loads((HERE / "runs.json").read_text()) if (HERE / "runs.json").exists() else [])
-    plan = [{**r, "worst_usd": round(worst_cost(r["actor"], log), 5)} for r in P.planned_runs(items, parts)]
+    plan = [{**r, "worst_usd": round(worst_cost(r["actor"], log), 5)} for r in P.planned_runs(items, parts) if not stores or r["store"] in stores]
     for part, url in P.CENTRAL_PAGES.items():
-        if not parts or part in parts:
+        if (not parts or part in parts) and (not stores or P.CENTRAL in stores):
             plan.append({"part": part, "query": url, "slug": "category-page", "store": P.CENTRAL, "second": False,
                          "actor": P.CENTRAL_ACTOR, "worst_usd": CENTRAL_PAGE_USD,
-                         "input": {"startUrls": [{"url": url}], "maxCrawlDepth": 1, "maxCrawlPages": 25, "crawlerType": "cheerio",
+                         "input": {"startUrls": [{"url": url}], "maxCrawlDepth": 0, "maxCrawlPages": 1, "crawlerType": "cheerio",
                                    "saveMarkdown": True}})
     return plan
 
 
 def run_one_part(r, api=None, items=5, now=None):
-    """One planned run -> a log record. Never raises. Writes snapshots_parts/<key>-<stamp>.json (cards) and raw/ (items)."""
+    """One planned run -> a log record. Never raises. Writes parts_snapshots/<key>-<stamp>.json (cards) and raw/ (items)."""
     from . import parts as P
     api = api or call
     started = time.time()
@@ -145,7 +145,7 @@ def run_one_part(r, api=None, items=5, now=None):
         snap, stamp = f"{key}-{now:%Y%m%dT%H%MZ}", now.isoformat(timespec="seconds")
         P.SNAPSHOTS.mkdir(exist_ok=True)
         P.RAW.mkdir(exist_ok=True)
-        (P.RAW / f"{snap}.json").write_text(json.dumps([strip_private(r["store"], it) for it in got], indent=1))
+        (P.RAW / f"{snap}.json").write_text(json.dumps([P.raw_item(strip_private(r["store"], it)) for it in got], indent=1))
         if r["store"] == P.CENTRAL:
             cards = P.central_cards(r["part"], got, snap, stamp)
         else:
@@ -182,10 +182,12 @@ def run_parts(plan, cap, api=None, items=5, workers=4):
     return out
 
 
-def parts_main(argv, api=None, ask=input, out=print, log_path=None, workers=4):
+def parts_main(argv, api=None, ask=input, out=print, log_path=None, workers=None):
     ap = argparse.ArgumentParser(prog="python -m data.mirror.run_actors --parts", add_help=True)
     ap.add_argument("--parts", nargs="*", default=[], choices=["cpu", "motherboard", "memory", "storage", "cooler"])
     ap.add_argument("--cap", type=float, default=DEFAULT_CAP, help="dollars, default 5, at most 10")
+    ap.add_argument("--stores", nargs="*", default=[], help="only these stores, e.g. centralcomputers (default: all)")
+    ap.add_argument("--workers", type=int, default=4, help="runs at once (default 4; Central Computers needs 1 on the free plan)")
     ap.add_argument("--items", type=int, default=5, help="items per search (default 5)")
     ap.add_argument("--dry-run", action="store_true", help="print the plan and the estimate; spend nothing")
     ap.add_argument("--approved-by", default="", help="who approved the spend, written into every log record")
@@ -196,7 +198,7 @@ def parts_main(argv, api=None, ask=input, out=print, log_path=None, workers=4):
     if not 1 <= a.items <= 10:
         out("refused: --items must be 1 to 10")
         return 2
-    plan = parts_plan(a.items, a.parts or None)
+    plan = parts_plan(a.items, a.parts or None, stores=a.stores or None)
     total = sum(r["worst_usd"] for r in plan)
     out(f"parts capture (MIRROR): {len(plan)} runs, {a.items} items each, {len({(r['part'], r['query']) for r in plan})} searches")
     for r in plan:
@@ -211,7 +213,7 @@ def parts_main(argv, api=None, ask=input, out=print, log_path=None, workers=4):
     if ask(f"This spends real money, up to ${a.cap:.2f}, from the Apify account behind APIFY_TOKEN. Type SPEND to go on: ").strip() != "SPEND":
         out("not confirmed: nothing was run and nothing was spent")
         return 2
-    records = run_parts(plan, a.cap, api, a.items, workers)
+    records = run_parts(plan, a.cap, api, a.items, workers or a.workers)
     approval = a.approved_by or "typed SPEND at the prompt"
     for rec in records:
         rec["approval"] = f"{approval}; cap ${a.cap:.2f}"

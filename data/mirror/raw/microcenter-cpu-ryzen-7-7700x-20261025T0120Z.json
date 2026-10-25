@@ -1,0 +1,47 @@
+[
+ {
+  "productTitle": "G732 Gaming PC",
+  "sku": "049585",
+  "url": "https://www.microcenter.com/product/712043/powerspec-g732-gaming-pc",
+  "mpn": null,
+  "price": 1699.99,
+  "in_stock": true,
+  "availability": "2 IN STOCK"
+ },
+ {
+  "productTitle": "B739 Desktop Computer",
+  "sku": "049668",
+  "url": "https://www.microcenter.com/product/712044/powerspec-b739-desktop-computer",
+  "mpn": null,
+  "price": 1099.99,
+  "in_stock": true,
+  "availability": "2 IN STOCK"
+ },
+ {
+  "productTitle": "G740 Gaming PC",
+  "sku": "072140",
+  "url": "https://www.microcenter.com/product/714230/powerspec-g740-gaming-pc",
+  "mpn": null,
+  "price": 1699.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "Ryzen 7 7800X3D Raphael AM5 4.2GHz 8-Core Boxed Processor - Heatsink Not Included",
+  "sku": "643718",
+  "url": "https://www.microcenter.com/product/674503/amd-ryzen-7-7800x3d-raphael-am5-42ghz-8-core-boxed-processor-heatsink-not-included",
+  "mpn": null,
+  "price": 329.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "AMD Ryzen 7 7800X3D, ASUS B650E Max Gaming WiFi AM5, G.Skill Flare X5 Series 32GB DDR5-6000 Kit, Computer Build Bundle",
+  "sku": "999999",
+  "url": "https://www.microcenter.com/product/5007508/amd-ryzen-7-7800x3d,-asus-b650e-max-gaming-wifi-am5,-gskill-flare-x5-series-32gb-ddr5-6000-kit,-computer-build-bundle",
+  "mpn": null,
+  "price": 749.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ }
+]

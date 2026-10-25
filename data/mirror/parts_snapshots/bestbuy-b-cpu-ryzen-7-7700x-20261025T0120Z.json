@@ -1,0 +1,134 @@
+[
+ {
+  "id": "bestbuy:0b72db91053d",
+  "category": "cpu",
+  "name": "AMD - Ryzen 7 7700X 8-Core - 16-Thread 4.5GHz (5.4 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 105,
+   "microarchitecture": "Zen 4"
+  },
+  "price": 261.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/amd-ryzen-7-7700x-8-core-16-thread-4-5ghz-5-4-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52C2/sku/6519477",
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:19+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/amd-ryzen-7-7700x-8-core-16-thread-4-5ghz-5-4-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52C2/sku/6519477",
+   "price": 261.0,
+   "was_price": 399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "100-100000591WOF"
+ },
+ {
+  "id": "bestbuy:14c86b29402d",
+  "category": "cpu",
+  "name": "AMD - Ryzen 5 7600X 6-Core - 12-Thread 4.7GHz (5.3 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 184.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/amd-ryzen-5-7600x-6-core-12-thread-4-7ghz-5-3-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52CT/sku/6519479",
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:19+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/amd-ryzen-5-7600x-6-core-12-thread-4-7ghz-5-3-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52CT/sku/6519479",
+   "price": 184.0,
+   "was_price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:fd00b6fede3f",
+  "category": "cpu",
+  "name": "AMD - Ryzen 7 9700X 8-Core - 16-Thread 3.8 GHz (5.5 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 341.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/amd-ryzen-7-9700x-8-core-16-thread-3-8-ghz-5-5-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH5XFW/sku/6589136",
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:19+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/amd-ryzen-7-9700x-8-core-16-thread-3-8-ghz-5-5-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH5XFW/sku/6589136",
+   "price": 341.0,
+   "was_price": 359.0,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "bestbuy:b372b8ceb828",
+  "category": "cpu",
+  "name": "AMD - Ryzen 5 9600X 6-Core - 12-Thread 3.9 GHz (5.4 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 205.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/amd-ryzen-5-9600x-6-core-12-thread-3-9-ghz-5-4-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH5XVY/sku/12090937",
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:19+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/amd-ryzen-5-9600x-6-core-12-thread-3-9-ghz-5-4-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH5XVY/sku/12090937",
+   "price": 205.99,
+   "was_price": 279.0,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "100-100001405WOF"
+ },
+ {
+  "id": "bestbuy:cd398afe5b3e",
+  "category": "cpu",
+  "name": "AMD - Ryzen 7 7700X3D - Ryzen 7000 Series Raphael (Zen 4) 8-Core 4.0 GHz Socket AM5 120W Desktop Processor",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 328.07,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/amd-ryzen-7-7700x3d-ryzen-7000-series-raphael-zen-4-8-core-4-0-ghz-socket-am5-120w-desktop-processor/JXKQHH5YR6/sku/12876297",
+  "snapshot_id": "bestbuy-b-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:19+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/amd-ryzen-7-7700x3d-ryzen-7000-series-raphael-zen-4-8-core-4-0-ghz-socket-am5-120w-desktop-processor/JXKQHH5YR6/sku/12876297",
+   "price": 328.07,
+   "was_price": 348.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]

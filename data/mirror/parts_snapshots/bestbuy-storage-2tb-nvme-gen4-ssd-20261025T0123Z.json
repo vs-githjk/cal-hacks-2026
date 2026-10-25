@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bestbuy:666b9cde1c60",
+  "category": "storage",
+  "name": "KLEVV - K02TBM2SP0-10G CRAS C910G SSD 2TB, M.2 NVMe 2280, PCIe Gen4x4 SSD with Heatsink",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 289.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/klevv-k02tbm2sp0-10g-cras-c910g-ssd-2tb-m-2-nvme-2280-pcie-gen4x4-ssd-with-heatsink/CGC7TFFW7C/sku/12611251",
+  "snapshot_id": "bestbuy-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:15+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/klevv-k02tbm2sp0-10g-cras-c910g-ssd-2tb-m-2-nvme-2280-pcie-gen4x4-ssd-with-heatsink/CGC7TFFW7C/sku/12611251",
+   "price": 289.99,
+   "was_price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:b591d1b424f9",
+  "category": "storage",
+  "name": "Western Digital - WD_BLACK 2TB SN850X NVMe SSD - 7300 MB/s, PS5, Gen4, M.2 2280",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 439.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/western-digital-wd_black-2tb-sn850x-nvme-ssd-7300-mb-s-ps5-gen4-m-2-2280/JXTHCC7JCY/sku/11018063",
+  "snapshot_id": "bestbuy-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:15+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/western-digital-wd_black-2tb-sn850x-nvme-ssd-7300-mb-s-ps5-gen4-m-2-2280/JXTHCC7JCY/sku/11018063",
+   "price": 439.99,
+   "was_price": 518.15,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:5000aae23791",
+  "category": "storage",
+  "name": "HUADISK - 2TB M.2 2280 PCIe 4.0 NVMe SSD, 5000MB/s Read, 3D NAND, for PS5, PC & Laptops",
+  "model_number": "HYV2TBX4(2280)",
+  "condition": "new",
+  "attrs": {},
+  "price": 239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/huadisk-2tb-m-2-2280-pcie-4-0-nvme-ssd-5000mb-s-read-3d-nand-for-ps5-pc-laptops/JXT65SKQJ9/sku/13113001",
+  "snapshot_id": "bestbuy-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:15+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/huadisk-2tb-m-2-2280-pcie-4-0-nvme-ssd-5000mb-s-read-3d-nand-for-ps5-pc-laptops/JXT65SKQJ9/sku/13113001",
+   "price": 239.99,
+   "was_price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:0e2fca2b3cbd",
+  "category": "storage",
+  "name": "Micron Technology - 2TB PCIe Gen4 NVMe M.2 Solid State Drive",
+  "model_number": "CT2000E100SSD8",
+  "condition": "new",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/micron-technology-2tb-pcie-gen4-nvme-m-2-solid-state-drive/JX8PSKC64R/sku/12352032",
+  "snapshot_id": "bestbuy-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:15+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/micron-technology-2tb-pcie-gen4-nvme-m-2-solid-state-drive/JX8PSKC64R/sku/12352032",
+   "price": 249.99,
+   "was_price": 291.93,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]
