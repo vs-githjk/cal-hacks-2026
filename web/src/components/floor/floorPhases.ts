@@ -71,7 +71,7 @@ export interface FloorPlan {
 }
 
 // Floor plane (docs/design-system/floor.md v2): the mat is the trapezoid (270,190) (690,190) (840,430) (120,430) in a 960 by 540 view.
-export const BUYER_HOME: Pt = { u: 0, v: 0.82 };
+export const BUYER_HOME: Pt = { u: 0, v: 0.86 };
 export const CHECKER_HOME: Pt = { u: 1.26, v: 0.46 };
 export const REFEREE_AT: Pt = { u: 0, v: 0.158 };
 
@@ -96,7 +96,7 @@ const PLAIN: Record<ReasonCode, string> = {
 /** Home spot for slot i of n: spread across the mat; the outer seats stand nearer the front, as in the reference run. */
 export function homeOf(i: number, n: number): Pt {
   const u = n === 1 ? 0 : -0.815 + (1.63 * i) / (n - 1);
-  const v = u === 0 ? 0.56 : 0.3 + 0.24 * Math.min(1, Math.max(0, (Math.abs(u) - 0.375) / 0.44));
+  const v = u === 0 ? 0.66 : 0.3 + 0.24 * Math.min(1, Math.max(0, (Math.abs(u) - 0.375) / 0.44));
   return { u, v };
 }
 

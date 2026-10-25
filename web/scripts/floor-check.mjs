@@ -32,7 +32,7 @@ for (const [name, w, h] of [["desktop", 1440, 900], ["phone", 390, 844]]) {
       const ledger = await page.locator('[data-testid="floor-ledger"]').innerText();
       if (/\$\d/.test(ledger)) sealedPrice = true;
     }
-    for (const k of shots) if (!seen.has(k) && text.toLowerCase().includes(k.toLowerCase())) { seen.add(k); await page.screenshot({ path: `${OUT}/${name}-${k.replace(/\W+/g, "-")}.png` }); }
+    for (const k of shots) if (!seen.has(k) && text.toLowerCase().includes(k.toLowerCase())) { seen.add(k); if (k === "SHIELD BLOCKED") await page.waitForTimeout(1000); await page.screenshot({ path: `${OUT}/${name}-${k.replace(/\W+/g, "-")}.png` }); }
     if (await page.locator('[data-testid="floor-deal"]').count()) {
       seen.add("DEAL"); await page.waitForTimeout(600);
       await page.screenshot({ path: `${OUT}/${name}-DEAL.png` });

@@ -94,6 +94,8 @@ export function FloorRing({ phases, index, elapsed, reduced, label }: RingProps)
       [[168, 399], [150, 374], [131, 349]].forEach(([y0, y1]) => { line(270, y0!, 120, y1!, C.rope, 1.5, 0.7); line(690, y0!, 840, y1!, C.rope, 1.5, 0.7); });
 
       const items: { y: number; draw: () => void }[] = [];
+      const bubbles: { x: number; top: number }[] = [];
+      const tops: number[] = [];
       const shadow = (rx: number, ry: number) => { c.fillStyle = "rgba(0,0,0,0.35)"; c.beginPath(); c.ellipse(0, 2, rx, ry, 0, 0, 7); c.fill(); };
       const boost = k < 0.6 ? 1.5 : 1; // phone: pieces stay readable at 366 px
       const at = (x: number, y: number, s: number, f: () => void) => () => { c.save(); c.translate(x, y); c.scale(s * boost, s * boost); f(); c.restore(); };
@@ -129,6 +131,7 @@ export function FloorRing({ phases, index, elapsed, reduced, label }: RingProps)
         const alpha = s.status === "eaten" ? (eating ? 1 - clamp01(el / T.chomp) : 0) : 1;
         if (alpha <= 0) return;
         const x = px(pos.u, pos.v), y = py(pos.v);
+        tops.push(y - (56 + 22 + 40) * sc * boost);
         const look = Math.sign(ph.buyer.u - pos.u) || 1;
         items.push({ y, draw: at(x, y, sc, () => {
           c.globalAlpha = alpha;
@@ -145,28 +148,24 @@ export function FloorRing({ phases, index, elapsed, reduced, label }: RingProps)
           c.fillStyle = C.tagBg; c.beginPath(); c.roundRect(-tw / 2, -56 - th, tw, th, 6); c.fill();
           text(c, label, 0, -56 - th / 2 + 0.5, fs, C.tagInk, mono);
           if (k >= 0.6) text(c, s.name, 0, -56 - th - 10, 10, TINT[s.tint] === C.slate ? C.muted : TINT[s.tint], mono);
-          if (s.statusLine && k >= 0.5) text(c, s.statusLine, 0, 17, labelSize(10), s.tone === "bad" ? C.coralText : s.tone === "good" ? C.mintText : C.amberText, mono);
-          if (s.injection) {
-            const bt = "Hidden instruction in the listing";
-            const bw = 236, bx = Math.min(18, (960 - 40 - x) / sc - bw);
-            const by = -56 - th - 66;
-            c.fillStyle = C.coral; c.beginPath(); c.roundRect(Math.min(bx, 18), by, bw, 24, 8); c.fill();
-            c.beginPath(); c.moveTo(30, by + 24); c.lineTo(36, by + 32); c.lineTo(42, by + 24); c.closePath(); c.fill();
-            text(c, bt, Math.min(bx, 18) + bw / 2, by + 12, labelSize(10), C.tagBg, mono);
-          }
+          // status word stacks above the name label, so nothing sits between the ghost and the buyer
+          if (s.statusLine && k >= 0.5) text(c, s.statusLine, 0, -56 - th - (k >= 0.6 ? 24 : 10), labelSize(10), s.tone === "bad" ? C.coralText : s.tone === "good" ? C.mintText : C.amberText, mono);
+          if (s.injection) bubbles.push({ x, top: y - (56 + th + 40) * sc * boost });
           c.globalAlpha = 1;
         }) });
       });
 
-      // shield
+      // shield: slides from the referee and settles around the ghost it blocks, so it never sits on the buyer or a label
       if (ph.shield) {
-        const sp = lerpPt(prev.shield ?? REFEREE_AT, ph.shield, tt);
+        const hit = ph.sellers.find((q) => q.injection || q.statusLine === "SHIELD BLOCKED");
+        const target: Pt = hit ? hit.pos : ph.shield;
+        const sp = lerpPt(prev.shield ?? REFEREE_AT, target, tt);
         const flash = !red && ph.kind === "shield" && el > T.block && Math.floor((el - T.block) / 120) % 2 === 0 && el < T.block + 480;
         items.push({ y: py(sp.v) + 1, draw: at(px(sp.u, sp.v), py(sp.v), 1, () => {
-          c.beginPath(); [[0, -32], [28, -16], [28, 16], [0, 32], [-28, 16], [-28, -16]].forEach(([a, b], j) => (j ? c.lineTo(a!, b!) : c.moveTo(a!, b!))); c.closePath();
+          c.beginPath(); [[0, -58], [34, -41], [34, -7], [0, 10], [-34, -7], [-34, -41]].forEach(([a, b], j) => (j ? c.lineTo(a!, b!) : c.moveTo(a!, b!))); c.closePath();
           c.fillStyle = C.live; c.globalAlpha = flash || (red && ph.kind === "shield") ? 0.6 : 0.18; c.fill(); c.globalAlpha = 1;
           c.strokeStyle = C.live; c.lineWidth = 2.5; c.stroke();
-          if (k >= 0.5) text(c, "Shield", 0, 48, 10, C.live, mono);
+          if (k >= 0.5) text(c, "Shield", 40, -24, 10, C.live, mono, "left");
         }) });
       }
 
@@ -188,6 +187,16 @@ export function FloorRing({ phases, index, elapsed, reduced, label }: RingProps)
       }) });
 
       items.sort((a, b) => a.y - b.y).forEach((it) => it.draw());
+      // the injection bubble sits above every seller's tag and label (never on another seller's), tail toward its own ghost
+      for (const b of bubbles) {
+        c.font = `500 ${labelSize(10)}px ${mono}`;
+        const bh = Math.max(24, labelSize(10) + 12), bw = Math.min(930, Math.max(236, c.measureText("HIDDEN INSTRUCTION IN THE LISTING").width + 24)), bx = Math.min(Math.max(b.x - bw / 2, 16), 960 - 16 - bw);
+        const by = Math.max(-8, Math.min(b.top, ...tops) - bh);
+        c.fillStyle = C.coral; c.beginPath(); c.roundRect(bx, by, bw, bh, 8); c.fill();
+        const tx = Math.min(Math.max(b.x, bx + 14), bx + bw - 14);
+        c.beginPath(); c.moveTo(tx - 6, by + bh); c.lineTo(tx, by + bh + 8); c.lineTo(tx + 6, by + bh); c.closePath(); c.fill();
+        text(c, "Hidden instruction in the listing", bx + bw / 2, by + bh / 2, labelSize(10), C.tagBg, mono);
+      }
       // front posts and ropes, over the pieces
       for (const x of [120, 840]) { line(x, 430, x, 340, C.line, 3, 0.75); disc(x, 338, 6, C.line); }
       for (const y of [399, 374, 349]) line(120, y, 840, y, C.rope, 1.5, 1);
