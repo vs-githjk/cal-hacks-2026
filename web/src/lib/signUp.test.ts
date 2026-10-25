@@ -44,23 +44,35 @@ test("signUpErrorText maps throttle, already and empty, and passes other text th
 
 test("cleanSignUp: name is required and capped", () => {
   assert.deepEqual(cleanSignUp("  ", ""), { error: "Enter a name." });
-  assert.deepEqual(cleanSignUp("x".repeat(41), ""), { error: "Keep the name under 40 characters." });
-  assert.deepEqual(cleanSignUp(" Asha ", ""), { displayName: "Asha" });
-  assert.deepEqual(cleanSignUp("x".repeat(40), "   "), { displayName: "x".repeat(40) });
+  assert.deepEqual(cleanSignUp("x".repeat(41), "+14155550100"), { error: "Keep the name under 40 characters." });
+  assert.deepEqual(cleanSignUp(" Asha ", "+14155550100"), { displayName: "Asha", phone: "+14155550100" });
+  assert.deepEqual(cleanSignUp("x".repeat(40), "+14155550100"), { displayName: "x".repeat(40), phone: "+14155550100" });
+});
+
+// #449 PL-15: the phone is required, because every purchase is approved by a call to it.
+test("#449 PL-15 cleanSignUp: a blank phone is refused with a plain ask, never an account without one", () => {
+  const ask = { error: "Enter the phone we call to approve a purchase." };
+  assert.deepEqual(cleanSignUp("Asha", ""), ask);
+  assert.deepEqual(cleanSignUp("Asha", "   "), ask);
+  assert.deepEqual(cleanSignUp("Asha", " ()- "), { error: "Add your country code, like +44 20 7946 0958." });
 });
 
 test("cleanSignUp: US numbers become E.164, other countries need a plus", () => {
   assert.deepEqual(cleanSignUp("Asha", "(415) 555-0100"), { displayName: "Asha", phone: "+14155550100" });
   assert.deepEqual(cleanSignUp("Asha", "1 415 555 0100"), { displayName: "Asha", phone: "+14155550100" });
   assert.deepEqual(cleanSignUp("Asha", "+44 20 7946 0958"), { displayName: "Asha", phone: "+442079460958" });
-  assert.deepEqual(cleanSignUp("Asha", "   "), { displayName: "Asha" });
-  const err = { error: "Add your country code, like +44 20 7946 0958, or leave it blank." };
+  const err = { error: "Add your country code, like +44 20 7946 0958." };
   assert.deepEqual(cleanSignUp("Asha", "+0123"), err);
   assert.deepEqual(cleanSignUp("Asha", "12345"), err);
 });
 
 test("signUpErrorText: the market's E.164 phone refusal reads plainly", () => {
   assert.match(signUpErrorText("phone must start with + and a country code, like +14155550100"), /country code/);
+  assert.doesNotMatch(signUpErrorText("phone must start with + and a country code, like +14155550100"), /leave it blank/);
+});
+
+test("#449 PL-15 signUpErrorText: the market's missing-phone refusal reads plainly", () => {
+  assert.equal(signUpErrorText("a phone number is required: purchases are approved by a call"), "Enter the phone we call to approve a purchase.");
 });
 
 test("pairCodeToSend uppercases, drops inner spaces and keeps the hyphen", () => {

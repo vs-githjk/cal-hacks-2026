@@ -482,7 +482,7 @@ export function vetoFromRows(checks: readonly CheckRow[], results: readonly Resu
   };
 }
 
-/** The latest Shield block or quarantine in this round, with the rule ids the row stores. */
+/** The latest Smell Test (Shield) block or quarantine in this round, with the rule ids the row stores. */
 export function shieldFromRows(checks: readonly CheckRow[], roundId: string | undefined): ShieldView | null {
   const c = latestOf(checks.filter((x) => x.roundId === roundId && x.kind === "shield" && x.result !== "allow"));
   if (!c) return null;
