@@ -41,8 +41,8 @@ export function BuyerAppShell({ children }: { children: ReactNode }) {
         </nav>
         <span className="flex items-center gap-2 text-[14px] text-muted">
           {name}
-          {/* Self-serve accounts (sign_up_buyer, ids b_...) are real; only the operator-paired demo buyer is SIM. */}
-          {!buyerId.startsWith("b_") && <OriginChip origin="SIM" label="SIM demo pairing" />}
+          {/* The market's sellers and payments are SIM tonight: self-serve accounts (ids b_...) say SIM market, the operator-paired buyer says SIM demo pairing. */}
+          <OriginChip origin="SIM" label={buyerId.startsWith("b_") ? "SIM market" : "SIM demo pairing"} />
         </span>
       </div>
       <MemoryProvider>{children}</MemoryProvider>

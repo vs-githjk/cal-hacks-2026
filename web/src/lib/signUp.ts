@@ -22,7 +22,7 @@ export function signUpErrorText(message: string): string {
   if (!m) return "Sign-up failed. Try again.";
   if (/no such reducer|reducer.*not found/i.test(m)) return "Sign-up is not live on this market yet.";
   if (/display name required/i.test(m)) return "Enter a name.";
-  if (/phone must be/i.test(m)) return "Enter a full phone number, or leave it blank.";
+  if (/phone must/i.test(m)) return "Add your country code, like +44 20 7946 0958, or leave it blank.";
   if (/busy|throttl|too many|rate/i.test(m)) return "Lots of people are signing up right now. Wait a few minutes and try again.";
   if (/already/i.test(m)) return "This browser already has an account. Use Continue below, or open a private window to start fresh.";
   return m;
@@ -34,8 +34,10 @@ export function cleanSignUp(name: string, phone: string): { displayName: string;
   if (displayName.length > 40) return { error: "Keep the name under 40 characters." };
   const raw = phone.trim();
   if (!raw) return { displayName };
-  const cleaned = (raw.startsWith("+") ? "+" : "") + raw.replace(/\D/g, "");
-  const digits = cleaned.replace(/\D/g, "").length;
-  if (digits < 7 || digits > 20) return { error: "Enter a full phone number, or leave it blank." };
-  return { displayName, phone: cleaned };
+  const cleaned = raw.replace(/[\s\-.()]/g, "");
+  const ask = { error: "Add your country code, like +44 20 7946 0958, or leave it blank." };
+  if (cleaned.startsWith("+")) return /^\+[1-9][0-9]{6,14}$/.test(cleaned) ? { displayName, phone: cleaned } : ask;
+  if (/^[0-9]{10}$/.test(cleaned)) return { displayName, phone: `+1${cleaned}` };
+  if (/^1[0-9]{10}$/.test(cleaned)) return { displayName, phone: `+${cleaned}` };
+  return ask;
 }

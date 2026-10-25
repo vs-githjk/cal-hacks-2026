@@ -9,6 +9,7 @@ import {
   applyDictation,
   buildGoalRequest,
   canFindOffers,
+  catalogSku,
   postGoalArgs,
   dictate,
   draftFor,
@@ -23,7 +24,7 @@ import {
 const TODAY = new Date(2026, 9, 24, 12, 0, 0); // local noon, 24 Oct 2026
 const draft = (over: Partial<GoalDraft> = {}): GoalDraft => ({ text: "RTX 5070 under $650", cap: "", deadline: "", conditions: [], ...over });
 const build = (over: Partial<GoalDraft> = {}) => buildGoalRequest(draft(over), "req-1", TODAY);
-const request = (over: Partial<GoalRequest> = {}): GoalRequest => ({ requestId: "req-1", requestText: "RTX 5070", cap: null, deadline: null, conditions: [], ownedPartIds: [], ...over });
+const request = (over: Partial<GoalRequest> = {}): GoalRequest => ({ requestId: "req-1", requestText: "RTX 5070 Ti", cap: null, deadline: null, conditions: [], ownedPartIds: [], ...over });
 const problemFields = (r: ReturnType<typeof build>) => (r.ok ? [] : r.problems.map((p) => p.field));
 
 // ---- building the request: any product, exact words, no second parser
@@ -232,7 +233,7 @@ test("every message the buyer can read here is free of em and en dashes", async 
 // ---- posting the goal to the market (reducers.postGoal)
 
 test("postGoalArgs maps a request with a cap and a deadline to the exact reducer args", () => {
-  const args = postGoalArgs(request({ requestText: "  RTX 5070  ", cap: 650, deadline: "2026-11-02" }), "b_ab12cd34", TODAY);
+  const args = postGoalArgs(request({ requestText: "  RTX 5070 Ti  ", cap: 650, deadline: "2026-11-02" }), "b_ab12cd34", TODAY);
   assert.deepEqual(args, {
     id: "g_req1",
     buyerId: "b_ab12cd34",
@@ -240,8 +241,8 @@ test("postGoalArgs maps a request with a cap and a deadline to the exact reducer
     cap: 650,
     deadline: "2026-11-02T23:59:00Z",
     poNumber: "",
-    origin: "LIVE",
-    items: [{ skuSpec: "RTX 5070", condition: "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
+    origin: "SIM",
+    items: [{ skuSpec: "rtx 5070 ti", condition: "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
   });
 });
 
@@ -266,4 +267,31 @@ test("canFindOffers is true for a b_ buyer that is not busy, false for no buyer 
   assert.equal(canFindOffers("b_ab12cd34", false), true);
   assert.equal(canFindOffers(null, false), false);
   assert.equal(canFindOffers("b_ab12cd34", true), false);
+});
+
+test("catalogSku maps typed part names to the exact seller sku", () => {
+  const cases: [string, string | null][] = [
+    ["RTX 5070 Ti", "rtx 5070 ti"],
+    ["rtx5070ti under $900", "rtx 5070 ti"],
+    ["4070 Super", "rtx 4070 super 12gb"],
+    ["RX 7800 XT", "rx 7800 xt 16gb"],
+    ["850W power supply", "psu 850w"],
+    ["a power supply", "psu 750w"],
+    ["mid-tower case", "case"],
+    ["graphics card under $600", "rtx 4070 super 12gb"],
+    ["RTX 5090", null],
+    ["a keyboard", null],
+  ];
+  for (const [text, sku] of cases) assert.equal(catalogSku(text), sku, text);
+});
+
+test("postGoalArgs says plainly when sellers do not carry the part", () => {
+  const args = postGoalArgs(request({ requestText: "a keyboard", cap: 90 }), "b_ab12cd34", TODAY);
+  assert.ok("error" in args);
+  assert.match(args.error, /don't carry that part/);
+});
+
+test("catalogSku: a price is not a GPU model", () => {
+  assert.equal(catalogSku("graphics card under $1000"), "rtx 4070 super 12gb");
+  assert.equal(catalogSku("a 5090 graphics card"), null);
 });

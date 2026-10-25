@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { reducers } from "@/module_bindings";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
 import {
+  CATALOG,
   CONDITIONS,
   EMPTY_DRAFT,
   buildGoalRequest,
@@ -133,6 +134,19 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
         placeholder="For example: a 1 TB NVMe SSD under $90 by Friday"
         className="min-h-[72px] w-full resize-y rounded-lg border border-line bg-soft px-3 py-2.5 text-[18px] leading-snug aria-[invalid=true]:border-coral"
       />
+
+      <div className="mt-2 flex flex-wrap gap-2" aria-label="Parts sellers carry tonight">
+        {CATALOG.map((c) => (
+          <button
+            key={c.sku}
+            type="button"
+            onClick={() => change({ text: c.label })}
+            className="min-h-11 rounded-lg border border-line px-3 text-[13px]"
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
 
       <details className="mt-1" open={detailsOpen || detailsBad} onToggle={(e) => setDetailsOpen(e.currentTarget.open)}>
         <summary className="inline-flex min-h-11 cursor-pointer items-center text-[14px] text-muted">

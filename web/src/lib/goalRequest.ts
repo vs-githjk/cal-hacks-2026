@@ -91,8 +91,34 @@ export interface PostGoalArgs {
   items: { skuSpec: string; condition: string; variant: string; quantity: number; skippedOwnedPartId: string }[];
 }
 
+/** The full catalog sellers stock tonight. Sellers match need items by exact lowercase sku_spec. */
+export const CATALOG = [
+  { sku: "rtx 5070 ti", label: "RTX 5070 Ti" },
+  { sku: "rtx 4070 super 12gb", label: "RTX 4070 Super" },
+  { sku: "rx 7800 xt 16gb", label: "RX 7800 XT" },
+  { sku: "psu 850w", label: "850W PSU" },
+  { sku: "psu 750w", label: "750W PSU" },
+  { sku: "case", label: "PC case" },
+] as const;
+
+/** The seller sku for typed words, or null when sellers do not carry it. First match wins. */
+export function catalogSku(text: string): string | null {
+  const t = text.toLowerCase();
+  if (/\b(?:rtx\s*)?5070\s*ti\b/.test(t)) return "rtx 5070 ti";
+  if (/\b(?:rtx\s*)?4070\s*super\b/.test(t)) return "rtx 4070 super 12gb";
+  if (/\b(?:rx\s*)?7800\s*xt\b/.test(t)) return "rx 7800 xt 16gb";
+  if (/\b850\s*-?\s*w/.test(t)) return "psu 850w";
+  if (/\b750\s*-?\s*w/.test(t) || /\b(?:psu|power supply)\b/.test(t)) return "psu 750w";
+  if (/\b(?:case|mid-tower|full-tower|tower)\b/.test(t)) return "case";
+  if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) return null;
+  if (/\b(?:gpu|graphics card|video card)\b/.test(t)) return "rtx 4070 super 12gb";
+  return null;
+}
+
 export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date): PostGoalArgs | { error: string } {
   if (request.cap === null) return { error: "Add a top price so sellers know your cap." };
+  const skuSpec = catalogSku(request.requestText);
+  if (skuSpec === null) return { error: "Sellers tonight don't carry that part. Pick one below: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case." };
   const day = request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7));
   return {
     id: `g_${request.requestId.replace(/[^A-Za-z0-9]/g, "").slice(0, 12)}`,
@@ -101,8 +127,8 @@ export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date)
     cap: request.cap,
     deadline: `${day}T23:59:00Z`,
     poNumber: "",
-    origin: "LIVE",
-    items: [{ skuSpec: request.requestText.trim(), condition: request.conditions[0] ?? "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
+    origin: "SIM",
+    items: [{ skuSpec, condition: request.conditions[0] ?? "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
   };
 }
 

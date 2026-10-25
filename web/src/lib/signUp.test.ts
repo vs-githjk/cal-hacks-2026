@@ -38,7 +38,7 @@ test("signUpErrorText maps throttle, already and empty, and passes other text th
   assert.match(signUpErrorText("already signed up: this identity is a seller"), /already has an account/);
   assert.match(signUpErrorText("sign-ups are busy right now, try again in a few minutes"), /Lots of people/);
   assert.equal(signUpErrorText("display name required"), "Enter a name.");
-  assert.match(signUpErrorText("phone must be 7 to 20 digits, optionally starting with +"), /full phone number/);
+  assert.match(signUpErrorText("phone must be 7 to 20 digits, optionally starting with +"), /country code/);
   assert.equal(signUpErrorText("No such reducer sign_up_buyer"), "Sign-up is not live on this market yet.");
 });
 
@@ -49,9 +49,16 @@ test("cleanSignUp: name is required and capped", () => {
   assert.deepEqual(cleanSignUp("x".repeat(40), "   "), { displayName: "x".repeat(40) });
 });
 
-test("cleanSignUp: phone keeps digits and a leading plus, needs 7 to 20 digits like the market", () => {
-  assert.deepEqual(cleanSignUp("Asha", "(415) 555-0100"), { displayName: "Asha", phone: "4155550100" });
-  assert.deepEqual(cleanSignUp("Asha", "+1 415 555 0100"), { displayName: "Asha", phone: "+14155550100" });
-  assert.deepEqual(cleanSignUp("Asha", "555-010"), { error: "Enter a full phone number, or leave it blank." });
-  assert.deepEqual(cleanSignUp("Asha", "1".repeat(21)), { error: "Enter a full phone number, or leave it blank." });
+test("cleanSignUp: US numbers become E.164, other countries need a plus", () => {
+  assert.deepEqual(cleanSignUp("Asha", "(415) 555-0100"), { displayName: "Asha", phone: "+14155550100" });
+  assert.deepEqual(cleanSignUp("Asha", "1 415 555 0100"), { displayName: "Asha", phone: "+14155550100" });
+  assert.deepEqual(cleanSignUp("Asha", "+44 20 7946 0958"), { displayName: "Asha", phone: "+442079460958" });
+  assert.deepEqual(cleanSignUp("Asha", "   "), { displayName: "Asha" });
+  const err = { error: "Add your country code, like +44 20 7946 0958, or leave it blank." };
+  assert.deepEqual(cleanSignUp("Asha", "+0123"), err);
+  assert.deepEqual(cleanSignUp("Asha", "12345"), err);
+});
+
+test("signUpErrorText: the market's E.164 phone refusal reads plainly", () => {
+  assert.match(signUpErrorText("phone must start with + and a country code, like +14155550100"), /country code/);
 });

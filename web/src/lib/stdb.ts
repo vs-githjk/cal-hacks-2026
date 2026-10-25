@@ -21,28 +21,14 @@ function saveToken(token: string) {
   }
 }
 
-function clearToken() {
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-  } catch {
-    // Blocked storage: nothing to clear.
-  }
-}
-
 export function connectionBuilder() {
   const stored = readToken();
   return DbConnection.builder()
     .withUri(STDB_URI)
     .withDatabaseName(STDB_DB)
     .withToken(stored)
-    .onConnect((_conn, _identity, token) => saveToken(token))
-    .onConnectError(() => {
-      // A token from a reset database must not leave the visitor stuck connecting: drop it and reload once with a fresh identity.
-      if (stored) {
-        clearToken();
-        location.reload();
-      }
-    });
+    // No token clearing on connect errors: a browser WebSocket failure cannot tell an auth rejection from flaky data, and a token with no role already routes to sign-up.
+    .onConnect((_conn, _identity, token) => saveToken(token));
 }
 
 export const toDate = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
