@@ -2,6 +2,7 @@
 // Small shared pieces. Every color comes from tokens.css; no literal colors here.
 import type { ReactNode } from "react";
 import { formatMoney } from "@/lib/money";
+import { recordedLine } from "@/lib/recorded";
 import { safeUrl } from "@/lib/url";
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
@@ -62,6 +63,19 @@ export function RunsLocally({ what, children }: { what: string; children: ReactN
         to run it on your own machine.
       </p>
     </Card>
+  );
+}
+
+/** The banner over a recorded snapshot on the hosted site (#398): SIM, when it was captured, and where the live version runs. */
+export function RecordedBanner({ at }: { at: string }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[10px] border border-line bg-panel px-3 py-2.5 text-[13px] text-ink-2">
+      <OriginChip origin="SIM" />
+      <span>{recordedLine(at)}</span>
+      <a className="font-medium underline underline-offset-2" href={README_URL} target="_blank" rel="noreferrer">
+        See the README
+      </a>
+    </p>
   );
 }
 

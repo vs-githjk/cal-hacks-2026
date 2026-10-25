@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Card, Code, Label, OriginChip, RunsLocally } from "@/components/ui";
+import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
+import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import {
-  CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, slugify, submitConfig,
+  CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
@@ -32,6 +33,9 @@ export default function SellPage() {
   const [shops, setShops] = useState<ShopRow[] | null>(null);
   const [needs, setNeeds] = useState<OpenNeed[] | null>(null);
   const kit = useApiBase(SELLER_KIT_URL);
+  // the hosted site shows the recorded SIM snapshot (#398); locally, what the kit answers
+  const shownShops = kit.local ? parseShops(recorded.shops) : shops;
+  const shownNeeds = kit.local ? parseNeeds(recorded.needs) : needs;
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const [s, n] = await Promise.all([fetchShops(signal), fetchNeeds(signal)]);
@@ -94,10 +98,13 @@ export default function SellPage() {
       </header>
 
       {kit.local ? (
+        <>
+        <RecordedBanner at={recorded.recorded_at} />
         <RunsLocally what="The Seller Kit">
           It checks your shop and writes a config file that your own seller agent runs from, on your machine. This hosted page cannot reach it,
-          so nothing here is sent anywhere.
+          so the form is not shown and nothing here is sent anywhere. Below is what the kit answered when it was recorded.
         </RunsLocally>
+        </>
       ) : (
       <>
       {offline && (
@@ -241,6 +248,8 @@ export default function SellPage() {
           </button>
         </div>
       </form>
+      </>
+      )}
 
       {created && (
         <Card stripe="mint">
@@ -261,13 +270,13 @@ export default function SellPage() {
 
       <Card>
         <Label>Shops written so far</Label>
-        {shops === null ? (
+        {shownShops === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
-        ) : shops.length === 0 ? (
+        ) : shownShops.length === 0 ? (
           <p className="text-muted">None yet.</p>
         ) : (
           <ul className="grid gap-2">
-            {shops.map((s) => (
+            {shownShops.map((s) => (
               <li key={s.id} className="text-[14px]">
                 <strong>{s.name}</strong> <OriginChip origin={s.origin} />{" "}
                 <span className="text-muted">
@@ -281,13 +290,13 @@ export default function SellPage() {
 
       <Card>
         <Label>Open needs you could bid on</Label>
-        {needs === null ? (
+        {shownNeeds === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
-        ) : needs.length === 0 ? (
+        ) : shownNeeds.length === 0 ? (
           <p className="text-muted">No open needs.</p>
         ) : (
           <ul className="grid gap-2">
-            {needs.map((n) => (
+            {shownNeeds.map((n) => (
               <li key={n.id} className="text-[14px]">
                 {n.quantity} x <strong>{n.sku_spec}</strong>{" "}
                 <span className="text-muted">
@@ -301,8 +310,6 @@ export default function SellPage() {
         )}
         <p className="mt-2 text-[12px] text-muted">The buyer&apos;s spending cap is never shown to sellers.</p>
       </Card>
-      </>
-      )}
     </div>
   );
 }

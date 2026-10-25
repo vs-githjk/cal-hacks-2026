@@ -24,7 +24,7 @@ import {
   type Tone,
   type Vendor,
 } from "@/lib/hyphenate";
-import { Card, Code, Label, OriginChip, RunsLocally, Stat, Tag, Verdict, type VerdictKind } from "./ui";
+import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally, Stat, Tag, Verdict, type VerdictKind } from "./ui";
 
 const TONE_VERDICT: Record<Tone, VerdictKind> = { bad: "veto", warn: "caution", good: "buy", neutral: "out" };
 const TONE_BORDER: Record<Tone, "coral" | "amber" | "mint" | "ink"> = { bad: "coral", warn: "amber", good: "mint", neutral: "ink" };
@@ -295,6 +295,8 @@ export interface HyphenateScreenProps {
   snapshot: Snapshot | null;
   onLoadMoment?: () => void;
   loadingMoment?: boolean;
+  /** Set on the hosted site: the snapshot is the recorded one, captured at this time (#398). */
+  recordedAt?: string;
 }
 
 export function HyphenateScreen(p: HyphenateScreenProps) {
@@ -314,6 +316,7 @@ export function HyphenateScreen(p: HyphenateScreenProps) {
       <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
         A simulated 40-person studio buying computer gear. The people, vendors, bills and bank record are SIM; price references are MIRROR. No model makes a control decision: every line below names the rule or the person that decided, with the reason.
       </p>
+      {p.recordedAt && <RecordedBanner at={p.recordedAt} />}
       {p.state === "local" ? (
         <RunsLocally what="Hyphenate">
           Its purchasing and accounts payable seats read a local API on your machine. This hosted page cannot reach it, so it shows no rows rather than
