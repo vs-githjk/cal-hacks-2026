@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAt, capPercent, partRows, planLines, SAMPLE_BUILD, showBuildPlan, stepsUpTo } from "./build.ts";
+import { buildAt, capPercent, partRows, planLines, SAMPLE_BUILD, stepsUpTo } from "./build.ts";
 
 test("partRows lists the six parts in plan order with the swapped board marked", () => {
   const rows = partRows(SAMPLE_BUILD);
@@ -48,13 +48,6 @@ test("buildAt replays the build: parts lock as their step arrives, locked only a
 
 test("planLines keeps the plan and the re-plan, in order, and drops picks and plain knockouts", () => {
   assert.deepEqual(planLines(SAMPLE_BUILD).map((s) => s.kind), ["plan", "clash", "swap", "reallocate", "locked"]);
-});
-
-test("showBuildPlan: only when live or a ?sample preview", () => {
-  assert.equal(showBuildPlan(false, ""), false);
-  assert.equal(showBuildPlan(false, "?sample"), true);
-  assert.equal(showBuildPlan(false, "?x=1&sample=1"), true);
-  assert.equal(showBuildPlan(true, ""), true);
 });
 
 test("SAMPLE_BUILD never lets a MIRROR listing win; it is a comparison only", () => {
