@@ -1,0 +1,113 @@
+[
+ {
+  "id": "bestbuy:b5c7bb61eeb2",
+  "category": "memory",
+  "name": "CORSAIR - Vengeance RGB 32GB (2 x 16GB) 288-Pin PC RAM DDR5 6000 (PC5 48000) Desktop Memory Model CMH32GX5M2B6000Z30W - White",
+  "model_number": "CMH32GX5M2B6000Z30W",
+  "condition": "new",
+  "attrs": {
+   "type": "DDR5",
+   "speed_mhz": 6000,
+   "modules": 2,
+   "form": "DIMM"
+  },
+  "price": 678.49,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/corsair-vengeance-rgb-32gb-2-x-16gb-288-pin-pc-ram-ddr5-6000-pc5-48000-desktop-memory-model-cmh32gx5m2b6000z30w-white/J39TSCHWTK/sku/12296914",
+  "snapshot_id": "bestbuy-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:00+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/corsair-vengeance-rgb-32gb-2-x-16gb-288-pin-pc-ram-ddr5-6000-pc5-48000-desktop-memory-model-cmh32gx5m2b6000z30w-white/J39TSCHWTK/sku/12296914",
+   "price": 678.49,
+   "was_price": 678.49,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "CMH32GX5M2B6000Z30W"
+ },
+ {
+  "id": "bestbuy:6bf21a2f4f6a",
+  "category": "memory",
+  "name": "G.SKILL - Trident Z5 Neo RGB DDR5 6000 32GB (2x16GB) AMD EXPO RAM - Black",
+  "model_number": "F5-6000J3038F16GX2-TZ5NR",
+  "condition": "new",
+  "attrs": {},
+  "price": 741.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/g-skill-trident-z5-neo-rgb-ddr5-6000-32gb-2x16gb-amd-expo-ram-black/J36V4SLWXV/sku/12068533",
+  "snapshot_id": "bestbuy-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:00+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/g-skill-trident-z5-neo-rgb-ddr5-6000-32gb-2x16gb-amd-expo-ram-black/J36V4SLWXV/sku/12068533",
+   "price": 741.99,
+   "was_price": 741.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:3f8c63358855",
+  "category": "memory",
+  "name": "CORSAIR - VENGEANCE RGB 32GB (2x16GB) DDR5 6000MHz C30 AMD EXPO & Intel XMP UDIMM Desktop Memory - Gray",
+  "model_number": "CMH32GX5M2B6000Z30K",
+  "condition": "new",
+  "attrs": {
+   "type": "DDR5",
+   "speed_mhz": 6000,
+   "modules": 2,
+   "form": "DIMM"
+  },
+  "price": 569.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/corsair-vengeance-rgb-32gb-2x16gb-ddr5-6000mhz-c30-amd-expo-intel-xmp-udimm-desktop-memory-gray/J39QHH5PXG/sku/6580809",
+  "snapshot_id": "bestbuy-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:00+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/corsair-vengeance-rgb-32gb-2x16gb-ddr5-6000mhz-c30-amd-expo-intel-xmp-udimm-desktop-memory-gray/J39QHH5PXG/sku/6580809",
+   "price": 569.99,
+   "was_price": 639.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "CMH32GX5M2B6000Z30K"
+ },
+ {
+  "id": "bestbuy:404d8f39b299",
+  "category": "memory",
+  "name": "CORSAIR - Vengeance 32GB (2 x 16GB) 288-Pin PC RAM DDR5 6000 (PC5 48000) Desktop Memory Model CMK32GX5M2B6000Z30W - White",
+  "model_number": "CMK32GX5M2B6000Z30W",
+  "condition": "new",
+  "attrs": {
+   "type": "DDR5",
+   "speed_mhz": 6000,
+   "modules": 2,
+   "form": "DIMM"
+  },
+  "price": 663.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/corsair-vengeance-32gb-2-x-16gb-288-pin-pc-ram-ddr5-6000-pc5-48000-desktop-memory-model-cmk32gx5m2b6000z30w-white/J39TSCHWWQ/sku/12296928",
+  "snapshot_id": "bestbuy-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:00+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/corsair-vengeance-32gb-2-x-16gb-288-pin-pc-ram-ddr5-6000-pc5-48000-desktop-memory-model-cmk32gx5m2b6000z30w-white/J39TSCHWWQ/sku/12296928",
+   "price": 663.99,
+   "was_price": 678.0,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "CMK32GX5M2B6000Z30W"
+ }
+]

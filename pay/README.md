@@ -43,18 +43,28 @@ mark_used(m, store=store, deal_id="deal-A", amount=1119.00, payee="seller-x")   
   `ttl_too_long`, `schema_invalid`, `not_approved`, `no_approval_id`, `deal_mismatch`, `amount_mismatch`,
   `payee_mismatch`, `buyer_mismatch`, `bad_amount`, `replayed_mandate`.
 
-## TAP-style signing (`pay/tap.py`)
-Signs every buyer-agent request with an RFC 9421 HTTP Message Signature (Ed25519). The signature covers
-`@method`, `@authority`, `@path`, `@query`, `content-digest` and `mandate-hash`, with params `created`, `expires`,
-`keyid`, `alg="ed25519"`, `nonce` and `tag="agent-browser-auth"`. The query string is covered (changing `?x=1` to `?x=2` fails); the money fields
-live in the signed body.
+## Visa Trusted Agent Protocol signing (`pay/tap.py`)
+Signs every buyer-agent request the way Visa's sample agent and CDN verifier do (open repo
+`visa/trusted-agent-protocol`, commit `16d59bdf`, Ed25519 path): RFC 9421, label `sig2`, covered components
+`"@authority" "@path"`, params in this order `created; expires; keyId; alg="ed25519"; nonce; tag`, plus a
+`Signature-Agent: "https://..."` header. `tag` is `agent-payer-auth` for a charge (a browsing signature,
+`agent-browser-auth`, cannot authorize one). Verified by our merchant simulator, never by Visa.
+`pay/tests/test_tap_conformance.py` runs our signer through `pay/tests/visa_reference_port.py`, a port of the
+reference verifier (the repo's license points at Visa's developer terms, so it is re-implemented, not copied).
+Not matched: the reference merchant-backend `/verify-signature` endpoint is a separate, older RSA-PSS-only
+format (`sig1`, its own base string); an Ed25519 signer cannot satisfy it.
+
+The reference signature covers only `@authority` and `@path`, so method, query, body digest and mandate hash are
+bound through the nonce: `nonce = <random>.<base64url sha256(method, query, Content-Digest, Mandate-Hash, random)>`.
+The signature covers the nonce, so `?x=1` to `?x=2`, a different body or another deal's hash fails our verifier
+while a Visa merchant still sees an ordinary opaque nonce. The money fields live in the signed body.
 ```python
 from pay.tap import load_private_key, keyring, sign_request, verify_request, attach_signature
 
 priv = load_private_key()                          # path from VISA_TAP_PRIVATE_KEY_PATH
 headers = sign_request(method="POST", url="https://merchant.example/v1/charge",
                        body=body_bytes, mandate=m, private_key=priv)   # Content-Digest, Mandate-Hash,
-attach_signature(m, headers)                                           # Signature-Input, Signature
+attach_signature(m, headers)                                           # Signature-Agent, Signature-Input, Signature
 
 verdict = verify_request(method="POST", url=url, headers=request_headers, body=body_bytes,
                          keys=keyring(public_key), store=store,
@@ -63,12 +73,17 @@ verdict = verify_request(method="POST", url=url, headers=request_headers, body=b
 - Body convention: a JSON object with the mandate under `"mandate"`; the verifier recomputes its hash and
   compares it with the signed `Mandate-Hash` header (pass `mandate=` to bind one explicitly).
 - `verify_request` fails with a reason: `missing_header`, `bad_signature_input`, `bad_component_set`, `bad_alg`,
-  `bad_tag`, `unknown_key`, `ttl_too_long`, `signature_not_yet_valid`, `signature_expired`, `digest_mismatch`
-  (body changed), `bad_signature` (method, host, path, digest or hash header changed), `mandate_mismatch`,
+  `bad_tag`, `bad_signature_agent`, `unknown_key`, `ttl_too_long`, `signature_not_yet_valid`, `signature_expired`, `digest_mismatch`
+  (body changed), `bad_signature` (method, host, path, query, digest or hash header changed), `mandate_mismatch`,
   `mandate_hash_mismatch`, `unbound_mandate` (neither an expected hash nor a mandate in the body), `replayed_nonce`,
   plus every `mandate.verify` reason (`expired`, `already_used`, `denied`, ...) and `replayed_mandate` (the mandate nonce
   is already spent in the store). The nonce is recorded only after every other check passes, so a
   forged request cannot burn a real one. Signatures live at most 300 s (default 60 s).
+- `tap_status(verdict)` turns a verdict into what the approval card shows: `TAP signature verified`,
+  `Replay refused` (`replayed_nonce` or `replayed_mandate`) or `TAP signature refused`. `MerchantSim.handle`
+  returns it as `outcome["tap"]`.
+- `Signature-Agent` defaults to a placeholder `.example` URL; set `VISA_TAP_SIGNATURE_AGENT` to the real
+  directory URL.
 - Keys: set `VISA_TAP_PRIVATE_KEY_PATH` to an Ed25519 PEM kept outside the repo. `generate_keypair(path)` writes a
   new one (mode 0600, never overwrites) for dev and tests; tests use a throwaway key in a temp dir. `*.pem` is
   gitignored. Nothing in this folder reads `.env`.

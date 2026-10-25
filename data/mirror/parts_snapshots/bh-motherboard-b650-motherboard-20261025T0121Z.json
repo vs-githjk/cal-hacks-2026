@@ -1,0 +1,106 @@
+[
+ {
+  "id": "bh:8644e326163c",
+  "category": "motherboard",
+  "name": "ASUS ROG STRIX B650-A GAMING WIFI AM5 ATX Motherboard",
+  "model_number": "ROG STRIX B650-A GAMING WIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1730802-REG/asus_rog_strix_b650_a_gaming.html",
+  "snapshot_id": "bh-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1730802-REG/asus_rog_strix_b650_a_gaming.html",
+   "price": 159.99,
+   "stock": "special_order",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "special_order"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:7ed5475d1da6",
+  "category": "motherboard",
+  "name": "ASUS B650E MAX GAMING WIFI AM5 ATX Motherboard",
+  "model_number": "B650E MAX GAMING WIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 167.32,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1957666-REG/asus_b650e_max_gaming_wifi.html",
+  "snapshot_id": "bh-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1957666-REG/asus_b650e_max_gaming_wifi.html",
+   "price": 167.32,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:b0b229824e87",
+  "category": "motherboard",
+  "name": "ASUS TUF GAMING B650E-PLUS WIFI AM5 ATX Motherboard",
+  "model_number": "TUF GAMING B650E-PLUS WIFI",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "memory_slots": 4,
+   "memory_max_speed_mhz": 8000,
+   "form_factor": "ATX",
+   "m2_slots": 3
+  },
+  "price": 149.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1896718-REG/asus_tuf_gaming_b650e_plus_wifi.html",
+  "snapshot_id": "bh-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1896718-REG/asus_tuf_gaming_b650e_plus_wifi.html",
+   "price": 149.99,
+   "stock": "special_order",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "special_order"
+  },
+  "maker_model": "TUF GAMING B650E-PLUS WIFI"
+ },
+ {
+  "id": "bh:60cd2ce346f3",
+  "category": "motherboard",
+  "name": "Gigabyte B650 AORUS ELITE AX AM5 ATX Motherboard",
+  "model_number": "B650 AORUS ELITE AX",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1736690-REG/gigabyte_b650_aorus_elite_ax.html",
+  "snapshot_id": "bh-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1736690-REG/gigabyte_b650_aorus_elite_ax.html",
+   "price": 159.99,
+   "stock": "discontinued",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "discontinued"
+  },
+  "maker_model": null
+ }
+]

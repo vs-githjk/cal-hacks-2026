@@ -239,10 +239,24 @@ def mailbox_ready(role: str) -> bool:
     return not (mailbox_on(role) and public_seed(role))
 
 
+AVATARS = Path(__file__).resolve().parent / "avatars"
+AVATAR_BASE = "https://raw.githubusercontent.com/vs-githjk/cal-hacks-2026/main/agents/avatars"
+
+
+def avatar_url(role: str) -> str | None:
+    """Public URL of the role's avatar (agents/avatars/<role>.png, served from the public repo), or None when the
+    role has no avatar file. AGENT_AVATAR_BASE overrides the host, e.g. to serve them from the web app."""
+    if not (AVATARS / f"{role}.png").is_file():
+        return None
+    return f"{os.getenv('AGENT_AVATAR_BASE', AVATAR_BASE).rstrip('/')}/{role}.png"
+
+
 def agent_args(role: str, port: int, **profile) -> dict:
     """Constructor args for an agent. AGENTS_MAILBOX=1 puts it on Agentverse (register once with
     `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
-    readme_path, handle, published to Agentverse on connect."""
+    readme_path, handle, avatar_url (defaults to the role's avatar), published to Agentverse on connect."""
+    if "avatar_url" not in profile and (url := avatar_url(role)):
+        profile["avatar_url"] = url
     args = dict(seed=SEEDS[role], port=port, publish_agent_details=True, **profile)
     if mailbox_on(role):
         if public_seed(role):
