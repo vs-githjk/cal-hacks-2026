@@ -56,6 +56,9 @@ export default function Home() {
             <Link href="/market" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
               Watch the round <span aria-hidden>→</span>
             </Link>
+            <Link href="/start" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
+              Start as a buyer
+            </Link>
             <Link href="/buyer" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
               Open the buyer screen
             </Link>

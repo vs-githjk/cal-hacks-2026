@@ -21,12 +21,36 @@ function saveToken(token: string) {
   }
 }
 
+function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Blocked storage: nothing to clear.
+  }
+}
+
 export function connectionBuilder() {
+  const stored = readToken();
   return DbConnection.builder()
     .withUri(STDB_URI)
     .withDatabaseName(STDB_DB)
-    .withToken(readToken())
-    .onConnect((_conn, _identity, token) => saveToken(token));
+    .withToken(stored)
+    .onConnect((_conn, _identity, token) => saveToken(token))
+    .onConnectError(() => {
+      // A token from a reset database must not leave the visitor stuck connecting: drop it and reload once with a fresh identity.
+      if (stored) {
+        clearToken();
+        location.reload();
+      }
+    });
+}
+
+// Switches to the generated reducers.signUpBuyer binding once the market reducer lands.
+export async function signUpBuyer(conn: unknown, args: { displayName: string; phone?: string }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reducers = (conn as any)?.reducers;
+  if (typeof reducers?.signUpBuyer !== "function") throw new Error("Sign-up is not live on this market yet.");
+  await reducers.signUpBuyer(args);
 }
 
 export const toDate = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));

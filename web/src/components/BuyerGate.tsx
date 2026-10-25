@@ -1,16 +1,17 @@
 "use client";
 // The private boundary for every /buyer route. Children render only once the market's own my_role row says this
-// screen is paired as one buyer; the buyer id is read from that row, never from the URL or local state.
+// screen is a buyer (signed up at /start, or paired with a code); a visitor with no role is sent to /start; the buyer id is read from that row, never from the URL or local state.
 // Switching buyers remounts everything below (key), so no private row, draft or pending request outlives the identity it belonged to.
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { buyerSession } from "@/lib/screens";
+import { gateRoute } from "@/lib/signUp";
 import { GoalComposer } from "./GoalComposer";
 import { PanelPreviews } from "./panels";
 
-// Demo pairing: the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
+// Operator pairing (/buyer?pair=1): the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
 const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;
@@ -76,9 +77,15 @@ function PairScreen() {
 export function BuyerGate({ children }: { children: ReactNode }) {
   const conn = useSpacetimeDB();
   const [roles, rolesReady] = useTable(tables.myRole);
-  const session = buyerSession(conn.isActive, rolesReady, roles);
-  if (session.status === "connecting") return <PanelPreviews reason="Connecting to the market. If this stays, the market is not reachable from this page; the panels fill in when it answers." />;
-  if (session.status === "unpaired") {
+  const router = useRouter();
+  // Providers renders client-only, so window exists here.
+  const [wantsPair] = useState(() => new URLSearchParams(window.location.search).get("pair") === "1");
+  const route = gateRoute(conn.isActive, rolesReady, roles, wantsPair);
+  useEffect(() => {
+    if (route === "signup") router.replace("/start");
+  }, [route, router]);
+  if (route === "connecting" || route === "signup") return <PanelPreviews reason="Connecting to the market. If this stays, the market is not reachable from this page; the panels fill in when it answers." />;
+  if (route === "pair") {
     return (
       <div className="grid gap-3.5">
         <GoalComposer buyerId={null} />
@@ -87,8 +94,9 @@ export function BuyerGate({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  const buyerId = roles.find((r) => r.role === "buyer")!.subjectId;
   return (
-    <BuyerIdContext.Provider key={session.buyerId} value={session.buyerId}>
+    <BuyerIdContext.Provider key={buyerId} value={buyerId}>
       {children}
     </BuyerIdContext.Provider>
   );
