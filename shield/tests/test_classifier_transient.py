@@ -112,6 +112,29 @@ def test_no_retry_once_the_total_deadline_has_passed(monkeypatch):
     assert len(calls) == 1 and took < 0.6, (len(calls), took)
 
 
+def test_a_retry_that_hangs_still_ends_inside_the_deadline(monkeypatch):
+    """#371 review: the first call fails at once, the retry hangs; the whole classify must still end near the deadline."""
+    from shield import classifier as c
+    monkeypatch.setattr(c, "_ssl_context", lambda: None)  # a cold CA-bundle load (about 0.1 s) would eat the retry window
+    gate = threading.Event()
+    calls = []
+
+    def flaky(req, timeout=None, context=None):
+        calls.append(1)
+        if len(calls) == 1:
+            raise TimeoutError("first read timed out at once")
+        gate.wait(3)  # the second call never answers in time
+        raise TimeoutError("late")
+    monkeypatch.setattr(urllib.request, "urlopen", flaky)
+    clf = ClaudeClassifier("k", deadline=0.6)
+    t0 = time.monotonic()
+    with pytest.raises(TimeoutError):
+        clf.classify(HONEST, {})
+    took = time.monotonic() - t0
+    gate.set()
+    assert len(calls) == 2 and took < 0.9, (len(calls), took)
+
+
 def test_the_retry_fits_inside_the_total_deadline():
     from shield import classifier as c
     assert 2 * c.TIMEOUT_S <= c.DEADLINE_S  # two socket timeouts still end before the deadline

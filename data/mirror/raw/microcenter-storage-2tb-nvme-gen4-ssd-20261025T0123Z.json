@@ -1,0 +1,47 @@
+[
+ {
+  "productTitle": "CRAS C910G 2TB 3D TLC NAND Flash PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "sku": "971572",
+  "url": "https://www.microcenter.com/product/705544/klevv-cras-c910g-2tb-3d-tlc-nand-flash-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "mpn": null,
+  "price": 299.99,
+  "in_stock": true,
+  "availability": "19 IN STOCK"
+ },
+ {
+  "productTitle": "9100 PRO 2TB Samsung V NAND TLC NAND (V8) PCIe Gen 5 x4 and PCIe Gen 5 x4 NVMe M.2 Internal SSD",
+  "sku": "815258",
+  "url": "https://www.microcenter.com/product/691300/samsung-9100-pro-2tb-samsung-v-nand-tlc-nand-(v8)-pcie-gen-5-x4-and-pcie-gen-5-x4-nvme-m2-internal-ssd",
+  "mpn": null,
+  "price": 419.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "990 PRO 2TB Samsung V NAND 3-bit MLC PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "sku": "516120",
+  "url": "https://www.microcenter.com/product/660429/samsung-990-pro-2tb-samsung-v-nand-3-bit-mlc-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "mpn": null,
+  "price": 409.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "QN450 2TB SSD 3D QLC NAND PCIe Gen 4 x4 NVMe M.2 2280 Internal Solid State Drive",
+  "sku": "701813",
+  "url": "https://www.microcenter.com/product/680086/inland-qn450-2tb-ssd-3d-qlc-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+  "mpn": null,
+  "price": 299.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "BLACK SN850X 2TB 112-Layer BiCS5 TLC NAND PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "sku": "691840",
+  "url": "https://www.microcenter.com/product/679348/wd-black-sn850x-2tb-112-layer-bics5-tlc-nand-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "mpn": null,
+  "price": 389.99,
+  "in_stock": true,
+  "availability": "18 IN STOCK"
+ }
+]

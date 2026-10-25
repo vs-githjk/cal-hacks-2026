@@ -79,7 +79,7 @@ flowchart LR
     A --> MK[("Market state<br/>SpacetimeDB")]
     MK --> W["Buyer and market screens"]
     MK -- "rank 1 only" --> G["Winner checks<br/>Bright Data price, CRS payee"]
-    G -- "inside allowance" --> P["TAP-style signing<br/>Stripe test mode"]
+    G -- "inside allowance" --> P["Visa TAP signing<br/>Stripe test mode"]
     G -- "above allowance" --> C["Cartesia approval call"]
     C --> J["Approval judge<br/>(code)"]
     J -- "signed mandate" --> P
@@ -130,7 +130,7 @@ Every bid, claim and screen carries a badge driven by the `source` field in the 
 | Buyer's goal and owned parts | SIM | Scripted for the reference scenario; the buyer is Vidyut |
 | Fit checks, claim checks, Shield | LIVE | Real code on every bid; claim checks run on pages we host for the demo |
 | Approval call | LIVE | A real Cartesia phone call to one registered number, the only approval above the allowance; silence, a hang-up or a failed call denies, and nothing is paid. The reference runner types the call transcripts and says so |
-| Request signing | LIVE | Signed in the style of Visa's Trusted Agent Protocol and verified by our merchant simulator, not by Visa |
+| Request signing | LIVE | Implements Visa's Trusted Agent Protocol wire format (RFC 9421 `sig2`, Ed25519, nonce, `agent-payer-auth` tag), verified against a port of Visa's reference verifier; replays are refused. Not certified by Visa |
 | Payment | SIM by default | One Stripe test-mode charge on a Visa test card with `--stripe`; no real money |
 | Receipts | LIVE in chat | The buyer agent sends the receipt after the charge and at settlement. The emailed receipt goes through ASI:One's Gmail connector from the buyer's own Gmail account, tested once live. Order, shipped and tracking messages are written ([agents/buyer/post_purchase.py](agents/buyer/post_purchase.py)) but not yet sent by the running agent; carrier and tracking are SIM |
 | Bright Data | built, env-gated | Re-checks the winner's price live just before the call when its key is set; without it the dated MIRROR price stays, and the line says so. One live call returned the ASUS Prime at $1,299.99 (Sat 02:55) |
@@ -146,7 +146,6 @@ Not merged, or merged but not yet running in the app. None of this is described 
 - **The full PC build.** One sentence becomes a build plan, one round per part, one call for the whole build, one mandate per seller and a receipt per part ([#343](https://github.com/vs-githjk/cal-hacks-2026/issues/343), [#344](https://github.com/vs-githjk/cal-hacks-2026/issues/344), [#345](https://github.com/vs-githjk/cal-hacks-2026/issues/345)).
 - **Sealed knockout rounds.** Up to three best-and-final stages; rule-breakers and last place are knocked out with reasons, and survivors only hear "still in" ([#336](https://github.com/vs-githjk/cal-hacks-2026/issues/336), [#337](https://github.com/vs-githjk/cal-hacks-2026/issues/337)).
 - **Market Pulse** on a screen and in the seller agents (module merged, see For sellers).
-- **Visa TAP conformance.** Matching `pay/tap.py` to Visa's published Trusted Agent Protocol ([#284](https://github.com/vs-githjk/cal-hacks-2026/issues/284)).
 - **Central Computers bidding in the round.** Its MIRROR listing adapter and a dated snapshot are merged ([data/mirror/central_computers.py](data/mirror/central_computers.py)); it does not bid in the reference round yet.
 - **No typed APPROVE in ASI:One.** Today a typed APPROVE reply starts the approval call (the call still decides); this change removes the reply ([#234](https://github.com/vs-githjk/cal-hacks-2026/pull/234)).
 - **Order, shipped and tracking messages** sent by the running buyer agent.
@@ -171,7 +170,7 @@ Shield on its development set stops 30 of 30, but its rules were written against
 | Partner | What we use | Role in Tech Bazaar |
 |---|---|---|
 | Fetch.ai | uAgents, Agentverse, ASI:One and its Gmail connector, Agent Chat Protocol, Payment Protocol | Every agent is a uAgent; the buyer takes goals in ASI:One, a caller agent for the approval call runs locally, and ASI:One emails the receipt from the buyer's own Gmail |
-| Visa | Trusted Agent Protocol (style), Visa test card | Signed agent requests; the test card behind the Stripe charge. Conformance to the published spec is in progress |
+| Visa | Trusted Agent Protocol, Visa test card | Signed agent requests in TAP's wire format, checked against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/cal-hacks-2026/pull/387)); the test card behind the Stripe charge |
 | Stripe | Test mode | The one sandbox charge, idempotent on the mandate hash |
 | Cartesia | Voice agent, outbound calls | The approval call, the only approval above the allowance |
 | Apify | Store Actors, plus four public Actors of our own on the Apify Store: [Listing Claim Checker](https://apify.com/anoopibrampur/tech-bazaar-claim-check), [PC Build Compatibility Checker](https://apify.com/anoopibrampur/pc-build-compatibility-checker), [Electronics Recall Checker](https://apify.com/anoopibrampur/electronics-recall-checker), [Seller Agent-Readiness Report](https://apify.com/anoopibrampur/seller-agent-readiness-report) | Listing mirrors, claim checks, fit checks and real San Francisco listings. Four Actor sources are in this repo: claim check, compatibility and recall (all on the Store) and an injection screen (not on the Store). The readiness Actor's source is in review ([#309](https://github.com/vs-githjk/cal-hacks-2026/pull/309)) |
@@ -183,13 +182,27 @@ Shield on its development set stops 30 of 30, but its rules were written against
 
 Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT) for compatibility fields.
 
+### Our Apify Actors
+
+IDs and run ids read from the Apify account on Oct 24 2026 (anoopibrampur). Four are public; the Listing Injection Screen is private (Apify only needs the IDs).
+
+| Actor | Actor ID | `username/actor-name` | URL | Pricing (pay per event) | Last successful run |
+|---|---|---|---|---|---|
+| Listing Claim Checker | `U4g8XPRpuGhDa97cM` | `anoopibrampur/tech-bazaar-claim-check` | https://apify.com/anoopibrampur/tech-bazaar-claim-check | $0.01 per `claim-checked` (only verified or false claims), $0.00005 per `apify-actor-start` | `T0ASSKGvCUf8DclZ5` (Oct 24 19:53 UTC) |
+| PC Build Compatibility Checker | `djo1yhWs81xud1DkO` | `anoopibrampur/pc-build-compatibility-checker` | https://apify.com/anoopibrampur/pc-build-compatibility-checker | $0.005 per `build-checked`, $0.00005 per `apify-actor-start` | `oNgFAznvcXn3RCO7H` (Oct 24 20:04 UTC) |
+| Electronics Recall Checker | `uMK7F4tqYnnbBkknU` | `anoopibrampur/electronics-recall-checker` | https://apify.com/anoopibrampur/electronics-recall-checker | $0.002 per `product-checked`, $0.00005 per `apify-actor-start` | `ItvSaUKtsjwhXd5jg` (Oct 24 22:48 UTC) |
+| Seller Agent-Readiness Report | `whYB0iBdGanGPVv05` | `anoopibrampur/seller-agent-readiness-report` | https://apify.com/anoopibrampur/seller-agent-readiness-report | $0.02 per `listing-reported` (unreadable pages are free); default run 1 GB and 300 s | `Ug5TASTEbVcwSeCnV` (Oct 24 22:47 UTC) |
+| Listing Injection Screen | `pzSsctJHHdNzrLJH8` | `anoopibrampur/listing-injection-screen` | https://console.apify.com/actors/pzSsctJHHdNzrLJH8 (private) | not set (private, free to run) | `CyjW4NhXhXlD9JFBL` (Oct 24, about 19:20 PDT: the honest SIM listing passed, the injected one was blocked) |
+
+How useful each one is, and which are thin: [docs/ACTORS.md](docs/ACTORS.md).
+
 ## Fetch.ai agents
 
 | Agent name | Role | Agentverse address |
 |---|---|---|
 | Tech Bazaar Buyer (@techbazaarbuyer) | Takes goals over the Chat Protocol, remembers owned parts, runs the sealed round, pays within the allowance | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` |
-| Bazaar Advocate (@techbazaaradvocate) | Checks fit and claims; at most 3 cited warnings; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` |
-| Bazaar Shield (@techbazaarshield) | Chat front door to Shield screening; makes no purchases | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` |
+| Tech Bazaar Quality Advocate (@techbazaaradvocate) | Checks fit and claims; at most 3 cited warnings; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` |
+| Tech Bazaar Shield Client (@techbazaarshield) | Chat front door to Shield screening; makes no purchases | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` |
 | Byte Bros Outlet (@techbazaarseller1) | Seller agent: bids from its listings, never below its floor | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` |
 | Silicon Sally's Surplus (@techbazaarseller2) | Seller agent | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` |
 | FlashDeal Frankie (@techbazaarseller3) | Seller agent; carries the planted condition trap (SIM) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` |

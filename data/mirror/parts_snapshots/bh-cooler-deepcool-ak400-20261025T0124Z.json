@@ -1,0 +1,50 @@
+[
+ {
+  "id": "bh:b181ec83d1cc",
+  "category": "cooler",
+  "name": "Deepcool AK400 Performance CPU Cooler (Black)",
+  "model_number": "R-AK400-BKNNMN-G-1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 34.46,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1757027-REG/deepcool_r_ak400_bknnmn_g_1_ak400_performance_cpu_cooler.html",
+  "snapshot_id": "bh-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:19+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1757027-REG/deepcool_r_ak400_bknnmn_g_1_ak400_performance_cpu_cooler.html",
+   "price": 34.46,
+   "stock": "discontinued",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "discontinued"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:32306c42200d",
+  "category": "cooler",
+  "name": "Cooler Master Hyper 212 Spectrum V3 ARGB CPU Air Cooler",
+  "model_number": "RR-S4NA-17PA-R1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 19.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1860468-REG/cooler_master_rr_s4na_17pa_r1_hyper_212_spectrum_v3.html",
+  "snapshot_id": "bh-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:19+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1860468-REG/cooler_master_rr_s4na_17pa_r1_hyper_212_spectrum_v3.html",
+   "price": 19.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

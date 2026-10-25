@@ -5,7 +5,22 @@ rank 1 only for a mandate, the allowance rule on create_mandate, no payment with
 of docs/changes/1633-B-knockout-rounds.md (#363). It is NOT the market: nothing here ranks for the real run."""
 from __future__ import annotations
 
+import re
+
+from demo import build
+
 LADDER_TOP = (600, 1500)   # market/config.ts ALLOWANCE_LADDER's top step: per purchase, per period
+# market/config.ts QUALITY (a test reads the file and pins these): the market ranks on the quality-adjusted score, not on landed price
+QUALITY = {"condition_adj": {"new": 0.0, "open-box": 0.04, "refurbished": 0.08, "used": 0.15, "unknown": 0.0}, "no_returns_adj": 0.02,
+           "min_returns_days": 30}
+
+
+def adjusted_total(line: dict, perks: list, condition: str, quantity: float = 1.0) -> float:
+    """market/rules/scoring.ts qualityAdjusted and rankBids' score for one picked line: price x quantity x (1 + the condition step + the
+    no-returns step), in cents. The market passes no perksValue, so nothing else is taken off."""
+    found = [int(m.group(1)) for p in perks for m in [re.search(r"(\d+)[- ]day returns?", str(p), re.I)] if m]
+    returns = 0.0 if max([0, *found]) >= QUALITY["min_returns_days"] else QUALITY["no_returns_adj"]
+    return round(line["unit_price"] * quantity * (1 + QUALITY["condition_adj"].get(condition, 0.0) + returns), 2)
 
 
 class SimMarket:
@@ -27,6 +42,9 @@ class SimMarket:
         self.allowance_readable, self.deals_readable, self.events_readable = True, True, True
         self.swallow_approval, self.never_close, self.knockout = False, False, set()
         self.goals = {}
+        self.buyer_id = "vidyut"   # whose allowance the buyer client reads back (my_allowance)
+        self.goal_reader = "vidyut"   # the buyer role the buyer client holds: my_goals returns this buyer's goals only
+        self.goal_state = {}          # goal id -> state (default ACTIVE)
 
     def post_goal(self, a):
         # market.ts GOAL_TYPES, which is also the enum of contracts/Goal.schema.json
@@ -69,7 +87,9 @@ class SimMarket:
             if mine and line["unit_price"] >= min(b["landed"] for b in mine):
                 raise RuntimeError("place_bid refused: the offer must be lower than your last stage's")
             # below its floor is not refused here: the offer stands and the stage's close knocks it out (docs/changes/1633-B)
-        self.bids[a["id"]] = {**a, "landed": line["unit_price"], "below_floor": below, "stage": stage}
+        cond = line.get("offered_condition") or item["condition"]
+        adjusted = adjusted_total(line, a.get("perks") or [], cond, float(item.get("quantity") or 1))
+        self.bids[a["id"]] = {**a, "landed": line["unit_price"], "adjusted": adjusted, "below_floor": below, "stage": stage}
 
     def post_need(self, a):
         self.needs[a["id"]] = a
@@ -142,7 +162,7 @@ class SimMarket:
         rows += [(b, 0, why, "knocked_out") for b, why in out]
         for b, rank, why, status in rows:
             self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], rank, b["landed"], why, b["lines"], b["origin"],
-                              b["source"], b["landed"], "", stage, status))
+                              b["source"], b["adjusted"], "", stage, status))
         if champion is not None or not ok:
             self.round_state[rid] = "closed"
         else:
@@ -176,7 +196,8 @@ class SimMarket:
                 out.append((b, ["over the cap"]))
             else:
                 ok.append(b)
-        ok.sort(key=lambda b: (hold and bool(self.cards.get(b["id"]) and self.cards[b["id"]]["recommendation"] == "caution"), b["landed"]))
+        # scoring.ts rankBids: a held-back caution last, then the adjusted score; a tie keeps the order the bids were sealed in
+        ok.sort(key=lambda b: (hold and bool(self.cards.get(b["id"]) and self.cards[b["id"]]["recommendation"] == "caution"), b["adjusted"]))
         return ok, out
 
     def publish_build_view(self, a):
@@ -191,7 +212,7 @@ class SimMarket:
         for i, b in enumerate(ok, 1):
             held = self._held(b)
             self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], i, b["landed"], [held] if held else [],
-                              b["lines"], b["origin"], b["source"], b["landed"], "", 1, "advancing" if rid in self.knockout and i == 1 else ""))
+                              b["lines"], b["origin"], b["source"], b["adjusted"], "", 1, "advancing" if rid in self.knockout and i == 1 else ""))
         for b, why in out:
             self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], 0, b["landed"], why, b["lines"], b["origin"], b["source"],
                               b["landed"], "", 1, ""))
@@ -249,11 +270,21 @@ class _Client:
             return [(rid, m.rounds[rid]["need_id"], "t", "t", 0, st, 0, None, "SIM") for rid, st in m.round_state.items()]
         if query in ("SELECT * FROM allowance", "SELECT * FROM approval", "SELECT * FROM mandate"):   # private: the referee cannot read them
             raise RuntimeError("sql failed (400): no such table")
+        if query == build.GOALS_SQL:        # the my_goals view answers the caller's own buyer role only: the referee and sellers read none
+            if self.name != "buyer":
+                return []
+            return [(g["id"], g["buyer_id"], g["type"], g["cap"], g["deadline"], m.goal_state.get(g["id"], "ACTIVE"), [1_000_000 * i])
+                    for i, g in enumerate(m.goals.values(), 1) if g["buyer_id"] == m.goal_reader]
+        if query == build.GOAL_ITEMS_SQL:   # my_goal_items: the same rule
+            if self.name != "buyer":
+                return []
+            return [(g["id"], i["sku_spec"], i["condition"], i["variant"], i["quantity"], i["skipped_owned_part_id"])
+                    for g in m.goals.values() if g["buyer_id"] == m.goal_reader for i in g["items"]]
         if query == "SELECT * FROM my_allowance":      # buyer only
             if self.name != "buyer" or not m.allowance_readable:
                 raise RuntimeError("sql failed (400)")
             a = m.allow
-            return [("vidyut", "USD", a["per"], a["period_limit"], a["period"], a["spent"], 0, "t")]
+            return [(m.buyer_id, "USD", a["per"], a["period_limit"], a["period"], a["spent"], 0, "t")]
         if query == "SELECT * FROM my_deals":          # buyer only: hash, id, deal, amount, payee, expiry, within, origin, method, voice id, ...
             if self.name != "buyer" or not m.deals_readable:
                 raise RuntimeError("sql failed (400)")

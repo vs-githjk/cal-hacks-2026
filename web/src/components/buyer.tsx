@@ -4,7 +4,7 @@
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
+import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, winningBid } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import type { CrsView } from "@/lib/crs";
 import { CrsSignal } from "./crs";
@@ -54,7 +54,7 @@ export function StatePill({ state }: { state: GoalView["state"] }) {
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */
 export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | null }) {
-  const win = bids.find((b) => b.won);
+  const win = winningBid(bids);
   const vetoed = bids.filter((b) => b.recommendation === "veto").length;
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
   const refused = bids.filter((b) => b.recommendation === "refused").length;
@@ -78,7 +78,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
         {win ? (
           <>
             <div ref={field} className="relative -mx-2 px-2">
-              <div className="relative z-10 my-1 font-display text-[clamp(48px,6vw,76px)] leading-none tracking-[-0.01em] tabular-nums">{money(win.landed)}</div>
+              <div className="relative z-10 my-1 text-[clamp(48px,6vw,76px)] font-semibold leading-none tracking-[-0.04em] tabular-nums">{money(win.landed)}</div>
             </div>
             <div className="text-[15px] text-muted">
               <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
@@ -86,7 +86,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
             {win.recommendation === "caution" && <div className="text-[15px] text-muted">Fit not confirmed on the page</div>}
           </>
         ) : (
-          <div className="my-1 font-display text-[clamp(40px,5vw,64px)] leading-none text-muted">no deal yet</div>
+          <div className="my-1 text-[clamp(40px,5vw,64px)] font-semibold leading-none tracking-[-0.04em] text-muted">no deal yet</div>
         )}
       </div>
       <div className="mt-3.5 grid gap-1 border-t border-line pt-3 text-[14px]">
@@ -148,6 +148,9 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey, crs
               {bids.map((b, i) => {
                 const k = b.rowRef ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
+                const won = !!b.won;
+                const vetoed = b.recommendation === "veto";
+                const edge = won ? "border-l-[3px] border-l-mint" : vetoed ? "border-l-[3px] border-l-coral" : "";
                 const struck = b.recommendation === "veto" ? "line-through text-muted" : "";
                 const signal = b.sellerId && crs ? crs(b.sellerId) : null;
                 const expanded = open === k;
@@ -166,26 +169,26 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey, crs
                       }}
                       initial={play ? { rotateX: -90, opacity: 0 } : false}
                       animate={
-                        play && b.won
+                        play && won
                           ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(255,255,255,0)", "inset 0 0 0 2px rgba(255,255,255,0.55)", "inset 0 0 0 0 rgba(255,255,255,0)"] }
                           : { rotateX: 0, opacity: 1 }
                       }
                       transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
-                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${b.won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}${signal?.greyed ? " opacity-50" : ""}`}
+                      className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}${signal?.greyed ? " opacity-50" : ""}`}
                     >
-                      <Td className={`font-mono font-semibold ${b.won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /><CrsSignal view={signal} />{b.won && <> <Tag>Winner</Tag></>}</Td>
+                      <Td className={`font-mono font-semibold ${edge} ${won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} /><CrsSignal view={signal} />{won && <> <Tag>Winner</Tag></>}</Td>
                       <Td>
                         <Tag>{b.condition}</Tag>
                         {b.missing && <span className="ml-1.5 text-[13px] text-amber">missing: {b.missing}</span>}
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] tabular-nums text-muted">{l.condition} {money(l.unitPrice)}</span>)}
                       </Td>
-                      <Td right className={struck}>{b.won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
+                      <Td right className={struck}>{won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
                       <Td><Verdict kind={b.heldBack ? "caution" : REC[b.recommendation].kind}>{b.heldBack ? "Held back" : REC[b.recommendation].text}</Verdict></Td>
                       <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
                     </motion.tr>
                     {expanded && (
-                      <tr className={b.won ? "bg-mint-soft" : "bg-soft"}>
+                      <tr className={won ? "bg-mint-soft" : "bg-soft"}>
                         <td colSpan={6} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
                           <p>{b.why || "No reason recorded."}</p>
                           <p className="mt-1 text-muted">
@@ -283,7 +286,7 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
       {approval.wordPair && (
         <>
           <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-            <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{approval.wordPair}</span>
+            <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{approval.wordPair}</span>
             <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
           </div>
           <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
@@ -318,7 +321,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
         Mandate <Code>{review.mandateId}</Code> · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
       </p>
       <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-        <span className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-[0.01em]">{review.code}</span>
+        <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{review.code}</span>
         <small className="text-[12px] text-muted">one-time code for this mandate, this screen only</small>
       </div>
       <p className="text-[13px] font-semibold">Say this code on the call. Only the call approves; nothing on this screen can.</p>

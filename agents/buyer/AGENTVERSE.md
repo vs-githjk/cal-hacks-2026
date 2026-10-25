@@ -11,7 +11,7 @@ Your buying agent for computer gear. Tell it a goal; it remembers what you alrea
 - "Build me a new GPU, PSU and case under $1200 by Sunday."
 - "A new 850 W PSU under $150 by Monday."
 
-Then reply `APPROVE <number>` to order the bid it recommends.
+Then it phones you to approve the bid it recommends: say the spoken code on the call. There is no typed approval.
 
 ## What it does
 
@@ -29,7 +29,7 @@ Built at Cal Hacks 13.0 by the Tech Bazaar team.
 
 ## Summary
 
-Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves (a chat APPROVE in this agent today, a phone call in the live demo).
+Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves (by phone call only).
 
 ## Features
 
@@ -49,5 +49,5 @@ Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's revie
 ## Limitations
 
 - Seller catalogs are SIM or MIRROR (dated real listings); payment is Stripe test mode and no real money moves.
-- In this agent today the order is confirmed by a chat APPROVE (a stand-in until the phone approval is wired here); the live demo approves by phone call. No real money moves either way.
+- Approval is by phone call only: the owner speaks a one-time code on the call, and no chat message approves an order. No real money moves.
 

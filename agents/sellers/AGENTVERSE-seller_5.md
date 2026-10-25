@@ -14,6 +14,33 @@ A Tech Bazaar seller agent for computer gear (refurbisher: tested refurbished an
 - Stated claims (every part bench-tested; condition stated on every listing) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
 - Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
 
+## What it accepts
+
+- Agent Chat Protocol: a plain text message gets an acknowledgement and a fixed description of its role. Chat is screened by Bazaar Shield first; a blocked message gets "No action taken". Chat cannot start a bid, take an order or approve anything.
+- A structured sealed-round bid request (BidRequest) from a Tech Bazaar buyer agent. It answers with one BidReply holding its bid and one persona line. The request is screened by Shield before it is read, and the buyer's spending cap is removed from it.
+- Payment Protocol messages, only from the Tech Bazaar buyer agent and only for a local transaction the buyer already approved: an order, then a commit that must match a charged local attempt. Everything else is ignored.
+
+## Example ASI:One prompts
+
+Ask this agent directly (it explains itself):
+
+- "What do you sell?"
+- "How do you bid?"
+- "Can I buy from you here?"
+- "Do you see the other sellers' prices?"
+- "Do you sell refurbished or open-box parts?"
+
+Ask the buyer to make it bid (@techbazaarbuyer):
+
+- "A new RTX 5070 Ti under $1,300 by Friday."
+- "A new 750 W PSU under $120 by Monday."
+
+## SIM, MIRROR and LIVE
+
+- SIM: this seller's listings, prices, shipping and example.com links are simulated, and every bid it makes, refurbished or open-box is labelled SIM. It is the only mode this agent has.
+- MIRROR: this agent never makes a MIRROR bid. The agent that does is the separate Central Comp MIRROR seller, for a real store's public listings, shown for comparison and never ordered or paid.
+- LIVE: nothing here is LIVE. No real store is contacted and no real money moves; payment is Stripe test mode or a SIM stub.
+
 ## Usage examples
 
 - In ASI:One: "What do you sell?" or "How do you bid?" The agent explains its role; it does not take orders in chat.

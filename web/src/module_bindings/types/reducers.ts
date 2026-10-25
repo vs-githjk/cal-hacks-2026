@@ -34,6 +34,7 @@ import SetAllowanceReducer from "../set_allowance_reducer";
 import SetBuyerProfileReducer from "../set_buyer_profile_reducer";
 import SetFloorReducer from "../set_floor_reducer";
 import SetFloorForConditionReducer from "../set_floor_for_condition_reducer";
+import SignUpBuyerReducer from "../sign_up_buyer_reducer";
 
 export type AssignRoleParams = __Infer<typeof AssignRoleReducer>;
 export type AttachAdvocateCardParams = __Infer<typeof AttachAdvocateCardReducer>;
@@ -63,4 +64,5 @@ export type SetAllowanceParams = __Infer<typeof SetAllowanceReducer>;
 export type SetBuyerProfileParams = __Infer<typeof SetBuyerProfileReducer>;
 export type SetFloorParams = __Infer<typeof SetFloorReducer>;
 export type SetFloorForConditionParams = __Infer<typeof SetFloorForConditionReducer>;
+export type SignUpBuyerParams = __Infer<typeof SignUpBuyerReducer>;
 

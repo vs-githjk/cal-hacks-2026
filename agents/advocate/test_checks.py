@@ -381,3 +381,19 @@ def test_a_bid_from_a_store_that_never_joined_is_vetoed_as_not_orderable():
     assert checks.best_bid([b], [card]) is None
     flagged = dict(bid("b3", "seller_3", 590), orderable=False)
     assert run([flagged])[0]["recommendation"] == "veto"
+
+
+@pytest.mark.parametrize("price", [None, "1299.99", float("nan"), float("inf"), -5, True, [1]])
+def test_a_line_with_an_unreadable_price_is_unverified_never_a_crash_or_a_buy(price):  # #397 B6: a None price crashed advise
+    b = bid("b1", "seller_1", 1.0)
+    b["lines"][0]["unit_price"] = price
+    card = run([b])[0]
+    assert card["recommendation"] != "buy"
+    assert any(w["kind"] == "unverified" and "price" in w["text"] for w in card["warnings"])
+
+
+def test_an_unreadable_quantity_is_unverified_too():
+    b = bid("b1", "seller_1", 499.0)
+    b["lines"][0]["quantity"] = None
+    card = run([b])[0]
+    assert card["recommendation"] != "buy" and any(w["kind"] == "unverified" for w in card["warnings"])

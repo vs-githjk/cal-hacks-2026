@@ -98,6 +98,32 @@ class NumberNotAllowed(CartesiaError):
     """A call was requested to a number other than APPROVAL_CALL_TO."""
 
 
+class NoPhone(CartesiaError):
+    """The buyer has no phone number to approve on. Above the allowance that means no call and no approval: the phone call is the only way."""
+
+
+# The buyer APPROVAL_CALL_TO belongs to (the id the demo's /buyer pairs with; demo/bridge.py DB_BUYER_ID, pinned by a test).
+DEFAULT_APPROVAL_BUYER = "vidyut"
+
+
+def approval_phone(buyer_id: str, env: Mapping[str, str], default_buyer_id: str = DEFAULT_APPROVAL_BUYER) -> Optional[str]:
+    """The number the approval call rings for this buyer, or None when there is none. The default buyer gets the env-configured
+    APPROVAL_CALL_TO (unchanged). Any other buyer gets None for now and is never given the default buyer's number.
+    TODO(#374): read the buyer's own phone from the market's buyer_profile (reducer in the unmerged PRs #378-#380) for every other buyer."""
+    if buyer_id and buyer_id == default_buyer_id:
+        return env.get(TO_ENV) or None
+    return None
+
+
+def client_for_buyer(buyer_id: str, env: Mapping[str, str], **kw) -> "CartesiaClient":
+    """The Cartesia client whose only number is this buyer's approval phone. NoPhone for a buyer with none (never the default number);
+    the default buyer's missing or bad setup is the same CartesiaError as before."""
+    phone = approval_phone(buyer_id, env)
+    if phone is None and buyer_id != DEFAULT_APPROVAL_BUYER:
+        raise NoPhone(f"no approval phone number for buyer {buyer_id}")
+    return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env, **kw)
+
+
 # ---------- config ----------
 
 def load_env(path: Optional[Path] = None, environ: Optional[Mapping[str, str]] = None) -> dict:
@@ -345,6 +371,7 @@ _DENIAL_LINES = {
     "silence": "Nobody spoke on the call, nothing was paid.",
     "expired": "The deal expired before it was approved, nothing was paid.",
     "not_configured": "The call could not be placed, nothing was paid.",
+    "no_phone": "There is no phone number on file to approve this on, so no call was placed and nothing was paid.",
 }
 _NOT_APPROVED = ("wrong_code", "no_code", "max_attempts", "replay", "cooldown", "denied", "script_error")
 
