@@ -36,8 +36,8 @@ export interface RankedBid {
   won: boolean;
   /** #191: the referee ranked it below confirmed bids (advocate caution); the reason as close_round wrote it. */
   heldBack?: string;
-  /** The market row this bid was drawn from (round_result/<id>); absent on sample rows. */
-  rowRef?: string;
+  /** #449 PL-13: a neutral key for a live market row (never shown, never a table name); absent on sample rows. */
+  rowKey?: string;
 }
 
 export interface VetoView {
@@ -79,8 +79,8 @@ export interface ApprovalView {
 
 /** A live mandate waiting for the buyer, from my_pending_approvals. The code shows on this screen only. */
 export interface ReviewView {
-  mandateHash: string;
-  mandateId: string;
+  /** #449 PL-13: no mandate id or hash on the card; wholeBuild says whether the one call approves a whole build. */
+  wholeBuild: boolean;
   amount: number;
   payee: string;
   expiry: Date;
@@ -92,7 +92,7 @@ export interface ReviewView {
 
 /** The mandateId my_pending_approvals gives the one code that approves a whole build (market.ts myPendingApprovalsView). */
 export const WHOLE_BUILD_ID = "whole build";
-export const isWholeBuild = (r: Pick<ReviewView, "mandateId">): boolean => r.mandateId === WHOLE_BUILD_ID;
+export const isWholeBuild = (r: Pick<ReviewView, "wholeBuild">): boolean => r.wholeBuild;
 
 /** Matches APPROVAL_MAX_FAILURES in market/spacetimedb/src/market.ts. */
 export const REVIEW_MAX_FAILURES = 5;
@@ -104,12 +104,11 @@ export interface ReceiptView {
   amount: number;
   shipping?: number; // absent when the market row does not state it (never shown as $0)
   paymentMethod: string;
-  chargeId: string;
+  /** #449 PL-13: the last 6 characters of the charge id, shown as "Receipt"; the full charge id never reaches the screen. */
+  receiptRef: string;
   chargeStatus: string; // e.g. "SIM stub, no money moved"
   chargeOrigin?: Origin;
   paidAt: Date;
-  mandateId: string;
-  mandateHash: string;
   mandateExpires: Date;
   mandateOrigin: Origin;
   signature?: string;
@@ -319,7 +318,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
         ...(held ? { heldBack: held } : {}),
-        rowRef: `round_result/${r.id}`,
+        rowKey: `row-${r.id}`,
       };
     });
 }
@@ -445,9 +444,20 @@ export function clusterArrivals(arrivals: readonly Arrival[], totalMs: number, g
 
 interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; code: string; failures: number; locked: boolean; origin: string }
 
-export function reviewFromRows(rows: readonly PendingRow[]): ReviewView | null {
+/**
+ * #449 PL-13: what a customer reads for a payee. A seller id (seller_3, an agent1q... address) becomes that seller's persona from the
+ * round results, else "the seller"; a readable line (it has a space, like the whole-build payee) is kept as it is.
+ */
+export function payeeLabel(payee: string, results: readonly { sellerId: string; persona: string }[]): string {
+  if (/\s/.test(payee)) return payee;
+  return results.find((r) => r.sellerId === payee && r.persona)?.persona ?? "the seller";
+}
+
+export function reviewFromRows(rows: readonly PendingRow[], results: readonly ResultRow[] = []): ReviewView | null {
   const r = [...rows].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
-  return r ? { ...r, expiry: d(r.expiry), origin: asOrigin(r.origin) } : null;
+  return r
+    ? { wholeBuild: r.mandateId === WHOLE_BUILD_ID, amount: r.amount, payee: payeeLabel(r.payee, results), expiry: d(r.expiry), code: r.code, failures: r.failures, locked: r.locked, origin: asOrigin(r.origin) }
+    : null;
 }
 
 // ---- #191-5: live veto, Shield, approval and receipt cards (my_bid_checks, my_deals). Only what the rows hold; nothing filled in.
@@ -493,8 +503,8 @@ export function dealFromRows(deals: readonly DealRow[], allowance: number | null
   if (!dl) return { approval: null, receipt: null };
   const approval: ApprovalView | null = dl.approvalMethod && dl.approvedAt
     ? {
-        amount: dl.amount, payee: dl.payee, allowance: allowance ?? 0, codeExpiresAt: d(dl.expiry), within: dl.approvalMethod === "allowance",
-        attempts: [{ at: d(dl.approvedAt), label: dl.approvalMethod === "allowance" ? "Approved within the allowance" : "Approved on the call", said: dl.voiceApprovalId ? `VoiceApproval ${dl.voiceApprovalId}` : "", approved: true }],
+        amount: dl.amount, payee: payeeLabel(dl.payee, results), allowance: allowance ?? 0, codeExpiresAt: d(dl.expiry), within: dl.approvalMethod === "allowance",
+        attempts: [{ at: d(dl.approvedAt), label: dl.approvalMethod === "allowance" ? "Approved within the allowance" : "Approved on the call", said: "", approved: true }],
       }
     : null;
   const bidId = dl.dealId.replace(/^deal-/, "").split(":").pop();
@@ -502,9 +512,9 @@ export function dealFromRows(deals: readonly DealRow[], allowance: number | null
   const pay = PAY_LABEL[dl.paymentMode] ?? PAY_LABEL.sim!;
   const receipt: ReceiptView | null = dl.paidAt
     ? {
-        seller: dl.payee, ...(line?.skuSpec ? { item: line.skuSpec } : {}), ...(line?.offeredCondition ? { condition: line.offeredCondition } : {}),
-        amount: dl.amount, paymentMethod: pay.method, chargeId: dl.paymentRef, chargeStatus: pay.status, chargeOrigin: pay.origin, paidAt: d(dl.paidAt),
-        mandateId: dl.mandateId, mandateHash: dl.mandateHash, mandateExpires: d(dl.expiry), mandateOrigin: asOrigin(dl.origin),
+        seller: payeeLabel(dl.payee, results), ...(line?.skuSpec ? { item: line.skuSpec } : {}), ...(line?.offeredCondition ? { condition: line.offeredCondition } : {}),
+        amount: dl.amount, paymentMethod: pay.method, receiptRef: dl.paymentRef.slice(-6), chargeStatus: pay.status, chargeOrigin: pay.origin, paidAt: d(dl.paidAt),
+        mandateExpires: d(dl.expiry), mandateOrigin: asOrigin(dl.origin),
       }
     : null;
   return { approval, receipt };

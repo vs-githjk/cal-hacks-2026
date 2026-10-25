@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanSignUp, gateRoute, pairCodeToSend, signUpErrorText, isTokenRejected } from "./signUp.ts";
+import { cleanSignUp, continueLabel, gateRoute, pairCodeToSend, signUpErrorText, isTokenRejected } from "./signUp.ts";
 
 const buyer = [{ role: "buyer", subjectId: "b-1" }];
 const seller = [{ role: "seller", subjectId: "s-1" }];
@@ -82,4 +82,11 @@ test("isTokenRejected: only an explicit 401 or 403 from the token exchange clear
   assert.equal(isTokenRejected(tokenError(503)), false, "a server hiccup keeps the account");
   assert.equal(isTokenRejected(new Error("WebSocket closed")), false, "flaky data keeps the account");
   assert.equal(isTokenRejected(undefined), false);
+});
+
+// #449 PL-13: the start page never says "Continue as b_xxxxxxxx".
+test("#449 PL-13 continueLabel names the buyer by display name, else the account, never the b_ id", () => {
+  assert.equal(continueLabel("Asha"), "Continue as Asha");
+  assert.equal(continueLabel("  Asha "), "Continue as Asha");
+  for (const none of [undefined, "", "   ", "b_ab12cd34"]) assert.equal(continueLabel(none), "Continue to your account", String(none));
 });

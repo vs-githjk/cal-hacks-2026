@@ -7,6 +7,7 @@ import { useReducer } from "spacetimedb/react";
 import { useRef, useState } from "react";
 import { reducers } from "@/module_bindings";
 import { ASI_ONE_URL } from "@/lib/agentFeed";
+import { postGoalErrorText } from "@/lib/composerError";
 import {
   CATALOG,
   CONDITIONS,
@@ -115,7 +116,7 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
       writeStored(buyerId, EMPTY_DRAFT);
       requestId.current = null;
     } catch (e) {
-      setStatus({ kind: "error", text: e instanceof Error && e.message ? e.message : "The request could not be sent." });
+      setStatus({ kind: "error", text: postGoalErrorText(e) }); // #449 PL-13: plain words, never the reducer's own text
     }
   };
 

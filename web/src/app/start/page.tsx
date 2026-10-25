@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { cleanSignUp, gateRoute, signUpErrorText } from "@/lib/signUp";
+import { cleanSignUp, continueLabel, gateRoute, signUpErrorText } from "@/lib/signUp";
 
 const field = "w-full min-h-11 rounded-xl bg-surface px-4 text-[15px]/[20px] text-ink shadow-ring focus:shadow-[var(--shadow-ring),var(--shadow-focus)] focus:outline-none";
 const primary = "btn inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-pulse px-5 font-medium text-pulse-ink disabled:opacity-60";
@@ -27,9 +27,6 @@ export default function StartPage() {
   useEffect(() => {
     if (route === "buyer" && submitted) router.replace("/buyer");
   }, [route, submitted, router]);
-
-  const buyerId = roles.find((r) => r.role === "buyer")?.subjectId ?? "";
-  const shown = profiles[0]?.displayName || buyerId;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +53,7 @@ export default function StartPage() {
         <div className="grid gap-3">
           <p className="text-[15px]/[20px] text-muted">This browser already has an account.</p>
           <Link href="/buyer" className={primary}>
-            Continue as {shown}
+            {continueLabel(profiles[0]?.displayName)}
           </Link>
         </div>
       ) : (

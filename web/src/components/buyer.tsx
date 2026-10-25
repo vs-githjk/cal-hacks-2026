@@ -144,7 +144,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
             </thead>
             <tbody>
               {bids.map((b, i) => {
-                const k = b.rowRef ?? `${b.seller}|${b.condition}`;
+                const k = b.rowKey ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
                 const won = !!b.won;
                 const vetoed = b.recommendation === "veto";
@@ -188,8 +188,8 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                         <td colSpan={6} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
                           <p>{b.why || "No reason recorded."}</p>
                           <p className="mt-1 text-muted">
-                            {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /> · </> : "No source link · "}
-                            {b.rowRef ? <>market row <Code>{b.rowRef}</Code></> : <>sample row, not from this market <OriginChip origin="SIM" /></>}
+                            {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /></> : "No source link"}
+                            {!b.rowKey && <> · sample row, not from this market <OriginChip origin="SIM" /></>}
                           </p>
                         </td>
                       </tr>
@@ -314,7 +314,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
         {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
       </h3>
       <p className="text-[13px] tabular-nums text-muted">
-        {isWholeBuild(review) ? "One call approves the whole build" : <>Mandate <Code>{review.mandateId}</Code></>} · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
+        {isWholeBuild(review) ? "One call approves the whole build" : "One call approves this purchase"} · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
       </p>
       <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
         <span className="rounded-xl bg-surface-2 px-4 py-3 font-mono text-[28px]/[32px] font-medium tracking-[0.04em]">{review.code}</span>
@@ -343,11 +343,10 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
           <div>{[receipt.seller, receipt.item, receipt.condition].filter(Boolean).join(" · ")}</div><div>{money(receipt.amount)}</div>
           {receipt.shipping !== undefined && <><div className="text-muted">Shipping</div><div className="text-muted">{money(receipt.shipping)}</div></>}
           <div className="border-t border-line pt-2 text-[18px] font-semibold">Charged</div><div className="border-t border-line pt-2 font-mono text-[18px] font-medium">{money(receipt.amount + (receipt.shipping ?? 0))}</div>
-          <div className="text-[13px] text-muted">{receipt.paymentMethod} · {receipt.chargeId}</div><div className="text-[13px] text-muted">{clock(receipt.paidAt)}</div>
+          <div className="text-[13px] text-muted">{receipt.paymentMethod}{receipt.receiptRef && <> · Receipt <Code>{receipt.receiptRef}</Code></>}</div><div className="text-[13px] text-muted">{clock(receipt.paidAt)}</div>
         </dl>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
-          <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]"><Code>{receipt.mandateId}</Code> · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
-          <dt className="text-muted">Hash</dt><dd><Code>{receipt.mandateHash.slice(0, 8)}…{receipt.mandateHash.slice(-6)}</Code></dd>
+          <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]">signed · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
           {receipt.signature && <><dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd></>}
           {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> same mandate sent twice; second charge rejected</> : "not tested"}</dd></>}
           <dt className="text-muted">Allowance</dt><dd>unchanged until the receiving check passes</dd>

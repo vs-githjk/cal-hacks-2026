@@ -30,7 +30,7 @@ export default function BuyerPage() {
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
   const sim = liveBids.length === 0;
-  const review = useMemo(() => reviewFromRows(pending), [pending]);
+  const review = useMemo(() => reviewFromRows(pending, results), [pending, results]);
   const roundId = latestRound(rounds)?.id;
   const veto = useMemo(() => vetoFromRows(checks, results, roundId), [checks, results, roundId]);
   const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);
