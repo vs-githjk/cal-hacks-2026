@@ -17,7 +17,7 @@ export interface GoalView {
   conditions: string[]; // allowed conditions, e.g. ["new", "open-box"]
   variant: string;
   origin: Origin;
-  skipped: string[]; // sentences like "You already own a 750 W PSU ..."
+  skipped: { part: string; text: string }[]; // the owned part that was skipped ("PSU", "case") and the sentence about it
   allowance: { perPurchase: number; periodLimit: number; period: string; spent: number; ladderStep: number } | null;
 }
 
@@ -89,6 +89,10 @@ export interface ReviewView {
   locked: boolean;
   origin: Origin;
 }
+
+/** The mandateId my_pending_approvals gives the one code that approves a whole build (market.ts myPendingApprovalsView). */
+export const WHOLE_BUILD_ID = "whole build";
+export const isWholeBuild = (r: Pick<ReviewView, "mandateId">): boolean => r.mandateId === WHOLE_BUILD_ID;
 
 /** Matches APPROVAL_MAX_FAILURES in market/spacetimedb/src/market.ts. */
 export const REVIEW_MAX_FAILURES = 5;
@@ -163,6 +167,11 @@ import { safeUrl } from "./url.ts";
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 export const asOrigin = (o: string): Origin => (o === "LIVE" || o === "MIRROR" ? o : "SIM");
 
+/** The round's winning bid, whatever its origin (the market and the producer enforce eligibility). */
+export function winningBid<T extends { won?: boolean }>(bids: readonly T[]): T | undefined {
+  return bids.find((b) => b.won);
+}
+
 /** A sample view shown in place of an empty table: every origin becomes SIM, so no sample number reads as LIVE or MIRROR. */
 export function asSim<T>(v: T): T {
   if (Array.isArray(v)) return v.map(asSim) as T;
@@ -182,6 +191,12 @@ export function latestGoal<G extends GoalRow>(goals: readonly G[]): G | undefine
   return [...goals].sort((a, b) => (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
+/** "owned-psu" -> "PSU", "owned-case" -> "case": the part an owned-part id names, short ids as acronyms. */
+function ownedPartLabel(id: string): string {
+  const name = id.replace(/^owned-/, "").replaceAll("-", " ").trim() || "part";
+  return name.length <= 3 ? name.toUpperCase() : name;
+}
+
 function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView {
   const mine = items.filter((i) => i.goalId === g.id);
   const deadline = d(g.deadline);
@@ -199,7 +214,10 @@ function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: Allowanc
     conditions,
     variant: mine.find((i) => i.variant)?.variant ?? "",
     origin: asOrigin(g.origin),
-    skipped: mine.filter((i) => i.skippedOwnedPartId).map((i) => `Already owned (${i.skippedOwnedPartId}), so it is not in this hunt.`),
+    skipped: mine.filter((i) => i.skippedOwnedPartId).map((i) => {
+      const part = ownedPartLabel(i.skippedOwnedPartId);
+      return { part, text: `You already own the ${part}, so it is not in this hunt.` };
+    }),
     allowance: allowanceView(allowance),
   };
 }
@@ -266,6 +284,14 @@ function advocateByBid(events: readonly EventRow[]): Map<string, { rec: "veto" |
 
 export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undefined {
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
+}
+
+const PART_WORD: Record<string, string> = { board: "Motherboard", gpu: "Graphics card", cpu: "Processor", ram: "Memory", ssd: "Storage", cooler: "CPU cooler", psu: "Power supply", case: "Case" };
+
+/** "Motherboard, round 2" for a build round id like round-goal-build-1-board-2; null when the id is not a build round. */
+export function roundTitle(roundId: string): string | null {
+  const m = /-([a-z]+)-([1-9]\d*)$/.exec(roundId);
+  return m && Object.hasOwn(PART_WORD, m[1]!) ? `${PART_WORD[m[1]!]}, round ${m[2]}` : null;
 }
 
 const cond = (c: string) => c || "as asked";

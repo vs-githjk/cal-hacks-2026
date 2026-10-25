@@ -65,6 +65,10 @@ export const ApprovalCode = __t.object("ApprovalCode", {
   failures: __t.u32(),
   locked: __t.bool(),
   issuedAt: __t.timestamp(),
+  amount: __t.f64(),
+  payee: __t.string(),
+  expiry: __t.timestamp(),
+  origin: __t.string(),
 });
 export type ApprovalCode = __Infer<typeof ApprovalCode>;
 

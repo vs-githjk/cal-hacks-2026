@@ -474,3 +474,157 @@ def test_memory_endpoint_survives_a_lone_surrogate(tmp_path, where):
         (tmp_path / "run-1.json").write_text(_json.dumps(sample))
     r = TestClient(F.create_app(tmp_path / "run", memory_dir=tmp_path)).get("/v1/memory")
     assert r.status_code == 200 and "entries" in r.json()
+
+
+# ---------------------------------------------------------------- GET /v1/build (the live BuildView for the /buyer panel)
+
+HASH = "0x" + "ab" * 32
+PRIVATE_BITS = (HASH, "Payee Seller LLC", "pay-ref-9", "voice_code", "approval-code-4821", "allowance", "+15551230000")
+
+
+def _full_view() -> dict:
+    """A BuildView as demo/build.py writes it to demo/out/build-view.json, with every private field filled in."""
+    champ = {"bidId": "bid-1", "sellerId": "seller-1", "persona": "Micro Center", "landed": 1299.0, "origin": "MIRROR",
+             "sourceUrl": "https://example.test/gpu", "mandateHash": HASH, "phone": "+15551230000",
+             "liveCheck": {"state": "ok", "price": 1288.5, "quoted": 1299.0, "fetchedAt": "2026-10-24T23:50:00Z", "origin": "LIVE",
+                           "source": "Bright Data", "text": "x", "at": "t", "mandateHash": HASH}}
+    return {"goalId": "goal-build-1", "buyerId": "vidyut", "budget": 2100.0, "spent": 1299.0, "origin": "MIRROR", "secret": "x",
+            "parts": [{"part": "gpu", "label": "RTX 5070 Ti", "status": "locked", "budget": 1329.0, "origin": "MIRROR",
+                       "champion": champ, "payee": "Payee Seller LLC",
+                       "history": {"state": "ok", "origin": "MIRROR", "secret": "x", "phone": "+15551230000",
+                                   "windows": [{"days": 7, "low": 1199.0, "median": 1249.0, "n": 4, "daysOfData": 7, "url": "https://x"},
+                                               {"days": 30, "low": 1149.0, "median": 1270.0, "n": 9, "daysOfData": 12}]}}],
+            "checks": [{"a": "gpu", "b": "psu", "rule": "power", "state": "ok", "detail": "750 W is enough", "source": "fit.psu_wattage"}],
+            "events": [{"at": "t1", "kind": "locked", "text": "RTX 5070 Ti: Micro Center locked at $1,299.00", "parts": ["gpu"], "origin": "MIRROR"},
+                       {"at": "t2", "kind": "call", "text": "Calling Vidyut at +15551230000, code approval-code-4821", "parts": [], "origin": "SIM"},
+                       {"at": "t3", "kind": "approved", "text": "Inside your allowance: $1,299.00", "parts": [], "origin": "SIM"},
+                       {"at": "t4", "kind": "receipt", "text": "Payment recorded: pay-ref-9", "parts": ["gpu"], "origin": "SIM"}],
+            "approval": {"state": "approved", "total": 1299.0, "sellers": 1, "method": "voice_code", "reason": "allowance rule",
+                         "mandates": [{"sellerId": "Payee Seller LLC", "amount": 1299.0, "mandateHash": HASH, "part": "gpu"}]}}
+
+
+def _build_client(tmp_path, text: str | None = None):
+    from fastapi.testclient import TestClient
+    if text is not None:
+        (tmp_path / "build-view.json").write_text(text, encoding="utf-8")
+    return TestClient(F.create_app(tmp_path / "run", build_dir=tmp_path))
+
+
+def test_build_endpoint_never_carries_the_whole_build_approval_code_whatever_key_it_rides_in(tmp_path):
+    """The code belongs to the buyer's own paired /buyer card (market approval_code row), never to this unauthenticated feed."""
+    word = "amber harbor"
+    view = _full_view()
+    view["approval"].update(code=word, approvalCode=word, wordPair=word, pendingCode=word)
+    view["code"] = word
+    view["parts"][0]["code"] = word
+    view["events"][0]["code"] = word
+    r = _build_client(tmp_path, json.dumps(view)).get("/v1/build")
+    assert r.status_code == 200 and word not in r.text and "harbor" not in r.text
+    for key in ("code", "approvalCode", "wordPair", "pendingCode"):
+        assert f'"{key}"' not in r.text
+
+
+def test_build_endpoint_serves_the_latest_view_without_private_fields(tmp_path):
+    r = _build_client(tmp_path, json.dumps(_full_view())).get("/v1/build")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["goalId"] == "goal-build-1" and body["origin"] == "MIRROR"
+    assert body["parts"][0]["champion"]["persona"] == "Micro Center" and body["parts"][0]["champion"]["origin"] == "MIRROR"
+    assert body["approval"] == {"state": "approved", "total": 1299.0, "sellers": 1}
+    assert [e["kind"] for e in body["events"]] == ["locked"]
+    for bit in PRIVATE_BITS:
+        assert bit not in r.text
+    for key in ("mandates", "mandateHash", "phone", "payee", "secret", "method", "reason", "quoted", "price", "url"):
+        assert f'"{key}"' not in r.text
+
+
+def test_build_endpoint_serves_only_the_safe_proof_fields(tmp_path):
+    """Judge fix 3: "Bright Data checked Ns ago" needs the read's time and source, not the read price or the quote (no money beyond the
+    landed price the panel already shows); the Tiger line needs the low and median of each window, nothing else."""
+    part = _build_client(tmp_path, json.dumps(_full_view())).get("/v1/build").json()["parts"][0]
+    assert part["champion"]["liveCheck"] == {"state": "ok", "origin": "LIVE", "fetchedAt": "2026-10-24T23:50:00Z", "source": "Bright Data"}
+    assert part["history"] == {"state": "ok", "origin": "MIRROR",
+                               "windows": [{"days": 7, "low": 1199.0, "median": 1249.0, "n": 4, "daysOfData": 7},
+                                           {"days": 30, "low": 1149.0, "median": 1270.0, "n": 9, "daysOfData": 12}]}
+
+
+def test_a_live_check_that_read_nothing_serves_no_time_and_never_a_live_label(tmp_path):
+    view = _full_view()
+    view["parts"][0]["champion"]["liveCheck"] = {"state": "slow", "price": None, "fetchedAt": "2026-10-24T23:50:00Z", "origin": "MIRROR",
+                                                  "quoted": 1299.0}
+    lc = _build_client(tmp_path, json.dumps(view)).get("/v1/build").json()["parts"][0]["champion"]["liveCheck"]
+    assert lc == {"state": "slow", "origin": "MIRROR", "source": "Bright Data"}   # no fetchedAt: nothing was read, so nothing was "checked"
+    view["parts"][0]["champion"]["liveCheck"] = {"state": "ok", "origin": "LIVE", "fetchedAt": 5}   # a LIVE read with no real time proves nothing
+    lc = _build_client(tmp_path, json.dumps(view)).get("/v1/build").json()["parts"][0]["champion"]["liveCheck"]
+    assert lc["origin"] == "MIRROR" and "fetchedAt" not in lc
+
+
+def test_a_history_that_is_not_the_shape_is_dropped_and_a_bad_window_with_it(tmp_path):
+    view = _full_view()
+    view["parts"][0]["history"] = "no"
+    assert "history" not in _build_client(tmp_path, json.dumps(view)).get("/v1/build").json()["parts"][0]
+    view["parts"][0]["history"] = {"state": "ok", "origin": "LIVE", "windows": [{"days": 7, "low": "1", "median": 2, "n": 1, "daysOfData": 1}, 3,
+                                                                                {"days": 30, "low": 1.0, "median": 2.0, "n": 1, "daysOfData": 1}]}
+    h = _build_client(tmp_path, json.dumps(view)).get("/v1/build").json()["parts"][0]["history"]
+    assert h["origin"] == "MIRROR" and [w["days"] for w in h["windows"]] == [30]   # a stored read is never LIVE
+
+
+def test_build_endpoint_is_404_until_a_run_wrote_a_view(tmp_path):
+    r = _build_client(tmp_path).get("/v1/build")
+    assert r.status_code == 404
+
+
+@pytest.mark.parametrize("text", ['{"goalId": "goal-1", "parts": [{"part": "gp', "", "[]", "null", '{"goalId": 7}',
+                                  '{"goalId": "g", "parts": "no", "checks": [], "events": []}', r'"\ud800"', '{"a": ' * 3000])
+def test_build_endpoint_never_500s_on_a_half_written_or_odd_file(tmp_path, text):
+    r = _build_client(tmp_path, text).get("/v1/build")
+    assert r.status_code in (404, 503), r.status_code
+
+
+def test_build_endpoint_survives_a_lone_surrogate_inside_a_valid_view(tmp_path):
+    view = _full_view()
+    view["parts"][0]["champion"]["persona"] = "\ud800"
+    r = _build_client(tmp_path, json.dumps(view)).get("/v1/build")  # json.dumps escapes it, so the file itself is valid
+    assert r.status_code in (200, 503)
+
+
+def test_build_endpoint_skips_rows_of_the_wrong_type(tmp_path):
+    view = _full_view()
+    view["parts"].append("junk")
+    view["events"].append(5)
+    view["checks"].append(None)
+    r = _build_client(tmp_path, json.dumps(view)).get("/v1/build")
+    assert r.status_code == 200 and len(r.json()["parts"]) == 1
+
+
+def test_build_endpoint_dir_comes_from_BUILD_VIEW_DIR(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    (tmp_path / "build-view.json").write_text(json.dumps(_full_view()), encoding="utf-8")
+    monkeypatch.setenv("BUILD_VIEW_DIR", str(tmp_path))
+    assert TestClient(F.create_app(tmp_path / "run")).get("/v1/build").status_code == 200
+
+
+def test_build_endpoint_default_dir_is_the_one_build_py_writes():
+    from demo import build as B
+    spec_dir = F.default_build_dir()
+    assert spec_dir == B.OUT_DIR and F.BUILD_VIEW_FILE == B.VIEW_FILE
+
+
+def test_build_endpoint_serves_a_real_dry_run_view_the_panel_can_parse(tmp_path):
+    """demo/build.py --dry-run --out-dir writes the real BuildView offline; the feed serves it stripped, and the committed web
+    fixture (web/src/lib/fixtures/build-feed.served.json, parsed by web/src/lib/buildView.test.ts) is that shape."""
+    import subprocess
+    root = SCRIPTS.parent
+    done = subprocess.run([sys.executable, str(root / "demo" / "build.py"), "--dry-run", "--out-dir", str(tmp_path)],
+                          cwd=root, capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stderr[-500:]
+    raw = json.loads((tmp_path / "build-view.json").read_text())
+    r = _build_client(tmp_path).get("/v1/build")
+    assert r.status_code == 200
+    body = r.json()
+    assert body == F.buyer_view(raw)
+    assert body["goalId"] == raw["goalId"] and len(body["parts"]) == len(raw["parts"])
+    assert "mandates" not in body["approval"]
+    fixture = json.loads((root / "web" / "src" / "lib" / "fixtures" / "build-feed.served.json").read_text())
+    assert F.buyer_view(fixture) == fixture  # the web test's fixture is exactly what the feed serves
+    assert set(fixture) == set(body)

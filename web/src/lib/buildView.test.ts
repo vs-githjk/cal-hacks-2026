@@ -90,3 +90,26 @@ test("fetchBuild: 404 means no live build, a posted build is parsed", async () =
     globalThis.fetch = real;
   }
 });
+
+// web/src/lib/fixtures/build-feed.served.json is a real `python3 demo/build.py --dry-run --out-dir` view run through the feed's
+// buyer_view() (scripts/agent_feed.py GET /v1/build); scripts/tests/test_agent_feed.py pins it to what the feed serves.
+test("the live build the agent feed serves parses with nothing dropped and replaces the SIM sample in the panel", async () => {
+  const served = JSON.parse(readFileSync(new URL("./fixtures/build-feed.served.json", import.meta.url), "utf8"));
+  assert.equal(JSON.stringify(served).includes("mandate"), false);
+  const real = globalThis.fetch;
+  try {
+    let url = "";
+    globalThis.fetch = (async (u: string) => { url = u; return Response.json(served); }) as typeof fetch;
+    const view = (await fetchBuild("http://127.0.0.1:8790"))!;
+    assert.equal(url, "http://127.0.0.1:8790/v1/build");
+    assert.equal(view.rejected, 0);
+    assert.equal(view.goalId, served.goalId);
+    const b = toBuildResult(view);
+    assert.equal(b.rejected, 0);
+    assert.ok(Object.keys(b.picks).length > 0, "the panel shows the live picks");
+    assert.ok(Object.values(b.picks).every((p) => ["LIVE", "MIRROR", "SIM"].includes(p.origin as string)));
+    assert.equal(b.capCents, Math.round(served.budget * 100));
+  } finally {
+    globalThis.fetch = real;
+  }
+});

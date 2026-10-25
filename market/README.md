@@ -96,6 +96,8 @@ Pass every name in snake_case. SpacetimeDB's HTTP API wants top-level reducer ar
 |---|---|---|
 | `assign_role(identity, role, subject_id)` | owner | role is buyer, seller or referee |
 | `pair_buyer_screen(buyer_id, code)` | a screen with no role, or a buyer | demo sign-in (SIM); a seller or referee is refused. A wrong code does not throw (so the count sticks) and shows in `my_pair_attempts`; 5 wrong codes lock the code, and 5 lock the caller across every code; the code never appears in a message |
+| `issue_build_approval_code(mandate_hash, buyer_id, amount, payee, expiry_minutes, code, origin)` | referee | the word pair for the ONE call that approves a whole build, shown on that buyer's own `/buyer` card (`my_pending_approvals`, `mandate_id` = `whole build`). Keyed by the aggregate mandate hash (the build makes its mandates after the call), so no mandate row is needed; `expiry_minutes` 1 to 10; a new one retires the buyer's earlier build code; refuses a hash that is a real mandate (use `issue_approval_code`), an unknown buyer, an empty code or a zero amount |
+| `clear_build_approval_code(mandate_hash)` | referee | takes that build code off the buyer's screen when the call ends (approved, denied or crashed); the row stays so telemetry still counts the call; a no-op when there is none |
 | `reissue_pair_code(buyer_id)` | owner | fresh code, unlocked, counter reset |
 | `set_floor(sku_spec, floor)` | seller | a floor for every condition of that SKU (unchanged call; the Lane D bridge uses it); private |
 | `set_floor_for_condition(sku_spec, condition, floor)` | seller | a floor for one (seller, sku_spec, condition); it wins over `set_floor`; private |

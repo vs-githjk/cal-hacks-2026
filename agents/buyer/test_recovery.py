@@ -414,7 +414,7 @@ def test_superseded_round_ignores_its_late_crs_result(buyer, monkeypatch):
         release.set()
         assert await old is False
         assert buyer.ROUND['phase'] == 'bidding'
-        assert len([msg for _, msg in ctx.sent if isinstance(msg, buyer.common.BidRequest)]) == len(buyer.common.SELLERS)
+        assert len([msg for _, msg in ctx.sent if isinstance(msg, buyer.common.BidRequest)]) == len([x for x in buyer.common.SELLERS if x not in buyer.common.RETIRED_SELLERS])  # #398: retired sellers are not asked
     run_bounded(run())
 
 
@@ -426,7 +426,7 @@ def test_buyer_output_shows_cached_crs_time_without_forwarding_profile(buyer, mo
     seller_ctx = Context()
     asyncio.run(buyer.start_round(seller_ctx, dict(buyer.ROUND['need'])))
     seller_requests = [msg for _, msg in seller_ctx.sent if isinstance(msg, buyer.common.BidRequest)]
-    assert len(seller_requests) == len(buyer.common.SELLERS)
+    assert len(seller_requests) == len([x for x in buyer.common.SELLERS if x not in buyer.common.RETIRED_SELLERS])
     buyer.ROUND.update(phase='bidding', seller_checks={'seller_1': check}, deadline=time.time() - 1,
                        bids=[bid], received_bids={'bid-1': bid})
     ctx = Context()
@@ -614,17 +614,18 @@ def _open_round(buyer, monkeypatch, *, mailbox, seeded):
 
 
 def test_mailbox_round_counts_only_sellers_that_can_run(buyer, monkeypatch):
-    # AGENTS_MAILBOX=1, seeds set for seller_1 to seller_3 only: seller_4 and seller_5 keep the public dev seed and never run.
+    # AGENTS_MAILBOX=1, seeds set for seller_1 to seller_3 only: seller_5 keeps the public dev seed and never runs, and
+    # seller_2 and seller_4 are retired (#398), so only seller_1 and seller_3 are asked.
     bids, text, common = _open_round(buyer, monkeypatch, mailbox=True, seeded={'seller_1', 'seller_2', 'seller_3'})
-    assert sorted(bids) == sorted(common.address(s) for s in ['seller_1', 'seller_2', 'seller_3'])
-    assert 'with 3 sellers' in text
+    assert sorted(bids) == sorted(common.address(s) for s in ['seller_1', 'seller_3'])
+    assert 'with 2 sellers' in text
     assert '5 sellers' not in text
 
 
-def test_local_round_still_counts_all_five_sellers(buyer, monkeypatch):
+def test_local_round_counts_the_three_running_catalog_sellers(buyer, monkeypatch):
     bids, text, common = _open_round(buyer, monkeypatch, mailbox=False, seeded=set())
-    assert len(bids) == 5
-    assert 'with 5 sellers' in text
+    assert len(bids) == 3   # seller_1, seller_3, seller_5; seller_2 and seller_4 are retired (#398)
+    assert 'with 3 sellers' in text
 
 
 def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buyer):

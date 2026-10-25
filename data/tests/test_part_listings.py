@@ -447,3 +447,16 @@ def test_an_amazon_listing_that_names_no_seller_never_bids(tmp_path, specs):
     root = tmp_path / "p"
     write(root, "amazon-cpu-x-20261024T2200Z", [card("amazon", "cpu", "AMD Ryzen 7 9700X", 280.0, "https://amz/none")])
     assert parts.offers("cpu", root=root) == []
+
+
+@pytest.mark.parametrize("title,ok", [("Samsung - 990 PRO 2TB Internal SSD PCle Gen 4x4 NVMe", True),
+                                      ("990 PRO 2TB Samsung V NAND 3-bit MLC PCIe Gen 4 x4 NVMe M.2 Internal SSD", True),
+                                      ("Samsung SSD 990 PRO 2TB, PCIe 4.0 M.2 2280, Up to 7,450 MB/s", True),
+                                      ("Samsung - 990 PRO 1TB Internal SSD PCle Gen 4x4 NVMe", False),
+                                      ("Samsung Ark 2nd Gen 55in 4K Curved Monitor & 2TB 990 PRO M.2 SSD with Heatsink Kit", False),
+                                      ("Samsung SSD 9100 PRO 2TB, PCIe 5.0x4 M.2 2280", False)])
+def test_the_shipped_ssd_row_matches_only_the_990_pro_2tb(title, ok):  # #397 A2: the storage slot had no maker row
+    row = part_specs.find("storage", None, title)
+    assert (row is not None) is ok
+    if ok:
+        assert row["interface"] == "NVMe" and row["source"].startswith("https://www.samsung.com/") and row["checked"]

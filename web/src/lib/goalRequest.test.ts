@@ -8,6 +8,9 @@ import {
   SpeechError,
   applyDictation,
   buildGoalRequest,
+  canFindOffers,
+  catalogSku,
+  postGoalArgs,
   dictate,
   draftFor,
   fallbackMessage,
@@ -21,7 +24,7 @@ import {
 const TODAY = new Date(2026, 9, 24, 12, 0, 0); // local noon, 24 Oct 2026
 const draft = (over: Partial<GoalDraft> = {}): GoalDraft => ({ text: "RTX 5070 under $650", cap: "", deadline: "", conditions: [], ...over });
 const build = (over: Partial<GoalDraft> = {}) => buildGoalRequest(draft(over), "req-1", TODAY);
-const request = (over: Partial<GoalRequest> = {}): GoalRequest => ({ requestId: "req-1", requestText: "RTX 5070", cap: null, deadline: null, conditions: [], ownedPartIds: [], ...over });
+const request = (over: Partial<GoalRequest> = {}): GoalRequest => ({ requestId: "req-1", requestText: "RTX 5070 Ti", cap: null, deadline: null, conditions: [], ownedPartIds: [], ...over });
 const problemFields = (r: ReturnType<typeof build>) => (r.ok ? [] : r.problems.map((p) => p.field));
 
 // ---- building the request: any product, exact words, no second parser
@@ -225,4 +228,87 @@ test("every message the buyer can read here is free of em and en dashes", async 
   for (const e of [await submitGoal(request({ requestId: "d1" })).catch((e) => e), await submitGoal(request({ requestId: "d2" }), undefined, { command: never, timeoutMs: 10 }).catch((e) => e), await dictate(null, new AbortController().signal).catch((e) => e), await dictate({ listen: async () => { throw new DOMException("n", "NotAllowedError"); } }, new AbortController().signal).catch((e) => e)]) msgs.push((e as Error).message);
   assert.ok(msgs.length >= 8);
   for (const m of msgs) assert.doesNotMatch(m, /[\u2013\u2014]/, m);
+});
+
+// ---- posting the goal to the market (reducers.postGoal)
+
+test("postGoalArgs maps a request with a cap and a deadline to the exact reducer args", () => {
+  const args = postGoalArgs(request({ requestText: "  RTX 5070 Ti  ", cap: 650, deadline: "2026-11-02" }), "b_ab12cd34", TODAY);
+  assert.deepEqual(args, {
+    id: "g_req1",
+    buyerId: "b_ab12cd34",
+    type: "budget_cap",
+    cap: 650,
+    deadline: new Date(2026, 10, 2, 23, 59).toISOString(),
+    poNumber: "",
+    origin: "SIM",
+    items: [{ skuSpec: "rtx 5070 ti", condition: "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
+  });
+});
+
+test("postGoalArgs defaults the deadline to 7 days after today", () => {
+  const args = postGoalArgs(request({ cap: 90 }), "b_ab12cd34", TODAY);
+  assert.ok(!("error" in args));
+  assert.equal(args.deadline, new Date(2026, 9, 31, 23, 59).toISOString());
+  assert.match(args.deadline, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test("postGoalArgs asks for a cap instead of guessing one", () => {
+  assert.deepEqual(postGoalArgs(request({ cap: null }), "b_ab12cd34", TODAY), { error: "Add a top price so sellers know your cap." });
+});
+
+test("postGoalArgs passes the first chosen condition through and makes a short safe id", () => {
+  const args = postGoalArgs(request({ requestId: "3f2b8c1e-9a4d-4e7f-8b21-0c5d6e7f8a9b", cap: 90, conditions: ["refurbished", "used"] }), "b_ab12cd34", TODAY);
+  assert.ok(!("error" in args));
+  assert.equal(args.items[0]!.condition, "refurbished");
+  assert.match(args.id, /^g_[A-Za-z0-9]{1,12}$/);
+});
+
+test("canFindOffers is true for a b_ buyer that is not busy, false for no buyer or while sending", () => {
+  assert.equal(canFindOffers("b_ab12cd34", false), true);
+  assert.equal(canFindOffers(null, false), false);
+  assert.equal(canFindOffers("b_ab12cd34", true), false);
+});
+
+test("catalogSku maps typed part names to the exact seller sku", () => {
+  const cases: [string, string | null][] = [
+    ["RTX 5070 Ti", "rtx 5070 ti"],
+    ["rtx5070ti under $900", "rtx 5070 ti"],
+    ["4070 Super", "rtx 4070 super 12gb"],
+    ["RX 7800 XT", "rx 7800 xt 16gb"],
+    ["850W power supply", "psu 850w"],
+    ["a power supply", "psu 750w"],
+    ["mid-tower case", "case"],
+    ["graphics card under $600", "rtx 4070 super 12gb"],
+    ["RTX 5090", null],
+    ["a keyboard", null],
+    ["1000W power supply", null],
+    ["850 watt PSU", "psu 850w"],
+    ["1000 watt power supply", null],
+    ["650 watts psu", null],
+    ["650W PSU", null],
+    ["tower cooler", null],
+    ["RTX 5090 in a mid-tower case", null],
+    ["850 W PSU", "psu 850w"],
+  ];
+  for (const [text, sku] of cases) assert.equal(catalogSku(text), sku, text);
+});
+
+test("postGoalArgs says plainly when sellers do not carry the part", () => {
+  const args = postGoalArgs(request({ requestText: "a keyboard", cap: 90 }), "b_ab12cd34", TODAY);
+  assert.ok("error" in args);
+  assert.match(args.error, /don't carry that part/);
+});
+
+test("catalogSku: a price is not a GPU model", () => {
+  assert.equal(catalogSku("graphics card under $1000"), "rtx 4070 super 12gb");
+  assert.equal(catalogSku("a 5090 graphics card"), null);
+});
+
+test("a deadline of today picked at 7:30 pm is still in the future", () => {
+  const evening = new Date(2026, 9, 24, 19, 30);
+  const args = postGoalArgs(request({ cap: 90, deadline: "2026-10-24" }), "b_ab12cd34", evening);
+  assert.ok(!("error" in args));
+  assert.ok(Date.parse(args.deadline) > evening.getTime());
+  assert.match(args.deadline, /^\d{4}-\d{2}-\d{2}T/);
 });

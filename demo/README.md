@@ -39,6 +39,26 @@ a held-back, vetoed or non-partner champion is never mandated, and a part with n
 live with Bright Data (parallel, bounded; a failed read keeps the dated price and says so). Above the allowance: ONE call ("6 parts from 3 sellers, <total>"), then one mandate,
 approval, payment and receipt per part; inside it: no call (method `allowance`). `demo/out/build-view.json` (the board's BuildView) is rewritten at every step.
 Details and the keys added to the board's shape: `docs/changes/1705-D-build-in-the-market.md`.
+The local agent feed serves that file to the `/buyer` build panel as `GET /v1/build` (scripts/agent_feed.py; private fields stripped). Step-by-step local rehearsal with a real call: `demo/REHEARSAL.md`.
+
+**Whose build.** With no flag the run builds the demo plan under `goal-build-1` for `vidyut` (unchanged). `--buyer-id X` with no `--goal-id` and no `--plan` builds from X's own
+latest ACTIVE `build_by_date` goal: the cap, deadline, owned items and the items to buy come from the goal row, and the run REUSES that goal (it posts no second one). The goal row
+holds no per-part budget, so the budgets are the demo plan's split, scaled down to fit the cap, and the plan line says so (SIM). `--plan FILE` takes a `planner.plan()` JSON
+(`cap_cents`, `owned`, `parts`) through `plan_from_planner` and posts it as a new goal. An unreadable or missing goal is one `error:` line and exit 1. `--dry-run` runs on an in-memory market,
+so it cannot read a goal: use `--plan FILE` to dry-run a plan. Goals are private to the buyer (the `my_goals` view answers the caller's own buyer role; the referee reads none), so
+reading X's goal needs X's identity token: `buyer-vidyut.json` for Vidyut, or `--buyer-token FILE` for another buyer (a self-serve buyer's token lives in their browser). For another
+buyer the run leaves their allowance alone unless `--per-buy` or `--period-limit` is given.
+
+**Whose phone.** Above the allowance the call rings the buyer's own approval phone (`pay.voice_cartesia.approval_phone`). Today only Vidyut has one (`APPROVAL_CALL_TO`); any other buyer
+has none until the market's `buyer_profile` phone lands (#374), and a build or bridge run for them above the allowance is DENIED (`no_phone`): no call, no mandate, no payment, and no
+scripted fallback.
+
+**Which Shield.** Every runner prints one `Shield:` line at the start. The default is the deterministic rule screen only. The Claude classifier (`claude-haiku-5-5`, `SHIELD_MODEL` to
+change) adds a quarantine on text the rules allowed, and is on only when `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` are both exported in the shell that runs the command; the runner's
+env file is not read for them. Example: `SHIELD_CLASSIFIER=1 python3 demo/build.py --live-call` with the key already in the shell. Its timeouts are Shield's own and are not changed here.
+
+**LIVE proof lines.** The Fetch tile gets a `LIVE` line (referee `record_agent_event`) only for a value the run actually fetched: a Bright Data price read (`ok`, origin LIVE), a Tiger Data
+write that stored rows, a CRS band from a sandbox request made in this run (never a cached or SIM seller's). Anything else posts no proof line, and the agents' own lines stay `SIM`.
 
 ## Screen bridge (`demo/bridge.py`): watch the run on /buyer and /market
 ```

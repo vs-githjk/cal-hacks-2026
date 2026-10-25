@@ -51,6 +51,18 @@ def validate(name: str, obj: Any) -> Any:
     return obj
 
 
+def shield_mode_line(environ: Optional[dict] = None) -> str:
+    """One console line saying which Shield screens this run: the deterministic rules alone, or the rules plus the Claude classifier.
+    Mirrors shield.classifier.default_classifier (both SHIELD_CLASSIFIER=1 and ANTHROPIC_API_KEY in the process environment). Names only."""
+    import os
+    from shield import classifier
+    env = os.environ if environ is None else environ
+    if env.get("SHIELD_CLASSIFIER") == "1" and env.get("ANTHROPIC_API_KEY"):
+        return f"Shield: rules plus the Claude classifier ({env.get('SHIELD_MODEL') or classifier.DEFAULT_MODEL}); it can only add a quarantine"
+    return ("Shield: rule screen only. To add the Claude classifier, export SHIELD_CLASSIFIER=1 and ANTHROPIC_API_KEY in the shell that runs this "
+            "(the env file is not read for them)")
+
+
 def money(x: float) -> str:
     return f"${x:,.2f}"
 
@@ -64,7 +76,7 @@ class Narrator:
 
     def _w(self, text: str) -> None:
         if self.show:
-            print(text, file=self.stream)
+            print(text, file=self.stream, flush=True)   # a piped log (| tee) must show the approval code line during the call
 
     def header(self, n: int, title: str, code: str) -> None:
         self._w("")

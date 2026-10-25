@@ -514,7 +514,7 @@ def test_the_runner_prints_every_losing_sellers_note_and_the_buyer_trend(no_tige
     for sid in ("amazon-direct", "ebay-072531", "gadget-grove", "bargain-bin", "fair-price-pc"):
         assert f"  {sid}  (" in out
     assert "  shady-sam  (within5, advocate veto)" in out      # the referee's report says advocate veto, so it is told so
-    assert "CRS: 1 of 19 sellers listing this part are verified" in out
+    assert "CRS: 1 of 21 sellers listing this part are verified" in out   # 19 + Byte Bros and Frankie (#398)
     assert "[SIM fixture; SIM]" in out and "(only 10 days of data)" in out
 
 

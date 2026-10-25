@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -157,6 +157,19 @@ test("reviewFromRows shows the latest expiring code, with the origin normalized"
   assert.equal(reviewFromRows([]), null);
 });
 
+test("the whole-build code row (my_pending_approvals, no mandate yet) becomes the same review card, marked as the whole build", () => {
+  const build = { mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0 + 300_000), code: "amber harbor", failures: 0, locked: false, origin: "LIVE" };
+  const r = reviewFromRows([build])!;
+  assert.equal(r.code, "amber harbor");
+  assert.equal(r.amount, 3412.5);
+  assert.equal(r.payee, "your whole build (8 parts from 4 sellers)");
+  assert.equal(r.origin, "LIVE");
+  assert.equal(isWholeBuild(r), true);
+  const deal = reviewFromRows([{ ...build, mandateHash: "h1", mandateId: "mdt-1", payee: "seller-c" }])!;
+  assert.equal(isWholeBuild(deal), false);
+  assert.equal(reviewFromRows([]), null, "no row, no card: the screen says nothing is waiting");
+});
+
 // ---- Task 1: the buyer app only ever shows the paired buyer's own goals.
 
 const roleRow = (role: string, subjectId: string) => ({ role, subjectId });
@@ -276,4 +289,31 @@ test("#191-5 my_deals: approval shows only once the call approved it, the receip
   assert.equal(paid.receipt!.chargeStatus, "SIM stub, no money moved");
   assert.equal(paid.receipt!.amount, 1299.99);
   assert.equal(paid.receipt!.seller, "best-buy");
+});
+
+test("winningBid returns the winner even when it is a MIRROR bid", () => {
+  const w = winningBid([{ seller: "A", origin: "SIM", won: false }, { seller: "Central Computers", origin: "MIRROR", won: true }]);
+  assert.equal(w?.seller, "Central Computers");
+  assert.equal(w?.origin, "MIRROR");
+});
+
+test("roundTitle turns a build round id into a readable name", () => {
+  assert.equal(roundTitle("round-goal-build-1-board-2"), "Motherboard, round 2");
+  assert.equal(roundTitle("round-goal-build-3-gpu-1"), "Graphics card, round 1");
+  assert.equal(roundTitle("round-1"), null);
+  assert.equal(roundTitle("round-goal-build-1-board-x"), null);
+});
+
+// ---- The skipped-owned-part line names the part that was skipped, not always the PSU (rehearsal 22:17).
+
+test("goalsForBuyer: each skipped owned part is named by its own id, so the case is never called the PSU", () => {
+  const items = [
+    { ...goalItemRow("goal-a1", "750 w psu"), skippedOwnedPartId: "owned-psu" },
+    { ...goalItemRow("goal-a1", "case (305 mm gpu room)"), skippedOwnedPartId: "owned-case" },
+    { ...goalItemRow("goal-a1", "rtx 5070 ti"), skippedOwnedPartId: "" },
+  ];
+  const [g] = goalsForBuyer([goalRow()], items, undefined, "buyer-a");
+  assert.deepEqual(g!.skipped.map((s) => s.part), ["PSU", "case"]);
+  assert.equal(g!.skipped[0]!.text, "You already own the PSU, so it is not in this hunt.");
+  assert.equal(g!.skipped[1]!.text, "You already own the case, so it is not in this hunt.");
 });
