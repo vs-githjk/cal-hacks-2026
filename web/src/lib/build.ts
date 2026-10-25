@@ -16,6 +16,8 @@ export interface BuildResult {
   steps: BuildStep[];
   /** The build's own label from the feed; absent on SAMPLE_BUILD, which is SIM. */
   origin?: "LIVE" | "MIRROR" | "SIM";
+  /** Rows the feed sent that failed the BuildView shape and were left out. */
+  rejected?: number;
 }
 
 export const PARTS = ["gpu", "cpu", "motherboard", "memory", "storage", "cooler"] as const;

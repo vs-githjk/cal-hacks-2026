@@ -53,6 +53,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
           Kept, no round: {Object.entries(b.owned).map(([k, name]) => `${PART_NAMES[k] ?? k} (${name})`).join(", ")}
         </p>
       )}
+      {!!b.rejected && <p className="mt-3 text-[12px] text-amber">{b.rejected} rows from the feed failed the build shape and are not shown.</p>}
     </Card>
   );
 }
