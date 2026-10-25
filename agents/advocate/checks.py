@@ -131,12 +131,25 @@ def _seller(supplier_id) -> str:
     return f"Seller {supplier_id}" if re.fullmatch(r"seller_\d{1,3}", str(supplier_id)) else "This seller"
 
 
+def _amount(v):
+    """A finite, non-negative number (not a bool, not a string), else None."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or v in (float("inf"), float("-inf")) or v < 0:
+        return None
+    return v
+
+
 def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
     out = _fit_warnings(bid, owned)
     for line in bid["lines"]:
         sku = _item(line["sku_spec"], wanted)
-        total = line["unit_price"] * line["quantity"]
         url = line.get("listing_url", "")
+        price, qty = _amount(line.get("unit_price")), _amount(line.get("quantity"))
+        if price is None or qty is None:  # #397 B6: an unreadable price or quantity was a crash; now it is unverified, never a buy
+            out.append(_warn("unverified", f"{sku}: the price or quantity on this line could not be read, so no price "
+                             "check was made.", url, 0, rule_id="advocate.unsourced"))
+            line = {**line, "unit_price": 0.0, "quantity": 1}
+            price, qty = 0.0, 1
+        total = price * qty
 
         offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
         # #308: a page that does not state the condition (MIRROR Central Computers) proves nothing either way.
@@ -158,7 +171,7 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
             out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
                              "The condition claim did not match the listing.", url, total))
 
-        base = baseline.get(_norm(line["sku_spec"]))
+        base = baseline.get(_norm(line["sku_spec"])) if price else None
         if base and line["unit_price"] > base["unit_price"] * (1 + PRICE_TOLERANCE):
             over = (line["unit_price"] - base["unit_price"]) * line["quantity"]
             dated = (f" ({base['label']})" if base.get("label") else  # #291: MIRROR baseline as of <date>, N sources

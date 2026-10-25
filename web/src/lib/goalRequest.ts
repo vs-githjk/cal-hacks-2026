@@ -78,6 +78,64 @@ export function buildGoalRequest(draft: GoalDraft, requestId: string, today: Dat
   };
 }
 
+// ---- Posting the goal to the market (reducers.postGoal). The market checks the rest: type, cap > 0, ISO deadline, new id, caller.
+
+export interface PostGoalArgs {
+  id: string;
+  buyerId: string;
+  type: string;
+  cap: number;
+  deadline: string;
+  poNumber: string;
+  origin: string;
+  items: { skuSpec: string; condition: string; variant: string; quantity: number; skippedOwnedPartId: string }[];
+}
+
+/** The full catalog sellers stock tonight. Sellers match need items by exact lowercase sku_spec. */
+export const CATALOG = [
+  { sku: "rtx 5070 ti", label: "RTX 5070 Ti" },
+  { sku: "rtx 4070 super 12gb", label: "RTX 4070 Super" },
+  { sku: "rx 7800 xt 16gb", label: "RX 7800 XT" },
+  { sku: "psu 850w", label: "850W PSU" },
+  { sku: "psu 750w", label: "750W PSU" },
+  { sku: "case", label: "PC case" },
+] as const;
+
+/** The seller sku for typed words, or null when sellers do not carry it. First match wins. */
+export function catalogSku(text: string): string | null {
+  const t = text.toLowerCase();
+  if (/\b(?:rtx\s*)?5070\s*ti\b/.test(t)) return "rtx 5070 ti";
+  if (/\b(?:rtx\s*)?4070\s*super\b/.test(t)) return "rtx 4070 super 12gb";
+  if (/\b(?:rx\s*)?7800\s*xt\b/.test(t)) return "rx 7800 xt 16gb";
+  if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) return null;
+  const watts = /\b(\d{3,4})\s*-?\s*w(?:atts?)?\b/.exec(t);
+  if (watts) return watts[1] === "850" ? "psu 850w" : watts[1] === "750" ? "psu 750w" : null;
+  if (/\b(?:psu|power supply)\b/.test(t)) return "psu 750w";
+  if (/\b(?:pc case|case|mid-tower|full-tower|mini-tower)\b/.test(t)) return "case";
+  if (/\b(?:gpu|graphics card|video card)\b/.test(t)) return "rtx 4070 super 12gb";
+  return null;
+}
+
+export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date): PostGoalArgs | { error: string } {
+  if (request.cap === null) return { error: "Add a top price so sellers know your cap." };
+  const skuSpec = catalogSku(request.requestText);
+  if (skuSpec === null) return { error: "Sellers tonight don't carry that part. Tap one above: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case." };
+  const [y, m, d] = (request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7))).split("-").map(Number);
+  return {
+    id: `g_${request.requestId.replace(/[^A-Za-z0-9]/g, "").slice(0, 12)}`,
+    buyerId,
+    type: "budget_cap",
+    cap: request.cap,
+    deadline: new Date(y!, m! - 1, d!, 23, 59).toISOString(), // the buyer's local end of day
+    poNumber: "",
+    origin: "SIM",
+    items: [{ skuSpec, condition: request.conditions[0] ?? "new", variant: "retail", quantity: 1, skippedOwnedPartId: "" }],
+  };
+}
+
+/** Find offers needs a signed-up buyer and no send in flight. */
+export const canFindOffers = (buyerId: string | null, busy: boolean): boolean => buyerId !== null && !busy;
+
 // ---- The draft: kept through pairing, never shown to a different buyer.
 
 export interface StoredDraft {
