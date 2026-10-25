@@ -231,10 +231,21 @@ SELLERS = [*CATALOG_SELLERS, *_MIRROR_SEEDS]  # each its own uAgent; seller_6 on
 # tests stay): each only repeats a job above, which Fetch asked us not to show as separate agents.
 RETIRED_SELLERS = {"seller_2": "not run (same job as ReNew Refurb, seller_5)",
                    "seller_4": "not run (same job as Byte Bros Outlet, seller_1)"}
-SELLER_JOBS = {"seller_1": "learns from a loss report: steps its price, never below its floor",
-               "seller_3": "lies: the bid says new, its page says open-box, and the Advocate vetoes it with the source",
-               "seller_5": "bundles refurbished and open-box lines of one part in one bid, condition on every line",
-               "seller_6": "real store: bids a San Francisco store's dated listings (MIRROR) and can never be ordered or paid"}
+SELLER_JOBS = {"seller_1": "learner: steps its margin across rounds from its own losses and wins, never below its floor, and "
+                           "shows a strategy note",
+               "seller_3": "adaptive trickster: rotates a condition lie and an injection line (plus a fee and a warranty lie behind a flag), "
+                           "learns which got caught, and every trick stays catchable",
+               "seller_5": "honest refurbisher: labelled refurbished and open-box lines, the tradeoff in plain words, truthful "
+                           "answers to the Advocate",
+               "seller_6": "live mirror: bids a real store's dated listing as a price anchor, re-checked each round when a Bright "
+                           "Data key is set, and can never be ordered or paid"}
+
+
+def live_sellers() -> list[str]:
+    """The sellers that run: SELLERS without the retired ones (seller_6 only when its private seed is set)."""
+    return [s for s in SELLERS if s not in RETIRED_SELLERS]
+
+
 SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
                 "seller_6": 8016}
 BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)
