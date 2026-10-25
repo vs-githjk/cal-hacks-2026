@@ -90,6 +90,10 @@ export interface ReviewView {
   origin: Origin;
 }
 
+/** The mandateId my_pending_approvals gives the one code that approves a whole build (market.ts myPendingApprovalsView). */
+export const WHOLE_BUILD_ID = "whole build";
+export const isWholeBuild = (r: Pick<ReviewView, "mandateId">): boolean => r.mandateId === WHOLE_BUILD_ID;
+
 /** Matches APPROVAL_MAX_FAILURES in market/spacetimedb/src/market.ts. */
 export const REVIEW_MAX_FAILURES = 5;
 

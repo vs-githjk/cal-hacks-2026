@@ -506,6 +506,20 @@ def _build_client(tmp_path, text: str | None = None):
     return TestClient(F.create_app(tmp_path / "run", build_dir=tmp_path))
 
 
+def test_build_endpoint_never_carries_the_whole_build_approval_code_whatever_key_it_rides_in(tmp_path):
+    """The code belongs to the buyer's own paired /buyer card (market approval_code row), never to this unauthenticated feed."""
+    word = "amber harbor"
+    view = _full_view()
+    view["approval"].update(code=word, approvalCode=word, wordPair=word, pendingCode=word)
+    view["code"] = word
+    view["parts"][0]["code"] = word
+    view["events"][0]["code"] = word
+    r = _build_client(tmp_path, json.dumps(view)).get("/v1/build")
+    assert r.status_code == 200 and word not in r.text and "harbor" not in r.text
+    for key in ("code", "approvalCode", "wordPair", "pendingCode"):
+        assert f'"{key}"' not in r.text
+
+
 def test_build_endpoint_serves_the_latest_view_without_private_fields(tmp_path):
     r = _build_client(tmp_path, json.dumps(_full_view())).get("/v1/build")
     assert r.status_code == 200

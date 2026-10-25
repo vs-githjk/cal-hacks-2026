@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -155,6 +155,19 @@ test("reviewFromRows shows the latest expiring code, with the origin normalized"
   assert.equal(r.mandateHash, "b");
   assert.equal(r.origin, "SIM");
   assert.equal(reviewFromRows([]), null);
+});
+
+test("the whole-build code row (my_pending_approvals, no mandate yet) becomes the same review card, marked as the whole build", () => {
+  const build = { mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0 + 300_000), code: "amber harbor", failures: 0, locked: false, origin: "LIVE" };
+  const r = reviewFromRows([build])!;
+  assert.equal(r.code, "amber harbor");
+  assert.equal(r.amount, 3412.5);
+  assert.equal(r.payee, "your whole build (8 parts from 4 sellers)");
+  assert.equal(r.origin, "LIVE");
+  assert.equal(isWholeBuild(r), true);
+  const deal = reviewFromRows([{ ...build, mandateHash: "h1", mandateId: "mdt-1", payee: "seller-c" }])!;
+  assert.equal(isWholeBuild(deal), false);
+  assert.equal(reviewFromRows([]), null, "no row, no card: the screen says nothing is waiting");
 });
 
 // ---- Task 1: the buyer app only ever shows the paired buyer's own goals.
