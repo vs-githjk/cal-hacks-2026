@@ -1,0 +1,1 @@
+The outside navigation: wordmark token on the left, four links, a LIVE pill and the one primary button. The consumer provides the BRAND.name string, the current route and whether the floor is live. Links are 44 px tall tap targets. Under 640 px the links move into the buyer app shell's bottom tab bar.

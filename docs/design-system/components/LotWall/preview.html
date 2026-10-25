@@ -1,0 +1,42 @@
+<!-- @dsCard group="Outside" height=420 subtitle="/lot: one real request on the left, the seller's view of a pooled lot as a wall of bricks on the right" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .lot { display:grid; grid-template-columns: 1fr 1.4fr; gap:16px; max-width:960px; }
+  .wall { display:grid; grid-template-columns: repeat(8, 1fr); gap:6px; }
+  .brick { aspect-ratio: 2 / 1; border-radius: 6px; background: var(--slate-soft); border:1px solid var(--line); position:relative; }
+  .brick.real { background: var(--pulse); border-color: var(--pulse); box-shadow: var(--shadow-glow); }
+  .brick.real::after { content:"REAL"; position:absolute; inset:0; display:grid; place-items:center; font:500 10px/1 var(--font-mono); color:var(--pulse-ink); letter-spacing:0.08em; }
+  .ladder { display:grid; gap:6px; margin-top:12px; font: 400 13px/18px var(--font-mono); }
+  .ladder div { display:flex; justify-content:space-between; gap:8px; padding:6px 10px; border-radius:6px; background:var(--surface-2); }
+  @media (max-width:640px) { .lot { grid-template-columns:1fr; } .wall { grid-template-columns: repeat(6, 1fr); } }
+</style></head>
+<body>
+<div class="tb">
+  <div class="lot">
+    <div class="card" style="display:grid;gap:10px;align-content:start">
+      <div class="cap">One request · the buyer</div>
+      <div style="font:600 18px/24px var(--font-sans)">RTX 5070 Ti · under $1,400</div>
+      <div class="sm ink2">Sealed round open · 4 bids · closes in <span class="mono">02:41</span></div>
+      <span class="pill pill-live"><span class="dot"></span>Real request</span>
+      <div class="well sm">This is one real request. When many requests pool, the right side is what a seller sees. Never say "many buyers use it".</div>
+    </div>
+    <div class="card">
+      <div class="spread" style="margin-bottom:10px"><span style="font:600 18px/24px var(--font-sans)">Lot Wall <span class="muted" style="font-weight:400">what a seller sees</span></span><span class="pill pill-sim">Pool · SIM</span></div>
+      <div class="wall" aria-label="24 bricks, one real">
+        <i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i>
+        <i class="brick"></i><i class="brick"></i><i class="brick real"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i>
+        <i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i><i class="brick"></i>
+      </div>
+      <div class="ladder">
+        <div><span>Price ladder · lot of 24</span><span class="muted">banded, no buyer cap shown</span></div>
+        <div><span>Floor the referee enforces</span><span>$1,190.00</span></div>
+        <div><span>Your last bid</span><span>$1,247.44</span></div>
+      </div>
+      <div class="sm muted" style="margin-top:10px">Status: planned, not built. Ship behind a label or cut the line from the demo.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

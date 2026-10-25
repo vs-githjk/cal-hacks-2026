@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from data.recall_checker import _tokens, check_product
-from data.recalls import brand_in, recalls_for
+from data.recalls import brand_in
 
 FIX = Path(__file__).resolve().parent / "fixtures"
 NOW = datetime(2026, 10, 24, 20, 0, tzinfo=timezone.utc)
@@ -86,7 +86,7 @@ def test_sizes_are_product_lines_not_models():
 
 
 def test_the_gpu_recall_check_still_works_after_the_shared_lookup_refactor(tmp_path):
-    r = recalls_for("ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", "ASUS", fetch=serve("asus"), now=NOW, cache_dir=tmp_path)
+    r = check_product("ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition", "ASUS", fetch=serve("asus"), now=NOW, cache_dir=tmp_path)
     assert r["status"] == "none"
 
 

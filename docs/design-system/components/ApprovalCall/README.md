@@ -1,0 +1,1 @@
+The approval sheet shown only above the allowance, as a Radix Dialog over the buyer app. The consumer provides amount, allowance, deal summary and the one-time word pair from the backend event. States: ringing, approved (mint check, 420 ms pop), denied, no answer. Nothing on this card may generate or guess a code.

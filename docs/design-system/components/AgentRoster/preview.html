@@ -1,0 +1,35 @@
+<!-- @dsCard group="Outside" height=560 subtitle="/buyer/agents: nine agents, one job each, a heartbeat per row" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .list { display:grid; }
+  .ag { display:grid; grid-template-columns: 36px 1fr auto; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line); }
+  .ag:first-child { border-top:0; }
+  .ag .job { font-size:13px; line-height:18px; color:var(--muted); }
+  .ag .hb { display:flex; align-items:center; gap:8px; font:400 12px/16px var(--font-mono); color:var(--muted); }
+  .ag .hb .dot { color:var(--pulse); }
+  .ag.idle .hb .dot { color:var(--slate); }
+  .ag.idle .hb .dot::after { display:none; }
+  @media (max-width:640px) { .ag { grid-template-columns: 36px 1fr; } .ag .hb { grid-column: 2; } }
+</style></head>
+<body>
+<div class="tb">
+  <div class="card">
+    <div class="spread" style="margin-bottom:8px"><span style="font:600 24px/30px var(--font-sans);letter-spacing:-0.01em">Agents</span><span class="pill pill-live"><span class="dot"></span>6 on Agentverse</span></div>
+    <div class="sm muted" style="margin-bottom:12px">Avatars come from agents/avatars/&lt;role&gt;.png (navy tile, colour ring, initials). The ring colour here is the same token as the row's role.</div>
+    <div class="list">
+      <div class="ag"><span class="avatar ring-pulse">TB</span><div><div>Tech Bazaar Buyer</div><div class="job">Turns one ASI:One message into a goal, runs the sealed round, never pays alone</div></div><div class="hb"><span class="dot"></span>LIVE · 2 s</div></div>
+      <div class="ag"><span class="avatar ring-mint">QA</span><div><div>Quality Advocate</div><div class="job">Code, not a model: fit, claims, recalls; vetoes with a cited source</div></div><div class="hb"><span class="dot"></span>LIVE · 4 s</div></div>
+      <div class="ag"><span class="avatar ring-pulse">SH</span><div><div>Bazaar Shield</div><div class="job">Public face of the screen that runs inside every agent, before any text is acted on</div></div><div class="hb"><span class="dot"></span>LIVE · 1 s</div></div>
+      <div class="ag"><span class="avatar ring-royal">RF</span><div><div>CRS Referee</div><div class="job">One ranking rule, fixed tie order; one CRS check on the winning payee</div></div><div class="hb"><span class="dot"></span>Env-gated</div></div>
+      <div class="ag"><span class="avatar ring-coral">CL</span><div><div>Bazaar Caller</div><div class="job">Places the approval call; code, not the voice, approves</div></div><div class="hb"><span class="dot"></span>LIVE · call ready</div></div>
+      <div class="ag idle"><span class="avatar ring-amber">MP</span><div><div>Market Pulse</div><div class="job">A coaching note per losing seller from loss reports and Tiger Data history</div></div><div class="hb"><span class="dot"></span>SIM until Tiger has rows</div></div>
+      <div class="ag"><span class="avatar" style="border-color:var(--ghost-1)">S1</span><div><div>Byte Bros Outlet</div><div class="job">Seller · 3 percent under list, learns a price step from loss reports</div></div><div class="hb"><span class="dot"></span>SIM · bidding</div></div>
+      <div class="ag"><span class="avatar" style="border-color:var(--ghost-2)">S3</span><div><div>FlashDeal Frankie</div><div class="job">Seller · bids "new", page says open-box: the advocate vetoes it</div></div><div class="hb"><span class="dot"></span>SIM · bidding</div></div>
+      <div class="ag"><span class="avatar" style="border-color:var(--ghost-3)">S6</span><div><div>Central Computers mirror</div><div class="job">Seller · a real SF store's dated listings at list; never orderable</div></div><div class="hb"><span class="dot"></span>MIRROR · comparison only</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

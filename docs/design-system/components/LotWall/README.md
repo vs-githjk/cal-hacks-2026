@@ -1,0 +1,1 @@
+The /lot screen: one real request on the left, the seller's pooled view as a wall of bricks on the right with the referee-enforced floor and the price ladder. One brick is REAL (pulse) and the rest are SIM (slate). The consumer provides the request, the floor and the last bid. Today the Lot Wall is planned, not built; keep the label on screen or cut the route.
