@@ -463,6 +463,27 @@ def is_business(supplier_id: str) -> bool:
     return sim_reason(supplier_id) is None
 
 
+def payee_status(supplier_id: str, now: datetime) -> dict:
+    """#398: a payee's CRS status from local files only (the profile file and the sanitized cache), for a dry run.
+    It never logs in or calls the sandbox: a failed login locks the shared account. Returns {"state", "reason", "band",
+    "checked_at", "persona_ref"}: state "sim" (no business profile), "business" (band and checked_at set only for a fresh
+    recorded result of the same persona), or "unknown" (the profile file is unreadable). None of these is a pass."""
+    out = {"state": "sim", "reason": None, "band": None, "checked_at": None, "persona_ref": None}
+    try:
+        why_sim = sim_reason(supplier_id)
+        profile = None if why_sim is not None else _payee_profile(supplier_id)
+    except ProfilesUnreadable as e:
+        return {**out, "state": "unknown", "reason": str(e)}
+    if why_sim is not None:
+        return {**out, "reason": why_sim}
+    key = next((k for k in _profiles() if isinstance(k, str) and k.strip().lower() == str(supplier_id).strip().lower()),
+               supplier_id)
+    hit = _cached(key, profile, now, _cache_read(_paths()[1]))
+    ref = profile.get("persona_ref")
+    return {**out, "state": "business", "persona_ref": ref if isinstance(ref, str) else None,
+            "band": hit["signal"]["stability"] if hit else None, "checked_at": hit["signal"]["checked_at"] if hit else None}
+
+
 async def check_payee(supplier_id: str, now: datetime) -> dict:
     """#257: one CRS check of the payee at the payment gate, cached per payee for PAYEE_TTL.
     Returns {"business", "check", "cached"}: `check` is the CrsCheck (pay.crs_gate judges it) for a business payee,
