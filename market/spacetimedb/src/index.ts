@@ -97,6 +97,11 @@ export const record_approval = spacetimedb.reducer(
 );
 
 export const issue_approval_code = spacetimedb.reducer({ mandateHash: t.string(), code: t.string() }, (ctx, a) => m.issueApprovalCode(ctx, a));
+export const issue_build_approval_code = spacetimedb.reducer(
+  { mandateHash: t.string(), buyerId: t.string(), amount: t.f64(), payee: t.string(), expiryMinutes: t.u32(), code: t.string(), origin: t.string() },
+  (ctx, a) => m.issueBuildApprovalCode(ctx, a),
+);
+export const clear_build_approval_code = spacetimedb.reducer({ mandateHash: t.string() }, (ctx, a) => m.clearBuildApprovalCode(ctx, a));
 
 export const record_loss_report = spacetimedb.reducer(
   {

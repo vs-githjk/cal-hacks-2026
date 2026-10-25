@@ -86,14 +86,21 @@ def test_total_includes_shipping():
     assert sum(line["unit_price"] * line["quantity"] + line["shipping"] for line in bid["lines"]) == bid["total_landed_price"]
 
 
+def _mirror_only_seller_1():
+    """seller_1 with its MIRROR 5070 Ti cards only: since #398 it also has a SIM 5070 Ti line, which would bid first."""
+    s = seller("seller_1")
+    s["listings"].pop("rtx 5070 ti", None)
+    return s
+
+
 def test_mirror_snapshot_offer_refuses_when_shipping_or_floor_is_unknown():
     n = need("rtx 5070 ti")
     n["source"] = "live"
-    assert make_bid(n, seller("seller_1")) is None
+    assert make_bid(n, _mirror_only_seller_1()) is None
 
 
 def _mirror_bid_with_shipping(shipping):
-    s = seller("seller_1")
+    s = _mirror_only_seller_1()
     card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
     card["listing"]["stock"] = True
     s["mirror_inputs"] = {card["id"]: {
@@ -186,7 +193,7 @@ def test_bid_schema_keeps_the_closed_sim_unobserved_zero_shipping_variant():
 
 
 def test_mirror_alternatives_must_share_seller_of_record_and_snapshot():
-    s = seller("seller_1")
+    s = _mirror_only_seller_1()
     card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
     card["listing"]["stock"] = True
     second = dict(card, id="bestbuy:other", seller_of_record="Other Seller")
@@ -200,7 +207,7 @@ def test_mirror_alternatives_must_share_seller_of_record_and_snapshot():
 
 
 def test_mirror_offer_does_not_ignore_allowed_conditions():
-    s = seller("seller_1")
+    s = _mirror_only_seller_1()
     card = next(c for c in s["mirror_listings"] if c["id"] == "bestbuy:9a072ed6c281")
     card["listing"]["stock"] = True
     s["mirror_inputs"] = {card["id"]: {
@@ -221,3 +228,14 @@ def test_sim_refurbished_offer_requires_an_allowed_condition():
     n["items"][0]["allowed_conditions"] = ["new", "refurbished"]
     bid = make_bid(n, seller("seller_2"))
     assert bid["lines"][0]["offered_condition"] == "refurbished"
+
+
+def test_byte_bros_and_frankie_bid_on_the_filmed_rtx_5070_ti_goal():  # #398 item 1: the ASI:One goal got no bids
+    for n in ("seller_1", "seller_3"):
+        s = seller(n)
+        bid = make_bid(need("rtx 5070 ti"), s)
+        common.validate("Bid", bid)
+        line = bid["lines"][0]
+        assert line["sku_spec"] == "rtx 5070 ti" and line["unit_price"] >= s["listings"]["rtx 5070 ti"]["floor"]
+        assert line["attrs"]["chipset"] == "RTX 5070 Ti" and line["attrs"]["length_mm"] <= 305
+    assert seller("seller_3")["listings"]["rtx 5070 ti"]["page_condition"] == "open-box"   # Frankie's planted lie, as on its 4070

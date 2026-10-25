@@ -16,6 +16,7 @@ type Auth = ReturnType<typeof as>;
 let h: ReturnType<typeof createModuleTestHarness<InferSchema<typeof spacetimedb>>>;
 const run = <T>(auth: Auth, f: (ctx: any) => T) => h.withReducerTx(auth, f);
 const idOf = (auth: Auth): Identity => run(auth, (ctx) => ctx.sender);
+const ms = (ts: Timestamp) => Number(ts.microsSinceUnixEpoch / 1000n);
 const advance = (ms: number) => h.clock.advance(TimeDuration.fromMillis(ms));
 const events = () => [...h.db.floorEvent.iter()];
 
@@ -969,6 +970,83 @@ describe('b5 approval code on the buyer screen (shown only; the call approves, #
   });
 });
 
+describe('whole-build approval code on the buyer screen (issued before the call, no mandate exists yet)', () => {
+  const CODE = 'amber harbor';
+  const BUILD = 'agg-hash-1';
+  const buildArgs = (over: Partial<Parameters<typeof m.issueBuildApprovalCode>[1]> = {}) => ({
+    mandateHash: BUILD, buyerId: 'vidyut', amount: 3412.5, payee: 'your whole build (8 parts, 4 sellers)', expiryMinutes: 5, code: CODE, origin: 'LIVE', ...over,
+  });
+  const issue = (over: Partial<Parameters<typeof m.issueBuildApprovalCode>[1]> = {}) => run(REF, (ctx) => m.issueBuildApprovalCode(ctx, buildArgs(over)));
+  const clear = (hash = BUILD) => run(REF, (ctx) => m.clearBuildApprovalCode(ctx, { mandateHash: hash }));
+  const seen = (who: Auth) => m.myPendingApprovalsView(h.viewContext(who) as any);
+
+  it('only the referee issues or clears; only the paired buyer sees the code, with amount, label and expiry', () => {
+    for (const who of [VIDYUT, A, STRANGER]) {
+      expect(() => run(who, (ctx) => m.issueBuildApprovalCode(ctx, buildArgs()))).toThrow(/not allowed/);
+    }
+    issue();
+    for (const who of [VIDYUT, A, STRANGER]) expect(() => run(who, (ctx) => m.clearBuildApprovalCode(ctx, { mandateHash: BUILD }))).toThrow(/not allowed/);
+    const mine = seen(VIDYUT);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ mandateHash: BUILD, amount: 3412.5, payee: 'your whole build (8 parts, 4 sellers)', code: CODE, origin: 'LIVE', failures: 0, locked: false });
+    expect(ms(mine[0]!.expiry)).toBe(ms(T0) + 5 * 60_000);
+    for (const who of [BOB, A, STRANGER]) expect(seen(who)).toHaveLength(0);
+  });
+
+  it('clearing hides it at once for the buyer and keeps the row (the call still counts as placed)', () => {
+    issue();
+    expect(seen(VIDYUT)).toHaveLength(1);
+    clear();
+    expect(seen(VIDYUT)).toHaveLength(0);
+    expect(h.db.approvalCode.mandateHash.find(BUILD)).toBeTruthy();
+    clear(); // idempotent: the runner clears in a finally and must never throw there
+    clear('never-issued');
+  });
+
+  it('a new build code retires the buyer\'s earlier one, so exactly one code is ever on screen', () => {
+    issue();
+    issue({ mandateHash: 'agg-hash-2', code: 'copper meadow', amount: 900 });
+    const rows = seen(VIDYUT);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ mandateHash: 'agg-hash-2', code: 'copper meadow' });
+  });
+
+  it('refuses bad input: empty code, no amount, expiry outside 1 to 10 minutes, a hash that is a real mandate, an unknown buyer', () => {
+    expect(() => issue({ code: '   ' })).toThrow(/empty code/);
+    expect(() => issue({ amount: 0 })).toThrow(/amount/);
+    expect(() => issue({ amount: Number.NaN })).toThrow(/amount/);
+    expect(() => issue({ expiryMinutes: 0 })).toThrow(/expiry/);
+    expect(() => issue({ expiryMinutes: 11 })).toThrow(/expiry/);
+    expect(() => issue({ buyerId: 'nobody' })).toThrow(/buyer/);
+    mint(mandateArgs(win()));
+    expect(() => issue({ mandateHash: 'h1' })).toThrow(/real mandate/);
+    expect(seen(VIDYUT)).toHaveLength(0);
+  });
+
+  it('shows the code to the buyer and approves nothing: no approval row, no payment, the call relay needs a mandate', () => {
+    issue();
+    expect(() => run(VIDYUT, (ctx) => m.recordApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: CODE }))).toThrow(/not allowed/);
+    expect(() => run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: BUILD, method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }))).toThrow(/no mandate/);
+    expect([...h.db.approval.iter()]).toHaveLength(0);
+  });
+
+  it('per-deal codes are untouched: one buyer can have a deal code and a build code, and each clears on its own terms', () => {
+    mint(mandateArgs(win()));
+    run(REF, (ctx) => m.issueApprovalCode(ctx, { mandateHash: 'h1', code: 'velvet falcon' }));
+    issue();
+    expect(seen(VIDYUT).map((r) => r.mandateHash).sort()).toEqual(['agg-hash-1', 'h1']);
+    clear();
+    expect(seen(VIDYUT).map((r) => r.mandateHash)).toEqual(['h1']);
+  });
+
+  it('reset_demo wipes build codes with the rest', () => {
+    issue();
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect(seen(VIDYUT)).toHaveLength(0);
+    expect([...h.db.approvalCode.iter()]).toHaveLength(0);
+  });
+});
+
 describe('b6 seller screen: pooled lot band, own loss reports, strategy diff', () => {
   const report = (over: Partial<Parameters<typeof m.recordLossReport>[1]> = {}) => ({
     id: 'lr-1', roundId: 'round-1', sellerId: 'seller-a', won: false, gapBand: 'within5', reason: 'price', sourceUrl: 'https://example.com/sim/a',
@@ -1524,6 +1602,71 @@ describe('#191 approval and mandate holes', () => {
     expect(h.db.mandate.hash.find('h2')!.withinAllowance).toBe(true);
     const labels = events().filter((e) => e.kind === 'mandate_created').map((e) => e.label);
     expect(labels).toEqual(['Deal ready for approval', 'Deal ready for approval']);
+  });
+
+  it('#325-1 a NaN amount is refused, not treated as equal to the landed price', () => {
+    wonByA();
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: NaN })))).toThrow(/amount/);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: Infinity })))).toThrow(/amount/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#325-2 a Shield block or failed claim on the winning bid refuses the mandate, however the card reached it', () => {
+    wonByA();
+    // A card reaching the bid outside attach_claim_check (eg. a row written directly, as a stand-in for any
+    // path other than the reducer): create_mandate must still catch it, not trust that ranking screened it.
+    run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'claim', result: 'false', detail: 'card fits', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block|claim check|veto/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#389 (#396-1) create_mandate names a failed claim on the winning bid, not just a generic refusal', () => {
+    wonByA();
+    run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'claim', result: 'false', detail: 'card fits', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/failed claim/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#389 (#396-1a) attach_verdict and attach_claim_check succeed on an already-closed round (the demo\'s beat 3: open, bid, close, then attach a Shield block); create_mandate still refuses', () => {
+    wonByA();
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+    expect([...h.db.bidCheck.iter()].filter((c) => c.bidId === 'bid-a' && c.kind === 'shield')).toHaveLength(1);
+    // attach_claim_check on the same already-closed round's bid: also succeeds, and still blocks the mandate.
+    run(REF, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-a', claim: 'c', check: 'false', evidenceUrl: '', origin: 'SIM' }));
+    expect([...h.db.bidCheck.iter()].filter((c) => c.bidId === 'bid-a' && c.kind === 'claim')).toHaveLength(1);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#389 (#396-1b) create_mandate refuses a Shield quarantine, not only a block', () => {
+    wonByA();
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'quarantine', ruleIds: ['shield.y'], origin: 'SIM' }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#389 (#396-1c) create_mandate refuses a bid the advocate vetoed', () => {
+    wonByA();
+    // The advocate card's own attach reducer still refuses a closed round (unchanged), so this stands in for
+    // a veto that reached the bid before close but was missed by ranking (eg. a race on the same tick).
+    run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'advocate', result: 'veto', detail: 'fit.x: too long', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/veto/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#325-3 the public approval_recorded label is the same for the allowance path and the voice-code call', () => {
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
+    wonByA(); // 780: over the per-buy limit, needs the call
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2' })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
+    run(C, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-c2', [line(200)]), roundId: 'round-2' }));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-2' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', dealId: 'round-2:bid-c2', payee: 'seller-c', amount: 200 })));
+    const labels = events().filter((e) => e.kind === 'approval_recorded').map((e) => e.label);
+    expect(labels).toEqual(['Deal approved', 'Deal approved']);
   });
 
   it('#191-5 my_bid_checks: the buyer sees the veto, Shield and claim rows on bids in its own rounds; nobody else does', () => {

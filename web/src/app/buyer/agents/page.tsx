@@ -1,5 +1,6 @@
 "use client";
 
+import { AgentWire } from "@/components/AgentWire";
 import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
 import { Card, Code, Label, OriginChip, Tag } from "@/components/ui";
 import { shortAddress } from "@/lib/agents";
@@ -56,6 +57,7 @@ export default function AgentsPage() {
           Open in ASI:One
         </a>
       </Card>
+      <AgentWire />
       {noFeed ? (
         <Card>
           <p className="text-[14px] text-muted">No live agent feed on this site. Each agent's public Agentverse profile:</p>
