@@ -615,7 +615,7 @@ export function createMandate(
   if (a.payee !== bid.sellerId) throw new SenderError(`payee must be the winning seller (${bid.sellerId})`);
   if (!(Number.isFinite(a.amount) && Math.abs(a.amount - won.landed) <= 1e-9)) throw new SenderError('amount must equal the winning landed price');
   const checks = [...ctx.db.bidCheck.bidId.filter(bid.id)];
-  if (checks.some((c) => c.kind === 'shield' && c.result === 'block')) throw new SenderError('bid has a Shield block; no mandate');
+  if (checks.some((c) => c.kind === 'shield' && c.result !== 'allow')) throw new SenderError('bid has a Shield block; no mandate');
   if (checks.some((c) => c.kind === 'claim' && c.result === 'false')) throw new SenderError('bid has a failed claim check; no mandate');
   if (checks.some((c) => c.kind === 'advocate' && c.result === 'veto')) throw new SenderError('bid has an advocate veto; no mandate');
   if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {

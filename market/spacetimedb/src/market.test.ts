@@ -1507,6 +1507,13 @@ describe('#191 approval and mandate holes', () => {
     expect([...h.db.mandate.iter()]).toHaveLength(0);
   });
 
+  it('#266 a Shield quarantine (not just a block) attached after close still refuses a mandate', () => {
+    wonByA();
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'quarantine', ruleIds: ['shield.classifier.unavailable'], origin: 'SIM' }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
   it('#325-3 approval_recorded carries one neutral label whether the deal was within the allowance or approved by call', () => {
     run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
     wonByA(); // 780: over the per-buy limit, needs the call
