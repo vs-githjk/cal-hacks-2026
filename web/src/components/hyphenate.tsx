@@ -24,7 +24,7 @@ import {
   type Tone,
   type Vendor,
 } from "@/lib/hyphenate";
-import { Card, Code, Label, OriginChip, Stat, Tag, Verdict, type VerdictKind } from "./ui";
+import { Card, Code, Label, OriginChip, RunsLocally, Stat, Tag, Verdict, type VerdictKind } from "./ui";
 
 const TONE_VERDICT: Record<Tone, VerdictKind> = { bad: "veto", warn: "caution", good: "buy", neutral: "out" };
 const TONE_BORDER: Record<Tone, "coral" | "amber" | "mint" | "ink"> = { bad: "coral", warn: "amber", good: "mint", neutral: "ink" };
@@ -290,8 +290,8 @@ function AuditTrail({ s }: { s: Snapshot }) {
 }
 
 export interface HyphenateScreenProps {
-  /** loading: first answer not in yet; offline: API unreachable or answered something else. */
-  state: "loading" | "offline" | "ready";
+  /** loading: first answer not in yet; offline: API unreachable or answered something else; local: the hosted site, where the API only runs locally (#398). */
+  state: "loading" | "offline" | "ready" | "local";
   snapshot: Snapshot | null;
   onLoadMoment?: () => void;
   loadingMoment?: boolean;
@@ -314,7 +314,12 @@ export function HyphenateScreen(p: HyphenateScreenProps) {
       <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
         A simulated 40-person studio buying computer gear. The people, vendors, bills and bank record are SIM; price references are MIRROR. No model makes a control decision: every line below names the rule or the person that decided, with the reason.
       </p>
-      {p.state === "loading" || (p.state === "ready" && !s) ? (
+      {p.state === "local" ? (
+        <RunsLocally what="Hyphenate">
+          Its purchasing and accounts payable seats read a local API on your machine. This hosted page cannot reach it, so it shows no rows rather than
+          made up ones.
+        </RunsLocally>
+      ) : p.state === "loading" || (p.state === "ready" && !s) ? (
         <p className="text-muted">Connecting to Hyphenate...</p>
       ) : p.state === "offline" || !s ? (
         <section className="card p-[18px]">

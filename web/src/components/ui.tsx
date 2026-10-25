@@ -47,6 +47,24 @@ export function Label({ children }: { children: ReactNode }) {
   return <h2 className="mb-3 text-[15px] font-semibold text-ink">{children}</h2>;
 }
 
+export const README_URL = "https://github.com/vs-githjk/cal-hacks-2026#readme";
+
+/** A part of Tech Bazaar that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
+export function RunsLocally({ what, children }: { what: string; children: ReactNode }) {
+  return (
+    <Card>
+      <p className="text-[18px] font-medium">{what} runs locally.</p>
+      <p className="mt-1 text-muted">{children}</p>
+      <p className="mt-3 text-[14px]">
+        <a className="font-medium underline underline-offset-2" href={README_URL} target="_blank" rel="noreferrer">
+          See the README
+        </a>{" "}
+        to run it on your own machine.
+      </p>
+    </Card>
+  );
+}
+
 /** A card for something with no recorded source yet. Says so plainly; never fills the gap with a sample. */
 export function Unavailable({ title, children }: { title: string; children: ReactNode }) {
   return (

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Card, Code, Label, OriginChip } from "@/components/ui";
+import { Card, Code, Label, OriginChip, RunsLocally } from "@/components/ui";
+import { useApiBase } from "@/lib/useApiBase";
 import {
-  CONDITIONS, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, slugify, submitConfig,
+  CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
@@ -30,6 +31,7 @@ export default function SellPage() {
   const [created, setCreated] = useState<Created | null>(null);
   const [shops, setShops] = useState<ShopRow[] | null>(null);
   const [needs, setNeeds] = useState<OpenNeed[] | null>(null);
+  const kit = useApiBase(SELLER_KIT_URL);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const [s, n] = await Promise.all([fetchShops(signal), fetchNeeds(signal)]);
@@ -40,12 +42,13 @@ export default function SellPage() {
   }, []);
 
   useEffect(() => {
+    if (!kit.base) return; // not hydrated yet, or the hosted site: the Seller Kit runs locally, so never fetch 127.0.0.1
     const ctl = new AbortController();
     // refresh() sets state only after an await, so this is not a synchronous cascade
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh(ctl.signal);
     return () => ctl.abort();
-  }, [refresh]);
+  }, [kit.base, refresh]);
 
   const set = <K extends keyof SellForm>(k: K, v: SellForm[K]) => setForm((f) => ({ ...f, [k]: v }));
   const setRow = (i: number, patch: Partial<ListingRow>) =>
@@ -90,6 +93,13 @@ export default function SellPage() {
         </p>
       </header>
 
+      {kit.local ? (
+        <RunsLocally what="The Seller Kit">
+          It checks your shop and writes a config file that your own seller agent runs from, on your machine. This hosted page cannot reach it,
+          so nothing here is sent anywhere.
+        </RunsLocally>
+      ) : (
+      <>
       {offline && (
         <Card stripe="coral">
           <p className="font-medium">Seller Kit offline.</p>
@@ -291,6 +301,8 @@ export default function SellPage() {
         )}
         <p className="mt-2 text-[12px] text-muted">The buyer&apos;s spending cap is never shown to sellers.</p>
       </Card>
+      </>
+      )}
     </div>
   );
 }

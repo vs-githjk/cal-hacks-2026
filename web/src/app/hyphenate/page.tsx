@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HyphenateScreen } from "@/components/hyphenate";
-import { POLL_MS, fetchSnapshot, loadMoment, type Snapshot } from "@/lib/hyphenate";
+import { HYPHENATE_URL, POLL_MS, fetchSnapshot, loadMoment, type Snapshot } from "@/lib/hyphenate";
+import { useApiBase } from "@/lib/useApiBase";
 
 /** Hyphenate: the purchasing and AP seats. Reads the local API (:8789) every few seconds; when it is down the page says so and shows no rows. */
 export default function HyphenatePage() {
@@ -10,6 +11,7 @@ export default function HyphenatePage() {
   const [state, setState] = useState<"loading" | "offline" | "ready">("loading");
   const [loadingMoment, setLoadingMoment] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  const api = useApiBase(HYPHENATE_URL);
 
   const refresh = useCallback(async () => {
     abort.current?.abort();
@@ -22,6 +24,7 @@ export default function HyphenatePage() {
   }, []);
 
   useEffect(() => {
+    if (!api.base) return; // not hydrated yet, or the hosted site: Hyphenate runs locally, so never fetch 127.0.0.1
     // refresh() only sets state after an await, so the first fetch is not a synchronous cascade
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
@@ -30,7 +33,7 @@ export default function HyphenatePage() {
       clearInterval(t);
       abort.current?.abort();
     };
-  }, [refresh]);
+  }, [api.base, refresh]);
 
   const onLoadMoment = useCallback(async () => {
     setLoadingMoment(true);
@@ -39,5 +42,5 @@ export default function HyphenatePage() {
     setLoadingMoment(false);
   }, [refresh]);
 
-  return <HyphenateScreen state={state} snapshot={snapshot} onLoadMoment={onLoadMoment} loadingMoment={loadingMoment} />;
+  return <HyphenateScreen state={api.local ? "local" : state} snapshot={snapshot} onLoadMoment={onLoadMoment} loadingMoment={loadingMoment} />;
 }
