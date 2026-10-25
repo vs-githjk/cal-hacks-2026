@@ -19,14 +19,14 @@ const LIT_MS = 2500;
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function AgentWire() {
-  const [rows] = useTable(tables.agentEvent);
+  const [rows, ready] = useTable(tables.agentEvent);
   const seen = useRef<bigint | null>(null);
   const [lit, setLit] = useState<{ edge: EdgeId; key: bigint } | null>(null);
   const [last, setLast] = useState<{ name: string; text: string; origin: string } | null>(null);
   const [still] = useState(reduced);
 
   useEffect(() => {
-    const { seen: next, fresh } = advance(seen.current, rows);
+    const { seen: next, fresh } = advance(seen.current, rows, ready);
     seen.current = next;
     const newest = fresh[fresh.length - 1];
     if (!newest) return;
@@ -40,7 +40,7 @@ export function AgentWire() {
       clearTimeout(t);
       clearTimeout(off);
     };
-  }, [rows]);
+  }, [rows, ready]);
 
   const node = (x: number, y: number, w: number, name: string, sub: string, hub = false) => (
     <g>
