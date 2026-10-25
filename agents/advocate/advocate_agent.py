@@ -10,12 +10,12 @@ import status
 from advocate import checks, mock_data
 
 agent = Agent(**common.agent_args(
-    "advocate", 8003, name="Bazaar Advocate", handle="techbazaaradvocate",
+    "advocate", 8003, name="Tech Bazaar Quality Advocate", handle="techbazaaradvocate",
     readme_path=str(Path(__file__).with_name("AGENTVERSE.md")),
     description="Argues for the buyer: checks fit with code and condition claims, price history, recalls and "
                 "seller records using SIM fixtures; vetoes traps with cited warnings."))
 
-common.include_profile_chat(agent, "I am Bazaar Advocate, Tech Bazaar's quality advocate. I review structured seller bids for fit "
+common.include_profile_chat(agent, "I am the Tech Bazaar Quality Advocate, Tech Bazaar's quality advocate. I review structured seller bids for fit "
                             "and claims with cited warnings. Current checks use SIM fixtures. "
                             "Send buying goals to @techbazaarbuyer; this chat cannot approve purchases.")
 

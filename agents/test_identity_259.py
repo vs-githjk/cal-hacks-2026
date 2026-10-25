@@ -13,9 +13,10 @@ SECTIONS = ("## Summary", "## Features", "## Usage examples", "## Use cases", "#
     ("advocate/advocate_agent.py", r'name="([^"]+)"'), ("shield_client.py", r"name='([^']+)'"),
     ("caller/caller_agent.py", r'NAME = "([^"]+)"'), ("buyer/buyer_agent.py", r'name="([^"]+)"'),
 ])
-def test_display_names_are_under_20_characters(path, pattern):
+def test_display_names_match_agentverse_and_the_short_ones_are_under_20_characters(path, pattern):
     name = re.search(pattern, (AGENTS / path).read_text()).group(1)
-    assert len(name) < 20, name
+    long_names = {"Tech Bazaar Quality Advocate", "Tech Bazaar Shield Client"}  # renamed on Agentverse (#383)
+    assert name in long_names or len(name) < 20, name
 
 
 @pytest.mark.parametrize("readme", ["advocate/AGENTVERSE.md", "SHIELD_AGENTVERSE.md", "caller/AGENTVERSE.md",

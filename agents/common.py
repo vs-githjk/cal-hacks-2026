@@ -229,7 +229,7 @@ def public_seed(role: str) -> bool:
 
 def mailbox_on(role: str) -> bool:
     """True when this role should go on Agentverse (AGENTS_MAILBOX, or its own flag; sellers share SELLERS_MAILBOX)."""
-    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
+    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield", "caller") else "SELLERS_MAILBOX"
     return bool(os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag))
 
 

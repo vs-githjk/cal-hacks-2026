@@ -690,6 +690,7 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
     if mailbox and seed.endswith("-dev"):
         sys.exit("Set PULSE_AGENT_SEED to a private seed before putting Market Pulse on Agentverse: the default seed is public.")
     args: dict = dict(seed=seed, port=port, name="Market Pulse", publish_agent_details=True,
+                      handle=os.environ.get("PULSE_AGENT_HANDLE") or "techbazaarpulse",
                       description="Teaches sellers and buyers the market's week and month: price trends from Tiger Data, "
                                   "CRS verified seller counts, and a note for every seller that lost a round.")
     readme = Path(__file__).with_name("AGENTVERSE.md")
