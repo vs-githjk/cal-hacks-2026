@@ -39,6 +39,7 @@ a held-back, vetoed or non-partner champion is never mandated, and a part with n
 live with Bright Data (parallel, bounded; a failed read keeps the dated price and says so). Above the allowance: ONE call ("6 parts from 3 sellers, <total>"), then one mandate,
 approval, payment and receipt per part; inside it: no call (method `allowance`). `demo/out/build-view.json` (the board's BuildView) is rewritten at every step.
 Details and the keys added to the board's shape: `docs/changes/1705-D-build-in-the-market.md`.
+The local agent feed serves that file to the `/buyer` build panel as `GET /v1/build` (scripts/agent_feed.py; private fields stripped). Step-by-step local rehearsal with a real call: `demo/REHEARSAL.md`.
 
 **Whose build.** With no flag the run builds the demo plan under `goal-build-1` for `vidyut` (unchanged). `--buyer-id X` with no `--goal-id` and no `--plan` builds from X's own
 latest ACTIVE `build_by_date` goal: the cap, deadline, owned items and the items to buy come from the goal row, and the run REUSES that goal (it posts no second one). The goal row
