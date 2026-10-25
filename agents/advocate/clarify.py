@@ -75,40 +75,58 @@ class Clarifier:
     def __init__(self, send: Send, resolve: Callable[[str], str], *, timeout: float = ASK_TIMEOUT_S, clock=None):
         self._send, self._resolve, self._timeout = send, resolve, timeout
         self._clock = clock or (lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
-        self._pending: dict[str, asyncio.Future] = {}
+        # address -> one open question: [future for the reply, number of requests waiting on it, the question text sent].
+        # A second request to a seller with a question already open joins it instead of asking again (still ONE question),
+        # so concurrent requests cannot take each other's answer.
+        self._pending: dict[str, list] = {}
 
     def is_waiting(self, sender: str) -> bool:
         """True while a question to this address is open: its next chat message is the answer, not a conversation."""
-        fut = self._pending.get(sender)
-        return fut is not None and not fut.done()
+        entry = self._pending.get(sender)
+        return entry is not None and not entry[0].done()
 
     def offer(self, sender: str, text: str, allowed: bool = True) -> bool:
         """True when this message answered an open question (it is then consumed). allowed=False is Smell Test's block."""
-        fut = self._pending.get(sender)
-        if fut is None or fut.done():
+        entry = self._pending.get(sender)
+        if entry is None or entry[0].done():
             return False
-        fut.set_result((str(text or ""), bool(allowed)))
+        entry[0].set_result((str(text or ""), bool(allowed)))
         return True
 
-    async def _ask(self, address: str, q: str) -> tuple[str, str | None, str, str]:
-        """(status, condition, excerpt, answered_at) for one question to one address."""
-        loop = asyncio.get_running_loop()
-        fut = self._pending[address] = loop.create_future()
+    async def _ask(self, address: str, q: str) -> tuple[str, str | None, str, str, str]:
+        """(status, condition, excerpt, answered_at, question sent) for one question to one address."""
+        entry = self._pending.get(address)
+        fresh = entry is None or entry[0].done()
+        if fresh:
+            entry = self._pending[address] = [asyncio.get_running_loop().create_future(), 0, q]
+        entry[1] += 1
+        fut, sent = entry[0], entry[2]
         try:
-            await self._send(address, q)
-            text, allowed = await asyncio.wait_for(asyncio.shield(fut), self._timeout)
+            if fresh:
+                try:
+                    await self._send(address, q)
+                except Exception:
+                    if not fut.done():
+                        fut.set_result(None)  # every request waiting on this question fails with it
+                    return "cannot_ask", None, "", "", sent
+            got = await asyncio.wait_for(asyncio.shield(fut), self._timeout)
         except asyncio.TimeoutError:
-            return "no_answer", None, "", ""
+            return "no_answer", None, "", "", sent
         except Exception:
-            return "cannot_ask", None, "", ""
+            return "cannot_ask", None, "", "", sent
         finally:
-            self._pending.pop(address, None)
+            entry[1] -= 1
+            if entry[1] == 0 and self._pending.get(address) is entry:  # the last waiter closes the question
+                del self._pending[address]
+        if got is None:
+            return "cannot_ask", None, "", "", sent
+        text, allowed = got
         when = self._clock()
         if not allowed:
-            return "blocked", None, "", when
+            return "blocked", None, "", when, sent
         # a seller that only sends its profile text ("I am ReNew Refurb... send buying goals to @...") has not answered
         condition = None if _PROFILE_TEXT.search(text) else parse_answer(text)
-        return ("answered" if condition else "unclear"), condition, _excerpt(text), when
+        return ("answered" if condition else "unclear"), condition, _excerpt(text), when, sent
 
     async def ask_all(self, need: dict, bids: list[dict]) -> dict[str, dict]:
         """One question per seller for all of that seller's open bids, asked at the same time. {bid_id: record}."""
@@ -126,12 +144,12 @@ class Clarifier:
             try:
                 address = self._resolve(sid)
             except Exception:
-                result = ("cannot_ask", None, "", "")
+                result = ("cannot_ask", None, "", "", q)
             else:
                 result = await self._ask(address, q)
-            status, condition, excerpt, when = result
+            status, condition, excerpt, when, sent = result  # `sent` is the question actually asked (a joined request shares it)
             for b in group:
-                out[b["id"]] = {"status": status, "condition": condition, "question": q, "answer_excerpt": excerpt,
+                out[b["id"]] = {"status": status, "condition": condition, "question": sent, "answer_excerpt": excerpt,
                                 "answered_at": when, "seller": sid, "skus": gaps[b["id"]]}
 
         await asyncio.gather(*(one(sid, group) for sid, group in by_seller.items()))

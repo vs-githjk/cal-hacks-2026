@@ -76,6 +76,29 @@ def test_a_failed_lookup_is_a_note_not_a_crash():
     assert reply.splitlines()[0].startswith("Approved with a note: ") and "could not run" in reply.splitlines()[0]
 
 
+def test_slow_phrasing_never_stalls_the_event_loop():
+    """phrase() can block for its whole deadline; it must run off the loop so on_advice and other chats keep moving."""
+    import time
+    ticks = []
+
+    def slow_phrase(sentence):
+        time.sleep(0.4)  # what phrasing.phrase does while it joins its worker
+        return sentence
+
+    async def run():
+        async def heartbeat():
+            while True:
+                ticks.append(time.monotonic())
+                await asyncio.sleep(0.02)
+        beat = asyncio.create_task(heartbeat())
+        reply = await qa.answer("RTX 4070 Super $590 new", inputs=inputs, phrase=slow_phrase)
+        beat.cancel()
+        return reply
+    reply = asyncio.run(run())
+    gaps = [b - a for a, b in zip(ticks, ticks[1:])]
+    assert reply.startswith(("Approved", "Caution")) and len(ticks) > 10 and max(gaps) < 0.15, (len(ticks), max(gaps))
+
+
 def test_the_model_only_rewords_the_first_sentence():
     seen = []
 
