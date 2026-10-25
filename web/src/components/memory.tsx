@@ -4,12 +4,11 @@
 
 import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { FEED_URL } from "@/lib/agentFeed";
-import { approvalLabel, entryDate, fetchMemory, memoryForBuyer, paymentModeLabel, selectMemory, sourceUrl, type MemoryEntry, type MemoryResponse } from "@/lib/memory";
+import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, selectMemory, sourceUrl, type MemoryEntry, type MemoryResponse } from "@/lib/memory";
 import { useBuyerId } from "./BuyerGate";
 import { Card, Code, Label, OriginChip, SourceLink, Tag, Verdict, clock, money } from "./ui";
 
-type MemoryState = { status: "loading" } | { status: "error"; message: string } | { status: "ready"; data: MemoryResponse };
+type MemoryState = { status: "loading" } | { status: "offline" } | { status: "error"; message: string } | { status: "ready"; data: MemoryResponse };
 const MemoryContext = createContext<{ state: MemoryState; reload: () => void } | null>(null);
 
 /** One read for every buyer screen. It lives below BuyerGate, so a buyer switch unmounts it and aborts the pending request. */
@@ -18,7 +17,13 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const ctl = new AbortController();
-    fetchMemory(ctl.signal).then(
+    const feed = memoryFeed(window.location.hostname);
+    if (!feed) {
+      // The hosted site: the operator feed runs on the operator's machine, so never fetch a loopback address from a visitor's browser.
+      setState({ status: "offline" });
+      return;
+    }
+    fetchMemory(ctl.signal, feed).then(
       (data) => setState({ status: "ready", data }),
       (e: unknown) => {
         if (!ctl.signal.aborted) setState({ status: "error", message: e instanceof Error ? e.message : "memory feed failed" });
@@ -66,6 +71,14 @@ function RetryButton({ reload }: { reload: () => void }) {
 /** Loading, failure and feed health: everything the history screens say about where the rows came from. */
 function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empty: string }) {
   if (m.state.status === "loading") return <p className="text-muted">Loading recorded history...</p>;
+  if (m.state.status === "offline") {
+    return (
+      <Card>
+        <Label>Recorded history is not live here</Label>
+        <p className="text-[14px]">Purchases and decisions are read from the operator demo feed, which runs on the operator's machine and is not reachable from this site. Nothing is shown rather than a guess.</p>
+      </Card>
+    );
+  }
   if (m.state.status === "error") {
     return (
       <Card>
@@ -76,6 +89,7 @@ function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empt
     );
   }
   const d = m.state.data;
+  const feedAddress = typeof window === "undefined" ? null : memoryFeed(window.location.hostname);
   const broken = d.sources.filter((s) => s.state === "error");
   return (
     <div className="grid gap-2 text-[13px] text-muted">
@@ -90,7 +104,7 @@ function MemoryStatus({ m, empty }: { m: ReturnType<typeof useBuyerMemory>; empt
           ))}
         </ul>
       </details>
-      <p>Operator demo feed at {FEED_URL}. It is not buyer scoped on the server, so rows are filtered to this buyer here for display only.</p>
+      <p>Operator demo feed{feedAddress ? ` at ${feedAddress}` : ""}. It is not buyer scoped on the server, so rows are filtered to this buyer here for display only.</p>
     </div>
   );
 }
@@ -270,6 +284,8 @@ export function RecentPurchases() {
       <Label>Recent purchases</Label>
       {m.state.status === "loading" ? (
         <p className="text-[13px] text-muted">Loading recorded history...</p>
+      ) : m.state.status === "offline" ? (
+        <p className="text-[13px] text-muted">Recorded history comes from the operator demo feed, which is not reachable from this site.</p>
       ) : m.state.status === "error" ? (
         <>
           <p className="text-[18px] font-medium">Unavailable</p>
