@@ -1,11 +1,19 @@
-"""TAP-style request signing: RFC 9421 HTTP Message Signatures with Ed25519.
+"""Visa Trusted Agent Protocol request signing: RFC 9421 HTTP Message Signatures with Ed25519.
 
-TAP-style signing per RFC 9421; conformance checked by our merchant simulator. This follows the shape of
-Visa's Trusted Agent Protocol (signature covers method, authority, path, body digest and the mandate hash;
-created, expires, keyid, nonce and tag params) but it is not a certified Visa integration, and nothing here
-settles money.
+Wire format matches the sample verifier in github.com/visa/trusted-agent-protocol (commit 16d59bdf,
+cdn-proxy/server.js and tap-agent/agent_app.py, Ed25519 path):
+  Signature-Input: sig2=("@authority" "@path"); created=N; expires=N; keyId="..."; alg="ed25519"; nonce="..."; tag="..."
+  Signature: sig2=:<base64>:        Signature-Agent: "https://<agent directory>"
+tag is agent-browser-auth (browsing) or agent-payer-auth (checkout); a charge needs agent-payer-auth.
+pay/tests/visa_reference_port.py is a port of that verifier and pay/tests/test_tap_conformance.py runs our
+signer through it. Verified by our own merchant simulator, not by Visa, and nothing here settles money.
 
-Signed headers: Content-Digest (sha-256), Mandate-Hash, Signature-Input, Signature.
+The reference signature covers only @authority and @path, so the rest of the request (method, query, body
+digest, mandate hash) is bound through the nonce: nonce = <random>.<base64url sha-256 of method, query,
+Content-Digest, Mandate-Hash and the random part>. The signature covers the nonce, so changing any of those
+fails our verifier while a Visa merchant still sees an ordinary opaque nonce.
+
+Extra headers: Content-Digest (sha-256), Mandate-Hash. The seller-admission profile below is separate.
 The private key comes from the path in VISA_TAP_PRIVATE_KEY_PATH. Never commit a key (*.pem is ignored).
 """
 from __future__ import annotations
@@ -33,10 +41,17 @@ from pay.mandate import verify as verify_mandate
 from pay.replay import NS_MANDATE, NS_TAP, NonceStore
 
 KEY_ENV = "VISA_TAP_PRIVATE_KEY_PATH"
-TAG = "agent-browser-auth"
+BROWSER_TAG = "agent-browser-auth"
+PAYER_TAG = "agent-payer-auth"
+TAGS = (BROWSER_TAG, PAYER_TAG)
 ALG = "ed25519"
-LABEL = "sig1"
-COMPONENTS = ("@method", "@authority", "@path", "@query", "content-digest", "mandate-hash")
+LABEL = "sig1"  # seller-admission profile
+TAP_LABEL = "sig2"  # the label Visa's reference verifier requires
+COMPONENTS = ("@authority", "@path")
+SIGNATURE_AGENT_ENV = "VISA_TAP_SIGNATURE_AGENT"
+DEFAULT_SIGNATURE_AGENT = "https://techbazaar.example/.well-known/http-message-signatures-directory"
+_SIGNATURE_AGENT_RE = re.compile(r'"https://[^"\s]{1,2000}"\Z')
+_NONCE_RE = re.compile(r"[A-Za-z0-9_\-]{1,128}\Z")
 MAX_SIGNATURE_TTL_SECONDS = 300
 DEFAULT_TTL_SECONDS = 60
 CLOCK_SKEW_SECONDS = 30
@@ -136,9 +151,16 @@ def _content_digest(body: bytes) -> str:
     return "sha-256=:" + base64.b64encode(hashlib.sha256(body).digest()).decode() + ":"
 
 
-def _params_string(components, created: int, expires: int, keyid: str, nonce: str) -> str:
-    inner = " ".join(f'"{c}"' for c in components)
-    return f'({inner});created={created};expires={expires};keyid="{keyid}";alg="{ALG}";nonce="{nonce}";tag="{TAG}"'
+def _params_string(created: int, expires: int, keyid: str, nonce: str, tag: str) -> str:
+    inner = " ".join(f'"{c}"' for c in COMPONENTS)
+    return (f'({inner}); created={created}; expires={expires}; keyId="{keyid}"; alg="{ALG}"; '
+            f'nonce="{nonce}"; tag="{tag}"')
+
+
+def _binding(values: Mapping[str, str], digest: str, mand_hash: str, rand: str) -> str:
+    """Commitment to the request parts the Visa signature does not cover; it rides in the signed nonce."""
+    material = "\n".join(("tap-binding-v1", values["@method"], values["@query"], digest, mand_hash, rand))
+    return base64.urlsafe_b64encode(hashlib.sha256(material.encode("utf-8")).digest()).rstrip(b"=").decode()
 
 
 def _signature_base(components, values: Mapping[str, str], params: str) -> bytes:
@@ -171,8 +193,18 @@ def sign_request(
     now: Optional[datetime] = None,
     ttl_seconds: int = DEFAULT_TTL_SECONDS,
     nonce: Optional[str] = None,
+    tag: str = PAYER_TAG,
+    signature_agent: Optional[str] = None,
 ) -> dict[str, str]:
-    """Headers to add to a buyer-agent request. Refuses a mandate whose hash is stale."""
+    """Headers to add to a buyer-agent request. Refuses a mandate whose hash is stale.
+
+    `tag` is agent-payer-auth for a charge (default) or agent-browser-auth. `signature_agent` is the https URL
+    of the agent directory (default: VISA_TAP_SIGNATURE_AGENT or a placeholder .example URL)."""
+    if tag not in TAGS:
+        raise ValueError("tag must be " + " or ".join(TAGS))
+    agent_url = f'"{signature_agent or os.environ.get(SIGNATURE_AGENT_ENV) or DEFAULT_SIGNATURE_AGENT}"'
+    if not _SIGNATURE_AGENT_RE.fullmatch(agent_url):
+        raise ValueError("signature_agent must be an https URL")
     if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int) or not 0 < ttl_seconds <= MAX_SIGNATURE_TTL_SECONDS:
         raise ValueError(f"ttl_seconds must be 1..{MAX_SIGNATURE_TTL_SECONDS}")
     mand_hash = mandate_hash(mandate)
@@ -180,17 +212,21 @@ def sign_request(
         raise ValueError("mandate hash does not match its fields; refusing to sign")
     created = int((now or datetime.now().astimezone()).timestamp())
     expires = created + ttl_seconds
-    nonce = nonce or secrets.token_urlsafe(16)
+    rand = nonce or secrets.token_urlsafe(16)
+    if not _NONCE_RE.fullmatch(rand):
+        raise ValueError("nonce must be 1..128 characters of A-Z a-z 0-9 _ -")
     keyid = key_id(private_key.public_key())
     digest = _content_digest(body)
-    params = _params_string(COMPONENTS, created, expires, keyid, nonce)
-    base = _signature_base(COMPONENTS, _component_values(method, url, digest, mand_hash), params)
+    values = _component_values(method, url, digest, mand_hash)
+    params = _params_string(created, expires, keyid, f"{rand}.{_binding(values, digest, mand_hash, rand)}", tag)
+    base = _signature_base(COMPONENTS, values, params)
     sig = base64.b64encode(private_key.sign(base)).decode()
     return {
         "Content-Digest": digest,
         "Mandate-Hash": mand_hash,
-        "Signature-Input": f"{LABEL}={params}",
-        "Signature": f"{LABEL}=:{sig}:",
+        "Signature-Agent": agent_url,
+        "Signature-Input": f"{TAP_LABEL}={params}",
+        "Signature": f"{TAP_LABEL}=:{sig}:",
     }
 
 
@@ -202,8 +238,8 @@ def attach_signature(mandate: dict, headers: Mapping[str, str]) -> dict:
 
 # ---------- verify ----------
 
-_INPUT_RE = re.compile(r'(?P<label>[a-z0-9]+)=\((?P<inner>[^)]*)\)(?P<params>(?:;[a-z]+=(?:\d+|"[A-Za-z0-9_\-=.:+/]*"))*)')
-_PARAM_RE = re.compile(r';([a-z]+)=(\d+|"[A-Za-z0-9_\-=.:+/]*")')
+_INPUT_RE = re.compile(r'(?P<label>[a-z0-9]+)=\((?P<inner>[^)]*)\)(?P<params>(?:;[ ]?[A-Za-z]+=(?:\d+|"[A-Za-z0-9_\-=.:+/]*"))*)')
+_PARAM_RE = re.compile(r';[ ]?([A-Za-z]+)=(\d+|"[A-Za-z0-9_\-=.:+/]*")')
 _SIG_RE = re.compile(r'(?P<label>[a-z0-9]+)=:(?P<b64>[A-Za-z0-9+/]*={0,2}):')
 _DIGEST_RE = re.compile(r'sha-256=:(?P<b64>[A-Za-z0-9+/]*={0,2}):')
 _HEADER_NAME_RE = re.compile(r"[!#$%&'*+.^_`|~0-9A-Za-z-]{1,128}\Z")
@@ -245,35 +281,37 @@ def verify_request(
     expiry, status) and its nonce must not be spent in `store`. The nonce is recorded only after every other
     check passes, so a forged request cannot burn it."""
     h = {k.lower(): v for k, v in headers.items()}
-    for name in ("signature", "signature-input", "content-digest", "mandate-hash"):
+    for name in ("signature", "signature-input", "content-digest", "mandate-hash", "signature-agent"):
         if not isinstance(h.get(name), str) or not h[name].strip():
             return _no("missing_header", name)
+    if not _SIGNATURE_AGENT_RE.fullmatch(h["signature-agent"].strip()):
+        return _no("bad_signature_agent", "Signature-Agent must be a quoted https URL")
 
     parsed = _parse_input(h["signature-input"])
     if parsed is None:
         return _no("bad_signature_input", "cannot parse Signature-Input")
     label, components, params, params_str = parsed
     sig_m = _SIG_RE.fullmatch(h["signature"].strip())
-    if not sig_m or sig_m["label"] != label or label != LABEL:
-        return _no("bad_signature_input", "Signature label does not match Signature-Input")
-    if not set(COMPONENTS) <= set(components):
-        return _no("bad_component_set", "signature must cover " + ", ".join(COMPONENTS))
+    if not sig_m or sig_m["label"] != label or label != TAP_LABEL:
+        return _no("bad_signature_input", f"Signature label must be {TAP_LABEL} and match Signature-Input")
+    if tuple(components) != COMPONENTS:
+        return _no("bad_component_set", "signature must cover exactly " + ", ".join(COMPONENTS))
+    if set(params) != {"created", "expires", "keyId", "alg", "nonce", "tag"}:
+        return _no("bad_signature_input", "parameters must be created, expires, keyId, alg, nonce, tag")
     if params.get("alg") != ALG:
         return _no("bad_alg", "alg must be ed25519")
-    if params.get("tag") != TAG:
-        return _no("bad_tag", f"tag must be {TAG}")
+    if params.get("tag") != PAYER_TAG:
+        return _no("bad_tag", f"tag must be {PAYER_TAG} to authorize a charge")
     for p in ("created", "expires"):
         if not isinstance(params.get(p), int):
             return _no("bad_signature_input", f"{p} is required")
-    for p in ("keyid", "nonce"):
+    for p in ("keyId", "nonce"):
         if not isinstance(params.get(p), str) or not params[p]:
             return _no("bad_signature_input", f"{p} is required")
-    if set(components) - set(COMPONENTS):
-        return _no("bad_component_set", "unsupported covered component")
 
-    public_key = keys.get(params["keyid"])
+    public_key = keys.get(params["keyId"])
     if public_key is None:
-        return _no("unknown_key", "keyid is not in the keyring")
+        return _no("unknown_key", "keyId is not in the keyring")
 
     now_ts = int((now or datetime.now().astimezone()).timestamp())
     created, expires = params["created"], params["expires"]
@@ -294,6 +332,10 @@ def verify_request(
         public_key.verify(base64.b64decode(sig_m["b64"], validate=True), base)
     except (InvalidSignature, binascii.Error, ValueError):
         return _no("bad_signature", "signature does not verify")
+    rand, _, bound = params["nonce"].rpartition(".")
+    if not _NONCE_RE.fullmatch(rand) or not hmac.compare_digest(
+            bound, _binding(values, h["content-digest"].strip(), h["mandate-hash"].strip(), rand)):
+        return _no("bad_signature", "signed nonce does not bind this method, query, body and mandate hash")
 
     mand_hash = h["mandate-hash"].strip()
     if expected_mandate_hash is not None and not hmac.compare_digest(mand_hash, expected_mandate_hash):
@@ -321,9 +363,22 @@ def verify_request(
         if store.seen(NS_MANDATE, mandate["nonce"]):
             return _no("replayed_mandate", "this mandate was already charged")
 
-    if not store.consume(NS_TAP, f"{params['keyid']}:{params['nonce']}"):
+    if not store.consume(NS_TAP, f"{params['keyId']}:{params['nonce']}"):
         return _no("replayed_nonce", "this signed request was already used")
     return _ok()
+
+
+def tap_status(verdict: Verdict) -> dict[str, Any]:
+    """What the approval card shows for a verify_request result: "TAP signature verified", "Replay refused"
+    or "TAP signature refused" (with the reason). Verification is by our merchant simulator, never by Visa."""
+    if verdict.ok:
+        label = "TAP signature verified"
+    elif verdict.reason in ("replayed_nonce", "replayed_mandate"):
+        label = "Replay refused"
+    else:
+        label = "TAP signature refused"
+    return {"ok": bool(verdict.ok), "label": label, "reason": verdict.reason,
+            "verified_by": "merchant simulator (SIM), not by Visa"}
 
 
 def _admission_url_values(method: str, url: str, content_digest: str,
