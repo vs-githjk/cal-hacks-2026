@@ -10,7 +10,7 @@ import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
 import { POLL_MS, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
 import { agentFor, bubbleText, bubblesFrom, type AgentEventLike } from "@/lib/arenaAgents";
 import { SAMPLES, SAMPLE_AGENT_LINES } from "@/lib/arenaFixture";
-import { IDLE, playback, projectArenaScene, storyFor, type ActorKey, type ArenaRows, type ArenaScene, type Playback, type PlaybackAction, type SceneOffer, type Story } from "@/lib/arenaScene";
+import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorKey, type ArenaRows, type ArenaScene, type Playback, type PlaybackAction, type SceneOffer, type Story } from "@/lib/arenaScene";
 import type { ReasonCode } from "@/lib/bracket";
 import { FIXED_ACTORS, actorFor } from "@/lib/floor";
 import { formatMoney } from "@/lib/money";
@@ -18,6 +18,8 @@ import { formatMoney } from "@/lib/money";
 type SampleName = keyof typeof SAMPLES;
 const LEAD_MS = 1200; // the sealed table holds this long before a close starts to play
 const SAMPLE_OPEN_LEFT_MS = 62_000; // a sample's open round counts down from here, since its recorded deadline is long past
+const LOOP_GAP_MS = 4000; // an empty market shows the gpu sample on a loop, with this pause before each replay
+const AUTO_SCENE = projectArenaScene(SAMPLES.gpu, { sample: true });
 const NO_SELLERS: ReadonlySet<string> = new Set();
 
 /** The sealed-room scene: one round told as a short piece of theater. Every motion is a market row (see web/docs/3d-arena/DESIGN.md).
@@ -44,7 +46,7 @@ function useWebGL(): boolean | null {
   return useSyncExternalStore(subscribeNever, () => (webglCache ??= hasWebGL()), () => null);
 }
 
-function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBeat: number | null }) {
+function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | null; sampleBeat: number | null }) {
   const conn = useSpacetimeDB();
   const [rounds] = useTable(tables.round);
   const [needs] = useTable(tables.sellerNeeds);
@@ -52,13 +54,17 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
   const [agentRows] = useTable(tables.agentEvent);
   const [events] = useTable(tables.floorEvent);
 
-  // A sample replaces the tables outright; nothing ever falls back to one on its own.
-  const rows = useMemo<ArenaRows>(() => (sample ? SAMPLES[sample] : { rounds, needs, results, events }), [sample, rounds, needs, results, events]);
+  // An explicit ?sample= replaces the tables outright. With none, an empty market (at most one row) shows the labelled gpu sample on a loop
+  // so the floor is never still, and the live scene takes over as soon as a second row arrives.
+  const live = useMemo<ArenaRows>(() => ({ rounds, needs, results, events }), [rounds, needs, results, events]);
+  const auto = !sampleParam && isEmptyMarket(live);
+  const sample: SampleName | null = sampleParam ?? (auto ? "gpu" : null);
+  const rows = useMemo<ArenaRows>(() => (sample ? SAMPLES[sample] : live), [sample, live]);
   const scene = useMemo(() => projectArenaScene(rows, { sample: sample !== null }), [rows, sample]);
 
   // ---- playback: display only
   // A sample is known at mount, so it starts in the state it should show: stopped at ?beat=N, or replaying from the sealed table.
-  const [pb, setPb] = useState<Playback>(() => {
+  const [pbState, setPb] = useState<Playback>(() => {
     if (!sample) return IDLE;
     const first = projectArenaScene(SAMPLES[sample], { sample: true });
     const there = playback(IDLE, { type: "scene" }, first);
@@ -66,10 +72,25 @@ function FloorView({ sample, sampleBeat }: { sample: SampleName | null; sampleBe
   });
   const act = useCallback((a: PlaybackAction) => setPb((s) => playback(s, a, scene)), [scene]);
   const reduced = useReducedMotion();
+  // The auto sample appears after mount (the initializer above only ran once), so start it from the sealed table when it shows.
+  let pb = pbState;
+  const [autoSeen, setAutoSeen] = useState(auto);
+  if (auto !== autoSeen) {
+    setAutoSeen(auto);
+    if (auto) pb = playback(playback(pb, { type: "scene" }, AUTO_SCENE), { type: "replay" }, AUTO_SCENE);
+  }
   // The new scene reaches playback in the same render (never a frame with the old round's beat), and reduced motion never plays.
   let view = playback(pb, { type: "scene" }, scene);
   if (reduced && view.playing) view = playback(view, { type: "skip" }, scene);
-  if (view !== pb) setPb(view);
+  if (view !== pbState) setPb(view);
+
+  // At the end of the auto sample, wait, then replay. Reduced motion never loops.
+  const atEnd = !view.playing && scene.beats.length > 0 && view.beat >= scene.beats.length;
+  useEffect(() => {
+    if (!auto || reduced || !atEnd) return;
+    const t = setTimeout(() => act({ type: "replay" }), LOOP_GAP_MS);
+    return () => clearTimeout(t);
+  }, [auto, reduced, atEnd, act]);
 
   const frozen = !sample && !conn.isActive;
   useEffect(() => {
