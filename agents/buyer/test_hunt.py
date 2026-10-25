@@ -1,11 +1,11 @@
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # agents/
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from uagents_core.contrib.protocols.payment import CommitPayment, RejectPayment
+from uagents_core.contrib.protocols.payment import RejectPayment
 
 import hunt
 import payment
@@ -49,33 +49,13 @@ def test_public_hint_never_buys():
     assert hunt.BUY_PUBLIC_IF_NO_BID is False
 
 
-def _deal():
-    m = payment.make_mandate("order-1", 589.0, SELLER, buyer_id="vidyut", within_allowance=False)
-    return m, {m["hash"]: {"answer": "approve", "source": "chat stub"}}, set()
-
-
-def test_settle_commits_then_rejects_reuse():
-    m, approvals, used = _deal()
-    req = payment.payment_request(m, SELLER)
-    assert isinstance(hunt.settle(req, m, approvals, used), CommitPayment)
-    again = hunt.settle(req, m, approvals, used)
-    assert isinstance(again, RejectPayment) and "replay" in again.reason
-
-
-def test_settle_rejects_other_payee_and_no_mandate():
-    m, approvals, used = _deal()
-    out = hunt.settle(payment.payment_request(m, "agent1qattacker"), m, approvals, used)
-    assert isinstance(out, RejectPayment) and "payee" in out.reason
-    assert not used
-    assert isinstance(hunt.settle(payment.payment_request(m, SELLER), None, approvals, used), RejectPayment)
-
-
-def test_settle_rejects_expired_mandate():
-    m, approvals, used = _deal()
-    m_old = payment.make_mandate("order-2", 10.0, SELLER, buyer_id="vidyut", within_allowance=False,
-                                  now=datetime.now(timezone.utc) - timedelta(minutes=20))
-    out = hunt.settle(payment.payment_request(m_old, SELLER), m_old, {m_old["hash"]: {"answer": "approve"}}, used)
-    assert isinstance(out, RejectPayment) and "expired" in out.reason
+def test_settle_refuses_missing_transaction_and_unpaid_approval():
+    mandate = payment.make_mandate("order-1", 589.0, SELLER, buyer_id="vidyut", within_allowance=False)
+    req = payment.payment_request(mandate, SELLER)
+    assert isinstance(hunt.settle(req, None), RejectPayment)
+    tx = {"deal_id": "order-1", "buyer_id": "vidyut", "goal_id": "goal-1", "phase": "approved",
+          "mandate": mandate}
+    assert isinstance(hunt.settle(req, tx), RejectPayment)
 
 
 def test_pick_best_prefers_asked_condition_over_cheaper_refurb():

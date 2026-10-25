@@ -15,8 +15,12 @@ def run():
     return run_all(say=Narrator(False))
 
 
+RUN: dict = {}
+
+
 @pytest.fixture(autouse=True)
 def offline(run, monkeypatch):
+    RUN["run"] = run
     """main() reuses one run (the story is deterministic enough for these tests) and never reads the Cartesia env."""
     monkeypatch.setattr(stage, "run_all", lambda **kw: run)
     from pay import voice_cartesia as vc
@@ -59,8 +63,20 @@ class Time:
         return self.t
 
 
-def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows=None, on_ask=None):
+def go(argv, *, rows=UP, fail=None, inputs=None, log=None, result_rows="market", on_ask=None, through_gate=True):
+    """result_rows: the market's round_result rows (default: the market agrees with the demo's winner; None: unreadable).
+    through_gate: there is no scripted approval (#251), so a run only reaches beat 5 with --live-call and an approver that says
+    approved. By default this adds --live-call and a fake approver; False runs the argv as given (a run with no call)."""
+    if through_gate and "--live-call" not in argv:
+        mp = pytest.MonkeyPatch()
+        mp.setattr(bridge, "live_approver_for", lambda *a, **k: (Approver(True), "live call: fake"))
+        try:
+            return go([*argv, "--live-call"], rows=rows, fail=fail, inputs=inputs, log=log, result_rows=result_rows, on_ask=on_ask)
+        finally:
+            mp.undo()
     log = [] if log is None else log
+    if result_rows == "market":
+        result_rows = market_rows(RUN["run"], RUN["run"]["beats"]["2"]["winner"]["seller_id"])
     clk = Time()
     asked = []
 
@@ -93,16 +109,17 @@ def test_every_step_lands_in_exactly_one_beat_in_order(run):
     beats = stage.assign_beats(steps)
     assert sorted(beats) == [1, 2, 3, 4, 5]
     assert [s for n in sorted(beats) for s in beats[n]] == steps
-    assert [s.reducer for s in beats[1]] == ["post_goal", "set_allowance", "post_need"]
+    assert [s.reducer for s in beats[1]] == ["post_goal", "set_allowance", "post_need", "set_buyer_profile"]
     assert beats[2][0].reducer == "open_round" and beats[2][-1].reducer == "close_round"
     assert [s.reducer for s in beats[3]] == ["attach_verdict"]
     assert [s.reducer for s in beats[4]] == ["create_mandate", "record_approval", "record_payment", "record_payment"]
-    assert beats[5][0].reducer == "open_round" and beats[5][-1].reducer == "close_round"
+    assert beats[5][0].reducer == "record_loss_report" and beats[5][-1].reducer == "close_round"     # #216: reports, then round 2
+    assert "open_round" in [s.reducer for s in beats[5]]
 
 
-def test_one_round_plan_has_no_beat_five(run):
+def test_one_round_plan_has_only_the_loss_reports_in_beat_five(run):
     beats = stage.assign_beats(bridge.plan(run, delay=0, rounds=1))
-    assert sorted(beats) == [1, 2, 3, 4]
+    assert sorted(beats) == [1, 2, 3, 4, 5] and {s.reducer for s in beats[5]} == {"record_loss_report"}
 
 
 # ---------------------------------------------------------------- the auto run
@@ -242,7 +259,7 @@ def test_live_call_passes_through_to_the_bridge_and_records_on_approval(monkeypa
     assert code == 0 and approver.seen == ["record_approval"]
     assert "record_approval" in reducers(log) and "record_payment" in reducers(log)
     created = next(a for _, r, a in log if r == "create_mandate")
-    assert created["hash"] == seen["mandate"]["hash"]           # the mandate the call judges is the one the market got
+    assert created["hash"] == seen["mandate"].mandate["hash"]   # the mandate the call judges is the one the market got
     assert reducers(log).count("open_round") == 2                  # beat 5 still plays
 
 
@@ -263,10 +280,15 @@ def test_live_call_not_configured_is_a_denial_not_a_charge(capsys):
     assert "create_mandate" in reducers(log)
 
 
-def test_without_live_call_the_simulated_approval_is_recorded(monkeypatch):
+def test_without_live_call_the_run_stops_at_the_approval_gate_and_pays_nothing(monkeypatch, capsys):
+    """#251: no scripted approval. No call is asked for, the mandate is made, and nothing after it is recorded."""
     monkeypatch.setattr(bridge, "live_approver_for", lambda *a, **k: pytest.fail("no live call was asked for"))
-    code, log, *_ = go(["--auto", "--step-delay", "0"])
-    assert code == 0 and "record_approval" in reducers(log) and "record_payment" in reducers(log)
+    code, log, *_ = go(["--auto", "--step-delay", "0"], through_gate=False)
+    out = capsys.readouterr().out
+    assert code == 1 and "create_mandate" in reducers(log)
+    assert not any(r in reducers(log) for r in ("record_approval", "record_payment", "record_loss_report"))
+    assert reducers(log).count("open_round") == 1                # beat 5 never starts
+    assert "approval needs the real phone call (--live-call); nothing was paid" in out
 
 
 def test_live_call_cannot_be_combined_with_stripe():
@@ -277,7 +299,7 @@ def test_live_call_cannot_be_combined_with_stripe():
 def test_live_cue_differs_and_names_the_code_and_the_denial_rule():
     live, sim = stage.cue_for(4, live_call=True), stage.cue_for(4, live_call=False)
     assert live != sim and "code" in live.lower() and "approve" in live.lower() and "nothing is paid" in live.lower()
-    assert "simulated" in sim.lower()
+    assert "real phone call" in sim.lower() and "--live-call" in sim and "nothing is paid" in sim.lower() and "simulated" not in sim.lower()
     for n in (1, 2, 3, 5):
         assert stage.cue_for(n, live_call=True) == stage.cue_for(n, live_call=False)
 
@@ -357,9 +379,9 @@ def test_live_call_mandate_is_made_at_beat_four_so_a_long_wait_does_not_expire_i
     judged = []
     real = bridge.make_live_approver
 
-    def spy(mandate, *a, **k):
-        judged.append(mandate)
-        return real(mandate, *a, **k)
+    def spy(gate, *a, **k):
+        judged.append(gate)
+        return real(gate, *a, **k)
 
     monkeypatch.setattr(bridge, "make_live_approver", spy)
 
@@ -372,14 +394,14 @@ def test_live_call_mandate_is_made_at_beat_four_so_a_long_wait_does_not_expire_i
     assert len(dialled) == 1, "the gate refused before dialling"
     assert "(expired)" not in out and "call_failed" in out and code == 1       # the blocked dial is the only denial
     created = next(a for _, r, a in log if r == "create_mandate")
-    assert judged[-1]["hash"] == created["hash"]                             # the gate judged the mandate the market got
+    assert judged[-1].mandate["hash"] == created["hash"]                     # the gate judged the mandate the market got
     assert "record_approval" not in reducers(log) and "record_payment" not in reducers(log)
 
 
 def test_live_call_startup_does_not_make_the_call_mandate(monkeypatch):
     made = []
-    real = bridge.fresh_pending_mandate
-    monkeypatch.setattr(bridge, "fresh_pending_mandate", lambda m: made.append(1) or real(m))
+    real = bridge.DealGate.prepare
+    monkeypatch.setattr(bridge.DealGate, "prepare", lambda self, ref: made.append(1) or real(self, ref))
     patch_live(monkeypatch, Approver(True))
     asked_when = []
     go(["--live-call", "--step-delay", "0"], on_ask=lambda prompt: asked_when.append(len(made)))
@@ -389,10 +411,18 @@ def test_live_call_startup_does_not_make_the_call_mandate(monkeypatch):
 
 # ---------------------------------------------------------------- round 1 read-back
 
-def result_rows(run, first_seller_id):
-    win = run["beats"]["2"]["winner"]["seller_id"]
-    return [("rr-1", "round-1", "b1", first_seller_id, "Winner Co", 1, 124999, []),
-            ("rr-2", "round-1", "b2", "other-2" if first_seller_id == win else win, "Second Co", 2, 130000, [])]
+def market_rows(run, first_seller_id):
+    """round_result rows (id, round_id, bid_id, seller_id, persona, rank, landed, reasons) with `first_seller_id` ranked 1."""
+    b2 = run["beats"]["2"]
+    win = b2["winner"]["seller_id"]
+    second = "gadget-grove" if first_seller_id == win else win
+    bids = {b["seller_id"]: b for b in b2["bids"]}
+    landed = {e["seller_id"]: e["landed"] for e in b2["ranking"]["ranked"]}
+    return [("rr-1", "round-1", bids[first_seller_id]["id"], first_seller_id, bids[first_seller_id]["persona"], 1, landed[first_seller_id], []),
+            ("rr-2", "round-1", bids[second]["id"], second, bids[second]["persona"], 2, landed[second], [])]
+
+
+result_rows = market_rows
 
 
 def test_beat_two_reads_the_market_ranking_back_and_says_when_it_agrees(run, capsys):
@@ -403,9 +433,11 @@ def test_beat_two_reads_the_market_ranking_back_and_says_when_it_agrees(run, cap
 
 
 def test_a_different_market_number_one_prints_divergence_before_the_beat_four_cue(run, capsys):
-    code, log, clk, asked = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, "someone-else"))
+    code, log, clk, asked = go(["--auto", "--step-delay", "0"], result_rows=result_rows(run, "gadget-grove"))
     out = capsys.readouterr().out
     assert code == 0
+    gg = next(x for x in run["beats"]["2"]["sellers"] if x["id"] == "gadget-grove")
+    assert next(a for _, r, a in log if r == "create_mandate")["payee"] == gg["id"]    # #194, #240: beat 4 pays the market's #1 by seller id
     assert out.index("DIVERGENCE") < out.index("BEAT 4 of 5")
     assert out.index("BEAT 2 of 5") < out.index("DIVERGENCE") < out.index("BEAT 3 of 5")
     assert any("not the demo's winner" in p for p in asked)         # --auto pauses once so the operator cannot miss it
@@ -417,7 +449,55 @@ def test_agreement_does_not_add_a_pause(run):
     assert asked == []
 
 
-def test_an_unreadable_market_ranking_is_one_note_not_a_stop(capsys):
-    code, *_ = go(["--auto", "--step-delay", "0"])     # the fake has no round_result
+def test_an_unreadable_market_ranking_stops_beat_four_with_nothing_paid(capsys):
+    code, log, *_ = go(["--auto", "--step-delay", "0"], result_rows=None)     # the fake has no round_result
     out = capsys.readouterr().out
-    assert code == 0 and "could not read round_result back (RuntimeError)" in out
+    assert "could not read round_result back (RuntimeError)" in out           # after beat 2: one note
+    assert code == 1 and "no mandate was made" in out and "nothing was paid" in out and "Nothing was charged" not in out
+    assert not any(r in ("create_mandate", "record_approval", "record_payment") for _, r, _ in log)
+
+
+# ---------------------------------------------------------------- #183: one run under 120 s with a short sealed window
+
+def test_a_full_auto_run_with_a_20_s_bid_window_takes_under_120_s():
+    """The clock moves only when the code sleeps, so this is the run's own pacing: cues, steps and both sealed windows."""
+    code, log, clk, _ = go(["--auto", "--bid-window", "20"])
+    assert code == 0 and reducers(log).count("open_round") == 2
+    assert clk.t - 1000.0 < 120, clk.t - 1000.0
+    windows = [a["window_s"] for _, r, a in log if r == "open_round"]
+    assert windows == [20, 20]
+
+
+def test_without_the_flag_the_windows_cover_the_paced_steps_as_before():
+    code, log, clk, _ = go(["--auto"])
+    windows = [a["window_s"] for _, r, a in log if r == "open_round"]
+    assert code == 0 and windows[0] > 20 and clk.t - 1000.0 > 120
+
+
+def test_every_bid_and_check_lands_before_the_short_deadline():
+    """Compressing the window compresses the step pace inside the round, so no bid arrives after the close."""
+    run = RUN["run"]
+    steps = bridge.plan(run, delay=2.0, rounds=2, bid_window=20)
+    for rno in ("round-1", "round-2"):
+        i = next(k for k, s in enumerate(steps) if s.reducer == "open_round" and s.args["round_id"] == rno)
+        j = next(k for k, s in enumerate(steps) if s.reducer == "close_round" and s.args["round_id"] == rno)
+        inside = sum(2.0 * s.pace for s in steps[i:j] if s.pause)
+        assert steps[i].args["window_s"] == 20 and inside <= 20 - 6 + 1e-9, (rno, inside)
+
+
+@pytest.mark.parametrize("bad", ["5", "0", "-3", "abc", "12", "14"])
+def test_a_bid_window_below_the_minimum_is_refused(bad):
+    with pytest.raises(SystemExit):
+        stage.main(["--dry-run", "--bid-window", bad])
+    with pytest.raises(SystemExit):
+        bridge.main(["--dry-run", "--bid-window", bad])
+
+
+
+def test_the_stop_line_says_nothing_was_paid_once():
+    """#222: the denial line already says nothing was paid; the stop line does not repeat it."""
+    import inspect
+    from demo import stage
+    src = inspect.getsource(stage)
+    i = src.index("STOPPED at beat {n}")
+    assert "Nothing was charged" not in src[i:i + 300]

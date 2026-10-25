@@ -10,6 +10,13 @@ from shield.text import Doc
 BLOCK = "block"
 QUARANTINE = "quarantine"
 SEVERITY_ORDER = ("none", "low", "medium", "high", "critical")
+# The buyer's own agent, the advocate and the marketplace: their text may ask the buyer for the code or name the limit.
+BUYER_SIDE = frozenset({"buyer", "advocate", "marketplace"})
+
+
+def seller_side(ctx: Mapping) -> bool:
+    """Every sender role except the buyer-side ones, after trimming and lowercasing; a missing role counts as a seller."""
+    return str((ctx or {}).get("sender_role") or "").strip().lower() not in BUYER_SIDE
 
 
 @dataclass(frozen=True)

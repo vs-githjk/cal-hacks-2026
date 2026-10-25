@@ -125,9 +125,9 @@ def test_claude_classifier_builds_request_without_network(monkeypatch):
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     clf = ClaudeClassifier("test-key-not-real")
-    assert clf.classify("hi " * 5000, {}) == "SUSPICIOUS"
+    assert clf.classify("hi " * 9000, {}) == "SUSPICIOUS"          # 27,000 chars: cut to the 20,000-char window (#196)
     assert seen["url"].startswith("https://api.anthropic.com/") and seen["timeout"] <= 2
-    assert seen["body"]["max_tokens"] <= 10 and len(seen["body"]["messages"][0]["content"]) < 4100
+    assert seen["body"]["max_tokens"] <= 10 and len(seen["body"]["messages"][0]["content"]) < 20100
     assert seen["hdr"]["x-api-key"] == "test-key-not-real"
 
 
@@ -166,18 +166,58 @@ def test_oversized_message_is_quarantined_fast_before_any_parsing():
     assert screen("hello " * 3333, {})["verdict"] == "allow"  # exactly at the cap is still parsed
 
 
+def _growth(work, text, *, small=2500, repeats=7):
+    """How the CPU time of work(text) grows from its first `small` characters to all of it: (ratio, full seconds).
+    Each size is judged by its BEST of `repeats` runs after a warm-up, so a noise burst on a shared runner cannot
+    inflate it (noise only ever adds time), and the clock is process CPU time, so a descheduled runner adds nothing."""
+    import gc
+    import time
+
+    best = {}
+    work(text[:small])          # warm-up: first-call imports, regex caches, allocator arenas
+    work(text)
+    for _ in range(repeats):
+        for size in (small, len(text)):         # interleaved, so a slow patch of the machine hits both sizes
+            gc.collect()
+            t = time.process_time()
+            work(text[:size])
+            took = time.process_time() - t
+            best[size] = min(best.get(size, took), took)
+    return best[len(text)] / max(best[small], 0.002), best[len(text)]   # the floor keeps a tiny small run from dividing noise
+
+
+# 8x the text. Linear time grows about 8x, quadratic about 64x; the bound sits at the geometric middle (slope 1.5, 22.6x).
+# The first bound, 4x the text against 8x, failed on a CI runner whose three steady pairs read 8.4 to 8.8 against linear
+# 4: a 2x cache effect, not a quadratic, and 4x text leaves no room for that. 8x text leaves a 2.8x margin.
+GROWTH_BOUND = 22.6
+
+
 @pytest.mark.parametrize("unit,count", [
     ("<!--", 5000), ("<div ", 4000), ("<p hidden>", 2000), ("<b style='display:none'>", 800),
     ("<a" + " x" * 50, 200), ("<div><!--", 2200),
 ])
 def test_adversarial_markup_at_the_cap_stays_fast(unit, count):
-    import time
-
+    """The quadratic version took 0.7 to 54 s at the cap. A wall-clock bound alone flaked on shared CI runners (#199:
+    0.56 s against 0.5 s), so the test checks how the time GROWS (see _growth), with a generous ceiling as well."""
     payload = (unit * count)[:20000]
-    t = time.perf_counter()
-    out = screen(payload, {})
-    assert time.perf_counter() - t < 0.5, (unit, time.perf_counter() - t)  # the quadratic version took 0.7 to 54 s
-    assert out["verdict"] in ("allow", "quarantine", "block")
+    out = {}
+
+    def work(text):
+        out["result"] = screen(text, {})
+
+    ratio, full = _growth(work, payload)
+    assert full < 2.0, (unit, full)
+    assert ratio < GROWTH_BOUND, (unit, round(ratio, 1))
+    assert out["result"]["verdict"] in ("allow", "quarantine", "block")
+
+
+def test_the_growth_check_tells_linear_work_from_quadratic_work():
+    """The guard above is only worth having if it can fail: a synthetic quadratic must trip it, a linear one must not."""
+    text = "x" * 20000
+    linear, _ = _growth(lambda t: sum(1 for _ in range(len(t) * 20)), text)
+    quadratic, _ = _growth(lambda t: sum(1 for _ in range(len(t) * len(t) // 200)), text)
+    assert linear < GROWTH_BOUND, linear
+    assert quadratic > GROWTH_BOUND, quadratic
 
 
 def test_long_hidden_comment_and_many_decoys_cannot_hide_an_instruction():

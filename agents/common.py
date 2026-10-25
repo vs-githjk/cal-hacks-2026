@@ -177,15 +177,32 @@ class OrderPlaced(Model):
 
 
 # Deterministic seeds so addresses are stable across restarts. Override in .env for the real deploy.
-SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named seller agents, each its own uAgent
-SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015}
-BUILT_IN_ROLES = ("buyer", "advocate", "shield", *SELLERS)
+CATALOG_SELLERS = ["seller_1", "seller_2", "seller_3", "seller_4", "seller_5"]  # five named SIM seller agents
+# #342: seller_6 bids Central Computers (SF) listings as MIRROR. That store never joined, so its bids are shown for
+# comparison and never ordered or paid (data/mirror/not_partners.py). It has NO default seed: it runs only when
+# SELLER_6_AGENT_SEED is set to a private seed (agents/.env, never committed); otherwise it stays off.
+MIRROR_SELLERS = ("seller_6",)
+MIN_PRIVATE_SEED = 16
+
+
+def _private_seed(env: str) -> str | None:
+    """The env seed when it is private enough to sign with: set, 16+ characters, not a public *-dev default."""
+    value = (os.getenv(env) or "").strip()
+    return value if len(value) >= MIN_PRIVATE_SEED and not value.endswith("-dev") else None
+
+
+_MIRROR_SEEDS = {name: seed for name in MIRROR_SELLERS if (seed := _private_seed(f"{name.upper()}_AGENT_SEED"))}
+SELLERS = [*CATALOG_SELLERS, *_MIRROR_SEEDS]  # each its own uAgent; seller_6 only when its private seed is set
+SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
+                "seller_6": 8016}
+BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)
 SEEDS = {
     "buyer": os.getenv("BUYER_AGENT_SEED", "tech-bazaar-buyer-dev"),
     "advocate": os.getenv("ADVOCATE_AGENT_SEED") or os.getenv("ADVOCATE_SEED", "tech-bazaar-advocate-dev"),
     "shield": os.getenv("SHIELD_AGENT_SEED") or os.getenv("SHIELD_SEED", "tech-bazaar-shield-dev"),
     **{s: os.getenv(f"{s.upper()}_AGENT_SEED") or os.getenv(f"{s.upper()}_SEED", f"tech-bazaar-{s}-dev")
-       for s in SELLERS},
+       for s in CATALOG_SELLERS},
+    **_MIRROR_SEEDS,  # never a default: no private seed, no seller_6
 }
 
 
@@ -235,6 +252,9 @@ def agent_args(role: str, port: int, **profile) -> dict:
 
 
 def address(role: str) -> str:
+    if role not in SEEDS and role in MIRROR_SELLERS:
+        raise ValueError(f"{role} is off: set {role.upper()}_AGENT_SEED in agents/.env to a private seed of "
+                         f"{MIN_PRIVATE_SEED}+ characters. It has no default seed.")
     return Identity.from_seed(SEEDS[role], 0).address
 
 

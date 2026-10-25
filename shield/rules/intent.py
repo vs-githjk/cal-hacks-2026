@@ -44,7 +44,8 @@ SKIP = _w(
 )
 # "without ..." only counts when the gate word FOLLOWS it ("without waiting for your owner"), never "approval ... without a deposit".
 SKIP_BEFORE_GATE = _w(r"without", r"sin\s+(?:pedir|consultar|llamar|esperar|preguntar|avisar|requerir)?", r"bina")
-_NOT_MANUAL = r"(?!\s*(?:'s)?\s*(?:manual|guide|handbook|interface|account|manuals|reviews))"
+# bounded gaps: two unbounded \s* here took 9.6 s on "advocate" + 19,900 spaces (#236)
+_NOT_MANUAL = r"(?!\s{0,20}(?:'s)?\s{0,20}(?:manual|guide|handbook|interface|account|manuals|reviews))"   # a lookahead, so wider gaps stay linear (#273)
 GATE = rx(
     r"\b(?:the\s+|your\s+|our\s+|its\s+)?(?:buyer|owner|human|principal|advocate|approver)(?:'s|s')?\b" + _NOT_MANUAL
     + r"|\b(?:the|your)\s+user(?:'s)?\b" + _NOT_MANUAL

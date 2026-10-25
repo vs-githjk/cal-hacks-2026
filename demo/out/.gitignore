@@ -1,2 +1,5 @@
 # one sample run is committed as sample-run.json; fresh runs stay local
 run-*.json
+market-memory-*.json
+build-view*.json
+build-view*.jsonl

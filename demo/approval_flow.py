@@ -4,8 +4,8 @@ pay.tap (RFC 9421 signing, verify_request) and pay.replay (used nonces).
 
 What is simulated: the call transport (the transcripts are typed by the runner, no Cartesia), the clock (it
 advances 31 s per retry to clear the 30 s cooldown instead of sleeping) and the merchant (verify_request is what
-Lane C's merchant simulator will call). The Stripe charge is a SIM stub unless `--stripe` is passed AND
-STRIPE_SECRET_KEY starts with sk_test_; then it is one Stripe test-mode PaymentIntent on a Visa test card.
+Lane C's merchant simulator will call). Because the approval here is scripted (no call), the charge is ALWAYS the SIM stub.
+A Stripe test-mode PaymentIntent runs only after a real call approves: demo/bridge.py --live-call --stripe (charge_or_stub).
 Before the mandate exists, the winning price is re-checked live through Bright Data (demo/recheck.py) when
 BRIGHT_DATA_API_KEY is set; out of stock or a price above the quote stops the call, anything unreadable keeps the MIRROR quote.
 The approval code is never printed or stored. No key is ever printed.
@@ -86,6 +86,34 @@ def stripe_charge_test(mandate: Mapping[str, Any], key: str, urlopen: Callable =
             "idempotency_key": idempotency_key(mandate)}
 
 
+def charge_or_stub(mandate: Mapping[str, Any], env: Mapping[str, str], use_stripe: bool,
+                   stripe_test: Optional[Callable] = None) -> tuple[dict, str]:
+    """(charge, note). One Stripe TEST PaymentIntent when use_stripe and the key is sk_test_, else the SIM stub; a refused
+    or failed Stripe call also falls back to the SIM stub and the note says why. The caller must have checked the approval."""
+    key = env.get(STRIPE_ENV, "")
+    live_ok = use_stripe and key.startswith("sk_test_")
+    charge, note = None, ""
+    if use_stripe and not live_ok:
+        note = f"--stripe was passed but {STRIPE_ENV} is not an sk_test_ key, so the SIM stub runs"
+    if live_ok:
+        try:
+            charge = (stripe_test or stripe_charge_test)(mandate, key)
+        except urllib.error.HTTPError as e:   # Stripe's error type and code are safe to show; the key never is
+            try:
+                err = json.loads(e.read()).get("error", {})
+            except (ValueError, OSError):
+                err = {}
+            note = (f"Stripe test call refused (HTTP {e.code}, {err.get('type', 'unknown')}/{err.get('code', 'none')}), "
+                    "so the SIM stub runs")
+        except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+            note = f"Stripe test call failed ({type(e).__name__}), so the SIM stub runs"
+        if charge is not None and charge.get("status") != "succeeded":   # #208: only a succeeded intent is a test charge
+            note = (f"Stripe test PaymentIntent {charge.get('id')} came back {charge.get('status') or 'with no status'}, "
+                    "not succeeded, so the SIM stub is recorded")
+            charge = None
+    return charge or stripe_charge_sim(mandate), note
+
+
 def _signing_key(env: Mapping[str, str], tmp: str):
     """(private_key, source label). The env key when usable, else a throwaway Ed25519 key in a temp dir."""
     if env.get(KEY_ENV):
@@ -134,8 +162,8 @@ def _live_recheck(b1: dict, b2: dict, bid: dict, win: dict, seller: dict, say, r
     return res, reason
 
 
-def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, env: Optional[Mapping[str, str]] = None,
-              stripe_test: Optional[Callable] = None, recheck_fn: Optional[Callable] = None, recheck_enabled: bool = True) -> dict:
+def run_beat4(b1: dict, b2: dict, now: datetime, say, env: Optional[Mapping[str, str]] = None,
+              recheck_fn: Optional[Callable] = None, recheck_enabled: bool = True) -> dict:
     env = os.environ if env is None else env
     t0 = now.replace(microsecond=0)
     bid, win = b2["winner_bid"], b2["winner"]
@@ -144,8 +172,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     allowance, goal = b1["allowance"], copy.deepcopy(b1["goal"])
     call, why_call = needs_call(allowance, amount)
     say.header(4, "Two-way call approves a deal above the allowance",
-               "REAL pay.mandate, pay.callscript, pay.approval, pay.tap, pay.replay; SIM call transport, clock and merchant; "
-               + ("Stripe TEST API" if use_stripe else "SIM Stripe stub"))
+               "REAL pay.mandate, pay.callscript, pay.approval, pay.tap, pay.replay; SIM call transport, clock and merchant; SIM Stripe stub")
     say.line(SIM, f"winning deal: {seller['name']} at {b2['winner_note']}; {why_call}: the agent must call")
     if bid["origin"] == MIRROR:
         say.line(SIM, f"the bid is MIRROR (a real, dated listing); the payee {payee} is a SIM test address, so no real merchant is contacted or paid")
@@ -233,24 +260,7 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     guard = can_charge(mandate, t_verify, deal_id=mandate["deal_id"], amount=amount, payee=payee, store=store)
     if not guard:
         raise RuntimeError(f"can_charge refused at charge time: {guard.reason}")
-    key = env.get(STRIPE_ENV, "")
-    live_ok = use_stripe and key.startswith("sk_test_")
-    charge, stripe_note = None, ""
-    if use_stripe and not live_ok:
-        stripe_note = f"--stripe was passed but {STRIPE_ENV} is not an sk_test_ key, so the SIM stub runs"
-    if live_ok:
-        try:
-            charge = (stripe_test or stripe_charge_test)(mandate, key)
-        except urllib.error.HTTPError as e:   # Stripe's error type and code are safe to show; the key never is
-            try:
-                err = json.loads(e.read()).get("error", {})
-            except (ValueError, OSError):
-                err = {}
-            stripe_note = (f"Stripe test call refused (HTTP {e.code}, {err.get('type', 'unknown')}/{err.get('code', 'none')}), "
-                           "so the SIM stub runs")
-        except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
-            stripe_note = f"Stripe test call failed ({type(e).__name__}), so the SIM stub runs"
-    charge = charge or stripe_charge_sim(mandate)
+    charge, stripe_note = charge_or_stub(mandate, env, use_stripe=False)   # a scripted approval never reaches Stripe (#193)
     mark_used(mandate, deal_id=mandate["deal_id"], amount=amount, payee=payee, store=store, now=t_verify)
     if stripe_note:
         say.line(SIM, stripe_note)
@@ -258,7 +268,9 @@ def run_beat4(b1: dict, b2: dict, now: datetime, say, use_stripe: bool = False, 
     say.line(LIVE if live else SIM,
              f"charge ({charge['mode']}): {charge['id']} {money(charge['amount_cents'] / 100)}, status {charge['status']}, "
              f"idempotency key {charge['idempotency_key'][:20]}...")
-    say.line(LIVE if live else SIM, ("a Stripe test-mode charge on a Visa test card" if live else "no Stripe call was made (pass --stripe with an sk_test_ key for the test API)")
+    say.line(LIVE if live else SIM, ("a Stripe test-mode charge on a Visa test card" if live else
+                                     "no Stripe call was made (the approval above is scripted; a Stripe test charge runs only after a real call: "
+                                     "demo/bridge.py --live-call --stripe)")
              + ", under a TAP-style signed mandate; this is not Visa settlement")
 
     # a replay of the exact signed request, and an altered one

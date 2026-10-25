@@ -1,17 +1,24 @@
 // web/src/components/market.tsx
 // The referee's floor: sealed round timeline, bids per seller line, loss reports, learning diff, events feed.
-import type { FloorEventView, LearningView, LossReport, RoundView, SellerLine } from "@/lib/screens";
+import { clusterArrivals, type FloorEventView, type LearningView, type LossReport, type RoundView, type SellerLine } from "@/lib/screens";
 import { Card, Label, OriginChip, Stat, Tag, Verdict, clock, money } from "./ui";
 
-/** Horizontal track from 0 to close. Labels rotate over three rows so eleven arrivals never collide. */
+/**
+ * Horizontal track from 0 to close. Arrivals within 3% of the track of each other cluster into one marker (a
+ * demo flood can post 17+ bids within milliseconds), so dots never stack and every bid stays in its tooltip.
+ * Labels of single-arrival markers rotate over three rows so they do not collide either.
+ */
 export function RoundTimeline({ round }: { round: RoundView }) {
   const total = Math.max(round.closedMs, round.windowMs);
   const pct = (ms: number) => `${(ms / total) * 100}%`;
+  const clusters = clusterArrivals(round.arrivals, total, 0.03);
   const rows = ["bottom-5", "top-5", "top-9"]; // label offsets, cycling
-  // Label an arrival only when its row has room since the last label there (12% of the track); every dot keeps its tooltip.
+  // Label a single-arrival marker only when its row has room since the last label there (12% of the track);
+  // a cluster always shows its count, since clusters are already spaced apart by construction.
   const lastInRow = [-1, -1, -1];
-  const labelled = round.arrivals.map((a, i) => {
-    const r = i % 3, at = a.atMs / total;
+  const labelled = clusters.map((c, i) => {
+    if (c.length > 1) return true;
+    const r = i % 3, at = c[0]!.atMs / total;
     if (lastInRow[r] >= 0 && at - lastInRow[r] < 0.12) return false;
     lastInRow[r] = at;
     return true;
@@ -29,16 +36,28 @@ export function RoundTimeline({ round }: { round: RoundView }) {
         <div className="relative my-3 h-[104px]">
           <div className="absolute inset-x-0 top-10 h-1 rounded-sm bg-line" />
           {round.closedMs > round.windowMs && <div className="absolute top-10 h-1 rounded-sm bg-amber opacity-50" style={{ left: pct(round.windowMs), right: 0 }} />}
-          {round.arrivals.map((a, i) => (
-            <div
-              key={a.label + a.atMs}
-              className={`absolute top-[34px] h-4 w-4 -translate-x-1/2 rounded-full border-[3px] bg-panel ${a.refused ? "border-coral" : a.origin === "SIM" ? "border-amber" : a.origin === "LIVE" ? "border-mint" : "border-sky"}`}
-              style={{ left: pct(a.atMs) }}
-              title={`${a.label} at ${(a.atMs / 1000).toFixed(1)} s (${a.origin}${a.refused ? ", refused" : ""})`}
-            >
-              <span className={`absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap font-mono text-[11px] text-muted sm:inline ${rows[i % 3]}`}>{labelled[i] ? short(a.label) : ""}</span>
-            </div>
-          ))}
+          {clusters.map((c, i) => {
+            const first = c[0]!;
+            const allRefused = c.every((a) => a.refused);
+            const origins = new Set(c.map((a) => a.origin));
+            const color = allRefused ? "border-coral" : origins.size > 1 ? "border-ink" : first.origin === "SIM" ? "border-amber" : first.origin === "LIVE" ? "border-mint" : "border-sky";
+            const title = c.length === 1
+              ? `${first.label} at ${(first.atMs / 1000).toFixed(1)} s (${first.origin}${first.refused ? ", refused" : ""})`
+              : `${c.length} bids near ${(first.atMs / 1000).toFixed(1)} s: ${c.map((a) => `${a.label} (${a.origin}${a.refused ? ", refused" : ""})`).join("; ")}`;
+            return (
+              <div
+                key={first.label + first.atMs}
+                className={`absolute top-[34px] h-4 w-4 -translate-x-1/2 rounded-full border-[3px] bg-panel ${color}`}
+                style={{ left: pct(first.atMs) }}
+                title={title}
+              >
+                {c.length > 1 && <span className="absolute inset-0 grid place-items-center text-[8px] font-bold leading-none text-ink">{c.length}</span>}
+                <span className={`absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap font-mono text-[11px] text-muted sm:inline ${rows[i % 3]}`}>
+                  {labelled[i] ? (c.length > 1 ? `${c.length} bids` : short(first.label)) : ""}
+                </span>
+              </div>
+            );
+          })}
           <div className="absolute top-[22px] h-10 w-0.5 -translate-x-1/2 bg-ink" style={{ left: pct(round.windowMs) }}>
             <span className={`absolute -top-5 whitespace-nowrap text-[11px] font-semibold tracking-[0.04em] ${round.windowMs / total > 0.7 ? "right-1" : "left-1"}`}>deadline {round.windowMs / 1000} s</span>
           </div>
@@ -108,9 +127,9 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                 const fill = o.kind === "won" ? "bg-mint" : dim ? "bg-slate opacity-50" : l.origin === "SIM" ? "bg-amber" : l.origin === "LIVE" ? "bg-mint" : "bg-sky";
                 return (
                   <tr key={i} className={o.kind === "won" ? "bg-mint-soft" : dim ? "text-muted" : ""}>
-                    <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} /></Td>
+                    <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} />{o.kind === "won" && <> <Tag>Winner</Tag></>}</Td>
                     <Td><Tag>{l.condition}</Tag>{o.kind === "alt" && <span className="ml-1.5 text-[13px] text-muted">alt</span>}</Td>
-                    <Td right>{o.kind === "refused" && l.landed === 0 ? "·" : o.kind === "won" ? <b>{money(l.landed)}</b> : money(l.landed)}</Td>
+                    <Td right className="tabular-nums">{o.kind === "refused" && l.landed === 0 ? "·" : o.kind === "won" ? <b>{money(l.landed)}</b> : money(l.landed)}</Td>
                     <Td>
                       <div className="relative h-2.5 min-w-[120px] rounded-[5px] bg-soft">
                         <b className={`absolute inset-y-0 left-0 rounded-[5px] ${fill}`} style={{ width: `${Math.min(100, (l.landed / scale) * 100)}%` }} />
@@ -121,6 +140,7 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                     <Td>
                       {o.kind === "won" && <Verdict kind="buy">won</Verdict>}
                       {o.kind === "ranked" && <Verdict kind="buy">buy</Verdict>}
+                      {o.kind === "held" && <><Verdict kind="caution">held back</Verdict> <span className="text-[13px] text-muted">{o.note?.replace(/^held back: /, "")}</span></>}
                       {o.kind === "veto" && <><Verdict kind="veto">veto</Verdict> <span className="text-[13px] text-muted">{o.note}</span></>}
                       {(o.kind === "ineligible" || o.kind === "alt") && <span className="text-[13px] text-muted">{o.kind === "alt" ? o.note : `ineligible, ${o.note}`}</span>}
                       {o.kind === "refused" && <span className="text-[13px] text-muted">never seen</span>}
@@ -178,10 +198,10 @@ export function SellerLearns({ learning }: { learning: LearningView | null }) {
   if (!learning) return <Card><Label>Seller learns</Label><p className="text-muted">After the round, one losing seller updates its strategy. The diff shows here.</p></Card>;
   return (
     <Card>
-      <Label>Seller learns · {learning.seller} <OriginChip origin={learning.origin} /></Label>
+      <div className="flex items-center justify-between gap-2"><Label>Seller learns · {learning.seller}</Label><OriginChip origin={learning.origin} /></div>
       <div className="rounded-xl border-l-[3px] border-accent bg-soft px-3.5 py-3 text-[15px]">
-        "{learning.whatToChange}"
-        <small className="mt-1 block text-[12px] text-muted">Claude's one line to the owner ({learning.whatToChangeOrigin} in this run)</small>
+        &quot;{learning.whatToChange}&quot;
+        <small className="mt-1 block text-[12px] text-muted">Claude&apos;s one line to the owner ({learning.whatToChangeOrigin} in this run)</small>
       </div>
       <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 font-mono text-[13px]">
         {learning.diff.map((d) => (

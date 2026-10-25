@@ -250,15 +250,39 @@ def test_beat4_signature_verifies_and_replay_or_edit_fails(run):
     assert set(b(run, 4)["signature"]["headers"]) == {"Content-Digest", "Mandate-Hash", "Signature-Input", "Signature"}
 
 
-def test_beat4_stripe_is_a_sim_stub_by_default_and_without_a_test_key(run):
+def _mandate():
+    from pay.mandate import new_mandate
+    return new_mandate(deal_id="deal-t", buyer_id="vidyut", amount=773.22, payee="honest-hal@pay.example.test")
+
+
+def test_beat4_scripted_approval_never_calls_stripe_even_with_a_test_key(run):
+    """#193: the runner's approval is typed, not a call, so beat 4 always pays with the SIM stub."""
     assert b(run, 4)["charge"]["mode"] == "SIM stub" and "no money moved" in b(run, 4)["charge"]["status"]
-    flagged, text = full_run(use_stripe=True, env={STRIPE_ENV: "sk_live_notatestkey"})
-    assert flagged["beats"]["4"]["charge"]["mode"] == "SIM stub"
-    assert "sk_live_notatestkey" not in text and "sk_live_notatestkey" not in json.dumps(flagged, default=str)
-    assert "is not an sk_test_ key" in text
+    key = "sk_test_FAKEKEY1234567890"
+    from demo import approval_flow
+    with mock.patch.object(approval_flow, "stripe_charge_test", lambda *a, **k: pytest.fail("Stripe called after a scripted approval")):
+        scripted, text = full_run(env={STRIPE_ENV: key})
+    assert scripted["beats"]["4"]["charge"]["mode"] == "SIM stub" and "after a real call" in text
+    assert key not in text and key not in json.dumps(scripted, default=str)
 
 
-def test_beat4_stripe_test_mode_only_with_flag_and_test_key_and_never_prints_the_key():
+def test_run_demo_refuses_stripe():
+    with pytest.raises(SystemExit):
+        run_demo.main(["--stripe", "--no-write"])
+
+
+def test_charge_or_stub_is_a_sim_stub_without_the_flag_or_a_test_key():
+    from demo.approval_flow import charge_or_stub
+    never = lambda *a: pytest.fail("no Stripe call")
+    ch, note = charge_or_stub(_mandate(), {STRIPE_ENV: "sk_live_notatestkey"}, use_stripe=True, stripe_test=never)
+    assert ch["mode"] == "SIM stub" and "is not an sk_test_ key" in note
+    assert "sk_live_notatestkey" not in note and "sk_live_notatestkey" not in json.dumps(ch)
+    ch, note = charge_or_stub(_mandate(), {STRIPE_ENV: "sk_test_FAKEKEY1234567890"}, use_stripe=False, stripe_test=never)
+    assert ch["mode"] == "SIM stub" and note == ""
+
+
+def test_charge_or_stub_uses_stripe_test_mode_only_with_flag_and_test_key_and_never_returns_the_key():
+    from demo.approval_flow import charge_or_stub
     key = "sk_test_FAKEKEY1234567890"
     calls = []
 
@@ -266,13 +290,9 @@ def test_beat4_stripe_test_mode_only_with_flag_and_test_key_and_never_prints_the
         calls.append(k)
         return {"mode": "Stripe test mode", "id": "pi_test_1", "object": "payment_intent", "amount_cents": 77322, "currency": "usd",
                 "payment_method": "pm_card_visa (Stripe test card)", "status": "succeeded", "idempotency_key": "mandate:" + mandate["hash"]}
-    no_flag, _ = full_run(use_stripe=False, env={STRIPE_ENV: key})
-    assert no_flag["beats"]["4"]["charge"]["mode"] == "SIM stub"
-    from demo import approval_flow
-    with mock.patch.object(approval_flow, "stripe_charge_test", fake):
-        run, text = full_run(use_stripe=True, env={STRIPE_ENV: key})
-    assert run["beats"]["4"]["charge"]["mode"] == "Stripe test mode" and calls == [key]
-    assert key not in text and key not in json.dumps(run, default=str)
+    ch, note = charge_or_stub(_mandate(), {STRIPE_ENV: key}, use_stripe=True, stripe_test=fake)
+    assert ch["mode"] == "Stripe test mode" and calls == [key] and note == ""
+    assert key not in json.dumps(ch)
 
 
 def test_stripe_charge_test_sends_the_key_only_in_the_header_and_returns_no_key():
@@ -415,9 +435,9 @@ def test_stripe_http_error_shows_stripe_error_type_never_the_key():
         raise urllib.error.HTTPError("https://api.stripe.com/v1/payment_intents", 401, "Unauthorized", {},
                                      io.BytesIO(json.dumps({"error": {"type": "invalid_request_error", "code": "api_key_invalid"}}).encode()))
     with mock.patch.object(approval_flow, "stripe_charge_test", boom):
-        run, text = full_run(use_stripe=True, env={STRIPE_ENV: key})
-    assert run["beats"]["4"]["charge"]["mode"] == "SIM stub" and "HTTP 401, invalid_request_error/api_key_invalid" in text
-    assert key not in text
+        ch, note = approval_flow.charge_or_stub(_mandate(), {STRIPE_ENV: key}, use_stripe=True)
+    assert ch["mode"] == "SIM stub" and "HTTP 401, invalid_request_error/api_key_invalid" in note
+    assert key not in note and key not in json.dumps(ch)
 
 
 # ---------- console and CLI ----------

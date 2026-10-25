@@ -8,6 +8,10 @@ For every run it records the wall time, seconds per beat (from the `BEAT <n>` li
 read-only end-state checks against the local SpacetimeDB, and optional headless Chrome screenshots of /buyer and /market at
 the end of each beat. It writes `<out>/REPORT.md`, `<out>/runs.json` and one `<out>/run<k>.log` per run.
 
+There is no scripted approval (#251): a stage command without --live-call ends at beat 4's approval gate ("approval needs the real
+phone call (--live-call); nothing was paid", exit 1), so that run counts as failed and has no beat 5. A full rehearsal uses
+--stage-cmd with --live-call, which places ONE real approval call per run; the harness never adds it for you.
+
 Nothing is faked: a check that cannot be read is recorded as `skipped` with the reason, a screenshot that fails is recorded
 and never fatal, and a stack that is down means no run (exit code 2). Secrets: the harness reads no token or env file, and
 any env value whose name looks secret is replaced by `[redacted]` in everything it prints or writes.
@@ -67,7 +71,7 @@ def parse_beat(line: str) -> Optional[int]:
 def default_stage_cmd(root: Path = ROOT) -> str:
     stage = Path(root) / "demo" / "stage.py"
     if stage.exists():
-        return f"python3 {stage} --auto"
+        return f"python3 {stage} --auto --bid-window 20"     # #183: one run under the 2:00 cut
     return f"python3 {Path(root) / 'demo' / 'bridge.py'} --reset --rounds 2 --step-delay 1"
 
 
@@ -128,6 +132,23 @@ def chrome_shot(url: str, path: str) -> tuple:
     if p.returncode != 0 or not Path(path).exists():
         return False, f"chrome exited {p.returncode}"
     return True, ""
+
+
+def paired_shooter(sql: Callable, market: Optional[Callable] = None, browser_cls: Optional[Callable] = None,
+                   chrome: Optional[str] = None) -> tuple:
+    """(shoot, browser or None, note). Pairs the rehearsal's own screen identity once (demo/screens.py) and shoots in
+    one browser that holds its token, so /buyer shows the buyer's screen, not the pair gate (#184). Any failure falls
+    back to plain chrome_shot and the note says /buyer is NOT paired."""
+    from demo import screens
+    try:
+        token = screens.pair_screen(sql, market or screens.stdb_market, ROOT / ".tokens" / "rehearse-screen.json")
+        exe = chrome or screens.find_chrome()
+        if exe is None:
+            raise RuntimeError("no Chrome or Chromium found (set CHROME_PATH)")
+        browser = (browser_cls or screens.PairedBrowser)(exe, f"http://localhost:{WEB_PORT}/", token)
+    except Exception as e:  # never a crash, never a fake pass: the shots still run, unpaired, and the report says so
+        return chrome_shot, None, f"/buyer NOT paired ({str(e)[:160]}); its shots show the pair gate"
+    return browser.shot, browser, "/buyer paired once with the rehearsal's own screen identity (pair_buyer_screen); shots show the buyer's screen"
 
 
 # ---------------------------------------------------------------- one run
@@ -227,6 +248,8 @@ def one_run(k: int, cmd: str, out: Path, args, secrets: list, sql, shoot, say) -
 def report_md(runs: list, cmd: str, args, started: str) -> str:
     L = [f"# Rehearsal report ({started})", "",
          f"Stage command: `{cmd}`", f"Runs: {len(runs)} of {args.runs}. Target: {TARGET_SECONDS} s per run (the 2:00 cut).", ""]
+    if getattr(args, "pairing_note", ""):
+        L += [f"Screens: {args.pairing_note}", ""]
     head = "| Run | Total s | " + " | ".join(f"Beat {b} s" for b in BEATS) + " | Exit | Target | Checks |"
     L += [head, "|" + "---|" * (len(BEATS) + 5)]
     for r in runs:
@@ -283,7 +306,7 @@ def stack_down_md(down: list, at: str) -> str:
 # ---------------------------------------------------------------- CLI
 
 def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Callable = run_sql,
-         shoot: Callable = chrome_shot, say: Callable = print) -> int:
+         shoot: Callable = chrome_shot, say: Callable = print, memory_dir: Optional[Path] = None) -> int:
     ap = argparse.ArgumentParser(description="Run the five-beat skeleton N times and record it")
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--stage-cmd", help="command to run per rehearsal (default: demo/stage.py --auto if present, else bridge.py)")
@@ -302,11 +325,14 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
     if args.dry_run:
         say_r(f"rehearse plan (dry run, nothing touched): {args.runs} run(s), one after another")
         say_r(f"  stage command: {redact(cmd, secrets)}")
+        say_r("  approval: " + ("each run places ONE real approval phone call (--live-call)" if "--live-call" in cmd else
+              "no --live-call, so each run ends at beat 4's approval gate (nothing paid, exit 1); add it to --stage-cmd for a full run"))
         say_r(f"  preflight: {HOST}:{STDB_PORT} (SpacetimeDB) and {HOST}:{WEB_PORT} (web) must accept connections, else exit 2")
         say_r(f"  per run: wall time, seconds per beat from `BEAT <n>` lines, timeout {args.timeout:g} s")
         say_r("  end-state checks (read only): " + ", ".join(CHECKS))
         say_r("  screenshots: " + (f"yes, after each beat, pages {', '.join('/' + p for p in PAGES)}" if args.screens else "no (add --screens)"))
-        say_r(f"  writes: {out}/REPORT.md, runs.json, run<k>.log" + (", screens/*.png" if args.screens else ""))
+        say_r(f"  writes: {out}/REPORT.md, runs.json, run<k>.log" + (", screens/*.png" if args.screens else "")
+              + ", demo/out/market-memory-<time>.json (market rows for the memory panel)")
         say_r(f"  target: {TARGET_SECONDS} s per run (2:00)")
         return 0
 
@@ -319,12 +345,29 @@ def main(argv: Optional[list] = None, *, probe: Callable = port_open, sql: Calla
         (out / "runs.json").write_text("[]\n")
         say_r(f"stack down at {at}, not run (closed: {', '.join(f'{h}:{p}' for h, p in down)}). Report: {out}/REPORT.md")
         return 2
+    browser = None
+    args.pairing_note = ""
+    if args.screens and shoot is chrome_shot:
+        shoot, browser, args.pairing_note = paired_shooter(sql)
+        say_r(f"screens: {args.pairing_note}")
     runs = []
-    for k in range(1, args.runs + 1):
-        say_r(f"run {k} of {args.runs}: {redact(cmd, secrets)}")
-        runs.append(one_run(k, cmd, out, args, secrets, sql, shoot, say_r))
+    try:
+        for k in range(1, args.runs + 1):
+            say_r(f"run {k} of {args.runs}: {redact(cmd, secrets)}")
+            runs.append(one_run(k, cmd, out, args, secrets, sql, shoot, say_r))
+    finally:
+        if browser is not None:
+            browser.close()
     (out / "runs.json").write_text(json.dumps(runs, indent=2) + "\n")
     (out / "REPORT.md").write_text(redact(report_md(runs, cmd, args, started), secrets))
+    # the dashboard memory panel (#189) reads the market's own rows from the last rehearsal. After the report, and never
+    # able to change the rehearsal's verdict or exit code: a failed read or write is one console line.
+    try:
+        from demo import memory
+        snap = memory.snapshot(sql, memory_dir or memory.OUT_DIR, db=os.environ.get("SPACETIMEDB_DB", "tech-bazaar"))
+        say_r(f"memory: {snap.name} ({'error' if json.loads(snap.read_text())['error'] else 'market rows saved'})")
+    except Exception as e:  # noqa: BLE001
+        say_r(f"memory: snapshot not saved ({type(e).__name__}: {e})")
     bad = any(r["exit_code"] != 0 or "fail" in r["checks"].values() for r in runs)
     if bad:
         verdict = "problems found"

@@ -86,6 +86,8 @@ def landed(listing, price):
             cost = float(t.replace("$", "").replace(",", ""))
         elif re.fullmatch(r"\s*free(\s+(standard\s+)?(shipping|delivery))?\s*\.?\s*", t, re.I):  # only the bare phrase; anything conditional stays unknown
             cost = 0.0
+        elif m := re.fullmatch(r"\+\s*\$\s*(\d[\d,]*(?:\.\d+)?)\s+(?:shipping|delivery)\s*\.?", t, re.I):  # eBay "+$12.99 delivery"; "+C $N" is not USD and stays unknown
+            cost = float(m.group(1).replace(",", ""))
     if cost is None and str(listing.get("shipping_type") or "").lower() == "free":
         cost = 0.0
     stock = listing.get("stock")

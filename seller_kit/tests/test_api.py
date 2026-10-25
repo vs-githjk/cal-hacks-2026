@@ -126,22 +126,24 @@ def test_oversized_body_gets_413(client, custom):
     assert not custom.exists() or not list(custom.iterdir())
 
 
-def test_same_id_twice_is_409_unless_replace(client, custom):
+def test_same_id_twice_is_409_unless_replace(custom):
+    client = TestClient(api.create_app(custom_dir=custom, operator_token="op-token-test-1234567890"))
     assert client.post("/v1/sellers", json=good()).status_code == 201
     r = client.post("/v1/sellers", json=good(name="Other Shop"))
     assert r.status_code == 409 and "already" in r.json()["errors"][0]["message"]
     assert load_config(custom / "corner-pc.json")["name"] == "Corner PC"
-    r = client.post("/v1/sellers?replace=true", json=good(name="Other Shop"))
+    r = client.post("/v1/sellers?replace=true", json=good(name="Other Shop"), headers={"X-Operator-Token": "op-token-test-1234567890"})
     assert r.status_code == 201
     assert load_config(custom / "corner-pc.json")["name"] == "Other Shop"
 
 
-def test_a_symlinked_config_is_never_followed(client, custom, tmp_path):
+def test_a_symlinked_config_is_never_followed(custom, tmp_path):
+    client = TestClient(api.create_app(custom_dir=custom, operator_token="op-token-test-1234567890"))   # past the #197 token check
     custom.mkdir()
     target = tmp_path / "outside.json"
     target.write_text("keep")
     os.symlink(target, custom / "corner-pc.json")
-    r = client.post("/v1/sellers?replace=true", json=good())
+    r = client.post("/v1/sellers?replace=true", json=good(), headers={"X-Operator-Token": "op-token-test-1234567890"})
     assert r.status_code in (409, 422)
     assert target.read_text() == "keep"
 
@@ -263,3 +265,48 @@ def test_health_and_cors(client):
     bad = client.options("/v1/sellers", headers={"origin": "https://evil.example", "access-control-request-method": "POST",
                                                  "access-control-request-headers": "content-type"})
     assert "access-control-allow-origin" not in bad.headers
+
+
+# ---------------------------------------------------------------- #197 M6: id collisions and replace without auth
+
+@pytest.mark.parametrize("other", ["corner_pc", "corner-pc_agent", "corner_pc_agent"])
+def test_an_id_that_folds_to_an_existing_shop_is_refused(client, custom, other):
+    assert client.post("/v1/sellers", json=good()).status_code == 201
+    r = client.post("/v1/sellers", json=good(id=other, name="Lookalike"))
+    assert r.status_code == 409 and "corner-pc" in r.json()["errors"][0]["message"]
+    assert not (custom / f"{other}.json").exists()
+
+
+def test_replace_needs_the_operator_token(custom):
+    c = TestClient(api.create_app(custom_dir=custom, operator_token="op-token-test-1234567890"))
+    assert c.post("/v1/sellers", json=good()).status_code == 201
+    for headers in ({}, {"X-Operator-Token": "wrong"}):
+        r = c.post("/v1/sellers?replace=true", json=good(name="Hijacked"), headers=headers)
+        assert r.status_code == 403 and "operator" in r.json()["errors"][0]["message"]
+        assert load_config(custom / "corner-pc.json")["name"] == "Corner PC"
+    r = c.post("/v1/sellers?replace=true", json=good(name="Renamed"), headers={"X-Operator-Token": "op-token-test-1234567890"})
+    assert r.status_code == 201 and load_config(custom / "corner-pc.json")["name"] == "Renamed"
+
+
+def test_without_an_operator_token_configured_replace_is_refused(client, custom):
+    assert client.post("/v1/sellers", json=good()).status_code == 201
+    r = client.post("/v1/sellers?replace=true", json=good(name="Hijacked"), headers={"X-Operator-Token": ""})
+    assert r.status_code == 403 and load_config(custom / "corner-pc.json")["name"] == "Corner PC"
+
+
+def test_replace_cannot_take_a_lookalike_id_either(custom):
+    c = TestClient(api.create_app(custom_dir=custom, operator_token="op-token-test-1234567890"))
+    assert c.post("/v1/sellers", json=good()).status_code == 201
+    r = c.post("/v1/sellers?replace=true", json=good(id="corner_pc", name="Lookalike"), headers={"X-Operator-Token": "op-token-test-1234567890"})
+    assert r.status_code == 409
+
+
+# #237 L1: a whitespace-only operator token is unset, so a blank header can never replace a shop
+@pytest.mark.parametrize("token", [" ", "  \t", "\n"])
+def test_a_blank_operator_token_is_unset_and_replace_is_refused(custom, token, monkeypatch):
+    monkeypatch.setenv(api.OPERATOR_ENV, token)
+    for c in (TestClient(api.create_app(custom_dir=custom, operator_token=token)), TestClient(api.create_app(custom_dir=custom))):
+        c.post("/v1/sellers", json=good())
+        for header in (token, " ", ""):
+            r = c.post("/v1/sellers?replace=true", json=good(name="Hijacked"), headers={"X-Operator-Token": header})
+            assert r.status_code == 403 and load_config(custom / "corner-pc.json")["name"] == "Corner PC"

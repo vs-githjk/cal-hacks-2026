@@ -62,7 +62,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
-from pay.approval import APPROVE_TOKENS, ApprovalError, ApprovalService, Decision, normalize
+from pay.approval import (APPROVE_TOKENS, VOICE_CODE_TTL_SECONDS, ApprovalError, ApprovalService, Decision,
+                          normalize)
 from pay.callscript import CallScript, ScriptError, script_for
 from pay.words import WORD_SET
 
@@ -83,7 +84,7 @@ POLL_S = 2.0
 MAX_WAIT_S = 180.0
 TRANSCRIPT_RETRIES = 4
 TRANSCRIPT_RETRY_S = 2.0
-CALL_CODE_TTL_S = 300     # the call needs ring + script time; still capped by the mandate's own 10 minute expiry
+CALL_CODE_TTL_S = VOICE_CODE_TTL_SECONDS  # still capped by the mandate's own 10 minute expiry
 TERMINAL = ("completed", "failed")
 _E164 = re.compile(r"\+[1-9][0-9]{6,14}")
 _NAME = re.compile(r"[A-Za-z][A-Za-z .'-]{0,39}")
@@ -328,6 +329,35 @@ class VoiceResult:
     attempts: int = 0                # approval attempts that were judged
     trace: list = field(default_factory=list)   # outcomes only, never what was said
 
+    @property
+    def buyer_line(self) -> Optional[str]:
+        """What the buyer is told when the call did not approve (screen and chat); None when it approved."""
+        return None if self.approved else denial_line(self.reason)
+
+
+# #185: approval is by phone call only, so every way a call can fail ends in one plain line that says nothing was paid.
+_DENIAL_LINES = {
+    "call_failed": "Call failed, nothing was paid.",
+    "call_timeout": "The call timed out, nothing was paid.",
+    "no_answer": "No answer on the call, nothing was paid.",
+    "no_transcript": "Nobody spoke on the call, nothing was paid.",
+    "no_buyer_speech": "Nobody spoke on the call, nothing was paid.",
+    "silence": "Nobody spoke on the call, nothing was paid.",
+    "expired": "The deal expired before it was approved, nothing was paid.",
+    "not_configured": "The call could not be placed, nothing was paid.",
+}
+_NOT_APPROVED = ("wrong_code", "no_code", "max_attempts", "replay", "cooldown", "denied", "script_error")
+
+
+def denial_line(reason: Optional[str]) -> str:
+    """The buyer-facing line for a denied approval call. Never names the code or what was said."""
+    key = str(reason or "").split(":", 1)[0].strip()
+    if key in _DENIAL_LINES:
+        return _DENIAL_LINES[key]
+    if key in _NOT_APPROVED:
+        return "Not approved on the call, nothing was paid."
+    return "Not approved, nothing was paid."
+
 
 def judge_call(session, call: Mapping[str, Any], placed_at: datetime) -> tuple[Optional[Decision], list, int]:
     """Feed every buyer utterance of an ended call to the session. Returns (last decision, trace, ignored count).
@@ -362,39 +392,53 @@ def run_approval_call(mandate: dict, advocate_reason: Any, client, service: Appr
         return VoiceResult(False, "script_error")
     except ApprovalError as e:
         return VoiceResult(False, e.reason)
+
+    def no_voice_answer(reason: str, *, call_id: Optional[str] = None,
+                        end_reason: Optional[str] = None, trace: Optional[list] = None) -> VoiceResult:
+        current = now()
+        decision = (session.approve("", now=current) if current >= session.expires_at
+                    else session.silence(now=current))
+        return VoiceResult(False, reason, call_id, end_reason,
+                           decision.record, session.attempts, trace or [])
+
     try:
         assert_clean(variables, code)
         if on_code is not None:
-            on_code(code)
-        session.start_call()
+            try:
+                on_code(code)
+            except Exception:
+                session.silence(now=now())
+                raise
+        session.start_call(now=now())
         placed_at = now()
-        call_id = place_call(client, variables)
-    except (CartesiaError, ScriptError) as e:
-        d = session.silence()
+    except ScriptError as e:
+        d = session.silence(now=now())
         return VoiceResult(False, "call_failed", record=d.record, trace=[{"outcome": type(e).__name__}])
+    try:
+        call_id = place_call(client, variables)
+    except CartesiaError as e:
+        return no_voice_answer("call_failed", trace=[{"outcome": type(e).__name__}])
     ended = wait_for_end(client, call_id, max_wait=max_wait, poll=poll, sleep=sleep, clock=clock)
     if ended is None:
-        d = session.silence()
-        return VoiceResult(False, "call_timeout", call_id=call_id, record=d.record)
+        return no_voice_answer("call_timeout", call_id=call_id)
     end_reason = ended.get("end_reason")
     if ended.get("status") == "failed" or end_reason in ("voicemail_detected", "dial_no_answer", "dial_busy",
                                                          "dial_failed", "dial_timeout"):
-        d = session.silence()
-        return VoiceResult(False, f"no_answer:{end_reason or 'failed'}", call_id=call_id, end_reason=end_reason, record=d.record)
+        return no_voice_answer(f"no_answer:{end_reason or 'failed'}", call_id=call_id, end_reason=end_reason)
     try:
         entries, full = transcript(client, call_id, ended, sleep=sleep)
     except CartesiaError:
         entries, full = [], ended
     if not entries:
-        d = session.silence()
-        return VoiceResult(False, "no_transcript", call_id=call_id, end_reason=end_reason, record=d.record)
+        return no_voice_answer("no_transcript", call_id=call_id, end_reason=end_reason)
     session.recording_ref = f"cartesia:{call_id}"
     last, trace, _ = judge_call(session, {**full, "transcript": entries}, placed_at)
     if last is not None and last.approved:
         return VoiceResult(True, None, call_id, end_reason, last.record, session.attempts, trace)
-    final = last if (last is not None and last.final) else session.silence()
-    reason = last.reason if last is not None else "no_buyer_speech"
-    return VoiceResult(False, reason, call_id, end_reason, final.record, session.attempts, trace)
+    if last is None:
+        return no_voice_answer("no_buyer_speech", call_id=call_id, end_reason=end_reason, trace=trace)
+    final = last if last.final else session.silence(now=now())
+    return VoiceResult(False, last.reason, call_id, end_reason, final.record, session.attempts, trace)
 
 
 # ---------- CLI ----------

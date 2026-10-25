@@ -1,0 +1,13 @@
+{
+ "actorSpecification": 1,
+ "name": "electronics-recall-checker",
+ "title": "Electronics Recall Checker: Is This Product Recalled?",
+ "description": "Checks any electronics product against U.S. CPSC recalls by brand, model and UPC. Returns recalled, possible or none, with the recall page, date, hazard, remedy and units recalled. Built for AI shopping agents.",
+ "version": "0.1",
+ "input": "./input_schema.json",
+ "dockerfile": "../Dockerfile",
+ "storages": {
+  "dataset": "./dataset_schema.json"
+ },
+ "output": "./output_schema.json"
+}

@@ -1,15 +1,15 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { asOrigin, asSim, bidsFromRows, feedFromRows, latestRound, linesFromRows, originCounts, reviewFromRows, roundFromRows } from "./screens.ts";
+import type { Timestamp } from "spacetimedb";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
 
-const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as any;
+const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
 
 const result = (over: Record<string, unknown> = {}) => ({
   id: 1n, roundId: "round-1", bidId: "bid-a", sellerId: "fair-price-pc", persona: "Fair Price PC (SIM)", rank: 1, landed: 1289,
-  reasons: [] as string[], lines: [{ offeredCondition: "new", unitPrice: 1289 }], origin: "SIM", source: "https://example.com/fair",
-  adjustedTotal: 1289, adjustmentReason: "", ...over,
+  reasons: [] as string[], lines: [{ offeredCondition: "new", unitPrice: 1289 }], origin: "SIM", source: "https://example.com/fair", ...over,
 });
 const event = (over: Record<string, unknown> = {}) => ({
   id: 1n, kind: "bid_sealed", refTable: "bid", refId: "bid-a", sellerId: "fair-price-pc", label: "", origin: "SIM", at: ts(T0), ...over,
@@ -39,18 +39,10 @@ test("bidsFromRows: a source of just https:// renders the row with no link, and 
   assert.equal(label!.sourceUrl, undefined);
 });
 
-test("bidsFromRows shows the landed price from the row, and the real stored adjusted_total, never a recomputed one", () => {
-  const [b] = bidsFromRows([result({ landed: 1247.02, adjustedTotal: 1296.9, adjustmentReason: "open-box condition, +4%" })], [], "round-1");
+test("bidsFromRows shows the landed price from the row and never invents an adjusted score", () => {
+  const [b] = bidsFromRows([result({ landed: 1247.02 })], [], "round-1");
   assert.equal(b!.landed, 1247.02);
-  assert.equal(b!.adjusted, 1296.9);
-  assert.equal(b!.adjustedReason, "open-box condition, +4%");
-});
-
-test("bidsFromRows never shows an adjusted score for a row that was not ranked", () => {
-  const [b] = bidsFromRows([result({ rank: 0, adjustedTotal: 1090, adjustmentReason: "" })], [], "round-1");
-  assert.equal(b!.rank, null);
-  assert.equal(b!.adjusted, null);
-  assert.equal(b!.adjustedReason, "");
+  assert.equal("adjusted" in b!, false);
 });
 
 test("bidsFromRows ranks 1, 2, then unranked; filters to the round; the advocate veto blocks the win", () => {
@@ -111,10 +103,177 @@ test("originCounts counts each origin", () => {
   assert.deepEqual(originCounts([{ origin: "SIM" }, { origin: "LIVE" }, { origin: "SIM" }]), { LIVE: 1, MIRROR: 0, SIM: 2 });
 });
 
+test("#213 originMixLabel names the noun and totals the bids, dropping zero counts from the breakdown", () => {
+  assert.equal(originMixLabel({ LIVE: 0, MIRROR: 12, SIM: 6 }), "18 bids · 12 MIRROR · 6 SIM");
+  assert.equal(originMixLabel({ LIVE: 1, MIRROR: 0, SIM: 0 }), "1 bid · 1 LIVE");
+  assert.equal(originMixLabel({ LIVE: 0, MIRROR: 0, SIM: 0 }), "");
+});
+
+test("#213 origin mix counts round.arrivals (one per bid), not seller lines (one per condition line, alt and refused included)", () => {
+  const rows = [
+    result({ lines: [{ offeredCondition: "new", unitPrice: 1200 }, { offeredCondition: "open-box", unitPrice: 1100 }], landed: 1100, origin: "MIRROR" }),
+  ];
+  const events = [
+    event({ kind: "round_opened", refTable: "round", refId: "round-1", label: "Sealed round open for 6 s" }),
+    event({ id: 2n, kind: "bid_sealed", refId: "bid-a", sellerId: "fair-price-pc", origin: "MIRROR", at: ts(T0 + 1000) }),
+  ];
+  const r = round();
+  const lines = linesFromRows(rows, events, r);
+  assert.equal(lines.length, 2, "sanity: the bid's two condition lines both show in the seller table");
+  assert.equal(originCounts(lines).MIRROR, 2, "seller lines double count a two-line bid, the bug");
+  const roundView = roundFromRows(r, events, rows);
+  assert.equal(originCounts(roundView.arrivals).MIRROR, 1, "the round's arrivals count the bid once, the fix's data source");
+});
+
+test("#167 clusterArrivals keeps every arrival, merging a dense run into one cluster", () => {
+  const a = (atMs: number, label = `b${atMs}`) => ({ label, atMs, origin: "MIRROR" as const, refused: false });
+  // 18 arrivals inside a 6000 ms window, 17 of them within the first 150 ms (a demo flood), one late.
+  const flood = Array.from({ length: 17 }, (_, i) => a(i * 8));
+  const clusters = clusterArrivals([...flood, a(5000, "late")], 6000, 0.03);
+  assert.equal(clusters.flat().length, 18, "no arrival is dropped");
+  assert.equal(clusters.length, 2);
+  assert.equal(clusters[0]!.length, 17);
+  assert.deepEqual(clusters[1], [a(5000, "late")]);
+});
+
+test("#167 clusterArrivals keeps well-spaced arrivals apart, one per cluster", () => {
+  const a = (atMs: number) => ({ label: `b${atMs}`, atMs, origin: "SIM" as const, refused: false });
+  const clusters = clusterArrivals([a(0), a(1000), a(2000)], 6000, 0.03); // 1000 ms apart, gap threshold 180 ms
+  assert.equal(clusters.length, 3);
+  assert.ok(clusters.every((c) => c.length === 1));
+});
+
+test("clusterArrivals on an empty round is empty, and a single arrival is its own cluster", () => {
+  assert.deepEqual(clusterArrivals([], 6000), []);
+  const only = [{ label: "b", atMs: 10, origin: "SIM" as const, refused: false }];
+  assert.deepEqual(clusterArrivals(only, 6000), [only]);
+});
+
 test("reviewFromRows shows the latest expiring code, with the origin normalized", () => {
   const row = (h: string, exp: number) => ({ mandateHash: h, mandateId: "m", amount: 780, payee: "p", expiry: ts(exp), code: "c", failures: 0, locked: false, origin: "sim" });
   const r = reviewFromRows([row("a", T0), row("b", T0 + 1)])!;
   assert.equal(r.mandateHash, "b");
   assert.equal(r.origin, "SIM");
   assert.equal(reviewFromRows([]), null);
+});
+
+// ---- Task 1: the buyer app only ever shows the paired buyer's own goals.
+
+const roleRow = (role: string, subjectId: string) => ({ role, subjectId });
+const goalRow = (over: Record<string, unknown> = {}) => ({
+  id: "goal-a1", buyerId: "buyer-a", type: "budget_cap", cap: 1300, deadline: ts(T0 + 86_400_000), state: "ACTIVE", reservedAmount: 0, origin: "SIM", createdAt: ts(T0), ...over,
+});
+const goalItemRow = (goalId: string, skuSpec: string) => ({ goalId, skuSpec, condition: "new", variant: "", quantity: 1, skippedOwnedPartId: "" });
+const allowanceRow = (buyerId: string) => ({ buyerId, perPurchaseLimit: 800, periodLimit: 2000, period: "month", spentThisPeriod: 100, ladderStep: 1 });
+
+test("buyerSession: nothing is a buyer until connected, the roles loaded, and one buyer role says so", () => {
+  assert.deepEqual(buyerSession(false, true, [roleRow("buyer", "buyer-a")]), { status: "connecting" });
+  assert.deepEqual(buyerSession(true, false, [roleRow("buyer", "buyer-a")]), { status: "connecting" });
+  assert.deepEqual(buyerSession(true, true, []), { status: "unpaired" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("seller", "seller-a")]), { status: "unpaired" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "")]), { status: "unpaired" }, "an unknown subject is not an identity");
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-a")]), { status: "buyer", buyerId: "buyer-a" });
+});
+
+test("buyerSession: switching from buyer A to buyer B follows the role row, and two different buyers fail closed", () => {
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-b")]), { status: "buyer", buyerId: "buyer-b" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-a"), roleRow("buyer", "buyer-a")]), { status: "buyer", buyerId: "buyer-a" });
+  assert.deepEqual(buyerSession(true, true, [roleRow("buyer", "buyer-a"), roleRow("buyer", "buyer-b")]), { status: "unpaired" });
+});
+
+test("goalsForBuyer: an empty dashboard is an empty list, and an unknown buyer sees nothing", () => {
+  assert.deepEqual(goalsForBuyer([], [], undefined, "buyer-a"), []);
+  assert.deepEqual(goalsForBuyer([goalRow()], [goalItemRow("goal-a1", "RTX 5070")], allowanceRow("buyer-a"), ""), []);
+});
+
+test("goalsForBuyer: buyer B's newer goal never shows for buyer A, and switching shows only B's rows and allowance", () => {
+  const goals = [
+    goalRow(),
+    goalRow({ id: "goal-b1", buyerId: "buyer-b", createdAt: ts(T0 + 5000) }), // newer than A's goal
+  ];
+  const items = [goalItemRow("goal-a1", "RTX 5070"), goalItemRow("goal-b1", "Ryzen 7 9800X3D")];
+  const forA = goalsForBuyer(goals, items, allowanceRow("buyer-a"), "buyer-a");
+  assert.deepEqual(forA.map((g) => g.id), ["goal-a1"]);
+  assert.match(forA[0]!.text, /RTX 5070/);
+  assert.doesNotMatch(forA[0]!.text, /Ryzen/);
+  assert.equal(forA[0]!.allowance?.perPurchase, 800);
+  const forB = goalsForBuyer(goals, items, allowanceRow("buyer-a"), "buyer-b");
+  assert.deepEqual(forB.map((g) => g.id), ["goal-b1"]);
+  assert.equal(forB[0]!.allowance, null, "buyer A's allowance row is never attached to buyer B");
+});
+
+test("goalsForBuyer: open searches come first, newest first, and a newer finished goal does not hide an active one", () => {
+  const goals = [
+    goalRow({ id: "old-active", createdAt: ts(T0) }),
+    goalRow({ id: "new-done", state: "DONE", createdAt: ts(T0 + 9000) }),
+    goalRow({ id: "new-active", state: "HUNTING", createdAt: ts(T0 + 3000) }),
+  ];
+  assert.deepEqual(goalsForBuyer(goals, [], undefined, "buyer-a").map((g) => g.id), ["new-active", "old-active", "new-done"]);
+});
+
+test("allowanceForBuyer: only the paired buyer's own spending rule, else none", () => {
+  const rows = [allowanceRow("buyer-a"), { ...allowanceRow("buyer-b"), perPurchaseLimit: 50 }];
+  assert.equal(allowanceForBuyer(rows, "buyer-b")?.perPurchase, 50);
+  assert.equal(allowanceForBuyer(rows, "buyer-a")?.perPurchase, 800);
+  assert.equal(allowanceForBuyer(rows, "buyer-c"), null);
+  assert.equal(allowanceForBuyer(rows, ""), null);
+  assert.equal(allowanceForBuyer([], "buyer-a"), null);
+});
+
+test("#191 a ranked row the referee held back (advocate caution) shows as held back with its reason, never as the winner", () => {
+  const held = "held back: advocate caution (fit.unconfirmed: card length not on the listing)";
+  const rows = [
+    result({ id: 1n, bidId: "bid-bb", sellerId: "best-buy", persona: "Best Buy", rank: 1, landed: 1299.99 }),
+    result({ id: 2n, bidId: "bid-eb", sellerId: "ebay-235887", persona: "eBay seller", rank: 2, landed: 1036.99, reasons: [held] }),
+  ];
+  const bids = bidsFromRows(rows, [], "round-1");
+  const eb = bids.find((b) => b.seller === "eBay seller")!;
+  assert.equal(eb.heldBack, held);
+  assert.equal(eb.won, false);
+  assert.deepEqual(bids.filter((b) => b.won).map((b) => b.seller), ["Best Buy"]);
+  const lines = linesFromRows(rows, [], round());
+  assert.deepEqual(lines.find((l) => l.seller === "eBay seller")!.outcome, { kind: "held", rank: 2, note: held });
+});
+
+// #191-5: live veto, Shield, approval and receipt cards from my_bid_checks and my_deals (shapes from module_bindings, SIM fixtures).
+const check = (over: Record<string, unknown> = {}) => ({
+  id: 1n, bidId: "bid-bb", roundId: "round-1", sellerId: "bargain-bin", persona: "Bargain Bin Hardware", bidOrigin: "SIM", kind: "advocate",
+  result: "veto", detail: "fit.gpu_length: 336 mm card, your case allows 305 mm", evidenceUrl: "https://bargainbin.example.test/5070ti", origin: "SIM", at: ts(T0), ...over,
+});
+const deal = (over: Record<string, unknown> = {}) => ({
+  mandateHash: "abcdef0123456789", mandateId: "mdt-1", dealId: "round-1:bid-a", amount: 1299.99, payee: "best-buy", expiry: ts(T0 + 600_000),
+  withinAllowance: false, origin: "SIM", approvalMethod: "", voiceApprovalId: "", approvedAt: undefined, paymentRef: "", paymentMode: "", paidAt: undefined, ...over,
+});
+
+test("#191-5 the latest advocate veto in the round becomes the veto card, with the false claim, rule, source and landed price", () => {
+  const checks = [check({ id: 1n, kind: "claim", result: "false", detail: "BRAND NEW, factory sealed", evidenceUrl: "https://x.test/p" }), check({ id: 2n })];
+  const v = vetoFromRows(checks, [result({ bidId: "bid-bb", landed: 1199 })], "round-1")!;
+  assert.deepEqual({ ...v, checkedAt: undefined }, {
+    seller: "Bargain Bin Hardware", origin: "SIM", landed: 1199, claim: "BRAND NEW, factory sealed", finding: "336 mm card, your case allows 305 mm",
+    ruleId: "fit.gpu_length", sourceUrl: "https://bargainbin.example.test/5070ti", checkedAt: undefined, checkOrigin: "SIM",
+  });
+  assert.equal(vetoFromRows([check({ result: "buy" })], [], "round-1"), null);
+  assert.equal(vetoFromRows(checks, [], "round-2"), null);
+});
+
+test("#191-5 a Shield block becomes the Shield card with its rule ids; fields the market does not store stay absent", () => {
+  const s = shieldFromRows([check({ kind: "shield", result: "block", detail: "shield.payee.swap, shield.hidden.instruction", evidenceUrl: "", origin: "LIVE" })], "round-1")!;
+  assert.equal(s.verdict, "block");
+  assert.deepEqual(s.ruleIds, ["shield.payee.swap", "shield.hidden.instruction"]);
+  assert.equal(s.verdictOrigin, "LIVE");
+  assert.equal(s.chars, undefined);
+  assert.deepEqual(s.evidence, []);
+  assert.equal(shieldFromRows([check({ kind: "shield", result: "allow", detail: "" })], "round-1"), null);
+});
+
+test("#191-5 my_deals: approval shows only once the call approved it, the receipt only once paid", () => {
+  assert.deepEqual(dealFromRows([deal()], 250), { approval: null, receipt: null });
+  const approved = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000) })], 250);
+  assert.equal(approved.approval!.attempts[0]!.label, "Approved on the call");
+  assert.equal(approved.receipt, null);
+  const paid = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000), paymentRef: "ch_sim_1", paymentMode: "sim", paidAt: ts(T0 + 2000) })], 250);
+  assert.equal(paid.receipt!.chargeId, "ch_sim_1");
+  assert.equal(paid.receipt!.chargeStatus, "SIM stub, no money moved");
+  assert.equal(paid.receipt!.amount, 1299.99);
+  assert.equal(paid.receipt!.seller, "best-buy");
 });

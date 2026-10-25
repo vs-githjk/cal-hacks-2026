@@ -224,11 +224,11 @@ def test_a_the_adapters_verified_check_binds_to_a_mandate():
 
 
 # (f) existing hashes unchanged
-def test_f_mandate_without_crs_check_id_hashes_exactly_as_before():
+def test_f_mandate_without_crs_check_id_hashes_as_if_the_field_did_not_exist():
     m = {"deal_id": "deal-crs", "amount": 1299.99, "currency": "USD", "payee": "seller-grace-nakamura",
          "tier_price": None, "nonce": "00112233445566778899aabbccddeeff", "expires_at": "2026-10-24T09:10:00Z"}
-    # value computed on the code before T8 was written
-    assert mandate_hash(m) == "84c5c04e32b81fd96aa5a278e5f57c8fc4f355edb8d4926d2daaf1b15b54a427"
+    # value of the #186 hash format (buyer_id bound, here absent so null); the pre-T8 value was 84c5c04e...a427
+    assert mandate_hash(m) == "2a2fd9daaeffdd2fd9ef43d6e781c0d94c2b9124b8e339ed16561852f7137893"
     assert mandate_hash(dict(m, crs_check_id=None)) == mandate_hash(m)
 
 

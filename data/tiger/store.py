@@ -30,8 +30,10 @@ MARKET_1H_FALLBACK = """CREATE MATERIALIZED VIEW IF NOT EXISTS market_1h WITH (t
 
 _INSERT_PRICE_OBS = ("INSERT INTO price_obs (ts, sku, store, provider, url, price_cents, in_stock, origin) "
                      "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (ts, sku, store, provider, url) DO NOTHING")
-_INSERT_BID_TICK = "INSERT INTO bid_ticks (ts, round_id, sku, seller_id, price_cents, event) VALUES (%s, %s, %s, %s, %s, %s)"
-_INSERT_LOSS = "INSERT INTO loss_reports (ts, round_id, seller_id, sku, lost_by_cents, reason) VALUES (%s, %s, %s, %s, %s, %s)"
+_INSERT_BID_TICK = ("INSERT INTO bid_ticks (ts, round_id, sku, seller_id, price_cents, event, origin) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s)")
+_INSERT_LOSS = ("INSERT INTO loss_reports (ts, round_id, seller_id, sku, lost_by_cents, reason, origin) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)")
 _BEST_BID_VS_MARKET = (
     "SELECT c.bucket, c.sku, c.best_bid, c.bids, m.typical_cents, m.n "
     "FROM bid_curve_10s c "
@@ -144,23 +146,26 @@ def _is_market_view(sql: str) -> bool:
 def apply_schema(*, connect=None) -> dict:
     """Create everything in schema.sql (idempotent). Returns {"market_1h": "median"|"avg_fallback", "optional_failed": [...]}."""
     stmts = split_statements((HERE / "schema.sql").read_text())
+    url = _url()
 
     def work(conn):
-        market, failed = "median", []
+        market, failed, reasons = "median", [], {}
         with conn.cursor() as cur:
             for sql, optional in stmts:
                 try:
                     cur.execute(sql)
-                except Exception:
+                except Exception as e:
                     if optional:
                         m = re.match(r"\s*SELECT\s+(\w+)", sql)
-                        failed.append(m.group(1) if m else "optional")
+                        name = m.group(1) if m else "optional"
+                        failed.append(name)
+                        reasons[name] = _redact((str(e).splitlines() or [""])[0], url)[:200]
                     elif _is_market_view(sql) and "percentile_cont" in sql:
                         cur.execute(MARKET_1H_FALLBACK)
                         market = "avg_fallback"
                     else:
                         raise
-        return {"market_1h": market, "optional_failed": failed, "statements": len(stmts)}
+        return {"market_1h": market, "optional_failed": failed, "optional_reasons": reasons, "statements": len(stmts)}
 
     out = _run(connect, work, autocommit=True)
     _state["market_1h"] = out["market_1h"]
@@ -220,6 +225,15 @@ def write_price_obs(rows: list[dict], *, connect=None) -> dict:
     return _insert(connect, _INSERT_PRICE_OBS, sets)
 
 
+def _origin(row: dict) -> str:
+    """The row's origin; a row with none is SIM (never LIVE by default). A given value that is not LIVE, MIRROR or SIM is refused."""
+    if "origin" not in row:
+        return "SIM"
+    if row["origin"] not in ORIGINS:
+        raise ValueError("origin must be LIVE, MIRROR or SIM")
+    return row["origin"]
+
+
 def write_bid_ticks(rows: list[dict], *, connect=None) -> dict:
     sets = []
     for r in rows:
@@ -228,7 +242,7 @@ def write_bid_ticks(rows: list[dict], *, connect=None) -> dict:
         _check_cents(r, "price_cents", optional=True)
         if r.get("event") not in BID_EVENTS:
             raise ValueError(f"event must be one of {BID_EVENTS}")
-        sets.append((r["ts"], r["round_id"], r["sku"], r["seller_id"], r.get("price_cents"), r["event"]))
+        sets.append((r["ts"], r["round_id"], r["sku"], r["seller_id"], r.get("price_cents"), r["event"], _origin(r)))
     return _insert(connect, _INSERT_BID_TICK, sets)
 
 
@@ -238,7 +252,7 @@ def write_loss_reports(rows: list[dict], *, connect=None) -> dict:
         for k in ("ts", "seller_id"):
             _check_text(r, k)
         _check_cents(r, "lost_by_cents", optional=True)
-        sets.append((r["ts"], r.get("round_id"), r["seller_id"], r.get("sku"), r.get("lost_by_cents"), r.get("reason")))
+        sets.append((r["ts"], r.get("round_id"), r["seller_id"], r.get("sku"), r.get("lost_by_cents"), r.get("reason"), _origin(r)))
     return _insert(connect, _INSERT_LOSS, sets)
 
 

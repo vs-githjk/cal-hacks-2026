@@ -105,16 +105,27 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
 
 
+# one plain US price: 1299.99, $1,299.99, $ 1,299. ASCII digits only: "$１２９９" is unreadable (#237)
+_ONE_PRICE = re.compile(r"\$?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(\.[0-9]{1,2})?")
+
+
 def _price(v) -> float | None:
+    """A numeric final_price, or a string that is exactly one plain $N.NN price. Anything else ("-5", "$9.99/mo for 24
+    months", "1.299,99", a range) is unreadable, so the quoted MIRROR price stands (#197)."""
     if isinstance(v, bool):
         return None
     if isinstance(v, str):
-        v = re.sub(r"[^0-9.]", "", v)
-    try:
-        p = float(v)
-    except (TypeError, ValueError):
+        m = _ONE_PRICE.fullmatch(v.strip())
+        if not m:
+            return None
+        v = m.group(1).replace(",", "") + (m.group(2) or "")
+    if not isinstance(v, (int, float, str)):
         return None
-    return round(p, 2) if math.isfinite(p) and p > 0 else None
+    try:
+        p = round(float(v), 2)
+    except (TypeError, ValueError, OverflowError):   # a JSON int of 10**400 overflows float (#237)
+        return None
+    return p if math.isfinite(p) and p > 0 else None   # 0.001 rounds to 0: unreadable
 
 
 def stock_state(availability) -> str:

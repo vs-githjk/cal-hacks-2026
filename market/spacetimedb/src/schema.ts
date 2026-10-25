@@ -272,9 +272,10 @@ export const approval = table(
   {
     id: t.u64().primaryKey().autoInc(),
     mandateHash: t.string().unique(),
-    method: t.string(), // voice_code | typed_code | allowance
+    method: t.string(), // voice_code | allowance (#191: no typed fallback)
     approvedBy: t.string(),
     at: t.timestamp(),
+    voiceApprovalId: t.string().default(''), // #191: the VoiceApproval id the call produced ('' for allowance); appended last
   },
 );
 

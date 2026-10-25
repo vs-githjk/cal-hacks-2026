@@ -19,6 +19,9 @@ from data.mirror.price_spread import load, out_of_stock
 
 HERE = Path(__file__).resolve().parent
 RETAIL = {"bestbuy", "microcenter", "bh", "newegg"}  # amazon is out until the seller of record is captured
+# #308: one local store's own listings (Central Computers SF, condition not stated, stock the store's own figure). Kept out of
+# the retail median on purpose: they are an agent's bid, and a bid must not move the baseline the advocate judges it against.
+LOCAL_STORE = {"centralcomputers"}
 MARKETPLACE = {"ebay_live"}
 SOLD = {"ebay_sold"}
 WINDOW = timedelta(hours=24)
@@ -26,6 +29,8 @@ SOLD_WINDOW = timedelta(days=30)
 MIN_OWNERS = 2
 RETAILER_OWNER = "retailer listings (Apify)"
 OWNERS = {"apify": RETAILER_OWNER, "apify-b": RETAILER_OWNER, "ebay-sold": "eBay sold"}  # two Actor families are still one data owner
+REQUIRED = ("observed_at", "url", "sku", "kind", "store", "condition")  # baseline() reads these (and in_stock) directly
+RECORDED = HERE / "recorded"  # saved Bright Data rows (brightdata-*.json), read if present; brightdata.py is never called here
 
 
 def _ts(s: str) -> datetime:
@@ -59,6 +64,16 @@ def observations() -> list[dict]:
                          "kind": "sold" if store in SOLD else "ask", "observed_at": c["snapshot_date"],
                          "sold_date": c["listing"].get("sold_date"),
                          "url": c["listing"].get("url") or c.get("source"), "snapshot_id": c.get("snapshot_id"), "origin": "MIRROR"})
+    return rows + _recorded_brightdata()
+
+
+def _recorded_brightdata() -> list[dict]:
+    """Bright Data rows saved to data/baselines/recorded/, if any. Once stored they are MIRROR, dated (brightdata.py's own rule)."""
+    rows = []
+    for f in sorted(RECORDED.glob("brightdata-*.json")) if RECORDED.is_dir() else []:
+        for r in json.loads(f.read_text()):
+            if r.get("price") and all(r.get(k) not in (None, "") for k in REQUIRED) and isinstance(r.get("in_stock"), bool):
+                rows.append({**r, "provider": "brightdata", "origin": "MIRROR"})
     return rows
 
 
