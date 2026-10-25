@@ -409,9 +409,10 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
 export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; ruleIds: string[]; origin: string }) {
   requireRole(ctx, 'attach_verdict', ['referee']);
   if (!['allow', 'quarantine', 'block'].includes(a.verdict)) throw new SenderError('verdict must be allow, quarantine or block');
-  const vb = ctx.db.bid.id.find(a.bidId);
-  if (!vb) throw new SenderError(`no bid ${a.bidId}`);
-  if (ctx.db.round.id.find(vb.roundId)?.state === 'closed') throw new SenderError('round already closed; a card can no longer change its ranking');
+  // #389: a Shield verdict is allowed on an already-closed round (the demo's beat 3 attaches a block right
+  // after close_round) and never changes a ranking already computed. create_mandate re-checks every card on
+  // the winning bid before it mints, so a late block still refuses the mandate; it just can't be dropped here.
+  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'shield', result: a.verdict, detail: a.ruleIds.join(', '), evidenceUrl: '', origin: a.origin, at: ctx.timestamp });
   event(ctx, 'verdict', 'bid_check', a.bidId, `Bazaar Shield: ${a.verdict}`, '', a.origin);
 }
@@ -419,9 +420,8 @@ export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; rul
 export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; check: string; evidenceUrl: string; origin: string }) {
   requireRole(ctx, 'attach_claim_check', ['referee']);
   if (!['verified', 'unverified', 'false'].includes(a.check)) throw new SenderError('check must be verified, unverified or false');
-  const cb = ctx.db.bid.id.find(a.bidId);
-  if (!cb) throw new SenderError(`no bid ${a.bidId}`);
-  if (ctx.db.round.id.find(cb.roundId)?.state === 'closed') throw new SenderError('round already closed; a card can no longer change its ranking');
+  // #389: late is fine, same as attach_verdict above; create_mandate is the enforcement point, not the attach.
+  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'claim', result: a.check, detail: a.claim, evidenceUrl: a.evidenceUrl, origin: a.origin, at: ctx.timestamp });
   event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
 }

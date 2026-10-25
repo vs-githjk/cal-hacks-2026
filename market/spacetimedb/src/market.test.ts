@@ -1533,10 +1533,10 @@ describe('#191 approval and mandate holes', () => {
     expect([...h.db.mandate.iter()]).toHaveLength(0);
   });
 
-  it('#325-2 a Shield block or failed claim on the winning bid refuses the mandate, even one that reached the bid by some other path than attach_claim_check', () => {
+  it('#325-2 a Shield block or failed claim on the winning bid refuses the mandate, however the card reached it', () => {
     wonByA();
-    // Simulates a card that reached the bid outside the attach_* reducers (which now refuse a closed round):
-    // create_mandate must still catch it rather than trust that ranking already screened every card.
+    // A card reaching the bid outside attach_claim_check (eg. a row written directly, as a stand-in for any
+    // path other than the reducer): create_mandate must still catch it, not trust that ranking screened it.
     run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'claim', result: 'false', detail: 'card fits', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
     expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block|claim check|veto/);
     expect([...h.db.mandate.iter()]).toHaveLength(0);
@@ -1544,19 +1544,36 @@ describe('#191 approval and mandate holes', () => {
 
   it('#389 (#396-1) create_mandate names a failed claim on the winning bid, not just a generic refusal', () => {
     wonByA();
-    // attach_claim_check itself now refuses a bid in a closed round (see #325-2b below), so the only way a
-    // false claim still reaches an already-ranked rank 1 bid is a path outside that reducer, same as #325-2.
     run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'claim', result: 'false', detail: 'card fits', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
     expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/failed claim/);
     expect([...h.db.mandate.iter()]).toHaveLength(0);
   });
 
-  it('#325-2b attach_verdict and attach_claim_check refuse a bid in an already-closed round, like attach_advocate_card does', () => {
+  it('#389 (#396-1a) attach_verdict and attach_claim_check succeed on an already-closed round (the demo\'s beat 3: open, bid, close, then attach a Shield block); create_mandate still refuses', () => {
     wonByA();
-    expect(() => run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }))).toThrow(/already closed/);
-    expect(() => run(REF, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-a', claim: 'c', check: 'false', evidenceUrl: '', origin: 'SIM' }))).toThrow(/already closed/);
-    run(REF, (ctx) => m.createMandate(ctx, mandateArgs())); // no stray card: the mandate still mints
-    expect([...h.db.mandate.iter()]).toHaveLength(1);
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+    expect([...h.db.bidCheck.iter()].filter((c) => c.bidId === 'bid-a' && c.kind === 'shield')).toHaveLength(1);
+    // attach_claim_check on the same already-closed round's bid: also succeeds, and still blocks the mandate.
+    run(REF, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-a', claim: 'c', check: 'false', evidenceUrl: '', origin: 'SIM' }));
+    expect([...h.db.bidCheck.iter()].filter((c) => c.bidId === 'bid-a' && c.kind === 'claim')).toHaveLength(1);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#389 (#396-1b) create_mandate refuses a Shield quarantine, not only a block', () => {
+    wonByA();
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'quarantine', ruleIds: ['shield.y'], origin: 'SIM' }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#389 (#396-1c) create_mandate refuses a bid the advocate vetoed', () => {
+    wonByA();
+    // The advocate card's own attach reducer still refuses a closed round (unchanged), so this stands in for
+    // a veto that reached the bid before close but was missed by ranking (eg. a race on the same tick).
+    run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'advocate', result: 'veto', detail: 'fit.x: too long', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/veto/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
   });
 
   it('#325-3 the public approval_recorded label is the same for the allowance path and the voice-code call', () => {
