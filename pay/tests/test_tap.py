@@ -15,7 +15,7 @@ from pay.mandate import mandate_hash, new_mandate
 from pay.replay import NonceStore
 from pay.tap import (
     KEY_ENV,
-    TAG,
+    PAYER_TAG as TAG,
     TapKeyError,
     attach_signature,
     generate_keypair,
@@ -78,26 +78,22 @@ def test_headers_follow_rfc9421_shape(priv):
     assert h["Mandate-Hash"] == m["hash"] == mandate_hash(m)
     assert h["Content-Digest"] == "sha-256=:" + base64.b64encode(hashlib.sha256(body).digest()).decode() + ":"
     si = h["Signature-Input"]
-    assert si.startswith('sig1=("@method" "@authority" "@path" "@query" "content-digest" "mandate-hash");')
-    for param in ("created=", "expires=", 'keyid="', 'alg="ed25519"', 'nonce="', f'tag="{TAG}"'):
+    assert si.startswith('sig2=("@authority" "@path"); created=')
+    for param in ("expires=", 'keyId="', 'alg="ed25519"', 'nonce="', f'tag="{TAG}"'):
         assert param in si
-    assert re.fullmatch(r"sig1=:[A-Za-z0-9+/=]+:", h["Signature"])
-    assert TAG == "agent-browser-auth"
+    assert re.fullmatch(r"sig2=:[A-Za-z0-9+/=]+:", h["Signature"])
+    assert TAG == "agent-payer-auth"
 
 
 def test_signature_matches_an_independently_built_signature_base(priv):
     m, body, h = signed(priv)
-    params = h["Signature-Input"][len("sig1="):]
+    params = h["Signature-Input"][len("sig2="):]
     base = "\n".join([
-        '"@method": POST',
         '"@authority": merchant.example.com',
         '"@path": /v1/charge',
-        '"@query": ?x=1',
-        f'"content-digest": {h["Content-Digest"]}',
-        f'"mandate-hash": {m["hash"]}',
         f'"@signature-params": {params}',
     ])
-    sig = base64.b64decode(h["Signature"][len("sig1=:"):-1])
+    sig = base64.b64decode(h["Signature"][len("sig2=:"):-1])
     priv.public_key().verify(sig, base.encode())  # raises InvalidSignature if wrong
 
 
@@ -236,7 +232,7 @@ def test_ttl_over_cap_is_refused_at_signing(priv, keys):
 
 def test_missing_headers_fail(priv, keys):
     m, body, h = signed(priv)
-    for name in ("Signature", "Signature-Input", "Content-Digest", "Mandate-Hash"):
+    for name in ("Signature", "Signature-Input", "Content-Digest", "Mandate-Hash", "Signature-Agent"):
         h2 = {k: v for k, v in h.items() if k != name}
         r = check(keys, h2, body)
         assert not r.ok and r.reason == "missing_header", name
@@ -247,18 +243,21 @@ def test_header_names_are_case_insensitive(priv, keys):
     assert check(keys, {k.lower(): v for k, v in h.items()}, body).ok
 
 
-def test_signature_input_must_cover_required_components(priv, keys):
+def test_signature_input_must_cover_exactly_authority_and_path(priv, keys):
     m, body, h = signed(priv)
-    h2 = dict(h)
-    h2["Signature-Input"] = h["Signature-Input"].replace(' "content-digest"', "")
-    r = check(keys, h2, body)
-    assert not r.ok and r.reason == "bad_component_set"
+    for new in ('("@authority")', '("@authority" "@path" "content-digest")', '("@path" "@authority")'):
+        h2 = dict(h, **{"Signature-Input": h["Signature-Input"].replace('("@authority" "@path")', new)})
+        r = check(keys, h2, body)
+        assert not r.ok and r.reason == "bad_component_set", new
 
 
 @pytest.mark.parametrize("old,new,reason", [
     (f'tag="{TAG}"', 'tag="other"', "bad_tag"),
     ('alg="ed25519"', 'alg="rsa-v1_5-sha256"', "bad_alg"),
-    ("sig1=(", "sig9=(", "bad_signature_input"),
+    ("sig2=(", "sig9=(", "bad_signature_input"),
+    ("sig2=(", "sig1=(", "bad_signature_input"),
+    ('keyId="', 'keyid="', "bad_signature_input"),
+    ("; nonce=", "; extra=1; nonce=", "bad_signature_input"),
 ])
 def test_bad_params_fail(priv, keys, old, new, reason):
     m, body, h = signed(priv)
@@ -269,10 +268,10 @@ def test_bad_params_fail(priv, keys, old, new, reason):
 
 def test_garbage_headers_fail_cleanly(priv, keys):
     m, body, h = signed(priv)
-    for sig_input in ("", "garbage", 'sig1=("@method");created=x'):
+    for sig_input in ("", "garbage", 'sig2=("@authority");created=x'):
         r = check(keys, dict(h, **{"Signature-Input": sig_input}), body)
         assert not r.ok
-    r = check(keys, dict(h, Signature="sig1=:!!!:"), body)
+    r = check(keys, dict(h, Signature="sig2=:!!!:"), body)
     assert not r.ok
 
 
@@ -354,12 +353,14 @@ def test_request_signed_without_query_cannot_gain_one_and_vice_versa(priv, keys)
     assert not r.ok and r.reason == "bad_signature"
 
 
-def test_signature_must_cover_query(priv, keys):
+def test_query_is_bound_through_the_nonce(priv, keys):
     m, body, h = signed(priv)
-    h2 = dict(h)
-    h2["Signature-Input"] = h["Signature-Input"].replace(' "@query"', "")
-    r = check(keys, h2, body)
-    assert not r.ok and r.reason == "bad_component_set"
+    for url in (URL + "&y=2", URL.split("?")[0]):
+        r = check(keys, h, body, url=url)
+        assert not r.ok and r.reason == "bad_signature"
+    other = signed(priv, body=body)[2]  # same body, fresh nonce: its binding cannot be moved onto h
+    swapped = dict(h, **{"Signature-Input": other["Signature-Input"]})
+    assert check(keys, swapped, body).reason == "bad_signature"
 
 
 # ---------- fix 2: bound, live, unused mandate ----------
