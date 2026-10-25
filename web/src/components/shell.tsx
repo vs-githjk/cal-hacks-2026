@@ -23,12 +23,12 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
-      <nav className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 py-2.5">
-        <Link href="/" aria-label="Tech Bazaar" className="inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap font-display text-[17px] tracking-[0.06em] text-ink">
+      <nav className="mx-auto flex max-w-[1360px] items-center gap-4 px-4 py-3">
+        <Link href="/" aria-label="Tech Bazaar" className="inline-flex min-h-12 shrink-0 items-center gap-2.5 whitespace-nowrap font-display text-[20px] tracking-[0.06em] text-ink">
           <Badge />
           <span className="hidden sm:inline">TECH BAZAAR</span>
         </Link>
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full border border-line bg-soft/70 p-1 [scrollbar-width:none]">
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full border border-line bg-soft/70 p-1.5 [scrollbar-width:none]">
           {NAV.map((n) => {
             const on = n.match ? path.startsWith(n.match) : path === n.href;
             return (
@@ -36,15 +36,15 @@ export function AppHeader() {
                 key={n.href}
                 href={n.href}
                 aria-current={on ? "page" : undefined}
-                className={`inline-flex min-h-8 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium transition-colors ${on ? "bg-accent text-accent-ink" : "text-ink-2 hover:bg-panel hover:text-ink"}`}
+                className={`btn inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full px-5 text-[15px] font-semibold ${on ? "bg-accent text-accent-ink" : "text-ink-2 hover:bg-panel hover:text-ink"}`}
               >
                 {n.label}
               </Link>
             );
           })}
         </div>
-        <span className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:flex">
-          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-mint" : "border border-ink bg-transparent"}`} aria-hidden />
+        <span className="hidden items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.08em] text-muted md:flex">
+          <span className={`h-2.5 w-2.5 rounded-full ${conn.isActive ? "bg-mint" : "border border-ink bg-transparent"}`} aria-hidden />
           {conn.isActive ? "market live" : "offline"}
         </span>
       </nav>
@@ -55,7 +55,7 @@ export function AppHeader() {
 /** Badge mark: a six-point sheriff star. */
 function Badge() {
   return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden className="shrink-0 text-accent">
+    <svg width={27} height={27} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden className="shrink-0 text-accent">
       <path d="M12 2.5 13.6 8l5.4-2-2 5.4 5.4 1.6-5.4 1.6 2 5.4-5.4-2L12 23.5 10.4 18l-5.4 2 2-5.4L1.6 13l5.4-1.6-2-5.4 5.4 2L12 2.5Z" />
       <circle cx="12" cy="12" r="3.1" />
     </svg>

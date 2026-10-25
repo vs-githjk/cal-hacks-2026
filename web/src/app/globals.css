@@ -36,7 +36,7 @@
   --slate-soft: rgba(24, 19, 13, 0.06);
   --grid: rgba(24, 19, 13, 0.05);
   --shadow: 0 24px 60px rgba(24, 19, 13, 0.14);
-  --radius: 16px;
+  --radius: 22px;
   color-scheme: light;
 }
 
@@ -76,12 +76,16 @@
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+html {
+  overflow-x: hidden;
+}
 body {
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 17px;
+  line-height: 1.5;
+  overflow-x: hidden;
 }
 
 /* One card style for every panel. Keep .panel so untouched pages still render. */
@@ -91,6 +95,18 @@ body {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: 0 1px 0 rgba(24, 19, 13, 0.03);
+}
+
+/* Soft, clicky press: every real button gets weight on hover and gives tactile feedback on press. */
+.btn {
+  transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+.btn:active {
+  transform: scale(0.96) translateY(1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn:active { transform: none; }
 }
 
 :focus-visible {
@@ -137,7 +153,6 @@ main, header, footer { position: relative; z-index: 1; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
 
-@keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 @keyframes orbit { to { transform: rotate(360deg) } }
 @keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }
 @keyframes sun-drift {

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { AgentPip } from "@/components/AgentPip";
 import { PwaRegister } from "@/components/PwaRegister";
 import { AppHeader, RunModeFooter } from "@/components/shell";
 import { fontVars } from "./fonts";
@@ -25,7 +24,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <RunModeFooter />
           <PwaRegister />
         </Providers>
-        <AgentPip />
       </body>
     </html>
   );
