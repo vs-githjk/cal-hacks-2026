@@ -262,3 +262,11 @@ main, header, footer { position: relative; z-index: 1; }
 .fm-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--color-shield); animation: fm-ring 2.4s ease-out infinite; }
 .fm-ghost { position: absolute; top: 0; left: 0; offset-path: path("M 40 28 H 280 V 132 H 40 Z"); offset-rotate: 0deg; animation: fm-lap var(--lap, 9s) linear infinite; animation-delay: var(--delay, 0s); }
 .fm-line { animation: fm-line 220ms var(--ease-out) both; }
+
+/* Aquarium hero (#448, round 3): water, caustic light and a few slow bubbles. Pauses under reduced motion. */
+.fm-water { background: linear-gradient(180deg, #d9f1fa 0%, #bfe6f4 45%, #e9f2f8 100%); }
+.fm-caustic { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(40% 50% at 25% 10%, rgba(255,255,255,0.75), transparent 70%), radial-gradient(35% 40% at 80% 20%, rgba(34,211,238,0.35), transparent 70%), radial-gradient(50% 40% at 60% 95%, rgba(30,78,216,0.16), transparent 70%); }
+@keyframes fm-bubble { 0% { transform: translateY(0) scale(1); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.5; } 100% { transform: translateY(-520px) scale(1.25); opacity: 0; } }
+.fm-bubble { position: absolute; bottom: -24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.85); background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.9), rgba(255,255,255,0.1) 60%); animation: fm-bubble var(--rise, 14s) linear infinite; animation-delay: var(--delay, 0s); pointer-events: none; }
+.fm-tile { transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out); }
+.fm-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }

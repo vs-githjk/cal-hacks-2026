@@ -1,18 +1,16 @@
 "use client";
-// Home (#448 step 2, reworked on Vidyut's feedback): the secure agentic marketplace, with depth and a little pulse that leads
-// into the floor. One animated gradient zone (the hero), flat sections, a gradient band that descends into the dark floor,
-// then back to light for payment. Numbers are labelled; nothing on this page is a made-up deal.
+// Home (#448, round 3 of Vidyut's feedback): an aquarium hero, boxed numbers, the dashboard in miniature, four clean steps,
+// the dark floor, approval and receipt, sellers, footer. No ticker, no gradient band. Every value is labelled; nothing is a made-up deal.
 
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
-import { tables } from "@/module_bindings";
+import type { ReactNode } from "react";
+import { useSpacetimeDB } from "spacetimedb/react";
 import { BrandMark } from "@/components/BrandMark";
+import { DashboardPreview } from "@/components/DashboardPreview";
 import { FloorMini } from "@/components/FloorMini";
 import { HomeMore } from "@/components/HomeMore";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { OriginChip, README_URL, StatusPill } from "@/components/ui";
-import { toDate } from "@/lib/stdb";
 import { BRAND, SHIELD, SHIELD_LINE, TAGLINE } from "@/lib/brand";
 
 // Measured results, copied from data/scoreboard.json (Oct 24 run) and the README. Update when the scoreboard is regenerated.
@@ -22,35 +20,40 @@ const PROOF: { value: string; label: string; caveat: string }[] = [
   { value: "9 of 10", label: "voice attacks denied", caveat: "first run" },
 ];
 
-const STEPS: { title: string; text: string }[] = [
-  { title: "State a goal", text: "A part, a price cap, a date." },
-  { title: "Sealed bids", text: "Seller agents bid blind." },
-  { title: "Referee ranks", text: `One rule. ${SHIELD} throws out fishy listings first.` },
-  { title: "Approve by phone", text: "Above your allowance, you say the code." },
+const STEPS: { title: string; text: string; icon: ReactNode }[] = [
+  { title: "State a goal", text: "A part, a price cap, a date.", icon: <GoalIcon /> },
+  { title: "Sealed bids", text: "Seller agents bid blind.", icon: <SealedIcon /> },
+  { title: "Referee ranks", text: `One rule. ${SHIELD} throws out fishy listings first.`, icon: <RankIcon /> },
+  { title: "Approve by phone", text: "Above your allowance, you say the code.", icon: <PhoneIcon /> },
 ];
 
-// Ticker lines while the market has no events yet. Each is labelled SIM on screen.
-const SAMPLE_TICKER = ["Round opened", "4 bids sealed", `${SHIELD}: 1 blocked`, "Ranked", "Approved", "Paid"];
+const BUBBLES = [
+  { left: "8%", size: 10, rise: "16s", delay: "0s" },
+  { left: "22%", size: 6, rise: "13s", delay: "-5s" },
+  { left: "41%", size: 14, rise: "19s", delay: "-9s" },
+  { left: "63%", size: 8, rise: "15s", delay: "-2s" },
+  { left: "78%", size: 12, rise: "18s", delay: "-11s" },
+  { left: "91%", size: 7, rise: "14s", delay: "-7s" },
+];
 
 export default function Home() {
   const conn = useSpacetimeDB();
-  const [events] = useTable(tables.floorEvent);
-  const ticker = useMemo(() => {
-    const live = [...events].sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, 12).map((e) => ({ text: e.label, origin: e.origin, at: toDate(e.at) }));
-    return live.length >= 4 ? live : SAMPLE_TICKER.map((text) => ({ text, origin: "SIM", at: null as Date | null }));
-  }, [events]);
-
   return (
     <div className="-mx-4 grid grid-cols-[minmax(0,1fr)]">
       <ScrollProgress />
-      {/* 1. Hero: the one animated gradient zone. */}
-      <section className="relative overflow-hidden px-4">
-        <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.28)]" aria-hidden />
-        <div className="fm-orb fm-orb-b right-[-6%] top-[10%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.16)]" aria-hidden />
-        <div className="fm-orb fm-orb-a bottom-[-30%] left-[35%] h-[300px] w-[380px] bg-[rgba(255,122,69,0.14)]" aria-hidden />
-        <div className="relative mx-auto grid max-w-[1120px] items-center gap-10 py-16 md:px-4 md:py-28 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+
+      {/* 1. Hero: the aquarium. */}
+      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#cdeaf8_0%,#a8daf0_50%,#e3eff7_100%)] px-4">
+        <div className="fm-caustic" aria-hidden />
+        <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.35)]" aria-hidden />
+        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.22)]" aria-hidden />
+        <div className="fm-orb fm-orb-a bottom-[-30%] left-[40%] h-[260px] w-[360px] bg-[rgba(255,122,69,0.12)]" aria-hidden />
+        {BUBBLES.map((b) => (
+          <span key={b.left} className="fm-bubble" style={{ left: b.left, width: b.size, height: b.size, ["--rise" as string]: b.rise, ["--delay" as string]: b.delay }} aria-hidden />
+        ))}
+        <div className="relative mx-auto grid max-w-[1120px] items-center gap-10 py-16 md:px-4 md:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
           <div>
-            <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ink-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-2 shadow-ring backdrop-blur">
               <span className="dot text-live" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
             </span>
             <h1 className="mt-5 text-[40px] font-medium leading-[44px] tracking-[-0.025em] text-balance md:text-[60px] md:leading-[64px] md:tracking-[-0.03em]">
@@ -68,36 +71,56 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. Proof strip with the honesty footnote. */}
-      <section aria-label="Measured results" className="border-t border-line px-4">
-        <div className="mx-auto grid max-w-[1120px] gap-6 py-14 md:px-4 md:py-20">
-          <div className="grid grid-cols-3 gap-4 md:gap-8">
+      {/* 2. Proof: three boxed numbers with their caveats. */}
+      <section aria-label="Measured results" className="px-4">
+        <div className="mx-auto max-w-[1120px] py-12 md:px-4 md:py-16">
+          <div className="grid gap-4 md:grid-cols-3">
             {PROOF.map((p) => (
-              <div key={p.value} className="grid gap-1.5">
-                <span className="text-[28px] font-medium leading-8 tracking-[-0.02em] tabular-nums md:text-[48px] md:leading-[52px]">{p.value}</span>
-                <span className="text-[13px] leading-[18px] text-ink-2 md:text-[15px] md:leading-5">{p.label}</span>
-                <span className="flex flex-wrap items-center gap-1.5 text-[12px] leading-4 text-muted"><OriginChip origin="SIM" /> {p.caveat}</span>
+              <div key={p.value} className="fm-tile rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-[36px] font-medium leading-10 tracking-[-0.02em] tabular-nums md:text-[44px] md:leading-[48px]">{p.value}</span>
+                  <OriginChip origin="SIM" />
+                </div>
+                <p className="mt-2 text-[15px] font-medium leading-5">{p.label}</p>
+                <p className="mt-1 text-[13px] leading-[18px] text-muted">{p.caveat}</p>
               </div>
             ))}
           </div>
-          <p className="text-[13px] leading-[18px] text-muted">Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
+          <p className="mt-4 text-[13px] leading-[18px] text-muted">Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
         </div>
       </section>
 
-      {/* 3. How it works: four steps, one line each. */}
-      <section aria-labelledby="how" className="border-t border-line px-4">
-        <div className="mx-auto max-w-[1120px] py-14 md:px-4 md:py-24">
+      {/* 3. The product: the dashboard in miniature. */}
+      <section aria-labelledby="dash" className="px-4">
+        <div className="mx-auto grid max-w-[1120px] gap-6 py-10 md:px-4 md:py-16">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 id="dash" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">Your dashboard, in one glance.</h2>
+            <Link href="/start" className="inline-flex min-h-11 items-center gap-1.5 text-[15px] font-medium text-pulse">Open yours <span aria-hidden>→</span></Link>
+          </div>
+          <DashboardPreview />
+        </div>
+      </section>
+
+      {/* 4. How it works: four steps on one line. */}
+      <section aria-labelledby="how" className="px-4">
+        <div className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
           <h2 id="how" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">How it works</h2>
-          <ol className="-mx-4 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] md:mx-0 md:mt-12 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible md:px-0">
+          <ol className="relative mt-8 grid gap-3 md:grid-cols-4 md:gap-4">
+            <span className="absolute left-0 right-0 top-[38px] hidden h-px bg-line-2 md:block" aria-hidden />
             {STEPS.map((s, i) => (
-              <li key={s.title} className="glass grid min-w-[78%] snap-center gap-3 p-5 transition-transform motion-safe:hover:-translate-y-1 md:min-w-0 md:p-6">
-                <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-koi">Step 0{i + 1}</span>
-                <span className="text-[17px] font-semibold leading-[22px]">{s.title}</span>
-                <span className="text-[15px] leading-5 text-ink-2">{s.text}</span>
+              <li key={s.title} className="fm-tile relative grid gap-4 rounded-2xl border border-line bg-surface p-5 shadow-card md:p-6">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-12 w-12 place-items-center rounded-xl bg-pulse-soft text-pulse-soft-ink">{s.icon}</span>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-ink font-mono text-[12px] text-canvas">{i + 1}</span>
+                </div>
+                <div>
+                  <p className="text-[17px] font-semibold leading-[22px]">{s.title}</p>
+                  <p className="mt-1 text-[15px] leading-5 text-ink-2">{s.text}</p>
+                </div>
               </li>
             ))}
           </ol>
-          <details className="group mt-8">
+          <details className="group mt-6">
             <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[15px] font-medium text-pulse [&::-webkit-details-marker]:hidden">
               More: the five beats, the auction, this round in numbers <span className="text-muted transition-transform group-open:rotate-45" aria-hidden>+</span>
             </summary>
@@ -106,21 +129,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. The descent: light to ink, with the ticker of market events. */}
-      <section aria-label="Recent market events" className="relative overflow-hidden bg-[linear-gradient(180deg,var(--color-canvas)_0%,var(--color-floor-bg)_100%)] py-12">
-        <div className="flex w-max gap-3 whitespace-nowrap fm-ticker">
-          {[...ticker, ...ticker].map((t, i) => (
-            <span key={i} className="inline-flex h-9 items-center gap-2 rounded-full border border-[rgba(214,235,253,0.19)] bg-[rgba(11,27,43,0.55)] px-4 font-mono text-[12px] text-floor-line backdrop-blur">
-              {t.text} <OriginChip origin={t.origin} />
-            </span>
-          ))}
-        </div>
-      </section>
-
       {/* 5 and 6. The floor, and the two guards, on ink. */}
-      <section aria-labelledby="floor" className="bg-floor-bg px-4 text-floor-line">
-        <div className="mx-auto grid max-w-[1120px] gap-12 py-16 md:px-4 md:py-24">
-          <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto] lg:gap-16">
+      <section aria-labelledby="floor" className="mt-6 bg-floor-bg px-4 text-floor-line">
+        <div className="mx-auto grid max-w-[1120px] gap-10 py-14 md:px-4 md:py-20">
+          <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
             <div>
               <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ghost-1"><span className="dot text-shield" aria-hidden /> The floor</span>
               <h2 id="floor" className="mt-4 text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Every round, played live.</h2>
@@ -135,9 +147,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. Payment: back to light. */}
-      <section aria-labelledby="pay" className="bg-[linear-gradient(180deg,var(--color-floor-bg)_0%,var(--color-canvas)_18%)] px-4">
-        <div className="mx-auto grid max-w-[1120px] gap-8 py-20 md:px-4 md:py-28 lg:grid-cols-[1fr_1fr] lg:items-center">
+      {/* 7. Payment. */}
+      <section aria-labelledby="pay" className="px-4">
+        <div className="mx-auto grid max-w-[1120px] gap-8 py-14 md:px-4 md:py-20 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
             <h2 id="pay" className="text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Nothing pays without you.</h2>
             <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ink-2">We call. You say the code. Then a test charge and a receipt.</p>
@@ -158,9 +170,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 8. Sellers, closing, footer. */}
+      {/* 8. Sellers, footer. */}
       <section aria-label="For sellers" className="border-t border-line px-4">
-        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-5 py-14 md:px-4 md:py-20">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-5 py-12 md:px-4 md:py-16">
           <p className="text-[22px] font-medium leading-7 tracking-[-0.015em] md:text-[28px] md:leading-[34px]">Sell here. Your agent bids, never below your floor.</p>
           <Link href="/sell" className="btn inline-flex min-h-12 items-center rounded-xl bg-surface px-6 text-[17px] font-medium text-ink shadow-ring transition-transform motion-safe:hover:-translate-y-0.5 hover:bg-surface-2">List your shop</Link>
         </div>
@@ -187,3 +199,11 @@ function DarkCard({ eyebrow, title, children }: { eyebrow: string; title: string
     </div>
   );
 }
+
+function Icon({ children }: { children: ReactNode }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-6 w-6">{children}</svg>;
+}
+function GoalIcon() { return <Icon><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /></Icon>; }
+function SealedIcon() { return <Icon><rect x="4" y="9" width="16" height="11" rx="2" /><path d="M6 9 12 4l6 5" /></Icon>; }
+function RankIcon() { return <Icon><path d="M5 19V10M12 19V5M19 19v-7" /></Icon>; }
+function PhoneIcon() { return <Icon><path d="M7 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5L16 12.5l4 1.5v3a2 2 0 0 1-2.2 2A14 14 0 0 1 5 6.2 2 2 0 0 1 7 4Z" /></Icon>; }
