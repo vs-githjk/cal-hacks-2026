@@ -28,4 +28,6 @@ export default __t.row({
   },
   origin: __t.string(),
   source: __t.string(),
+  adjustedTotal: __t.f64().name("adjusted_total"),
+  adjustmentReason: __t.string().name("adjustment_reason"),
 });

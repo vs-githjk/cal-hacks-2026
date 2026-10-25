@@ -52,16 +52,18 @@ def clients(log, fail=None, rows="market"):
 
 def test_order_follows_the_stage_story(steps):
     kinds = [s.reducer for s in steps if s.reducer != "set_floor"]
-    assert kinds[:4] == ["post_goal", "set_allowance", "post_need", "open_round"]
+    assert kinds[:5] == ["post_goal", "set_allowance", "post_need", "set_buyer_profile", "open_round"]
     assert kinds.index("place_bid") < kinds.index("attach_verdict") < kinds.index("attach_advocate_card") < kinds.index("close_round")
     tail = kinds[kinds.index("close_round") + 1:]
-    assert tail == ["attach_verdict", "create_mandate", "record_approval", "record_payment", "record_payment"]
+    assert tail[:5] == ["attach_verdict", "create_mandate", "record_approval", "record_payment", "record_payment"]
+    assert tail[5:] and set(tail[5:]) == {"record_loss_report"}          # #216: beat 5's loss reports close the one-round plan
 
 
 def test_each_reducer_is_called_by_the_role_it_demands(steps):
     allowed = {"post_goal": "buyer", "post_need": "buyer", "set_allowance": "referee", "open_round": "referee", "close_round": "referee",
                "attach_verdict": "referee", "attach_claim_check": "referee", "attach_advocate_card": "referee", "create_mandate": "referee",
-               "record_approval": "referee", "record_payment": "referee"}
+               "record_approval": "referee", "record_payment": "referee", "set_buyer_profile": "referee",
+               "record_loss_report": "referee", "record_agent_event": "referee"}
     for s in steps:
         if s.reducer in ("set_floor", "place_bid"):
             assert s.actor.startswith("seller:")
@@ -155,10 +157,11 @@ def test_a_scripted_approval_never_records_a_live_payment(run, steps):
     assert all(p.args["payment_ref"].startswith("ch_sim_") for p in lp) and "pi_test_scripted" not in lp[0].say
 
 
-def test_a_scripted_approval_is_labelled_sim_script_not_voice(steps):
+def test_without_a_call_the_approval_step_says_the_run_stops_there(steps):
+    """#251: no scripted approval. The plan's approval step names the call's method and says what a run with no call does."""
     appr = next(s for s in steps if s.reducer == "record_approval")
-    assert appr.args["method"] == "sim_script" and appr.tag == bridge.SIM
-    assert "no phone call" in appr.say
+    assert appr.args["method"] == "voice_code" and appr.tag == bridge.SIM
+    assert bridge.NO_CALL_LINE in appr.say and "stops at this gate" in appr.say
 
 
 def test_money_steps_use_the_demos_real_mandate(run, steps):
@@ -167,7 +170,7 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     assert mand["hash"] == m["hash"] and mand["amount"] == 1299.99 and mand["payee"] == m["payee"]
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
-    assert appr == {"mandate_hash": m["hash"], "method": "sim_script", "approved_by": "vidyut"}
+    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut", "voice_approval_id": ""}
     pays = [s.args for s in steps if s.reducer == "record_payment"]
     assert len(pays) == 2 and pays[0] == pays[1] and pays[0]["payment_ref"] == run["beats"]["4"]["charge"]["id"]
 
@@ -187,12 +190,17 @@ def test_round_two_has_distinct_bid_ids_and_a_lower_learner_price(run):
     assert p2 < p1
 
 
+def approves(step):
+    """An approver that says approved, so the run goes past the gate (the real one is a phone call)."""
+    return {"step": "approval_call", "approved": True, "reason": None, "call_id": "call_test", "voice_approval_id": "apr_test"}
+
+
 def test_execute_calls_in_order_paces_and_waits_for_the_deadline(steps):
     log, sleeps, now = [], [], [100.0]
     def sleep(x):
         sleeps.append(x)
         now[0] += x
-    bridge.execute(steps, clients(log), delay=2.0, say=lambda s: None, sleep=sleep, clock=lambda: now[0])
+    bridge.execute(steps, clients(log), delay=2.0, say=lambda s: None, sleep=sleep, clock=lambda: now[0], approver=approves)
     assert [(a, r) for a, r, _ in log] == [(s.actor, s.reducer) for s in steps]
     paced = [x for x in sleeps if x == 2.0]
     assert len(paced) == sum(1 for s in steps if s.pause)
@@ -203,9 +211,9 @@ def test_close_retries_while_the_round_is_still_open_and_accepts_already_closed(
     log = []
     fail = {"close_round": ["round is still open until its deadline", "round already closed"]}
     sleeps = []
-    bridge.execute(steps, clients(log, fail), delay=0, say=lambda s: None, sleep=sleeps.append, clock=lambda: 0.0)
+    bridge.execute(steps, clients(log, fail), delay=0, say=lambda s: None, sleep=sleeps.append, clock=lambda: 0.0, approver=approves)
     assert [r for _, r, _ in log].count("close_round") == 2 and 1.0 in sleeps
-    assert log[-1][1] == "record_payment"
+    assert log[-1][1] == "record_loss_report" and "record_payment" in [r for _, r, _ in log]
 
 
 def test_a_refused_reducer_stops_the_run(steps):
@@ -227,9 +235,9 @@ def test_divergence_is_reported_when_the_market_ranks_another_bid_first(run):
 
 def test_not_bridged_list_names_every_gap_and_no_secret():
     text = " ".join(bridge.NOT_BRIDGED)
-    for word in ("loss reports", "set_goal_state", "floors per condition"):
+    for word in ("set_goal_state", "floors per condition"):
         assert word in text
-    for fixed in ("buyer allowance", "set_allowance", "advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
+    for fixed in ("loss reports", "buyer name", "buyer allowance", "set_allowance", "advocate veto", "allowed_conditions", "alternative lines", "goal cap", "payment label", "footer"):
         assert fixed not in text, f"{fixed} is bridged now"
     assert "token" not in text.lower()
 
@@ -296,7 +304,8 @@ def test_the_gate_builds_a_fresh_pending_mandate_from_the_markets_rank_one(run):
     gate = bridge.DealGate(run)
     m = gate.prepare(Fake([], "referee", rows=market_rows(run)))
     assert m["status"] == "pending" and m["hash"] != old["hash"]
-    assert (m["deal_id"], m["amount"], m["payee"], m["buyer_id"]) == (old["deal_id"], old["amount"], old["payee"], old["buyer_id"])
+    assert (m["deal_id"], m["amount"], m["buyer_id"]) == (old["deal_id"], old["amount"], old["buyer_id"])
+    assert m["payee"] == "best-buy"          # #240: the mandate pays the winning seller id, not a SIM test address
     steps = [gate.bind(x) for x in bridge.plan(run, delay=0, rounds=1, live_call=True)]
     assert next(x for x in steps if x.reducer == "create_mandate").args["hash"] == m["hash"]
     assert [x.args["mandate_hash"] for x in steps if x.reducer in ("record_approval", "record_payment")] == [m["hash"]] * 3
@@ -319,9 +328,12 @@ def test_h5_the_bridge_pays_the_markets_number_one_not_the_demos_winner(run):
         outcomes = bridge.execute(bridge.plan(run, delay=0, rounds=1, live_call=live), clients(log, rows=rows), delay=0,
                                   say=lambda s: None, sleep=lambda x: None, clock=lambda: 0.0, approver=approver, deal_gate=gate)
         made = next(a for _, r, a in log if r == "create_mandate")
-        assert made["payee"] == gg["payee"] and made["deal_id"] == f"deal-{rows[0][2]}" and made["amount"] == rows[0][6]
+        assert made["payee"] == gg["id"] and made["deal_id"] == f"deal-{rows[0][2]}" and made["amount"] == rows[0][6]
         assert all(a["mandate_hash"] == made["hash"] for _, r, a in log if r in ("record_approval", "record_payment"))
-        assert "record_payment" in [r for _, r, _ in log] and all(o["approved"] for o in outcomes)
+        if live:
+            assert "record_payment" in [r for _, r, _ in log] and all(o["approved"] for o in outcomes)
+        else:   # #251: no call, no approval: the run ends at the gate with the mandate pending
+            assert not any(r in ("record_approval", "record_payment") for _, r, _ in log) and not outcomes[0]["approved"]
 
 
 @pytest.mark.parametrize("rows", [[], None, "unknown", "two-firsts"])
@@ -412,7 +424,7 @@ def test_live_call_approved_places_one_call_and_records_approval_then_payment(ru
     assert len(client.calls) == 1 and client.calls[0][0] == TO                       # exactly one call, to the configured number
     assert len(shown) == 1 and all(shown[0][0] not in str(v) for v in client.calls[0][1].values())   # the code is on screen only
     tail = [r for _, r, _ in log][[r for _, r, _ in log].index("create_mandate"):]
-    assert tail == ["create_mandate", "issue_approval_code", "record_approval", "record_payment", "record_payment"]
+    assert tail[:5] == ["create_mandate", "issue_approval_code", "record_approval", "record_payment", "record_payment"]
     assert outcomes[0]["approved"] is True and outcomes[0]["call_id"] == "call_1"
     assert gate.mandate["status"] == "approved"
 
@@ -448,7 +460,8 @@ def test_not_configured_denies_without_placing_a_call(run):
     approver = bridge.make_live_approver(gate, None, unconfigured="missing CARTESIA_API_KEY", buyer_name="Vidyut",
                                          on_code=lambda c, w: pytest.fail("no code is issued when nothing can be called"))
     log, outcomes = run_with(run, approver, gate)
-    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None}]
+    assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None,
+                         "voice_approval_id": None}]
     kinds = [r for _, r, _ in log]
     assert "create_mandate" in kinds and "record_approval" not in kinds and "record_payment" not in kinds
 

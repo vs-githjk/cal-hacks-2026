@@ -171,7 +171,11 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
         </ul>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <p id="goal-blocked" className="mt-3 text-[13px] text-muted">
+        Not connected yet: Find offers and Speak cannot send from this screen, even after pairing. Copy the request to the buyer agent in ASI:One to start a search.
+      </p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button type="button" onClick={viaAsiOne} className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink">
           Copy and open ASI:One
         </button>
@@ -186,10 +190,6 @@ export function GoalComposer({ buyerId }: { buyerId: string | null }) {
           Speak
         </button>
       </div>
-
-      <p id="goal-blocked" className="mt-3 text-[13px] text-muted">
-        Sending from this screen and voice entry are not connected yet. Copy the request to the buyer agent in ASI:One to start a search.
-      </p>
 
       <p role="status" aria-live="polite" className={`mt-2 text-[14px] ${status.kind === "error" ? "text-coral" : ""}`}>
         {status.kind === "sending" && "Sending..."}

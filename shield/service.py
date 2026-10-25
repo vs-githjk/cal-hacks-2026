@@ -5,13 +5,18 @@ import base64
 import hashlib
 import logging
 import os
+import json
+import re
+from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping, Optional
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from pay.replay import NonceStore
 from pay.tap import keyring
+from pay.tap import load_private_key
 from pay.reasons import reason_for
+from shield.receipt import parse_unique_json, sign_allow_receipt
 from shield.agent import verify_agent
 from shield.core import screen
 from shield.registry import Registry, load_registry
@@ -67,6 +72,68 @@ def handle_screen(payload: Any) -> dict:
     return _legacy(out, payload)
 
 
+def handle_screen_payment(payload: Any, registry: Registry, receipt_private_key=None) -> dict:
+    """Screen the exact Payment Protocol JSON and, only on allow, optionally attest its binding."""
+    p = payload if isinstance(payload, Mapping) else {}
+    message_id, sender = p.get("message_id"), p.get("sender_agent")
+    request_json, expected = p.get("request_json"), p.get("expected")
+    try:
+        if (not isinstance(message_id, str) or not message_id or not isinstance(sender, str) or not sender
+                or not isinstance(request_json, str) or len(request_json.encode("utf-8")) > 32 * 1024
+                or not isinstance(expected, Mapping)
+                or set(expected) != {"deal_id", "mandate_hash", "amount_cents", "currency", "payee"}):
+            raise ValueError("malformed payment-screen request")
+        seller = registry.get(sender)
+        if seller is None or seller.get("role") != "seller" or registry.is_denied(sender):
+            raise ValueError("payment sender is not a registered seller")
+        deal_id, mand_hash, amount_cents, currency, payee = (expected[k] for k in
+            ("deal_id", "mandate_hash", "amount_cents", "currency", "payee"))
+        if (not all(isinstance(x, str) and x for x in (deal_id, mand_hash, currency, payee))
+                or isinstance(amount_cents, bool) or not isinstance(amount_cents, int) or amount_cents <= 0
+                or currency != "USD" or payee != sender):
+            raise ValueError("invalid expected payment binding")
+        request = parse_unique_json(request_json)
+        if not isinstance(request, dict) or set(request) - {"accepted_funds", "recipient", "deadline_seconds", "reference", "description", "metadata"}:
+            raise ValueError("malformed RequestPayment")
+        funds = request.get("accepted_funds")
+        if (not isinstance(funds, list) or len(funds) != 1 or not isinstance(funds[0], dict)
+                or set(funds[0]) != {"amount", "currency", "payment_method"}):
+            raise ValueError("RequestPayment must contain one complete accepted-funds entry")
+        if not isinstance(funds[0].get("amount"), str):
+            raise ValueError("RequestPayment amount must be a string")
+        if not re.fullmatch(r"[0-9]+\.[0-9]{2}", funds[0]["amount"]):
+            raise ValueError("RequestPayment amount must use canonical cents")
+        try:
+            amount = Decimal(funds[0]["amount"])
+        except (InvalidOperation, TypeError, ValueError):
+            raise ValueError("invalid RequestPayment amount") from None
+        if (not amount.is_finite() or amount <= 0 or amount * 100 != (amount * 100).to_integral_value()
+                or int(amount * 100) != amount_cents or funds[0]["currency"] != currency
+                or funds[0]["payment_method"] != "stripe" or request.get("recipient") != payee
+                or request.get("reference") != mand_hash or request.get("description") != "deal " + deal_id
+                or isinstance(request.get("deadline_seconds"), bool)
+                or not isinstance(request.get("deadline_seconds"), int) or request["deadline_seconds"] <= 0):
+            raise ValueError("RequestPayment does not match expected binding")
+    except (ValueError, TypeError, UnicodeError, KeyError, json.JSONDecodeError):
+        out = screen("invalid RequestPayment", {"request_id": str(message_id or "payment-screen")})
+        out.update(verdict="block", rule_ids=["shield.payment.request_invalid"], severity="critical", evidence_spans=[])
+        out = _legacy(out, p)
+        out["reasons"] = out["rule_ids"]
+        out["attack_type"] = "mandate"
+        return out
+
+    out = screen(request_json, {"sender_role": "seller", "payee_of_record": payee, "request_id": message_id})
+    out = _legacy(out, p)
+    if out["verdict"] == "allow" and receipt_private_key is not None:
+        try:
+            out["receipt"] = sign_allow_receipt(private_key=receipt_private_key, message_id=message_id,
+                request_json=request_json, deal_id=deal_id, mandate_hash=mand_hash, amount_cents=amount_cents,
+                currency=currency, payee=payee)
+        except (TypeError, ValueError):
+            log.error("payment-screen receipt signing failed")
+    return out
+
+
 def handle_verify_mandate(payload: Any, keys: Optional[Mapping], store: Optional[NonceStore]) -> dict:
     # Keys come only from the server; a "keys" field in the payload is ignored on purpose.
     expected = payload.get("expected") if isinstance(payload, Mapping) else None
@@ -106,3 +173,14 @@ def keys_from_env() -> dict:
 
 def store_from_env() -> NonceStore:
     return NonceStore(os.environ.get("SHIELD_NONCE_DB") or None)
+
+
+def receipt_private_key_from_env():
+    """Optional Shield-owned receipt signer; never fall back to the buyer's VISA TAP key."""
+    path = os.environ.get("SHIELD_RECEIPT_PRIVATE_KEY_PATH")
+    if not path:
+        return None
+    try:
+        return load_private_key(path=path)
+    except Exception as e:
+        raise ValueError("SHIELD_RECEIPT_PRIVATE_KEY_PATH is not a valid Ed25519 key file") from e

@@ -20,14 +20,14 @@
   --accent-2: #e6e6e6;
   --accent-ink: #000000;
   --accent-soft: rgba(255, 255, 255, 0.1);
-  --coral: #ffffff; /* flare: vetoes, denials, errors (read by the word and the strikethrough) */
-  --coral-soft: rgba(255, 255, 255, 0.12);
-  --mint: #ffffff; /* won, approved, live */
-  --mint-soft: rgba(255, 255, 255, 0.16);
-  --amber: #a6a6a6; /* SIM */
-  --amber-soft: rgba(255, 255, 255, 0.06);
-  --sky: #d9d9d9; /* MIRROR, source links */
-  --sky-soft: rgba(255, 255, 255, 0.1);
+  --coral: #e07a6f; /* flare: vetoes, denials, errors (read by the word and the strikethrough) */
+  --coral-soft: rgba(224, 122, 111, 0.12);
+  --mint: #74b98f; /* won, approved, live */
+  --mint-soft: rgba(116, 185, 143, 0.12);
+  --amber: #c9a35a; /* SIM */
+  --amber-soft: rgba(201, 163, 90, 0.12);
+  --sky: #8fb0d6; /* MIRROR, source links */
+  --sky-soft: rgba(143, 176, 214, 0.12);
   --slate: #8c8c8c;
   --slate-soft: rgba(255, 255, 255, 0.07);
   --grid: rgba(255, 255, 255, 0.05);
@@ -80,6 +80,7 @@ body {
 
 /* One card style for every panel. Keep .panel so untouched pages still render. */
 .panel,
+.card { position: relative; isolation: isolate; }
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -109,26 +110,10 @@ body::before {
   pointer-events: none;
   background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px), linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
   background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, black, transparent 75%);
 }
 main, header, footer { position: relative; z-index: 1; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
-/* Touch the lines: a card's border lights up under the pointer (--mx, --my set by the shell). */
-.card { position: relative; isolation: isolate; }
-.card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  border-radius: inherit;
-  padding: 1px;
-  background: radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), var(--accent), transparent 70%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
 
 @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 @keyframes orbit { to { transform: rotate(360deg) } }

@@ -3,11 +3,10 @@
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
 import { originMixLabel, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
-import { ASI_ONE_URL } from "@/lib/agents";
+import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
-import { DotPattern } from "./ui/dot-pattern";
 
 
 export interface BuyerScreenProps {
@@ -25,7 +24,6 @@ export interface BuyerScreenProps {
   approval: ApprovalView | null;
   /** A live mandate waiting for this buyer; when present it replaces the sample approval card. */
   review?: ReviewView | null;
-  onTyped?: (mandateHash: string, code: string) => Promise<string>;
   receipt: ReceiptView | null;
   feed: FeedItem[];
   /** Id of the latest round close event; a new one flips the bids open. */
@@ -58,7 +56,7 @@ function Searches({ goals }: { goals: GoalView[] }) {
             <p className="min-w-0 text-[15px] font-medium text-balance"><q>{g.text}</q></p>
             <StatePill state={g.state} />
           </div>
-          <p className="mt-1 text-[13px] text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
+          <p className="mt-1 text-[13px] tabular-nums text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
         </Card>
       ))}
     </div>
@@ -74,7 +72,7 @@ function SpendingRules({ allowance: a }: { allowance: GoalView["allowance"] }) {
       ) : a.perPurchase > 0 ? (
         <>
           <p className="text-[28px] font-semibold tracking-[-0.02em] tabular-nums">{money(a.perPurchase)}</p>
-          <p className="mt-1 text-[13px] text-muted">per buy without a call. {money(a.spent)} of {money(a.periodLimit)} used this {a.period}, step {a.ladderStep}.</p>
+          <p className="mt-1 text-[13px] tabular-nums text-muted">per buy without a call. {money(a.spent)} of {money(a.periodLimit)} used this {a.period}, step {a.ladderStep}.</p>
         </>
       ) : (
         <p className="text-[18px] font-medium">Every buy calls you first.</p>
@@ -93,8 +91,8 @@ export function BuyerScreen(p: BuyerScreenProps) {
       ) : (
         <>
           {p.composer}
-          {p.review && p.onTyped ? (
-            <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} onTyped={(c) => p.onTyped!(p.review!.mandateHash, c)} />
+          {p.review ? (
+            <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
           ) : (
             <Card>
               <Label>Needs your attention</Label>
@@ -112,7 +110,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
               <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
                 The cards below show the latest public round. They are not yet matched to a specific search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.
               </p>
-              <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={goal.cap} /></SampleOnly>
+              <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
               <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
               <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
                 <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
@@ -151,9 +149,7 @@ export function MarketScreen(p: MarketScreenProps) {
   return (
     <div className="grid gap-3.5">
       <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        {/* Very faint, static, decorative; fades out before the small round text on the right. */}
-        <DotPattern width={12} height={12} className="fill-line [mask-image:linear-gradient(to_right,white,transparent_40%)]" />
-        <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee's floor</span></div>
+        <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee&apos;s floor</span></div>
         <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {p.round && <span>{p.round.id} · {p.round.needId}</span>}
           {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}

@@ -3,16 +3,19 @@
 The checks run on can_charge, on mark_used and on the MerchantSim charge path. A mutation that lets "pending" through
 (can_charge accepting status pending) must fail many tests here, not two.
 """
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from pay.approval import ApprovalService
 from pay.mandate import HASH_FIELDS, MandateError, can_charge, mandate_hash, mark_used, new_mandate
 from pay.merchant_sim import MerchantSim
 from pay.replay import NS_MANDATE, NonceStore
 from pay.tap import keyring, sign_request
+from shield.receipt import sign_allow_receipt
 
 NOW = datetime(2026, 10, 24, 1, 0, 0, tzinfo=timezone.utc)
 URL = "https://merchant.sim.test/v1/charge"
@@ -28,6 +31,11 @@ BUYERS = [None, BUYER]
 CASES = [(s, a) for s in STATES for a in APPROVAL_IDS] + [("approved", a) for a in (None, "", "   ")]
 REASON = {"pending": "not_approved", "denied": "denied", "expired_status": "expired", "expired_clock": "expired",
           "used": "already_used", "approved_nonce_spent": "replayed_mandate", "approved": "no_approval_id"}
+
+# MerchantSim: the reasons it may give for each state (a state with no usable approval record is refused by the approved-transaction gate first).
+SIM_REASONS = {**{s: {"no_trusted_approval"} for s in STATES + ["approved"]},
+              "expired_clock": {"no_trusted_approval", "expired"},
+              "approved_nonce_spent": {"no_trusted_approval", "replayed_mandate"}}
 
 
 def expected_reason(state, approval_id):
@@ -86,22 +94,61 @@ class FakeStripe:
 
 
 def sim_handle(m, store, when):
-    """A validly signed charge request for `m` through MerchantSim; returns (result, stripe calls)."""
-    priv = Ed25519PrivateKey.generate()
+    """A validly signed, receipted charge request for `m` through MerchantSim; returns (result, stripe calls).
+
+    The transaction carries a real phone approval of a pristine copy of the mandate, so the only thing that can stop
+    the charge is the state under test. A mandate whose status or approval_id is not an approval never matches that
+    record and is refused by the sim's own approved-transaction gate before can_charge is reached.
+    """
+    m = dict(m)
+    voice = None
+    if m["status"] in ("approved", "used") or (m.get("approval_id") or "").strip():
+        approvals = ApprovalService("throwaway-test-secret-0123456789")
+        pristine = dict(m, status="pending")
+        pristine.pop("approval_id", None)
+        session, code = approvals.issue(pristine, channel="phone", now=NOW)
+        session.start_call(now=NOW)
+        session.begin_listening(now=NOW)
+        session.recording_ref = "cartesia:ac_test"  # call evidence, as voice_cartesia records it
+        decision = session.approve(code + " approve", now=NOW + timedelta(seconds=1))
+        assert decision.approved
+        voice = decision.record
+        if (m.get("approval_id") or "").strip():
+            m["approval_id"] = voice["id"]
+    transaction = {"deal_id": DEAL, "buyer_id": BUYER, "goal_id": m.get("goal_id"), "need_id": "need-1",
+        "bid_id": "bid-1", "phase": "approved", "deal": {"id": DEAL, "goal_id": m.get("goal_id"),
+        "need_id": "need-1", "bid_id": "bid-1", "amount": AMOUNT, "payee": PAYEE}, "order": None,
+        "advocate_card": {"need_id": "need-1", "bid_id": "bid-1", "warnings": [], "recommendation": "buy",
+        "wait_until": "", "call_reason": {"rule_id": "advocate.ok", "summary": "No problems found in the checks",
+        "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
+        "rule_id": "advocate.ok", "reason": "No problems found in the checks",
+        "source_url": "https://github.com/vs-githjk/cal-hacks-2026/blob/main/agents/advocate/checks.py"},
+        "mandate": dict(m), "voice_approval": voice}
+    tap_private, receipt_private = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
     stripe = FakeStripe()
-    sim = MerchantSim(keys=keyring(priv.public_key()), store=store, approvals={DEAL: dict(m)}.get, charger=stripe)
-    body = json.dumps({"deal_id": DEAL, "mandate": m}).encode()
-    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=priv, now=when)
-    return sim.handle(method="POST", url=URL, headers=headers, body=body, now=when), stripe.calls
+    sim = MerchantSim(keys=keyring(tap_private.public_key()), receipt_keys=keyring(receipt_private.public_key()),
+        store=store, approvals=lambda deal_id, buyer_id: transaction if (deal_id, buyer_id) == (DEAL, BUYER) else None,
+        charger=stripe)
+    body = json.dumps({"accepted_funds": [{"amount": "%.2f" % AMOUNT, "currency": "USD", "payment_method": "stripe"}],
+        "recipient": PAYEE, "deadline_seconds": 600, "reference": m["hash"], "description": "deal " + DEAL},
+        separators=(",", ":")).encode()
+    message_id = "req:" + hashlib.sha256(BUYER.encode() + b"\n" + body).hexdigest()
+    receipt = sign_allow_receipt(private_key=receipt_private, message_id=message_id, request_json=body.decode("utf-8"),
+        deal_id=DEAL, mandate_hash=m["hash"], amount_cents=129999, currency="USD", payee=PAYEE, now=when)
+    headers = sign_request(method="POST", url=URL, body=body, mandate=m, private_key=tap_private, now=when)
+    out = sim.handle(method="POST", url=URL, headers=headers, body=body, receipt=receipt, message_id=message_id,
+                     buyer_id=BUYER, now=when)
+    return out, stripe.calls
 
 
 @pytest.mark.parametrize("state, approval_id", CASES)
 def test_the_merchant_sim_never_charges_a_mandate_that_is_not_approved(state, approval_id):
     m, store, when = mandate_in(state, approval_id)
     out, calls = sim_handle(m, store, when)
-    # refused for the state itself, not for a broken signature (verify_request sees a spent nonce before can_charge does)
-    want = "replayed_mandate" if state == "approved_nonce_spent" else expected_reason(state, approval_id)
-    assert out["status"] == "refused" and out["reason"] == want and calls == [], out
+    # Refused for the state itself where the request gets as far as can_charge (a spent nonce is seen by verify_request
+    # first). Every other case is turned away earlier by the sim's own approved-transaction gate.
+    assert out["status"] == "refused" and calls == [], out
+    assert out["reason"] in SIM_REASONS[state], (state, approval_id, out["reason"])
 
 
 def test_an_approved_mandate_with_an_approval_id_still_charges():

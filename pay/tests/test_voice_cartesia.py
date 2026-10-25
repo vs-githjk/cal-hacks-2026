@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from pay import voice_cartesia as vc
-from pay.approval import ApprovalError, ApprovalService
+from pay.approval import CODE_TTL_SECONDS, VOICE_CODE_TTL_SECONDS, ApprovalError, ApprovalService
 from pay.mandate import can_charge, new_mandate
 from pay.replay import NonceStore
 from pay.voice_cartesia import (CartesiaClient, CartesiaError, NumberNotAllowed, assert_clean, build_variables,
@@ -82,6 +82,11 @@ def _ticker():
         t[0] += 1.0
         return t[0]
     return clock
+
+
+def test_voice_and_shared_approval_ttl_match_while_browser_default_stays_shorter():
+    assert vc.CALL_CODE_TTL_S == VOICE_CODE_TTL_SECONDS == 300
+    assert CODE_TTL_SECONDS == 120
 
 
 def other_pair(code):
@@ -194,6 +199,71 @@ def test_empty_transcript_is_retried_before_giving_up(world):
         return [] if calls["n"] < 3 else [U(f"{c} approve")]
     res, _ = go(world, fn)
     assert res.approved
+
+
+@pytest.mark.parametrize("failure", ["code_delivery", "script", "nonfinal", "expired"])
+def test_injected_utc_clock_controls_call_session_bookkeeping(world, monkeypatch, failure):
+    service, mandate, _ = world
+    current = [T0]
+    original_issue = service.issue
+    captured = {}
+
+    def issue(value, **kwargs):
+        session, code = original_issue(value, **kwargs)
+        captured["session"] = session
+        original_start = session.start_call
+
+        def start_call(now=None):
+            captured["started_at"] = now
+            return original_start(now=now)
+
+        session.start_call = start_call
+        return session, code
+
+    monkeypatch.setattr(service, "issue", issue)
+
+    if failure == "code_delivery":
+        def deliver(_code):
+            current[0] = T0 + timedelta(seconds=5)
+            raise RuntimeError("private display unavailable")
+
+        with pytest.raises(RuntimeError, match="private display unavailable"):
+            run_approval_call(mandate, REASON, FakeClient(lambda _code: []), service,
+                              on_code=deliver, now=lambda: current[0])
+        expected_decision = T0 + timedelta(seconds=5)
+    elif failure == "script":
+        def invalid_script(_variables, _code):
+            current[0] = T0 + timedelta(seconds=6)
+            raise ScriptError("invalid spoken script")
+
+        monkeypatch.setattr(vc, "assert_clean", invalid_script)
+        result = run_approval_call(mandate, REASON, FakeClient(lambda _code: []), service,
+                                  now=lambda: current[0])
+        assert not result.approved and result.reason == "call_failed"
+        expected_decision = T0 + timedelta(seconds=6)
+    else:
+        expiry = 301 if failure == "expired" else 8
+
+        class EndedAfterDelay(FakeClient):
+            def get_call(self, call_id):
+                current[0] = T0 + timedelta(seconds=expiry)
+                return super().get_call(call_id)
+
+        if failure == "expired":
+            transcript = lambda code: [U(f"{code} approve", at=expiry)]
+        else:
+            transcript = lambda code: [U(f"{other_pair(code)} approve")]
+        client = EndedAfterDelay(transcript)
+        result = run_approval_call(mandate, REASON, client, service, on_code=lambda code: setattr(client, "code", code),
+                                   now=lambda: current[0], sleep=lambda _seconds: None)
+        assert not result.approved
+        assert captured["started_at"] == T0
+        expected_decision = T0 + timedelta(seconds=expiry)
+        if failure == "expired":
+            assert result.record["result"] == "expired"
+
+    assert captured["session"].decided_at == expected_decision
+    assert captured["session"].result != "approved"
 
 
 def test_failed_dial_request_denies_and_closes_the_session(world):
