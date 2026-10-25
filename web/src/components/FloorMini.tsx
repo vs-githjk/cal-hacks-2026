@@ -25,11 +25,10 @@ export function FloorMini({ className = "" }: { className?: string }) {
   }, [reduce]);
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-[rgba(214,235,253,0.22)] bg-[linear-gradient(180deg,#1b3a58_0%,#14314c_100%)] p-5 text-floor-line shadow-[0_30px_80px_-20px_rgba(11,27,43,0.45)] md:p-6 ${className}`}
+      className={`fm-glass-dark relative overflow-hidden rounded-[22px] p-5 text-floor-line md:p-6 ${className}`}
       aria-label="The floor, in miniature"
       role="img"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[rgba(255,255,255,0.08)]" aria-hidden />
       <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em] text-ghost-1">
         <span className="inline-flex items-center gap-2"><span className="dot text-[#4f8df7]" aria-hidden /> The floor</span>
         <span>Round 1 of 3</span>

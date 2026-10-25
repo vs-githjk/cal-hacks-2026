@@ -17,7 +17,7 @@ export function DashboardPreview() {
   const live = latestRound(rounds);
   const liveSealed = live ? Number(live.sealedCount) : null;
   return (
-    <div className="glass overflow-hidden rounded-[20px] p-0" role="img" aria-label="The buyer dashboard: a goal, a sealed round, an approval code and a receipt, from a recorded sample run">
+    <div className="fm-glass overflow-hidden rounded-[22px] p-0" role="img" aria-label="The buyer dashboard: a goal, a sealed round, an approval code and a receipt, from a recorded sample run">
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <span className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
           <span className="flex gap-1.5" aria-hidden><i className="h-2.5 w-2.5 rounded-full bg-coral-mark/70" /><i className="h-2.5 w-2.5 rounded-full bg-amber/60" /><i className="h-2.5 w-2.5 rounded-full bg-mint-mark/70" /></span>
