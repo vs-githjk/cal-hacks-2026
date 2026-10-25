@@ -248,14 +248,15 @@ export function stateLabel(state: GoalView["state"]): string {
   return state.toLowerCase().replaceAll("_", " ");
 }
 
-interface GoalNoteRow { id: bigint; goalId: string; text: string }
+interface GoalNoteRow { id: bigint; goalId: string; klass: string; text: string }
 
-/** The text of the newest note (highest id) for each goal id. Notes with no goal id belong to no card. */
+/** The text of the newest state note (highest id, klass "state") for each goal id. Veto and other notes are feed lines, not the card's
+ * state. Notes with no goal id belong to no card. */
 function latestNotes(notes: readonly GoalNoteRow[]): Map<string, string> {
   const best = new Map<string, GoalNoteRow>();
   for (const n of notes) {
     const cur = best.get(n.goalId);
-    if (n.goalId && (!cur || cur.id < n.id)) best.set(n.goalId, n);
+    if (n.goalId && n.klass === "state" && (!cur || cur.id < n.id)) best.set(n.goalId, n);
   }
   return new Map([...best].map(([k, v]) => [k, v.text]));
 }
