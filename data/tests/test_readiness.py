@@ -293,9 +293,14 @@ def test_script_blocks_are_still_found_in_any_case_and_with_other_attributes():
                                   '<script type="application/json" id="listing">"x"</script>',
                                   '<script type="application/json" id="listing">{bad</script>'])
 def test_a_page_that_cannot_be_parsed_is_unreadable_never_ready(html):
-    r = check_page("https://shop.example/x", html, now=NOW)
+    # RT-20: the <script id="listing"> block is read only on our own liar pages, so those cases use one of our hosts
+    url = "http://localhost:8765/x.html" if 'id="listing"' in html else "https://shop.example/x"
+    r = check_page(url, html, now=NOW)
     assert r["status"] == "unreadable" and r["findings"] == [] and r["summary"].startswith("UNREADABLE")
-    assert check_listing("https://shop.example/x", fetch=lambda u: html.encode(), now=NOW)["status"] == "unreadable"
+    assert check_listing(url, fetch=lambda u: html.encode(), now=NOW)["status"] == "unreadable"
+    if 'id="listing"' in html:   # on any other host the block is ignored, never parsed and never "ready"
+        other = check_page("https://shop.example/x", html, now=NOW)
+        assert other["status"] != "ready" and other["status"] != "unreadable"
 
 
 @pytest.mark.parametrize("listing", ["[1]", '"x"', "7", "[" * 100_000 + "]" * 100_000])

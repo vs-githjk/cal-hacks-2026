@@ -4,8 +4,11 @@ check_claim(claim, fetch=None, history=None) ->
     {"result": "verified"|"unverified"|"false", "evidence_url", "checked_at" (ISO-8601 UTC), "method",
      "evidence_hash" (sha256 of the page bytes), "reason"}
 Input is a Claim (contracts/Claim.schema.json); `result` maps to Claim.check. The page is claim["evidence_url"].
-Optional claim["field"] and claim["value"] skip text parsing. Page facts come from our SIM pages'
-<script id="listing"> JSON, else schema.org JSON-LD. A page we cannot read is "unverified", never "false".
+Optional claim["field"] and claim["value"] skip text parsing. Page facts come from schema.org JSON-LD; our own SIM liar pages
+(is_our_liar_page) also carry a <script id="listing"> JSON block, read first on those pages only (RT-20: on any other host a
+seller could write that block, so it is ignored). Our SIM seller pages state their facts as schema.org JSON-LD like any store. A page we cannot read is "unverified", never "false".
+A price claim is in USD unless it names another currency ("C$1,749.99", "$1,749.99 CAD", or claim["currency"]); when the page
+states a priceCurrency that differs, the price claim is "unverified" and the reason names both currencies (RT-19).
 Wording is neutral: "differs from the listing at time T", "did not match the price history", "could not verify".
 """
 import hashlib
@@ -17,7 +20,7 @@ from urllib.parse import urlparse
 from data.fit_checker.tables import MICROARCH_SOCKET
 
 PATTERNS = [  # (field, regex, value from match); first match per field, every field is checked
-    ("was_price", r"\bwas\s*\$?\s*([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(1))),
+    ("was_price", r"\bwas\s*(?:(US|CA|CDN|AU|NZ|HK|MX|C|A|S)?\$)?\s*([\d,]+(?:\.\d+)?)", lambda m: _num(m.group(2))),
     ("socket", r"\bsocket\s*(AM\d|LGA\s?\d{3,4})", lambda m: m.group(1).replace(" ", "").upper()),
     ("return_days", r"(\d+)[- ]day returns?", lambda m: int(m.group(1))),
     ("stock", r"\b(out of stock|not in stock|unavailable|sold out)\b", lambda m: False),
@@ -54,38 +57,79 @@ def _money(v):
     return _num(m.group(0)) if m else None
 
 
-def _price(text):
-    """(amount,) for the claimed price; (None,) when it is ambiguous (two different amounts, or an offer amount such as a
-    gift card or an order minimum); () when no amount is the price."""
+# RT-19: a "$" amount is USD unless the claim names another currency right beside it.
+CURRENCY_PREFIX = {"US": "USD", "C": "CAD", "CA": "CAD", "CDN": "CAD", "A": "AUD", "AU": "AUD", "NZ": "NZD", "HK": "HKD", "S": "SGD", "MX": "MXN"}
+CURRENCY_CODES = frozenset({"USD", "CAD", "EUR", "GBP", "AUD", "NZD", "JPY", "CNY", "CHF", "MXN", "INR", "SEK", "NOK", "DKK", "SGD",
+                            "HKD", "KRW", "BRL", "PLN", "CZK", "ZAR", "TWD"})
+_PREFIX_BEFORE = re.compile(r"(?<![A-Za-z0-9])(US|CA|CDN|AU|NZ|HK|MX|C|A|S)$", re.I)   # letters glued to the $ sign: C$1,749
+_CODE_BEFORE = re.compile(r"(?<![A-Za-z])([A-Za-z]{3})\s?$")                            # CAD $1,749
+_CODE_AFTER = re.compile(r"^\s?([A-Za-z]{3})(?![A-Za-z])")                              # $1,749 CAD
+
+
+def _currency_code(v):
+    """A three-letter currency code upper-cased, else None (missing, "$", "dollars", 840)."""
+    return v.strip().upper() if isinstance(v, str) and re.fullmatch(r"[A-Za-z]{3}", v.strip()) else None
+
+
+def _amount_currency(before, after):
+    """The currency a claim names beside one "$" amount: a prefix glued to the sign (C$), else a code just before or after
+    (CAD $5, $5 CAD). USD when it names none."""
+    m = _PREFIX_BEFORE.search(before)
+    if m:
+        return CURRENCY_PREFIX[m.group(1).upper()]
+    for found in (_CODE_BEFORE.search(before), _CODE_AFTER.match(after)):
+        if found and found.group(1).upper() in CURRENCY_CODES:
+            return found.group(1).upper()
+    return "USD"
+
+
+def _price_and_currency(text):
+    """((amount,), currency): (amount,) for the claimed price; (None,) when it is ambiguous (two different amounts, or an
+    offer amount such as a gift card or an order minimum); () when no amount is the price. The currency is the one named
+    beside that amount, USD when none; two amounts in two currencies are ambiguous too."""
     amounts, offer = [], False
     for m in re.finditer(r"\$\s?([\d,]+(?:\.\d+)?)", text):
         before, after = text[:m.start()], text[m.end():]
         if OFFER_BEFORE.search(before) or OFFER_AFTER.search(after):
             offer = True
         elif not (NOT_PRICE_BEFORE.search(before) or NOT_PRICE_AFTER.search(after)):
-            amounts.append(_num(m.group(1)))
-    if offer or len(set(amounts)) > 1:
-        return (None,)
-    return (amounts[0],) if amounts else ()
+            amounts.append((_num(m.group(1)), _amount_currency(before, after)))
+    if offer or len({a for a, _ in amounts}) > 1 or len({c for _, c in amounts}) > 1:
+        return (None,), "USD"
+    return ((amounts[0][0],), amounts[0][1]) if amounts else ((), "USD")
 
 
-def parse_claims(claim):
-    """Every field the claim states, in PATTERNS order. A "was $X" amount is not also read as the current price."""
+def _price(text):
+    return _price_and_currency(text)[0]
+
+
+def _parse(claim):
+    """([(field, value)], {field: currency}): every field the claim states, in PATTERNS order, and the currency its amount is in
+    (USD unless named, or claim["currency"]). A "was $X" amount is not also read as the current price."""
+    named = _currency_code(claim.get("currency"))
     if claim.get("field"):
-        return [(claim["field"], claim.get("value"))]
+        return [(claim["field"], claim.get("value"))], {claim["field"]: named or "USD"}
     text = claim.get("text") or ""
-    found = {}
+    found, currency = {}, {}
     for field, rx, val in PATTERNS:
         if field == "price":
-            for v in _price(text):
+            values, cur = _price_and_currency(text)
+            for v in values:
                 found.setdefault("price", v)
+                currency.setdefault("price", cur)
             continue
         m = re.search(rx, text, re.I)
         if m and field not in found:
             found[field] = val(m)
             if field == "was_price":
+                currency[field] = CURRENCY_PREFIX[m.group(1).upper()] if m.group(1) else _amount_currency("", text[m.end():])
                 text = text[:m.start()] + text[m.end():]
-    return list(found.items())
+    return list(found.items()), {f: named or currency.get(f, "USD") for f in found}
+
+
+def parse_claims(claim):
+    """Every field the claim states, in PATTERNS order. A "was $X" amount is not also read as the current price."""
+    return _parse(claim)[0]
 
 
 def parse_claim(claim):
@@ -196,18 +240,43 @@ def ld_offer(product):
     return offer if isinstance(offer, dict) else {}
 
 
+def _ld_currency(offer):
+    """The offer's priceCurrency as a three-letter code, else the first priceSpecification's (the order readiness reads them in);
+    None when neither is a readable code (RT-19)."""
+    cur = _currency_code(offer.get("priceCurrency"))
+    if cur:
+        return cur
+    specs = offer.get("priceSpecification")
+    for spec in specs if isinstance(specs, list) else [specs]:
+        cur = _currency_code(spec.get("priceCurrency")) if isinstance(spec, dict) else None
+        if cur:
+            return cur
+    return None
+
+
 def page_facts(html, url=None):
     """(facts, how) from our SIM <script id="listing"> JSON, else the page's schema.org Product (see ld_product).
-    Raises ValueError when the listing JSON is not a JSON object or the page's JSON is too deeply nested to parse."""
-    body = next((b for tag, b in script_blocks(html) if tag == LISTING_TAG), None)
+    RT-20: the listing block is read only when `url` is one of our own demo liar pages (is_our_liar_page). On any other host,
+    and when no url is given, a seller could write that block to say anything, so it is ignored and never parsed.
+    Raises ValueError when our listing JSON is not a JSON object or the page's JSON is too deeply nested to parse."""
+    body = next((b for tag, b in script_blocks(html) if tag == LISTING_TAG), None) if is_our_liar_page(url) else None
     if body is not None:
         data = _loads(body, "listing JSON")
         if not isinstance(data, dict):
             raise ValueError("listing JSON is not an object")
         if "warranty_months" not in data:
-            wm = _text_warranty(data.get("warranty"), data.get("description"))
+            wm = _text_warranty(data.get("warranty"))
+            if wm is None:
+                wm = _text_warranty(data.get("description"))
+                if wm is not None:
+                    data["warranty_source"] = "description"
             if wm is not None:
                 data["warranty_months"] = wm
+        cur = _currency_code(data.get("priceCurrency")) or _currency_code(data.get("currency"))
+        data.pop("priceCurrency", None)
+        data.pop("currency", None)
+        if cur:
+            data["currency"] = cur
         return data, "page listing JSON"
     notes = []
     node = ld_product(html, url, notes)
@@ -216,11 +285,16 @@ def page_facts(html, url=None):
     offer = ld_offer(node)
     cond = str(offer.get("itemCondition") or "").rsplit("/", 1)[-1]
     avail = str(offer.get("availability") or "").rsplit("/", 1)[-1]
-    facts = {"title": node.get("name"), "price": _money(offer.get("price")),
-             "condition": LD_CONDITION.get(cond), "stock": avail or None,
+    structured = node.get("warranty") or offer.get("warranty")
+    described = None if structured else _text_warranty(node.get("description"))
+    condition = LD_CONDITION.get(cond)
+    if condition == "used" and re.search(r"\bopen[- ]box\b", str(node.get("name") or ""), re.I):
+        condition = "open-box"   # schema.org has no open-box term: stores (and our SIM pages) say UsedCondition and name it so
+    facts = {"title": node.get("name"), "price": _money(offer.get("price")), "currency": _ld_currency(offer),
+             "condition": condition, "stock": avail or None,
              "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
-             "warranty_months": _ld_warranty(node.get("warranty") or offer.get("warranty"))
-             if (node.get("warranty") or offer.get("warranty")) else _text_warranty(node.get("description"))}
+             "warranty_months": _ld_warranty(structured) if structured else described,
+             "warranty_source": "description" if described is not None else None}
     return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD" + "".join(f"; {n}" for n in notes)
 
 
@@ -335,8 +409,8 @@ def _history(url, facts, fetch, history, observations=None):
     return series or None
 
 
-def judge(field, value, facts, at, series):
-    """-> (result, reason)"""
+def judge(field, value, facts, at, series, currency="USD"):
+    """-> (result, reason). `currency` is the currency the claim's amount is in (USD unless it names another, RT-19)."""
     if field == "condition":
         page = facts.get("condition")
         if not page:
@@ -349,9 +423,16 @@ def judge(field, value, facts, at, series):
         page = _money(facts.get("price"))
         if page is None:
             return "unverified", "could not verify: the page states no price"
+        shown = facts.get("currency")
+        if shown and shown != currency:   # 1,749.99 CAD is not $1,749.99: never verified, and never false either
+            return "unverified", f"could not verify: the claim is in {currency} and the page prices in {shown}, so the amounts cannot be compared"
+        if not shown and currency != "USD":   # a page with no currency is read as USD: a claim in CAD cannot be checked against it
+            return "unverified", f"could not verify: the claim is in {currency} and the page states no currency, so the amounts cannot be compared"
         return ("verified", f"the page shows ${page:,.2f}") if abs(page - value) < 0.01 else \
             ("false", f"claim says ${value:,.2f}; differs from the listing at {at}: the page shows ${page:,.2f}")
     if field == "was_price":
+        if currency != "USD":
+            return "unverified", f"could not verify: the claim is in {currency} and our price history is in USD"
         if not series:
             return "unverified", "could not verify: no dated price history from our own captures"
         top = max(series, key=lambda p: p["price"])
@@ -384,8 +465,9 @@ def judge(field, value, facts, at, series):
         page = facts.get("warranty_months")
         if page is None:
             return "unverified", "could not verify: no warranty term on the page"
-        return ("verified", f"the page shows a {page}-month warranty") if page == value else \
-            ("false", f"claim says {value} months of warranty; differs from the listing at {at}: the page shows {page} months")
+        own = " (from the seller's own description)" if facts.get("warranty_source") == "description" else ""
+        return ("verified", f"the page shows a {page}-month warranty{own}") if page == value else \
+            ("false", f"claim says {value} months of warranty; differs from the listing at {at}: the page shows {page} months{own}")
     if field == "return_days":
         policy = str(facts.get("return_policy") or "")
         if "not permitted" in policy:
@@ -405,7 +487,7 @@ def check_claim(claim, fetch=None, history=None, observations=None):
     unverified = lambda why: {**out, "method": f"could not verify: {why}", "reason": "could not verify"}
     at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     out = {"result": "unverified", "evidence_url": url, "checked_at": at, "evidence_hash": ""}
-    fields = parse_claims(claim)
+    fields, currencies = _parse(claim)
     if not fields:
         return unverified("claim text not recognized")
     if urlparse(url).scheme not in ("http", "https"):
@@ -421,7 +503,8 @@ def check_claim(claim, fetch=None, history=None, observations=None):
     out["evidence_hash"] = hashlib.sha256(body).hexdigest()
     try:  # a malformed page must not abort a batch or turn into "false"
         facts, source = page_facts(body.decode("utf-8", "replace"), url)
-        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history, observations) if f == "was_price" else None))
+        results = [(f, *judge(f, v, facts, at, _history(url, facts, fetch, history, observations) if f == "was_price" else None,
+                              currencies.get(f, "USD")))
                    for f, v in fields]
     except (ValueError, TypeError, KeyError, AttributeError, OverflowError, RecursionError) as e:
         return unverified(f"page could not be parsed ({type(e).__name__})")
