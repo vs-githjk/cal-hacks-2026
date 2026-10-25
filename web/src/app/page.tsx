@@ -6,6 +6,7 @@ import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
 import { Corral } from "@/components/Corral";
+import { HowItWorks, Sides } from "@/components/Explainer";
 import { OriginChip, clock } from "@/components/ui";
 import { asOrigin, bidsFromRows, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
@@ -64,6 +65,10 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      <HowItWorks />
+
+      <Sides />
 
       <Corral bids={bids} goalLine="Hunting the best verified price" />
 
