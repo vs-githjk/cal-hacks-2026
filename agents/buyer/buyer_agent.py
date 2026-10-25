@@ -1619,7 +1619,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
     async def send_private(text: str):
         if web:
             return True
-        return await ctx.send(owner, ChatMessage(content=[TextContent(text=text)]))
+        # the owner's own conversation context, so ASI:One shows the code in the same chat, not a new thread
+        return await (ROUND.get("owner_context") or ctx).send(owner, ChatMessage(content=[TextContent(text=text)]))
 
     try:
         ROUND["phase"] = "approval"
