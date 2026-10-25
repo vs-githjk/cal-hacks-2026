@@ -44,7 +44,7 @@ def _no(reason: str) -> dict:
 
 
 def handle(sender: str, request: Any, *, buyer_address: str, client: Any, show_code: Optional[Callable[[str], None]],
-           seen: set, unconfigured: Optional[str] = None, secret: Optional[str] = None, buyer_name: str = "Vidyut",
+           seen: set, unconfigured: Optional[str] = None, secret: Optional[str] = None, buyer_name: str = "there",
            run: Optional[Callable] = None, **timing) -> dict:
     """{approved, reason, call_id, voice_approval_id}. Every refusal places no call."""
     from pay.approval import ApprovalService

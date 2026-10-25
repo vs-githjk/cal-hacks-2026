@@ -66,7 +66,7 @@ MERCHANT_SIM = None
 TAP_PRIVATE_KEY = None
 SHIELD_RECEIPT_KEYS = None
 SHIELD_PAYMENT_SCREEN = None
-MARKET_BUYER_ID = "vidyut"
+MARKET_BUYER_ID = os.environ.get("MARKET_BUYER_ID", "")
 MARKET_SELLER_IDS = {"seller-a": "seller_1", "seller-b": "seller_2", "seller-c": "seller_3"}
 
 
@@ -582,12 +582,16 @@ async def start_round(ctx: Context, need: dict | None = None):
     set_state("HUNTING")
     try:
         buyer_market, referee_market = market_clients()
-        goal = dict(ROUND["goal"], buyer_id=MARKET_BUYER_ID)
+        market_buyer_id = ROUND["goal"].get("market_buyer_id") or MARKET_BUYER_ID
+        if not market_buyer_id:
+            raise MarketBridgeError("market_buyer_id_missing")
+        ROUND["market_buyer_id"] = market_buyer_id
+        goal = dict(ROUND["goal"], buyer_id=market_buyer_id)
         if not ROUND.get("market_goal_posted"):
-            buyer_market.post_goal(goal, buyer_id=MARKET_BUYER_ID)
+            buyer_market.post_goal(goal, buyer_id=market_buyer_id)
             ROUND["market_goal_posted"] = True
-        market_need = dict(need, buyer_id=MARKET_BUYER_ID)
-        buyer_market.post_need(market_need, buyer_id=MARKET_BUYER_ID, goal_id=goal["id"])
+        market_need = dict(need, buyer_id=market_buyer_id)
+        buyer_market.post_need(market_need, buyer_id=market_buyer_id, goal_id=goal["id"])
         round_id = f"round-{need['id']}"
         referee_market.open_round(round_id, need["id"], need["auction_window_s"])
         if referee_market.round_status(round_id).get("state") != "open":
@@ -963,19 +967,30 @@ def _approval_service():
     return APPROVAL_SERVICE
 
 
-def _approval_call():
-    """(client, reason) for the approval phone call. Approval is only ever the spoken code on that call, so with
-    no client configured the buyer fails closed: no approval, no payment."""
-    if APPROVAL_CALL_CLIENT is not None:
-        return APPROVAL_CALL_CLIENT, ""
-    from pay.voice_cartesia import CartesiaClient, CartesiaError, load_env
+def _approval_call(buyer_id: str = ""):
+    """(client, reason, buyer_name) for the approval phone call. Approval is only ever the spoken code on that call,
+    so with no client configured the buyer fails closed: no approval, no payment. The number is the buyer's own
+    profile phone; only the env-default buyer may fall back to APPROVAL_CALL_TO."""
+    from pay.voice_cartesia import CartesiaClient, CartesiaError, TO_ENV, load_env
     try:
-        return CartesiaClient.from_env(load_env()), ""
+        profile = market_clients()[0].buyer_profile(buyer_id) if buyer_id else None
+    except Exception:
+        profile = None
+    profile = profile if isinstance(profile, dict) else {}
+    env = load_env()
+    name = profile.get("display_name") or env.get("APPROVAL_BUYER_NAME") or "there"
+    if APPROVAL_CALL_CLIENT is not None:
+        return APPROVAL_CALL_CLIENT, "", name
+    phone = profile.get("phone")
+    if not phone and not (buyer_id and buyer_id == MARKET_BUYER_ID):
+        return None, "not_configured", name
+    try:
+        return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env), "", name
     except CartesiaError:
-        return None, "not_configured"
+        return None, "not_configured", name
 
 
-async def _phone_approval(transaction: dict, send_private, client, service):
+async def _phone_approval(transaction: dict, send_private, client, service, buyer_name: str = "there"):
     """The only approval: the owner speaks a one-time code on a phone call (buyer.checkout.approve_offer).
     The private chat shows the code and the outcome; no chat text or typed code is ever accepted as approval."""
     from buyer import checkout
@@ -995,7 +1010,7 @@ async def _phone_approval(transaction: dict, send_private, client, service):
 
     try:
         result = await asyncio.to_thread(checkout.approve_offer, dict(transaction), client, service,
-                                         on_code=on_code, buyer_name="Vidyut", now=business_now)
+                                         on_code=on_code, buyer_name=buyer_name, now=business_now)
     except Exception:
         result = VoiceResult(False, "private_approval_unavailable")
     try:
@@ -1025,14 +1040,14 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
 
     try:
         ROUND["phase"] = "approval"
-        client, unavailable = _approval_call()
+        client, unavailable, buyer_name = _approval_call(transaction["buyer_id"])
         if client is None:
             # Fail closed: no approval without the phone call. The transaction is left as it was.
             ROUND["phase"] = "pending_approval"
             await send_private("Phone approval is not set up, so this deal cannot be approved. "
                                "Nothing was approved and nothing was ordered.")
             return
-        result = await _phone_approval(transaction, send_private, client, _approval_service())
+        result = await _phone_approval(transaction, send_private, client, _approval_service(), buyer_name)
         if not result.approved or not isinstance(result.record, dict) or result.record.get("channel") != "phone":
             transaction["phase"] = "denied" if result.record and result.record.get("result") == "denied" else "paused"
             buyer_state.save_transaction(state_db(), transaction)
@@ -1056,7 +1071,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         buyer_market, _ = market_clients()
         method = "voice_code"
         market_status = buyer_market.record_approval(mandate_hash=mandate["hash"], method=method,
-                                                       approved_by=MARKET_BUYER_ID)
+                                                       approved_by=transaction["buyer_id"])
         if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
                 or not market_status.get("approved_at")):
             raise MarketBridgeError("market_approval_readback_mismatch")
@@ -1124,20 +1139,20 @@ async def on_requote(ctx: Context, fresh: dict):
         amount = bid["total_landed_price"]
         seller = common.address(bid["supplier_id"])
         mandate = payment.make_mandate(deal_id=deal_id, amount=amount, payee=seller,
-            buyer_id=MARKET_BUYER_ID, within_allowance=False, goal_id=ROUND["goal"]["id"],
+            buyer_id=ROUND["market_buyer_id"], within_allowance=False, goal_id=ROUND["goal"]["id"],
             now=business_now(), origin=bid.get("origin", "SIM"))
         deal = {"id": deal_id, "goal_id": ROUND["goal"]["id"], "need_id": ROUND["need"]["id"],
             "bid_id": bid["id"], "amount": amount, "payee": seller, "owner_sender": ROUND["owner"],
             "market_round_id": ROUND["market_round_id"],
             "candidate_binding_hash": bid.get("candidate_binding_hash")}
-        transaction = {"deal_id": deal_id, "buyer_id": MARKET_BUYER_ID, "goal_id": ROUND["goal"]["id"],
+        transaction = {"deal_id": deal_id, "buyer_id": ROUND["market_buyer_id"], "goal_id": ROUND["goal"]["id"],
             "need_id": ROUND["need"]["id"], "bid_id": bid["id"], "phase": "pending_approval",
             "deal": deal, "order": None, "advocate_card": card, "mandate": mandate,
             "voice_approval": None, "allowance_authorization": None, "settlement": None,
             "settlement_result": None, "payment_ref": None, "mode": bid.get("origin", "SIM")}
         buyer_market, _referee_market = market_clients()
         status = buyer_market.create_mandate(mandate, need_id=ROUND["need"]["id"],
-            buyer_id=MARKET_BUYER_ID, now=business_now())
+            buyer_id=ROUND["market_buyer_id"], now=business_now())
         if (not isinstance(status, dict) or status.get("mandate_hash") != mandate["hash"]
                 or status.get("reservation_matches") is not True or status.get("within_allowance") is not False
                 or status.get("retired") is not False):

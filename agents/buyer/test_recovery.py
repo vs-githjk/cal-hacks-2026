@@ -63,6 +63,7 @@ def buyer(monkeypatch, tmp_path):
         module = importlib.import_module('buyer_agent')
     fake_agent.address = module.common.address('buyer')
     monkeypatch.setattr(module, 'ALLOWANCE', 1000)
+    monkeypatch.setattr(module, 'MARKET_BUYER_ID', 'vidyut')
     class FakeMarket:
         def __init__(self, identity):
             self.identity = identity

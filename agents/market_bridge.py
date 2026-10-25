@@ -421,6 +421,18 @@ class MarketBridge:
             output.append(row)
         return output
 
+    def buyer_profile(self, buyer_id: str) -> dict[str, Any] | None:
+        """The buyer's own profile (name, approval phone); None when absent or the column is not on the market yet."""
+        columns = ("buyer_id", "display_name", "phone")
+        try:
+            rows = self._sql("SELECT " + ", ".join(columns) + " FROM my_buyer_profile WHERE buyer_id = " + _quote(buyer_id))
+            row = _project(rows[0], columns) if rows else None
+        except Exception:
+            return None
+        if not row or row.get("buyer_id") != buyer_id:
+            return None
+        return {"buyer_id": buyer_id, "display_name": row.get("display_name") or None, "phone": row.get("phone") or None}
+
     def purchase_status(self, mandate_hash: str) -> dict[str, Any]:
         """Read the exact buyer-private purchase projection; never query raw money tables."""
         if self.role != "buyer" or not _HASH.fullmatch(str(mandate_hash)):
