@@ -39,7 +39,7 @@ MAX_SESSIONS_PER_SHOP = 200     # so one shop's flood cannot block every other s
 MAX_LINE_ITEMS = 20
 MAX_QUANTITY = 10
 STATUSES = ("incomplete", "ready_for_complete", "complete_in_progress", "canceled")
-HELD = ("Order held for the buyer's Tech Bazaar mandate. No money moved here: the charge runs in Tech Bazaar pay only after "
+HELD = ("Order held for the buyer's Fish Market mandate. No money moved here: the charge runs in Fish Market pay only after "
         "the buyer approves on a phone call. SIM shop, SIM payee.")
 
 

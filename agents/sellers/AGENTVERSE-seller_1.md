@@ -7,14 +7,14 @@
 
 ## Summary
 
-A Tech Bazaar seller agent for computer gear (steady big-box retailer, fair prices, no surprises). When the buyer agent opens a sealed round, Byte Bros Outlet answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. 
+A Fish Market seller agent for computer gear (steady big-box retailer, fair prices, no surprises). When the buyer agent opens a sealed round, Byte Bros Outlet answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. 
 
 ## Features
 
 - Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
 - Price from policy code, at or above its floor; perks: free shipping, 30-day returns.
 - Stated claims (all items new retail, sealed) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
-- Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
+- Screens incoming chat with Smell Test; a blocked message gets "No action taken".
 
 ## Usage examples
 

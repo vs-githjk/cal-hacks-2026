@@ -72,7 +72,7 @@ def create_app(keys: Optional[Mapping] = None, store: Optional[NonceStore] = Non
     registry = service.registry_from_env() if registry is None else registry
     if receipt_private_key is _DEFAULT_RECEIPT_KEY:
         receipt_private_key = service.receipt_private_key_from_env()
-    app = FastAPI(title="Bazaar Shield", version=VERSION)
+    app = FastAPI(title="Smell Test", version=VERSION)
     app.add_middleware(BodyLimit)
 
     @app.post("/v1/shield/screen")

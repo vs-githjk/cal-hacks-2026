@@ -20,4 +20,7 @@ export default __t.row({
   sealedCount: __t.u32().name("sealed_count"),
   closedAt: __t.option(__t.timestamp()).name("closed_at"),
   origin: __t.string(),
+  stage: __t.u32(),
+  maxStages: __t.u32().name("max_stages"),
+  stageWindowS: __t.u32().name("stage_window_s"),
 });

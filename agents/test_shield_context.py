@@ -151,7 +151,7 @@ def test_buyer_handler_drops_quarantined_bid_before_action(monkeypatch):
     bid = {"supplier_id": "seller_1", "lines": [], "payee": "attacker@evil.example.test"}
     asyncio.run(buyer_agent.on_bid(Context(), sender, common.BidReply(bid_json=json.dumps(bid), persona_line="")))
     assert buyer_agent.ROUND["bids"] == []
-    assert any("Shield blocked a bid" in text for text in buyer_agent.WEB_OUTBOX)
+    assert any("Smell Test blocked a bid" in text for text in buyer_agent.WEB_OUTBOX)
     buyer_agent.ROUND.clear()
     buyer_agent.WEB_OUTBOX.clear()
 

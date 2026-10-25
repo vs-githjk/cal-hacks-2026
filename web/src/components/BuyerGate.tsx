@@ -34,9 +34,9 @@ function PairScreen() {
   const [tried, setTried] = useState(false);
   const failures = attempts[0]?.failures ?? 0;
   return (
-    <section className="card mx-auto max-w-md p-6">
-      <h1 className="mb-2 text-lg font-semibold">Pair this screen with the buyer</h1>
-      <p className="mb-4 text-sm text-muted">
+    <section className="card mx-auto w-full max-w-md p-4 md:p-6">
+      <h1 className="mb-2 text-[22px]/[28px] font-semibold tracking-[-0.01em]">Pair this screen with the buyer</h1>
+      <p className="mb-4 text-[15px]/[20px] text-muted">
         Enter the pairing code from the operator, like DJAAG-FRM3M. Sellers can never pair.
       </p>
       <form
@@ -67,13 +67,13 @@ function PairScreen() {
           autoComplete="off"
           placeholder="Like DJAAG-FRM3M"
           aria-label="Pairing code"
-          className="w-full min-w-0 flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono"
+          className="min-h-11 w-full min-w-0 flex-1 rounded-xl bg-surface px-4 font-mono text-[15px]/[20px] shadow-ring focus:shadow-[var(--shadow-ring),var(--shadow-focus)] focus:outline-none"
         />
-        <button className="min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink">Pair</button>
+        <button className="btn min-h-11 rounded-xl bg-pulse px-5 font-medium text-pulse-ink">Pair</button>
       </form>
-      {error && <p className="mt-3 text-sm text-coral">{error}</p>}
+      {error && <p className="mt-3 text-[13px]/[18px] text-coral">{error}</p>}
       {!error && tried && failures > 0 && (
-        <p className="mt-3 text-sm text-coral">
+        <p className="mt-3 text-[13px]/[18px] text-coral">
           {failures >= PAIR_MAX_FAILURES
             ? "Too many wrong codes. This screen is locked; ask the operator for a new code."
             : `That code did not match. ${PAIR_MAX_FAILURES - failures} tries left before pairing locks.`}

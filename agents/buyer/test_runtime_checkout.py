@@ -1007,6 +1007,22 @@ def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_ri
     assert not buyer.MARKET_BUYER.record_approval.called
 
 
+def test_a_caller_call_timeout_is_final_and_never_dials_a_second_call(runtime, monkeypatch):
+    """The Caller dialled and the call rang out (call_timeout): the phone already rang, so the buyer neither dials
+    directly nor asks the Caller again, and nothing is paid."""
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    caller = FakeCaller(direct, reply=lambda h: {"mandate_hash": h, "call_id": "caller-call-1", "call": None, "error": "call_timeout"})
+    _delegate(buyer, monkeypatch, caller, direct)
+    held = _run(buyer, ctx)
+    assert held["phase"] != "approved" and held["order"] is None
+    assert len(caller.requests) == 1 and direct.calls == 0
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+    assert not buyer.MARKET_BUYER.record_approval.called
+
+
 def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):
     buyer, _db = runtime
     ready_for_requote(buyer)

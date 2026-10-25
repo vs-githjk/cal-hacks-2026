@@ -37,12 +37,26 @@ export interface FieldError {
   message: string;
 }
 
+export interface ReadinessRow {
+  sku: string;
+  url: string | null;
+  status: string;
+  summary: string;
+}
+
+/** The Seller Kit's read of each listing page (#412): advice, never a gate. LIVE page reads; local and placeholder pages are not fetched. */
+export interface Readiness {
+  line: string;
+  listings: ReadinessRow[];
+}
+
 export interface Created {
   id: string;
   name: string;
   origin: string;
   config_path: string;
   run_command: string;
+  readiness?: Readiness;
 }
 
 export interface ShopRow {
@@ -143,7 +157,18 @@ export function parseCreated(body: unknown): Created | null {
   if (!isObj(body)) return null;
   const { id, name, origin, config_path, run_command } = body;
   if (typeof id !== "string" || typeof name !== "string" || typeof config_path !== "string" || typeof run_command !== "string") return null;
-  return { id, name, origin: typeof origin === "string" ? origin : "SIM", config_path, run_command };
+  return { id, name, origin: typeof origin === "string" ? origin : "SIM", config_path, run_command, readiness: parseReadiness(body.readiness) };
+}
+
+function parseReadiness(raw: unknown): Readiness | undefined {
+  if (!isObj(raw) || typeof raw.line !== "string") return undefined;
+  const rows = Array.isArray(raw.listings) ? raw.listings : [];
+  const listings = rows.flatMap((r) =>
+    isObj(r) && typeof r.sku === "string" && typeof r.status === "string" && typeof r.summary === "string"
+      ? [{ sku: r.sku, url: typeof r.url === "string" ? r.url : null, status: r.status, summary: r.summary }]
+      : [],
+  );
+  return { line: raw.line, listings };
 }
 
 export function parseShops(body: unknown): ShopRow[] {

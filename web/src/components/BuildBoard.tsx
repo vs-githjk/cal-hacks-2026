@@ -10,7 +10,7 @@ import { Card, Label } from "./ui";
 // The dot carries the kind; each line already says what happened ("Clash: ...", "GPU: Best Buy out ..."), so no kind word.
 const DOT: Record<StepKind, string> = {
   plan: "bg-ink-2", pick: "bg-ink-2", knockout: "bg-coral", clash: "bg-coral",
-  swap: "bg-accent", reallocate: "bg-accent", locked: "bg-mint", blocked: "bg-coral",
+  swap: "bg-pulse", reallocate: "bg-pulse", locked: "bg-mint", blocked: "bg-coral",
 };
 const STEP_MS = 1200;
 
@@ -27,7 +27,7 @@ export function BuildBoard({ build, origin }: { build: BuildResult; origin?: str
   // A live build (it carries its feed origin) is drawn as it stands: its events have no per-part pick step to replay.
   const live = !!build.origin;
   const now = live ? build : buildAt(build, upTo);
-  const btn = "rounded-md px-2.5 py-1 text-[13px] text-ink-2 hover:bg-soft hover:text-ink disabled:opacity-40";
+  const btn = "rounded-md px-2.5 py-1 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40";
   return (
     <div className="grid gap-3.5 lg:grid-cols-[7fr_5fr]">
       <BuildPanel build={now} origin={origin} />

@@ -8,10 +8,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 BUYER = os.getenv("BUYER_REST_URL", "http://localhost:8001/chat")
 PORT = int(os.getenv("WEB_CHAT_PORT", "8080"))
 
-PAGE = b"""<!doctype html><meta charset=utf-8><title>Tech Bazaar buyer</title>
+PAGE = b"""<!doctype html><meta charset=utf-8><title>Fish Market buyer</title>
 <style>body{font:15px system-ui;max-width:720px;margin:2em auto;padding:0 16px}#log{white-space:pre-wrap}
 .me{color:#555;margin-top:1em}.ag{background:#f3f3f3;padding:.5em;margin:.3em 0}form{display:flex;gap:8px}input{flex:1;padding:.5em}</style>
-<h1>Tech Bazaar buyer (local)</h1><div id=log></div>
+<h1>Fish Market buyer (local)</h1><div id=log></div>
 <form id=f><input id=t autofocus placeholder="a GPU for 1440p under $800 by Friday. I already own a 750 W PSU"><button>Send</button></form>
 <script>
 const log=document.getElementById('log');

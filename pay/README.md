@@ -248,7 +248,7 @@ Lane A also renders the same table in code (`call_reason` in `agents/advocate/ch
 
 > Historical helper notes only. The current buyer sets `call_ready` unavailable and does not wire this helper. The command examples and managed-agent setup below describe earlier helper work; they are not current operator instructions. Any paid call requires separate explicit approval. Do not treat this section as runtime or deployment readiness evidence.
 
-A Cartesia MANAGED agent ("Tech Bazaar approval") only talks. Our code decides: it issues the mandate and the
+A Cartesia MANAGED agent ("Fish Market approval") only talks. Our code decides: it issues the mandate and the
 word-pair code (on-screen only), places the call, waits for it to end, reads the transcript from Cartesia and
 feeds each BUYER utterance to `ApprovalSession.approve`. Silence, hang-up, voicemail, a failed dial, a timeout or no
 transcript all deny. `can_charge` passes only after an approved session.
@@ -290,11 +290,11 @@ was heard (noise, one word, cut off). A wrong code or a missing "approve" needs 
 
 Introduction (greeting) message:
 ```
-Hi {{buyer_name}}, this is your Tech Bazaar agent calling about one purchase that needs your approval.
+Hi {{buyer_name}}, this is your Fish Market agent calling about one purchase that needs your approval.
 ```
 System prompt:
 ```
-You are the Tech Bazaar approval agent on a short phone call with {{buyer_name}}. You only collect one spoken answer. You never decide anything and you never say whether a code is right or wrong: the Tech Bazaar app checks the answer after the call and shows the result on the buyer's screen. You do not know the code and must never guess, hint at or say a code yourself. Keep every turn short and calm.
+You are the Fish Market approval agent on a short phone call with {{buyer_name}}. You only collect one spoken answer. You never decide anything and you never say whether a code is right or wrong: the Fish Market app checks the answer after the call and shows the result on the buyer's screen. You do not know the code and must never guess, hint at or say a code yourself. Keep every turn short and calm.
 
 Steps:
 1. Your greeting already played. As soon as {{buyer_name}} says anything at all ("hello", "who is this", "which purchase is this?"), say this once, exactly as written, in one go: {{deal_script}}

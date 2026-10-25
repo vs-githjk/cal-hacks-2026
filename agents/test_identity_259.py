@@ -15,7 +15,7 @@ SECTIONS = ("## Summary", "## Features", "## Usage examples", "## Use cases", "#
 ])
 def test_display_names_match_agentverse_and_the_short_ones_are_under_20_characters(path, pattern):
     name = re.search(pattern, (AGENTS / path).read_text()).group(1)
-    long_names = {"Tech Bazaar Quality Advocate", "Tech Bazaar Shield Client"}  # renamed on Agentverse (#383)
+    long_names = {"Fish Market Quality Advocate", "Fish Market Smell Test"}  # renamed on Agentverse (#383)
     assert name in long_names or len(name) < 20, name
 
 
