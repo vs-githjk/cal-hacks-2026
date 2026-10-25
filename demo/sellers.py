@@ -102,7 +102,9 @@ def load_offers() -> tuple[list[dict], list[str]]:
     latest: dict[str, tuple[str, dict]] = {}   # listing URL -> (prefix, card): a URL seen in two snapshots is one listing, the newest
     for path in sorted(SNAPSHOTS.glob("*.json")):   # file names end in a UTC stamp, so sorted order is oldest to newest
         prefix = path.name.split("-")[0]
-        if prefix == "ebay_sold":
+        # Sold history is comps, not offers. A store snapshot this round has no seller of record for (for example
+        # centralcomputers, #308, served by data.mirror.central_computers) stays out until Lane D adds it here.
+        if prefix == "ebay_sold" or prefix not in SELLER_OF_RECORD:
             continue
         for card in json.loads(path.read_text(encoding="utf-8")):
             if (card.get("attrs") or {}).get("chipset") != CHIPSET:

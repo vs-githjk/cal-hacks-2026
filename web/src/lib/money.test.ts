@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { commas, formatMoney, typedStatus } from "./money.ts";
+import { commas, formatMoney, underCap } from "./money.ts";
 
 test("commas groups whole numbers by thousands, with no Intl", () => {
   assert.equal(commas(0), "0");
@@ -26,17 +26,9 @@ test("formatMoney puts the minus before the dollar sign for negatives", () => {
   assert.equal(formatMoney(-0.5), "-$0.50");
 });
 
-test("typedStatus shows Checking... while the typed code is pending", () => {
-  assert.equal(typedStatus({ locked: false, busy: true, msg: "", failures: 0, left: 5 }), "Checking...");
-});
-
-test("typedStatus shows N tries left beside the message after a miss", () => {
-  const msg = "If it matched, this card disappears and the approval is recorded.";
-  assert.equal(typedStatus({ locked: false, busy: false, msg, failures: 1, left: 4 }), `${msg} 4 tries left.`);
-  assert.equal(typedStatus({ locked: false, busy: false, msg: "", failures: 2, left: 3 }), "3 tries left.");
-  assert.equal(typedStatus({ locked: false, busy: false, msg: "", failures: 0, left: 5 }), "");
-});
-
-test("typedStatus says locked once the code is locked, whatever else is pending", () => {
-  assert.match(typedStatus({ locked: true, busy: false, msg: "x", failures: 5, left: 0 }), /locked/);
+test("underCap shows nothing without a cap for this goal and never a negative", () => {
+  assert.equal(underCap(null, 757.44), null);
+  assert.equal(underCap(undefined, 757.44), null);
+  assert.equal(underCap(90, 1249.99), null);
+  assert.equal(underCap(900, 757.5), 142.5);
 });

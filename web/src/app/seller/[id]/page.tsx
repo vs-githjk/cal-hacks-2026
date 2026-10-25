@@ -171,9 +171,11 @@ function SellerPair({ sellerId }: { sellerId: string }) {
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          inputMode="numeric"
-          placeholder="6-digit code"
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-soft px-3 font-mono"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="XXXXX-XXXXX"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-soft px-3 font-mono uppercase placeholder:normal-case"
         />
         <button className="min-h-11 rounded-lg bg-accent px-4 font-medium text-accent-ink">Pair</button>
       </form>

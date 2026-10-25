@@ -1,28 +1,31 @@
 "use client";
-// Fetch agents, live: a floating tile in a screen corner, like a minimized video call. Collapsed it is a small tile
-// (a pill on a phone), expanded it lists every agent with its status and last line. Drag it to a corner, or use Move.
+// The Fetch tile: an activity feed pinned in a screen corner (top right on a desktop, a compact pill at the bottom on a phone),
+// not a video call. Collapsed it shows the latest recorded activity and its age; expanded it lists every agent, links to the
+// directory, and links out to ASI:One and Agentverse. Drag it to a corner, or use Move.
 // Reads only the agent feed (lib/agentFeed.ts); when the feed is down it says "agents offline" and shows no rows.
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
+import { AgentAvatar, useAgents } from "@/components/useAgents";
 import {
   ASI_ONE_URL,
   NEXT_CORNER,
-  POLL_MS,
   STATUS_TEXT,
+  agentLink,
   ago,
-  agentverseUrl,
-  fetchAgents,
+  headline,
+  isStale,
+  latestActivity,
   nearestCorner,
   realRows,
-  summary,
-  type AgentRow,
   type AgentStatus,
   type Corner,
 } from "@/lib/agentFeed";
 
-const PREFS_KEY = "tb-agent-pip";
-// Bottom corners clear the fixed run-mode footer, top corners clear the header; neither sits over the page's hero number.
+// A new key: the first version defaulted to the bottom right on every screen, and a saved corner would keep that.
+const PREFS_KEY = "tb-agent-pip-2";
+// Bottom corners clear the fixed run-mode footer, top corners clear the header.
 const CORNER_CLASS: Record<Corner, string> = {
   br: "bottom-12 right-3",
   bl: "bottom-12 left-3",
@@ -43,7 +46,7 @@ function loadPrefs(): Prefs {
   } catch {
     // storage blocked or corrupt: fall through to the default
   }
-  return { open: false, corner: "br" };
+  return { open: false, corner: window.matchMedia("(max-width: 639px)").matches ? "br" : "tr" };
 }
 
 function savePrefs(p: Prefs) {
@@ -56,7 +59,7 @@ function savePrefs(p: Prefs) {
 
 const subscribe = () => () => {};
 
-/** Browser only: the saved corner and open state come from localStorage, which the server cannot see. */
+/** Browser only: the saved corner and open state come from localStorage, which the server cannot see. Mounted once, in the root layout. */
 export function AgentPip() {
   const inBrowser = useSyncExternalStore(subscribe, () => true, () => false);
   return inBrowser ? <AgentPipTile /> : null;
@@ -64,32 +67,10 @@ export function AgentPip() {
 
 function AgentPipTile() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
-  const [rows, setRows] = useState<AgentRow[] | null | undefined>(undefined); // undefined: first poll pending, null: offline
-  const [now, setNow] = useState(() => Date.now());
+  const { rows, now } = useAgents();
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const box = useRef<HTMLElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    let stop = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const ctl = new AbortController();
-    const tick = async () => {
-      if (!document.hidden) {
-        const r = await fetchAgents(ctl.signal);
-        if (stop) return;
-        setRows(r);
-        setNow(Date.now());
-      }
-      if (!stop) timer = setTimeout(tick, POLL_MS);
-    };
-    tick();
-    return () => {
-      stop = true;
-      ctl.abort();
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
 
   const update = useCallback((next: Partial<Prefs>) => {
     setPrefs((p) => {
@@ -102,8 +83,9 @@ function AgentPipTile() {
   const shown = rows ? realRows(rows) : [];
   const offline = rows === null;
   const pending = rows === undefined;
-  const anyUp = shown.some((r) => r.status !== "down");
-  const head = pending ? "Checking agents" : offline ? "Agents offline" : summary(shown);
+  const latest = latestActivity(shown);
+  const fresh = !!latest && !isStale(latest.at, now);
+  const head = headline(rows ? shown : rows, now);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
@@ -127,19 +109,22 @@ function AgentPipTile() {
     <aside
       ref={box}
       aria-label="Fetch agents"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && prefs.open) update({ open: false });
+      }}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined}
       className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-line bg-panel text-[13px] shadow-lg ${CORNER_CLASS[prefs.corner]} ${
-        prefs.open ? "h-[320px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto sm:h-[120px] sm:w-[220px]"
-      } ${drag ? "" : "transition-[width,height] duration-150"}`}
+        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px]"
+      } ${drag ? "" : "transition-[width,height] duration-150 motion-reduce:transition-none"}`}
     >
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="flex min-h-11 cursor-grab touch-none select-none items-center gap-2 border-b border-line px-3 active:cursor-grabbing"
+        className="flex min-h-11 cursor-grab touch-none select-none items-center gap-2 px-3 active:cursor-grabbing"
       >
-        <span className={`h-2 w-2 shrink-0 rounded-full ${offline ? "bg-coral" : anyUp ? "bg-mint" : "bg-slate opacity-40"}`} aria-hidden />
+        <span className={`h-2 w-2 shrink-0 rounded-full ${offline ? "bg-coral" : fresh ? "bg-mint" : "bg-slate opacity-40"}`} aria-hidden />
         <span className="min-w-0 flex-1 truncate font-semibold" aria-live="polite">
           {head}
         </span>
@@ -165,7 +150,7 @@ function AgentPipTile() {
 
       {prefs.open ? (
         <>
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+          <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
             {offline || pending || shown.length === 0 ? (
               <p className="py-3 text-muted">
                 {pending
@@ -176,53 +161,49 @@ function AgentPipTile() {
               </p>
             ) : (
               <ul className="divide-y divide-line">
-                {shown.map((r) => (
-                  <li key={`${r.role}-${r.name}`} className="py-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[r.status]}`} aria-hidden />
-                      <span className="min-w-0 flex-1 truncate font-semibold">{r.name}</span>
-                      <OriginChip origin={r.origin} label={STATUS_TEXT[r.status]} />
-                    </div>
-                    <p className="mt-0.5 truncate pl-4 text-muted" title={r.last_message ?? undefined}>
-                      {r.last_message ?? "no messages yet"}
-                      {r.at ? ` (${ago(r.at, now)})` : ""}
-                    </p>
-                    {r.status === "agentverse" && r.address ? (
-                      <a
-                        href={agentverseUrl(r.address)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-0.5 inline-block pl-4 text-accent underline-offset-2 hover:underline"
-                      >
-                        Agentverse
-                      </a>
-                    ) : null}
-                  </li>
-                ))}
+                {shown.map((r) => {
+                  const link = agentLink(r);
+                  return (
+                    <li key={`${r.role}-${r.name}`} className="flex gap-2.5 py-2">
+                      <AgentAvatar row={r} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate font-semibold">{r.name}</span>
+                          <OriginChip origin={r.origin} />
+                        </div>
+                        <p className="flex items-center gap-1.5 text-muted">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[r.status]}`} aria-hidden />
+                          {STATUS_TEXT[r.status]}
+                        </p>
+                        <p className="truncate text-muted" title={r.last_message ?? undefined}>
+                          {r.last_message ?? "no messages yet"}
+                          {ago(r.at, now) ? ` (${ago(r.at, now)})` : ""}
+                        </p>
+                        {link ? (
+                          <a href={link} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline">
+                            Agentverse profile
+                          </a>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
-          <div className="flex items-center gap-3 border-t border-line px-3 py-2">
-            <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="font-semibold text-accent underline-offset-2 hover:underline">
+          <div className="flex items-center gap-4 border-t border-line px-3">
+            <Link href="/buyer/agents" className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-2 hover:underline">
+              All agents
+            </Link>
+            <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-2 hover:underline">
               Open in ASI:One
             </a>
           </div>
         </>
       ) : (
-        <div className="hidden min-h-0 flex-1 flex-col justify-center gap-1 px-3 sm:flex">
-          {offline || pending || shown.length === 0 ? (
-            <p className="text-muted">{pending ? "Checking..." : offline ? "No feed" : "Nothing running"}</p>
-          ) : (
-            <>
-              <p className="flex flex-wrap gap-1.5" aria-hidden>
-                {shown.map((r) => (
-                  <span key={`${r.role}-${r.name}`} className={`h-2.5 w-2.5 rounded-full ${DOT[r.status]}`} title={`${r.name}: ${STATUS_TEXT[r.status]}`} />
-                ))}
-              </p>
-              <p className="line-clamp-2 text-muted">{shown.find((r) => r.last_message)?.last_message ?? "no messages yet"}</p>
-            </>
-          )}
-        </div>
+        <p className="hidden truncate px-3 pb-2.5 text-muted sm:block" title={latest?.last_message ?? undefined}>
+          {pending ? "Checking..." : offline ? "No feed" : (latest?.last_message ?? "No recorded activity")}
+        </p>
       )}
     </aside>
   );

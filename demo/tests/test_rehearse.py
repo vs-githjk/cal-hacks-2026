@@ -254,6 +254,16 @@ def test_dry_run_prints_the_plan_and_touches_nothing(tmp_path, capsys):
         assert needle in text
 
 
+def test_dry_run_says_what_the_approval_does_with_and_without_a_live_call(tmp_path, capsys):
+    """#251: no scripted approval, so the plan says whether each run rings the phone or ends at the approval gate."""
+    boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("dry run must not touch the stack"))  # noqa: E731
+    rehearse.main(["--dry-run", "--out", str(tmp_path / "a")], probe=boom, sql=boom, shoot=boom)
+    assert "no --live-call, so each run ends at beat 4's approval gate" in capsys.readouterr().out
+    rehearse.main(["--dry-run", "--stage-cmd", "python3 demo/stage.py --auto --live-call", "--out", str(tmp_path / "b")],
+                  probe=boom, sql=boom, shoot=boom)
+    assert "ONE real approval phone call" in capsys.readouterr().out
+
+
 def test_beat_parser_accepts_the_stage_and_bridge_shapes():
     assert rehearse.parse_beat("  BEAT 4 of 5: Approval") == 4
     assert rehearse.parse_beat("BEAT 2: Shield") == 2

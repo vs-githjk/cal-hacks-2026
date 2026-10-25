@@ -14,4 +14,5 @@ export default {
   mandateHash: __t.string(),
   method: __t.string(),
   approvedBy: __t.string(),
+  voiceApprovalId: __t.string(),
 };

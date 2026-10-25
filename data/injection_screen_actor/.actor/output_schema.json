@@ -1,0 +1,12 @@
+{
+ "actorOutputSchemaVersion": 1,
+ "title": "Listing injection screen output",
+ "properties": {
+  "screen": {
+   "type": "string",
+   "title": "Screen results",
+   "description": "One row per listing: block, flag, pass or skipped, with the rules that fired and the matched text",
+   "template": "{{links.apiDefaultDatasetUrl}}/items?view=screen"
+  }
+ }
+}

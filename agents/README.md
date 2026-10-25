@@ -33,7 +33,7 @@ Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json
 .venv/bin/python sellers/seller_agent.py --config sellers/custom/<id>.json
 ```
 
-The port comes from the config or is the next free one from 8016. The buyer's seller list is still `common.SELLERS`, so a custom seller bids only once the buyer is told its address.
+The port comes from the config or is the next free one from 8016 (8016 itself is seller_6). The buyer's seller list is still `common.SELLERS`, so a custom seller bids only once the buyer is told its address.
 
 ## Issue #14 verification
 
@@ -44,6 +44,10 @@ After restoring the advocate, the scheduled automatic retry visibly delivered a 
 The [Claude hub plan](https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU) names a Shield client among its agent roles. The sixth agent here adds that role while keeping the issue's buyer, advocate and three sellers. A separate seller gateway is not implemented.
 
 The [issue owner's October 23 update](https://github.com/vs-githjk/cal-hacks-2026/issues/14#issuecomment-6380938238) specifies local processes with Agentverse mailboxes and explicitly says no cloud server is needed. This updates the earlier cloud-hosting instruction in the plan. Keep the laptop awake during judging. Use the mailbox run instructions below.
+
+## Issue #143 offline containment probe
+
+At source snapshot `3ad940e`, the real local Shield benchmark derived 8 held-out misses (`h01`, `h03`, `h05`, `h07`, `h09`, `h13`, `h15`, `h20`). With Shield screening bypassed and deterministic SIM CRS identity fixtures, the actual buyer bid/tick, advocate, buyer review, recommendation, approval/requote callbacks preserved the baseline recommendation, payee and amount for all 8 rows. A selection control also showed the production recommendation at index 2 driving the second bid through approval and requote after the first bid's real condition mismatch was vetoed. For each resulting order and the same mandate hash, both absent approval and a real approval record for a different hash were refused by `MerchantSim` as `no_trusted_approval`; `agents.payment.commit` also refused, and the fake charger recorded zero calls. Network sentinels recorded zero attempts. This is a SIM behavioral result, not a full containment pass: the accepted `AdvocateCard` contract is still open, so the strict closed-schema test remains a dependency gate.
 
 ## Run
 
@@ -109,12 +113,18 @@ Check each profile is Active on Agentverse, then find each by name in a fresh AS
 
 Containment (issue #143, SIM, offline): **8 of 8 contained with Shield off**. The 8 held-out attacks Shield's rules do not block (the same ids `shield.bench` reports) are put into a bid's free text with Shield bypassed; the advocate's closed output still validates, the winner, payee and amount are unchanged, and no charge happens without an approval row for the mandate (`agents/tests/test_containment.py`).
 
-- `payment.py` requires an approval entry for the same mandate hash and checks replay, expiry, payee and amount. The buyer currently creates that entry from chat `APPROVE` or its allowance: this is a SIM approval stub, not Lane D's voice approval record. Stripe charging is not connected.
-- Buyer and seller bid/order/payment handlers and the advocate request handler call Shield before acting. Configure `SHIELD_URL` for screening; when configured but unreachable it blocks. With no URL, the current client allows messages using a labelled stub.
-- Prices come from policy code, never from a model. Fit is decided by Lane C's checker, never by a model.
-- The voice call gets only `{rule_id, summary, source_url}`; the summary is a fixed template per rule_id (`advocate/checks.py` CALL_SUMMARIES).
+### Current purchase readiness
 
-Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" to one SKU (SIM table until Lane C's SpecCards land); a buyer who does not state PSU connector counts gets "fit not confirmed". Condition evidence is supplied in bid fields, not independently fetched; price history, recalls and seller records use fixtures. Voice approval and Stripe charges wait on Lane D.
+- Market purchase actions require `MARKET_BUYER_OWNER_SENDER` to be explicitly configured with the exact authenticated buyer sender. The buyer checks this before mandate/approval and again against the frozen transaction before payment or seller completion acknowledgement. Missing or mismatched mapping fails closed; it is not inferred from a chat session.
+- The buyer approves only by phone call: the real mandate-bound `ApprovalService` issues a one-time code, the private owner chat shows it and reports the call status and result, and the owner speaks the code on the call (`pay.voice_cartesia.run_approval_call`). A typed code or chat text is never approval. The service shares the buyer's persistent protected nonce store, so approval replay protection survives restarts. If the call is not configured (`CARTESIA_API_KEY`, `CARTESIA_AGENT_ID`, `APPROVAL_CALL_TO`), the buyer fails closed: the owner is told, nothing is approved and nothing is paid.
+- Payment is not ready from environment variables alone. In `buyer_agent.py`, `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS`, and `SHIELD_PAYMENT_SCREEN` start unset and have no startup bootstrap. The payment handler requires the checkout, signing, receipt-verification, and payment-screen dependencies; `SHIELD_PAYMENT_SCREEN` is a callback, not an environment setting. It is separate from `SHIELD_URL`, which is the message-screening endpoint. The current handler accepts only `SIM` payment origin; no live Stripe charge or deployed checkout is claimed.
+- Build goals remain helper-only: three child goals, independent mandates/approvals, and full paid/owned completion are not wired into the buyer runtime. The current buyer source does not prove a full hunt restart or three-child build completion.
+
+- Buyer, seller bid/order/payment handlers and advocate request handling use Shield message screening. `SHIELD_URL` configures that screening path; it is not the checkout payment-screen callback.
+- Prices come from policy code, never from a model. Fit is decided by Lane C's checker, never by a model.
+- If a voice-call helper is used in a separately approved integration, its reason input is limited to `{rule_id, summary, source_url}`; the summary is a fixed template per rule_id (`advocate/checks.py` CALL_SUMMARIES). The current buyer runtime does not place calls.
+
+Where it could go wrong: the goal parser is regex-based and maps a "1440p GPU" to one SKU (SIM table until Lane C's SpecCards land); a buyer who does not state PSU connector counts gets "fit not confirmed". Condition evidence is supplied in bid fields, not independently fetched; price history, recalls and seller records use fixtures. Approval is the phone call with the spoken code; without a configured call the buyer fails closed, and checkout remains unbootstrapped.
 
 ## CRS sandbox setup (Issue #15)
 
