@@ -78,11 +78,21 @@ export function FloorMini({ className = "" }: { className?: string }) {
 /** Faint seaweed along the aquarium floor: five strands that sway. Decorative. */
 function Seaweed() {
   const strands = [
-    { x: 24, h: 46, sway: "5.2s", delay: "0s" },
-    { x: 58, h: 70, sway: "6.1s", delay: "-2s" },
-    { x: 96, h: 38, sway: "4.6s", delay: "-1s" },
-    { x: 410, h: 58, sway: "5.7s", delay: "-3s" },
-    { x: 452, h: 42, sway: "4.9s", delay: "-1.5s" },
+    { x: 14, h: 40, sway: "5.4s", delay: "-0.5s" },
+    { x: 30, h: 62, sway: "6.2s", delay: "-2s" },
+    { x: 48, h: 34, sway: "4.8s", delay: "-1s" },
+    { x: 70, h: 74, sway: "6.6s", delay: "-3s" },
+    { x: 92, h: 46, sway: "5.1s", delay: "-1.6s" },
+    { x: 118, h: 30, sway: "4.5s", delay: "-0.8s" },
+    { x: 160, h: 38, sway: "5.6s", delay: "-2.4s" },
+    { x: 215, h: 26, sway: "4.7s", delay: "-1.2s" },
+    { x: 262, h: 32, sway: "5.0s", delay: "-2.8s" },
+    { x: 318, h: 42, sway: "5.9s", delay: "-0.3s" },
+    { x: 362, h: 28, sway: "4.6s", delay: "-1.9s" },
+    { x: 398, h: 56, sway: "6.0s", delay: "-3.4s" },
+    { x: 426, h: 36, sway: "5.2s", delay: "-0.9s" },
+    { x: 448, h: 66, sway: "6.4s", delay: "-2.2s" },
+    { x: 468, h: 44, sway: "4.9s", delay: "-1.4s" },
   ];
   return (
     <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-[90px] w-full" viewBox="0 0 480 90" preserveAspectRatio="none" aria-hidden>
