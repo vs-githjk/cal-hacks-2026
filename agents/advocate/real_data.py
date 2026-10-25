@@ -54,6 +54,26 @@ def _note(rule_id: str, text: str, url: str = NOTE_SOURCE) -> dict:
     return {"kind": "note", "rule_id": rule_id, "text": text, "source_url": url, "dollar_impact": 0.0}
 
 
+WHY = {"stale": "the newest retail prices are more than 24 h old", "empty": "we hold no price data for it",
+       "one_source": "only one data owner has priced it"}
+
+
+def _why(b: dict) -> str:
+    if b.get("status") == "thin":
+        return "thin baseline, fewer than 2 prices from " + " and ".join(b.get("thin_owners") or ["a data owner"])
+    return WHY.get(b.get("status"), "the price lookup failed")
+
+
+def _entry(b: dict, as_of=None) -> dict | None:
+    """The baseline entry checks.advise reads, for an ok baseline with a real listing near the median; else None."""
+    if not (b.get("status") == "ok" and b.get("median") and b.get("rows")):
+        return None
+    near = min(b["rows"], key=lambda r: abs(r["price"] - b["median"]))  # a real listing page near the median
+    return {"unit_price": b["median"], "source_url": near["url"], "source": "MIRROR", "as_of": b["to"], "n": b["n"],
+            "owners": b["owners"],
+            "label": f"MIRROR baseline as of {b['to'][:10]}, {b['n']} retail asks, {len(b['owners'])} sources{_pinned(as_of)}"}
+
+
 def baseline_for(skus, as_of=None, rows=None) -> tuple[dict, list[dict]]:
     """A dated baseline per SKU we hold real data for. status ok only (two data owners); anything else is unverified."""
     at, out, notes = _as_of(as_of), {}, []
@@ -62,18 +82,70 @@ def baseline_for(skus, as_of=None, rows=None) -> tuple[dict, list[dict]]:
             b = price_baselines.baseline(sku, at.isoformat(), rows=rows)
         except Exception as e:  # a lookup that fails is unverified, never a silent pass
             b = {"status": "error", "error": type(e).__name__, "rows": []}
-        if b.get("status") == "ok" and b.get("median") and b.get("rows"):
-            near = min(b["rows"], key=lambda r: abs(r["price"] - b["median"]))  # a real listing page near the median
-            out[sku] = {"unit_price": b["median"], "source_url": near["url"], "source": "MIRROR", "as_of": b["to"], "n": b["n"],
-                        "owners": b["owners"],
-                        "label": f"MIRROR baseline as of {b['to'][:10]}, {b['n']} retail asks, {len(b['owners'])} sources{_pinned(as_of)}"}
+        entry = _entry(b, as_of)
+        if entry:
+            out[sku] = entry
         else:  # never a silent sample price: no real baseline means no price comparison, and the card says so
-            why = {"stale": "the newest retail prices are more than 24 h old", "empty": "we hold no price data for it",
-                   "one_source": "only one data owner has priced it",
-                   "thin": "thin baseline, fewer than 2 prices from " + " and ".join(b.get("thin_owners") or ["a data owner"])
-                   }.get(b.get("status"), "the price lookup failed")
             notes.append(_note("advocate.baseline_unverified",
-                               f"Price baseline unavailable for {sku} (unverified): {why}. No price comparison was made, and no sample price was used."))
+                               f"Price baseline unavailable for {sku} (unverified): {_why(b)}. No price comparison was made, and no sample price was used."))
+    return out, notes
+
+
+PART_CATEGORIES = ("cpu", "motherboard", "memory", "storage", "cooler")
+
+
+def _part_model(line: dict, cat: str, by_url: dict, need_skus: set) -> str | None:
+    """The exact maker model for a part line, from OUR data only: our own listing row for its URL, else the buyer's own
+    sku when the line is for it (matched with part_specs' exact matcher). The seller's text alone never picks the model."""
+    from data.fit_checker import part_specs
+    url = line.get("listing_url")
+    if isinstance(url, str) and url in by_url:
+        return by_url[url]
+    sku = _norm(line.get("sku_spec"))
+    if sku and sku in need_skus:
+        row = part_specs.find(cat, None, line.get("sku_spec"))
+        return row["model_number"] if row else None
+    return None
+
+
+def part_baseline_for(bids, need=None, as_of=None, part_rows=None) -> tuple[dict, list[dict]]:
+    """Dated baselines for the CPU, board, memory, storage and cooler lines (#342), keyed like the GPU ones (by the line's
+    sku_spec) so checks.advise reads them unchanged. GPU lines are left to baseline_for."""
+    at, out, notes = _as_of(as_of), {}, []
+    try:
+        rows = price_baselines.part_observations() if part_rows is None else part_rows
+    except Exception:
+        rows = []
+    by_url = {r["url"]: r["model"] for r in rows if r.get("url") and r.get("model")}
+    need_skus = {_norm(i.get("sku_spec")) for i in (need or {}).get("items", []) if isinstance(i, dict) and i.get("sku_spec")}
+    models: dict[str, set] = {}
+    cats: dict[str, str] = {}
+    for b in bids or []:
+        for line in _lines(b):
+            cat = (line.get("attrs") or {}).get("category") if isinstance(line, dict) else None
+            if cat not in PART_CATEGORIES:
+                continue
+            key = _norm(line.get("sku_spec"))
+            cats[key] = cat
+            models.setdefault(key, set()).add(_part_model(line, cat, by_url, need_skus))
+    for key, found in models.items():
+        cat = cats[key]
+        if None in found or len(found) != 1:
+            why = "this line could not be tied to one exact model in our own data" if None in found else "its bids name different exact models"
+            notes.append(_note("advocate.baseline_unverified",
+                               f"Price baseline unavailable for a {cat} line (unverified): {why}. No price comparison was made, and no sample price was used."))
+            continue
+        model = next(iter(found))
+        try:
+            b = price_baselines.part_baseline(model, at.isoformat(), rows=rows)
+        except Exception as e:
+            b = {"status": "error", "error": type(e).__name__, "rows": []}
+        entry = _entry(b, as_of)
+        if entry:
+            out[key] = {**entry, "model": model}
+        else:
+            notes.append(_note("advocate.baseline_unverified",
+                               f"Price baseline unavailable for {model} (unverified): {_why(b)}. No price comparison was made, and no sample price was used."))
     return out, notes
 
 
@@ -223,12 +295,16 @@ def with_notes(cards: list[dict], notes: list[dict]) -> list[dict]:
     return cards
 
 
-def advice_inputs(need: dict, bids: list[dict], fetch=None, now=None, as_of=None, rows=None, cache_dir=None):
+def advice_inputs(need: dict, bids: list[dict], fetch=None, now=None, as_of=None, rows=None, cache_dir=None, part_rows=None):
     """Everything advocate_agent passes to checks.advise: baseline, records, recalls, notes. We hold no real seller records yet,
     so records is empty (no record warning) rather than the SIM table."""
-    skus = [i.get("sku_spec") for i in need.get("items", []) if isinstance(i, dict)] + \
-           [l.get("sku_spec") for b in bids for l in _lines(b) if isinstance(l, dict)]
+    part_base, part_notes = part_baseline_for(bids, need, as_of=as_of, part_rows=part_rows)
+    parts = {_norm(l.get("sku_spec")) for b in bids for l in _lines(b)
+             if isinstance(l, dict) and (l.get("attrs") or {}).get("category") in PART_CATEGORIES}
+    skus = [s for s in [i.get("sku_spec") for i in need.get("items", []) if isinstance(i, dict)] +
+            [l.get("sku_spec") for b in bids for l in _lines(b) if isinstance(l, dict)] if _norm(s) not in parts]
     baseline, notes = baseline_for(skus, as_of=as_of, rows=rows)
+    baseline, notes = {**baseline, **part_base}, notes + part_notes
     recalls, recall_notes = recalls_for_bids(bids, fetch=fetch, now=now, cache_dir=cache_dir, rows=rows)
     return baseline, {}, recalls, notes + recall_notes
 

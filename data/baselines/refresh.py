@@ -9,6 +9,10 @@ data/baselines/feed.json and prints the new baseline and when it goes stale.
     python3 -m data.baselines.refresh --yes-spend            # run it (or omit --yes-spend and type SPEND at the prompt)
     options: --max-items N (1 to 10, default 10)  --max-usd X (refuse if the estimate is over X, default 0.50)  --sku S
 
+    python3 -m data.baselines.refresh --parts --dry-run      # #342: the Build Story parts (cpu, board, memory, SSD, cooler)
+    python3 -m data.baselines.refresh --parts                # re-run run_actors --parts for Best Buy, Micro Center, B&H and eBay
+                                                             # sold only; type SPEND; --cap dollars (default 2); --items N (default 5)
+
 APIFY_TOKEN comes from the environment (or the gitignored .env, as run_actors reads it) and is never printed.
 Exit codes: 0 baseline ok, 1 refreshed but the baseline is not ok, 2 refused (no token, not confirmed, over the cap).
 """
@@ -106,6 +110,70 @@ def _print_baseline(sku, now, out) -> int:
     return 0 if b["status"] == "ok" else 1
 
 
+PARTS_STORES = ("bestbuy", "microcenter", "bh", "ebay_sold")  # what a part baseline reads: retail asks and eBay sold (no
+# second family, no Central Computers crawl and no Amazon: none of them enter the median)
+PARTS_DEFAULT_CAP = 2.0
+
+
+def parts_refresh_plan(items: int = 5, log=None) -> list[dict]:
+    return [r for r in run_actors.parts_plan(items, log=log, stores=list(PARTS_STORES)) if not r["second"]]
+
+
+def _part_why(b: dict) -> str:
+    if b["status"] == "one_source":
+        return f"only one data owner has priced it ({', '.join(b['owners']) or 'none'})"
+    if b["status"] == "thin":
+        return f"fewer than 2 prices from {' and '.join(b.get('thin_owners') or ['a data owner'])}"
+    return {"stale": "no in-stock Best Buy, Micro Center or B&H ask in the last 24 h", "empty": "we hold no price data for it"}.get(b["status"], b["status"])
+
+
+def _print_part_baselines(now: datetime, out) -> int:
+    """One line per exact model we hold a maker row for: its baseline status now and when it goes stale."""
+    from data.fit_checker import part_specs
+    rows = baselines.part_observations()
+    ok = 0
+    for cat in part_specs.CATEGORIES:
+        for r in part_specs.rows(cat):
+            key = baselines.part_key(r["model_number"])
+            b = baselines.baseline(key, now.isoformat(), rows=rows)
+            when = stale_at(key, rows, now) if b["status"] == "ok" else None
+            ok += b["status"] == "ok"
+            out(f"  {cat} {r['model_number']}: status {b['status']}"
+                + (f", median ${b['median']:.2f} from {b['n']} retail asks, eBay sold n={b['sold']['n']}, stale at {pacific(when)}" if when
+                   else f" (no baseline: {_part_why(b)})" if b["status"] != "ok" else ""))
+    out(f"part baselines ok now: {ok} model(s)")
+    return 0
+
+
+def parts_main(a, env, confirm, isatty, out, now) -> int:
+    log_path = run_actors.HERE / "runs.json"
+    log = json.loads(log_path.read_text()) if log_path.exists() else []
+    plan = parts_refresh_plan(a.items, log)
+    total = round(sum(r["worst_usd"] for r in plan), 4)
+    out(f"parts refresh plan (MIRROR, {a.items} items per run): {len(plan)} runs, stores {', '.join(PARTS_STORES)}")
+    for r in plan:
+        out(f"  {r['part']} {r['store']}: {r['query']}  worst ${r['worst_usd']:.4f}")
+    out(f"estimated Apify cost: ${total:.2f} worst case for {len(plan)} runs (highest logged cost per Actor), cap ${a.cap:.2f}")
+    if a.dry_run:
+        out("dry run: nothing was run and nothing was spent. Part baselines now:")
+        return _print_part_baselines(now or datetime.now(timezone.utc), out)
+    if total > a.cap or not 0 < a.cap <= run_actors.MAX_CAP:
+        out(f"refused: the estimate ${total:.2f} is over the cap ${a.cap:.2f} (at most ${run_actors.MAX_CAP:.0f}); nothing was run")
+        return 2
+    if not _have_token(env):
+        out("refused: APIFY_TOKEN is not set (export it or put it in the gitignored .env); nothing was run")
+        return 2
+    if not isatty() or confirm(f"This spends up to ${a.cap:.2f} of Apify credits. Type SPEND to run: ").strip() != "SPEND":
+        out("refused: spend not confirmed; nothing was run")
+        return 2
+    records = run_actors.run_parts(plan, a.cap, None, a.items)
+    old = json.loads(log_path.read_text()) if log_path.exists() else []
+    log_path.write_text(json.dumps(old + records, indent=1))
+    spent = sum(r["cost_usd"] for r in records if isinstance(r.get("cost_usd"), (int, float)))
+    out(f"logged Apify cost this parts refresh: ${spent:.4f} of the ${a.cap:.2f} cap")
+    return _print_part_baselines(now or datetime.now(timezone.utc), out)
+
+
 def main(argv=None, env=None, runner=None, confirm=input, isatty=None, out=print, now=None) -> int:
     p = argparse.ArgumentParser(prog="python3 -m data.baselines.refresh", description="Re-scrape the dated price baseline (costs Apify credits).")
     p.add_argument("--dry-run", action="store_true", help="show the plan and estimated cost; run nothing")
@@ -113,10 +181,16 @@ def main(argv=None, env=None, runner=None, confirm=input, isatty=None, out=print
     p.add_argument("--max-items", type=int, default=HARD_MAX_ITEMS, choices=range(1, HARD_MAX_ITEMS + 1), metavar=f"1..{HARD_MAX_ITEMS}")
     p.add_argument("--max-usd", type=float, default=DEFAULT_MAX_USD, help="refuse if the estimated cost is over this")
     p.add_argument("--sku", default=SKU)
+    p.add_argument("--parts", action="store_true", help="refresh the Build Story part baselines instead (#342)")
+    p.add_argument("--cap", type=float, default=PARTS_DEFAULT_CAP, help="--parts only: dollars, default 2")
+    p.add_argument("--items", type=int, default=5, choices=range(1, HARD_MAX_ITEMS + 1), metavar=f"1..{HARD_MAX_ITEMS}",
+                   help="--parts only: items per search (default 5)")
     a = p.parse_args(argv)
     env = os.environ if env is None else env
     runner = runner or run_actors.run
     isatty = isatty or sys.stdin.isatty
+    if a.parts:
+        return parts_main(a, env, confirm, isatty, out, now)
 
     log_path = run_actors.HERE / "runs.json"
     log = json.loads(log_path.read_text()) if log_path.exists() else []
