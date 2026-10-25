@@ -145,9 +145,10 @@ test("stage 2 on the reference run: re-check ages, recall, walk-out, approved by
   const checks = p.phases.filter((ph) => ph.kind === "check" && ph.sellers.some((s) => s.key === p.winnerKey && s.status === "fit_ok"));
   assert.equal(checks.length, 2);
   assert.equal(checks[1]!.sellers.find((s) => s.key === p.winnerKey)!.statusLine, "FIT OK · NO RECALL");
-  // winner walks out with the buyer: both end past the front rope (v > 1)
+  // winner walks out with the buyer: both leave to the right
   const walk = p.phases.find((ph) => ph.kind === "walkout")!;
-  assert.ok(walk.buyer.v > 1 && walk.sellers.find((s) => s.key === p.winnerKey)!.pos.v > 1);
+  assert.ok(walk.buyer.u > 1.2 && walk.sellers.find((s) => s.key === p.winnerKey)!.pos.u > 1.2, "off the mat to the right");
+  assert.ok(walk.buyer.v < 1 && walk.sellers.find((s) => s.key === p.winnerKey)!.pos.v < 1, "above the ledger strip, never under the front rope");
   // deal card: approved by phone first, then paid in Stripe test mode
   const end = p.phases.find((ph) => ph.kind === "end")!;
   const paid = p.phases.find((ph) => ph.kind === "paid")!;
@@ -184,4 +185,20 @@ test("a Smell Test block row through floorPhases: injection, then the Smell Test
   assert.equal(out.tag, "BLOCKED · SMELL TEST");
   assert.equal(out.reason, "shield");
   assert.doesNotMatch(JSON.stringify(p, (_, v) => (typeof v === "bigint" ? String(v) : v)), /Shield/);
+});
+
+test("the deal card says only what a row says: no Smell Test clause on the reference run, one when a Smell Test pass row exists", () => {
+  const ref = planFromRows(EMPTY).phases.find((ph) => ph.kind === "end")!;
+  assert.doesNotMatch(ref.end!.line, /Smell Test/);
+  assert.match(ref.end!.line, /rank 1 of 4 bids/);
+  assert.match(ref.end!.line, /fit checked/); // the reference run carries an advocate card and a claim check for the winner
+  // SAMPLES.gpu has a Shield allow verdict row for its winner
+  const withPass = planFromRows(SAMPLES.gpu, { sample: true }).phases.find((ph) => ph.kind === "end")!;
+  assert.match(withPass.end!.line, /passed the Smell Test/);
+  // strip every row about the winner's checks: neither clause is claimed, and the checker does not tick it
+  const bare: ArenaRows = { ...SAMPLES.ssd, events: SAMPLES.ssd.events.filter((e) => !["verdict", "advocate_card", "claim_checked"].includes(e.kind)) };
+  const p = planFromRows(bare, { sample: true });
+  const end = p.phases.find((ph) => ph.kind === "end")!;
+  assert.doesNotMatch(end.end!.line, /Smell Test|fit checked/);
+  assert.ok(!p.phases.some((ph) => ph.kind === "check"));
 });

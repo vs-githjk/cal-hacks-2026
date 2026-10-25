@@ -77,7 +77,7 @@ export interface FloorPlan {
 export const BUYER_HOME: Pt = { u: 0, v: 0.86 };
 export const CHECKER_HOME: Pt = { u: 1.26, v: 0.46 };
 export const REFEREE_AT: Pt = { u: 0, v: 0.158 };
-const EXIT: Pt = { u: 1.0, v: 1.45 }; // under the front rope, toward the camera and right
+const EXIT: Pt = { u: 1.5, v: 0.92 }; // off the mat to the right, above the ledger strip
 
 const REASON_WORD: Record<Reason, string> = { price: "PRICE", failed_fit: "FAILED FIT", shield: "SMELL TEST", refused: "NOT ORDERABLE" };
 export function reasonKind(code: ReasonCode): Reason {
@@ -131,10 +131,11 @@ function holdPlan(count: number, part: string, origin: string, sample: boolean, 
 export interface Extras {
   rechecks: Record<string, { sec: number; by: string | null }>; // by bid id
   advocate: Record<string, string>; // by bid id: "Advocate: buy" and so on
+  smell: Record<string, boolean>; // by bid id: a Smell Test (Shield verdict) row that lets the bid through
   approved: boolean;
   paid: boolean;
 }
-export const NO_EXTRAS: Extras = { rechecks: {}, advocate: {}, approved: false, paid: false };
+export const NO_EXTRAS: Extras = { rechecks: {}, advocate: {}, smell: {}, approved: false, paid: false };
 const agoText = (sec: number) => (sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`);
 
 /** Extras for the latest round, read from the rows only (nothing invented): a claim_checked row per bid gives the re-check time. */
@@ -147,15 +148,17 @@ export function extrasFromRows(rows: ArenaRows, roundId: string | null): Extras 
   const bids = new Set(rows.results.filter((r) => r.roundId === round.id).map((r) => r.bidId));
   const rechecks: Extras["rechecks"] = {};
   const advocate: Extras["advocate"] = {};
+  const smell: Extras["smell"] = {};
   for (const e of [...rows.events].sort((a, b) => (a.id < b.id ? -1 : 1))) {
     if (!bids.has(e.refId)) continue;
     if (e.kind === "advocate_card") advocate[e.refId] = e.label;
+    if (e.kind === "verdict" && /allow/i.test(e.label)) smell[e.refId] = true;
     if (e.kind === "claim_checked" && closeMs !== null && us(e.at) <= closeMs) {
       rechecks[e.refId] = { sec: Math.round((closeMs - us(e.at)) / 1000), by: /bright data/i.test(e.label) ? "Bright Data" : null };
     }
   }
   const after = (kind: string) => closeMs !== null && rows.events.some((e) => e.kind === kind && us(e.at) >= closeMs);
-  return { rechecks, advocate, approved: after("approval_recorded"), paid: after("payment_recorded") };
+  return { rechecks, advocate, smell, approved: after("approval_recorded"), paid: after("payment_recorded") };
 }
 
 /** The phases for a scene. Pure and deterministic. */
@@ -253,10 +256,14 @@ export function planFromScene(scene: ArenaScene, extras: Extras = NO_EXTRAS): Fl
     const o = offers[winnerIdx]!;
     buyer = { ...BUYER_HOME, face: 1, chomp: false };
     checker = { u: w.pos.u + 0.14, v: w.pos.v + 0.08 };
-    w.status = "fit_ok"; w.statusLine = "FIT OK"; w.tone = "good";
-    push("check", 1100, { pip: `The checker confirmed the fit of ${w.name}.` });
+    // the checker ticks the winner only when a row says the fit was checked (an advocate card or a claim check for this bid)
+    const checked = o.bidId in extras.advocate || o.bidId in extras.rechecks;
+    if (checked) {
+      w.status = "fit_ok"; w.statusLine = "FIT OK"; w.tone = "good";
+      push("check", 1100, { pip: `The checker confirmed the fit of ${w.name}.` });
+    }
     // recall: said only when the advocate's row for this bid says buy
-    if (/^Advocate: buy/.test(extras.advocate[o.bidId] ?? "")) {
+    if (checked && /^Advocate: buy/.test(extras.advocate[o.bidId] ?? "")) {
       checker = { u: w.pos.u + 0.2, v: w.pos.v + 0.04 };
       w.statusLine = "FIT OK · NO RECALL";
       push("check", 1000, { pip: `Recall check: none found for ${w.name}.` });
@@ -272,7 +279,8 @@ export function planFromScene(scene: ArenaScene, extras: Extras = NO_EXTRAS): Fl
     w.pos = { u: EXIT.u - 0.1, v: EXIT.v };
     buyer = { ...EXIT, face: 1, chomp: false };
     push("walkout", 2000, { pip: "Walking out with the buyer." });
-    const line = `${w.name} · ranked 1 of ${n} by the referee · passed the Smell Test · fit checked`;
+    // every clause is backed by a row: the rank by round_result, "passed the Smell Test" by a Shield allow verdict, "fit checked" by an advocate or claim row
+    const line = [w.name, `rank 1 of ${n} bids`, extras.smell[o.bidId] ? "passed the Smell Test" : null, checked ? "fit checked" : null].filter(Boolean).join(" \u00b7 ");
     const card = (badges: string[]): EndCard => ({ title: "DEAL", part: part || o.product, price: winPrice, line, badges });
     const approved = extras.approved ? ["Approved by phone"] : [];
     push("end", extras.paid ? 2600 : 4000, { end: card(approved), pip: extras.approved ? "Approved by phone. The buyer has its part." : "Deal. The buyer has its part." });

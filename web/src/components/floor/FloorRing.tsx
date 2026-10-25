@@ -137,7 +137,6 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme, textS
         if (ph.refereeArms) { c.moveTo(0, -36); c.lineTo(-12, -54); c.moveTo(0, -36); c.lineTo(12, -54); } else { c.moveTo(-12, -24); c.lineTo(12, -24); }
         c.moveTo(0, -10); c.lineTo(-8, 0); c.moveTo(0, -10); c.lineTo(8, 0); c.stroke();
         disc(0, -48, 7, C.referee);
-        if (k >= 0.6) text(c, "CRS referee", 0, -66, 10, C.referee, mono);
       }) });
 
       // checker
@@ -160,7 +159,7 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme, textS
         if (s.status === "winner" && (ph.kind === "end" || ph.kind === "paid")) return; // walked out
         const walking = s.status === "winner" && ph.kind === "walkout";
         const x = px(pos.u, pos.v), y = py(pos.v);
-        tops.push(y - (56 + ((k < 0.6 || TS > 1) && s.slot % 2 === 0 ? 24 : 0) + 22 + (s.recheck && k >= 0.6 ? 20 : 0) + 40) * sc * dz(pos.v) * boost);
+        tops.push(y - (56 + (k < 0.6 ? (s.slot % 2 === 0 ? 24 : 0) : TS > 1 && Math.abs(pos.u) < 0.5 ? 34 : 0) + 22 + (s.recheck && k >= 0.6 ? 20 : 0) + 40) * sc * dz(pos.v) * boost);
         const look = Math.sign(ph.buyer.u - pos.u) || 1;
         items.push({ y, draw: at(x, y, sc * dz(pos.v), () => {
           c.globalAlpha = alpha;
@@ -191,16 +190,19 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme, textS
           const fs = labelSize(11);
           c.font = `500 ${fs * TS}px ${mono}`;
           // phones: tickets of alternate fish ride higher so neighbours never overlap
-          const lift = (k < 0.6 || TS > 1) && s.slot % 2 === 0 ? 24 : 0;
+          const lift = k < 0.6 ? (s.slot % 2 === 0 ? 24 : 0) : TS > 1 && Math.abs(pos.u) < 0.5 ? 34 : 0; // phones stagger; recording mode lifts the two inner tickets above their neighbours
           const extra = s.recheck && k >= 0.6 ? Math.max(12, fs * TS * 0.85 + 5) : 0;
           const priceW = c.measureText(label.toUpperCase()).width + 14 / k;
           let tw = Math.max((s.price === null ? 64 : 80) * TS, priceW);
           if (extra) { c.font = `500 ${Math.max(8, fs * 0.72) * TS}px ${mono}`; tw = Math.max(tw, c.measureText(s.recheck!.toUpperCase()).width + 22); c.font = `500 ${fs * TS}px ${mono}`; }
           const th = Math.max(22, fs * TS + 8), thT = th + extra, top = -56 - lift - thT;
+          // inner fish nudge their ticket outward so it never reaches the referee's box in the middle
+          const nx = Math.abs(pos.u) < 0.5 ? Math.sign(pos.u || 1) * Math.max(0, 75 + tw / 2 - Math.abs(x - 480)) : 0;
+          c.save(); c.translate(nx, 0);
           if (th0 === "fish") {
             // a paper price ticket on a string: pointed left end with a punched hole
             const x0 = -tw / 2;
-            c.strokeStyle = "rgba(238,243,248,0.55)"; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -52); c.lineTo(0, -56 - lift); c.stroke();
+            c.strokeStyle = "rgba(238,243,248,0.55)"; c.lineWidth = 1; c.beginPath(); c.moveTo(-nx, -52); c.lineTo(0, -56 - lift); c.stroke();
             c.fillStyle = C.paper; c.strokeStyle = C.paperEdge; c.lineWidth = 1;
             c.beginPath(); c.moveTo(x0 + 9, top); c.lineTo(-x0, top); c.lineTo(-x0, -56 - lift); c.lineTo(x0 + 9, -56 - lift); c.lineTo(x0, top + thT / 2); c.closePath(); c.fill(); c.stroke();
             c.fillStyle = C.ground; c.beginPath(); c.arc(x0 + 10, top + thT / 2, 2.2, 0, 7); c.fill();
@@ -208,6 +210,7 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme, textS
           const px0 = th0 === "fish" ? 4 : 0;
           text(c, label, px0, top + th / 2 + 0.5, fs, C.tagInk, mono);
           if (extra) text(c, s.recheck!, px0, -56 - lift - extra / 2 + 1, Math.max(8, fs * 0.72), "#4a5a6c", mono);
+          c.restore();
           if (k >= 0.6 && s.status !== "winner") text(c, s.name, 0, 17, 10, TINT[s.tint] === C.slate ? C.muted : TINT[s.tint], mono); // under the fish, clear of the referee and the tickets
           // status word stacks above the name label, so nothing sits between the ghost and the buyer
           if (s.statusLine && k >= 0.5) text(c, s.statusLine, 0, top - 10, labelSize(10), s.tone === "bad" ? C.coralText : s.tone === "good" ? C.mintText : C.amberText, mono);
@@ -244,10 +247,18 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme, textS
         }
         disc(7, -12, 3.5, C.tagInk);
         c.restore();
-        if (k >= 0.6) text(c, "The buyer", 0, 16, 10, C.pac, mono);
+        if (k >= 0.6 && ph.kind !== "walkout") text(c, "The buyer", 0, 16, 10, C.pac, mono);
       }) });
 
       items.sort((a, b) => a.y - b.y).forEach((it) => it.draw());
+      // the referee's label is drawn last, on a backing pill, so no ticket or label ever covers it
+      if (k >= 0.6) {
+        const lx = px(REFEREE_AT.u, REFEREE_AT.v), ly = py(REFEREE_AT.v) - 66 * dz(REFEREE_AT.v);
+        c.font = `500 ${10 * TS}px ${mono}`;
+        const lw = c.measureText("CRS REFEREE").width + 14;
+        c.fillStyle = C.stage; c.globalAlpha = 0.92; c.beginPath(); c.roundRect(lx - lw / 2, ly - 8 * TS, lw, 16 * TS, 8); c.fill(); c.globalAlpha = 1;
+        text(c, "CRS referee", lx, ly, 10, C.referee, mono);
+      }
       // the injection bubble sits above every seller's tag and label (never on another seller's), tail toward its own ghost
       for (const b of bubbles) {
         c.font = `500 ${labelSize(10)}px ${mono}`;
