@@ -2,6 +2,7 @@
 
 POST /v1/sellers   a SellerConfig (contracts/SellerConfig.schema.json) -> 201 {id, name, origin, config_path, run_command}
                    a config agents/sellers/factory.py refuses -> 422 {errors: [{field, message}]} with every bad field
+                   the 201 also carries `readiness`: a summary of each listing page (seller_kit/readiness.py)
 GET  /v1/sellers   the shops written so far
 GET  /v1/needs/open  open needs a shop could bid on, each with an origin label (SIM when nothing real is wired in)
 
@@ -37,7 +38,7 @@ sys.path.insert(0, str(AGENTS / "sellers"))
 from factory import ConfigError, validate_config  # noqa: E402
 
 from shield.api import BodyLimit  # noqa: E402  (413 before any parsing, same limit as the other local APIs)
-from seller_kit import ucp  # noqa: E402
+from seller_kit import readiness, ucp  # noqa: E402
 
 # SIM sample needs shown when no real source is wired in. Same SKUs the demo sellers list.
 SIM_NEEDS: list[dict] = [
@@ -178,8 +179,9 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
                 except OSError:
                     pass
                 raise
+        # #412: readiness is advice read from the listing pages after the shop is safely written; it never stops the write.
         return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
-                             "run_command": run_command(path)}, status_code=201)
+                             "run_command": run_command(path), "readiness": readiness.summarize(norm)}, status_code=201)
 
     @app.get("/v1/sellers")
     def list_sellers() -> list[dict]:

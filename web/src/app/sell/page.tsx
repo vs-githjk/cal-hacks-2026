@@ -240,6 +240,21 @@ export default function SellPage() {
           </p>
           <p className="mt-3 text-[13px] font-medium">Run your agent</p>
           <pre className="mt-1 overflow-x-auto rounded-lg bg-soft p-3 font-mono text-[12px]">{created.run_command}</pre>
+          {created.readiness && (
+            <>
+              <p className="mt-3 text-[13px] font-medium">Readiness</p>
+              <p className="mt-1 text-[14px]">{created.readiness.line}</p>
+              {created.readiness.listings.length > 0 && (
+                <ul className="mt-1 grid gap-1 text-[13px] text-muted">
+                  {created.readiness.listings.map((r) => (
+                    <li key={r.sku}>
+                      <Code>{r.sku}</Code>: {r.summary}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
           <p className="mt-3 text-[13px] font-medium">What happens next</p>
           <ol className="mt-1 list-decimal pl-5 text-[14px] text-muted">
             <li>Run the command above on a machine with this repo and its agents environment. It starts your seller agent on a free port from 8016.</li>
