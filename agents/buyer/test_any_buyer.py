@@ -543,3 +543,114 @@ def test_web_buyer_without_phone_frees_the_agent(runtime, monkeypatch):
     assert not buyer.ROUND.get("pending_hold")
     assert _stored_phases(db) == ["expired"]
     assert _next_web_goal_adopted(buyer, db) is True
+
+
+# ---- #449 item 1: approval calls are limited to an allowlist during the beta ----
+def _beta_env(monkeypatch, allow="+14155550999"):
+    monkeypatch.setattr("pay.voice_cartesia.load_env", lambda *a, **k: {"APPROVAL_CALL_ALLOWLIST": allow})
+
+
+def test_profile_phone_off_the_allowlist_builds_no_client_and_logs_no_digits(runtime, monkeypatch, caplog):
+    buyer, _db = runtime
+    monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "")
+    buyer.MARKET_REFEREE.buyer_contact.return_value = {"display_name": "Asha", "phone": "+14155550111"}
+    _beta_env(monkeypatch)
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make, caplog.at_level("INFO"):
+        assert buyer._approval_call(BID) == (None, "beta_limited", "Asha")
+    assert not make.called
+    assert BID in caplog.text and not re.search(r"\d{7,}", caplog.text.replace(BID, ""))
+    _beta_env(monkeypatch, "+14155550111")
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client):
+        assert buyer._approval_call(BID)[1] == ""
+
+
+def test_web_buyer_off_the_allowlist_gets_no_call_and_frees_the_agent(runtime, monkeypatch, caplog):
+    buyer, db = runtime
+    from buyer import checkout
+    called = []
+    monkeypatch.setattr(checkout, "approve_offer", lambda *a, **k: called.append(1))
+    ready_for_requote(buyer)
+    buyer.ROUND.update(owner=None, market_buyer_id=BID)
+    buyer.ROUND["goal"]["market_buyer_id"] = BID
+    referee = buyer.MARKET_REFEREE
+    referee.buyer_contact.return_value = {"display_name": "Web", "phone": "+14155550111"}
+    referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    monkeypatch.setattr(buyer, "_approval_service", lambda: object())
+    _beta_env(monkeypatch)
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make, caplog.at_level("INFO"):
+        asyncio.run(buyer._auto_web_approval(Context(), 1))
+    assert not called and not make.called
+    assert buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None and not buyer.ROUND.get("pending_hold")
+    assert _stored_phases(db) == ["expired"]
+    assert not re.search(r"\d{7,}", caplog.text.replace(BID, "")) and "4155550111" not in caplog.text
+    assert _next_web_goal_adopted(buyer, db) is True
+
+
+def test_chat_owner_off_the_allowlist_is_told_the_beta_limit(runtime, monkeypatch):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    buyer.ROUND["market_buyer_id"] = BID
+    buyer.MARKET_REFEREE.buyer_contact.return_value = {"display_name": "Asha", "phone": "+14155550111"}
+    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "")
+    monkeypatch.setattr(buyer, "_approval_service", lambda: object())
+    _beta_env(monkeypatch)
+    ctx = Context()
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make:
+        transaction = buyer._create_pending_transaction(1)
+        asyncio.run(buyer._run_owner_approval(ctx, 1, buyer.ROUND["owner"], transaction))
+    texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+    assert "limited during the beta" in texts and "Nothing was paid" in texts and "4155550111" not in texts
+    assert not make.called and buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None
+    assert _stored_phases(db) == ["expired"]
+
+
+def _real_service(buyer, monkeypatch):
+    from buyer import state
+    from pay.approval import ApprovalService
+    from pay.replay import NonceStore
+    service = ApprovalService("throwaway-test-secret-0123456789", store=NonceStore(str(state.DEFAULT_DB_PATH)))
+    monkeypatch.setattr(buyer, "_approval_service", lambda: service)
+
+
+class _Limited:
+    approval_call_to = "+14155550111"
+
+    def __init__(self):
+        self.attempts = []
+
+    def create_call(self, to, variables):
+        from pay.voice_cartesia import CallLimited
+        self.attempts.append(to)
+        raise CallLimited("rate_limited")
+
+
+def test_a_rate_limited_dial_is_final_and_not_retried_on_the_web_path(runtime, monkeypatch):
+    buyer, db = runtime
+    limited = _Limited()
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b: (limited, "", "Web"))
+    _real_service(buyer, monkeypatch)
+    ready_for_requote(buyer)
+    buyer.ROUND.update(owner=None, market_buyer_id=BID)
+    buyer.ROUND["goal"]["market_buyer_id"] = BID
+    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    asyncio.run(buyer._auto_web_approval(Context(), 1))
+    assert len(limited.attempts) == 1
+    assert not buyer.MARKET_REFEREE.record_approval.called
+    assert buyer.ROUND["phase"] == "done" and _stored_phases(db) == ["expired"]
+
+
+def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, monkeypatch):
+    buyer, db = runtime
+    limited = _Limited()
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b: (limited, "", "Asha"))
+    _real_service(buyer, monkeypatch)
+    ready_for_requote(buyer)
+    buyer.ROUND["market_buyer_id"] = BID
+    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    ctx = Context()
+    transaction = buyer._create_pending_transaction(1)
+    asyncio.run(buyer._run_owner_approval(ctx, 1, buyer.ROUND["owner"], transaction))
+    texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+    assert len(limited.attempts) == 1 and "limited during the beta" in texts and "Nothing was paid" in texts
+    assert not buyer.MARKET_REFEREE.record_approval.called
