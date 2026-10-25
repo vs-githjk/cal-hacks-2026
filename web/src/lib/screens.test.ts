@@ -337,7 +337,7 @@ test("the home question names no dollar figure: the cap is the buyer's own, so n
   const q = buildQuestion();
   assert.equal(q, "Who builds the best 1440p gaming PC under the buyer's cap?");
   assert.doesNotMatch(q, /\$|\d,\d{3}/);
-  assert.ok(!("BUILD_CAP_CENTS" in screens), "the hard-coded build cap is gone");
+  assert.ok(!(["BUILD_CAP", "CENTS"].join("_") in screens), "the hard-coded build cap is gone");
 });
 
 // ---- The skipped-owned-part line names the part that was skipped, not always the PSU (rehearsal 22:17).

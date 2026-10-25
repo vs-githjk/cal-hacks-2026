@@ -8,11 +8,12 @@ import { Mark } from "@/components/shell";
 import { Corral } from "@/components/Corral";
 import { HowItWorks, Sides } from "@/components/Explainer";
 import { OriginChip, clock } from "@/components/ui";
-import { asOrigin, bidsFromRows, latestRound } from "@/lib/screens";
+import { Question } from "@/components/arena";
+import { asOrigin, bidsFromRows, buildQuestion, homeRound, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Vidyut's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
+  { href: "/buyer", path: "/buyer", title: "Buyer", text: "The buyer's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
   { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
@@ -26,6 +27,7 @@ export default function Home() {
   const [events] = useTable(tables.floorEvent);
 
   const r = latestRound(rounds);
+  const home = homeRound(rounds);
   const bids = useMemo(() => bidsFromRows(results, events, r?.id), [results, events, r]);
   const stats = useMemo(() => {
     const mine = results.filter((x) => x.roundId === r?.id);
@@ -45,7 +47,7 @@ export default function Home() {
       <section className="relative -mx-4 grid items-center gap-4 overflow-hidden px-4 pt-6 text-center">
         <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-line bg-panel px-4 py-1.5 font-mono text-[12px] uppercase tracking-[0.1em] text-muted">
           <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
-          {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
+          {home.pill}
         </p>
         <h1 className="mx-auto max-w-[20ch] font-display text-[clamp(32px,6vw,68px)] font-normal leading-[1.05] tracking-[0.01em] text-balance">
           <span className="mr-3 inline-block align-middle">
@@ -75,16 +77,27 @@ export default function Home() {
 
       <Corral bids={bids} goalLine="Hunting the best verified price" />
 
-      <section aria-label="This round in numbers" className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        {stats.map((s) => (
-          <div key={s.label} className="card p-5">
-            <div className="text-[clamp(28px,3.2vw,40px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
-            <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted">
-              {s.label} <OriginChip origin={s.origin} />
+      <Question
+        question={buildQuestion()}
+        status={home.status === "closed" ? "verdict" : home.status}
+        detail={home.status === "none" ? undefined : home.title}
+        origin={r?.origin}
+      />
+
+      {home.status === "none" ? (
+        <p className="text-[15px] text-ink-2">No round has run yet, so there is nothing to count. Numbers appear here once the first round opens.</p>
+      ) : (
+        <section aria-label="This round in numbers" className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+          {stats.map((s) => (
+            <div key={s.label} className="card p-5">
+              <div className="text-[clamp(28px,3.2vw,40px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
+              <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-muted">
+                {s.label} <OriginChip origin={s.origin} />
+              </div>
             </div>
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
 
       {latest.length > 0 && (
         <section aria-label="Latest moves" className="card grid gap-0 divide-y divide-line overflow-hidden p-0">
