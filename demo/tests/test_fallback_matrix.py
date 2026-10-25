@@ -172,7 +172,8 @@ def test_stripe_down_records_the_sim_stub_and_moves_no_money(error, words):
         return approval_flow.stripe_charge_test(m, key, urlopen=urlopen)
     m = new_mandate(deal_id="deal-x", buyer_id="vidyut", amount=1299.99, payee="best-buy@pay.example.test")
     ch, note = approval_flow.charge_or_stub(m, {approval_flow.STRIPE_ENV: "sk_test_FAKEKEY1234567890"}, True, stripe)
-    assert ch["mode"] == "SIM stub" and "no money moved" in ch["status"] and note.startswith(words)
+    # #449 item 4 RT-10: with a test key a Stripe outage is an uncertain charge, never a SIM stub that looks paid
+    assert ch["status"] == "uncertain" and ch["id"] is None and words in note and "uncertain" in note
 
 
 # 8. The Anthropic classifier behind Shield: down or off

@@ -26,9 +26,10 @@ def intent(status):
 
 
 @pytest.mark.parametrize("status", ["requires_action", "processing", "canceled", None])
-def test_a_stripe_answer_that_did_not_succeed_records_the_sim_stub_and_says_why(status):
+def test_a_stripe_answer_that_did_not_succeed_is_uncertain_not_a_stub_and_says_why(status):
+    # #449 item 4 RT-10: with a test key a stub would look paid, so the charge is "uncertain" and carries no id
     charge, note = charge_or_stub(mandate(), KEY, True, intent(status))
-    assert charge["mode"] != "Stripe test mode" and "pi_test_9" in note and "SIM stub" in note
+    assert charge["status"] == "uncertain" and charge["id"] is None and "pi_test_9" in note and "uncertain" in note
 
 
 def test_a_succeeded_stripe_answer_is_the_test_charge():
