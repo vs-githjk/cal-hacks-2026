@@ -1,18 +1,18 @@
 // Client side of the Lot Wall (sim/lot_wall.py writes web/public/lot.json). Pure parsers and helpers plus one fetch.
-// A bad file gives no wall, never made up bricks. Every order here is SIM: the featured one is Vidyut's scripted demo goal
+// A bad file gives no wall, never made up bricks. Every order here is SIM: the featured one is the buyer's scripted demo goal
 // (demo/out/sample-run.json, need source "simulated"), not a live buyer's request. sim/lot_wall.py still writes label "REAL" for it
 // (and origin "SIM"); the page never shows that word, it shows the order's origin.
 
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 
 export const LOT_URL = "/lot.json";
-export const STAGE_LINE = "This is one scripted demo request, Vidyut's (SIM). When many requests pool, this is what a seller sees.";
+export const STAGE_LINE = "This is one scripted demo request, the buyer's (SIM). When many requests pool, this is what a seller sees.";
 
 export interface LotOrder {
   id: string;
   /** What the page shows: the order's own origin, never "REAL". Scripted orders are SIM. */
   label: Origin;
-  /** The one order the file singles out (Vidyut's demo goal); it still carries label SIM. */
+  /** The one order the file singles out (the buyer's demo goal); it still carries label SIM. */
   featured: boolean;
   name: string;
   cap: number;
