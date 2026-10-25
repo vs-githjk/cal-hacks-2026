@@ -356,3 +356,58 @@ def test_reject_does_not_complete_or_log_untrusted_reason(seller):
     assert not ctx.sent
     assert all("secret raw buyer text" not in line for line in ctx.logs)
 
+
+
+def _bid_request_run(seller, monkeypatch, market_bid):
+    bid = {"supplier_id": "seller_1", "total_landed_price": 100.0}
+    monkeypatch.setattr(seller_agent, "_make_bid_with_learning", lambda need, s, name: dict(bid))
+    monkeypatch.setattr(seller_agent, "_apply_mind", lambda name, need, b, s: (b, None))
+    monkeypatch.setattr(seller_agent.common, "validate", lambda kind, value: value)
+    monkeypatch.setattr(seller_agent, "_market_bid", market_bid)
+    ctx = Context()
+    asyncio.run(seller["app"].handlers[seller_agent.common.BidRequest](
+        ctx, BUYER_AGENT, seller_agent.common.BidRequest(need_json=json.dumps({"items": []}))))
+    return ctx
+
+
+def test_a_failed_market_publication_logs_its_message_and_sends_no_reply(seller, monkeypatch):
+    def refuse(bid, s):
+        raise ValueError("seller Market identity is not configured: set SPACETIMEDB_SELLER_A_TOKEN_FILE")
+    ctx = _bid_request_run(seller, monkeypatch, refuse)
+    assert ctx.logs == ["Market bid publication failed: ValueError: seller Market identity is not configured: "
+                        "set SPACETIMEDB_SELLER_A_TOKEN_FILE"]
+    assert ctx.sent == []
+
+
+def test_the_publication_failure_message_is_cut_to_200_characters(seller, monkeypatch):
+    def refuse(bid, s):
+        raise RuntimeError("x" * 500)
+    ctx = _bid_request_run(seller, monkeypatch, refuse)
+    assert ctx.logs == ["Market bid publication failed: RuntimeError: " + "x" * 200]
+
+
+def test_a_missing_seller_token_variable_is_named_in_the_error(monkeypatch):
+    monkeypatch.delenv("SPACETIMEDB_SELLER_B_TOKEN_FILE", raising=False)
+    with pytest.raises(ValueError, match="SPACETIMEDB_SELLER_B_TOKEN_FILE"):
+        seller_agent._market_bid({"supplier_id": "seller_2", "lines": []}, {})
+
+
+def test_building_a_maincloud_seller_without_its_token_variable_prints_one_loud_line(seller, monkeypatch, capsys):
+    monkeypatch.setenv("SPACETIMEDB_SERVER", "maincloud")
+    monkeypatch.delenv("SPACETIMEDB_SELLER_A_TOKEN_FILE", raising=False)
+    seller_agent.build("seller_1")
+    err = capsys.readouterr().err.strip().splitlines()
+    assert len(err) == 1 and err[0].startswith("MARKET IDENTITY MISSING: seller_1 ")
+    assert "SPACETIMEDB_SELLER_A_TOKEN_FILE is not set" in err[0]
+
+
+def test_building_a_seller_is_quiet_on_a_local_market_or_with_the_file_in_place(seller, monkeypatch, capsys, tmp_path):
+    monkeypatch.setenv("SPACETIMEDB_SERVER", "local")
+    seller_agent.build("seller_1")
+    token = tmp_path / "a.token"
+    token.write_text("{}")
+    monkeypatch.setenv("SPACETIMEDB_SERVER", "maincloud")
+    monkeypatch.setenv("SPACETIMEDB_SELLER_A_TOKEN_FILE", str(token))
+    seller_agent.build("seller_1")
+    seller_agent.build("seller_4")   # no Market identity, so no variable is expected
+    assert capsys.readouterr().err == ""

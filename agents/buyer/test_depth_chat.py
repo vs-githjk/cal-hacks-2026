@@ -113,3 +113,47 @@ def test_an_over_cap_winner_is_not_followed_by_a_promised_call(recovery_buyer):
     buyer.ROUND["need"]["spend_limit"] = 500
     line = _finish(buyer, ctx, [card()])
     assert "call your phone" not in line and "Next: the best eligible bid is over your cap. Nothing was ordered." in line
+
+
+def test_zero_bids_tell_the_owner_no_seller_offers_arrived_and_log_the_count(recovery_buyer):
+    buyer, ctx = recovery_buyer, Context()
+    buyer.ROUND.update(owner_context=ctx, owner_session=ctx.session, phase="advice", deadline=time.time() + 30,
+                       quoted_at=time.time(), bids=[], received_bids={}, review_bids=[], asked=["seller_1", "seller_2"])
+    buyer.MARKET_BUYER.authoritative_winner = lambda round_id, items: None
+    asyncio.run(buyer._finish_market_round(ctx))
+    text = ctx.owner_text()
+    assert "Round summary: 0 of 2 sellers bid. No seller offers arrived, so there was nothing to rank." in text
+    assert "No seller offers arrived this round. Nothing ordered." in text
+    assert "No reviewed Market bid passed" not in text and chr(0x2014) not in text and chr(0x2013) not in text
+    logged = [c.args[0] for c in ctx.logger.warning.call_args_list]
+    assert "Round ended with 0 of 2 bids received (from nobody); no reply from seller_1, seller_2" in logged
+
+
+def test_bids_that_all_lose_keep_the_ranking_message(recovery_buyer):
+    buyer, ctx = recovery_buyer, Context()
+    buyer.ROUND.update(owner_context=ctx, owner_session=ctx.session, phase="advice", deadline=time.time() + 30,
+                       quoted_at=time.time())
+    buyer.MARKET_BUYER.authoritative_winner = lambda round_id, items: None
+    asyncio.run(buyer._finish_market_round(ctx))
+    assert "No reviewed Market bid passed the authoritative ranking. Nothing ordered." in ctx.owner_text()
+    assert "No seller offers arrived" not in ctx.owner_text()
+
+
+def test_buyer_startup_names_the_missing_token_variables_on_maincloud(recovery_buyer, monkeypatch):
+    buyer, ctx = recovery_buyer, Context()
+    monkeypatch.setattr(buyer, "recover_buyer_state", lambda: 0)   # state recovery is not under test
+    monkeypatch.setenv("SPACETIMEDB_SERVER", "maincloud")
+    monkeypatch.delenv("SPACETIMEDB_BUYER_TOKEN_FILE", raising=False)
+    monkeypatch.delenv("SPACETIMEDB_REFEREE_TOKEN_FILE", raising=False)
+    asyncio.run(buyer.buyer_startup(ctx))
+    (line,), _ = ctx.logger.error.call_args
+    assert line.startswith("MARKET IDENTITY MISSING: the Buyer") and "SPACETIMEDB_BUYER_TOKEN_FILE is not set" in line
+    assert "SPACETIMEDB_REFEREE_TOKEN_FILE is not set" in line
+
+
+def test_buyer_startup_is_quiet_on_a_local_market(recovery_buyer, monkeypatch):
+    buyer, ctx = recovery_buyer, Context()
+    monkeypatch.setattr(buyer, "recover_buyer_state", lambda: 0)
+    monkeypatch.setenv("SPACETIMEDB_SERVER", "local")
+    asyncio.run(buyer.buyer_startup(ctx))
+    ctx.logger.error.assert_not_called()

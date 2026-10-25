@@ -15,6 +15,7 @@ from uagents import Agent, Context, Protocol
 from uagents_core.contrib.protocols.payment import CommitPayment, CompletePayment, RejectPayment, payment_protocol_spec
 
 import common
+import market_env_check
 import payment
 from factory import load_config, pick_port, seller_from_config
 from market_bridge import MarketBridge
@@ -133,9 +134,10 @@ def _market_bid(bid: dict, seller: dict) -> None:
     subject = _MARKET_SELLER_SUBJECT.get(bid["supplier_id"])
     if subject is None:
         return  # no Market identity for this seller (sellers 4, 5, Seller Kit): the bid goes to the buyer only
-    token_file = os.environ.get(f"SPACETIMEDB_{subject.replace('-', '_').upper()}_TOKEN_FILE")
+    token_var = f"SPACETIMEDB_{subject.replace('-', '_').upper()}_TOKEN_FILE"
+    token_file = os.environ.get(token_var)
     if not token_file:
-        raise ValueError("seller Market identity is not configured")
+        raise ValueError(f"seller Market identity is not configured: set {token_var}")
     market = MarketBridge("seller", token_file=token_file)
     metadata = []
     for index, line in enumerate(bid["lines"]):
@@ -294,6 +296,9 @@ def persona_line(s: dict, total: float) -> str:
 
 def build(name: str, cfg: dict | None = None) -> Agent:
     """A catalog seller by name, or a custom seller from a validated SellerConfig `cfg` (name is then cfg["id"])."""
+    loud = market_env_check.seller_line(name, os.environ) if cfg is None else None  # Maincloud: a missing token file is loud
+    if loud:
+        print(loud, file=sys.stderr, flush=True)
     mirror = cfg is None and name in MIRROR_SOURCES
     if mirror:
         if name not in common.SEEDS:  # no default seed: a guessable key must never sign as this agent
@@ -374,7 +379,7 @@ def build(name: str, cfg: dict | None = None) -> Agent:
         try:
             _market_bid(bid, s)
         except Exception as exc:
-            ctx.logger.warning(f"Market bid publication failed: {type(exc).__name__}")
+            ctx.logger.warning(f"Market bid publication failed: {type(exc).__name__}: {str(exc)[:200]}")
             return
         seller_chat.remember_bid(name, bid)  # the Advocate may ask about this bid's condition; answer from what was bid
         line = (_mirror_persona(s, bid["total_landed_price"], bid.get("price_anchor")) if mirror

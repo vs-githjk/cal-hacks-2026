@@ -81,11 +81,32 @@ def round_summary(*, asked, received: dict, screened: dict, review_bids: list, c
         under = f", {_money(cap - winner['total_landed_price'])} under your cap" if cap and cap >= winner["total_landed_price"] else ""
         parts.append(f"{_name(winner)} won on landed price at {_money(winner['total_landed_price'])} "
                      f"(item plus shipping){under}.")
+    elif not bids:
+        parts.append("No seller offers arrived, so there was nothing to rank.")
     else:
         parts.append("No bid survived the checks.")
     if next_step:
         parts.append(next_step)
     return " ".join(parts)
+
+
+NO_WINNER_WHY = "No reviewed Market bid passed the authoritative ranking. Nothing ordered."
+NO_OFFERS_WHY = "No seller offers arrived this round. Nothing ordered."
+
+
+def no_winner_why(received: dict) -> str:
+    """The owner-facing reason for a round with no winner: say plainly when no offers arrived at all."""
+    return NO_WINNER_WHY if received else NO_OFFERS_WHY
+
+
+def arrival_line(asked, received: dict) -> str:
+    """One log line: how many bids arrived and from whom, and which asked sellers stayed silent. Ids only (no prices)."""
+    asked = [str(a) for a in asked]
+    came = sorted({str(b.get("supplier_id")) for b in received.values() if isinstance(b, dict)})
+    silent = [a for a in asked if a not in came]
+    line = f"Round ended with {len(received)} of {len(asked)} bids received"
+    line += f" (from {', '.join(came)})" if came else " (from nobody)"
+    return line + (f"; no reply from {', '.join(silent)}" if silent else "")
 
 
 NEXT_BUY = ("Next: I get a fresh quote and then call your phone for the approval code. "

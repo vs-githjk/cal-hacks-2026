@@ -238,6 +238,23 @@ def maincloud_check(file_env: dict[str, str]) -> "Check":
     return Check("maincloud market", True, market_target.describe(t))
 
 
+def market_tokens_check(file_env: dict[str, str], repo: Path = REPO) -> "Check":
+    """Maincloud mode: every seller with a Market identity and the Buyer need their token file, or the Buyer silently gets
+    zero bids. Names only: reports which VARIABLE is unset or points at no file, never a value or a path. A relative
+    path counts as present when it exists under the repo or agents/ (where the services run)."""
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from agents import market_env_check
+    env = {**{k: v for k, v in os.environ.items() if k.startswith("SPACETIMEDB")}, **file_env}
+    found = market_env_check.all_problems(
+        env, exists=lambda p: any((base / p).is_file() for base in (repo, repo / "agents")) if not os.path.isabs(p)
+        else os.path.isfile(p))
+    if found:
+        return Check("market token files (names only)", False, "; ".join(found),
+                     "set each variable to its role's token file in the env file; without them sellers cannot bid and the Buyer sees zero offers")
+    return Check("market token files (names only)", True, "seller A, B, C, buyer and referee files found")
+
+
 # ---------------------------------------------------------------- preflight
 
 
@@ -277,6 +294,7 @@ def run_preflight(a, services: list[Service], file_env: dict[str, str], env_note
                          auto="up runs `npm ci` in market/"))
     if getattr(a, "maincloud", False):
         out.append(maincloud_check(file_env))
+        out.append(market_tokens_check(file_env, repo))
     env_ok = bool(file_env)
     out.append(Check("env file", env_ok, env_note.removeprefix("env file "), f"create it from .env.example, or pass --env-file PATH"))
     names = key_names_from_example(repo / ".env.example")

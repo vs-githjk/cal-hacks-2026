@@ -32,6 +32,7 @@ from advocate.real_data import cached_shield_baseline
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
 from goal import need_from_goal, owned_attrs, remember, skip_lines
+import market_env_check
 import explain, fair_band, owner_approval, purchases, understand  # Lane D depth: understanding, round explanation, price check, purchase memory
 from logic import advice_need_for, decide, make_order, sealed
 from data.mirror import not_partners  # common put the repo root on sys.path
@@ -300,10 +301,12 @@ async def _finish_market_round(ctx: Context):
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     if ROUND.get("market_winner") is None:
+        received = ROUND.get("received_bids", {})
+        (ctx.logger.warning if not received else ctx.logger.info)(
+            explain.arrival_line(ROUND.get("asked") or common.SELLERS, received))
         if ROUND.get("round_summary"):
             await tell_owner(ctx, ROUND["round_summary"])
-        await fail_round(ctx, "No reviewed Market bid passed the authoritative ranking. Nothing ordered.",
-                         always_notify=True)
+        await fail_round(ctx, explain.no_winner_why(received), always_notify=True)
         return
     await conclude(ctx, reviewed=True)
 
@@ -347,6 +350,9 @@ def recover_buyer_state() -> int:
 
 @agent.on_event("startup")
 async def buyer_startup(ctx: Context):
+    loud = market_env_check.buyer_line(os.environ)  # Maincloud: a missing buyer or referee token file is loud
+    if loud:
+        ctx.logger.error(loud)
     try:
         recover_buyer_state()
     except Exception as exc:
