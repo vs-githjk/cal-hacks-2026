@@ -18,7 +18,7 @@ export const FLOOR = {
   surface: "#112437",
   surface2: "#16304a",
   // seller tints, by outcome: slate control, coral injected, amber uncertain, mint winner
-  slate: "#8fa0b2", coral: "#e5484d", amber: "#fcd34d", mint: "#0f9d76", sky: "#8fb0ff",
+  slate: "#8fa0b2", coral: "#e5484d", amber: "#fcd34d", mint: "#0f9d76", sky: "#8fb0ff", sand: "#d6c3a1",
   paper: "#f7f3e8", paperEdge: "#d9d2bd", ice: "#1a3a52",
   eaten: "#334155",
   // text on the dark stage
@@ -30,7 +30,7 @@ export const FLOOR = {
   fontSans: "var(--font-geist), ui-sans-serif, system-ui, sans-serif",
   fontMono: "var(--font-geist-mono), ui-monospace, Menlo, Consolas, monospace",
 } as const;
-export type Tint = "slate" | "coral" | "amber" | "mint" | "sky";
+export type Tint = "slate" | "coral" | "amber" | "mint" | "sky" | "sand";
 
 /** Timings in ms (docs/design-system tokens: f-dash, f-block, ...). */
 export const T = { dash: 600, chomp: 1000, block: 500, grow: 800, reveal: 320 } as const;

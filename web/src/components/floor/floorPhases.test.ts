@@ -12,7 +12,7 @@ test("an empty market plays the SIM reference scenario", () => {
   assert.equal(p.sample, true);
   assert.equal(p.origin, "SIM");
   assert.ok(p.phases.length > 10);
-  assert.equal(p.phases.at(-1)!.kind, "end");
+  assert.equal(p.phases.at(-1)!.kind, "paid");
   assert.equal(p.phases.at(-1)!.end?.title, "DEAL");
 });
 
@@ -67,7 +67,7 @@ test("the referee calls every round and the winner is checked, grows and takes t
   assert.ok(calls.every((c) => c.call && c.refereeArms));
   const win = p.phases.find((ph) => ph.kind === "winner")!;
   const w = win.sellers.find((s) => s.key === p.winnerKey)!;
-  assert.equal(w.scale, 1.12);
+  assert.equal(w.scale, 1.6);
   assert.equal(w.ring, true);
   assert.equal(w.tint, "mint");
   assert.equal(w.statusLine, "WINNER");
@@ -128,4 +128,60 @@ test("the reference run: the 4 current sellers, true labels, Byte Bros wins at $
   const text = JSON.stringify(p, (_, v) => (typeof v === "bigint" ? String(v) : v));
   assert.doesNotMatch(text, /Silicon|Bay Area|127\.0\.0\.1|localhost|example\.com|Shield/);
   assert.equal(p.phases[0]!.hud.rounds, 3);
+});
+
+test("stage 2 on the reference run: re-check ages, recall, walk-out, approved by phone then Stripe test mode", () => {
+  const p = planFromRows(EMPTY);
+  const reveal = p.phases.find((ph) => ph.kind === "reveal")!;
+  const by = (n: string) => reveal.sellers.find((s) => s.name === n)!;
+  assert.equal(by("Byte Bros Outlet").recheck, "re-checked 5s ago");
+  assert.equal(by("ReNew Refurb").recheck, "re-checked 9s ago");
+  assert.equal(by("FlashDeal Frankie").recheck, "re-checked 14s ago");
+  assert.equal(by("Central Comp").recheck, "re-checked 2m 17s ago"); // its recorded snapshot time, 2026-10-24T21:12:13Z
+  assert.equal(by("Central Comp").recheckBy, "Bright Data");
+  const sealed = p.phases[0]!;
+  assert.ok(sealed.sellers.every((s) => s.recheck === null), "no re-check tag while sealed");
+  // recall: a second check phase for the winner, its status line says no recall
+  const checks = p.phases.filter((ph) => ph.kind === "check" && ph.sellers.some((s) => s.key === p.winnerKey && s.status === "fit_ok"));
+  assert.equal(checks.length, 2);
+  assert.equal(checks[1]!.sellers.find((s) => s.key === p.winnerKey)!.statusLine, "FIT OK · NO RECALL");
+  // winner walks out with the buyer: both end past the front rope (v > 1)
+  const walk = p.phases.find((ph) => ph.kind === "walkout")!;
+  assert.ok(walk.buyer.v > 1 && walk.sellers.find((s) => s.key === p.winnerKey)!.pos.v > 1);
+  // deal card: approved by phone first, then paid in Stripe test mode
+  const end = p.phases.find((ph) => ph.kind === "end")!;
+  const paid = p.phases.find((ph) => ph.kind === "paid")!;
+  assert.deepEqual(end.end!.badges, ["Approved by phone"]);
+  assert.deepEqual(paid.end!.badges, ["Approved by phone", "Paid · Stripe test mode"]);
+  assert.match(hudText(end.hud), /approved by phone$/);
+});
+
+test("without approval, payment or re-check rows the floor says none of it", () => {
+  const rows: ArenaRows = { ...SAMPLES.ssd, events: SAMPLES.ssd.events.filter((e) => e.kind !== "advocate_card") };
+  const p = planFromRows(rows, { sample: true });
+  const last = p.phases.at(-1)!;
+  assert.equal(last.kind, "end");
+  assert.deepEqual(last.end!.badges, []);
+  assert.ok(p.phases.every((ph) => ph.sellers.every((s) => s.recheck === null)));
+  assert.ok(!p.phases.some((ph) => ph.sellers.some((s) => s.statusLine?.includes("NO RECALL"))));
+});
+
+test("a Smell Test block row through floorPhases: injection, then the Smell Test phase, then eaten with its reason", () => {
+  const rows: ArenaRows = {
+    ...SAMPLES.gpu,
+    results: SAMPLES.gpu.results.map((r) => (r.sellerId === "seller_2" ? { ...r, reasons: ["Bazaar Shield block: shield.override.instruction"] } : r)),
+  };
+  const p = planFromRows(rows, { sample: true });
+  const kinds = p.phases.map((ph) => ph.kind);
+  assert.ok(kinds.indexOf("injection") >= 0 && kinds.indexOf("injection") < kinds.indexOf("shield") && kinds.indexOf("shield") < kinds.indexOf("chomp"));
+  const sh = p.phases.find((ph) => ph.kind === "shield")!;
+  assert.ok(sh.shield);
+  const hit = sh.sellers.find((s) => s.statusLine === "SMELL TEST FAILED")!;
+  assert.equal(hit.status, "blocked");
+  assert.equal(hit.tint, "coral");
+  assert.match(sh.pip ?? "", /Smell Test/);
+  const out = p.phases.at(-1)!.sellers.find((s) => s.key === hit.key)!;
+  assert.equal(out.tag, "BLOCKED · SMELL TEST");
+  assert.equal(out.reason, "shield");
+  assert.doesNotMatch(JSON.stringify(p, (_, v) => (typeof v === "bigint" ? String(v) : v)), /Shield/);
 });

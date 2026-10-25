@@ -12,7 +12,7 @@ import { T, type Tint } from "./floorTokens.ts";
 
 export type PhaseKind =
   | "sealed" | "reveal" | "injection" | "shield" | "check" | "referee" | "dash" | "chomp"
-  | "winner" | "end" | "hold";
+  | "winner" | "walkout" | "end" | "paid" | "hold";
 export type Reason = "price" | "failed_fit" | "shield" | "refused";
 export type SellerStatus = "sealed" | "revealed" | "blocked" | "eaten" | "checking" | "fit_ok" | "winner";
 export type Tone = "neutral" | "bad" | "good" | "warn";
@@ -35,12 +35,14 @@ export interface SellerView {
   ring: boolean; // the winner's mint ring
   injection: boolean; // the hidden-instruction bubble is up
   origin: string; // LIVE, MIRROR or SIM, per seller
+  recheck: string | null; // "re-checked 5s ago": from a claim_checked row, relative to the round close
+  recheckBy: string | null; // "Bright Data" when the row says so
 }
-export interface EndCard { title: "DEAL" | "NO DEAL"; part: string; price: string | null; line: string }
-export interface Hud { round: number; rounds: number; part: string; sellers: number; state: "sealed" | "revealed" | "checking" | "deal"; price: string | null }
+export interface EndCard { title: "DEAL" | "NO DEAL"; part: string; price: string | null; line: string; badges: string[] }
+export interface Hud { round: number; rounds: number; part: string; sellers: number; state: "sealed" | "revealed" | "checking" | "deal"; price: string | null; note: string | null }
 /** "Round 2 of 3 · GPU · 3 sellers · revealed", or "Deal · GPU · $1,299.99". */
 export function hudText(h: Hud): string {
-  if (h.state === "deal") return ["Deal", h.part, h.price].filter(Boolean).join(" · ");
+  if (h.state === "deal") return ["Deal", h.part, h.price, h.note].filter(Boolean).join(" · ");
   const tail = h.state === "checking" ? `${h.sellers === 1 ? "the checker verifies" : "the checker verifies"}` : h.state;
   return `Round ${h.round} of ${h.rounds} · ${h.part || "part"} · ${h.sellers} seller${h.sellers === 1 ? "" : "s"} · ${tail}`;
 }
@@ -75,6 +77,7 @@ export interface FloorPlan {
 export const BUYER_HOME: Pt = { u: 0, v: 0.86 };
 export const CHECKER_HOME: Pt = { u: 1.26, v: 0.46 };
 export const REFEREE_AT: Pt = { u: 0, v: 0.158 };
+const EXIT: Pt = { u: 1.0, v: 1.45 }; // under the front rope, toward the camera and right
 
 const REASON_WORD: Record<Reason, string> = { price: "PRICE", failed_fit: "FAILED FIT", shield: "SMELL TEST", refused: "NOT ORDERABLE" };
 export function reasonKind(code: ReasonCode): Reason {
@@ -109,7 +112,7 @@ function sellerName(o: SceneOffer, i: number): string {
 function blank(i: number, n: number, name: string, origin: string): SellerView {
   return {
     key: `s${i}`, name, slot: i, price: null, status: "sealed", reason: null, tag: "SEALED", statusLine: null, tone: "neutral",
-    pos: homeOf(i, n), scale: 1, tint: "slate", ring: false, injection: false, origin,
+    pos: homeOf(i, n), scale: 1, tint: "slate", ring: false, injection: false, origin, recheck: null, recheckBy: null,
   };
 }
 
@@ -118,14 +121,45 @@ function holdPlan(count: number, part: string, origin: string, sample: boolean, 
   const sellers = Array.from({ length: count }, (_, i) => blank(i, count, `Seller ${i + 1}`, origin));
   const phase: FloorPhase = {
     index: 0, kind: "hold", ms: 0, hold: true, round: 1, rounds: 1,
-    hud: { round: 1, rounds: 1, part, sellers: count, state: "sealed", price: null }, call, pip: call ?? "Sealed round open. Prices stay hidden until it closes.",
+    hud: { round: 1, rounds: 1, part, sellers: count, state: "sealed", price: null, note: null }, call, pip: call ?? "Sealed round open. Prices stay hidden until it closes.",
     refereeArms: false, buyer: { ...BUYER_HOME, face: 1, chomp: false }, sellers, shield: null, checker: CHECKER_HOME, wander: true, end: null,
   };
   return { sample, origin, part, phases: [phase], sellerCount: count, winnerKey: null };
 }
 
+/** What the rows say beyond the ranking: when each price was re-read, what the advocate said, whether the buyer approved and paid. */
+export interface Extras {
+  rechecks: Record<string, { sec: number; by: string | null }>; // by bid id
+  advocate: Record<string, string>; // by bid id: "Advocate: buy" and so on
+  approved: boolean;
+  paid: boolean;
+}
+export const NO_EXTRAS: Extras = { rechecks: {}, advocate: {}, approved: false, paid: false };
+const agoText = (sec: number) => (sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`);
+
+/** Extras for the latest round, read from the rows only (nothing invented): a claim_checked row per bid gives the re-check time. */
+export function extrasFromRows(rows: ArenaRows, roundId: string | null): Extras {
+  const round = rows.rounds.find((r) => r.id === roundId);
+  if (!round) return NO_EXTRAS;
+  const us = (t: { microsSinceUnixEpoch: bigint }) => Number(t.microsSinceUnixEpoch / BigInt(1000));
+  const closeEv = rows.events.find((e) => e.kind === "auction_closed" && e.refId === round.id);
+  const closeMs = round.closedAt ? us(round.closedAt) : closeEv ? us(closeEv.at) : null;
+  const bids = new Set(rows.results.filter((r) => r.roundId === round.id).map((r) => r.bidId));
+  const rechecks: Extras["rechecks"] = {};
+  const advocate: Extras["advocate"] = {};
+  for (const e of [...rows.events].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+    if (!bids.has(e.refId)) continue;
+    if (e.kind === "advocate_card") advocate[e.refId] = e.label;
+    if (e.kind === "claim_checked" && closeMs !== null && us(e.at) <= closeMs) {
+      rechecks[e.refId] = { sec: Math.round((closeMs - us(e.at)) / 1000), by: /bright data/i.test(e.label) ? "Bright Data" : null };
+    }
+  }
+  const after = (kind: string) => closeMs !== null && rows.events.some((e) => e.kind === kind && us(e.at) >= closeMs);
+  return { rechecks, advocate, approved: after("approval_recorded"), paid: after("payment_recorded") };
+}
+
 /** The phases for a scene. Pure and deterministic. */
-export function planFromScene(scene: ArenaScene): FloorPlan {
+export function planFromScene(scene: ArenaScene, extras: Extras = NO_EXTRAS): FloorPlan {
   const part = scene.requestLabel || scene.offers.find((o) => o.product)?.product || "";
   const origin = scene.sample ? "SIM" : scene.offers[0]?.origin ?? "LIVE";
   if (scene.phase === "inconsistent") return holdPlan(Math.max(scene.sealedCount, 1), part, origin, scene.sample, "The result rows disagree, so no winner is shown.");
@@ -140,7 +174,7 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
   // Tint by outcome, as the reference run does: mint the winner, coral the Shield block, amber a failed fit, slate the rest.
   offers.forEach((o, i) => {
     const code = o.knock?.reasonCode;
-    sellers[i]!.tint = o.bidId === scene.winnerBidId ? "mint" : code && reasonKind(code) === "shield" ? "coral" : code && reasonKind(code) === "failed_fit" ? "amber" : o.rank === 2 ? "sky" : "slate";
+    sellers[i]!.tint = o.bidId === scene.winnerBidId ? "mint" : code && reasonKind(code) === "shield" ? "coral" : code && reasonKind(code) === "failed_fit" ? "amber" : o.rank === 2 ? "sand" : "slate";
   });
   const knocks = scene.beats.flatMap((b) => b.knocked);
   const rounds = Math.max(knocks.length, 1);
@@ -159,8 +193,8 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
     phases.push({
       index: phases.length, kind, ms, hold: false, round, rounds,
       hud: {
-        round, rounds, part, sellers: alive(), price: winPrice,
-        state: kind === "end" || kind === "winner" ? "deal" : kind === "check" ? "checking" : revealed ? "revealed" : "sealed",
+        round, rounds, part, sellers: alive(), price: winPrice, note: ["end", "paid", "winner", "walkout"].includes(kind) && extras.approved ? "approved by phone" : null,
+        state: kind === "end" || kind === "paid" || kind === "winner" || kind === "walkout" ? "deal" : kind === "check" ? "checking" : revealed ? "revealed" : "sealed",
       },
       call: extra.call ?? null, pip: extra.pip ?? null, refereeArms: extra.arms ?? false,
       buyer: { ...buyer }, sellers: sellers.map((s) => ({ ...s, pos: { ...s.pos } })), shield: shield && { ...shield }, checker: { ...checker },
@@ -170,7 +204,11 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
 
   push("sealed", 3600, { wander: true, pip: `${n} sealed offers are in. Prices stay hidden until the round closes.` });
   revealed = true;
-  sellers.forEach((s, i) => { s.price = offers[i]!.landed; s.status = "revealed"; s.tag = formatMoney(offers[i]!.landed); });
+  sellers.forEach((s, i) => {
+    s.price = offers[i]!.landed; s.status = "revealed"; s.tag = formatMoney(offers[i]!.landed);
+    const rc = extras.rechecks[offers[i]!.bidId];
+    if (rc) { s.recheck = `re-checked ${agoText(rc.sec)} ago`; s.recheckBy = rc.by; }
+  });
   push("reveal", 1000 + 120 * n, { pip: "The round closed. The referee opens the sealed offers." });
 
   // one elimination per knock: the worst seller is eaten, with its reason
@@ -216,20 +254,31 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
     buyer = { ...BUYER_HOME, face: 1, chomp: false };
     checker = { u: w.pos.u + 0.14, v: w.pos.v + 0.08 };
     w.status = "fit_ok"; w.statusLine = "FIT OK"; w.tone = "good";
-    push("check", 1100, { pip: `The checker confirmed ${w.name}.` });
+    push("check", 1100, { pip: `The checker confirmed the fit of ${w.name}.` });
+    // recall: said only when the advocate's row for this bid says buy
+    if (/^Advocate: buy/.test(extras.advocate[o.bidId] ?? "")) {
+      checker = { u: w.pos.u + 0.2, v: w.pos.v + 0.04 };
+      w.statusLine = "FIT OK · NO RECALL";
+      push("check", 1000, { pip: `Recall check: none found for ${w.name}.` });
+    }
     checker = CHECKER_HOME;
     winPrice = formatMoney(o.landed);
-    w.status = "winner"; w.statusLine = "WINNER"; w.scale = 1.12; w.ring = true;
+    w.status = "winner"; w.statusLine = "WINNER"; w.scale = 1.6; w.ring = true;
     const side = w.pos.u >= 0 ? -1 : 1;
-    buyer = { u: w.pos.u + side * 0.2, v: Math.min(w.pos.v + 0.1, 0.97), face: side === -1 ? 1 : -1, chomp: false };
+    buyer = { u: w.pos.u + side * 0.22, v: Math.min(w.pos.v + 0.1, 0.97), face: side === -1 ? 1 : -1, chomp: false };
     const call = `Winner: ${w.name} at ${winPrice}, before sales tax.`;
-    push("winner", 1500, { call, arms: true, pip: call });
-    push("end", 4000, {
-      end: { title: "DEAL", part: part || o.product, price: winPrice, line: `${w.name} · ranked 1 of ${n} by the referee · passed the Smell Test · fit checked` },
-      pip: "Deal. The buyer has its part.",
-    });
+    push("winner", 1800, { call, arms: true, pip: call });
+    // the winner and the buyer walk out together, under the front rope
+    w.pos = { u: EXIT.u - 0.1, v: EXIT.v };
+    buyer = { ...EXIT, face: 1, chomp: false };
+    push("walkout", 2000, { pip: "Walking out with the buyer." });
+    const line = `${w.name} · ranked 1 of ${n} by the referee · passed the Smell Test · fit checked`;
+    const card = (badges: string[]): EndCard => ({ title: "DEAL", part: part || o.product, price: winPrice, line, badges });
+    const approved = extras.approved ? ["Approved by phone"] : [];
+    push("end", extras.paid ? 2600 : 4000, { end: card(approved), pip: extras.approved ? "Approved by phone. The buyer has its part." : "Deal. The buyer has its part." });
+    if (extras.paid) push("paid", 3200, { end: card([...approved, "Paid · Stripe test mode"]), pip: "Paid in Stripe test mode." });
   } else {
-    push("end", 4000, { end: { title: "NO DEAL", part, price: null, line: "No offer passed the checks, so nobody won this round." }, call: "No offer passed the checks.", pip: "No deal this round." });
+    push("end", 4000, { end: { title: "NO DEAL", part, price: null, line: "No offer passed the checks, so nobody won this round.", badges: [] }, call: "No offer passed the checks.", pip: "No deal this round." });
   }
 
   return { sample: scene.sample, origin, part, phases, sellerCount: n, winnerKey: winnerIdx !== null ? sellers[winnerIdx]!.key : null };
@@ -238,9 +287,15 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
 /** Market rows in, phases out. An empty market plays the built-in reference scenario, labelled SIM. */
 export function planFromRows(rows: ArenaRows, opts: { sample?: boolean } = {}): FloorPlan {
   const scene = projectArenaScene(rows, { sample: opts.sample });
-  if (!opts.sample && (isEmptyMarket(rows) || scene.phase === "waiting")) return planFromScene(projectArenaScene(REFERENCE_RUN, { sample: true }));
-  return planFromScene(scene);
+  if (!opts.sample && (isEmptyMarket(rows) || scene.phase === "waiting")) return referencePlan();
+  return planFromScene(scene, extrasFromRows(rows, scene.roundId));
 }
 
 /** Total ms of a plan's timed phases. */
 export const planMs = (p: FloorPlan) => p.phases.reduce((a, ph) => a + ph.ms, 0);
+
+/** The built-in reference run as a plan (SIM): what the floor plays with no rows, and what /floor?replay=reference loops. */
+export function referencePlan(): FloorPlan {
+  const scene = projectArenaScene(REFERENCE_RUN, { sample: true });
+  return planFromScene(scene, extrasFromRows(REFERENCE_RUN, scene.roundId));
+}

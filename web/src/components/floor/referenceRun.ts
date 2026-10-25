@@ -3,7 +3,8 @@
 // dated listing, which is MIRROR and can never be ordered or paid, so it cannot win. No link, no id, no loopback address.
 import type { ArenaRows, EventRow, ResultRow, RoundRow } from "../../lib/arenaScene.ts";
 
-const OPENED_MS = Date.UTC(2026, 9, 24, 17, 0, 0);
+// Opened right after the Central Comp snapshot (21:12:13Z) so its capture time sits before the close; the round closes 90 s later.
+const OPENED_MS = Date.UTC(2026, 9, 24, 21, 13, 0);
 const WINDOW_S = 90;
 const ts = (ms: number) => ({ microsSinceUnixEpoch: BigInt(ms) * BigInt(1000) });
 const ROUND = "reference-run";
@@ -42,6 +43,14 @@ export const REFERENCE_RUN: ArenaRows = (() => {
     events.push({ id: BigInt(events.length + 1), kind, refTable, refId, sellerId, label, origin, at: ts(OPENED_MS + atS * 1000) });
   push("round_opened", "round", ROUND, "", `Sealed round open for ${WINDOW_S} s`, 0);
   SPECS.forEach((s, i) => push("bid_sealed", "bid", bid(s), s.id, "A sealed bid arrived", 10 + i * 12, s.origin));
+  // Price re-reads, as claim_checked rows: the three SIM bids 5, 9 and 14 s before the close; Central Comp at its recorded snapshot time.
+  const SNAPSHOT_AT_S = (Date.UTC(2026, 9, 24, 21, 12, 13) - OPENED_MS) / 1000;
+  const reread: Record<string, number> = { seller_1: WINDOW_S - 5, seller_5: WINDOW_S - 9, seller_3: WINDOW_S - 14, seller_6: SNAPSHOT_AT_S };
+  SPECS.forEach((s) => push("claim_checked", "bid_check", bid(s), s.id, "Bright Data re-check: price read again", reread[s.id]!, s.origin));
+  push("advocate_card", "bid_check", bid(SPECS[0]!), "", "Advocate: buy", WINDOW_S - 2);
   push("auction_closed", "round", ROUND, "seller_1", "Round closed: 2 ranked, 2 out", WINDOW_S);
+  // After the close the buyer approves by phone, then pays (Stripe test mode): recorded SIM rows, shown only because they are rows.
+  push("approval_recorded", "approval", ROUND, "", "Approved by phone code", WINDOW_S + 20);
+  push("payment_recorded", "payment", ROUND, "", "Payment recorded (test mode)", WINDOW_S + 40);
   return { rounds, needs: [], results, events };
 })();

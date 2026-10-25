@@ -12,7 +12,7 @@ const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) /
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const lerpPt = (a: Pt, b: Pt, t: number): Pt => ({ u: lerp(a.u, b.u, t), v: lerp(a.v, b.v, t) });
-const TINT: Record<Tint, string> = { slate: C.slate, coral: C.coral, amber: C.amber, mint: C.mint, sky: C.sky };
+const TINT: Record<Tint, string> = { slate: C.slate, coral: C.coral, amber: C.amber, mint: C.mint, sky: C.sky, sand: C.sand };
 /** Depth: nearer is bigger. */
 const dz = (v: number) => 0.85 + 0.3 * v;
 /** Ice-bed flecks on the mat, fixed so the picture is the same every frame. */
