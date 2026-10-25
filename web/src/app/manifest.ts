@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// The dashboard lives under /buyer, so the installed app opens there. Colours are the Ledger black.
+// The dashboard lives under /buyer, so the installed app opens there. Colours are the Frontier sand and ink.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Tech Bazaar",
@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/buyer",
     scope: "/",
     display: "standalone",
-    background_color: "#000000",
-    theme_color: "#000000",
+    background_color: "#f1e7d3",
+    theme_color: "#f1e7d3",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
