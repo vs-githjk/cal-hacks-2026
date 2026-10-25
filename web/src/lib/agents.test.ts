@@ -148,9 +148,14 @@ test("fetchAgents answers null for an offline feed: unreachable, HTTP error, not
   }
 });
 
-test("feedBase skips the fetch when unset or when a loopback feed is seen from a deployed page", () => {
-  assert.equal(feedBase(undefined, "localhost"), null);
-  assert.equal(feedBase("", "localhost"), null);
+test("feedBase falls back to the loopback feed on a localhost page when unset", () => {
+  assert.equal(feedBase(undefined, "localhost"), "http://127.0.0.1:8790");
+  assert.equal(feedBase("", "127.0.0.1"), "http://127.0.0.1:8790");
+});
+
+test("feedBase skips the fetch when unset on a deployed page or when a loopback feed is seen from a deployed page", () => {
+  assert.equal(feedBase(undefined, "tech-bazaar.vercel.app"), null);
+  assert.equal(feedBase("", "judge.example"), null);
   assert.equal(feedBase("not a url", "localhost"), null);
   assert.equal(feedBase("http://127.0.0.1:8790", "tech-bazaar.vercel.app"), null);
   assert.equal(feedBase("http://localhost:8790", "judge.example"), null);
