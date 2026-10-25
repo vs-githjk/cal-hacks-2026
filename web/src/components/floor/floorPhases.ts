@@ -189,7 +189,9 @@ export const SIM_RUN: FloorScript = scriptFor(SAMPLES.gpu)!;
 
 /** The script for the latest round in `rows`, or SIM_RUN when there is nothing usable. */
 export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
-  return scriptFor(rows) ?? SIM_RUN;
+  const live = scriptFor(rows);
+  // a live round with one seller has no race to show; the labelled SIM run does
+  return live && live.sellers.length >= 2 ? live : SIM_RUN;
 }
 
 /** The phase showing `seconds` into the loop: the last with at <= seconds % duration. Negative or NaN input gives the first phase. */
