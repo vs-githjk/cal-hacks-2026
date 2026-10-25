@@ -23,11 +23,11 @@ def need(*skus):
 
 
 def test_sellers_match_common():
-    assert all(seller(n)["listings"] for n in common.SELLERS)
+    assert all(seller(n)["listings"] for n in common.CATALOG_SELLERS)
 
 
 def test_every_bid_validates_and_respects_floor():
-    for n in common.SELLERS:
+    for n in common.CATALOG_SELLERS:
         s = seller(n)
         bid = make_bid(need(GPU, PSU, CASE, "psu 750w", "rx 7800 xt 16gb"), s)
         common.validate("Bid", bid)

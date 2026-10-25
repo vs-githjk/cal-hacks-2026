@@ -6,6 +6,11 @@ from data.claim_check.actor_client import UNAVAILABLE, Down, Slow, check_via_act
 CLAIM = {"id": "c1", "text": "was $1,499.99", "kind": "price", "evidence_url": "https://www.bestbuy.com/site/x"}
 
 
+@pytest.fixture(autouse=True)
+def _no_agent_token(monkeypatch):  # a developer's own APIFY_AGENT_TOKEN must not change these tests (#329)
+    monkeypatch.delenv("APIFY_AGENT_TOKEN", raising=False)
+
+
 def fake(status=200, rows=None, exc=None):
     calls = []
 
@@ -179,3 +184,66 @@ def test_a_boolean_id_never_matches_a_numeric_claim_id():
     out = check_via_actor(claim, post=fake(status=201, rows=[{**OK, "id": True}])[0])
     assert out["result"] == "unverified" and out["method"].startswith(f"{UNAVAILABLE}: empty")
     assert check_via_actor(claim, post=fake(status=201, rows=[{**OK, "id": 1}])[0])["result"] == "verified"
+
+
+
+# #270 step 3: an agent's own prepaid token
+def test_an_agent_token_is_used_and_the_result_says_the_agent_paid(monkeypatch):
+    monkeypatch.setenv("APIFY_TOKEN", "apify_api_OURS")
+    monkeypatch.setenv("APIFY_AGENT_TOKEN", "apify_api_AGENT")
+    seen = []
+
+    def post(url, body, headers, timeout):
+        seen.append(headers)
+        return 201, [OK]
+    out = check_via_actor(CLAIM, post=post)
+    assert seen[0] == {"Authorization": "Bearer apify_api_AGENT"} and out["paid_by"] == "using a prepaid agent token (set in the env)"
+    assert out["result"] == "verified" and "apify_api_AGENT" not in repr(out)
+
+
+def test_without_an_agent_token_our_account_pays_and_says_so(monkeypatch):
+    monkeypatch.delenv("APIFY_AGENT_TOKEN", raising=False)
+    monkeypatch.setenv("APIFY_TOKEN", "apify_api_OURS")
+    seen = []
+    out = check_via_actor(CLAIM, post=lambda url, body, headers, timeout: seen.append(headers) or (201, [OK]))
+    assert seen[0] == {"Authorization": "Bearer apify_api_OURS"} and out["paid_by"] == "our Apify account"
+
+
+# #329: paid_by is honest with no token, and an expired agent token falls back to our account
+def test_with_no_token_at_all_paid_by_says_so(monkeypatch):
+    monkeypatch.delenv("APIFY_TOKEN", raising=False)
+    seen = []
+    out = check_via_actor(CLAIM, post=lambda url, body, headers, timeout: seen.append(headers) or (401, None))
+    assert seen == [{}] and out["paid_by"] == "no Apify token set" and out["result"] == "unverified"
+
+
+@pytest.mark.parametrize("refused", [401, 402, 403])
+def test_a_refused_agent_token_falls_back_to_our_account_once(monkeypatch, refused):
+    monkeypatch.setenv("APIFY_TOKEN", "apify_api_OURS")
+    monkeypatch.setenv("APIFY_AGENT_TOKEN", "apify_api_AGENT")
+    seen = []
+
+    def post(url, body, headers, timeout):
+        seen.append(headers)
+        return (refused, None) if headers["Authorization"].endswith("AGENT") else (201, [OK])
+    out = check_via_actor(CLAIM, post=post)
+    assert [h["Authorization"] for h in seen] == ["Bearer apify_api_AGENT", "Bearer apify_api_OURS"]
+    assert out["result"] == "verified" and out["paid_by"] == f"our Apify account (the agent token was refused: HTTP {refused})"
+    assert "apify_api_AGENT" not in repr(out) and "apify_api_OURS" not in repr(out)
+
+
+@pytest.mark.parametrize("status,exc", [(408, None), (429, None), (503, None), (None, Slow("ReadTimeout"))])
+def test_an_agent_token_never_falls_back_when_a_run_may_have_started(monkeypatch, status, exc):
+    monkeypatch.setenv("APIFY_TOKEN", "apify_api_OURS")
+    monkeypatch.setenv("APIFY_AGENT_TOKEN", "apify_api_AGENT")
+    post, calls = fake(status=status, exc=exc)
+    out = check_via_actor(CLAIM, post=post)
+    assert len(calls) == 1 and out["result"] == "unverified" and out["paid_by"] == "using a prepaid agent token (set in the env)"
+
+
+def test_a_refused_agent_token_without_our_token_does_not_retry(monkeypatch):
+    monkeypatch.delenv("APIFY_TOKEN", raising=False)
+    monkeypatch.setenv("APIFY_AGENT_TOKEN", "apify_api_AGENT")
+    post, calls = fake(status=402)
+    out = check_via_actor(CLAIM, post=post)
+    assert len(calls) == 1 and out["method"].startswith(f"{UNAVAILABLE}: quota")

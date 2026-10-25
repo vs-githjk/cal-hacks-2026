@@ -33,7 +33,7 @@ Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json
 .venv/bin/python sellers/seller_agent.py --config sellers/custom/<id>.json
 ```
 
-The port comes from the config or is the next free one from 8016. The buyer's seller list is still `common.SELLERS`, so a custom seller bids only once the buyer is told its address.
+The port comes from the config or is the next free one from 8016 (8016 itself is seller_6). The buyer's seller list is still `common.SELLERS`, so a custom seller bids only once the buyer is told its address.
 
 ## Issue #14 verification
 
