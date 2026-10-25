@@ -9,7 +9,7 @@ import type { FloorRendererProps } from "./FloorRingPixel.tsx";
 import { POCKET_IDS, findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
 import { followBox } from "./callState.ts";
 import { useFollowViewBox } from "./followCam.ts";
-import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
+import { ADVOCATE_COLORS, AQUA, AVATAR_GRIDS, CHECKER, GHOST, GHOST_COLORS, GHOST_SCARED, HAMMERHEAD, HAMMER_COLORS, MAZE, MAZE_ORIGIN, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER_ADVOCATE, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, avatarColors, avatarFor, mazeWallPaths, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -77,7 +77,6 @@ function spikyPoints(R: number, spike: number, n: number): string {
     return `${(Math.cos(a) * rr).toFixed(1)},${(Math.sin(a) * rr).toFixed(1)}`;
   }).join(" ");
 }
-const SPIKES = Array.from({ length: 10 }, (_, k) => { const a = (k * Math.PI) / 5; return [Math.round(32 + Math.cos(a) * 35), Math.round(28 + Math.sin(a) * 32)] as const; });
 
 interface Sg { label: string; sub: string | null; tone: string }
 interface Row {
@@ -172,8 +171,6 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
   );
 }
 
-const DARK_CYAN = mix(PAL.cyan, "#000000", 0.32);
-const PUFFER_COLORS = { X: PAL.cyan, D: DARK_CYAN, S: mix(PAL.cyan, "#000000", 0.22), E: PAL.ink };
 const REF_COLORS = { C: "#c7d4ff", H: "#f1c9a0", E: PAL.ink, K: "#2b3340", W: "#ffffff" };
 
 /** One support agent at its target: swims in from the tank edge, acts, swims back out (leaving). Positioned by its top-left corner. */
@@ -186,27 +183,24 @@ function AgentG({ a, reduced, leaving }: { a: Placed; reduced: boolean; leaving:
   let nameStyle: CSSProperties = {};
   if (a.kind === "shield") {
     name = "Shield";
-    nameStyle = { transform: `translateY(${a.puffed ? a.h * 0.25 : 0}px)`, transition: tr };
+    nameStyle = { transform: `translateY(${a.puffed ? a.h * 0.08 : 0}px)`, transition: tr };
     body = (
       <g transform={`translate(${cx} ${cy})`}>
-        <g style={{ transform: `scale(${a.puffed ? 1.5 : 1})`, transition: tr }}>
-          <g transform={`scale(${S}) translate(${-8 * FC} ${-7 * FC})`}>
-            <Sprite grid={PUFFER} colors={PUFFER_COLORS} cell={FC} flip={a.flip} />
-            <g shapeRendering="crispEdges" style={{ opacity: a.puffed ? 1 : 0, transition: tr }}>
-              {SPIKES.map(([sx, sy], k) => <rect key={k} x={sx - 3} y={sy - 3} width={6} height={6} fill={DARK_CYAN} />)}
-            </g>
+        <g style={{ transform: `scale(${a.puffed ? 1.15 : 1})`, transition: tr }}>
+          <g transform={`scale(${S}) translate(${-(HAMMERHEAD[0]!.length / 2) * FC} ${-(HAMMERHEAD.length / 2) * FC})`}>
+            <Sprite grid={HAMMERHEAD} colors={HAMMER_COLORS} cell={FC} flip={a.flip} />
           </g>
         </g>
       </g>
     );
   } else if (a.kind === "advocate") {
     name = "Advocate";
+    nameStyle = { transform: `translateY(${a.lensUp ? a.h * 0.15 : 0}px)`, transition: tr };
     body = (
-      <g transform={`scale(${S})`}>
-        <g transform={a.flip ? `translate(${12 * FC} 0) scale(-1 1)` : undefined}>
-          <Sprite grid={AUDIT} colors={{ X: PAL.mint, E: PAL.ink }} cell={FC} />
-          <g style={{ transform: a.lensUp ? "translate(2px, -12px)" : "translate(0px, 0px)", transition: tr }}>
-            <Sprite grid={AUDIT} colors={{ M: PAL.line, L: PAL.lens }} cell={FC} />
+      <g transform={`translate(${cx} ${cy})`}>
+        <g style={{ transform: `scale(${a.lensUp ? 1.3 : 1})`, transition: tr }}>
+          <g transform={`scale(${S}) translate(${-(PUFFER_ADVOCATE[0]!.length / 2) * FC} ${-(PUFFER_ADVOCATE.length / 2) * FC})`}>
+            <Sprite grid={PUFFER_ADVOCATE} colors={ADVOCATE_COLORS} cell={FC} flip={a.flip} />
           </g>
         </g>
       </g>
@@ -510,7 +504,7 @@ function Weed({ x, delay, reduced }: { x: number; delay: number; reduced: boolea
 
 /** Where an agent stands next to a fish (or at the top-centre for the Referee), and the tank-edge point it swims in from. */
 function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continuing: boolean): Placed {
-  const grid = c.kind === "shield" ? PUFFER : c.kind === "advocate" ? AUDIT : c.kind === "checker" ? CHECKER : REFEREE;
+  const grid = c.kind === "shield" ? HAMMERHEAD : c.kind === "advocate" ? PUFFER_ADVOCATE : c.kind === "checker" ? CHECKER : REFEREE;
   const w = gridW(grid), h = gridH(grid);
   const f = c.row;
   const fishCx = f ? f.sx + f.W / 2 : 480;
@@ -520,7 +514,7 @@ function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continui
   else if (c.kind === "shield") {
     const cxx = left ? f.sx - 8 - w * 0.75 : f.sx + f.W + 8 + w * 0.75;
     x = cxx - w / 2; y = f.sy + f.H / 2 - h / 2;
-  } else { x = left ? f.sx - 8 - w : f.sx + f.W + 8; y = f.sy + f.H - h; }
+  } else { const gap = 8 + (c.kind === "advocate" ? w * 0.15 : 0); x = left ? f.sx - gap - w : f.sx + f.W + gap; y = f.sy + f.H - h; }
   const padX = c.kind === "shield" ? w * 0.25 + 6 : 6;
   x = Math.max(TANK.x + padX, Math.min(TANK.x + TANK.w - w - padX, x));
   y = Math.max(WATER_Y + (c.kind === "shield" ? h * 0.25 : 0) + 2, Math.min(SAND_Y + 18 - h, y));
@@ -530,7 +524,7 @@ function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continui
   const arrived = reduced || e >= ACT_AT;
   const puffed = arrived || phase.kind === "eat";
   const armUp = arrived || continuing;
-  const flip = c.kind === "shield" ? left : c.kind === "referee" ? false : !left;
+  const flip = c.kind === "shield" || c.kind === "advocate" ? left : c.kind === "referee" ? false : !left;
   return {
     kind: c.kind, key: c.key, x, y, w, h, flip, from, puffed, armUp, lensUp: arrived, rowId: f ? f.id : null,
     sig: `${c.key}|${x.toFixed(1)}|${y.toFixed(1)}|${puffed}|${armUp}|${arrived}|${flip}`,
@@ -628,7 +622,8 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
     }
     const color = GHOST_COLORS[(s.slot - 1) % 4] ?? PAL.red;
     const fish = theme === "fish";
-    const grid = fish ? FISH : scared ? GHOST_SCARED : GHOST;
+    const av = avatarFor(s.agent);
+    const grid = fish ? AVATAR_GRIDS[av] : scared ? GHOST_SCARED : GHOST;
     const W = gridW(grid), H = gridH(grid);
     const t = frozenNow[s.id] ?? tick;
     const centre = reducedMotion ? (POCKETS[i % 8] ?? px(START)) : px(fishTile(i, t));
@@ -636,7 +631,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
       id: s.id, name: s.name, sx: centre.x - W / 2, sy: centre.y - H / 2, cx: W / 2, W, H, color, win, newly, gone, shrink: eatsUp, burst, sign, stamp, grid, reason: r, ctag: null,
       flip: fish && !win && !reducedMotion && heading(LOOPS[i % 8] ?? [], t + 2 * i) > 0,
       pos: { x: centre.x - W / 2, y: centre.y - H / 2 },
-      colors: fish ? fishColors(color, scared) : scared ? { X: PAL.scared } : { X: color, W: PAL.white, P: PAL.pupil },
+      colors: fish ? avatarColors(av, color, scared) : scared ? { X: PAL.scared } : { X: color, W: PAL.white, P: PAL.pupil },
       field: false,
       tag: phase.injection === s.id && !scared && !gone && v.state !== "eaten",
       w: Math.max(72, (sign?.label.length ?? 0) * 9 + 22, (sign?.sub?.length ?? 0) * 6.2 + 20),

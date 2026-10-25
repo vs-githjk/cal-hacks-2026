@@ -8,7 +8,7 @@ export type Theme = "ghosts" | "fish";
 export type Slot = 1 | 2 | 3 | 4; // colour slot: ghost-1..4
 export type SellerState = "sealed" | "open" | "eaten" | "winner";
 export type OutReason = "highest_price" | "outranked" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";
-export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot }
+export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot; agent?: string } // agent: the offer's sellerId, which picks the avatar (REFERENCE and sealed sellers have none and stay fish)
 export interface SellerView { state: SellerState; price: number | null; ledger: string; reason: OutReason | null; checkedAgo: number | null } // ledger: "Sealed" | "$1,329.00" | "Eaten · highest price" | "Blocked · Shield" | "Out · fit uncertain" | "Fit OK · 304 mm · no recall" | "Winner"; checkedAgo: Bright Data re-check age in seconds, null if unknown
 export type PhaseKind = "sealed" | "reveal" | "call" | "inject" | "shield" | "check" | "eat" | "crown" | "deal" | "paid" | "think";
 export interface FloorPhase {
@@ -152,7 +152,7 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
   if ((scene.phase !== "closed" && scene.phase !== "inconsistent") || scene.offers.length === 0) return REFERENCE;
 
   const offers = scene.offers;
-  const sellers: FloorSeller[] = offers.map((o, i) => ({ id: o.bidId, name: o.name, origin: o.origin, slot: ((i % 4) + 1) as Slot }));
+  const sellers: FloorSeller[] = offers.map((o, i) => ({ id: o.bidId, name: o.name, origin: o.origin, slot: ((i % 4) + 1) as Slot, agent: o.sellerId }));
   const prices: Record<string, number> = {};
   for (const o of offers) prices[o.bidId] = o.landed;
   const byKey = new Map(offers.map((o) => [o.key, o]));

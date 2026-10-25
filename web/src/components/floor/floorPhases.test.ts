@@ -176,3 +176,10 @@ test("real rounds get the buyer, shield, advocate and summary beats within ceili
   assert.equal(s.phases[adv + 1]!.kind, "think");
   assert.equal(s.phases[adv + 2]!.kind, "eat");
 });
+
+test("floorScript sellers carry the offer's sellerId as agent; REFERENCE sellers have none", () => {
+  const s = floorScript(SAMPLES.gpu);
+  assert.ok(s.sellers.length > 0);
+  assert.ok(s.sellers.every((x) => typeof x.agent === "string" && x.agent.length > 0));
+  assert.ok(REFERENCE.sellers.every((x) => x.agent === undefined));
+});

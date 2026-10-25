@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { BRAND } from "@/components/floor/brand";
 import type { FloorPhase, FloorScript, SellerView } from "@/components/floor/floorPhases";
-import { FISH, fishColors, runs } from "@/components/floor/pixelArt";
+import { AVATAR_GRIDS, avatarColors, avatarFor, runs } from "@/components/floor/pixelArt";
 
 /** The HUD around the stage: top-left lines and referee call, the seller ledger and the deal card.
  * Pure presentational: everything comes from the script and the current phase. The ledger is always in flow BELOW the stage.
@@ -135,11 +135,12 @@ function explain(v: SellerView): string {
   }
 }
 
-function FishIcon({ color, out }: { color: string; out: boolean }) {
-  const colors = fishColors(color, out);
+function FishIcon({ color, out, agent }: { color: string; out: boolean; agent?: string }) {
+  const kind = avatarFor(agent);
+  const colors = avatarColors(kind, color, out);
   return (
     <svg className="fh-fish" viewBox="0 0 36 28" shapeRendering="crispEdges" aria-hidden="true">
-      {runs(FISH).map((r, i) => (colors[r.ch] ? <rect key={i} x={r.x * 2} y={r.y * 2} width={r.w * 2} height={2} fill={colors[r.ch]} /> : null))}
+      {runs(AVATAR_GRIDS[kind]).map((r, i) => (colors[r.ch] ? <rect key={i} x={r.x * 2} y={r.y * 2} width={r.w * 2} height={2} fill={colors[r.ch]} /> : null))}
     </svg>
   );
 }
@@ -159,7 +160,7 @@ function Ledger({ script, phase }: { script: FloorScript; phase: FloorPhase }) {
         const color = SLOT_COLOR[s.slot] ?? MUTED;
         return (
           <div key={s.id} className={`fh-row${on ? " on" : ""}${out ? " out" : ""}`} style={{ "--c": color } as CSSProperties}>
-            <FishIcon color={color} out={out} />
+            <FishIcon color={color} out={out} agent={s.agent} />
             <div className="fh-main">
               <div className="fh-top">
                 <span className="fh-nm">{s.name}</span>

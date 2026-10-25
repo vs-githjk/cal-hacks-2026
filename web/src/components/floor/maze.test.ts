@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CHECKER, MAZE, MAZE_ORIGIN, MAZE_TILE, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REFEREE, REFEREE_UP, mazeWallPaths, productKind, type ProductKind } from "./pixelArt.ts";
+import { ADVOCATE_COLORS, AVATAR_GRIDS, CHECKER, HAMMERHEAD, HAMMER_COLORS, PAL, PUFFER_ADVOCATE, avatarColors, avatarFor, MAZE, MAZE_ORIGIN, MAZE_TILE, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REFEREE, REFEREE_UP, mazeWallPaths, productKind, type ProductKind } from "./pixelArt.ts";
 import { POCKET_IDS, adjacent, emptyBlock, findTile, heading, isWalk, loopTile, mazePath, mod, patrolLoop, sameTile, type Tile } from "./maze.ts";
 
 const walkable: Tile[] = [];
@@ -130,4 +130,27 @@ test("product icons are 16 x 12 and the part picks an icon", () => {
   assert.equal(productKind("NVMe SSD"), "ssd");
   assert.equal(productKind("RAM"), "ram");
   for (const p of ["motherboard", "cooler", "PSU", "case", "Part", ""]) assert.equal(productKind(p), "box");
+});
+
+test("avatar sprites are 18 x 14 rectangles and every letter has a colour, normal and frightened", () => {
+  const sets: Array<[string, readonly string[], Record<string, string>, Record<string, string>]> = [
+    ...(["whale", "angler", "hermit", "mirror"] as const).map((k) => [k, AVATAR_GRIDS[k], avatarColors(k, PAL.red, false), avatarColors(k, PAL.red, true)] as [string, readonly string[], Record<string, string>, Record<string, string>]),
+    ["fish", AVATAR_GRIDS.fish, avatarColors("fish", PAL.red, false), avatarColors("fish", PAL.red, true)],
+    ["hammerhead", HAMMERHEAD, HAMMER_COLORS, HAMMER_COLORS],
+    ["advocate", PUFFER_ADVOCATE, ADVOCATE_COLORS, ADVOCATE_COLORS],
+  ];
+  for (const [name, g, cols, scaredCols] of sets) {
+    assert.equal(g.length, 14, name);
+    assert.ok(g.every((row) => row.length === 18), name);
+    for (const ch of new Set(g.join("").replace(/\./g, ""))) { assert.ok(cols[ch], `${name} colour ${ch}`); assert.ok(scaredCols[ch], `${name} frightened colour ${ch}`); }
+  }
+  assert.equal(avatarColors("whale", PAL.red, true).X, PAL.scared);
+});
+
+test("avatarFor maps the named sellers and leaves every other seller a fish", () => {
+  assert.equal(avatarFor("seller_1"), "whale");
+  assert.equal(avatarFor("seller_3"), "angler");
+  assert.equal(avatarFor("seller_5"), "hermit");
+  assert.equal(avatarFor("seller_6"), "mirror");
+  for (const a of ["seller_2", "seller_4", "seller_9", "", undefined, "unknown"]) assert.equal(avatarFor(a), "fish");
 });

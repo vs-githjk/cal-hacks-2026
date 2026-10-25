@@ -249,3 +249,82 @@ export function productKind(part: string): ProductKind {
   if (/\b(ram|memory|ddr\d?|dimm)\b/.test(p)) return "ram";
   return "box";
 }
+
+// ---- Agent avatars as pixel sprites (aquarium scene) ----
+// 18 x 14 grids facing left like FISH. Eyes are W (white) and P (pupil) everywhere; K is ink (brows, mouth, notch) and never turns blue.
+export type AvatarKind = "fish" | "whale" | "angler" | "hermit" | "mirror";
+
+// seller_1 blue whale: a stack of boxes as the spout. X body, L belly, F fins and flukes, B box.
+export const WHALE: Grid = [
+  "BB................", "BB................", "...B..............", ".....B..........FF", "....XXXXXXXXX..FFF", "..XXXXXXXXXXXX.FF.",
+  ".XXXXXXXXXXXXXXF..", "XXWPXXXXXXXXXXXX..", "XXXXXXXXXXXXXX.FF.", "LLLLLLLLLLLLLL.FFF", ".LLLLLLLLLLLL...FF", "..LLLFFLLLL.......",
+  "..LLLLLLLLL.......", "....LLLLLL........",
+];
+// seller_3 anglerfish: H glow, G lure, K stalk, M open mouth, F fins. The half-closed eye is a body-colour lid over W and P.
+export const ANGLER: Grid = [
+  "....KKKKKKK.......", "..HHK.......K.....", ".HGGH.......K.....", "..HH........XXX...", "...XXXXXXXXXX.FF..", "..XXXXXXXXXXXXFFF.",
+  ".XXXXWPXXXXXXXFF..", "MMMMXXXXXXXXXXFFF.", "MMMMMXXXXXXXXXFF..", "MMMMMMXXXXXXXXF...", "MMMMMMXXXXXXXXF...", ".XXXXXXXXXXXXX....",
+  "..XXXXXFFXXXXX....", "....XXXXXXXX......",
+];
+// seller_5 hermit crab: S shell, R shell spiral, M mint patch, O crab, K claw notch.
+export const HERMIT: Grid = [
+  "..........SSSS....", "........SSSSSSSS..", ".WW.WW.SSSSSMMSSS.", ".WP.WP.SSRRSMMSSS.", "..O..O.SSRSSSSRSS.", "..O..O.SSSRRRRSSS.",
+  ".OOOOOOOOSSSSSSS..", "OOKOOOOOOOSSSSSS..", "OOOOOOOOOOSSSS....", ".OOOOOOOOO........", ".OOK.OOOO.........", "...O..O..O........",
+  "...O..O..O........", "..OO.OO.OO........",
+];
+// seller_6 Central Comp (MIRROR): a dashed outline fish (D line, F faint fill, W and P eye) over a waterline (L) and its faint reflection (R line, G fill).
+export const MIRROR_FISH: Grid = [
+  ".....DD..DD.......", "...DD.FFFFFF.D..D.", "..D.FFFFFFFFFD.D..", ".D.FFDFFFFFFFFD...", "D..FFFFFFFFFFD.D..", ".D.FFFFFFFFFD..D..",
+  "..D.D.D.D.D.D.....", "LLLLLLLLLLLLLLLLLL", "..R.R.R.R.R.R.....", ".R.GGGGGGGGGR..R..", "R..GGGGGGGGGGR.R..", ".R.GGRGGGGGGGGR...",
+  "..R.GGGGGGGGGR.R..", ".....R.RR.R.......",
+];
+// shield: hammerhead shark seen from above, head to the left. H hammer, X body, L highlight, F fins, D gill slits.
+export const HAMMERHEAD: Grid = [
+  ".......FFF........", "WPHH...FFFF.......", "HLLLH.FFFFF.......", "HHHHXXXXXXX.......", "HHHHXXXXXXXXX...FF", "HHHHXXXXXXXXXXXFF.",
+  "HHHHXXXXXXXXXXXXFF", "HHHHXDXDXXXXXXXXF.", "HHHHXDXDXXXXXXXXF.", "HHHHXXXXXXXXXXXFF.", "HHHHXXXXXXXX...FFF", "HHHHH.FFFFF....FFF",
+  "WPHH...FFFF.......", ".......FFF........",
+];
+// advocate: pufferfish, puffed up, one raised brow (K), pursed mouth (K). S spikes, B belly, D spots, F fins.
+export const PUFFER_ADVOCATE: Grid = [
+  "....S..S..S.......", "....XXXXXXXX......", "..SXXXXXXXXXXS.FF.", ".SXXKKKXXXXXXXXXFF", "SXXWWXXXXDXXXXXXFF", ".XXPWXXXXXXXXXXXF.",
+  ".XXXXXXXXDXXXXXXF.", "KXXXXXXXXXXXXXXFF.", "SXXBBBBBBBBBXXXXF.", ".XBBBBBBBBBBBBXXFF", "SXXBBBBBFBBBBBXX..", "..XXBBBBBBBBXX....",
+  "...SXXXXXXXXS.....", "....S..S..S.......",
+];
+
+/** Which avatar a seller draws: the team's named sellers get theirs, every other or unknown seller keeps the fish. */
+export function avatarFor(agent: string | undefined): AvatarKind {
+  switch (agent) {
+    case "seller_1": return "whale";
+    case "seller_3": return "angler";
+    case "seller_5": return "hermit";
+    case "seller_6": return "mirror";
+    default: return "fish";
+  }
+}
+
+export const AVATAR_GRIDS: Record<AvatarKind, Grid> = { fish: FISH, whale: WHALE, angler: ANGLER, hermit: HERMIT, mirror: MIRROR_FISH };
+
+const COMMON = { W: PAL.white, P: PAL.ink, K: PAL.ink };
+export const AVATAR_PALETTES: Record<Exclude<AvatarKind, "fish">, Record<string, string>> = {
+  whale: { ...COMMON, X: "#8fa0b2", L: "#e3e8ef", F: "#5b6b7c", B: "#e3e8ef" },
+  angler: { ...COMMON, X: "#3b4d66", F: "#1f3a55", K: "#5b6b7c", M: "#b4232a", G: "#fcd34d", H: "#7a6a2a" },
+  hermit: { ...COMMON, S: "#5b6b7c", R: "#8fa0b2", M: "#0f9d76", O: "#d97706" },
+  mirror: { ...COMMON, D: "#8fa0b2", F: "#213f57", L: "#2c4d6b", R: "#4a6075", G: "#1a3850" },
+};
+export const HAMMER_COLORS: Record<string, string> = { ...COMMON, H: "#0891b2", X: "#0891b2", L: "#22d3ee", F: "#0e7490", D: "#0e7490" };
+export const ADVOCATE_COLORS: Record<string, string> = { ...COMMON, X: "#0f9d76", B: "#6ee7b7", S: "#0b7a5b", F: "#0b7a5b", D: "#0b7a5b" };
+
+const lum = (h: string) => (parseInt(h.slice(1, 3), 16) * 0.3 + parseInt(h.slice(3, 5), 16) * 0.59 + parseInt(h.slice(5, 7), 16) * 0.11) / 255;
+/** Colours for a seller's avatar. Caught or out sellers turn the frightened blue (same shape, lighter and darker shades kept, blank eye). */
+export function avatarColors(kind: AvatarKind, base: string, scared: boolean): Record<string, string> {
+  if (kind === "fish") return fishColors(base, scared);
+  const pal = AVATAR_PALETTES[kind];
+  if (!scared) return { ...pal };
+  const out: Record<string, string> = {};
+  for (const [k, c] of Object.entries(pal)) {
+    if (k === "W" || k === "P") out[k] = PAL.white;
+    else if (k === "K" && kind !== "angler") out[k] = c;
+    else { const l = lum(c); out[k] = l < 0.3 ? mix(PAL.scared, "#000000", 0.3) : l > 0.65 ? mix(PAL.scared, "#ffffff", 0.4) : PAL.scared; }
+  }
+  return out;
+}
