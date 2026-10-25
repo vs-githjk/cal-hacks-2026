@@ -305,11 +305,18 @@ def recover_buyer_state() -> int:
     recovered = nonce_store().recover_submitted_attempts()
     unresolved = db.execute("SELECT deal_id, buyer_id FROM transactions "
                             "WHERE phase IN ('paused', 'approved', 'submitted', 'uncertain') ORDER BY rowid").fetchall()
-    if unresolved:
-        deal_id, buyer_id = unresolved[0]
+    # Web (b_) buyers have no owner chat and their calls end at approval (SIM): never hold the agent for them.
+    unresolved = [(d, b) for d, b in unresolved if not str(b).startswith("b_")]
+    held = None
+    for deal_id, buyer_id in unresolved:
         transaction = buyer_state.load_transaction(db, deal_id, buyer_id)
         owner = (transaction.get("deal", {}).get("owner_sender")
                  if isinstance(transaction.get("deal"), dict) else None)
+        if owner:
+            held = (transaction, owner)
+            break
+    if held:
+        transaction, owner = held
         goal = buyer_state.load_goal(db, transaction["goal_id"], owner) if isinstance(owner, str) and owner else None
         ROUND.clear()
         ROUND.update(owner=owner, owner_context=None, goal=goal, phase="uncertain", order=transaction.get("order"),
@@ -467,6 +474,13 @@ async def handle_text(ctx: Context, sender: str, text: str):
         else:
             await tell(ctx, sender, "A buyer session is active. Try again later.")
         return
+    web_round = (str(ROUND.get("goal", {}).get("market_buyer_id", "")).startswith("b_") and ROUND.get("owner") is None
+                 and ROUND.get("phase") not in (None, "done"))
+    if web_round:  # an adopted web hunt belongs to no chat sender: never let a chat goal wipe it
+        if not ROUND.get("told_busy"):
+            ROUND["told_busy"] = True
+            await tell(ctx, sender, "A sealed round is already running; results soon.")
+        return
     released = False
     # Single buyer deployment: no sender other than the owner of the active round sees its state.
     if ROUND.get("owner") and sender != ROUND["owner"]:
@@ -604,11 +618,6 @@ async def adopt_open_goal(ctx: Context) -> bool:
     if row is None:
         return False
     try:
-        buyer_state.mark_goal_handled(db, row["id"], row["buyer_id"])
-    except Exception:
-        ctx.logger.warning(f"Open goal {row.get('id')} not hunted: could not record it as handled")
-        return False
-    try:
         goal = _web_goal(row)
         need = need_from_goal(goal)
     except Exception as exc:
@@ -619,7 +628,13 @@ async def adopt_open_goal(ctx: Context) -> bool:
     ROUND.clear()
     ROUND.update(owner=None, owner_context=None, goal=goal, owned=[], need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={}, retired_need_ids=[], market_goal_posted=True, received_bids={})
-    return bool(await start_round(ctx, need))
+    started = bool(await start_round(ctx, need))
+    if started:
+        try:
+            buyer_state.mark_goal_handled(db, row["id"], row["buyer_id"])
+        except Exception:
+            ctx.logger.warning(f"Open goal {row.get('id')} hunted but could not be recorded as handled")
+    return started
 
 
 async def start_round(ctx: Context, need: dict | None = None):
@@ -1112,7 +1127,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
 
     try:
         ROUND["phase"] = "approval"
-        client, unavailable, buyer_name = _approval_call(transaction["buyer_id"])
+        client, unavailable, buyer_name = await asyncio.to_thread(_approval_call, transaction["buyer_id"])
         if client is None:
             # Fail closed: no approval without the phone call. The transaction is left as it was.
             ROUND["phase"] = "pending_approval"
@@ -1122,6 +1137,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         result = await _phone_approval(transaction, send_private, client, _approval_service(), buyer_name)
         if not result.approved or not isinstance(result.record, dict) or result.record.get("channel") != "phone":
             transaction["phase"] = "denied" if result.record and result.record.get("result") == "denied" else "paused"
+            if web and transaction["phase"] == "paused":
+                transaction["phase"] = "expired"  # terminal: recovery ignores it, so a restart cannot wedge the agent
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
             await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
@@ -1153,6 +1170,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             import logging
             logging.getLogger("buyer_agent").info(
                 f"web buyer {transaction['buyer_id']}: approved; payment leg not wired for web buyers (SIM)")
+            transaction["phase"] = "expired"  # terminal: the SIM web flow ends here and nothing is held or paid
+            buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=transaction, mandate=mandate, order=order, pending_hold=False, phase="done")
             return
         ROUND.update(transaction=transaction, mandate=mandate, order=order,
@@ -1226,6 +1245,12 @@ async def on_requote(ctx: Context, fresh: dict):
 
 def _create_pending_transaction(n: int, *, web: bool = False) -> dict:
     """Mandate + stored pending transaction for bid #n (shared by the chat requote and the web auto-approval)."""
+    transaction, create = _build_pending_transaction(n, web=web)
+    return _finish_pending_transaction(transaction, create(), web=web)
+
+
+def _build_pending_transaction(n: int, *, web: bool = False):
+    """(transaction, blocking market create_mandate call): the call may run in a worker thread, the rest must not."""
     bid = ROUND["bids"][n - 1]
     card = ROUND["cards"][bid["id"]]
     deal_id = f"deal-{uuid4().hex}"
@@ -1244,8 +1269,13 @@ def _create_pending_transaction(n: int, *, web: bool = False) -> dict:
         "voice_approval": None, "allowance_authorization": None, "settlement": None,
         "settlement_result": None, "payment_ref": None, "mode": bid.get("origin", "SIM")}
     buyer_market, referee_market = market_clients()
-    status = (referee_market if web else buyer_market).create_mandate(mandate, need_id=ROUND["need"]["id"],
-        buyer_id=ROUND["market_buyer_id"], now=business_now())
+    need_id, market_buyer_id, now = ROUND["need"]["id"], ROUND["market_buyer_id"], business_now()
+    return transaction, lambda: (referee_market if web else buyer_market).create_mandate(
+        mandate, need_id=need_id, buyer_id=market_buyer_id, now=now)
+
+
+def _finish_pending_transaction(transaction: dict, status, *, web: bool = False) -> dict:
+    mandate = transaction["mandate"]
     if (not isinstance(status, dict) or status.get("mandate_hash") != mandate["hash"]
             or (not web and (status.get("reservation_matches") is not True
                              or status.get("within_allowance") is not False
@@ -1260,7 +1290,8 @@ def _create_pending_transaction(n: int, *, web: bool = False) -> dict:
 async def _auto_web_approval(ctx: Context, n: int) -> None:
     """A web buyer's locked winner goes straight to mandate -> phone call -> approval; no owner chat, no owner check."""
     try:
-        transaction = _create_pending_transaction(n, web=True)
+        transaction, create = _build_pending_transaction(n, web=True)
+        transaction = _finish_pending_transaction(transaction, await asyncio.to_thread(create), web=True)
     except Exception as exc:
         ctx.logger.warning(f"Web purchase approval could not be prepared: {type(exc).__name__}")
         ROUND["phase"] = "done"

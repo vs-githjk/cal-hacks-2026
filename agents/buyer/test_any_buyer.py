@@ -179,7 +179,7 @@ def test_open_web_goal_is_adopted_and_need_posted_by_referee_on_that_goal(runtim
     assert asyncio.run(buyer.adopt_open_goal(Context())) is False  # a round is in progress; the goal is handled
 
 
-def _web_approval(buyer, monkeypatch, issue_error=None):
+def _web_approval(buyer, monkeypatch, issue_error=None, voice=None):
     from buyer import checkout
     from pay.voice_cartesia import VoiceResult
     ready_for_requote(buyer)
@@ -198,13 +198,16 @@ def _web_approval(buyer, monkeypatch, issue_error=None):
         used.append(cl)
         on_code("424242")
         mandate = transaction["mandate"]
+        if voice is not None:
+            return voice
         return VoiceResult(True, None, record={"id": "va-1", "channel": "phone", "result": "approved",
                                                "mandate_hash": mandate["hash"], "mandate_id": mandate["id"]})
 
     monkeypatch.setattr(checkout, "approve_offer", fake_approve)
     save = buyer.buyer_state.save_transaction  # the fake call record is not a full VoiceApproval row
     monkeypatch.setattr(buyer.buyer_state, "save_transaction",
-                        lambda db, tx: save(db, tx) if not tx.get("voice_approval") else None)
+                        lambda db, tx: save(db, tx) if not tx.get("voice_approval") else (
+                            save(db, {**tx, "voice_approval": None}) if tx.get("phase") != "approved" else None))
     ctx = Context()
     with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make:
         asyncio.run(buyer._auto_web_approval(ctx, 1))
@@ -298,3 +301,78 @@ def test_goal_poll_is_rate_limited(runtime, monkeypatch):
     clock[0] += 6
     asyncio.run(buyer.adopt_open_goal(Context()))
     assert buyer.MARKET_REFEREE.open_goals.call_count == 2
+
+
+def _restart_then_adopt_next(buyer, db, monkeypatch):
+    buyer.ROUND.clear()  # a restart: no in-memory round, same DB
+    monkeypatch.setattr(buyer, "state_db", lambda: db)
+    monkeypatch.setattr(buyer, "nonce_store", lambda: Mock(recover_submitted_attempts=lambda: 0))
+    buyer.recover_buyer_state()
+    buyer.MARKET_REFEREE.open_goals.return_value = [{**_open_goal_row(buyer), "id": "goal-web2"}]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    assert _adopt(buyer) is True
+    assert not buyer.ROUND.get("pending_hold")
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def _voice(kind):
+    from pay.voice_cartesia import VoiceResult
+    if kind == "paused":
+        return VoiceResult(False, "no_answer", record=None)
+    return VoiceResult(False, "denied", record={"id": "va-2", "channel": "phone", "result": "denied"})
+
+
+def test_web_approved_round_survives_restart_without_wedging(runtime, monkeypatch):
+    buyer, db = runtime
+    _web_approval(buyer, monkeypatch)
+    _restart_then_adopt_next(buyer, db, monkeypatch)
+
+
+def test_web_paused_round_survives_restart_without_wedging(runtime, monkeypatch):
+    buyer, db = runtime
+    _web_approval(buyer, monkeypatch, voice=_voice("paused"))
+    _restart_then_adopt_next(buyer, db, monkeypatch)
+
+
+def test_web_denied_round_survives_restart_without_wedging(runtime, monkeypatch):
+    buyer, db = runtime
+    _web_approval(buyer, monkeypatch, voice=_voice("denied"))
+    _restart_then_adopt_next(buyer, db, monkeypatch)
+
+
+def test_old_web_row_without_owner_is_skipped_by_recovery(runtime, monkeypatch):
+    import json as _json
+    buyer, db = runtime
+    db.execute("INSERT INTO transactions (deal_id, buyer_id, phase, payload) VALUES ('d-old', 'b_x', 'approved', ?)",
+               (_json.dumps({"deal_id": "d-old", "buyer_id": "b_x", "goal_id": "g-old", "deal": {}}),))
+    db.commit()
+    monkeypatch.setattr(buyer, "state_db", lambda: db)
+    monkeypatch.setattr(buyer, "nonce_store", lambda: Mock(recover_submitted_attempts=lambda: 0))
+    buyer.ROUND.clear()
+    buyer.recover_buyer_state()
+    assert not buyer.ROUND.get("pending_hold")
+
+
+def test_chat_goal_during_web_round_does_not_wipe_it(runtime):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    assert _adopt(buyer) is True
+    buyer.ROUND["phase"] = "waiting"
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "agent1qchat", "a new GPU under $800 by Friday"))
+    assert buyer.ROUND["goal"]["id"] == "goal-web1" and buyer.ROUND["owner"] is None
+    assert buyer.ROUND["phase"] == "waiting"
+
+
+def test_failed_start_round_leaves_goal_unmarked(runtime, monkeypatch):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+
+    async def boom(ctx, need=None):
+        return False
+
+    monkeypatch.setattr(buyer, "start_round", boom)
+    assert _adopt(buyer) is False
+    assert not buyer.buyer_state.goal_handled(db, "goal-web1")
+
