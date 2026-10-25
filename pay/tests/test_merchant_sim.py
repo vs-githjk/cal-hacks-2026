@@ -113,6 +113,17 @@ def test_replayed_signed_request_is_refused(world):
     assert replay["status"] == "refused" and not replay.get("charge_id") and len(stripe.calls) == 1
 
 
+def test_outcome_carries_the_tap_status_the_approval_card_shows(world):
+    priv, receipt_priv, mandate, _, sim, stripe = world
+    req = signed(priv, receipt_priv, mandate)
+    first = sim.handle(**req, now=NOW)
+    assert first["status"] == "charged"
+    assert first["tap"]["label"] == "TAP signature verified" and first["tap"]["ok"] is True
+    replay = sim.handle(**req, now=NOW)
+    assert replay["status"] == "refused" and replay["tap"]["label"] == "Replay refused"
+    assert replay["tap"]["ok"] is False and len(stripe.calls) == 1
+
+
 def test_stale_request_cannot_charge_after_atomic_unsubmitted_retirement(world):
     priv, receipt_priv, mandate, _, sim, stripe = world
     req = signed(priv, receipt_priv, mandate)

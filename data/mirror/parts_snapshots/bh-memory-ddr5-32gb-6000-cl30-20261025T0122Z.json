@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bh:74ec576244b1",
+  "category": "memory",
+  "name": "TEAMGROUP 32GB T-Create Expert DDR5 6000 MHz UDIMM Memory Kit (2 x 16GB, Black)",
+  "model_number": "CTCED532G6000HC30DC01",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 569.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1845648-REG/team_group_ctced532g6000hc30dc01_t_create_classic_32gb_ddr5.html",
+  "snapshot_id": "bh-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1845648-REG/team_group_ctced532g6000hc30dc01_t_create_classic_32gb_ddr5.html",
+   "price": 569.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:04e46331df13",
+  "category": "memory",
+  "name": "Silicon Power 32GB Zenith 6000 MT/s DDR5 Desktop Memory Kit (2 x 16GB, Black)",
+  "model_number": "SP032GXLWU60AFDE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 579.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1801353-REG/silicone_power_sp032gxlwu60afde_32gb_2x16gb_zenith_ddr5_6000.html",
+  "snapshot_id": "bh-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1801353-REG/silicone_power_sp032gxlwu60afde_32gb_2x16gb_zenith_ddr5_6000.html",
+   "price": 579.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:67d29644f4eb",
+  "category": "memory",
+  "name": "Silicon Power 32GB Zenith 6000 MT/s DDR5 Desktop Memory Kit (2 x 16GB, White)",
+  "model_number": "SP032GXLWU60AFDG",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 579.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1801354-REG/silicone_power_sp032gxlwu60afdg_32gb_2x16gb_zenith_ddr5_6000.html",
+  "snapshot_id": "bh-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1801354-REG/silicone_power_sp032gxlwu60afdg_32gb_2x16gb_zenith_ddr5_6000.html",
+   "price": 579.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:92a859153de1",
+  "category": "memory",
+  "name": "AMD Ryzen Threadripper 7970X 32-Core & 128GB T-Create Master DDR5 6000 MHz ECC RDIMM Memory Kit (4 x 32GB)",
+  "model_number": "1984640",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 7149.98,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1984640-REG/amd_ryzen_threadripper_7970x_32_core.html",
+  "snapshot_id": "bh-memory-ddr5-32gb-6000-cl30-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:18+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1984640-REG/amd_ryzen_threadripper_7970x_32_core.html",
+   "price": 7149.98,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

@@ -79,9 +79,19 @@ def checks_of(run: Mapping) -> dict:
     out = {}
     if "2" in beats:
         b2 = beats["2"]
-        top = b2["cards"][0] if b2["cards"] else None
+        # The cheapest bid in the room is either ranked and vetoed (Shield's rules allowed it) or caught by Shield and still
+        # vetoed by the advocate (option C: a held bid is never ranked, but its veto card and sources are shown).
+        caught = b2.get("caught", [])
+        pool = [(r["landed"], c, False) for r, c in zip(b2["ranking"]["ranked"], b2["cards"])] + [(e["landed"], e["card"], True) for e in caught]
+        top, is_caught = min(pool, key=lambda t: t[0])[1:] if pool else (None, False)
         out["beat2_cheapest_eligible_vetoed_with_source"] = bool(
-            top and top["recommendation"] == "veto" and all(w["source_url"] for w in top["warnings"]) and b2["winner"])
+            top and top["recommendation"] == "veto" and top["warnings"] and all(w["source_url"] for w in top["warnings"]) and b2["winner"]
+            and (not is_caught or (top.get("caught", {}).get("by") == "shield" and top["caught"].get("rule") and top["caught"].get("round"))))
+        if caught:   # a caught listing is never ranked and never the winner, so it can never be paid
+            ids = {e["bid_id"] for e in caught}
+            out["beat2_caught_listing_never_ranked_or_payable"] = (
+                not ids & {r["bid_id"] for r in b2["ranking"]["ranked"]} and not ids & {c["bid_id"] for c in b2["cards"]}
+                and b2["winner"]["bid_id"] not in ids)
         win = next((b for b in b2["bids"] if b["id"] == b2["winner"]["bid_id"]), None) if b2["winner"] else None
         out["beat2_winner_is_a_real_mirror_seller"] = bool(win and win["origin"] == "MIRROR" and win["lines"][b2["winner"]["line"]]["origin"] == "MIRROR")
         out["beat2_one_seller_has_new_and_open_box_lines"] = any({"new", "open-box"} <= {l["offered_condition"] for l in b["lines"]} for b in b2["bids"])
@@ -137,7 +147,7 @@ def artifacts_of(beats: Mapping) -> dict:
     if "2" in beats:
         b2 = beats["2"]
         a.update(seller_agents=b2["sellers"], bids=b2["bids"], claims=[c for cs in b2["claims"].values() for c in cs],
-                 verdicts={"referee": b2["referee"], "shield": b2["shield"], "ranking": b2["ranking"], "advocate_cards": b2["cards"],
+                 verdicts={"referee": b2["referee"], "shield": b2["shield"], "ranking": b2["ranking"], "advocate_cards": b2["cards"], "caught": b2["caught"],
                            "winner": b2["winner"]})
     if "3" in beats:
         a.setdefault("verdicts", {})["injected_listing"] = beats["3"]["injected"]

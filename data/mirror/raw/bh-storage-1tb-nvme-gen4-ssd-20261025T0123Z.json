@@ -1,0 +1,86 @@
+[
+ {
+  "name": "Lexar 1TB NM790 PCIe 4.0 x4 NVMe M.2 Internal SSD",
+  "price": 199.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1846006-REG/lexar_lnm790x001t_rnnnu_nm790_m_2_2280_pcie.html",
+  "sku": 1846006,
+  "mpn": "LNM790X001T-RNNNU",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_TWO_DAY_DELIVERY",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Silicon Power 1TB UD90 NVMe PCIe 4.0 M.2 Internal SSD",
+  "price": 161.97,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1793032-REG/silicon_power_su01kgbp44ud9005bh_1tb_ssd_pcie_4_0.html",
+  "sku": 1793032,
+  "mpn": "SU01KGBP44UD9005BH",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_TWO_DAY_DELIVERY",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "CORSAIR 1TB MP600 PRO LPX NVMe PCIe 4.0 M.2 Internal SSD (White)",
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1808755-REG/corsair_cssd_f1000gbmp600plpw_mp600_pro_lpx_1tb.html",
+  "sku": 1808755,
+  "mpn": "CSSD-F1000GBMP600PLPW",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "NO_MESSAGE",
+   "shippingLongMessageType": "NO_MESSAGE",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Lenovo 16\" ThinkPad P16s Gen 4 Laptop",
+  "price": 3714.47,
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1922555-REG/lenovo_21qv003kus_16_thinkpad_p16s_gen.html",
+  "sku": 1922555,
+  "mpn": "21QV003KUS",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipTime": "2-4  Weeks",
+   "shipsAlone": false,
+   "shipTimeMessageType": "EXPECTED_AVAILABLITY_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ }
+]

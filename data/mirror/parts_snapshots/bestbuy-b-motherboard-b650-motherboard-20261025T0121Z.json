@@ -1,0 +1,130 @@
+[
+ {
+  "id": "bestbuy:ed012bd6079b",
+  "category": "motherboard",
+  "name": "GIGABYTE - B650 AORUS ELITE AX (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - Black",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-b650-aorus-elite-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92V2KF/sku/6523178",
+  "snapshot_id": "bestbuy-b-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-b650-aorus-elite-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92V2KF/sku/6523178",
+   "price": 159.99,
+   "was_price": 229.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:4bc5fc02b146",
+  "category": "motherboard",
+  "name": "GIGABYTE - B650 EAGLE AX (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - Black",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/gigabyte-b650-eagle-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92VHW2/sku/6582206",
+  "snapshot_id": "bestbuy-b-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/gigabyte-b650-eagle-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92VHW2/sku/6582206",
+   "price": 139.99,
+   "was_price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:37426a336953",
+  "category": "motherboard",
+  "name": "ASUS - TUF GAMING B650E-PLUS WIFI (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 7 Motherboard - Black",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "socket": "AM5",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "memory_slots": 4,
+   "memory_max_speed_mhz": 8000,
+   "form_factor": "ATX",
+   "m2_slots": 3
+  },
+  "price": 158.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/asus-tuf-gaming-b650e-plus-wifi-socket-am5-amd-b650-atx-ddr5-wi-fi-7-motherboard-black/JJGGLHLTKG/sku/11022357",
+  "snapshot_id": "bestbuy-b-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/asus-tuf-gaming-b650e-plus-wifi-socket-am5-amd-b650-atx-ddr5-wi-fi-7-motherboard-black/JJGGLHLTKG/sku/11022357",
+   "price": 158.99,
+   "was_price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": "TUF GAMING B650E-PLUS WIFI"
+ },
+ {
+  "id": "bestbuy:32f72949d302",
+  "category": "motherboard",
+  "name": "ASUS - ROG STRIX B650-A GAMING WIFI (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - White",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/asus-rog-strix-b650-a-gaming-wifi-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-white/JJG7VW7WPH/sku/6582203",
+  "snapshot_id": "bestbuy-b-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/asus-rog-strix-b650-a-gaming-wifi-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-white/JJG7VW7WPH/sku/6582203",
+   "price": 159.99,
+   "was_price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:8e7f4d9131d9",
+  "category": "motherboard",
+  "name": "ASUS - TUF GAMING B650E-E WIFI ATX Motherboard",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {},
+  "price": 155.16,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/asus-tuf-gaming-b650e-e-wifi-atx-motherboard/JJGGLHL9VF/sku/10955229",
+  "snapshot_id": "bestbuy-b-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/asus-tuf-gaming-b650e-e-wifi-atx-motherboard/JJGGLHL9VF/sku/10955229",
+   "price": 155.16,
+   "was_price": 180.49,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]

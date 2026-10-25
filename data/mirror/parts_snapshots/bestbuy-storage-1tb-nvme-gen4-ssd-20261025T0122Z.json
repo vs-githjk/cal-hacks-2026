@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bestbuy:f70f4dfd1922",
+  "category": "storage",
+  "name": "PNY - CS900 2.5\" 1TB SATA III 3D NAND Internal Solid State Drive (SSD) SSD7CS900-1TB-RB",
+  "model_number": "SSD7CS900-1TB-RB",
+  "condition": "new",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/pny-cs900-2-5-1tb-sata-iii-3d-nand-internal-solid-state-drive-ssd-ssd7cs900-1tb-rb/J2VYQCJQLF/sku/13014703",
+  "snapshot_id": "bestbuy-storage-1tb-nvme-gen4-ssd-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:54+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/pny-cs900-2-5-1tb-sata-iii-3d-nand-internal-solid-state-drive-ssd-ssd7cs900-1tb-rb/J2VYQCJQLF/sku/13014703",
+   "price": 139.99,
+   "was_price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:ce86b10c2804",
+  "category": "storage",
+  "name": "Samsung - 990 PRO 1TB Internal SSD PCle Gen 4x4 NVMe",
+  "model_number": "MZ-V9P1T0B/AM",
+  "condition": "new",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/samsung-990-pro-1tb-internal-ssd-pcle-gen-4x4-nvme/J3ZYG28J3X/sku/6523591",
+  "snapshot_id": "bestbuy-storage-1tb-nvme-gen4-ssd-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:54+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/samsung-990-pro-1tb-internal-ssd-pcle-gen-4x4-nvme/J3ZYG28J3X/sku/6523591",
+   "price": 259.99,
+   "was_price": 319.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:e31938dbea76",
+  "category": "storage",
+  "name": "Crucial - P310 1TB Internal SSD PCIe Gen 4 x4 NVMe M.2",
+  "model_number": "CT1000P310SSD8",
+  "condition": "new",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/crucial-p310-1tb-internal-ssd-pcie-gen-4-x4-nvme-m-2/JX8PSKCGL8/sku/11446635",
+  "snapshot_id": "bestbuy-storage-1tb-nvme-gen4-ssd-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:54+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/crucial-p310-1tb-internal-ssd-pcie-gen-4-x4-nvme-m-2/JX8PSKCGL8/sku/11446635",
+   "price": 199.99,
+   "was_price": 209.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:21b2874afd82",
+  "category": "storage",
+  "name": "KINGFAST - 1TB M.2 2280 PCIe 4.0 NVMe SSD, Up to 4000MB/s Read, 3D NAND Internal SSD for Laptop & Desktop",
+  "model_number": "KC8040Q0M04I2-1TB",
+  "condition": "new",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/kingfast-1tb-m-2-2280-pcie-4-0-nvme-ssd-up-to-4000mb-s-read-3d-nand-internal-ssd-for-laptop-desktop/CZW8KH778Q/sku/13084815",
+  "snapshot_id": "bestbuy-storage-1tb-nvme-gen4-ssd-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:54+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/kingfast-1tb-m-2-2280-pcie-4-0-nvme-ssd-up-to-4000mb-s-read-3d-nand-internal-ssd-for-laptop-desktop/CZW8KH778Q/sku/13084815",
+   "price": 139.99,
+   "was_price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]
