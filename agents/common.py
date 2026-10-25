@@ -206,6 +206,9 @@ SEEDS = {
 }
 
 
+_CUSTOM_ENVS: dict[str, str] = {}  # env name -> the custom role that owns it
+
+
 def register_custom_seller(role: str) -> None:
     """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
     Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
@@ -218,7 +221,10 @@ def register_custom_seller(role: str) -> None:
     if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
         raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
                          "built-in agent, a custom seller must not reuse its key")
-    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
+    if _CUSTOM_ENVS.get(env, role) != role:
+        raise ValueError(f"{role!r} and {_CUSTOM_ENVS[env]!r} map to the same seed name {env}_AGENT_SEED")
+    _CUSTOM_ENVS[env] = role
+    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED", f"tech-bazaar-{role}-dev")
 
 
 def public_seed(role: str) -> bool:

@@ -73,14 +73,14 @@ def test_conclude_names_no_winner_for_a_mirror_bid_and_shows_its_label(runtime, 
     assert buyer.ROUND["goal"]["state"] != "HOLD_FOR_CALL" and buyer.ROUND["phase"] != "decided"
 
 
-def test_eligible_for_order_and_approve_refuse_a_mirror_bid(runtime, monkeypatch, supplier):
+def test_eligible_for_order_and_start_requote_refuse_a_mirror_bid(runtime, monkeypatch, supplier):
     buyer, _db = runtime
     _wire_cc(buyer, monkeypatch, supplier)
     _cc_round(buyer, supplier, recommendation="buy")
     assert buyer.eligible_for_order(1) is False
     ctx = Context()
     buyer.ROUND.update(phase="decided", transaction=None, owner_context=ctx, owner_session=ctx.session)
-    asyncio.run(buyer.approve(ctx, 1, sender="owner"))
+    asyncio.run(buyer._start_requote(ctx, 1))
     assert not any(isinstance(m, buyer.common.BidRequest) for _to, m in ctx.sent)
     assert buyer.ROUND["phase"] == "decided"
 
