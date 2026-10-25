@@ -2274,5 +2274,130 @@
   "maker_models": 0,
   "secs": 11,
   "approval": "Anoop, confirmed in this session; retry of 4 Central Computers pages that returned 402 under the same 5 USD cap; cap $1.00"
+ },
+ {
+  "store": "bestbuy",
+  "actor": "benthepythondev/bestbuy-scraper",
+  "input": {
+   "mode": "search",
+   "searchQuery": "RTX 5070 Ti",
+   "maxProducts": 3
+  },
+  "run_id": "jgj7ctop9T2WI8lkY",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 3,
+  "snapshot_id": "bestbuy-20261025T0241Z",
+  "fields": [
+   "condition",
+   "model_number",
+   "price",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 4
+ },
+ {
+  "store": "microcenter",
+  "actor": "sian.agency/microcenter-product-scraper",
+  "input": {
+   "keywords": [
+    "RTX 5070 Ti"
+   ],
+   "scrapeMode": "overview",
+   "maxResults": 3
+  },
+  "run_id": "erP610gErNSHF2GwP",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.05,
+  "items": 3,
+  "snapshot_id": "microcenter-20261025T0242Z",
+  "fields": [
+   "model_number",
+   "price",
+   "stock",
+   "title",
+   "url"
+  ],
+  "secs": 54
+ },
+ {
+  "store": "bh",
+  "actor": "shahidirfan/B-H-Photo-Scraper",
+  "input": {
+   "startUrls": [
+    {
+     "url": "https://www.bhphotovideo.com/c/search?q=rtx%205070%20ti"
+    }
+   ],
+   "results_wanted": 3,
+   "max_pages": 1
+  },
+  "run_id": "W7oZXtLuM5tuIfSoQ",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0005,
+  "items": 3,
+  "snapshot_id": "bh-20261025T0241Z",
+  "fields": [
+   "model_number",
+   "price",
+   "shipping",
+   "stock",
+   "title",
+   "url"
+  ],
+  "secs": 10
+ },
+ {
+  "store": "ebay_sold",
+  "actor": "caffein.dev/ebay-sold-listings",
+  "input": {
+   "keywords": [
+    "rtx 5070 ti"
+   ],
+   "count": 5,
+   "daysToScrape": 30,
+   "ebaySite": "ebay.com"
+  },
+  "run_id": "6envOd445JhW4FaPM",
+  "status": "SUCCEEDED",
+  "cost_usd": 0.0001,
+  "items": 5,
+  "snapshot_id": "ebay_sold-20261025T0241Z",
+  "fields": [
+   "condition",
+   "date",
+   "price",
+   "seller",
+   "shipping",
+   "shipping_type",
+   "title",
+   "url"
+  ],
+  "secs": 10
+ },
+ {
+  "store": "bestbuy",
+  "actor": "axlymxp/bestbuy-scraper",
+  "input": {
+   "searchQuery": "RTX 5070 Ti",
+   "maxResults": 3,
+   "fetchProductDetails": false
+  },
+  "family": "b",
+  "run_id": "6txcwCuo31ODikLae",
+  "status": "SUCCEEDED",
+  "cost_usd": 0,
+  "items": 3,
+  "snapshot_id": "bestbuy-20261025T0241Z",
+  "fields": [
+   "condition",
+   "price",
+   "title",
+   "url",
+   "was_price"
+  ],
+  "secs": 6
  }
 ]

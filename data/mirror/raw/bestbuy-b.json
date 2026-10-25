@@ -11,7 +11,7 @@
   "savings": 0,
   "savingsPercent": 0,
   "rating": 4.9,
-  "reviewCount": 378,
+  "reviewCount": 379,
   "condition": "new",
   "whatItIs": [
    "Graphics Card"
@@ -44,18 +44,18 @@
   "searchQuery": "RTX 5070 Ti"
  },
  {
-  "skuId": "6614742",
-  "bsin": "JJGGLHJX4K",
-  "name": "ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition 16GB GDDR7 PCI Express 5.0 Graphics Card - Black",
-  "brand": "ASUS",
-  "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
-  "image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/96505925-44c6-4d24-a571-3ae1c981e0c2.png",
-  "price": 1299.99,
-  "regularPrice": 1299.99,
+  "skuId": "6616903",
+  "bsin": "JXF2C46ZZH",
+  "name": "PNY - NVIDIA GeForce RTX 5080 Overclocked 16GB GDDR7 PCI Express 5.0 Graphics Card with Triple Fan - Black",
+  "brand": "PNY",
+  "url": "https://www.bestbuy.com/product/pny-nvidia-geforce-rtx-5080-overclocked-16gb-gddr7-pci-express-5-0-graphics-card-with-triple-fan-black/JXF2C46ZZH/sku/6616903",
+  "image": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/692070a8-5d8d-4547-89f0-623b4d034ce3.jpg",
+  "price": 1849.99,
+  "regularPrice": 1849.99,
   "savings": 0,
   "savingsPercent": 0,
-  "rating": 4.7,
-  "reviewCount": 72,
+  "rating": 4.8,
+  "reviewCount": 411,
   "condition": "new",
   "whatItIs": [
    "Graphics Card"
