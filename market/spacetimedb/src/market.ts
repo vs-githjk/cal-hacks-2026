@@ -887,9 +887,47 @@ export function issueApprovalCode(ctx: Ctx, { mandateHash, code }: { mandateHash
   if (!md) throw new SenderError('no mandate with that hash');
   if (ctx.db.approval.mandateHash.find(mandateHash)) throw new SenderError('mandate already approved; no code needed');
   if (!normCode(code)) throw new SenderError('empty code');
-  const row = { mandateHash, buyerId: md.buyerId, code: normCode(code), failures: 0, locked: false, issuedAt: ctx.timestamp };
+  const row = { mandateHash, buyerId: md.buyerId, code: normCode(code), failures: 0, locked: false, issuedAt: ctx.timestamp, amount: 0, payee: '', expiry: Timestamp.UNIX_EPOCH, origin: '' };
   if (ctx.db.approvalCode.mandateHash.find(mandateHash)) ctx.db.approvalCode.mandateHash.update(row);
   else ctx.db.approvalCode.insert(row);
+}
+
+/**
+ * Referee only: the code for the ONE call that approves a whole build. The build makes its mandates after the call (and
+ * create_mandate takes only a closed round's rank 1), so there is no mandate row to key on: the row is keyed by the aggregate
+ * mandate hash the runner already computed, and carries its own amount, label and expiry for the buyer's card. Private to the
+ * buyer like every approval_code row. A new build code retires the buyer's earlier one, so exactly one is on screen.
+ */
+export function issueBuildApprovalCode(
+  ctx: Ctx,
+  a: { mandateHash: string; buyerId: string; amount: number; payee: string; expiryMinutes: number; code: string; origin: string },
+) {
+  requireRole(ctx, 'issue_build_approval_code', ['referee']);
+  if (!a.mandateHash) throw new SenderError('a build code needs the aggregate mandate hash');
+  if (ctx.db.mandate.hash.find(a.mandateHash)) throw new SenderError('that hash is a real mandate; use issue_approval_code');
+  if (![...ctx.db.role.subjectId.filter(a.buyerId)].some((r) => r.role === 'buyer')) throw new SenderError('no buyer with that id');
+  if (!(Number.isFinite(a.amount) && a.amount > 0)) throw new SenderError('the build amount must be above zero');
+  if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {
+    throw new SenderError(`expiry must be 1 to ${MANDATE_MAX_EXPIRY_MIN} minutes`);
+  }
+  const code = normCode(a.code);
+  if (!code) throw new SenderError('empty code');
+  for (const old of [...ctx.db.approvalCode.buyerId.filter(a.buyerId)]) {
+    if (old.mandateHash !== a.mandateHash && ms(old.expiry) > 0) ctx.db.approvalCode.mandateHash.update({ ...old, expiry: Timestamp.UNIX_EPOCH });
+  }
+  const row = {
+    mandateHash: a.mandateHash, buyerId: a.buyerId, code, failures: 0, locked: false, issuedAt: ctx.timestamp,
+    amount: a.amount, payee: a.payee.slice(0, 120), expiry: tsFromMs(ms(ctx.timestamp) + a.expiryMinutes * 60_000), origin: a.origin,
+  };
+  if (ctx.db.approvalCode.mandateHash.find(a.mandateHash)) ctx.db.approvalCode.mandateHash.update(row);
+  else ctx.db.approvalCode.insert(row);
+}
+
+/** Referee only: take a whole-build code off the buyer's screen (the call ended, approved or not). No-op when there is none, so the runner's finally never throws. */
+export function clearBuildApprovalCode(ctx: Ctx, { mandateHash }: { mandateHash: string }) {
+  requireRole(ctx, 'clear_build_approval_code', ['referee']);
+  const row = ctx.db.approvalCode.mandateHash.find(mandateHash);
+  if (row && !ctx.db.mandate.hash.find(mandateHash)) ctx.db.approvalCode.mandateHash.update({ ...row, expiry: Timestamp.UNIX_EPOCH });
 }
 
 /** This buyer's mandates still waiting for approval, with the code to show on this screen only. */
@@ -898,6 +936,13 @@ export function myPendingApprovalsView(ctx: VCtx) {
   if (!id) return [];
   return [...ctx.db.approvalCode.buyerId.filter(id)].flatMap((ac) => {
     const md = ctx.db.mandate.hash.find(ac.mandateHash);
+    if (!md && ms(ac.expiry) > 0) {
+      // A live whole-build code (no mandate row yet); a cleared one has its expiry back at the epoch.
+      return [{
+        mandateHash: ac.mandateHash, mandateId: 'whole build', amount: ac.amount, payee: ac.payee, expiry: ac.expiry, code: ac.code,
+        failures: ac.failures, locked: ac.locked, issuedAt: ac.issuedAt, origin: ac.origin,
+      }];
+    }
     if (!md || ctx.db.approval.mandateHash.find(ac.mandateHash)) return [];
     return [{
       mandateHash: md.hash, mandateId: md.id, amount: md.amount, payee: md.payee, expiry: md.expiry, code: ac.code,

@@ -1398,9 +1398,18 @@ class BuildRun:
         deal: dict[str, Any] = {"parts": len(champs), "sellers": sellers}
         if checks:
             deal["price"] = "live" if all(r.get("origin") == LIVE and r.get("price") is not None for r in checks.values()) else "mirror"
-        res = run_approval_call(agg, self._why(), self.cartesia, service, deal=deal, buyer_name=self.buyer_name,
-                                on_code=self.on_code or (lambda code: self.note(f"approval code for the call (read it, then say approve): {code}")),
-                                **self.call_timing)
+        console = self.on_code or (lambda code: self.note(f"approval code for the call (read it, then say approve): {code}"))
+        shown: dict[str, bool] = {}
+
+        def on_code(code: str) -> None:
+            shown["on_screen"] = self._code_to_buyer_screen(agg, code, total, len(champs), sellers)
+            console(code)
+        try:
+            res = run_approval_call(agg, self._why(), self.cartesia, service, deal=deal, buyer_name=self.buyer_name, on_code=on_code,
+                                    **self.call_timing)
+        finally:
+            if shown.get("on_screen"):
+                self._take_code_off_buyer_screen(agg)
         if not res.approved:
             return self._deny(res.reason or "denied", f"{denial_line(res.reason)} No mandate was made.")
         voice_id = str((res.record or {}).get("id") or "").strip()
@@ -1423,6 +1432,35 @@ class BuildRun:
         self._event("approved", f"Approved on the call: {len(champs)} parts from {sellers} sellers, {money(total)}")
         self.publish()
         return voice_id
+
+    def _code_to_buyer_screen(self, agg: dict, code: str, total: float, parts: int, sellers: int) -> bool:
+        """Put the whole-build code on the paired buyer's own /buyer card for the call (issue_build_approval_code, keyed by the aggregate
+        mandate hash: the build makes its mandates only after the call). Private to that buyer in the market; never in the BuildView.
+        True when it is on screen. Never raises: a code that cannot be shown is one console line saying so, and the call still judges it."""
+        from demo.bridge import market_has_typed_approval
+        from pay.voice_cartesia import CALL_CODE_TTL_S
+        if market_has_typed_approval():
+            self.note("approval code is NOT on /buyer: the market module still has approve_typed (typed-code approval, #191), so it is kept off the screen. It is on this console.")
+            return False
+        try:
+            self.clients["referee"].call(
+                "issue_build_approval_code", mandate_hash=agg["hash"], buyer_id=self.plan.buyer_id, amount=total, origin=agg["origin"],
+                payee=f"your whole build ({parts} parts from {sellers} sellers)", expiry_minutes=max(1, math.ceil(CALL_CODE_TTL_S / 60)), code=code)
+        except (RuntimeError, OSError) as e:
+            text = str(e)
+            why = ("the deployed market has not been republished with issue_build_approval_code" if "(404)" in text or "o such procedure" in text
+                   else f"the market refused it ({text[:120]})")
+            self.note(f"approval code is NOT on /buyer: {why}. It is on this console only; read it, then say approve.")
+            return False
+        self.note("approval code is on /buyer now (the card 'Review and approve'); read it there, then say approve")
+        return True
+
+    def _take_code_off_buyer_screen(self, agg: dict) -> None:
+        """The call ended (approved, denied or crashed): the code is dead, so it comes off /buyer. A failed clear is a warning, never a crash."""
+        try:
+            self.clients["referee"].call("clear_build_approval_code", mandate_hash=agg["hash"])
+        except (RuntimeError, OSError) as e:
+            self.note(f"WARNING: the approval code could not be taken off /buyer ({str(e)[:120]}); it is dead (the call ended) and the next build or a reset clears it")
 
     def _why(self) -> dict:
         """The call's why-answer: the advocate's first veto in this build (the cheaper bid it kept out, with its fit rule and source),
