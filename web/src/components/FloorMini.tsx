@@ -26,7 +26,7 @@ export function FloorMini({ className = "" }: { className?: string }) {
   }, [reduce]);
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-[rgba(214,235,253,0.19)] bg-floor-bg p-5 text-floor-line shadow-[0_30px_80px_-20px_rgba(11,27,43,0.45)] md:p-6 ${className}`}
+      className={`relative overflow-hidden rounded-2xl border border-[rgba(214,235,253,0.22)] bg-[linear-gradient(180deg,#1b3a58_0%,#14314c_100%)] p-5 text-floor-line shadow-[0_30px_80px_-20px_rgba(11,27,43,0.45)] md:p-6 ${className}`}
       aria-label="The floor, in miniature"
       role="img"
     >
@@ -50,8 +50,8 @@ export function FloorMini({ className = "" }: { className?: string }) {
         ))}
       </div>
       <ol className="mt-4 grid gap-1 font-mono text-[13px] leading-[18px] text-floor-line/80">
-        {LINES.slice(0, shown).map((l, i) => (
-          <li key={l} className="fm-line flex items-center gap-2">
+        {LINES.map((l, i) => (
+          <li key={l} className={`flex items-center gap-2 transition-opacity duration-300 ${i < shown ? "opacity-100" : "opacity-0"}`} aria-hidden={i >= shown}>
             <span className={`h-1.5 w-1.5 rounded-full ${i === shown - 1 ? "bg-shield" : "bg-ghost-1"}`} aria-hidden />
             {l}
           </li>

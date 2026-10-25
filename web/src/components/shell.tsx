@@ -28,7 +28,7 @@ export function AppHeader() {
         key={n.href}
         href={n.href}
         aria-current={on ? "page" : undefined}
-        className={`inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-[14px] font-medium transition-colors ${on ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`}
+        className={`btn inline-flex min-h-10 shrink-0 items-center rounded-xl px-4 text-[15px] font-medium transition-[background-color,box-shadow,transform] ${on ? "bg-ink text-canvas shadow-[0_6px_16px_-6px_rgba(11,27,43,0.5)]" : "text-ink-2 hover:bg-white/70 hover:text-ink hover:shadow-ring"}`}
       >
         {n.label}
       </Link>
@@ -36,12 +36,12 @@ export function AppHeader() {
   });
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-white/50 bg-white/35 backdrop-blur-xl">
       <nav aria-label="Main" className="mx-auto flex h-[60px] max-w-[1120px] items-center justify-between gap-4 px-4 md:px-8">
         <Link href="/" aria-label={`${BRAND} home`} className="inline-flex min-h-11 shrink-0 items-center">
           <Wordmark />
         </Link>
-        <div className="hidden items-center gap-1 md:flex">{links}</div>
+        <div className="hidden items-center gap-1 rounded-2xl border border-white/70 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_-12px_rgba(11,27,43,0.25)] backdrop-blur-xl md:flex">{links}</div>
         <div className="flex items-center gap-2.5">
           <LivePill on={conn.isActive} />
           {path !== "/start" && !path.startsWith("/buyer") && (
@@ -51,7 +51,7 @@ export function AppHeader() {
           )}
         </div>
       </nav>
-      <div className="flex gap-1 overflow-x-auto px-3 pb-1.5 [scrollbar-width:none] md:hidden">{links}</div>
+      <div className="mx-3 mb-2 flex gap-1 overflow-x-auto rounded-2xl border border-white/70 bg-white/45 p-1 [scrollbar-width:none] md:hidden">{links}</div>
     </header>
   );
 }

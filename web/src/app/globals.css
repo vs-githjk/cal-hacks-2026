@@ -231,7 +231,9 @@ body {
 @keyframes orbit { to { transform: rotate(360deg) } }
 @keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }
 
-main, header, footer { position: relative; z-index: 1; }
+main, footer { position: relative; z-index: 1; }
+/* Unlayered rules beat Tailwind's layered utilities, so the sticky header is set here, not in a class. */
+header { position: sticky; top: 0; z-index: 40; }
 ::selection { background: var(--color-pulse); color: var(--color-pulse-ink); }
 
 /* Glass card (one per screen), the live dot (Prism's heartbeat) and the 8 px rise. */
