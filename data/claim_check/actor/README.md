@@ -1,6 +1,6 @@
 # Listing Claim Checker: price, stock, condition
 
-**Is the seller telling the truth?** Paste a product page and what the seller says about it ("price $1,749.99", "new", "in stock"). The Actor reads the live page and returns, for every claim, **verified**, **false** or **unverified**, with the evidence: the page URL, the time it was read and a sha256 hash of the page.
+**Checks a seller's claim against the live listing page.** Paste a product page and what the seller says about it ("price $1,749.99", "new", "in stock"). The Actor reads the live page and returns, for every claim, **verified**, **false** or **unverified**, with the evidence: the page URL, the time it was read and a sha256 hash of the page.
 
 ## What you get
 
@@ -16,11 +16,13 @@ Built for **AI shopping agents** (our own, [Fish Market](https://github.com/vs-g
 
 | Claim | Read from the page | Example claim text |
 |---|---|---|
-| **Price** | schema.org Product JSON-LD offer price | `price $1,749.99` |
+| **Price** | schema.org Product JSON-LD offer price and `priceCurrency` | `price $1,749.99` |
 | **Condition** | schema.org itemCondition: New is new, Used and Damaged are used, Refurbished is refurbished | `new`, `refurbished`, `used` |
 | **Stock** | schema.org availability (InStock, OutOfStock, PreOrder, BackOrder, ...) | `in stock` |
 | **Warranty** | JSON-LD `warranty`, or "N-year warranty" in the description | `2-year warranty` |
 | **Returns** | JSON-LD `hasMerchantReturnPolicy` | `30-day returns` |
+
+A price claim is read as USD unless it names another currency (for example `C$1,749.99`). A CAD or other non-USD page leaves a `$` price claim **unverified**, with both currencies named in the reason; it is never `false` or `verified`.
 
 schema.org has no open-box condition, so an `open-box` claim can never be confirmed from the page: it is compared with what the page states (a page marked new gives `false`, "differs from the listing").
 
@@ -67,6 +69,8 @@ Each dataset row is the claim plus:
   "evidence_hash": "sha256 of the page bytes"
 }
 ```
+
+The price row above was verified before the Actor read `priceCurrency`. This Canada Computers page prices in CAD (saved copy: `data/claim_check/fixtures/mirror-canadacomputers-269441.html`), so the same `price $1,749.99` claim now comes back unverified. The prefilled example input uses this page.
 
 The key-value store's `OUTPUT` record holds the summary and all rows together.
 

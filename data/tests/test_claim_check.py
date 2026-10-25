@@ -1,4 +1,5 @@
 """c3 claim check against the SIM liar pages (served from disk through an injected fetcher)."""
+import json
 from data.claim_check import check_claim, parse_claim
 from data.liar_pages.build import SITE, build
 
@@ -186,7 +187,7 @@ def test_returns_read_from_json_ld_merchant_return_policy():  # #73 item 6
 def test_real_page_without_a_return_policy_stays_unverified():
     out = fixture_check("30-day returns", "mirror-canadacomputers-269441.html")
     assert out["result"] == "unverified"
-    assert fixture_check("$1,749.99", "mirror-canadacomputers-269441.html")["result"] == "verified"  # saved page still parses
+    assert fixture_check("$1,749.99", "mirror-canadacomputers-269441.html")["result"] == "unverified"  # saved page still parses; it prices in CAD (RT-19)
 
 def test_shipping_threshold_dollars_are_not_read_as_the_price():  # #99: never a false flag on an honest page
     from data.claim_check import parse_claims
@@ -311,3 +312,142 @@ def test_page_facts_claiming_to_be_sim_do_not_earn_our_sim_history():  # #155: S
         assert out["result"] == "unverified", url
     ours = check_claim({"text": "was $829", "kind": "price", "evidence_url": BASE + "shady-sam-gpu-5070ti-lies.html"}, fetch=fetch)
     assert ours["result"] in ("verified", "false") and "price history" in ours["reason"]
+
+
+# RT-19: the page's priceCurrency. A claim with "$" or no currency is USD; a page in another currency leaves it unverified.
+def _priced(price, currency=None, spec_currency=None):
+    cur = f',"priceCurrency":{json.dumps(currency)}' if currency is not None else ""
+    spec = f',"priceSpecification":{{"@type":"PriceSpecification","price":{price},"priceCurrency":{json.dumps(spec_currency)}}}' if spec_currency else ""
+    body = f'{{"@type":"Product","name":"X","offers":{{"@type":"Offer","price":{price}{cur}{spec}}}}}'
+    return f'<script type="application/ld+json">{body}</script>'.encode()
+
+
+def _price_check(text, page, kind="price", url="https://store.example/p"):
+    return check_claim({"text": text, "kind": kind, "evidence_url": url}, fetch=lambda u: page)
+
+
+def test_a_cad_page_leaves_a_dollar_price_claim_unverified_and_names_both_currencies():
+    for text in ("$1,749.99", "price $1,749.99", "New, $1,749.99", "$1,699.00"):   # the same number or a different one: never verified, never false
+        out = _price_check(text, _priced(1749.99, "CAD"))
+        assert out["result"] == "unverified", text
+        assert "USD" in out["reason"] and "CAD" in out["reason"], out["reason"]
+
+
+def test_the_saved_canada_computers_page_does_not_verify_a_dollar_claim():  # the Actor README's own example page
+    out = fixture_check("$1,749.99", "mirror-canadacomputers-269441.html")
+    assert out["result"] == "unverified" and "USD" in out["reason"] and "CAD" in out["reason"]
+
+
+def test_a_usd_page_still_verifies_and_still_catches_a_false_price():
+    assert _price_check("$1,749.99", _priced(1749.99, "USD"))["result"] == "verified"
+    assert _price_check("$1,749.99", _priced(1749.99, "usd"))["result"] == "verified"   # case is ignored
+    assert _price_check("$1,699.00", _priced(1749.99, "USD"))["result"] == "false"
+    assert fixture_check("$1,249.99", "sim-return-policy.html")["result"] == "verified"   # a saved USD page
+
+
+def test_a_page_with_no_readable_currency_is_judged_as_before():
+    for page in (_priced(1749.99), _priced(1749.99, "$"), _priced(1749.99, "dollars"), _priced(1749.99, 840), _priced(1749.99, "")):
+        assert _price_check("$1,749.99", page)["result"] == "verified", page
+
+
+def test_the_currency_can_sit_on_a_price_specification():
+    out = _price_check("$1,749.99", _priced(1749.99, spec_currency="CAD"))
+    assert out["result"] == "unverified" and "CAD" in out["reason"]
+    assert _price_check("$1,749.99", _priced(1749.99, "USD", spec_currency="CAD"))["result"] == "verified"   # the offer's own code first
+
+
+def test_a_claim_that_names_its_currency_is_compared_in_that_currency():
+    assert _price_check("C$1,749.99", _priced(1749.99, "CAD"))["result"] == "verified"
+    assert _price_check("price $1,749.99 CAD", _priced(1749.99, "CAD"))["result"] == "verified"
+    assert _price_check("CAD $1,749.99", _priced(1749.99, "CAD"))["result"] == "verified"
+    assert _price_check("C$1,699.00", _priced(1749.99, "CAD"))["result"] == "false"
+    out = _price_check("C$1,749.99", _priced(1749.99, "USD"))
+    assert out["result"] == "unverified" and "CAD" in out["reason"] and "USD" in out["reason"]
+    assert _price_check("US$1,749.99", _priced(1749.99, "USD"))["result"] == "verified"
+    assert _price_check("1749.99", _priced(1749.99, "CAD"), kind="price") ["result"] == "unverified"   # no amount with a $ at all
+    assert check_claim({"field": "price", "value": 1749.99, "currency": "CAD", "evidence_url": "https://store.example/p"},
+                       fetch=lambda u: _priced(1749.99, "CAD"))["result"] == "verified"
+
+
+def test_a_cad_page_does_not_hide_a_false_condition_in_the_same_claim():
+    page = b'<script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":1749.99,"priceCurrency":"CAD","itemCondition":"https://schema.org/UsedCondition"}}</script>'
+    assert _price_check("New, $1,749.99", page)["result"] == "false"   # the worst field still decides
+    page_new = page.replace(b"UsedCondition", b"NewCondition")
+    out = _price_check("New, $1,749.99", page_new)
+    assert out["result"] == "unverified" and "CAD" in out["reason"]
+
+
+def test_a_non_usd_was_price_claim_is_not_judged_against_usd_history():
+    rows = [{"url": "https://store.example/p", "observed_at": "2026-10-20T00:00:00+00:00", "price": 1500.0}]
+    ok = check_claim({"text": "was $1,400", "kind": "price", "evidence_url": "https://store.example/p"}, fetch=lambda u: _priced(1749.99), observations=rows)
+    assert ok["result"] == "verified"
+    out = check_claim({"text": "was C$1,400", "kind": "price", "evidence_url": "https://store.example/p"}, fetch=lambda u: _priced(1749.99), observations=rows)
+    assert out["result"] == "unverified" and "CAD" in out["reason"] and "USD" in out["reason"]
+
+
+def test_page_facts_carries_the_currency_code():
+    from data.claim_check import page_facts
+    assert page_facts(_priced(10, "cad").decode(), "https://store.example/p")[0]["currency"] == "CAD"
+    assert "currency" not in page_facts(_priced(10, "$").decode(), "https://store.example/p")[0]
+
+
+# RT-20: the <script id="listing"> block is read only on our own demo liar pages.
+LISTING = '<script type="application/json" id="listing">{"price": 789.0, "condition": "new", "stock": "in stock"}</script>'
+LD_USED = ('<script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":1299.0,"priceCurrency":"USD",'
+           '"itemCondition":"https://schema.org/UsedCondition","availability":"https://schema.org/OutOfStock"}}</script>')
+
+
+def test_a_listing_block_on_another_host_is_ignored_in_favour_of_the_real_json_ld():
+    from data.claim_check import page_facts
+    html = LISTING + LD_USED
+    facts, how = page_facts(html, "https://shop.example/p/1")
+    assert how == "page JSON-LD" and facts["price"] == 1299.0 and facts["condition"] == "used"
+    assert _price_check("New", html.encode(), kind="spec")["result"] == "false"       # the seller's block cannot make it new
+    assert _price_check("$789", html.encode())["result"] == "false"                    # nor make $789 true
+    assert _price_check("in stock", html.encode(), kind="stock")["result"] == "false"
+
+
+def test_a_page_with_only_a_listing_block_on_another_host_has_no_structured_data():
+    from data.claim_check import page_facts
+    assert page_facts(LISTING, "https://shop.example/p/1") == ({}, "no structured data")
+    assert page_facts(LISTING) == ({}, "no structured data")   # no url: not ours
+    assert page_facts(LISTING, "http://localhost:8765.evil.example/p.html") == ({}, "no structured data")
+    out = _price_check("$789", LISTING.encode())
+    assert out["result"] == "unverified" and out["method"].startswith("could not verify")
+
+
+def test_a_listing_block_on_our_own_liar_page_is_still_read_first():
+    from data.claim_check import page_facts
+    for url in ("http://localhost:8765/x.html", "http://127.0.0.1:8765/x.html"):
+        facts, how = page_facts(LISTING + LD_USED, url)
+        assert how == "page listing JSON" and facts["price"] == 789.0 and facts["condition"] == "new", url
+        assert _price_check("$789", (LISTING + LD_USED).encode(), url=url)["result"] == "verified"
+
+
+def test_a_broken_listing_block_on_another_host_is_not_parsed_at_all():
+    from data.claim_check import page_facts
+    for bad in ('{not json', '[1]', '"x"', "[" * 100_000 + "]" * 100_000):
+        html = f'<script type="application/json" id="listing">{bad}</script>' + LD_USED
+        assert page_facts(html, "https://shop.example/p")[1] == "page JSON-LD"   # no ValueError, no parse
+
+
+# RT-20: a warranty read from free text is marked as the seller's own description.
+def _described(description, extra_node=""):
+    return (f'<script type="application/ld+json">{{"@type":"Product","name":"X","description":{json.dumps(description)}{extra_node},'
+            '"offers":{"@type":"Offer","price":10}}</script>').encode()
+
+
+def test_a_warranty_from_the_description_says_so_when_verified_or_false():
+    page = _described("Includes a 2-year limited warranty.")
+    verified = _price_check("2 year warranty", page, kind="spec")
+    false = _price_check("3-year warranty", page, kind="spec")
+    assert verified["result"] == "verified" and "seller's own description" in verified["reason"]
+    assert false["result"] == "false" and "seller's own description" in false["reason"]
+    assert "seller's own description" not in _price_check("3-year warranty", _described("", _w(3, "ANN")), kind="spec")["reason"]
+    assert "seller's own description" not in _price_check("3-year warranty", _described("", _w(2, "ANN")), kind="spec")["reason"]
+
+
+def test_a_structured_warranty_wins_over_the_description_and_is_not_marked():
+    page = _described("Includes a 1-year limited warranty.", _w(3, "ANN"))
+    out = _price_check("3-year warranty", page, kind="spec")
+    assert out["result"] == "verified" and "seller's own description" not in out["reason"]

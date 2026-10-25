@@ -93,7 +93,9 @@ def claim_app(tmp_path, fetch):
     return TestClient(create_product_app(keys=keys, meter=Meter(tmp_path / "m.sqlite"), claim_fetch=fetch)), key
 
 
-PAGE = b'<script type="application/json" id="listing">{"price": 789.0, "condition": "open-box"}</script>'
+# RT-20: the claim check reads the page's schema.org JSON-LD on a store host; the <script id="listing"> block is for our own SIM pages only
+PAGE = (b'<script type="application/ld+json">{"@type": "Product", "name": "X", "offers": {"@type": "Offer", "price": 789.0, '
+        b'"priceCurrency": "USD", "itemCondition": "https://schema.org/UsedCondition"}}</script>')
 CLAIM = {"id": "c1", "bid_id": "b1", "text": "Brand new", "kind": "spec", "evidence_url": "https://shop.example.com/p/1"}
 
 
@@ -105,7 +107,7 @@ def test_check_claim_needs_a_key(tmp_path):
 def test_check_claim_returns_the_claim_check_result_and_is_metered(tmp_path):
     client, key = claim_app(tmp_path, lambda url: PAGE)
     r = client.post("/v1/check-claim", json=CLAIM, headers={"X-API-Key": key})
-    assert r.status_code == 200 and r.json()["result"] == "false" and "open-box" in r.json()["reason"]
+    assert r.status_code == 200 and r.json()["result"] == "false" and "used" in r.json()["reason"]
     assert client.get("/v1/usage", headers={"X-API-Key": key}).json()["calls"] == {"/v1/check-claim": 1}
 
 
@@ -182,7 +184,8 @@ def test_check_claim_on_internal_url_is_unverified_not_an_error(tmp_path):
 
 
 def test_check_claim_mixed_field_text_with_a_false_price_is_false(tmp_path):  # #99
-    page = b'<script type="application/json" id="listing">{"price": 1299.0, "condition": "new"}</script>'
+    page = (b'<script type="application/ld+json">{"@type": "Product", "name": "X", "offers": {"@type": "Offer", "price": 1299.0, '
+            b'"priceCurrency": "USD", "itemCondition": "https://schema.org/NewCondition"}}</script>')
     client, key = claim_app(tmp_path, lambda url: page)
     r = client.post("/v1/check-claim", json=dict(CLAIM, text="New RTX 5070 Ti for only $749"), headers={"X-API-Key": key})
     assert r.status_code == 200 and r.json()["result"] == "false" and "$1,299.00" in r.json()["reason"]
