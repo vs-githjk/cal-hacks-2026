@@ -14,6 +14,7 @@ is SIM: the kit cannot verify a real shop, so origin LIVE is refused. Nothing he
 """
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 import os
@@ -163,9 +164,15 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             given = request.headers.get(OPERATOR_HEADER) or ""
             if not operator or not hmac.compare_digest(given.encode(), operator.encode()):
                 return _one(403, "replace", f"replace=true needs the operator token ({OPERATOR_HEADER} header, set by {OPERATOR_ENV})")
-        return _write(norm, replace)
+        wrote = _write(norm, replace)
+        if isinstance(wrote, JSONResponse):
+            return wrote
+        path = wrote
+        # #412: readiness is advice read from the listing pages after the shop is safely written; it never stops the write. summarize blocks on page fetches (up to 25 s), so it runs off the event loop.
+        return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
+                             "run_command": run_command(path), "readiness": await asyncio.to_thread(readiness.summarize, norm)}, status_code=201)
 
-    def _write(norm: dict, replace: bool):
+    def _write(norm: dict, replace: bool):   # a JSONResponse for a refusal, else the path written
         path = folder / f"{norm['id']}.json"
         with lock:
             if path.parent != folder or path.is_symlink():
@@ -192,9 +199,8 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
                 except OSError:
                     pass
                 raise
-        # #412: readiness is advice read from the listing pages after the shop is safely written; it never stops the write.
-        return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
-                             "run_command": run_command(path), "readiness": readiness.summarize(norm)}, status_code=201)
+        return path
+
 
     @app.get("/v1/sellers")
     def list_sellers() -> list[dict]:

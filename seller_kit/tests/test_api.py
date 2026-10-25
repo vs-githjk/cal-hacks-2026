@@ -1,5 +1,6 @@
 """Seller Kit API tests: a temp custom dir and fake need sources only, no network, no agents started.
 Run: python3 -m pytest seller_kit -q"""
+import asyncio
 import copy
 import json
 import os
@@ -507,3 +508,32 @@ def test_the_shops_that_ship_with_the_repo_pass_the_screen():
 def test_an_invalid_body_still_gets_the_factorys_errors_not_the_screens(client):
     r = client.post("/v1/sellers", json={"id": "x"})
     assert r.status_code == 422 and any(e["field"] for e in r.json()["errors"])
+
+
+def test_a_slow_readiness_check_does_not_stall_the_server(custom, monkeypatch):
+    """summarize blocks on page fetches for up to 25 s; add_seller must run it off the event loop so /v1/health still answers."""
+    import threading
+    import httpx
+    from seller_kit import readiness
+    started, release = threading.Event(), threading.Event()
+
+    def slow(norm):
+        started.set()
+        assert release.wait(10)
+        return {"listings": []}
+    monkeypatch.setattr(readiness, "summarize", slow)
+    app = api.create_app(custom_dir=custom)
+
+    async def go():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+            post = asyncio.create_task(c.post("/v1/sellers", json=good()))
+            while not started.is_set():
+                await asyncio.sleep(0.01)
+            try:
+                health = await asyncio.wait_for(c.get("/v1/health"), 3)
+            finally:
+                release.set()
+            return health, await post
+    health, post = asyncio.run(go())
+    assert health.status_code == 200 and health.json() == {"ok": True}
+    assert post.status_code == 201
