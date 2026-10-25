@@ -29,9 +29,9 @@ def test_bad_cap_refused(cap):
 def test_six_rounds_lock_a_build_with_fit_knockouts():
     r = resolve(plan(200_000, OWNED), offers())
     assert r["status"] == "locked" and len(r["picks"]) == 6
-    assert r["picks"]["gpu"]["seller"] == "Central Computers" and r["picks"]["cooler"]["spec"]["name"] == "Low cooler"
+    assert r["picks"]["gpu"]["seller"] == "Silicon Sally's Surplus" and r["picks"]["cooler"]["spec"]["name"] == "Low cooler"
     assert {k["rule_id"] for k in r["knockouts"]} == {"fit.gpu_length", "fit.cooler_height"}
-    assert r["total_cents"] == 196_800 and r["steps"][-1]["line"] == "Build locked: 6 parts, 4 sellers, $1,968."
+    assert r["total_cents"] == 196_800 and r["steps"][-1]["line"] == "Build locked: 6 parts, 3 sellers, $1,968."
 
 
 def test_socket_clash_triggers_a_board_swap():
@@ -70,7 +70,7 @@ def test_over_budget_with_no_room_under_the_cap_is_knocked_out():
 def test_demo_lines_have_no_dashes_and_tell_the_story():
     lines = [s["line"] for s in run()["steps"]]
     assert not any("\u2014" in x or "\u2013" in x for x in lines)
-    assert lines[0].startswith("Plan:") and lines[-1] == "Build locked: 6 parts, 4 sellers, $1,988."
+    assert lines[0].startswith("Plan:") and lines[-1] == "Build locked: 6 parts, 3 sellers, $1,988."
 
 
 def test_resolve_returns_checks_and_a_swap_carries_its_own():
@@ -97,3 +97,61 @@ def test_uncertain_check_needs_a_check_and_does_not_lock():
     assert "swap" not in kinds and "B650 board" in r["picks"]["motherboard"]["spec"]["name"]
     line = r["steps"][-1]["line"]
     assert "board" in line and "\u2014" not in line and "\u2013" not in line
+
+
+def _one_gpu(*gpus):
+    return resolve(plan(200_000, OWNED), {**offers(), "gpu": list(gpus)})
+
+
+GPU = dict(name="RTX 5070 Ti", chipset="RTX 5070 Ti", length_mm=304)
+
+
+def test_origin_is_carried_and_defaults_to_sim():
+    r = run()
+    assert all(x["origin"] == "SIM" for x in r["picks"].values())
+    assert {k["origin"] for k in r["knockouts"]} == {"SIM"}
+    live = _one_gpu({**offer("Byte Bros Outlet", 1200, **GPU), "origin": "LIVE"})
+    assert live["picks"]["gpu"]["origin"] == "LIVE"
+    for bad in (None, "live", 5):
+        o = {**offer("Byte Bros Outlet", 1200, **GPU), "origin": bad}
+        assert _one_gpu(o)["picks"]["gpu"]["origin"] == "SIM"
+    o = offer("Byte Bros Outlet", 1200, **GPU)
+    del o["origin"]
+    assert _one_gpu(o)["picks"]["gpu"]["origin"] == "SIM"
+
+
+def test_mirror_and_not_orderable_offers_never_win():
+    cheap = {**offer("Mirror store", 900, **GPU), "origin": "MIRROR"}
+    nope = {**offer("FlashDeal Frankie", 1000, **GPU), "orderable": False}
+    r = _one_gpu(cheap, nope, offer("Byte Bros Outlet", 1200, **GPU))
+    assert r["picks"]["gpu"]["seller"] == "Byte Bros Outlet"
+    assert [k["rule_id"] for k in r["knockouts"]][:2] == ["offer.mirror", "offer.not_orderable"]
+    assert r["knockouts"][0]["reason"] == "is a real store listing, shown for comparison only; it cannot be ordered"
+    assert r["knockouts"][1]["reason"] == "cannot be ordered"
+    assert [k["part"] for k in r["knockouts"]][:2] == ["gpu", "gpu"]
+
+
+@pytest.mark.parametrize("price", [0, -5, 12.5, "100", None, True])
+def test_no_real_price_never_wins(price):
+    bad = {**offer("FlashDeal Frankie", 1, **GPU), "price_cents": price}
+    r = _one_gpu(bad, offer("Byte Bros Outlet", 1200, **GPU))
+    assert r["picks"]["gpu"]["seller"] == "Byte Bros Outlet"
+    assert r["knockouts"][0]["rule_id"] == "offer.bad_price" and r["knockouts"][0]["reason"] == "has no real price"
+
+
+@pytest.mark.parametrize("spec", [None, {}])
+def test_offer_without_spec_is_knocked_out(spec):
+    bare = {"seller": "FlashDeal Frankie", "price_cents": 100_000, "spec": spec}
+    r = _one_gpu(bare, offer("Byte Bros Outlet", 1200, **GPU))
+    assert r["picks"]["gpu"]["seller"] == "Byte Bros Outlet"
+    assert r["knockouts"][0]["rule_id"] == "offer.no_spec"
+    assert r["knockouts"][0]["reason"] == "has no part details to check"
+
+
+def test_all_parts_owned_is_blocked_not_locked():
+    from agents.buyer.planner import PARTS
+    r = resolve(plan(200_000, {**{k: {"name": k} for k in PARTS}}), {})
+    assert r["status"] == "blocked" and r["picks"] == {} and r["total_cents"] == 0
+    assert r["steps"][-1]["line"] == "Nothing to buy: every part is already yours."
+    assert "locked" not in [s["kind"] for s in r["steps"]]
+
