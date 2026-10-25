@@ -2,12 +2,13 @@
 // The Fetch tile: an activity feed pinned in a screen corner (top right on a desktop, a compact pill at the bottom on a phone),
 // not a video call. Collapsed it shows the latest recorded activity and its age; expanded it lists every agent, links to the
 // directory, and links out to ASI:One and Agentverse. Drag it to a corner, or use Move.
-// Reads only the agent feed (lib/agentFeed.ts); when the feed is down it says "agents offline" and shows no rows.
+// Reads only the agent feed (lib/agentFeed.ts); when the feed is down it says "agents offline" and shows no rows. With no
+// reachable feed configured (a deployed site) it lists the Agentverse profile links instead.
 
 import Link from "next/link";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
-import { AgentAvatar, useAgents } from "@/components/useAgents";
+import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
 import {
   ASI_ONE_URL,
   NEXT_CORNER,
@@ -67,7 +68,7 @@ export function AgentPip() {
 
 function AgentPipTile() {
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs);
-  const { rows, now } = useAgents();
+  const { rows, now, noFeed } = useAgents();
   const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
   const box = useRef<HTMLElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -81,11 +82,11 @@ function AgentPipTile() {
   }, []);
 
   const shown = rows ? realRows(rows) : [];
-  const offline = rows === null;
+  const offline = rows === null && !noFeed;
   const pending = rows === undefined;
   const latest = latestActivity(shown);
   const fresh = !!latest && !isStale(latest.at, now);
-  const head = headline(rows ? shown : rows, now);
+  const head = noFeed ? "Fetch agents on Agentverse" : headline(rows ? shown : rows, now);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
@@ -151,7 +152,12 @@ function AgentPipTile() {
       {prefs.open ? (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
-            {offline || pending || shown.length === 0 ? (
+            {noFeed ? (
+              <>
+                <p className="pt-2 text-muted">No live agent feed on this site. Each agent's public Agentverse profile:</p>
+                <AgentProfiles />
+              </>
+            ) : offline || pending || shown.length === 0 ? (
               <p className="py-3 text-muted">
                 {pending
                   ? "Checking the agent feed..."
@@ -202,7 +208,7 @@ function AgentPipTile() {
         </>
       ) : (
         <p className="hidden truncate px-3 pb-2.5 text-muted sm:block" title={latest?.last_message ?? undefined}>
-          {pending ? "Checking..." : offline ? "No feed" : (latest?.last_message ?? "No recorded activity")}
+          {noFeed ? "Open for Agentverse profiles" : pending ? "Checking..." : offline ? "No feed" : (latest?.last_message ?? "No recorded activity")}
         </p>
       )}
     </aside>
