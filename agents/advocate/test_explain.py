@@ -32,6 +32,16 @@ def test_a_caution_names_the_biggest_concern():
     assert c["recommendation"] == "caution" and c["explanation"].startswith("Caution: ") and "$700.00" in c["explanation"]
 
 
+def test_code_sources_use_the_current_repo_name():
+    code = {k: v for k, v in checks.CODE_SOURCES.items() if k != "floor"}  # floor is a simulated placeholder link
+    assert code and all(v.startswith("https://github.com/vs-githjk/fish-market-nothing-fishy/blob/main/") for v in code.values())
+    no_listing = bid("b1", "seller_1", 590)
+    no_listing["lines"][0]["listing_url"] = ""
+    c = cards([no_listing])[0]
+    assert c["source_url"].startswith("https://github.com/vs-githjk/fish-market-nothing-fishy/blob/main/")
+    assert "cal-hacks-2026" not in c["call_reason"]["source_url"]
+
+
 def test_an_approval_says_which_checks_ran():
     c = cards([bid("b1", "seller_1", 590)])[0]
     assert c["recommendation"] == "buy" and c["explanation"] == "Approved: the price, fit, recall and condition checks found no problem."

@@ -95,11 +95,13 @@ def score(bid: dict, track: dict) -> dict:
             "late_risk": round(landed * late_rate * LATE_COST_SHARE, 2),
             "warranty_credit": round(landed * WARRANTY_PER_MONTH * min(t["warranty_months"] or 0.0, WARRANTY_CAP_MONTHS), 2),
             "return_credit": round(landed * RETURN_PER_DAY * min(t["return_window_days"] or 0.0, RETURN_CAP_DAYS), 2)}
-    total = landed + comp["condition_risk"] + comp["reject_risk"] + comp["late_risk"] - comp["warranty_credit"] - comp["return_credit"]
+    all_in = landed + comp["condition_risk"] + comp["reject_risk"] + comp["late_risk"]  # price plus expected risk costs: never below landed
+    credit = comp["warranty_credit"] + comp["return_credit"]
+    total = all_in - credit  # effective cost after warranty and returns value: the figure bids are ranked on
     missing = [name for name, v in (("warranty", t["warranty_months"]), ("return window", t["return_window_days"]),
                                     ("condition", t["condition"])) if v is None]
     return {"bid_id": bid.get("id"), "seller_id": sid, "seller": _seller(sid), "landed": round(landed, 2),
-            "tco": round(total, 2), "components": comp, "missing": missing, "thin_record": thin,
+            "all_in": round(all_in, 2), "credit": round(credit, 2), "tco": round(total, 2), "components": comp, "missing": missing, "thin_record": thin,
             "deliveries": deliveries, "wins": (rec or {}).get("wins"), "losses": (rec or {}).get("losses"),
             "terms": {"warranty_months": t["warranty_months"], "return_window_days": t["return_window_days"],
                       "condition": t["condition"]}}
@@ -121,6 +123,8 @@ def _record_text(row) -> str:
     return f"{row['seller']} has {row['deliveries']} deliveries on record{extra}"
 
 
+# Two figures, never confused: all_in = landed + expected risk costs (condition, rejects, late delivery), always >= landed;
+# tco = all_in - the value of warranty and return window, labelled "effective cost" wherever it is shown. Bids rank on tco.
 def rank(need: dict, bids: list[dict], cards: list[dict], track: dict | None = None) -> dict:
     """Rank the unvetoed bids by total cost. `cards` are the Advocate's cards: a veto removes a bid from the ranking."""
     track = track or {}
@@ -135,13 +139,15 @@ def rank(need: dict, bids: list[dict], cards: list[dict], track: dict | None = N
                 "note": "No bid is left to rank on total cost: every bid was vetoed. Advisory only; the referee's ranking by landed price stays the rule."}
     top = ranked[0]
     cheapest = min(ranked, key=lambda r: (r["landed"], str(r["bid_id"])))
-    head = (f"Best total cost: {top['seller']} at ${top['landed']:.2f} landed, about ${top['tco']:.2f} all in "
-            f"({_terms_text(top)}).")
+    effective = (f", effective cost ${top['tco']:.2f} after ${top['credit']:.2f} of warranty and returns value"
+                 if top["credit"] else "")
+    head = (f"Best total cost: {top['seller']} at ${top['landed']:.2f} landed, ${top['all_in']:.2f} all in with expected risk costs"
+            f"{effective} ({_terms_text(top)}).")
     if cheapest["bid_id"] == top["bid_id"]:
         head += " It is also the lowest landed price."
     else:
         head += (f" That is ${top['landed'] - cheapest['landed']:.2f} more than the lowest landed price "
-                 f"({cheapest['seller']}, ${cheapest['landed']:.2f}) but ${cheapest['tco'] - top['tco']:.2f} cheaper all in.")
+                 f"({cheapest['seller']}, ${cheapest['landed']:.2f}) but ${cheapest['tco'] - top['tco']:.2f} cheaper in effective cost.")
     notes = [_record_text(top)] + ([f"no credit was given for {', '.join(top['missing'])}, which the bid does not state"]
                                    if top["missing"] else [])
     return {"ranking": ranked, "excluded": excluded, "advisory": True,

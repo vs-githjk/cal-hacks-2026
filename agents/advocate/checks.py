@@ -32,7 +32,7 @@ MAX_WARNINGS = 3
 # unverified_veto: the seller was asked about an unclear field and did not answer (advocate.clarify); never made by advise alone
 VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller", "mirror_not_orderable", "unverified_veto"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
-REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
+REPO = "https://github.com/vs-githjk/fish-market-nothing-fishy/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
 CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unconfirmed": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
                 "note": f"{REPO}/data/fit_checker/README.md", "same_seller": f"{REPO}/agents/advocate/checks.py", "record": f"{REPO}/agents/advocate/checks.py",
@@ -371,7 +371,7 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
     rows = {r["bid_id"]: r for r in ranking["ranking"]}
     for card in cards:
         row = rows.get(card["bid_id"])
-        card["tco"] = ({"rank": row["rank"], "landed": row["landed"], "tco": row["tco"], "components": row["components"],
+        card["tco"] = ({"rank": row["rank"], "landed": row["landed"], "all_in": row["all_in"], "tco": row["tco"], "components": row["components"],
                         "missing": row["missing"], "thin_record": row["thin_record"]} if row else {"rank": None})
         card["worth_it_note"] = ranking["note"]
     return cards

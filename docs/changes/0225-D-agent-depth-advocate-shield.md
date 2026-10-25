@@ -3,7 +3,7 @@
 No contract file changed. Additive only; nothing a reader of the old shapes needs to change.
 
 **AdvocateCard** (contracts/AdvocateCard.schema.json allows extra keys): each card now also carries `explanation` (one sentence) and
-`explanation_source_url`, `tco` ({rank, landed, tco, components, missing, thin_record}; `rank` is null for a vetoed bid), `worth_it_note`,
+`explanation_source_url`, `tco` ({rank, landed, all_in, tco, components, missing, thin_record}; `rank` is null for a vetoed bid; `all_in` is landed plus expected risk costs and never below landed, `tco` is the effective cost after warranty and returns value and is the figure bids rank on), `worth_it_note`,
 and, only when a seller was asked a question, `clarification` ({status, question, condition, answer_excerpt, answered_at, seller}).
 New warning kinds: `seller_confirmed` (a caution) and `unverified_veto` (a veto, rule id `advocate.unverified`, whose spoken summary is the
 existing "Some checks could not run"). `checks.advise` gained two optional arguments, `clarifications` and `track`; with neither, its output

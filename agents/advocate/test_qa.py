@@ -41,7 +41,7 @@ def test_a_card_that_fits_and_is_fairly_priced_is_approved_with_the_total_cost()
     lines = reply.splitlines()
     assert lines[0] == "Approved: the price, fit, recall and condition checks found no problem."
     assert "it fits your case" in lines[1]
-    assert lines[2].startswith("Worth it: Best total cost: this seller at $590.00 landed, about $5") and "36 month warranty, 30 day returns, new" in lines[2]
+    assert lines[2].startswith("Worth it: Best total cost: this seller at $590.00 landed, $590.00 all in with expected risk costs, effective cost $559.91 after $30.09 of warranty and returns value") and "36 month warranty, 30 day returns, new" in lines[2]
     assert "Source: " in lines[3] and "cannot buy or approve anything" in lines[4]
 
 

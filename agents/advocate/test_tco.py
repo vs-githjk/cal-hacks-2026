@@ -24,8 +24,29 @@ def test_a_dearer_bid_with_a_long_warranty_and_returns_can_win_on_total_cost():
     assert [r["bid_id"] for r in ranking["ranking"]] == ["b2", "b1"]
     top = ranking["ranking"][0]
     assert top["landed"] == 600.0 and top["tco"] == 569.4 and ranking["ranking"][1]["tco"] == 590.0
-    assert "$10.00 more" in ranking["note"] and "36 month warranty" in ranking["note"] and "30 day returns" in ranking["note"]
+    assert "$10.00 more" in ranking["note"] and "cheaper in effective cost" in ranking["note"] and "36 month warranty" in ranking["note"] and "30 day returns" in ranking["note"]
     assert ranking["advisory"] is True and "referee" in ranking["note"]
+
+
+def test_all_in_is_never_below_landed_and_the_lower_figure_is_labelled_effective():
+    import itertools
+    import re
+    terms = [(None, None), (0, 0), (36, 30), (120, 90)]
+    conds = [("new", "new"), ("open-box", "open-box"), ("refurbished", "refurbished"), ("used", "used")]
+    tracks = [{}, {"seller_1": {"deliveries": 40, "rejects": 10, "on_time_rate": 0.7}}]
+    for (w, r), (offered, page), track in itertools.product(terms, conds, tracks):
+        b = bid("b1", "seller_1", 600, offered=offered, page=page)
+        if w is not None:
+            line_terms(b, warranty_months=w, return_window_days=r)
+        ranking = tco.rank(NEED, [b], cards_for([b]), track)
+        row = ranking["ranking"][0]
+        assert row["all_in"] >= row["landed"], row  # price plus risk costs can only add
+        assert row["tco"] == round(row["all_in"] - row["credit"], 2)
+        note = ranking["note"]
+        assert float(re.search(r"\$([\d.]+) all in", note).group(1)) >= row["landed"]
+        if row["tco"] < row["landed"]:  # a figure under the price is only ever shown as effective cost after warranty value
+            assert f"effective cost ${row['tco']:.2f} after ${row['credit']:.2f} of warranty and returns value" in note
+            assert f"${row['tco']:.2f} all in" not in note
 
 
 def test_condition_costs_money_open_box_loses_to_the_same_price_new():
