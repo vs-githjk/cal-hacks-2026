@@ -13,7 +13,7 @@ import pytest
 import owner_approval as OA
 import state
 from market_bridge import MarketBridge, MarketBridgeError
-from test_owner_approval import BridgeWithCode, OPTION_NONE
+from test_owner_approval import OPTION_NONE
 from test_runtime_checkout import (CodeCapturingContext, FakeVoiceClient, _wire_voice, ready_for_requote,  # noqa: F401
                                    runtime)
 
@@ -26,8 +26,10 @@ class MarketWorld:
     record_approval are referee-only; a mandate exists only for the closed round's rank 1 bid, named by its deal id and paid
     to its market seller id at its landed price; one live mandate per deal; record_approval needs a mandate that exists."""
 
-    def __init__(self, require_code=False):
+    def __init__(self, require_code=False, fail_issue=False):
+        self.fail_issue = fail_issue
         self.require_code, self.mandates, self.issued, self.approvals, self.calls = require_code, {}, {}, {}, []
+        self.goal_id = self.need_id = ""  # the market derives these from the round's need; wire() reads them from the buyer
 
     def client(self, role):
         world = self
@@ -40,6 +42,8 @@ class MarketWorld:
                 if reducer in {"create_mandate", "issue_approval_code", "record_approval"} and role != "referee":
                     raise RuntimeError(f"{reducer} needs referee; caller is {role} vidyut")
                 if reducer == "create_mandate":
+                    if "goal_id" in a or "need_id" in a:  # the published create_mandate takes neither (#447)
+                        raise RuntimeError("create_mandate takes no goal_id or need_id")
                     if a["deal_id"] != DEAL:
                         raise RuntimeError("a mandate needs the rank 1 bid of a closed round")
                     if a["payee"] != SELLER:
@@ -50,6 +54,8 @@ class MarketWorld:
                         raise RuntimeError("these units are already held for this deal")
                     world.mandates[a["hash"]] = a
                 elif reducer == "issue_approval_code":
+                    if world.fail_issue:
+                        raise RuntimeError("market unreachable")
                     if a["mandate_hash"] not in world.mandates:
                         raise RuntimeError("no mandate with that hash")
                     world.issued[a["mandate_hash"]] = a["code"]
@@ -67,8 +73,8 @@ class MarketWorld:
                 if not m:
                     return []
                 ok = h in world.approvals
-                return [{"mandateHash": h, "mandateId": m["id"], "dealId": m["deal_id"], "goalId": m["goal_id"],
-                         "needId": m["need_id"], "amount": m["amount"], "payee": m["payee"],
+                return [{"mandateHash": h, "mandateId": m["id"], "dealId": m["deal_id"], "goalId": world.goal_id,
+                         "needId": world.need_id, "amount": m["amount"], "payee": m["payee"],
                          "expiry": "2099-01-01T00:00:00Z", "origin": m["origin"], "withinAllowance": False,
                          "retired": False, "reservationMatches": True, "settled": False,
                          "approvalMethod": {"some": "voice_code"} if ok else OPTION_NONE,
@@ -77,6 +83,7 @@ class MarketWorld:
         return Client()
 
     def wire(self, buyer, referee_class=MarketBridge):
+        self.goal_id, self.need_id = buyer.ROUND["goal"]["id"], buyer.ROUND["need"]["id"]
         buyer.MARKET_BUYER = MarketBridge("buyer", client=self.client("buyer"))
         buyer.MARKET_REFEREE = referee_class("referee", client=self.client("referee"))
 
@@ -112,7 +119,8 @@ def test_the_chat_purchase_creates_the_markets_mandate_through_the_referee_for_t
     assert tx["market_mandate"]["hash"] == created["hash"] and tx["market_mandate"]["payee"] == SELLER
     # the local mandate keeps the payment protocol's agent-address payee and its own hash: the phone gate is untouched
     assert tx["mandate"]["payee"].startswith("agent1q") and tx["mandate"]["hash"] != created["hash"]
-    assert tx["mandate"]["amount"] == created["amount"] and tx["mandate"]["goal_id"] == created["goal_id"]
+    assert tx["mandate"]["amount"] == created["amount"] and tx["mandate"]["goal_id"] == world.goal_id
+    assert "goal_id" not in created and "need_id" not in created  # the market takes the goal and need from the round, not the call
     assert client.calls == 1 and tx["phase"] == "approved"
     stored = state.load_transaction(db, tx["deal_id"], tx["buyer_id"])
     assert stored["market_mandate"]["hash"] == created["hash"]  # survives a restart
@@ -129,15 +137,25 @@ def test_the_code_is_issued_then_the_referee_records_the_approval_for_the_same_m
     assert world.roles("issue_approval_code") == world.roles("record_approval") == ["referee"]
     assert list(world.issued) == [market_hash] and list(world.approvals) == [market_hash]
     assert world.approvals[market_hash]["approved_by"] == buyer.ROUND["transaction"]["buyer_id"]
-    assert "code" not in world.approvals[market_hash]  # today's bridge takes none
+    assert world.approvals[market_hash]["code"] == world.issued[market_hash]  # the referee bridge requires the issued code
 
 
-def test_after_455_the_issued_code_travels_with_the_approval_and_the_market_checks_it(runtime):
+def test_the_issued_code_travels_with_the_approval_and_the_market_checks_it(runtime):
     buyer, _db = runtime
     world = MarketWorld(require_code=True)
-    _purchase(buyer, world, referee_class=BridgeWithCode)
+    _purchase(buyer, world)
     market_hash = buyer.ROUND["transaction"]["market_mandate"]["hash"]
     assert world.approvals[market_hash]["code"] == world.issued[market_hash] and buyer.ROUND["transaction"]["phase"] == "approved"
+
+
+def test_a_chat_purchase_whose_code_cannot_be_put_on_the_market_never_dials(runtime):
+    buyer, _db = runtime
+    world = MarketWorld(require_code=True, fail_issue=True)
+    ctx, client = _purchase(buyer, world)
+    assert client.calls == 0  # no call is placed without the code on /buyer
+    assert "record_approval" not in [r for _role, r, _a in world.calls] and not world.approvals
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _to, m in ctx.sent)
+    assert buyer.ROUND["transaction"]["phase"] != "approved"
 
 
 def test_one_live_mandate_per_deal_a_second_attempt_never_creates_another(runtime):

@@ -77,30 +77,26 @@ def buyer(monkeypatch, tmp_path):
     class FakeMarket:
         def __init__(self, identity):
             self.identity = identity
-            self.state = 'review'
+            self.state = 'open'   # #447: the published module reviews while the round is open, then closes it
             self.candidates = []
 
         def post_goal(self, *args, **kwargs): pass
         def post_need(self, *args, **kwargs): pass
         def open_round(self, *args, **kwargs): self.state = 'open'
-        def close_round(self, *args, **kwargs): self.state = 'closed' if self.state == 'review' else 'review'
+        def close_round(self, *args, **kwargs): self.state = 'closed'
         def round_status(self, *args, **kwargs):
-            return {'state': self.state, 'review_deadline': datetime.now(timezone.utc).isoformat()}
+            return {'state': self.state, 'deadline': datetime.now(timezone.utc).isoformat()}
         def attach_verdict(self, *args, **kwargs): pass
         def attach_claim_check(self, *args, **kwargs): pass
         def attach_advocate_card(self, *args, **kwargs): pass
-        def review_candidates(self, round_id):
-            return self.candidates or module.ROUND.get('review_bids', [])
         def authoritative_winner(self, round_id, need_items):
+            # #447: the published module's winner row: no line index, listing or binding hash
             candidate = (self.candidates or module.ROUND.get('review_bids', []))[0]
-            lines, metadata = candidate['lines'], candidate['line_metadata']
             return {'bid_id': candidate['bid_id'], 'seller_id': candidate['seller_id'],
-                    'binding_hash': candidate['binding_hash'], 'landed': module.ROUND['bids'][0]['total_landed_price'],
-                    'lines': [{'original_line_index': line['line_index'], 'sku_spec': line['sku_spec'],
-                               'unit_price': line['unit_price'], 'quantity': line['quantity'],
-                               'shipping': line['shipping'], 'listing_id': metadata[index]['listingId'],
-                               'listing_hash': metadata[index]['listingHash']}
-                              for index, line in enumerate(lines)]}
+                    'landed': module.ROUND['bids'][0]['total_landed_price'],
+                    'lines': [{'sku_spec': line['sku_spec'], 'unit_price': line['unit_price'], 'quantity': line['quantity'],
+                               'qty_available': line['quantity'], 'offered_condition': '', 'offered_spec': ''}
+                              for line in candidate['lines']]}
 
     monkeypatch.setattr(module, 'MARKET_BUYER', FakeMarket('buyer-test'))
     referee = FakeMarket('referee-test')
@@ -449,7 +445,7 @@ def test_buyer_output_shows_cached_crs_time_without_forwarding_profile(buyer, mo
     assert 'CRS' not in request.need_json and 'persona_ref' not in request.need_json
     assert 'CRS' not in request.bids_json and 'persona_ref' not in request.bids_json
     buyer.ROUND['phase'] = 'advice'
-    buyer.MARKET_REFEREE.state = 'review'
+    buyer.MARKET_REFEREE.state = 'open'  # #447: the round is still open while the review lands
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
         cards_json=json.dumps([card()]))))
     text = ctx.owner_text()
@@ -572,7 +568,7 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(multi_
                 candidate_hashes={bid['id']: candidate['binding_hash']})
             buyer.MARKET_BUYER.candidates = [candidate]
             buyer.MARKET_REFEREE.candidates = [candidate]
-            buyer.MARKET_REFEREE.state = 'review'
+            buyer.MARKET_REFEREE.state = 'open'  # #447
             await buyer.on_advice(advocate_ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
                 cards_json=json.dumps([card(need_id=buyer.ROUND['need']['id'], bid_id=bid['id'])])))
             final = [e for e in envelopes if e.target == owner][-1]
