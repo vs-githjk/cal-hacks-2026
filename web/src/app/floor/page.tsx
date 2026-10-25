@@ -150,7 +150,7 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
           <ActorList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
+        <div className="overflow-hidden rounded-[24px] shadow-[0_18px_48px_rgba(110,70,30,0.16)] ring-1 ring-[#E2D3BE]">
           <div className="relative flex min-w-0 flex-col sm:block">
             {webgl ? (
               <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
@@ -169,7 +169,7 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
               </div>
             )}
           </div>
-          <div className="border-t border-white/10 bg-[#17120E] px-4 py-3 sm:px-6">{controls}</div>
+          <div className="border-t border-[#E8DCCB] bg-[#FFFDF8] px-4 py-3 sm:px-6">{controls}</div>
         </div>
       )}
       <div className="grid gap-3.5 lg:grid-cols-[7fr_5fr]">
@@ -223,10 +223,10 @@ function StoryTop({ story, sample, deadline }: { story: Story; sample: boolean; 
 }
 
 const BUTTON =
-  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] font-medium text-white hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9B949] disabled:cursor-not-allowed disabled:opacity-40";
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#2B2A33]/15 bg-white px-4 text-[15px] font-medium text-[#2B2A33] shadow-[0_1px_2px_rgba(60,40,30,0.08)] hover:bg-[#F6F1EA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66] disabled:cursor-not-allowed disabled:opacity-50";
 
 const PRIMARY =
-  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-[15px] font-semibold text-[#17120E] hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9B949]";
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2F3E66] px-4 text-[15px] font-semibold text-white hover:bg-[#26335A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66]";
 
 const STEPS = ["Request", "Sealed bids", "Rounds", "Winner"] as const;
 
@@ -252,29 +252,29 @@ function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a
   const done = pb.beat >= total;
   const at = stepOf(scene, pb.beat);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-white">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-[#2B2A33]">
       <ol className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         {STEPS.map((name, i) => {
           const state = i < at || (i === at && done && total > 0 && i === 3) ? "done" : i === at ? "now" : "next";
           const seekable = total > 0 && i >= 1 && state !== "next";
           return (
             <li key={name} className="flex items-center gap-2">
-              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#E9B949]" : "bg-white/20"}`} />}
+              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#2F3E66]" : "bg-[#2B2A33]/20"}`} />}
               <button
                 type="button"
                 disabled={!seekable}
                 onClick={() => act({ type: "seek", beat: seekFor(scene, i) })}
                 aria-current={state === "now" ? "step" : undefined}
-                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E9B949]"
+                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2F3E66]"
               >
-                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#E9B949] bg-[#E9B949] shadow-[0_0_0_4px_rgba(233,185,73,0.22)]" : state === "done" ? "border-[#E9B949] bg-[#E9B949]/15" : "border-white/25"}`}>
+                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#2F3E66] bg-[#2F3E66] shadow-[0_0_0_4px_rgba(47,62,102,0.18)]" : state === "done" ? "border-[#2F3E66] bg-[#2F3E66]/10" : "border-[#2B2A33]/25"}`}>
                   {state === "done" && (
-                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#E9B949]" aria-hidden="true">
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#2F3E66]" aria-hidden="true">
                       <path d="M2.5 6.5 5 9l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </span>
-                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-white/50" : ""}>{name}</span>
+                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-[#2B2A33]/55" : ""}>{name}</span>
               </button>
             </li>
           );
