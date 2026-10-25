@@ -175,18 +175,14 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
             "source": line["source"], "snapshotId": line.get("snapshot_id", ""),
             "provenance": {}, "attrs": line["attrs"]})
     referee, market = Mock(), Mock()
-    referee.review_candidates.return_value = [{"round_id": "round-need-1", "need_id": "need-1",
-        "bid_id": bid_id, "seller_id": "seller-a", "origin": raw["origin"],
-        "lines": rows, "line_metadata": metadata, "binding_hash": candidate_hash}]
     referee.round_status.return_value = {"state": "closed"}
     chosen = raw["lines"]
     chosen_hash = metadata[0]["listingHash"]
+    # #447: the published market's winner row has no line index, listing or binding hash: the buyer binds it locally
     market.authoritative_winner.return_value = {"bid_id": bid_id, "seller_id": "seller-a",
-        "binding_hash": candidate_hash, "landed": raw["total_landed_price"],
-        "lines": [{"original_line_index": index, "sku_spec": line["sku_spec"],
-            "unit_price": line["unit_price"], "listing_id": line["listing_id"],
-            "listing_hash": metadata[index]["listingHash"], "quantity": line["quantity"],
-            "shipping": line["shipping"]} for index, line in enumerate(chosen)]}
+        "landed": raw["total_landed_price"],
+        "lines": [{"sku_spec": line["sku_spec"], "unit_price": line["unit_price"], "quantity": line["quantity"],
+                   "qty_available": line["quantity"], "offered_condition": "", "offered_spec": ""} for line in chosen]}
     buyer.MARKET_BUYER, buyer.MARKET_REFEREE = market, referee
     buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_kwargs: {
         "mandate_hash": mandate["hash"], "reservation_matches": True,
@@ -199,7 +195,7 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
         owned=[], attempts=0, last_sent={}, market_buyer_id="vidyut", market_round_id="round-need-1", round_token="round-token",
         candidate_hashes={}, order=None, transaction=None)
 
-    buyer.ROUND["review_bids"] = buyer._review_candidates(referee, "round-need-1")
+    buyer.ROUND["review_bids"] = buyer._review_candidates()
     asyncio.run(buyer._finish_market_round(Context()))
     projected = buyer.ROUND["bids"][0]
     assert len(projected["lines"]) == 2
@@ -747,10 +743,9 @@ def test_exact_ack_skips_duplicate_market_payment_record(runtime):
 
 
 @pytest.mark.parametrize(("initial", "expected", "transition_from", "final", "accepted"), [
-    ("open", "review", "open", "review", True),
-    ("review", "closed", "review", "closed", True),
-    ("open", "review", "open", "open", False),
-    ("review", "closed", "review", "review", False),
+    # #447: the published module goes open -> closed (it ranks at close); there is no review state
+    ("open", "closed", "open", "closed", True),
+    ("open", "closed", "open", "open", False),
 ])
 def test_market_scheduler_races_require_confirmed_round_transition(
         runtime, initial, expected, transition_from, final, accepted):
@@ -762,8 +757,7 @@ def test_market_scheduler_races_require_confirmed_round_transition(
         state = initial
 
         def sql(self, _query):
-            return [{"id": "round-1", "need_id": "need-1", "state": self.state,
-                     "deadline": None, "review_deadline": None}]
+            return [{"id": "round-1", "need_id": "need-1", "state": self.state, "deadline": None}]
 
         def call(self, _reducer, **_kwargs):
             self.state = final

@@ -35,6 +35,9 @@ from logic import advice_need_for, decide, make_order, sealed
 from data.mirror import not_partners  # common put the repo root on sys.path
 
 ADVICE_TIMEOUT_S = 15
+# #447: the published market ranks at close, so its round stays open this much longer than the bidding window: the
+# advocate's cards must be attached before the close for a veto or caution to count in the ranking.
+MARKET_REVIEW_S = ADVICE_TIMEOUT_S + 10
 RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs a phone-call approval
 CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
@@ -120,42 +123,24 @@ def _market_timestamp(value) -> float:
     return current.astimezone(timezone.utc).timestamp()
 
 
-def _review_candidates(referee_market, round_id: str) -> list[dict]:
-    candidates = referee_market.review_candidates(round_id)
-    originals = {bid["id"]: bid for bid in ROUND.get("received_bids", {}).values()}
-    selected = []
-    hashes = {}
-    for candidate in candidates:
-        bid = originals.get(candidate.get("bid_id"))
-        if (bid is None or candidate.get("round_id") != round_id
-                or candidate.get("need_id") != ROUND["need"]["id"]
-                or candidate.get("seller_id") != {"seller_1": "seller-a", "seller_2": "seller-b",
-                                                   "seller_3": "seller-c"}.get(bid["supplier_id"])
-                or candidate.get("origin") != bid.get("origin")):
-            raise MarketBridgeError("candidate_bid_binding_mismatch")
-        lines = candidate.get("lines")
-        metadata = candidate.get("line_metadata")
-        if not isinstance(lines, list) or not lines or not isinstance(metadata, list) or len(lines) != len(metadata):
+def _canonical_hash(value) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                                     allow_nan=False).encode()).hexdigest()
+
+
+def _review_candidates() -> list[dict]:
+    """#447: the bids to review are the Shield-allowed bids the sellers sent this agent (ROUND["bids"]); the published market
+    has no review_candidates view and the referee cannot read sealed bids. Each line keeps its index, listing id and a hash
+    of the seller's own line, and each bid a hash of the whole offer, so the winner is bound to exactly what was reviewed."""
+    selected, hashes = [], {}
+    for bid in ROUND.get("bids", []):
+        if not isinstance(bid.get("lines"), list) or not bid["lines"]:
             raise MarketBridgeError("candidate_lines_invalid")
-        projected = dict(bid, lines=[])
-        for row, meta in zip(lines, metadata):
-            index = row.get("line_index") if isinstance(row, dict) else None
-            if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(bid["lines"]):
-                raise MarketBridgeError("candidate_line_index_invalid")
-            original = bid["lines"][index]
-            line_hash = hashlib.sha256(json.dumps(original, sort_keys=True, separators=(",", ":"),
-                                               ensure_ascii=False, allow_nan=False).encode()).hexdigest()
-            if (meta.get("lineIndex") != index or meta.get("listingHash") != line_hash
-                    or meta.get("listingId") != (original.get("listing_id") or original.get("listing_url"))
-                    or row.get("sku_spec") != original.get("sku_spec")
-                    or row.get("unit_price") != original.get("unit_price")
-                    or row.get("quantity") != original.get("quantity")):
-                raise MarketBridgeError("candidate_line_binding_mismatch")
-            projected["lines"].append({**original, "line_index": index, "listing_id": meta["listingId"],
-                                       "listing_hash": meta["listingHash"]})
-        projected["candidate_binding_hash"] = candidate["binding_hash"]
-        selected.append(projected)
-        hashes[bid["id"]] = candidate["binding_hash"]
+        lines = [{**line, "line_index": index, "listing_id": line.get("listing_id") or line.get("listing_url"),
+                  "listing_hash": _canonical_hash(line)} for index, line in enumerate(bid["lines"])]
+        binding = _canonical_hash(bid)
+        selected.append(dict(bid, lines=lines, candidate_binding_hash=binding))
+        hashes[bid["id"]] = binding
     ROUND["candidate_hashes"] = hashes
     return selected
 
@@ -183,11 +168,13 @@ def _ensure_market_round_state(referee_market, round_id: str, *, expected: str, 
 def _begin_market_review() -> list[dict]:
     _buyer_market, referee_market = market_clients()
     round_id = ROUND["market_round_id"]
-    _ensure_market_round_state(referee_market, round_id, expected="review", transition_from="open")
+    # #447: review while the round is still open (the published market ranks at close); a closed round is too late
+    if referee_market.round_status(round_id).get("state") != "open":
+        raise MarketBridgeError("market_round_closed_before_review")
     for bid_id, check in ROUND.get("screened_bids", {}).items():
         referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
                                       rule_ids=check["rule_ids"], origin=check["origin"])
-    return _review_candidates(referee_market, round_id)
+    return _review_candidates()
 
 
 def _record_market_reviews(cards: list[dict]) -> None:
@@ -239,7 +226,11 @@ async def _finish_market_round(ctx: Context):
         reviewed_cards = ROUND.get("cards", {})
         buyer_market, referee_market = market_clients()
         round_id = ROUND["market_round_id"]
-        _ensure_market_round_state(referee_market, round_id, expected="closed", transition_from="review")
+        status = referee_market.round_status(round_id)
+        if status.get("state") == "open" and _market_timestamp(status.get("deadline")) > business_now().timestamp():
+            ROUND["deadline"] = _market_timestamp(status.get("deadline"))  # #447: the market extended its round; wait for it
+            return
+        _ensure_market_round_state(referee_market, round_id, expected="closed", transition_from="open")
         winner = buyer_market.authoritative_winner(round_id, ROUND["need"]["items"])
         if winner is None:
             ROUND["market_winner"] = None
@@ -247,25 +238,27 @@ async def _finish_market_round(ctx: Context):
             local = next((bid for bid in ROUND.get("review_bids", []) if bid["id"] == winner.get("bid_id")), None)
             supplier = MARKET_SELLER_IDS.get(winner.get("seller_id"))
             if (local is None or supplier != local.get("supplier_id")
-                    or winner.get("binding_hash") != ROUND.get("candidate_hashes", {}).get(local["id"])):
+                    or ROUND.get("candidate_hashes", {}).get(local["id"]) != local.get("candidate_binding_hash")):
                 raise MarketBridgeError("market_winner_binding_mismatch")
             raw_offer = next((bid for bid in ROUND.get("received_bids", {}).values()
                               if bid.get("id") == local["id"]), None)
             if not isinstance(raw_offer, dict):
                 raise MarketBridgeError("original_offer_readback_missing")
-            by_index = {line["line_index"]: line for line in local["lines"]}
-            selected = []
+            # #447: the market's result lines carry no line index; bind each to one reviewed line by sku and unit price
+            # (and condition when both name one). The market's landed price is unit price x quantity, without shipping,
+            # and the mandate must equal it, so shipping is shown but never charged.
+            unused, selected = list(local["lines"]), []
             for result_line in winner["lines"]:
-                line = by_index.get(result_line.get("original_line_index"))
-                if (line is None or line.get("sku_spec") != result_line.get("sku_spec")
-                        or line.get("unit_price") != result_line.get("unit_price")
-                        or result_line.get("listing_id") != line.get("listing_id")
-                        or result_line.get("listing_hash") != line.get("listing_hash")):
+                line = next((l for l in unused if l.get("sku_spec") == result_line.get("sku_spec")
+                             and l.get("unit_price") == result_line.get("unit_price")
+                             and not (l.get("offered_condition") and result_line.get("offered_condition")
+                                      and l["offered_condition"] != result_line["offered_condition"])), None)
+                if line is None:
                     raise MarketBridgeError("market_winner_line_mismatch")
-                selected.append({**line, "quantity": result_line["quantity"],
-                                 "shipping": result_line["shipping"]})
+                unused.remove(line)
+                selected.append({**line, "quantity": result_line["quantity"]})
             ROUND["market_winner"] = dict(local, lines=selected, total_landed_price=winner["landed"],
-                                           market_binding_hash=winner["binding_hash"], market_seller_id=winner["seller_id"])
+                                           market_binding_hash=local["candidate_binding_hash"], market_seller_id=winner["seller_id"])
             ROUND["original_offer"] = copy.deepcopy(raw_offer)
             ROUND["bids"] = [ROUND["market_winner"]]
         if not ROUND.get("trace_written"):
@@ -727,7 +720,7 @@ async def start_round(ctx: Context, need: dict | None = None):
         market_need = dict(need, buyer_id=market_buyer_id)
         need_poster.post_need(market_need, buyer_id=market_buyer_id, goal_id=goal["id"])
         round_id = f"round-{need['id']}"
-        referee_market.open_round(round_id, need["id"], need["auction_window_s"])
+        referee_market.open_round(round_id, need["id"], need["auction_window_s"] + MARKET_REVIEW_S)  # #447
         if referee_market.round_status(round_id).get("state") != "open":
             raise MarketBridgeError("round_open_readback_invalid")
         ROUND.update(market_round_id=round_id)
@@ -890,9 +883,9 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
         _record_market_reviews(cards)
         _, referee_market = market_clients()
         status = referee_market.round_status(ROUND["market_round_id"])
-        if status.get("state") != "review":
+        if status.get("state") != "open":  # #447: the cards count only if they landed before the market closed
             raise MarketBridgeError("market_review_closed")
-        ROUND["deadline"] = _market_timestamp(status.get("review_deadline"))
+        ROUND["deadline"] = _market_timestamp(status.get("deadline"))
     except Exception as exc:
         ctx.logger.warning(f"Market review write failed: {type(exc).__name__}")
         await fail_round(ctx, "Market could not record the independent review. Nothing ordered.", always_notify=True)
@@ -934,8 +927,8 @@ async def tick(ctx: Context):
         try:
             review_bids = _begin_market_review()
             _, referee_market = market_clients()
-            review_deadline = _market_timestamp(referee_market.round_status(ROUND["market_round_id"])
-                                                 .get("review_deadline"))
+            market_deadline = _market_timestamp(referee_market.round_status(ROUND["market_round_id"])
+                                                 .get("deadline"))  # #447: the market round's own close
         except Exception as exc:
             ctx.logger.warning(f"Market review could not be opened: {type(exc).__name__}")
             await fail_round(ctx, "Market could not verify the sealed round cutoff. Nothing ordered.", always_notify=True)
@@ -943,7 +936,7 @@ async def tick(ctx: Context):
         ROUND["quoted_at"] = now
         ROUND["review_bids"] = review_bids
         ROUND["phase"] = "market_review_wait" if not review_bids else "advice"
-        ROUND["deadline"] = review_deadline if not review_bids else min(review_deadline, now + ADVICE_TIMEOUT_S)
+        ROUND["deadline"] = market_deadline if not review_bids else min(market_deadline, now + ADVICE_TIMEOUT_S)
         if not review_bids:
             return
         # The advocate sees the owned parts for fit checks, but not the cap.
