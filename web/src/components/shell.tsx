@@ -23,12 +23,12 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
-      <nav className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 py-2">
-        <Link href="/" aria-label="Tech Bazaar" className="inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap font-display text-[16px] font-semibold tracking-[0.12em] text-ink">
-          <Laurel />
+      <nav className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 py-2.5">
+        <Link href="/" aria-label="Tech Bazaar" className="inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap font-display text-[17px] tracking-[0.06em] text-ink">
+          <Badge />
           <span className="hidden sm:inline">TECH BAZAAR</span>
         </Link>
-        <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto [scrollbar-width:none]">
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-full border border-line bg-soft/70 p-1 [scrollbar-width:none]">
           {NAV.map((n) => {
             const on = n.match ? path.startsWith(n.match) : path === n.href;
             return (
@@ -36,7 +36,7 @@ export function AppHeader() {
                 key={n.href}
                 href={n.href}
                 aria-current={on ? "page" : undefined}
-                className={`inline-flex min-h-9 shrink-0 items-center border-b-2 px-3 text-[13px] font-medium transition-colors ${on ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"}`}
+                className={`inline-flex min-h-8 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium transition-colors ${on ? "bg-accent text-accent-ink" : "text-ink-2 hover:bg-panel hover:text-ink"}`}
               >
                 {n.label}
               </Link>
@@ -44,7 +44,7 @@ export function AppHeader() {
           })}
         </div>
         <span className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:flex">
-          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-ink" : "border border-ink bg-transparent"}`} aria-hidden />
+          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-mint" : "border border-ink bg-transparent"}`} aria-hidden />
           {conn.isActive ? "market live" : "offline"}
         </span>
       </nav>
@@ -52,14 +52,12 @@ export function AppHeader() {
   );
 }
 
-/** Laurel mark: two mirrored leaf arcs. */
-function Laurel() {
+/** Badge mark: a six-point sheriff star. */
+function Badge() {
   return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden className="shrink-0 text-accent">
-      <path d="M11 21C5 19 3 12 5 4" />
-      <path d="M13 21C19 19 21 12 19 4" />
-      <path d="M5.5 9.5C7.5 9 8.5 10 9 12M6.5 14.5C8.5 14 9.5 15 10 17M5 5.5C7 5.5 8 6.5 8.5 8.5" />
-      <path d="M18.5 9.5C16.5 9 15.5 10 15 12M17.5 14.5C15.5 14 14.5 15 14 17M19 5.5C17 5.5 16 6.5 15.5 8.5" />
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden className="shrink-0 text-accent">
+      <path d="M12 2.5 13.6 8l5.4-2-2 5.4 5.4 1.6-5.4 1.6 2 5.4-5.4-2L12 23.5 10.4 18l-5.4 2 2-5.4L1.6 13l5.4-1.6-2-5.4 5.4 2L12 2.5Z" />
+      <circle cx="12" cy="12" r="3.1" />
     </svg>
   );
 }

@@ -9,11 +9,11 @@ import { fontVars } from "./fonts";
 export const metadata: Metadata = {
   title: "Tech Bazaar",
   description: "A refereed arena where seller agents bid for a buyer's computer gear.",
-  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#000000" };
+export const viewport: Viewport = { themeColor: "#f1e7d3" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

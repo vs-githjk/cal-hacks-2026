@@ -5,9 +5,10 @@ import { useMemo } from "react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
+import { Corral } from "@/components/Corral";
 import { OriginChip, Label, clock } from "@/components/ui";
 import { Question } from "@/components/arena";
-import { asOrigin, latestRound } from "@/lib/screens";
+import { asOrigin, bidsFromRows, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
@@ -27,6 +28,7 @@ export default function Home() {
   const [events] = useTable(tables.floorEvent);
 
   const r = latestRound(rounds);
+  const bids = useMemo(() => bidsFromRows(results, events, r?.id), [results, events, r]);
   const stats = useMemo(() => {
     const mine = results.filter((x) => x.roundId === r?.id);
     const by = (o: string) => mine.filter((x) => asOrigin(x.origin) === o).length;
@@ -42,32 +44,29 @@ export default function Home() {
 
   return (
     <div className="grid gap-10 pb-10">
-      <section className="relative -mx-4 grid items-center gap-8 overflow-hidden px-4 pt-6 md:min-h-[420px] md:grid-cols-[1.1fr_.9fr] md:gap-10">
-        <div className="relative z-10 order-2 md:order-1">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
-            <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
-            {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
-          </p>
-          <h1 className="max-w-[18ch] font-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.08] tracking-[0.01em] text-balance">
-            The arena answers one question at a time.
-          </h1>
-          <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
-            Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-2.5">
-            <Link href="/market" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
-              Watch the round <span aria-hidden>→</span>
-            </Link>
-            <Link href="/buyer" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
-              Open the buyer screen
-            </Link>
-          </div>
-        </div>
-        <div className="relative order-1 grid place-items-center md:order-2">
-          <span className="hidden md:block"><Mark size={300} spin /></span>
-          <span className="md:hidden"><Mark size={160} spin /></span>
+      <section className="relative -mx-4 grid items-center gap-3 overflow-hidden px-4 pt-6 text-center">
+        <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+          <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
+          {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
+        </p>
+        <h1 className="mx-auto flex max-w-[20ch] items-center justify-center gap-3 font-display text-[clamp(30px,5vw,56px)] font-normal leading-[1.08] tracking-[0.01em] text-balance">
+          <Mark size={44} spin />
+          The arena answers one question at a time.
+        </h1>
+        <p className="mx-auto mt-2 max-w-[52ch] text-[16px] text-ink-2">
+          Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+          <Link href="/market" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
+            Watch the round <span aria-hidden>→</span>
+          </Link>
+          <Link href="/buyer" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
+            Open the buyer screen
+          </Link>
         </div>
       </section>
+
+      <Corral bids={bids} goalLine="Hunting the best verified price" />
 
       <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
 
@@ -86,10 +85,10 @@ export default function Home() {
         </ol>
       </section>
 
-      <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
+      <section aria-label="This round in numbers" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {stats.map((s) => (
-          <div key={s.label} className="bg-panel px-4 py-4">
-            <div className="text-[clamp(26px,3vw,36px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
+          <div key={s.label} className="card p-4">
+            <div className="text-[clamp(24px,2.6vw,32px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
             <div className="mt-2 flex items-center gap-1.5 text-[12px] text-muted">
               {s.label} <OriginChip origin={s.origin} />
             </div>
