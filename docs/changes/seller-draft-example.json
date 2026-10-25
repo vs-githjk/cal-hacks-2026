@@ -1,0 +1,79 @@
+{
+  "input": "I run a small repair shop in Oakland. I have three refurbished 4070 Supers and some 750W PSUs, 90-day warranty, and I won't go below $520 on the cards.",
+  "live_call": {
+    "not_run": "ANTHROPIC_API_KEY is empty in cal-hacks-2026/.env and not set in the environment",
+    "route_response_without_key": {
+      "ok": false,
+      "note": "Claude is unavailable right now; fill in the form below."
+    }
+  },
+  "offline_example_with_stubbed_model_reply": {
+    "note": "NOT a live call. The model reply below is stubbed to show the vetting: the invented store name, list price 600, PSU floor 80 and 30-day returns are all dropped; the floor 520, the 90-day warranty and the stock of 3 survive because the owner wrote them.",
+    "stubbed_model_reply": {
+      "store_name": "Oakland GPU Hub",
+      "owner": null,
+      "kind": "small repair shop in Oakland",
+      "lines": [
+        {
+          "part": "rtx 4070 super",
+          "condition": "refurbished",
+          "list_price": 600,
+          "floor": 520,
+          "quantity": 3
+        },
+        {
+          "part": "psu 750w",
+          "condition": "refurbished",
+          "list_price": null,
+          "floor": 80,
+          "quantity": null
+        }
+      ],
+      "perks": [
+        "90-day warranty",
+        "30-day returns"
+      ],
+      "claims": [],
+      "questions": []
+    },
+    "route_response": {
+      "ok": true,
+      "model": "claude-haiku-5-5",
+      "draft": {
+        "name": "",
+        "owner": "",
+        "archetype": "small repair shop in Oakland",
+        "perks": [
+          "90-day warranty"
+        ],
+        "claims": [],
+        "lines": [
+          {
+            "part": "rtx 4070 super",
+            "condition": "refurbished",
+            "list_price": null,
+            "floor": 520,
+            "quantity": 3
+          },
+          {
+            "part": "psu 750w",
+            "condition": "refurbished",
+            "list_price": null,
+            "floor": null,
+            "quantity": null
+          }
+        ]
+      },
+      "questions": [
+        "What is the lowest price you would accept for the refurbished psu 750w?",
+        "What is the list price of the refurbished rtx 4070 super?"
+      ],
+      "dropped": [
+        "store name (you did not say it)",
+        "list price for rtx 4070 super (not a number you wrote)",
+        "floor for psu 750w (not a number you wrote)",
+        "perk \"30-day returns\" (you did not say it)"
+      ]
+    }
+  }
+}

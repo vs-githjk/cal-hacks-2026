@@ -117,7 +117,7 @@ Smell Test stops 30 of 30 on its development set, but its rules were written aga
 | SpacetimeDB | Reducers and live state for rounds, floors, mandates and approvals | `market/spacetimedb/` | LIVE on Maincloud |
 | Tiger Data | Time-series Postgres for bid prices and Market Pulse trends | `data/tiger/` | built, env-gated |
 | Visa | Trusted Agent Protocol signing, built and tested, run in the reference run but not on the live web purchase; the Visa test card behind the Stripe test charge | `pay/tap.py` | built, not certified |
-| Anthropic | Claude Haiku 5.5 as an opt-in Smell Test classifier; it never decides money | `shield/classifier.py` | opt-in |
+| Anthropic | Claude Haiku 5.5 reads goals (Buyer), phrases explanations (Advocate, Smell Test), and drafts seller agents for small shops on `/sell`; it never decides money, vetoes or ranking. The Smell Test classifier is opt-in | `agents/buyer/understand.py`, `agents/phrasing.py`, `shield/classifier.py`, `web/src/lib/sellerDraft.ts` | Buyer and seller draft need `ANTHROPIC_API_KEY`; classifier opt-in |
 | Vercel | Hosting for the web app | `web/` | LIVE |
 
 Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT) for compatibility fields.
