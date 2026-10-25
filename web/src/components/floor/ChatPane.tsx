@@ -34,7 +34,7 @@ export function agentColor(who: string): string {
 
 const css = `
 .cp { container-type: inline-size; position: relative; width: 100%; height: 100%; background: ${PANEL}; color: ${TEXT}; overflow: hidden; display: flex; flex-direction: column; border-radius: 18px; }
-.cp-full { height: auto; min-height: inherit; max-height: inherit; }
+.cp-full { height: 100%; }
 .cp * { box-sizing: border-box; min-width: 0; }
 .cp-head { display: flex; align-items: center; gap: 6px; flex: none; padding: max(4px, 2.4cqw) max(8px, 3.2cqw); background: #ffffff; border-bottom: 1px solid ${HAIR}; font-size: max(9px, 3.6cqw); line-height: 1.3; color: ${MUTED}; }
 .cp-full .cp-head { padding: 12px 20px; font-size: 13px; }

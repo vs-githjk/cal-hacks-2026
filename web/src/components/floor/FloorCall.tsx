@@ -94,7 +94,7 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   const left = wide ? Math.max(0, corner.endsWith("l") ? Math.max(room / 2, tileW + INSET * 2) : Math.min(room / 2, room - tileW - INSET * 2)) : room / 2;
   const stack = wide ? 0 : Math.max(0, tileH + INSET + 12 - 24);
   const bigChat: MotionStyle = {
-    position: "relative", width: cardW, maxHeight: bigH, marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
+    position: "relative", width: cardW, height: bigH, marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
     marginTop: corner.startsWith("t") ? stack : 0, marginBottom: corner.startsWith("b") ? stack : 0,
   };
 
