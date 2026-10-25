@@ -383,7 +383,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             note(deal_gate.crs_note())
             for line in deal_gate.drain_notes():
                 note(line)
-        if s.reducer == "open_round" and before_round is not None:
+        if s.reducer in ("open_round", "open_knockout_round") and before_round is not None:
             try:
                 before_round()
             except Exception as e:  # noqa: BLE001  (a relay problem never stops a round)
