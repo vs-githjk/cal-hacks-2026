@@ -78,8 +78,9 @@ export function BuyerScreen(p: BuyerScreenProps) {
         <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />
       ) : (
         <>
-          {p.composer}
+          {/* A pending call outranks everything: its code card comes first. */}
           {p.review && <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />}
+          {p.composer}
           <Searches goals={p.goals} />
           <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
           <div className="grid gap-3.5 md:grid-cols-3">
