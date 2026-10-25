@@ -17,10 +17,19 @@ from demo.tests.test_bridge import FakeCartesia
 
 
 class FakeMarket:
-    def __init__(self, per_buy=0.0):
+    def __init__(self, spent=0.0):
         self.log, self.bids, self.cards, self.verdicts, self.needs, self.rounds = [], {}, {}, {}, {}, {}
         self.rows, self.mandates, self.approvals, self.payments = [], {}, {}, {}
-        self.per_buy, self.fail, self.floors = per_buy, {}, {}
+        self.fail, self.floors, self.floor_events, self.round_state = {}, {}, [], {}
+        # the market's allowance row starts at $0 (a new buyer's first buy always calls); set_allowance changes it
+        self.allow = {"per": 0.0, "period_limit": 0.0, "period": "week", "spent": spent}
+        # switches for the checks that read the market back
+        self.private_readable, self.events_readable, self.swallow_approval, self.never_close, self.knockout = True, True, False, False, set()
+
+    def set_allowance(self, a):
+        if a["per_purchase_limit"] > a["period_limit"]:
+            raise RuntimeError("set_allowance refused: per_purchase_limit cannot be above period_limit")
+        self.allow = {**self.allow, "per": a["per_purchase_limit"], "period_limit": a["period_limit"], "period": a["period"]}
 
     def client(self, name):
         return _Client(self, name)
@@ -45,9 +54,13 @@ class FakeMarket:
 
     def open_round(self, a):
         self.rounds[a["round_id"]] = a
+        self.round_state[a["round_id"]] = "open"
 
     def close_round(self, a):
         rid = a["round_id"]
+        if self.never_close:
+            return
+        self.round_state[rid] = "closed"
         need = self.needs[self.rounds[rid]["need_id"]]
         mine = [b for b in self.bids.values() if b["round_id"] == rid]
         ok, out = [], []
@@ -68,9 +81,10 @@ class FakeMarket:
             held = self.cards.get(b["id"], {}).get("recommendation") == "caution"
             self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], i, b["landed"],
                               [f"held back: advocate caution ({self.cards[b['id']]['rule_id']}: {self.cards[b['id']]['text']})"] if held else [],
-                              b["lines"], b["origin"], b["source"]))
+                              b["lines"], b["origin"], b["source"], b["landed"], "", 1, "advancing" if rid in self.knockout and i == 1 else ""))
         for b, why in out:
-            self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], 0, b["landed"], why, b["lines"], b["origin"], b["source"]))
+            self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], 0, b["landed"], why, b["lines"], b["origin"], b["source"],
+                              b["landed"], "", 1, ""))
 
     def create_mandate(self, a):
         bid_id = a["deal_id"][5:]
@@ -80,15 +94,23 @@ class FakeMarket:
         if a["payee"] != won[3] or abs(a["amount"] - won[6]) > 1e-9:
             raise RuntimeError("payee or amount differs from the winner")
         self.mandates[a["hash"]] = a
-        if a["amount"] <= self.per_buy:
+        al = self.allow   # market/rules/allowance.ts decide(): $0, over the per-buy limit or past the period limit all call
+        if al["per"] > 0 and a["amount"] <= al["per"] and al["spent"] + a["amount"] <= al["period_limit"]:
             self.approvals[a["hash"]] = {"method": "allowance", "voice_approval_id": ""}
+            self.allow = {**al, "spent": round(al["spent"] + a["amount"], 2)}
+            self.floor_events.append(("approval_recorded", a["hash"], "Approved within the allowance"))
 
     def record_approval(self, a):
         if a["mandate_hash"] not in self.mandates:
             raise RuntimeError("no mandate with that hash")
-        if a["method"] == "voice_code" and not a["voice_approval_id"]:
+        if a["method"] == "allowance":
+            raise RuntimeError("this deal is over the allowance; only the call approves it")
+        if a["method"] == "voice_code" and not a["voice_approval_id"].strip():
             raise RuntimeError("a voice approval needs the VoiceApproval id from the call")
-        self.approvals.setdefault(a["mandate_hash"], {"method": a["method"], "voice_approval_id": a["voice_approval_id"]})
+        if self.swallow_approval or a["mandate_hash"] in self.approvals:
+            return   # the real market logs rejected() on a second approval and does not throw
+        self.approvals[a["mandate_hash"]] = {"method": a["method"], "voice_approval_id": a["voice_approval_id"].strip()}
+        self.floor_events.append(("approval_recorded", a["mandate_hash"], "Approved by voice code"))
 
     def record_payment(self, a):
         if a["mandate_hash"] not in self.approvals:
@@ -108,8 +130,25 @@ class _Client:
         getattr(self.m, reducer, lambda a: None)(seen)
 
     def sql(self, query):
-        assert query == "SELECT * FROM round_result"
-        return list(self.m.rows)
+        m = self.m
+        if query == "SELECT * FROM round_result":
+            return list(m.rows)
+        if query == "SELECT * FROM round":   # id, need_id, opened_at, deadline, extensions, state, sealed_count, closed_at, origin
+            return [(rid, m.rounds[rid]["need_id"], "t", "t", 0, st, 0, None, "SIM") for rid, st in m.round_state.items()]
+        if query == "SELECT * FROM allowance":
+            if not m.private_readable:
+                raise RuntimeError("sql failed (400): no such table `allowance`")
+            a = m.allow
+            return [("vidyut", "USD", a["per"], a["period_limit"], a["period"], a["spent"], 0, "t")]
+        if query == "SELECT * FROM approval":
+            if not m.private_readable:
+                raise RuntimeError("sql failed (400): no such table `approval`")
+            return [(i, h, v["method"], "vidyut", "t", v["voice_approval_id"]) for i, (h, v) in enumerate(m.approvals.items(), 1)]
+        if query == "SELECT * FROM floor_event":   # id, kind, ref_table, ref_id, seller_id, label, origin, at
+            if not m.events_readable:
+                raise RuntimeError("sql failed (500)")
+            return [(i, k, "approval", ref, "", label, "SIM", "t") for i, (k, ref, label) in enumerate(m.floor_events, 1)]
+        raise AssertionError(query)
 
 
 def kinds(m):
@@ -302,7 +341,7 @@ class WatchingCartesia(FakeCartesia):
 def test_no_part_is_approved_by_the_markets_allowance_rule_when_the_build_needed_the_call(tmp_path):
     # every part is under the per-purchase limit but the build is not: the market would auto-approve a mandate at once, so no
     # mandate may exist before the call approves (the call covers the whole build)
-    m = FakeMarket(per_buy=400.0)
+    m = FakeMarket()
     watch = WatchingCartesia(m, lambda code: f"{code} approve")
     r, out, m, client, notes = run_build(m, tmp_path=tmp_path, cartesia=watch, allowance={"per_purchase_limit": 400.0, "period_limit": 5000.0, "period": "month"})
     assert out["status"] == "paid" and len(watch.calls) == 1
@@ -311,7 +350,7 @@ def test_no_part_is_approved_by_the_markets_allowance_rule_when_the_build_needed
 
 
 def test_inside_the_allowance_it_pays_with_no_call_and_says_allowance(tmp_path):
-    m = FakeMarket(per_buy=5000.0)
+    m = FakeMarket()
     r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance={"per_purchase_limit": 5000.0, "period_limit": 9000.0, "period": "month"})
     assert out["status"] == "paid" and client.calls == []
     assert len(calls(m, "create_mandate")) == 6 and calls(m, "record_approval") == [] and len(calls(m, "record_payment")) == 6
@@ -321,8 +360,8 @@ def test_inside_the_allowance_it_pays_with_no_call_and_says_allowance(tmp_path):
 
 
 def test_a_period_limit_too_small_for_the_whole_build_still_needs_the_call(tmp_path):
-    r, out, m, client, notes = run_build(tmp_path=tmp_path, allowance={"per_purchase_limit": 5000.0, "period_limit": 9000.0, "period": "month",
-                                                                      "spent_this_period": 8000.0})
+    r, out, m, client, notes = run_build(FakeMarket(spent=8000.0), tmp_path=tmp_path,
+                                         allowance={"per_purchase_limit": 5000.0, "period_limit": 9000.0, "period": "month"})
     assert len(client.calls) == 1 and out["status"] == "paid" and out["view"]["approval"]["method"] == "voice_code"
 
 
@@ -380,6 +419,142 @@ def test_the_gpu_runs_the_bridges_own_round_so_the_liar_is_vetoed_by_the_real_ad
     cards = [a for a in calls(m, "attach_advocate_card")]
     assert {"fit.gpu_length", "advocate.condition"} <= {c["rule_id"] for c in cards}
     assert gpu["champion"]["origin"] in ("SIM", "MIRROR") and gpu["budget"] == 1300.0
+
+
+def allowance_calls(m):
+    return [(a["per_purchase_limit"], a["period_limit"], a["period"]) for _, r, a in m.log if r == "set_allowance"]
+
+
+def test_after_the_call_every_part_is_approved_by_the_calls_voice_code_even_a_part_under_the_per_buy_limit(tmp_path):
+    # the market approves a mandate at or under the per-purchase limit by itself (method allowance, no voice id), and a following
+    # record_approval is swallowed: the build zeroes the per-buy limit while it makes the mandates, then restores it
+    r, out, m, client, notes = run_build(tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "paid" and len(m.approvals) == 6
+    assert {v["method"] for v in m.approvals.values()} == {"voice_code"}
+    ids = {v["voice_approval_id"] for v in m.approvals.values()}
+    assert len(ids) == 1 and "" not in ids
+    assert allowance_calls(m) == [(250.0, 500.0, "month"), (0.0, 500.0, "month"), (250.0, 500.0, "month")]
+    assert m.allow["per"] == 250.0 and m.allow["spent"] == 0.0, "the allowance is back and nothing counted against it"
+    order = kinds(m)
+    zero = [i for i, (_, r_, a) in enumerate(m.log) if r_ == "set_allowance" and a["per_purchase_limit"] == 0.0][0]
+    assert zero < order.index("create_mandate") and order.index("record_approval") < len(order) - order[::-1].index("set_allowance")
+
+
+def test_the_allowance_is_restored_when_a_mandate_is_refused_midway(tmp_path):
+    m = FakeMarket()
+    m.fail["record_approval"] = "mandate expired; the deal must be re-quoted"
+    with pytest.raises(RuntimeError):
+        run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert allowance_calls(m)[-1] == (250.0, 500.0, "month") and m.allow["per"] == 250.0 and m.payments == {}
+
+
+def test_a_failed_restore_leaves_the_allowance_at_zero_and_says_so(tmp_path):
+    m = FakeMarket()
+    real = m.set_allowance
+
+    def flaky(a):
+        if a["per_purchase_limit"] > 0 and len(allowance_calls(m)) > 2:
+            raise RuntimeError("market down")
+        real(a)
+    m.set_allowance = flaky
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert m.allow["per"] == 0.0 and any("allowance" in n and "$0" in n for n in notes)
+
+
+def test_the_build_is_denied_with_no_payment_when_a_mandate_has_no_voice_code_row(tmp_path):
+    m = FakeMarket()
+    m.swallow_approval = True
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "denied" and out["reason"] == "approval_missing" and m.payments == {}
+    assert "record_payment" not in kinds(m) and out["view"]["approval"]["state"] == "denied"
+    assert "voice" in out["view"]["approval"]["reason"].lower() and "Nothing was paid" in out["view"]["approval"]["reason"]
+    assert len(calls(m, "deny_approval")) == 6, "the held units go back on sale"
+
+
+def test_without_the_private_tables_the_public_floor_events_still_prove_the_method(tmp_path):
+    m = FakeMarket()
+    m.private_readable = False
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "paid"
+    m2 = FakeMarket()
+    m2.private_readable, m2.swallow_approval = False, True
+    r, out, m2, client, notes = run_build(m2, tmp_path=tmp_path / "b", allowance=dict(ALLOW))
+    assert out["status"] == "denied" and m2.payments == {}
+
+
+def test_a_build_that_cannot_be_read_back_at_all_pays_nothing(tmp_path):
+    m = FakeMarket()
+    m.private_readable = m.events_readable = False
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "denied" and m.payments == {} and "record_payment" not in kinds(m)
+
+
+def test_no_stripe_test_charge_is_made_before_every_approval_is_confirmed(tmp_path):
+    m = FakeMarket()
+    m.swallow_approval = True
+    stripe = []
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW), use_stripe=True,
+                                         env={"STRIPE_SECRET_KEY": "sk_test_x"}, stripe_test=lambda mand, key: stripe.append(mand) or {})
+    assert out["status"] == "denied" and stripe == []
+
+
+def test_the_markets_own_spent_this_period_decides_not_a_hard_coded_zero(tmp_path):
+    # the build was given room for the whole total, but the market already counts $8,500 spent this period
+    m = FakeMarket(spent=8500.0)
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance={"per_purchase_limit": 5000.0, "period_limit": 9000.0, "period": "month"})
+    assert len(client.calls) == 1 and out["status"] == "paid" and out["view"]["approval"]["method"] == "voice_code"
+    assert {v["method"] for v in m.approvals.values()} == {"voice_code"} and m.allow["spent"] == 8500.0
+
+
+def test_an_allowance_that_cannot_be_read_or_restored_stops_before_any_mandate(tmp_path):
+    m = FakeMarket()
+    m.private_readable = False
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=None)
+    assert out["status"] == "denied" and "create_mandate" not in kinds(m) and m.payments == {}
+
+
+def test_inside_the_allowance_a_part_the_market_would_not_auto_approve_denies_before_any_payment(tmp_path):
+    m = FakeMarket()
+    real = m.create_mandate
+
+    def stingy(a):   # the market's own rule disagrees with the build's reading of the allowance
+        m.allow = {**m.allow, "per": 1.0}
+        real(a)
+    m.create_mandate = stingy
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance={"per_purchase_limit": 5000.0, "period_limit": 9000.0, "period": "month"})
+    assert out["status"] == "denied" and m.payments == {} and "record_payment" not in kinds(m) and client.calls == []
+
+
+def test_a_round_the_market_has_not_closed_gives_no_champion(tmp_path):
+    m = FakeMarket()
+    m.never_close = True
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    assert out["status"] == "denied" and "create_mandate" not in kinds(m) and client.calls == []
+    assert {p["status"] for p in out["view"]["parts"] if p["status"] != "owned"} == {"bidding"}
+
+
+def test_a_knockout_stage_leader_is_never_a_champion():
+    row = {"roundId": "r", "bidId": "b", "sellerId": "s", "persona": "S", "rank": 1, "landed": 10.0, "reasons": [], "origin": "SIM"}
+    for status, ok in (("", True), ("champion", True), ("advancing", False), ("knocked_out", False)):
+        champ, why = build.champion_of([{**row, "status": status}])
+        assert (champ is not None) is ok, status
+    assert build.champion_of([row])[0] is not None   # an older market with no status column
+
+
+def test_a_stage_leader_that_has_not_won_fails_the_part(tmp_path):
+    m = FakeMarket()
+    m.knockout = {"round-goal-build-1-gpu"}
+    r, out, m, client, notes = run_build(m, tmp_path=tmp_path, allowance=dict(ALLOW))
+    gpu = next(p for p in out["view"]["parts"] if p["part"] == "gpu")
+    assert gpu["status"] == "failed" and out["status"] == "denied" and "create_mandate" not in kinds(m)
+
+
+def test_a_rerun_starts_the_steps_file_over(tmp_path):
+    run_build(tmp_path=tmp_path)
+    first = (tmp_path / build.STEPS_FILE).read_text().splitlines()
+    run_build(tmp_path=tmp_path)
+    again = (tmp_path / build.STEPS_FILE).read_text().splitlines()
+    assert len(again) == len(first) and json.loads(again[0])["parts"][2]["status"] == "planned"
 
 
 # ---------------------------------------------------------------- fail safe

@@ -88,9 +88,11 @@ def _cents_ok(landed: Any) -> bool:
 
 
 def champion_of(results: list[dict]) -> tuple[Optional[dict], str]:
-    """(the round's eligible champion row, "") or (None, why there is none). Eligible = the market's rank 1, not held back, a seller
+    """(the round's eligible champion row, "") or (None, why there is none). Eligible = the market's rank 1 of a plain or won round, not held back, a seller
     that joined the market, and a landed price in whole cents. A held-back or vetoed bid is never a champion (#240)."""
-    first = [r for r in results if r.get("rank") == 1]
+    # #363 (knockout rounds): only a row whose status is "" (a plain round) or "champion" can win; a stage leader ("advancing") or a
+    # knocked-out bid never can, whatever its rank
+    first = [r for r in results if r.get("rank") == 1 and (r.get("status") or "") in ("", "champion")]
     if len(first) != 1:
         return None, "no eligible bid: the market ranked none" if not first else "no eligible bid: the market named two rank 1 bids"
     r = first[0]
@@ -437,6 +439,7 @@ def result_dicts(rows: list, ledger: dict, round_ids: set) -> list[dict]:
         origin = _origin(r[9]) if len(r) > 9 else _origin(placed.get("origin"))
         out.append({"roundId": r[1], "bidId": r[2], "sellerId": r[3], "persona": r[4], "rank": r[5], "landed": float(r[6]),
                     "reasons": [str(x) for x in r[7]] if len(r) > 7 and isinstance(r[7], (list, tuple)) else [], "origin": origin,
+                    "status": str(r[14]) if len(r) > 14 and r[14] is not None else "",   # #363: '' | knocked_out | advancing | champion
                     "sourceUrl": placed.get("listingUrl", "") if origin == MIRROR else ""})
     return out
 
@@ -476,6 +479,7 @@ class BuildRun:
         self.live: dict[str, dict] = {}
         self.approval: dict[str, Any] = {"state": "waiting", "events": []}
         self._full: list[dict] = []   # the full pay.mandate dicts behind self.mandates
+        self._verified: set[str] = set()   # mandate hashes whose approval was read back from the market
         self.goal_posted = False
         self.step_no = 0
         self._warned = False
@@ -518,6 +522,7 @@ class BuildRun:
         at = _stamp(self.now())
         if step.reducer == "post_goal":
             self.goal_posted = True
+            self._start_steps_file()
             if not any(e.get("kind") == "plan" for e in self.plan_events):   # the planner's own plan line (phase 2) wins
                 self.plan_events.append({"at": at, "kind": "plan", "text": self._plan_line(), "parts": [], "origin": SIM})
         elif step.reducer == "post_need":
@@ -528,6 +533,15 @@ class BuildRun:
             self.rounds.append({"id": step.args["round_id"], "needId": step.args["need_id"], "state": "open", "openedAt": at,
                                 "closedAt": "", "origin": SIM})
         self.publish()
+
+    def _start_steps_file(self) -> None:
+        """A new run starts the replay file over; the latest-view file is rewritten at every step anyway."""
+        if self.out_dir is not None:
+            try:
+                self.out_dir.mkdir(parents=True, exist_ok=True)
+                (self.out_dir / STEPS_FILE).write_text("", encoding="utf-8")
+            except OSError:
+                pass   # publish() says so once
 
     def _plan_line(self) -> str:
         owned = [o.part.upper() if len(o.part) <= 3 else o.part for o in self.plan.owned]
@@ -546,12 +560,20 @@ class BuildRun:
         self.ledger.update(ledger)
         self._execute(steps)
         rid = round_id(self.plan.goal_id, spec.part)
-        rows = self.clients["referee"].sql("SELECT * FROM round_result")
-        self.results = [r for r in self.results if r["roundId"] != rid] + result_dicts(rows, self.ledger, {rid})
+        results, closed = self._read_results({rid})
+        self.results = [r for r in self.results if r["roundId"] != rid] + results
         for r in self.rounds:
-            if r["id"] == rid:
+            if r["id"] == rid and rid in closed:   # closed only when the market says so: a close that did not happen is not a result
                 r["state"], r["closedAt"] = "closed", _stamp(self.now())
         self.publish()
+
+    def _read_results(self, round_ids: set) -> tuple[list[dict], set]:
+        """(the round_result rows of closed rounds as dicts, the ids of the rounds the market reports closed). Rows of a round that is not
+        closed are dropped: nothing in an open round is a champion."""
+        referee = self.clients["referee"]
+        closed = {r[0] for r in referee.sql("SELECT * FROM round") if r[0] in round_ids and len(r) > 5 and r[5] == "closed"}
+        rows = referee.sql("SELECT * FROM round_result")
+        return result_dicts(rows, self.ledger, closed), closed
 
     def run(self) -> dict:
         """The whole build. Returns {"status": "paid" | "denied" | "failed", "reason", "view"}. A reducer refusal raises RuntimeError with the
@@ -572,7 +594,9 @@ class BuildRun:
         got, bad = {}, {}
         for spec in self.plan.parts:
             rid = round_id(self.plan.goal_id, spec.part)
-            champ, why = champion_of([r for r in self.results if r["roundId"] == rid])
+            row = next((r for r in self.rounds if r["id"] == rid), None)
+            champ, why = (None, "no eligible bid: its round is not closed") if row is None or row["state"] != "closed" else \
+                champion_of([r for r in self.results if r["roundId"] == rid])
             if champ is not None and champ["bidId"] not in self.ledger:
                 champ, why = None, f"no eligible bid: {champ['persona']}'s bid was not placed by this build"
             if champ is None:
@@ -675,7 +699,9 @@ class BuildRun:
             return self._deny(e.code, f"No call: {e}. Nothing was paid.")
         total = round(sum(float(c["landed"]) for c in champs.values()), 2)
         sellers = len({c["sellerId"] for c in champs.values()})
-        allowance = self.allowance or {"per_purchase_limit": 0.0, "period_limit": 0.0, "period": "week", "spent_this_period": 0.0}
+        # the market's own allowance row is the truth (its spent this period counts); the given one only if the row cannot be read
+        allowance = self._market_allowance() or self.allowance or {"per_purchase_limit": 0.0, "period_limit": 0.0, "period": "week",
+                                                                   "spent_this_period": 0.0}
         call, why = needs_call({"spent_this_period": 0.0, **allowance}, total)
         voice_id: Optional[str] = None
         if call:
@@ -683,12 +709,106 @@ class BuildRun:
             if isinstance(out, dict):
                 return out
             voice_id = out
+            denied = self._mandates_zeroed(champs, crs_ids, voice_id)
         else:
+            self._mandates(champs, crs_ids, None)
+            denied = None
+        denied = denied or self._verify_approvals(voice_id)
+        if denied:
+            return denied
+        if voice_id is None:
             self._event("approved", f"Inside your allowance: {money(total)} for {len(champs)} parts, no call", origin=SIM)
             self.approval.update(state="approved", method="allowance")
-        self._mandates(champs, crs_ids, voice_id)
         self._pay()
         return {"status": "paid", "reason": "", "view": self.view()}
+
+    # ---- the market's allowance, and approvals read back
+
+    def _market_allowance(self) -> Optional[dict]:
+        """The buyer's allowance row as the market holds it, or None when it cannot be read (the referee may not read private tables)."""
+        try:
+            for r in self.clients["referee"].sql("SELECT * FROM allowance"):
+                if r[0] == self.plan.buyer_id:
+                    return {"per_purchase_limit": float(r[2]), "period_limit": float(r[3]), "period": str(r[4]), "spent_this_period": float(r[5])}
+        except (RuntimeError, OSError, ValueError, TypeError, IndexError):
+            return None
+        return None
+
+    def _set_per_buy(self, original: dict, per: float) -> None:
+        self.clients["referee"].call("set_allowance", buyer_id=self.plan.buyer_id, per_purchase_limit=per,
+                                     period_limit=original["period_limit"], period=original["period"])
+
+    def _mandates_zeroed(self, champs: dict, crs_ids: dict, voice_id: str) -> Optional[dict]:
+        """Make the per-part mandates after the call approved, with the buyer's per-purchase limit at $0 for the duration: the market
+        approves any mandate at or under that limit by itself (method allowance, no voice id) and swallows the voice approval after it,
+        so a part under the limit would be paid on the allowance instead of on the call. At $0 the market's own rule says "call" for every
+        mandate. The limit is restored in a `finally`; a restore that fails leaves it at $0 (fail closed) and says so. None, or a _deny dict."""
+        original = self._market_allowance() or (dict(self.allowance, spent_this_period=0.0) if self.allowance else None)
+        if original is None:
+            return self._deny("allowance_unreadable", "The buyer's allowance could not be read, so it could not be put back after the call. "
+                                                      "No mandate was made and nothing was paid.")
+        if float(original["per_purchase_limit"]) <= 0:
+            self._mandates(champs, crs_ids, voice_id)
+            return None
+        self._set_per_buy(original, 0.0)
+        try:
+            self._mandates(champs, crs_ids, voice_id)
+        finally:
+            try:
+                self._set_per_buy(original, float(original["per_purchase_limit"]))
+            except RuntimeError as e:
+                self.note(f"WARNING: the buyer's per-purchase allowance could not be restored ({e}); it stays at $0, so every buy calls")
+        return None
+
+    def _approval_state(self) -> tuple[Optional[dict], Optional[dict]]:
+        """(approvals by mandate hash {method, id} from the approval table, methods by mandate hash from the public floor events). Each is
+        None when it cannot be read."""
+        referee = self.clients["referee"]
+        rows = events = None
+        try:
+            rows = {r[1]: {"method": r[2], "id": str(r[5] if len(r) > 5 else "")} for r in referee.sql("SELECT * FROM approval")}
+        except (RuntimeError, OSError, ValueError, TypeError, IndexError):
+            pass
+        try:
+            label = {"Approved by voice code": "voice_code", "Approved within the allowance": "allowance"}
+            events = {r[3]: label[r[5]] for r in referee.sql("SELECT * FROM floor_event") if r[1] == "approval_recorded" and r[5] in label}
+        except (RuntimeError, OSError, ValueError, TypeError, IndexError):
+            pass
+        return rows, events
+
+    def _verify_approvals(self, voice_id: Optional[str]) -> Optional[dict]:
+        """Before any payment: every mandate must carry the approval this build expects, read back from the market. After the call that is a
+        voice_code row with the call's VoiceApproval id; inside the allowance, an allowance row. Anything else (a part the market approved on
+        the allowance, a swallowed approval, a table that cannot be read at all) denies the build visibly, releases the held units and pays
+        nothing. The approval table gives method and id; if it cannot be read the public floor events give the method alone."""
+        want = "voice_code" if voice_id else "allowance"
+        rows, events = self._approval_state()
+        bad = []
+        for m in self.mandates:
+            h = m["hash"]
+            if rows is not None:
+                got = rows.get(h)
+                ok = got is not None and got["method"] == want and (want != "voice_code" or got["id"] == voice_id)
+            elif events is not None:
+                ok = events.get(h) == want
+            else:
+                ok = False
+            if not ok:
+                bad.append(m["part"])
+        if not bad:
+            self._verified = {m["hash"] for m in self.mandates}
+            return None
+        referee = self.clients["referee"]
+        for m in self.mandates:
+            try:
+                referee.call("deny_approval", mandate_hash=m["hash"], reason="the build was not approved on every mandate")
+            except RuntimeError:
+                pass   # an already approved mandate cannot be denied; the unit hold ends by itself
+        unreadable = rows is None and events is None
+        what = "the call's voice approval" if voice_id else "an allowance approval"
+        line = (f"No payment: the market's approvals could not be read back, so {what} on every mandate is unconfirmed. Nothing was paid." if unreadable
+                else f"No payment: the market did not record {what} on every mandate ({', '.join(bad)}). Nothing was paid.")
+        return self._deny("approval_unverified" if unreadable else "approval_missing", line)
 
     def _call(self, champs: dict, checks: dict, total: float, sellers: int):
         """The ONE approval call for the whole build. Returns the VoiceApproval id when it approved, else the _deny result dict."""
@@ -719,8 +839,7 @@ class BuildRun:
         if not voice_id:   # #240 keeps the VoiceApproval id on every approval row; an approval with none is not recorded
             return self._deny("no_voice_approval_id", "The call approved but left no VoiceApproval record, so nothing was paid.")
         try:
-            rows = self.clients["referee"].sql("SELECT * FROM round_result")
-            now_results = result_dicts(rows, self.ledger, {round_id(gid, s.part) for s in self.plan.parts})
+            now_results, _closed = self._read_results({round_id(gid, s.part) for s in self.plan.parts})
             before, self.results = self.results, now_results
             again, bad = self.champions()
             self.results = before
@@ -770,6 +889,8 @@ class BuildRun:
         from demo.approval_flow import charge_or_stub
         referee = self.clients["referee"]
         for m, row in zip(self._full, self.mandates):
+            if m["hash"] not in self._verified:   # never charge (a Stripe TEST charge included) what the market has not approved
+                raise RuntimeError(f"no confirmed approval for the {row['part']} mandate; nothing was charged")
             ch, why = charge_or_stub(m, self.env, self.use_stripe, self.stripe_test)
             if why:
                 self.note(why)
