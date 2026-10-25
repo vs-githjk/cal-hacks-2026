@@ -11,19 +11,19 @@ Your buying agent for computer gear. Tell it a goal; it remembers what you alrea
 - "Build me a new GPU, PSU and case under $1200 by Sunday."
 - "A new 850 W PSU under $150 by Monday."
 
-Then it phones you to approve the bid it recommends: say the spoken code on the call. There is no typed approval.
+Then it phones you to approve the bid it recommends: say the spoken code on the call. There is no typed approval; typing a reply never approves anything. The call rings the phone number on your own Fish Market profile, only if the operator's call allowlist (when one is set) includes it, and at most once per number every 5 minutes.
 
 ## What it does
 
 1. Turns your message into a goal (budget cap, part by date, or build by date).
 2. Skips parts you already own and cites your own words ("you already own it, your note at 21:58").
-3. Runs a sealed round with five seller agents. Sellers never see your cap.
+3. Runs a sealed round with up to four seller agents (Byte Bros Outlet, FlashDeal Frankie, ReNew Refurb and Central Comp MIRROR). Sellers never see your cap.
 4. The Quality Advocate checks fit (socket, GPU length, PSU wattage, decided by code), the condition claim against the listing page, price history, CPSC recalls and the seller's record. It can veto the cheapest bid and cites a source for every warning.
-5. You approve; payment uses the Fetch.ai Payment Protocol with a single-use mandate bound to that exact deal.
+5. You approve by phone call only. Payment is Stripe test mode, bound to a mandate for that exact deal. A payment request sent in chat is refused on purpose.
 
 ## Honest labels
 
-Seller listings and prices in this demo are simulated (SIM). No real money moves: payments are Stripe test mode.
+Store listings are MIRROR: real, dated copies of public store listings. The seller agents are SIM: ours, not the stores. Central Comp MIRROR bids a real store's listing for comparison and can never be ordered or paid. No real money moves: payments are Stripe test mode.
 
 Built at Cal Hacks 13.0 by the Fish Market team.
 

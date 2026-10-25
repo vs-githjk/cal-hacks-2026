@@ -28,7 +28,7 @@ The Fish Market orchestration layer. It watches finished sealed-bid rounds and t
 - "How is the PSU 750W trending?"
 - "How is the PSU 850W trending?"
 - "Why does seller_3 keep losing?" (answered only to that seller's own agent, unless the operator set PULSE_SELLER_CHAT=open)
-- "Why does seller_4 keep losing?"
+- "Why does seller_5 keep losing?"
 - "Help"
 
 ## SIM, MIRROR and LIVE

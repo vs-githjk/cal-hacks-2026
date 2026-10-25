@@ -58,7 +58,7 @@ and gets back `CallResult(approved=True, call_id="call_...", voice_approval_id="
 
 ## Limitations
 
-- It dials only the one number configured for the buyer (APPROVAL_CALL_TO); it cannot call anyone else.
+- It dials only the one number configured for the buyer (APPROVAL_CALL_TO); it cannot call anyone else. Every call also passes the operator's allowlist (APPROVAL_CALL_ALLOWLIST, when set) and a rate cap: 1 call per number per 5 minutes and 20 per day.
 - Without Cartesia configured, or without a screen to show the code on, it places no call and answers not approved. While the market still has a typed-code approval, it shows no code and places no call (phone only).
 - Every request is screened by Smell Test first; a blocked or unscreened request places no call.
 - Stripe stays in test mode, and the caller never touches it: payment happens after the buyer agent records the approval.
