@@ -1,6 +1,8 @@
 // The buyer's request, before it reaches an agent. This file validates what the buyer typed, keeps their exact words,
-// and guards the two things that are not connected yet: sending a goal from the app, and speech input. It never parses
-// the words into a product (the buyer agent owns that, agents/buyer/goal.py) and never decides what the market stocks.
+// and guards the two things that are not connected yet: sending a goal from the app, and speech input. It never decides
+// what the market stocks. It maps the words to one of the catalog parts below only when they name exactly one part
+// clearly (#449 PL-14): a vague "gpu" or "psu", or words naming two or more different parts, come back as a question
+// for the buyer and never as a guess.
 
 import { formatMoney } from "./money.ts";
 
@@ -101,25 +103,64 @@ export const CATALOG = [
   { sku: "case", label: "PC case" },
 ] as const;
 
-/** The seller sku for typed words, or null when sellers do not carry it. First match wins. */
+const NOT_STOCKED = "Sellers tonight don't carry that part. Tap one above: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case.";
+const ONE_AT_A_TIME = "That names more than one part. Ask for one part at a time; post the next one after this.";
+
+/** "A", "A or B", "A, B or C" of the catalog labels for these skus. */
+function choices(skus: readonly string[]): string {
+  const labels = skus.map((sku) => CATALOG.find((c) => c.sku === sku)!.label);
+  return labels.length < 2 ? labels.join("") : `${labels.slice(0, -1).join(", ")} or ${labels[labels.length - 1]}`;
+}
+
+const GPU_MODELS = [
+  { re: /\b(?:rtx\s*)?5070\s*ti\b/g, sku: "rtx 5070 ti" },
+  { re: /\b(?:rtx\s*)?4070\s*super\b/g, sku: "rtx 4070 super 12gb" },
+  { re: /\b(?:rx\s*)?7800\s*xt\b/g, sku: "rx 7800 xt 16gb" },
+] as const;
+
+/**
+ * What the typed words name: one catalog sku, or a problem to show the buyer. A sku comes back only when the words name exactly one
+ * part clearly. A bare "gpu" or "psu" asks which one; two or more different parts ask for one part at a time; a part sellers do not
+ * carry says so. #449 PL-14: nothing here picks a card or a wattage the buyer did not name.
+ */
+export function matchCatalog(text: string): { sku: string } | { problem: string } {
+  let t = text.toLowerCase();
+  const gpu = new Set<string>(); // named catalog cards, plus "other" for a model sellers do not carry
+  for (const m of GPU_MODELS) {
+    const rest = t.replace(m.re, " ");
+    if (rest !== t) gpu.add(m.sku);
+    t = rest;
+  }
+  if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) gpu.add("other");
+  const psu = new Set<string>(); // named wattages: "psu 850w", "psu 750w", or "other" for one sellers do not carry
+  for (const w of t.matchAll(/\b(\d{3,4})\s*-?\s*w(?:atts?)?\b/g)) psu.add(w[1] === "850" ? "psu 850w" : w[1] === "750" ? "psu 750w" : "other");
+  const vagueGpu = gpu.size === 0 && /\b(?:gpu|graphics card|video card)\b/.test(t);
+  const vaguePsu = psu.size === 0 && /\b(?:psu|power supply)\b/.test(t);
+  // "in case", "case of" and the buyer's own case ("fits my case", "my mid-tower case") are not a request for a PC case
+  const pcCase = /\b(?:pc case|mid-tower|full-tower|mini-tower)\b|(?<!\bin(?:\s+(?:this|that|any|which))?\s)\bcase\b(?!\s+of\b)/.test(t.replace(/\b(?:my|your|our)\s+(?:[\w-]+\s+){0,2}case\b/g, " "));
+  const families = [gpu.size > 0 || vagueGpu, psu.size > 0 || vaguePsu, pcCase].filter(Boolean).length;
+  if (gpu.size > 1 || psu.size > 1 || families > 1) return { problem: ONE_AT_A_TIME };
+  const [card] = gpu;
+  if (card) return card === "other" ? { problem: NOT_STOCKED } : { sku: card };
+  const [watts] = psu;
+  if (watts) return watts === "other" ? { problem: NOT_STOCKED } : { sku: watts };
+  if (pcCase) return { sku: "case" };
+  if (vagueGpu) return { problem: `Which card do you want? Tap one above: ${choices(["rtx 5070 ti", "rtx 4070 super 12gb", "rx 7800 xt 16gb"])}.` };
+  if (vaguePsu) return { problem: `Which power supply do you want? Tap one above: ${choices(["psu 750w", "psu 850w"])}.` };
+  return { problem: NOT_STOCKED };
+}
+
+/** The seller sku for typed words, or null when they do not name exactly one clear catalog part (matchCatalog says why). */
 export function catalogSku(text: string): string | null {
-  const t = text.toLowerCase();
-  if (/\b(?:rtx\s*)?5070\s*ti\b/.test(t)) return "rtx 5070 ti";
-  if (/\b(?:rtx\s*)?4070\s*super\b/.test(t)) return "rtx 4070 super 12gb";
-  if (/\b(?:rx\s*)?7800\s*xt\b/.test(t)) return "rx 7800 xt 16gb";
-  if (/\b(?:rtx|rx|gtx)\s*\d{3,4}/.test(t) || /(?<![$\d,.])\b\d{4}\s*(?:ti|super|xt|gpu|graphics|video)\b/.test(t)) return null;
-  const watts = /\b(\d{3,4})\s*-?\s*w(?:atts?)?\b/.exec(t);
-  if (watts) return watts[1] === "850" ? "psu 850w" : watts[1] === "750" ? "psu 750w" : null;
-  if (/\b(?:psu|power supply)\b/.test(t)) return "psu 750w";
-  if (/\b(?:pc case|case|mid-tower|full-tower|mini-tower)\b/.test(t)) return "case";
-  if (/\b(?:gpu|graphics card|video card)\b/.test(t)) return "rtx 4070 super 12gb";
-  return null;
+  const m = matchCatalog(text);
+  return "sku" in m ? m.sku : null;
 }
 
 export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date): PostGoalArgs | { error: string } {
   if (request.cap === null) return { error: "Add a top price so sellers know your cap." };
-  const skuSpec = catalogSku(request.requestText);
-  if (skuSpec === null) return { error: "Sellers tonight don't carry that part. Tap one above: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case." };
+  const part = matchCatalog(request.requestText);
+  if ("problem" in part) return { error: part.problem };
+  const skuSpec = part.sku;
   const [y, m, d] = (request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7))).split("-").map(Number);
   return {
     id: `g_${request.requestId.replace(/[^A-Za-z0-9]/g, "").slice(0, 12)}`,

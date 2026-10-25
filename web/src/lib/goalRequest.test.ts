@@ -10,6 +10,8 @@ import {
   buildGoalRequest,
   canFindOffers,
   catalogSku,
+  matchCatalog,
+  CATALOG,
   postGoalArgs,
   dictate,
   draftFor,
@@ -277,9 +279,9 @@ test("catalogSku maps typed part names to the exact seller sku", () => {
     ["4070 Super", "rtx 4070 super 12gb"],
     ["RX 7800 XT", "rx 7800 xt 16gb"],
     ["850W power supply", "psu 850w"],
-    ["a power supply", "psu 750w"],
+    ["a power supply", null], // #449 PL-14: no wattage named, so it is a question, not a 750W
     ["mid-tower case", "case"],
-    ["graphics card under $600", "rtx 4070 super 12gb"],
+    ["graphics card under $600", null], // #449 PL-14: no card named, so it is a question, not a 4070 Super
     ["RTX 5090", null],
     ["a keyboard", null],
     ["1000W power supply", null],
@@ -301,8 +303,81 @@ test("postGoalArgs says plainly when sellers do not carry the part", () => {
 });
 
 test("catalogSku: a price is not a GPU model", () => {
-  assert.equal(catalogSku("graphics card under $1000"), "rtx 4070 super 12gb");
+  const priced = matchCatalog("graphics card under $1000");
+  assert.ok("problem" in priced);
+  assert.match(priced.problem, /Which card/, "the price is not read as a model: the card is still a question");
   assert.equal(catalogSku("a 5090 graphics card"), null);
+  const model = matchCatalog("a 5090 graphics card");
+  assert.ok("problem" in model);
+  assert.match(model.problem, /don't carry that part/);
+});
+
+// ---- #449 PL-14: never map a vague or mixed request silently
+
+const GPU_LABELS = ["RTX 5070 Ti", "RTX 4070 Super", "RX 7800 XT"];
+const problemOf = (text: string): string => {
+  const m = matchCatalog(text);
+  assert.ok("problem" in m, `${text} should be a question, got ${JSON.stringify(m)}`);
+  return m.problem;
+};
+
+test("#449 PL-14 a vague GPU request asks which card, with the catalog choices, and never picks one", () => {
+  for (const text of ["a gpu", "GPU please", "graphics card under $600", "I need a video card", "a graphics card for gaming"]) {
+    assert.equal(catalogSku(text), null, text);
+    const msg = problemOf(text);
+    assert.match(msg, /Which card/, text);
+    for (const label of GPU_LABELS) assert.ok(msg.includes(label), `${text}: ${label}`);
+    const args = postGoalArgs(request({ requestText: text, cap: 600 }), "b_ab12cd34", TODAY);
+    assert.deepEqual(args, { error: msg }, "the composer shows the same question");
+  }
+});
+
+test("#449 PL-14 a bare PSU request asks 750W or 850W and never picks one", () => {
+  for (const text of ["psu", "a power supply", "power supply under $120", "need a PSU for my build"]) {
+    assert.equal(catalogSku(text), null, text);
+    const msg = problemOf(text);
+    assert.match(msg, /Which power supply/, text);
+    assert.ok(msg.includes("750W") && msg.includes("850W"), text);
+    assert.ok("error" in postGoalArgs(request({ requestText: text, cap: 120 }), "b_ab12cd34", TODAY), text);
+  }
+});
+
+test("#449 PL-14 naming the card or the wattage still maps, even with the vague word beside it", () => {
+  assert.equal(catalogSku("a 5070 Ti graphics card"), "rtx 5070 ti");
+  assert.equal(catalogSku("RX 7800 XT video card"), "rx 7800 xt 16gb");
+  assert.equal(catalogSku("750W PSU"), "psu 750w");
+  assert.equal(catalogSku("an 850 watt power supply"), "psu 850w");
+  assert.equal(catalogSku("RTX 5070 Ti, just in case it drops"), "rtx 5070 ti", "'in case' is not a PC case");
+  assert.equal(catalogSku("RTX 5070 Ti, in that case"), "rtx 5070 ti");
+  assert.equal(catalogSku("RTX 5070 Ti that fits my case"), "rtx 5070 ti", "the buyer's own case is not a second part");
+  assert.equal(catalogSku("a 750W PSU for my mid-tower case"), "psu 750w");
+  assert.match(problemOf("a psu for my case"), /Which power supply/);
+  assert.equal(catalogSku("a mid-tower case"), "case", "asking for a case still works");
+});
+
+test("#449 PL-14 text naming two or more different catalog parts asks for one part at a time", () => {
+  const several = [
+    "RTX 5070 Ti and a 750W PSU",
+    "5070 Ti or 4070 Super",
+    "RTX 5070 Ti, RX 7800 XT",
+    "750W or 850W power supply",
+    "a mid-tower case and an 850W PSU",
+    "RTX 5070 Ti or RTX 5090",
+    "a graphics card and a power supply",
+  ];
+  for (const text of several) {
+    assert.equal(catalogSku(text), null, text);
+    assert.match(problemOf(text), /one part at a time/, text);
+    const args = postGoalArgs(request({ requestText: text, cap: 900 }), "b_ab12cd34", TODAY);
+    assert.ok("error" in args && /one part at a time/.test(args.error), text);
+  }
+  // The same part named twice is one part.
+  assert.equal(catalogSku("RTX 5070 Ti, the 5070 ti please"), "rtx 5070 ti");
+});
+
+test("#449 PL-14 the choices in the questions are the catalog's own labels, and no message has an em or en dash", () => {
+  for (const label of GPU_LABELS) assert.ok(CATALOG.some((c) => c.label === label), label);
+  for (const text of ["a gpu", "psu", "RTX 5070 Ti and a 750W PSU", "a keyboard"]) assert.doesNotMatch(problemOf(text), /[\u2013\u2014]/, text);
 });
 
 test("a deadline of today picked at 7:30 pm is still in the future", () => {
