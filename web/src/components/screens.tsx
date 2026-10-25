@@ -8,7 +8,7 @@ import { FloorEvents, RefereeCard, RoundTimeline, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import type { BuildResult } from "@/lib/build";
-import { Card, Details, SampleOnly, money } from "./ui";
+import { Card, Details, money } from "./ui";
 
 
 export interface BuyerScreenProps {
