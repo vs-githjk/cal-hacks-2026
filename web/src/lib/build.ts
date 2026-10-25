@@ -20,6 +20,8 @@ export interface BuildResult {
   rejected?: number;
   /** Per-part round status from the feed (panel part keys); absent on SAMPLE_BUILD. */
   partStatus?: Record<string, "planned" | "bidding" | "locked" | "replanned" | "failed">;
+  /** Why a part's round ended without a winner, from the feed (panel part keys). */
+  partReason?: Record<string, string>;
   /** Fit checks as the feed recorded them (panel part keys). */
   checks?: { a: string; b: string; rule: string; state: "ok" | "clash" | "unknown"; detail: string; source: string }[];
   approval?: { state: string; total: number; sellers: number } | null;
@@ -42,7 +44,7 @@ export const PART_NAMES: Record<string, string> = {
   gpu: "GPU", cpu: "CPU", motherboard: "Board", memory: "RAM", storage: "SSD", cooler: "Cooler", psu: "Power supply", case: "Case",
 };
 
-export interface PartRow { part: string; label: string; state: "locked" | "swapped" | "open"; name: string; seller: string; price: number | null; budget: number; overBy: number; origin?: BuildPick["origin"] }
+export interface PartRow { part: string; label: string; state: "locked" | "swapped" | "open"; name: string; seller: string; note: string; price: number | null; budget: number; overBy: number; origin?: BuildPick["origin"] }
 
 /** One row per part in plan order: what won, from whom, against its budget; a part that clashed and was swapped says so. */
 export function partRows(b: BuildResult): PartRow[] {
@@ -56,6 +58,7 @@ export function partRows(b: BuildResult): PartRow[] {
       part, label: PART_NAMES[part], budget, price,
       state: !pick ? "open" : swapped.has(part) ? "swapped" : "locked",
       name: pick?.name ?? (st === "planned" ? "Planned" : st === "failed" ? "No eligible bid" : "Round open"), seller: pick?.seller ?? "", origin: pick?.origin,
+      note: !pick && st === "failed" ? b.partReason?.[part] || "Round ended with no eligible bid" : "Waiting for its round",
       overBy: price !== null && price > budget ? Math.round((price - budget) * 100) / 100 : 0,
     };
   });
