@@ -11,7 +11,7 @@ import { ScrollProgress } from "@/components/ScrollProgress";
 import { Reveal } from "@/components/Reveal";
 import { OriginChip, README_URL, StatusPill } from "@/components/ui";
 import { proofStats } from "@/lib/scoreboard";
-import { SHIELD } from "@/lib/brand";
+import { BRAND, SHIELD } from "@/lib/brand";
 
 // Measured results, computed from data/scoreboard.json (lib/scoreboard.ts). A test keeps the fixture copy identical to the file.
 const PROOF = proofStats(SHIELD);
@@ -167,6 +167,14 @@ export default function Home() {
           <Link href="/sell" className="btn fm-ghostbtn inline-flex min-h-12 items-center rounded-2xl px-6 text-[17px] font-medium text-ink transition-transform motion-safe:hover:-translate-y-0.5">List your shop</Link>
         </div>
       </section>
+      <footer className="border-t border-line px-4">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-5 gap-y-2 py-6 pb-20 text-[13px] text-muted md:px-4">
+          <span>&copy; 2026 {BRAND}</span>
+          <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+          <Link href="/terms" className="hover:text-ink">Terms</Link>
+          <span>Sandbox only: test cards, test identities, no real money.</span>
+        </div>
+      </footer>
     </div>
   );
 }

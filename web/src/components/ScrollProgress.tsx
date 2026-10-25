@@ -1,5 +1,5 @@
 "use client";
-// A 2 px bar under the header that fills as the page scrolls (#448, Vidyut). Cyan into koi. Decorative; hidden from readers.
+// A 3 px bar at the very top edge, above the header, that fills as the page scrolls (#448, Vidyut). Cyan into koi. Decorative; hidden from readers.
 // It also drives the water: the aquarium and the primary buttons share one gradient (--fm-g1, --fm-g2) that shifts from
 // blue-to-cyan at the top of the page to indigo-to-teal over the first screen and a half of scrolling.
 import { useEffect, useState } from "react";
@@ -29,7 +29,7 @@ export function ScrollProgress() {
     };
   }, []);
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-[60px] z-40 h-0.5 md:top-[60px]" aria-hidden>
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[3px]" aria-hidden>
       <div className="h-full origin-left bg-[linear-gradient(90deg,var(--color-live),var(--color-koi))] transition-transform duration-150 ease-out" style={{ transform: `scaleX(${p})` }} />
     </div>
   );
