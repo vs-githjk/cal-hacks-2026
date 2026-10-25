@@ -5,11 +5,16 @@ rank 1 only for a mandate, the allowance rule on create_mandate, no payment with
 of docs/changes/1633-B-knockout-rounds.md (#363). It is NOT the market: nothing here ranks for the real run."""
 from __future__ import annotations
 
-from typing import Optional
+LADDER_TOP = (600, 1500)   # market/config.ts ALLOWANCE_LADDER's top step: per purchase, per period
 
 
 class SimMarket:
-    def __init__(self, spent=0.0):
+    def __init__(self, spent=0.0, ladder_cap=True, scheduler_first=False, clock=None):
+        # ladder_cap: set_allowance refuses above the ladder's top step ($600 a buy, $1,500 a period, market/config.ts)
+        # scheduler_first (needs `clock`, a callable giving seconds): the market's deadline scheduler (closeRoundOnDeadline) closes a knockout
+        # stage AT its deadline, before any later call is handled, as the real #363 module does. The referee's close_stage then finds the stage
+        # closed: "round is still open until its deadline" (the next stage has opened) or "round already closed" (the last one).
+        self.ladder_cap, self.scheduler_first, self.clock = ladder_cap, scheduler_first, clock
         self.ko = {}          # sealed knockout rounds (#363): round id -> {"stage", "max"}
         self.published = []   # publish_build_view calls: (goal_id, json text)
         self.log, self.bids, self.cards, self.verdicts, self.needs, self.rounds = [], {}, {}, {}, {}, {}
@@ -34,6 +39,8 @@ class SimMarket:
     def set_allowance(self, a):
         if a["per_purchase_limit"] > a["period_limit"]:
             raise RuntimeError("set_allowance refused: per_purchase_limit cannot be above period_limit")
+        if self.ladder_cap and (a["per_purchase_limit"] > LADDER_TOP[0] or a["period_limit"] > LADDER_TOP[1]):
+            raise RuntimeError(f"set_allowance refused: above the ladder's top step (${LADDER_TOP[0]} a buy, ${LADDER_TOP[1]} a period)")
         self.allow = {**self.allow, "per": a["per_purchase_limit"], "period_limit": a["period_limit"], "period": a["period"]}
 
     def client(self, name):
@@ -44,7 +51,12 @@ class SimMarket:
         self.floors[(a["seller_id"], a["sku_spec"])] = a["floor"]
 
     def place_bid(self, a):
-        line = min(a["lines"], key=lambda l: l["unit_price"])
+        need = self.needs[self.rounds[a["round_id"]]["need_id"]]
+        item = need["items"][0]
+        allowed = item.get("allowed_conditions") or [item["condition"]]
+        # the market picks the cheapest line whose condition the goal allows; a bid with none is judged (and rejected) at the close
+        fits = [l for l in a["lines"] if (l.get("offered_condition") or item["condition"]) in allowed] or a["lines"]
+        line = min(fits, key=lambda l: l["unit_price"])
         below = line["unit_price"] < self.floors.get((a["seller_id"], line["sku_spec"]), 0)
         ko = self.ko.get(a["round_id"])
         stage = ko["stage"] if ko else 1
@@ -56,8 +68,7 @@ class SimMarket:
                 raise RuntimeError("place_bid refused: already offered this stage")
             if mine and line["unit_price"] >= min(b["landed"] for b in mine):
                 raise RuntimeError("place_bid refused: the offer must be lower than your last stage's")
-            if below:
-                raise RuntimeError("place_bid refused: below your floor")
+            # below its floor is not refused here: the offer stands and the stage's close knocks it out (docs/changes/1633-B)
         self.bids[a["id"]] = {**a, "landed": line["unit_price"], "below_floor": below, "stage": stage}
 
     def post_need(self, a):
@@ -77,11 +88,33 @@ class SimMarket:
         """#363: stages of stage_window_s, up to max_stages; a seller that places no offer in a stage keeps its last one."""
         self.rounds[a["round_id"]] = a
         self.round_state[a["round_id"]] = "open"
-        self.ko[a["round_id"]] = {"stage": 1, "max": a["max_stages"], "alive": None}
+        self.ko[a["round_id"]] = {"stage": 1, "max": a["max_stages"], "alive": None, "window": a["stage_window_s"],
+                                  "deadline": self._now() + a["stage_window_s"]}
+
+    def _now(self) -> float:
+        return float(self.clock()) if self.clock is not None else 0.0
+
+    def tick(self) -> None:
+        """The deadline scheduler: close every open knockout stage whose deadline has passed, then the next stage's deadline is one window on."""
+        if not self.scheduler_first:
+            return
+        for rid, ko in self.ko.items():
+            while self.round_state.get(rid) == "open" and ko["deadline"] <= self._now():
+                self._close_stage({"round_id": rid})
+                ko["deadline"] += ko["window"]
 
     def close_stage(self, a):
         """The contract of docs/changes/1633-B: rule-breakers and the last-placed survivor go out; one survivor wins at once; at the last
         stage the best offer wins; zero survivors close the round with no deal."""
+        if self.scheduler_first:
+            self.tick()
+            if self.round_state[a["round_id"]] == "closed":
+                raise RuntimeError("round already closed")
+            if self.ko[a["round_id"]]["deadline"] > self._now():
+                raise RuntimeError("round is still open until its deadline")
+        self._close_stage(a)
+
+    def _close_stage(self, a):
         rid, ko = a["round_id"], self.ko[a["round_id"]]
         if self.never_close:
             return
@@ -90,7 +123,8 @@ class SimMarket:
         for b in sorted((b for b in self.bids.values() if b["round_id"] == rid), key=lambda b: b["stage"]):
             latest[b["seller_id"]] = b
         live = [b for s, b in latest.items() if ko["alive"] is None or s in ko["alive"]]
-        ok, out = self._judge(rid, live)
+        # #363's closeStageInner ranks by price and never holds a caution back (heldBack stays empty), so neither does this stand-in
+        ok, out = self._judge(rid, live, hold=False)
         out = list(out)
         champion = None
         if len(ok) > 1 and stage >= ko["max"]:
@@ -104,8 +138,7 @@ class SimMarket:
             champion = ok[0]   # one survivor left: the round is won at once
         rows = []
         for i, b in enumerate(ok, 1):
-            held = self._held(b)
-            rows.append((b, i, [held] if held else [], "champion" if champion is b else "advancing"))
+            rows.append((b, i, [], "champion" if champion is b else "advancing"))
         rows += [(b, 0, why, "knocked_out") for b, why in out]
         for b, rank, why, status in rows:
             self.rows.append((len(self.rows) + 1, rid, b["id"], b["seller_id"], b["persona"], rank, b["landed"], why, b["lines"], b["origin"],
@@ -120,13 +153,20 @@ class SimMarket:
         card = self.cards.get(b["id"], {})
         return (f"held back: advocate caution ({card['rule_id']}: {card['text']})" if card.get("recommendation") == "caution" else "")
 
-    def _judge(self, rid, mine):
-        """The checks the market runs on every live bid: floor, Shield, advocate veto, the cap. -> (clean bids best first, [(bid, reasons)])."""
+    def _judge(self, rid, mine, hold=True):
+        """The checks the market runs on every live bid: floor, condition, Shield, advocate veto, the cap. -> (clean bids best first, [(bid,
+        reasons)]). With `hold` (a plain round, close_round) a caution ranks after every clean bid, as the market holds it back."""
         need = self.needs[self.rounds[rid]["need_id"]]
+        item = need["items"][0]
+        allowed = item.get("allowed_conditions") or [item["condition"]]
         ok, out = [], []
         for b in mine:
             card, verdict = self.cards.get(b["id"]), self.verdicts.get(b["id"], "allow")
-            if b["below_floor"]:
+            cond = min(b["lines"], key=lambda l: l["unit_price"]).get("offered_condition") or item["condition"]
+            fits = [l for l in b["lines"] if (l.get("offered_condition") or item["condition"]) in allowed]
+            if not fits:   # scoring.ts checkLineSpec
+                out.append((b, [f"condition: offered {cond}, goal asks for {' or '.join(allowed)}"]))
+            elif b["below_floor"]:
                 out.append((b, ["referee: below the seller's own floor"]))
             elif verdict != "allow":
                 out.append((b, [f"shield {verdict}"]))
@@ -136,7 +176,7 @@ class SimMarket:
                 out.append((b, ["over the cap"]))
             else:
                 ok.append(b)
-        ok.sort(key=lambda b: (bool(self.cards.get(b["id"]) and self.cards[b["id"]]["recommendation"] == "caution"), b["landed"]))
+        ok.sort(key=lambda b: (hold and bool(self.cards.get(b["id"]) and self.cards[b["id"]]["recommendation"] == "caution"), b["landed"]))
         return ok, out
 
     def publish_build_view(self, a):
@@ -194,6 +234,7 @@ class _Client:
 
     def call(self, reducer, **args):
         self.m.log.append((self.name, reducer, args))
+        self.m.tick()
         if self.m.fail.get(reducer):
             raise RuntimeError(self.m.fail[reducer])
         seen = {**args, "seller_id": self.name.split(":", 1)[1]} if reducer in ("place_bid", "set_floor") else args   # the market knows the caller
@@ -201,6 +242,7 @@ class _Client:
 
     def sql(self, query):
         m = self.m
+        m.tick()
         if query == "SELECT * FROM round_result":
             return list(m.rows)
         if query == "SELECT * FROM round":   # id, need_id, opened_at, deadline, extensions, state, sealed_count, closed_at, origin
@@ -242,5 +284,8 @@ def make_clients(m):
     return Clients(m)
 
 
-FakeMarket = SimMarket   # the name the tests grew up with
+class FakeMarket(SimMarket):
+    """The market the older build tests grew up with: no ladder cap on set_allowance (they use huge limits for an inside-the-allowance build)."""
+    def __init__(self, spent=0.0, **kw):
+        super().__init__(spent, **{"ladder_cap": False, **kw})
 

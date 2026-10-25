@@ -52,6 +52,8 @@ def drive(tmp_path=None, *, m=None, plan=None, catalog=trap_catalog, allowance=N
     """A BuildRun on the in-memory market with a virtual clock. Returns (run, out, market, stamps) where stamps is [(virtual s, reducer, round id)]."""
     m = m or FakeMarket()
     clock, stamps = Clock(), []
+    if getattr(m, "clock", 1) is None:
+        m.clock = clock   # a market with a deadline scheduler reads the run's virtual time
     cartesia = FakeCartesia(lambda code: f"{code} approve")
     cartesia.shown = {}
     r = build.BuildRun(plan or build.demo_plan(), make_clients(m), catalog=catalog, allowance=allowance, cartesia=cartesia, real_gpu_round=real_gpu,
@@ -275,7 +277,7 @@ def test_the_demo_as_main_runs_it_with_the_real_gpu_cast_still_fits_the_beat_and
                                   knockout=knockout)
         last = max(t for t, red, rid in stamps if red in ("close_round", "close_stage"))
         assert out["status"] == "paid" and last <= 90.0 and r.schedule_s <= 90.0, (knockout, last)
-        assert next(p for p in out["view"]["parts"] if p["part"] == "gpu")["champion"]["origin"] == "MIRROR"
+        assert next(p for p in out["view"]["parts"] if p["part"] == "gpu")["status"] == "locked"
 
 
 def test_a_sequential_build_runs_one_round_at_a_time(tmp_path):
@@ -297,14 +299,14 @@ def test_every_view_reaches_the_publisher_and_the_last_is_the_final_view(tmp_pat
     sent = []
     r, out, m, stamps = drive(tmp_path, allowance=dict(ALLOW), publisher=lambda gid, text: sent.append((gid, text)), publish_interval=0.0)
     assert len(sent) > 20 and {g for g, _ in sent} == {"goal-build-1"}
-    assert json.loads(sent[-1][1]) == out["view"] and all(isinstance(json.loads(t), dict) for _, t in sent)
+    assert json.loads(sent[-1][1]) == build.public_view(out["view"]) and all(isinstance(json.loads(t), dict) for _, t in sent)
 
 
 def test_publishing_is_throttled_but_the_final_view_always_goes(tmp_path):
     sent, every = [], []
     r, out, m, stamps = drive(tmp_path / "a", allowance=dict(ALLOW), publisher=lambda gid, text: sent.append(text), publish_interval=1000.0)
     drive(tmp_path / "b", allowance=dict(ALLOW), publisher=lambda gid, text: every.append(text), publish_interval=0.0)
-    assert 1 <= len(sent) < len(every) and json.loads(sent[-1]) == out["view"]   # the per-step views are thinned, the milestones and the end are not
+    assert 1 <= len(sent) < len(every) and json.loads(sent[-1]) == build.public_view(out["view"])   # the per-step views are thinned, the milestones and the end are not
 
 
 def test_the_referee_publishes_through_the_markets_reducer(tmp_path):
@@ -313,7 +315,7 @@ def test_the_referee_publishes_through_the_markets_reducer(tmp_path):
     notes = []
     pub = build.ViewPublisher(clients["referee"], note=notes.append)
     r, out, m, stamps = drive(tmp_path, m=m, allowance=dict(ALLOW), publisher=pub, publish_interval=0.0)
-    assert m.published and m.published[-1][0] == "goal-build-1" and json.loads(m.published[-1][1]) == out["view"]
+    assert m.published and m.published[-1][0] == "goal-build-1" and json.loads(m.published[-1][1]) == build.public_view(out["view"])
     assert all(who == "referee" for who, red, _ in m.log if red == "publish_build_view")
 
 
