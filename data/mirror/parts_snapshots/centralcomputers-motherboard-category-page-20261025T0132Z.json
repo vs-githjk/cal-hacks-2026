@@ -1,0 +1,3422 @@
+[
+ {
+  "id": "centralcomputers:2bb483415c6d",
+  "category": "motherboard",
+  "name": "ASRock X870E TAICHI Lite EATX Motherboard Ryzen 9000/7000 Socket AM5 LGA 17184 4x DDR5 DIMM 2xPCIe 5.0 x165Gbps LAN & 802.11be WiFi 7",
+  "model_number": "X870E TAICHI Lite",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-x870e-taichi-lite-eatx-motherboard-ryzen-9000-7000-socket-am5-lga-17184-4x-ddr5-dimm-2xpcie-5-0-x16.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-x870e-taichi-lite-eatx-motherboard-ryzen-9000-7000-socket-am5-lga-17184-4x-ddr5-dimm-2xpcie-5-0-x16.html",
+   "price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASRX8702R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:03e2bd7b156b",
+  "category": "motherboard",
+  "name": "ASRock B650 Pro RS ATX Motherboard AMD Socket AM5 128GB DDR5 Dual Channel 4x 288pin DIMM Support Realtek ALC897 7.1 HD Audio1x HDMI 2.1 1x DisplayPort 1.4",
+  "model_number": "B650 Pro RS",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-b650-pro-rs-atx-motherboard-amd-socket-am5-128gb-ddr5-dual-channel-4x-288pin-dimm-support-realtek-alc897-7-1-hd-audio1x-hdmi-2-1-1x-displayport-1-4.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-b650-pro-rs-atx-motherboard-amd-socket-am5-128gb-ddr5-dual-channel-4x-288pin-dimm-support-realtek-alc897-7-1-hd-audio1x-hdmi-2-1-1x-displayport-1-4.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASR65PRSR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:56e4ceab2d20",
+  "category": "motherboard",
+  "name": "ASRock B650 PG LIGHTNING ATX Motherboard Supports AMD Ryzen 7000 CPUs Supports Max 192GB DDR5 7.1 HD Audio 2x PCIe 4.0x16 1x HDMI 2.5G LAN Supports Win 10/11",
+  "model_number": "B650 PG LIGHTNING",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-b650-pg-lightning-atx-motherboard-supports-amd-ryzen-7000-cpus-supports-max-192gb-ddr5-7-1-hd-audio-2x-pcie-4-0x16-1x-hdmi-2-5g-lan-supports-win-10-11.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-b650-pg-lightning-atx-motherboard-supports-amd-ryzen-7000-cpus-supports-max-192gb-ddr5-7-1-hd-audio-2x-pcie-4-0x16-1x-hdmi-2-5g-lan-supports-win-10-11.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASR65LIGR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 7
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7cbb38e39ce4",
+  "category": "motherboard",
+  "name": "MSI Z890-S WIFI WHITE Gaming Desktop Motherboard Intel Z890 Socket LGA-1851 ATX 256 GB DDR5 SDRAM 2.5 Gigabit Ethernet IEEE 802.11 a/b/g/n/ac/ax/be - HDMI - DisplayPort - 4 x SATA Interfaces",
+  "model_number": "Z890SWHITEWIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-z890-s-wifi-white-gaming-desktop-motherboard-intel-z890-socket-lga-1851-atx-256-gb-ddr5-sdram-2-5-gigabit-ethernet-ieee-802-11-a-b-g-n-ac-ax-be-hdmi-displayport-4-x-sata-interfaces.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-z890-s-wifi-white-gaming-desktop-motherboard-intel-z890-socket-lga-1851-atx-256-gb-ddr5-sdram-2-5-gigabit-ethernet-ieee-802-11-a-b-g-n-ac-ax-be-hdmi-displayport-4-x-sata-interfaces.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTMSI89SWWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:66720b2abf79",
+  "category": "motherboard",
+  "name": "ASUS PRIME H610M-A D4-CSM Micro-ATX Motherboard Intel 12th Gen Socket LGA 1700 Supports Max 64GB DDR4-3200 PCI Express 4.02x M.2 Slots Gigabit Ethernet 1x DP 1x HDMI 1x VGA Supports Windows 10/11 64-bit",
+  "model_number": "PRIME H610M-A D4-CSM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-prime-h610m-a-d4-csm-micro-atx-motherboard-intel-12th-gen-socket-lga-1700-supports-max-64gb-ddr4-3200-pci-express-4-0.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-prime-h610m-a-d4-csm-micro-atx-motherboard-intel-12th-gen-socket-lga-1700-supports-max-64gb-ddr4-3200-pci-express-4-0.html",
+   "price": 109.95,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASU61MA4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4a7ff87e9706",
+  "category": "motherboard",
+  "name": "MSI B550M-P WIFI6E Gaming Desktop Motherboard AMD B550 Chipset - Socket AM4 - Micro ATX 4x Memory Slots Gigabit Ethernet HDMI - DisplayPort 4 x SATA Interfaces",
+  "model_number": "B550MPWIFI6E",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-b550m-p-wifi6e-gaming-desktop-motherboard-amd-b550-chipset-socket-am4-micro-atx-4x-memory-slots-gigabit-ethernet-hdmi-displayport-4-x-sata-interfaces.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-b550m-p-wifi6e-gaming-desktop-motherboard-amd-b550-chipset-socket-am4-micro-atx-4x-memory-slots-gigabit-ethernet-hdmi-displayport-4-x-sata-interfaces.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI550MPR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e4a95d93827f",
+  "category": "motherboard",
+  "name": "ASUS ROG STRIX B550-F GAMING WIFI II ATX Motherboard Socket AM4 AMD B550 Chipset DDDR4-4400MHz (Max 128GB) USB 3.2M.2 PCIe 4.0 x4 SATA3 1x DisplayPort 1.2 1x HDMI 2.1 802.11ax Wi-Fi 6E 6GHz",
+  "model_number": "STRIX B550-F GAMING WIFI II",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-strix-b550-f-gaming-wifi-ii-atx-motherboard-socket-am4-amd-b550-chipset-dddr4-4400mhz-max-128gb-usb-3-2m-2-pcie-4-0-x4-sata3-1x-displayport-1-2-1x-hdmi-2-1-802-11ax-wi-fi-6e-6ghz.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-strix-b550-f-gaming-wifi-ii-atx-motherboard-socket-am4-amd-b550-chipset-dddr4-4400mhz-max-128gb-usb-3-2m-2-pcie-4-0-x4-sata3-1x-displayport-1-2-1x-hdmi-2-1-802-11ax-wi-fi-6e-6ghz.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU550F2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:04f1c4ac7291",
+  "category": "motherboard",
+  "name": "ASUS PRO WS TRX50-SAGE SI WIFI6E Refurb Workstation Motherboard Supports Ryzen 7000 WX-Series Socket sTR5 4x DDR5 ECC RIMM Slots Supports Max 1TB Wi-Fi 6E Supports Windows 10/11",
+  "model_number": "PRO WS TRX50-SAGE SI WIFI6E",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 674.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-pro-ws-trx50-sage-si-wifi6e-refurb-workstation-motherboard-supports-ryzen-7000-wx-series-socket-str5-4x-ddr5-ecc-rimm-slots-supports-max-1tb-wi-fi-6e-supports-windows-10-11.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-pro-ws-trx50-sage-si-wifi6e-refurb-workstation-motherboard-supports-ryzen-7000-wx-series-socket-str5-4x-ddr5-ecc-rimm-slots-supports-max-1tb-wi-fi-6e-supports-windows-10-11.html",
+   "price": 674.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUX50S6Y",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:647d02a63f46",
+  "category": "motherboard",
+  "name": "ASRock Z890M Riptide WiFi mATX Motherboard Intel Z890 Chipset LGA1851  4x DDR5 DIMM Slots Max 128GB PCI Express 5.0 2.5Gbps LAN Intel WiFi6E 5.1 Realtek Audio Supports Windows 11",
+  "model_number": "Z890M Riptide WiFi",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-z890m-riptide-wifi-matx-motherboard-intel-z890-chipset-lga1851-4x-ddr5-dimm-slots-max-128gb-pci-express-5-0-2-5gbps-lan-intel-wifi6e-5-1-realtek-audio-supports-windows-11.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-z890m-riptide-wifi-matx-motherboard-intel-z890-chipset-lga1851-4x-ddr5-dimm-slots-max-128gb-pci-express-5-0-2-5gbps-lan-intel-wifi6e-5-1-realtek-audio-supports-windows-11.html",
+   "price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASRZ89MRR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:37c4414616f9",
+  "category": "motherboard",
+  "name": "ASUS TUF GAMING B550-PLUS WiFi II ATX Refurbished Motherboard AMD B550 Chipset Socket AM4 Max 128GB DDR4 4x DIMM PCIe 4.0 7.1 HD Audio 1x DisplayPort 1x HDMI",
+  "model_number": "TUFGAMINGB550-PLUSWIFIII",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-gaming-b550-plus-wifi-ii-atx-refurbished-motherboard-amd-b550-chipset-socket-am4-max-128gb-ddr4-4x-dimm-pcie-4-0-7-1-hd-audio-1x-displayport-1x-hdmi.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-gaming-b550-plus-wifi-ii-atx-refurbished-motherboard-amd-b550-chipset-socket-am4-max-128gb-ddr4-4x-dimm-pcie-4-0-7-1-hd-audio-1x-displayport-1x-hdmi.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASU550T2Y",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:931ba0baebd1",
+  "category": "motherboard",
+  "name": "ASUS Z790 MAX Gaming WIFI7 Intel Z790 (LGA 1700) ATX Motherboard with PCIe 5.0. Three M.2 Slots. 14+1 DrMOS. DDR5. WiFi 7. Realtek 1Gb LAN. HDMI. USB 20Gbps Type-C Thunderbolt (USB4). Aura Sync",
+  "model_number": "Z790 MAX GAMING WIFI7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-z790-max-gaming-wifi7-intel-z790-lga-1700-atx-motherboard-with-pcie-5-0-three-m-2-slots-14-1-drmos-ddr5-wifi-7-realtek-1gb-lan-hdmi-usb-20gbps-type-c-thunderbolt-usb4-aura-sync.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-z790-max-gaming-wifi7-intel-z790-lga-1700-atx-motherboard-with-pcie-5-0-three-m-2-slots-14-1-drmos-ddr5-wifi-7-realtek-1gb-lan-hdmi-usb-20gbps-type-c-thunderbolt-usb4-aura-sync.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU79MG7R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8d5247ce896f",
+  "category": "motherboard",
+  "name": "MSI MAG X870E TOMAHAWK MAX WIFI ATX Gaming Motherboard AM5 X870E Chipset PCIe 5.0 DDR5 M.2 Gen5 SATA USB A USB C 5Gbps LAN Wifi 7 Bluetooth 5.4",
+  "model_number": "X870ETOMAHAWKMAXWIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 289.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-mag-x870e-tomahawk-max-wifi-atx-gaming-motherboard-am5-x870e-chipset-pcie-5-0-ddr5-m-2-gen5-sata-usb-a-usb-c-5gbps-lan-wifi-7-bluetooth-5-4.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-mag-x870e-tomahawk-max-wifi-atx-gaming-motherboard-am5-x870e-chipset-pcie-5-0-ddr5-m-2-gen5-sata-usb-a-usb-c-5gbps-lan-wifi-7-bluetooth-5-4.html",
+   "price": 289.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI87ETMR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4a50bee04474",
+  "category": "motherboard",
+  "name": "MSI Pro Z890-P WIFI ATX Motherboard LGA 1851 Intel Core Ultra Series 2 Ready",
+  "model_number": "Z890PWIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-pro-z890-p-wifi-atx-motherboard-lga-1851-intel-core-ultra-series-2-ready.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-pro-z890-p-wifi-atx-motherboard-lga-1851-intel-core-ultra-series-2-ready.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSIZ89PWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 10
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:18e702b8f0db",
+  "category": "motherboard",
+  "name": "GIGABYTE Ultra Durable B550M DS3H AC R2 Gaming Desktop Motherboard AMD B550 Chipset Socket AM4 Micro ATX DDR4 SDRAM Gigabit Ethernet - IEEE 802.11a/b/g/n/ac - HDMI - DisplayPort - 4 x SATA",
+  "model_number": "B550M DS3H AC R2",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-ultra-durable-b550m-ds3h-ac-r2-gaming-desktop-motherboard-amd-b550-chipset-socket-am4-micro-atx-ddr4-sdram-gigabit-ethernet-ieee-802-11a-b-g-n-ac-hdmi-displayport-4-x-sata.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-ultra-durable-b550m-ds3h-ac-r2-gaming-desktop-motherboard-amd-b550-chipset-socket-am4-micro-atx-ddr4-sdram-gigabit-ethernet-ieee-802-11a-b-g-n-ac-hdmi-displayport-4-x-sata.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIG550S2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:eeff7471f168",
+  "category": "motherboard",
+  "name": "ASUS ROG MAXIMUS Z890 APEX Intel Z890 LGA 1851 ATX motherboard Advanced AI PC-ready 22+2+1+2 stages DDR5 WiFi 7 5G LAN 3x PCIe 5.0 M.2 Thunderbolt 4 USB Type-C AI OC Cooling & Networking",
+  "model_number": "90MB1IP0-M0AAY0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 574.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-maximus-z890-apex-intel-z890-lga-1851-atx-motherboard-advanced-ai-pc-ready-22-2-1-2-stages-ddr5-wifi-7-5g-lan-3x-pcie-5-0-m-2-thunderbolt-4-usb-type-c-ai-oc-cooling-networking.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-maximus-z890-apex-intel-z890-lga-1851-atx-motherboard-advanced-ai-pc-ready-22-2-1-2-stages-ddr5-wifi-7-5g-lan-3x-pcie-5-0-m-2-thunderbolt-4-usb-type-c-ai-oc-cooling-networking.html",
+   "price": 574.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUZ89APR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7d004b661186",
+  "category": "motherboard",
+  "name": "ASUS TUF B850I WIFI NEO ITX Gaming Desktop Motherboard AM5 AMD B850 Chipset DDDR5 PCIe 5.0 Ready M.2 slots x2 Wi-Fi 6E 2.5GB Ethernet DisplayPort HDMIUSB 20Gbps Type-C USB 10Gbps Type-C BIOS FlashBac",
+  "model_number": "TUF GAMING B850I WIFI NEO",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-b850i-wifi-neo-itx-gaming-desktop-motherboard-am5-amd-b850-chipset-dddr5-pcie-5-0-ready-m-2-slots-x2-wi-fi-6e-2-5gb-ethernet-displayport-hdmiusb-20gbps-type-c-usb-10gbps-type-c-bios-flashbac.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-b850i-wifi-neo-itx-gaming-desktop-motherboard-am5-amd-b850-chipset-dddr5-pcie-5-0-ready-m-2-slots-x2-wi-fi-6e-2-5gb-ethernet-displayport-hdmiusb-20gbps-type-c-usb-10gbps-type-c-bios-flashbac.html",
+   "price": 259.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUB85INR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:50407553207e",
+  "category": "motherboard",
+  "name": "ASUS ROG CROSSHAIR X870E EDITION 20ROG CROSSHAIR X870E (Socket AM5) AMD X870 E-ATX DDR5 Wi-Fi 7 MotherboardIntegrated ROG RYUJIN 360 Liquid Cooler",
+  "model_number": "ROG CROSSHAIR X870E EDITION 20",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-crosshair-x870e-edition-20rog-crosshair-x870e-socket-am5-amd-x870-e-atx-ddr5-wi-fi-7-motherboardintegrated-rog-ryujin-360-liquid-cooler.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-crosshair-x870e-edition-20rog-crosshair-x870e-socket-am5-amd-x870-e-atx-ddr5-wi-fi-7-motherboardintegrated-rog-ryujin-360-liquid-cooler.html",
+   "price": 3299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASU87E20R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:833820b3f390",
+  "category": "motherboard",
+  "name": "MSI PRO H610M-G WiFi DDR4 Pro Series Motherboard mATX 12th/13th/14th Gen Intel Core LGA 1700 Socket DDR4 PCIe 4 2.5G LAN SATA 6Gb/s M.2 Slots USB 3.2 Wi-Fi 5 Bluetooth 4.2 HDMI DisplayPort",
+  "model_number": "PROH610MGD4WIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-pro-h610m-g-wifi-ddr4-pro-series-motherboard-matx-12th-13th-14th-gen-intel-core-lga-1700-socket-ddr4-pcie-4-2-5g-lan-sata-6gb-s-m-2-slots-usb-3-2-wi-fi-5-bluetooth-4-2-hdmi-displayport.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-pro-h610m-g-wifi-ddr4-pro-series-motherboard-matx-12th-13th-14th-gen-intel-core-lga-1700-socket-ddr4-pcie-4-2-5g-lan-sata-6gb-s-m-2-slots-usb-3-2-wi-fi-5-bluetooth-4-2-hdmi-displayport.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTMSI610MWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:0d9c90c3ab7d",
+  "category": "motherboard",
+  "name": "Gigabyte B860 GAMING X WIFI 6E LGA 1851 Intel B860 DDR5  Motherboard",
+  "model_number": "B860 GAMING X WIFI6E",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-b860-gaming-x-wifi-6e-lga-1851-intel-b860-ddr5-motherboard.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-b860-gaming-x-wifi-6e-lga-1851-intel-b860-ddr5-motherboard.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIGB8601R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 6,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 6
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 6
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 15
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 8
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "6 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:fad10b29e020",
+  "category": "motherboard",
+  "name": "MSI PRO B760M-P DDR4 Micro ATX MotherboardIntel B760 Chipset LGA 1700 Socket 4x DDR4 DIMM Slots Max 128GB 1x HDMI 1x DisplayPort 1x VGA 2x M.2 Slots Supports Windows 10/11",
+  "model_number": "PRO B760M-P DDR4",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-pro-b760m-p-ddr4-micro-atx-motherboardintel-b760-chipset-lga-1700-socket-4x-ddr4-dimm-slots-max-128gb-1x-hdmi-1x-displayport-1x-vga-2x-m-2-slots-supports-windows-10-11.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-pro-b760m-p-ddr4-micro-atx-motherboardintel-b760-chipset-lga-1700-socket-4x-ddr4-dimm-slots-max-128gb-1x-hdmi-1x-displayport-1x-vga-2x-m-2-slots-supports-windows-10-11.html",
+   "price": 109.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTMSI76MP4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:614e628f4a1e",
+  "category": "motherboard",
+  "name": "ASRock Rack TURIND8X-2T/500W Server Motherboard Single Socket SP5 supports AMD EPYC 9005/9004 Processors 8x DDR5 RDIMM Slots4x PCIe 5.0 2x RJ45 10GbE IPMI",
+  "model_number": "TURIND8X-2T/500W",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1099.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-rack-turind8x-2t-500w-server-motherboard-single-socket-sp5-supports-amd-epyc-9005-9004-processors-8x-ddr5-rdimm-slots.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-rack-turind8x-2t-500w-server-motherboard-single-socket-sp5-supports-amd-epyc-9005-9004-processors-8x-ddr5-rdimm-slots.html",
+   "price": 1099.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASRX2T5WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7bf5d40de9bb",
+  "category": "motherboard",
+  "name": "MSI Pro B760-P WIFI DDR4 Gaming Desktop Motherboard Intel B760 Chipset Socket LGA-1700 ATX 128 GB DDR4 SDRAM Maximum RAM Gigabit Ethernet - HDMI - DisplayPort - 4 x SATA Interfaces",
+  "model_number": "PROB760PWIFID4",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 149.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-pro-b760-p-wifi-ddr4-gaming-desktop-motherboard-intel-b760-chipset-socket-lga-1700-atx-128-gb-ddr4-sdram-maximum-ram-gigabit-ethernet-hdmi-displayport-4-x-sata-interfaces.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-pro-b760-p-wifi-ddr4-gaming-desktop-motherboard-intel-b760-chipset-socket-lga-1700-atx-128-gb-ddr4-sdram-maximum-ram-gigabit-ethernet-hdmi-displayport-4-x-sata-interfaces.html",
+   "price": 149.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI760PWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3e513f337a93",
+  "category": "motherboard",
+  "name": "MSI MAG Z890 TOMAHAWK WIFI II ATX Motherboard LGA-1851 Intel Core Ultra Series 2 Ready 256 GB DDR5 SDRAM Maximum 5Gbps LAN Wi-Fi 7 PCIe 5.0 M.2 SATA Bluetooth 5.4 Thunderbolt 4",
+  "model_number": "Z890TOMAHAWKWIFIII",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 219.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-mag-z890-tomahawk-wifi-ii-atx-motherboard-lga-1851-intel-core-ultra-series-2-ready-256-gb-ddr5-sdram-maximum-5gbps-lan-wi-fi-7-pcie-5-0-m-2-sata-bluetooth-5-4-thunderbolt-4.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-mag-z890-tomahawk-wifi-ii-atx-motherboard-lga-1851-intel-core-ultra-series-2-ready-256-gb-ddr5-sdram-maximum-5gbps-lan-wi-fi-7-pcie-5-0-m-2-sata-bluetooth-5-4-thunderbolt-4.html",
+   "price": 219.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSIZ89T2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:83ae5ad80ffd",
+  "category": "motherboard",
+  "name": "ASUS ROG CROSSHAIR 2006 AMD AM5 ATX motherboard Advanced AI PC-ready 20+2+2 stages DDR5 with DIMM Fit WiFi 7 10Gb Ethernet PCIe 5.0 5x M.2 2x USB4 2x 20Gb USB-C 2-inch OLED display support",
+  "model_number": "ROGCrosshair2006AM5ATX",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 799.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-crosshair-2006-amd-am5-atx-motherboard-advanced-ai-pc-ready-20-2-2-stages-ddr5-with-dimm-fit-wifi-7-10gb-ethernet-pcie-5-0-5x-m-2-2x-usb4-2x-20gb-usb-c-2-inch-oled-display-support.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-crosshair-2006-amd-am5-atx-motherboard-advanced-ai-pc-ready-20-2-2-stages-ddr5-with-dimm-fit-wifi-7-10gb-ethernet-pcie-5-0-5x-m-2-2x-usb4-2x-20gb-usb-c-2-inch-oled-display-support.html",
+   "price": 799.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUX87E6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d5f488407095",
+  "category": "motherboard",
+  "name": "ASRock B860M-C M-ATX MotherboardSupports Intel Core Ultra CPUs LGA1851 4x DDR5 DIMM Slots 1x PCIe 5.0 x167.1 HD Audio 1x HDMI Intel Gigabit LAN 802.11ax WiFi Bulk Packaging",
+  "model_number": "B860M-C",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-b860m-c-m-atx-motherboardsupports-intel-core-ultra-cpus-lga1851-4x-ddr5-dimm-slots-1x-pcie-5-0-x167-1-hd-audio-1x-hdmi-intel-gigabit-lan-802-11ax-wifi.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-b860m-c-m-atx-motherboardsupports-intel-core-ultra-cpus-lga1851-4x-ddr5-dimm-slots-1x-pcie-5-0-x167-1-hd-audio-1x-hdmi-intel-gigabit-lan-802-11ax-wifi.html",
+   "price": 139.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASR860MCR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 32
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:62e469be1ac6",
+  "category": "motherboard",
+  "name": "MSI MAG X870E GAMING MAX WIFI ATX Gaming Motherboard AM5 DDR5 M.2 Gen5 PCIe 5.0 SATA USB A USB C 5Gbps LAN Wifi 7 Bluetooth 5.4",
+  "model_number": "MAGX870EGAMINGMAX",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-mag-x870e-gaming-max-wifi-atx-gaming-motherboard-am5-ddr5-m-2-gen5-pcie-5-0-sata-usb-a-usb-c-5gbps-lan-wifi-7-bluetooth-5-4.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-mag-x870e-gaming-max-wifi-atx-gaming-motherboard-am5-ddr5-m-2-gen5-pcie-5-0-sata-usb-a-usb-c-5gbps-lan-wifi-7-bluetooth-5-4.html",
+   "price": 259.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI87EGWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f9114fb83e44",
+  "category": "motherboard",
+  "name": "GIGABYTE B850M GAMING X WF6E mATX Motherboard",
+  "model_number": "B850M GAMING X WF6E",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-b850m-gaming-x-wf6e-matx-motherboard.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-b850m-gaming-x-wf6e-matx-motherboard.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIG85MD4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 7
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b7c96f423cc5",
+  "category": "motherboard",
+  "name": "ASUS Pro WS W880-ACE SE LGA 1851 ATX Motherboard Intel Core Ultra Processor (Series 2) 8+1+2+2 Power Stages PCIe 5.0 DDR5 Thunderbolt 4 Type-C 2X 2.5 GbE LAN 4X M.2",
+  "model_number": "Pro WS W880-ACE SE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-pro-ws-w880-ace-se-lga-1851-atx-motherboard-intel-core-ultra-processor-series-2-8-1-2-2-power-stages-pcie-5-0-ddr5.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-pro-ws-w880-ace-se-lga-1851-atx-motherboard-intel-core-ultra-processor-series-2-8-1-2-2-power-stages-pcie-5-0-ddr5.html",
+   "price": 449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUW88SER",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f88636febbb2",
+  "category": "motherboard",
+  "name": "MSI B850 GAMING PLUS WIFI Gaming ATX MotherboardAMD AM5 Ryzen 9000 8000 and 7000 series DDR5 Max 256GB PCI Express 5.0 M.25 Gigabit LAN 802.11axe WiFi 6E 7.1 HD Audio 1x HDMI 1x DisplayPort",
+  "model_number": "B850GPW",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-b850-gaming-plus-wifi-gaming-atx-motherboardamd-am5-ryzen-9000-8000-and-7000-series-ddr5-max-256gb-pci-express-5-0-m-2.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-b850-gaming-plus-wifi-gaming-atx-motherboardamd-am5-ryzen-9000-8000-and-7000-series-ddr5-max-256gb-pci-express-5-0-m-2.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI85GPWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f7a8c3c58b1c",
+  "category": "motherboard",
+  "name": "MSI MAGX870EGPMW MAG X870E GAMING PLUS MAX WIFI ATX Gaming Motherboard - AM5 PCIe 5.0 DDR5 M.2 Gen5 SATA USB A USB-C 5Gbps LAN - Wifi 7 - Bluetooth 5.4 White",
+  "model_number": "MAGX870EGPMW",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-magx870egpmw-mag-x870e-gaming-plus-max-wifi-atx-gaming-motherboard-am5-pcie-5-0-ddr5-m-2-gen5-sata-usb-a-usb-c.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-magx870egpmw-mag-x870e-gaming-plus-max-wifi-atx-gaming-motherboard-am5-pcie-5-0-ddr5-m-2-gen5-sata-usb-a-usb-c.html",
+   "price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI87EMWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:adedf82a8a43",
+  "category": "motherboard",
+  "name": "Gigabyte B650M GAMING PLUS WIFI mATX Motherboard",
+  "model_number": "B650M GAMING PLUS WF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-b650m-gaming-plus-wifi-matx-mothergboard.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-b650m-gaming-plus-wifi-matx-mothergboard.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIGB650FR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 16
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 9
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:275ac3771cab",
+  "category": "motherboard",
+  "name": "ASUS TUF GAMING B550-PLUS WiFi II ATX Motherboard AMD B550 Chipset Socket AM4 Supports Max 128GB DDR4 (4x DIMM Slots) PCIe 4.0 7.1 HD Audio 1x DisplayPort 1x HDMI",
+  "model_number": "TUF GAMING B550-PLUS WiFi II",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 149.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-gaming-b550-plus-wifi-ii-atx-motherboard-amd-b550-chipset-socket-am4-supports-max-128gb-ddr4-4x-dimm-slots-pcie-4-0.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-gaming-b550-plus-wifi-ii-atx-motherboard-amd-b550-chipset-socket-am4-supports-max-128gb-ddr4-4x-dimm-slots-pcie-4-0.html",
+   "price": 149.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU550T2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:52b9ff782660",
+  "category": "motherboard",
+  "name": "GIGABYTE Ultra Durable B760M DS3H AX DDR4 Desktop Motherboard - Intel B760 Chipset - Socket LGA-1700 - Micro ATX",
+  "model_number": "B760M DS3H AX DDR4",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-ultra-durable-b760m-ds3h-ax-ddr4-desktop-motherboard-intel-b760-chipset-socket-lga-1700-micro-atx.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-ultra-durable-b760m-ds3h-ax-ddr4-desktop-motherboard-intel-b760-chipset-socket-lga-1700-micro-atx.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIG76DS4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e9e755ed6853",
+  "category": "motherboard",
+  "name": "GIGABYTE X870 Gaming WIFI6 AMD AM5 LGA 1718 Motherboard ATX DDR5 4X M.2 PCIe 5.0 USB4 WIFI6 2.5GbE LAN EZ-Latch 5-Year Warranty",
+  "model_number": "X870 GAMING WIFI6",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-x870-gaming-wifi6-amd-am5-lga-1718-motherboard-atx-ddr5-4x-m-2-pcie-5-0-usb4-wifi6-2-5gbe-lan-ez-latch-5-year-wa.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-x870-gaming-wifi6-amd-am5-lga-1718-motherboard-atx-ddr5-4x-m-2-pcie-5-0-usb4-wifi6-2-5gbe-lan-ez-latch-5-year-wa.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIG87GW6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5486ee9378e1",
+  "category": "motherboard",
+  "name": "ASUS TUF GAMING X870-PRO WIFI7 W NEO AMD ATX motherboard 16+2+1 power stages DDR5 with NitroPath DRAM Technology and AEMP four M.2 slots PCIe 5.0 for next-gen GPUs 5Gb Ethernet and 64MB BIOS",
+  "model_number": "TUF GAMING X870-PRO WIFI7 W NE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 349.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-gaming-x870-pro-wifi7-w-neo-amd-atx-motherboard-16-2-1-power-stages-ddr5-with-nitropath-dram-technology-and-aemp-four.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-gaming-x870-pro-wifi7-w-neo-amd-atx-motherboard-16-2-1-power-stages-ddr5-with-nitropath-dram-technology-and-aemp-four.html",
+   "price": 349.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU87PWNR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:dc977812845c",
+  "category": "motherboard",
+  "name": "ASUS ROG Strix B850-F GAMING WIFI7 NEO AMD ATX motherboard 16+2+2 power stages DDR5 slots four M.2 slots PCIe 5.0 three USB 2 .0 headers USB 20Gbps Type-C WiFi 7 Realtek 5G and Aura Sync RGB",
+  "model_number": "STRIX B850-F GAM WIFI7NEO",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 289.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-strix-b850-f-gaming-wifi7-neo-amd-atx-motherboard-16-2-2-power-stages-ddr5-slots-four-m-2-slots-pcie-5-0-three-usb.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-strix-b850-f-gaming-wifi7-neo-amd-atx-motherboard-16-2-2-power-stages-ddr5-slots-four-m-2-slots-pcie-5-0-three-usb.html",
+   "price": 289.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU85FWNR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:be0107e35581",
+  "category": "motherboard",
+  "name": "ASRock X870 RIPTIDE WIFI Motherboard Ryzen 9000/7000 Socket AM5 LGA 17184 4x DDR5 DIMM 1 PCIe 5.0 x16 1 PCIe 4.0 x1 2.5Gbps LAN & 802.11be WiFi 7 + Bluetooth",
+  "model_number": "X870 RIPTIDE WIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-x870-riptide-wifi-motherboard-ryzen-9000-7000-socket-am5-lga-17184-4x-ddr5-dimm-1-pcie-5-0-x16-1-pcie-4-0-x1.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-x870-riptide-wifi-motherboard-ryzen-9000-7000-socket-am5-lga-17184-4x-ddr5-dimm-1-pcie-5-0-x16-1-pcie-4-0-x1.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASRX87RWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a078fa4b2984",
+  "category": "motherboard",
+  "name": "ASUS ROG STRIX X870E-E GAMING WIFI7 NEO GamingMotherboard AMD X870E Chipset Socket AM5 4x DDR5 DIMM Slots5x M.2 Slots PCIe 5.0 WiFi 7 2x USB 4.0 Supports Windows 11",
+  "model_number": "ROG STRIX X870E-E GAMING WIFI7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-strix-x870e-e-gaming-wifi7-neo-gamingmotherboard-amd-x870e-chipset-socket-am5-4x-ddr5-dimm-slots.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-strix-x870e-e-gaming-wifi7-neo-gamingmotherboard-amd-x870e-chipset-socket-am5-4x-ddr5-dimm-slots.html",
+   "price": 599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASUX87GNR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9ad7516909a4",
+  "category": "motherboard",
+  "name": "ASUS ProArt B850-CREATOR WIFI NEO MotherboardAMD B850 Chipset Socket AM5 4x DDR5 DIMM Slots PCIe 5.0 3x M.2 SlotsWi-Fi 7 2x 5G LAN Supports Windows 11",
+  "model_number": "ProArt B850-CREATOR WIFI NEO",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-proart-b850-creator-wifi-neo-motherboardamd-b850-chipset-socket-am5-4x-ddr5-dimm-slots-pcie-5-0-3x-m-2-slots.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-proart-b850-creator-wifi-neo-motherboardamd-b850-chipset-socket-am5-4x-ddr5-dimm-slots-pcie-5-0-3x-m-2-slots.html",
+   "price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU850CNR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:692a44056dd4",
+  "category": "motherboard",
+  "name": "ASUS Pro WS W890E-SAGE SE SSI EEB Motherboard Intel Socket LGA4710-2 Intel W890 Chipset 8x DDR5 DIMM Slots Max 2048GB 2x Intel 10Gb Ethernet 1x Gigabit Ethernet Supports Windows 10/11",
+  "model_number": "ASUS Pro WS W890E-SAGE SE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-pro-ws-w890e-sage-se-ssi-eeb-motherboard-intel-socket-lga4710-2-intel-w890-chipset-8x-ddr5-dimm-slots-max-2048gb.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-pro-ws-w890e-sage-se-ssi-eeb-motherboard-intel-socket-lga4710-2-intel-w890-chipset-8x-ddr5-dimm-slots-max-2048gb.html",
+   "price": 1199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUW89SER",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cc267e3c62c0",
+  "category": "motherboard",
+  "name": "GIGABYTE X870 Eagle WIFI7 AMD AM5 LGA 1718 Motherboard ATX DDR5 4X M.2 PCIe 5.0 USB4 WIFI7 2.5GbE LAN EZ-Latch 5-Year Warranty",
+  "model_number": "X870 Eagle WIFI7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 219.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-x870-eagle-wifi7-amd-am5-lga-1718-motherboard-atx-ddr5-4x-m-2-pcie-5-0-usb4-wifi7-2-5gbe-lan-ez-latch-5-year-war.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-x870-eagle-wifi7-amd-am5-lga-1718-motherboard-atx-ddr5-4x-m-2-pcie-5-0-usb4-wifi7-2-5gbe-lan-ez-latch-5-year-war.html",
+   "price": 219.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIG87EWFR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5801cb3fc9df",
+  "category": "motherboard",
+  "name": "ASUS ROG CROSSHAIR X870E HERO BTF ATX Motherboard AM5 Ryzen 9000/7000 Socket AM5 LGA 17184 4x DDR5 DIMM 2 x PCIe 5.0 x16 Slots 5 X M.2 SLOTS 2.5Gb & 5Gb ETHERNET Wifi 7",
+  "model_number": "ROG CROSSHAIR X870E HERO BTF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 747.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-crosshair-x870e-hero-btf-atx-motherboard-am5-ryzen-9000-7000-socket-am5-lga-17184-4x-ddr5-dimm-2-x-pcie-5-0-x16-slots.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-crosshair-x870e-hero-btf-atx-motherboard-am5-ryzen-9000-7000-socket-am5-lga-17184-4x-ddr5-dimm-2-x-pcie-5-0-x16-slots.html",
+   "price": 747.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASUX87HBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:067ae038c208",
+  "category": "motherboard",
+  "name": "GIGABYTE Ultra Durable A620M S2H mATXAMD AM5 2xDDR5 DIMM Slots Motherboard",
+  "model_number": "A620M-S2H",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-ultra-durable-a620m-s2h-matxamd-am5-2xddr5-dimm-slots-motherboard.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-ultra-durable-a620m-s2h-matxamd-am5-2xddr5-dimm-slots-motherboard.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIGA6201R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:97a0df1832d9",
+  "category": "motherboard",
+  "name": "MSI MPG Z890I EDGE TI WIFI Gaming Desktop Mini ITX Motherboard - Intel Z890 Chipset Socket LGA-1851 Core Ultra Processor DDR5 Gigabit Ethernet 802.11 a/b/g/n/ac/ax/be - HDMI - DisplayPort - 2 x SATA",
+  "model_number": "Z890IEDGTIWIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 269.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-mpg-z890i-edge-ti-wifi-gaming-desktop-mini-itx-motherboard-intel-z890-chipset-socket-lga-1851-core-ultra-processor-ddr5.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-mpg-z890i-edge-ti-wifi-gaming-desktop-mini-itx-motherboard-intel-z890-chipset-socket-lga-1851-core-ultra-processor-ddr5.html",
+   "price": 269.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSI89IETR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a9363e9d4b3a",
+  "category": "motherboard",
+  "name": "ASUS ROG CROSSHAIR X870E DARK HERO  ATX AM5 Motherboard Ryzen 9000/7000 Socket AM5 LGA 1718 4x DDR5 DIMM 2 x PCIe 5.0 x16 Slots 5 X M.2 SLOTS 10Gb & 5Gb ETHERNET Wifi 7",
+  "model_number": "ROG CROSSHAIR X870E DARK HERO",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-crosshair-x870e-dark-hero-atx-am5-motherboard-ryzen-9000-7000-socket-am5-lga-1718-4x-ddr5-dimm-2-x-pcie-5-0-x16-slots.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-crosshair-x870e-dark-hero-atx-am5-motherboard-ryzen-9000-7000-socket-am5-lga-1718-4x-ddr5-dimm-2-x-pcie-5-0-x16-slots.html",
+   "price": 699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASUX87DHR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:57dca9a23743",
+  "category": "motherboard",
+  "name": "ASUS WS PRO-WS-B850M-ACE SE mATX Motherboard AM5 Socket AMD B850 Chipset DDR5 (Max 256GB) 10 Gb & 2.5 Gb LAN PCIe 5.0 HDMI DisplayPort 4x SATA Interfaces 2X M.2",
+  "model_number": "PRO-WS-B850M-ACE SE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 359.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-ws-pro-ws-b850m-ace-se-matx-motherboard-am5-socket-amd-b850-chipset-dddr5-max-256gb-10-gb-2-5-gb-lan-pcie-5-0.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-ws-pro-ws-b850m-ace-se-matx-motherboard-am5-socket-amd-b850-chipset-dddr5-max-256gb-10-gb-2-5-gb-lan-pcie-5-0.html",
+   "price": 359.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU85MASR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:2fffdbcb5c67",
+  "category": "motherboard",
+  "name": "GIGABYTE X870E AORUS PRO X3D AM5 AMD X870E ATX Motherboard DDR5 4X M.2 PCIe 5.0 USB4 WIFI7 2.5GbE LAN EZ-Latch 5-Year Warranty",
+  "model_number": "X870E AORUS PRO X3D",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 439.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-x870e-aorus-pro-x3d-ice-am5-amd-x870e-atx-motherboard-ddr5-4x-m-2-pcie-5-0-usb4-wifi7-2-5gbe-lan-ez-latch-5-year.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-x870e-aorus-pro-x3d-ice-am5-amd-x870e-atx-motherboard-ddr5-4x-m-2-pcie-5-0-usb4-wifi7-2-5gbe-lan-ez-latch-5-year.html",
+   "price": 439.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTGIG87EA3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d4310db74700",
+  "category": "motherboard",
+  "name": "MSI MEG Z890 ACE ATX Motherboard LGA 1851 for Intel Core Ultra series 2 CPU with DDR5 RAM supports DIMM UDIMM 4x Memory Slot Gigabit Ethernet - IEEE 802.11 a/b/g/n/ac/ax/be - HDMI - DisplayPort - 4 x SATA",
+  "model_number": "Z890ACE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 549.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-meg-z890-ace-atx-motherboard-lga-1851-for-intel-core-ultra-series-2-cpu-with-ddr5-ram-supports-dimm-udimm-4x-memory-slot.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-meg-z890-ace-atx-motherboard-lga-1851-for-intel-core-ultra-series-2-cpu-with-ddr5-ram-supports-dimm-udimm-4x-memory-slot.html",
+   "price": 549.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTMSIZ89ACR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9dafde9f6185",
+  "category": "motherboard",
+  "name": "GIGABYTE Z890 Eagle WIFI7 Intel Core Ultra (Series 2) LGA 1851 Motherboard ATX DDR5 4X M.2 PCIe 5.0 USB4 WIFI7 2.5GbE LAN EZ-Latch",
+  "model_number": "Z890 EAGLE WIFI7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 219.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-z890-eagle-wifi7-intel-core-ultra-series-2-lga-1851-motherboard-atx-ddr5-4x-m-2-pcie-5-0-usb4-wifi7-2-5gbe-lan.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-z890-eagle-wifi7-intel-core-ultra-series-2-lga-1851-motherboard-atx-ddr5-4x-m-2-pcie-5-0-usb4-wifi7-2-5gbe-lan.html",
+   "price": 219.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTGIGZ89E7R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:48c732af7dc8",
+  "category": "motherboard",
+  "name": "GIGABYTE B860 Eagle WIFI6E Intel Core Ultra (Series 2) LGA 1851 Motherboard ATX DDR5 3X M.2 PCIe 5.0 USB-C WIFI6E 2.5GbE LAN EZ-Latch",
+  "model_number": "B860 EAGLE WIFI6E",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-b860-eagle-wifi6e-intel-core-ultra-series-2-lga-1851-motherboard-atx-ddr5-3x-m-2-pcie-5-0-usb-c-wifi6e-2-5gbe-la.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-b860-eagle-wifi6e-intel-core-ultra-series-2-lga-1851-motherboard-atx-ddr5-3x-m-2-pcie-5-0-usb-c-wifi6e-2-5gbe-la.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIGB86E6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f4e857cd84e5",
+  "category": "motherboard",
+  "name": "MSI H610M-G DDR4 Desktop Motherboard Intel H610 Chipset - Socket LGA-1700 - Micro ATX Gigabit Ethernet - HDMI - DisplayPort - 4 x SATA Interfaces",
+  "model_number": "PROH610MGD4",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-h610m-g-ddr4-desktop-motherboard-intel-h610-chipset-socket-lga-1700-micro-atx-gigabit-ethernet-hdmi.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-h610m-g-ddr4-desktop-motherboard-intel-h610-chipset-socket-lga-1700-micro-atx-gigabit-ethernet-hdmi.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTMSI610MGR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:eeef51e820db",
+  "category": "motherboard",
+  "name": "Gigabyte MW83-RP0 CEB Server Motherboard Supports Single Intel Xeon W-3400 Processors Socket LGA4677 W790 Chipset8x DDR5 RDIMM Slots PCI Express 5.0 2x 10GbE LAN Ports",
+  "model_number": "MW83-RP0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 839.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-mw83-rp0-ceb-server-motherboard-supports-single-intel-xeon-w-3400-processors-socket-lga4677-w790-chipset.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-mw83-rp0-ceb-server-motherboard-supports-single-intel-xeon-w-3400-processors-socket-lga4677-w790-chipset.html",
+   "price": 839.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTGIGMW830R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1f7a55911ab5",
+  "category": "motherboard",
+  "name": "Gigabyte Z890M AORUS ELITE WIFI7 ICE Ultra Core Series 2) LGA 1851 Intel Z890 DDR5 3x M.2 PCIe 5.0 USB Type-C ATX Motherboard",
+  "model_number": "Z890M AORUS ELITE WF7 ICE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 229.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-z890m-aorus-elite-wifi7-ice-ultra-core-series-2-lga-1851-intel-z890-ddr5-3x-m-2-pcie-5-0-usb-type-c-atx-motherboard.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-z890m-aorus-elite-wifi7-ice-ultra-core-series-2-lga-1851-intel-z890-ddr5-3x-m-2-pcie-5-0-usb-type-c-atx-motherboard.html",
+   "price": 229.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTGIGZ89MER",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e0aa3242b70b",
+  "category": "motherboard",
+  "name": "ASUS PRIME H810M-E-CSM Desktop Motherboard Intel H810 Chipset Socket LGA-1851 mATX Core Ultra Processor Supported 128 GB DDR5 SDRAM Maximum RAM DIMM UDIMM 2x Memory Slots Gigabit Ethernet",
+  "model_number": "PRIME H810M-E-CSM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-prime-h810m-e-csm-desktop-motherboard-intel-h810-chipset-socket-lga-1851-matx-core-ultra-processor-supported.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-prime-h810m-e-csm-desktop-motherboard-intel-h810-chipset-socket-lga-1851-matx-core-ultra-processor-supported.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUB81ECR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6be5aac9a682",
+  "category": "motherboard",
+  "name": "MSI Pro B850M-A WIFI Gaming Desktop Motherboard AMD B850 Chipset Socket AM5 Micro ATX 256 GB DDR5 SDRAM Maximum RAM DIMM UDIMM 4x Memory Slots Gigabit Ethernet 802.11be WLAN HDMI DisplayPort 4x SATA",
+  "model_number": "PROB850MAWIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-pro-b850m-a-wifi-gaming-desktop-motherboard-amd-b850-chipset-socket-am5-micro-atx-256-gb-ddr5-sdram-maximum-ram-dimm-udimm.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-pro-b850m-a-wifi-gaming-desktop-motherboard-amd-b850-chipset-socket-am5-micro-atx-256-gb-ddr5-sdram-maximum-ram-dimm-udimm.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTMSI85MAWR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c4d85c5a18dd",
+  "category": "motherboard",
+  "name": "MSI MPG MPG B860I EDGE TI WIFI Gaming Desktop mITX Motherboard Intel B860 Chipset Socket LGA-1851 128 GB DDR5 SDRAM Maximum RAM DIMM UDIMM 2x Memory Slots WiFi 7 HDMI DisplayPort 2 x SATA Interfaces",
+  "model_number": "B860IEDGETIWIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/msi-mpg-mpg-b860i-edge-ti-wifi-gaming-desktop-mitx-motherboard-intel-b860-chipset-socket-lga-1851-128-gb-ddr5-sdram-maximum-ram.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/msi-mpg-mpg-b860i-edge-ti-wifi-gaming-desktop-mitx-motherboard-intel-b860-chipset-socket-lga-1851-128-gb-ddr5-sdram-maximum-ram.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTMSI86IETR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6e13a7aa71a4",
+  "category": "motherboard",
+  "name": "GIGABYTE B850M Eagle WIFI6E ICE AMD AM5 Motherboard M-ATX DDR5 2X M.2 PCIe 5.0 USB-C USB 3.2 Gen 2 WIFI6E 2.5GbE",
+  "model_number": "B850M EAGLE WIFI6E ICE",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/gigabyte-b850m-eagle-wf6e-ice-matx-motherboard.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/gigabyte-b850m-eagle-wf6e-ice-matx-motherboard.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTGIG85MD2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:298094ccb3da",
+  "category": "motherboard",
+  "name": "ASRock Z890 Steel Legend WiFi ATX Motherboard Intel Z890 Chipset LGA1851  4x DDR5 DIMM Slots Max 128GB PCI Express 5.0 2.5Gbps LAN Intel WiFi7 5.1 Realtek Audio Supports Windows 11",
+  "model_number": "Z890 Steel Legend WiFi",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asrock-z890-steel-legend-wifi-atx-motherboard-intel-z890-chipset-lga1851-4x-ddr5-dimm-slots-max-128gb-pci-express-5-0-2-5gbps-lan.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asrock-z890-steel-legend-wifi-atx-motherboard-intel-z890-chipset-lga1851-4x-ddr5-dimm-slots-max-128gb-pci-express-5-0-2-5gbps-lan.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MOTASRZ89SLR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:41f76e659208",
+  "category": "motherboard",
+  "name": "ASUS ROG MAXIMUS Z890 HERO Intel Z890 LGA 1851 ATX motherboard Advanced AI PC-ready 22+2+1+2 stages DDR5 WiFi 7 3x PCIe 5.0 M.2 Thunderbolt 4 USB Type-C AI Overclocking/Cooling/Networking",
+  "model_number": "90MB1ID0-M0AAY0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-rog-maximus-z890-hero-intel-z890-lga-1851-atx-motherboard-advanced-ai-pc-ready-22-2-1-2-stages-ddr5-wifi-7-3x-pcie-5-0.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-rog-maximus-z890-hero-intel-z890-lga-1851-atx-motherboard-advanced-ai-pc-ready-22-2-1-2-stages-ddr5-wifi-7-3x-pcie-5-0.html",
+   "price": 449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASUZ89HER",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 6
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:41d29b9b78de",
+  "category": "motherboard",
+  "name": "ASUS TUF GAMING B850M-PLUS WIFI 7 mATX Motherboard AM5 Socket AMD B850 Chipset DDDR5 (Max 128GB) Wi-Fi 7",
+  "model_number": "TUF GAMING B850M-PLUS WIFI 7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/asus-tuf-gaming-b850m-plus-wifi-7-matx-motherboard-am5-socket-amd-b850-chipset-dddr5-max-128gb-wi-fi-7.html",
+  "snapshot_id": "centralcomputers-motherboard-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:35+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/asus-tuf-gaming-b850m-plus-wifi-7-matx-motherboard-am5-socket-amd-b850-chipset-dddr5-max-128gb-wi-fi-7.html",
+   "price": 259.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MOTASU85MP7R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/motherboards.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ }
+]

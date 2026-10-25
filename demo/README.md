@@ -39,6 +39,26 @@ a held-back, vetoed or non-partner champion is never mandated, and a part with n
 live with Bright Data (parallel, bounded; a failed read keeps the dated price and says so). Above the allowance: ONE call ("6 parts from 3 sellers, <total>"), then one mandate,
 approval, payment and receipt per part; inside it: no call (method `allowance`). `demo/out/build-view.json` (the board's BuildView) is rewritten at every step.
 Details and the keys added to the board's shape: `docs/changes/1705-D-build-in-the-market.md`.
+The local agent feed serves that file to the `/buyer` build panel as `GET /v1/build` (scripts/agent_feed.py; private fields stripped). Step-by-step local rehearsal with a real call: `demo/REHEARSAL.md`.
+
+**Whose build.** With no flag the run builds the demo plan under `goal-build-1` for `vidyut` (unchanged). `--buyer-id X` with no `--goal-id` and no `--plan` builds from X's own
+latest ACTIVE `build_by_date` goal: the cap, deadline, owned items and the items to buy come from the goal row, and the run REUSES that goal (it posts no second one). The goal row
+holds no per-part budget, so the budgets are the demo plan's split, scaled down to fit the cap, and the plan line says so (SIM). `--plan FILE` takes a `planner.plan()` JSON
+(`cap_cents`, `owned`, `parts`) through `plan_from_planner` and posts it as a new goal. An unreadable or missing goal is one `error:` line and exit 1. `--dry-run` runs on an in-memory market,
+so it cannot read a goal: use `--plan FILE` to dry-run a plan. Goals are private to the buyer (the `my_goals` view answers the caller's own buyer role; the referee reads none), so
+reading X's goal needs X's identity token: `buyer-vidyut.json` for Vidyut, or `--buyer-token FILE` for another buyer (a self-serve buyer's token lives in their browser). For another
+buyer the run leaves their allowance alone unless `--per-buy` or `--period-limit` is given.
+
+**Whose phone.** Above the allowance the call rings the buyer's own approval phone (`pay.voice_cartesia.approval_phone`). Today only Vidyut has one (`APPROVAL_CALL_TO`); any other buyer
+has none until the market's `buyer_profile` phone lands (#374), and a build or bridge run for them above the allowance is DENIED (`no_phone`): no call, no mandate, no payment, and no
+scripted fallback.
+
+**Which Shield.** Every runner prints one `Shield:` line at the start. The default is the deterministic rule screen only. The Claude classifier (`claude-haiku-5-5`, `SHIELD_MODEL` to
+change) adds a quarantine on text the rules allowed, and is on only when `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` are both exported in the shell that runs the command; the runner's
+env file is not read for them. Example: `SHIELD_CLASSIFIER=1 python3 demo/build.py --live-call` with the key already in the shell. Its timeouts are Shield's own and are not changed here.
+
+**LIVE proof lines.** The Fetch tile gets a `LIVE` line (referee `record_agent_event`) only for a value the run actually fetched: a Bright Data price read (`ok`, origin LIVE), a Tiger Data
+write that stored rows, a CRS band from a sandbox request made in this run (never a cached or SIM seller's). Anything else posts no proof line, and the agents' own lines stay `SIM`.
 
 ## Screen bridge (`demo/bridge.py`): watch the run on /buyer and /market
 ```
@@ -134,6 +154,11 @@ listings in the snapshots run $1,239.99 to $1,489.00. One or two bids are real, 
 - **Best Buy (MIRROR) wins at $1,249.99**, its real new listing. The advocate marks it CAUTION: the snapshot has no card length, so fit is "not confirmed", said and not guessed.
 - One more real bid is inside the cap (an eBay seller, open-box $1,239.99, ranked last). The other real listings are over the cap or state no condition (Micro Center, Amazon), and are out.
 - **Shady Sam (SIM) bids $757.44**, far under the market, and is vetoed by Lane A's real advocate: his page shows open-box while he claims new, and his "was $1,099" does not match the price history (highest recorded $829.00). Both cite his page.
+  With `SHIELD_CLASSIFIER=1` and a key, the classifier quarantines his page first (`shield.classifier.suspicious`). Option C (locked Oct 24): Shield screens every round and
+  records the catch, a caught bid is never ranked, never the winner and never payable, but the advocate still judges it, so beat 2 prints
+  "Caught by Shield in round N" with the same veto card and cited sources (`caught: {by, rule, round}` on the card; `beats.2.caught` and `artifacts.verdicts.caught` in the JSON).
+  The beat 2 check passes when the cheapest bid is vetoed, ranked (keyless) or caught-and-vetoed (keyed); `beat2_caught_listing_never_ranked_or_payable` appears only when something was caught.
+  A classifier that could not answer holds a bid closed and is labelled "Held by Shield (classifier unavailable)", never "Caught". The market bridge reads the same Shield verdicts, so it quarantines the caught bid and needs no change.
 - **Bargain Bin (SIM)** is vetoed by the real fit checker (336 mm card, 305 mm case). **Lowball (SIM)** bids under its floor and the referee rejects it before anyone sees it.
 - **Gadget Grove (Vedant)** (a SIM seller, Vedant is the learner seller) is one seller with two condition lines, new and open-box. **Fair Price PC (SIM)** is the static control.
 - Honest Hal's page is used by beat 3 only (the clean control). At $789 his honest listing would undercut every real seller, so he does not bid in the market round.

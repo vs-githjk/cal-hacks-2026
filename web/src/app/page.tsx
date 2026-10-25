@@ -5,7 +5,8 @@ import { useMemo } from "react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
-import { OriginChip, clock } from "@/components/ui";
+import { OriginChip, Label, clock } from "@/components/ui";
+import { Question } from "@/components/arena";
 import { asOrigin, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
@@ -15,6 +16,8 @@ const ROUTES: { href: string; path: string; title: string; text: string; chips: 
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
 ];
+
+const PARTS = ["GPU", "CPU", "Motherboard", "RAM", "SSD", "Cooler"];
 
 /** Home: the first screen judges see. Every number on it is counted from live market rows. */
 export default function Home() {
@@ -45,9 +48,8 @@ export default function Home() {
             <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
             {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
           </p>
-          <h1 className="max-w-[16ch] text-[clamp(34px,5.5vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance">
-            The refereed arena for{" "}
-            <span className="text-ink">agent commerce.</span>
+          <h1 className="max-w-[18ch] font-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.08] tracking-[0.01em] text-balance">
+            The arena answers one question at a time.
           </h1>
           <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
             Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
@@ -55,6 +57,9 @@ export default function Home() {
           <div className="mt-7 flex flex-wrap gap-2.5">
             <Link href="/market" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
               Watch the round <span aria-hidden>→</span>
+            </Link>
+            <Link href="/start" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
+              Start as a buyer
             </Link>
             <Link href="/buyer" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
               Open the buyer screen
@@ -67,10 +72,27 @@ export default function Home() {
         </div>
       </section>
 
+      <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
+
+      <section aria-label="One round per part" className="grid gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <Label>One sealed round per part</Label>
+          <OriginChip origin="SIM" />
+        </div>
+        <ol className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-6">
+          {PARTS.map((p, i) => (
+            <li key={p} className="border-t-2 border-line-2 pt-2.5">
+              <span className="text-[12px] tabular-nums text-muted">{i + 1}</span>
+              <span className="block text-[14px] text-ink">{p}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
         {stats.map((s) => (
           <div key={s.label} className="bg-panel px-4 py-4">
-            <div className="font-mono text-[clamp(26px,3vw,36px)] font-medium leading-none tracking-[-0.04em] tabular-nums">{s.value}</div>
+            <div className="text-[clamp(26px,3vw,36px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
             <div className="mt-2 flex items-center gap-1.5 text-[12px] text-muted">
               {s.label} <OriginChip origin={s.origin} />
             </div>

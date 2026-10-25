@@ -1,0 +1,102 @@
+[
+ {
+  "id": "bh:c5b9ff6bf882",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 3.8 GHz 8-Core AM5 Processor",
+  "model_number": "100-100001404WOF",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 309.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1834128-REG/amd_100_100001404wof_ryzen_7_9700x.html",
+  "snapshot_id": "bh-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:31+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1834128-REG/amd_100_100001404wof_ryzen_7_9700x.html",
+   "price": 309.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "bh:367046a576dd",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 8-Core AM5 Processor & MAG X870 TOMAHAWK WIFI Motherboard Kit",
+  "model_number": "1996519",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 563.48,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1996519-REG/amd_ryzen_7_9700x_8_core.html",
+  "snapshot_id": "bh-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:31+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1996519-REG/amd_ryzen_7_9700x_8_core.html",
+   "price": 563.48,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:022a7e2b12ab",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 3.8 GHz 8-Core AM5 Processor Kit with MSI PRO B850-S WIFI6E AM5 ATX Motherboard",
+  "model_number": "1988041",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.98,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1988041-REG/amd_ryzen_7_9700x_3_8.html",
+  "snapshot_id": "bh-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:31+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1988041-REG/amd_ryzen_7_9700x_3_8.html",
+   "price": 449.98,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:5b4373427a30",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 3.8 GHz 8-Core AM5 Processor Kit with MSI MAG B850 TOMAHAWK MAX WIFI AM5 ATX Motherboard",
+  "model_number": "1988040",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 519.98,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1988040-REG/amd_ryzen_7_9700x_3_8.html",
+  "snapshot_id": "bh-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:31+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1988040-REG/amd_ryzen_7_9700x_3_8.html",
+   "price": 519.98,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

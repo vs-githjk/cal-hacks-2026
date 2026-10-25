@@ -163,6 +163,11 @@ import { safeUrl } from "./url.ts";
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
 export const asOrigin = (o: string): Origin => (o === "LIVE" || o === "MIRROR" ? o : "SIM");
 
+/** The round's winning bid, whatever its origin (the market and the producer enforce eligibility). */
+export function winningBid<T extends { won?: boolean }>(bids: readonly T[]): T | undefined {
+  return bids.find((b) => b.won);
+}
+
 /** A sample view shown in place of an empty table: every origin becomes SIM, so no sample number reads as LIVE or MIRROR. */
 export function asSim<T>(v: T): T {
   if (Array.isArray(v)) return v.map(asSim) as T;
@@ -266,6 +271,14 @@ function advocateByBid(events: readonly EventRow[]): Map<string, { rec: "veto" |
 
 export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undefined {
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
+}
+
+const PART_WORD: Record<string, string> = { board: "Motherboard", gpu: "Graphics card", cpu: "Processor", ram: "Memory", ssd: "Storage", cooler: "CPU cooler", psu: "Power supply", case: "Case" };
+
+/** "Motherboard, round 2" for a build round id like round-goal-build-1-board-2; null when the id is not a build round. */
+export function roundTitle(roundId: string): string | null {
+  const m = /-([a-z]+)-([1-9]\d*)$/.exec(roundId);
+  return m && Object.hasOwn(PART_WORD, m[1]!) ? `${PART_WORD[m[1]!]}, round ${m[2]}` : null;
 }
 
 const cond = (c: string) => c || "as asked";

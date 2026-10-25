@@ -247,7 +247,7 @@ def test_beat4_signature_verifies_and_replay_or_edit_fails(run):
     assert v["first"] == {"ok": True, "reason": "ok"}
     assert v["replay"] == {"ok": False, "reason": "replayed_mandate"}
     assert v["altered"] == {"ok": False, "reason": "digest_mismatch"}
-    assert set(b(run, 4)["signature"]["headers"]) == {"Content-Digest", "Mandate-Hash", "Signature-Input", "Signature"}
+    assert set(b(run, 4)["signature"]["headers"]) == {"Content-Digest", "Mandate-Hash", "Signature-Agent", "Signature-Input", "Signature"}
 
 
 def _mandate():

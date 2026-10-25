@@ -1,0 +1,3381 @@
+[
+ {
+  "id": "centralcomputers:bc88db91be28",
+  "category": "cpu",
+  "name": "AMD EPYC 9475F Processor 48 Cores 96 Threads3.65GHz Base Clock 4.8GHz Max Boost Tray 100-000001143",
+  "model_number": "100-000001143",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9475f-processor-48-cores-96-threads3-65ghz-base-clock-4-8ghz-max-boost-tray-100-000001143.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9475f-processor-48-cores-96-threads3-65ghz-base-clock-4-8ghz-max-boost-tray-100-000001143.html",
+   "price": 4599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD9475FS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a0f83b845527",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X Desktop Processor without Cooler 8 Cores 16 Threads 3.8GHz Base Clock 5.5GHz Max Turbo 65W TDP AMD RadeonGraphics Retail OEM Tray 100-000001404",
+  "model_number": "100-000001404",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 439.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9700x-desktop-processor-without-cooler-8-cores-16-threads-3-8ghz-base-clock-5-5ghz-max-turbo-65w-tdp-amd-radeongraphics-retail-oem-tray-100-000001404.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9700x-desktop-processor-without-cooler-8-cores-16-threads-3-8ghz-base-clock-5-5ghz-max-turbo-65w-tdp-amd-radeongraphics-retail-oem-tray-100-000001404.html",
+   "price": 439.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9700XS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "centralcomputers:9da0592dc1fe",
+  "category": "cpu",
+  "name": "AMD EPYC 9734 Processor 112 Cores 224 Threads 2.20GHz Base Clock 3GHz Max Turbo 340W TDP Socket SP5 OEM Tray 100-000001235",
+  "model_number": "100-000001235",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9734-processor-112-cores-224-threads-2-20ghz-base-clock-3ghz-max-turbo-340w-tdp-socket-sp5-oem-tray-100-000001235.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9734-processor-112-cores-224-threads-2-20ghz-base-clock-3ghz-max-turbo-340w-tdp-socket-sp5-oem-tray-100-000001235.html",
+   "price": 3999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9734S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ded49e34afc8",
+  "category": "cpu",
+  "name": "AMD EPYC 4465P 12 Core 24 Thread Processor 64MB L3 Cache 65W 100-100001558WOF",
+  "model_number": "100-100001558WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 429.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-4465p-12-core-24-thread-processor-64mb-l3-cache-65w-100-100001558wof.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-4465p-12-core-24-thread-processor-64mb-l3-cache-65w-100-100001558wof.html",
+   "price": 429.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD4465PR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:df355e5bfb34",
+  "category": "cpu",
+  "name": "Intel Core i3-14100 14th Gen Processor 4 Cores 8 Threads (4 + 0) 3.5GHz Base Clock 4.7GHz Turbo 60W TDPRetail Box BX8071514100",
+  "model_number": "BX8071514100",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 139.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-i3-14100-14th-gen-processor-4-cores-8-threads-4-0-3-5ghz-base-clock-4-7ghz-turbo-60w-tdpretail-box-bx8071514100.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-i3-14100-14th-gen-processor-4-cores-8-threads-4-0-3-5ghz-base-clock-4-7ghz-turbo-60w-tdpretail-box-bx8071514100.html",
+   "price": 139.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT14100R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 7
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:55d366d9f9e6",
+  "category": "cpu",
+  "name": "AMD EPYC 9575F Processor 64 Cores 128 Threads3.3GHz Base Clock 5.0GHz Max Turbo OEM Tray 100-000001554",
+  "model_number": "100-000001554",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 6399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9575f-processor-64-cores-128-threads-3-3ghz-base-clock-5-0ghz-max-turbo-oem-tray-100-000001554.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9575f-processor-64-cores-128-threads-3-3ghz-base-clock-5-0ghz-max-turbo-oem-tray-100-000001554.html",
+   "price": 6399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD9575FS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cdd5bf2557fa",
+  "category": "cpu",
+  "name": "Intel Core i7-13700K 13th Gen Processor 8P Cores 8E Cores 24 Threads 5.4GHz P-Core Boost 4.3GHz E-Core Boost Box BX8071513700K",
+  "model_number": "BX8071513700K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 414.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-i7-13700k-13th-gen-processor-8p-cores-8e-cores-24-threads-5-4ghz-p-core-boost-4-3ghz-e-core-boost-box-bx8071513700k.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-i7-13700k-13th-gen-processor-8p-cores-8e-cores-24-threads-5-4ghz-p-core-boost-4-3ghz-e-core-boost-box-bx8071513700k.html",
+   "price": 414.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINT1370KR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b065c5bc3e55",
+  "category": "cpu",
+  "name": "Intel Xeon Silver 4210R 10C/20T 2.4GHz Processor3.2GHz Max Turbo 13.75MB Cache 100W TDP OEM Tray CD8069504344500",
+  "model_number": "CD8069504344500",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 569.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-xeon-silver-4210r-10c-20t-2-4ghz-processor3-2ghz-max-turbo-13-75mb-cache-100w-tdp-oem-tray-cd8069504344500.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-xeon-silver-4210r-10c-20t-2-4ghz-processor3-2ghz-max-turbo-13-75mb-cache-100w-tdp-oem-tray-cd8069504344500.html",
+   "price": 569.95,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINT4210RS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8af7b9372943",
+  "category": "cpu",
+  "name": "AMD Ryzen 5 9600X 6-Core 12-Thread 5.4GHz Boost AM5 65W 38 MB cache Desktop Processor Tray 100-000001405",
+  "model_number": "100-000001405",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-5-9600x-6-core-12-thread-5-4ghz-boost-am5-65w-38-mb-cache-desktop-processor-tray-100-000001405.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-5-9600x-6-core-12-thread-5-4ghz-boost-am5-65w-38-mb-cache-desktop-processor-tray-100-000001405.html",
+   "price": 259.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDR596XS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": "100-100001405WOF"
+ },
+ {
+  "id": "centralcomputers:c812a30f8a40",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 5800X3D 10th Anniversary Edition 8 Cores 16 Threads 3.4GHz Clock 4.5GHz Max Boost Socket AM4 Zen 3 Boxed100-100000651POF",
+  "model_number": "100-100000651POF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 334.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-5800x3d-10th-anniversary-edition-8-cores-16-threads-3-4ghz-clock-4-5ghz-max-boost-socket-am4-zen-3-boxed.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-5800x3d-10th-anniversary-edition-8-cores-16-threads-3-4ghz-clock-4-5ghz-max-boost-socket-am4-zen-3-boxed.html",
+   "price": 334.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD58X31R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 17
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4f637d5a8704",
+  "category": "cpu",
+  "name": "AMD EPYC 9455P 48C/96T 3.15GHz Processor OEM/Tray 256MB L3 Cache 4.4GHz Overclocking Speed Socket SP5 300W - 100-000001563EPYC 9005 Series",
+  "model_number": "100-000001563",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9455p-48c-96t-3-15ghz-processor-oem-tray-256mb-l3-cache-4-4ghz-overclocking-speed-socket-sp5-300w-100-000001563.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9455p-48c-96t-3-15ghz-processor-oem-tray-256mb-l3-cache-4-4ghz-overclocking-speed-socket-sp5-300w-100-000001563.html",
+   "price": 3599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE945PS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1893ba052318",
+  "category": "cpu",
+  "name": "Intel Xeon 654 processor 18C-36T Retail (72M Cache 3.10 GHz) FC-LGA18N - BX80720654",
+  "model_number": "BX80720654",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1349.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-xeon-654-processor-18c-36t-retail-72m-cache-3-10-ghz-fc-lga18n-bx80720654.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-xeon-654-processor-18c-36t-retail-72m-cache-3-10-ghz-fc-lga18n-bx80720654.html",
+   "price": 1349.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINTXE654R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cc16627482e5",
+  "category": "cpu",
+  "name": "Intel Xeon 676X processor 32C-64T Retail (144M Cache 2.80 GHz) FC-LGA18N - BX80720676X",
+  "model_number": "BX80720676X",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-xeon-676x-processor-32c-64t-retail-144m-cache-2-80-ghz-fc-lga18n-bx80720676x.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-xeon-676x-processor-32c-64t-retail-144m-cache-2-80-ghz-fc-lga18n-bx80720676x.html",
+   "price": 2999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINTX676XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e7fc36dfdc61",
+  "category": "cpu",
+  "name": "Intel Xeon 678X processor 48C-96T Retail (192M Cache 2.40 GHz) FC-LGA18N - BX80720678X",
+  "model_number": "BX80720678X",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4589.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-xeon-678x-processor-48c-96t-retail-192m-cache-2-40-ghz-fc-lga18n-bx80720678x.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-xeon-678x-processor-48c-96t-retail-192m-cache-2-40-ghz-fc-lga18n-bx80720678x.html",
+   "price": 4589.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINTX678XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d06b40b1eafe",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 250KF Plus Processor 18 Cores 5.3GHz Turbo Retail Box BX80768250KF",
+  "model_number": "BX80768250KF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-250kf-plus-processor-18-cores-5-3ghz-turbo-retail-box-bx80768250kf.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-250kf-plus-processor-18-cores-5-3ghz-turbo-retail-box-bx80768250kf.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT525KFR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d843dc2d15b0",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9950X3D2 Dual Edition Desktop Processor 16 Cores 32 Threads 4.3GHz Base Clock 5.6GHz Max 16MB L2 & 192MB L3 AMD RadeonGraphics Retail Boxed 100-100001978WOF",
+  "model_number": "100-100001978WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 889.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9950x3d2-dual-edition-desktop-processor-16-cores-32-threads-4-3ghz-base-clock-5-6ghz-max-16mb-l2-192mb-l3-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9950x3d2-dual-edition-desktop-processor-16-cores-32-threads-4-3ghz-base-clock-5-6ghz-max-16mb-l2-192mb-l3-amd-radeon.html",
+   "price": 889.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD995X2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ee6c557e9266",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 250K Plus Processor 18 Cores 5.3GHz Turbo OEM Tray AT807683B9B4886",
+  "model_number": "AT807683B9B4886",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 209.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-250k-plus-processor-24-cores-5-3ghz-turbo-oem-tray-at807683b9b4886.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-250k-plus-processor-24-cores-5-3ghz-turbo-oem-tray-at807683b9b4886.html",
+   "price": 209.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINT5250KS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4a56858b203e",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 250K Plus Processor 18 Cores 5.3GHz Turbo Retail Box BX80768250K",
+  "model_number": "BX80768250K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-250k-plus-processor-18-cores-5-3ghz-turbo-retail-box-bx80768250k.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-250k-plus-processor-18-cores-5-3ghz-turbo-retail-box-bx80768250k.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT5250KR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 11,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 11
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 15
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 36
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 16
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 10
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "11 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d65557bfe373",
+  "category": "cpu",
+  "name": "Intel Core Ultra 7 270K Plus Processor 24 Cores 5.5GHz Turbo Retail Box BX80768270K",
+  "model_number": "BX80768270K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 339.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-7-270k-plus-processor-24-cores-5-5ghz-turbo-retail-box-bx80768270k.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-7-270k-plus-processor-24-cores-5-5ghz-turbo-retail-box-bx80768270k.html",
+   "price": 339.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINT7270KR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:06a074b83558",
+  "category": "cpu",
+  "name": "Intel Core i5-12600KF 12th Gen CPU 3.7 GHz LGA1700 125W 10-Core (6P+4E) 16-Thread Socket BX8071512600KF Retail Desktop Processor",
+  "model_number": "BX8071512600KF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-i5-12600kf-12th-gen-cpu-3-7-ghz-lga1700-125w-10-core-6p-4e-16-thread-socket-bx8071512600kf-retail-desktop-processor.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-i5-12600kf-12th-gen-cpu-3-7-ghz-lga1700-125w-10-core-6p-4e-16-thread-socket-bx8071512600kf-retail-desktop-processor.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUINT1260FR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:765edbf87431",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700F Desktop Processor OEM without Cooler 8 Cores 16 Threads 3.8GHz Base Clock 5.5GHz Max Turbo 65W TDP AMD RadeonGraphics Retail Tray 100-000001902",
+  "model_number": "100-000001902",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9700f-desktop-processor-oem-without-cooler-8-cores-16-threads-3-8ghz-base-clock-5-5ghz-max-turbo-65w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9700f-desktop-processor-oem-without-cooler-8-cores-16-threads-3-8ghz-base-clock-5-5ghz-max-turbo-65w-tdp-amd-radeon.html",
+   "price": 239.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9700FS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:fd5b4b4b3586",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9850X3D OEM Tray without Cooler 8 Cores 16 Threads 4.7GHz Base Clock 5.6GHz Max Turbo 120W TDP AMD RadeonGraphics  100-000001973",
+  "model_number": "100-000001973",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9850x3d-oem-tray-without-cooler-8-cores-16-threads-4-7ghz-base-clock-5-6ghz-max-turbo-120w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9850x3d-oem-tray-without-cooler-8-cores-16-threads-4-7ghz-base-clock-5-6ghz-max-turbo-120w-tdp-amd-radeon.html",
+   "price": 449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD985X3S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 20
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 6
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d520a15af200",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9850X3D Retail Boxed without Cooler 8 Cores 16 Threads 4.7GHz Base Clock 5.6GHz Max Turbo 120W TDP AMD RadeonGraphics  100-100001973WOF",
+  "model_number": "100-100001973WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 469.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9850x3d-retail-boxed-without-cooler-8-cores-16-threads-4-7ghz-base-clock-5-6ghz-max-turbo-120w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9850x3d-retail-boxed-without-cooler-8-cores-16-threads-4-7ghz-base-clock-5-6ghz-max-turbo-120w-tdp-amd-radeon.html",
+   "price": 469.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD985X3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 10,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 10
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 10
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 18
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 15
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "10 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:893ab2f036ca",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 8700G Desktop Processor 8 Cores 16 Threads 4.2GHz Base 5.1GHz Turbo Socket AM5 65W TDP 100-100001236SBX WRAITH SPIRE RADEON GRAPHICS",
+  "model_number": "100-100001236SBX",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 279.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-8700g-desktop-processor-8-cores-16-threads-4-2ghz-base-5-1ghz-turbo-socket-am5-65w-tdp-100-100001236sbx.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-8700g-desktop-processor-8-cores-16-threads-4-2ghz-base-5-1ghz-turbo-socket-am5-65w-tdp-100-100001236sbx.html",
+   "price": 279.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD870G1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:2fc03371fcb0",
+  "category": "cpu",
+  "name": "AMD EPYC 4005 4585PX Hexadeca-core (16 Core) 4.3GHz Processor 128MB L3 Cache 64-bit Processing 5.7GHz Overclocking Speed Socket AM5 - 170 W - 32 Threads - 100-100001561WOF",
+  "model_number": "100-100001561WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-4005-4585px-hexadeca-core-16-core-4-3ghz-processor-128mb-l3-cache-64-bit-processing-5-7ghz-overclocking-speed.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-4005-4585px-hexadeca-core-16-core-4-3ghz-processor-128mb-l3-cache-64-bit-processing-5-7ghz-overclocking-speed.html",
+   "price": 699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD4585PR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:14dc00a84324",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 225F Processor 10 Cores (6P+4E)  LGA 1851 65W TDP 4.9GHz Turbo Retail Box No Graphics BX80768225F",
+  "model_number": "BX80768225F",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-225f-processor-10-cores-6p-4e-lga-1851-65w-tdp-4-9ghz-turbo-retail-box-no-graphics-bx80768225f.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-225f-processor-10-cores-6p-4e-lga-1851-65w-tdp-4-9ghz-turbo-retail-box-no-graphics-bx80768225f.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINTU5226R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b0dcc05dcef4",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper 9960X Processor 24 Cores 48 Threads 4.2GHz Base 5.4GHz Max Boost sTR5 Socket 152MB Cache 350W100-100001595WOF",
+  "model_number": "100-100001595WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-9960x-processor-24-cores-48-threads-4-2ghz-base-5-4ghz-max-boost-str5-socket-152mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-9960x-processor-24-cores-48-threads-4-2ghz-base-5-4ghz-max-boost-str5-socket-152mb-cache-350w.html",
+   "price": 1449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD9960XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3df30e06614a",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper 9970X Processor 32 Cores 64 Threads 4GHz Base 5.4GHz Max Boost sTR5 Socket 160MB Cache 350W100-100001594WOF",
+  "model_number": "100-100001594WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-9970x-processor-32-cores-64-threads-4ghz-base-5-4ghz-max-boost-str5-socket-160mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-9970x-processor-32-cores-64-threads-4ghz-base-5-4ghz-max-boost-str5-socket-160mb-cache-350w.html",
+   "price": 2399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9970XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:472564e28c63",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper 9980X Processor 64 Cores 128 Threads 3.2GHz Base 5.4GHz Max Boost sTR5 Socket 320MB Cache 350W100-100001593WOF",
+  "model_number": "100-100001593WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-9980x-processor-64-cores-128-threads-3-2ghz-base-5-4ghz-max-boost-str5-socket-320mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-9980x-processor-64-cores-128-threads-3-2ghz-base-5-4ghz-max-boost-str5-socket-320mb-cache-350w.html",
+   "price": 4899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD9980XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3c5999593174",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper PRO 9955WX Processor 16 Cores 32 Threads 4.5GHz Base 5.4GHz Max Boost sTR5 Socket 80MB Cache 350W100-000000725WOF",
+  "model_number": "100-100000725WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1549.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9955wx-processor-16-cores-32-threads-4-5ghz-base-5-4ghz-max-boost-str5-socket-80mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9955wx-processor-16-cores-32-threads-4-5ghz-base-5-4ghz-max-boost-str5-socket-80mb-cache-350w.html",
+   "price": 1549.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9955WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 11,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 11
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 12
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 14
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 12
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "11 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f94a01bdc247",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper PRO 9965WX Processor 24 Cores 48 Threads 4.2GHz Base 5.4GHz Max Boost sTR5 Socket 152MB Cache 350W100-100000724WOF",
+  "model_number": "100-100000724WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9965wx-processor-24-cores-48-threads-4-2ghz-base-5-4ghz-max-boost-str5-socket-152mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9965wx-processor-24-cores-48-threads-4-2ghz-base-5-4ghz-max-boost-str5-socket-152mb-cache-350w.html",
+   "price": 2899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9965WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cdcaa266d0c4",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper PRO 9975WX Processor 32 Cores 64 Threads 4.0GHz Base 5.4GHz Max Boost sTR5 Socket 128MB Cache 350W100-100000723WOF",
+  "model_number": "100-100000723WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9975wx-processor-32-cores-64-threads-4-0ghz-base-5-4ghz-max-boost-str5-socket-128mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9975wx-processor-32-cores-64-threads-4-0ghz-base-5-4ghz-max-boost-str5-socket-128mb-cache-350w.html",
+   "price": 3899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9975WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 19
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:632dda3cbe04",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper PRO 9985WX Processor 64 Cores 128 Threads 3.2GHz Base 5.4GHz Max Boost sTR5 Socket 320MB Cache 350W 100-100000722WOF",
+  "model_number": "100-100000722WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 7899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9985wx-processor-64-cores-128-threads-3-2ghz-base-5-4ghz-max-boost-str5-socket-320mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9985wx-processor-64-cores-128-threads-3-2ghz-base-5-4ghz-max-boost-str5-socket-320mb-cache-350w.html",
+   "price": 7899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9985WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 7
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:19f1387faf52",
+  "category": "cpu",
+  "name": "AMD Ryzen Threadripper PRO 9995WX Processor 96 Cores 192 Threads 2.5GHz Base 5.4GHz Max Boost sTR5 Socket 480MB Cache 350W 100-100001361WOF",
+  "model_number": "100-100001361WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 11449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9995wx-processor-96-cores-192-threads-2-5ghz-base-5-4ghz-max-boost-str5-socket-480mb-cache-350w.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-threadripper-pro-9995wx-processor-96-cores-192-threads-2-5ghz-base-5-4ghz-max-boost-str5-socket-480mb-cache-350w.html",
+   "price": 11449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD9995WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4a952d6e0cb1",
+  "category": "cpu",
+  "name": "AMD EPYC 9355 32C/64T 3.55GHz Processor 4.4GHz Boost Tray 256 MB L3 Cache 280W TDP 100-000001148EPYC 9005 Series",
+  "model_number": "100-000001148",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9355-32c-64t-3-55ghz-processor-4-4ghz-boost-tray-256-mb-l3-cache-280w-tdp-100-000001148.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9355-32c-64t-3-55ghz-processor-4-4ghz-boost-tray-256-mb-l3-cache-280w-tdp-100-000001148.html",
+   "price": 2999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9355S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:0e8a3f31740b",
+  "category": "cpu",
+  "name": "AMD EPYC 9335 32C/64T 3.0GHz Processor 4.4GHz Boost Tray 128 MB L3 Cache 210W TDP 100-000001149EPYC 9005 Series",
+  "model_number": "100-000001149",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9335-32c-64t-3-0ghz-processor-4-4ghz-boost-tray-128-mb-l3-cache-210w-tdp-100-000001149.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9335-32c-64t-3-0ghz-processor-4-4ghz-boost-tray-128-mb-l3-cache-210w-tdp-100-000001149.html",
+   "price": 2899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9335S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c48b573202a8",
+  "category": "cpu",
+  "name": "AMD EPYC 9825 144C/288T 2.2GHz Processor 3.7GHz Boost Tray 384 MB L3 Cache 390W TDP 100-000000837EPYC 9005 Series",
+  "model_number": "100-000000837",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 7499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9825-144c-288t-2-2ghz-processor-3-7ghz-boost-tray-384-mb-l3-cache-390w-tdp-100-000000837.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9825-144c-288t-2-2ghz-processor-3-7ghz-boost-tray-384-mb-l3-cache-390w-tdp-100-000000837.html",
+   "price": 7499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9825S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5cce2b3b3cd0",
+  "category": "cpu",
+  "name": "AMD EPYC 9755 128C/256T 2.7GHz Processor 4.1GHz Boost Tray 512 MB L3 Cache 500W TDP 100-000001443EPYC 9005 Series",
+  "model_number": "100-000001443",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 6999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9755-128c-256t-2-7ghz-processor-4-1ghz-boost-tray-512-mb-l3-cache-500w-tdp-100-000001443.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9755-128c-256t-2-7ghz-processor-4-1ghz-boost-tray-512-mb-l3-cache-500w-tdp-100-000001443.html",
+   "price": 6999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9755S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5baf8fd84a2f",
+  "category": "cpu",
+  "name": "AMD EPYC 9745 128C/256T 2.4GHz Processor 3.7GHz Boost Tray 256 MB L3 Cache 400W TDP 100-000001460EPYC 9005 Series",
+  "model_number": "100-000001460",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 5999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9745-128c-256t-2-4ghz-processor-3-7ghz-boost-tray-256-mb-l3-cache-400w-tdp-100-000001460.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9745-128c-256t-2-4ghz-processor-3-7ghz-boost-tray-256-mb-l3-cache-400w-tdp-100-000001460.html",
+   "price": 5999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9745S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c5658b07c5de",
+  "category": "cpu",
+  "name": "AMD EPYC 9565 72C/144T 3.15GHz Processor 4.3GHz Boost Tray 384 MB L3 Cache 400W TDP 100-000001447EPYC 9005 Series",
+  "model_number": "100-000001447",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 5499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9565-72c-144t-3-15ghz-processor-4-3ghz-boost-tray-384-mb-l3-cache-400w-tdp-100-000001447.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9565-72c-144t-3-15ghz-processor-4-3ghz-boost-tray-384-mb-l3-cache-400w-tdp-100-000001447.html",
+   "price": 5499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9565S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d05898dc413a",
+  "category": "cpu",
+  "name": "AMD EPYC 9555 64C/128T 3.2GHz Processor 4.4GHz Boost Tray 256 MB L3 Cache 360W TDP 100-000001142EPYC 9005 Series",
+  "model_number": "100-000001142",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 5699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-epyc-9555-64c-128t-3-2ghz-processor-4-4ghz-boost-tray-256-mb-l3-cache-360w-tdp-100-000001142.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-epyc-9555-64c-128t-3-2ghz-processor-4-4ghz-boost-tray-256-mb-l3-cache-360w-tdp-100-000001142.html",
+   "price": 5699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMDE9555S",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 16
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:85fef725f529",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 225 Processor 10 Cores (6P+4E) LGA 1851 65W TDP 4.9GHz Turbo Retail Box BX80768225",
+  "model_number": "BX80768225",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-225-processor-10-cores-6p-4e-lga-1851-65w-tdp-4-9ghz-turbo-retail-box-bx80768225.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-225-processor-10-cores-6p-4e-lga-1851-65w-tdp-4-9ghz-turbo-retail-box-bx80768225.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINTU5225R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 9
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 14
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:df0964a54307",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9950X3D OEM Tray 100-000000719 Without Cooler 16 Cores 32 Threads 4.3GHz Base 5.7GHz Max Turbo 170W TDP 3YR Warranty Radeon Graphics",
+  "model_number": "100-000000719",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 629.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9950x3d-oem-tray-100-000000719-without-cooler-16-cores-32-threads-4-3ghz-base-clock-5-7ghz-max-turbo-170w-tdp-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9950x3d-oem-tray-100-000000719-without-cooler-16-cores-32-threads-4-3ghz-base-clock-5-7ghz-max-turbo-170w-tdp-radeon.html",
+   "price": 629.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9953DS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 32
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:802cab97eaf2",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9950X3D Desktop Processor without Cooler 16 Cores 32 Threads 4.3GHz Base Clock 5.7GHz Max Turbo 170W TDP AMD RadeonGraphics Retail Boxed 100-100000719WOF",
+  "model_number": "100-100000719WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 659.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9950x3d-desktop-processor-without-cooler-16-cores-32-threads-4-3ghz-base-clock-5-7ghz-max-turbo-170w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9950x3d-desktop-processor-without-cooler-16-cores-32-threads-4-3ghz-base-clock-5-7ghz-max-turbo-170w-tdp-amd-radeon.html",
+   "price": 659.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD995X3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 13
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e903d7b6db77",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9900X3D Desktop Processor without Cooler 12 Cores 24 Threads 4.4GHz Base Clock 5.6GHz Max Turbo 120W TDP AMD RadeonGraphics Retail Boxed 100-100001368WOF",
+  "model_number": "100-100001368WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 569.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9900x3d-desktop-processor-without-cooler-12-cores-24-threads-4-4ghz-base-clock-5-6ghz-max-turbo-120w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9900x3d-desktop-processor-without-cooler-12-cores-24-threads-4-4ghz-base-clock-5-6ghz-max-turbo-120w-tdp-amd-radeon.html",
+   "price": 569.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD99X3DR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3d4aeee8343b",
+  "category": "cpu",
+  "name": "AMD Ryzen 5 8400F OEM/Tray AM5 6 Cores 12 Threads 4.2GHz Base Clock 4.7GHz Max Turbo 65W TDP AMD Radeon Graphics Processor 100-000001591 (3 Years Warranty)",
+  "model_number": "100-000001591",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 149.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-5-8400f-oem-tray-processor-6-cores12-threads-4-2ghz-base-clock-4-7ghz-max-turbo-65w-tdp-amd-radeon-graphics.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-5-8400f-oem-tray-processor-6-cores12-threads-4-2ghz-base-clock-4-7ghz-max-turbo-65w-tdp-amd-radeon-graphics.html",
+   "price": 149.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD8400FS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c15107583167",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9800X3D OEM Tray CPU 3-Year Warranty 8 Cores 16 Threads 4.7GHz Base 5.2GHz Turbo 120W TDP 100-000001084 AMD Radeon Graphics",
+  "model_number": "100-000001084",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 429.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9800x3d-desktop-processor-without-cooler-8-cores-16-threads-4-7ghz-base-5-2ghz-turbo-120w-tdp-oem-tray-100-000001084.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9800x3d-desktop-processor-without-cooler-8-cores-16-threads-4-7ghz-base-5-2ghz-turbo-120w-tdp-oem-tray-100-000001084.html",
+   "price": 429.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD98X3DS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 15
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e121bdd534f4",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9800X3D Retail Boxed without Cooler 8 Cores 16 Threads 4.7GHz Base Clock 5.2GHz Max Turbo 120W TDP AMD RadeonGraphics  100-100001084WOF",
+  "model_number": "100-100001084WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9800x3d-desktop-processor-without-cooler-8-cores-16-threads-4-7ghz-base-clock-5-2ghz-max-turbo-120w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9800x3d-desktop-processor-without-cooler-8-cores-16-threads-4-7ghz-base-clock-5-2ghz-max-turbo-120w-tdp-amd-radeon.html",
+   "price": 449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD98X3DR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 9,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 9
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 18
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 10
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "9 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:83cb49370078",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 245KF Processor 14 Cores 5.5GHz Turbo Retail Box BX80768245KF",
+  "model_number": "BX80768245KF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-245kf-processor-14-cores-5-5ghz-turbo-retail-box-bx80768245kf.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-245kf-processor-14-cores-5-5ghz-turbo-retail-box-bx80768245kf.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT5245FR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e342c0e0f24b",
+  "category": "cpu",
+  "name": "Intel Core Ultra 5 245K Processor 14 Cores 5.5GHz Turbo Retail Box BX80768245K",
+  "model_number": "BX80768245K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 209.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-5-245k-processor-14-cores-5-5ghz-turbo-retail-box-bx80768245k.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-5-245k-processor-14-cores-5-5ghz-turbo-retail-box-bx80768245k.html",
+   "price": 209.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT5245KR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ee799ef70d42",
+  "category": "cpu",
+  "name": "Intel Core Ultra 9 285K Processor 24 Cores 24 Threads (8 + 16) 3.2GHz Base Clock 5.7GHz Turbo 125W TDPRetail Box BX80768285K",
+  "model_number": "BX80768285K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 629.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-ultra-9-285k-processor-24-cores-32-threads-8-16-3-2ghz-base-clock-5-7ghz-turbo-125w-tdp.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-ultra-9-285k-processor-24-cores-32-threads-8-16-3-2ghz-base-clock-5-7ghz-turbo-125w-tdp.html",
+   "price": 629.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT9285KR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 6,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 6
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 30
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "6 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:82f0499e49ec",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9950X OEM Tray 100-00001277 Without Cooler 16 Cores 32 Threads 4.3GHz Base Clock 5.7GHz Max Turbo 170W TDP AMD RadeonGraphics",
+  "model_number": "100-000001277",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9950x-desktop-processor-without-cooler-oem-tray-100-000001277.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9950x-desktop-processor-without-cooler-oem-tray-100-000001277.html",
+   "price": 499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9950XS",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 6,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 6
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 18
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 7
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 8
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "6 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4113d51b795f",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 5800XT Desktop Processor With Cooler 8 Cores 16 Threads 3.8GHz Base Clock 4.8GHz Max Turbo 105W TDP AMD RadeonGraphics Retail Boxed 100-100001582BOX",
+  "model_number": "100-100001582BOX",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-5800xt-desktop-processor-with-cooler-8-cores-16-threads-3-8ghz-base-clock-4-8ghz-max-turbo-105w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-5800xt-desktop-processor-with-cooler-8-cores-16-threads-3-8ghz-base-clock-4-8ghz-max-turbo-105w-tdp-amd-radeon.html",
+   "price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD580XTR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5339946e89b9",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 5900XT Desktop Processor without Cooler 16 Cores 32 Threads 3.3GHz Base Clock 4.8GHz Max Turbo 105W TDP AMD RadeonGraphics Retail Boxed 100-100001581WOF",
+  "model_number": "100-100001581WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-5900xt-desktop-processor-without-cooler-16-cores-32-threads-3-3ghz-base-clock-4-8ghz-max-turbo-105w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-5900xt-desktop-processor-without-cooler-16-cores-32-threads-3-3ghz-base-clock-4-8ghz-max-turbo-105w-tdp-amd-radeon.html",
+   "price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD590XTR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b267ea3ba767",
+  "category": "cpu",
+  "name": "AMD Ryzen 5 9600X Desktop Processor without Cooler 6 Cores 12 Threads 3.9GHz Base Clock 5.4GHz Max Turbo 65W TDP AMD RadeonGraphics Retail Boxed 100-100001405WOF",
+  "model_number": "100-100001405WOF",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 214.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-5-9600x-desktop-processor-without-cooler-6-cores-12-threads-3-9ghz-base-clock-5-4ghz-max-turbo-65w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-5-9600x-desktop-processor-without-cooler-6-cores-12-threads-3-9ghz-base-clock-5-4ghz-max-turbo-65w-tdp-amd-radeon.html",
+   "price": 214.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9600XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 6
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 10
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": "100-100001405WOF"
+ },
+ {
+  "id": "centralcomputers:260c3aae7f9a",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X Desktop Processor without Cooler 8 Cores 16 Threads 3.8GHz Base Clock 5.5GHz Max Turbo 65W TDP AMD RadeonGraphics Retail Boxed 100-100001404WOF",
+  "model_number": "100-100001404WOF",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 329.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-7-9700x-desktop-processor-without-cooler-8-cores-16-threads-3-8ghz-base-clock-5-5ghz-max-turbo-65w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-7-9700x-desktop-processor-without-cooler-8-cores-16-threads-3-8ghz-base-clock-5-5ghz-max-turbo-65w-tdp-amd-radeon.html",
+   "price": 329.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "CPUAMD9700XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 7
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "centralcomputers:5170ba0c9e75",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9900X Desktop Processor without Cooler 12 Cores 24 Threads 4.4GHz Base Clock 5.6GHz Max Turbo 120W TDP AMD RadeonGraphics Retail Boxed 100-100000662WOF",
+  "model_number": "100-100000662WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 389.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9900x-desktop-processor-without-cooleramd-ryzen-9-9900x-desktop-processor-without-cooler.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9900x-desktop-processor-without-cooleramd-ryzen-9-9900x-desktop-processor-without-cooler.html",
+   "price": 389.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9900XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6aae18a7b2d2",
+  "category": "cpu",
+  "name": "AMD Ryzen 9 9950X Desktop Processor without Cooler 16 Cores 32 Threads 4.3GHz Base Clock 5.7GHz Max Turbo 170W TDP AMD RadeonGraphics Retail Boxed 100-100001277WOF",
+  "model_number": "100-100001277WOF",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 529.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/amd-ryzen-9-9950x-desktop-processor-without-cooler-16-cores-32-threads-4-3ghz-base-clock-5-7ghz-max-turbo-170w-tdp-amd-radeon.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/amd-ryzen-9-9950x-desktop-processor-without-cooler-16-cores-32-threads-4-3ghz-base-clock-5-7ghz-max-turbo-170w-tdp-amd-radeon.html",
+   "price": 529.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUAMD9950XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 15
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3f2815eee7ad",
+  "category": "cpu",
+  "name": "Intel Core i5-14400F 14th Gen Processor 10 Cores 16 Threads (4 + 6) 2.5GHz Base Clock 4.7GHz Turbo 65W TDPRetail Box BX8071514400F",
+  "model_number": "BX8071514400F",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 174.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/intel-core-i5-14400f-14th-gen-processor-10-cores-16-threads-4-6-2-5ghz-base-clock-4-7ghz-turbo-65w-tdp.html",
+  "snapshot_id": "centralcomputers-cpu-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:22+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/intel-core-i5-14400f-14th-gen-processor-10-cores-16-threads-4-6-2-5ghz-base-clock-4-7ghz-turbo-65w-tdp.html",
+   "price": 174.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "CPUINT1440FR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/cpus.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ }
+]

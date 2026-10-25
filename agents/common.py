@@ -206,6 +206,9 @@ SEEDS = {
 }
 
 
+_CUSTOM_ENVS: dict[str, str] = {}  # env name -> the custom role that owns it
+
+
 def register_custom_seller(role: str) -> None:
     """Give a custom seller (from the Seller Kit) a stable seed so its address survives restarts.
     Set <ROLE>_AGENT_SEED in agents/.env before putting it on Agentverse; the default is public."""
@@ -218,7 +221,10 @@ def register_custom_seller(role: str) -> None:
     if {f"{env}_AGENT_SEED", f"{env}_SEED"} & owned:
         raise ValueError(f"{role!r} is already a Tech Bazaar agent: its seed name {env}_AGENT_SEED belongs to a "
                          "built-in agent, a custom seller must not reuse its key")
-    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED") or os.getenv(f"{env}_SEED", f"tech-bazaar-{role}-dev")
+    if _CUSTOM_ENVS.get(env, role) != role:
+        raise ValueError(f"{role!r} and {_CUSTOM_ENVS[env]!r} map to the same seed name {env}_AGENT_SEED")
+    _CUSTOM_ENVS[env] = role
+    SEEDS[role] = os.getenv(f"{env}_AGENT_SEED", f"tech-bazaar-{role}-dev")
 
 
 def public_seed(role: str) -> bool:
@@ -229,7 +235,7 @@ def public_seed(role: str) -> bool:
 
 def mailbox_on(role: str) -> bool:
     """True when this role should go on Agentverse (AGENTS_MAILBOX, or its own flag; sellers share SELLERS_MAILBOX)."""
-    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield") else "SELLERS_MAILBOX"
+    mailbox_flag = f"{role.upper()}_MAILBOX" if role in ("buyer", "advocate", "shield", "caller") else "SELLERS_MAILBOX"
     return bool(os.getenv("AGENTS_MAILBOX") or os.getenv(mailbox_flag))
 
 
@@ -239,10 +245,24 @@ def mailbox_ready(role: str) -> bool:
     return not (mailbox_on(role) and public_seed(role))
 
 
+AVATARS = Path(__file__).resolve().parent / "avatars"
+AVATAR_BASE = "https://raw.githubusercontent.com/vs-githjk/cal-hacks-2026/main/agents/avatars"
+
+
+def avatar_url(role: str) -> str | None:
+    """Public URL of the role's avatar (agents/avatars/<role>.png, served from the public repo), or None when the
+    role has no avatar file. AGENT_AVATAR_BASE overrides the host, e.g. to serve them from the web app."""
+    if not (AVATARS / f"{role}.png").is_file():
+        return None
+    return f"{os.getenv('AGENT_AVATAR_BASE', AVATAR_BASE).rstrip('/')}/{role}.png"
+
+
 def agent_args(role: str, port: int, **profile) -> dict:
     """Constructor args for an agent. AGENTS_MAILBOX=1 puts it on Agentverse (register once with
     `python connect.py <port>`); otherwise it listens on localhost. `profile`: name, description,
-    readme_path, handle, published to Agentverse on connect."""
+    readme_path, handle, avatar_url (defaults to the role's avatar), published to Agentverse on connect."""
+    if "avatar_url" not in profile and (url := avatar_url(role)):
+        profile["avatar_url"] = url
     args = dict(seed=SEEDS[role], port=port, publish_agent_details=True, **profile)
     if mailbox_on(role):
         if public_seed(role):
