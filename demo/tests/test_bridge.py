@@ -170,7 +170,7 @@ def test_money_steps_use_the_demos_real_mandate(run, steps):
     assert mand["hash"] == m["hash"] and mand["amount"] == 1299.99 and mand["payee"] == m["payee"]
     assert mand["buyer_id"] == "vidyut" and mand["requested_by"] == ""
     appr = next(s for s in steps if s.reducer == "record_approval").args
-    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut", "voice_approval_id": ""}
+    assert appr == {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": "vidyut", "voice_approval_id": "", "code": ""}
     pays = [s.args for s in steps if s.reducer == "record_payment"]
     assert len(pays) == 2 and pays[0] == pays[1] and pays[0]["payment_ref"] == run["beats"]["4"]["charge"]["id"]
 
@@ -461,7 +461,7 @@ def test_not_configured_denies_without_placing_a_call(run):
                                          on_code=lambda c, w: pytest.fail("no code is issued when nothing can be called"))
     log, outcomes = run_with(run, approver, gate)
     assert outcomes == [{"step": "approval_call", "approved": False, "reason": "not_configured: missing CARTESIA_API_KEY", "call_id": None,
-                         "voice_approval_id": None}]
+                         "voice_approval_id": None, "code": ""}]
     kinds = [r for _, r, _ in log]
     assert "create_mandate" in kinds and "record_approval" not in kinds and "record_payment" not in kinds
 
