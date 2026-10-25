@@ -179,7 +179,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                         <Tag>{b.condition}</Tag>
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] tabular-nums text-muted">{l.condition} {money(l.unitPrice)}</span>)}
                       </Td>
-                      <Td right className={struck}>{won ? <b>{money(b.landed)}</b> : money(b.landed)}</Td>
+                      <Td right className={struck}>{won ? <b>{money(b.landed)}</b> : b.landed > 0 ? money(b.landed) : "·"}</Td>
                       <Td><Verdict kind={b.heldBack ? "caution" : REC[b.recommendation].kind}>{b.heldBack ? "Held back" : REC[b.recommendation].text}</Verdict></Td>
                       <Td className="max-w-[26ch] truncate text-[13px] text-muted">{b.why}</Td>
                     </motion.tr>

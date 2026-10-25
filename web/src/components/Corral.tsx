@@ -103,7 +103,7 @@ export function Corral({ bids, goalLine }: { bids: RankedBid[]; goalLine: string
               >
                 <rect x={-78} y="0" width="156" height="56" rx="14" fill="var(--panel)" stroke={won ? "var(--mint)" : "var(--line)"} strokeWidth={won ? 2.5 : 1.5} />
                 <text x="0" y="24" textAnchor="middle" className="fill-ink" fontSize="18" fontWeight="700" style={{ textDecoration: vetoed ? "line-through" : undefined }}>
-                  {money(b.landed)}
+                  {b.landed > 0 ? money(b.landed) : "·"}
                 </text>
                 <text x="0" y="43" textAnchor="middle" fontSize="12" className="fill-muted" fontWeight="600">
                   {vetoed ? "VETOED" : won ? "WINNER" : b.origin}
