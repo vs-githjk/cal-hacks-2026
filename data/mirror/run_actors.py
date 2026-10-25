@@ -48,8 +48,10 @@ def call(method, path, body=None, timeout=330):
         return json.loads(r.read())
 
 
-def run(store, second=False):
-    """Never raises: every outcome, including a paid run that broke later, comes back as a log record."""
+def run(store, second=False, max_items=10, max_usd=None):
+    """Never raises: every outcome, including a paid run that broke later, comes back as a log record.
+    max_items caps the items Apify may return and the items we read; max_usd (if given) is sent as Apify's maxTotalChargeUsd,
+    which binds pay-per-event Actors (others are bounded by max_items and the 420 s abort)."""
     if store not in (SECOND_SOURCE if second else ACTORS):
         return {"store": store, "status": "SKIPPED", "error": f"no {'second-family ' if second else ''}actor for {store}"}
     actor, inp = (SECOND_SOURCE if second else ACTORS)[store]
@@ -57,7 +59,8 @@ def run(store, second=False):
     started = time.time()
     rec = {"store": store, "actor": actor, "input": inp, **({"family": "b"} if second else {})}
     try:
-        r = call("POST", f"/acts/{actor.replace('/', '~')}/runs?waitForFinish=300&maxItems=10", inp)["data"]
+        r = call("POST", f"/acts/{actor.replace('/', '~')}/runs?waitForFinish=300&maxItems={int(max_items)}"
+                 + (f"&maxTotalChargeUsd={max_usd:.2f}" if max_usd else ""), inp)["data"]
         rec.update(run_id=r["id"], status=r["status"], cost_usd=r.get("usageTotalUsd"))
         while r["status"] in ("READY", "RUNNING") and time.time() - started < 420:
             time.sleep(10)
@@ -65,7 +68,7 @@ def run(store, second=False):
         if r["status"] in ("READY", "RUNNING"):
             call("POST", f"/actor-runs/{r['id']}/abort")
         rec.update(status=r["status"], cost_usd=r.get("usageTotalUsd"))
-        items = call("GET", f"/datasets/{r['defaultDatasetId']}/items?clean=1&limit=10")
+        items = call("GET", f"/datasets/{r['defaultDatasetId']}/items?clean=1&limit={int(max_items)}")
         now = datetime.now(timezone.utc)
         snap = f"{store}-{now:%Y%m%dT%H%MZ}"
         (HERE / "raw" / f"{raw}.json").write_text(json.dumps([strip_private(store, it) for it in items[:3]], indent=1))

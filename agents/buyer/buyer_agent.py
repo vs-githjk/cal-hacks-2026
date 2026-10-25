@@ -27,7 +27,7 @@ import payment
 import status
 import state as buyer_state
 from market_bridge import MarketBridge, MarketBridgeError
-from advocate.mock_data import BASELINE
+from advocate.real_data import cached_shield_baseline
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
 from goal import apply_owned, need_from_goal, owned_attrs, parse_goal, remember, skip_lines
@@ -661,7 +661,8 @@ async def on_bid(ctx: Context, sender: str, msg: common.BidReply):
             and bid.get("supplier_id") == SELLER_ADDRS[sender]):
         ctx.logger.info("stale bid ignored")
         return
-    verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, BASELINE)
+    references = cached_shield_baseline(i.get("sku_spec") for i in ROUND.get("need", {}).get("items", []) if isinstance(i, dict))
+    verdict = common.screen_bid(str(uuid4()), sender, msg.bid_json, msg.persona_line, references)  # real dated prices, re-read past the TTL
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
         return
     reasons = None if verdict.get("verdict") == "allow" else "; ".join(verdict.get("reasons", [])) or verdict.get("verdict")
