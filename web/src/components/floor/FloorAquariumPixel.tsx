@@ -13,14 +13,14 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" 
 const TANK = { x: 90, y: 150, w: 780, h: 350 };
 const WATER_Y = 172;
 const SAND_Y = 460;
-const FC = 2; // fish, Shield and Auditor cell size
-const PC = 3; // Pac-Man cell size
+const FC = 4; // fish, Shield and Auditor cell size: fish 72 x 56
+const PC = 4; // Pac-Man cell size: 52 x 52
 const PW = 13 * PC;
 const PIP_X = 700; // no sign above stage y 200 right of this
-const STEP_MS = 120; // Pac-Man, per tile
-const PATROL_MS = 600; // fish, per tile
+const STEP_MS = 160; // Pac-Man, per tile
+const PATROL_MS = 800; // fish, per tile
 
-const START = findTile(MAZE, "S") ?? ([5, 9] as Tile);
+const START = findTile(MAZE, "S") ?? ([4, 6] as Tile);
 const LOOPS: Tile[][] = ["1", "2", "3", "4"].map((d) => patrolLoop(MAZE, d));
 const px = (t: Tile) => ({ x: MAZE_ORIGIN.x + t[1] * T + T / 2, y: MAZE_ORIGIN.y + t[0] * T + T / 2 });
 const rectCentre = (ch: string) => {
@@ -28,9 +28,10 @@ const rectCentre = (ch: string) => {
   return r ? { x: MAZE_ORIGIN.x + ((r.c0 + r.c1 + 1) / 2) * T, y: MAZE_ORIGIN.y + ((r.r0 + r.r1 + 1) / 2) * T } : { x: 480, y: 332 };
 };
 const POCKETS = ["1", "2", "3", "4"].map(rectCentre);
-const WIN_AT = rectCentre("5");
 const WIN_RECT = pocketRect(MAZE, "5");
-const WIN_PAC: Tile = WIN_RECT ? [WIN_RECT.r1, WIN_RECT.c0 - 2] : START; // beside the winner, with room for both name labels
+// winner stands in the pocket's right column, 8 units right of it, so its label clears Pac-Man's; the pair stays left of x 560
+const WIN_AT = WIN_RECT ? { x: px([WIN_RECT.r0, WIN_RECT.c1]).x + 8, y: rectCentre("5").y } : rectCentre("5");
+const WIN_PAC: Tile = WIN_RECT ? [WIN_RECT.r1, WIN_RECT.c0 - 1] : START; // the corridor tile left of the pocket
 const tkey = (t: Tile) => `${t[0]},${t[1]}`;
 const PELLETS: Tile[] = [];
 MAZE.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === ".") PELLETS.push([r, c]); }));
@@ -282,7 +283,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
   const swimmer = (key: string, on: boolean, x: number, y: number, grid: Grid, colors: Record<string, string>): ReactNode => (
     <g key={key} aria-hidden="true" style={{ transform: `translate(${x}px, ${y}px)`, opacity: on ? 1 : 0, transition: tr }}>
       <Sprite grid={grid} colors={colors} cell={FC} />
-      {on && !reducedMotion ? <Bubbles x={11} y={-2} n={3} rise={50} dur={3} /> : null}
+      {on && !reducedMotion ? <Bubbles x={20} y={-2} n={3} rise={60} dur={3} /> : null}
     </g>
   );
   const shieldW = 11 * FC, auditW = 12 * FC, swimY = (r: Row | undefined) => (r ? r.sy + r.H - 14 * FC : 300);
@@ -311,7 +312,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
             <path d={WALLS.light} fill="#fff" fillOpacity={0.14} /><path d={WALLS.dark} fill="#000" fillOpacity={0.2} />
           </g>
           <path d={pelletPath} fill={PAL.line} fillOpacity={0.5} shapeRendering="crispEdges" />
-          <circle cx={WIN_AT.x} cy={WIN_AT.y} r={26} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
+          <ellipse cx={WIN_AT.x} cy={WIN_AT.y} rx={50} ry={32} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
           {sorted.map((r) => <SellerG key={r.id} r={r} reduced={reducedMotion} />)}
           {swimmer("shield", shieldOn, shieldOn && shieldRow ? shieldRow.sx - shieldW - 6 : 60, swimY(shieldRow), SHIELD, { X: PAL.cyan, B: PAL.ink, E: PAL.ink })}
           {swimmer("audit", auditOn, auditOn && checkRow ? checkRow.sx + checkRow.W + 6 : 900 - auditW, swimY(checkRow), AUDIT, { X: PAL.mint, E: PAL.ink, M: PAL.line, L: PAL.lens })}

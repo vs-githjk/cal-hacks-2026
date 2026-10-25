@@ -98,34 +98,85 @@ export function sandCells(w: number, h: number): Array<[number, number]> {
 }
 
 // ---- Reef maze (aquarium scene) ----
-// # wall (coral or rock), . corridor with a pellet, space empty corridor, 1-4 a seller pocket (a 2 x 3 room), 5 the centre pocket (winner), S Pac-Man start.
+// # wall (a thin coral or rock ridge), . corridor with a pellet, space empty corridor, 1-4 a seller pocket (a 2 x 2 room), 5 the centre pocket (winner), S Pac-Man start.
+// The top row is the reef ceiling; the bottom row has no wall (the sand is the floor). Top-left of tile (0,0) is MAZE_ORIGIN.
 export const MAZE: readonly string[] = [
-  "###################",
-  "#111.....#333.....#",
-  "#111.###.#333.##..#",
-  "#.....#.555.#..444#",
-  "#.#.222.555..#.444#",
-  "#.#.222..S........#",
-  "###################",
+  "#############",
+  "#11.#.#33.#.#",
+  "#11.#5533.#.#",
+  "###2255.##44#",
+  "#..22.S...44#",
 ];
-export const MAZE_TILE = 40;
-export const MAZE_ORIGIN = { x: 100, y: 172 };
+export const MAZE_TILE = 56;
+export const MAZE_ORIGIN = { x: 116, y: 172 };
 export const REEF = { coralA: "#c4566b", coralB: "#e07a5f", rock: "#4a5d6e" } as const;
 
-/** SVG path data (one string per colour) for the maze walls: 40 px tiles with 5 px cells of irregular texture. */
+/**
+ * SVG path data (one string per colour) for the maze walls: a 12 unit ridge through the centre of every wall tile, joined to each
+ * adjacent wall tile, built from 4 unit cells with rounded corners, a few coral branch nubs and light/dark texture cells.
+ */
 export function mazeWallPaths(grid: readonly string[] = MAZE): { coralA: string; coralB: string; rock: string; light: string; dark: string } {
-  const out = { coralA: "", coralB: "", rock: "", light: "", dark: "" };
+  const U = 4, per = MAZE_TILE / U; // 14 cells per tile
+  const cols = (grid[0]?.length ?? 0) * per + 2, rows = grid.length * per + 2;
+  const ras = new Uint8Array(cols * rows); // 0 empty, 1 coralA, 2 coralB, 3 rock
+  const at = (x: number, y: number) => (x < 0 || y < 0 || x >= cols || y >= rows ? 0 : ras[y * cols + x]!);
+  const put = (x: number, y: number, k: number) => { if (x >= 0 && y >= 0 && x < cols && y < rows) ras[y * cols + x] = k; };
+  const wall = (r: number, c: number) => grid[r]?.[c] === "#";
+  const kindOf = (r: number, c: number, d: number) => { const m = (r * 5 + c * 3 + d * 7) % 5; return m === 2 ? 3 : m === 1 ? 2 : 1; };
+  const bar = (x0: number, y0: number, x1: number, y1: number, k: number) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, k); };
+  const nubs: Array<[number, number, number, number, boolean]> = []; // x, y, direction (0 up,1 down,2 left,3 right), length, horizontal segment
   grid.forEach((row, r) => [...row].forEach((ch, c) => {
     if (ch !== "#") return;
-    const x = MAZE_ORIGIN.x + c * MAZE_TILE, y = MAZE_ORIGIN.y + r * MAZE_TILE;
-    const kind = (r * 5 + c * 3 + (r * c) % 3) % 4;
-    const key = kind === 2 ? "rock" : kind === 1 ? "coralB" : "coralA";
-    out[key] += `M${x} ${y}h${MAZE_TILE}v${MAZE_TILE}h-${MAZE_TILE}z`;
-    for (let k = 0; k < 9; k++) {
-      const idx = (r * 13 + c * 7 + k * 29 + k * k * 3) % 64;
-      const cell = `M${x + (idx % 8) * 5} ${y + Math.floor(idx / 8) * 5}h5v5h-5z`;
-      if (k % 2) out.light += cell; else out.dark += cell;
+    const cx = c * per + per / 2, cy = r * per + per / 2;
+    const k = kindOf(r, c, 0);
+    bar(cx - 1, cy - 1, cx + 1, cy + 1, k);
+    const right = wall(r, c + 1), down = wall(r + 1, c);
+    if (right) { bar(cx, cy - 1, cx + per, cy + 1, kindOf(r, c, 1)); }
+    if (down) { bar(cx - 1, cy, cx + 1, cy + per, kindOf(r, c, 2)); }
+    if (!right && !down && !wall(r, c - 1) && !wall(r - 1, c)) bar(cx - 3, cy - 1, cx + 3, cy + 1, k); // a lone reef pillar becomes a short ridge
+    for (const [on, horiz] of [[right, true], [down, false]] as const) {
+      if (!on) continue;
+      const n = 2 + ((r * 3 + c * 5 + (horiz ? 1 : 0)) % 2);
+      for (let j = 0; j < n; j++) {
+        const off = 3 + ((r * 7 + c * 11 + j * 5 + (horiz ? 2 : 0)) % (per - 5));
+        const side = (r + c + j) % 2 === 0;
+        const len = 1 + ((r + c * 2 + j) % 2);
+        nubs.push(horiz ? [cx + off, cy, side ? 0 : 1, len, true] : [cx, cy + off, side ? 2 : 3, len, false]);
+      }
     }
   }));
+  // round the convex corners: a cell with exactly two perpendicular neighbours goes
+  const snap = ras.slice();
+  const was = (x: number, y: number) => (x < 0 || y < 0 || x >= cols || y >= rows ? 0 : snap[y * cols + x]!);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    if (!was(x, y)) continue;
+    const u = was(x, y - 1) > 0, d = was(x, y + 1) > 0, l = was(x - 1, y) > 0, rr = was(x + 1, y) > 0;
+    if (Number(u) + Number(d) + Number(l) + Number(rr) === 2 && (u || d) && (l || rr)) ras[y * cols + x] = 0;
+  }
+  for (const [x, y, dir, len] of nubs) {
+    for (let j = 0; j < len; j++) {
+      const [dx, dy] = dir === 0 ? [0, -2 - j] : dir === 1 ? [0, 2 + j] : dir === 2 ? [-2 - j, 0] : [2 + j, 0];
+      if (!at(x + dx, y + dy)) put(x + dx, y + dy, 2);
+    }
+  }
+  const out = { coralA: "", coralB: "", rock: "", light: "", dark: "" };
+  const names = [null, "coralA", "coralB", "rock"] as const;
+  for (let y = 0; y < rows; y++) {
+    let x = 0;
+    while (x < cols) {
+      const k = ras[y * cols + x]!;
+      if (!k) { x++; continue; }
+      let w = 1;
+      while (x + w < cols && ras[y * cols + x + w] === k) w++;
+      out[names[k]!] += `M${MAZE_ORIGIN.x + x * U} ${MAZE_ORIGIN.y + y * U}h${w * U}v${U}h-${w * U}z`;
+      x += w;
+    }
+  }
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    if (!ras[y * cols + x]) continue;
+    const h = (x * 31 + y * 17 + x * y) % 7;
+    const cell = `M${MAZE_ORIGIN.x + x * U} ${MAZE_ORIGIN.y + y * U}h${U}v${U}h-${U}z`;
+    if (h === 0) out.light += cell; else if (h === 3) out.dark += cell;
+  }
   return out;
 }
