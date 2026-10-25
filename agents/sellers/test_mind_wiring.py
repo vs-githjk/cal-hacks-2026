@@ -286,3 +286,28 @@ def test_exactly_the_four_named_sellers_are_live_and_seller_2_and_4_are_retired(
     assert set(common.SELLER_JOBS) == set(common.live_sellers()) == set(minds.KINDS)
     monkeypatch.setattr(common, "SELLERS", list(common.CATALOG_SELLERS))   # no private seed for seller_6: it starts off
     assert common.live_sellers() == ["seller_1", "seller_3", "seller_5"]
+
+
+# ---- Smell Test sees every mind's bid and floor line ------------------------------
+
+def _smell(bid, persona):
+    from shield.core import screen
+    return screen(json.dumps(bid) + "\n" + persona, {"sender_role": "seller"}, classifier=None)
+
+
+@pytest.mark.parametrize("name,source", [("seller_1", "sim"), ("seller_5", "sim"), ("seller_6", "live")])
+def test_the_honest_minds_pass_smell_test_with_their_notes_and_anchors_attached(built, name, source):
+    app, _ = built["make"](name)
+    REPORTS["rows"] = [loss("l1", "round-need-1", "seller-a")] if name == "seller_1" else []
+    built["ask"](app, need("need-1", source))
+    ctx, [(bid, persona)] = built["ask"](app, need("need-2", source))
+    assert _smell(bid, persona)["verdict"] == "allow"
+
+
+def test_frankies_first_three_tricks_slip_past_smell_test_and_the_injection_round_does_not(built):
+    app, _ = built["make"]("seller_3")
+    verdicts = []
+    for n in range(1, 5):
+        ctx, [(bid, persona)] = built["ask"](app, need(f"need-{n}"))
+        verdicts.append(_smell(bid, persona)["verdict"])
+    assert verdicts == ["allow", "allow", "allow", "block"]
