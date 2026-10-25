@@ -365,7 +365,9 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
 export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; ruleIds: string[]; origin: string }) {
   requireRole(ctx, 'attach_verdict', ['referee']);
   if (!['allow', 'quarantine', 'block'].includes(a.verdict)) throw new SenderError('verdict must be allow, quarantine or block');
-  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
+  const vb = ctx.db.bid.id.find(a.bidId);
+  if (!vb) throw new SenderError(`no bid ${a.bidId}`);
+  if (ctx.db.round.id.find(vb.roundId)?.state === 'closed') throw new SenderError('round already closed; a card can no longer change its ranking');
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'shield', result: a.verdict, detail: a.ruleIds.join(', '), evidenceUrl: '', origin: a.origin, at: ctx.timestamp });
   event(ctx, 'verdict', 'bid_check', a.bidId, `Bazaar Shield: ${a.verdict}`, '', a.origin);
 }
@@ -373,7 +375,9 @@ export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; rul
 export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; check: string; evidenceUrl: string; origin: string }) {
   requireRole(ctx, 'attach_claim_check', ['referee']);
   if (!['verified', 'unverified', 'false'].includes(a.check)) throw new SenderError('check must be verified, unverified or false');
-  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
+  const cb = ctx.db.bid.id.find(a.bidId);
+  if (!cb) throw new SenderError(`no bid ${a.bidId}`);
+  if (ctx.db.round.id.find(cb.roundId)?.state === 'closed') throw new SenderError('round already closed; a card can no longer change its ranking');
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'claim', result: a.check, detail: a.claim, evidenceUrl: a.evidenceUrl, origin: a.origin, at: ctx.timestamp });
   event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
 }
@@ -612,8 +616,14 @@ export function createMandate(
   const bid = ctx.db.bid.id.find(bidIdOfDeal(a.dealId));
   const won = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].find((r) => r.bidId === bid.id) : undefined;
   if (!bid || !won || won.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
+  // #325: a Shield block, a failed claim check or an advocate veto attached to the winning bid (even after the
+  // round closed) must still refuse the mandate; the ranking having run before the card arrived is not a defense.
+  const lateChecks = [...ctx.db.bidCheck.bidId.filter(bid.id)];
+  const blocked = lateChecks.some((c) => (c.kind === 'shield' && c.result !== 'allow') || (c.kind === 'claim' && c.result === 'false') || (c.kind === 'advocate' && c.result === 'veto'));
+  if (blocked) throw new SenderError('the winning bid carries a Shield block, a failed claim check or an advocate veto');
   if (a.payee !== bid.sellerId) throw new SenderError(`payee must be the winning seller (${bid.sellerId})`);
-  if (Math.abs(a.amount - won.landed) > 1e-9) throw new SenderError('amount must equal the winning landed price');
+  // #325: NaN must never pass as "equal to the landed price" (Math.abs(NaN - x) > 1e-9 is false).
+  if (!Number.isFinite(a.amount) || !(Math.abs(a.amount - won.landed) <= 1e-9)) throw new SenderError('amount must equal the winning landed price');
   if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {
     throw new SenderError(`expiry must be 1 to ${MANDATE_MAX_EXPIRY_MIN} minutes`);
   }
@@ -633,7 +643,8 @@ export function createMandate(
     ctx.db.approval.insert({ id: 0n, mandateHash: a.hash, method: 'allowance', approvedBy: a.buyerId, at: ctx.timestamp, voiceApprovalId: '' });
     saveAllowance(ctx, recordAutoSpend(allow, a.amount, ms(ctx.timestamp)));
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'deal_found', text: `Bought within your allowance: ${d.reason}. Receipt for deal ${a.dealId}.`, push: false, at: ctx.timestamp });
-    event(ctx, 'approval_recorded', 'approval', a.hash, 'Approved within the allowance', a.payee, a.origin);
+    // #325: one neutral public label, so the floor never shows which side of the allowance a deal fell on.
+    event(ctx, 'approval_recorded', 'approval', a.hash, 'Deal approved', a.payee, a.origin);
   } else {
     ctx.db.notification.insert({ id: 0n, buyerId: a.buyerId, goalId: '', klass: 'state', text: `Call needed: ${d.reason}.`, push: true, at: ctx.timestamp });
   }
@@ -654,7 +665,8 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp, voiceApprovalId: a.voiceApprovalId.trim() });
-  event(ctx, 'approval_recorded', 'approval', a.mandateHash, `Approved by ${a.method.replace('_', ' ')}`, md.payee, md.origin);
+  // #325: same neutral label as the allowance path; the method is never shown on the public floor.
+  event(ctx, 'approval_recorded', 'approval', a.mandateHash, 'Deal approved', md.payee, md.origin);
 }
 
 /**

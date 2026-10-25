@@ -1526,6 +1526,45 @@ describe('#191 approval and mandate holes', () => {
     expect(labels).toEqual(['Deal ready for approval', 'Deal ready for approval']);
   });
 
+  it('#325-1 a NaN amount is refused, not treated as equal to the landed price', () => {
+    wonByA();
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: NaN })))).toThrow(/amount/);
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ amount: Infinity })))).toThrow(/amount/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#325-2 a Shield block or failed claim on the winning bid refuses the mandate, even one that reached the bid by some other path than attach_claim_check', () => {
+    wonByA();
+    // Simulates a card that reached the bid outside the attach_* reducers (which now refuse a closed round):
+    // create_mandate must still catch it rather than trust that ranking already screened every card.
+    run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'claim', result: 'false', detail: 'card fits', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/Shield block|claim check|veto/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
+  it('#325-2b attach_verdict and attach_claim_check refuse a bid in an already-closed round, like attach_advocate_card does', () => {
+    wonByA();
+    expect(() => run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }))).toThrow(/already closed/);
+    expect(() => run(REF, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-a', claim: 'c', check: 'false', evidenceUrl: '', origin: 'SIM' }))).toThrow(/already closed/);
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs())); // no stray card: the mandate still mints
+    expect([...h.db.mandate.iter()]).toHaveLength(1);
+  });
+
+  it('#325-3 the public approval_recorded label is the same for the allowance path and the voice-code call', () => {
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
+    wonByA(); // 780: over the per-buy limit, needs the call
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-2' })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-2', needId: 'need-2', windowS: 15 }));
+    run(C, (ctx) => m.placeBid(ctx, { ...bidArgs('bid-c2', [line(200)]), roundId: 'round-2' }));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-2' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs({ hash: 'h2', id: 'mdt-2', nonce: 'n2', dealId: 'round-2:bid-c2', payee: 'seller-c', amount: 200 })));
+    const labels = events().filter((e) => e.kind === 'approval_recorded').map((e) => e.label);
+    expect(labels).toEqual(['Deal approved', 'Deal approved']);
+  });
+
   it('#191-5 my_bid_checks: the buyer sees the veto, Shield and claim rows on bids in its own rounds; nobody else does', () => {
     setupRound();
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(700)])));
