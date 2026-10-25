@@ -721,6 +721,16 @@ async def start_round(ctx: Context, need: dict | None = None):
                  reviewed=False, order=None, mandate=None, told_foreign=False,
                  phase="checking", deadline=0, round_token=token)
     set_state("HUNTING")
+    # CRS checks run BEFORE the market round opens: the market closes the round on its own clock, so slow checks
+    # after open_round left no time to attach verdicts ("Market could not verify the sealed round cutoff").
+    try:
+        pending_checks = await crs.check_sellers(business_now())
+    except Exception:
+        ctx.logger.warning("CRS checks failed; business sellers will be ineligible for this round.")
+        pending_checks = {}
+    if ROUND.get("round_token") != token or ROUND.get("phase") != "checking" or ROUND.get("need") is not need:
+        return False
+    ROUND["pending_seller_checks"] = pending_checks
     try:
         buyer_market, referee_market = market_clients()
         market_buyer_id = ROUND["goal"].get("market_buyer_id") or MARKET_BUYER_ID
@@ -745,11 +755,7 @@ async def start_round(ctx: Context, need: dict | None = None):
         ROUND.update(phase="done", round_token=uuid4().hex)
         await tell_owner(ctx, "Market setup could not be verified. Nothing ordered.")
         return False
-    try:
-        checks = await crs.check_sellers(business_now())
-    except Exception:
-        ctx.logger.warning("CRS checks failed; business sellers will be ineligible for this round.")
-        checks = {}
+    checks = ROUND.pop("pending_seller_checks", {})
     if ROUND.get("round_token") != token or ROUND.get("phase") != "checking" or ROUND.get("need") is not need:
         return False
     asked = live_sellers()
@@ -946,7 +952,7 @@ async def tick(ctx: Context):
             market_deadline = _market_timestamp(referee_market.round_status(ROUND["market_round_id"])
                                                  .get("deadline"))  # #447: the market round's own close
         except Exception as exc:
-            ctx.logger.warning(f"Market review could not be opened: {type(exc).__name__}")
+            ctx.logger.warning(f"Market review could not be opened: {type(exc).__name__}: {str(exc)[:200]}")
             await fail_round(ctx, "Market could not verify the sealed round cutoff. Nothing ordered.", always_notify=True)
             return
         ROUND["quoted_at"] = now
