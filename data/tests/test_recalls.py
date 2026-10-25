@@ -72,3 +72,23 @@ def test_an_empty_brand_is_unverified_and_never_calls_the_api(tmp_path):
     for brand in (None, "", "   "):
         out = recalls_for(TITLE, brand, fetch=boom, now=NOW, cache_dir=tmp_path)
         assert out["status"] == "unverified" and out["recalls"] == [] and out["source_url"] is None, repr(brand)
+
+
+def _gpu_recall(name):  # SIM fixture, not a real recall
+    return [{"Title": f"MSI Recalls {name} Graphics Cards (SIM fixture)", "RecallDate": "2026-02-03T00:00:00",
+             "URL": "https://example.test/msi", "Products": [{"Name": f"MSI {name} graphics card"}], "Manufacturers": []}]
+
+
+def test_one_model_token_with_a_different_variant_is_partial_never_found(tmp_path):  # #291: 4070 Ti recall, 4070 Super bid
+    out = recalls_for("MSI rtx 4070 super 12gb", "MSI", fetch=serve(_gpu_recall("GeForce RTX 4070 Ti")), now=NOW, cache_dir=tmp_path)
+    assert out["status"] == "partial" and out["recalls"] == [] and out["partial"][0]["url"] == "https://example.test/msi"
+
+
+def test_a_plain_model_against_a_ti_recall_is_partial(tmp_path):
+    out = recalls_for("MSI rtx 4070 12gb", "MSI", fetch=serve(_gpu_recall("GeForce RTX 4070 Ti")), now=NOW, cache_dir=tmp_path)
+    assert out["status"] == "partial"
+
+
+def test_the_full_model_with_the_same_variant_is_found(tmp_path):
+    out = recalls_for("MSI rtx 4070 super 12gb", "MSI", fetch=serve(_gpu_recall("GeForce RTX 4070 Super")), now=NOW, cache_dir=tmp_path)
+    assert out["status"] == "found" and out["partial"] == []

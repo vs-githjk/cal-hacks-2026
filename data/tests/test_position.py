@@ -23,11 +23,11 @@ def test_one_source_wording_has_no_sold_clause_and_never_says_savings():
 
 
 def test_ok_wording_adds_the_sold_clause_only_when_price_is_under_it():
-    sold = row("ebay_sold", 1500.0, kind="sold", provider="ebay-sold", sold_date="2026-10-23", url="https://ebay.example/1")
-    out = price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + [sold])
-    assert out["status"] == "ok" and out["sentence"].endswith("and $200.01 under the 30-day eBay sold median (mixed condition, n = 1)")
-    above = price_position(SKU, 1600.0, "new", AS_OF, rows=BASE + [sold])
-    assert "under" not in above["sentence"] and "(30-day eBay sold median, mixed condition: $1,500.00, n = 1)" in above["sentence"]
+    sold = [row("ebay_sold", 1500.0, kind="sold", provider="ebay-sold", sold_date="2026-10-23", url=f"https://ebay.example/{i}") for i in (1, 2)]
+    out = price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + sold)
+    assert out["status"] == "ok" and out["sentence"].endswith("and $200.01 under the 30-day eBay sold median (mixed condition, n = 2)")
+    above = price_position(SKU, 1600.0, "new", AS_OF, rows=BASE + sold)
+    assert "under" not in above["sentence"] and "(30-day eBay sold median, mixed condition: $1,500.00, n = 2)" in above["sentence"]
     assert above["sentence"].startswith("4th cheapest fitting new card")
 
 

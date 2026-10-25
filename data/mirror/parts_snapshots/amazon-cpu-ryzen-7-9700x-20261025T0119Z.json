@@ -1,0 +1,148 @@
+[
+ {
+  "id": "amazon:889219a7585e",
+  "category": "cpu",
+  "name": "Micro Center AMD Ryzen 7 9700X Processor with MSI PRO B850-P WF Motherboard",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 529.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0F99BG4ZN",
+  "snapshot_id": "amazon-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0F99BG4ZN",
+   "price": 529.99,
+   "shipping": "November 5 - 10",
+   "seller": "Micro Center",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "amazon:2060a8bee00d",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 7700X 8-Core, 16-Thread Unlocked Desktop Processor",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 105,
+   "microarchitecture": "Zen 4"
+  },
+  "price": 229.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0BBHHT8LY",
+  "snapshot_id": "amazon-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0BBHHT8LY",
+   "price": 229.0,
+   "was_price": 284.0,
+   "shipping": "Thursday, October 29",
+   "seller": "Amazon.com",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": "100-100000591WOF"
+ },
+ {
+  "id": "amazon:cc86c8fcc2a1",
+  "category": "cpu",
+  "name": "AMD Ryzen\u2122 9 9900X 12-Core, 24-Thread Unlocked Desktop Processor",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 326.65,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0D6NN87T8",
+  "snapshot_id": "amazon-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0D6NN87T8",
+   "price": 326.65,
+   "was_price": 499.0,
+   "shipping": "Thursday, October 29",
+   "seller": "Byte-TechDirect",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "amazon:f00fb2dc2d9a",
+  "category": "cpu",
+  "name": "AMD Ryzen\u2122 5 9600X 6-Core, 12-Thread Unlocked Desktop Processor",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 179.59,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0D6NN6TM7",
+  "snapshot_id": "amazon-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0D6NN6TM7",
+   "price": 179.59,
+   "was_price": 220.0,
+   "shipping": "Thursday, October 29",
+   "seller": "Amazon.com",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": "100-100001405WOF"
+ },
+ {
+  "id": "amazon:f33215d1f495",
+  "category": "cpu",
+  "name": "AMD Ryzen\u2122 7 9700X 8-Core, 16-Thread Unlocked Desktop Processor",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 307.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0D6NMDNNX",
+  "snapshot_id": "amazon-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0D6NMDNNX",
+   "price": 307.95,
+   "was_price": 339.0,
+   "shipping": "October 30 - November 5",
+   "seller": "Joes Tech Shop Inc",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": "100-100001404WOF"
+ }
+]

@@ -1,0 +1,3422 @@
+[
+ {
+  "id": "centralcomputers:905bf358fc3e",
+  "category": "memory",
+  "name": "NEMIX MR51200-2544K1-G 256GB (1X256GB) 4Rx4 DDR56400MHz PC5-51200 RDIMM",
+  "model_number": "MR51200-2544K1-G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 7899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/nemix-mr51200-2544k1-g-256gb-1x256gb-4rx4-ddr56400mhz-pc5-51200-rdimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/nemix-mr51200-2544k1-g-256gb-1x256gb-4rx4-ddr56400mhz-pc5-51200-rdimm.html",
+   "price": 7899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMNEM512K1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6239f19a1d15",
+  "category": "memory",
+  "name": "NEMIX 512GB (8X64GB) 1.2V DDR4 3200MHZ PC4-25600RDIMM 2RX4 MR25600-924K8-G",
+  "model_number": "MR25600-924K8-G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/nemix-512gb-8x64gb-1-2v-ddr4-3200mhz-pc4-25600rdimm-2rx4-mr25600-924k8-g.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/nemix-512gb-8x64gb-1-2v-ddr4-3200mhz-pc4-25600rdimm-2rx4-mr25600-924k8-g.html",
+   "price": 3999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMNEM51264R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:25a6d4aed5e5",
+  "category": "memory",
+  "name": "Samsung M321R4GA3PB2-CCP 32GB DDR5-6400 RDIMM 2Rx8",
+  "model_number": "M321R4GA3PB2-CCP",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-m321r4ga3pb2-ccp-32gb-ddr5-6400-rdimm-2rx8.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-m321r4ga3pb2-ccp-32gb-ddr5-6400-rdimm-2rx8.html",
+   "price": 1699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSAM321B2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b3abf9a0c0e4",
+  "category": "memory",
+  "name": "Hynix HMCT04MGBRC 128GB DDR5-5600 ECC RDIMM CL46 Memory",
+  "model_number": "HMCT04MGBRC",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/hynix-hmct04mgbrc-128gb-ddr5-5600-ecc-rdimm-cl46-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/hynix-hmct04mgbrc-128gb-ddr5-5600-ecc-rdimm-cl46-memory.html",
+   "price": 4499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMHYN84AGAR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:2de1c5da7fda",
+  "category": "memory",
+  "name": "SK Hynix HMCG78CMBRA 16GB DDR5 8000MT/s PC5-51200 CL64 ECC RDIMM Low Profile Memory",
+  "model_number": "HMCG78CMBRA",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 849.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sk-hynix-hmcg78cmbra-16gb-ddr5-8000mt-s-pc5-51200-cl64-ecc-rdimm-low-profile-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sk-hynix-hmcg78cmbra-16gb-ddr5-8000mt-s-pc5-51200-cl64-ecc-rdimm-low-profile-memory.html",
+   "price": 849.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSKH51680R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:feefa7076c19",
+  "category": "memory",
+  "name": "Corsair CMH64GX5M2B6200C32 VENGEANCE RGB DDR5 64GB 2x32GB Memory Kit 6200MT/s 32-38-38-80 Std PMIC XMP 3.0 1.4V Black",
+  "model_number": "CMH64GX5M2B6200C32",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmh64gx5m2b6200c32-vengeance-rgb-ddr5-64gb-2x32gb-memory-kit-6200mt-s-32-38-38-80-std-pmic-xmp-3-0-1-4v-black.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmh64gx5m2b6200c32-vengeance-rgb-ddr5-64gb-2x32gb-memory-kit-6200mt-s-32-38-38-80-std-pmic-xmp-3-0-1-4v-black.html",
+   "price": 999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMCORXB62CR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cb10f7287c4b",
+  "category": "memory",
+  "name": "Hynix HMCG94CKBRA 64GB DDR5-7200 Pc5-57600 2rx8 ECC Registered RDIMM 288-pin Memory Module",
+  "model_number": "HMCG94CKBRA",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2799.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/hynix-hmcg94ckbra-64gb-ddr5-7200-pc5-57600-2rx8-ecc-registered-rdimm-288-pin-memory-module.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/hynix-hmcg94ckbra-64gb-ddr5-7200-pc5-57600-2rx8-ecc-registered-rdimm-288-pin-memory-module.html",
+   "price": 2799.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMHYN94CKBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 32
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 16
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 8
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:981ad8a4d51a",
+  "category": "memory",
+  "name": "Corsair CMSX32GX5M1A5600C48 32GB (32GBx1) DDR5 SO-DIMM/Laptop Memory",
+  "model_number": "CMSX32GX5M1A5600C48",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 459.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmsx32gx5m1a5600c48-32gb-32gbx1-ddr5-so-dimm-laptop-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmsx32gx5m1a5600c48-32gb-32gbx1-ddr5-so-dimm-laptop-memory.html",
+   "price": 459.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR32GS1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1f7e2d8bb658",
+  "category": "memory",
+  "name": "Corsair CMSX64GX5M2A5600C48  64GB (32GBx2) DDR5 SO-DIMM/Laptop Memory",
+  "model_number": "CMSX64GX5M2A5600C48",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 969.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmsx64gx5m2a5600c48-64gb-32gbx2-ddr5-so-dimm-laptop-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmsx64gx5m2a5600c48-64gb-32gbx2-ddr5-so-dimm-laptop-memory.html",
+   "price": 969.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR64GS1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:780dc7046163",
+  "category": "memory",
+  "name": "Corsair CMSX16GX5M1A5600C48 16GB (16GBx1) DDR5 SO-DIMM/Laptop Memory",
+  "model_number": "CMSX16GX5M1A5600C4",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmsx16gx5m1a5600c48-16gb-16gbx1-ddr5-so-dimm-laptop-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmsx16gx5m1a5600c48-16gb-16gbx1-ddr5-so-dimm-laptop-memory.html",
+   "price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR16GS1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d8c62625b767",
+  "category": "memory",
+  "name": "Corsair CMK64GX5M2D6000C40 Vengeance 64GB(2x 32GB) 288-Pin PC RAM DDR5 6000 Desktop Memory Kit",
+  "model_number": "CMK64GX5M2D6000C40",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmk64gx5m2d6000c40-vengeance-64gb-2x-32gb-288-pin-pc-ram-ddr5-6000-desktop-memory-kit.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmk64gx5m2d6000c40-vengeance-64gb-2x-32gb-288-pin-pc-ram-ddr5-6000-desktop-memory-kit.html",
+   "price": 999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR64C40R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 39
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9530cb67cb06",
+  "category": "memory",
+  "name": "Kingston KTH-PL564D8-32G 32GB PC5-51200 DDR5 6400MHz ECC Registered CL52 288-Pin DIMM 1.1V Dual Rank Memory Module",
+  "model_number": "KTH-PL564D8-32G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kth-pl564d8-32g-32gb-pc5-51200-ddr5-6400mhz-ecc-registered-cl52-288-pin-dimm-1-1v-dual-rank-memory-module.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kth-pl564d8-32g-32gb-pc5-51200-ddr5-6400mhz-ecc-registered-cl52-288-pin-dimm-1-1v-dual-rank-memory-module.html",
+   "price": 1299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN53265R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b3abc9859167",
+  "category": "memory",
+  "name": "Corsair CMH32GX5M2B6400Z32 VENGEANCE RGB DDR532GB 2x16GB Memory Kit 6400MT/s 32-40-40-84  AMD EXPO & Intel XMP Memory - Grey",
+  "model_number": "CMH32GX5M2B6400Z32",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmh32gx5m2b6400z32-vengeance-rgb-ddr532gb-2x16gb-memory-kit-6400mt-s-32-40-40-84-amd-expo-intel-xmp-memory-grey.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmh32gx5m2b6400z32-vengeance-rgb-ddr532gb-2x16gb-memory-kit-6400mt-s-32-40-40-84-amd-expo-intel-xmp-memory-grey.html",
+   "price": 599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMCORXB641R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:0fecc796fa7f",
+  "category": "memory",
+  "name": "Kingston KSM32RS4/32HCR 32GB ECC REG DDR4 SDRAM DDR4-3200/PC4-25600 CL22 1.2V",
+  "model_number": "KSM32RS4/32HCR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-ksm32rs4-32hcr-32gb-ecc-reg-ddr4-sdram-ddr4-3200-pc4-25600-cl22-1-2v.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-ksm32rs4-32hcr-32gb-ecc-reg-ddr4-sdram-ddr4-3200-pc4-25600-cl22-1-2v.html",
+   "price": 399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN432HCR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b54af9260ff0",
+  "category": "memory",
+  "name": "Hynix HMCG84CMBRA 32GB DDR5-8000 ECC RDIMM CL64 Memory",
+  "model_number": "HMCG84CMBRA",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/hynix-hmcg84cmbra-32gb-ddr5-8000-ecc-rdimm-cl64-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/hynix-hmcg84cmbra-32gb-ddr5-8000-ecc-rdimm-cl64-memory.html",
+   "price": 1599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMHYN84CMAR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 24
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:06200e9d8d4b",
+  "category": "memory",
+  "name": "Kingston KF560R32RBEK8-128 FURY Renegade Pro 128GB(8 x 16GB) DDR5 6000MT/s CL32 RDIMM Black EXPOECC Registered 1.35V",
+  "model_number": "KF560R32RBEK8-128",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kf560r32rbek8-128-fury-renegade-pro-128gb-8-x-16gb-ddr5-6000mt-s-cl32-rdimm-black-expoecc-registered-1-35v.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kf560r32rbek8-128-fury-renegade-pro-128gb-8-x-16gb-ddr5-6000mt-s-cl32-rdimm-black-expoecc-registered-1-35v.html",
+   "price": 4399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN560K1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e6f5963edc86",
+  "category": "memory",
+  "name": "Hynix HMCG94CMBRA 64GB DDR5-8000 ECC RDIMM CL64 Memory",
+  "model_number": "HMCG94CMBRA",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/hynix-hmcg94cmbra-64gb-ddr5-8000-ecc-rdimm-lc64-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/hynix-hmcg94cmbra-64gb-ddr5-8000-ecc-rdimm-lc64-memory.html",
+   "price": 2999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMHYN94CMAR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 48
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 16
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:aa3bb319d1b2",
+  "category": "memory",
+  "name": "Micron MTC40F2046S1RC64BH1R 64GB DDR5-6400MHzPC5-51200 CL52 ECC Memory",
+  "model_number": "MTC40F2046S1RC64BH1R",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc40f2046s1rc64bh1r-64gb-ddr5-6400mhzpc5-51200-cl52-ecc-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc40f2046s1rc64bh1r-64gb-ddr5-6400mhzpc5-51200-cl52-ecc-memory.html",
+   "price": 3399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMMIC64C40R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9a43efb7b943",
+  "category": "memory",
+  "name": "ADATA AD5U560064G-S 64GB DDR5 5600 U-DIMM CL 46 Me",
+  "model_number": "AD5U560064G-S",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1099.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/adata-ad5u560064g-s-64gb-ddr5-5600-u-dimm-cl-46-me.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/adata-ad5u560064g-s-64gb-ddr5-5600-u-dimm-cl-46-me.html",
+   "price": 1099.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMADA5U641R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 54
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:767aa46879d1",
+  "category": "memory",
+  "name": "Micron MTC20F1045S1RC56BR 32GB DDR5 5600Mhz RDIMM 1Rx4  Single Rank CL52 ECC Reg Memory",
+  "model_number": "MTC20F1045S1RC56BR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc20f1045s1rc56br-32gb-ddr5-5600mhz-rdimm-1rx4-single-rank-cl52-ecc-reg-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc20f1045s1rc56br-32gb-ddr5-5600mhz-rdimm-1rx4-single-rank-cl52-ecc-reg-memory.html",
+   "price": 1599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMMIC53456R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d44f9e9c86bc",
+  "category": "memory",
+  "name": "Samsung M321RBJA0M22-CLP 256GB DDR5 ECC RDIMM 6400Mhz Memory 1.10 V - Registered - 288-pin",
+  "model_number": "M321RBJA0M22-CLP",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 9999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-m321rbja0m22-clp-256gb-ddr5-ecc-rdimm-6400mhz-memory-1-10-v-registered-288-pin.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-m321rbja0m22-clp-256gb-ddr5-ecc-rdimm-6400mhz-memory-1-10-v-registered-288-pin.html",
+   "price": 9999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSAM3222CR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ed406d545000",
+  "category": "memory",
+  "name": "ADATA AD5U560032G-B 32GB DDR5 5600Mhz",
+  "model_number": "AD5U560032G-B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 529.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/adata-ad5u560032g-b-32gb-ddr5-5600mhz.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/adata-ad5u560032g-b-32gb-ddr5-5600mhz.html",
+   "price": 529.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMADA5U633R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 20
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 25
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cfaa82c76e1c",
+  "category": "memory",
+  "name": "AGI AGI560A16UD238-BK UD238 16GB DDR5 UDIMM 5600MHz RAM",
+  "model_number": "AGI560A16UD238-BK",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 219.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/agi-agi560a16ud238-bk-ud238-16gb-ddr5-udimm-5600mhz-ram.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/agi-agi560a16ud238-bk-ud238-16gb-ddr5-udimm-5600mhz-ram.html",
+   "price": 219.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMAGI5165UR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:50ee41c1b22b",
+  "category": "memory",
+  "name": "Adata AD5U560016G-B 16GB DDR5 SDRAM Memory Module DDR5-5600/PC5-44800 5600MHz 1.1V On-die ECC Unbuffered 288-pin DIMM Lifetime Warranty",
+  "model_number": "AD5U560016G-B",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/adata-ad5u560016g-b-16gb-ddr5-sdram-memory-module-ddr5-5600-pc5-44800-5600mhz-1-1v-on-die-ecc-unbuffered-288-pin-dimm-lifetime-warranty.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/adata-ad5u560016g-b-16gb-ddr5-sdram-memory-module-ddr5-5600-pc5-44800-5600mhz-1-1v-on-die-ecc-unbuffered-288-pin-dimm-lifetime-warranty.html",
+   "price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMADA51656R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c1825169140b",
+  "category": "memory",
+  "name": "Micron MTC20F208XS1RC56BB1R 48GB DDR5 ECC Reg DIMM 288-pin - 5600 MHz / PC5-44800 - CL46",
+  "model_number": "MTC20F208XS1RC56BB1R",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1749.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc20f208xs1rc56bb1r-48gb-ddr5-ecc-reg-dimm-288-pin-5600-mhz-pc5-44800-cl46.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc20f208xs1rc56bb1r-48gb-ddr5-ecc-reg-dimm-288-pin-5600-mhz-pc5-44800-cl46.html",
+   "price": 1749.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMMIC20856R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 8,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 8
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 8
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 42
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 9
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 13
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "8 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8d081e62d8f8",
+  "category": "memory",
+  "name": "Micron MTC10F1084S1RC56BR 16GB DDR5ECC REG DDR5-5600/PC5-44800 CL46 1.1V",
+  "model_number": "MTC10F1084S1RC56BR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 949.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc10f1084s1rc56br-16gb-ddr5ecc-reg-ddr5-5600-pc5-44800-cl46-1-1v.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc10f1084s1rc56br-16gb-ddr5ecc-reg-ddr5-5600-pc5-44800-cl46-1-1v.html",
+   "price": 949.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMMIC5156SR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 30
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:29f023d73bca",
+  "category": "memory",
+  "name": "Samsung M321RAJA0MB0-CWM 128GB DDR5 5600Mhz ECCRegistered Memory",
+  "model_number": "M321RAJA0MB0-CWM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-m321raja0mb0-cwm-128gb-ddr5-5600mhz-eccregistered-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-m321raja0mb0-cwm-128gb-ddr5-5600mhz-eccregistered-memory.html",
+   "price": 4899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSAM321WMR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:dc491a789b7c",
+  "category": "memory",
+  "name": "Crucial CT64G64C52CU5 64GB 288-Pin RAM DDR5 6400 (PC5 51200) CL52 CUDIMM Desktop Memory",
+  "model_number": "CT64G64C52CU5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct64g64c52cu5-64gb-288-pin-ram-ddr5-6400-pc5-51200-cl52-cudimm-desktop-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct64g64c52cu5-64gb-288-pin-ram-ddr5-6400-pc5-51200-cl52-cudimm-desktop-memory.html",
+   "price": 999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCRU5664CR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:56f92b9105dc",
+  "category": "memory",
+  "name": "Corsair CMK32GX5M2D6000Z38 Vengeance 32GB (2x16GB)288-Pin PC RAM DDR5 6000 (PC5 48000) Desktop Memory Kit",
+  "model_number": "CMK32GX5M2D6000Z38",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 479.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmk32gx5m2d6000z38-vengeance-32gb-2x16gb-288-pin-pc-ram-ddr5-6000-pc5-48000-desktop-memory-kit.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmk32gx5m2d6000z38-vengeance-32gb-2x16gb-288-pin-pc-ram-ddr5-6000-pc5-48000-desktop-memory-kit.html",
+   "price": 479.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR32Z38R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:71597adf80c1",
+  "category": "memory",
+  "name": "Kingston KVR56U46BD8-64 ValueRAM 64GB DDR5-5600PC5-44800 CL46 1.1V UDIMM",
+  "model_number": "KVR56U46BD8-64",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kvr56u46bd8-64-valueram-64gb-ddr5-5600pc5-44800-cl46-1-1v-udimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kvr56u46bd8-64-valueram-64gb-ddr5-5600pc5-44800-cl46-1-1v-udimm.html",
+   "price": 1199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN56468R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:dda52a9a589b",
+  "category": "memory",
+  "name": "Micron MTC40F2046S1RC56BG1 64GB DDR5 5600 MHz SDRAM Dual-rank Memory CL46 1.1V ECC Registered 288-pin DIMM DDR5-5600/PC5-44800 Memory Module",
+  "model_number": "MTC40F2046S1RC56BG1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc40f2046s1rc56bg1-64gb-ddr5-5600-mhz-sdram-dual-rank-memory-cl46-1-1v-ecc-registered-288-pin-dimm-ddr5-5600-pc5-44800-memory-module.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc40f2046s1rc56bg1-64gb-ddr5-5600-mhz-sdram-dual-rank-memory-cl46-1-1v-ecc-registered-288-pin-dimm-ddr5-5600-pc5-44800-memory-module.html",
+   "price": 2999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMMIC56457R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3ad7ffff80d2",
+  "category": "memory",
+  "name": "Kingston KF556R28RBE2-32 32GB (1 x 32GB) DDR5 5600MT/s CL28 FURY Renegade Pro RDIMM Black EXPO",
+  "model_number": "KF556R28RBE2-32",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1099.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kf556r28rbe2-32-32gb-1-x-32gb-ddr5-5600mt-s-cl28-fury-renegade-pro-rdimm-black-expo.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kf556r28rbe2-32-32gb-1-x-32gb-ddr5-5600mt-s-cl28-fury-renegade-pro-rdimm-black-expo.html",
+   "price": 1099.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN53256R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:36c3d1f36375",
+  "category": "memory",
+  "name": "Samsung M321RAJA0MB2-CJR 128GB DDR5 ECC RDIMM 7200Mhz Memory",
+  "model_number": "M321RAJA0MB2-CJR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 4699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-m321raja0mb2-cjr-128gb-ddr5-ecc-rdimm-7200mhz-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-m321raja0mb2-cjr-128gb-ddr5-ecc-rdimm-7200mhz-memory.html",
+   "price": 4699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSAM3212JR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e7607d74e189",
+  "category": "memory",
+  "name": "Corsair CMK64GX5M2D5600C40 Vengeance 64GB (2x32GB) DDR5 5600MHz CL40 RAM",
+  "model_number": "CMK64GX5M2D5600C40",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmk64gx5m2d5600c40-vengeance-64gb-2x32gb-ddr5-5600mhz-cl40-ram.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmk64gx5m2d5600c40-vengeance-64gb-2x32gb-ddr5-5600mhz-cl40-ram.html",
+   "price": 899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR64D56R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:fcb56850f915",
+  "category": "memory",
+  "name": "Samsung M321R2GA3EB0-CWM 16GB DDR5 ECC RDIMMDDR5-5600/PC5-44800 DDR5 SDRAM",
+  "model_number": "M321R2GA3EB0-CWM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 849.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-m321r2ga3eb0-cwm-16gb-ddr5-ecc-rdimmddr5-5600-pc5-44800-ddr5-sdram.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-m321r2ga3eb0-cwm-16gb-ddr5-ecc-rdimmddr5-5600-pc5-44800-ddr5-sdram.html",
+   "price": 849.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSAM321B0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9c89ccd4159c",
+  "category": "memory",
+  "name": "Micron MTC20F1045S1RC64BD2R 32GB DDR5 6400Mhz RDIMM 1Rx4  Single Rank CL52 ECC Reg Memory",
+  "model_number": "MTC20F1045S1RC64BD2R",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1649.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc20f1045s1rc64bd2r-32gb-ddr5-6400mhz-rdimm-1rx4-cl52-ecc-reg-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc20f1045s1rc64bd2r-32gb-ddr5-6400mhz-rdimm-1rx4-cl52-ecc-reg-memory.html",
+   "price": 1649.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMMIC53415R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5d95ad24b256",
+  "category": "memory",
+  "name": "SuperTalent FD556U32GV 32GB DDR5 5600 UDIMM Memory",
+  "model_number": "FD556U32GV",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/supertalent-fd556u32gv-32gb-ddr5-5600-udimm-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/supertalent-fd556u32gv-32gb-ddr5-5600-udimm-memory.html",
+   "price": 499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMSTT56632R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1d1c30d20cbe",
+  "category": "memory",
+  "name": "Samsung M321R4GA0EB2-CCP 32GB DDR5-6400 ECC-REG RDIMM",
+  "model_number": "M321R4GA0EB2-CCP",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-m321r4ga0eb2-ccp-32gb-ddr5-6400-ecc-reg-rdimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-m321r4ga0eb2-ccp-32gb-ddr5-6400-ecc-reg-rdimm.html",
+   "price": 1699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMSAM321CPR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 18
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:82d6200579b2",
+  "category": "memory",
+  "name": "Kingston KSM56R46BD4PMI-96MBI 96GB 5600Mhz DDR5 ECC Reg Memory",
+  "model_number": "KSM56R46BD4PMI-96MBI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-ksm56r46bd4pmi-96mbi-96gb-5600mhz-ddr5-ecc-reg-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-ksm56r46bd4pmi-96mbi-96gb-5600mhz-ddr5-ecc-reg-memory.html",
+   "price": 3499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN59681R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:084434606fd5",
+  "category": "memory",
+  "name": "V7  V7K1280016GBD-LV-U 16GB DDR3 1600MHZ PC3L-12800 Memory Module - SDRAM (2 X 8GB Kit) UDIMM For Desktop Unbuffered Dual-Rank CL11 - 1.35v - 240pin - Lifetime Warranty",
+  "model_number": "V7K1280016GBD-LV-U",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/v7-v7k1280016gbd-lv-u-16gb-ddr3-1600mhz-pc3l-12800-memory-module-sdram-2-x-8gb-kit-udimm-for-desktop-unbuffered-dual-rank.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/v7-v7k1280016gbd-lv-u-16gb-ddr3-1600mhz-pc3l-12800-memory-module-sdram-2-x-8gb-kit-udimm-for-desktop-unbuffered-dual-rank.html",
+   "price": 79.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMV7-43160R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:df9fbcdf3fc8",
+  "category": "memory",
+  "name": "V7 V71600DDR3D-8GB-U 8GB (1 x 8GB) DDR3 SDRAM Memory Module DDR3-1600/PC3-12800 1600 MHz CL11 1.35v 240Pin",
+  "model_number": "V71600DDR3D-8GB-U",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 59.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/v7-v71600ddr3d-8gb-u-8gb-1-x-8gb-ddr3-sdram-memory-module-ddr3-1600-pc3-12800-1600-mhz-cl11-1-35v-240pin.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/v7-v71600ddr3d-8gb-u-8gb-1-x-8gb-ddr3-sdram-memory-module-ddr3-1600-pc3-12800-1600-mhz-cl11-1-35v-240pin.html",
+   "price": 59.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMV7-32161R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ed2977d5e6bc",
+  "category": "memory",
+  "name": "Kingston KF576C38RSAK2-32 FURY Renegade 32GB 2x 16GB Memory Kit DDR5-7600/PC5-60800 CL38 1.45V RGB Non-ECC Unbuffered",
+  "model_number": "KF576C38RSAK2-32",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 549.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kf576c38rsak2-32-fury-renegade-64gb-2x-32gb-memory-kit-ddr5-7600-pc5-60800-cl38-1-45v-rgb-non-ecc-unbuffered.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kf576c38rsak2-32-fury-renegade-64gb-2x-32gb-memory-kit-ddr5-7600-pc5-60800-cl38-1-45v-rgb-non-ecc-unbuffered.html",
+   "price": 549.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN576C3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9294e080459c",
+  "category": "memory",
+  "name": "Corsair CMK64GX5M2D5600Z40 Vengeance 64GB(2x 32GB) 288-Pin PC RAM DDR5 5600 (PC5 44800) Desktop Memory Kit",
+  "model_number": "CMK64GX5M2D5600Z40",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 949.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cmk64gx5m2d5600z40-vengeance-64gb-2x-32gb-288-pin-pc-ram-ddr5-5600-pc5-44800-desktop-memory-kit.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cmk64gx5m2d5600z40-vengeance-64gb-2x-32gb-288-pin-pc-ram-ddr5-5600-pc5-44800-desktop-memory-kit.html",
+   "price": 949.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCOR64Z40R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 30
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8a5d4ba556c2",
+  "category": "memory",
+  "name": "Micron MTC20F2085S1RC64BD2R 32GB DDR5 6400Mhz RDIMM 2Rx8 CL52 ECC Reg Dual-rank Memory",
+  "model_number": "MTC20F2085S1RC64BR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1649.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc20f2085s1rc64bd2r-32gb-ddr5-6400mhz-rdimm-2rx8-cl52-ecc-reg-dual-rank-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc20f2085s1rc64bd2r-32gb-ddr5-6400mhz-rdimm-2rx8-cl52-ecc-reg-dual-rank-memory.html",
+   "price": 1649.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMMIC53414R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7a0339529498",
+  "category": "memory",
+  "name": "Micron MTC10F1084S1RC64BD2R 16GB DDR5 6400MT/sPC5-51200 ECC REG RDIMM Server RAM",
+  "model_number": "MTC10F1084S1RC64BD2R",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 969.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc10f1084s1rc64bd2r-16gb-ddr5-6400mt-spc5-51200-ecc-reg-rdimm-server-ram.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc10f1084s1rc64bd2r-16gb-ddr5-6400mt-spc5-51200-ecc-reg-rdimm-server-ram.html",
+   "price": 969.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMMIC16565R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 4
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 14
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f09a1d414770",
+  "category": "memory",
+  "name": "Crucial CP2K32G4DFRA32A Pro 64GB Kit (2x32GB) DDR4-3200 UDIMM CAS Latency 22 Extended Timings 22-22-22 1.2V",
+  "model_number": "CP2K32G4DFRA32A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 629.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-cp2k32g4dfra32a-pro-64gb-kit-2x32gb-ddr4-3200-udimm-cas-latency-22-extended-timings-22-22-22-1-2v.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-cp2k32g4dfra32a-pro-64gb-kit-2x32gb-ddr4-3200-udimm-cas-latency-22-extended-timings-22-22-22-1-2v.html",
+   "price": 629.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMCRUCP2K3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e1f296a78f18",
+  "category": "memory",
+  "name": "Crucial CT32G48C40S5 32GB DDR5-4800MHz SODIMM Memory  CL40",
+  "model_number": "CT32G48C40S5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 429.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct32g48c40s5-32gb-ddr5-4800mhz-sodimm-memory-cl40.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct32g48c40s5-32gb-ddr5-4800mhz-sodimm-memory-cl40.html",
+   "price": 429.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMCRU32G48R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:89b49f55a1ba",
+  "category": "memory",
+  "name": "Crucial CP32G60C40U5W Pro DDR5 32 GB Module (1 x 32GB) 6000 MHz PC5-48000 CL40 1.35V White - Unbuffered - 288-pin - DIMM",
+  "model_number": "CP32G60C40U5W",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 419.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-cp32g60c40u5w-pro-ddr5-32-gb-module-1-x-32gb-6000-mhz-pc5-48000-cl40-1-35v-white-unbuffered-288-pin-dimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-cp32g60c40u5w-pro-ddr5-32-gb-module-1-x-32gb-6000-mhz-pc5-48000-cl40-1-35v-white-unbuffered-288-pin-dimm.html",
+   "price": 419.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMCRU5360WR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9e1c55d74243",
+  "category": "memory",
+  "name": "Micron MTC40F2046S1RC64BR DDR5 RDIMM 64GB 6400Mhz 2Rx4 Dual-rank Memory CL52 ECC Registered",
+  "model_number": "MTC40F2046S1RC64BR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-mtc40f2046s1rc64br-ddr5-rdimm-64gb-2rx4-6400mhz-cl52-ecc-registered.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-mtc40f2046s1rc64br-ddr5-rdimm-64gb-2rx4-6400mhz-cl52-ecc-registered.html",
+   "price": 3399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMCRUC64BR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f4783d3c88eb",
+  "category": "memory",
+  "name": "Kingston KF432C16BB/8 FURY Beast 8GB (1x8GB) DDR4 SDRAM Memory 3200 MHz PC4-25600 CL16 1.35V Black",
+  "model_number": "KF432C16BB/8",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kf432c16bb-8-fury-beast-8gb-1x8gb-ddr4-sdram-memory-3200-mhz-pc4-25600-cl16-1-35v-black.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kf432c16bb-8-fury-beast-8gb-1x8gb-ddr4-sdram-memory-3200-mhz-pc4-25600-cl16-1-35v-black.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN48322R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:5136201a676f",
+  "category": "memory",
+  "name": "Kingston KVR32N22D8/16 ValueRAM 16GB DDR4 SDRAM Memory 3200 MHz PC4-25600 CL22 1.2V Non-ECC - Unbuffered - 288-pin - DIMM",
+  "model_number": "KVR32N22D8/16",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kvr32n22d8-16-valueram-16gb-ddr4-sdram-memory-3200-mhz-pc4-25600-cl22-1-2v-non-ecc-unbuffered-288-pin-dimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kvr32n22d8-16-valueram-16gb-ddr4-sdram-memory-3200-mhz-pc4-25600-cl22-1-2v-non-ecc-unbuffered-288-pin-dimm.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN41323R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:59c68b620d8d",
+  "category": "memory",
+  "name": "Kingston KF432C16BB1/16 FURY Beast 16GB (1x16GB) DDR4 SDRAM Memory 3200 MHz PC4-25600 CL16 1.35V Black",
+  "model_number": "KF432C16BB1/16",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kf432c16bb1-16-fury-beast-16gb-1x16gb-ddr4-sdram-memory-3200-mhz-pc4-25600-cl16-1-35v-black.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kf432c16bb1-16-fury-beast-16gb-1x16gb-ddr4-sdram-memory-3200-mhz-pc4-25600-cl16-1-35v-black.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMKIN41322R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a269164451f4",
+  "category": "memory",
+  "name": "Kingston KCP432NS6/8 8GB DDR4 3200MHz SDRAM Memory Module CL22 1.2V Non-ECC Unbuffered 288-pin DIMM DDR4-3200/PC4-25600 DDR4 SDRAM",
+  "model_number": "KCP432NS6/8",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kcp432ns6-8-8gb-ddr4-3200mhz-sdram-memory-module-cl22-1-2v-non-ecc-unbuffered-288-pin-dimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kcp432ns6-8-8gb-ddr4-3200mhz-sdram-memory-module-cl22-1-2v-non-ecc-unbuffered-288-pin-dimm.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN4832DR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:226245b3b72a",
+  "category": "memory",
+  "name": "Crucial CT2K32G48C40S5 64GB 2x32GB DDR5 SODIMM Memory Kit 4800MHz 40-39-39 1.1V",
+  "model_number": "CT2K32G48C40S5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 869.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct2k32g48c40s5-64gb-2x32gb-ddr5-sodimm-memory-kit-4800mhz-40-39-39-1-1v.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct2k32g48c40s5-64gb-2x32gb-ddr5-sodimm-memory-kit-4800mhz-40-39-39-1-1v.html",
+   "price": 869.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMCRUCT2K3R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:010d6516a4d3",
+  "category": "memory",
+  "name": "Kingston KCP432SD8/16 16GB DDR4 3200 SODIMM Value RAM CL22 1.2V Notebook Memory",
+  "model_number": "KCP432SD8/16",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kcp432sd8-16-16gb-ddr4-3200-sodimm-value-ram-cl22-1-2v-notebook-memory.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kcp432sd8-16-16gb-ddr4-3200-sodimm-value-ram-cl22-1-2v-notebook-memory.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMKIN41321R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 14
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 12
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 13
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c117009f697d",
+  "category": "memory",
+  "name": "Micron MTC40F2046S1RC64BD2R 64GB DDR5 6400 MHz SDRAM Dual-rank Memory CL52 1.1V ECC Registered 288-pin DIMM DDR5-6400/PC5-51200 Memory Module",
+  "model_number": "MTC40F2046S1RC64BD2R",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc40f2046s1rc64bd2r-64gb-ddr5-6400-mhz-sdram-dual-rank-memory-cl52-1-1v-ecc-registered-288-pin-dimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc40f2046s1rc64bd2r-64gb-ddr5-6400-mhz-sdram-dual-rank-memory-cl52-1-1v-ecc-registered-288-pin-dimm.html",
+   "price": 3299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMMIC56464R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 16
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7ea282eddb26",
+  "category": "memory",
+  "name": "ADATA AX5U6000C3032G-DTLABBK 32GB DDR56000MHz 1.4V 30-40-40 CL Black",
+  "model_number": "AX5U6000C3032G-DTLABBK",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/adata-ax5u6000c3032g-dtlabbk-32gb-ddr56000mhz-1-4v-30-40-40-cl-black.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/adata-ax5u6000c3032g-dtlabbk-32gb-ddr56000mhz-1-4v-30-40-40-cl-black.html",
+   "price": 599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMADA5U632R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:cf1c67d90d54",
+  "category": "memory",
+  "name": "Micron MTC40F2046S1RC56BR 64GB DDR5 5600 MHz SDRAM Dual-rank Memory CL46 1.1V ECC 288-pin DIMM DDR5-5600/PC5-44800 Memory Module",
+  "model_number": "MTC40F2046S1RC56BR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-mtc40f2046s1rc56br-64gb-ddr5-5600-mhz-sdram-dual-rank-memory-cl46-1-1v-ecc-registered-288-pin-dimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-mtc40f2046s1rc56br-64gb-ddr5-5600-mhz-sdram-dual-rank-memory-cl46-1-1v-ecc-registered-288-pin-dimm.html",
+   "price": 2999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMMIC56456R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:73e0d3128ee3",
+  "category": "memory",
+  "name": "Kingston KCP432SS8/8 8GB DDR4 SODIMM Memory Module DDR4-3200/PC4-25600 SDRAM 3200MHz CL22 1.2V Non-ECC Unbuffered 260-pin",
+  "model_number": "KVR32S22S6/8",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-kcp432ss8-8-8gb-ddr4-sodimm-memory-module-ddr4-3200-pc4-25600-sdram-3200mhz-cl22-1-2v-non-ecc-unbuffered-260-pin.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-kcp432ss8-8-8gb-ddr4-sodimm-memory-module-ddr4-3200-pc4-25600-sdram-3200mhz-cl22-1-2v-non-ecc-unbuffered-260-pin.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "MEMKIN32S22R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b97195560820",
+  "category": "memory",
+  "name": "D4432E Kingston KSM32RD4/64HD 64GB DDR4 3200 ECC Registered Server Memory Dual-rank CL22 1.2V 288-pin DIMM",
+  "model_number": "KSM32RD4/64HD",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/d4432e-kingston-ksm32rd4-64hd-64gb-ddr4-3200-ecc-registered-server-memory-dual-rank-cl22-1-2v-288-pin-dimm.html",
+  "snapshot_id": "centralcomputers-memory-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:45+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/d4432e-kingston-ksm32rd4-64hd-64gb-ddr4-3200-ecc-registered-server-memory-dual-rank-cl22-1-2v-288-pin-dimm.html",
+   "price": 999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "MEMKIN46432R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/memory.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ }
+]

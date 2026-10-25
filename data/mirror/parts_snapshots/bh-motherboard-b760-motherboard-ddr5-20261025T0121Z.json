@@ -1,0 +1,106 @@
+[
+ {
+  "id": "bh:44328ba2f90f",
+  "category": "motherboard",
+  "name": "MSI PRO B760M-P DDR5 LGA 1700 Micro-ATX Motherboard",
+  "model_number": "PRO B760M-P",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1901080-REG/msi_pro_b760m_p_ddr5_motherboard.html",
+  "snapshot_id": "bh-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:40+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1901080-REG/msi_pro_b760m_p_ddr5_motherboard.html",
+   "price": 109.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:946525e1b698",
+  "category": "motherboard",
+  "name": "MSI B760 GAMING PLUS WIFI ATX LGA 1700 Motherboard",
+  "model_number": "B760 GAMING PLUS WIFI",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.54,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1764872-REG/msi_b760_gaming_plus_wifi.html",
+  "snapshot_id": "bh-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:40+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1764872-REG/msi_b760_gaming_plus_wifi.html",
+   "price": 189.54,
+   "stock": "special_order",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "special_order"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:17af7037b0e5",
+  "category": "motherboard",
+  "name": "ASUS TUF GAMING B760-PLUS WIFI LGA1700 ATX Motherboard",
+  "model_number": "TUF GAMING B760-PLUS WIFI",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "LGA1700",
+   "memory_type": "DDR5",
+   "memory_form": "DIMM",
+   "memory_slots": 4,
+   "memory_max_speed_mhz": 7200,
+   "form_factor": "ATX",
+   "m2_slots": 3
+  },
+  "price": 169.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1757906-REG/asus_tuf_gaming_b760_plus_wifi.html",
+  "snapshot_id": "bh-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:40+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1757906-REG/asus_tuf_gaming_b760_plus_wifi.html",
+   "price": 169.99,
+   "stock": "special_order",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "special_order"
+  },
+  "maker_model": "TUF GAMING B760-PLUS WIFI"
+ },
+ {
+  "id": "bh:dc9b87df1d71",
+  "category": "motherboard",
+  "name": "ASUS Pro B760M-CT-CSM LGA 1700 Micro-ATX Motherboard",
+  "model_number": "PRO B760M-CT-CSM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 135.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1742990-REG/asus_pro_b760m_ct_csm_lga_1700.html",
+  "snapshot_id": "bh-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:40+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1742990-REG/asus_pro_b760m_ct_csm_lga_1700.html",
+   "price": 135.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

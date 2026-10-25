@@ -112,3 +112,29 @@ def test_installed_agents_advertise_real_chat_manifest_offline(monkeypatch):
             await asyncio.sleep(0)
 
     asyncio.run(check())
+
+
+def test_custom_seller_seed_reads_only_the_agent_seed_name(monkeypatch):
+    monkeypatch.setenv("ACME_ONLY_SEED", "someone-elses-seed")
+    monkeypatch.delenv("ACME_ONLY_AGENT_SEED", raising=False)
+    try:
+        common.register_custom_seller("acme-only")
+        assert common.SEEDS["acme-only"] == "tech-bazaar-acme-only-dev"
+        common.SEEDS.pop("acme-only")
+        monkeypatch.setenv("ACME_ONLY_AGENT_SEED", "mine")
+        common.register_custom_seller("acme-only")
+        assert common.SEEDS["acme-only"] == "mine"
+    finally:
+        common.SEEDS.pop("acme-only", None)
+        common._CUSTOM_ENVS.pop("ACME_ONLY", None)
+
+
+def test_two_custom_roles_never_share_one_env_seed_name():
+    try:
+        common.register_custom_seller("acme-shop")
+        with pytest.raises(ValueError, match="same seed name"):
+            common.register_custom_seller("acme_shop")
+        assert "acme_shop" not in common.SEEDS
+    finally:
+        common.SEEDS.pop("acme-shop", None)
+        common._CUSTOM_ENVS.pop("ACME_SHOP", None)

@@ -1,0 +1,37 @@
+[
+ {
+  "name": "MSI - B760 GAMING PLUS WIFI LGA 1700 DDR5 ATX - SATA 6Gbps, Wi-Fi 6E, PCIe 4.0",
+  "url": "https://www.bestbuy.com/product/msi-b760-gaming-plus-wifi-lga-1700-ddr5-atx-sata-6gbps-wi-fi-6e-pcie-4-0/J3P7TXLSJZ/sku/11061905",
+  "price": 211.99,
+  "regularPrice": 211.99,
+  "condition": "new"
+ },
+ {
+  "name": "GIGABYTE - B760M DS3H WIFI6E GEN5 LGA 1700 DDR5 M.2 PCIe 5.0 USB 3.2 Type-C 2.5GbE LAN",
+  "url": "https://www.bestbuy.com/product/gigabyte-b760m-ds3h-wifi6e-gen5-lga-1700-ddr5-m-2-pcie-5-0-usb-3-2-type-c-2-5gbe-lan/J3ZW9X73ZG/sku/11944735",
+  "price": 161.49,
+  "regularPrice": 185.73,
+  "condition": "new"
+ },
+ {
+  "name": "GIGABYTE - B650 EAGLE AX (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - Black",
+  "url": "https://www.bestbuy.com/product/gigabyte-b650-eagle-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92VHW2/sku/6582206",
+  "price": 139.99,
+  "regularPrice": 179.99,
+  "condition": "new"
+ },
+ {
+  "name": "GIGABYTE - B650 AORUS ELITE AX (Socket AM5) AMD B650 ATX DDR5 Wi-Fi 6E Motherboard - Black",
+  "url": "https://www.bestbuy.com/product/gigabyte-b650-aorus-elite-ax-socket-am5-amd-b650-atx-ddr5-wi-fi-6e-motherboard-black/J3ZW92V2KF/sku/6523178",
+  "price": 159.99,
+  "regularPrice": 229.99,
+  "condition": "new"
+ },
+ {
+  "name": "MSI - B550 TOMAHAWK MAX WIFI (Socket AM4) AMD B550 ATX DDR4 Wi-Fi 6E Motherboard - Black",
+  "url": "https://www.bestbuy.com/product/msi-b550-tomahawk-max-wifi-socket-am4-amd-b550-atx-ddr4-wi-fi-6e-motherboard-black/J3P7TX8LTP/sku/6504286",
+  "price": 159.99,
+  "regularPrice": 159.99,
+  "condition": "new"
+ }
+]

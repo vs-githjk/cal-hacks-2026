@@ -1,4 +1,4 @@
-# Bazaar Advocate
+# Tech Bazaar Quality Advocate
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
