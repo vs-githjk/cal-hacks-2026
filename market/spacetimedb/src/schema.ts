@@ -131,10 +131,22 @@ export const pairCode = table(
   },
 );
 
-/** The one-time word-pair code Lane D's approval service issued for a mandate that needs the buyer's call. Private: only the mandate's buyer sees it (my_pending_approvals). */
+/**
+ * The one-time word-pair code Lane D's approval service issued for a mandate that needs the buyer's call. Private: only the
+ * mandate's buyer sees it (my_pending_approvals). A WHOLE-BUILD code (issue_build_approval_code) has no mandate row yet (the
+ * build makes its mandates after the call), so it carries its own amount, label, origin and expiry: `expiry` after the epoch
+ * marks a build row, and clearing one sets expiry back to the epoch (the row stays, so telemetry still counts the call).
+ * The four trailing columns are appended with defaults so a publish migrates in place.
+ */
 export const approvalCode = table(
   { name: 'approval_code' },
-  { mandateHash: t.string().primaryKey(), buyerId: t.string().index('btree'), code: t.string(), failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp() },
+  {
+    mandateHash: t.string().primaryKey(), buyerId: t.string().index('btree'), code: t.string(), failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp(),
+    amount: t.f64().default(0),
+    payee: t.string().default(''),
+    expiry: t.timestamp().default(Timestamp.UNIX_EPOCH),
+    origin: t.string().default(''),
+  },
 );
 
 /** LossReport contract, plus the seller's strategy diff and Claude's one line. Private: each seller sees only its own (my_loss_reports). */

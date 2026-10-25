@@ -2,6 +2,12 @@
 
 **Check a PC build before you buy it.** Fill in the parts (CPU, motherboard, RAM, graphics card, power supply, case, cooler). The Actor runs up to **12 compatibility rules** and returns **pass**, **fail** or **uncertain** for each one, with the numbers it compared and the **maker spec pages** behind them.
 
+## What you get
+
+- One row per build: **pass**, **fail**, **partial** or **uncertain**, and for each of up to 12 rules the numbers compared and the maker page behind them.
+- Sample row (the default input): `{"rule_id": "fit.cooler_height", "verdict": "fail", "reason": "cooler height 155 mm exceeds case clearance 145 mm", "sources": ["thermalright.com ...", "fractal-design.com ..."], "build_verdict": "fail"}`
+- Price: **$0.005 per build checked** (plus Apify's $0.00005 run start).
+
 It never guesses. A spec nobody knows makes that rule **uncertain**, not a pass. A build with parts missing never gets a plain PASS: its verdict is **partial**, and the summary says which rules could run and which parts were not given, for example `PASS for the 1 rule(s) that could run; not given: memory, gpu, psu, case, cooler`. A part we cannot read, an unknown key or a bad number makes the build **uncertain** and names it.
 
 Built for **AI shopping agents**. Our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), uses it to veto a part that will not fit before any money moves. It is just as useful to PC builders, resellers and anyone quoting a build.

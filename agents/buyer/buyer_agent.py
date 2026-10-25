@@ -558,8 +558,9 @@ async def handle_text(ctx: Context, sender: str, text: str):
 
 def live_sellers() -> list[str]:
     """The sellers that can run in this mode. On Agentverse a seller still on its public dev seed is skipped by
-    sellers/run_all.py, so it is neither asked for a bid nor counted in what the owner is told."""
-    return [s for s in common.SELLERS if common.mailbox_ready(s)]
+    sellers/run_all.py, so it is neither asked for a bid nor counted in what the owner is told. A retired seller
+    (common.RETIRED_SELLERS, #398) is not run, so it is not asked either."""
+    return [s for s in common.SELLERS if common.mailbox_ready(s) and s not in common.RETIRED_SELLERS]
 
 
 async def start_round(ctx: Context, need: dict | None = None):

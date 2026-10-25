@@ -124,7 +124,23 @@
    "checked": "2026-10-24"
   }
  ],
- "storage": [],
+ "storage": [
+  {
+   "brand": "Samsung",
+   "name": "Samsung 990 PRO 2TB",
+   "model_number": "MZ-V9P2T0B/AM",
+   "also_model_numbers": [
+    "MZ-V9P2T0B",
+    "MZ-V9P2T0"
+   ],
+   "match": "990 pro\\b.{0,40}\\b2\\s?tb|\\b2\\s?tb\\b.{0,40}990 pro",
+   "exclude": "heatsink|monitor|\\bark\\b|9100|combo|bundle",
+   "interface": "NVMe",
+   "form": "M.2",
+   "source": "https://www.samsung.com/us/computing/memory-storage/solid-state-drives/990-pro-pcie-4-0-nvme-ssd-2tb-mz-v9p2t0b-am/",
+   "checked": "2026-10-24"
+  }
+ ],
  "cooler": [
   {
    "brand": "Thermalright",

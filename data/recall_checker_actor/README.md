@@ -2,6 +2,12 @@
 
 **Check any electronics product against U.S. government recalls in one call.** Give a brand and a product name (with its model number or UPC if you have them). The Actor reads the **U.S. Consumer Product Safety Commission (CPSC)** recall database and returns, for each product:
 
+## What you get
+
+- One row per product: **recalled**, **possible**, **none** or **unverified**, with the cpsc.gov recall page, date, hazard, remedy and units.
+- Sample row (the default input): `{"brand": "Anker", "product": "PowerCore 10000 A1263", "status": "recalled", "recall_date": "2025-06-12", "units": "About 1,158,000", "match_on": "model A1263", "recall_url": "https://www.cpsc.gov/Recalls/2025/..."}`
+- Price: **$0.002 per product checked**; unverified is free (plus Apify's $0.00005 run start).
+
 - **recalled**: a recall names this exact model or UPC;
 - **possible**: a recall of the same brand names the same product line or product name, but not this model (a lead to check, never called a match);
 - **none**: CPSC answered and no recall of that brand matches;

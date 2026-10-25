@@ -1,0 +1,19 @@
+{
+ "title": "Readiness report input",
+ "type": "object",
+ "schemaVersion": 1,
+ "properties": {
+  "listingUrls": {
+   "title": "Your listing URLs",
+   "type": "array",
+   "editor": "stringList",
+   "description": "Product page URLs from your own store, one per line (up to 200 per run). Each page is fetched once.",
+   "prefill": [
+    "https://www.canadacomputers.com/en/powered-by-nvidia/269441/msi-rtx-5070-ti-16g-shadow-3x-oc-gddr7-triple-fans-rtx-5070-ti-16g-shadow-3x-oc.html"
+   ]
+  }
+ },
+ "required": [
+  "listingUrls"
+ ]
+}
