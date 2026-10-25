@@ -159,7 +159,10 @@ def test_no_allowance_means_the_buyers_own_allowance_is_left_alone():
 def test_the_default_run_is_unchanged_the_demo_plan_and_goal_build_1(capsys, tmp_path):
     assert build.main(["--dry-run", "--step-delay", "0", "--out-dir", str(tmp_path)]) == 0
     out = capsys.readouterr().out
-    assert "plan from the default" in out and "goal-build-1" in out
+    # #358 put the 6-part planner on main: with it importable the default run says "plan from the planner", without it "plan from the default"
+    # (the demo plan). Either way the goal id, the six parts and the $2,100 cap are the demo's.
+    assert ("plan from the planner" in out or "plan from the default" in out) and "goal-build-1" in out
+    assert "6 parts to buy, 2 owned, cap $2,100.00" in out
 
 
 def test_a_plan_file_is_built_through_plan_from_planner(capsys, tmp_path):

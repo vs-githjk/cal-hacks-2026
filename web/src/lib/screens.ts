@@ -17,7 +17,7 @@ export interface GoalView {
   conditions: string[]; // allowed conditions, e.g. ["new", "open-box"]
   variant: string;
   origin: Origin;
-  skipped: string[]; // sentences like "You already own a 750 W PSU ..."
+  skipped: { part: string; text: string }[]; // the owned part that was skipped ("PSU", "case") and the sentence about it
   allowance: { perPurchase: number; periodLimit: number; period: string; spent: number; ladderStep: number } | null;
 }
 
@@ -92,6 +92,10 @@ export interface ReviewView {
   locked: boolean;
   origin: Origin;
 }
+
+/** The mandateId my_pending_approvals gives the one code that approves a whole build (market.ts myPendingApprovalsView). */
+export const WHOLE_BUILD_ID = "whole build";
+export const isWholeBuild = (r: Pick<ReviewView, "mandateId">): boolean => r.mandateId === WHOLE_BUILD_ID;
 
 /** Matches APPROVAL_MAX_FAILURES in market/spacetimedb/src/market.ts. */
 export const REVIEW_MAX_FAILURES = 5;
@@ -191,6 +195,12 @@ export function latestGoal<G extends GoalRow>(goals: readonly G[]): G | undefine
   return [...goals].sort((a, b) => (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
+/** "owned-psu" -> "PSU", "owned-case" -> "case": the part an owned-part id names, short ids as acronyms. */
+function ownedPartLabel(id: string): string {
+  const name = id.replace(/^owned-/, "").replaceAll("-", " ").trim() || "part";
+  return name.length <= 3 ? name.toUpperCase() : name;
+}
+
 function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView {
   const mine = items.filter((i) => i.goalId === g.id);
   const deadline = d(g.deadline);
@@ -208,7 +218,10 @@ function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: Allowanc
     conditions,
     variant: mine.find((i) => i.variant)?.variant ?? "",
     origin: asOrigin(g.origin),
-    skipped: mine.filter((i) => i.skippedOwnedPartId).map((i) => `Already owned (${i.skippedOwnedPartId}), so it is not in this hunt.`),
+    skipped: mine.filter((i) => i.skippedOwnedPartId).map((i) => {
+      const part = ownedPartLabel(i.skippedOwnedPartId);
+      return { part, text: `You already own the ${part}, so it is not in this hunt.` };
+    }),
     allowance: allowanceView(allowance),
   };
 }

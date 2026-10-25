@@ -113,7 +113,7 @@ def test_each_reducer_is_called_by_the_role_it_demands(tmp_path):
     r, out, m, *_ = run_build(tmp_path=tmp_path)
     allowed = {"post_goal": "buyer", "post_need": "buyer", "set_allowance": "referee", "open_round": "referee", "close_round": "referee",
                "attach_verdict": "referee", "attach_advocate_card": "referee", "create_mandate": "referee", "record_approval": "referee",
-               "record_payment": "referee"}
+               "record_payment": "referee", "issue_build_approval_code": "referee", "clear_build_approval_code": "referee"}
     for who, reducer, _ in m.log:
         if reducer in ("set_floor", "place_bid"):
             assert who.startswith("seller:")
@@ -665,3 +665,74 @@ def test_dry_run_prints_the_steps_touches_nothing_and_exits_zero(capsys, tmp_pat
     assert build.main(["--dry-run"]) == 0
     out = capsys.readouterr().out
     assert "post_goal" in out and out.count("post_need") == 7 and out.count("open_round") == 7 and "create_mandate" not in out   # six parts and the board's re-plan
+
+
+# ---------------------------------------------------------------- #398: the dry run names each payee's CRS status
+
+def crs_lines(out):
+    return [l for l in out.splitlines() if "CRS" in l and ("profile" in l or "unknown" in l) and "CRS per payee" not in l]
+
+
+def crs_offline(monkeypatch, tmp_path, profile=None):
+    """Point CRS at a temp profile file and cache, with credentials set and every network path raising."""
+    from demo import bridge
+    mod = bridge.crs_module()
+    def boom(*a, **k):
+        raise AssertionError("a dry run must never reach the CRS sandbox")
+    for name in ("_login", "_get_token", "_request", "_open_request"):
+        monkeypatch.setattr(mod, name, boom)
+    monkeypatch.setenv("CRS_USERNAME", "test-user")
+    monkeypatch.setenv("CRS_PASSWORD", "test-password")
+    monkeypatch.setenv("CRS_SIGNAL_CACHE_PATH", str(tmp_path / "cache.json"))
+    if profile is None:
+        monkeypatch.delenv("CRS_TEST_IDENTITIES_PATH", raising=False)
+    else:
+        path = tmp_path / "private.json"
+        path.write_text(profile if isinstance(profile, str) else json.dumps(profile))
+        monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(path))
+
+
+def test_dry_run_with_no_profile_file_says_no_crs_profile_for_every_payee(capsys, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    crs_offline(monkeypatch, tmp_path)
+    assert build.main(["--dry-run"]) == 0
+    lines = crs_lines(capsys.readouterr().out)
+    for sid in ("gadget-grove", "fair-price-pc", "bargain-bin"):
+        mine = [l for l in lines if f"({sid})" in l]
+        assert len(mine) == 1 and "no CRS profile" in mine[0] and "[SIM]" in mine[0]
+    assert all("no CRS profile" in l for l in lines) and len(lines) >= 3
+
+
+def test_dry_run_names_a_business_payee_as_not_checked_and_an_individual_as_sim(capsys, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    crs_offline(monkeypatch, tmp_path, {"sellers": {
+        "fair-price-pc": {"seller_type": "business", "consent": True, "persona_ref": "P01", "request": {"field": "synthetic"}},
+        "gadget-grove": {"seller_type": "individual", "consent": True}}})
+    assert build.main(["--dry-run"]) == 0
+    lines = crs_lines(capsys.readouterr().out)
+    fair = [l for l in lines if "(fair-price-pc)" in l]
+    assert len(fair) == 1 and "business CRS profile (P01)" in fair[0] and "not checked" in fair[0]
+    grove = [l for l in lines if "(gadget-grove)" in l]
+    assert len(grove) == 1 and "no CRS profile: its CRS profile is an individual seller" in grove[0]
+
+
+def test_dry_run_shows_a_recorded_band_with_its_time_never_as_live(capsys, tmp_path, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    monkeypatch.chdir(tmp_path)
+    crs_offline(monkeypatch, tmp_path, {"sellers": {
+        "bargain-bin": {"seller_type": "business", "consent": True, "persona_ref": "P12", "request": {"field": "synthetic"}}}})
+    at = (datetime.now(timezone.utc) - timedelta(hours=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    (tmp_path / "cache.json").write_text(json.dumps({"bargain-bin": {"persona_ref": "P12", "reason": "x", "signal": {
+        "supplier_id": "bargain-bin", "stability": "not_verified", "checked_at": at, "source": "sandbox"}}}))
+    assert build.main(["--dry-run"]) == 0
+    line = next(l for l in crs_lines(capsys.readouterr().out) if "(bargain-bin)" in l)
+    assert "CRS band not_verified" in line and f"recorded {at}" in line and "[LIVE]" not in line
+    assert "the payee gate would hold" in line
+
+
+def test_dry_run_with_an_unreadable_profile_file_says_unknown_never_no_profile(capsys, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    crs_offline(monkeypatch, tmp_path, "not json")
+    assert build.main(["--dry-run"]) == 0
+    lines = crs_lines(capsys.readouterr().out)
+    assert lines and all("CRS unknown" in l and "no CRS profile" not in l for l in lines)

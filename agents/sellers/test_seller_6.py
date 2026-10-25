@@ -162,11 +162,11 @@ def test_the_bureau_runs_seller_6_only_with_its_seed(monkeypatch, capsys):
     monkeypatch.setattr(run_all, "build", lambda name: built.append(name) or type("A", (), {"address": name})())
     monkeypatch.setattr(common, "SELLERS", list(common.CATALOG_SELLERS))
     run_all.build_all()
-    assert built == common.CATALOG_SELLERS and "seller_6 off: set SELLER_6_AGENT_SEED" in capsys.readouterr().out
+    assert built == [n for n in common.CATALOG_SELLERS if n not in common.RETIRED_SELLERS] and "seller_6 off: set SELLER_6_AGENT_SEED" in capsys.readouterr().out
     built.clear()
     monkeypatch.setattr(common, "SELLERS", [*common.CATALOG_SELLERS, "seller_6"])
     monkeypatch.setitem(common.SEEDS, "seller_6", PRIVATE)
-    assert [a.address for a in run_all.build_all()] == [*common.CATALOG_SELLERS, "seller_6"]
+    assert [a.address for a in run_all.build_all()] == [*(n for n in common.CATALOG_SELLERS if n not in common.RETIRED_SELLERS), "seller_6"]
 
 
 def test_a_seller_6_bid_is_held_back_by_every_buyer_check():

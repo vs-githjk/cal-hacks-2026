@@ -1,5 +1,7 @@
 # Byte Bros Outlet
 
+**Job: the learner.** It learns from a loss report: a banded price gap becomes a price step, never below its floor.
+
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 

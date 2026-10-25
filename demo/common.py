@@ -76,7 +76,7 @@ class Narrator:
 
     def _w(self, text: str) -> None:
         if self.show:
-            print(text, file=self.stream)
+            print(text, file=self.stream, flush=True)   # a piped log (| tee) must show the approval code line during the call
 
     def header(self, n: int, title: str, code: str) -> None:
         self._w("")

@@ -4,7 +4,7 @@
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, winningBid } from "@/lib/screens";
+import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, winningBid } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import type { CrsView } from "@/lib/crs";
 import { CrsSignal } from "./crs";
@@ -40,7 +40,7 @@ export function GoalCard({ goal }: { goal: GoalView }) {
         <Stat label="Reserved" value={money(goal.reserved)} sub={goal.state === "DONE" ? "released after payment" : undefined} />
       </dl>
       {goal.skipped.map((s) => (
-        <p key={s} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the PSU.</b> {s}</p>
+        <p key={s.part} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the {s.part}.</b> {s.text}</p>
       ))}
     </Card>
   );
@@ -318,11 +318,11 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
         {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
       </h3>
       <p className="text-[13px] tabular-nums text-muted">
-        Mandate <Code>{review.mandateId}</Code> · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
+        {isWholeBuild(review) ? "One call approves the whole build" : <>Mandate <Code>{review.mandateId}</Code></>} · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
       </p>
       <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
         <span className="text-[clamp(32px,4vw,44px)] font-semibold leading-none tracking-[-0.02em]">{review.code}</span>
-        <small className="text-[12px] text-muted">one-time code for this mandate, this screen only</small>
+        <small className="text-[12px] text-muted">one-time code for {isWholeBuild(review) ? "this call" : "this mandate"}, this screen only</small>
       </div>
       <p className="text-[13px] font-semibold">Say this code on the call. Only the call approves; nothing on this screen can.</p>
       <p className="mt-1 text-[13px] text-muted">{CAP_RULE}</p>
