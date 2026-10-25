@@ -393,6 +393,45 @@ describe('every state change writes a floor event', () => {
   });
 });
 
+// ============================================================================================
+// #H1 (red team): a Shield block, failed claim or advocate veto attached while a round is still open
+// must not reach the public floor_event feed, or a rival still bidding learns which sellers are
+// already out. The round close that reveals the result flushes every check's event at once.
+// ============================================================================================
+describe('#H1 per-bid check events wait for round close', () => {
+  it("an open round's public events name no bid or seller, however many checks land on it", () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    const n0 = events().length;
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a1', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+    run(REF, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-a1', claim: 'new', check: 'false', evidenceUrl: 'https://x.test', origin: 'SIM' }));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b1', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'too long', sourceUrl: 'https://x.test/b', origin: 'SIM' }));
+    // No public event at all for any of these three checks while the round stays open: not the bid id
+    // (which embeds the seller id), not the rule, not the verdict, nothing.
+    expect(events().slice(n0)).toHaveLength(0);
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const kinds = events().slice(n0).map((e) => e.kind);
+    expect(kinds).toContain('verdict');
+    expect(kinds).toContain('claim_checked');
+    expect(kinds).toContain('advocate_card');
+    const verdict = events().find((e) => e.kind === 'verdict')!;
+    expect(verdict.refId).toBe('bid-a1');
+    expect(verdict.label).toBe('Bazaar Shield: block');
+  });
+
+  it('a check attached after the round already closed (#389 defense in depth) is announced right away: it leaks nothing new', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const n0 = events().length;
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a1', verdict: 'block', ruleIds: ['shield.late'], origin: 'SIM' }));
+    expect(events().slice(n0).map((e) => e.kind)).toEqual(['verdict']);
+  });
+});
+
 describe('goals (Lane A Goal contract)', () => {
   it('post_goal stores the goal with its items; only a paired buyer screen sees it', () => {
     run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
@@ -585,21 +624,23 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
     expect([...h.db.bidCheck.iter()].map((c) => [c.kind, c.result])).toEqual([['advocate', 'caution']]);
   });
 
-  it('writes a floor event without the seller or the text, and a veto line on the buyer feed', () => {
+  it('#H1 defers the floor event (no seller, no text) until the round closes; the veto notification is immediate', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     const n0 = events().length;
     run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }));
-    const e = events().slice(n0);
-    expect(e.map((x) => x.kind)).toEqual(['advocate_card']);
-    expect(e[0]!.label).toMatch(/veto/);
-    expect(e[0]!.sellerId).toBe('');
+    expect(events().slice(n0)).toHaveLength(0); // no public event while the round stays open
     const feed = m.myNotificationsView(h.viewContext(VIDYUT) as any);
     const v = feed.filter((n: any) => n.klass === 'veto');
-    expect(v).toHaveLength(1);
+    expect(v).toHaveLength(1); // the private veto notification is never deferred
     expect(v[0]!.text).toContain('The card is longer than your case allows');
     expect(v[0]!.text).toContain('https://example.com/spec');
     expect(m.myNotificationsView(h.viewContext(BOB) as any).filter((n: any) => n.klass === 'veto')).toHaveLength(0);
+    closeIt();
+    const e = events().slice(n0).filter((x) => x.kind === 'advocate_card');
+    expect(e).toHaveLength(1);
+    expect(e[0]!.label).toMatch(/veto/);
+    expect(e[0]!.sellerId).toBe('');
   });
 
   it('a veto must cite a source, the recommendation must be known, and the bid must exist', () => {

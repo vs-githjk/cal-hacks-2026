@@ -406,24 +406,49 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   else event(ctx, 'bid_rejected', 'bid', a.id, 'Bid rejected: below this seller floor', me.sellerId, a.origin);
 }
 
+/**
+ * #H1 (red team): emit the public event for one check row attached to a bid. Called immediately only when
+ * the bid's round is already closed (a late check, #389's defense in depth, leaks nothing new); otherwise
+ * the round or stage close that reveals this bid's outcome flushes it, via emitBidCheckEvents below. Before
+ * that, a rival still bidding must never learn from the public floor that this seller carries a flag.
+ */
+function emitOneBidCheckEvent(ctx: Ctx, bidId: string, c: { kind: string; result: string; detail: string; origin: string }) {
+  if (c.kind === 'shield') event(ctx, 'verdict', 'bid_check', bidId, `Bazaar Shield: ${c.result}`, '', c.origin);
+  else if (c.kind === 'claim') event(ctx, 'claim_checked', 'bid_check', bidId, `Claim check: ${c.result}`, '', c.origin);
+  else if (c.kind === 'advocate') {
+    const ruleId = c.detail.includes(': ') ? c.detail.slice(0, c.detail.indexOf(': ')) : c.detail;
+    event(ctx, 'advocate_card', 'bid_check', bidId, c.result === 'veto' ? `Advocate veto (${ruleId})` : `Advocate: ${c.result}`, '', c.origin);
+  }
+}
+
+/** #H1: flush every check already attached to a bid whose outcome a round close just revealed. None of
+ * them has had a public event yet, since attach deferred it until now (see the attach_* reducers below). */
+function emitBidCheckEvents(ctx: Ctx, bidId: string) {
+  for (const c of ctx.db.bidCheck.bidId.filter(bidId)) emitOneBidCheckEvent(ctx, bidId, c);
+}
+
 export function attachVerdict(ctx: Ctx, a: { bidId: string; verdict: string; ruleIds: string[]; origin: string }) {
   requireRole(ctx, 'attach_verdict', ['referee']);
   if (!['allow', 'quarantine', 'block'].includes(a.verdict)) throw new SenderError('verdict must be allow, quarantine or block');
   // #389: a Shield verdict is allowed on an already-closed round (the demo's beat 3 attaches a block right
   // after close_round) and never changes a ranking already computed. create_mandate re-checks every card on
   // the winning bid before it mints, so a late block still refuses the mandate; it just can't be dropped here.
-  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
+  const b = ctx.db.bid.id.find(a.bidId);
+  if (!b) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'shield', result: a.verdict, detail: a.ruleIds.join(', '), evidenceUrl: '', origin: a.origin, at: ctx.timestamp });
-  event(ctx, 'verdict', 'bid_check', a.bidId, `Bazaar Shield: ${a.verdict}`, '', a.origin);
+  // #H1: a block or quarantine on a still-open round must not reach the public floor before close; see above.
+  if (ctx.db.round.id.find(b.roundId)?.state === 'closed') event(ctx, 'verdict', 'bid_check', a.bidId, `Bazaar Shield: ${a.verdict}`, '', a.origin);
 }
 
 export function attachClaimCheck(ctx: Ctx, a: { bidId: string; claim: string; check: string; evidenceUrl: string; origin: string }) {
   requireRole(ctx, 'attach_claim_check', ['referee']);
   if (!['verified', 'unverified', 'false'].includes(a.check)) throw new SenderError('check must be verified, unverified or false');
   // #389: late is fine, same as attach_verdict above; create_mandate is the enforcement point, not the attach.
-  if (!ctx.db.bid.id.find(a.bidId)) throw new SenderError(`no bid ${a.bidId}`);
+  const b = ctx.db.bid.id.find(a.bidId);
+  if (!b) throw new SenderError(`no bid ${a.bidId}`);
   ctx.db.bidCheck.insert({ id: 0n, bidId: a.bidId, kind: 'claim', result: a.check, detail: a.claim, evidenceUrl: a.evidenceUrl, origin: a.origin, at: ctx.timestamp });
-  event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
+  // #H1: see attach_verdict above.
+  if (ctx.db.round.id.find(b.roundId)?.state === 'closed') event(ctx, 'claim_checked', 'bid_check', a.bidId, `Claim check: ${a.check}`, '', a.origin);
 }
 
 export const ADVOCATE_RECOMMENDATIONS = ['buy', 'caution', 'veto'];
@@ -449,7 +474,8 @@ export function attachAdvocateCard(
     id: 0n, bidId: a.bidId, kind: 'advocate', result: a.recommendation, detail: `${a.ruleId}: ${a.text}`, evidenceUrl: a.sourceUrl,
     origin: a.origin, at: ctx.timestamp,
   });
-  event(ctx, 'advocate_card', 'bid_check', a.bidId, veto ? `Advocate veto (${a.ruleId})` : `Advocate: ${a.recommendation}`, '', a.origin);
+  // #H1: a round already closed never reaches here (the guard above throws), so this event always waits
+  // for close to flush it (emitBidCheckEvents), the same as attach_verdict and attach_claim_check.
   if (veto) {
     const n = ctx.db.need.id.find(b.needId);
     if (n) {
@@ -622,6 +648,9 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+  // #H1 (red team): every check attached while this round was open had its public event deferred; the
+  // round's result is revealed now anyway, so flush them all.
+  for (const b of rows) emitBidCheckEvents(ctx, b.id);
   const top = ranked.ranked[0];
   for (const b of rows) {
     if (soldOut.get(b.id)!.some((x) => x)) event(ctx, 'stock_sold_out', 'bid', b.id, `A bid line was ${SOLD_OUT_REASON}`, b.sellerId, b.origin);
