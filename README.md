@@ -1,8 +1,12 @@
 <div align="center">
 
-# Tech Bazaar
+<img src="web/public/icons/icon-192.png" width="72" height="72" alt="Fish Market mark: a fish with a chomping mouth">
 
-### A buyer's agent that is hard to fool and can't pay without you.
+# Fish Market
+
+### The agentic marketplace where buyers and sellers thrive.
+
+Nothing fishy gets through. A buyer's agent that is hard to fool and can't pay without you.
 
 Tell it the computer part you need. It reads real store listings, vetoes the traps with a source, blocks listings that try to hijack it, and phones you before it pays more than your allowance.
 
@@ -27,10 +31,10 @@ Tell it the computer part you need. It reads real store listings, vetoes the tra
 
 ## Overview
 
-Tech Bazaar is a buyer's agent for computer gear. You give it a goal, not a one-shot order: this part, under this price, by this date. Three things stand between you and a bad buy:
+Fish Market is a buyer's agent for computer gear. You give it a goal, not a one-shot order: this part, under this price, by this date. Three things stand between you and a bad buy:
 
 1. **A quality advocate** checks every offer against the parts you already own and the seller's own page, and vetoes a trap with the source. It is deterministic code; no model decides the veto.
-2. **Bazaar Shield**, our agent security API, screens every listing and message before the agent acts on it, and quarantines one that hides instructions or swaps the payee.
+2. **Smell Test**, our agent security API (the Shield), screens every listing and message before the agent acts on it, and quarantines one that hides instructions or swaps the payee.
 3. **Your allowance decides who approves.** Inside the allowance you set, a deal pays without a call. Above it, the phone call is the only approval: a voice agent calls you, reads the deal, and only the one-time code on your screen plus "approve" signs a mandate for that exact deal. Silence, a hang-up or a failed call means nothing is paid. Every spend, inside the allowance or above it, sends you a receipt.
 
 **It works today without a single outside seller agent.** It reads real, dated store listings (labelled MIRROR) and turns each into a bid, so the protection above runs on real prices now. If no bid comes in, it names the best public listing and buys nothing.
@@ -72,7 +76,7 @@ The referee that ranks offers is deterministic: one ranking rule, ties broken in
 flowchart LR
     U["Buyer<br/>(ASI:One or web)"] --> B["Buyer agent"]
     B -- "sealed request" --> S["Seller agents<br/>(Agentverse)"]
-    S -- "bids" --> SH["Bazaar Shield<br/>screen, verify"]
+    S -- "bids" --> SH["Smell Test<br/>screen, verify"]
     SH --> A["Quality advocate<br/>fit + claim checks"]
     M[("Dated listing mirrors<br/>Apify, Bright Data")] --> S
     M --> A
@@ -93,7 +97,7 @@ Components and data flow in detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 - **A skeptic on the buyer's side.** The advocate is deterministic code, not a model. It can veto the cheapest bid and must cite a source for every warning.
 - **Fit checking.** Rules over an open parts dataset plus maker specs; an unknown fit is "uncertain" and can never beat a confirmed fit.
-- **Agent security as an API.** Bazaar Shield exposes `POST /v1/shield/screen`, `/verify-agent` and `/verify-mandate`, plus a claim check, with a published rule list. See [shield/API.md](shield/API.md).
+- **Agent security as an API.** Smell Test exposes `POST /v1/shield/screen`, `/verify-agent` and `/verify-mandate`, plus a claim check, with a published rule list. See [shield/API.md](shield/API.md).
 - **Voice is the trust step, never the credential.** A recording of your voice cannot approve a payment: the code on your screen is single use, bound to one mandate, and silence, a hang-up or a mismatch all deny. A spoken approval with any other amount, payee or term denies.
 - **Scoped, replay-proof payments.** Each mandate binds deal, amount, payee, expiry and nonce, and only the market's real winner gets one. A replayed or altered mandate fails, and a retry cannot charge twice.
 - **A receipt for every spend.** The buyer agent tells you what it paid, with the charge reference and the mandate, after the charge and again at settlement.
@@ -167,7 +171,7 @@ Shield on its development set stops 30 of 30, but its rules were written against
 
 ## Built with
 
-| Partner | What we use | Role in Tech Bazaar |
+| Partner | What we use | Role in Fish Market |
 |---|---|---|
 | Fetch.ai | uAgents, Agentverse, ASI:One and its Gmail connector, Agent Chat Protocol, Payment Protocol | Every agent is a uAgent; the buyer takes goals in ASI:One, a caller agent for the approval call runs locally, and ASI:One emails the receipt from the buyer's own Gmail |
 | Visa | Trusted Agent Protocol, Visa test card | Signed agent requests in TAP's wire format, checked against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/cal-hacks-2026/pull/387)); the test card behind the Stripe charge |
@@ -217,7 +221,7 @@ Each agent has a short name, a full README and a themed avatar. Registration det
 **Prerequisites:** Python 3.12, Node.js with npm, the SpacetimeDB CLI, and sandbox keys for the services you want live (names in [.env.example](.env.example)). The launcher tells you what is missing.
 
 ```bash
-git clone https://github.com/vs-githjk/cal-hacks-2026.git tech-bazaar && cd tech-bazaar
+git clone https://github.com/vs-githjk/cal-hacks-2026.git fish-market && cd fish-market
 cp .env.example .env                                  # your own sandbox keys; .env is gitignored
 python3 scripts/launch.py up --env-file .env          # preflight, then start every service that can start
 python3 scripts/launch.py status                      # service, port, pid, health
@@ -250,7 +254,7 @@ hyphenate/   IT purchasing controls and blind test scenarios
 market/      SpacetimeDB module and auction rules (sealing, scoring, outcomes)
 pay/         Approval judge, mandates, CRS gate, request signing, merchant simulator, Cartesia call client
 seller_kit/  Seller Kit API and UCP profile
-shield/      Bazaar Shield API, rules, attack corpus and bench
+shield/      Smell Test API, rules, attack corpus and bench
 sim/         Wind tunnel: simulated buyers and hostile agents
 web/         Next.js buyer and market screens
 docs/        Architecture, real vs simulated, red team, research notes
@@ -275,7 +279,7 @@ These live in code and tests, not in prompts.
 - Seller agents that sell better within their shop's policy, and a shop-level report of the strategies that won.
 - Small IT buyers (10 to 50 machines), where sealed volume bids matter most.
 - Visa Intelligent Commerce tokens in place of the Stripe path, given sandbox access.
-- Tech Bazaar as an MCP server, so any agent can request bids.
+- Fish Market as an MCP server, so any agent can request bids.
 
 ## Team
 
@@ -283,7 +287,7 @@ Vidyut Sriram, Vedant Shirvi, Abhinav, Anoop Ibrampur.
 
 ## License
 
-Tech Bazaar is released under the [MIT License](LICENSE). Copyright (c) 2026 the Tech Bazaar team.
+Fish Market (formerly Tech Bazaar) is released under the [MIT License](LICENSE). Copyright (c) 2026 the Tech Bazaar team.
 
 Third-party data keeps its own license, including [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT). Product and retailer names belong to their owners and are shown for price comparison only.
 

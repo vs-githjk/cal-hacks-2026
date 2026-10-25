@@ -39,7 +39,7 @@ const VETO = /^Advocate veto \(([^)]*)\)(?: \[source: (.*)\])?/;
 /** The code for one reason string, matching what close_round and rankBids write. */
 export function reasonCode(reason: string): ReasonCode {
   if (/^below this seller floor/.test(reason)) return "below_floor";
-  if (/^Bazaar Shield /.test(reason)) return "shield_block";
+  if (/^(Bazaar Shield|Smell Test|Shield) /.test(reason)) return "shield_block"; // the backend renames Bazaar Shield to Smell Test (#430)
   if (/^over_cap/.test(reason)) return "over_cap";
   if (VETO.test(reason)) return "advocate_veto";
   if (/^claim did not match the page/.test(reason)) return "claim_false";

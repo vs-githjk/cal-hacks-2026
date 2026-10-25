@@ -4,15 +4,18 @@ import { Providers } from "@/components/Providers";
 import { PwaRegister } from "@/components/PwaRegister";
 import { AppHeader, RunModeFooter } from "@/components/shell";
 import { fontVars } from "./fonts";
+import { BRAND, BRAND_SHORT, DESCRIPTION } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Tech Bazaar",
-  description: "A refereed arena where seller agents bid for a buyer's computer gear.",
-  appleWebApp: { capable: true, title: "Bazaar", statusBarStyle: "default" },
+  title: { default: BRAND, template: `%s · ${BRAND}` },
+  description: DESCRIPTION,
+  applicationName: BRAND,
+  appleWebApp: { capable: true, title: BRAND_SHORT, statusBarStyle: "default" },
+  openGraph: { title: BRAND, description: DESCRIPTION, siteName: BRAND },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#f1e7d3" };
+export const viewport: Viewport = { themeColor: "#eef3f8" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

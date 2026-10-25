@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, winningBid } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
+import { SHIELD } from "@/lib/brand";
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
@@ -234,12 +235,12 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
 
 export function ShieldCard({ shield }: { shield: ShieldView | null }) {
   if (!shield) {
-    return <Card stripe="ink"><Label>Bazaar Shield</Label><p className="text-muted">Every seller message is screened before the advocate reads it. Blocks show here with the rule that fired.</p></Card>;
+    return <Card stripe="ink"><Label>{SHIELD}</Label><p className="text-muted">Every seller message is screened before the advocate reads it. Blocks show here with the rule that fired.</p></Card>;
   }
   const blocked = shield.verdict !== "allow";
   return (
     <Card stripe="ink">
-      <Label>Bazaar Shield</Label>
+      <Label>{SHIELD}</Label>
       <div className={`text-[15px] font-bold ${blocked ? "text-coral" : "text-mint"}`}>
         {blocked ? "Blocked before the advocate saw it" : "Allowed"}
       </div>

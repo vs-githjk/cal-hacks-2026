@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
+import { BRAND } from "@/lib/brand";
 import {
   CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
@@ -89,7 +90,7 @@ export default function SellPage() {
     <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
       <header>
         <h1 className="text-[22px] font-semibold">
-          Sell on Tech Bazaar <OriginChip origin="SIM" />
+          Sell on {BRAND} <OriginChip origin="SIM" />
         </h1>
         <p className="mt-1 text-muted">
           Describe your shop once. The Seller Kit checks it and writes a config your own seller agent runs from. Everything here is a simulation:

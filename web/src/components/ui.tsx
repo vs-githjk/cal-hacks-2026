@@ -50,7 +50,7 @@ export function Label({ children }: { children: ReactNode }) {
 
 export const README_URL = "https://github.com/vs-githjk/cal-hacks-2026#readme";
 
-/** A part of Tech Bazaar that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
+/** A part of Fish Market that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
 export function RunsLocally({ what, children }: { what: string; children: ReactNode }) {
   return (
     <Card>

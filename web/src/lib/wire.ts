@@ -13,7 +13,7 @@ const BY_KEY: Record<AgentInfo["key"], EdgeId> = {
 };
 
 // Names the AGENTS registry lacks: demo/bridge.py AGENT_NAMES ("Tech Bazaar Buyer" is already registered).
-const ALIASES: Record<string, EdgeId> = { "bazaar advocate": "buyer-advocate", "bazaar shield": "shield-buyer" };
+const ALIASES: Record<string, EdgeId> = { "bazaar advocate": "buyer-advocate", "bazaar shield": "shield-buyer", "smell test": "shield-buyer" };
 
 const EDGE_BY_NAME = new Map<string, EdgeId>([
   ...AGENTS.map((a): [string, EdgeId] => [a.name.toLowerCase(), BY_KEY[a.key]]),
