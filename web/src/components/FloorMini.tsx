@@ -5,7 +5,6 @@
 // the shape of a round, not a deal. The real thing is /floor.
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
-import { SHIELD } from "@/lib/brand";
 import { FISH_PATH } from "./BrandMark";
 
 const LINES = ["Goal received", "4 bids sealed", "3 of 4 pass", "Code confirmed"];
@@ -32,7 +31,7 @@ export function FloorMini({ className = "" }: { className?: string }) {
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[rgba(255,255,255,0.08)]" aria-hidden />
       <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em] text-ghost-1">
-        <span className="inline-flex items-center gap-2"><span className="dot text-shield" aria-hidden /> The floor</span>
+        <span className="inline-flex items-center gap-2"><span className="dot text-[#4f8df7]" aria-hidden /> The floor</span>
         <span>Round 1 of 3</span>
       </div>
       <div className="relative mx-auto mt-6 h-[240px] w-[480px] max-w-full" aria-hidden>

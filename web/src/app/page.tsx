@@ -51,7 +51,7 @@ export default function Home() {
         <div className="relative mx-auto grid max-w-[1120px] items-center gap-10 pb-12 pt-14 md:px-4 md:pb-16 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-2 shadow-ring backdrop-blur">
-              <span className="dot text-live" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
+              <span className="dot text-pulse" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
             </span>
             <h1 className="mt-5 text-[40px] font-medium leading-[44px] tracking-[-0.025em] text-balance md:text-[60px] md:leading-[64px] md:tracking-[-0.03em]">
               The <span className="fm-headline-accent">secure agentic</span> marketplace.
@@ -124,11 +124,11 @@ export default function Home() {
       </section>
 
       {/* 5 and 6. The floor, and the two guards, on ink. */}
-      <section aria-labelledby="floor" className="relative px-4 py-[260px] text-floor-line [background:linear-gradient(180deg,#eef3f8_0px,#e8edf2_26px,#d6dde3_52px,#bdc4cc_78px,#9ea7b0_104px,#7c8792_130px,#5b6773_156px,#3c4a57_182px,#233140_208px,#112131_234px,#0b1b2b_260px,#0b1b2b_calc(100%-260px),#112131_calc(100%-234px),#233140_calc(100%-208px),#3c4a57_calc(100%-182px),#5b6773_calc(100%-156px),#7c8792_calc(100%-130px),#9ea7b0_calc(100%-104px),#bdc4cc_calc(100%-78px),#d6dde3_calc(100%-52px),#e8edf2_calc(100%-26px),#eef3f8_calc(100%-0px))]">
+      <section aria-labelledby="floor" className="relative px-4 py-[136px] text-floor-line [background:linear-gradient(180deg,#eef3f8_0px,#e8edf2_15px,#d6dde3_30px,#bdc4cc_45px,#9ea7b0_60px,#7c8792_75px,#5b6773_90px,#3c4a57_105px,#233140_120px,#112131_135px,#0b1b2b_150px,#0b1b2b_calc(100%-150px),#112131_calc(100%-135px),#233140_calc(100%-120px),#3c4a57_calc(100%-105px),#5b6773_calc(100%-90px),#7c8792_calc(100%-75px),#9ea7b0_calc(100%-60px),#bdc4cc_calc(100%-45px),#d6dde3_calc(100%-30px),#e8edf2_calc(100%-15px),#eef3f8_calc(100%-0px))]">
         <div className="mx-auto grid max-w-[1120px] gap-10 md:px-4">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
             <div>
-              <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ghost-1"><span className="dot text-shield" aria-hidden /> The floor</span>
+              <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ghost-1"><span className="dot text-[#4f8df7]" aria-hidden /> The floor</span>
               <h2 id="floor" className="mt-4 text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Every round, played live.</h2>
               <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ghost-1">Your agent eats the worst offer each round. Every move is a market row.</p>
             </div>
