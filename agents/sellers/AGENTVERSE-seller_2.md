@@ -19,7 +19,7 @@ A Fish Market seller agent for computer gear (chatty refurb specialist who loves
 ## Usage examples
 
 - In ASI:One: "What do you sell?" or "How do you bid?" The agent explains its role; it does not take orders in chat.
-- To see it compete: tell @techbazaarbuyer "A new RTX 5070 Ti under $1,300 by Friday". The buyer asks this seller for a sealed bid.
+- Retired: Silicon Sally's Surplus is not run and the buyer does not ask it for bids (`RETIRED_SELLERS` in `agents/common.py`). To see a round, tell @techbazaarbuyer "A new RTX 5070 Ti under $1,300 by Friday"; it asks the four running sellers.
 
 ## Use cases
 
@@ -28,5 +28,5 @@ A Fish Market seller agent for computer gear (chatty refurb specialist who loves
 
 ## Limitations
 
-- Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
+- The seller is SIM (our agent). Its catalog lines, prices and example.com links are simulated, and no real merchant is contacted. Among the Fish Market seller agents, only Central Comp MIRROR bids a real store's dated listing (MIRROR), and it cannot be bought from.
 - It cannot approve or charge anything. Payment is Stripe test mode or a SIM stub, and no real money moves.

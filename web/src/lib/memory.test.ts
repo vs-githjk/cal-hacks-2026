@@ -189,6 +189,19 @@ test("fetchMemory reads /v1/memory without the sample flag and parses it", async
   assert.match(url, /\/v1\/memory$/);
 });
 
+test("fetchMemory passes the paired buyer as a query parameter, encoded, and never a token (#449 PL-17)", async () => {
+  const seen: { url: string; init?: RequestInit }[] = [];
+  await withFetch(async (u, init) => { seen.push({ url: String(u), init }); return json(envelope([purchase()], [src()])); }, async () => {
+    await fetchMemory(undefined, "http://127.0.0.1:8790", "vidyut");
+    await fetchMemory(undefined, "http://127.0.0.1:8790", "a b&c=d/é");
+    await fetchMemory(undefined, "http://127.0.0.1:8790", "");
+  });
+  assert.equal(seen[0]!.url, "http://127.0.0.1:8790/v1/memory?buyer=vidyut");
+  assert.equal(seen[1]!.url, "http://127.0.0.1:8790/v1/memory?buyer=a%20b%26c%3Dd%2F%C3%A9");
+  assert.equal(seen[2]!.url, "http://127.0.0.1:8790/v1/memory", "no paired buyer: no parameter");
+  assert.ok(seen.every((r) => !JSON.stringify(r.init ?? {}).toLowerCase().includes("authorization")), "the page never holds the feed token");
+});
+
 test("fetchMemory fails visibly: HTTP errors, unreachable feed, non JSON and wrong shapes all throw", async () => {
   await withFetch(async () => json({ detail: "boom" }, { status: 500 }), async () => { await assert.rejects(fetchMemory(), /500/); });
   await withFetch(async () => { throw new TypeError("fetch failed"); }, async () => { await assert.rejects(fetchMemory(), /memory/i); });

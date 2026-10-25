@@ -279,18 +279,17 @@
   "condition": "new",
   "as_of": "2026-10-25T02:42:11+00:00",
   "rank": 1,
-  "of_n": 2,
+  "of_n": 1,
   "stores": [
-   "bestbuy",
    "microcenter"
   ],
   "cheapest_fitting": {
    "price": 1299.99,
-   "store": "bestbuy",
-   "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"
+   "store": "microcenter",
+   "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "observed_at": "2026-10-25T02:42:11+00:00"
   },
   "snapshot_dates": [
-   "2026-10-24",
    "2026-10-25"
   ],
   "sold_median": 1015.0,
@@ -298,14 +297,55 @@
   "tied_with": [
    {
     "store": "microcenter",
-    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card"
+    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+    "price": 1299.99,
+    "observed_at": "2026-10-25T02:42:11+00:00"
    }
   ],
-  "unknown_fit": 3,
-  "too_long": 3,
+  "listings": [
+   {
+    "store": "microcenter",
+    "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+    "price": 1299.99,
+    "observed_at": "2026-10-25T02:42:11+00:00"
+   }
+  ],
+  "left_out": [
+   {
+    "store": "bestbuy",
+    "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
+    "price": 1299.99,
+    "last_seen": "2026-10-24T09:36:33+00:00",
+    "newest_capture": "2026-10-25T02:41:28+00:00"
+   },
+   {
+    "store": "microcenter",
+    "url": "https://www.microcenter.com/product/696024/msi-nvidia-geforce-rtx-5070-ti-gaming-trio-overclocked-triple-fan-16g-gddr7-pcie-50-graphics-card",
+    "price": 1259.99,
+    "last_seen": "2026-10-24T05:09:29.655Z",
+    "newest_capture": "2026-10-25T02:42:11+00:00"
+   },
+   {
+    "store": "microcenter",
+    "url": "https://www.microcenter.com/product/702482/zotac-nvidia-geforce-rtx-5070-ti-solid-core-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+    "price": 1499.99,
+    "last_seen": "2026-10-24T09:38:02+00:00",
+    "newest_capture": "2026-10-25T02:42:11+00:00"
+   }
+  ],
+  "subject": {
+   "store": "bestbuy",
+   "price": 1299.99,
+   "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
+   "observed_at": "2026-10-24T09:36:33+00:00",
+   "newest_capture": "2026-10-25T02:41:28+00:00",
+   "in_newest_capture": false
+  },
+  "unknown_fit": 2,
+  "too_long": 2,
   "max_gpu_length_mm": 305,
   "status": "ok",
-  "sentence": "Tied as the cheapest of the listings we can confirm fit; 3 of unknown length not counted (2 new listings at 2 stores, Oct 25) (30-day eBay sold median, mixed condition: $1,015.00, n = 10)",
+  "sentence": "Tied as the cheapest of the listings we can confirm fit; 2 of unknown length not counted (1 new listing at 1 store, Oct 25) (30-day eBay sold median, mixed condition: $1,015.00, n = 10). The priced listing was last seen Oct 24 09:36 UTC and is not in Best Buy's newest capture (Oct 25 02:41 UTC). 2 other listings missing from their store's newest capture were not counted",
   "origin": "MIRROR"
  }
 }
