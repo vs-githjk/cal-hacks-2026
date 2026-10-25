@@ -9,6 +9,7 @@ export type Origin = "LIVE" | "MIRROR" | "SIM";
 export interface GoalView {
   id: string;
   text: string; // the buyer's own words
+  part?: string; // display name of the first part: the catalog label, else the sku title-cased
   type: "budget_cap" | "part_by_date" | "build_by_date";
   state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED" | "FAILED";
   latestNote?: string; // #449 item 3 PL-4: the newest notification text written for this goal ("" when none)
@@ -163,6 +164,8 @@ export interface FloorEventView { key: string; at: Date; kind: string; label: st
 
 import type { Timestamp } from "spacetimedb";
 import { formatMoney } from "./money.ts";
+import { CATALOG } from "./goalRequest.ts";
+import { SHIELD } from "./brand.ts";
 import { safeUrl } from "./url.ts";
 
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
@@ -198,6 +201,13 @@ function ownedPartLabel(id: string): string {
   return name.length <= 3 ? name.toUpperCase() : name;
 }
 
+/** "RTX 5070 Ti" for a catalog sku; otherwise the sku with each word capitalised; undefined when there is no sku. */
+export function partName(sku: string | undefined): string | undefined {
+  if (!sku) return undefined;
+  const hit = CATALOG.find((c) => c.sku === sku.toLowerCase());
+  return hit ? hit.label : sku.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView {
   const mine = items.filter((i) => i.goalId === g.id);
   const deadline = d(g.deadline);
@@ -206,6 +216,7 @@ function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: Allowanc
   const when = deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   return {
     id: g.id,
+    part: partName(mine[0]?.skuSpec),
     text: `${what}${conditions.length ? `, ${conditions.join(" or ")}` : ""}, under ${formatMoney(Math.round(g.cap))} by ${when}`,
     type: (["budget_cap", "part_by_date", "build_by_date"].includes(g.type) ? g.type : "budget_cap") as GoalView["type"],
     state: g.state as GoalView["state"],
@@ -350,6 +361,11 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
 const FEED_TITLE: Record<FeedKind, string> = { deal: "Deal found", bid: "Bid in", veto: "Veto", block: "Block", progress: "Progress" };
 const PROGRESS = ["goal_posted", "goal_state", "need_posted", "round_opened", "approval_recorded", "payment_recorded", "mandate_created"];
 
+/** The market writes "Bazaar Shield: block"; the product name for it is the Smell Test. */
+export function feedLabel(label: string): string {
+  return label.replace(/^(?:Bazaar Shield|Shield)\b/, SHIELD);
+}
+
 function classify(kind: string, label: string): FeedKind | null {
   if (kind === "bid_sealed") return "bid";
   if (kind === "auction_closed") return label.includes("no eligible") ? "progress" : "deal";
@@ -365,7 +381,7 @@ interface NoteRow { id: bigint; klass: string; text: string; at: Timestamp }
 export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[], mine?: ReadonlySet<string>): FeedItem[] {
   const fromEvents = events.filter((e) => !mine || mine.has(e.refId)).flatMap((e): FeedItem[] => {
     const kind = classify(e.kind, e.label);
-    return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: e.label, origin: asOrigin(e.origin) }] : [];
+    return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: feedLabel(e.label), origin: asOrigin(e.origin) }] : [];
   });
   const fromNotes = notes.map((n): FeedItem => {
     const kind: FeedKind = n.klass === "veto" ? "veto" : "progress";
@@ -568,7 +584,7 @@ const ELIGIBLE: Recommendation[] = ["buy", "caution", "unchecked"];
 export function buyerKpis(goals: readonly GoalView[], bids: readonly RankedBid[], review: ReviewView | null, allowance: GoalView["allowance"], receiptsCount: number, roundOpen = false): BuyerKpi[] {
   const g = goals[0];
   const search: BuyerKpi = g
-    ? { id: "search", label: "Current search", value: g.text.length > 28 ? `${g.text.slice(0, 27).trimEnd()}...` : g.text, line: `${stateLabel(g.state)}, due ${kpiDay(g.deadline)}, cap ${formatMoney(g.cap)}`, dot: GOAL_DOT[g.state], word: stateLabel(g.state), href: "#new-search" }
+    ? { id: "search", label: "Current search", value: g.part ?? (g.text.length > 28 ? `${g.text.slice(0, 27).trimEnd()}...` : g.text), line: `${stateLabel(g.state)}, due ${kpiDay(g.deadline)}, cap ${formatMoney(g.cap)}`, dot: GOAL_DOT[g.state], word: stateLabel(g.state), href: "#new-search" }
     : { id: "search", label: "Current search", value: "None yet", line: "Start a search below.", href: "#new-search" };
 
   const eligible = bids.filter((b) => b.rank !== null && ELIGIBLE.includes(b.recommendation) && b.landed > 0);

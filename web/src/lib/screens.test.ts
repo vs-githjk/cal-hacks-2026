@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, buyerKpis, myRounds } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, buyerKpis, myRounds, partName, feedLabel } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -450,4 +450,18 @@ test("myRounds ignores another buyer's newer round and returns none without chec
   const rs = [round({ id: "round-mine", openedAt: ts(T0) }), round({ id: "round-other", openedAt: ts(T0 + 5000) })];
   assert.deepEqual(myRounds(rs, [{ roundId: "round-mine" }]).map((r) => r.id), ["round-mine"]);
   assert.deepEqual(myRounds(rs, []), []);
+});
+
+test("feed renames the market's Shield label to the Smell Test", () => {
+  assert.equal(feedLabel("Bazaar Shield: block"), "Smell Test: block");
+  assert.equal(feedLabel("Shield: allow"), "Smell Test: allow");
+  assert.equal(feedLabel("Shielded by a rule"), "Shielded by a rule");
+  const f = feedFromRows([event({ kind: "verdict", label: "Bazaar Shield: block" })], []);
+  assert.equal(f[0]!.text, "Smell Test: block");
+});
+
+test("partName uses the catalog label, else title-cases the sku", () => {
+  assert.equal(partName("rtx 5070 ti"), "RTX 5070 Ti");
+  assert.equal(partName("m.2 nvme 1tb"), "M.2 Nvme 1tb");
+  assert.equal(partName(undefined), undefined);
 });

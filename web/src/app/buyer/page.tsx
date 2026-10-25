@@ -47,6 +47,10 @@ export default function BuyerPage() {
   }, [goals, myRoundIds, checks, results, events, notes]);
   const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed" && myRoundIds.has(e.refId)).reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events, myRoundIds]);
   const roundOpen = !!myLatest && myLatest.state !== "closed";
+  const quietOrigin = useMemo(() => {
+    const origins = [...liveBids.map((b) => b.origin), ...feed.map((f) => f.origin ?? "SIM"), ...goals.map((g) => g.origin), shield?.pageOrigin, shield?.verdictOrigin, veto?.checkOrigin];
+    return origins.every((o) => !o || o === "SIM");
+  }, [liveBids, feed, goals, shield, veto]);
   const receiptsCount = useMemo(() => deals.filter((x) => x.paidAt).length, [deals]);
   const liveBuild = useLiveBuild(buyerId);
   // Veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows only when its row exists. No sample data on this page.
@@ -65,6 +69,7 @@ export default function BuyerPage() {
       review={review}
       receipt={deal.receipt}
       roundOpen={roundOpen}
+      quietOrigin={quietOrigin}
       receiptsCount={receiptsCount}
       feed={feed}
       revealKey={closeKey}

@@ -3,7 +3,7 @@
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
 import { buyerKpis, originMixLabel, roundTitle, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
-import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, KpiCard, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
+import { AgentFeed, ApprovalCard, ReviewCard, HeroPrice, KpiCard, QuietOrigin, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
@@ -35,6 +35,8 @@ export interface BuyerScreenProps {
   connecting?: boolean;
   /** True while the latest round has not closed: the best-offer card then shows no price. */
   roundOpen?: boolean;
+  /** True when every row is SIM: per-row SIM chips are left out (only a LIVE or MIRROR row shows its chip). */
+  quietOrigin?: boolean;
   /** Paid receipts in myDeals. */
   receiptsCount?: number;
 }
@@ -43,15 +45,11 @@ const dayOf = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", mon
 
 function Searches({ goals }: { goals: GoalView[] }) {
   if (!goals.length) return null;
-  const older = goals.slice(1);
   return (
-    <div className="grid gap-5">
-      <GoalCard goal={goals[0]!} />
-      {older.length > 0 && (
-        <div>
-          <h3 className="mb-1 text-[13px] text-muted">Earlier searches</h3>
-          <ul className="divide-y divide-line border-y border-line">
-            {older.map((g) => (
+    <div>
+      <h3 className="mb-1 text-[15px] font-semibold">Your searches</h3>
+      <ul className="divide-y divide-line border-y border-line">
+        {goals.map((g) => (
               <li key={g.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
                 <span className="min-w-0 truncate text-[15px] font-medium"><q>{g.text}</q></span>
                 <span className="flex items-center gap-3 text-[13px] tabular-nums text-muted">
@@ -59,10 +57,8 @@ function Searches({ goals }: { goals: GoalView[] }) {
                   <StatePill state={g.state} />
                 </span>
               </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        ))}
+      </ul>
     </div>
   );
 }
@@ -82,6 +78,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
   const kpis = buyerKpis(p.goals, p.bids, p.review ?? null, p.allowance, p.receiptsCount ?? 0, !!p.roundOpen);
   const decided = [p.veto, p.shield, p.approval && !p.review ? p.approval : null, p.receipt].filter(Boolean).length;
   return (
+    <QuietOrigin.Provider value={!!p.quietOrigin}>
     <div className="grid gap-6">
       {p.review && (
         <a href="#needs-you" className="card card-active flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
@@ -157,6 +154,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
         </Details>
       </div>
     </div>
+    </QuietOrigin.Provider>
   );
 }
 

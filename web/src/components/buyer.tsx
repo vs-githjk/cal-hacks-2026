@@ -2,12 +2,20 @@
 // web/src/components/buyer.tsx
 // Cards for the buyer screen. Each takes a view model from lib/screens.ts; none reads SpacetimeDB directly,
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
-import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { type ApprovalView, type BuyerKpi, type FeedItem, type KpiDot, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
 import { Card, Code, Details, Label, OriginChip, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
 import { SHIELD } from "@/lib/brand";
+
+/** When every row on the page is SIM the shell already says so; then only a row that is not SIM gets its own chip. */
+export const QuietOrigin = createContext(false);
+function Chip({ origin, label }: { origin: string; label?: string }) {
+  const quiet = useContext(QuietOrigin);
+  if (quiet && origin === "SIM") return null;
+  return <OriginChip origin={origin} label={label} />;
+}
 
 const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
@@ -104,7 +112,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
               <div className="relative z-10 my-1 text-[clamp(44px,5vw,56px)] font-medium leading-[1.08] tracking-[-0.025em] tabular-nums">{money(win.landed)}</div>
             </div>
             <div className="text-[15px] text-muted">
-              <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <OriginChip origin={win.origin} />
+              <b className="font-semibold text-ink">{win.seller}</b> · {win.condition} <Chip origin={win.origin} />
             </div>
             {win.recommendation === "caution" && <div className="text-[15px] text-muted">Fit not confirmed on the page</div>}
           </>
@@ -200,7 +208,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pulse ${won ? "bg-mint-soft" : `hover:bg-surface-2 ${out ? "text-muted" : ""}`}`}
                     >
                       <Td className={`font-mono font-semibold ${edge} ${won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} />{won && <> <Tag>Winner</Tag></>}</Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <Chip origin={b.origin} />{won && <> <Tag>Winner</Tag></>}</Td>
                       <Td>
                         <Tag>{b.condition}</Tag>
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] tabular-nums text-muted">{l.condition} {money(l.unitPrice)}</span>)}
@@ -288,7 +296,7 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
       </div>
       <p className="mt-2 text-[13px] text-muted">
         {shield.control && <>Control page ({shield.control.name}, same SKU) {shield.control.verdict} in {shield.control.latencyMs.toFixed(1)} ms. </>}
-        <OriginChip origin={shield.pageOrigin} /> page, <OriginChip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.
+        <Chip origin={shield.pageOrigin} /> page, <Chip origin={shield.verdictOrigin} /> verdict{shield.version ? ` from ${shield.version}` : ""}.
       </p>
     </Card>
   );
@@ -403,7 +411,7 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
               <span className="font-mono text-[12px] text-muted">{clock(f.at)}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className={`mb-px block text-[12px]/[16px] font-medium ${FEED_STYLE[f.kind]}`}>{f.title.charAt(0) + f.title.slice(1).toLowerCase()}</span>
-                {f.text} {f.origin && <OriginChip origin={f.origin} />}
+                {f.text} {f.origin && <Chip origin={f.origin} />}
               </span>
             </li>
           ))}
