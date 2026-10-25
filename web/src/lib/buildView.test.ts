@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fetchBuild, parseBuildView, toBuildResult } from "./buildView.ts";
 import { partRows, planLines } from "./build.ts";
+import { feedBase } from "./agentFeed.ts";
 
 const sample = JSON.parse(readFileSync(new URL("../../../contracts/samples/build-board.sample.json", import.meta.url), "utf8"));
 
@@ -33,12 +34,24 @@ test("Lane D's build sample parses, bad rows drop, and the panel reads parts, se
   assert.deepEqual(planLines(b).map((s) => s.kind), ["plan", "clash", "swap", "locked"]);
 });
 
-test("a MIRROR champion is dropped and counted; checks and approval carry; a planned part reads Planned", () => {
+test("the build feed address: none on a deployed host, local only on loopback", () => {
+  assert.equal(feedBase(undefined, "tech-bazaar.example.com"), null);
+  assert.ok(feedBase(undefined, "localhost")!.includes("127.0.0.1"));
+});
+
+test("approval null is not rejected", () => {
+  const v = parseBuildView({ ...structuredClone(sample), approval: null });
+  assert.equal(v.rejected, 0);
+  assert.equal(v.approval, null);
+});
+
+test("a MIRROR champion is kept as a normal row; checks and approval carry; a planned part reads Planned", () => {
   const m = structuredClone(sample);
   m.parts.find((p: { part: string }) => p.part === "gpu").champion.origin = "MIRROR";
   const v = parseBuildView(m);
-  assert.equal(v.rejected, 1);
-  assert.ok(!v.parts.some((p) => p.part === "gpu"));
+  assert.equal(v.rejected, 0);
+  assert.ok(v.parts.some((p) => p.part === "gpu"));
+  assert.equal(toBuildResult(v).picks.gpu.origin, "MIRROR");
 
   const b = toBuildResult(parseBuildView(sample));
   assert.equal(b.checks!.length, 5);

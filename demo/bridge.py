@@ -354,8 +354,10 @@ NOT_BRIDGED = [
 def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[Step], None],
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic,
             approver: Optional[Callable[[Step], dict]] = None, note: Callable[[str], None] = lambda text: None,
-            charger: Optional[Callable[[Step], dict]] = None, deal_gate: Optional["DealGate"] = None) -> list[dict]:
-    """Run the steps in order. A reducer refusal stops the run with the market's own message.
+            charger: Optional[Callable[[Step], dict]] = None, deal_gate: Optional["DealGate"] = None,
+            before_round: Optional[Callable[[], None]] = None) -> list[dict]:
+    """Run the steps in order. A `before_round` hook (the CRS relay, demo/crs_relay.py) runs right before each open_round and
+    is best effort: whatever it raises is one note, and the round opens anyway. A reducer refusal stops the run with the market's own message.
     With an `approver`, the approval step runs only after it returns approved; a denial skips the approval and every payment
     step and ends the run there (the mandate stays pending, nothing is charged). Returns the approval outcomes.
     Without an `approver` there is no approval at all (#251: no scripted approval): the run ends at the approval gate with the
@@ -381,6 +383,11 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             note(deal_gate.crs_note())
             for line in deal_gate.drain_notes():
                 note(line)
+        if s.reducer == "open_round" and before_round is not None:
+            try:
+                before_round()
+            except Exception as e:  # noqa: BLE001  (a relay problem never stops a round)
+                note(f"CRS relay skipped ({type(e).__name__}); the round opens anyway")
         if deal_gate is not None and deal_gate.mandate is not None:
             s = deal_gate.bind(s)
         if s.reducer == "record_payment" and charger is not None and approver is not None and approved_and_recorded:
@@ -1011,8 +1018,10 @@ def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None
         clients["referee"].call("reset_demo")
         time.sleep(1)
     try:
+        from demo import crs_relay
         outcomes = execute(steps, clients, delay=args.step_delay, say=say, approver=approver, note=out.note, charger=charger,
-                           deal_gate=gate)
+                           deal_gate=gate,
+                           before_round=lambda: crs_relay.relay_best_effort(clients["referee"], note=out.note))
     except RuntimeError as e:
         out.blank()
         out.note(f"STOPPED by the market: {e}")

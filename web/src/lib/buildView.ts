@@ -39,7 +39,6 @@ function parsePart(p: unknown): BuildPart | null {
   if (!isObj(p) || !oneOf(p.part, PART_KEYS) || !str(p.label) || !oneOf(p.status, STATUSES) || !num(p.budget) || p.budget < 0) return null;
   const champion = p.champion === undefined ? undefined : parseChampion(p.champion);
   if (champion === null) return null; // a champion that is present but malformed drops the row
-  if (champion?.origin === "MIRROR") return null; // MIRROR prices are comparison only, never a winner
   if ((p.status === "locked" || p.status === "replanned") && !champion) return null;
   return {
     part: p.part, label: p.label, status: p.status, budget: p.budget,
@@ -71,7 +70,7 @@ export function parseBuildView(v: unknown): BuildView {
   const approval = isObj(a) && oneOf(a.state, APPROVAL_STATES) && num(a.total) && num(a.sellers) ? { state: a.state, total: a.total, sellers: a.sellers } : null;
   return {
     goalId: v.goalId, buyerId: v.buyerId, budget: v.budget, spent: v.spent, origin: v.origin, parts, checks, events, approval,
-    rejected: v.parts.length - parts.length + (v.checks.length - checks.length) + (v.events.length - events.length) + (a !== undefined && !approval ? 1 : 0),
+    rejected: v.parts.length - parts.length + (v.checks.length - checks.length) + (v.events.length - events.length) + (a !== undefined && a !== null && !approval ? 1 : 0),
   };
 }
 
