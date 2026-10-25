@@ -28,13 +28,13 @@ import {
 
 // A new key: the first version defaulted to the bottom right on every screen, and a saved corner would keep that.
 const PREFS_KEY = "tb-agent-pip-2";
-// Bottom corners clear the fixed run-mode footer, top corners clear the header.
+// Corners sit 16px from the viewport edge; the sidebar and run-mode services are in flow, so nothing fixed to clear on desktop.
 // On a phone the collapsed tile sits in the page flow after the content, so it never covers anything; opening it overlays.
 const CORNER_CLASS: Record<Corner, string> = {
-  br: "bottom-12 right-3",
-  bl: "bottom-12 left-3",
-  tr: "top-[64px] right-3",
-  tl: "top-[64px] left-3",
+  br: "bottom-4 right-4",
+  bl: "bottom-4 left-4",
+  tr: "top-4 right-4",
+  tl: "top-4 left-4",
 };
 // Plan and re-plan lines: the clash is the one red line, the swap and the lock are green, a budget move is amber.
 const PLAN_TONE: Partial<Record<StepKind, string>> = { plan: "text-ink-2", clash: "text-coral", knockout: "text-coral", swap: "text-accent", locked: "text-mint", reallocate: "text-accent", blocked: "text-coral" };
@@ -74,7 +74,7 @@ function loadPrefs(): Prefs {
   } catch {
     // storage blocked or corrupt: fall through to the default
   }
-  return { open: false, corner: window.matchMedia("(max-width: 639px)").matches ? "br" : "tr" };
+  return { open: false, corner: "br" } // top right would sit on every page title;
 }
 
 function savePrefs(p: Prefs) {
@@ -143,7 +143,7 @@ function AgentPipTile() {
       }}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined}
       className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-line bg-panel text-[13px] shadow-lg ${CORNER_CLASS[prefs.corner]} ${
-        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px] max-sm:static max-sm:mx-4 max-sm:mb-16 max-sm:max-w-none"
+        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px] max-sm:static max-sm:mx-4 max-sm:mb-4 max-sm:max-w-none"
       } ${drag ? "" : "transition-[width,height] duration-150 motion-reduce:transition-none"}`}
     >
       <div

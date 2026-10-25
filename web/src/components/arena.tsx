@@ -29,7 +29,7 @@ export function Question({ question, bout, of, status, contenders, verdict, orig
         </span>
         {origin && <OriginChip origin={origin} />}
       </div>
-      <h2 className="mt-3 max-w-[40ch] text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[28px]">{question}</h2>
+      <h2 className="mt-3 max-w-[40ch] font-display text-[24px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[30px]">{question}</h2>
       {(contenders !== undefined || verdict) && (
         <p className="mt-3 text-[13.5px] text-muted">
           {contenders !== undefined && <>{contenders} {contenders === 1 ? "seller" : "sellers"} bid</>}

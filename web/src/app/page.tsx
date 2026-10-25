@@ -4,18 +4,10 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
-import { Mark } from "@/components/shell";
 import { OriginChip, Label, clock } from "@/components/ui";
 import { Question } from "@/components/arena";
 import { asOrigin, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
-
-const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Vidyut's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
-  { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
-  { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
-  { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
-];
 
 const PARTS = ["GPU", "CPU", "Motherboard", "RAM", "SSD", "Cooler"];
 
@@ -42,32 +34,26 @@ export default function Home() {
 
   return (
     <div className="grid gap-10 pb-10">
-      <section className="relative -mx-4 grid items-center gap-8 overflow-hidden px-4 pt-6 md:min-h-[420px] md:grid-cols-[1.1fr_.9fr] md:gap-10">
-        <div className="relative z-10 order-2 md:order-1">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div>
+          <h1 className="font-display text-[32px] font-semibold tracking-[-0.02em] text-ink">Overview</h1>
+          <p className="mt-1 max-w-[60ch] text-[15px] text-ink-2">
+            Sellers bid in sealed rounds. Your agent vetoes traps with proof and calls you above your allowance.
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-[13px] text-ink-2">
             <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
-            {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
+            {r ? `${r.id} is ${r.state === "closed" ? "closed" : "open"}` : "No round yet"}
           </p>
-          <h1 className="max-w-[18ch] font-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.08] tracking-[0.01em] text-balance">
-            The arena answers one question at a time.
-          </h1>
-          <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
-            Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-2.5">
-            <Link href="/market" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
-              Watch the round <span aria-hidden>→</span>
-            </Link>
-            <Link href="/buyer" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
-              Open the buyer screen
-            </Link>
-          </div>
         </div>
-        <div className="relative order-1 grid place-items-center md:order-2">
-          <span className="hidden md:block"><Mark size={300} spin /></span>
-          <span className="md:hidden"><Mark size={160} spin /></span>
+        <div className="flex flex-wrap gap-2.5">
+          <Link href="/buyer" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-4 font-medium text-accent-ink">
+            Open the buyer screen
+          </Link>
+          <Link href="/floor" className="inline-flex min-h-10 items-center rounded-lg bg-panel px-4 font-medium text-ink ring-1 ring-line-2 hover:bg-soft">
+            Watch the round
+          </Link>
         </div>
-      </section>
+      </header>
 
       <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
 
@@ -86,11 +72,11 @@ export default function Home() {
         </ol>
       </section>
 
-      <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
+      <section aria-label="This round in numbers" className="card grid grid-cols-2 sm:grid-cols-5 sm:divide-x sm:divide-line">
         {stats.map((s) => (
-          <div key={s.label} className="bg-panel px-4 py-4">
-            <div className="text-[clamp(26px,3vw,36px)] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{s.value}</div>
-            <div className="mt-2 flex items-center gap-1.5 text-[12px] text-muted">
+          <div key={s.label} className="px-4 py-4">
+            <div className="text-[28px] font-semibold leading-none tabular-nums text-ink">{s.value}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
               {s.label} <OriginChip origin={s.origin} />
             </div>
           </div>
@@ -98,12 +84,12 @@ export default function Home() {
       </section>
 
       {ticker.length > 0 && (
-        <section aria-label="Latest floor events" className="-mx-4 overflow-hidden border-y border-line bg-canvas-2 py-2.5">
-          <div className="flex w-max gap-8 whitespace-nowrap font-mono text-[12px] text-muted motion-safe:animate-[marquee_60s_linear_infinite] hover:[animation-play-state:paused]">
+        <section aria-label="Latest floor events" className="overflow-hidden rounded-lg bg-canvas-2 py-2.5">
+          <div className="flex w-max gap-8 whitespace-nowrap px-4 text-[13px] text-ink-2 motion-safe:animate-[marquee_60s_linear_infinite] hover:[animation-play-state:paused]">
             {[0, 1].map((copy) =>
               ticker.map((e) => (
                 <span key={`${copy}-${e.id}`} aria-hidden={copy === 1} className="inline-flex items-center gap-2">
-                  <span className="text-accent">{e.kind}</span>
+                  <span className="font-medium text-ink">{e.kind}</span>
                   <span className="text-ink-2">{e.label}</span>
                   <OriginChip origin={e.origin} />
                   <span>{clock(toDate(e.at))}</span>
@@ -113,28 +99,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      <section aria-label="Screens" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {ROUTES.map((t) => (
-          <Link
-            key={t.href}
-            href={t.href}
-            className="card group flex min-h-[132px] flex-col justify-between p-4 transition-transform motion-safe:hover:-translate-y-0.5"
-          >
-            <div>
-              <div className="flex items-center justify-between font-mono text-[12px] text-accent">
-                {t.path}
-                <span className="text-muted transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
-              </div>
-              <div className="mt-2 text-[17px] font-semibold tracking-[-0.01em]">{t.title}</div>
-              <p className="mt-1 text-[13px] text-muted">{t.text}</p>
-            </div>
-            <div className="mt-3 flex gap-1.5">
-              {t.chips.map((c) => <OriginChip key={c} origin={c} />)}
-            </div>
-          </Link>
-        ))}
-      </section>
     </div>
   );
 }
