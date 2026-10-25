@@ -262,7 +262,7 @@ header { position: sticky; top: 0; z-index: 40; }
 .fm-orb-b { animation: fm-orb-b 18s ease-in-out infinite; }
 .fm-ticker { animation: fm-ticker 40s linear infinite; }
 .fm-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--color-shield); animation: fm-ring 2.4s ease-out infinite; }
-.fm-ghost { position: absolute; top: 0; left: 0; offset-path: path("M 48 36 H 432 V 204 H 48 Z"); offset-rotate: 0deg; animation: fm-lap var(--lap, 9s) linear infinite; animation-delay: var(--delay, 0s); }
+.fm-ghost { position: absolute; top: 0; left: 0; offset-path: path("M 70 36 H 410 A 22 22 0 0 1 432 58 V 182 A 22 22 0 0 1 410 204 H 70 A 22 22 0 0 1 48 182 V 58 A 22 22 0 0 1 70 36 Z"); offset-rotate: 0deg; animation: fm-lap var(--lap, 9s) linear infinite; animation-delay: var(--delay, 0s); }
 .fm-line { animation: fm-line 220ms var(--ease-out) both; }
 
 /* Aquarium hero (#448, round 3): water, caustic light and a few slow bubbles. Pauses under reduced motion. */
