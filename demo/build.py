@@ -664,7 +664,7 @@ class BuildRun:
                  recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True,
                  stagger: Optional[float] = None, knockout: bool = False, max_stages: int = MAX_STAGES, replan: bool = True,
                  replan_catalog: Optional[Callable] = None, publisher: Optional[Callable[[str, str], None]] = None,
-                 publish_interval: float = 1.0):
+                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None):
         self.plan, self.clients, self.allowance = plan, clients, allowance
         self.catalog = catalog or default_catalog
         self.replan_catalog = replan_catalog or default_replan_catalog
@@ -685,6 +685,7 @@ class BuildRun:
         self.out_dir, self._say, self.note, self.sleep, self.clock, self.now = out_dir, say, note, sleep, clock, now
         self.delay, self.bid_window, self.on_code = delay, bid_window, on_code
         self.recheck_timeout, self.call_timing, self.real_gpu_round = recheck_timeout, call_timing or {}, real_gpu_round
+        self.relay_signals = relay_signals   # demo/crs_relay.py, run right before each round opens (best effort); None in tests
         self.plan_events = list(plan_events or [])
         self.checks = list(checks or [])
         self.ledger: dict[str, dict] = {}
@@ -783,7 +784,7 @@ class BuildRun:
     def _execute(self, steps: list, delay: Optional[float] = None) -> None:
         from demo import bridge
         bridge.execute(steps, self.clients, delay=self.delay if delay is None else delay, say=self._hook, sleep=self.sleep, clock=self.clock,
-                       note=self.note)
+                       note=self.note, before_round=self.relay_signals)
 
     # ---- the timeline: every part's steps at their scheduled second
     #
@@ -1562,12 +1563,14 @@ def main(argv: Optional[list] = None) -> int:
             out.note("reset_demo (referee): clearing the demo tables")
             clients["referee"].call("reset_demo")
             time.sleep(1)
+        from demo import crs_relay
         from demo.run_demo import stripe_env
         knockout = resolve_knockout(args.knockout, clients, out.note)   # the deployed market must answer close_stage, not only the source say so
         publisher = None if args.no_publish else make_publisher(clients, note=out.note)
         out.note("BuildView: " + (f"also sent to the market's publish_build_view for the hosted board, and written to {out_dir / VIEW_FILE}" if publisher
                                   else f"written to {out_dir / VIEW_FILE}; the market has no publish_build_view reducer, so no hosted copy"))
-        run = BuildRun(plan, clients, allowance=allowance, price_check=price_check, crs_check=bridge.default_crs_check, cartesia=cartesia,
+        run = BuildRun(plan, clients, relay_signals=lambda: crs_relay.relay_best_effort(clients["referee"], note=out.note), allowance=allowance,
+                       price_check=price_check, crs_check=bridge.default_crs_check, cartesia=cartesia,
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
                        env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=out_dir, say=say,
                        note=out.note, delay=args.step_delay, bid_window=args.bid_window, stagger=stagger, knockout=knockout,
