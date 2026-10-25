@@ -184,7 +184,7 @@ function AgentPipTile() {
         className="flex min-h-11 cursor-grab touch-none select-none items-center gap-2 px-3 active:cursor-grabbing"
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${offline ? "bg-coral" : fresh ? "bg-mint" : "bg-slate opacity-40"}`} aria-hidden />
-        <span className="min-w-0 flex-1 truncate font-semibold" aria-live="polite">
+        <span className="min-w-0 flex-1 line-clamp-2 font-semibold leading-snug" aria-live="polite">
           {head}
         </span>
         {head === planHead && <OriginChip origin={liveBuild?.origin ?? "SIM"} />}
