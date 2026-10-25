@@ -214,14 +214,6 @@ function Results({ rows }: { rows: { card: BoardCard; label: string | null }[] }
   );
 }
 
-/** Smallest horizontal gap between neighbours on the same row, so wide signs can shrink to fit. */
-function minGap(pts: Pt[]): number {
-  let g = Infinity;
-  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (pts[i]!.y === pts[j]!.y) g = Math.min(g, Math.abs(pts[i]!.x - pts[j]!.x));
-  return g;
-}
-const fitScale = (gap: number, width: number): number => Math.max(0.5, Math.min(1, (0.95 * gap) / width));
-
 export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick, bubbles, chrome }: ArenaWestProps) {
   const b = useMemo(() => boardAt(scene, beat), [scene, beat]);
   const kind = scene.beats[beat - 1]?.kind;
@@ -232,7 +224,7 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
   const anonCount = Math.min(b.sealedCount, 8);
   const drawn = anon ? anonCount : Math.min(b.track.length, 8);
   const L = westLayout(drawn, b.out.length, portrait);
-  const signs = (L as { sellerSigns?: Pt[] }).sellerSigns;
+  const signs = L.sellerSigns;
   const lit = (k: string) => b.lit.includes(k as "buyer");
   const gavel = b.winner ? "down" : "up";
   const request = bubbles?.buyer ?? (b.request ? `Looking for ${b.request}` : "Waiting for a request");
@@ -247,8 +239,8 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
   const handOf = (p: Pt): Pt => ({ x: p.x + 48 * L.scale, y: p.y - 56 * L.scale });
   const said = (key: string) => bubbles?.[key];
   const bubbleAt = (p: Pt): Pt => ({ x: p.x, y: p.y - 140 * L.scale });
-  const sellerSign = fitScale(minGap(L.sellers), ANCHORS.sign.wide.w);
-  const outSign = fitScale(minGap(L.outs), ANCHORS.sign.small.w);
+  const sellerSign = L.sellerSignScale;
+  const outSign = L.outSignScale;
 
   const showResults = b.track.some((c) => c.price !== null) || b.out.length > 0;
   const rows = useMemo(() => {
@@ -280,7 +272,7 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
           <AnimatePresence>
             {!anon && b.track.slice(0, 8).map((c, i) => (
               <Seller
-                key={c.key} card={sealedAnon ? null : c} at={L.sellers[i] ?? L.ring} signAt={signs?.[i]} scale={L.scale} signScale={sellerSign} hat={sealedAnon ? "wide" : hatOf(c)}
+                key={c.key} card={sealedAnon ? null : c} at={L.sellers[i] ?? L.ring} signAt={signs[i]} scale={L.scale} signScale={sellerSign} hat={sealedAnon ? "wide" : hatOf(c)}
                 pose={kind === "arrive" ? "toss" : "idle"} selected={selected === c.key} spot={c.state === "focus" || c.state === "winner"}
                 onPick={onPick} showRank={final} snap={snap}
               />
@@ -288,7 +280,7 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
           </AnimatePresence>
           {anon && Array.from({ length: anonCount }, (_, i) => L.sellers[i] && (
             <g key={i}>
-              <Seller card={null} at={L.sellers[i]!} signAt={signs?.[i]} scale={L.scale} signScale={1} hat="wide" pose="idle" selected={false} spot={false} onPick={onPick} showRank={false} snap={snap} />
+              <Seller card={null} at={L.sellers[i]!} signAt={signs[i]} scale={L.scale} signScale={sellerSign} hat="wide" pose="idle" selected={false} spot={false} onPick={onPick} showRank={false} snap={snap} />
               <g transform={`translate(${handOf(L.sellers[i]!).x} ${handOf(L.sellers[i]!).y})`}><PriceCard pose="sealed" scale={cs} /></g>
             </g>
           ))}
@@ -343,7 +335,7 @@ export function ArenaWest({ scene, beat, frozen, reducedMotion, selected, onPick
             return (
               <g transform={`translate(${L.ring.cx} ${L.ring.cy - 100 + 40 * k})`}>
                 <Sign kind="wide" scale={k} />
-                <g transform={`translate(0 ${(box.y + box.h / 2) * k})`}><Lines lines={wrap(b.buyerLine, Math.floor(avail / (fs * 0.52)), 3)} size={fs} lh={fs * 1.1} avail={avail} /></g>
+                <g transform={`translate(0 ${(box.y + box.h / 2) * k})`}><Lines lines={wrap(b.buyerLine, Math.floor(avail / (fs * 0.4)), 3)} size={fs} lh={fs * 1.1} avail={avail} /></g>
               </g>
             );
           })()}

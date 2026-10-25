@@ -6,13 +6,18 @@ export interface WestLayout {
   auctioneer: Pt; referee: Pt; sheriff: Pt; appraiser: Pt; // fixed actors (feet points)
   sellers: Pt[]; // feet points of n sellers on an arc inside the ring, left to right
   cards: { x: number; y: number; rot: number; scale: number }[]; // seller i's tossed price card (center, tilt in degrees, scale): beside that seller, upper right (left if the right would leave the ring or hit a neighbour); one shared scale, as big as fits without overlap
-  outs: Pt[]; // where the k-th eliminated seller's reason sign sits: a row below the ring (two rows in portrait with more than 4)
+  sellerSigns: Pt[]; // anchor (the sign's base, at scale 1 the board is 184 x 44 above it) of seller i's wide name sign: below the feet; with many sellers every other sign drops one step so neighbours never touch
+  sellerSignScale: number; // scale to draw every seller sign at (1 down to about 0.5)
+  outs: Pt[]; // anchor of the k-th eliminated seller's small reason sign (the ghost figure is drawn 56 above it): a row below the lowest seller sign (two rows in portrait with more than 4)
+  outSignScale: number; // scale to draw every out sign at
   request: Pt; // the request speech bubble's tail anchor, above the auctioneer's head
   scale: number; // figure scale: 1.7 at landscape with up to 5 sellers, 1.3 with 6 to 8, 1.1 in portrait (0.9 with 6 to 8)
 }
 
 const SCALE_L = 1.7, SCALE_L_MANY = 1.3, SCALE_P = 1.1, SCALE_P_MANY = 0.9;
 
+// Name sign: selection ring is 208 wide and reaches 100 above its anchor. Out stack: the ghost's head is 150 above the out anchor.
+const SIGN_W = 208, SIGN_H = 100, OUT_UP = 150;
 const FIG_W = 70, FIG_H = 132, CARD_W = 72, CARD_H = 48, GAP = 4;
 type Box = { l: number; r: number; t: number; b: number };
 const hit = (a: Box, b: Box, m: number): boolean => a.l < b.r + m && b.l < a.r + m && a.t < b.b + m && b.t < a.b + m;
@@ -64,7 +69,6 @@ export function westLayout(n: number, outs: number, portrait: boolean): WestLayo
   n = clamp8(n);
   outs = clamp8(outs);
   const w = portrait ? 900 : 1600;
-  const h = portrait ? 1200 : 900;
   const ring = portrait ? { cx: 450, cy: 760, rx: 400, ry: 260 } : { cx: 800, cy: 600, rx: 620, ry: 210 };
   const rx = ring.rx * 0.78;
   const ry = ring.ry * 0.78;
@@ -77,19 +81,36 @@ export function westLayout(n: number, outs: number, portrait: boolean): WestLayo
     const t = n === 1 ? 0 : half + (i * -2 * half) / (n - 1); // -0.94 .. 0.94 left to right
     sellers.push({ x: ring.cx + rx * t, y: ring.cy + ry * Math.sqrt(1 - t * t) });
   }
+  // Seller name signs sit 70 below the feet (wide sign, selection ring 208 x 64 at scale 1, reaching 100 above the anchor).
+  // When neighbours are too close, odd signs drop below the even ones and the shared scale can grow back.
+  let adj = Infinity;
+  for (let i = 1; i < n; i++) adj = Math.min(adj, sellers[i].x - sellers[i - 1].x);
+  let signScale = n < 2 ? 1 : Math.min(1, (0.95 * adj) / SIGN_W);
+  const stagger = n >= 2 && signScale < 0.75;
+  if (stagger) signScale = Math.min(1, (0.95 * 2 * adj) / SIGN_W);
+  const sellerSigns: Pt[] = sellers.map((p) => ({ x: p.x, y: p.y + 70 }));
+  if (stagger) {
+    for (let j = 1; j < n; j += 2) {
+      const above = Math.max(sellerSigns[j - 1].y, j + 1 < n ? sellerSigns[j + 1].y : -Infinity);
+      sellerSigns[j] = { x: sellers[j].x, y: Math.max(sellerSigns[j].y, above + 6 + SIGN_H * signScale) };
+    }
+  }
+  const lowestSign = n > 0 ? Math.max(...sellerSigns.map((q) => q.y)) : ring.cy + ring.ry * 0.78 + 70;
+  const outY = Math.max(Math.round(lowestSign + OUT_UP + 10), portrait ? ring.cy + ring.ry + 40 : ring.cy + ring.ry + 36);
   // Out signs: a row (landscape) or up to two rows (portrait, more than 4) below the ring, evenly spread.
   const spread = (k: number, lo: number, hi: number, i: number) => (k === 1 ? (lo + hi) / 2 : lo + (i * (hi - lo)) / (k - 1));
   const outPts: Pt[] = [];
   if (!portrait) {
-    const y = ring.cy + ring.ry + 36;
-    for (let k = 0; k < outs; k++) outPts.push({ x: spread(outs, 260, 1340, k), y });
+    for (let k = 0; k < outs; k++) outPts.push({ x: spread(outs, 260, 1340, k), y: outY });
   } else {
     const first = Math.min(outs, 4);
-    const y = ring.cy + ring.ry + 40;
+    const y = outY;
     for (let k = 0; k < first; k++) outPts.push({ x: spread(first, 120, 780, k), y });
     const rest = outs - first;
-    for (let k = 0; k < rest; k++) outPts.push({ x: spread(rest, 120, 780, k), y: y + 70 });
+    for (let k = 0; k < rest; k++) outPts.push({ x: spread(rest, 120, 780, k), y: y + OUT_UP + 6 });
   }
+  const lastOut = outY + (outs > 4 && portrait ? OUT_UP + 6 : 0);
+  const h = Math.max(portrait ? 1200 : 900, lastOut + 40);
   const scale = portrait ? (n >= 6 ? SCALE_P_MANY : SCALE_P) : n >= 6 ? SCALE_L_MANY : SCALE_L;
   const cards = placeCards(sellers, scale, w, h, portrait ? 1.5 : 1.8);
   return {
@@ -98,7 +119,7 @@ export function westLayout(n: number, outs: number, portrait: boolean): WestLayo
     referee: portrait ? { x: 600, y: 470 } : { x: 960, y: 430 },
     sheriff: portrait ? { x: 110, y: 520 } : { x: 150, y: 430 },
     appraiser: portrait ? { x: 790, y: 520 } : { x: 1450, y: 430 },
-    sellers, cards, outs: outPts,
+    sellers, cards, sellerSigns, sellerSignScale: signScale, outs: outPts, outSignScale: 1,
     request: portrait ? { x: 450, y: 300 } : { x: 800, y: 230 },
     scale,
   };

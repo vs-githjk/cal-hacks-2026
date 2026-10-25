@@ -110,3 +110,43 @@ test("cards are inside the viewBox, tilted a little, scaled within bounds", () =
     }
   });
 });
+
+// Sign boxes. Seller name sign: the selection ring, 208 x 100 at scale k, base at the anchor. Out sign: ring 128 wide, base at the anchor,
+// plus the ghost figure above it (head 150 over the anchor). Scales come from the layout.
+const sellerSignBox = (a: { x: number; y: number }, k: number) => ({ l: a.x - 104 * k, r: a.x + 104 * k, t: a.y - 100 * k, b: a.y });
+const outBox = (a: { x: number; y: number }, k: number) => ({ l: a.x - 64 * k, r: a.x + 64 * k, t: a.y - 150, b: a.y });
+const figBox = (s: { x: number; y: number }, sc: number) => ({ l: s.x - 35 * sc, r: s.x + 35 * sc, t: s.y - 132 * sc, b: s.y });
+
+function eachSigns(fn: (l: ReturnType<typeof westLayout>, n: number, o: number, p: boolean) => void) {
+  for (const p of [false, true]) for (let n = 1; n <= 8; n++) for (let o = 0; o <= n; o++) fn(westLayout(n, o, p), n, o, p);
+}
+
+test("seller signs sit below the feet, do not overlap each other, and stay inside the viewBox", () => {
+  eachSigns((l, n, o, p) => {
+    assert.equal(l.sellerSigns.length, n);
+    const boxes = l.sellerSigns.map((a) => sellerSignBox(a, l.sellerSignScale));
+    boxes.forEach((b, i) => {
+      assert.ok(l.sellerSigns[i].y >= l.sellers[i].y + 70, `sign above its feet i=${i} n=${n} p=${p}`);
+      assert.ok(b.l >= 0 && b.r <= l.w && b.t >= 0 && b.b <= l.h, `sign outside n=${n} p=${p}`);
+      for (let j = i + 1; j < n; j++) assert.ok(!overlap(b, boxes[j], 0), `signs ${i},${j} n=${n} p=${p}`);
+    });
+    assert.ok(l.sellerSignScale >= 0.5 && l.sellerSignScale <= 1, `sign scale n=${n} p=${p}`);
+  });
+});
+
+test("out signs and their ghosts never touch a seller sign, a seller figure or a price card", () => {
+  eachSigns((l, n, o, p) => {
+    const signs = l.sellerSigns.map((a) => sellerSignBox(a, l.sellerSignScale));
+    const figs = l.sellers.map((s) => figBox(s, l.scale));
+    const cards = l.cards.map(cardBox);
+    const outs = l.outs.map((a) => outBox(a, l.outSignScale));
+    assert.equal(outs.length, o);
+    outs.forEach((b, k) => {
+      assert.ok(b.l >= 0 && b.r <= l.w && b.t >= 0 && b.b <= l.h, `out ${k} outside viewBox n=${n} o=${o} p=${p}`);
+      signs.forEach((s, i) => assert.ok(!overlap(b, s, 4), `out ${k} on seller sign ${i} n=${n} o=${o} p=${p}`));
+      figs.forEach((f, i) => assert.ok(!overlap(b, f, 4), `out ${k} on figure ${i} n=${n} o=${o} p=${p}`));
+      cards.forEach((c, i) => assert.ok(!overlap(b, c, 4), `out ${k} on card ${i} n=${n} o=${o} p=${p}`));
+      for (let j = k + 1; j < outs.length; j++) assert.ok(!overlap(b, outs[j], 0), `outs ${k},${j} n=${n} o=${o} p=${p}`);
+    });
+  });
+});
