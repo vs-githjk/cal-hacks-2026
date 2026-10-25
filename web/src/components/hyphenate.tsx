@@ -326,7 +326,7 @@ export function HyphenateScreen(p: HyphenateScreenProps) {
       ) : isBlank(s) ? (
         <section className="card p-[18px]">
           <p className="text-[22px] font-medium">A blank studio.</p>
-          <p className="mt-1 text-muted">No orders or decisions yet. Load the seeded story to see Vidyut&apos;s request, the controller&apos;s no, the short shipment and the held bills.</p>
+          <p className="mt-1 text-muted">No orders or decisions yet. Load the seeded story to see the buyer&apos;s request, the controller&apos;s no, the short shipment and the held bills.</p>
           {p.onLoadMoment && (
             <button
               type="button"

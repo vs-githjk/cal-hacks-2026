@@ -32,3 +32,13 @@ export function serviceStatuses(events: readonly EventLike[], connected: boolean
     return { name, text: `${origins.join(" + ")} (${mine.length})`, tone: origins[0].toLowerCase() as ServiceStatus["tone"] };
   });
 }
+
+export type ConnectionState = "connecting" | "live" | "disconnected";
+
+/** The market's own connection, as three states instead of a flipping boolean: neutral "connecting" until
+ * the first connect (or the first connect error), then "live", then red "disconnected" only once a live
+ * connection actually drops or errors. Never a red flash during the first second while it is still trying. */
+export function connectionState(isActive: boolean, everActive: boolean): ConnectionState {
+  if (isActive) return "live";
+  return everActive ? "disconnected" : "connecting";
+}
