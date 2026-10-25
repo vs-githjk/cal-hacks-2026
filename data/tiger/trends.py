@@ -52,6 +52,11 @@ _RECORD = (
     "AND ts >= now() - make_interval(days => %s)), "
     "(SELECT count(DISTINCT round_id) FROM loss_reports WHERE seller_id = %s AND round_id IS NOT NULL "
     "AND ts >= now() - make_interval(days => %s))")
+# the origins of the rows the record is built from (a row stored before #260 has none and reads as SIM)
+_RECORD_ORIGINS = (
+    "SELECT array_agg(DISTINCT coalesce(origin, 'SIM')) FROM ("
+    "SELECT origin FROM bid_ticks WHERE seller_id = %s AND ts >= now() - make_interval(days => %s) "
+    "UNION ALL SELECT origin FROM loss_reports WHERE seller_id = %s AND ts >= now() - make_interval(days => %s)) o")
 _RECORD_SPAN = "SELECT ceil(extract(epoch FROM now() - min(ts)) / 86400)::int FROM bid_ticks WHERE seller_id = %s"
 # the gap of each loss as a percent of the round's winning price (the win tick of the same round and SKU)
 _RECORD_GAP = (
@@ -158,16 +163,17 @@ def seller_record(seller_id: str, days: int, *, connect=None) -> dict:
     """One seller's record over the last `days` (1 to 365): rounds entered, won, lost, and the median gap of its losses
     as a band (the loss's `lost_by` as a percent of the round's winning price). `days_of_data` as in price_trend.
     Entered counts every round with a tick for the seller (a win tick is the winner's only tick). Never invents a band:
-    `median_gap_band` is None when no loss could be joined to its round's winning tick."""
+    `median_gap_band` is None when no loss could be joined to its round's winning tick. `origins` are those of the rows
+    read (a stored LIVE reads as MIRROR, a row with none as SIM); [] when there are none."""
     if not isinstance(seller_id, str) or not seller_id.strip():
         raise ValueError("seller_id must be a non-empty string")
     days = _int_in_range(days, "days", MAX_DAYS)
     empty = {"seller_id": seller_id, "window_days": days, "days_of_data": 0, "rounds_entered": 0, "rounds_won": 0,
-             "rounds_lost": 0, "win_rate": None, "median_gap_band": None, "gap_samples": 0}
+             "rounds_lost": 0, "win_rate": None, "median_gap_band": None, "gap_samples": 0, "origins": []}
     queries = [(_RECORD, (seller_id, days, seller_id, days, seller_id, days)), (_RECORD_SPAN, (seller_id,)),
-               (_RECORD_GAP, (seller_id, days))]
+               (_RECORD_GAP, (seller_id, days)), (_RECORD_ORIGINS, (seller_id, days, seller_id, days))]
     try:
-        counts, span, gap = store._run(connect, lambda conn: _fetch(conn, queries))
+        counts, span, gap, origins = store._run(connect, lambda conn: _fetch(conn, queries))
     except store.NotConfigured:
         return {"status": "not_configured", **empty}
     except store.TigerError:
@@ -178,7 +184,8 @@ def seller_record(seller_id: str, days: int, *, connect=None) -> dict:
     band = gap_band(float(med)) if med is not None and samples else None
     return {"status": "ok", "seller_id": seller_id, "window_days": days, "days_of_data": max(1, min(days, held)) if held else 0,
             "rounds_entered": entered, "rounds_won": won, "rounds_lost": lost,
-            "win_rate": round(won / entered, 3) if entered else None, "median_gap_band": band, "gap_samples": int(samples or 0)}
+            "win_rate": round(won / entered, 3) if entered else None, "median_gap_band": band, "gap_samples": int(samples or 0),
+            "origins": _origins(origins[0][0] if origins and origins[0] else [])}
 
 
 def _fetch(conn, queries):

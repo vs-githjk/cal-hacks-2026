@@ -579,3 +579,45 @@ def test_chat_answers_nothing_but_a_block_notice_when_shield_blocks(tmp_path, mo
     pytest.importorskip("uagents")
     sent = _run_chat(tmp_path, monkeypatch, "block", "how is the RTX 5070 Ti trending?")
     assert sent[1][1].text() == "Shield blocked this message. No action taken."
+
+
+# ---- origin labels of a real Tiger read: the rows' origin, or "no data", never a blanket SIM ----------------------
+
+class TigerLike(FakeSource):
+    """A configured Tiger that answers with the given record and price dicts."""
+
+    def __init__(self, rec, prc):
+        super().__init__()
+        self.rec, self.prc = rec, prc
+
+    def record(self, seller_id, days):
+        return {**self.rec, "window_days": days}
+
+    def price(self, sku, days):
+        return {**self.prc, "window_days": days}
+
+
+def test_an_empty_but_real_tiger_read_says_no_data_not_sim(tmp_path):
+    empty_rec = {**record(7, 0, entered=0, won=0, band=None), "origins": []}
+    empty_prc = price(7, 0, n=0, direction="no_data", origins=())
+    out = pulse(tmp_path, TigerLike(empty_rec, empty_prc)).process_round(rnd())
+    note, trend = out["seller_notes"][0], out["buyer_trends"][0]
+    assert note["record"]["7"]["line"] == "Last 7 days: no rounds recorded for you yet. [Tiger Data bid_ticks and loss_reports; no data]"
+    assert note["record"]["7"]["origin"] == "no data" and trend["windows"]["7"]["origin"] == "no data"
+    assert trend["windows"]["7"]["line"] == "Last 7 days: no prices recorded for this part yet. [Tiger Data price_obs; no data]"
+    assert "SIM" not in json.dumps(note["record"]) and "SIM" not in json.dumps(trend["windows"])
+
+
+def test_a_tiger_record_carries_the_origin_of_the_rows_it_was_built_from(tmp_path):
+    rec = {**record(7, 7), "origins": ["MIRROR", "SIM"]}
+    out = pulse(tmp_path, TigerLike(rec, price(7, 7))).process_round(rnd())
+    line = out["seller_notes"][0]["record"]["7"]["line"]
+    assert line.endswith("[Tiger Data bid_ticks and loss_reports; MIRROR+SIM]")
+    only_sim = pulse(tmp_path, TigerLike({**record(7, 7), "origins": ["SIM"]}, price(7, 7))).process_round(rnd())
+    assert only_sim["seller_notes"][0]["record"]["7"]["line"].endswith("; SIM]")
+
+
+def test_rows_that_state_no_origin_read_as_sim_and_the_fixture_stays_sim(tmp_path):
+    assert O.record_origin({**record(7, 7), "origins": []}, sim=False) == "SIM"
+    assert O.record_origin(record(7, 7), sim=True) == "SIM"
+    assert O.SimSource().record("seller_3", 7)["origins"] == ["SIM"]

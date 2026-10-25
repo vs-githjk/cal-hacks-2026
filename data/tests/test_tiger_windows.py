@@ -27,8 +27,8 @@ def price_conn(days, held=3, origins=("MIRROR", "SIM")):
     return Conn({"GROUP BY day": days, "array_agg": agg, "ceil(": [(held,)]})
 
 
-def record_conn(counts=(9, 2, 7), held=12, gap=(8.2, 5)):
-    return Conn({"SELECT (SELECT": [counts], "ceil(": [(held,)], "JOIN bid_ticks": [gap]})
+def record_conn(counts=(9, 2, 7), held=12, gap=(8.2, 5), origins=("SIM",)):
+    return Conn({"SELECT (SELECT": [counts], "ceil(": [(held,)], "JOIN bid_ticks": [gap], "array_agg": [(list(origins),)]})
 
 
 def test_windows_are_a_week_and_a_month():
@@ -101,11 +101,18 @@ def test_seller_record_counts_entered_won_lost_and_the_median_gap_band(configure
     hostile = "seller_3'; DROP TABLE bid_ticks;--"
     c = Connector(record_conn())
     out = trends.seller_record(hostile, 7, connect=c)
-    assert len(c.conn.executed) == 3
+    assert len(c.conn.executed) == 4
     for sql, params in c.conn.executed:
         assert hostile not in sql and "DROP" not in sql.upper() and sql.count("%s") == len(params) and params[0] == hostile
     assert out == {"status": "ok", "seller_id": hostile, "window_days": 7, "days_of_data": 7, "rounds_entered": 9, "rounds_won": 2,
-                   "rounds_lost": 7, "win_rate": 0.222, "median_gap_band": "within10", "gap_samples": 5}
+                   "rounds_lost": 7, "win_rate": 0.222, "median_gap_band": "within10", "gap_samples": 5, "origins": ["SIM"]}
+
+
+def test_seller_record_origins_are_those_of_the_rows_read_and_a_stored_live_reads_as_mirror(configured):
+    out = trends.seller_record("seller_3", 7, connect=Connector(record_conn(origins=("LIVE", "MIRROR", "weird", None))))
+    assert out["origins"] == ["MIRROR", "SIM"]
+    none = trends.seller_record("seller_9", 7, connect=Connector(record_conn(counts=(0, 0, 0), held=None, gap=(None, 0), origins=())))
+    assert none["origins"] == [] and none["rounds_entered"] == 0
 
 
 @pytest.mark.parametrize("pct,band", [(0.0, "within5"), (5.0, "within5"), (5.01, "within10"), (10.0, "within10"), (20.0, "within20"), (20.5, "over20")])

@@ -250,7 +250,7 @@ class TigerSource:
     def record(self, seller_id: str, days: int) -> dict:
         return _safe(lambda: trends.seller_record(seller_id, days), {"seller_id": seller_id, "window_days": days, "days_of_data": 0,
                                                                      "rounds_entered": 0, "rounds_won": 0, "rounds_lost": 0, "win_rate": None,
-                                                                     "median_gap_band": None, "gap_samples": 0})
+                                                                     "median_gap_band": None, "gap_samples": 0, "origins": []})
 
     def demand(self) -> dict:
         return trends.demand_by_sku()
@@ -301,7 +301,7 @@ class SimSource(TigerSource):
         band = GAP_BANDS[_h(seller_id, "band") % 3] if entered > won else None
         return {"status": "ok", "seller_id": seller_id, "window_days": days, "days_of_data": held, "rounds_entered": entered,
                 "rounds_won": won, "rounds_lost": entered - won, "win_rate": round(won / entered, 3) if entered else None,
-                "median_gap_band": band, "gap_samples": entered - won, "sim": True}
+                "median_gap_band": band, "gap_samples": entered - won, "origins": ["SIM"], "sim": True}
 
 
 def tiger_configured() -> bool:
@@ -420,7 +420,17 @@ def _tag(source: str, origin: str) -> str:
 
 def _short(block: dict) -> str:
     d, w = block["days_of_data"], block["window_days"]
-    return f" (only {_plural(d, 'day')} of data)" if d < w else ""
+    return f" (only {_plural(d, 'day')} of data)" if 0 < d < w else ""
+
+
+def record_origin(rec: dict, sim: bool) -> str:
+    """The origin a record line carries: SIM for the fixture; for a Tiger read, the origins of the rows it was built from
+    ("no data" when it was built from none: a real, empty read is not SIM); SIM for rows that state none."""
+    if sim:
+        return "SIM"
+    if not rec["rounds_entered"]:
+        return "no data"
+    return "+".join(rec.get("origins") or []) or "SIM"
 
 
 def record_block(rec: dict) -> dict:
@@ -428,7 +438,7 @@ def record_block(rec: dict) -> dict:
     state = rec.get("status") or "error"
     block = {"window_days": rec["window_days"], "state": state, "days_of_data": rec["days_of_data"], "rounds_entered": rec["rounds_entered"],
              "rounds_won": rec["rounds_won"], "win_rate": rec["win_rate"], "median_gap_band": rec["median_gap_band"],
-             "origin": "SIM", "source": SIM_SRC if sim else TIGER_RECORD_SRC}
+             "origin": record_origin(rec, sim), "source": SIM_SRC if sim else TIGER_RECORD_SRC}
     block["line"] = record_line(block)
     return block
 
@@ -447,10 +457,10 @@ def record_line(b: dict) -> str:
 
 def price_block(p: dict) -> dict:
     sim = bool(p.get("sim"))
-    origins = p.get("origins") or ["SIM"]
+    origin = "SIM" if sim else "no data" if not p["n"] else "+".join(p.get("origins") or []) or "SIM"
     block = {"window_days": p["window_days"], "state": p.get("status") or "error", "days_of_data": p["days_of_data"], "n": p["n"],
              "min_cents": p["min_cents"], "median_cents": p["median_cents"], "now_cents": p["now_cents"], "direction": p["direction"],
-             "origin": "+".join(origins), "source": SIM_SRC if sim else TIGER_PRICE_SRC}
+             "origin": origin, "source": SIM_SRC if sim else TIGER_PRICE_SRC}
     block["line"] = price_line(block)
     return block
 

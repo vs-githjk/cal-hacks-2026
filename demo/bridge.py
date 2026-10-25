@@ -439,6 +439,8 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                     note(f"the market refused record_payment after Stripe test charge {s.args.get('payment_ref')}: "
                          "find it in the Stripe test dashboard (it is idempotent on the mandate hash)")
                 raise
+        if s.reducer == "record_loss_report" and deal_gate is not None:
+            deal_gate.note_loss(s.args)     # #260: written to Tiger Data in one batch once the run's steps are done
         if s.gate == "approval_call" and approver is not None:
             approved_and_recorded = True    # the approver said approved and the market took the approval row
         lag += clock() - t_call
@@ -452,6 +454,9 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
             if want > 0:
                 sleep(want)
             lag = max(0.0, -want)
+    if deal_gate is not None:
+        for line in deal_gate.flush_losses():     # #260: after the payment, so a slow or failed Tiger never touches the money path
+            note(line)
     return outcomes
 
 
@@ -543,8 +548,30 @@ class DealGate:
         # #269, set by main on --live-call: the Bright Data re-check before the call and the Tiger Data write of the round
         self.price_check: Optional[Callable[[dict], dict]] = None
         self.tiger_writer: Optional[Callable[[list], dict]] = None
+        # #260: the loss reports the referee recorded, written to Tiger Data in one batch after the payment (never on the money path)
+        self.tiger_loss_writer: Optional[Callable[[list], dict]] = None
+        self._round_rows: list = []
+        self._losses: list[dict] = []
         self.price: Optional[dict] = None
         self._notes: list[str] = []
+
+    def note_loss(self, report: dict) -> None:
+        """A record_loss_report step the market accepted; kept for flush_losses."""
+        if self.tiger_loss_writer is not None:
+            self._losses.append(dict(report))
+
+    def flush_losses(self) -> list[str]:
+        """Write the kept loss reports to Tiger Data (best effort, bounded by the writer) and return the console line.
+        A failure is a line, never an exception: the round and its payment are already done."""
+        if self.tiger_loss_writer is None or not self._losses:
+            return []
+        from demo import sponsors_live as S
+        reports, self._losses = self._losses, []
+        try:
+            res = self.tiger_loss_writer(S.loss_rows(reports, self._round_rows, self.goal["items"][0]["sku_spec"]))
+        except Exception as e:  # noqa: BLE001
+            res = {"state": "error", "detail": type(e).__name__}
+        return [S.tiger_note(res, self.round_id, "loss reports")]
 
     def expectations(self, rows: list) -> dict:
         w = market_winner(rows, self.round_id)
@@ -570,15 +597,16 @@ class DealGate:
         from pay.mandate import new_mandate
         self._referee = referee
         rows = referee.sql("SELECT * FROM round_result")
-        w = self.expectations(rows)
-        self.winner = w
-        if self.tiger_writer is not None:   # #269: the round's prices to Tiger Data; never on the money path
+        self._round_rows = [r for r in rows if r[1] == self.round_id]
+        if self.tiger_writer is not None:   # #269: the round's prices to Tiger Data, even when the round has no payable winner
             from demo import sponsors_live as S
             try:
-                res = self.tiger_writer(S.round_ticks([r for r in rows if r[1] == self.round_id], self.goal["items"][0]["sku_spec"]))
+                res = self.tiger_writer(S.round_ticks(self._round_rows, self.goal["items"][0]["sku_spec"]))
             except Exception as e:  # noqa: BLE001
                 res = {"state": "error", "detail": type(e).__name__}
             self._notes.append(S.tiger_note(res, self.round_id))
+        w = self.expectations(rows)
+        self.winner = w
         # #257: one CRS check of the payee before the call and the charge. A business payee needs a verified check,
         # bound into the mandate; an error, a timeout, "not configured" or a failed check holds the payee gate.
         try:
@@ -874,8 +902,13 @@ def main(argv: Optional[list] = None) -> int:
         S.load_sponsor_env(args.env_file or vc.DEFAULT_ENV_FILE)
         gate.price_check = S.price_recheck
         gate.tiger_writer = S.write_round_ticks
+        gate.tiger_loss_writer = S.write_loss_reports
         approver, client_note = live_approver_for(args, run, gate, out)
         out.note(client_note)
+    elif os.environ.get("TIGER_DATA_SERVICE_URL"):   # #260: round history is written on any run when Tiger is configured
+        from demo import sponsors_live as S
+        gate.tiger_writer = S.write_round_ticks
+        gate.tiger_loss_writer = S.write_loss_reports
     if args.stripe:
         charger = make_charger(gate, {**os.environ, **stripe_env(DEFAULT_ENV_FILE)}, use_stripe=True)
         out.note("Stripe: ONE test-mode charge (sk_test_ key only) after the call approves and the market records the approval; "

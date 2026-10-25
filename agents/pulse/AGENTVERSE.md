@@ -27,6 +27,7 @@ The Tech Bazaar orchestration layer. It watches finished sealed-bid rounds and t
 
 ## Limitations
 
+- Setup: run `python3 -m data.tiger.load` once per Tiger service (it creates the tables and loads the price history).
 - It cannot place bids, approve purchases or move money.
 - Week and month figures are real only once Tiger Data holds real rounds and prices; until then they are labelled SIM.
 - A seller's record is shown to anyone who asks for that seller id in chat, unless the operator sets PULSE_SELLER_CHAT=own.
