@@ -188,12 +188,40 @@ if d.approved:
   stored market approval and is never represented as a voice record. The allowance path in `pay/merchant_sim.py` checks
   `per_purchase_limit`, `period_limit` and `spent_this_period` before charging.
 
-### TODO stubs (the call transport is a later task)
-- **Cartesia hookup (TODO).** In-browser call is the default and the fallback. The transport will: speak
-  `script.spoken()`, call `session.begin_listening(now)`, send each final STT transcript and its confidence to
-  `session.approve(text, confidence=c)`, speak `script.why_answer` on a "why" intent, and speak `script.approved_line`
-  or `script.denied_line` from `Decision`. Needs `CARTESIA_API_KEY` and `CARTESIA_AGENT_ID`. Setup, features used and
-  known limitations (carrier, latency, noisy rooms, in-browser fallback) go here when it is built.
+### Cartesia approval call (`pay/voice_cartesia.py`)
+When a purchase is above the buyer's allowance, a Cartesia managed voice agent phones the buyer and asks them to approve it. The agent only talks: it reads one script, asks for the
+two-word code shown on the buyer's screen, repeats back what it heard and hangs up. The decision is made by our own code from the call's transcript (`pay.approval.ApprovalSession`), and every
+other outcome is a denial.
+
+**Setup.** Set these names in the process environment or in the env file the runner reads (names only here; values stay out of the repo and the logs):
+`CARTESIA_API_KEY`, `CARTESIA_AGENT_ID`, `APPROVAL_CALL_TO` (the buyer's phone, E.164), and optionally `CARTESIA_PHONE_NUMBER_ID` (the `ap_...` id of the agent's number, found from the
+agent when unset), `APPROVAL_BUYER_NAME` (how the agent addresses the buyer) and `APPROVAL_SECRET`. `python3 -m pay.voice_cartesia --check` reads the agent (no call) and `--dry-run` prints the variables that would be sent.
+`demo/build.py --live-call` and `demo/bridge.py --live-call` place the call; without `--live-call` a purchase above the allowance stops before any call.
+
+**What we use.**
+- *Outbound call.* `POST /agents/calls` with one number and three dynamic variables: `buyer_name`, `deal_script` and `why_answer`. The client dials only the configured approval number
+  and refuses any other (`NumberNotAllowed`). Ringing times out after 30 s and a call lasts at most 3 minutes.
+- *The deal read out.* The total and the number of sellers come from the mandate and the market's winners (for a full build: "6 parts from 3 sellers" and the total in words and digits),
+  never from speech, from a seller's text or from a model. The script never asks for a card number.
+- *Answering "why".* The agent answers "why not the cheaper one?" from `why_answer`, which is built from the advocate's closed-schema reason (`rule_id`, `summary`, `source_url`) after a
+  strict allowlist. Anything that fails the allowlist is dropped and a fixed sentence is spoken instead.
+- *Approve or hang up.* After the call ends we fetch the transcript with Get Call and feed every buyer utterance to the approval session. Only the buyer saying `approve` or `approved`
+  together with the code from their screen approves, within 3 attempts. Silence, a hang-up, voicemail, no answer, a failed dial, a timeout, a wrong code or a missing transcript all deny:
+  nothing is paid and no mandate is approved. The code and any seller text are never sent to Cartesia.
+
+**Phone-only approval.** The phone call is the only way to approve a purchase above the allowance: there is no typed code, no chat reply and no scripted fallback. The call goes to the
+buyer's own approval phone (`pay.voice_cartesia.approval_phone`). Today only the configured buyer has one; for any other buyer, and for a buyer with no number, a purchase above the allowance is
+refused with a clear denial (`no_phone`) before anything is dialed, and no mandate is made. Reading each buyer's number from their profile is tracked in #374.
+
+**Known limits.**
+- The decision is made after the call ends, from the transcript, not word by word during the call, so a buyer who says the code and then "wait" in the same call is judged on everything said.
+- Cartesia documents no call-cancel endpoint (DELETE on a call redacts it, it does not hang up), so when our wait times out we deny and the call may still be ringing; anything said after
+  the timeout is ignored.
+- How soon after `completed` the transcript is whole is not documented, so we retry a few times when it is empty. A zero-data-retention agent keeps no transcript and would always deny.
+- Speech-to-text can mishear a name or the code in a noisy room; a misheard code is a wrong attempt, never an approval. Get Call returns no confidence score.
+- Carrier behavior (voicemail, call screening, dial delays) is outside our control and always ends in a denial.
+
+### Not built yet
 - **Photon phone path (TODO).** Calls only the number registered in a prior in-app step, with `svc.issue(mandate,
   channel="phone")`. The phone alone can never approve because the code is shown only on the screen. Stays Tier 1 until
   Photon is proven (Lane C spike).
