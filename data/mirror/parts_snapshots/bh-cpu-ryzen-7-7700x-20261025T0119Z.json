@@ -1,0 +1,102 @@
+[
+ {
+  "id": "bh:cf2e8e8f4755",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 7700X 4.5 GHz Eight-Core AM5 Processor",
+  "model_number": "100-100000591WOF",
+  "condition": "unknown",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 105,
+   "microarchitecture": "Zen 4"
+  },
+  "price": 239.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1723470-REG/amd_100_100000591wof_ryzen_7_7700x_4_5.html",
+  "snapshot_id": "bh-cpu-ryzen-7-7700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:55+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1723470-REG/amd_100_100000591wof_ryzen_7_7700x_4_5.html",
+   "price": 239.0,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": "100-100000591WOF"
+ },
+ {
+  "id": "bh:0b53b0f5efd0",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 7700X with ASUS B650E MAX GAMING WIFI & Corsair 16GB VENGEANCE DDR5-6000 Combo",
+  "model_number": "1958002",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 706.31,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1958002-REG/amd_ryzen_7_7700x_with.html",
+  "snapshot_id": "bh-cpu-ryzen-7-7700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:55+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1958002-REG/amd_ryzen_7_7700x_with.html",
+   "price": 706.31,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:3090f78e5914",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 7700X with ASUS B650E MAX GAMING WIFI & Corsair 16GB VENGEANCE RGB DDR5-6000 Combo",
+  "model_number": "1957992",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 672.32,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1957992-REG/amd_ryzen_7_7700x_with.html",
+  "snapshot_id": "bh-cpu-ryzen-7-7700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:55+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1957992-REG/amd_ryzen_7_7700x_with.html",
+   "price": 672.32,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:4be7403d1a63",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 7700X Processor and ASUS ROG STRIX B650E-F GAMING WIFI Motherboard",
+  "model_number": "1815629",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 408.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1815629-REG/amd_amd_ryzen_7_7700x.html",
+  "snapshot_id": "bh-cpu-ryzen-7-7700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:55+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1815629-REG/amd_amd_ryzen_7_7700x.html",
+   "price": 408.99,
+   "stock": "discontinued",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "discontinued"
+  },
+  "maker_model": null
+ }
+]

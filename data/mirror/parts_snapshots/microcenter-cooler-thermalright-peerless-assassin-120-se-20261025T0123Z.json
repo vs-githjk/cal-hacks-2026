@@ -1,0 +1,142 @@
+[
+ {
+  "id": "microcenter:cdfd9b571813",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 SE ARGB CPU Air Cooler",
+  "model_number": "959270",
+  "condition": "unknown",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 54.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/704461/thermalright-peerless-assassin-120-se-argb-cpu-air-cooler",
+  "snapshot_id": "microcenter-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:48+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/704461/thermalright-peerless-assassin-120-se-argb-cpu-air-cooler",
+   "price": 54.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": "Peerless Assassin 120 SE ARGB"
+ },
+ {
+  "id": "microcenter:eea5df59461d",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 SE CPU Air Cooler",
+  "model_number": "959262",
+  "condition": "unknown",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 49.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/704460/thermalright-peerless-assassin-120-se-cpu-air-cooler",
+  "snapshot_id": "microcenter-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:48+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/704460/thermalright-peerless-assassin-120-se-cpu-air-cooler",
+   "price": 49.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": "Peerless Assassin 120 SE"
+ },
+ {
+  "id": "microcenter:ad55357432d8",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 SE ARGB CPU Cooler - White",
+  "model_number": "959445",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 54.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/704473/thermalright-peerless-assassin-120-se-argb-cpu-cooler-white",
+  "snapshot_id": "microcenter-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:48+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/704473/thermalright-peerless-assassin-120-se-argb-cpu-cooler-white",
+   "price": 54.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:da2287bda69f",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 Digital CPU Air Cooler - Black",
+  "model_number": "959536",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 69.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/704482/thermalright-peerless-assassin-120-digital-cpu-air-cooler-black",
+  "snapshot_id": "microcenter-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:48+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/704482/thermalright-peerless-assassin-120-digital-cpu-air-cooler-black",
+   "price": 69.99,
+   "stock": "10 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "10 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:1fbe379c7e86",
+  "category": "cooler",
+  "name": "Peerless Assassin 120 Mini CPU Cooler",
+  "model_number": "025254",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 49.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/710164/thermalright-peerless-assassin-120-mini-cpu-cooler",
+  "snapshot_id": "microcenter-cooler-thermalright-peerless-assassin-120-se-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:48+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/710164/thermalright-peerless-assassin-120-mini-cpu-cooler",
+   "price": 49.99,
+   "stock": "6 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "6 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

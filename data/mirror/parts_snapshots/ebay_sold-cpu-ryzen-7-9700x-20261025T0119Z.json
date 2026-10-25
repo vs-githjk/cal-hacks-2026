@@ -1,0 +1,146 @@
+[
+ {
+  "id": "ebay_sold:7f638d3bcb65",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 8-Core 3.8GHz AM5 Desktop CPU Processor 100-000001404",
+  "model_number": null,
+  "condition": "used",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 200.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/860078004469?nordt=true",
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/860078004469?nordt=true",
+   "price": 200.0,
+   "shipping_type": "paid",
+   "shipping": "6.24",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 6.24,
+   "shipping_captured": true,
+   "landed_price": 206.24,
+   "availability": null
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "ebay_sold:1fbf04b1a57f",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X Givea DRAM Light On Motherboard",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/336859236369?nordt=true",
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/336859236369?nordt=true",
+   "price": 99.0,
+   "shipping_type": "paid",
+   "shipping": "5.00",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 5.0,
+   "shipping_captured": true,
+   "landed_price": 104.0,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "ebay_sold:4b6c3aa679f9",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 3.8GHz Base Socket AM5 8-Core 16-Thread Desktop CPU Processor",
+  "model_number": null,
+  "condition": "used",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 214.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/800155738638?nordt=true",
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/800155738638?nordt=true",
+   "price": 214.99,
+   "shipping_type": "free",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 214.99,
+   "availability": null
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "ebay_sold:dc07e4e78867",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 8-Core 3.8GHz Socket AM5 CPU 32MB L3 8MB L2 MPN",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 185.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/377592512129?nordt=true",
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/377592512129?nordt=true",
+   "price": 185.0,
+   "shipping_type": "paid",
+   "shipping": "5.82",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 5.82,
+   "shipping_captured": true,
+   "landed_price": 190.82,
+   "availability": null
+  },
+  "maker_model": "100-100001404WOF"
+ },
+ {
+  "id": "ebay_sold:2d521454a1b1",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 9700X 3.80GHz 8 Core 100-000001404 16 Thread AM5 Processor",
+  "model_number": null,
+  "condition": "used",
+  "attrs": {
+   "socket": "AM5",
+   "tdp_w": 65,
+   "microarchitecture": "Zen 5"
+  },
+  "price": 229.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/920061657898?nordt=true",
+  "snapshot_id": "ebay_sold-cpu-ryzen-7-9700x-20261025T0119Z",
+  "snapshot_date": "2026-10-25T01:19:43+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/920061657898?nordt=true",
+   "price": 229.99,
+   "shipping_type": "free",
+   "sold_date": "2026-10-23",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 229.99,
+   "availability": null
+  },
+  "maker_model": "100-100001404WOF"
+ }
+]

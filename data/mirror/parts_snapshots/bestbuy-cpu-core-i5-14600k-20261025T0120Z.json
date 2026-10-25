@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bestbuy:14c86b29402d",
+  "category": "cpu",
+  "name": "AMD - Ryzen 5 7600X 6-Core - 12-Thread 4.7GHz (5.3 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "model_number": "100-100000593WOF",
+  "condition": "new",
+  "attrs": {},
+  "price": 184.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/amd-ryzen-5-7600x-6-core-12-thread-4-7ghz-5-3-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52CT/sku/6519479",
+  "snapshot_id": "bestbuy-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/amd-ryzen-5-7600x-6-core-12-thread-4-7ghz-5-3-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52CT/sku/6519479",
+   "price": 184.0,
+   "was_price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:0c87f425fc24",
+  "category": "cpu",
+  "name": "Intel - Core i5-14600K 14th Gen 14-Core 20-Thread - 4.0GHz (5.3GHz Turbo) Socket LGA 1700 Unlocked Desktop Processor - Multi",
+  "model_number": "BX8071514600K",
+  "condition": "new",
+  "attrs": {},
+  "price": 265.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/intel-core-i5-14600k-14th-gen-14-core-20-thread-4-0ghz-5-3ghz-turbo-socket-lga-1700-unlocked-desktop-processor-multi/JXZRJ55778/sku/12122498",
+  "snapshot_id": "bestbuy-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/intel-core-i5-14600k-14th-gen-14-core-20-thread-4-0ghz-5-3ghz-turbo-socket-lga-1700-unlocked-desktop-processor-multi/JXZRJ55778/sku/12122498",
+   "price": 265.99,
+   "was_price": 275.75,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:142ed3a32ea9",
+  "category": "cpu",
+  "name": "Intel - Core Ultra 7 Processor 270K Plus 24 cores (8 P-cores + 16 E-cores) up to 5.5 GHz - Multi",
+  "model_number": "BX80768270K",
+  "condition": "new",
+  "attrs": {},
+  "price": 349.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/intel-core-ultra-7-processor-270k-plus-24-cores-8-p-cores-16-e-cores-up-to-5-5-ghz-multi/JXZRJ55PGL/sku/12555947",
+  "snapshot_id": "bestbuy-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/intel-core-ultra-7-processor-270k-plus-24-cores-8-p-cores-16-e-cores-up-to-5-5-ghz-multi/JXZRJ55PGL/sku/12555947",
+   "price": 349.99,
+   "was_price": 361.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bestbuy:d5b50408e3a0",
+  "category": "cpu",
+  "name": "Intel - Core Ultra 5 245K 14-Cores 14-Threads - 4.6GHz (5.2 GHz Turbo) Socket LGA 1851 Unlocked Desktop Processor - Multi",
+  "model_number": "BX80768245K",
+  "condition": "new",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bestbuy.com/product/intel-core-ultra-5-245k-14-cores-14-threads-4-6ghz-5-2-ghz-turbo-socket-lga-1851-unlocked-desktop-processor-multi/JXZRJ5534W/sku/6602199",
+  "snapshot_id": "bestbuy-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:23+00:00",
+  "listing": {
+   "url": "https://www.bestbuy.com/product/intel-core-ultra-5-245k-14-cores-14-threads-4-6ghz-5-2-ghz-turbo-socket-lga-1851-unlocked-desktop-processor-multi/JXZRJ5534W/sku/6602199",
+   "price": 179.99,
+   "was_price": 326.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]
