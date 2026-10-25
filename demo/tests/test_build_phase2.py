@@ -124,7 +124,7 @@ def test_the_event_log_shows_red_then_the_swap_then_green_for_the_board(tmp_path
     assert red < swap < green
     assert "LGA1700" in ev[red]["text"] and "AM5" in ev[red]["text"] and ev[red]["text"].startswith("Clash:")
     assert "need-goal-build-1-board-2" in ev[swap]["text"] and ev[green]["parts"] == ["board", "cpu"]
-    assert not any("—" in e["text"] or "–" in e["text"] for e in out["view"]["events"])
+    assert not any(chr(0x2014) in e["text"] or chr(0x2013) in e["text"] for e in out["view"]["events"])
     assert board_origin_ok(out["view"])
 
 
@@ -355,7 +355,7 @@ def test_dry_run_shows_the_whole_build_the_replan_and_real_checks(capsys, tmp_pa
     assert [p["status"] for p in v["parts"] if p["part"] == "board"] == ["replanned"]
     assert sum(1 for p in v["parts"] if p["status"] in ("locked", "replanned")) == 6 and v["approval"]["state"] == "waiting"
     assert v["checks"] and all(c["source"].startswith("fit.") and c["state"] != "clash" for c in v["checks"])
-    assert not any("—" in l or "–" in l for l in text.splitlines())
+    assert not any(chr(0x2014) in l or chr(0x2013) in l for l in text.splitlines())
 
 
 def test_dry_run_touches_no_files_unless_asked(capsys, tmp_path, monkeypatch):
