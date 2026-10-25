@@ -455,9 +455,29 @@ def round_finished() -> bool:
 
 
 HELD_PHASES = {"pending_approval", "paused", "approved", "submitted", "uncertain"}
+STRANGER_TOLD: dict[str, float] = {}  # sender -> when they last got the sign-up reply (#449 item 2)
+STRANGER_REPLY_S = 600  # ASI:One's assistant recaps our replies back to us: never answer one sender in a loop
+STRANGER_REPLY = "I buy for my owner only. To shop with Fish Market, sign up at https://fishmarket.dev/start"
+
+
+def _chat_sender_allowed(sender: Any) -> bool:
+    """#449 item 2: the pinned owner, or the local web chat (WEB). No other chat sender may touch ROUND or the market."""
+    return sender == WEB or _configured_market_owner_matches(sender)
 
 
 async def handle_text(ctx: Context, sender: str, text: str):
+    # #449 item 2: this agent has ONE global ROUND and buys under the operator's market buyer id, so a chat sender who
+    # is not the pinned owner must never reach ROUND, the market or the "session is active" line, whatever the text says.
+    # First check on purpose: every path that can start or touch a round (goal, CANCEL, busy replies) is below it.
+    # WEB is the local web chat (web_chat.py); web goals from the goal poller never come through here.
+    if not _chat_sender_allowed(sender):
+        now = business_now().timestamp()
+        if now - STRANGER_TOLD.get(sender, float("-inf")) >= STRANGER_REPLY_S:
+            if len(STRANGER_TOLD) >= 256:
+                STRANGER_TOLD.clear()
+            STRANGER_TOLD[sender] = now
+            await tell(ctx, sender, STRANGER_REPLY)
+        return
     if sender == ROUND.get("owner") and (hunt.command(text) or ("",))[0] == "approve":
         await tell(ctx, sender, "Approval happens on a phone call, not in chat. Nothing was approved or ordered.")
         return
@@ -1354,7 +1374,7 @@ async def on_requote(ctx: Context, fresh: dict):
         return
     if not (not_partners.orderable(old) and not_partners.orderable(fresh)
             and not_partners.orderable(ROUND.get("original_offer"))):
-        ROUND["phase"] = "decided"  # #333: no mandate, no payee, no order for a store that never joined
+        ROUND["phase"] = "done"  # #333: no mandate, no payee, no order for a store that never joined; #449 item 2: terminal, so release
         await tell_owner(ctx, f"Bid #{n} is a MIRROR listing from a store that never joined. "
                               f"{not_partners.NOT_ORDERABLE} Nothing was reserved or ordered.")
         return
@@ -1379,7 +1399,7 @@ async def on_requote(ctx: Context, fresh: dict):
         await tell_owner(ctx, "This exact offer already has a pending approval record.")
         return
     if not _configured_market_owner_matches(ROUND.get("owner")):
-        ROUND["phase"] = "decided"
+        ROUND["phase"] = "done"  # #449 item 2: terminal (no owner action continues it), so release the round for the next goal
         await tell_owner(ctx, "Private purchase approval is not configured for this owner. Nothing was reserved.")
         return
     try:

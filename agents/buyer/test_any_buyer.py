@@ -441,7 +441,7 @@ def test_chat_goal_during_web_round_does_not_wipe_it(runtime):
     assert _adopt(buyer) is True
     buyer.ROUND["phase"] = "waiting"
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, "agent1qchat", "a new GPU under $800 by Friday"))
+    asyncio.run(buyer.handle_text(ctx, "owner", "a new GPU under $800 by Friday"))
     assert buyer.ROUND["goal"]["id"] == "goal-web1" and buyer.ROUND["owner"] is None
     assert buyer.ROUND["phase"] == "waiting"
 
@@ -519,7 +519,7 @@ def test_web_referee_record_failure_frees_the_agent(runtime, monkeypatch, caplog
     assert "424242" not in caplog.text and "+1415" not in caplog.text
     assert _next_web_goal_adopted(buyer, db) is True
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, "agent1qchat", "a new GPU under $800 by Friday"))
+    asyncio.run(buyer.handle_text(ctx, "owner", "a new GPU under $800 by Friday"))
     texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
     assert "A buyer session is active" not in texts and "held" not in texts
 
@@ -543,3 +543,109 @@ def test_web_buyer_without_phone_frees_the_agent(runtime, monkeypatch):
     assert not buyer.ROUND.get("pending_hold")
     assert _stored_phases(db) == ["expired"]
     assert _next_web_goal_adopted(buyer, db) is True
+
+
+STRANGER = "agent1qstranger"
+GOAL_TEXT = "a new GPU under $800 by Friday"
+
+
+@pytest.fixture(autouse=True)
+def _forget_strangers():
+    mod = sys.modules.get("buyer_agent")
+    if mod is not None and hasattr(mod, "STRANGER_TOLD"):
+        mod.STRANGER_TOLD.clear()
+
+
+def _texts(ctx):
+    return " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+
+
+def test_non_owner_chat_goal_gets_one_friendly_reply_and_touches_nothing(runtime):
+    """#449 item 2: a stranger's complete goal never posts a goal or need, opens a round or changes ROUND."""
+    buyer, db = runtime
+    before = dict(buyer.ROUND)
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
+    assert "fishmarket.dev/start" in _texts(ctx) and "owner only" in _texts(ctx)
+    assert len(ctx.sent) == 1
+    assert not buyer.MARKET_BUYER.mock_calls and not buyer.MARKET_REFEREE.mock_calls
+    assert buyer.ROUND == before == {}
+    assert db.execute("SELECT COUNT(*) FROM goals").fetchone()[0] == 0
+
+
+def test_non_owner_is_refused_even_while_a_round_or_hold_is_live_and_never_told_it_is_busy(runtime):
+    buyer, _db = runtime
+    buyer.ROUND.update(owner="owner", phase="bidding", pending_hold=True, goal={"state": "HUNTING"})
+    before = dict(buyer.ROUND)
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
+    assert "fishmarket.dev/start" in _texts(ctx) and "session is active" not in _texts(ctx)
+    assert buyer.ROUND == before and not buyer.MARKET_BUYER.mock_calls and not buyer.MARKET_REFEREE.mock_calls
+
+
+def test_non_owner_chat_is_acknowledged_then_refused_by_on_chat(runtime):
+    buyer, _db = runtime
+    ctx = Context()
+    msg = buyer.ChatMessage(content=[buyer.TextContent(type="text", text=GOAL_TEXT)])
+    asyncio.run(buyer.on_chat(ctx, STRANGER, msg))
+    assert any(isinstance(m, buyer.ChatAcknowledgement) for _to, m in ctx.sent)
+    assert "fishmarket.dev/start" in _texts(ctx) and not buyer.ROUND
+
+
+def test_unpinned_owner_env_refuses_every_chat_sender_but_not_the_web_chat(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.delenv("MARKET_BUYER_OWNER_SENDER")
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "owner", GOAL_TEXT))
+    assert "fishmarket.dev/start" in _texts(ctx) and not buyer.ROUND
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    asyncio.run(buyer.handle_text(Context(), buyer.WEB, GOAL_TEXT))
+    assert buyer.ROUND["owner"] == buyer.WEB  # the local web chat path is exempt
+
+
+def test_owner_chat_goal_still_starts_a_round(runtime):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    buyer.MARKET_BUYER_ID = BID
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "owner", GOAL_TEXT))
+    assert buyer.ROUND["owner"] == "owner" and buyer.ROUND["phase"] == "bidding"
+    assert "fishmarket.dev/start" not in _texts(ctx)
+
+
+def test_web_goal_is_adopted_at_once_right_after_a_refused_stranger_goal(runtime):
+    buyer, db = runtime
+    asyncio.run(buyer.handle_text(Context(), STRANGER, GOAL_TEXT))
+    assert not buyer.ROUND  # the stranger never took the round
+    assert _next_web_goal_adopted(buyer, db) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def test_unconfigured_owner_approval_refusal_is_terminal_and_frees_the_next_web_goal(runtime, monkeypatch):
+    """#449 item 2: the refusal used to leave phase 'decided', which round_finished() never counts as finished."""
+    buyer, db = runtime
+    monkeypatch.delenv("MARKET_BUYER_OWNER_SENDER")
+    ready_for_requote(buyer)
+    asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
+    assert buyer.ROUND["phase"] == "done" and buyer.round_finished() is True
+    assert not buyer.ROUND.get("transaction") and not buyer.ROUND.get("pending_hold")
+    assert _next_web_goal_adopted(buyer, db) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def test_never_joined_store_refusal_at_requote_is_terminal_and_frees_the_next_web_goal(runtime, monkeypatch):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    monkeypatch.setattr(buyer.not_partners, "orderable", lambda _bid: False)
+    asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
+    assert buyer.ROUND["phase"] == "done" and buyer.round_finished() is True
+    assert not buyer.MARKET_BUYER.create_mandate.called
+    assert _next_web_goal_adopted(buyer, db) is True
+
+
+def test_a_stranger_is_answered_once_not_in_a_loop(runtime):
+    buyer, _db = runtime
+    ctx = Context()
+    for _ in range(3):
+        asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
+    assert len(ctx.sent) == 1 and not buyer.ROUND
