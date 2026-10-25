@@ -60,7 +60,7 @@ export default function Home() {
               Where buyers and sellers thrive. {SHIELD_LINE}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/start" className="btn fm-btn inline-flex min-h-12 items-center rounded-2xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-6 text-[17px] font-medium text-white transition-transform motion-safe:hover:-translate-y-0.5">Start a goal</Link>
+              <Link href="/start" className="btn fm-btn fm-grad inline-flex min-h-12 items-center rounded-2xl px-6 text-[17px] font-medium text-white transition-transform motion-safe:hover:-translate-y-0.5">Start a goal</Link>
               <Link href="/floor" className="btn fm-ghostbtn inline-flex min-h-12 items-center rounded-2xl px-6 text-[17px] font-medium text-ink transition-transform motion-safe:hover:-translate-y-0.5">Watch the floor</Link>
             </div>
           </div>
