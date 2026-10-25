@@ -22,7 +22,7 @@ def build_all(names=None) -> list:
     if not names:
         for name, why in common.RETIRED_SELLERS.items():
             print(f"{name} {why}")
-    for name in names or [n for n in common.SELLERS if n not in common.RETIRED_SELLERS]:
+    for name in names or common.live_sellers():
         if not common.mailbox_ready(name):
             print(f"{name} skipped: set {name.upper()}_AGENT_SEED")
             continue

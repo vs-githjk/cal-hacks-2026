@@ -5,7 +5,7 @@ import { FEED_ENV, feedBase } from "@/lib/agentFeed";
 import { fetchBuild, toBuildResult } from "@/lib/buildView";
 import type { BuildResult } from "@/lib/build";
 
-export function useLiveBuild(): BuildResult | null {
+export function useLiveBuild(buyerId?: string): BuildResult | null {
   const [build, setBuild] = useState<BuildResult | null>(null);
   useEffect(() => {
     const base = feedBase(FEED_ENV, window.location.hostname);
@@ -14,13 +14,13 @@ export function useLiveBuild(): BuildResult | null {
     let seq = 0;
     const read = () => {
       const mine = ++seq;
-      return fetchBuild(base, ctl.signal)
+      return fetchBuild(base, ctl.signal, buyerId)
         .then((v) => { if (mine === seq) setBuild(v ? toBuildResult(v) : null); })
         .catch((e) => { if (!ctl.signal.aborted && mine === seq) { console.warn(e); setBuild(null); } });
     };
     read();
     const t = setInterval(read, 3000);
     return () => { clearInterval(t); ctl.abort(); };
-  }, []);
+  }, [buyerId]);
   return build;
 }

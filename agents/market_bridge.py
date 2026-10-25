@@ -22,16 +22,22 @@ if str(_SCRIPTS) not in sys.path:
 from stdb import Market  # noqa: E402
 
 # Agent-only buyer contact view; names are tentative until the market confirms them. Swap here only.
+GOAL_STATES = ("HUNTING", "HOLD_FOR_CALL", "DONE", "EXPIRED", "PAUSED", "FAILED")  # what set_goal_state accepts (#449 item 3)
 BUYER_CONTACT_VIEW = "agent_buyer_contact"
 BUYER_CONTACT_COLUMNS = ("buyer_id", "display_name", "phone")
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _HASH = re.compile(r"^[a-f0-9]{64}$")
 _META_KEYS = ("lineIndex", "shipping", "listingId", "listingHash", "source", "snapshotId", "provenance", "attrs")
-_BID_COLUMNS = ("id", "round_id", "seller_id", "persona", "lines", "stated_total", "perks", "claims", "origin", "source", "line_meta_json")
-_RESULT_COLUMNS = ("bid_id", "seller_id", "rank", "landed", "reasons", "lines", "line_meta_json", "origin", "source", "binding_hash")
-_CANDIDATE_COLUMNS = ("round_id", "need_id", "bid_id", "seller_id", "origin", "rank", "landed", "lines_json", "line_meta_json", "binding_hash")
+# #447: only columns the published market module has (my_bids, round_result); #165's line_meta_json and binding_hash are not live
+_BID_COLUMNS = ("id", "round_id", "seller_id", "persona", "lines", "stated_total", "perks", "claims", "origin", "source")
+_RESULT_COLUMNS = ("bid_id", "seller_id", "rank", "landed", "reasons", "lines", "origin", "source")
 _LINE_COLUMNS = ("sku_spec", "offered_spec", "offered_condition", "unit_price", "quantity")
+
+
+def _rank_key(row: Mapping[str, Any]) -> float:
+    rank = row.get("rank")
+    return float(rank) if isinstance(rank, (int, float)) and not isinstance(rank, bool) else float("inf")
 
 
 class MarketBridgeError(RuntimeError):
@@ -272,8 +278,7 @@ class MarketBridge:
         return rows
 
     def _own_bid(self, bid_id: str) -> dict[str, Any] | None:
-        rows = self._sql("SELECT id, round_id, seller_id, persona, lines, stated_total, perks, claims, origin, source, "
-                         "line_meta_json FROM my_bids WHERE id = " + _quote(bid_id))
+        rows = self._sql("SELECT " + ", ".join(_BID_COLUMNS) + " FROM my_bids WHERE id = " + _quote(bid_id))
         if not rows:
             return None
         if len(rows) != 1:
@@ -365,17 +370,15 @@ class MarketBridge:
 
     def round_status(self, round_id: str) -> dict[str, Any]:
         round_id = _safe_id(round_id, "round_id")
-        rows = self._sql("SELECT id, need_id, state, deadline, review_deadline FROM round WHERE id = " + _quote(round_id))
+        # #447: the published module goes open -> closed (ranked at close); there is no review state or review_deadline
+        rows = self._sql("SELECT id, need_id, state, deadline FROM round WHERE id = " + _quote(round_id))
         if len(rows) != 1:
             raise MarketBridgeError("round_readback_missing")
-        row = _project(rows[0], ("id", "need_id", "state", "deadline", "review_deadline"))
-        if row.get("id") != round_id or row.get("state") not in {"open", "review", "closed"}:
+        row = _project(rows[0], ("id", "need_id", "state", "deadline"))
+        if row.get("id") != round_id or row.get("state") not in {"open", "closed"}:
             raise MarketBridgeError("round_readback_invalid")
         if row.get("deadline") is not None:
             row["deadline"] = _timestamp_iso(row["deadline"])
-        if row.get("review_deadline") is not None:
-            value = _option_value(row["review_deadline"])
-            row["review_deadline"] = _timestamp_iso(value) if value is not None else None
         return row
 
     def close_round(self, round_id: str) -> None:
@@ -452,11 +455,68 @@ class MarketBridge:
         return [dict(g, items=[{k: v for k, v in i.items() if k != "goal_id"} for i in items if i.get("goal_id") == g.get("id")])
                 for g in goals if g.get("id") and g.get("buyer_id")]
 
+    def claim_goal(self, goal_id: str) -> None:
+        """#449 item 3 PL-9: take an ACTIVE goal off every agent's poll (referee-only reducer). The first writer wins; a goal
+        already claimed or closed makes the reducer refuse, which is a MarketBridgeError here."""
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        self._call("claim_goal", goal_id=_safe_id(goal_id, "goal_id"))
+
+    def set_goal_state(self, goal_id: str, state: str, text: str) -> None:
+        """#449 item 3 PL-4: move a goal and tell its buyer in plain words (referee-only reducer; the text is cut to 200)."""
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        if state not in GOAL_STATES or not isinstance(text, str):
+            raise MarketBridgeError("goal_state_invalid")
+        self._call("set_goal_state", goal_id=_safe_id(goal_id, "goal_id"), state=state, text=text.strip()[:200])
+
+    def approval_row(self, mandate_hash: str) -> dict[str, Any] | None:
+        """#449 item 3: the approval row for a mandate from the referee-only agent_approvals view; None when there is none.
+        A read failure raises (never reads as 'no approval'), so the caller can tell 'refused' from 'could not look'."""
+        columns = ("mandate_hash", "method", "approved_by", "at", "voice_approval_id")
+        row = self._agent_row("agent_approvals", columns, mandate_hash)
+        if row is None:
+            return None
+        row["at"] = _timestamp_iso(row.get("at"))
+        return row
+
+    def payment_row(self, mandate_hash: str) -> dict[str, Any] | None:
+        """#449 item 3: the payment row for a mandate from the referee-only agent_payments view; None when there is none."""
+        columns = ("mandate_hash", "payment_ref", "amount", "mode", "at")
+        row = self._agent_row("agent_payments", columns, mandate_hash)
+        if row is None:
+            return None
+        row["amount"] = _finite(row.get("amount"), "payment_amount")
+        row["at"] = _timestamp_iso(row.get("at"))
+        return row
+
+    def _agent_row(self, view: str, columns: Sequence[str], mandate_hash: str) -> dict[str, Any] | None:
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        if not _HASH.fullmatch(str(mandate_hash)):
+            raise MarketBridgeError("mandate_hash_invalid")
+        rows = self._sql("SELECT " + ", ".join(columns) + " FROM " + view + " WHERE mandate_hash = " + _quote(mandate_hash))
+        if not rows:
+            return None
+        row = _project(rows[0], columns)
+        if len(rows) != 1 or row.get("mandate_hash") != mandate_hash or any(c not in row for c in columns):
+            raise MarketBridgeError("market_readback_invalid")
+        return {c: row[c] for c in columns}
+
     def issue_approval_code(self, mandate_hash: str, code: str) -> None:
         """Show the spoken approval code on the buyer's /buyer screen (referee-only reducer). Never logs the code."""
         if self.role != "referee" or not _HASH.fullmatch(str(mandate_hash)) or not isinstance(code, str) or not code:
             raise MarketBridgeError("approval_code_binding_invalid")
         self._call("issue_approval_code", mandate_hash=mandate_hash, code=code)
+
+    def deny_approval(self, mandate_hash: str, reason: str) -> None:
+        """Release the units held for a mandate whose approval call failed or was denied (referee or the buyer; the market refuses it
+        once approved). The market writes its own notification and floor event; the reason is a short plain sentence."""
+        if self.role not in {"buyer", "referee"}:
+            raise MarketBridgeError("market_role_mismatch")
+        if not _HASH.fullmatch(str(mandate_hash)) or not isinstance(reason, str) or not reason.strip():
+            raise MarketBridgeError("approval_denial_invalid")
+        self._call("deny_approval", mandate_hash=mandate_hash, reason=reason.strip()[:200])
 
     def purchase_status(self, mandate_hash: str) -> dict[str, Any]:
         """Read the exact buyer-private purchase projection; never query raw money tables."""
@@ -511,7 +571,7 @@ class MarketBridge:
                 "buyer_id": mandate["buyer_id"], "amount": _finite(mandate["amount"], "mandate_amount", minimum=0.000000001),
                 "payee": mandate["payee"], "expiry_minutes": max(1, min(10, int(remaining // 60))),
                 "nonce": mandate["nonce"], "requested_by": requested_by, "origin": mandate["origin"],
-                "goal_id": mandate["goal_id"], "need_id": _safe_id(need_id, "need_id")}
+                }  # #447: the module's create_mandate takes no goal_id or need_id
         if self.role == "referee":  # the buyer-private status view is not readable by the referee: the reducer is the check
             self._call("create_mandate", **args)
             return {"mandate_hash": mandate["hash"]}
@@ -546,21 +606,22 @@ class MarketBridge:
             return False
 
     def record_approval(self, *, mandate_hash: str, method: str, approved_by: str,
-                        voice_approval_id: str = "") -> dict[str, Any]:
+                        voice_approval_id: str = "", code: str = "") -> dict[str, Any]:
+        """`code` is the word pair issued for the call (#449 item 3 RT-11); the market compares it with its own row. Never logged."""
         if self.role not in {"buyer", "referee"} or method != "voice_code":
             raise MarketBridgeError("approval_binding_invalid")
         if self.role == "referee":
-            if not voice_approval_id:
+            if not voice_approval_id or not isinstance(code, str) or not code.strip():
                 raise MarketBridgeError("approval_binding_invalid")
             self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
-                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"))
+                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"), code=code)
             return {"mandate_hash": mandate_hash, "approval_method": method}
         before = self.purchase_status(mandate_hash)
         if before.get("approval_method") is not None or before.get("retired"):
             raise MarketBridgeError("approval_not_pending")
         try:
             self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
-                       **({"voice_approval_id": _safe_id(voice_approval_id, "voice_approval_id")} if voice_approval_id else {}))
+                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"), code=code)
         except MarketBridgeError:
             after = self.purchase_status(mandate_hash)
             if after.get("approval_method") != method:
@@ -640,49 +701,31 @@ class MarketBridge:
                                       persona=persona, lines=wire_lines, stated_total=total, perks=perks,
                                       claims=claims, origin=origin, source=source):
                     raise MarketBridgeError("market_reducer_failed") from None
-        self._call("set_bid_line_meta", bid_id=bid_id, line_meta_json=serialized)
+        # #447: the published module has no set_bid_line_meta; the line metadata stays with the seller and the buyer's copy
         observed = self._own_bid(bid_id)
         if observed is None:
             raise MarketBridgeError("bid_readback_missing")
-        if (not self._same_bid(observed, bid_id=bid_id, round_id=round_id, seller_id=seller_id,
-                               persona=persona, lines=wire_lines, stated_total=total, perks=perks,
-                               claims=claims, origin=origin, source=source)
-                or not _json_equal(observed.get("line_meta_json"), metadata)):
+        if not self._same_bid(observed, bid_id=bid_id, round_id=round_id, seller_id=seller_id,
+                              persona=persona, lines=wire_lines, stated_total=total, perks=perks,
+                              claims=claims, origin=origin, source=source):
             raise MarketBridgeError("bid_readback_mismatch")
         return {"bid_id": bid_id, "round_id": round_id, "seller_id": seller_id, "line_metadata": metadata}
-
-    def review_candidates(self, round_id: str) -> list[dict[str, Any]]:
-        round_id = _safe_id(round_id, "round_id")
-        query = ("SELECT round_id, need_id, bid_id, seller_id, origin, rank, landed, lines_json, "
-                 "line_meta_json, binding_hash FROM review_candidates WHERE round_id = " + _quote(round_id))
-        rows = self._sql(query)
-        candidates: list[dict[str, Any]] = []
-        for raw in rows:
-            candidate = _project(raw, _CANDIDATE_COLUMNS)
-            candidate["lines"] = _decode(candidate.pop("lines_json"))
-            candidate["line_metadata"] = _decode(candidate.pop("line_meta_json"))
-            if (candidate.get("round_id") != round_id or not _HASH.fullmatch(str(candidate.get("binding_hash", "")))
-                    or not isinstance(candidate.get("lines"), list)
-                    or not isinstance(candidate.get("line_metadata"), list)):
-                raise MarketBridgeError("candidate_readback_invalid")
-            # No cap, goal, floor, or unselected bid rows are queried or returned.
-            candidates.append(candidate)
-        return candidates
 
     def attach_advocate_card(self, *, bid_id: str, recommendation: str, rule_id: str, text: str,
                              source_url: str, origin: str, binding_hash: str) -> None:
         if not _HASH.fullmatch(binding_hash):
             raise MarketBridgeError("candidate_binding_invalid")
+        # #447: binding_hash is checked here and kept by the buyer; the module's reducer does not take it
         self._call("attach_advocate_card", bid_id=_safe_id(bid_id, "bid_id"), recommendation=recommendation,
-                   rule_id=rule_id, text=text, source_url=source_url, origin=origin, binding_hash=binding_hash)
+                   rule_id=rule_id, text=text, source_url=source_url, origin=origin)
 
     def attach_claim_check(self, *, bid_id: str, claim: str, check: str, evidence_url: str, origin: str,
                            binding_hash: str, line_index: int, listing_id: str, listing_hash: str) -> None:
         if isinstance(line_index, bool) or not isinstance(line_index, int) or line_index < 0 or not _HASH.fullmatch(binding_hash) or not _HASH.fullmatch(listing_hash):
             raise MarketBridgeError("candidate_binding_invalid")
+        # #447: the line binding is checked here and kept by the buyer; the module's reducer takes only these
         self._call("attach_claim_check", bid_id=_safe_id(bid_id, "bid_id"), claim=claim, check=check,
-                   evidence_url=evidence_url, origin=origin, binding_hash=binding_hash, line_index=line_index,
-                   listing_id=listing_id, listing_hash=listing_hash)
+                   evidence_url=evidence_url, origin=origin)
 
     def authoritative_winner(self, round_id: str, need_items: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
         """Return exact server winner with requested purchase quantities, never seller stock quantity."""
@@ -697,32 +740,28 @@ class MarketBridge:
             if sku in expected:
                 raise MarketBridgeError("need_items_duplicate")
             expected[sku] = _finite(item.get("quantity"), "need_quantity", minimum=0.000000001)
-        query = ("SELECT bid_id, seller_id, rank, landed, reasons, lines, line_meta_json, origin, source, binding_hash "
-                 "FROM round_result WHERE round_id = " + _quote(round_id) + " ORDER BY rank ASC")
-        rows = self._sql(query)
+        # #447: only round_result columns the published module has. It ranks at close on unit price x requested quantity
+        # (no shipping, no line metadata), so the buyer binds these lines to its own reviewed copy of the bid.
+        query = ("SELECT " + ", ".join(_RESULT_COLUMNS) + " FROM round_result WHERE round_id = " + _quote(round_id))
+        rows = self._sql(query)  # no ORDER BY: Maincloud sql answers 400 Unsupported, so rank order is applied here
         result = [_project(raw, _RESULT_COLUMNS) for raw in rows]
+        result.sort(key=_rank_key)
         ranked = [row for row in result if row.get("rank") == 1]
         if not ranked:
             return None
         if len(ranked) != 1:
             raise MarketBridgeError("winner_readback_ambiguous")
         winner = ranked[0]
-        binding_hash = winner.get("binding_hash")
-        if not isinstance(binding_hash, str) or not _HASH.fullmatch(binding_hash):
-            raise MarketBridgeError("winner_binding_missing")
         reasons = _decode(winner.get("reasons"))
         lines = _normalized_lines(winner.get("lines"))
-        metadata = _decode(winner.get("line_meta_json"))
-        if reasons != [] or not isinstance(metadata, list) or len(lines) != len(metadata):
+        if reasons != []:
             raise MarketBridgeError("winner_readback_invalid")
         if len(lines) != len(expected):
             return None
         order_lines = []
         seen: set[str] = set()
         total_cents = 0
-        for bid_line, meta in zip(lines, metadata):
-            if not isinstance(meta, Mapping):
-                raise MarketBridgeError("winner_line_invalid")
+        for bid_line in lines:
             sku = _field(bid_line, "sku_spec")
             if sku not in expected or sku in seen:
                 return None
@@ -731,19 +770,14 @@ class MarketBridge:
             quantity = expected[sku]
             if stock < quantity:
                 return None
-            if isinstance(meta.get("lineIndex"), bool) or not isinstance(meta.get("lineIndex"), int):
-                raise MarketBridgeError("winner_line_metadata_invalid")
             price = _finite(_field(bid_line, "unit_price"), "unit_price")
-            shipping = _finite(meta.get("shipping"), "shipping")
             try:
-                exact_line = Decimal(str(price)) * Decimal(str(quantity)) + Decimal(str(shipping))
+                exact_line = Decimal(str(price)) * Decimal(str(quantity))
             except (InvalidOperation, ValueError, TypeError, OverflowError):
                 raise MarketBridgeError("winner_amount_invalid") from None
             total_cents += _decimal_cents(exact_line, "winner_amount")
-            order_lines.append({"sku_spec": sku, "unit_price": price, "quantity": quantity,
-                                "qty_available": stock, "original_line_index": meta["lineIndex"],
-                                "listing_id": meta.get("listingId"), "listing_hash": meta.get("listingHash"),
-                                "shipping": shipping})
+            order_lines.append({"sku_spec": sku, "unit_price": price, "quantity": quantity, "qty_available": stock,
+                                "offered_condition": bid_line["offered_condition"], "offered_spec": bid_line["offered_spec"]})
         if seen != set(expected):
             return None
         landed = _finite(winner.get("landed"), "landed")
@@ -762,6 +796,5 @@ class MarketBridge:
             raise MarketBridgeError("winner_amount_mismatch")
         return {"round_id": round_id, "bid_id": winner.get("bid_id"), "seller_id": winner.get("seller_id"),
                 "landed": canonical_total, "landed_cents": total_cents,
-                "lines": order_lines, "origin": winner.get("origin"), "source": winner.get("source"),
-                "binding_hash": binding_hash}
+                "lines": order_lines, "origin": winner.get("origin"), "source": winner.get("source")}
 

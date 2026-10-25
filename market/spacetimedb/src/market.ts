@@ -156,8 +156,9 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
     const failures = (mine?.failures ?? 0) + 1;
     if (mine) ctx.db.pairAttempt.identity.update({ ...mine, failures });
     else ctx.db.pairAttempt.insert({ identity: ctx.sender, failures });
-    if (failures >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', key, 'A screen is locked after too many wrong codes');
-    if (windowMisses >= PAIR_THROTTLE_MISSES) event(ctx, 'pairing_throttled', 'pair_code', key, 'Pairing on a screen is throttled after many wrong codes');
+    if (failures >= PAIR_MAX_FAILURES) event(ctx, 'pairing_locked', 'pair_code', '', // #449 item 3 PL-16: no pair key (a buyer id) on the public floor
+       'A screen is locked after too many wrong codes');
+    if (windowMisses >= PAIR_THROTTLE_MISSES) event(ctx, 'pairing_throttled', 'pair_code', '', 'Pairing on a screen is throttled after many wrong codes');
     return { paired: false, reason: 'wrong pairing code' };
   }
   if (cur) ctx.db.role.identity.update({ ...cur, subjectId });
@@ -191,14 +192,14 @@ export function issuePairCode(ctx: Ctx, buyerId: string) {
 
 // ---------------------------------------------------------------- #374 open buyer sign-up
 
-export const SIGNUP_MAX = 30;
+export const SIGNUP_MAX = 60; // global sign-up ceiling per window; RT-14 (one sign-up per identity is the real limit) stays open
 export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;
 
 /**
  * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
- * (every deal needs their call). One sign-up per identity; 30 per 10 minutes across the market.
+ * (every deal needs their call). One sign-up per identity; 60 per 10 minutes across the market.
  */
 export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: string; phone?: string }) {
   const had = roleOf(ctx);
@@ -206,7 +207,9 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
   const name = displayName.trim().slice(0, 60);
   if (!name) throw new SenderError('display name required');
   const ph = (phone ?? '').trim().replace(/[ ()-]/g, '');
-  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
+  // #449 PL-15: every purchase is approved by a call to this number, so an account without one could never buy.
+  if (!ph) throw new SenderError('a phone number is required: purchases are approved by a call');
+  if (!PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
   const now = ms(ctx.timestamp);
   const th = ctx.db.signupThrottle.id.find(0);
   const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;
@@ -223,7 +226,7 @@ export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: str
   ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
   ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph });
   ctx.db.allowance.insert(fromRule({ ...newAllowance(buyerId, now), per_purchase_limit: 0 }));
-  event(ctx, 'buyer_signed_up', 'buyer_profile', buyerId, 'A new buyer signed up');
+  event(ctx, 'buyer_signed_up', 'buyer_profile', '', 'A new buyer signed up'); // #449 item 3 PL-16: refId '' so the floor never shows the buyer id
   return buyerId;
 }
 
@@ -268,7 +271,7 @@ export function setAllowanceChecked(ctx: Ctx, a: SetAllowanceArgs) {
   );
   if (!r.ok) throw new SenderError(`set_allowance refused: ${r.reasons.join('; ')}`);
   saveAllowance(ctx, r.allowance);
-  event(ctx, 'allowance_set', 'allowance', a.buyerId, 'A buyer allowance was set', '', 'SIM');
+  event(ctx, 'allowance_set', 'allowance', '', 'A buyer allowance was set', '', 'SIM'); // #449 item 3 PL-16
 }
 
 // ---------------------------------------------------------------- needs and goals
@@ -285,17 +288,20 @@ export function postNeed(ctx: Ctx, a: PostNeedArgs) {
   if (who.role === 'referee') {
     const g = ctx.db.goal.id.find(a.goalId);
     if (!g || g.buyerId !== a.buyerId) throw new SenderError(`not allowed: the referee posts a need only for one of that buyer's goals; ${a.goalId || 'no goal'} is not ${a.buyerId}'s`);
-    if (g.state !== 'ACTIVE') throw new SenderError(`not allowed: goal ${a.goalId} is not active`);
+    // #449 item 3 PL-9: claim_goal moves a goal to HUNTING, and the claiming agent is the one that posts its need.
+    if (g.state !== 'ACTIVE' && g.state !== 'HUNTING') throw new SenderError(`not allowed: goal ${a.goalId} is not active`);
   }
+  // #449 item 3 RT-31: a buyer cannot choose its own origin label; the server uses the buyer's profile. The referee keeps passing it.
+  const origin = who.role === 'buyer' ? buyerOrigin(ctx, a.buyerId) : a.origin;
   allowanceFor(ctx, a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');
   ctx.db.need.insert({
     id: a.id, buyerId: a.buyerId, goalId: a.goalId, deliveryWindow: a.deliveryWindow, spendLimit: a.spendLimit,
-    consent: a.consent, auctionWindowS: a.auctionWindowS, origin: a.origin, createdAt: ctx.timestamp,
+    consent: a.consent, auctionWindowS: a.auctionWindowS, origin, createdAt: ctx.timestamp,
   });
   for (const i of a.items) ctx.db.needItem.insert({ id: 0n, needId: a.id, ...i });
-  event(ctx, 'need_posted', 'need', a.id, `New request: ${a.items.length} item(s)`, '', a.origin);
+  event(ctx, 'need_posted', 'need', a.id, `New request: ${a.items.length} item(s)`, '', origin);
 }
 
 /** Lane A's Goal contract; deadline is an ISO datetime. */
@@ -307,8 +313,42 @@ export interface PostGoalArgs {
 export const GOAL_TYPES = ['budget_cap', 'part_by_date', 'build_by_date'];
 
 export function postGoal(ctx: Ctx, a: PostGoalArgs) {
-  requireRole(ctx, 'post_goal', ['buyer'], a.buyerId);
-  insertGoal(ctx, a);
+  const who = requireRole(ctx, 'post_goal', ['buyer'], a.buyerId);
+  // #449 item 3 RT-31: a buyer's goal takes the origin of the buyer's profile, whatever the caller sends.
+  insertGoal(ctx, who.role === 'buyer' ? { ...a, origin: buyerOrigin(ctx, a.buyerId) } : a);
+}
+
+/** #449 item 3 RT-31: the origin label the server trusts for a buyer's own posts: the profile's, else SIM. */
+const buyerOrigin = (ctx: Ctx, buyerId: string) => ctx.db.buyerProfile.buyerId.find(buyerId)?.origin || 'SIM';
+
+/** Goal states the referee may set (PL-4). ACTIVE is only the starting state; claim_goal moves it to HUNTING. */
+export const SETTABLE_GOAL_STATES = ['HUNTING', 'HOLD_FOR_CALL', 'DONE', 'EXPIRED', 'PAUSED', 'FAILED'];
+const CLOSED_GOAL_STATES = ['DONE', 'EXPIRED', 'FAILED'];
+
+/**
+ * #449 item 3 PL-9: referee only. The first writer wins: an ACTIVE goal becomes HUNTING (and so leaves agent_open_goals, every
+ * agent's poll); any other state means another agent has it or it is closed.
+ */
+export function claimGoal(ctx: Ctx, { goalId }: { goalId: string }) {
+  requireRole(ctx, 'claim_goal', ['referee']);
+  const g = ctx.db.goal.id.find(goalId);
+  if (!g) throw new SenderError(`no goal ${goalId}`);
+  if (g.state !== 'ACTIVE') throw new SenderError('goal already claimed or closed');
+  ctx.db.goal.id.update({ ...g, state: 'HUNTING' });
+}
+
+/**
+ * #449 item 3 PL-4: referee only. Moves a goal and tells the buyer in plain words on their own feed. A closed goal (DONE,
+ * EXPIRED, FAILED) never changes again; a closing state pushes.
+ */
+export function setGoalState(ctx: Ctx, { goalId, state, text }: { goalId: string; state: string; text: string }) {
+  requireRole(ctx, 'set_goal_state', ['referee']);
+  if (!SETTABLE_GOAL_STATES.includes(state)) throw new SenderError(`state must be one of ${SETTABLE_GOAL_STATES.join(', ')}`);
+  const g = ctx.db.goal.id.find(goalId);
+  if (!g) throw new SenderError(`no goal ${goalId}`);
+  if (CLOSED_GOAL_STATES.includes(g.state)) throw new SenderError(`goal is closed (${g.state}); it cannot change again`);
+  ctx.db.goal.id.update({ ...g, state });
+  ctx.db.notification.insert({ id: 0n, buyerId: g.buyerId, goalId, klass: 'state', text: text.trim().slice(0, 200), push: CLOSED_GOAL_STATES.includes(state), at: ctx.timestamp });
 }
 
 /** No role check: callers are postGoal (gated) and seedDemo (gated). */
@@ -944,6 +984,14 @@ export function createMandate(
   if (!(Number.isInteger(a.expiryMinutes) && a.expiryMinutes >= 1 && a.expiryMinutes <= MANDATE_MAX_EXPIRY_MIN)) {
     throw new SenderError(`expiry must be 1 to ${MANDATE_MAX_EXPIRY_MIN} minutes`);
   }
+  // #449 item 3 RT-11: one live mandate per deal. A live one is not expired, has no payment row and was not denied.
+  const wantBid = bidIdOfDeal(a.dealId);
+  const denied = (hash: string) => [...ctx.db.rejectedAttempt.iter()].some((r) => r.kind === 'approval' && r.refId === hash && r.reason.startsWith('Approval denied'));
+  for (const old of ctx.db.mandate.iter()) {
+    if (bidIdOfDeal(old.dealId) !== wantBid || ms(ctx.timestamp) > ms(old.expiry)) continue;
+    if (ctx.db.payment.mandateHash.find(old.hash) || denied(old.hash)) continue;
+    throw new SenderError('this deal already has a live mandate; wait for it to be paid, denied or expired');
+  }
   claimDealUnits(ctx, a.dealId, a.buyerId, 'held');
   const allow = allowanceFor(ctx, a.buyerId);
   const d = decide(allow, a.amount, ms(ctx.timestamp));
@@ -967,7 +1015,9 @@ export function createMandate(
   }
 }
 
-export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string; voiceApprovalId: string }) {
+export const APPROVAL_CODE_MAX_FAILURES = 3;
+
+export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: string; approvedBy: string; voiceApprovalId: string; code: string }) {
   // #191 (LOCKED: approval by phone call only): the referee relays the call result; no buyer screen records an approval.
   requireRole(ctx, 'record_approval', ['referee']);
   if (!APPROVAL_METHODS.includes(a.method)) throw new SenderError(`method must be one of ${APPROVAL_METHODS.join(', ')}`);
@@ -979,11 +1029,30 @@ export function recordApproval(ctx: Ctx, a: { mandateHash: string; method: strin
   const sep = requesterMayApprove(md.requestedBy, a.approvedBy);
   if (!sep.ok) throw new SenderError(sep.reasons.join('; '));
   if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
+  if (a.method === 'voice_code') checkApprovalCode(ctx, md, a.code);
   if (ctx.db.approval.mandateHash.find(a.mandateHash)) return rejected(ctx, 'approval', a.mandateHash, 'second approval for the same mandate refused');
   claimDealUnits(ctx, md.dealId, md.buyerId, 'held');
   ctx.db.approval.insert({ id: 0n, mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: ctx.timestamp, voiceApprovalId: a.voiceApprovalId.trim() });
   // #325: same neutral label as the allowance path; the method is never shown on the public floor.
   event(ctx, 'approval_recorded', 'approval', a.mandateHash, 'Deal approved', md.payee, md.origin);
+}
+
+/**
+ * #449 item 3 RT-11: the code the call checked must be the one issued for this mandate (issue_approval_code). A locked row always
+ * refuses. A wrong code counts a failure and locks the row at APPROVAL_CODE_MAX_FAILURES. NOTE: the throw rolls the whole reducer
+ * back, so on a real server the count itself is not kept (the same reason pair_buyer_screen returns instead of throwing); the money
+ * path stays closed either way, because no approval row is written. A whole-build call (one code for many mandates) has the
+ * referee issue that code for each mandate it makes, then relay the approval with it.
+ */
+function checkApprovalCode(ctx: Ctx, md: { hash: string }, code: string) {
+  const row = ctx.db.approvalCode.mandateHash.find(md.hash);
+  if (!row) throw new SenderError('no approval code was issued for this mandate; the call cannot approve it');
+  if (row.locked) throw new SenderError('the approval code is locked after too many wrong codes');
+  if (!normCode(code ?? '') || normCode(code) !== row.code) {
+    const failures = row.failures + 1;
+    ctx.db.approvalCode.mandateHash.update({ ...row, failures, locked: failures >= APPROVAL_CODE_MAX_FAILURES });
+    throw new SenderError('the approval code does not match');
+  }
 }
 
 /**
@@ -1024,6 +1093,8 @@ export function recordPayment(ctx: Ctx, a: { mandateHash: string; paymentRef: st
   if (!md) throw new SenderError('no mandate with that hash');
   const ap = ctx.db.approval.mandateHash.find(a.mandateHash);
   if (!ap) throw new SenderError('no approval row for this mandate hash; payment refused');
+  // #449 item 3 RT-11: an expired mandate is never paid, even when its approval row exists.
+  if (ms(ctx.timestamp) > ms(md.expiry)) throw new SenderError('mandate expired; the deal must be re-quoted');
   if (a.amount !== md.amount) throw new SenderError('payment amount differs from the mandate amount');
   const auth = authorizePayment({ amount: a.amount, limit_checked: true, approval_id: String(ap.id) }, md.amount);
   if (!auth.ok) throw new SenderError(auth.reasons.join('; '));
@@ -1062,7 +1133,7 @@ export function recordReceiving(ctx: Ctx, a: RecordReceivingArgs) {
     const next = raiseOnCleanReceiving(allowanceFor(ctx, md.buyerId), ms(ctx.timestamp));
     saveAllowance(ctx, next);
     ctx.db.notification.insert({ id: 0n, buyerId: md.buyerId, goalId: '', klass: 'progress', text: 'Clean delivery: your allowance went up one step.', push: false, at: ctx.timestamp });
-    event(ctx, 'allowance_raised', 'allowance', md.buyerId, 'A buyer allowance went up one step', '', a.origin);
+    event(ctx, 'allowance_raised', 'allowance', '', 'A buyer allowance went up one step', '', a.origin); // #449 item 3 PL-16
   }
 }
 
@@ -1388,6 +1459,18 @@ const isReferee = (ctx: VCtx) => roleOf(ctx)?.role === 'referee';
 export function agentBuyerContactView(ctx: VCtx) {
   if (!isReferee(ctx)) return [];
   return [...ctx.db.buyerProfile.iter()].map((p) => ({ buyerId: p.buyerId, displayName: p.displayName, phone: p.phone }));
+}
+
+/** #449 item 3: referee only. The approval rows, so the buyer agent can confirm a record_approval took (it cannot read the buyer-private views). */
+export function agentApprovalsView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.approval.iter()].map((a) => ({ mandateHash: a.mandateHash, method: a.method, approvedBy: a.approvedBy, at: a.at, voiceApprovalId: a.voiceApprovalId }));
+}
+
+/** #449 item 3: referee only. The payment rows, for the same readback. */
+export function agentPaymentsView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.payment.iter()].map((p) => ({ mandateHash: p.mandateHash, paymentRef: p.paymentRef, amount: p.amount, mode: p.mode, at: p.at }));
 }
 
 /** Referee only: goals still open. Open means state ACTIVE, the only state postGoal writes. */

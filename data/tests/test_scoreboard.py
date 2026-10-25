@@ -80,6 +80,22 @@ def test_price_position_block_is_present_and_honest():  # #141
     if pp["status"] == "one_source":
         assert "sold median" not in pp["sentence"]
 
+def test_price_position_stamps_the_priced_listing_with_its_own_capture_time():  # PL-26
+    from data.baselines import _ts
+    from data.scoreboard import position_block
+    pp = position_block()   # position_block alone: it does not run the Shield bench like build() does
+    s = pp["subject"]
+    for x in pp["listings"] + [pp["cheapest_fitting"]] + pp["tied_with"]:
+        if x:
+            assert x["observed_at"] and _ts(x["observed_at"]) <= _ts(pp["as_of"])
+    if s["in_newest_capture"] is False:   # the priced listing is not in its store's newest capture: its own, older time shows
+        assert _ts(s["observed_at"]) < _ts(s["newest_capture"])
+        assert s["url"] not in {x["url"] for x in pp["listings"]}
+        assert "last seen" in pp["sentence"] and "newest capture" in pp["sentence"]
+    for gone in pp["left_out"]:
+        assert _ts(gone["last_seen"]) < _ts(gone["newest_capture"]) and gone["url"] not in {x["url"] for x in pp["listings"]}
+
+
 def test_no_tile_says_not_yet_run_while_its_own_tile_exists():  # #73: stale voice text
     sb = build()
     ids = {t["id"] for t in sb["tiles"]}

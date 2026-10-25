@@ -28,7 +28,7 @@ Environment (names only, no values in git):
 | `SHIELD_RECEIPT_PUBKEYS` | buyer-side comma-separated base64 raw Ed25519 public keys used to verify Shield receipts; empty fails closed |
 | `SHIELD_API_TOKEN` | optional (#449 RT-26). Set, every route of `shield.api` except `GET /v1/shield/health` needs `Authorization: Bearer <token>` (constant-time compare; 401 otherwise) and the agents' `common.screen()` sends it. Unset, the core is open as before. The keyed product (`shield.product`) uses its own API keys and ignores it |
 | `SHIELD_REGISTRY` | path of the verify-agent registry JSON (default `shield/registry.json`); a bad file stops startup |
-| `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` | both required to switch the optional Claude classifier on. Off by default |
+| `SHIELD_CLASSIFIER=1` and `ANTHROPIC_API_KEY` | both required to switch the optional Claude classifier on. Off by default. With the switch but no key, Shield runs rules only: it logs one WARNING ("classifier requested but no key: rules only") at first use and every verdict carries `"rules_only": true` (absent otherwise), so a caller can show "rules only" (#449 PL-21). The flag is not a rule: rule-clean text is still allowed |
 | `SHIELD_MODEL` | classifier model id. Default `claude-haiku-5-5`, verified live Sat 2026-10-24 09:07 PDT with `SHIELD_CLASSIFIER=1` (see Optional classifier). If an id is wrong every call is `unavailable` (a fail-closed quarantine) and the run prints a WARNING |
 
 ## API
