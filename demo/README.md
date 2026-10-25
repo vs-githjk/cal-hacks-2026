@@ -39,6 +39,7 @@ a held-back, vetoed or non-partner champion is never mandated, and a part with n
 live with Bright Data (parallel, bounded; a failed read keeps the dated price and says so). Above the allowance: ONE call ("6 parts from 3 sellers, <total>"), then one mandate,
 approval, payment and receipt per part; inside it: no call (method `allowance`). `demo/out/build-view.json` (the board's BuildView) is rewritten at every step.
 Details and the keys added to the board's shape: `docs/changes/1705-D-build-in-the-market.md`.
+The local agent feed serves that file to the `/buyer` build panel as `GET /v1/build` (scripts/agent_feed.py; private fields stripped). Step-by-step local rehearsal with a real call: `demo/REHEARSAL.md`.
 
 ## Screen bridge (`demo/bridge.py`): watch the run on /buyer and /market
 ```
