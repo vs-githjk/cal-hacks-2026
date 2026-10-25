@@ -1,52 +1,29 @@
-// Scoreboard tiles (contracts/Scoreboard.schema.json, data/scoreboard.json from Lane C). Every number is the file's own;
-// a tile whose value is null shows its status text, never a number.
-import { formatMoney } from "./money.ts";
-import { asOrigin, type Origin } from "./screens.ts";
+// web/src/lib/scoreboard.ts
+// The landing's three numbers, read from the scoreboard Lane C generates (data/scoreboard.json). The copy in fixtures/ is kept
+// identical by scoreboard.test.ts, so the page can never drift from the measured file. Nothing here is typed in by hand.
+import scoreboard from "./fixtures/scoreboard.json" with { type: "json" };
 
-/** The four tiles the home page shows, in this order. Other ids in the file (voice_attacks, hyphenate_blind) are not tiles here. */
-export const SCOREBOARD_IDS = ["verified_savings", "attacks_blocked", "fit_accuracy", "learning_lift"] as const;
+interface Tile { id: string; status: string; detail: Record<string, unknown> }
+const tiles = (scoreboard as { tiles: Tile[]; generated_at: string }).tiles;
+const tile = (id: string) => tiles.find((t) => t.id === id);
+const num = (v: unknown) => (typeof v === "number" ? v : NaN);
 
-const STATUS_TEXT: Record<string, string> = { measured: "Measured", not_quotable: "Not quotable", none_yet: "None yet" };
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export interface ProofStat { value: string; label: string; caveat: string; measured: boolean }
 
-export interface TileView {
-  id: string;
-  title: string;
-  value: string | null; // formatted; null when the file has no trustworthy number
-  statusText: string | null; // shown instead of the value when value is null
-  display: string;
-  count: number;
-  range: string;
-  origin: Origin;
+/** "39 of 39" style facts. A tile that is missing or not measured yields a "not measured" line rather than a number. */
+export function proofStats(shieldName: string): ProofStat[] {
+  const fit = tile("fit_accuracy"); const fitChecked = (fit?.detail.checked ?? {}) as Record<string, unknown>;
+  const atk = tile("attacks_blocked"); const held = (atk?.detail.held_out ?? {}) as Record<string, unknown>;
+  const voice = tile("voice_attacks"); const first = (voice?.detail.first_run ?? {}) as Record<string, unknown>;
+  const heldBlocked = Math.round(num(held.attacks) * num(held.block_rate));
+  const honestBlocked = Array.isArray(held.false_blocks) ? held.false_blocks.length : NaN;
+  const honestN = Number.isFinite(num(held.false_block_rate)) && honestBlocked >= 0 ? Math.round(honestBlocked / num(held.false_block_rate)) : NaN;
+  const stat = (ok: boolean, value: string, label: string, caveat: string): ProofStat => ({ value: ok ? value : "not measured", label, caveat: ok ? caveat : "no measured tile", measured: ok });
+  return [
+    stat(fit?.status === "measured" && Number.isFinite(num(fitChecked.correct)), `${num(fitChecked.correct)} of ${num(fitChecked.n)}`, "fit checks right", "tuned set"),
+    stat(atk?.status === "measured" && Number.isFinite(heldBlocked), `${heldBlocked} of ${num(held.attacks)}`, `attacks stopped by ${shieldName}`, Number.isFinite(honestN) ? `held-out, rules only; ${honestBlocked} of ${honestN} honest pages blocked` : "held-out, rules only"),
+    stat(voice?.status === "measured" && Number.isFinite(num(first.denied)), `${num(first.denied)} of ${num(first.n)}`, "voice attacks denied", "first run"),
+  ];
 }
 
-interface RawTile { id: string; title: string; status: string; value: number | null; unit: string; display: string; count: number; date_range: { from: string; to: string }; origin: string }
-
-const day = (iso: string) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  return m ? `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}` : iso;
-};
-
-function formatValue(v: number, unit: string): string {
-  // #332: 0.996 must never read as "100%" when it has not reached 1.0.
-  if (unit === "ratio") return `${v < 1 ? Math.floor(v * 100) : Math.round(v * 100)}%`;
-  if (unit === "USD") return formatMoney(v);
-  if (unit === "points") return `${v > 0 ? "+" : ""}${v.toFixed(2)} pts`;
-  return `${v} ${unit}`;
-}
-
-export function scoreboardTiles(file: unknown): TileView[] {
-  const tiles = (file as { tiles?: unknown } | null)?.tiles;
-  if (!Array.isArray(tiles)) return [];
-  return SCOREBOARD_IDS.flatMap((id) => {
-    const t = (tiles as RawTile[]).find((x) => x?.id === id);
-    if (!t) return [];
-    // #332: a value only counts once the tile is actually measured; none_yet/not_quotable never show a leftover number.
-    const has = t.status === "measured" && typeof t.value === "number" && Number.isFinite(t.value);
-    const from = day(t.date_range?.from ?? ""), to = day(t.date_range?.to ?? "");
-    return [{
-      id, title: t.title, value: has ? formatValue(t.value!, t.unit) : null, statusText: has ? null : STATUS_TEXT[t.status] ?? "No number",
-      display: t.display, count: t.count, range: from === to ? from : `${from} to ${to}`, origin: asOrigin(t.origin),
-    }];
-  });
-}
+export const SCOREBOARD_GENERATED_AT = (scoreboard as { generated_at: string }).generated_at;

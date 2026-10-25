@@ -1,4 +1,4 @@
-"""Recording a phone approval on the market: always through the REFEREE identity, then re-read through the BUYER's own view.
+"""Recording a phone approval on the market: always through the REFEREE identity, then re-read through the REFEREE's own approval view.
 
 The market's record_approval reducer is referee-only (market.ts requireRole 'record_approval', ['referee']): the referee
 relays what the phone call judged. The owner-chat path used to call it through the buyer client, which the live market
@@ -6,8 +6,9 @@ refuses ("record_approval needs referee; caller is buyer ..."), so an owner's ap
 
 Invariants kept here (nothing in this module approves anything; it only records a call result the caller already has):
   * it runs only after the call returned an approval record for this exact mandate (buyer_agent checks that first);
-  * a payment still needs the market's own buyer-private row to show a voice_code approval for the same mandate hash,
-    payee and amount, not retired (market_approval_matches), re-read through the buyer client after the referee writes.
+  * a payment still needs the market's own approval row (agent_approvals, referee-only) to show a voice_code approval by the
+    mandate's buyer for the same market mandate hash (approval_matches), re-read after the referee writes. main's market
+    module has no buyer-private purchase view (my_purchase_status) and no settle_goal: nothing here reads or calls them.
 
 Shape-compatible with the market bridge before and after #455: when record_approval takes a `code` (the word pair the
 market issued for this call), the issued code is passed; when it does not, it is not. The code is kept in memory only,
@@ -52,22 +53,31 @@ def referee_record(referee: Any, *, mandate_hash: str, buyer_id: str, voice_appr
         ISSUED_CODES.pop(mandate_hash, None)  # one call, one code: never reused for another attempt
 
 
-def record_owner_approval(referee: Any, buyer: Any, mandate: dict, buyer_id: str, voice_approval_id: str,
-                          matches: Callable[[Any, dict], bool]) -> dict:
-    """Owner chat: the referee records, the buyer re-reads. Raises MarketBridgeError unless the market's own row shows
-    this exact mandate approved, so nothing downstream can pay on a failed or mismatched recording."""
+def approval_matches(row: Any, mandate: dict, buyer_id: str, voice_approval_id: str = "") -> bool:
+    """The market's own approval row (the referee-only agent_approvals view) for this exact mandate hash: a voice_code approval
+    by the mandate's buyer (and, when given, for this call's VoiceApproval id). The hash already binds the payee and amount
+    the market stored at create_mandate, and record_payment refuses any other amount."""
+    return (isinstance(row, dict) and row.get("mandate_hash") == mandate.get("hash") and row.get("method") == METHOD
+            and row.get("approved_by") == buyer_id and bool(row.get("at"))
+            and (not voice_approval_id or row.get("voice_approval_id") == voice_approval_id))
+
+
+def record_owner_approval(referee: Any, mandate: dict, buyer_id: str, voice_approval_id: str) -> dict:
+    """Owner chat: the referee records, then the referee re-reads the market's own approval row. Raises MarketBridgeError unless
+    that row shows this exact mandate approved by voice_code, so nothing downstream can pay on a failed or mismatched
+    recording. main's market module has no buyer-private purchase view: this is the web path's read-back (agent_approvals)."""
     try:
         referee_record(referee, mandate_hash=mandate["hash"], buyer_id=buyer_id, voice_approval_id=voice_approval_id)
     except MarketBridgeError:
         # the write may have landed before the error (a retry): only the market's own row can say, and it must match
-        status = buyer.purchase_status(mandate["hash"])
-        if isinstance(status, dict) and status.get("approval_method") == METHOD and matches(status, mandate):
-            return status
+        row = referee.approval_row(mandate["hash"])
+        if approval_matches(row, mandate, buyer_id, voice_approval_id):
+            return row
         raise
-    status = buyer.purchase_status(mandate["hash"])
-    if not isinstance(status, dict) or status.get("approval_method") != METHOD or not matches(status, mandate):
+    row = referee.approval_row(mandate["hash"])
+    if not approval_matches(row, mandate, buyer_id, voice_approval_id):
         raise MarketBridgeError("market_approval_readback_mismatch")
-    return status
+    return row
 
 
 # ---- the market's own mandate for a chat purchase
@@ -100,15 +110,3 @@ def build_market_mandate(make_mandate: Callable[..., dict], *, bid: dict, round_
         raise MarketBridgeError("market_seller_missing")
     return make_mandate(deal_id=market_deal_id(round_id, bid["id"]), amount=bid["total_landed_price"], payee=seller,
                         buyer_id=buyer_id, within_allowance=False, goal_id=goal_id, now=now, origin=bid.get("origin", "SIM"))
-
-
-def pending_matches(status: Any, mandate: dict) -> bool:
-    """The buyer-private row after create_mandate: this exact mandate, its reservation held, not retired or settled."""
-    from decimal import Decimal, InvalidOperation
-    try:
-        same_amount = Decimal(str(status.get("amount"))).quantize(Decimal("0.01")) == Decimal(str(mandate.get("amount"))).quantize(Decimal("0.01"))
-    except (InvalidOperation, AttributeError, TypeError, ValueError):
-        return False
-    return (isinstance(status, dict) and status.get("mandate_hash") == mandate.get("hash") and status.get("payee") == mandate.get("payee")
-            and same_amount and status.get("reservation_matches") is True and status.get("within_allowance") is False
-            and status.get("retired") is False and status.get("settled") is not True)

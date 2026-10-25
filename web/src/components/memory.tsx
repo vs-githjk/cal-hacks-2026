@@ -13,6 +13,7 @@ const MemoryContext = createContext<{ state: MemoryState; reload: () => void } |
 
 /** One read for every buyer screen. It lives below BuyerGate, so a buyer switch unmounts it and aborts the pending request. */
 export function MemoryProvider({ children }: { children: ReactNode }) {
+  const buyerId = useBuyerId();   // sent as ?buyer= so a token-gated feed (AGENT_FEED_TOKEN) can scope the rows (#449 PL-17)
   const [state, setState] = useState<MemoryState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -23,14 +24,14 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       setState({ status: "offline" });
       return;
     }
-    fetchMemory(ctl.signal, feed).then(
+    fetchMemory(ctl.signal, feed, buyerId).then(
       (data) => setState({ status: "ready", data }),
       (e: unknown) => {
         if (!ctl.signal.aborted) setState({ status: "error", message: e instanceof Error ? e.message : "memory feed failed" });
       },
     );
     return () => ctl.abort();
-  }, [attempt]);
+  }, [attempt, buyerId]);
   const reload = () => {
     setState({ status: "loading" });
     setAttempt((n) => n + 1);
@@ -281,9 +282,9 @@ export function RecentPurchases() {
   const rows = selectMemory(m.entries, "purchase", "").filter(isPurchase).slice(0, 3);
   return (
     <Card>
-      <Label>Recent purchases</Label>
+      <Label>Purchases</Label>
       {m.state.status === "loading" ? (
-        <p className="text-[13px] text-muted">Loading recorded history...</p>
+        <p className="text-[13px] text-muted">Loading...</p>
       ) : m.state.status === "offline" ? (
         <p className="text-[13px] text-muted">Recorded history comes from the operator demo feed, which is not reachable from this site.</p>
       ) : m.state.status === "error" ? (
@@ -293,7 +294,7 @@ export function RecentPurchases() {
           <RetryButton reload={m.reload} />
         </>
       ) : rows.length === 0 ? (
-        <p className="text-[13px] text-muted">No purchases are recorded for you yet.</p>
+        <p className="text-[13px] text-muted">No purchases yet.</p>
       ) : (
         <ul className="grid gap-2">
           {rows.map((e) => (

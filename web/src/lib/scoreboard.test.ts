@@ -1,49 +1,23 @@
-// Run with: npm test --prefix web. Fixture tiles follow contracts/Scoreboard.schema.json (SIM copies of data/scoreboard.json rows).
+// Run with: npm test --prefix web. The landing's numbers come from the scoreboard copy in fixtures/; this keeps it identical to data/scoreboard.json.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SCOREBOARD_IDS, scoreboardTiles } from "./scoreboard.ts";
+import { readFileSync } from "node:fs";
+import { proofStats } from "./scoreboard.ts";
 
-const tile = (over: Record<string, unknown> = {}) => ({
-  id: "attacks_blocked", title: "Attacks blocked (held-out)", status: "measured", value: 0.6, unit: "ratio",
-  display: "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked", count: 20,
-  date_range: { from: "2026-10-24T16:29:09+00:00", to: "2026-10-24T16:29:09+00:00" }, origin: "SIM", source_run: "python3 -m shield.bench", note: "", ...over,
-});
-const board = (tiles: unknown[]) => ({ generated_at: "2026-10-24T16:29:09+00:00", tiles });
+const here = new URL("./", import.meta.url);
 
-test("the four tiles in contract order, each with display, count, date range and origin", () => {
-  const all = SCOREBOARD_IDS.map((id) => tile({ id }));
-  const t = scoreboardTiles(board([...all].reverse().concat([tile({ id: "voice_attacks" })])));
-  assert.deepEqual(t.map((x) => x.id), ["verified_savings", "attacks_blocked", "fit_accuracy", "learning_lift"]);
-  assert.deepEqual(t[1], {
-    id: "attacks_blocked", title: "Attacks blocked (held-out)", value: "60%", statusText: null,
-    display: "12 of 20 held-out attacks stopped; 2 of 10 honest listings wrongly blocked", count: 20, range: "Oct 24", origin: "SIM",
-  });
+test("the fixture copy of the scoreboard is byte-identical to data/scoreboard.json", () => {
+  const fixture = readFileSync(new URL("fixtures/scoreboard.json", here), "utf8");
+  const source = readFileSync(new URL("../../../data/scoreboard.json", here), "utf8");
+  assert.equal(fixture, source, "run: cp data/scoreboard.json web/src/lib/fixtures/scoreboard.json");
 });
 
-test("a null value shows its status text, never a number", () => {
-  const [t] = scoreboardTiles(board([tile({ id: "learning_lift", status: "not_quotable", value: null, unit: "points" })]));
-  assert.equal(t!.value, null);
-  assert.equal(t!.statusText, "Not quotable");
-  assert.equal(scoreboardTiles(board([tile({ id: "verified_savings", status: "none_yet", value: null, unit: "USD" })]))[0]!.statusText, "None yet");
-});
-
-test("units format honestly; a range over two days shows both; an unknown origin is SIM", () => {
-  const [usd] = scoreboardTiles(board([tile({ id: "verified_savings", value: 125.5, unit: "USD", origin: "live?" })]));
-  assert.equal(usd!.value, "$125.50");
-  assert.equal(usd!.origin, "SIM");
-  const [pts] = scoreboardTiles(board([tile({ id: "learning_lift", value: 0.37, unit: "points", date_range: { from: "2026-10-23", to: "2026-10-24" } })]));
-  assert.equal(pts!.value, "+0.37 pts");
-  assert.equal(pts!.range, "Oct 23 to Oct 24");
-});
-
-test("a missing or malformed file gives no tiles rather than a crash", () => {
-  assert.deepEqual(scoreboardTiles(null), []);
-  assert.deepEqual(scoreboardTiles({ tiles: "x" }), []);
-});
-
-test("the bundled fixture deep-equals the repo's data/scoreboard.json (no drift)", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { join } = await import("node:path");
-  const read = (p: string) => JSON.parse(readFileSync(join(process.cwd(), p), "utf8"));
-  assert.deepEqual(read("src/lib/fixtures/scoreboard.json"), read("../data/scoreboard.json"));
+test("the three landing numbers are computed from measured tiles, with their caveats", () => {
+  const [fit, attacks, voice] = proofStats("Smell Test");
+  assert.equal(fit!.value, "39 of 39");
+  assert.ok(fit!.measured);
+  assert.equal(attacks!.value, "13 of 20");
+  assert.match(attacks!.caveat, /held-out, rules only; 2 of 10 honest pages blocked/);
+  assert.equal(voice!.value, "9 of 10");
+  assert.equal(voice!.caveat, "first run");
 });

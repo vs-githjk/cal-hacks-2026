@@ -23,7 +23,8 @@ function routeExists(path: string): boolean {
   return existsSync(new URL("page.tsx", dir));
 }
 
-const hrefs = (src: string) => [...src.matchAll(/href:\s*"(\/[^"#?]*)"/g)].map((m) => m[1]!);
+// Both the tile objects (href: "/x") and JSX links (href="/x").
+const hrefs = (src: string) => [...src.matchAll(/href[:=]\s*"(\/[^"#?]*)"/g)].map((m) => m[1]!);
 
 test("routeExists knows a real page, a dynamic segment and a missing page", () => {
   assert.ok(routeExists("/"));
@@ -37,9 +38,9 @@ test("every header and buyer nav link resolves to a page", () => {
   for (const h of links) assert.ok(routeExists(h), h);
 });
 
-test("the home screen tiles resolve to a page", () => {
+test("the home screen links resolve to a page", () => {
   const links = hrefs(read("app/page.tsx"));
-  assert.ok(links.length >= 4);
+  assert.ok(links.length >= 3);
   for (const h of links) assert.ok(routeExists(h), h);
 });
 
