@@ -7,6 +7,7 @@ import { tables } from "@/module_bindings";
 import { SAMPLES } from "@/lib/arenaFixture";
 import type { ArenaRows } from "@/lib/arenaScene";
 import { FRAME, FloorHud } from "@/components/floor/FloorHud";
+import { FloorAquariumPixel } from "@/components/floor/FloorAquariumPixel";
 import { FloorRingPixel } from "@/components/floor/FloorRingPixel";
 import { REFERENCE, floorScript, type FloorPhase, type FloorScript, type Theme } from "@/components/floor/floorPhases";
 import { useFloorClock } from "@/components/floor/useFloorClock";
@@ -46,11 +47,16 @@ export default function FloorPage() {
   return params.replay ? <ReplayView theme={params.theme} t={params.t} /> : <FloorView theme={params.theme} sample={params.sample} t={params.t} paused={params.paused} />;
 }
 
-/** The pixel ring inside the HUD. */
+/** `?scene=aquarium` swaps the ring for the side-view tank; the default is the ring. */
+const isAquarium = () => new URLSearchParams(window.location.search).get("scene") === "aquarium";
+
+/** The pixel ring (or tank) inside the HUD. */
 function Stage({ script, phase, theme, reducedMotion, width, frame = false }: { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number; frame?: boolean }) {
   return (
     <FloorHud script={script} phase={phase} width={width} frame={frame} reducedMotion={reducedMotion}>
-      <FloorRingPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={frame ? FRAME.stageW : width} />
+      {isAquarium()
+        ? <FloorAquariumPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={frame ? FRAME.stageW : width} />
+        : <FloorRingPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={frame ? FRAME.stageW : width} />}
     </FloorHud>
   );
 }

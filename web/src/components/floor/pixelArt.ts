@@ -85,3 +85,47 @@ export function runs(grid: Grid): Run[] {
   cache.set(grid, out);
   return out;
 }
+
+// ---- Aquarium scene (additions only) ----
+export const AQUA = { top: "#12324a", bottom: "#0b1b2b", sandA: "#c2a878", sandB: "#a88f62", weed: "#2f7a5b" } as const;
+/** Seaweed stalk: x offset (in 5 px cells) of each cell from the base upward. */
+export const WEED_OFFSETS = [0, 0, 5, 5, 5, 0, 0, -5, -5, 0, 0, 5] as const;
+/** Deterministic darker sand cells (10 px) for a w x h floor, as [x, y] offsets from its top-left. */
+export function sandCells(w: number, h: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (let j = 0; j < h / 10; j++) for (let i = 0; i < w / 10; i++) if ((i * 7919 + j * 104729 + i * j * 31) % 5 === 0) out.push([i * 10, j * 10]);
+  return out;
+}
+
+// ---- Reef maze (aquarium scene) ----
+// # wall (coral or rock), . corridor with a pellet, space empty corridor, 1-4 a seller pocket (a 2 x 3 room), 5 the centre pocket (winner), S Pac-Man start.
+export const MAZE: readonly string[] = [
+  "###################",
+  "#111.....#333.....#",
+  "#111.###.#333.##..#",
+  "#.....#.555.#..444#",
+  "#.#.222.555..#.444#",
+  "#.#.222..S........#",
+  "###################",
+];
+export const MAZE_TILE = 40;
+export const MAZE_ORIGIN = { x: 100, y: 172 };
+export const REEF = { coralA: "#c4566b", coralB: "#e07a5f", rock: "#4a5d6e" } as const;
+
+/** SVG path data (one string per colour) for the maze walls: 40 px tiles with 5 px cells of irregular texture. */
+export function mazeWallPaths(grid: readonly string[] = MAZE): { coralA: string; coralB: string; rock: string; light: string; dark: string } {
+  const out = { coralA: "", coralB: "", rock: "", light: "", dark: "" };
+  grid.forEach((row, r) => [...row].forEach((ch, c) => {
+    if (ch !== "#") return;
+    const x = MAZE_ORIGIN.x + c * MAZE_TILE, y = MAZE_ORIGIN.y + r * MAZE_TILE;
+    const kind = (r * 5 + c * 3 + (r * c) % 3) % 4;
+    const key = kind === 2 ? "rock" : kind === 1 ? "coralB" : "coralA";
+    out[key] += `M${x} ${y}h${MAZE_TILE}v${MAZE_TILE}h-${MAZE_TILE}z`;
+    for (let k = 0; k < 9; k++) {
+      const idx = (r * 13 + c * 7 + k * 29 + k * k * 3) % 64;
+      const cell = `M${x + (idx % 8) * 5} ${y + Math.floor(idx / 8) * 5}h5v5h-5z`;
+      if (k % 2) out.light += cell; else out.dark += cell;
+    }
+  }));
+  return out;
+}
