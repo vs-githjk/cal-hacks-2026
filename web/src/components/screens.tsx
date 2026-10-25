@@ -9,7 +9,7 @@ import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, Sel
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
-import { Card, Details, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
+import { Card, Details, Label, SampleOnly, Unavailable, money } from "./ui";
 
 
 export interface BuyerScreenProps {
@@ -67,52 +67,83 @@ function Searches({ goals }: { goals: GoalView[] }) {
   );
 }
 
-export function BuyerScreen(p: BuyerScreenProps) {
-  const s = p.sample ?? {};
-  const goal = p.goals[0] ?? null;
+/** A journey step heading on the buyer dashboard: a number, a plain title and one muted line. */
+function Step({ n, title, hint, id }: { n: number; title: string; hint?: string; id?: string }) {
   return (
-    <div className="grid gap-3.5">
-      {p.connecting ? (
-        <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />
-      ) : (
-        <>
-          {p.composer}
-          {p.review ? (
-            <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
-          ) : (
-            <Card>
-              <Label>Your attention</Label>
-              <p className="text-[18px] font-medium">Nothing waiting.</p>
-            </Card>
-          )}
-          <Searches goals={p.goals} />
-          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
-          <div className="grid gap-3.5 md:grid-cols-3">
-            {p.purchases ?? <Unavailable title="Purchases">Not connected to this screen yet.</Unavailable>}
-            <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
-            <OwnedPartsPanel />
-          </div>
-          {goal && (
-            <>
-              <Details summary="About the round below" className="mt-0"><p>The latest public round. It is not yet matched to one search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.</p></Details>
-              <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
-              <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
-              <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
-                <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
-                <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-                {!p.review && <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>}
-              </div>
-              <div className="grid gap-3.5 lg:grid-cols-[8fr_4fr]">
-                <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>
-                <AgentFeed items={p.feed} />
-              </div>
-            </>
-          )}
-        </>
-      )}
+    <div id={id} className="flex scroll-mt-24 items-baseline gap-3 pt-4">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ink font-mono text-[11px] text-canvas">{n}</span>
+      <div className="min-w-0">
+        <h2 className="text-[20px] font-semibold leading-6 tracking-[-0.015em]">{title}</h2>
+        {hint && <p className="mt-0.5 text-[13px] leading-[18px] text-muted">{hint}</p>}
+      </div>
     </div>
   );
 }
+
+export function BuyerScreen(p: BuyerScreenProps) {
+  const s = p.sample ?? {};
+  const goal = p.goals[0] ?? null;
+  if (p.connecting) return <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />;
+  return (
+    <div className="grid gap-5">
+      {p.review && (
+        <a href="#needs-you" className="card card-active flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
+          <span className="flex items-center gap-2.5 text-[15px] font-semibold"><span className="dot text-live" aria-hidden /> Your approval is needed. Say the code on the call.</span>
+          <span className="text-[14px] font-medium text-pulse">Show the code <span aria-hidden>↓</span></span>
+        </a>
+      )}
+
+      <Step n={1} title="What you asked for" hint={goal ? undefined : "Post a goal and your agent starts hunting."} />
+      {goal ? <Searches goals={p.goals} /> : p.composer}
+
+      {goal && (
+        <>
+          <Step n={2} title="What is happening now" hint="The latest round in the market. Bids stay sealed until it closes." />
+          <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
+          <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
+          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
+        </>
+      )}
+
+      <Step n={goal ? 3 : 2} id="needs-you" title="What needs you" hint="Above your allowance, we call you. The one-time code shows here and nowhere else." />
+      {p.review ? (
+        <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
+      ) : (
+        <Card>
+          <p className="flex items-center gap-2.5 text-[17px] font-semibold"><span className="h-2 w-2 rounded-full bg-mint-mark" aria-hidden /> Nothing needs you right now.</p>
+          <p className="mt-1 text-[13px] text-muted">When a deal is above your allowance, the call starts and your code appears here.</p>
+        </Card>
+      )}
+
+      {goal && (
+        <>
+          <Step n={4} title="What was decided, and why" hint="Every veto and block comes with its reason and source." />
+          <div className={`grid items-start gap-5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+            <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
+            <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
+            {!p.review && <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>}
+          </div>
+
+          <Step n={5} title="What you bought" hint="One receipt per part, in Stripe test mode." />
+          <div className="grid items-start gap-5 lg:grid-cols-[7fr_5fr]">
+            <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>
+            {p.purchases ?? <Unavailable title="Purchases">Not connected to this screen yet.</Unavailable>}
+          </div>
+        </>
+      )}
+
+      <Details summary="Your allowance, your rig and the agent log" className="mt-2">
+        <div className="grid gap-5 md:grid-cols-2">
+          <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
+          <OwnedPartsPanel />
+        </div>
+        <AgentFeed items={p.feed} />
+      </Details>
+      {goal && <Details summary="Start another goal" className="mt-0">{p.composer}</Details>}
+    </div>
+  );
+}
+
 
 export interface MarketScreenProps {
   round: RoundView | null;
@@ -132,39 +163,43 @@ export function MarketScreen(p: MarketScreenProps) {
   const mixLabel = originMixLabel(c);
   const s = p.sample ?? {};
   return (
-    <div className="grid gap-3.5">
-      <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        <div className="relative text-[18px] font-bold tracking-[-0.01em]">Market <span className="font-medium text-muted">the referee&apos;s floor</span></div>
-        <div className="relative flex flex-wrap items-center gap-2 text-[14px] text-muted">
-          {p.round && (roundTitle(p.round.id) ? <span className="text-ink" title={`${p.round.id}, ${p.round.needId}`}>{roundTitle(p.round.id)}</span> : <span title={p.round.needId}>{p.round.id}</span>)}
-          {p.round && (p.round.state === "closed" ? <Pill tone="done">Closed</Pill> : <Pill tone="hunting">Open</Pill>)}
-          {mixLabel && <span className="font-mono text-[12px]">{mixLabel}</span>}
+    <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div>
+          <p className="text-[13px] leading-[18px] text-muted">The referee&apos;s floor</p>
+          <h1 className="mt-2 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">Market</h1>
         </div>
+        {p.round && (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-ink-2">
+            <span className={`h-2 w-2 rounded-full ${p.round.state === "closed" ? "bg-mint-mark" : "bg-live"}`} aria-hidden />
+            <span className="font-medium text-ink">{roundTitle(p.round.id) ?? "Latest round"}</span>
+            <span>· {p.round.state === "closed" ? "closed" : "open, bids sealed"}</span>
+            {mixLabel && <span className="text-muted">· {mixLabel}</span>}
+          </p>
+        )}
       </div>
-      <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
-        Every bid carries its origin. {c.LIVE} LIVE · {c.MIRROR} MIRROR · {c.SIM} SIM.
-      </p>
       {p.connecting ? (
         <p className="text-muted">Connecting...</p>
       ) : !p.round ? (
         <section className="card p-[18px]">
           <p className="text-[22px] font-medium">No rounds yet.</p>
-          <p className="mt-1 text-muted">When a buyer posts a need, a sealed round opens here with its 12 second window.</p>
+          <p className="mt-1 text-muted">When a buyer posts a request, a sealed round opens here and bids stay sealed until it closes.</p>
         </section>
       ) : (
         <>
-          <div className="grid gap-3.5 lg:grid-cols-[8fr_4fr]">
-            <SampleOnly on={!!s.round}><RoundTimeline round={p.round} /></SampleOnly>
-            <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
-          </div>
+          <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
           <SampleOnly on={!!s.lines}><SellerLines lines={p.lines} cap={p.cap} /></SampleOnly>
-          <div className="grid gap-3.5 lg:grid-cols-2">
-            <SampleOnly on={!!s.lossReports}><LossReports reports={p.lossReports} note={p.lossNote} /></SampleOnly>
-            <div className="grid content-start gap-3.5">
-              <SampleOnly on={!!s.learning}><SellerLearns learning={p.learning} /></SampleOnly>
+          <p className="text-[13px] leading-[18px] text-muted">Every bid carries its origin: {c.LIVE} LIVE · {c.MIRROR} MIRROR · {c.SIM} SIM.</p>
+          <Details summary="Round history: the timeline, why sellers lost, what they learned, every event" className="mt-0">
+            <div className="grid gap-6">
+              <SampleOnly on={!!s.round}><RoundTimeline round={p.round} /></SampleOnly>
+              <div className="grid items-start gap-6 lg:grid-cols-2">
+                <SampleOnly on={!!s.lossReports}><LossReports reports={p.lossReports} note={p.lossNote} /></SampleOnly>
+                <SampleOnly on={!!s.learning}><SellerLearns learning={p.learning} /></SampleOnly>
+              </div>
               <FloorEvents events={p.events} />
             </div>
-          </div>
+          </Details>
         </>
       )}
     </div>

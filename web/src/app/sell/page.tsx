@@ -5,6 +5,7 @@ import { Card, Code, Details, Label, OriginChip, RecordedBanner, RunsLocally } f
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import { BRAND } from "@/lib/brand";
+import { draftToForm, type Vetted } from "@/lib/sellerDraft";
 import {
   CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
@@ -34,6 +35,24 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+const EXAMPLE = "I run a small repair shop in Oakland. I have three refurbished 4070 Supers and some 750W PSUs, 90-day warranty, and I won't go below $520 on the cards.";
+
+type DraftState = { kind: "idle" } | { kind: "busy" } | { kind: "note"; text: string } | { kind: "done"; vetted: Vetted };
+
+/** Ask Claude (through /api/seller-draft) for a draft. Any failure is the plain form with a one-line note. */
+async function askClaude(text: string): Promise<DraftState> {
+  try {
+    const r = await fetch("/api/seller-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+    const body: unknown = await r.json();
+    const b = body as { ok?: boolean; note?: string; error?: string; draft?: Vetted["draft"]; questions?: string[]; dropped?: string[] };
+    if (r.status === 400 && b.error) return { kind: "note", text: b.error };
+    if (b.ok && b.draft) return { kind: "done", vetted: { draft: b.draft, questions: b.questions ?? [], dropped: b.dropped ?? [] } };
+    return { kind: "note", text: b.note ?? "Claude is unavailable right now; fill in the form below." };
+  } catch {
+    return { kind: "note", text: "Claude is unavailable right now; fill in the form below." };
+  }
+}
+
 /** /sell: a form that turns a shop into a SellerConfig and sends it to the Seller Kit API (:8791). */
 export default function SellPage() {
   const [form, setForm] = useState<SellForm>(emptyForm);
@@ -44,6 +63,8 @@ export default function SellPage() {
   const [created, setCreated] = useState<Created | null>(null);
   const [shops, setShops] = useState<ShopRow[] | null>(null);
   const [needs, setNeeds] = useState<OpenNeed[] | null>(null);
+  const [chat, setChat] = useState("");
+  const [draft, setDraft] = useState<DraftState>({ kind: "idle" });
   const kit = useApiBase(SELLER_KIT_URL);
   // the hosted site shows the recorded SIM snapshot (#398); locally, what the kit answers
   const shownShops = kit.local ? parseShops(recorded.shops) : shops;
@@ -72,6 +93,21 @@ export default function SellPage() {
   const margin = form.mode === "fixed_margin";
   const shownId = idTouched ? form.id : slugify(form.name);
 
+  const onDraft = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chat.trim()) return;
+    setDraft({ kind: "busy" });
+    const res = await askClaude(chat);
+    setDraft(res);
+    if (res.kind === "done") {
+      // Prefill the form below. The owner edits it and confirms; the Seller Kit still validates it and Smell Test still screens it.
+      setForm(draftToForm(res.vetted.draft));
+      setIdTouched(false);
+      setErrors([]);
+      setCreated(null);
+    }
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreated(null);
@@ -98,9 +134,10 @@ export default function SellPage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
+    <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
       <header>
-        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[22px]/[28px] font-semibold tracking-[-0.01em]">
+        <p className="text-[13px] leading-[18px] text-muted">Seller Kit</p>
+        <h1 className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">
           Sell on {BRAND} <OriginChip origin="SIM" />
         </h1>
         <p className="mt-2 text-[15px]/[20px] text-ink-2">Describe your shop once. Your agent bids from it, never below your floor.</p>
@@ -118,11 +155,67 @@ export default function SellPage() {
       ) : (
       <>
       {offline && (
-        <Card>
-          <p className="flex items-center gap-2 font-medium"><span aria-hidden className="size-2 rounded-full bg-coral-mark" />Seller Kit offline.</p>
-          <p className="mt-1 text-muted">Nothing was sent.</p>
-          <Details summary="How to start it"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
-        </Card>
+        <div className="flex flex-wrap items-center gap-x-3 text-[14px] text-ink-2">
+          <span className="flex items-center gap-2"><span aria-hidden className="h-2 w-2 rounded-full bg-coral-mark" />Seller Kit offline. Nothing was sent.</span>
+          <Details summary="How to start it" className="mt-0"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
+        </div>
+      )}
+
+      <Card>
+        <form onSubmit={onDraft} className="grid gap-3">
+          <h2 className="text-[17px]/[22px] font-semibold">Create your seller agent with Claude</h2>
+          <p className="text-[14px]/[20px] text-muted">
+            Tell Claude about your shop in a few sentences. It fills in the form below. It only writes down what you say, and you decide every number.
+          </p>
+          <label className="block">
+            <span className="sr-only">Describe your shop</span>
+            <textarea
+              className={`${input} min-h-28`}
+              value={chat}
+              maxLength={2000}
+              placeholder={EXAMPLE}
+              onChange={(e) => setChat(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" className="btn min-h-11 rounded-xl bg-pulse-soft px-5 py-2 font-medium text-pulse-soft-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] disabled:opacity-60" disabled={draft.kind === "busy" || !chat.trim()}>
+              {draft.kind === "busy" ? "Drafting..." : "Draft with Claude"}
+            </button>
+            <button type="button" className="min-h-11 text-[14px] text-muted hover:text-ink" onClick={() => setChat(EXAMPLE)}>
+              Use an example
+            </button>
+          </div>
+          <div aria-live="polite">
+            {draft.kind === "note" && <p className="text-[14px] text-ink-2">{draft.text}</p>}
+            {draft.kind === "done" && (
+              <div className="grid gap-2 text-[14px]">
+                {draft.vetted.questions.length > 0 && (
+                  <div>
+                    <p className="text-ink-2">Claude needs {draft.vetted.questions.length === 1 ? "one more answer" : "two more answers"}. Add them to your text and draft again, or fill them in below.</p>
+                    <ul className="mt-1 list-disc pl-5">
+                      {draft.vetted.questions.map((q) => (
+                        <li key={q}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {draft.vetted.dropped.length > 0 && (
+                  <p className="text-muted">Left out because you did not say it: {draft.vetted.dropped.join("; ")}.</p>
+                )}
+                {draft.vetted.draft.lines.some((l) => l.quantity !== null) && (
+                  <p className="text-muted">
+                    Stock you named: {draft.vetted.draft.lines.filter((l) => l.quantity !== null).map((l) => `${l.quantity} x ${l.part}`).join(", ")}. The kit has no stock field, so it is not sent.
+                  </p>
+                )}
+                <p className="text-muted">Add the link to each listing page yourself. Then send: the Seller Kit validates it and Smell Test screens your text.</p>
+              </div>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {draft.kind === "done" && (
+        <p className="rounded-xl bg-pulse-soft px-4 py-2 text-[14px]/[20px] font-medium text-pulse-soft-ink">Drafted by Claude. Check every field.</p>
       )}
 
       <form onSubmit={onSubmit} className="grid gap-4" noValidate>
@@ -292,6 +385,8 @@ export default function SellPage() {
         </Card>
       )}
 
+      <Details summary="Shops written and open requests" className="mt-0">
+        <div className="grid items-start gap-6 md:grid-cols-2">
       <Card>
         <Label>Shops written</Label>
         {shownShops === null ? (
@@ -313,11 +408,11 @@ export default function SellPage() {
       </Card>
 
       <Card>
-        <Label>Open needs</Label>
+        <Label>Open requests</Label>
         {shownNeeds === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
         ) : shownNeeds.length === 0 ? (
-          <p className="text-muted">No open needs.</p>
+          <p className="text-muted">No open requests. They appear when a buyer posts one.</p>
         ) : (
           <ul>
             {shownNeeds.map((n) => (
@@ -334,6 +429,8 @@ export default function SellPage() {
         )}
         <p className="mt-2 text-[12px] text-muted">Buyer caps are never shown.</p>
       </Card>
+        </div>
+      </Details>
     </div>
   );
 }

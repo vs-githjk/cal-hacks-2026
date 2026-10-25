@@ -205,7 +205,24 @@ def _as_market_winner(buyer, seller_id="seller-a"):
         {buyer.ROUND["market_round_id"]: {bid["id"]: ("seller-a", bid["total_landed_price"])}})
 
 
-def _web_approval(buyer, monkeypatch, issue_error=None, voice=None):
+def _approval_row(buyer_id=BID, method="voice_code", mandate_hash=None):
+    """#449 item 4 RT-12: the referee's read-back of the stored approval row, through the REAL bridge's approval_row over an
+    agent_approvals SQL row, so the agent sees exactly the keys production returns (snake_case: mandate_hash, approved_by)."""
+    from market_bridge import MarketBridge
+
+    class _Client:
+        def __init__(self, row): self.row = row
+        def sql(self, _query): return [self.row]
+        def call(self, *_a, **_k): raise AssertionError("no reducer call in a read-back")
+
+    def read(h):
+        row = {"mandateHash": mandate_hash or h, "method": method, "approvedBy": buyer_id, "at": [1], "voiceApprovalId": "va-1"}
+        return MarketBridge("referee", client=_Client(row)).approval_row(h) if (mandate_hash or h) == h else {
+            "mandate_hash": mandate_hash, "method": method, "approved_by": buyer_id, "at": [1], "voice_approval_id": "va-1"}
+    return read
+
+
+def _web_approval(buyer, monkeypatch, issue_error=None, voice=None, approval_row=None):
     from buyer import checkout
     from pay.voice_cartesia import VoiceResult
     ready_for_requote(buyer)
@@ -216,6 +233,7 @@ def _web_approval(buyer, monkeypatch, issue_error=None, voice=None):
     referee.issue_approval_code.side_effect = issue_error
     _as_market_winner(buyer)
     referee.record_approval.return_value = {"approval_method": "voice_code"}
+    referee.approval_row.side_effect = approval_row or _approval_row()
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
     monkeypatch.setattr("pay.voice_cartesia.load_env", lambda *a, **k: {})
     used = []
@@ -374,13 +392,17 @@ def test_web_failed_stripe_charge_sends_no_order_and_releases_the_round(runtime,
 
 def test_web_market_payment_row_failure_does_not_undo_the_charge_or_block_the_order(runtime, monkeypatch, caplog):
     buyer, db = runtime
+
+    async def no_wait(_seconds):  # #449 item 4 PL-10: the row is retried, with no real sleep here
+        return None
+    monkeypatch.setattr(buyer, "_sleep", no_wait)
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
     _fake_stripe(monkeypatch)
     buyer.MARKET_REFEREE.record_payment.side_effect = buyer.MarketBridgeError("down")
     with caplog.at_level("WARNING", logger="buyer_agent"):
         ctx, _used, _make = _web_approval(buyer, monkeypatch)
     assert len(_orders(buyer, ctx)) == 1 and _stored_phases(db) == ["settled"]
-    assert "market row failed" in caplog.text
+    assert "payment row failed" in caplog.text and buyer.MARKET_REFEREE.record_agent_event.called
 
 
 def _adopt(buyer):
@@ -951,3 +973,21 @@ def test_a_stranger_is_answered_once_not_in_a_loop(runtime):
     for _ in range(3):
         asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
     assert len(ctx.sent) == 1 and not buyer.ROUND
+
+
+def _chat_lines(ctx):
+    return [c.args[0] for c in ctx.logger.info.call_args_list if c.args and str(c.args[0]).startswith("AGENT_CHAT ")]
+
+
+def test_owner_goal_and_buyer_replies_reach_the_chat_feed_but_a_strangers_text_never_does(runtime):
+    import chatlog
+    buyer, _db = runtime
+    stranger_ctx = Context()
+    asyncio.run(buyer.handle_text(stranger_ctx, STRANGER, GOAL_TEXT + " secret-stranger-words"))
+    assert _chat_lines(stranger_ctx) == []   # neither the stranger's goal nor the sign-up reply is a chat line
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "owner", GOAL_TEXT + ", call me on 415-555-1234"))
+    recs = [chatlog.parse_line(line) for line in _chat_lines(ctx)]
+    assert recs[0]["who"] == "owner" and recs[0]["text"].startswith(GOAL_TEXT) and "415" not in recs[0]["text"]
+    assert any(r["who"] == "buyer" and r["kind"] == "thinking" for r in recs)
+    assert any(r["who"] == "buyer" and r["kind"] == "message" for r in recs)

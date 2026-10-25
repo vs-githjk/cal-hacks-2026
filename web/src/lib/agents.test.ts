@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { clearCorner, cornerRect } from "./agents.ts";
-import { STATUS_TEXT, agentLink, agentverseUrl, ago, feedBase, fetchAgents, headline, isStale, latestActivity, parseAgents, summary, type AgentRow } from "./agentFeed.ts";
+import { STATUS_TEXT, agentLink, cleanMessage, agentverseUrl, ago, feedBase, fetchAgents, headline, isStale, latestActivity, parseAgents, summary, type AgentRow } from "./agentFeed.ts";
 
 const VIEW = { w: 1280, h: 800 };
 const TILE = { w: 220, h: 120 };
@@ -168,4 +168,22 @@ test("feedBase never returns a loopback address for a hosted page, so no 127.0.0
   for (const env of [undefined, "", "http://127.0.0.1:8790", "http://localhost:8790", "http://[::1]:8790", "http://127.5.5.5:8790"]) {
     assert.equal(feedBase(env, "tech-bazaar.vercel.app"), null);
   }
+});
+
+test("cleanMessage: raw transport errors and log prefixes never reach the page as agent speech", () => {
+  assert.equal(cleanMessage("Failed to retrieve messages: 503:upstream connect error or disconnect/reset before headers. reset reason: connection termination"), "Waiting for the Agentverse mailbox.");
+  assert.equal(cleanMessage("Agent mailbox not found: create one using the agent inspector"), "Waiting for the Agentverse mailbox.");
+  assert.equal(cleanMessage("No valid reply {'ErrorMessage', 'AdviceReply'} was sent to agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8 for received..."), "Waiting for a reply.");
+  assert.equal(cleanMessage("AGENT_MSG name=buyer to=owner text=reply to owner"), "reply to owner");
+  assert.equal(cleanMessage("ignored BidRequest from agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8: ['shield.unavailable']"), "Skipped a bid request.");
+  assert.equal(cleanMessage(`Sent to ${ADDR} ok`), `Sent to ${ADDR.slice(0, 7)}…${ADDR.slice(-4)} ok`);
+  assert.equal(cleanMessage("Goal set"), "Goal set", "ordinary speech passes through");
+  assert.equal(cleanMessage("x".repeat(300)).length, 160);
+  assert.equal(cleanMessage("   "), null);
+  assert.equal(cleanMessage(null), null);
+});
+
+test("parseAgents cleans last_message", () => {
+  const raw = { name: "Seller", role: "seller", address: ADDR, status: "local", last_message: "Failed to retrieve messages: 503:upstream connect error", at: null, origin: "SIM" };
+  assert.equal(parseAgents([raw])![0].last_message, "Waiting for the Agentverse mailbox.");
 });

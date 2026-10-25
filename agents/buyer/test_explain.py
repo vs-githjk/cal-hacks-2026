@@ -127,3 +127,19 @@ def test_without_pulse_the_dated_baseline_band_is_used_and_matches_the_advocate_
     text = fair_band.price_line({"lines": [line(price=round(band["median"], 2))]})
     assert "looks fair" in text and "dated price history" in text
     assert fair_band.band_for("rtx 9090") is None
+
+
+def test_a_round_with_no_bids_says_no_seller_offers_arrived():
+    s = explain.round_summary(asked=ASKED, received={}, screened={}, review_bids=[], cards={}, winner=None, cap=1300.0,
+                              next_step="Next: a fresh round.")
+    assert s == "Round summary: 0 of 5 sellers bid. No seller offers arrived, so there was nothing to rank. Next: a fresh round."
+    assert "No bid survived" not in s
+    assert explain.no_winner_why({}) == "No seller offers arrived this round. Nothing ordered."
+    assert explain.no_winner_why({A["id"]: A}) == explain.NO_WINNER_WHY
+
+
+def test_the_arrival_line_names_who_bid_and_who_stayed_silent():
+    assert explain.arrival_line(ASKED, {}) == "Round ended with 0 of 5 bids received (from nobody); no reply from seller_1, seller_2, seller_3, seller_4, seller_5"
+    line = explain.arrival_line(ASKED, {b["id"]: b for b in (A, C)})
+    assert line == "Round ended with 2 of 5 bids received (from seller_1, seller_3); no reply from seller_2, seller_4, seller_5"
+    assert explain.arrival_line(["seller_1"], {A["id"]: A}) == "Round ended with 1 of 1 bids received (from seller_1)"

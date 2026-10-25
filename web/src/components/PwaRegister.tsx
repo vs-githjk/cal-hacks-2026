@@ -7,12 +7,13 @@ import { useEffect } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { badgeAction } from "@/lib/pwa";
+import { livePendingApprovals } from "@/lib/screens";
 
 type Badging = { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
 
 export function PwaRegister() {
   const [pending] = useTable(tables.myPendingApprovals);
-  const count = pending.length;
+  const count = livePendingApprovals(pending).length; // #449 item 4 PL-12: an expired code is not waiting
 
   useEffect(() => {
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {

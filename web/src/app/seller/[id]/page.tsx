@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { Card, Code, Label, OriginChip, Pill, SourceLink, clock } from "@/components/ui";
+import { Card, Label, OriginChip, Pill, SourceLink, clock } from "@/components/ui";
+import { roundTitle } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const BAND: Record<string, string> = { within5: "within 5%", within10: "within 10%", within20: "within 20%", over20: "over 20%" };
@@ -21,10 +22,11 @@ export default function SellerPage() {
   const paired = roles.some((r) => (r.role === "seller_screen" || r.role === "seller") && r.subjectId === id);
 
   return (
-    <div className="grid gap-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        <div className="text-[18px] font-bold tracking-[-0.01em]">
-          Seller <span className="font-medium text-muted">{persona?.name ?? id}</span>
+    <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div>
+          <p className="text-[13px] leading-[18px] text-muted">Seller</p>
+          <h1 className="mt-2 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">{persona?.name ?? "This seller"}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[14px] text-muted">
           {persona && <span>{persona.archetype}</span>}
@@ -33,7 +35,7 @@ export default function SellerPage() {
         </div>
       </div>
       {!conn.isActive || !rolesReady ? (
-        <p className="text-muted">Connecting to the market...</p>
+        <p className="flex items-center gap-2 text-muted"><span className="h-2 w-2 rounded-full bg-slate" aria-hidden /> Connecting to the market...</p>
       ) : (
         <>
           <PooledLot />
@@ -48,24 +50,24 @@ function PooledLot() {
   const [needs] = useTable(tables.sellerNeeds);
   return (
     <Card>
-      <Label>Pooled lot · what sellers see</Label>
+      <Label>Open requests · what sellers see</Label>
       {needs.length === 0 ? (
-        <p className="text-muted">No open request right now. When a buyer posts a need, it shows here as SKU, quantity, ceiling band and deadline only.</p>
+        <p className="text-muted">No open request right now. When a buyer posts one, it shows here as the part, quantity, price band and deadline. Never the buyer or the exact cap.</p>
       ) : (
         <div className="-mx-[18px] overflow-x-auto px-[18px]">
           <table className="w-full border-collapse text-[14px] tabular-nums">
             <thead>
               <tr>
-                <Th>SKU</Th><Th>Quantity</Th><Th>Ceiling band</Th><Th>Deadline</Th>
+                <Th>Part</Th><Th>Quantity</Th><Th>Price band</Th><Th>Deadline</Th>
               </tr>
             </thead>
             <tbody>
               {needs.map((n) => (
                 <tr key={`${n.roundId}-${n.skuSpec}`}>
-                  <Td><Code>{n.skuSpec}</Code> <OriginChip origin={n.origin} /></Td>
-                  <Td>{n.quantity} {n.unit} <OriginChip origin={n.origin} /></Td>
-                  <Td>{n.ceilingBand} <OriginChip origin={n.origin} /></Td>
-                  <Td>{clock(toDate(n.deadline))} <OriginChip origin={n.origin} /></Td>
+                  <Td><span className="font-medium">{n.skuSpec}</span> <OriginChip origin={n.origin} /></Td>
+                  <Td>{n.quantity} {n.unit}</Td>
+                  <Td>{n.ceilingBand}</Td>
+                  <Td className="font-mono">{clock(toDate(n.deadline))}</Td>
                 </tr>
               ))}
             </tbody>
@@ -96,7 +98,7 @@ function LossReports({ sellerId }: { sellerId: string }) {
               <tbody>
                 {mine.map((r) => (
                   <tr key={r.id}>
-                    <Td className="font-mono text-[13px]">{r.roundId} {r.won && <Pill tone="done">Won</Pill>}</Td>
+                    <Td className="text-[13px]">{roundTitle(r.roundId) ?? "A round"} {r.won && <Pill tone="done">Won</Pill>}</Td>
                     <Td>
                       <span className="rounded-md bg-slate-soft px-1.5 py-0.5 font-mono text-[11px] text-slate">{BAND[r.gapBand] ?? r.gapBand}</span>{" "}
                       <OriginChip origin={r.origin} />

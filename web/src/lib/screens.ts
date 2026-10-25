@@ -468,9 +468,27 @@ export function clusterArrivals(arrivals: readonly Arrival[], totalMs: number, g
 
 interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; code: string; failures: number; locked: boolean; origin: string }
 
-export function reviewFromRows(rows: readonly PendingRow[]): ReviewView | null {
-  const r = [...rows].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
+/**
+ * #449 item 4 PL-12: pending rows that have not expired. The market keeps an expired code row until it is cleared, so the client
+ * drops it itself. A denial is NOT visible here: my_pending_approvals and my_deals carry no denial flag (a denial is only a
+ * notification text with no mandate hash), so expiry is the only filter this screen can apply.
+ */
+export function livePendingApprovals<T extends { expiry: Timestamp }>(rows: readonly T[], now: number = Date.now()): T[] {
+  return rows.filter((r) => Number(r.expiry.microsSinceUnixEpoch / 1000n) > now);
+}
+
+export function reviewFromRows(rows: readonly PendingRow[], now: number = Date.now()): ReviewView | null {
+  const r = [...livePendingApprovals(rows, now)].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
   return r ? { ...r, expiry: d(r.expiry), origin: asOrigin(r.origin) } : null;
+}
+
+/**
+ * #449 item 4 PL-12: the approval card for a screen. A paired screen (a buyer id is known) shows the live approval or the empty
+ * "waiting for your call" card, never the sample one-time code; only an unpaired preview gets the sample, labelled SIM.
+ */
+export function approvalForScreen(live: ApprovalView | null, buyerId: string | null | undefined, sampleApproval: ApprovalView): { approval: ApprovalView | null; sample: boolean } {
+  if (buyerId) return { approval: live, sample: false };
+  return live ? { approval: live, sample: false } : { approval: asSim(sampleApproval), sample: true };
 }
 
 // ---- #191-5: live veto, Shield, approval and receipt cards (my_bid_checks, my_deals). Only what the rows hold; nothing filled in.

@@ -33,8 +33,9 @@ const BUBBLES = [
 ];
 
 export default function Home() {
+  // Full bleed: the landing runs edge to edge on any screen (main caps other pages at 1360 px); content stays centred at 1120 px.
   return (
-    <div className="-mx-4 -mb-[72px] grid grid-cols-[minmax(0,1fr)]">
+    <div className="-mb-6 grid grid-cols-[minmax(0,1fr)] [margin-inline:calc(50%-50vw)]">
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}

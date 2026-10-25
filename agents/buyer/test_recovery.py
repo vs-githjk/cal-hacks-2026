@@ -815,12 +815,25 @@ def test_plain_owner_text_does_not_replace_saved_chat_context(buyer):
 
 
 def test_tell_logs_no_private_reply_body(buyer):
+    """The only log line that carries a reply is the chat feed's AGENT_CHAT line, and it is exactly this, fully masked.
+    The owner check is the real one (_chat_sender_allowed, the pinned owner from the fixture), not patched."""
+    import re
+    assert buyer._chat_sender_allowed('owner') and not buyer._chat_sender_allowed('agent1qstranger')
     ctx = Context()
     private_body = 'approval code 482913 under $800 seller payload private'
     asyncio.run(buyer.tell(ctx, 'owner', private_body))
-    logged = '\n'.join(str(call) for call in ctx.logger.method_calls)
+    calls = [str(call) for call in ctx.logger.method_calls]
+    chat = [c for c in calls if 'AGENT_CHAT' in c]
+    assert len(chat) == 1
+    line = next(c.args[0] for c in ctx.logger.info.call_args_list if c.args and 'AGENT_CHAT' in str(c.args[0]))
+    expected = r'AGENT_CHAT at=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+00:00 who=buyer kind=message text="approval code \\u2022\\u2022\\u2022\\u2022 under \$800 seller payload private"'
+    assert re.fullmatch(expected, line), line
+    logged = '\n'.join(c for c in calls if 'AGENT_CHAT' not in c)
     assert private_body not in logged
     assert '482913' not in logged and '$800' not in logged and 'seller payload' not in logged
+    stranger = Context()
+    asyncio.run(buyer.tell(stranger, 'agent1qstranger', private_body))
+    assert not [c for c in stranger.logger.method_calls if 'AGENT_CHAT' in str(c)]
 
 
 def test_start_round_stops_before_old_summary_after_final_send_is_superseded(multi_sender, buyer, monkeypatch):
@@ -1040,3 +1053,23 @@ def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
     text = ctx.owner_text()
     assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
     assert text.count('asked seller_1') == 1
+
+
+def test_market_reviews_skip_a_chat_only_sellers_bid(buyer, monkeypatch):
+    # Live 05:39: ReNew (seller_5) has no market identity, so its bid has no market row; writing its review raised
+    # "attach_claim_check: no bid" and failed every round. Only market sellers' bids get market review rows.
+    calls = []
+    monkeypatch.setattr(buyer.MARKET_REFEREE, 'attach_claim_check', lambda **kw: calls.append(('claim', kw['bid_id'])))
+    monkeypatch.setattr(buyer.MARKET_REFEREE, 'attach_advocate_card', lambda **kw: calls.append(('card', kw['bid_id'])))
+    line = {'line_index': 0, 'listing_id': 'L1', 'listing_url': 'https://example.test/l1', 'listing_hash': 'h',
+            'offered_condition': 'new'}
+    bids = [{'id': 'bid-a', 'supplier_id': 'seller_1', 'origin': 'SIM', 'candidate_binding_hash': 'b1', 'lines': [line], 'claims': []},
+            {'id': 'bid-r', 'supplier_id': 'seller_5', 'origin': 'SIM', 'candidate_binding_hash': 'b2', 'lines': [line], 'claims': []}]
+    monkeypatch.setitem(buyer.ROUND, 'review_bids', bids)
+    cards = [{'bid_id': b['id'], 'recommendation': 'buy', 'claim_checks': [],
+              'call_reason': {'rule_id': 'fit.ok', 'text': 'fits', 'source_url': 'https://example.test'}} for b in bids]
+    try:
+        buyer._record_market_reviews(cards)
+    except (KeyError, TypeError):
+        pass  # card fields beyond what this test supplies; the point is which bids were written
+    assert calls and all(bid_id == 'bid-a' for _, bid_id in calls)

@@ -86,32 +86,50 @@ def stripe_charge_test(mandate: Mapping[str, Any], key: str, urlopen: Callable =
             "idempotency_key": idempotency_key(mandate)}
 
 
+def charge_uncertain(mandate: Mapping[str, Any]) -> dict:
+    """#449 item 4 RT-10: a Stripe test call whose outcome is not known. It has no id (none is invented), so nothing can record
+    it as a payment; the idempotency key is how the operator finds the original in the Stripe test dashboard."""
+    return {"mode": "Stripe test mode (uncertain)", "id": None, "object": "payment_intent", "status": "uncertain",
+            "idempotency_key": idempotency_key(mandate)}
+
+
+def is_uncertain(charge: Mapping[str, Any]) -> bool:
+    return isinstance(charge, Mapping) and charge.get("status") == "uncertain"
+
+
 def charge_or_stub(mandate: Mapping[str, Any], env: Mapping[str, str], use_stripe: bool,
                    stripe_test: Optional[Callable] = None) -> tuple[dict, str]:
-    """(charge, note). One Stripe TEST PaymentIntent when use_stripe and the key is sk_test_, else the SIM stub; a refused
-    or failed Stripe call also falls back to the SIM stub and the note says why. The caller must have checked the approval."""
+    """(charge, note). One Stripe TEST PaymentIntent when use_stripe and the key is sk_test_, else the SIM stub. #449 item 4 RT-10: with
+    an sk_test_ key a refused or failed Stripe call is retried once with the same idempotency key (Stripe hands back the original),
+    and if it still does not succeed the charge is "uncertain": never the SIM stub, which would look paid. The caller must have
+    checked the approval and must not record or report an uncertain charge as paid."""
     key = env.get(STRIPE_ENV, "")
     live_ok = use_stripe and key.startswith("sk_test_")
     charge, note = None, ""
     if use_stripe and not live_ok:
         note = f"--stripe was passed but {STRIPE_ENV} is not an sk_test_ key, so the SIM stub runs"
     if live_ok:
-        try:
-            charge = (stripe_test or stripe_charge_test)(mandate, key)
-        except urllib.error.HTTPError as e:   # Stripe's error type and code are safe to show; the key never is
+        for _attempt in range(2):   # the second call carries the same Idempotency-Key, so it can never be a second charge
+            charge, note = None, ""
             try:
-                err = json.loads(e.read()).get("error", {})
-            except (ValueError, OSError):
-                err = {}
-            note = (f"Stripe test call refused (HTTP {e.code}, {err.get('type', 'unknown')}/{err.get('code', 'none')}), "
-                    "so the SIM stub runs")
-        except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
-            note = f"Stripe test call failed ({type(e).__name__}), so the SIM stub runs"
-        if charge is not None and charge.get("status") != "succeeded":   # #208: only a succeeded intent is a test charge
-            note = (f"Stripe test PaymentIntent {charge.get('id')} came back {charge.get('status') or 'with no status'}, "
-                    "not succeeded, so the SIM stub is recorded")
-            charge = None
-    return charge or stripe_charge_sim(mandate), note
+                charge = (stripe_test or stripe_charge_test)(mandate, key)
+            except urllib.error.HTTPError as e:   # Stripe's error type and code are safe to show; the key never is
+                try:
+                    err = json.loads(e.read()).get("error", {})
+                except (ValueError, OSError):
+                    err = {}
+                note = f"Stripe test call refused (HTTP {e.code}, {err.get('type', 'unknown')}/{err.get('code', 'none')})"
+            except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+                note = f"Stripe test call failed ({type(e).__name__})"
+            if charge is not None and charge.get("status") != "succeeded":   # #208: only a succeeded intent is a test charge
+                note = f"Stripe test PaymentIntent {charge.get('id')} came back {charge.get('status') or 'with no status'}, not succeeded"
+                charge = None
+            if charge is not None:
+                return charge, ""
+        idem = idempotency_key(mandate)
+        return charge_uncertain(mandate), (f"{note}, so the charge is uncertain: no SIM stub was recorded and nothing is reported paid. "
+                                           f"Check the Stripe dashboard (test mode) for the PaymentIntent with idempotency key {idem}")
+    return stripe_charge_sim(mandate), note
 
 
 def _signing_key(env: Mapping[str, str], tmp: str):

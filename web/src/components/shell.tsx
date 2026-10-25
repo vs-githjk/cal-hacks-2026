@@ -35,7 +35,7 @@ export function AppHeader() {
   });
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/50 bg-[rgba(214,236,247,0.55)] backdrop-blur-xl">
+    <header data-shell className="sticky top-0 z-40 border-b border-white/50 bg-[rgba(214,236,247,0.55)] backdrop-blur-xl">
       <nav aria-label="Main" className="relative mx-auto flex h-[60px] max-w-[1120px] items-center justify-between gap-4 px-4 md:px-8">
         <Link href="/" aria-label={`${BRAND} home`} className="inline-flex min-h-11 shrink-0 items-center">
           <Wordmark showName={false} />
@@ -72,11 +72,11 @@ export function RunModeFooter() {
   const services = serviceStatuses(events, live);
   if (path === "/") return null; // the landing has no status line (#448, Vidyut); app screens keep it
   return (
-    <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-glass px-4 py-2 font-mono text-[11.5px] text-muted backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1120px] items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:flex-wrap md:px-4">
+    <footer data-shell className="fixed inset-x-0 bottom-0 border-t border-line bg-glass px-4 py-2 font-mono text-[11.5px] text-muted backdrop-blur-xl">
+      <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-4 gap-y-1 md:px-4">
         <span className="flex shrink-0 items-center gap-1.5">
           <span className={`h-2 w-2 rounded-full ${live ? "bg-live" : "bg-slate opacity-60"}`} aria-hidden />
-          Market: {live ? "live" : "connecting"} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
+          Market: {live ? "live" : "connecting"}<span className="hidden sm:inline"> ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})</span>
         </span>
         {services.map((s) => (
           <span key={s.name} className="flex shrink-0 items-center gap-1.5">
@@ -84,7 +84,7 @@ export function RunModeFooter() {
             {s.name}: {s.text}
           </span>
         ))}
-        <span className="shrink-0 text-muted">Sandbox only: test cards, test identities, no real money</span>
+        <span className="text-muted">Sandbox only: test cards, test identities, no real money</span>
       </div>
     </footer>
   );

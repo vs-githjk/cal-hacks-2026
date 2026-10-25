@@ -12,6 +12,7 @@ from uagents import Agent, Context
 from uagents_core.contrib.protocols.chat import ChatMessage, TextContent
 
 import common
+import chatlog
 import status
 from advocate import checks, clarify, explain, qa, real_data, tco
 
@@ -25,7 +26,16 @@ agent = Agent(**common.agent_args(
 _CTX: dict = {}  # the context of the advice request in flight, so the clarifier can send a chat message to a seller
 
 
+def _seller_id(address: str) -> str:
+    """The seller id (seller_1 ...) behind an agent address, for the chat feed; 'seller' when unknown."""
+    try:
+        return next((s for s in common.SELLERS if common.address(s) == address), "seller")
+    except Exception:  # noqa: BLE001
+        return "seller"
+
+
 async def _send_chat(address: str, text: str):
+    chatlog.emit(None, "advocate", "message", f"To {_seller_id(address)}: {text}")
     await _CTX["ctx"].send(address, ChatMessage(content=[TextContent(text=text)]))
 
 
@@ -37,6 +47,8 @@ async def seller_reply(ctx: Context, sender: str, msg: ChatMessage) -> bool:
     if not clarifier.is_waiting(sender):
         return False
     verdict = await asyncio.to_thread(common.screen, str(msg.msg_id), sender, msg.text(), common.shield_context(sender))
+    if verdict.get("verdict") == "allow":  # a blocked reply is never shown; common.screen already logged the Smell Test line
+        chatlog.emit(None, _seller_id(sender), "message", msg.text())
     clarifier.offer(sender, msg.text(), allowed=verdict.get("verdict") == "allow")
     return True
 
@@ -57,6 +69,7 @@ async def announce(ctx: Context):
 @agent.on_message(model=common.AdviceRequest, replies=common.AdviceReply)
 async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
     ctx.logger.info(status.msg_line("buyer", "advocate", "advice_request"))
+    chatlog.emit(ctx.logger, "advocate", "thinking", "Reviewing the bids for fit, claims and total cost")
     verdict = common.screen(f"advice-{ctx.session}", sender, msg.need_json + msg.bids_json,
                             common.shield_context(sender))
     if verdict["verdict"] != "allow":
@@ -82,8 +95,10 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceRequest):
     for c in cards:
         common.validate("AdvocateCard", c)
     ctx.logger.info(status.msg_line("advocate", "buyer", "advice"))
+    chatlog.emit(ctx.logger, "advocate", "done", f"Review done: {len(cards)} card{'s' if len(cards) != 1 else ''} sent to the Buyer")
     await ctx.send(sender, common.AdviceReply(cards_json=json.dumps(cards)))
 
 
 if __name__ == "__main__":
+    common.require_peer_seeds("advocate")   # #449 RT-27: production mode needs the buyer's private seed
     agent.run()
