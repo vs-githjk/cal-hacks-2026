@@ -2392,8 +2392,8 @@ describe('#449 item 3 RT-11 approval code, expiry, one live mandate per deal', (
 });
 
 describe('#449 item 3 RT-14 sign-up ceiling', () => {
-  it('SIGNUP_MAX is 300 per 10 minutes and a second sign-up by one identity still throws', () => {
-    expect(m.SIGNUP_MAX).toBe(300);
+  it('SIGNUP_MAX is 60 per 10 minutes and a second sign-up by one identity still throws', () => {
+    expect(m.SIGNUP_MAX).toBe(60);
     const who = as('once');
     run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
     expect(() => run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }))).toThrow(/already/);

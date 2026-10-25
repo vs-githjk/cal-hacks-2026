@@ -419,16 +419,16 @@ def _iso(value: Any) -> str:
 
 
 def read_buyer_goal(client: Any, buyer_id: str) -> tuple[dict, list[dict]]:
-    """X's latest ACTIVE build_by_date goal and its goal_items, read with the buyer's own client through the my_goals and my_goal_items views.
+    """X's latest live (ACTIVE or HUNTING) build_by_date goal and its goal_items, read with the buyer's own client through the my_goals and my_goal_items views.
     Only the buyer's own identity sees its goals (the tables are private and the views answer the caller's buyer role only: the referee reads
     none), so a client that is not this buyer's finds nothing and the error says so."""
     rows = [r for r in client.sql(GOALS_SQL) if len(r) >= 7]
     mine = [r for r in rows if r[1] == buyer_id]
     if rows and not mine:
         raise GoalNotFound(f"the goals this client can read belong to {rows[0][1]}, not {buyer_id}: pass the identity token of {buyer_id} with --buyer-token")
-    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] == "ACTIVE"), key=lambda r: _iso(r[6]), reverse=True)
+    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] in ("ACTIVE", "HUNTING")), key=lambda r: _iso(r[6]), reverse=True)
     if not live:
-        why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE build_by_date goal"
+        why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE or HUNTING build_by_date goal"
         raise GoalNotFound(f"no goal to build from for {buyer_id}: {why}")
     g = live[0]
     items = [{"sku_spec": str(r[1]), "condition": str(r[2]), "variant": str(r[3]), "quantity": r[4], "skipped_owned_part_id": str(r[5])}

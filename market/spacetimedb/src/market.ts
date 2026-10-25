@@ -192,7 +192,7 @@ export function issuePairCode(ctx: Ctx, buyerId: string) {
 
 // ---------------------------------------------------------------- #374 open buyer sign-up
 
-export const SIGNUP_MAX = 300; // #449 item 3 RT-14: one sign-up per identity is the real limit; this is only the global ceiling
+export const SIGNUP_MAX = 60; // global sign-up ceiling per window; RT-14 (one sign-up per identity is the real limit) stays open
 export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
 const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;

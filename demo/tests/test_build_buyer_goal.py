@@ -35,6 +35,14 @@ def test_the_latest_active_build_goal_of_the_buyer_is_read_with_its_items():
     assert [i["sku_spec"] for i in items] == ["rtx 5070 ti", "psu 750w", "case"] and items[1]["skipped_owned_part_id"] == "owned-1"
 
 
+def test_a_hunting_goal_is_live_too_because_the_buyer_agent_sets_it_on_adoption():
+    m = SimMarket()
+    post(m, "hunt")
+    m.goal_state["hunt"] = "HUNTING"
+    goal, _items = build.read_buyer_goal(make_clients(m)["buyer"], "vidyut")
+    assert goal["id"] == "hunt"
+
+
 def test_only_an_active_build_by_date_goal_counts():
     m = SimMarket()
     post(m, "p", typ="part_by_date")
@@ -42,7 +50,7 @@ def test_only_an_active_build_by_date_goal_counts():
     m.goal_state["closed"] = "DONE"
     with pytest.raises(build.GoalNotFound) as e:
         build.read_buyer_goal(make_clients(m)["buyer"], "vidyut")
-    assert "no ACTIVE build_by_date goal" in str(e.value) and "vidyut" in str(e.value)
+    assert "no ACTIVE or HUNTING build_by_date goal" in str(e.value) and "vidyut" in str(e.value)
 
 
 def test_no_goal_at_all_is_a_clear_error_that_names_the_identity_rule():
