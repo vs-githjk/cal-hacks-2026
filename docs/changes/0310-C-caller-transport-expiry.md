@@ -1,4 +1,3 @@
-# 0310 C Caller transport request expiry and buyer seed guard (#449 RT-24, PL-22)
-`common.VoiceTransportRequest` gains `expires_at: str = ""` (ISO UTC): the buyer sets it to now + `DELEGATE_TIMEOUT_S` (240 s) when it sends the request. `caller/relay.py transport()` answers `stale_request` and places no call when it is missing, has no zone, is unreadable or is not in the future; a stale request burns nothing from the one-call-per-hash set.
-The message schema digest changes, so deploy the Caller and the buyer together: an old Caller does not recognise the new request, the buyer's wait runs out and it falls back to its own direct call (it fails safe, after up to 240 s).
-`caller_agent.py` now exits at start unless `BUYER_AGENT_SEED` is a private seed (16+ characters, not `*-dev`): the Caller obeys only that address.
+# 0310 C Buyer seed guard and expiring delegated call (#449 PL-22, RT-24)
+`caller_agent.py` now exits at start unless `BUYER_AGENT_SEED` is a private seed (16+ characters, not `*-dev`): the Caller obeys only that address (`relay.buyer_seed_problem`).
+The buyer's delegated voice call is sent as `common.ExpiringVoiceTransportRequest` (from #458) with `expires_at` = now + `DELEGATE_TIMEOUT_S` (240 s), so a request still queued after the buyer fell back to its own direct call is refused as stale. `VoiceTransportRequest` is unchanged, so its pinned schema digest holds.

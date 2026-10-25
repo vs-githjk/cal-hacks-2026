@@ -3,9 +3,17 @@
     price_position(sku, price, condition, as_of, max_gpu_length_mm=305, rows=None) -> dict
 
 The honest claim behind "proves the price": rank among in-stock retail asks of the same condition (a first-party retailer's unstated condition counts as new, as in baseline()) that physically fit,
-observed within 24 h before `as_of`, one row per listing URL. 305 mm is the demo case's GPU clearance today; the demo may
+observed within 24 h before `as_of`, one row per listing URL (PL-26: the newest sighting of the URL wins, in stock or not). 305 mm is the demo case's GPU clearance today; the demo may
 change it. A listing whose model we cannot name from its title is not counted as fitting (it is counted in `unknown_fit`).
 The sentence never says "savings"; the sold-median clause appears only when the baseline status is "ok".
+
+Capture times (PL-26). Every price carries the time of the capture that showed it (`observed_at`); `as_of` is only when the
+comparison was assembled, never the time of a price. A listing is left out (and named in `left_out` with its own `last_seen`)
+when a provider that had seen it before captured the same store later without it: we cannot confirm it is still listed. A
+provider that never saw the listing says nothing about it (captures are small searches). `subject` is the priced listing
+itself (`subject_url`) with its own capture time and whether it is still in its store's newest capture. A capture is a
+(store, provider) timestamp, so a saved per-URL re-check (Bright Data rows in data/baselines/recorded/) would count as a
+store-wide capture and could leave other listings out; none are recorded today.
 """
 from __future__ import annotations
 
@@ -25,17 +33,65 @@ def _day(ts: str) -> str:
     return f"{d:%b} {d.day}"
 
 
+STORE_NAMES = {"bestbuy": "Best Buy", "microcenter": "Micro Center", "bh": "B&H", "newegg": "Newegg"}
+
+
+def _stamp(ts: str) -> str:
+    d = _ts(ts)
+    return f"{d:%b} {d.day} {d:%H:%M} UTC"
+
+
+def _span(times: list[str], fallback: str) -> str:
+    days = sorted({_ts(x).date() for x in times})
+    if not days:
+        return _day(fallback)
+    label = lambda d: f"{d:%b} {d.day}"
+    return label(days[0]) if len(days) == 1 else f"{label(days[0])} to {label(days[-1])}"
+
+
+def _key(r: dict):
+    return r.get("url") or (r["store"], r["price"])
+
+
 def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_length_mm: int = 305, rows: list[dict] | None = None,
                    subject_url: str | None = None) -> dict:
     rows = observations() if rows is None else rows
     t = _ts(as_of)
-    live = [r for r in rows if r["sku"] == sku and r["kind"] == "ask" and r["store"] in RETAIL and r["in_stock"]
+    newest, seen_by = {}, {}   # the newest ask capture per (store, provider) up to as_of, and who has seen each listing
+    for r in rows:
+        if r["kind"] != "ask" or _ts(r["observed_at"]) > t:
+            continue
+        who = (r["store"], r.get("provider"))
+        if who not in newest or _ts(r["observed_at"]) > _ts(newest[who]):
+            newest[who] = r["observed_at"]
+        seen_by.setdefault(_key(r), set()).add(who)
+
+    def newest_capture(r: dict) -> str:  # the newest capture of this store by any provider that had seen the listing
+        return max((newest[w] for w in seen_by[_key(r)]), key=_ts)
+
+    pool = [r for r in rows if r["sku"] == sku and r["kind"] == "ask" and r["store"] in RETAIL
             and (r["condition"] == condition or (condition == "new" and r["condition"] == "unknown")) and t - WINDOW <= _ts(r["observed_at"]) <= t]
     latest = {}
-    for r in sorted(live, key=lambda r: r["observed_at"]):  # one row per listing URL, the latest capture
-        latest[r.get("url") or (r["store"], r["price"])] = r
-    fitting, unknown_fit, too_long = [], 0, 0
+    for r in sorted(pool, key=lambda r: _ts(r["observed_at"])):  # one row per listing URL: the newest sighting, in stock or not
+        latest[_key(r)] = r
+    live, left_out = [], []
     for r in latest.values():
+        if not r["in_stock"]:
+            continue
+        newer = newest_capture(r)
+        if _ts(newer) > _ts(r["observed_at"]):   # a later capture of its store, by a provider that knew it, no longer shows it
+            left_out.append({"store": r["store"], "url": r.get("url"), "price": r["price"], "last_seen": r["observed_at"], "newest_capture": newer})
+        else:
+            live.append(r)
+    left_out.sort(key=lambda x: (x["store"], x["url"] or ""))
+    subject = {"store": None, "price": price, "url": subject_url, "observed_at": None, "newest_capture": None, "in_newest_capture": None}
+    seen = [r for r in rows if subject_url is not None and r["kind"] == "ask" and r.get("url") == subject_url and _ts(r["observed_at"]) <= t]
+    if seen:
+        r = max(seen, key=lambda r: _ts(r["observed_at"]))
+        newer = newest_capture(r)
+        subject.update(store=r["store"], observed_at=r["observed_at"], newest_capture=newer, in_newest_capture=_ts(newer) <= _ts(r["observed_at"]))
+    fitting, unknown_fit, too_long = [], 0, 0
+    for r in live:
         length = listing_length("", r.get("title") or "")["length_mm"]
         if length is None:
             unknown_fit += 1
@@ -53,9 +109,9 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
     same = sorted((r for r in fitting if abs(r["price"] - price) <= 0.01 and r.get("url") != subject_url), key=lambda r: (r["store"], r.get("url") or ""))
     if subject_url is None and same:  # the subject is one of the equal-priced listings: the others tie with it
         same = same[1:]
-    tied_with = [{"store": r["store"], "url": r.get("url")} for r in same] if rank == 1 else []
+    tied_with = [{"store": r["store"], "url": r.get("url"), "price": r["price"], "observed_at": r["observed_at"]} for r in same] if rank == 1 else []
     where = "Tied cheapest" if tied_with else "Cheapest" if rank == 1 else f"{_ordinal(rank)} cheapest"
-    counted = f"{of_n} {condition} listing{'s' * (of_n != 1)} at {len(stores)} store{'s' * (len(stores) != 1)}, {_day(as_of)}"
+    counted = f"{of_n} {condition} listing{'s' * (of_n != 1)} at {len(stores)} store{'s' * (len(stores) != 1)}, {_span([r['observed_at'] for r in fitting], as_of)}"
     if of_n and rank == 1 and unknown_fit:  # some listings could not be length-checked: say what was and was not counted
         sentence = f"{'Tied' if tied_with else 'Priced'} as the cheapest of the listings we can confirm fit; {unknown_fit} of unknown length not counted ({counted})"
     else:
@@ -66,8 +122,20 @@ def price_position(sku: str, price: float, condition: str, as_of: str, max_gpu_l
             sentence += f" and ${sold_median - price:,.2f} under the 30-day eBay sold median (mixed condition, n = {sold_n})"
         else:
             sentence += f" (30-day eBay sold median, mixed condition: ${sold_median:,.2f}, n = {sold_n})"
+    notes = []
+    if subject["in_newest_capture"] is False:   # the priced listing's own time, and that its store's newest capture no longer shows it
+        notes.append(f"the priced listing was last seen {_stamp(subject['observed_at'])} and is not in {STORE_NAMES.get(subject['store'], subject['store'])}'s newest capture "
+                     f"({_stamp(subject['newest_capture'])})")
+    others = [x for x in left_out if x["url"] != subject_url]
+    if others:
+        notes.append(f"{len(others)} other listing{'s' * (len(others) != 1)} missing from their store's newest capture {'were' if len(others) != 1 else 'was'} not counted")
+    if notes:   # each note is its own sentence
+        sentence += ". " + ". ".join(n[0].upper() + n[1:] for n in notes)
+    listings = [{"store": r["store"], "url": r.get("url"), "price": r["price"], "observed_at": r["observed_at"]}
+                for r in sorted(fitting, key=lambda r: (r["price"], r["store"], r.get("url") or ""))]
     return {"sku": sku, "price": price, "condition": condition, "as_of": as_of, "rank": rank if of_n else None, "of_n": of_n,
-            "stores": stores, "cheapest_fitting": {"price": cheapest["price"], "store": cheapest["store"], "url": cheapest.get("url")} if cheapest else None,
+            "stores": stores, "cheapest_fitting": {"price": cheapest["price"], "store": cheapest["store"], "url": cheapest.get("url"),
+                                 "observed_at": cheapest["observed_at"]} if cheapest else None,
             "snapshot_dates": sorted({r["observed_at"][:10] for r in fitting}), "sold_median": sold_median, "sold_n": sold_n,
-            "tied_with": tied_with, "unknown_fit": unknown_fit, "too_long": too_long, "max_gpu_length_mm": max_gpu_length_mm,
+            "tied_with": tied_with, "listings": listings, "left_out": left_out, "subject": subject, "unknown_fit": unknown_fit, "too_long": too_long, "max_gpu_length_mm": max_gpu_length_mm,
             "status": status, "sentence": sentence, "origin": "MIRROR"}

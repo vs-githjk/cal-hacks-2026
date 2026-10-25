@@ -1,6 +1,6 @@
 # ReNew Refurb
 
-**Job: the honest refurbisher.** One bid carries refurbished and open-box lines of one part, with the condition stated on every line.
+**Job: the honest refurbisher.** One bid carries refurbished and open-box lines of one part, with the condition stated on every line and the tradeoff in plain words (for example "the refurbished line is $78.40 less than my open-box line, with a 90-day warranty instead of 1-year"). It answers the Advocate's questions truthfully over chat.
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
@@ -55,5 +55,5 @@ Ask the buyer to make it bid (@techbazaarbuyer):
 
 ## Limitations
 
-- Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
+- The seller is SIM (our agent). Its catalog lines, prices and example.com links are simulated, and no real merchant is contacted. Among the Fish Market seller agents, only Central Comp MIRROR bids a real store's dated listing (MIRROR), and it cannot be bought from.
 - It cannot approve or charge anything. Payment is Stripe test mode or a SIM stub, and no real money moves.

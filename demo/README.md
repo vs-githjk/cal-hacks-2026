@@ -115,7 +115,7 @@ prices go to Tiger Data as bid ticks (rank 1 is the win); a Tiger failure is one
 `--live-call --stripe` makes one Stripe test charge after the approval is recorded (never before the round). There is no scripted approval (#251, decided by Vidyut):
 without `--live-call` the bridge makes the mandate, then stops at the approval gate with
 "approval needs the real phone call (--live-call); nothing was paid": no `record_approval`, no `record_payment`, the held unit released with `deny_approval`,
-beat 5 not played, exit 1. The only `record_approval` method the bridge sends is `voice_code`, with the call's VoiceApproval id. Rehearsals and the video
+beat 5 not played, exit 1. The only `record_approval` method the bridge sends is `voice_code`, with the call's VoiceApproval id and the code the call judged (#449 item 3: the market checks it against the code it issued). Rehearsals and the video
 run with `--live-call`; a deal inside the buyer's allowance keeps #240's `allowance` method and needs no call. Tests use a fake client and place no call.
 
 ## Stage runner (`demo/stage.py`): one command for the video and the room

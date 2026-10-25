@@ -25,7 +25,7 @@ export default function BuyerPage() {
   const [checks] = useTable(tables.myBidChecks);
   const [deals] = useTable(tables.myDeals);
 
-  const goals = useMemo(() => goalsForBuyer(goalRows, goalItems, allowances[0], buyerId), [goalRows, goalItems, allowances, buyerId]);
+  const goals = useMemo(() => goalsForBuyer(goalRows, goalItems, allowances[0], buyerId, notes), [goalRows, goalItems, allowances, buyerId, notes]);
   const allowance = useMemo(() => allowanceForBuyer(allowances, buyerId), [allowances, buyerId]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
@@ -36,7 +36,7 @@ export default function BuyerPage() {
   const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);
   const deal = useMemo(() => dealFromRows(deals, goals[0]?.allowance?.perPurchase ?? null, results), [deals, goals, results]);
   const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
-  const liveBuild = useLiveBuild();
+  const liveBuild = useLiveBuild(buyerId);
   // #191-5: veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows the SIM sample only while its row is missing.
   return (
     <BuyerScreen

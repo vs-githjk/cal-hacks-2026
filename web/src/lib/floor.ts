@@ -1,5 +1,6 @@
 // Who on the floor moves for a floor_event row. Every motion on /floor comes from one of these rows; nothing idles.
 import type { Origin } from "./screens";
+import { SHIELD } from "./brand.ts";
 
 export interface Actor {
   key: string;
@@ -11,7 +12,7 @@ export interface Actor {
 export const FIXED_ACTORS: Actor[] = [
   { key: "buyer", name: "Buyer agent", kind: "buyer", origin: "SIM" },
   { key: "advocate", name: "Advocate", kind: "advocate", origin: "SIM" },
-  { key: "shield", name: "Bazaar Shield", kind: "shield", origin: "SIM" },
+  { key: "shield", name: SHIELD, kind: "shield", origin: "SIM" },
   { key: "referee", name: "Referee", kind: "referee", origin: "SIM" },
 ];
 export const MAX_SELLERS = 5;

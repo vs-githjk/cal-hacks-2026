@@ -44,6 +44,13 @@ QUERIES = {
 }
 
 
+
+def bid_id_of_deal(deal_id: str) -> str:
+    """The winning bid a deal id names, exactly as the market's bidIdOfDeal (market/spacetimedb/src/market.ts): strip "deal-",
+    then take what follows the last ':' (the buyer agent's web deals are deal-<round>:<bid>, #447)."""
+    d = deal_id[5:] if deal_id.startswith("deal-") else deal_id
+    return d[d.rfind(":") + 1:]
+
 def _origin(value: Any) -> str:
     v = str(value or "").strip().upper()
     return v if v in ORIGINS else "SIM"
@@ -111,7 +118,7 @@ def _demo_entries(run: dict, ref: str) -> list[dict]:
     if m and rec.get("result") == "approved" and charge and matches:   # approved, and charged for this mandate at its amount
         mode = str(charge.get("mode") or "").strip().lower()
         pay_mode = "sim" if mode.startswith("sim") else "stripe_test" if mode.startswith("stripe test") else "none"
-        bid_id = str(m["deal_id"])[5:] if str(m["deal_id"]).startswith("deal-") else str(m["deal_id"])
+        bid_id = bid_id_of_deal(str(m["deal_id"]))
         seller = sellers.get(bid_id, "")
         amount = _num(m["amount"])
         out.append(_entry(f"{ref}:purchase:{m['id']}", "purchase", rec.get("decided_at"), "SIM", "demo_run", ref,
@@ -191,7 +198,7 @@ def from_market(sql: Callable[[str], list], ref: str, stats: Optional[dict] = No
         if h not in approvals or not abs(float(paid) - float(amount)) <= 0.005 or not float(amount) > 0:   # "not" also refuses nan
             stats["dropped"] = stats.get("dropped", 0) + 1   # paid with no approval row, or a different amount: not shown
             continue
-        bid_id = deal[5:] if deal.startswith("deal-") else deal
+        bid_id = bid_id_of_deal(deal)
         seller, name = bids.get(bid_id, ("", ""))
         amt = _num(amount)
         pay_mode = mode if mode in ("sim", "stripe_test") else "none"

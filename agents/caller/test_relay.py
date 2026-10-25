@@ -1,6 +1,5 @@
 """#259: the caller relays to pay/'s existing approval call and nothing else. Fake Cartesia, no network."""
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -172,19 +171,11 @@ class TransportClient:
                 "transcript": [{"role": "user", "text": "lemon river approve", "start_timestamp": 1.0}]}
 
 
-NOW = datetime(2026, 10, 25, 12, 0, 0, tzinfo=timezone.utc)
-
-
-def fresh(seconds=240):
-    """#449 RT-24: the buyer's expires_at, ISO UTC, `seconds` after NOW (negative: already past)."""
-    return (NOW + timedelta(seconds=seconds)).isoformat()
-
-
-def transport(request=None, *, sender=BUYER, client=None, seen=None, now=NOW):
+def transport(request=None, *, sender=BUYER, client=None, seen=None):
     client = client or TransportClient()
-    req = request if request is not None else {"mandate_hash": "a" * 64, "variables": dict(VARS), "expires_at": fresh()}
+    req = request if request is not None else {"mandate_hash": "a" * 64, "variables": dict(VARS)}
     return relay.transport(sender, req, buyer_address=BUYER, client=client, seen=set() if seen is None else seen,
-                           now=lambda: now, sleep=lambda s: None), client
+                           sleep=lambda s: None), client
 
 
 def test_transport_returns_the_finished_call_and_its_transcript_and_judges_nothing():
@@ -194,9 +185,9 @@ def test_transport_returns_the_finished_call_and_its_transcript_and_judges_nothi
     assert "approved" not in out and "voice_approval_id" not in out   # no verdict, no record
 
 
-@pytest.mark.parametrize("req,error", [({"mandate_hash": "x", "variables": VARS, "expires_at": fresh()}, "bad_request"),
-                                       ({"mandate_hash": "a" * 64, "variables": {**VARS, "code": "lemon river"}, "expires_at": fresh()}, "bad_variables"),
-                                       ({"mandate_hash": "a" * 64, "variables": {"buyer_name": "V"}, "expires_at": fresh()}, "bad_variables"),
+@pytest.mark.parametrize("req,error", [({"mandate_hash": "x", "variables": VARS}, "bad_request"),
+                                       ({"mandate_hash": "a" * 64, "variables": {**VARS, "code": "lemon river"}}, "bad_variables"),
+                                       ({"mandate_hash": "a" * 64, "variables": {"buyer_name": "V"}}, "bad_variables"),
                                        ("junk", "bad_request")])
 def test_transport_refuses_anything_but_the_three_script_variables(req, error):
     out, client = transport(req)
@@ -215,46 +206,6 @@ def test_transport_only_for_the_buyer_and_one_call_per_mandate():
 def test_the_existing_call_request_path_is_unchanged():
     out, _ = call()
     assert out["approved"] is True and set(out) == {"approved", "reason", "call_id", "voice_approval_id"}
-
-
-# ---- #449 RT-24: a queued request that outlived the buyer's wait must not ring ----------------------------------------
-def _with(expires_at):
-    req = {"mandate_hash": "a" * 64, "variables": dict(VARS)}
-    if expires_at is not ...:
-        req["expires_at"] = expires_at
-    return req
-
-
-@pytest.mark.parametrize("expires_at", [..., None, "", "tomorrow", "2026-13-45T99:00:00+00:00", 12345,
-                                        "2026-10-25T12:03:59",                    # no zone: not ISO UTC, refused
-                                        fresh(-1), fresh(0), fresh(-3600)])
-def test_a_missing_unparseable_or_past_expiry_is_stale_and_rings_nobody(expires_at):
-    seen = set()
-    out, client = transport(_with(expires_at), seen=seen)
-    assert out == {"call_id": None, "call": None, "error": "stale_request"} and client.calls == 0
-    assert seen == set()          # a stale request burns nothing: a fresh one for the same mandate still rings once
-    again, client2 = transport(_with(fresh()), seen=seen)
-    assert again["error"] is None and client2.calls == 1
-
-
-@pytest.mark.parametrize("expires_at", [fresh(1), fresh(240), (NOW + timedelta(seconds=30)).astimezone(
-    timezone(timedelta(hours=-7))).isoformat(), (NOW + timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")])
-def test_a_future_expiry_in_any_utc_spelling_still_rings_once(expires_at):
-    out, client = transport(_with(expires_at))
-    assert out["error"] is None and client.calls == 1
-
-
-def test_a_stranger_is_refused_before_the_expiry_is_read():
-    out, client = transport(_with("junk"), sender="agent1stranger")
-    assert out["error"] == "not_the_buyer" and client.calls == 0
-
-
-def test_the_relay_checks_the_expiry_at_delivery_time_not_import_time():
-    """The same request is fine at 12:00 and stale at 12:04: the clock is read per call."""
-    req = _with(fresh(240))
-    ok, c1 = transport(req, now=NOW)
-    late, c2 = transport(req, now=NOW + timedelta(seconds=241))
-    assert ok["error"] is None and late["error"] == "stale_request" and c1.calls == 1 and c2.calls == 0
 
 
 # ---- #449 PL-22: the Caller never trusts a public dev seed for the buyer address ----------------------------------------
@@ -302,30 +253,3 @@ def test_the_caller_starts_with_a_private_buyer_seed(monkeypatch):
     run, exit_ = _run_as_main(monkeypatch, "a-private-seed-of-24-chars!")
     assert exit_ is None
     run.assert_called_once()
-
-
-def test_the_caller_agent_hands_the_requests_expiry_to_the_relay(monkeypatch):
-    """#449 RT-24: on_transport passes msg.expires_at on (and screens it with the rest), so the relay can refuse it."""
-    import asyncio
-    import json
-    ns, _agent, _ = _load_caller_agent("caller_agent_under_test")
-    common, on_transport = ns["common"], ns["on_transport"]
-    sent, seen_by_relay, screened = [], [], []
-
-    class Ctx:
-        async def send(self, to, message):
-            sent.append(message)
-
-    def relay_transport(sender, request, **kw):
-        seen_by_relay.append(request)
-        return {"call_id": None, "call": None, "error": "stale_request"}
-    monkeypatch.setattr(relay, "transport", relay_transport)
-    monkeypatch.setattr(common, "screen", lambda mid, sender, text, context=None: screened.append(text) or {"verdict": "allow"})
-    monkeypatch.setattr(common, "address", lambda role: BUYER)
-    msg = common.VoiceTransportRequest(mandate_hash="a" * 64, variables_json=json.dumps(VARS),
-                                       expires_at="2020-01-01T00:00:00+00:00")
-    asyncio.run(on_transport(Ctx(), BUYER, msg))
-    assert seen_by_relay[0]["expires_at"] == "2020-01-01T00:00:00+00:00" and "2020-01-01" in screened[0]
-    assert sent[0].error == "stale_request"
-    # a request from an older buyer with no expires_at reaches the relay as "" and is refused there
-    assert common.VoiceTransportRequest(mandate_hash="a" * 64, variables_json="{}").expires_at == ""

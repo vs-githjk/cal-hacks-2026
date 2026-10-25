@@ -3,7 +3,7 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-Fetch.ai uAgents for Fish Market. The agentic marketplace where buyers and sellers thrive. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with five seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
+Fetch.ai uAgents for Fish Market. The agentic marketplace where buyers and sellers thrive. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with up to four seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
 
 ## Agents
 
@@ -21,7 +21,7 @@ Fetch.ai uAgents for Fish Market. The agentic marketplace where buyers and selle
 | Fish Market Caller (@techbazaarcaller) | Places the one approval phone call for a mandate through pay/ (caller/relay.py) and returns a CallResult; requests only from the buyer, one call per mandate; approves and charges nothing itself. Port 8006 | assigned when registered | Runs locally (`python caller/caller_agent.py`, which exits unless `BUYER_AGENT_SEED` is a private seed); not registered yet: manual mailbox step with `CALLER_MAILBOX=1`, see docs/FETCH_DISCOVERABILITY.md |
 | Market Pulse (@techbazaarpulse) | Answers price-trend and seller-record questions in chat from Tiger Data, the CRS cache and finished rounds; accepts a finished round only from PULSE_ROUND_SENDERS. Port 8018 | assigned when registered | Runs locally (`python pulse/orchestrator.py --serve`); not registered yet: manual mailbox step, see docs/FETCH_DISCOVERABILITY.md |
 
-**Sellers: four, each with one job (#398).** Byte Bros learns, FlashDeal Frankie lies and gets caught, ReNew Refurb bundles conditions, and the Central Comp MIRROR bids a real store's prices. `sellers/run_all.py` does not start Sally or Bay Area (`common.RETIRED_SELLERS`), and the buyer does not ask them. Caveat: ReNew and the MIRROR have no Market identity, so only Byte Bros and Frankie appear on the hosted board.
+**Sellers: four, each with its own mind (#398).** Byte Bros is a learner: it steps its margin across rounds from its own losses and wins, never below its floor, and shows a strategy note. FlashDeal Frankie is an adaptive trickster: it rotates a condition lie and an injection line, learns which got caught, and each is caught live (Advocate veto, Smell Test); a hidden fee and a fake warranty (claim check) are off unless `SELLER3_EXTRA_TRICKS=1`. ReNew Refurb bundles labelled refurbished and open-box lines and explains the tradeoff in plain words. The Central Comp MIRROR bids a real store's dated listing as a price anchor, re-checked each round through Bright Data when a key is set, else the snapshot with its capture time. Each answers chat in character from code (`sellers/seller_chat.py`); a model only rephrases, and never for the MIRROR. `sellers/run_all.py` does not start Sally or Bay Area (`common.RETIRED_SELLERS`), and the buyer does not ask them. Caveat: ReNew and the MIRROR have no Market identity, so only Byte Bros and Frankie appear on the hosted board.
 
 **Approval wording.** The approval is a two-channel, transaction-bound approval: a code on your own /buyer screen plus your voice on the call, bound to the exact amount and payee, expiring after 300 s, with 3 tries and replays refused. Our agents never hold your passwords or one-time codes.
 
@@ -31,9 +31,9 @@ Public profile verification on October 23, 2026 at 23:46 PDT: Agentverse's `GET 
 
 ## Seller Kit core (sellers 4 and 5, custom sellers)
 
-Note for Abhinav: `seller_4` and `seller_5` are in `common.SELLERS` and run in `sellers/run_all.py`, so the buyer now asks five sellers. Putting them on Agentverse is a manual mailbox step that needs you: set `SELLER_4_AGENT_SEED` and `SELLER_5_AGENT_SEED` in `agents/.env` (private values; the dev defaults are public and the agent refuses to start with them in mailbox mode), run each with `SELLERS_MAILBOX=1`, then `connect.py 8014` and `connect.py 8015`, and add their addresses to the table above. Until the seeds are set, `sellers/run_all.py` in mailbox mode skips them (it prints `seller_4 skipped: set SELLER_4_AGENT_SEED`) and sellers 1 to 3 keep running; without mailbox mode all five bid locally. Their READMEs are `sellers/AGENTVERSE-seller_4.md` and `AGENTVERSE-seller_5.md`.
+Note for Abhinav: `seller_5` is in `common.SELLERS` and runs in `sellers/run_all.py`. `seller_4` is retired (`common.RETIRED_SELLERS`): `run_all.py` does not start it and the buyer does not ask it, so the buyer asks at most four sellers (`seller_1`, `seller_3`, `seller_5` and, with its private seed, `seller_6`). Putting `seller_5` on Agentverse is a manual mailbox step that needs you: set `SELLER_5_AGENT_SEED` in `agents/.env` (a private value; the dev default is public and the agent refuses to start with it in mailbox mode), run it with `SELLERS_MAILBOX=1`, then `connect.py 8015`, and add its address to the table above. Until the seed is set, `sellers/run_all.py` in mailbox mode skips it (it prints `seller_5 skipped: set SELLER_5_AGENT_SEED`) and the other sellers keep running; without mailbox mode they all bid locally. Its profile is `sellers/AGENTVERSE-seller_5.md`.
 
-Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json](../contracts/SellerConfig.schema.json); change note in `docs/changes/0130-D-seller-config.md`). `sellers/sellers.json` holds all five as configs, and `sellers/factory.py` refuses a bad config (negative floor, floor above price, unknown condition, non-http listing URL) with field errors. A custom seller runs from its own file, from `agents/`:
+Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json](../contracts/SellerConfig.schema.json); change note in `docs/changes/0130-D-seller-config.md`). `sellers/sellers.json` holds all five catalog sellers as configs (two are retired), and `sellers/factory.py` refuses a bad config (negative floor, floor above price, unknown condition, non-http listing URL) with field errors. A custom seller runs from its own file, from `agents/`:
 
 ```bash
 .venv/bin/python sellers/seller_agent.py --config sellers/custom/<id>.json
@@ -49,7 +49,7 @@ After restoring the advocate, the scheduled automatic retry visibly delivered a 
 
 The [Claude hub plan](https://claude.ai/artifact/Hjrg6QgJ8FgdmkoEAaLCeU) names a Shield client among its agent roles. The sixth agent here adds that role while keeping the issue's buyer, advocate and three sellers. A separate seller gateway is not implemented.
 
-The [issue owner's October 23 update](https://github.com/vs-githjk/cal-hacks-2026/issues/14#issuecomment-6380938238) specifies local processes with Agentverse mailboxes and explicitly says no cloud server is needed. This updates the earlier cloud-hosting instruction in the plan. Keep the laptop awake during judging. Use the mailbox run instructions below.
+The [issue owner's October 23 update](https://github.com/vs-githjk/fish-market-nothing-fishy/issues/14#issuecomment-6380938238) specifies local processes with Agentverse mailboxes and explicitly says no cloud server is needed. This updates the earlier cloud-hosting instruction in the plan. Keep the laptop awake during judging. Use the mailbox run instructions below.
 
 ## Issue #143 offline containment probe
 
