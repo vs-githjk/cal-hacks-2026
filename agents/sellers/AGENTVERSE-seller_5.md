@@ -55,5 +55,5 @@ Ask the buyer to make it bid (@techbazaarbuyer):
 
 ## Limitations
 
-- Listings, prices and example.com links are simulated (SIM); no real merchant is contacted.
+- The seller is SIM (our agent). Its catalog lines, prices and example.com links are simulated, and no real merchant is contacted. Among the Fish Market seller agents, only Central Comp MIRROR bids a real store's dated listing (MIRROR), and it cannot be bought from.
 - It cannot approve or charge anything. Payment is Stripe test mode or a SIM stub, and no real money moves.
