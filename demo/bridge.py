@@ -774,6 +774,10 @@ class DealGate:
             return f"issue_approval_code refused ({str(e)[:120]})"
 
 
+class CodeNotOnScreen(RuntimeError):
+    """The approval code could not be put on the buyer's /buyer card, so the call must not be placed."""
+
+
 def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[str] = None, buyer_name: str = "Vidyut",
                        on_code: Callable[[str, Optional[str]], None] = lambda code, why_not_on_screen: None,
                        secret: Optional[str] = None, **timing) -> Callable[[Step], dict]:
@@ -795,7 +799,10 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
 
     def to_screen(code: str) -> None:
         issued["code"] = code
-        on_code(code, gate.show_code(code))
+        why_not = gate.show_code(code)
+        on_code(code, why_not)
+        if why_not is not None:   # record_approval repeats a code the market holds, so no code there means no call (nothing is dialled)
+            raise CodeNotOnScreen(why_not)
 
     def approve(step: Step) -> dict:
         mandate = gate.mandate
@@ -820,8 +827,11 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
                 return outcome(False, f"price_recheck: {stop}")
         store = NonceStore()
         service = ApprovalService(secret=secret or _secrets.token_hex(16), store=store, code_ttl_seconds=CALL_CODE_TTL_S)
-        res = run_approval_call(mandate, gate.reason(), client, service, deal=gate.facts(), buyer_name=buyer_name, on_code=to_screen,
-                                **timing)
+        try:
+            res = run_approval_call(mandate, gate.reason(), client, service, deal=gate.facts(), buyer_name=buyer_name, on_code=to_screen,
+                                    **timing)
+        except CodeNotOnScreen as e:
+            return outcome(False, f"code_not_on_screen: {e}")
         if not res.approved:
             return outcome(False, res.reason or "denied", res.call_id)
         voice_id = str((res.record or {}).get("id") or "").strip()
@@ -1065,7 +1075,7 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
         if why_not is None:
             out.note("approval code: on /buyer now (issue_approval_code); it is not printed here. The buyer reads it, then says approve")
         else:
-            out.note(f"SCREEN CODE: {code}   (/buyer could not show it: {why_not}. Say it, then say approve)")
+            out.note(f"approval code is NOT on /buyer ({why_not}): the call is NOT placed and nothing is paid. The code is never printed here")
 
     try:
         # #374 + H3: this buyer's own phone, never another buyer's (a web buyer's comes from the market's agent-only contact view)

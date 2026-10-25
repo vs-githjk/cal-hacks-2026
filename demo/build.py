@@ -1455,6 +1455,7 @@ class BuildRun:
         from pay.mandate import can_charge, new_mandate
         from pay.replay import NonceStore
         from pay.voice_cartesia import CALL_CODE_TTL_S, denial_line, run_approval_call
+        from demo.bridge import CodeNotOnScreen
         gid = self.plan.goal_id
         agg = new_mandate(deal_id=f"build-{gid}", buyer_id=self.plan.buyer_id, amount=total, payee=f"build-{gid}", goal_id=gid,
                           within_allowance=False, origin=_weakest([c["origin"] for c in champs.values()]))
@@ -1474,10 +1475,14 @@ class BuildRun:
         def on_code(code: str) -> None:
             self._call_code = code   # #449 item 3 RT-11: kept in memory so each mandate's approval can repeat it; never printed or stored
             shown["on_screen"] = self._code_to_buyer_screen(agg, code, total, len(champs), sellers)
+            if not shown["on_screen"]:   # record_approval repeats a code the market holds: no code there means no call, nothing is dialled
+                raise CodeNotOnScreen("the code could not be put on /buyer")
             console(code)
         try:
             res = run_approval_call(agg, self._why(), self.cartesia, service, deal=deal, buyer_name=self.buyer_name, on_code=on_code,
                                     **self.call_timing)
+        except CodeNotOnScreen:
+            return self._deny("code_not_on_screen", "The approval code could not be put on your /buyer card, so no call was placed. Nothing was paid.")
         finally:
             if shown.get("on_screen"):
                 self._take_code_off_buyer_screen(agg)
@@ -1507,11 +1512,11 @@ class BuildRun:
     def _code_to_buyer_screen(self, agg: dict, code: str, total: float, parts: int, sellers: int) -> bool:
         """Put the whole-build code on the paired buyer's own /buyer card for the call (issue_build_approval_code, keyed by the aggregate
         mandate hash: the build makes its mandates only after the call). Private to that buyer in the market; never in the BuildView.
-        True when it is on screen. Never raises: a code that cannot be shown is one console line saying so, and the call still judges it."""
+        True when it is on screen. Never raises: a code that cannot be shown is one console line saying so, and the caller then refuses to dial."""
         from demo.bridge import market_has_typed_approval
         from pay.voice_cartesia import CALL_CODE_TTL_S
         if market_has_typed_approval():
-            self.note("approval code is NOT on /buyer: the market module still has approve_typed (typed-code approval, #191), so it is kept off the screen. It is on this console.")
+            self.note("approval code is NOT on /buyer: the market module still has approve_typed (typed-code approval, #191), so it is kept off the screen. The call is NOT placed.")
             return False
         try:
             self.clients["referee"].call(
@@ -1521,7 +1526,7 @@ class BuildRun:
             text = str(e)
             why = ("the deployed market has not been republished with issue_build_approval_code" if "(404)" in text or "o such procedure" in text
                    else f"the market refused it ({text[:120]})")
-            self.note(f"approval code is NOT on /buyer: {why}. It is on this console only; read it, then say approve.")
+            self.note(f"approval code is NOT on /buyer: {why}. The call is NOT placed.")
             return False
         self.note("approval code is on /buyer now (the card 'Review and approve'); read it there, then say approve")
         return True
