@@ -221,3 +221,13 @@ test("a market veto has no buyer (buyer_id empty): kept for any paired buyer, an
   assert.deepEqual(memoryForBuyer(entries, "buyer-x").map((e) => e.id), ["mv"]);
   assert.deepEqual(memoryForBuyer(entries, ""), []);
 });
+
+test("approval is by phone call only: no typed-code field or wiring on /buyer, and an old typed row reads as retired (#335)", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const f of ["src/components/buyer.tsx", "src/components/screens.tsx", "src/app/buyer/page.tsx"]) {
+    const src = readFileSync(f, "utf8");
+    assert.doesNotMatch(src, /onTyped|approveTyped|Typed fallback/, f);
+  }
+  assert.match(readFileSync("src/components/buyer.tsx", "utf8"), /Only the call approves/);
+  assert.equal(approvalLabel("typed_code"), "Typed code (retired)");
+});
