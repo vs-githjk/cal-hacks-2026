@@ -13,7 +13,18 @@ import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
 from data.mirror import not_partners
 
-from advocate import explain, tco
+try:
+    from advocate import explain, tco
+except ImportError:  # this file was loaded by path (demo/adapters.py), so agents/ is not on sys.path: load the two pure siblings the same way
+    import importlib.util
+    from pathlib import Path
+
+    def _sibling(name):
+        spec = importlib.util.spec_from_file_location(f"lane_a_advocate_{name}", Path(__file__).with_name(f"{name}.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    explain, tco = _sibling("explain"), _sibling("tco")
 
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"

@@ -59,5 +59,17 @@ def test_the_model_may_reword_but_the_card_keeps_its_decision():
     assert pushed == c["explanation"]  # a model that flips the decision is ignored
 
 
+def test_checks_still_loads_by_file_path_when_agents_is_not_on_sys_path(monkeypatch):
+    """demo/adapters.py loads checks.py by path (the demo runner has no agents/ on sys.path); the new siblings must follow."""
+    import importlib.util
+    import sys
+    monkeypatch.setitem(sys.modules, "advocate", None)  # `from advocate import ...` now fails, as it does in the demo runner
+    spec = importlib.util.spec_from_file_location("lane_a_advocate_checks_t", checks.__file__)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    card = mod.advise(NEED, [bid("b1", "seller_1", 590)], mock_data.BASELINE, mock_data.RECORDS, [], None)[0]
+    assert card["recommendation"] == "buy" and card["explanation"] and card["tco"]["rank"] == 1
+
+
 def test_sentence_survives_a_card_with_no_warnings():
     assert explain.sentence({"recommendation": "veto", "rule_id": "x", "reason": "Because", "warnings": []}) == "Veto: Because."

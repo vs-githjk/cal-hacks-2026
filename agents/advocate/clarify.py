@@ -24,6 +24,7 @@ _WORDS = {"new": re.compile(r"\bnew\b", re.I), "open box": re.compile(r"\bopen[-
           "refurbished": re.compile(r"\brefurb\w*|\brenewed\b|\bre-?conditioned\b", re.I),
           "used": re.compile(r"\bused\b|\bpre[- ]?owned\b|\bsecond[- ]?hand\b", re.I)}
 _LIKE_NEW = re.compile(r"\blike[- ]new\b", re.I)
+_PROFILE_TEXT = re.compile(r"send buying goals to @", re.I)  # the closing line of every agent's profile chat text
 
 
 def ambiguities(bids: list[dict]) -> dict[str, list[str]]:
@@ -105,7 +106,8 @@ class Clarifier:
         when = self._clock()
         if not allowed:
             return "blocked", None, "", when
-        condition = parse_answer(text)
+        # a seller that only sends its profile text ("I am ReNew Refurb... send buying goals to @...") has not answered
+        condition = None if _PROFILE_TEXT.search(text) else parse_answer(text)
         return ("answered" if condition else "unclear"), condition, _excerpt(text), when
 
     async def ask_all(self, need: dict, bids: list[dict]) -> dict[str, dict]:

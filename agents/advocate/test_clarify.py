@@ -97,6 +97,12 @@ def test_a_reply_that_names_no_condition_is_unclear():
     assert out["b1"]["status"] == "unclear" and out["b1"]["condition"] is None
 
 
+def test_a_sellers_profile_text_is_not_an_answer_even_if_its_name_says_refurb():
+    profile = "I am ReNew Refurb, a Fish Market SIM seller. I bid on sealed rounds. Send buying goals to @techbazaarbuyer."
+    out = ask(make(Wire(reply=profile)), [bid("b1", "seller_1", 590, offered="new", page="")])
+    assert out["b1"]["status"] == "unclear" and out["b1"]["condition"] is None
+
+
 def test_a_reply_smell_test_blocks_is_not_used():
     wire = Wire()
     c = make(wire)
