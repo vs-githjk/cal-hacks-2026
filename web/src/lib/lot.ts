@@ -1,12 +1,19 @@
 // Client side of the Lot Wall (sim/lot_wall.py writes web/public/lot.json). Pure parsers and helpers plus one fetch.
-// A bad file gives no wall, never made up bricks. REAL means Vidyut's own order; every other order is SIM.
+// A bad file gives no wall, never made up bricks. Every order here is SIM: the featured one is Vidyut's scripted demo goal
+// (demo/out/sample-run.json, need source "simulated"), not a live buyer's request. sim/lot_wall.py still writes label "REAL" for it
+// (and origin "SIM"); the page never shows that word, it shows the order's origin.
+
+export type Origin = "LIVE" | "MIRROR" | "SIM";
 
 export const LOT_URL = "/lot.json";
-export const STAGE_LINE = "This is one real request, Vidyut's. When many requests pool, this is what a seller sees.";
+export const STAGE_LINE = "This is one scripted demo request, Vidyut's (SIM). When many requests pool, this is what a seller sees.";
 
 export interface LotOrder {
   id: string;
-  label: "REAL" | "SIM";
+  /** What the page shows: the order's own origin, never "REAL". Scripted orders are SIM. */
+  label: Origin;
+  /** The one order the file singles out (Vidyut's demo goal); it still carries label SIM. */
+  featured: boolean;
   name: string;
   cap: number;
   conditions: string[];
@@ -32,10 +39,13 @@ function parseOrder(r: unknown): LotOrder | null {
   const o = r as Record<string, unknown>;
   if (typeof o.id !== "string" || typeof o.name !== "string" || !isNum(o.cap) || o.cap <= 0) return null;
   if (o.label !== "REAL" && o.label !== "SIM") return null;
+  // The shown label is the order's origin. A file origin of LIVE or MIRROR is not believed for a scripted lot; only SIM is shown.
+  const label: Origin = "SIM";
   if (!Array.isArray(o.conditions) || !o.conditions.every((c) => typeof c === "string")) return null;
   return {
     id: o.id,
-    label: o.label,
+    label,
+    featured: o.label === "REAL",
     name: o.name,
     cap: o.cap,
     conditions: o.conditions as string[],
@@ -46,7 +56,7 @@ function parseOrder(r: unknown): LotOrder | null {
   };
 }
 
-/** Whole-file check: every order must parse, ids must be unique and exactly one order may be REAL. Otherwise null. */
+/** Whole-file check: every order must parse, ids must be unique and exactly one order may be featured (label REAL in the file). Otherwise null. */
 export function parseLot(json: unknown): Lot | null {
   if (!json || typeof json !== "object") return null;
   const j = json as Record<string, unknown>;
@@ -55,7 +65,7 @@ export function parseLot(json: unknown): Lot | null {
   if (orders.some((o) => o === null)) return null;
   const good = orders as LotOrder[];
   if (new Set(good.map((o) => o.id)).size !== good.length) return null;
-  if (good.filter((o) => o.label === "REAL").length !== 1) return null;
+  if (good.filter((o) => o.featured).length !== 1) return null;
   const caps = good.map((o) => o.cap).sort((a, b) => a - b);
   const mid = Math.floor(caps.length / 2);
   const demand = (j.summary as { demand_at?: unknown } | undefined)?.demand_at;
@@ -87,8 +97,8 @@ export function conditionsText(conditions: readonly string[]): string {
   return conditions.length === 0 ? "any condition" : conditions.map((c) => c.replace(/-/g, " ")).join(" or ");
 }
 
-export function realOrder(lot: Lot): LotOrder {
-  return lot.orders.find((o) => o.label === "REAL") as LotOrder;
+export function featuredOrder(lot: Lot): LotOrder {
+  return lot.orders.find((o) => o.featured) as LotOrder;
 }
 
 /** "17 of 38 orders can pay $1,300 or more", for the demand strip. */
