@@ -18,7 +18,10 @@ const SPECS: Spec[] = [
     reasons: ["Advocate veto (advocate.condition: Listed brand new, but the page shows open-box)"],
   },
   {
-    id: "seller_6", name: "Central Comp", rank: 0, landed: 1222.23, unit: 1222.23, spec: "rtx 5070 ti", condition: "new", origin: "MIRROR",
+    // Central Comp's price is its recorded MIRROR listing, never invented: data/mirror/snapshots/centralcomputers-20261024T2112Z.json,
+    // MSI G507T-16V3ZCB RTX 5070 Ti VENTUS 3X, $1,249.99, captured 2026-10-24T21:12:13Z, condition unknown. It is out because a MIRROR
+    // listing can never be ordered or paid, not because of its price (it ranks above ReNew's $1,247.02 by price alone).
+    id: "seller_6", name: "Central Comp", rank: 0, landed: 1249.99, unit: 1249.99, spec: "msi g507t 16v3zcb rtx 5070 ti ventus 3x", condition: "", origin: "MIRROR",
     reasons: ["This is a dated store listing (MIRROR): it can never be ordered or paid"],
   },
 ];

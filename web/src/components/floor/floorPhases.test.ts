@@ -123,6 +123,7 @@ test("the reference run: the 4 current sellers, true labels, Byte Bros wins at $
   assert.equal(central.origin, "MIRROR");
   assert.equal(central.status, "eaten");
   assert.equal(central.reason, "refused");
+  assert.equal(central.price, 1249.99); // its recorded MIRROR price, above ReNew by price alone, yet out for being unorderable
   assert.ok(last.sellers.filter((s) => s.origin === "SIM").length === 3);
   const text = JSON.stringify(p, (_, v) => (typeof v === "bigint" ? String(v) : v));
   assert.doesNotMatch(text, /Silicon|Bay Area|127\.0\.0\.1|localhost|example\.com|Shield/);
