@@ -8,7 +8,7 @@ import { GoalComposer } from "@/components/GoalComposer";
 import { useLiveBuild } from "@/components/useLiveBuild";
 import { RecentPurchases } from "@/components/memory";
 import { BuyerScreen } from "@/components/screens";
-import { allowanceForBuyer, asSim, bidsFromRows, dealFromRows, feedFromRows, goalsForBuyer, latestRound, reviewFromRows, shieldFromRows, vetoFromRows } from "@/lib/screens";
+import { allowanceForBuyer, asSim, bidsFromRows, buyerRefIds, dealFromRows, feedFromRows, goalsForBuyer, latestRound, reviewFromRows, shieldFromRows, vetoFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
 
 /** The dashboard. BuyerGate (app/buyer/layout.tsx) has already proved who this screen is paired as. */
@@ -17,7 +17,11 @@ export default function BuyerPage() {
   const [goalRows, goalsReady] = useTable(tables.myGoals);
   const [goalItems] = useTable(tables.myGoalItems);
   const [allowances] = useTable(tables.myAllowance);
-  const [rounds] = useTable(tables.round);
+  // #449 PL-3: this buyer's own rounds (my_rounds). Until `spacetime generate` adds tables.myRounds to module_bindings the table is
+  // missing, and the page shows the SIM sample; it never falls back to the public round table. The ternary is fixed per build, so the hook order is stable.
+  const myRoundsTable = (tables as unknown as { myRounds?: typeof tables.round }).myRounds;
+  const [myRoundRows] = useTable(myRoundsTable ?? tables.round);
+  const rounds = useMemo(() => (myRoundsTable ? myRoundRows : []), [myRoundsTable, myRoundRows]);
   const [results] = useTable(tables.roundResult);
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [notes] = useTable(tables.myNotifications);
@@ -27,15 +31,16 @@ export default function BuyerPage() {
 
   const goals = useMemo(() => goalsForBuyer(goalRows, goalItems, allowances[0], buyerId), [goalRows, goalItems, allowances, buyerId]);
   const allowance = useMemo(() => allowanceForBuyer(allowances, buyerId), [allowances, buyerId]);
-  const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
-  const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
+  const roundId = useMemo(() => latestRound(rounds)?.id, [rounds]);
+  const liveBids = useMemo(() => bidsFromRows(results, events, roundId), [results, events, roundId]);
+  const mine = useMemo(() => buyerRefIds(rounds, results, checks, deals), [rounds, results, checks, deals]);
+  const feed = useMemo(() => feedFromRows(events, notes, mine), [events, notes, mine]);
   const sim = liveBids.length === 0;
   const review = useMemo(() => reviewFromRows(pending, results), [pending, results]);
-  const roundId = latestRound(rounds)?.id;
   const veto = useMemo(() => vetoFromRows(checks, results, roundId), [checks, results, roundId]);
   const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);
   const deal = useMemo(() => dealFromRows(deals, goals[0]?.allowance?.perPurchase ?? null, results), [deals, goals, results]);
-  const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
+  const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed" && mine.has(e.refId)).reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events, mine]);
   const liveBuild = useLiveBuild();
   // #191-5: veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows the SIM sample only while its row is missing.
   return (

@@ -337,8 +337,26 @@ function classify(kind: string, label: string): FeedKind | null {
 
 interface NoteRow { id: bigint; klass: string; text: string; at: Timestamp }
 
-export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[]): FeedItem[] {
-  const fromEvents = events.flatMap((e): FeedItem[] => {
+/**
+ * #449 PL-3: every id this buyer's own rounds, bids and mandates go by in a public floor event's refId (a mandate event carries the
+ * mandate hash; its id is kept too). `rounds` is the buyer's my_rounds; a round, bid or mandate of anyone else is never in the set.
+ */
+export function buyerRefIds(rounds: readonly { id: string }[], results: readonly ResultRow[], checks: readonly CheckRow[], deals: readonly DealRow[]): Set<string> {
+  const roundIds = new Set(rounds.map((r) => r.id));
+  const ids = new Set(roundIds);
+  for (const r of results) if (roundIds.has(r.roundId)) ids.add(r.bidId);
+  for (const c of checks) if (roundIds.has(c.roundId)) ids.add(c.bidId);
+  for (const dl of deals) {
+    ids.add(dl.mandateHash);
+    ids.add(dl.mandateId);
+  }
+  ids.delete("");
+  return ids;
+}
+
+/** The buyer's feed: its own notifications (my_notifications is buyer-only) plus public floor events about `mine`, the ids from buyerRefIds. Every other event is dropped. */
+export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[], mine: ReadonlySet<string>): FeedItem[] {
+  const fromEvents = events.filter((e) => mine.has(e.refId)).flatMap((e): FeedItem[] => {
     const kind = classify(e.kind, e.label);
     return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: e.label, origin: asOrigin(e.origin) }] : [];
   });

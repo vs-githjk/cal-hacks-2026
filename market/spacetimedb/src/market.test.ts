@@ -1721,6 +1721,15 @@ describe('#191 approval and mandate holes', () => {
     for (const who of [BOB, A, B, STRANGER]) expect(m.myBidChecksView(h.viewContext(who) as any)).toHaveLength(0);
   });
 
+  it('#449 PL-3 my_rounds: a buyer sees only the rounds of its own needs; sellers, the referee and strangers see none', () => {
+    setupRound(); // vidyut: need-1 / round-1
+    run(BOB, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-bob', buyerId: 'bob', goalId: 'goal-bob' })));
+    run(REF, (ctx) => m.openRound(ctx, { roundId: 'round-bob', needId: 'need-bob', windowS: 15 }));
+    expect(m.myRoundsView(h.viewContext(VIDYUT) as any).map((r) => r.id)).toEqual(['round-1']);
+    expect(m.myRoundsView(h.viewContext(BOB) as any).map((r) => r.id)).toEqual(['round-bob']);
+    for (const who of [A, B, REF, STRANGER]) expect(m.myRoundsView(h.viewContext(who) as any)).toHaveLength(0);
+  });
+
   it('#191-5 my_deals: the buyer sees its own mandate with the approval and payment rows; nobody else does', () => {
     wonByA();
     run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
