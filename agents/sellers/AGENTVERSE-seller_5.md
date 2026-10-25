@@ -1,5 +1,7 @@
 # ReNew Refurb
 
+**Job: the honest refurbisher.** One bid carries refurbished and open-box lines of one part, with the condition stated on every line.
+
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 

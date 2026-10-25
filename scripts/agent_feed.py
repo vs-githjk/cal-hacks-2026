@@ -6,7 +6,9 @@ build panel (web/src/lib/buildView.ts): 404 until a run wrote one, 503 when the 
 Local and operator-only like the rest of this feed (127.0.0.1, CORS for localhost pages only). It is NOT the public copy that goes to the
 hosted board (build.public_view): it keeps the buyer's own budget, spent and approval totals because the panel parses them, and
 buyer_view() strips everything else private (mandates, hashes, payees, per-mandate amounts, approval method and reason, the call,
-approval and receipt events, live-check and any key it does not know).
+approval and receipt events and any key it does not know). Two sponsor proof lines are served on purpose, each cut down to what carries no
+money: a champion's liveCheck keeps only {state, origin, source, fetchedAt} (the time only for a LIVE read; never the price read or the quote),
+and a part's Tiger Data history keeps only {state, origin, windows [{days, low, median, n, daysOfData}]} (market prices of its SKU).
 GET /v1/memory -> {entries: [MemoryEntry], sources, note} for the dashboard memory panel (#189, demo/memory.py):
 past goals, purchases, vetoes and seller lessons from demo/out (MEMORY_DIR overrides). ?kind=, ?limit=, ?sample=1.
 
@@ -232,6 +234,40 @@ def _rows(v: object) -> list[dict]:
     return [x for x in v if isinstance(x, dict)] if isinstance(v, list) else []
 
 
+LIVE_CHECK_STATES = ("ok", "price_changed", "out_of_stock", "stock_unknown", "slow", "empty", "not_configured", "skipped")
+HISTORY_STATES = ("ok", "no_data", "not_configured", "error")
+
+
+def _num(v: object) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and abs(v) != float("inf")
+
+
+def _live_check(lc: dict) -> dict | None:
+    """The part of the Bright Data re-check the buyer's panel may show: whether it read a price, when, and from where. Never the price it
+    read or the quote it compared with. `fetchedAt` goes out only with a LIVE label, and a LIVE label only with a real time: anything
+    else was not read in this run, so it is MIRROR and carries no time."""
+    state = lc.get("state")
+    if state not in LIVE_CHECK_STATES:
+        return None
+    at = lc.get("fetchedAt")
+    live = lc.get("origin") == "LIVE" and isinstance(at, str) and bool(at) and len(at) <= 40
+    out = {"state": state, "origin": "LIVE" if live else "MIRROR", "source": "Bright Data"}
+    if live:
+        out["fetchedAt"] = at
+    return out
+
+
+def _history(h: object) -> dict | None:
+    """Tiger Data's 7 and 30 day read for one part: market prices of its SKU (low, median, rows, days held), no buyer money. A stored
+    read is dated, so it is never labelled LIVE here; a window that is not the shape is dropped, never repaired."""
+    if not isinstance(h, dict) or h.get("state") not in HISTORY_STATES:
+        return None
+    windows = [{k: w[k] for k in ("days", "low", "median", "n", "daysOfData")} for w in _rows(h.get("windows"))
+               if all(_num(w.get(k)) for k in ("days", "low", "median", "n", "daysOfData")) and w["low"] > 0 and w["median"] > 0]
+    return {"state": h["state"], "origin": h["origin"] if h.get("origin") in ("MIRROR", "SIM") else "MIRROR" if h.get("origin") == "LIVE" else "SIM",
+            "windows": windows}
+
+
 def buyer_view(v: dict) -> dict:
     """The BuildView for the buyer's own panel, rebuilt from an allow-list of keys so nothing unknown or private can ride along.
     Raises ValueError when v is not a BuildView (no goal id, or parts, checks or events that are not lists)."""
@@ -243,6 +279,12 @@ def buyer_view(v: dict) -> dict:
         q = _pick(p, ("part", "label", "status", "origin", "budget", "needId", "roundId", "reason"))
         if isinstance(p.get("champion"), dict):
             q["champion"] = _pick(p["champion"], ("bidId", "sellerId", "persona", "landed", "origin", "sourceUrl"))
+            lc = _live_check(p["champion"]["liveCheck"]) if isinstance(p["champion"].get("liveCheck"), dict) else None
+            if lc is not None:
+                q["champion"]["liveCheck"] = lc
+            hist = _history(p.get("history"))
+            if hist is not None:
+                q["history"] = hist
         parts.append(q)
     approval = v.get("approval") if isinstance(v.get("approval"), dict) else None
     return {**_pick(v, ("goalId", "buyerId", "budget", "spent", "origin")), "parts": parts,

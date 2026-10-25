@@ -3,6 +3,7 @@
 
 import { partRows, PART_NAMES, type BuildResult } from "@/lib/build";
 import { Card, Label, OriginChip, money } from "./ui";
+import { ProofLines } from "./ProofLines";
 
 const STATUS = {
   locked: ["bg-mint", "Locked", "text-ink"],
@@ -72,6 +73,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
               ) : (
                 <span className="min-w-[88px] text-right text-[12.5px] tabular-nums text-muted">{money(r.budget - r.price)} under</span>
               )}
+              {r.price !== null && <ProofLines build={b} part={r.part} />}
             </li>
           );
         })}
