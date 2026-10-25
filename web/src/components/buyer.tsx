@@ -133,6 +133,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
   return (
     <Card tactile>
       <Label>{roundLabel}</Label>
+      <Details summary="How bids are ranked" className="mb-3 mt-0"><p>Ranked by quality-adjusted landed price: the referee applies one fixed rule, ties break in a fixed order, and the seller fee never enters the ranking.</p></Details>
       {bids.length === 0 ? (
         <p className="text-muted">Sealed until the round closes.</p>
       ) : (

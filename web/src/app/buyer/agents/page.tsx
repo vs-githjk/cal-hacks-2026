@@ -2,7 +2,7 @@
 
 import { AgentWire } from "@/components/AgentWire";
 import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
-import { Card, Code, Label, OriginChip, Tag } from "@/components/ui";
+import { Card, Code, Details, Label, OriginChip, Tag } from "@/components/ui";
 import { shortAddress } from "@/lib/agents";
 import { ASI_ONE_URL, STATUS_TEXT, agentLink, ago, headline, isStale, realRows, type AgentRow, type AgentStatus } from "@/lib/agentFeed";
 
@@ -52,6 +52,7 @@ export default function AgentsPage() {
         <Label>Agents</Label>
         <p className="text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">{noFeed ? "Fetch agents on Agentverse" : headline(rows ? shown : rows, now)}</p>
         <p className="mt-2 text-[13px] text-muted">Status comes from the run log, not a live check.</p>
+        <Details summary="What the status means"><p>Status is read from the launcher run log, not checked live from this page. An address or a published profile alone does not mean an agent is online.</p></Details>
         <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="mt-1 inline-flex min-h-11 items-center text-[14px] font-medium text-pulse underline underline-offset-4">
           Open in ASI:One
         </a>

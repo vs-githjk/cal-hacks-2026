@@ -12,15 +12,15 @@ import { ScrollProgress } from "@/components/ScrollProgress";
 import { Reveal } from "@/components/Reveal";
 import { OriginChip, README_URL, StatusPill } from "@/components/ui";
 import { proofStats } from "@/lib/scoreboard";
-import { SHIELD, SHIELD_LINE } from "@/lib/brand";
+import { SHIELD } from "@/lib/brand";
 
 // Measured results, computed from data/scoreboard.json (lib/scoreboard.ts). A test keeps the fixture copy identical to the file.
 const PROOF = proofStats(SHIELD);
 
 const STEPS: { title: string; text: string; icon: ReactNode }[] = [
-  { title: "State a goal", text: "A part, a price cap and a date. Your agent does the hunting.", icon: <GoalIcon /> },
+  { title: "State a goal", text: "A part, a price cap and a date. Your agent hunts.", icon: <GoalIcon /> },
   { title: "Sealed bids", text: "Seller agents bid blind. No one sees your cap or another bid.", icon: <SealedIcon /> },
-  { title: "Referee ranks", text: `One fixed rule, no pay for rank. ${SHIELD} removes fishy listings first.`, icon: <RankIcon /> },
+  { title: "Referee ranks", text: `One fixed rule, no pay for rank. ${SHIELD} screens first.`, icon: <RankIcon /> },
   { title: "Approve by phone", text: "Above your allowance we call you. Only your spoken code pays.", icon: <PhoneIcon /> },
 ];
 
@@ -57,7 +57,7 @@ export default function Home() {
               The <span className="fm-headline-accent">secure agentic</span> marketplace.
             </h1>
             <p className="mt-5 max-w-[36ch] text-[18px] leading-[27px] text-ink-2 md:text-[20px] md:leading-[30px]">
-              Where buyers and sellers thrive. {SHIELD_LINE}
+              Where buyers and sellers thrive.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/start" className="btn fm-btn fm-grad inline-flex min-h-12 items-center rounded-2xl px-6 text-[17px] font-medium text-white transition-transform motion-safe:hover:-translate-y-0.5">Start a goal</Link>
@@ -135,7 +135,7 @@ export default function Home() {
             <Link href="/floor" className="btn fm-btn inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#f6fafd,#dbe9f5)] px-6 text-[17px] font-medium text-floor-bg transition-transform motion-safe:hover:-translate-y-0.5">Watch the floor <span aria-hidden>→</span></Link>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <DarkCard eyebrow={SHIELD} title="Fishy listings never reach your agent.">Hidden instructions or a swapped payee: blocked, with the rules that fired.</DarkCard>
+            <DarkCard eyebrow={SHIELD} title={`${SHIELD} screens every listing first.`}>Hidden instructions or a swapped payee: blocked, with the rules that fired.</DarkCard>
             <DarkCard eyebrow="Referee" title="One rule ranks every bid.">Sealed bids, one flat fee, no pay for rank.</DarkCard>
           </div>
         </Reveal>
@@ -145,7 +145,7 @@ export default function Home() {
       <section aria-labelledby="pay" className="px-4">
         <Reveal className="mx-auto grid max-w-[1120px] gap-8 pb-14 md:px-4 md:pb-20 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
-            <h2 id="pay" className="text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Nothing pays without you.</h2>
+            <h2 id="pay" className="text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Above your allowance, nothing pays without you.</h2>
             <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ink-2">We call. You say the code. Then a test charge and a receipt.</p>
           </div>
           <div className="fm-glass grid gap-4 rounded-[22px] p-6">

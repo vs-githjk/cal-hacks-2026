@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "motion/react";
 import { FISH_PATH } from "./BrandMark";
+import { OriginChip } from "./ui";
 
 const LINES = ["Goal received", "4 bids sealed", "3 of 4 pass", "Code confirmed"];
 const BUBBLES = [
@@ -44,7 +45,7 @@ export function FloorMini({ className = "" }: { className?: string }) {
       ))}
       <div className="relative flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em] text-white/80">
         <span className="inline-flex items-center gap-2"><span className="dot text-white" aria-hidden /> The floor</span>
-        <span>Round 1 of 3</span>
+        <span className="inline-flex items-center gap-2">Round 1 of 3 <OriginChip origin="SIM" /></span>
       </div>
       <div className="relative mx-auto mt-6 h-[240px] w-[480px] max-w-full" aria-hidden>
         <div className="absolute inset-x-[48px] inset-y-[36px] rounded-[22px] border border-white/30" />

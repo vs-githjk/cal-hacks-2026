@@ -138,7 +138,7 @@ export default function SellPage() {
             <Field label="Kind of shop" hint="Local shop, refurbisher, online reseller.">
               <input className={input} value={form.archetype} maxLength={200} required onChange={(e) => set("archetype", e.target.value)} />
             </Field>
-            <Field label="Agent id" hint="Lowercase, digits, - and _.">
+            <Field label="Agent id" hint="Lowercase letters, digits, - and _. Also the config file name.">
               <input
                 className={input}
                 value={shownId}
@@ -173,11 +173,12 @@ export default function SellPage() {
         <Card>
           <Step n={3}>What you sell</Step>
           <p className="mb-3 text-[13px] text-muted">One row per part and condition. Your agent never bids under the floor.</p>
+          <Details summary="About floors and conditions" className="mb-3 mt-0"><p>The floor is the lowest unit price your agent will ever bid. Add a second row with the same part and another condition to offer both in one bid.</p></Details>
           <div className="grid gap-4">
             {form.rows.map((r, i) => (
               <fieldset key={i} className="grid gap-3 rounded-xl bg-surface-2 p-3 sm:grid-cols-2">
                 <legend className="px-1 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">Listing {i + 1}</legend>
-                <Field label="Part" hint="Like: rtx 5070 ti">
+                <Field label="Part" hint="Lowercase, like: rtx 5070 ti or psu 750w">
                   <input className={input} value={r.sku} maxLength={80} required onChange={(e) => setRow(i, { sku: e.target.value })} />
                 </Field>
                 <Field label="Condition">
