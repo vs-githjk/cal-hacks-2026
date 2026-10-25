@@ -39,7 +39,7 @@ export function capPercent(totalCents: number, capCents: number): number {
   return capCents <= 0 ? 0 : Math.min(100, (totalCents / capCents) * 100);
 }
 
-export const PARTS = ["gpu", "cpu", "motherboard", "memory", "storage", "cooler"] as const;
+export const PARTS = ["gpu", "cpu", "motherboard", "memory", "storage", "cooler", "psu", "case"] as const;
 export const PART_NAMES: Record<string, string> = {
   gpu: "GPU", cpu: "CPU", motherboard: "Board", memory: "RAM", storage: "SSD", cooler: "Cooler", psu: "Power supply", case: "Case",
 };
