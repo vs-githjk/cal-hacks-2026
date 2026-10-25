@@ -6,7 +6,8 @@ import type { Actor } from "@/lib/floor";
 
 export interface FloorRow { id: string; actor: string; kind: string; label: string; origin: string; at: Date; ref: string }
 
-const COLOR: Record<Actor["kind"], number> = { buyer: 0xf5f5f5, advocate: 0xbdbdbd, shield: 0x3a3a3a, referee: 0x8c8c8c, seller: 0x6b6b6b };
+// Agent colours follow the palette tokens (globals.css): advocate --mint, Shield --sky; origin stays grey, read by its badge.
+const COLOR: Record<Actor["kind"], number> = { buyer: 0xf5f5f5, advocate: 0x74b98f, shield: 0x8fb0d6, referee: 0x8c8c8c, seller: 0x6b6b6b };
 const SELLER_BY_ORIGIN: Record<string, number> = { LIVE: 0xffffff, MIRROR: 0xa8a8a8, SIM: 0x5e5e5e };
 const HOP_MS = 700;
 

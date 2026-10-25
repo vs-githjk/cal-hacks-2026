@@ -52,8 +52,10 @@ def market_facts(sku: str, demand: dict, coach: dict) -> dict:
     if demand.get("status") == "ok":
         rows = [r for r in demand.get("rows") or [] if str(r.get("sku", "")).lower() == sku.lower()]
         # demand_by_sku counts rounds per hour, so a round across an hour boundary counts twice: round-hours, not rounds
-        out["demand"] = {"round_hours_24h": sum(int(r.get("rounds") or 0) for r in rows), "origin": "SIM",
-                         "source": "Tiger Data bid_curve_10s (bid_ticks carry no origin, so SIM)"}
+        hours = sum(int(r.get("rounds") or 0) for r in rows)
+        # the aggregate keeps no origin, so rows read are SIM; a real read with no rows is "no data", not SIM
+        out["demand"] = {"round_hours_24h": hours, "origin": "SIM" if hours else "no data",
+                         "source": "Tiger Data bid_curve_10s (the aggregate carries no origin, so SIM)"}
     else:
         out["demand"] = {"state": demand.get("status") or "error"}
     if coach.get("status") == "ok":

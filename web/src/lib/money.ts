@@ -6,6 +6,11 @@ export function commas(n: number): string {
   return n < 0 && Math.trunc(n) !== 0 ? `-${s}` : s;
 }
 
+/** How far under the cap a price lands, or null when there is no cap to compare (the round is not this goal's) or it is over. */
+export function underCap(cap: number | null | undefined, landed: number): number | null {
+  return cap == null || cap - landed < 0 ? null : cap - landed;
+}
+
 /** US dollars: "$1,000" for whole dollars, "$12.50" otherwise, "-$5" for negatives. */
 export function formatMoney(x: number): string {
   const cents = Math.round(Math.abs(x) * 100);
