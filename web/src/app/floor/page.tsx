@@ -161,7 +161,13 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
               <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
             )}
             {narration}
-            {scene.phase === "open" && scene.deadline && <div className="pointer-events-none absolute right-4 top-4 z-20"><ClosesIn deadline={scene.deadline} sample={sample !== null} /></div>}
+            {/* Top right: the countdown while open, and a SIM chip whenever the scene is a sample (audit #253 item 4: samples are always labelled). */}
+            {(countdown || sample !== null) && (
+              <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-2">
+                {sample !== null && <span title="Sample run, not this market" className="rounded-full bg-white/95 px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.06em] text-[#2B2A33]/75 shadow-[0_2px_8px_rgba(60,40,30,0.15)]">SIM</span>}
+                {countdown}
+              </div>
+            )}
             {/* a small collapsible window: top left over the scene on wider screens, below the scene on phones */}
             <details className="group pointer-events-auto z-20 w-[min(340px,calc(100%-2rem))] rounded-2xl bg-white/95 text-[#2B2A33] shadow-[0_8px_24px_rgba(60,40,30,0.16)] ring-1 ring-black/5 backdrop-blur-md sm:absolute sm:left-4 sm:top-4 max-sm:m-3">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[14px] font-medium [&::-webkit-details-marker]:hidden">
