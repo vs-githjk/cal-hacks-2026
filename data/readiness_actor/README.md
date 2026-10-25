@@ -12,7 +12,7 @@ Give it your own listing URLs. For each one you get **blocks** (an agent would s
 
 It is public on the Apify Store: [anoopibrampur/seller-agent-readiness-report](https://apify.com/anoopibrampur/seller-agent-readiness-report).
 
-It was built for [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
+It was built for [Fish Market](https://github.com/vs-githjk/fish-market-nothing-fishy), a market where buyer agents compare seller offers. The title-claim, stock and shipping checks are the ones our own buyer agents run; the structured-data checks were added for sellers.
 
 ## Real example (the default input)
 
@@ -45,7 +45,7 @@ The facts come from the page's schema.org Product JSON-LD. A page with no struct
 
 ## Input
 
-`listingUrls`: your product page URLs, one per line, up to 200 per run. Each page is fetched once, from public addresses only, with a 2 MB cap and 30 seconds per page. A run stops after 15 minutes; the listings left are not checked and not charged, and the status line says how many.
+`listingUrls`: your product page URLs, one per line, up to 200 per run. Each page is fetched once, from public addresses only, with a 2 MB cap and 30 seconds per page. A run stops checking a minute before its run timeout (4 minutes with the default 300 second timeout; raise the run timeout for a big batch), so the results are always written; the listings left are not checked and not charged, and the status line says how many. URLs past the 200 limit are not checked either, and the status line counts them.
 
 ## Output
 
@@ -96,4 +96,4 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~seller-agent-readiness
 
 ## Source
 
-The code is open: `data/readiness.py` and `data/readiness_actor/` in [vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026). The rules reuse our seller report (`data/seller_report.py`) and the claim checker's page reader.
+The code is open: `data/readiness.py` and `data/readiness_actor/` in [vs-githjk/fish-market-nothing-fishy](https://github.com/vs-githjk/fish-market-nothing-fishy). The rules reuse our seller report (`data/seller_report.py`) and the claim checker's page reader.

@@ -123,12 +123,16 @@ export function memoryFeed(pageHost: string, env: string | undefined = FEED_ENV)
   return feedBase(env, pageHost);
 }
 
-/** The one read path. Throws visibly (HTTP error, unreachable feed, not JSON, wrong shape); an aborted read rethrows its AbortError. */
-export async function fetchMemory(signal?: AbortSignal, feed: string = FEED_URL): Promise<MemoryResponse> {
+/**
+ * The one read path. Throws visibly (HTTP error, unreachable feed, not JSON, wrong shape); an aborted read rethrows its AbortError.
+ * `buyerId` goes as ?buyer= so a feed run with AGENT_FEED_TOKEN (#449 PL-17) can return only this buyer's rows. The page never holds
+ * that token, so it sends none: a feed that needs one answers 401 here and shows as an error, as an unreachable feed does.
+ */
+export async function fetchMemory(signal?: AbortSignal, feed: string = FEED_URL, buyerId?: string): Promise<MemoryResponse> {
   const aborted = (e: unknown) => !!signal?.aborted || (e as { name?: string } | null)?.name === "AbortError";
   let res: Response;
   try {
-    res = await fetch(`${feed}/v1/memory`, { signal, cache: "no-store" });
+    res = await fetch(`${feed}/v1/memory${buyerId ? `?buyer=${encodeURIComponent(buyerId)}` : ""}`, { signal, cache: "no-store" });
   } catch (e) {
     if (aborted(e)) throw e;
     throw new Error(`memory feed unreachable at ${feed}`);

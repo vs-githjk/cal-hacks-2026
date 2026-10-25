@@ -4,10 +4,10 @@ import { useMemo } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { MarketScreen } from "@/components/screens";
-import { asSim, eventsFromRows, goalFromRows, latestRound, linesFromRows, originCounts, roundFromRows } from "@/lib/screens";
+import { eventsFromRows, goalFromRows, latestRound, linesFromRows, originCounts, roundFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
 
-/** The referee's floor: public market state. Empty tables fall back to the recorded sample run, labelled SIM. */
+/** The referee's floor: public market state. Empty tables fall back to a sample round, labelled as a sample; each row keeps its own origin (a MIRROR store stays MIRROR, scripted sellers are SIM). */
 export default function MarketPage() {
   const [rounds, roundsReady] = useTable(tables.round);
   const [results] = useTable(tables.roundResult);
@@ -21,8 +21,8 @@ export default function MarketPage() {
   const floor = useMemo(() => eventsFromRows(events), [events]);
   const cap = goalFromRows(goals, goalItems, undefined)?.cap ?? null;
   const sim = !round;
-  const shownLines = sim ? asSim(sample.sellerLines) : lines;
-  const shownRound = sim ? asSim(sample.round) : round;
+  const shownLines = sim ? sample.sellerLines : lines;
+  const shownRound = sim ? sample.round : round;
 
   // Loss reports and the learning diff have no market table yet (Lane A owns them): SIM sample.
   return (
@@ -32,8 +32,8 @@ export default function MarketPage() {
         round={shownRound}
         cap={sim ? sample.goal.cap : cap}
         lines={shownLines}
-        lossReports={asSim(sample.lossReports)}
-        learning={asSim(sample.learning)}
+        lossReports={sample.lossReports}
+        learning={sample.learning}
         events={floor}
         originCounts={originCounts(shownRound?.arrivals ?? [])}
         sample={{ round: sim, lines: sim, lossReports: true, learning: true }}

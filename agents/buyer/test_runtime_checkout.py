@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from advocate.checks import CALL_SUMMARIES
 from buyer import checkout, state
+from owner_approval import market_view
 from goal import need_from_goal, parse_goal
 from payment import payment_request
 from pay.approval import ApprovalService, VOICE_CODE_TTL_SECONDS, approved_voice_record_matches
@@ -83,6 +84,38 @@ def reviewed_card(need_id="need-1", bid_id="bid-1"):
             "rule_id": "advocate.ok", "reason": reason, "source_url": source}
 
 
+def _wire_market_mandates(buyer):
+    """The market as it behaves: create_mandate only through the REFEREE (the buyer identity is refused), and the buyer's own
+    purchase row then shows that pending mandate (market.ts requireRole create_mandate, ['referee'])."""
+    created = {}
+
+    def create(mandate, **_kwargs):
+        created[mandate["hash"]] = mandate
+        return {"mandate_hash": mandate["hash"]}
+
+    def status(mandate_hash):
+        m = created[mandate_hash]
+        return {"mandate_hash": mandate_hash, "amount": m["amount"], "payee": m["payee"], "reservation_matches": True,
+                "within_allowance": False, "retired": False, "settled": False, "approval_method": None, "approved_at": None}
+
+    def refused(*_a, **_k):
+        raise buyer.MarketBridgeError("market_reducer_failed")  # create_mandate needs referee; caller is buyer
+    buyer.MARKET_REFEREE.create_mandate.side_effect = create
+    buyer.MARKET_BUYER.purchase_status.side_effect = status
+    buyer.MARKET_BUYER.create_mandate.side_effect = refused
+
+
+def _readbacks(buyer, row_fn):
+    """The first buyer-side read is create_mandate's own readback (the pending row from _wire_market_mandates); every later
+    read is what the test wants the market to show."""
+    pending, reads = buyer.MARKET_BUYER.purchase_status.side_effect, []
+
+    def status(mandate_hash):
+        reads.append(mandate_hash)
+        return pending(mandate_hash) if len(reads) == 1 else row_fn(mandate_hash)
+    buyer.MARKET_BUYER.purchase_status.side_effect = status
+
+
 def ready_for_requote(buyer):
     goal, _ = parse_goal("a new GPU under $800 by Friday", "owner", now=NOW)
     state.save_goal(buyer.STATE_DB, goal)
@@ -94,13 +127,11 @@ def ready_for_requote(buyer):
     line_hash = hashlib.sha256(json.dumps(raw_line, sort_keys=True, separators=(",", ":"),
                                          ensure_ascii=False, allow_nan=False).encode()).hexdigest()
     bid = {"id": "bid-1", "supplier_id": "seller_1", "total_landed_price": 582.0,
-           "persona": "Seller", "source": "SIM", "origin": "SIM", "need_id": need["id"],
+           "persona": "Seller", "source": "SIM", "origin": "SIM", "need_id": need["id"], "market_seller_id": "seller-a",
            "lines": [raw_line], "candidate_binding_hash": "c" * 64, "market_binding_hash": "c" * 64,
            "quoted_at": NOW.isoformat(), "expires_at": (NOW + timedelta(seconds=600)).isoformat(),
            "listing_hash": line_hash}
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_kwargs: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True,
-        "within_allowance": False, "retired": False}
+    _wire_market_mandates(buyer)
     buyer.ROUND.update(owner="owner", owner_context=None, phase="requote", pick=1,
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
         bids=[bid], cards={"bid-1": reviewed_card()}, reviewed=True,
@@ -138,7 +169,7 @@ def test_missing_owner_pin_prevents_creating_a_pending_purchase(runtime, monkeyp
 
     assert db.execute("SELECT COUNT(*) FROM transactions").fetchone()[0] == 0
     assert not buyer.ROUND.get("transaction")
-    assert not buyer.MARKET_BUYER.create_mandate.called
+    assert not buyer.MARKET_REFEREE.create_mandate.called and not buyer.MARKET_BUYER.create_mandate.called
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in ctx.sent)
 
 
@@ -175,22 +206,16 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
             "source": line["source"], "snapshotId": line.get("snapshot_id", ""),
             "provenance": {}, "attrs": line["attrs"]})
     referee, market = Mock(), Mock()
-    referee.review_candidates.return_value = [{"round_id": "round-need-1", "need_id": "need-1",
-        "bid_id": bid_id, "seller_id": "seller-a", "origin": raw["origin"],
-        "lines": rows, "line_metadata": metadata, "binding_hash": candidate_hash}]
     referee.round_status.return_value = {"state": "closed"}
     chosen = raw["lines"]
     chosen_hash = metadata[0]["listingHash"]
+    # #447: the published market's winner row has no line index, listing or binding hash: the buyer binds it locally
     market.authoritative_winner.return_value = {"bid_id": bid_id, "seller_id": "seller-a",
-        "binding_hash": candidate_hash, "landed": raw["total_landed_price"],
-        "lines": [{"original_line_index": index, "sku_spec": line["sku_spec"],
-            "unit_price": line["unit_price"], "listing_id": line["listing_id"],
-            "listing_hash": metadata[index]["listingHash"], "quantity": line["quantity"],
-            "shipping": line["shipping"]} for index, line in enumerate(chosen)]}
+        "landed": raw["total_landed_price"],
+        "lines": [{"sku_spec": line["sku_spec"], "unit_price": line["unit_price"], "quantity": line["quantity"],
+                   "qty_available": line["quantity"], "offered_condition": "", "offered_spec": ""} for line in chosen]}
     buyer.MARKET_BUYER, buyer.MARKET_REFEREE = market, referee
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_kwargs: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True,
-        "within_allowance": False, "retired": False}
+    _wire_market_mandates(buyer)
     state.save_goal(db, goal)
     buyer.ROUND.update(owner="owner", owner_context=None, phase="market_review_wait", pick=1,
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
@@ -199,19 +224,20 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
         owned=[], attempts=0, last_sent={}, market_buyer_id="vidyut", market_round_id="round-need-1", round_token="round-token",
         candidate_hashes={}, order=None, transaction=None)
 
-    buyer.ROUND["review_bids"] = buyer._review_candidates(referee, "round-need-1")
+    buyer.ROUND["review_bids"] = buyer._review_candidates()
     asyncio.run(buyer._finish_market_round(Context()))
     projected = buyer.ROUND["bids"][0]
     assert len(projected["lines"]) == 2
     assert buyer.ROUND["original_offer"] == raw
     assert projected["lines"][0].get("listing_hash") == chosen_hash
+    assert projected["market_seller_id"] == "seller-a"  # the web mandate pays the market's own seller id (PL-1)
 
     buyer.ROUND.update(phase="requote", pick=1, deadline=NOW.timestamp() + 60,
                        quoted_at=NOW.timestamp())
     requote_ctx = Context()
     asyncio.run(buyer.on_requote(requote_ctx, dict(raw)))
     assert buyer.ROUND.get("transaction") and buyer.ROUND["transaction"]["phase"] == "pending_approval", repr(
-        (buyer.ROUND.get("phase"), buyer.MARKET_BUYER.create_mandate.call_args_list,
+        (buyer.ROUND.get("phase"), buyer.MARKET_REFEREE.create_mandate.call_args_list,
          buyer.ROUND.get("original_offer") == raw, buyer.ROUND.get("candidate_hashes"),
          buyer.ROUND.get("market_winner"), requote_ctx.logger.warning.call_args_list,
          [message.text() for _, message in requote_ctx.sent if hasattr(message, "text")]))
@@ -262,11 +288,20 @@ def _wire_voice(buyer, client, secret):
     buyer.APPROVAL_CALL_CLIENT = client
 
 
+def _market_shows_the_approval(buyer):
+    """What the real market's buyer-private row shows once the referee has recorded the approval for this mandate."""
+    def status(mandate_hash):
+        m = market_view(buyer.ROUND["transaction"])
+        return {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": mandate_hash,
+                "amount": m["amount"], "payee": m["payee"], "retired": False}
+    _readbacks(buyer, status)
+
+
 def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     buyer, db = runtime
     ready_for_requote(buyer)
-    buyer.MARKET_BUYER.record_approval.return_value = {
-        "approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    buyer.MARKET_REFEREE.record_approval.return_value = {"mandate_hash": "x", "approval_method": "voice_code"}
+    _market_shows_the_approval(buyer)
     client = FakeVoiceClient()
     _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
     owner_ctx = CodeCapturingContext(client)
@@ -279,7 +314,10 @@ def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     assert approved["order"]["id"] == approved["deal_id"]
     assert approved_voice_record_matches(approved["voice_approval"], approved["mandate"], now=NOW + timedelta(seconds=2))
     assert approved["mandate"]["status"] == "approved"
-    assert buyer.MARKET_BUYER.record_approval.call_args.kwargs["method"] == "voice_code"
+    # the REFEREE relays the call result (market.ts record_approval is referee-only); the buyer only re-reads it
+    assert buyer.MARKET_REFEREE.record_approval.call_args.kwargs["method"] == "voice_code"
+    assert buyer.MARKET_REFEREE.record_approval.call_args.kwargs["approved_by"] == approved["buyer_id"]
+    assert not buyer.MARKET_BUYER.record_approval.called and buyer.MARKET_BUYER.purchase_status.called
     assert any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
     texts = owner_texts(owner_ctx)
     assert any("Calling you now to approve" in text for text in texts)
@@ -290,7 +328,34 @@ def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     asyncio.run(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])))
     for text in ("APPROVE 1", "approve", "yes"):
         asyncio.run(buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
-    assert client.calls == 1 and buyer.MARKET_BUYER.record_approval.call_count == 1
+    assert client.calls == 1 and buyer.MARKET_REFEREE.record_approval.call_count == 1
+
+
+@pytest.mark.parametrize("failure", ["referee_refuses", "market_row_missing", "market_row_for_another_amount"])
+def test_owner_chat_never_orders_unless_the_referee_recorded_this_exact_mandate(runtime, failure):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    if failure == "referee_refuses":
+        buyer.MARKET_REFEREE.record_approval.side_effect = buyer.MarketBridgeError("market_reducer_failed")
+        _readbacks(buyer, lambda h: {"approval_method": None, "approved_at": None})
+    else:
+        buyer.MARKET_REFEREE.record_approval.return_value = {"approval_method": "voice_code"}
+
+        def status(mandate_hash):
+            m = market_view(buyer.ROUND["transaction"])
+            row = {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": mandate_hash,
+                   "amount": m["amount"], "payee": m["payee"], "retired": False}
+            return {**row, "approval_method": None, "approved_at": None} if failure == "market_row_missing" else {**row, "amount": 1.0}
+        _readbacks(buyer, status)
+    client = FakeVoiceClient()
+    _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
+    owner_ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    assert client.calls == 1  # the call happened and was approved, but the market never recorded it
+    assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
+    held = state.load_transaction(db, buyer.ROUND["transaction"]["deal_id"], buyer.ROUND["transaction"]["buyer_id"])
+    assert held["phase"] == "uncertain" and buyer.ROUND["pending_hold"] is True and not buyer.ROUND.get("order")
+    assert any("remains held" in text for text in owner_texts(owner_ctx))
 
 
 def test_failed_call_says_nothing_was_paid_and_a_typed_code_never_approves(runtime):
@@ -313,7 +378,7 @@ def test_failed_call_says_nothing_was_paid_and_a_typed_code_never_approves(runti
     assert held["phase"] in {"paused", "denied"} and held["voice_approval"] is None and held["order"] is None
     assert client.calls == 1
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
     assert any("Nothing was paid" in text for text in owner_texts(owner_ctx))
 
 
@@ -333,7 +398,7 @@ def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, m
     assert unchanged["phase"] == "pending_approval" and unchanged["voice_approval"] is None
     assert unchanged["order"] is None and unchanged["mandate"]["status"] == "pending"
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
     texts = owner_texts(owner_ctx)
     assert any("Phone approval is not set up" in text and "Nothing was approved" in text
                and "nothing was paid" in text for text in texts)
@@ -746,10 +811,9 @@ def test_exact_ack_skips_duplicate_market_payment_record(runtime):
 
 
 @pytest.mark.parametrize(("initial", "expected", "transition_from", "final", "accepted"), [
-    ("open", "review", "open", "review", True),
-    ("review", "closed", "review", "closed", True),
-    ("open", "review", "open", "open", False),
-    ("review", "closed", "review", "review", False),
+    # #447: the published module goes open -> closed (it ranks at close); there is no review state
+    ("open", "closed", "open", "closed", True),
+    ("open", "closed", "open", "open", False),
 ])
 def test_market_scheduler_races_require_confirmed_round_transition(
         runtime, initial, expected, transition_from, final, accepted):
@@ -761,8 +825,7 @@ def test_market_scheduler_races_require_confirmed_round_transition(
         state = initial
 
         def sql(self, _query):
-            return [{"id": "round-1", "need_id": "need-1", "state": self.state,
-                     "deadline": None, "review_deadline": None}]
+            return [{"id": "round-1", "need_id": "need-1", "state": self.state, "deadline": None}]
 
         def call(self, _reducer, **_kwargs):
             self.state = final
@@ -903,11 +966,11 @@ def _delegate(buyer, monkeypatch, caller, direct):
     monkeypatch.setattr(buyer, "USED_CALL_IDS", set())
     monkeypatch.setattr(buyer, "_transport_request", lambda ctx, loop: caller)
     _wire_voice(buyer, direct, "buyer-runtime-delegate-secret")
-    buyer.MARKET_BUYER.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    buyer.MARKET_REFEREE.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
 
 
 def _market_row(buyer, **override):
-    m = buyer.ROUND["transaction"]["mandate"]
+    m = market_view(buyer.ROUND["transaction"])
     return {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": m["hash"],
             "amount": m["amount"], "payee": m["payee"], "retired": False, **override}
 
@@ -923,13 +986,15 @@ def test_delegation_is_off_by_default_and_today_s_direct_call_runs(runtime, monk
     monkeypatch.delenv("BUYER_DELEGATE_CALL", raising=False)
     assert not buyer.delegate_call_enabled()
     ready_for_requote(buyer)
-    buyer.MARKET_BUYER.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    buyer.MARKET_REFEREE.record_approval.return_value = {"mandate_hash": "x", "approval_method": "voice_code"}
+    _market_shows_the_approval(buyer)
     client = FakeVoiceClient()
     _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
     ctx = CodeCapturingContext(client)
     assert _run(buyer, ctx)["phase"] == "approved" and client.calls == 1
     assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
-    assert not buyer.MARKET_BUYER.purchase_status.called   # the delegated re-read is not on today's path
+    assert buyer.MARKET_REFEREE.record_approval.call_count == 1  # recorded by the referee, then re-read once by the buyer
+    assert buyer.MARKET_BUYER.purchase_status.call_count == 2  # create_mandate's readback, then the approval's
 
 
 def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_reads_the_market(runtime, monkeypatch):
@@ -939,7 +1004,7 @@ def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_rea
     ctx = CodeCapturingContext(direct)
     caller = FakeCaller(direct)
     _delegate(buyer, monkeypatch, caller, direct)
-    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer)
+    _readbacks(buyer, lambda h: _market_row(buyer))
     approved = _run(buyer, ctx)
     assert approved["phase"] == "approved" and direct.calls == 0 and len(caller.requests) == 1
     assert approved["voice_approval"]["recording_ref"] == "cartesia:caller-call-1"
@@ -1004,7 +1069,7 @@ def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_ri
     assert held["phase"] != "approved" and held["order"] is None
     assert len(caller.requests) == 1 and direct.calls == 0   # exactly one ring: no second call, direct or delegated
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
 
 
 def test_a_caller_call_timeout_is_final_and_never_dials_a_second_call(runtime, monkeypatch):
@@ -1020,7 +1085,7 @@ def test_a_caller_call_timeout_is_final_and_never_dials_a_second_call(runtime, m
     assert held["phase"] != "approved" and held["order"] is None
     assert len(caller.requests) == 1 and direct.calls == 0
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
 
 
 def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):
@@ -1055,7 +1120,7 @@ def test_a_caller_timeout_falls_back_to_the_direct_call_once(runtime, monkeypatc
     ctx = CodeCapturingContext(direct)
     caller = FakeCaller(direct, raise_=TimeoutError())
     _delegate(buyer, monkeypatch, caller, direct)
-    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer)
+    _readbacks(buyer, lambda h: _market_row(buyer))
     approved = _run(buyer, ctx)
     assert approved["phase"] == "approved" and direct.calls == 1 and len(caller.requests) == 1
 
@@ -1068,7 +1133,7 @@ def test_a_market_re_read_mismatch_blocks_the_order_and_payment(runtime, monkeyp
     direct = FakeVoiceClient()
     ctx = CodeCapturingContext(direct)
     _delegate(buyer, monkeypatch, FakeCaller(direct), direct)
-    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer, **{field: value})
+    _readbacks(buyer, lambda h: _market_row(buyer, **{field: value}))
     held = _run(buyer, ctx)
     assert held["phase"] == "uncertain"
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)

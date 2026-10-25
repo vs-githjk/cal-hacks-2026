@@ -12,7 +12,7 @@ export function AllowancePanel({ allowance: a, cap }: { allowance: GoalView["all
     <Card>
       <Label>Allowance</Label>
       {!a ? (
-        <p className="text-[13px] text-muted">No spending rule is recorded for you yet.</p>
+        <p className="text-[13px] text-muted">No allowance yet.</p>
       ) : a.perPurchase <= 0 ? (
         <p className="text-[18px] font-medium">Every buy calls you first.</p>
       ) : (
@@ -87,13 +87,13 @@ export function ClearanceRuler({ cards, limitMm, told }: Clearance) {
 export function OwnedPartsPanel({ clearance }: { clearance?: Clearance }) {
   return (
     <Card>
-      <Label>Already in your rig</Label>
+      <Label>Your rig</Label>
       {clearance ? (
         <ClearanceRuler {...clearance} />
       ) : (
         <>
           <p className="text-[18px] font-medium">Unavailable</p>
-          <p className="mt-1 text-[13px] text-muted">No approved buyer-private record of owned parts exists yet, so none are listed and no fit limit can be drawn.</p>
+          <p className="mt-1 text-[13px] text-muted">No owned parts recorded yet.</p>
         </>
       )}
     </Card>

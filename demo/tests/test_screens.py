@@ -61,13 +61,43 @@ def test_pair_screen_issues_its_own_code_once_pairs_once_and_returns_the_token(t
     assert made[0].calls == [("pair_buyer_screen", {"buyer_id": "vidyut", "code": issue.calls[0][1]})]     # the issued code, entered exactly once
 
 
-def test_each_pairing_makes_a_fresh_code(tmp_path):
+def test_each_forced_pairing_makes_a_fresh_code(tmp_path):
     codes = set()
     for _ in range(5):
         issue = Issuer()
-        screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue)
+        screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue, rotate=True)
         codes.add(issue.calls[0][1])
     assert len(codes) == 5
+
+
+def test_a_second_rehearsal_reuses_the_paired_screen_and_does_not_rotate_the_buyers_code(tmp_path):
+    """The screen identity from the last run still holds the buyer role: no new code is issued, none is entered."""
+    first = Issuer()
+    screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=first)
+    assert len(first.calls) == 1
+    again, made = Issuer(), []
+
+    def market(path):
+        made.append(path)
+        return FakeMarket(path)
+    assert screens.pair_screen(owner_sql(), market, tmp_path / "t.json", issue=again) == "tok-screen-1"
+    assert again.calls == [] and made == []
+
+
+@pytest.mark.parametrize("rows", [[], [['0xother', '"buyer"', '"vidyut"']], [['0xabc', '"buyer"', '"buyer-2"']]])
+def test_a_saved_token_whose_identity_lost_the_buyer_role_is_paired_again(tmp_path, rows):
+    (tmp_path / "t.json").write_text(json.dumps({"token": "stale", "identity": "abc"}))
+    issue = Issuer()
+    with pytest.raises(RuntimeError, match="did not take"):         # the fake role table never grows the row, so it ends here
+        screens.pair_screen(owner_sql(role_rows=rows), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue)
+    assert len(issue.calls) == 1                                    # but it did try with a new code
+
+
+def test_an_unreadable_saved_token_is_paired_again(tmp_path):
+    (tmp_path / "t.json").write_text("{not json")
+    issue = Issuer()
+    assert screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue) == "tok-screen-1"
+    assert len(issue.calls) == 1
 
 
 def test_a_refused_pairing_never_echoes_the_code(tmp_path):

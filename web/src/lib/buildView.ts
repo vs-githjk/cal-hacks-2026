@@ -136,8 +136,10 @@ export function toBuildResult(v: BuildView): BuildResult {
  * non-JSON body or wrong shape. ponytail: GET /v1/build on the agent feed is this lane's proposal; Lane D owns where the
  * BuildView is served, so change this one URL when it lands.
  */
-export async function fetchBuild(feedUrl: string, signal?: AbortSignal): Promise<BuildView | null> {
-  const res = await fetch(`${feedUrl}/v1/build`, { signal, cache: "no-store" });
+export async function fetchBuild(feedUrl: string, signal?: AbortSignal, buyerId?: string): Promise<BuildView | null> {
+  // #449 PL-17: ?buyer= lets a feed run with AGENT_FEED_TOKEN return only this buyer's build (404 for anyone else's). No token is sent:
+  // the page cannot hold it, so such a feed answers 401 (an error here) and the panel keeps its SIM sample.
+  const res = await fetch(`${feedUrl}/v1/build${buyerId ? `?buyer=${encodeURIComponent(buyerId)}` : ""}`, { signal, cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`build feed answered HTTP ${res.status}`);
   const body: unknown = await res.json();

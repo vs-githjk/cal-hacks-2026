@@ -441,6 +441,8 @@ def test_the_live_roster_is_four_sellers_with_four_distinct_jobs():  # #398
 
 
 def test_the_buyer_never_asks_a_retired_seller(monkeypatch):
+    import asyncio
+    asyncio.set_event_loop(asyncio.new_event_loop())   # an earlier asyncio.run closed the loop; uagents needs a current one
     import buyer.buyer_agent as B
     monkeypatch.setattr(common, "mailbox_ready", lambda s: True)
     assert not set(B.live_sellers()) & set(common.RETIRED_SELLERS)

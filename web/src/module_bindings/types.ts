@@ -10,6 +10,18 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const AgentApprovalRow = __t.object("AgentApprovalRow", {
+  mandateHash: __t.string(),
+  method: __t.string(),
+  approvedBy: __t.string(),
+  at: __t.timestamp(),
+  voiceApprovalId: __t.string(),
+});
+export type AgentApprovalRow = __Infer<typeof AgentApprovalRow>;
+
+export const AgentApprovals = __t.object("AgentApprovals", {});
+export type AgentApprovals = __Infer<typeof AgentApprovals>;
+
 export const AgentBuyerContact = __t.object("AgentBuyerContact", {});
 export type AgentBuyerContact = __Infer<typeof AgentBuyerContact>;
 
@@ -35,6 +47,18 @@ export type AgentGoalItems = __Infer<typeof AgentGoalItems>;
 
 export const AgentOpenGoals = __t.object("AgentOpenGoals", {});
 export type AgentOpenGoals = __Infer<typeof AgentOpenGoals>;
+
+export const AgentPaymentRow = __t.object("AgentPaymentRow", {
+  mandateHash: __t.string(),
+  paymentRef: __t.string(),
+  amount: __t.f64(),
+  mode: __t.string(),
+  at: __t.timestamp(),
+});
+export type AgentPaymentRow = __Infer<typeof AgentPaymentRow>;
+
+export const AgentPayments = __t.object("AgentPayments", {});
+export type AgentPayments = __Infer<typeof AgentPayments>;
 
 export const Allowance = __t.object("Allowance", {
   buyerId: __t.string(),

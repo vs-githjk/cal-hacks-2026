@@ -54,13 +54,22 @@ def issue_pair_code_via_cli(buyer_id: str, code: str) -> None:
 
 
 def pair_screen(sql: Callable[[str], list], market: Callable[[str], Any], token_file: Path, buyer_id: str = DEMO_BUYER,
-                issue: Optional[Callable[[str, str], None]] = None) -> str:
+                issue: Optional[Callable[[str, str], None]] = None, rotate: bool = False) -> str:
     """Pair the rehearsal's own screen identity with the buyer once and return its token. #449 RT-2: the market keeps only a
     hash of a pairing code, so there is nothing to read back. This makes its own code with `secrets` (stdb.new_pair_code),
     the owner issues it with reissue_pair_code (`issue(buyer_id, code)`; the local spacetime CLI by default), then the screen
-    pairs with it. That rotates the buyer's code (screens already paired keep their role). `sql` is the owner's read-only SQL
+    pairs with it. That rotates the buyer's code (screens already paired keep their role), so it happens only when needed:
+    when the saved token's identity still holds the buyer role for `buyer_id`, that token is returned and no code is issued
+    (a rehearsal run again does not rotate the code); `rotate=True` forces a new code. `sql` is the owner's read-only SQL
     (the role table), `market(token_file)` makes a market client for that identity (market/scripts/stdb.Market).
     Raises RuntimeError with a reason that never contains the code or the token."""
+    if not rotate:
+        try:
+            saved = json.loads(Path(token_file).read_text())
+            if has_buyer_role(sql("SELECT * FROM role"), str(saved["identity"]), buyer_id):
+                return saved["token"]
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError):
+            pass                     # no usable saved screen: pair it below
     import sys
     sys.path.insert(0, str(ROOT / "market" / "scripts"))
     from stdb import new_pair_code
