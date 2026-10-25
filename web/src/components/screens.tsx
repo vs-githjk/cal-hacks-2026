@@ -9,7 +9,7 @@ import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, Sel
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
-import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
+import { Card, Label, Pill, SampleOnly, money } from "./ui";
 
 
 export interface BuyerScreenProps {
@@ -89,7 +89,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
           <Searches goals={p.goals} />
           <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
           <div className="grid gap-3.5 md:grid-cols-3">
-            {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
+            {p.purchases}
             <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
             <OwnedPartsPanel />
           </div>

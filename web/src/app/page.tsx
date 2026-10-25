@@ -6,11 +6,11 @@ import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
 import { OriginChip, clock } from "@/components/ui";
-import { asOrigin, latestRound } from "@/lib/screens";
+import { asOrigin, latestRound, showStatStrip, tickerScrolls } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Vidyut's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
+  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Your goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
   { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
@@ -46,18 +46,18 @@ export default function Home() {
             {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
           </p>
           <h1 className="max-w-[16ch] text-[clamp(34px,5.5vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance">
-            The refereed arena for{" "}
-            <span className="text-ink">agent commerce.</span>
+            Describe the PC you want.{" "}
+            <span className="text-ink">Agents compete to build it.</span>
           </h1>
           <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
             Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
           </p>
           <div className="mt-7 flex flex-wrap gap-2.5">
-            <Link href="/market" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
-              Watch the round <span aria-hidden>→</span>
+            <Link href="/start" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-ink transition-transform motion-safe:hover:-translate-y-0.5">
+              Start as a buyer <span aria-hidden>→</span>
             </Link>
-            <Link href="/buyer" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
-              Open the buyer screen
+            <Link href="/market" className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 font-medium text-ink hover:bg-soft">
+              Watch the round
             </Link>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
+      {showStatStrip(r) && <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
         {stats.map((s) => (
           <div key={s.label} className="bg-panel px-4 py-4">
             <div className="font-mono text-[clamp(26px,3vw,36px)] font-medium leading-none tracking-[-0.04em] tabular-nums">{s.value}</div>
@@ -76,9 +76,14 @@ export default function Home() {
             </div>
           </div>
         ))}
-      </section>
+      </section>}
 
-      {ticker.length > 0 && (
+      {ticker.length > 0 && !tickerScrolls(ticker.length) && (
+        <p aria-label="Latest floor event" className="font-mono text-[12px] text-muted">
+          Latest: <span className="text-ink-2">{ticker[0].label}</span> <OriginChip origin={ticker[0].origin} />
+        </p>
+      )}
+      {tickerScrolls(ticker.length) && (
         <section aria-label="Latest floor events" className="-mx-4 overflow-hidden border-y border-line bg-canvas-2 py-2.5">
           <div className="flex w-max gap-8 whitespace-nowrap font-mono text-[12px] text-muted motion-safe:animate-[marquee_60s_linear_infinite] hover:[animation-play-state:paused]">
             {[0, 1].map((copy) =>

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, showStatStrip, shieldFromRows, tickerScrolls, vetoFromRows } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -276,4 +276,18 @@ test("#191-5 my_deals: approval shows only once the call approved it, the receip
   assert.equal(paid.receipt!.chargeStatus, "SIM stub, no money moved");
   assert.equal(paid.receipt!.amount, 1299.99);
   assert.equal(paid.receipt!.seller, "best-buy");
+});
+
+test("home: stat strip hidden with no round, ticker scrolls only at 4+ events", () => {
+  assert.equal(showStatStrip(undefined), false);
+  assert.equal(showStatStrip({ id: "r1" }), true);
+  assert.equal(tickerScrolls(3), false);
+  assert.equal(tickerScrolls(4), true);
+});
+
+test("no hard-coded Vidyut in copy a stranger reads", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const f of ["../app/page.tsx", "../components/lot.tsx", "./floor.ts", "./lot.ts", "../components/hyphenate.tsx"]) {
+    assert.doesNotMatch(readFileSync(new URL(f, import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, ""), /Vidyut/, f); // code comments may name the demo buyer
+  }
 });

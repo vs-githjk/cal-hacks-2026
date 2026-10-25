@@ -483,3 +483,10 @@ export function dealFromRows(deals: readonly DealRow[], allowance: number | null
     : null;
   return { approval, receipt };
 }
+
+/** Home: the numbers strip is for a real round; with none it would only show zeros. */
+export const showStatStrip = (round: unknown): boolean => round != null;
+
+/** Home: a scrolling ticker needs enough events to be worth the motion; fewer show one static line. */
+export const TICKER_MIN = 4;
+export const tickerScrolls = (events: number): boolean => events >= TICKER_MIN;
