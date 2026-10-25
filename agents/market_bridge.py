@@ -21,6 +21,10 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 from stdb import Market  # noqa: E402
 
+# Agent-only buyer contact view; names are tentative until the market confirms them. Swap here only.
+BUYER_CONTACT_VIEW = "agent_buyer_contact"
+BUYER_CONTACT_COLUMNS = ("buyer_id", "display_name", "phone")
+
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _HASH = re.compile(r"^[a-f0-9]{64}$")
 _META_KEYS = ("lineIndex", "shipping", "listingId", "listingHash", "source", "snapshotId", "provenance", "attrs")
@@ -421,11 +425,11 @@ class MarketBridge:
             output.append(row)
         return output
 
-    def buyer_profile(self, buyer_id: str) -> dict[str, Any] | None:
-        """The buyer's own profile (name, approval phone); None when absent or the column is not on the market yet."""
-        columns = ("buyer_id", "display_name", "phone")
+    def buyer_contact(self, buyer_id: str) -> dict[str, Any] | None:
+        """The buyer's contact (name, approval phone) from the agent-only market view; None when absent or on any failure."""
+        columns = BUYER_CONTACT_COLUMNS
         try:
-            rows = self._sql("SELECT " + ", ".join(columns) + " FROM my_buyer_profile WHERE buyer_id = " + _quote(buyer_id))
+            rows = self._sql("SELECT " + ", ".join(columns) + " FROM " + BUYER_CONTACT_VIEW + " WHERE buyer_id = " + _quote(buyer_id))
             row = _project(rows[0], columns) if rows else None
         except Exception:
             return None

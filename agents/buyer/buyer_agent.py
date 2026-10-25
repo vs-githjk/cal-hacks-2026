@@ -973,7 +973,7 @@ def _approval_call(buyer_id: str = ""):
     profile phone; only the env-default buyer may fall back to APPROVAL_CALL_TO."""
     from pay.voice_cartesia import CartesiaClient, CartesiaError, TO_ENV, load_env
     try:
-        profile = market_clients()[0].buyer_profile(buyer_id) if buyer_id else None
+        profile = market_clients()[0].buyer_contact(buyer_id) if buyer_id else None
     except Exception:
         profile = None
     profile = profile if isinstance(profile, dict) else {}
@@ -983,11 +983,18 @@ def _approval_call(buyer_id: str = ""):
         return APPROVAL_CALL_CLIENT, "", name
     phone = profile.get("phone")
     if not phone and not (buyer_id and buyer_id == MARKET_BUYER_ID):
+        import logging
+        logging.getLogger("buyer_agent").warning(f"approval call refused for buyer {buyer_id}: no phone on file")
         return None, "not_configured", name
     try:
         return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env), "", name
     except CartesiaError:
         return None, "not_configured", name
+
+
+def _is_web_buyer(buyer_id, owner) -> bool:
+    """Web buyers (market id "b_...", or no chat owner) have no ASI:One chat to receive the approval code."""
+    return str(buyer_id or "").startswith("b_") or not owner
 
 
 async def _phone_approval(transaction: dict, send_private, client, service, buyer_name: str = "there"):
@@ -997,8 +1004,14 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
     from pay.voice_cartesia import VoiceResult
     loop = asyncio.get_running_loop()
     deal_id = transaction.get("deal_id", "this deal")
+    buyer_id = transaction.get("buyer_id", "")
+    web = _is_web_buyer(buyer_id, (transaction.get("deal") or {}).get("owner_sender"))
 
     def on_code(code: str) -> None:
+        if web:  # no chat: the market's own approval view shows the code on /buyer; never send it elsewhere
+            import logging
+            logging.getLogger("buyer_agent").info(f"web buyer {buyer_id}: code shown on /buyer")
+            return
         text = f"One-time approval code: {code}. Calling your phone now: say the code, then say approve."
         try:
             future = asyncio.run_coroutine_threadsafe(send_private(text), loop)
@@ -1014,7 +1027,9 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
     except Exception:
         result = VoiceResult(False, "private_approval_unavailable")
     try:
-        if result.approved:
+        if web:
+            pass  # the web shows the outcome from the market rows
+        elif result.approved:
             await send_private(f"Approval confirmed for deal {deal_id}. Payment is not confirmed by this approval.")
         else:
             await send_private(f"Approval not granted for deal {deal_id}.")
