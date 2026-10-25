@@ -1,13 +1,14 @@
 // web/src/components/floor/floorPhases.ts
-// The /floor script: pure data, no React. REFERENCE is the docs/design-system/floor.md run (31 s loop, 4 sellers).
+// The /floor script: pure data, no React. SIM_RUN is the one fallback run: the SAMPLES.gpu round played through floorScript.
 // floorScript turns the latest closed round's public rows into the same shape via projectArenaScene, so no outcome is re-derived here.
 // A seller's price is null in every phase before its reveal: a sealed price never leaves this file.
+import { SAMPLES } from "../../lib/arenaFixture.ts";
 import { projectArenaScene, type ArenaRows, type SceneOffer } from "../../lib/arenaScene.ts";
 
 export type Slot = 1 | 2 | 3 | 4; // colour slot: ghost-1..4
 export type SellerState = "sealed" | "open" | "eaten" | "winner";
 export type OutReason = "highest_price" | "outranked" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";
-export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot; agent?: string } // agent: the offer's sellerId, which picks the avatar (REFERENCE and sealed sellers have none and stay fish)
+export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot; agent?: string } // agent: the offer's sellerId, which picks the avatar (sealed placeholder sellers have none and stay fish)
 export interface SellerView { state: SellerState; price: number | null; ledger: string; reason: OutReason | null; checkedAgo: number | null } // ledger: "Sealed" | "$1,329.00" | "Eaten · highest price" | "Blocked · Smell Tesd" | "Out · fit uncertain" | "Fit OK · 304 mm · no recall" | "Winner"; checkedAgo: Bright Data re-check age in seconds, null if unknown
 export type PhaseKind = "sealed" | "reveal" | "call" | "inject" | "shield" | "check" | "eat" | "crown" | "deal" | "paid" | "think";
 export interface FloorPhase {
@@ -29,7 +30,6 @@ export const THINK_CEIL = { buyer: 2.5, shield: 1.2, advocate: 2.5, summary: 5 }
 const BUYER = { who: "buyer", name: "Fish Market Buyer" };
 const SHIELD = { who: "shield", name: "Smell Test" };
 const ADVOCATE = { who: "advocate", name: "Advocate" };
-const SUMMARY = "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by Smell Test, and one failed the fit check. Approved by your phone code.";
 
 export interface FloorScript { sim: boolean; part: string; sellers: FloorSeller[]; phases: FloorPhase[]; duration: number }
 
@@ -73,50 +73,6 @@ class Builder {
   }
 }
 
-function buildReference(): FloorScript {
-  const sellers: FloorSeller[] = [
-    { id: "s1", name: "Seller 1", origin: "SIM", slot: 1 },
-    { id: "s2", name: "Seller 2 (injected)", origin: "SIM", slot: 2 },
-    { id: "s3", name: "eBay listing", origin: "MIRROR", slot: 3 },
-    { id: "s4", name: "Best Buy listing", origin: "MIRROR", slot: 4 },
-  ];
-  const prices = { s1: 1329, s2: 1189, s3: 1222.23, s4: 1299.99 };
-  const ids = sellers.map((s) => s.id);
-  const b = new Builder(ids, prices, 3, "GPU", { s1: null, s2: null, s3: 42, s4: 18 });
-  const dealPart = "ASUS Prime RTX 5070 Ti OC · Best Buy";
-  const dealLines = ["Fit confirmed 304 mm", "No recall", "CRS verified_stable", "Above the allowance: approved by phone code"];
-
-  b.pip = ["RTX 5070 Ti under $1,400 by Friday"];
-  b.push(0, "sealed");
-  b.push(1.1, "think", { think: { ...BUYER, text: "Reading your goal: one RTX 5070 Ti under $1,400 by Friday." } }); // 2.5 s hold, ends at the reveal
-  b.pip.push("4 sealed bids in. No seller sees the buyer's budget. Round 1 now.");
-  b.reveal(ids); b.push(3.6, "reveal", { buyerAt: "s1" });
-  b.push(4.6, "call", { buyerAt: "s1", callText: "Highest price is out: $1,329.00, Seller 1" });
-  b.eat("s1", "highest_price"); b.push(5.3, "eat", { buyerAt: "s1", callText: "Highest price is out: $1,329.00, Seller 1" });
-
-  b.round = 2; b.seal(["s2", "s3", "s4"]); b.push(7.2, "sealed");
-  b.push(8.2, "inject", { injection: "s2" });
-  b.reveal(["s2", "s3", "s4"]); b.push(8.9, "reveal", { injection: "s2" });
-  b.push(9.1, "shield", { injection: "s2", shieldAt: "s2" });
-  b.push(9.5, "think", { injection: "s2", shieldAt: "s2", think: { ...SHIELD, text: "Blocked Seller 2: hidden instructions aimed at the buying agent." } }); // 1.2 s hold
-  b.eat("s2", "shield_block"); b.push(10.7, "eat", { injection: "s2", shieldAt: "s2", callText: "Injected listing quarantined: Seller 2 is out" });
-
-  b.round = 3; b.push(12.6, "check", { checkerAt: "s3" });
-  b.push(13, "think", { checkerAt: "s3", think: { ...ADVOCATE, text: "Is it new, open-box, refurbished or used?" } }); // 2 s, under the 2.5 s ceiling
-  b.push(15, "think", { checkerAt: "s3", think: { who: "seller_3", name: "eBay listing", text: "Open-box." } }); // 2 s
-  b.eat("s3", "failed_fit"); b.push(17, "eat", { checkerAt: "s3", callText: "eBay listing is out: fit uncertain" });
-  b.mark("s4", "Fit OK · 304 mm · no recall"); b.push(18.7, "check", { checkerAt: "s4" });
-  b.win("s4"); b.pip.push("Winner $1,299.99. Above the allowance, so the buyer gets a call with the code.");
-  b.push(21.4, "crown", { buyerAt: "s4", callText: "Winner: Best Buy listing at $1,299.99 · CRS verified_stable" });
-  b.push(22.8, "deal", { buyerAt: "s4", deal: { price: 1299.99, part: dealPart, lines: dealLines, approvedByPhone: true, stripeTest: false } });
-  b.push(24, "think", { buyerAt: "s4", think: { ...BUYER, text: SUMMARY }, deal: { price: 1299.99, part: dealPart, lines: dealLines, approvedByPhone: true, stripeTest: false } }); // 5 s hold
-  b.push(29, "paid", { buyerAt: "s4", deal: { price: 1299.99, part: dealPart, lines: [...dealLines, "Stripe test mode"], approvedByPhone: true, stripeTest: true } });
-  return { sim: true, part: "GPU", sellers, phases: b.phases, duration: 31 };
-}
-
-/** The floor.md reference scenario: 4 sellers, 3 rounds, 31 s loop. Also the fallback when there is nothing real to show. */
-export const REFERENCE: FloorScript = buildReference();
-
 const STEP = 3;
 /** `strictTop`: this offer's landed price is strictly the highest among the offers still in. Only then is an outranking "highest_price". */
 const reasonOf = (o: SceneOffer, fallback: OutReason, strictTop = false, knocked?: string): OutReason => {
@@ -127,9 +83,9 @@ const reasonOf = (o: SceneOffer, fallback: OutReason, strictTop = false, knocked
   return fallback;
 };
 
-/** The script for the latest round in `rows`, or REFERENCE when there is nothing usable. */
-export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
-  if (!rows || !rows.rounds || rows.rounds.length === 0) return REFERENCE;
+/** The script for the latest round in `rows`, or null when there is nothing usable (never falls back, so SIM_RUN can be built from it). */
+function scriptFor(rows: ArenaRows | null | undefined): FloorScript | null {
+  if (!rows || !rows.rounds || rows.rounds.length === 0) return null;
   const scene = projectArenaScene(rows);
   const part = scene.requestLabel || "Part";
 
@@ -148,7 +104,7 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
   if (scene.phase === "closing") return sealed("Round closed. Waiting for the referee's result.", [`${bids} Prices stay hidden until the referee's result.`]);
   if (scene.phase === "closed" && scene.offers.length === 0) return sealed("Round closed. No offer passed the checks.", []);
 
-  if ((scene.phase !== "closed" && scene.phase !== "inconsistent") || scene.offers.length === 0) return REFERENCE;
+  if ((scene.phase !== "closed" && scene.phase !== "inconsistent") || scene.offers.length === 0) return null;
 
   const offers = scene.offers;
   const sellers: FloorSeller[] = offers.map((o, i) => ({ id: o.bidId, name: o.name, origin: o.origin, slot: ((i % 4) + 1) as Slot, agent: o.sellerId }));
@@ -226,6 +182,14 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
 
   const last = b.phases[b.phases.length - 1]!.at;
   return { sim: offers.every((o) => o.origin === "SIM"), part, sellers, phases: b.phases, duration: last + 6 };
+}
+
+/** The one fallback run: the SAMPLES.gpu round (Byte Bros, FlashDeal Frankie, Silicon Sally, Bay Area, ReNew). Also the video frame (`?replay=reference`). */
+export const SIM_RUN: FloorScript = scriptFor(SAMPLES.gpu)!;
+
+/** The script for the latest round in `rows`, or SIM_RUN when there is nothing usable. */
+export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
+  return scriptFor(rows) ?? SIM_RUN;
 }
 
 /** The phase showing `seconds` into the loop: the last with at <= seconds % duration. Negative or NaN input gives the first phase. */
