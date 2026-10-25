@@ -973,10 +973,18 @@ def test_a_forged_caller_reply_never_approves_and_the_direct_call_decides(runtim
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
 
 
-@pytest.mark.parametrize("says", ["alpha bravo approve", "{code} no", "{code}"])
+@pytest.mark.parametrize("says", [
+    "alpha bravo approve",                # a guessed code
+    "{wrong_code} approve",               # the right shape, one word wrong
+    "{code} no",                          # denied
+    "no {code}",                          # denied, code after
+    "{code}",                             # the code without approve
+    "",                                   # connected, but the owner said nothing
+])
 def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_rings_again(runtime, monkeypatch, says):
-    """A guessed code, a spoken no, or the code without approve: the call reached the owner and finished, so the answer
-    stands. The buyer never rings again, through the Caller or directly (#405 review)."""
+    """A guessed code, a wrong code, a spoken no, the code without approve, or silence after the call connected: the call
+    reached the owner and finished, so the answer stands. The buyer never rings again, through the Caller or directly,
+    and nothing is paid (#405 review, #412 item 2)."""
     buyer, _db = runtime
     ready_for_requote(buyer)
     direct = FakeVoiceClient()
@@ -985,14 +993,18 @@ def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_ri
 
     def reply(h):
         r = good(h, {})
-        text = says.format(code=direct.code)
-        return {**r, "call": {**r["call"], "transcript": [{"role": "user", "text": text, "start_timestamp": 1.0}]}}
+        words = (direct.code or "").split()
+        wrong_code = " ".join(["zulu"] + words[1:]) if words else "zulu"
+        text = says.format(code=direct.code, wrong_code=wrong_code).strip()
+        transcript = [{"role": "user", "text": text, "start_timestamp": 1.0}] if text else []
+        return {**r, "call": {**r["call"], "transcript": transcript}}
     caller = FakeCaller(direct, reply=reply)
     _delegate(buyer, monkeypatch, caller, direct)
     held = _run(buyer, ctx)
     assert held["phase"] != "approved" and held["order"] is None
-    assert len(caller.requests) == 1 and direct.calls == 0
+    assert len(caller.requests) == 1 and direct.calls == 0   # exactly one ring: no second call, direct or delegated
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+    assert not buyer.MARKET_BUYER.record_approval.called
 
 
 def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):
