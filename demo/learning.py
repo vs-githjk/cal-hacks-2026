@@ -123,8 +123,10 @@ def run_beat5(b1: dict, b2: dict, now: datetime, say) -> dict:
     say.line(SIM, f"{control.name} (static control): {money(c1)} -> {money(c2)}", 1)
     w2 = sellers[res2["winner"]["seller_id"]]
     say.line(SIM, f"round-2 winner: {w2.name} at {landed_note(w2, res2['winner']['landed'])}; vetoes unchanged: "
-                  + ", ".join(sellers[next(b["seller_id"] for b in res2["bids"] if b["id"] == c["bid_id"])].name
-                            for c in res2["cards"] if c["recommendation"] == "veto"))
+                  + ", ".join([sellers[next(b["seller_id"] for b in res2["bids"] if b["id"] == c["bid_id"])].name
+                               for c in res2["cards"] if c["recommendation"] == "veto"]
+                              + [f"{sellers[e['seller_id']].name} (caught by Shield, round {e['round']})"
+                                 for e in res2["caught"] if e["card"]["recommendation"] == "veto"]))
     ctrl2 = next((r for r in reports2 if r["seller_id"] == control.id), None)
     if ctrl2:
         say.line(SIM, f"{control.name} now gets its own report: gap {ctrl2['gap_band']}, reason {ctrl2['reason']}", 1)
