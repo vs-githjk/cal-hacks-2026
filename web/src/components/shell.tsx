@@ -54,9 +54,15 @@ export function TopNav() {
             })}
           </ul>
         </nav>
-        <div className="ml-auto hidden h-14 shrink-0 items-center gap-2 self-stretch text-[13px] text-accent-ink/85 sm:flex">
-          <span className={`h-2 w-2 rounded-full ${live ? "bg-accent-ink" : "border border-accent-ink/70 bg-transparent"}`} aria-hidden />
-          {status}
+        <div className="ml-auto flex h-14 shrink-0 items-center gap-3 self-stretch text-[13px] text-accent-ink/85">
+          <span className="hidden items-center gap-2 md:flex">
+            <span className={`h-2 w-2 rounded-full ${live ? "bg-accent-ink" : "border border-accent-ink/70 bg-transparent"}`} aria-hidden />
+            {status}
+          </span>
+          {/* The one entry point for a stranger: /start comes with #385. Once #379 lands, a paired buyer sees "Continue as <name>" to /buyer here instead. */}
+          <Link href="/start" className="inline-flex h-9 items-center rounded-full bg-accent-ink px-3.5 text-[13px] font-semibold text-accent hover:bg-accent-ink/90">
+            Start<span className="hidden sm:inline">&nbsp;as a buyer</span>
+          </Link>
         </div>
       </div>
     </header>
