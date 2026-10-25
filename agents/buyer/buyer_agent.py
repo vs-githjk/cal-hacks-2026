@@ -1153,11 +1153,10 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
         try:  # every buyer: the market shows the code on /buyer. Never log the code.
             owner_approval.remember_code(owner_approval.market_hash(transaction), code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(owner_approval.market_hash(transaction), code)
-        except Exception:
-            if web:
-                raise PermissionError("approval code could not be shown") from None
+        except Exception:  # web and chat alike: record_approval needs this code on the market, so no code there means no call
             import logging
             logging.getLogger("buyer_agent").warning(f"approval code not shown on /buyer for buyer {buyer_id}")
+            raise PermissionError("approval code could not be shown") from None
         if web:  # no chat: the market's own approval view shows the code on /buyer; never send it elsewhere
             import logging
             logging.getLogger("buyer_agent").info(f"web buyer {buyer_id}: code shown on /buyer")
