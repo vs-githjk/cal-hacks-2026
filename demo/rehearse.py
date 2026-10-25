@@ -135,13 +135,13 @@ def chrome_shot(url: str, path: str) -> tuple:
 
 
 def paired_shooter(sql: Callable, market: Optional[Callable] = None, browser_cls: Optional[Callable] = None,
-                   chrome: Optional[str] = None) -> tuple:
+                   chrome: Optional[str] = None, issue: Optional[Callable] = None) -> tuple:
     """(shoot, browser or None, note). Pairs the rehearsal's own screen identity once (demo/screens.py) and shoots in
     one browser that holds its token, so /buyer shows the buyer's screen, not the pair gate (#184). Any failure falls
     back to plain chrome_shot and the note says /buyer is NOT paired."""
     from demo import screens
     try:
-        token = screens.pair_screen(sql, market or screens.stdb_market, ROOT / ".tokens" / "rehearse-screen.json")
+        token = screens.pair_screen(sql, market or screens.stdb_market, ROOT / ".tokens" / "rehearse-screen.json", issue=issue)
         exe = chrome or screens.find_chrome()
         if exe is None:
             raise RuntimeError("no Chrome or Chromium found (set CHROME_PATH)")

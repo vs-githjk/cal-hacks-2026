@@ -1,8 +1,8 @@
 """Paired screenshots for demo/rehearse.py --screens (#184).
 
 `chrome --screenshot` starts a fresh profile every time, so /buyer always showed the pair gate. Here the rehearsal pairs
-ONE screen identity of its own through the market's real `pair_buyer_screen` reducer, with the code read by owner SQL
-(never printed, never logged, entered once: five misses lock the screen). That identity's token then goes into one
+ONE screen identity of its own through the market's real `pair_buyer_screen` reducer, with a code it makes itself and the owner
+issues (#449 RT-2: the market keeps only a hash; never printed, never logged, entered once: five misses lock the screen). That identity's token then goes into one
 headless Chrome's localStorage over the DevTools protocol, and every screenshot is taken in that same browser.
 
 Stdlib only: a minimal WebSocket client for the DevTools protocol (no new dependency). The token never leaves this
@@ -45,14 +45,39 @@ def token_key(db: Optional[str] = None) -> str:
     return f"tb_token_{db or os.environ.get('NEXT_PUBLIC_SPACETIMEDB_DB') or os.environ.get('SPACETIMEDB_DB', 'tech-bazaar')}"
 
 
-def pair_screen(sql: Callable[[str], list], market: Callable[[str], Any], token_file: Path, buyer_id: str = DEMO_BUYER) -> str:
-    """Pair the rehearsal's own screen identity with the buyer once and return its token. `sql` is the owner's read-only
-    SQL (pair_code is private), `market(token_file)` makes a market client for that identity (market/scripts/stdb.Market).
+def issue_pair_code_via_cli(buyer_id: str, code: str) -> None:
+    """The owner's reissue call through the local spacetime CLI (market/scripts/issue_pair_code.py). Raises RuntimeError."""
+    import sys
+    sys.path.insert(0, str(ROOT / "market" / "scripts"))
+    import issue_pair_code
+    issue_pair_code.issue(buyer_id, code)
+
+
+def pair_screen(sql: Callable[[str], list], market: Callable[[str], Any], token_file: Path, buyer_id: str = DEMO_BUYER,
+                issue: Optional[Callable[[str, str], None]] = None, rotate: bool = False) -> str:
+    """Pair the rehearsal's own screen identity with the buyer once and return its token. #449 RT-2: the market keeps only a
+    hash of a pairing code, so there is nothing to read back. This makes its own code with `secrets` (stdb.new_pair_code),
+    the owner issues it with reissue_pair_code (`issue(buyer_id, code)`; the local spacetime CLI by default), then the screen
+    pairs with it. That rotates the buyer's code (screens already paired keep their role), so it happens only when needed:
+    when the saved token's identity still holds the buyer role for `buyer_id`, that token is returned and no code is issued
+    (a rehearsal run again does not rotate the code); `rotate=True` forces a new code. `sql` is the owner's read-only SQL
+    (the role table), `market(token_file)` makes a market client for that identity (market/scripts/stdb.Market).
     Raises RuntimeError with a reason that never contains the code or the token."""
-    rows = sql(f"SELECT code FROM pair_code WHERE buyer_id = '{buyer_id}'")
-    if not rows or not rows[0]:
-        raise RuntimeError("no pairing code issued for the buyer (seed the market first)")
-    code = str(rows[0][0]).strip().strip('"')
+    if not rotate:
+        try:
+            saved = json.loads(Path(token_file).read_text())
+            if has_buyer_role(sql("SELECT * FROM role"), str(saved["identity"]), buyer_id):
+                return saved["token"]
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError):
+            pass                     # no usable saved screen: pair it below
+    import sys
+    sys.path.insert(0, str(ROOT / "market" / "scripts"))
+    from stdb import new_pair_code
+    code = new_pair_code()
+    try:
+        (issue or issue_pair_code_via_cli)(buyer_id, code)
+    except RuntimeError as e:
+        raise RuntimeError(f"pairing code was not issued: {str(e).replace(code, '[code]')[:160]}") from None
     Path(token_file).parent.mkdir(parents=True, exist_ok=True)
     client = market(str(token_file))
     try:

@@ -24,13 +24,13 @@ What you will see: the build panel on `/buyer` switches from the labelled "SIM s
    ```
    python3 market/scripts/setup_roles.py
    ```
-4. Load the demo data. This is also what creates the buyer's pairing code, and the market README's run block omits it:
+4. Load the demo data (the market README's run block omits this). It does not make a pairing code any more:
    ```
    spacetime call -s local tech-bazaar seed_demo
    ```
-5. Read the pair code:
+5. Make the pair code. The market keeps only a hash of it, so you cannot read it back; this makes one with Python `secrets`, sends it as the owner and prints it once, to you:
    ```
-   spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"
+   python3 market/scripts/issue_pair_code.py vidyut
    ```
 6. Start the agent feed (terminal 3), the server the build panel polls. It binds 127.0.0.1 and allows only localhost pages (CORS):
    ```
@@ -57,7 +57,7 @@ What the panel never shows, by design: mandate hashes, payees, per-mandate amoun
 ## Reset between runs
 - Same market, new run: run step 9 again. `--reset` calls `reset_demo` (SIM data only) and keeps roles and your pair code.
 - The panel keeps showing the LAST run's file until the next run writes its first step. To make it fall back to the SIM sample right away, delete the old view: `rm demo/out/build-view.json demo/out/build-view.steps.jsonl`.
-- Pair code lost or locked: `spacetime call -s local tech-bazaar reissue_pair_code '"vidyut"'`, then step 5 again.
+- Pair code lost or locked: run step 5 again (it issues a new code, which also unlocks every screen).
 - Wipe everything (roles, pair code and data) and start clean: stop the server (Ctrl-C in terminal 1), start it again, and redo steps 2 to 5. Or publish over the same server with `spacetime publish -s local -p ./market/spacetimedb --delete-data --yes=all tech-bazaar`, then redo steps 3 to 5 (roles and pair code are gone).
 - A refused or silent call changes nothing on the market's money side: nothing is paid. Re-run step 9.
 

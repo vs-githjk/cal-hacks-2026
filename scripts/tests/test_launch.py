@@ -419,6 +419,10 @@ def test_the_deploy_script_dry_run_calls_nothing_and_never_deletes_data():
     assert "--delete-data" not in code and "--yes=all" not in code
     out = subprocess.run(["sh", str(script)], capture_output=True, text=True, timeout=30, env={"PATH": "/usr/bin:/bin"})
     assert out.returncode == 0 and "dry run" in out.stdout and "+ spacetime publish -s maincloud" in out.stdout
+    # #449 RT-2: seed_demo makes no pairing code and the table holds only a hash, so the script issues one and never reads the column
+    assert "SELECT code FROM pair_code" not in script.read_text()
+    assert "market/scripts/issue_pair_code.py vidyut" in out.stdout
+    assert out.stdout.index("issue_pair_code.py") > out.stdout.index("seed_demo")
     bad = subprocess.run(["sh", str(script)], capture_output=True, text=True, timeout=30,
                          env={"PATH": "/usr/bin:/bin", "SPACETIMEDB_DB": "Bad DB"})
     assert bad.returncode == 2

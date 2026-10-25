@@ -705,6 +705,8 @@ def cmd_up(a, repo: Path = REPO) -> int:
                         warns.append(f"setup step failed: {label} (log {log_path(run_dir, logname)})")
                 if not http_ok(a.stdb_port, "/v1/database/tech-bazaar", max_status=300):
                     warns.append("module tech-bazaar is not published (the market has no tables)")
+                # #449 RT-2: seed_demo makes no pairing code (the market keeps only a hash). Not a step above: a step's output goes to a log file.
+                print("  No pairing code yet: run  python3 market/scripts/issue_pair_code.py vidyut  (it prints one code, to you) before pairing /buyer.")
                 if warns:
                     rec["static_warnings"] = warns
                     pf.save(state)

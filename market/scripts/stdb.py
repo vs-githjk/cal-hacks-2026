@@ -5,12 +5,25 @@ fallback would keep the same function names.
 """
 import json
 import os
+import secrets
 import urllib.error
 import urllib.request
 
 HOST = os.environ.get("SPACETIMEDB_HTTP", "http://127.0.0.1:3000")
 DB = os.environ.get("SPACETIMEDB_DB", "tech-bazaar")
 TOKEN_FILE = os.environ.get("SPACETIMEDB_TOKEN_FILE", "")  # one file per agent keeps its identity stable
+
+
+# Crockford base32 (no I L O U), the same alphabet the market module accepts for a pairing code.
+PAIR_CODE_CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+
+
+def new_pair_code():
+    """#449 RT-2: a fresh pairing code, XXXXX-XXXXX, from the OS random source. The market module never makes one itself
+    (its ctx.random is seeded from the public transaction time); the owner makes it here and sends it to reissue_pair_code,
+    which stores only its sha256. Show it to the operator only; never log it."""
+    raw = "".join(secrets.choice(PAIR_CODE_CHARS) for _ in range(10))
+    return f"{raw[:5]}-{raw[5:]}"
 
 
 def _post(path, body=b"", headers=None):

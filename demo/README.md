@@ -69,8 +69,8 @@ python3 -m pytest demo/tests/test_bridge.py     # mapping with a fake client, no
 It runs `run_all` (this folder's real lane code), then writes each step through the market's EXISTING reducers with the role token each one demands
 (buyer: `post_goal`, `post_need`; referee: `open_round`, `attach_verdict`, `attach_claim_check`, `close_round`, `create_mandate`, `record_approval`, `record_payment`;
 one seller identity per demo seller: `set_floor`, `place_bid`). Needs `referee.json` and `buyer-vidyut.json` from `market/scripts/setup_roles.py` (auto-found in `.tokens/` or the launcher's) and the
-local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `vidyut` with
-`spacetime sql -s local tech-bazaar "SELECT code FROM pair_code"`. The buyer is Vidyut; the goal, owned parts and payment data are labelled SIM; the DB buyer id is `vidyut`, the only id /buyer pairs with.
+local DB on 127.0.0.1:3000. Seller identities get tokens in `.tokens/bridge-<seller>.json` (gitignored) and an owner `assign_role` (the setup_roles call). Pair /buyer as `vidyut` with a code from
+`python3 market/scripts/issue_pair_code.py vidyut` (the market keeps only a hash of a pairing code, so it cannot be read back). The buyer is Vidyut; the goal, owned parts and payment data are labelled SIM; the DB buyer id is `vidyut`, the only id /buyer pairs with.
 The advocate's cards are bridged: `attach_advocate_card` carries Lane A's real card for each bid (a veto cites its source and disqualifies the bid at the close), the need carries
 `allowed_conditions` (open-box lines rank), a bid carries all its condition lines as alternatives (the market picks the cheapest allowed one), the market drops bids over the goal cap
 (`over_cap`), and `record_payment` carries `mode` (`sim` or `stripe_test`) so /market labels the SIM stub honestly. The console ends with the market's ranking, every bid it put out with its

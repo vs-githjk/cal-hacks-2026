@@ -293,7 +293,7 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         server, db = t["server"], t["db"]
     except market_target.TargetError:
         server, db = args.server or "local", "tech-bazaar"
-    out.note(f"Pair /buyer as {args.buyer_id} (spacetime sql -s {server} {db} \"SELECT code FROM pair_code\") and open /market before you start.")
+    out.note(f"Pair /buyer as {args.buyer_id} (SPACETIMEDB_SERVER={server} SPACETIMEDB_DB={db} python3 market/scripts/issue_pair_code.py {args.buyer_id} prints a fresh code) and open /market before you start.")
 
     try:
         clients = (make_clients or default_make_clients)(args, steps, out)

@@ -37,13 +37,17 @@ run spacetime publish -s "$SERVER" -p ./market/spacetimedb "$DB"
 check "the module answers" "spacetime sql -s $SERVER $DB 'SELECT * FROM owner' >/dev/null"
 
 run spacetime call -s "$SERVER" "$DB" seed_demo
-check "seed_demo made the pair code" "spacetime sql -s $SERVER $DB 'SELECT code FROM pair_code' | tail -n +3 | grep -q ."
 
 run mkdir -p "$TOKENS"
 run env SPACETIMEDB_SERVER="$SERVER" SPACETIMEDB_HTTP="$HTTP" SPACETIMEDB_DB="$DB" \
   python3 market/scripts/setup_roles.py "$TOKENS"
 check "the referee and buyer tokens exist" "test -s $TOKENS/referee.json && test -s $TOKENS/buyer-vidyut.json"
 check "roles are in the market" "spacetime sql -s $SERVER $DB 'SELECT role FROM role' | tail -n +3 | grep -q referee"
+
+# #449 RT-2: the market keeps only a hash of a pairing code and never makes one, so seed_demo leaves the buyer without one.
+# This makes a code with Python secrets, sends it as the owner and prints it once, to you. Give it to whoever pairs /buyer.
+run env SPACETIMEDB_SERVER="$SERVER" SPACETIMEDB_DB="$DB" python3 market/scripts/issue_pair_code.py vidyut
+check "the buyer has a pairing code (stored as a hash)" "spacetime sql -s $SERVER $DB 'SELECT buyer_id FROM pair_code' | tail -n +3 | grep -q vidyut"
 
 if [ "$GO" = "--go" ]; then echo "Done. In the Lane D env file set:"; else echo "Dry run only. After --go, set in the Lane D env file:"; fi
 echo "  SPACETIMEDB_SERVER=$SERVER  SPACETIMEDB_HTTP=$HTTP  SPACETIMEDB_DB=$DB"

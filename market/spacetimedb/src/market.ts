@@ -10,6 +10,7 @@ import { MARKET_CONFIG } from '../../config';
 import { DEFAULT_SEAL, isClosed, tryBid, type AuctionClock } from '../../rules/sealing';
 import { sellerView } from '../../rules/redaction';
 import { authorizePayment } from '../../rules/approval';
+import { sha256Hex } from '../../rules/sha256';
 import { HOLD_TTL_MS, SOLD_OUT_REASON, availableStock, holdIsActive, soldOutReasons, type HoldLike, type HoldState } from '../../rules/holds';
 import { decide, raiseOnCleanReceiving, recordAutoSpend, requesterMayApprove, newAllowance, setAllowance, type Allowance, type Period } from '../../rules/allowance';
 import type { Bid, Condition, NeedItem, Origin } from '../../rules/types';
@@ -111,7 +112,16 @@ export const PAIR_THROTTLE_WAIT_MS = 60 * 1000;
 // Crockford base32: no I L O U, so a misread character is never mistaken for another. 10 characters, shown
 // grouped as XXXXX-XXXXX; compared case-insensitively with the grouping ignored (normPairCode).
 const PAIR_CODE_CHARS = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const PAIR_CODE_LENGTH = 10;
 const normPairCode = (s: string) => s.toUpperCase().replace(/[^0-9A-Z]/g, '');
+// #449 RT-2: ctx.random is seeded from the transaction timestamp (SDK 2.13), which is public, so a code the module drew
+// itself could be predicted. The owner now makes the code off-module and sends it; the pair_code.code column holds only
+// the sha256 hex of the normalized code (same column, no schema change), and pairing compares the hash of the input.
+const isPairCode = (norm: string) => norm.length === PAIR_CODE_LENGTH && [...norm].every((c) => PAIR_CODE_CHARS.includes(c));
+const matchesPairCode = (stored: string, input: string) => {
+  const norm = normPairCode(input);
+  return norm.length === PAIR_CODE_LENGTH && sha256Hex(norm) === stored;
+};
 
 /**
  * A browser screen takes the buyer role with the demo pairing code (SIM sign-in). A wrong code returns { paired: false } without throwing, so the failure is counted (a throw would
@@ -146,7 +156,7 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   if (now < ms(want.throttledUntil)) {
     throw new SenderError(`too many wrong codes on this screen recently; wait ${Math.ceil((ms(want.throttledUntil) - now) / 1000)} s and try again`);
   }
-  if (normPairCode(want.code) !== normPairCode(code)) {
+  if (!matchesPairCode(want.code, code)) {
     const windowAge = now - ms(want.windowStart);
     const freshWindow = windowAge > PAIR_THROTTLE_WINDOW_MS;
     const windowStart = freshWindow ? ctx.timestamp : want.windowStart;
@@ -166,25 +176,26 @@ function pairWithCode(ctx: Ctx, key: string, code: string, role: RoleName, subje
   return { paired: true, reason: '' };
 }
 
-/** Owner only: a fresh code for this buyer, unlocked, with its counter and its throttle reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
-export function reissuePairCode(ctx: Ctx, { buyerId }: { buyerId: string }) {
+/** Owner only: a fresh code for this buyer (made by the owner, off-module; stored as its hash), unlocked, with its counter and its throttle reset. It also clears every screen's lock (pair_attempt is keyed by identity only): the operator unlocks. */
+export function reissuePairCode(ctx: Ctx, { buyerId, code }: { buyerId: string; code: string }) {
   requireRole(ctx, 'reissue_pair_code', ['owner']);
-  issuePairCode(ctx, buyerId);
+  issuePairCode(ctx, buyerId, code);
   for (const row of [...ctx.db.pairAttempt.iter()]) ctx.db.pairAttempt.identity.delete(row.identity);
 }
 
-/** Owner only: a fresh code for one seller's screen (stored under "seller:<id>"), with every screen lock cleared. */
-export function reissueSellerScreenCode(ctx: Ctx, { sellerId }: { sellerId: string }) {
+/** Owner only: a fresh code for one seller's screen (made by the owner; stored as its hash under "seller:<id>"), with every screen lock cleared. */
+export function reissueSellerScreenCode(ctx: Ctx, { sellerId, code }: { sellerId: string; code: string }) {
   requireRole(ctx, 'reissue_seller_screen_code', ['owner']);
-  issuePairCode(ctx, sellerScreenKey(sellerId));
+  issuePairCode(ctx, sellerScreenKey(sellerId), code);
   for (const row of [...ctx.db.pairAttempt.iter()]) ctx.db.pairAttempt.identity.delete(row.identity);
 }
 
-export function issuePairCode(ctx: Ctx, buyerId: string) {
-  let raw = '';
-  for (let i = 0; i < 10; i++) raw += PAIR_CODE_CHARS[ctx.random.integerInRange(0, PAIR_CODE_CHARS.length - 1)];
-  const code = `${raw.slice(0, 5)}-${raw.slice(5)}`;
-  const fresh = { buyerId, code, failedAttempts: 0, locked: false, windowStart: ctx.timestamp, windowMisses: 0, throttledUntil: Timestamp.UNIX_EPOCH };
+/** Store the hash of an owner-made code under `key`. A bad shape is refused without echoing what was sent. */
+function issuePairCode(ctx: Ctx, key: string, code: string) {
+  const norm = normPairCode(code);
+  if (!isPairCode(norm)) throw new SenderError(`the pairing code must be ${PAIR_CODE_LENGTH} characters from 0-9 and A-Z, without I, L, O or U`);
+  const buyerId = key;
+  const fresh = { buyerId, code: sha256Hex(norm), failedAttempts: 0, locked: false, windowStart: ctx.timestamp, windowMisses: 0, throttledUntil: Timestamp.UNIX_EPOCH };
   const cur = ctx.db.pairCode.buyerId.find(buyerId);
   if (cur) ctx.db.pairCode.buyerId.update(fresh);
   else ctx.db.pairCode.insert(fresh);
@@ -602,6 +613,27 @@ function sweepExpiredHolds(ctx: Ctx) {
   }
 }
 
+/**
+ * Per bid, per line: SOLD_OUT_REASON when stock held or sold by a round for a different need leaves too few units, else ''.
+ * Expired holds are swept first. Only other needs count: replaying the same need (the demo's round 2) must not compete with its
+ * own earlier sale, while a second buyer's round still meets the held or sold unit. close_round and close_stage share it (#449 RT-23).
+ */
+function soldOutLines(ctx: Ctx, needId: string, rows: readonly BidRow[], needItems: Map<string, NeedItem>): Map<string, string[]> {
+  sweepExpiredHolds(ctx);
+  const nowMs = ms(ctx.timestamp);
+  const needQtyOf = (sku: string) => needItems.get(sku)?.quantity ?? 1;
+  const sameNeed = (h: HoldRow) => ctx.db.round.id.find(h.roundId)?.needId === needId;
+  const soldOut = new Map<string, string[]>();
+  for (const b of rows) {
+    const held = [...ctx.db.stockHold.sellerId.filter(b.sellerId)].filter((h) => !sameNeed(h)).map(asHoldLike);
+    soldOut.set(b.id, soldOutReasons(
+      b.lines.map((l: Line) => ({ skuSpec: l.skuSpec, condition: l.offeredCondition || needItems.get(l.skuSpec)?.condition || 'new', quantity: l.quantity })),
+      held, b.sellerId, nowMs, needQtyOf,
+    ));
+  }
+  return soldOut;
+}
+
 /** A deal id names its awarded bid as `<bid id>`, `deal-<bid id>` or `<round id>:<bid id>`. */
 export function bidIdOfDeal(dealId: string): string {
   const d = dealId.startsWith('deal-') ? dealId.slice(5) : dealId;
@@ -705,17 +737,9 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
   // A line whose units are held or sold by an earlier round is skipped with a reason, like a line with no floor.
   const nowMs = ms(ctx.timestamp);
-  sweepExpiredHolds(ctx);
   const needQtyOf = (sku: string) => needItems.get(sku)?.quantity ?? 1;
   const condOfLine = (l: Line) => l.offeredCondition || needItems.get(l.skuSpec)?.condition || 'new';
-  const soldOut = new Map<string, string[]>();
-  // Only holds from rounds that served a different need count: replaying the same need (the demo's round 2) must not
-  // compete with its own earlier sale, while a second buyer's round still meets the held or sold unit.
-  const sameNeed = (h: HoldRow) => ctx.db.round.id.find(h.roundId)?.needId === r.needId;
-  for (const b of rows) {
-    const held = [...ctx.db.stockHold.sellerId.filter(b.sellerId)].filter((h) => !sameNeed(h)).map(asHoldLike);
-    soldOut.set(b.id, soldOutReasons(b.lines.map((l: Line) => ({ skuSpec: l.skuSpec, condition: condOfLine(l), quantity: l.quantity })), held, b.sellerId, nowMs, needQtyOf));
-  }
+  const soldOut = soldOutLines(ctx, r.needId, rows, needItems);
   const lineRejects = new Map(rows.map((b) => [b.id, b.lines.map((_: Line, i: number) => b.lineRejects[i] || soldOut.get(b.id)![i] || '')]));
   const ranked = rankBids(rows.map(toBid), {
     needItems, rejections, lineRejects, spendLimit, heldBack, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
@@ -850,7 +874,13 @@ function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     if (reasons.length) rejections.set(b.id, reasons);
   }
   const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
-  const lineRejects = new Map(rows.map((b) => [b.id, b.lineRejects]));
+  // #449 RT-23: the same hold sweep and sold-out check close_round runs. A line whose unit another need's round holds or sold is
+  // skipped with a reason, so a champion is always crowned on a line that still has stock (its hold below needs no second check).
+  const soldOut = soldOutLines(ctx, r.needId, rows, needItems);
+  const lineRejects = new Map(rows.map((b) => [b.id, b.lines.map((_: Line, i: number) => b.lineRejects[i] || soldOut.get(b.id)![i] || '')]));
+  for (const b of rows) {
+    if (soldOut.get(b.id)!.some((x) => x)) event(ctx, 'stock_sold_out', 'bid', b.id, `A bid line was ${SOLD_OUT_REASON}`, b.sellerId, b.origin);
+  }
   const ranked = rankBids(rows.map(toBid), {
     needItems, rejections, lineRejects, spendLimit, heldBack, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
   });
@@ -1111,12 +1141,15 @@ export interface RecordReceivingArgs {
   reasons: string[]; checkedBy: string; origin: string;
 }
 
-/** The buyer's own check at delivery. A clean one raises the allowance one step, once per deal. */
+/**
+ * The delivery check, relayed by the referee. A clean one raises the deal's buyer one allowance step, once per deal.
+ * #449 PL-20: it was the buyer's call, so a buyer could report their own clean delivery from a browser console and
+ * raise their own allowance. Nothing in the web calls it, so there is no buyer path left.
+ */
 export function recordReceiving(ctx: Ctx, a: RecordReceivingArgs) {
-  requireRole(ctx, 'record_receiving', ['buyer']);
+  requireRole(ctx, 'record_receiving', ['referee']);
   const md = ctx.db.mandate.hash.find(a.orderId);
   if (!md) throw new SenderError('no deal with that mandate hash');
-  requireRole(ctx, 'record_receiving', ['buyer'], md.buyerId);
   if (!ctx.db.payment.mandateHash.find(a.orderId)) throw new SenderError('this deal is not paid, so there is nothing to receive');
   if (!['accepted', 'rejected'].includes(a.result)) throw new SenderError('result must be accepted or rejected');
   if (ctx.db.receivingEvent.id.find(a.id)) throw new SenderError(`receiving event ${a.id} already exists`);

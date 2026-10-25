@@ -2,7 +2,7 @@
 // (or market/scripts/sim_sellers.mjs, SIM) place them through place_bid like anyone else.
 import type { InferSchema, ReducerCtx } from 'spacetimedb/server';
 import type spacetimedb from './schema';
-import { insertGoal, issuePairCode } from './market';
+import { insertGoal } from './market';
 
 type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
@@ -58,7 +58,7 @@ export function seedDemo(ctx: Ctx) {
       ctx.db.persona.insert({ sellerId: s.sellerId, name: s.name, archetype: s.archetype, voiceId: '', modelUrl: '', origin: 'SIM' });
     }
   }
-  if (!ctx.db.pairCode.buyerId.find(DEMO.buyerId)) issuePairCode(ctx, DEMO.buyerId);
+  // #449 RT-2: no pairing code here (ctx.random is predictable); the owner issues one with reissue_pair_code.
   if (!ctx.db.buyerProfile.buyerId.find(DEMO.buyerId)) ctx.db.buyerProfile.insert({ buyerId: DEMO.buyerId, displayName: DEMO.buyerName, origin: 'SIM', phone: '' });
   if (!ctx.db.goal.id.find(DEMO.goalId)) {
     // "a GPU for 1440p that fits my case and PSU, under $800, by Friday", as Lane A parses it.

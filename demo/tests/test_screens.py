@@ -2,23 +2,34 @@
 installed) for the DevTools client."""
 import http.server
 import json
+import re
 import threading
 
 import pytest
 
 from demo import rehearse, screens
 
-CODE = "K7Q2M-9XW4P"
 ROLE_ROWS = [['0xabc', '"buyer"', '"vidyut"']]
+CODE_SHAPE = r"[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}"
 
 
-def owner_sql(code_rows=None, role_rows=None):
-    """The owner's read-only SQL: the pair code, then the role table."""
+def owner_sql(role_rows=None):
+    """The owner's read-only SQL: only the role table now. #449 RT-2: pair_code holds a hash, so there is no code to read."""
     def sql(q):
-        if "pair_code" in q:
-            return [[f'"{CODE}"']] if code_rows is None else code_rows
+        assert "pair_code" not in q, "the code is made here and issued by the owner, never read back"
         return ROLE_ROWS if role_rows is None else role_rows
     return sql
+
+
+class Issuer:
+    """The owner's reissue call, faked: records (buyer_id, code), optionally fails with a message."""
+    def __init__(self, fail=None):
+        self.fail, self.calls = fail, []
+
+    def __call__(self, buyer_id, code):
+        self.calls.append((buyer_id, code))
+        if self.fail:
+            raise RuntimeError(self.fail.replace("{code}", code))
 
 
 class FakeMarket:
@@ -32,8 +43,8 @@ class FakeMarket:
             raise RuntimeError(self.fail)
 
 
-def test_pair_screen_reads_the_code_once_pairs_once_and_returns_the_token(tmp_path):
-    made, queries = [], []
+def test_pair_screen_issues_its_own_code_once_pairs_once_and_returns_the_token(tmp_path):
+    made, queries, issue = [], [], Issuer()
     inner = owner_sql()
 
     def sql(q):
@@ -43,16 +54,74 @@ def test_pair_screen_reads_the_code_once_pairs_once_and_returns_the_token(tmp_pa
     def market(path):
         made.append(FakeMarket(path))
         return made[-1]
-    token = screens.pair_screen(sql, market, tmp_path / "sub" / "t.json")        # the .tokens folder is created
+    token = screens.pair_screen(sql, market, tmp_path / "sub" / "t.json", issue=issue)        # the .tokens folder is created
     assert token == "tok-screen-1"
-    assert queries == ["SELECT code FROM pair_code WHERE buyer_id = 'vidyut'", "SELECT * FROM role"]
-    assert made[0].calls == [("pair_buyer_screen", {"buyer_id": "vidyut", "code": CODE})]     # entered exactly once
+    assert queries == ["SELECT * FROM role"]                                  # the private pair_code table is never read
+    assert len(issue.calls) == 1 and issue.calls[0][0] == "vidyut" and re.fullmatch(CODE_SHAPE, issue.calls[0][1])
+    assert made[0].calls == [("pair_buyer_screen", {"buyer_id": "vidyut", "code": issue.calls[0][1]})]     # the issued code, entered exactly once
+
+
+def test_each_forced_pairing_makes_a_fresh_code(tmp_path):
+    codes = set()
+    for _ in range(5):
+        issue = Issuer()
+        screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue, rotate=True)
+        codes.add(issue.calls[0][1])
+    assert len(codes) == 5
+
+
+def test_a_second_rehearsal_reuses_the_paired_screen_and_does_not_rotate_the_buyers_code(tmp_path):
+    """The screen identity from the last run still holds the buyer role: no new code is issued, none is entered."""
+    first = Issuer()
+    screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=first)
+    assert len(first.calls) == 1
+    again, made = Issuer(), []
+
+    def market(path):
+        made.append(path)
+        return FakeMarket(path)
+    assert screens.pair_screen(owner_sql(), market, tmp_path / "t.json", issue=again) == "tok-screen-1"
+    assert again.calls == [] and made == []
+
+
+@pytest.mark.parametrize("rows", [[], [['0xother', '"buyer"', '"vidyut"']], [['0xabc', '"buyer"', '"buyer-2"']]])
+def test_a_saved_token_whose_identity_lost_the_buyer_role_is_paired_again(tmp_path, rows):
+    (tmp_path / "t.json").write_text(json.dumps({"token": "stale", "identity": "abc"}))
+    issue = Issuer()
+    with pytest.raises(RuntimeError, match="did not take"):         # the fake role table never grows the row, so it ends here
+        screens.pair_screen(owner_sql(role_rows=rows), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue)
+    assert len(issue.calls) == 1                                    # but it did try with a new code
+
+
+def test_an_unreadable_saved_token_is_paired_again(tmp_path):
+    (tmp_path / "t.json").write_text("{not json")
+    issue = Issuer()
+    assert screens.pair_screen(owner_sql(), lambda p: FakeMarket(p), tmp_path / "t.json", issue=issue) == "tok-screen-1"
+    assert len(issue.calls) == 1
 
 
 def test_a_refused_pairing_never_echoes_the_code(tmp_path):
+    class Echo(FakeMarket):
+        def call(self, reducer, **args):
+            raise RuntimeError(f"code {args['code']} did not match")
+    issue = Issuer()
     with pytest.raises(RuntimeError) as e:
-        screens.pair_screen(owner_sql(), lambda p: FakeMarket(p, fail=f"code {CODE} did not match"), tmp_path / "t.json")
-    assert CODE not in str(e.value) and "[code]" in str(e.value)
+        screens.pair_screen(owner_sql(), lambda p: Echo(p), tmp_path / "t.json", issue=issue)
+    code = issue.calls[-1][1]
+    assert code not in str(e.value) and "[code]" in str(e.value)
+
+
+def test_a_failed_reissue_never_echoes_the_code_and_pairs_nothing(tmp_path):
+    made = []
+
+    def market(path):
+        made.append(path)
+        return FakeMarket(path)
+    issue = Issuer(fail="spacetime call exited 1: bad args {code}")
+    with pytest.raises(RuntimeError, match="pairing code was not issued") as e:
+        screens.pair_screen(owner_sql(), market, tmp_path / "t.json", issue=issue)
+    assert issue.calls[0][1] not in str(e.value) and "[code]" in str(e.value)
+    assert made == []                                                         # no screen identity was made or paired
 
 
 @pytest.mark.parametrize("rows", [[], [['0xabc', '"seller"', '"vidyut"']], [['0xother', '"buyer"', '"vidyut"']],
@@ -60,12 +129,7 @@ def test_a_refused_pairing_never_echoes_the_code(tmp_path):
 def test_a_pairing_that_did_not_take_is_never_reported_as_paired(tmp_path, rows):
     """A wrong code is not an HTTP error (the reducer returns paired false), so the role row is checked."""
     with pytest.raises(RuntimeError, match="did not take"):
-        screens.pair_screen(owner_sql(role_rows=rows), lambda p: FakeMarket(p), tmp_path / "t.json")
-
-
-def test_no_code_issued_is_a_clear_refusal(tmp_path):
-    with pytest.raises(RuntimeError, match="no pairing code"):
-        screens.pair_screen(owner_sql(code_rows=[]), lambda p: FakeMarket(p), tmp_path / "t.json")
+        screens.pair_screen(owner_sql(role_rows=rows), lambda p: FakeMarket(p), tmp_path / "t.json", issue=Issuer())
 
 
 def test_paired_shooter_falls_back_to_plain_shots_and_says_buyer_is_not_paired():
@@ -87,7 +151,7 @@ def test_paired_shooter_uses_the_paired_browser_when_pairing_works(tmp_path, mon
     monkeypatch.setattr(rehearse, "ROOT", tmp_path)
     (tmp_path / ".tokens").mkdir()
     shoot, browser, note = rehearse.paired_shooter(owner_sql(), market=lambda p: FakeMarket(p), browser_cls=Browser,
-                                                   chrome="/bin/true")
+                                                   chrome="/bin/true", issue=Issuer())
     assert seen == {"chrome": "/bin/true", "origin": f"http://localhost:{rehearse.WEB_PORT}/", "token": "tok-screen-1"}
     assert shoot == browser.shot and "paired once" in note and "tok-screen-1" not in note
 
