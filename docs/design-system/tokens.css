@@ -1,81 +1,144 @@
-@import "tailwindcss";
-
+/* Tech Bazaar - generated from tokens.json */
 :root, [data-theme="light"] {
-  --canvas: #f7f8fa; --surface: #ffffff; --surface-2: #eef0f4;
-  --ink: #0f1419; --ink-2: #3f4857; --muted: #687283;
-  --line: #e3e6ec; --line-2: #c9cfd9;
-  --pulse: #2457f5; --pulse-ink: #ffffff; --pulse-soft: #2457f51a; --pulse-glow: #2457f559;
-  --mint: #15803d; --mint-soft: #15803d1f; --coral: #c0392b; --coral-soft: #c0392b1f;
-  --amber: #b45309; --amber-soft: #b453091f; --slate: #5b6575; --slate-soft: #5b657521;
-  --royal: #6d28d9; --royal-soft: #6d28d91f;
-  --shadow-card: 0 1px 2px #0f14190f; --shadow-pop: 0 12px 32px #0f14191f; --shadow-glow: 0 0 0 4px #2457f526;
-  color-scheme: light;
+  --canvas: #eef3f8;
+  --surface: #ffffff;
+  --surface-2: #f4f6fa;
+  --glass: #ffffffcc;
+  --ink: #0b1b2b;
+  --ink-2: #2a3440;
+  --muted: #5b6b7c;
+  --line: #e3e8ef;
+  --line-2: #0b1b2b24;
+  --pulse: #1e4ed8;
+  --pulse-ink: #ffffff;
+  --pulse-soft: #eef2ff;
+  --pulse-soft-ink: #1e3a8a;
+  --live: #0891b2;
+  --live-soft: #0891b224;
+  --mint: #065f46;
+  --mint-mark: #0f9d76;
+  --mint-soft: #d1fae5;
+  --coral: #b4232a;
+  --coral-mark: #e5484d;
+  --coral-soft: #fdecec;
+  --amber: #92400e;
+  --amber-soft: #fef3c7;
+  --slate: #334155;
+  --slate-soft: #eef2f6;
+  --referee: #1e3a8a;
+  --referee-soft: #eef2ff;
+  --floor-bg: #0b1b2b;
+  --floor-ground: #112437;
+  --floor-line: #eef3f8;
+  --floor-rope: #5b6b7c;
+  --pac: #eef3f8;
+  --ghost-1: #8fa0b2;
+  --ghost-2: #e5484d;
+  --ghost-3: #fcd34d;
+  --ghost-4: #0f9d76;
+  --ghost-eaten: #334155;
+  --shield: #22d3ee;
+  --checker: #0f9d76;
+  --tag-bg: #eef3f8;
+  --tag-ink: #0b1b2b;
+  --shadow-ring: 0 0 0 1.5px #0b1b2b24, 0 1px 2px #0b1b2b14;
+  --shadow-card: 0 1px 2px #0b1b2b0f, 0 8px 24px #0b1b2b0f;
+  --shadow-lift: 0 24px 60px #0b1b2b2e;
+  --shadow-glass: inset 0 0.5px 0 #fffffff2, 0 0 0 0.5px #0e172614, 0 4px 40px 8px #0e172629, 0 34px 70px -34px #0e172642;
+  --shadow-focus: 0 0 0 4px #1e4ed833;
 }
 [data-theme="dark"] {
-  --canvas: #0b0d12; --surface: #121620; --surface-2: #1a1f2b;
-  --ink: #edf0f5; --ink-2: #b7bfcc; --muted: #8b95a7;
-  --line: #242b38; --line-2: #343d4d;
-  --pulse: #6f93ff; --pulse-ink: #0b0d12; --pulse-soft: #6f93ff29; --pulse-glow: #6f93ff73;
-  --mint: #4ade80; --mint-soft: #4ade8029; --coral: #f87171; --coral-soft: #f8717129;
-  --amber: #fbbf24; --amber-soft: #fbbf2429; --slate: #98a2b3; --slate-soft: #98a2b329;
-  --royal: #a78bfa; --royal-soft: #a78bfa29;
-  --shadow-card: 0 1px 2px #00000080; --shadow-pop: 0 12px 32px #000000a6; --shadow-glow: 0 0 0 4px #6f93ff33;
-  color-scheme: dark;
+  --canvas: #0b1b2b;
+  --surface: #112437;
+  --surface-2: #16304a;
+  --glass: #112437cc;
+  --ink: #eef3f8;
+  --ink-2: #c5d0dc;
+  --muted: #8fa0b2;
+  --line: #1f3a55;
+  --line-2: #eef3f833;
+  --pulse: #8fb0ff;
+  --pulse-ink: #0b1b2b;
+  --pulse-soft: #1e4ed838;
+  --pulse-soft-ink: #c7d4ff;
+  --live: #22d3ee;
+  --live-soft: #22d3ee29;
+  --mint: #6ee7b7;
+  --mint-mark: #0f9d76;
+  --mint-soft: #0f9d7633;
+  --coral: #fca5a5;
+  --coral-mark: #e5484d;
+  --coral-soft: #e5484d33;
+  --amber: #fcd34d;
+  --amber-soft: #92400e4d;
+  --slate: #cbd5e1;
+  --slate-soft: #33415566;
+  --referee: #c7d4ff;
+  --referee-soft: #1e4ed838;
+  --floor-bg: #0b1b2b;
+  --floor-ground: #112437;
+  --floor-line: #eef3f8;
+  --floor-rope: #5b6b7c;
+  --pac: #eef3f8;
+  --ghost-1: #8fa0b2;
+  --ghost-2: #e5484d;
+  --ghost-3: #fcd34d;
+  --ghost-4: #0f9d76;
+  --ghost-eaten: #334155;
+  --shield: #22d3ee;
+  --checker: #0f9d76;
+  --tag-bg: #eef3f8;
+  --tag-ink: #0b1b2b;
+  --shadow-ring: 0 0 0 1.5px #eef3f829, 0 1px 2px #00000066;
+  --shadow-card: 0 1px 2px #00000066, 0 8px 24px #00000059;
+  --shadow-lift: 0 24px 60px #000000a6;
+  --shadow-glass: inset 0 0.5px 0 #ffffff1f, 0 0 0 0.5px #eef3f81f, 0 4px 40px 8px #00000066, 0 34px 70px -34px #00000099;
+  --shadow-focus: 0 0 0 4px #8fb0ff4d;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --canvas: #0b0d12; --surface: #121620; --surface-2: #1a1f2b;
-    --ink: #edf0f5; --ink-2: #b7bfcc; --muted: #8b95a7;
-    --line: #242b38; --line-2: #343d4d;
-    --pulse: #6f93ff; --pulse-ink: #0b0d12; --pulse-soft: #6f93ff29; --pulse-glow: #6f93ff73;
-    --mint: #4ade80; --mint-soft: #4ade8029; --coral: #f87171; --coral-soft: #f8717129;
-    --amber: #fbbf24; --amber-soft: #fbbf2429; --slate: #98a2b3; --slate-soft: #98a2b329;
-    --royal: #a78bfa; --royal-soft: #a78bfa29;
-    --shadow-card: 0 1px 2px #00000080; --shadow-pop: 0 12px 32px #000000a6; --shadow-glow: 0 0 0 4px #6f93ff33;
-    color-scheme: dark;
-  }
-}
-/* Floor tokens: one value in both themes. */
 :root {
-  --floor-bg: #07080f; --floor-ground: #10131f; --floor-line: #f2efff; --floor-rope: #d9d4ff;
-  --floor-post-a: #ff7a1a; --floor-post-b: #8b5cf6;
-  --pac: #ffd21f; --pac-shade: #d9a900;
-  --ghost-1: #ff4d4d; --ghost-2: #ff8fd6; --ghost-3: #45e0ff; --ghost-4: #ffb04a;
-  --ghost-eaten: #4b5063; --ghost-blue: #3b6cff;
-  --referee: #a78bfa; --shield: #6f93ff; --checker: #4ade80;
-  --tag-bg: #ffffff; --tag-ink: #0b0d12; --crowd: #3a3d55;
-  --t-fast: 160ms; --t-base: 240ms; --t-slow: 420ms; --t-pulse: 1800ms; --t-ticker: 900ms;
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --f-reveal: 320ms; --f-dash: 600ms; --f-chomp: 420ms; --f-block: 500ms; --f-wander: 2400ms; --f-grow: 800ms; --f-walkout: 2000ms;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --container: 1120px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --t-fast: 160ms;
+  --t-base: 240ms;
+  --t-slow: 420ms;
+  --t-pulse: 1800ms;
+  --t-ticker: 900ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --f-reveal: 320ms;
+  --f-dash: 600ms;
+  --f-chomp: 420ms;
+  --f-block: 500ms;
+  --f-wander: 2400ms;
+  --f-grow: 800ms;
+  --f-walkout: 2000ms;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
-
-@theme inline {
-  --color-canvas: var(--canvas); --color-surface: var(--surface); --color-surface-2: var(--surface-2);
-  --color-ink: var(--ink); --color-ink-2: var(--ink-2); --color-muted: var(--muted);
-  --color-line: var(--line); --color-line-2: var(--line-2);
-  --color-pulse: var(--pulse); --color-pulse-ink: var(--pulse-ink); --color-pulse-soft: var(--pulse-soft); --color-pulse-glow: var(--pulse-glow);
-  --color-mint: var(--mint); --color-mint-soft: var(--mint-soft); --color-coral: var(--coral); --color-coral-soft: var(--coral-soft);
-  --color-amber: var(--amber); --color-amber-soft: var(--amber-soft); --color-slate: var(--slate); --color-slate-soft: var(--slate-soft);
-  --color-royal: var(--royal); --color-royal-soft: var(--royal-soft);
-  --color-floor-bg: var(--floor-bg); --color-floor-ground: var(--floor-ground); --color-floor-line: var(--floor-line); --color-floor-rope: var(--floor-rope);
-  --color-floor-post-a: var(--floor-post-a); --color-floor-post-b: var(--floor-post-b);
-  --color-pac: var(--pac); --color-pac-shade: var(--pac-shade);
-  --color-ghost-1: var(--ghost-1); --color-ghost-2: var(--ghost-2); --color-ghost-3: var(--ghost-3); --color-ghost-4: var(--ghost-4);
-  --color-ghost-eaten: var(--ghost-eaten); --color-ghost-blue: var(--ghost-blue);
-  --color-referee: var(--referee); --color-shield: var(--shield); --color-checker: var(--checker);
-  --color-tag-bg: var(--tag-bg); --color-tag-ink: var(--tag-ink); --color-crowd: var(--crowd);
-  --radius-sm: 8px; --radius-md: 12px; --radius-card: 16px; --radius-xl: 24px; --radius-pill: 999px;
-  --shadow-card: var(--shadow-card); --shadow-pop: var(--shadow-pop); --shadow-glow: var(--shadow-glow);
-  --spacing-gutter: 16px; --container-tb: 1120px;
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --font-arcade: var(--font-press-start), var(--font-geist-mono), ui-monospace, monospace;
-  --ease-out: var(--ease-out); --ease-in-out: var(--ease-in-out);
-  --animate-tb-pulse: tb-pulse 1800ms cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
-  @keyframes tb-pulse { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.6); opacity: 0; } }
-}
-
-body { background: var(--canvas); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-:focus-visible { outline: 2px solid var(--pulse); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+.display-xl { font-family: var(--font-sans); font-size: 56px; line-height: 60px; font-weight: 500; letter-spacing: -0.025em; }
+.display-lg { font-family: var(--font-sans); font-size: 40px; line-height: 44px; font-weight: 500; letter-spacing: -0.02em; }
+.number-hero { font-family: var(--font-sans); font-size: 48px; line-height: 52px; font-weight: 500; letter-spacing: -0.02em; }
+.display-md { font-family: var(--font-sans); font-size: 28px; line-height: 34px; font-weight: 500; letter-spacing: -0.015em; }
+.title { font-family: var(--font-sans); font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.headline { font-family: var(--font-sans); font-size: 17px; line-height: 22px; font-weight: 600; }
+.body { font-family: var(--font-sans); font-size: 17px; line-height: 26px; font-weight: 400; }
+.body-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 400; }
+.footnote { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em; }
+.code-lg { font-family: var(--font-mono); font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: 0.04em; }
+.price { font-family: var(--font-mono); font-size: 15px; line-height: 20px; font-weight: 500; }
+.label-mono { font-family: var(--font-mono); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em; }

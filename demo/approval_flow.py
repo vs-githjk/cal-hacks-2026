@@ -75,7 +75,7 @@ def stripe_charge_test(mandate: Mapping[str, Any], key: str, urlopen: Callable =
     form = urllib.parse.urlencode({
         "amount": cents, "currency": "usd", "payment_method": "pm_card_visa", "confirm": "true",
         "automatic_payment_methods[enabled]": "true", "automatic_payment_methods[allow_redirects]": "never",
-        "description": f"Tech Bazaar demo, mandate {mandate['id']}", "metadata[mandate_hash]": mandate["hash"]}).encode()
+        "description": f"Fish Market demo, mandate {mandate['id']}", "metadata[mandate_hash]": mandate["hash"]}).encode()
     req = urllib.request.Request(STRIPE_URL, data=form, method="POST", headers={
         "Authorization": f"Bearer {key}", "Idempotency-Key": idempotency_key(mandate),
         "Content-Type": "application/x-www-form-urlencoded"})

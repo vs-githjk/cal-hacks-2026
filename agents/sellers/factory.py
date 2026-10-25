@@ -74,10 +74,10 @@ def validate_config(cfg, *, catalog: bool = False) -> dict:
     # <NAME>_AGENT_SEED, so they are the same reserved ids.
     folded_id = cfg["id"].replace("-", "_").removesuffix("_agent")
     if not catalog and (folded_id in RESERVED_IDS or SELLER_ID_RE.match(folded_id)):
-        err("id", "is reserved for a Tech Bazaar agent")
+        err("id", "is reserved for a Fish Market agent")
     port = cfg.get("port")
     if port in RESERVED_PORTS:
-        err("port", f"{port} is used by {PORT_OWNERS.get(port, 'a Tech Bazaar service')}")
+        err("port", f"{port} is used by {PORT_OWNERS.get(port, 'a Fish Market service')}")
     pricing = cfg["pricing"]
     mode = pricing["mode"]
     if mode == "fixed_margin":

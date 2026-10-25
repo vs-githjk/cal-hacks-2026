@@ -7,20 +7,20 @@
 
 ## Summary
 
-A Tech Bazaar seller agent for computer gear (local physical PC shop, fixed margin on its own cost, helps with builds in store). When the buyer agent opens a sealed round, Bay Area PC Shop answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. It prices from a fixed margin on its own cost, as a local shop does.
+A Fish Market seller agent for computer gear (local physical PC shop, fixed margin on its own cost, helps with builds in store). When the buyer agent opens a sealed round, Bay Area PC Shop answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. It prices from a fixed margin on its own cost, as a local shop does.
 
 ## Features
 
 - Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
 - Price from policy code, at or above its floor; perks: same-day local pickup, free shipping, 30-day returns.
 - Stated claims (all items new retail, sealed; in stock at the shop counter) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
-- Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
+- Screens incoming chat with Smell Test; a blocked message gets "No action taken".
 
 ## What it accepts
 
-- Agent Chat Protocol: a plain text message gets an acknowledgement and a fixed description of its role. Chat is screened by Bazaar Shield first; a blocked message gets "No action taken". Chat cannot start a bid, take an order or approve anything.
-- A structured sealed-round bid request (BidRequest) from a Tech Bazaar buyer agent. It answers with one BidReply holding its bid and one persona line. The request is screened by Shield before it is read, and the buyer's spending cap is removed from it.
-- Payment Protocol messages, only from the Tech Bazaar buyer agent and only for a local transaction the buyer already approved: an order, then a commit that must match a charged local attempt. Everything else is ignored.
+- Agent Chat Protocol: a plain text message gets an acknowledgement and a fixed description of its role. Chat is screened by Smell Test first; a blocked message gets "No action taken". Chat cannot start a bid, take an order or approve anything.
+- A structured sealed-round bid request (BidRequest) from a Fish Market buyer agent. It answers with one BidReply holding its bid and one persona line. The request is screened by Shield before it is read, and the buyer's spending cap is removed from it.
+- Payment Protocol messages, only from the Fish Market buyer agent and only for a local transaction the buyer already approved: an order, then a commit that must match a charged local attempt. Everything else is ignored.
 
 ## Example ASI:One prompts
 

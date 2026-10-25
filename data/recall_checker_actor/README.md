@@ -15,7 +15,7 @@
 
 Every match carries the **recall page on cpsc.gov**, the date, the **hazard**, the **remedy** (refund, repair or replacement) and how many **units** were recalled.
 
-Built for **AI shopping agents**. Our own, [Tech Bazaar](https://github.com/vs-githjk/cal-hacks-2026), vetoes a recalled product before any money moves. It's also useful to resellers, refurbishers, marketplaces checking listings, and anyone buying second-hand electronics.
+Built for **AI shopping agents**. Our own, [Fish Market](https://github.com/vs-githjk/fish-market-nothing-fishy), vetoes a recalled product before any money moves. It's also useful to resellers, refurbishers, marketplaces checking listings, and anyone buying second-hand electronics.
 
 ## Real example (the default input)
 
@@ -117,4 +117,4 @@ curl -X POST "https://api.apify.com/v2/acts/anoopibrampur~electronics-recall-che
 
 ## Source
 
-[github.com/vs-githjk/cal-hacks-2026](https://github.com/vs-githjk/cal-hacks-2026), `data/recall_checker.py` and `data/recalls.py`. Labels: results are MIRROR (a dated read of CPSC data). **Building from git alone fails:** run `./bundle.sh` first, which copies the recall code into `src/data/`.
+[github.com/vs-githjk/fish-market-nothing-fishy](https://github.com/vs-githjk/fish-market-nothing-fishy), `data/recall_checker.py` and `data/recalls.py`. Labels: results are MIRROR (a dated read of CPSC data). **Building from git alone fails:** run `./bundle.sh` first, which copies the recall code into `src/data/`.

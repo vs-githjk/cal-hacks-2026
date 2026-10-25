@@ -7,7 +7,7 @@ import { ProofLines } from "./ProofLines";
 
 const STATUS = {
   locked: ["bg-mint", "Locked", "text-ink"],
-  open: ["bg-accent", "Rounds running", "text-ink-2"],
+  open: ["bg-pulse", "Rounds running", "text-ink-2"],
   blocked: ["bg-coral", "Blocked, nothing paid", "text-ink-2"],
 } as const;
 
@@ -33,14 +33,14 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
       </div>
       <div className="flex items-end justify-between gap-2">
         <p>
-          <span className="text-[32px] font-semibold tracking-[-0.02em] tabular-nums text-ink">{money(total)}</span>
+          <span className="font-mono text-[32px]/[36px] font-medium tabular-nums text-ink">{money(total)}</span>
           <span className="text-[15px] text-muted"> of {money(cap)}</span>
         </p>
         <p className="text-[13px] text-muted">{picked} of {rows.length} parts, {b.sellers.length} sellers</p>
       </div>
-      <div role="img" aria-label={`${money(total)} of the ${money(cap)} cap`} className="mt-3 mb-4 flex h-3 gap-[2px] overflow-hidden rounded-[3px] bg-soft">
+      <div role="img" aria-label={`${money(total)} of the ${money(cap)} cap`} className="mt-3 mb-4 flex h-3 gap-[2px] overflow-hidden rounded-full bg-surface-2">
         {rows.map((r) => r.price !== null && (
-          <div key={r.part} className={r.state === "swapped" ? "bg-accent/70" : "bg-accent"} style={{ width: `${(r.price * 100) / cap}%` }} title={`${r.label} ${money(r.price)}`} />
+          <div key={r.part} className={r.state === "swapped" ? "bg-pulse/70" : "bg-pulse"} style={{ width: `${(r.price * 100) / cap}%` }} title={`${r.label} ${money(r.price)}`} />
         ))}
       </div>
       <ul className="divide-y divide-line border-y border-line">
@@ -53,7 +53,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
                 <span className="block truncate text-[14px] text-ink">{r.name}</span>
                 <span className="block text-[12.5px] text-muted">
                   {r.price === null ? (
-                    st === "bidding" ? <span className="text-ink-2"><Dot cls="bg-accent" />In a round</span>
+                    st === "bidding" ? <span className="text-ink-2"><Dot cls="bg-pulse" />In a round</span>
                     : st === "failed" ? <span className="text-ink-2"><Dot cls="bg-coral" />{r.note}</span>
                     : "Not started"
                   ) : (

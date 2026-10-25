@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { RankedBid } from "@/lib/screens";
 import { rankedBids as sampleBids, goal as sampleGoal } from "@/lib/sample";
 import { OriginChip, Tag, Verdict, money } from "@/components/ui";
+import { SHIELD } from "@/lib/brand";
 
 const STEPS = ["Request", "Offers", "Review", "Selected"] as const;
 const STEP_MS = 2600;
@@ -82,8 +83,8 @@ export function Corral({ bids, goalLine }: { bids: RankedBid[]; goalLine: string
           </g>
         )}
 
-        {/* Shield (left) and Advocate (right), flanking the corral */}
-        <Figure x={120} y={172} label="Shield" scale={1.05} />
+        {/* The Smell Test (left) and the advocate (right), flanking the corral */}
+        <Figure x={120} y={172} label={SHIELD} scale={1.05} />
         <Figure x={840} y={172} label="Advocate" scale={1.05} />
 
         {/* Sellers */}
@@ -103,7 +104,7 @@ export function Corral({ bids, goalLine }: { bids: RankedBid[]; goalLine: string
               >
                 <rect x={-78} y="0" width="156" height="56" rx="14" fill="var(--panel)" stroke={won ? "var(--mint)" : "var(--line)"} strokeWidth={won ? 2.5 : 1.5} />
                 <text x="0" y="24" textAnchor="middle" className="fill-ink" fontSize="18" fontWeight="700" style={{ textDecoration: vetoed ? "line-through" : undefined }}>
-                  {money(b.landed)}
+                  {b.landed > 0 ? money(b.landed) : "·"}
                 </text>
                 <text x="0" y="43" textAnchor="middle" fontSize="12" className="fill-muted" fontWeight="600">
                   {vetoed ? "VETOED" : won ? "WINNER" : b.origin}

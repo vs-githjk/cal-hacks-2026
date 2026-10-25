@@ -5,7 +5,7 @@ ApprovalService issues the code (shown only in the owner's private chat), judges
 exactly as on the direct path. The Caller only dials and returns what was said; it never sees the code or the secret.
 A reply that does not match this mandate, reuses a call id, or is not a finished call is refused (`refused`), and a
 missing reply is `transport_failed`. Only then does the buyer fall back to its own direct call, once; a refused reply
-is never retried through the Caller. A finished call that is not an approval is final.
+is never retried through the Caller. A finished call that is not an approval is final, and so is a call_timeout (the phone already rang).
 """
 from __future__ import annotations
 
@@ -34,6 +34,9 @@ class DelegatedVoiceClient:
         except Exception:  # noqa: BLE001  (timeout, transport error)
             self.transport_failed = True
             raise CartesiaError("delegated_call_unavailable") from None
+        if isinstance(reply, dict) and reply.get("error") == "call_timeout":
+            # the Caller dialled and the call rang out: the owner may have heard it, so the answer stands, no second call
+            raise CartesiaError("delegated_reply_call_timeout")
         problem = self._check(reply)
         if problem == "transport":
             self.transport_failed = True

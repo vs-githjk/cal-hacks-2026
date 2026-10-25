@@ -1,0 +1,8 @@
+# apify push skips what .gitignore lists, and .gitignore lists src/data/ (the bundle bundle.sh writes, kept out of git),
+# so the first build failed with ModuleNotFoundError. A "!" line here force-includes files again even when git ignores
+# them (apify-cli getActorLocalFilePaths; an older apify-cli without .actorignore support skips them: update it).
+# Run sh bundle.sh before apify push.
+__pycache__/
+*.pyc
+!src/data/**/*.py
+!src/data/**/*.json

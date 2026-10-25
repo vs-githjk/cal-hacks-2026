@@ -30,7 +30,7 @@ check() {   # a step that reads back what the last step did; in a dry run it is 
   if [ "$GO" = "--go" ]; then sh -c "$2" || { echo "  CHECK FAILED: $1"; exit 1; }; fi
 }
 
-echo "Tech Bazaar market -> Maincloud database $DB ($HTTP)"
+echo "Fish Market market -> Maincloud database $DB ($HTTP)"
 [ "$GO" = "--go" ] || echo "(dry run: add --go to run these)"
 
 run spacetime publish -s "$SERVER" -p ./market/spacetimedb "$DB"

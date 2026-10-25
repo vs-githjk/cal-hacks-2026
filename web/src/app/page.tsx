@@ -13,7 +13,7 @@ import { asOrigin, bidsFromRows, buildQuestion, homeRound, latestRound } from "@
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "The buyer's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
+  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Your goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
   { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
@@ -22,12 +22,12 @@ const ROUTES: { href: string; path: string; title: string; text: string; chips: 
 /** Home: the first screen judges see. Every number on it is counted from live market rows. */
 export default function Home() {
   const conn = useSpacetimeDB();
-  const [rounds] = useTable(tables.round);
+  const [rounds, roundsReady] = useTable(tables.round);
   const [results] = useTable(tables.roundResult);
   const [events] = useTable(tables.floorEvent);
 
   const r = latestRound(rounds);
-  const home = homeRound(rounds);
+  const home = homeRound(rounds, roundsReady);
   const bids = useMemo(() => bidsFromRows(results, events, r?.id), [results, events, r]);
   const stats = useMemo(() => {
     const mine = results.filter((x) => x.roundId === r?.id);
@@ -80,11 +80,13 @@ export default function Home() {
       <Question
         question={buildQuestion()}
         status={home.status === "closed" ? "verdict" : home.status}
-        detail={home.status === "none" ? undefined : home.title}
+        detail={home.status === "none" || home.status === "loading" ? undefined : home.title}
         origin={r?.origin}
       />
 
-      {home.status === "none" ? (
+      {home.status === "loading" ? (
+        <p className="text-[15px] text-ink-2">connecting...</p>
+      ) : home.status === "none" ? (
         <p className="text-[15px] text-ink-2">No round has run yet, so there is nothing to count. Numbers appear here once the first round opens.</p>
       ) : (
         <section aria-label="This round in numbers" className="grid grid-cols-2 gap-4 sm:grid-cols-5">

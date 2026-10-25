@@ -16,17 +16,18 @@ from uagents import Agent, Context, Model, Protocol
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))         # agents/, for common
 sys.path.insert(1, str(Path(__file__).resolve().parents[2]))         # the repo root, for pay/
 import common  # noqa: E402
-from caller import relay  # noqa: E402
+from caller import explain, relay  # noqa: E402
 from caller.relay import market_has_typed_approval  # noqa: E402
 
 common.SEEDS.setdefault("caller", os.getenv("CALLER_AGENT_SEED") or "tech-bazaar-caller-dev")
-NAME = "Bazaar Caller"
+NAME = "Fish Market Caller"
 
 
 class CallRequest(Model):
     mandate_json: str
     reason_json: str = ""
     deal_json: str = ""
+    expires_at: str = ""   # RT-24: ISO 8601 with a zone, at most 10 minutes ahead; a stale or missing one is refused
 
 
 class CallResult(Model):
@@ -54,8 +55,8 @@ def screen_sink():
 agent = Agent(**common.agent_args(
     "caller", 8006, name=NAME, handle=os.getenv("CALLER_AGENT_HANDLE", "techbazaarcaller"),
     readme_path=str(Path(__file__).with_name("AGENTVERSE.md")),
-    description="Places the one approval phone call for a Tech Bazaar purchase: the buyer says the code on their screen "
-                "and approve. It approves and charges nothing itself."))
+    description="The second-factor agent: the buyer agent cannot approve its own spend, so I place the one approval phone call. "
+                "You say the code from your own screen, for that exact amount and seller. I approve and charge nothing myself."))
 protocol = Protocol(name="tech-bazaar-approval-call", version="0.1.0")
 SEEN: set = set()
 
@@ -65,7 +66,7 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
     # Only the buyer agent may ask, checked before Shield so a stranger costs no Shield call (#298). Then invariant 3:
     # every agent message goes through Shield first (fails closed when Shield is down), whole or not at all.
     text = " ".join((msg.mandate_json, msg.reason_json, msg.deal_json))
-    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"), expires_at=msg.expires_at)
     if refused:
         await ctx.send(sender, CallResult(approved=False, reason=refused))
         return
@@ -93,46 +94,62 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
     show = (lambda code: sink(code, mandate_hash)) if sink else None
     out = await asyncio.to_thread(relay.handle, sender, request, buyer_address=common.address("buyer"), client=client,
                                   show_code=show, seen=SEEN, unconfigured=unconfigured, secret=env.get(vc.SECRET_ENV),
-                                  buyer_name=env.get(vc.NAME_ENV) or "there")
+                                  buyer_name=env.get(vc.NAME_ENV) or "there", expires_at=msg.expires_at)
     ctx.logger.info(f"approval call for {str(mandate_hash)[:12]}: {'approved' if out['approved'] else 'not approved'}")
     await ctx.send(sender, CallResult(approved=out["approved"], reason=out["reason"] or "", call_id=out["call_id"] or "",
                                       voice_approval_id=out["voice_approval_id"] or ""))
 
 
-@protocol.on_message(common.VoiceTransportRequest, replies=common.VoiceTransportResult)
-async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequest):
-    """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
-    what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate."""
-    text = " ".join((msg.mandate_hash, msg.variables_json))
-    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
+async def voice_transport(ctx: Context, sender: str, mandate_hash: str, variables_json: str, expires_at):
+    """The delegated voice call for both request messages. `expires_at` None means the request carries no deadline (the old
+    VoiceTransportRequest): accepted unless the operator set CALLER_REQUIRE_EXPIRES=1. A string is always checked, and a blank one
+    is refused as missing."""
+    require = relay.expiry_required_for_transport()
+    if expires_at is None and require:
+        expires_at = ""
+    text = " ".join((mandate_hash, variables_json))
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"), expires_at=expires_at, require_expiry=True)
     if refused:
-        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error=refused))
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, error=refused))
         return
-    verdict = await asyncio.to_thread(common.screen, f"voice-{abs(hash(msg.mandate_hash)) % 10**12}", sender, text)
+    verdict = await asyncio.to_thread(common.screen, f"voice-{abs(hash(mandate_hash)) % 10**12}", sender, text)
     if verdict.get("verdict") != "allow":
-        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error="shield_blocked"))
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, error="shield_blocked"))
         return
     try:
-        variables = json.loads(msg.variables_json)
+        variables = json.loads(variables_json)
     except Exception:  # noqa: BLE001
-        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error="bad_request"))
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, error="bad_request"))
         return
     from pay import voice_cartesia as vc
     try:
         client, unconfigured = vc.CartesiaClient.from_env(vc.load_env(vc.DEFAULT_ENV_FILE)), None
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
-    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": msg.mandate_hash, "variables": variables},
-                                  buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured)
-    await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, call_id=out["call_id"] or "",
+    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": mandate_hash, "variables": variables},
+                                  buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured,
+                                  expires_at=expires_at, require_expiry=True)
+    await ctx.send(sender, common.VoiceTransportResult(mandate_hash=mandate_hash, call_id=out["call_id"] or "",
                                                        call_json=json.dumps(out["call"]) if out["call"] else "",
                                                        error=out["error"] or ""))
 
 
+@protocol.on_message(common.VoiceTransportRequest, replies=common.VoiceTransportResult)
+async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequest):
+    """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
+    what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate. This message is UNCHANGED (a buyer on
+    older code keeps working) and has no deadline, so it is refused only when CALLER_REQUIRE_EXPIRES=1."""
+    await voice_transport(ctx, sender, msg.mandate_hash, msg.variables_json, None)
+
+
+@protocol.on_message(common.ExpiringVoiceTransportRequest, replies=common.VoiceTransportResult)
+async def on_expiring_transport(ctx: Context, sender: str, msg: common.ExpiringVoiceTransportRequest):
+    """RT-24: the same request with `expires_at`, always checked: stale, missing, malformed or far-future is refused before Shield."""
+    await voice_transport(ctx, sender, msg.mandate_hash, msg.variables_json, msg.expires_at)
+
+
 agent.include(protocol, publish_manifest=True)
-common.include_profile_chat(agent, "I am Bazaar Caller, Tech Bazaar's approval-call agent. I place one phone call when the buyer "
-                            "agent asks me to confirm a purchase, and I only take structured requests from it. I cannot approve "
-                            "or charge anything from this chat. Send buying goals to @techbazaarbuyer.")
+common.include_profile_chat(agent, explain.SECOND_FACTOR_TEXT)
 
 if __name__ == "__main__":
     agent.run()

@@ -91,6 +91,7 @@ export const Bid = __t.object("Bid", {
   source: __t.string(),
   sealedAt: __t.timestamp(),
   lineRejects: __t.array(__t.string()),
+  stage: __t.u32(),
 });
 export type Bid = __Infer<typeof Bid>;
 
@@ -272,6 +273,9 @@ export type MyPendingApprovals = __Infer<typeof MyPendingApprovals>;
 export const MyRole = __t.object("MyRole", {});
 export type MyRole = __Infer<typeof MyRole>;
 
+export const MyStanding = __t.object("MyStanding", {});
+export type MyStanding = __Infer<typeof MyStanding>;
+
 export const Need = __t.object("Need", {
   id: __t.string(),
   buyerId: __t.string(),
@@ -417,6 +421,9 @@ export const Round = __t.object("Round", {
   sealedCount: __t.u32(),
   closedAt: __t.option(__t.timestamp()),
   origin: __t.string(),
+  stage: __t.u32(),
+  maxStages: __t.u32(),
+  stageWindowS: __t.u32(),
 });
 export type Round = __Infer<typeof Round>;
 
@@ -436,8 +443,22 @@ export const RoundResult = __t.object("RoundResult", {
   source: __t.string(),
   adjustedTotal: __t.f64(),
   adjustmentReason: __t.string(),
+  stage: __t.u32(),
+  status: __t.string(),
 });
 export type RoundResult = __Infer<typeof RoundResult>;
+
+export const RoundResultSealed = __t.object("RoundResultSealed", {
+  resultId: __t.u64(),
+  roundId: __t.string(),
+  rank: __t.u32(),
+  landed: __t.f64(),
+  get lines() {
+    return __t.array(BidLine);
+  },
+  adjustedTotal: __t.f64(),
+});
+export type RoundResultSealed = __Infer<typeof RoundResultSealed>;
 
 export const RoundTimer = __t.object("RoundTimer", {
   scheduledId: __t.u64(),
@@ -479,6 +500,15 @@ export const SignupThrottle = __t.object("SignupThrottle", {
   count: __t.u32(),
 });
 export type SignupThrottle = __Infer<typeof SignupThrottle>;
+
+export const StandingRow = __t.object("StandingRow", {
+  roundId: __t.string(),
+  stillIn: __t.bool(),
+  reason: __t.string(),
+  lastOfferSkuSpec: __t.string(),
+  lastOfferPrice: __t.f64(),
+});
+export type StandingRow = __Infer<typeof StandingRow>;
 
 export const StockHold = __t.object("StockHold", {
   id: __t.u64(),

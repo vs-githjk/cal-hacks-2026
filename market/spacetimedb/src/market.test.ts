@@ -393,6 +393,45 @@ describe('every state change writes a floor event', () => {
   });
 });
 
+// ============================================================================================
+// #H1 (red team): a Shield block, failed claim or advocate veto attached while a round is still open
+// must not reach the public floor_event feed, or a rival still bidding learns which sellers are
+// already out. The round close that reveals the result flushes every check's event at once.
+// ============================================================================================
+describe('#H1 per-bid check events wait for round close', () => {
+  it("an open round's public events name no bid or seller, however many checks land on it", () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    const n0 = events().length;
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a1', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+    run(REF, (ctx) => m.attachClaimCheck(ctx, { bidId: 'bid-a1', claim: 'new', check: 'false', evidenceUrl: 'https://x.test', origin: 'SIM' }));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b1', recommendation: 'veto', ruleId: 'fit.gpu_length', text: 'too long', sourceUrl: 'https://x.test/b', origin: 'SIM' }));
+    // No public event at all for any of these three checks while the round stays open: not the bid id
+    // (which embeds the seller id), not the rule, not the verdict, nothing.
+    expect(events().slice(n0)).toHaveLength(0);
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const kinds = events().slice(n0).map((e) => e.kind);
+    expect(kinds).toContain('verdict');
+    expect(kinds).toContain('claim_checked');
+    expect(kinds).toContain('advocate_card');
+    const verdict = events().find((e) => e.kind === 'verdict')!;
+    expect(verdict.refId).toBe('bid-a1');
+    expect(verdict.label).toBe('Bazaar Shield: block');
+  });
+
+  it('a check attached after the round already closed (#389 defense in depth) is announced right away: it leaks nothing new', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const n0 = events().length;
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a1', verdict: 'block', ruleIds: ['shield.late'], origin: 'SIM' }));
+    expect(events().slice(n0).map((e) => e.kind)).toEqual(['verdict']);
+  });
+});
+
 describe('goals (Lane A Goal contract)', () => {
   it('post_goal stores the goal with its items; only a paired buyer screen sees it', () => {
     run(VIDYUT, (ctx) => m.postGoal(ctx, goalArgs()));
@@ -585,21 +624,23 @@ describe('attach_advocate_card (the advocate relay, referee only)', () => {
     expect([...h.db.bidCheck.iter()].map((c) => [c.kind, c.result])).toEqual([['advocate', 'caution']]);
   });
 
-  it('writes a floor event without the seller or the text, and a veto line on the buyer feed', () => {
+  it('#H1 defers the floor event (no seller, no text) until the round closes; the veto notification is immediate', () => {
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     const n0 = events().length;
     run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-a', ...veto }));
-    const e = events().slice(n0);
-    expect(e.map((x) => x.kind)).toEqual(['advocate_card']);
-    expect(e[0]!.label).toMatch(/veto/);
-    expect(e[0]!.sellerId).toBe('');
+    expect(events().slice(n0)).toHaveLength(0); // no public event while the round stays open
     const feed = m.myNotificationsView(h.viewContext(VIDYUT) as any);
     const v = feed.filter((n: any) => n.klass === 'veto');
-    expect(v).toHaveLength(1);
+    expect(v).toHaveLength(1); // the private veto notification is never deferred
     expect(v[0]!.text).toContain('The card is longer than your case allows');
     expect(v[0]!.text).toContain('https://example.com/spec');
     expect(m.myNotificationsView(h.viewContext(BOB) as any).filter((n: any) => n.klass === 'veto')).toHaveLength(0);
+    closeIt();
+    const e = events().slice(n0).filter((x) => x.kind === 'advocate_card');
+    expect(e).toHaveLength(1);
+    expect(e[0]!.label).toMatch(/veto/);
+    expect(e[0]!.sellerId).toBe('');
   });
 
   it('a veto must cite a source, the recommendation must be known, and the bid must exist', () => {
@@ -1837,8 +1878,174 @@ describe('#336 sealed knockout rounds', () => {
   });
 });
 
+// ============================================================================================
+// Lane D takeover of #416 (red team H1/H2, reviewer findings 1 to 3): a sealed round leaks nothing
+// public before it closes, and every path that closes a knockout round reveals what was held back.
+// ============================================================================================
+describe('sealed rounds leak nothing before close (supersedes #416)', () => {
+  function openKnockout(maxStages = 3, stageWindowS = 15) {
+    run(VIDYUT, (ctx) => m.postNeed(ctx, needArgs()));
+    run(REF, (ctx) => m.openKnockoutRound(ctx, { roundId: 'round-1', needId: 'need-1', stageWindowS, maxStages }));
+  }
+  const closeStage = () => run(REF, (ctx) => m.closeStage(ctx, { roundId: 'round-1' }));
+  const resultOf = (sellerId: string, stage = 1) => [...h.db.roundResult.roundId.filter('round-1')].find((x) => x.sellerId === sellerId && x.stage === stage)!;
+  const shieldBlock = (bidId: string) => run(REF, (ctx) => m.attachVerdict(ctx, { bidId, verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+  const json = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === 'bigint' ? x.toString() : x));
+
+  it('1 (H): close_stage that crowns a champion flushes the deferred Shield verdict of the knocked-out seller', () => {
+    openKnockout();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    const n0 = events().length;
+    shieldBlock('bid-a1');
+    expect(events().slice(n0)).toHaveLength(0); // deferred while open
+    advance(16_000);
+    closeStage();
+    expect(h.db.round.id.find('round-1')).toMatchObject({ state: 'closed' });
+    expect(resultOf('seller-b')).toMatchObject({ status: 'champion', rank: 1 });
+    const verdicts = events().filter((e) => e.kind === 'verdict');
+    expect(verdicts).toHaveLength(1);
+    expect(verdicts[0]).toMatchObject({ refId: 'bid-a1', label: 'Bazaar Shield: block' });
+    expect(events().filter((e) => e.kind === 'auction_closed')).toHaveLength(1);
+  });
+
+  it('1 (H): close_stage with no survivor (the only bidder is blocked) flushes the verdict too', () => {
+    openKnockout();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    shieldBlock('bid-a1');
+    advance(16_000);
+    closeStage();
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    expect(events().filter((e) => e.kind === 'verdict').map((e) => e.refId)).toEqual(['bid-a1']);
+  });
+
+  it('1 (H): a knockout stage that leaves the round open keeps the checks deferred, and the final close flushes each once', () => {
+    openKnockout();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    run(REF, (ctx) => m.attachAdvocateCard(ctx, { bidId: 'bid-b1', recommendation: 'buy', ruleId: 'advocate.fit_ok', text: 'fits', sourceUrl: 'https://x.test/b', origin: 'SIM' }));
+    advance(16_000);
+    closeStage(); // a knocked out, b and c advance, round stays open
+    expect(h.db.round.id.find('round-1')!.state).toBe('open');
+    expect(events().filter((e) => e.kind === 'advocate_card')).toHaveLength(0);
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(740)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c2', [line(690)])));
+    advance(16_000);
+    closeStage();
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    expect(events().filter((e) => e.kind === 'advocate_card').map((e) => e.refId)).toEqual(['bid-b1']);
+  });
+
+  it("2 (M): an open round's public events name no bid and no seller, even for a below-floor bid", () => {
+    setupRound();
+    const n0 = events().length;
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(690)]))); // below seller-a's 700 floor
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-b1', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }));
+    const open = events().slice(n0);
+    expect(json(open)).not.toMatch(/bid-a1|bid-b1|seller-a|seller-b|floor/i);
+    for (const e of open) {
+      expect(e.sellerId).toBe('');
+      expect(['bid', 'bid_check']).not.toContain(e.refTable);
+    }
+    expect(h.db.round.id.find('round-1')!.sealedCount).toBe(2); // the count stays public
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const after = events().slice(n0);
+    expect(after.find((e) => e.kind === 'bid_rejected')).toMatchObject({ refId: 'bid-a1', sellerId: 'seller-a' });
+    expect(after.find((e) => e.kind === 'bid_sealed')).toMatchObject({ refId: 'bid-b1', sellerId: 'seller-b' });
+  });
+
+  it('2 (M): the revealed bid events keep the moment each bid arrived, in arrival order', () => {
+    setupRound();
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    const tB = h.db.bid.id.find('bid-b1')!.sealedAt;
+    advance(4_000);
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    const tA = h.db.bid.id.find('bid-a1')!.sealedAt;
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    const arrivals = events().filter((e) => e.kind === 'bid_sealed');
+    expect(arrivals.map((e) => e.refId)).toEqual(['bid-b1', 'bid-a1']);
+    expect(arrivals.map((e) => e.at.microsSinceUnixEpoch)).toEqual([tB.microsSinceUnixEpoch, tA.microsSinceUnixEpoch]);
+  });
+
+  it('2 (M): a knockout stage close reveals that stage bids; the next stage bids stay hidden until their own close', () => {
+    openKnockout();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    expect(events().some((e) => e.kind === 'bid_sealed' || e.kind === 'bid_rejected')).toBe(false);
+    advance(16_000);
+    closeStage();
+    expect(events().filter((e) => e.kind === 'bid_sealed').map((e) => e.refId).sort()).toEqual(['bid-a1', 'bid-b1', 'bid-c1']);
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(740)])));
+    expect(events().some((e) => e.refId === 'bid-b2')).toBe(false);
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c2', [line(690)])));
+    advance(16_000);
+    closeStage();
+    expect(events().filter((e) => e.kind === 'bid_sealed').map((e) => e.refId).sort()).toEqual(['bid-a1', 'bid-b1', 'bid-b2', 'bid-c1', 'bid-c2']);
+  });
+
+  it('3 (M): a knocked-out row of a stage that leaves the round open shows no rank, price or lines until the round closes', () => {
+    openKnockout();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    advance(16_000);
+    closeStage();
+    expect(h.db.round.id.find('round-1')!.state).toBe('open');
+    const a = resultOf('seller-a');
+    expect(a.status).toBe('knocked_out');
+    expect(a).toMatchObject({ rank: 0, landed: 0, adjustedTotal: 0 });
+    expect(a.lines).toHaveLength(0);
+    for (const sid of ['seller-b', 'seller-c']) expect(resultOf(sid)).toMatchObject({ status: 'advancing', rank: 0, landed: 0 });
+    for (const row of h.db.roundResult.roundId.filter('round-1')) expect(json(row)).not.toMatch(/790|760|700/);
+
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b2', [line(740)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c2', [line(690)])));
+    advance(16_000);
+    closeStage();
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    const revealed = resultOf('seller-a');
+    expect(revealed).toMatchObject({ status: 'knocked_out', rank: 3, landed: 790, reasons: ['knocked out: last placed this stage'] });
+    expect(revealed.adjustedTotal).toBeGreaterThanOrEqual(790); // the real quality-adjusted score, not the blank 0
+    expect(revealed.lines.map((l) => l.unitPrice)).toEqual([790]);
+    expect([...h.db.roundResultSealed.iter()]).toHaveLength(0); // nothing left held back
+  });
+
+  it('3 (M): a rule-breaker knocked out while the round stays open hides its price too, and shows it at close', () => {
+    const D = as('seller-d');
+    const dIdentity = idOf(D);
+    run(OWNER, (ctx) => m.assignRole(ctx, { identity: dIdentity, role: 'seller', subjectId: 'seller-d' }));
+    run(D, (ctx) => m.setFloorForCondition(ctx, { skuSpec: GPU, condition: 'new', floor: 100 }));
+    openKnockout();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a1', [line(790)])));
+    run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b1', [line(760)])));
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c1', [line(700)])));
+    run(D, (ctx) => m.placeBid(ctx, bidArgs('bid-d1', [line(720)])));
+    shieldBlock('bid-b1');
+    advance(16_000);
+    closeStage(); // b blocked, a last placed among the clean: c and d advance, round stays open
+    expect(h.db.round.id.find('round-1')!.state).toBe('open');
+    expect(resultOf('seller-b')).toMatchObject({ status: 'knocked_out', rank: 0, landed: 0, adjustedTotal: 0 });
+    expect(resultOf('seller-b').lines).toHaveLength(0);
+    expect(resultOf('seller-b').reasons.join(' ')).toContain('Shield');
+    expect(resultOf('seller-a')).toMatchObject({ status: 'knocked_out', rank: 0, landed: 0 });
+    run(C, (ctx) => m.placeBid(ctx, bidArgs('bid-c2', [line(690)])));
+    run(D, (ctx) => m.placeBid(ctx, bidArgs('bid-d2', [line(710)])));
+    advance(16_000);
+    closeStage();
+    expect(h.db.round.id.find('round-1')!.state).toBe('closed');
+    expect(resultOf('seller-b')).toMatchObject({ status: 'knocked_out', rank: 0, landed: 760 }); // never ranked; its landed price shows now
+    expect(resultOf('seller-b').lines.map((l) => l.unitPrice)).toEqual([760]);
+    expect(resultOf('seller-a')).toMatchObject({ status: 'knocked_out', rank: 3, landed: 790 });
+  });
+});
+
 describe('#374 sign_up_buyer', () => {
-  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana' }) =>
+  const signUp = (who: Auth, a: { displayName: string; phone?: string } = { displayName: 'Ana', phone: '+14155550100' }) =>
     run(who, (ctx) => m.signUpBuyer(ctx, a)) as string;
 
   it('creates a b_<8> buyer bound to the caller with a $0 per-buy allowance', () => {
@@ -1869,13 +2076,21 @@ describe('#374 sign_up_buyer', () => {
     expect(() => signUp(OWNER)).toThrow(/already/);
   });
 
-  it('phone is optional and validated; the name is required and capped', () => {
-    const a = signUp(as('new-3'), { displayName: 'Bo' });
-    expect(h.db.buyerProfile.buyerId.find(a)!.phone).toBe('');
+  it('#449 PL-15 a sign-up without a phone is refused: purchases are approved by a call', () => {
+    for (const phone of [undefined, '', '   ']) {
+      const who = as(`nophone-${phone ?? 'none'}`);
+      expect(() => signUp(who, { displayName: 'Bo', phone })).toThrow('a phone number is required: purchases are approved by a call');
+      expect(h.db.role.identity.find(idOf(who))).toBeFalsy();
+    }
+    expect([...h.db.buyerProfile.iter()].filter((p) => p.displayName === 'Bo')).toHaveLength(0);
+    expect(signUp(as('new-3'), { displayName: 'Bo', phone: '+442079460958' })).toMatch(/^b_/);
+  });
+
+  it('the phone is validated; the name is required and capped', () => {
     for (const bad of ['abc', '4155550100', '+0123456789'])
       expect(() => signUp(as(`bad-${bad}`), { displayName: 'Bo', phone: bad })).toThrow('phone must start with + and a country code, like +14155550100');
-    expect(() => signUp(as('new-5'), { displayName: '   ' })).toThrow();
-    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100) });
+    expect(() => signUp(as('new-5'), { displayName: '   ', phone: '+14155550100' })).toThrow(/display name required/);
+    const b = signUp(as('new-6'), { displayName: 'x'.repeat(100), phone: '+14155550100' });
     expect(h.db.buyerProfile.buyerId.find(b)!.displayName).toHaveLength(60);
   });
 
@@ -1903,7 +2118,7 @@ describe('#374 telemetry', () => {
   };
 
   it('counts the market with one row and no per-user data', () => {
-    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    run(as('tel-1'), (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     setupRound();
     run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
     run(B, (ctx) => m.placeBid(ctx, bidArgs('bid-b', [line(760)])));
@@ -1961,7 +2176,7 @@ describe('#374 post_need referee path', () => {
   let NEW: Auth, buyerId: string;
   beforeEach(() => {
     NEW = as('need-new');
-    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-r', buyerId })));
   });
 

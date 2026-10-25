@@ -90,7 +90,7 @@ def seller_6(tmp_path, monkeypatch):
     monkeypatch.setattr(seller_agent.common, "agent_args", lambda role, port, **kw: args.update(role=role, port=port,
                                                                                               **kw) or {})
     chats = []
-    monkeypatch.setattr(seller_agent.common, "include_profile_chat", lambda _agent, text: chats.append(text))
+    monkeypatch.setattr(seller_agent.common, "include_profile_chat", lambda _agent, text, **_kw: chats.append(text))
     monkeypatch.setattr(seller_agent.common, "address", lambda role: BUYER_AGENT if role == "buyer" else role)
     monkeypatch.setattr(seller_agent.common, "screen", lambda *_a, **_k: {"verdict": "allow", "reasons": []})
     app = seller_agent.build("seller_6")

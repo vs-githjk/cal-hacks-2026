@@ -82,9 +82,9 @@ def email(facts: dict, shipment: dict, owner_email: Any) -> Optional[dict]:
         f"Expected delivery: {shipment['eta']} (SIM estimate)",
         f"Tracking: {shipment['carrier']} {shipment['tracking']} (SIM carrier data, no real shipment)",
         "",
-        "Sent by your Tech Bazaar buyer agent to your own address. Nothing in this email asks you for a code or a card.",
+        "Sent by your Fish Market buyer agent to your own address. Nothing in this email asks you for a code or a card.",
     ])
-    return {"to": owner_email.strip(), "subject": f"Tech Bazaar order {facts['order_id']}: {facts['item']}", "body": body}
+    return {"to": owner_email.strip(), "subject": f"Fish Market order {facts['order_id']}: {facts['item']}", "body": body}
 
 
 def deliver(facts: dict, shipment: dict, *, tell_owner: Callable[[str], Any], owner_email: Any = None,

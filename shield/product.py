@@ -139,8 +139,8 @@ def create_product_app(keys: Optional[KeyStore] = None, meter: Optional[Meter] =
     keys, meter, limit = keys or KeyStore(), meter or Meter(), RateLimit(per_minute)
     claim_fetch = claim_fetch or public_fetch
     app = create_app()
-    app.title = "Bazaar Shield API"
-    app.description = ("Screen agent-to-agent commerce messages for prompt injection, payee swaps and other attacks. "
+    app.title = "Smell Test API"
+    app.description = ("Nothing fishy gets through. Screen agent-to-agent commerce messages for prompt injection, payee swaps and other attacks. "
                        "Send `X-API-Key` on every /v1 call. Any non-200 response must be treated as block.")
 
     @app.middleware("http")
