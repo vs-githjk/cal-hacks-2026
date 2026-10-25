@@ -194,9 +194,6 @@ def _growth(work, text, *, small=2500, repeats=7, patience=8.0):
             return ratio, best[len(text)]
 
 
-# 8x the text. Linear time grows about 8x, quadratic about 64x; the bound sits at the geometric middle (slope 1.5, 22.6x).
-# The first bound, 4x the text against 8x, failed on a CI runner whose three steady pairs read 8.4 to 8.8 against linear
-# 4: a 2x cache effect, not a quadratic, and 4x text leaves no room for that. 8x text leaves a 2.8x margin.
 # 8x the text: linear work grows about 8x, quadratic about 64x. 32 leaves a noisy runner 4x of headroom on linear work
 # (CI read 23.3 and 24.5 against the old 22.6 on work that measures 9.5 on a quiet machine) and quadratic work 2x below it.
 GROWTH_BOUND = 32.0
