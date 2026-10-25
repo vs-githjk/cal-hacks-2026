@@ -1,0 +1,137 @@
+[
+ {
+  "title": "CORSAIR Vengeance RS DDR5 32GB (2 x 16GB) Up to 6000MHz AMD Intel RAM",
+  "url": "https://www.amazon.com/dp/B0HC887B5X",
+  "price": {
+   "value": 474.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 505.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "CORSAIR Vengeance DDR5 32GB (2 x 16GB) Up to 6000MHz AMD Intel RAM",
+  "url": "https://www.amazon.com/dp/B0CBRJ63RT",
+  "price": {
+   "value": 559.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 625.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "Patriot Viper Venom DDR5 RAM 32GB (2X16GB) 6000MHz CL30 Desktop Memory",
+  "url": "https://www.amazon.com/dp/B0D4NLSP87",
+  "price": {
+   "value": 482.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": null,
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "Official Patriot Memory Store",
+   "id": "A26PVB3960EU85",
+   "url": "https://www.amazon.com/sp?seller=A26PVB3960EU85",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "CORSAIR Vengeance RGB DDR5 RAM 32GB (2x16GB) Up to 6000MHz CL30-36-36-76 1.40V AMD EXPO Intel XMP Desktop Computer Memory - Gray (CMH32GX5M2B6000Z30K)",
+  "url": "https://www.amazon.com/dp/B0BPTKD797",
+  "price": {
+   "value": 569.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 639.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "KLEVV Bolt V DDR5 32GB (2x16GB) 6000MHz CL30 1.35V Desktop Ram Memory White",
+  "url": "https://www.amazon.com/dp/B0HC1L2LGY",
+  "price": {
+   "value": 505.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": null,
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "Micro Center",
+   "id": "A1UVTGP6WV0D1P",
+   "url": "https://www.amazon.com/sp?seller=A1UVTGP6WV0D1P",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ }
+]

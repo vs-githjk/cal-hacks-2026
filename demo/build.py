@@ -42,7 +42,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from data.mirror import not_partners  # noqa: E402
-from demo.common import LIVE, MIRROR, SIM, money  # noqa: E402
+from demo.common import LIVE, MIRROR, SIM, money, shield_mode_line  # noqa: E402
 
 OUT_DIR = ROOT / "demo" / "out"
 VIEW_FILE = "build-view.json"          # the latest BuildView, rewritten at every step
@@ -344,6 +344,93 @@ def demo_plan(*, goal_id: str = "goal-build-1", buyer_id: str = "vidyut") -> Bui
     owned = [PartSpec(PLANNER_PART[k], DEFAULT_LABELS[PLANNER_PART[k]], 0.0, {a: v for a, v in info.items() if a != "name"})
              for k, info in DEMO_OWNED.items()]
     return BuildPlan(goal_id, buyer_id, 2100.0, [PartSpec(p, DEFAULT_LABELS[p], b) for p, b in budgets.items()], owned)
+
+
+class GoalNotFound(ValueError):
+    """The buyer has no active build_by_date goal the runner can read (or it cannot be turned into a plan)."""
+
+
+GOALS_SQL = "SELECT id, buyer_id, type, cap, deadline, state, created_at FROM my_goals"
+GOAL_ITEMS_SQL = "SELECT goal_id, sku_spec, condition, variant, quantity, skipped_owned_part_id FROM my_goal_items"
+# which board part a goal item's sku_spec names (the first match wins; "Tower cooler" is a cooler, "Case (305 mm GPU room)" a case)
+SKU_PART = (("psu", r"\bpsu\b|power supply"), ("cooler", r"cooler|\baio\b|heatsink"), ("case", r"\bcase\b|tower|chassis"),
+            ("board", r"motherboard|mobo|\bboard\b"), ("cpu", r"\bcpu\b|processor|ryzen|core i\d|core ultra"),
+            ("gpu", r"\bgpu\b|graphics|\brtx\b|\bgtx\b|\brx \d"), ("ram", r"\bram\b|ddr\d|memory"), ("ssd", r"\bssd\b|nvme|storage|m\.2"))
+SPLIT_BASE = {"gpu": 1300.0, "cpu": 285.0, "board": 170.0, "ram": 100.0, "ssd": 120.0, "cooler": 55.0}   # demo_plan's budgets: the SIM split
+
+
+def _iso(value: Any) -> str:
+    """A SpacetimeDB timestamp cell ([micros], micros, {"__timestamp_micros_since_unix_epoch__": micros}) or an ISO string, as an ISO UTC stamp."""
+    if isinstance(value, list) and len(value) == 1:
+        value = value[0]
+    if isinstance(value, dict) and set(value) == {"__timestamp_micros_since_unix_epoch__"}:
+        value = value["__timestamp_micros_since_unix_epoch__"]
+    if isinstance(value, bool):
+        raise GoalNotFound("the goal's deadline is not a time")
+    if isinstance(value, int):
+        return _stamp(datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=value))
+    if isinstance(value, str):
+        try:
+            return _stamp(datetime.fromisoformat(value.replace("Z", "+00:00")))
+        except ValueError:
+            pass
+    raise GoalNotFound("the goal's deadline is not a time")
+
+
+def read_buyer_goal(client: Any, buyer_id: str) -> tuple[dict, list[dict]]:
+    """X's latest ACTIVE build_by_date goal and its goal_items, read with the buyer's own client through the my_goals and my_goal_items views.
+    Only the buyer's own identity sees its goals (the tables are private and the views answer the caller's buyer role only: the referee reads
+    none), so a client that is not this buyer's finds nothing and the error says so."""
+    rows = [r for r in client.sql(GOALS_SQL) if len(r) >= 7]
+    mine = [r for r in rows if r[1] == buyer_id]
+    if rows and not mine:
+        raise GoalNotFound(f"the goals this client can read belong to {rows[0][1]}, not {buyer_id}: pass the identity token of {buyer_id} with --buyer-token")
+    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] == "ACTIVE"), key=lambda r: _iso(r[6]), reverse=True)
+    if not live:
+        why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE build_by_date goal"
+        raise GoalNotFound(f"no goal to build from for {buyer_id}: {why}")
+    g = live[0]
+    items = [{"sku_spec": str(r[1]), "condition": str(r[2]), "variant": str(r[3]), "quantity": r[4], "skipped_owned_part_id": str(r[5])}
+             for r in client.sql(GOAL_ITEMS_SQL) if r[0] == g[0]]
+    return {"id": g[0], "buyer_id": g[1], "type": g[2], "cap": float(g[3]), "deadline": _iso(g[4])}, items
+
+
+def plan_from_goal(goal: dict, items: list[dict]) -> tuple[BuildPlan, list[str]]:
+    """The BuildPlan of a buyer's own goal row: the cap and deadline as posted, a round for every item that is not skipped as owned, the owned
+    items as owned. The goal row holds no per-part budget, so the budgets are the demo plan's split, scaled down when they would exceed the
+    cap (SIM, said in the plan line). -> (plan, warnings). A goal this runner cannot build raises ValueError (nothing is bid on a guess)."""
+    cap = float(goal["cap"])
+    if not cap > 0:
+        raise GoalNotFound("the goal's cap must be above zero")
+    buy, own = [], []
+    for it in items:
+        sku = str(it.get("sku_spec") or "")
+        part = next((p for p, rx in SKU_PART if re.search(rx, sku, re.I)), None)
+        if part is None:
+            raise GoalNotFound(f"cannot tell which part {sku!r} is")
+        if it.get("quantity") != 1:
+            raise GoalNotFound(f"{sku!r}: the build runner buys one of each part, the goal asks for {it.get('quantity')!r}")
+        if part in [p for p, _ in buy] + [p for p, _ in own]:
+            raise GoalNotFound(f"{part} is in the goal twice")
+        (own if it.get("skipped_owned_part_id") else buy).append((part, sku))
+    if not buy:
+        raise GoalNotFound("the goal has nothing to buy: every part is marked as owned")
+    for part, sku in buy:
+        if part not in SPLIT_BASE:
+            raise GoalNotFound(f"{sku!r}: the build runner cannot buy a {part} yet (it is built around the PSU and case you already own)")
+    base = {p: SPLIT_BASE[p] for p, _ in buy}
+    scale = min(1.0, cap / sum(base.values()))
+    specs = [PartSpec(p, DEFAULT_LABELS[p], math.floor(b * scale * 100) / 100) for p, b in base.items()]
+    from demo.bridge import DB_BUYER_ID
+    owned_attrs = DEMO_OWNED if goal["buyer_id"] == DB_BUYER_ID else {}   # the demo's owned parts are Vidyut's; another buyer's specs are unknown, not invented
+    owned = [PartSpec(p, DEFAULT_LABELS[p], 0.0, {a: v for a, v in (owned_attrs.get(p) or {}).items() if a != "name"}) for p, _ in own]
+    warnings = []
+    gpu = next((s for p, s in buy if p == "gpu"), None)
+    if gpu is not None and gpu.strip().lower() != DEFAULT_LABELS["gpu"].lower():
+        warnings.append(f"the goal names {gpu!r}; the GPU round runs on the demo's {DEFAULT_LABELS['gpu']} listings (data/ holds no other card)")
+    line = (f"Plan from {goal['buyer_id']}'s own goal {goal['id']}: {len(specs)} parts to buy, {len(owned)} owned, cap ${cap:,.0f}; "
+            f"part budgets are a SIM split of the cap (a goal stores none)")
+    return BuildPlan(goal["id"], goal["buyer_id"], cap, specs, owned, goal["deadline"], line), warnings
 
 
 def planned_build(*, planner: Any = "auto", note: Callable[[str], None] = lambda text: None, goal_id: str = "goal-build-1",
@@ -664,8 +751,13 @@ class BuildRun:
                  recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True,
                  stagger: Optional[float] = None, knockout: bool = False, max_stages: int = MAX_STAGES, replan: bool = True,
                  replan_catalog: Optional[Callable] = None, publisher: Optional[Callable[[str, str], None]] = None,
-                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None):
+                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None, no_call_reason: str = "not_configured",
+                 agent_addresses: Optional[dict] = None, reuse_goal: bool = False):
         self.plan, self.clients, self.allowance = plan, clients, allowance
+        self.reuse_goal = reuse_goal   # the buyer's own goal is already in the market (plan_from_goal): the run never posts a second one
+        self.agent_addresses = agent_addresses or {}   # the Fetch tile's agents: with them, a value this run really fetched is posted as a LIVE line
+        self._proof_posted: set[str] = set()
+        self.no_call_reason = no_call_reason   # why `cartesia` is None: "not_configured" (no setup) or "no_phone" (this buyer has no number)
         self.catalog = catalog or default_catalog
         self.replan_catalog = replan_catalog or default_replan_catalog
         self.stagger, self.knockout, self.max_stages, self.replan = stagger, knockout, min(MAX_STAGES, max(1, int(max_stages))), replan
@@ -765,6 +857,15 @@ class BuildRun:
         elif step.reducer in ("open_round", "open_knockout_round"):
             self.rounds.append({"id": step.args["round_id"], "needId": step.args["need_id"], "state": "open", "openedAt": at,
                                 "closedAt": "", "origin": SIM})
+        self.publish(throttled=True)
+
+    def _goal_reused(self) -> None:
+        """What _hook does for a post_goal step, for a goal that was already posted by the buyer: the run's clock starts and the plan line shows."""
+        self.goal_posted = True
+        self._start_steps_file()
+        if not any(e.get("kind") == "plan" for e in self.plan_events):
+            self.plan_events.append({"at": _stamp(self.now()), "kind": "plan", "text": self.plan.plan_line or self._plan_line(), "parts": [],
+                                     "origin": SIM})
         self.publish(throttled=True)
 
     def _start_steps_file(self) -> None:
@@ -989,7 +1090,11 @@ class BuildRun:
     def run_rounds(self) -> None:
         """The goal, then every part's need and sealed round (and the re-plan of a part whose pick does not fit), in time order. Nothing is
         bought here: this is everything before the settle step, and what `--dry-run` runs on the in-memory market."""
-        self._execute(goal_steps(self.plan, self.allowance))
+        steps = goal_steps(self.plan, self.allowance)
+        if self.reuse_goal:
+            steps = [s for s in steps if s.reducer != "post_goal"]
+            self._goal_reused()
+        self._execute(steps)
         self._t0 = self.clock()
         self._at(0.0, lambda t: self._start_part(0, t))
         while self._heap:
@@ -1072,8 +1177,26 @@ class BuildRun:
                 text += f" (dated listing{' of ' + date if date else ''})"
             self.live[part] = {"state": res.get("state"), "price": res.get("price"), "fetchedAt": res.get("fetched_at"),
                                "origin": LIVE if S.is_live(res) else MIRROR, "quoted": quoted, "at": _stamp(self.now()), "text": text}
+        self.post_proof_events()
         self.publish()
         return out
+
+    def post_proof_events(self) -> None:
+        """Each part whose price this run read live (self.live origin LIVE) becomes one LIVE referee event on the buyer agent's Fetch tile,
+        once. A part that kept its dated MIRROR price, or a SIM part, posts nothing. Best effort: it never stops a build."""
+        if not self.agent_addresses or "referee" not in self.clients:
+            return
+        from demo import bridge
+        label = {s.part: s.label for s in self.plan.parts}
+        steps = []
+        for part, v in self.live.items():
+            res = {"state": v.get("state"), "price": v.get("price"), "fetched_at": v.get("fetchedAt"), "origin": v.get("origin")}
+            for s in bridge.live_proof_steps(self.agent_addresses, price=res, quoted=float(v.get("quoted") or 0)):
+                text = f"{label.get(part, part)}: {s.args['text']}"
+                if text not in self._proof_posted:
+                    self._proof_posted.add(text)
+                    steps.append(replace(s, args={**s.args, "text": text}))
+        bridge.post_proof_steps(self.clients["referee"], steps, self.note)
 
     def _stop_reasons(self, checks: dict, champs: dict) -> list[str]:
         from demo import recheck as R
@@ -1104,7 +1227,17 @@ class BuildRun:
             if not verdict:
                 raise _Refused("crs_gate", f"CRS: {verdict.detail} ({verdict.reason}), so the payee gate holds for {sid}")
             out[sid] = check_id(res["check"]) if business else None
+            self._post_crs_proof(sid, res)
         return out
+
+    def _post_crs_proof(self, sid: str, res: dict) -> None:
+        """A CRS band read from the sandbox in this run (never a cached or SIM one) is one LIVE line on the buyer agent's tile, once per seller."""
+        if not self.agent_addresses or "referee" not in self.clients:
+            return
+        from demo import bridge
+        steps = [s for s in bridge.live_proof_steps(self.agent_addresses, crs=res, seller=sid) if s.args["text"] not in self._proof_posted]
+        self._proof_posted.update(s.args["text"] for s in steps)
+        bridge.post_proof_steps(self.clients["referee"], steps, self.note)
 
     def settle(self) -> dict:
         from demo.goal import needs_call
@@ -1256,7 +1389,7 @@ class BuildRun:
         agg = new_mandate(deal_id=f"build-{gid}", buyer_id=self.plan.buyer_id, amount=total, payee=f"build-{gid}", goal_id=gid,
                           within_allowance=False, origin=_weakest([c["origin"] for c in champs.values()]))
         if self.cartesia is None:
-            return self._deny("not_configured", f"{denial_line('not_configured')} The phone call is the only approval above the allowance.")
+            return self._deny(self.no_call_reason, f"{denial_line(self.no_call_reason)} The phone call is the only approval above the allowance.")
         self.approval["state"] = "calling"
         self._event("call", f"Calling {self.buyer_name} for the whole build: {len(champs)} parts from {sellers} sellers, {money(total)}")
         self.publish()
@@ -1462,6 +1595,32 @@ def preview_steps(plan: BuildPlan, allowance: Optional[dict], *, catalog: Option
     return steps
 
 
+def _buyer_client(args) -> Any:
+    """The buyer identity's market client (its token file, default buyer-vidyut.json), for reading the buyer's own goal before the run starts."""
+    from demo import bridge
+    target = bridge.live_target(args)
+    sys.path.insert(0, str(ROOT / "market" / "scripts"))
+    from stdb import Market
+    tokens = bridge.find_tokens_dir(args.tokens_dir, target)
+    return Market(token_file=str(args.buyer_token or tokens / bridge.BUYER_TOKEN))
+
+
+def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None]) -> tuple[Any, str]:
+    """(the Cartesia client for this buyer's approval phone, "") or (None, why): "no_phone" for a buyer with no number (the call is the only
+    approval, so a build above the allowance is denied), "not_configured" for a setup that is missing or wrong. One masked note either way."""
+    from pay import voice_cartesia as vc
+    try:
+        client = vc.client_for_buyer(buyer_id, env)
+    except vc.NoPhone as e:
+        note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
+        return None, "no_phone"
+    except vc.CartesiaError as e:
+        note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
+        return None, "not_configured"
+    note(f"live call: ONE call to {vc.mask_number(client.approval_call_to)} for the whole build, only above the allowance")
+    return client, ""
+
+
 def main(argv: Optional[list] = None) -> int:
     import argparse
     from demo import bridge
@@ -1473,12 +1632,21 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--live-call", action="store_true", help="above the allowance, place ONE real Cartesia approval call; also turns the Bright Data re-check on")
     ap.add_argument("--recheck", action="store_true", help="re-check each MIRROR champion's price live with Bright Data (one scrape each, inside its call budget)")
     ap.add_argument("--stripe", action="store_true", help="with --live-call only: one Stripe TEST charge per part (sk_test_ key only) after the call approves")
-    ap.add_argument("--per-buy", type=float, default=250.0, help="the buyer's per-purchase allowance (default 250, SIM)")
-    ap.add_argument("--period-limit", type=float, default=500.0, help="the buyer's allowance per month (default 500, SIM)")
+    ap.add_argument("--per-buy", type=float, default=None,
+                    help="the buyer's per-purchase allowance the runner sets (default 250, SIM; when building from another buyer's own goal the "
+                         "runner leaves their allowance alone unless this or --period-limit is given)")
+    ap.add_argument("--period-limit", type=float, default=None, help="the buyer's allowance per month the runner sets (default 500, SIM)")
     ap.add_argument("--env-file", type=Path, default=None, help="where the CARTESIA_* and sponsor names are read from")
     ap.add_argument("--tokens-dir", help="folder with referee.json and buyer-vidyut.json (default: auto-detect)")
-    ap.add_argument("--buyer-id", default=bridge.DB_BUYER_ID)
-    ap.add_argument("--goal-id", default="goal-build-1")
+    ap.add_argument("--buyer-id", default=None,
+                    help=f"the buyer the build is for (default {bridge.DB_BUYER_ID}, the demo plan). With --buyer-id and no --goal-id and no --plan, "
+                         "the build is made from this buyer's own latest ACTIVE build_by_date goal in the market, which is reused (no second goal)")
+    ap.add_argument("--goal-id", default=None, help="post the plan as a new goal with this id (default goal-build-1); with --buyer-id, builds the demo plan under it")
+    ap.add_argument("--plan", type=Path, default=None,
+                    help="a planner.plan() JSON file (cap_cents, owned, parts) through plan_from_planner, posted as a new goal; wins over the buyer's own goal")
+    ap.add_argument("--buyer-token", type=Path, default=None,
+                    help="the buyer identity token file (default buyer-vidyut.json in the tokens dir). A self-serve buyer's own token lives in their "
+                         "browser: export it to a file to build from their goal; the referee cannot read it (goals are private to the buyer)")
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
     ap.add_argument("--server", default=None, help="spacetime -s server (default from the env or the Lane D env file)")
     ap.add_argument("--bid-window", type=bridge.bid_window_arg, default=None, help="seconds each part's sealed round stays open")
@@ -1499,9 +1667,37 @@ def main(argv: Optional[list] = None) -> int:
     out = Narrator(True)
     out.note("Tech Bazaar build: one goal, a sealed round per part, one call for the whole build (#345)")
     out.note("Sellers: SIM, plus the real dated MIRROR listings for the GPU. Payment is the SIM stub unless --live-call --stripe. Tags: [MIRROR] [SIM] [LIVE].")
-    plan, source = planned_build(planner="auto" if args.planner == "auto" else None, note=out.note, goal_id=args.goal_id, buyer_id=args.buyer_id)
-    plan.deadline = _stamp(datetime.now(timezone.utc) + timedelta(days=7))
-    allowance = {"per_purchase_limit": args.per_buy, "period_limit": args.period_limit, "period": "month"}
+    out.note(shield_mode_line())
+    from_goal = args.buyer_id is not None and args.goal_id is None and args.plan is None   # #253: build from this buyer's own goal row
+    args.buyer_id = args.buyer_id or bridge.DB_BUYER_ID
+    args.goal_id = args.goal_id or "goal-build-1"
+    own_allowance = args.per_buy is not None or args.period_limit is not None
+    args.per_buy = 250.0 if args.per_buy is None else args.per_buy
+    args.period_limit = 500.0 if args.period_limit is None else args.period_limit
+    reuse = False
+    try:
+        if args.plan is not None:
+            plan = plan_from_planner(json.loads(args.plan.read_text(encoding="utf-8")), goal_id=args.goal_id, buyer_id=args.buyer_id)
+            source = f"plan file {args.plan.name}"
+        elif from_goal:
+            if args.dry_run:
+                print("error: --dry-run runs on an in-memory market and cannot read a buyer's goal; use --plan FILE to dry-run a plan", file=sys.stderr)
+                return 1
+            goal, items = read_buyer_goal(_buyer_client(args), args.buyer_id)
+            plan, warnings = plan_from_goal(goal, items)
+            for w in warnings:
+                out.note(f"note: {w}")
+            reuse, source = True, f"buyer's own goal {goal['id']} (read from the market, reused: no second goal is posted)"
+        else:
+            plan, source = planned_build(planner="auto" if args.planner == "auto" else None, note=out.note, goal_id=args.goal_id, buyer_id=args.buyer_id)
+    except (ValueError, OSError, RuntimeError) as e:   # GoalNotFound, a bad plan file, an unreadable market: one line, nothing was posted or bid
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    if not plan.deadline:
+        plan.deadline = _stamp(datetime.now(timezone.utc) + timedelta(days=7))
+    # another buyer's own allowance stays theirs: the runner only sets one for the default buyer, or when asked with --per-buy / --period-limit
+    allowance = (None if reuse and args.buyer_id != bridge.DB_BUYER_ID and not own_allowance
+                 else {"per_purchase_limit": args.per_buy, "period_limit": args.period_limit, "period": "month"})
     knockout = market_has_reducer("open_knockout_round") if args.knockout == "auto" else args.knockout == "on"
     stagger = None if args.sequential else args.stagger
     out.note(f"plan from the {source}: {plan.plan_line or default_plan_line(plan)}")
@@ -1524,7 +1720,7 @@ def main(argv: Optional[list] = None) -> int:
     from demo import market_target
     from demo.run_demo import DEFAULT_ENV_FILE
     approver_env = args.env_file or DEFAULT_ENV_FILE
-    cartesia, price_check = None, None
+    cartesia, price_check, no_call_reason = None, None, "not_configured"
     if args.live_call or args.recheck:
         from demo import sponsors_live as S
         S.load_sponsor_env(approver_env)
@@ -1535,11 +1731,7 @@ def main(argv: Optional[list] = None) -> int:
         from pay import voice_cartesia as vc
         env = vc.load_env(approver_env)
         buyer_name, secret = env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME, env.get(vc.SECRET_ENV)
-        try:
-            cartesia = vc.CartesiaClient.from_env(env)
-            out.note(f"live call: ONE call to {vc.mask_number(cartesia.approval_call_to)} for the whole build, only above the allowance")
-        except vc.CartesiaError as e:
-            out.note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
+        cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note)
     else:
         out.note("No --live-call: a build above the allowance stops before any call. Nothing is paid.")
     target = bridge.live_target(args)
@@ -1550,7 +1742,7 @@ def main(argv: Optional[list] = None) -> int:
         tokens = bridge.find_tokens_dir(args.tokens_dir, target)
         seller_tokens = market_target.tokens_dir(target)
         seller_tokens.mkdir(parents=True, exist_ok=True)
-        clients: dict[str, Any] = {"buyer": Market(token_file=str(tokens / bridge.BUYER_TOKEN)),
+        clients: dict[str, Any] = {"buyer": Market(token_file=str(args.buyer_token or tokens / bridge.BUYER_TOKEN)),
                                    "referee": Market(token_file=str(tokens / bridge.REFEREE_TOKEN))}
         seller_ids = sorted({s.actor.split(":", 1)[1] for s in steps if s.actor.startswith("seller:")})
         for sid in seller_ids:
@@ -1574,7 +1766,7 @@ def main(argv: Optional[list] = None) -> int:
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
                        env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=out_dir, say=say,
                        note=out.note, delay=args.step_delay, bid_window=args.bid_window, stagger=stagger, knockout=knockout,
-                       publisher=publisher)
+                       publisher=publisher, no_call_reason=no_call_reason, agent_addresses=bridge.demo_agent_addresses(), reuse_goal=reuse)
         clock_of["run"] = run
         res = run.run()
     except RuntimeError as e:

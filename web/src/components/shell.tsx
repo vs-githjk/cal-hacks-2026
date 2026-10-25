@@ -24,9 +24,9 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
       <nav className="mx-auto flex max-w-[1360px] items-center gap-3 px-4 py-2">
-        <Link href="/" className="inline-flex min-h-11 shrink-0 items-center gap-2.5 whitespace-nowrap text-[17px] font-semibold tracking-[-0.02em]">
-          <Mark size={24} />
-          <span className="hidden sm:inline">Tech Bazaar</span>
+        <Link href="/" aria-label="Tech Bazaar" className="inline-flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap font-display text-[16px] font-semibold tracking-[0.12em] text-ink">
+          <Laurel />
+          <span className="hidden sm:inline">TECH BAZAAR</span>
         </Link>
         <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto [scrollbar-width:none]">
           {NAV.map((n) => {
@@ -36,7 +36,7 @@ export function AppHeader() {
                 key={n.href}
                 href={n.href}
                 aria-current={on ? "page" : undefined}
-                className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-[13px] font-medium transition-colors ${on ? "bg-accent-soft text-accent-2" : "text-muted hover:bg-soft hover:text-ink"}`}
+                className={`inline-flex min-h-9 shrink-0 items-center border-b-2 px-3 text-[13px] font-medium transition-colors ${on ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"}`}
               >
                 {n.label}
               </Link>
@@ -49,6 +49,18 @@ export function AppHeader() {
         </span>
       </nav>
     </header>
+  );
+}
+
+/** Laurel mark: two mirrored leaf arcs. */
+function Laurel() {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden className="shrink-0 text-accent">
+      <path d="M11 21C5 19 3 12 5 4" />
+      <path d="M13 21C19 19 21 12 19 4" />
+      <path d="M5.5 9.5C7.5 9 8.5 10 9 12M6.5 14.5C8.5 14 9.5 15 10 17M5 5.5C7 5.5 8 6.5 8.5 8.5" />
+      <path d="M18.5 9.5C16.5 9 15.5 10 15 12M17.5 14.5C15.5 14 14.5 15 14 17M19 5.5C17 5.5 16 6.5 15.5 8.5" />
+    </svg>
   );
 }
 

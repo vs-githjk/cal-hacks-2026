@@ -1,0 +1,37 @@
+[
+ {
+  "name": "CORSAIR - VENGEANCE LPX 32GB (2x16GB) DDR4 3200MHz C16 UDIMM Desktop Memory - Black",
+  "url": "https://www.bestbuy.com/product/corsair-vengeance-lpx-32gb-2x16gb-ddr4-3200mhz-c16-udimm-desktop-memory-black/J39QHH5FH5/sku/6448611",
+  "price": 259.99,
+  "regularPrice": 315.99,
+  "condition": "new"
+ },
+ {
+  "name": "ADATA - Premier 32GB DDR4 SDRAM Memory Module - For Notebook - 32 GB (1 x 32GB) - DDR4-3200/PC4-25600 DDR4 SDRAM - 3200 - Unknown",
+  "url": "https://www.bestbuy.com/product/adata-premier-32gb-ddr4-sdram-memory-module-for-notebook-32-gb-1-x-32gb-ddr4-3200-pc4-25600-ddr4-sdram-3200-unknown/C344QXVWHR/sku/12491676",
+  "price": 189.99,
+  "regularPrice": 239,
+  "condition": "new"
+ },
+ {
+  "name": "G.SKILL - TridentZ RGB 32GB DDR4 3200MHz RAM (2x16GB) Intel XMP 2.0 - Black",
+  "url": "https://www.bestbuy.com/product/g-skill-tridentz-rgb-32gb-ddr4-3200mhz-ram-2x16gb-intel-xmp-2-0-black/J36V4SGQQV/sku/13069147",
+  "price": 302.81,
+  "regularPrice": 302.81,
+  "condition": "new"
+ },
+ {
+  "name": "Refurbished G.SKILL Ripjaws V 32GB DDR4 3200MHz RAM (2x16GB) PC4-25600 - Black",
+  "url": "https://www.bestbuy.com/product/refurbished-g-skill-ripjaws-v-32gb-ddr4-3200mhz-ram-2x16gb-pc4-25600-black/J36V4SGC3S/sku/11248174",
+  "price": 254.49,
+  "regularPrice": 254.49,
+  "condition": "new"
+ },
+ {
+  "name": "CORSAIR - Vengeance Performance SODIMM Memory 32GB (2x16GB) DDR4 3200MHz CL22 - Black",
+  "url": "https://www.bestbuy.com/product/corsair-vengeance-performance-sodimm-memory-32gb-2x16gb-ddr4-3200mhz-cl22-black/J39QHHVS75/sku/12225067",
+  "price": 269.99,
+  "regularPrice": 315.99,
+  "condition": "new"
+ }
+]

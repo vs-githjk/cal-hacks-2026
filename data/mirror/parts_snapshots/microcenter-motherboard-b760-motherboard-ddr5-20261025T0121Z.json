@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:137ce149b175",
+  "category": "motherboard",
+  "name": "B760-P Pro WiFi DDR4 Intel LGA 1700 ATX Motherboard",
+  "model_number": "536656",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 149.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/662290/msi-b760-p-pro-wifi-ddr4-intel-lga-1700-atx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:39+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/662290/msi-b760-p-pro-wifi-ddr4-intel-lga-1700-atx-motherboard",
+   "price": 149.99,
+   "stock": "3 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "3 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:4749b7f10f1c",
+  "category": "motherboard",
+  "name": "B760M-P Pro Intel LGA 1700 microATX Motherboard",
+  "model_number": "606210",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 109.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/670067/msi-b760m-p-pro-intel-lga-1700-microatx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:39+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/670067/msi-b760m-p-pro-intel-lga-1700-microatx-motherboard",
+   "price": 109.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:6a5b391a13e1",
+  "category": "motherboard",
+  "name": "B760M-AYW WIFI D4 II Intel LGA 1700 microATX Motherboard",
+  "model_number": "065656",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/713412/asus-b760m-ayw-wifi-d4-ii-intel-lga-1700-microatx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:39+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/713412/asus-b760m-ayw-wifi-d4-ii-intel-lga-1700-microatx-motherboard",
+   "price": 119.99,
+   "stock": "2 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "2 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:bfbc1236d8cb",
+  "category": "motherboard",
+  "name": "Z790-Plus TUF Gaming WiFi D5 Intel LGA 1700 ATX Motherboard",
+  "model_number": "536334",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/662599/asus-z790-plus-tuf-gaming-wifi-d5-intel-lga-1700-atx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:39+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/662599/asus-z790-plus-tuf-gaming-wifi-d5-intel-lga-1700-atx-motherboard",
+   "price": 249.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:08dcbf4742d6",
+  "category": "motherboard",
+  "name": "Z890 EAGLE WIFI7 PLUS Intel LGA 1851 ATX Motherboard",
+  "model_number": "024745",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/709507/gigabyte-z890-eagle-wifi7-plus-intel-lga-1851-atx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b760-motherboard-ddr5-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:39+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/709507/gigabyte-z890-eagle-wifi7-plus-intel-lga-1851-atx-motherboard",
+   "price": 239.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ }
+]

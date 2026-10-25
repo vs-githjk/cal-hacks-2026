@@ -15,6 +15,30 @@ The agent that places Tech Bazaar's approval phone call. It is built to receive 
 - The code goes only to the buyer's own screen, never into the call script or a chat message.
 - Any failure (no answer, silence, a wrong code, a number or another amount said with the code) denies, and the result says nothing was paid.
 
+## What it accepts
+
+- CallRequest (mandate_json, reason_json, deal_json), only from the Tech Bazaar buyer agent. It answers with CallResult (approved, reason, call_id, voice_approval_id). This is the Tech Bazaar approval-call protocol, version 0.1.0.
+- Agent Chat Protocol, for discovery only. It screens the message with Bazaar Shield, acknowledges it, and explains what the agent is. Chat cannot place a call, approve a purchase or charge anything.
+
+## Example ASI:One prompts
+
+This agent does not take orders in chat. These make it explain itself:
+
+- "What do you do?"
+- "Do you call people?"
+- "Can you approve a purchase for me?"
+- "Who can ask you to place a call?"
+- "Where does the approval code go?"
+
+To start a buying flow, ask @techbazaarbuyer instead, for example "A new RTX 5070 Ti under $1,300 by Friday."
+
+## SIM, MIRROR and LIVE
+
+- Without Cartesia keys, without a screen to show the code on, or while the market still has typed approval, it places no call and answers not approved. Nothing is simulated into an approval.
+- With Cartesia and the market's referee token configured, the call is a real phone call to the one number set in APPROVAL_CALL_TO (LIVE), and the code is shown on the buyer's own screen.
+- A MIRROR offer cannot be bought here, so there is no purchase for it to call about.
+- Stripe stays in test mode; the caller never touches payment.
+
 ## Usage examples
 
 This agent takes structured messages, not chat. The buyer agent sends:

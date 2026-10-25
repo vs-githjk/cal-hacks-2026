@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:94a0de8d241d",
+  "category": "storage",
+  "name": "CRAS C910G 1TB 3D TLC NAND Flash PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "model_number": "971564",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/705543/klevv-cras-c910g-1tb-3d-tlc-nand-flash-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "snapshot_id": "microcenter-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:03+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/705543/klevv-cras-c910g-1tb-3d-tlc-nand-flash-pcie-gen-4-x4-nvme-m2-internal-ssd",
+   "price": 189.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:9aa112e6a4bf",
+  "category": "storage",
+  "name": "QN450 1TB SSD 3D QLC NAND PCIe Gen 4 x4 NVMe M.2 2280 Internal Solid State Drive",
+  "model_number": "701805",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/680085/inland-qn450-1tb-ssd-3d-qlc-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+  "snapshot_id": "microcenter-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:03+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/680085/inland-qn450-1tb-ssd-3d-qlc-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+   "price": 189.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:5061de25f797",
+  "category": "storage",
+  "name": "TN320 1TB SSD NVMe PCIe Gen 3.0x4 M.2 2280 3D NAND TLC Internal Solid State Drive",
+  "model_number": "529776",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 169.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/661862/inland-tn320-1tb-ssd-nvme-pcie-gen-30x4-m2-2280-3d-nand-tlc-internal-solid-state-drive",
+  "snapshot_id": "microcenter-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:03+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/661862/inland-tn320-1tb-ssd-nvme-pcie-gen-30x4-m2-2280-3d-nand-tlc-internal-solid-state-drive",
+   "price": 169.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:9a25f8f8c070",
+  "category": "storage",
+  "name": "990 1TB Samsung V NAND PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "model_number": "047084",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/711707/samsung-990-1tb-samsung-v-nand-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "snapshot_id": "microcenter-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:03+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/711707/samsung-990-1tb-samsung-v-nand-pcie-gen-4-x4-nvme-m2-internal-ssd",
+   "price": 189.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:95b7aadb8083",
+  "category": "storage",
+  "name": "SPATIUM M450 1TB SSD 3D NAND PCIe Gen 4 x4 NVMe M.2 2280 Internal Solid State Drive",
+  "model_number": "990937",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/706966/msi-spatium-m450-1tb-ssd-3d-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+  "snapshot_id": "microcenter-storage-1tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:03+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/706966/msi-spatium-m450-1tb-ssd-3d-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+   "price": 189.99,
+   "stock": "5 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "5 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

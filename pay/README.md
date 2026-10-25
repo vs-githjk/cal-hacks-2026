@@ -43,18 +43,28 @@ mark_used(m, store=store, deal_id="deal-A", amount=1119.00, payee="seller-x")   
   `ttl_too_long`, `schema_invalid`, `not_approved`, `no_approval_id`, `deal_mismatch`, `amount_mismatch`,
   `payee_mismatch`, `buyer_mismatch`, `bad_amount`, `replayed_mandate`.
 
-## TAP-style signing (`pay/tap.py`)
-Signs every buyer-agent request with an RFC 9421 HTTP Message Signature (Ed25519). The signature covers
-`@method`, `@authority`, `@path`, `@query`, `content-digest` and `mandate-hash`, with params `created`, `expires`,
-`keyid`, `alg="ed25519"`, `nonce` and `tag="agent-browser-auth"`. The query string is covered (changing `?x=1` to `?x=2` fails); the money fields
-live in the signed body.
+## Visa Trusted Agent Protocol signing (`pay/tap.py`)
+Signs every buyer-agent request the way Visa's sample agent and CDN verifier do (open repo
+`visa/trusted-agent-protocol`, commit `16d59bdf`, Ed25519 path): RFC 9421, label `sig2`, covered components
+`"@authority" "@path"`, params in this order `created; expires; keyId; alg="ed25519"; nonce; tag`, plus a
+`Signature-Agent: "https://..."` header. `tag` is `agent-payer-auth` for a charge (a browsing signature,
+`agent-browser-auth`, cannot authorize one). Verified by our merchant simulator, never by Visa.
+`pay/tests/test_tap_conformance.py` runs our signer through `pay/tests/visa_reference_port.py`, a port of the
+reference verifier (the repo's license points at Visa's developer terms, so it is re-implemented, not copied).
+Not matched: the reference merchant-backend `/verify-signature` endpoint is a separate, older RSA-PSS-only
+format (`sig1`, its own base string); an Ed25519 signer cannot satisfy it.
+
+The reference signature covers only `@authority` and `@path`, so method, query, body digest and mandate hash are
+bound through the nonce: `nonce = <random>.<base64url sha256(method, query, Content-Digest, Mandate-Hash, random)>`.
+The signature covers the nonce, so `?x=1` to `?x=2`, a different body or another deal's hash fails our verifier
+while a Visa merchant still sees an ordinary opaque nonce. The money fields live in the signed body.
 ```python
 from pay.tap import load_private_key, keyring, sign_request, verify_request, attach_signature
 
 priv = load_private_key()                          # path from VISA_TAP_PRIVATE_KEY_PATH
 headers = sign_request(method="POST", url="https://merchant.example/v1/charge",
                        body=body_bytes, mandate=m, private_key=priv)   # Content-Digest, Mandate-Hash,
-attach_signature(m, headers)                                           # Signature-Input, Signature
+attach_signature(m, headers)                                           # Signature-Agent, Signature-Input, Signature
 
 verdict = verify_request(method="POST", url=url, headers=request_headers, body=body_bytes,
                          keys=keyring(public_key), store=store,
@@ -63,12 +73,17 @@ verdict = verify_request(method="POST", url=url, headers=request_headers, body=b
 - Body convention: a JSON object with the mandate under `"mandate"`; the verifier recomputes its hash and
   compares it with the signed `Mandate-Hash` header (pass `mandate=` to bind one explicitly).
 - `verify_request` fails with a reason: `missing_header`, `bad_signature_input`, `bad_component_set`, `bad_alg`,
-  `bad_tag`, `unknown_key`, `ttl_too_long`, `signature_not_yet_valid`, `signature_expired`, `digest_mismatch`
-  (body changed), `bad_signature` (method, host, path, digest or hash header changed), `mandate_mismatch`,
+  `bad_tag`, `bad_signature_agent`, `unknown_key`, `ttl_too_long`, `signature_not_yet_valid`, `signature_expired`, `digest_mismatch`
+  (body changed), `bad_signature` (method, host, path, query, digest or hash header changed), `mandate_mismatch`,
   `mandate_hash_mismatch`, `unbound_mandate` (neither an expected hash nor a mandate in the body), `replayed_nonce`,
   plus every `mandate.verify` reason (`expired`, `already_used`, `denied`, ...) and `replayed_mandate` (the mandate nonce
   is already spent in the store). The nonce is recorded only after every other check passes, so a
   forged request cannot burn a real one. Signatures live at most 300 s (default 60 s).
+- `tap_status(verdict)` turns a verdict into what the approval card shows: `TAP signature verified`,
+  `Replay refused` (`replayed_nonce` or `replayed_mandate`) or `TAP signature refused`. `MerchantSim.handle`
+  returns it as `outcome["tap"]`.
+- `Signature-Agent` defaults to a placeholder `.example` URL; set `VISA_TAP_SIGNATURE_AGENT` to the real
+  directory URL.
 - Keys: set `VISA_TAP_PRIVATE_KEY_PATH` to an Ed25519 PEM kept outside the repo. `generate_keypair(path)` writes a
   new one (mode 0600, never overwrites) for dev and tests; tests use a throwaway key in a temp dir. `*.pem` is
   gitignored. Nothing in this folder reads `.env`.
@@ -173,12 +188,40 @@ if d.approved:
   stored market approval and is never represented as a voice record. The allowance path in `pay/merchant_sim.py` checks
   `per_purchase_limit`, `period_limit` and `spent_this_period` before charging.
 
-### TODO stubs (the call transport is a later task)
-- **Cartesia hookup (TODO).** In-browser call is the default and the fallback. The transport will: speak
-  `script.spoken()`, call `session.begin_listening(now)`, send each final STT transcript and its confidence to
-  `session.approve(text, confidence=c)`, speak `script.why_answer` on a "why" intent, and speak `script.approved_line`
-  or `script.denied_line` from `Decision`. Needs `CARTESIA_API_KEY` and `CARTESIA_AGENT_ID`. Setup, features used and
-  known limitations (carrier, latency, noisy rooms, in-browser fallback) go here when it is built.
+### Cartesia approval call (`pay/voice_cartesia.py`)
+When a purchase is above the buyer's allowance, a Cartesia managed voice agent phones the buyer and asks them to approve it. The agent only talks: it reads one script, asks for the
+two-word code shown on the buyer's screen, repeats back what it heard and hangs up. The decision is made by our own code from the call's transcript (`pay.approval.ApprovalSession`), and every
+other outcome is a denial.
+
+**Setup.** Set these names in the process environment or in the env file the runner reads (names only here; values stay out of the repo and the logs):
+`CARTESIA_API_KEY`, `CARTESIA_AGENT_ID`, `APPROVAL_CALL_TO` (the buyer's phone, E.164), and optionally `CARTESIA_PHONE_NUMBER_ID` (the `ap_...` id of the agent's number, found from the
+agent when unset), `APPROVAL_BUYER_NAME` (how the agent addresses the buyer) and `APPROVAL_SECRET`. `python3 -m pay.voice_cartesia --check` reads the agent (no call) and `--dry-run` prints the variables that would be sent.
+`demo/build.py --live-call` and `demo/bridge.py --live-call` place the call; without `--live-call` a purchase above the allowance stops before any call.
+
+**What we use.**
+- *Outbound call.* `POST /agents/calls` with one number and three dynamic variables: `buyer_name`, `deal_script` and `why_answer`. The client dials only the configured approval number
+  and refuses any other (`NumberNotAllowed`). Ringing times out after 30 s and a call lasts at most 3 minutes.
+- *The deal read out.* The total and the number of sellers come from the mandate and the market's winners (for a full build: "6 parts from 3 sellers" and the total in words and digits),
+  never from speech, from a seller's text or from a model. The script never asks for a card number.
+- *Answering "why".* The agent answers "why not the cheaper one?" from `why_answer`, which is built from the advocate's closed-schema reason (`rule_id`, `summary`, `source_url`) after a
+  strict allowlist. Anything that fails the allowlist is dropped and a fixed sentence is spoken instead.
+- *Approve or hang up.* After the call ends we fetch the transcript with Get Call and feed every buyer utterance to the approval session. Only the buyer saying `approve` or `approved`
+  together with the code from their screen approves, within 3 attempts. Silence, a hang-up, voicemail, no answer, a failed dial, a timeout, a wrong code or a missing transcript all deny:
+  nothing is paid and no mandate is approved. The code and any seller text are never sent to Cartesia.
+
+**Phone-only approval.** The phone call is the only way to approve a purchase above the allowance: there is no typed code, no chat reply and no scripted fallback. The call goes to the
+buyer's own approval phone (`pay.voice_cartesia.approval_phone`). Today only the configured buyer has one; for any other buyer, and for a buyer with no number, a purchase above the allowance is
+refused with a clear denial (`no_phone`) before anything is dialed, and no mandate is made. Reading each buyer's number from their profile is tracked in #374.
+
+**Known limits.**
+- The decision is made after the call ends, from the transcript, not word by word during the call, so a buyer who says the code and then "wait" in the same call is judged on everything said.
+- Cartesia documents no call-cancel endpoint (DELETE on a call redacts it, it does not hang up), so when our wait times out we deny and the call may still be ringing; anything said after
+  the timeout is ignored.
+- How soon after `completed` the transcript is whole is not documented, so we retry a few times when it is empty. A zero-data-retention agent keeps no transcript and would always deny.
+- Speech-to-text can mishear a name or the code in a noisy room; a misheard code is a wrong attempt, never an approval. Get Call returns no confidence score.
+- Carrier behavior (voicemail, call screening, dial delays) is outside our control and always ends in a denial.
+
+### Not built yet
 - **Photon phone path (TODO).** Calls only the number registered in a prior in-app step, with `svc.issue(mandate,
   channel="phone")`. The phone alone can never approve because the code is shown only on the screen. Stays Tier 1 until
   Photon is proven (Lane C spike).
