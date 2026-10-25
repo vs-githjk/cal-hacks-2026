@@ -262,11 +262,20 @@ def _wire_voice(buyer, client, secret):
     buyer.APPROVAL_CALL_CLIENT = client
 
 
+def _market_shows_the_approval(buyer):
+    """What the real market's buyer-private row shows once the referee has recorded the approval for this mandate."""
+    def status(mandate_hash):
+        m = buyer.ROUND["transaction"]["mandate"]
+        return {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": mandate_hash,
+                "amount": m["amount"], "payee": m["payee"], "retired": False}
+    buyer.MARKET_BUYER.purchase_status.side_effect = status
+
+
 def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     buyer, db = runtime
     ready_for_requote(buyer)
-    buyer.MARKET_BUYER.record_approval.return_value = {
-        "approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    buyer.MARKET_REFEREE.record_approval.return_value = {"mandate_hash": "x", "approval_method": "voice_code"}
+    _market_shows_the_approval(buyer)
     client = FakeVoiceClient()
     _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
     owner_ctx = CodeCapturingContext(client)
@@ -279,7 +288,10 @@ def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     assert approved["order"]["id"] == approved["deal_id"]
     assert approved_voice_record_matches(approved["voice_approval"], approved["mandate"], now=NOW + timedelta(seconds=2))
     assert approved["mandate"]["status"] == "approved"
-    assert buyer.MARKET_BUYER.record_approval.call_args.kwargs["method"] == "voice_code"
+    # the REFEREE relays the call result (market.ts record_approval is referee-only); the buyer only re-reads it
+    assert buyer.MARKET_REFEREE.record_approval.call_args.kwargs["method"] == "voice_code"
+    assert buyer.MARKET_REFEREE.record_approval.call_args.kwargs["approved_by"] == approved["buyer_id"]
+    assert not buyer.MARKET_BUYER.record_approval.called and buyer.MARKET_BUYER.purchase_status.called
     assert any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
     texts = owner_texts(owner_ctx)
     assert any("Calling you now to approve" in text for text in texts)
@@ -290,7 +302,34 @@ def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
     asyncio.run(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])))
     for text in ("APPROVE 1", "approve", "yes"):
         asyncio.run(buyer.on_chat(owner_ctx, "owner", buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
-    assert client.calls == 1 and buyer.MARKET_BUYER.record_approval.call_count == 1
+    assert client.calls == 1 and buyer.MARKET_REFEREE.record_approval.call_count == 1
+
+
+@pytest.mark.parametrize("failure", ["referee_refuses", "market_row_missing", "market_row_for_another_amount"])
+def test_owner_chat_never_orders_unless_the_referee_recorded_this_exact_mandate(runtime, failure):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    if failure == "referee_refuses":
+        buyer.MARKET_REFEREE.record_approval.side_effect = buyer.MarketBridgeError("market_reducer_failed")
+        buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: {"approval_method": None, "approved_at": None}
+    else:
+        buyer.MARKET_REFEREE.record_approval.return_value = {"approval_method": "voice_code"}
+
+        def status(mandate_hash):
+            m = buyer.ROUND["transaction"]["mandate"]
+            row = {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": mandate_hash,
+                   "amount": m["amount"], "payee": m["payee"], "retired": False}
+            return {**row, "approval_method": None, "approved_at": None} if failure == "market_row_missing" else {**row, "amount": 1.0}
+        buyer.MARKET_BUYER.purchase_status.side_effect = status
+    client = FakeVoiceClient()
+    _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
+    owner_ctx = CodeCapturingContext(client)
+    asyncio.run(asyncio.wait_for(buyer.on_requote(owner_ctx, dict(buyer.ROUND["bids"][0])), timeout=10))
+    assert client.calls == 1  # the call happened and was approved, but the market never recorded it
+    assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
+    held = state.load_transaction(db, buyer.ROUND["transaction"]["deal_id"], buyer.ROUND["transaction"]["buyer_id"])
+    assert held["phase"] == "uncertain" and buyer.ROUND["pending_hold"] is True and not buyer.ROUND.get("order")
+    assert any("remains held" in text for text in owner_texts(owner_ctx))
 
 
 def test_failed_call_says_nothing_was_paid_and_a_typed_code_never_approves(runtime):
@@ -313,7 +352,7 @@ def test_failed_call_says_nothing_was_paid_and_a_typed_code_never_approves(runti
     assert held["phase"] in {"paused", "denied"} and held["voice_approval"] is None and held["order"] is None
     assert client.calls == 1
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
     assert any("Nothing was paid" in text for text in owner_texts(owner_ctx))
 
 
@@ -333,7 +372,7 @@ def test_unconfigured_approval_call_fails_closed_with_a_clear_message(runtime, m
     assert unchanged["phase"] == "pending_approval" and unchanged["voice_approval"] is None
     assert unchanged["order"] is None and unchanged["mandate"]["status"] == "pending"
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in owner_ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
     texts = owner_texts(owner_ctx)
     assert any("Phone approval is not set up" in text and "Nothing was approved" in text
                and "nothing was paid" in text for text in texts)
@@ -903,7 +942,7 @@ def _delegate(buyer, monkeypatch, caller, direct):
     monkeypatch.setattr(buyer, "USED_CALL_IDS", set())
     monkeypatch.setattr(buyer, "_transport_request", lambda ctx, loop: caller)
     _wire_voice(buyer, direct, "buyer-runtime-delegate-secret")
-    buyer.MARKET_BUYER.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    buyer.MARKET_REFEREE.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
 
 
 def _market_row(buyer, **override):
@@ -923,13 +962,15 @@ def test_delegation_is_off_by_default_and_today_s_direct_call_runs(runtime, monk
     monkeypatch.delenv("BUYER_DELEGATE_CALL", raising=False)
     assert not buyer.delegate_call_enabled()
     ready_for_requote(buyer)
-    buyer.MARKET_BUYER.record_approval.return_value = {"approval_method": "voice_code", "approved_at": NOW.isoformat()}
+    buyer.MARKET_REFEREE.record_approval.return_value = {"mandate_hash": "x", "approval_method": "voice_code"}
+    _market_shows_the_approval(buyer)
     client = FakeVoiceClient()
     _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
     ctx = CodeCapturingContext(client)
     assert _run(buyer, ctx)["phase"] == "approved" and client.calls == 1
     assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
-    assert not buyer.MARKET_BUYER.purchase_status.called   # the delegated re-read is not on today's path
+    assert buyer.MARKET_REFEREE.record_approval.call_count == 1  # recorded by the referee, then re-read once by the buyer
+    assert buyer.MARKET_BUYER.purchase_status.call_count == 1
 
 
 def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_reads_the_market(runtime, monkeypatch):
@@ -1004,7 +1045,7 @@ def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_ri
     assert held["phase"] != "approved" and held["order"] is None
     assert len(caller.requests) == 1 and direct.calls == 0   # exactly one ring: no second call, direct or delegated
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
 
 
 def test_a_caller_call_timeout_is_final_and_never_dials_a_second_call(runtime, monkeypatch):
@@ -1020,7 +1061,7 @@ def test_a_caller_call_timeout_is_final_and_never_dials_a_second_call(runtime, m
     assert held["phase"] != "approved" and held["order"] is None
     assert len(caller.requests) == 1 and direct.calls == 0
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
-    assert not buyer.MARKET_BUYER.record_approval.called
+    assert not buyer.MARKET_REFEREE.record_approval.called
 
 
 def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):

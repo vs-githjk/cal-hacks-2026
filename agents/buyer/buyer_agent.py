@@ -31,7 +31,7 @@ from advocate.real_data import cached_shield_baseline
 from chat_diagnostics import ChatDiagnostics
 from chat_trace import round_trace
 from goal import need_from_goal, owned_attrs, remember, skip_lines
-import explain, fair_band, purchases, understand  # Lane D depth: understanding, round explanation, price check, purchase memory
+import explain, fair_band, owner_approval, purchases, understand  # Lane D depth: understanding, round explanation, price check, purchase memory
 from logic import advice_need_for, decide, make_order, sealed
 from data.mirror import not_partners  # common put the repo root on sys.path
 
@@ -1132,6 +1132,7 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
 
     def on_code(code: str) -> None:
         try:  # every buyer: the market shows the code on /buyer. Never log the code.
+            owner_approval.remember_code(transaction["mandate"]["hash"], code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(transaction["mandate"]["hash"], code)
         except Exception:
             if web:
@@ -1352,16 +1353,17 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         order["id"] = transaction["deal_id"]
         transaction["order"] = order
         buyer_state.save_transaction(state_db(), transaction)
-        buyer_market = market_clients()[1 if web else 0]
-        method = "voice_code"
-        market_status = buyer_market.record_approval(mandate_hash=mandate["hash"], method=method,
-                                                       approved_by=transaction["buyer_id"],
-                                                       voice_approval_id=record["id"])
-        if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
-                or (not web and not market_status.get("approved_at"))):  # the referee cannot read the buyer view back
-            raise MarketBridgeError("market_approval_readback_mismatch")
-        if delegation_allowed(transaction) and not web and not market_approval_matches(buyer_market.purchase_status(mandate["hash"]), mandate):
-            raise MarketBridgeError("market_approval_readback_mismatch")  # #398: re-read before anything can be paid
+        # market.ts record_approval is referee-only: the REFEREE relays the call result for web and owner-chat buyers alike.
+        # A chat owner's buyer client then re-reads the market's own row and it must match this mandate (#398) before payment.
+        buyer_market, referee_market = market_clients()
+        if web:
+            market_status = owner_approval.referee_record(referee_market, mandate_hash=mandate["hash"],
+                                                          buyer_id=transaction["buyer_id"], voice_approval_id=record["id"])
+            if not isinstance(market_status, dict) or market_status.get("approval_method") != "voice_code":
+                raise MarketBridgeError("market_approval_readback_mismatch")  # the referee cannot read the buyer view back
+        else:
+            owner_approval.record_owner_approval(referee_market, buyer_market, mandate, transaction["buyer_id"],
+                                                 record["id"], market_approval_matches)
         if web:
             await _pay_web_purchase(ctx, transaction, mandate, order, bid)
             return
