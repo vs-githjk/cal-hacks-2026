@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -276,4 +276,10 @@ test("#191-5 my_deals: approval shows only once the call approved it, the receip
   assert.equal(paid.receipt!.chargeStatus, "SIM stub, no money moved");
   assert.equal(paid.receipt!.amount, 1299.99);
   assert.equal(paid.receipt!.seller, "best-buy");
+});
+
+test("winningBid returns the winner even when it is a MIRROR bid", () => {
+  const w = winningBid([{ seller: "A", origin: "SIM", won: false }, { seller: "Central Computers", origin: "MIRROR", won: true }]);
+  assert.equal(w?.seller, "Central Computers");
+  assert.equal(w?.origin, "MIRROR");
 });

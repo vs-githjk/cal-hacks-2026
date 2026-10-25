@@ -4,7 +4,7 @@
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView } from "@/lib/screens";
+import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, winningBid } from "@/lib/screens";
 import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
 
@@ -52,7 +52,7 @@ export function StatePill({ state }: { state: GoalView["state"] }) {
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */
 export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | null }) {
-  const win = bids.find((b) => b.won && b.origin !== "MIRROR"); // a MIRROR listing is a comparison, never the deal
+  const win = winningBid(bids);
   const vetoed = bids.filter((b) => b.recommendation === "veto").length;
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
   const refused = bids.filter((b) => b.recommendation === "refused").length;
@@ -146,7 +146,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
               {bids.map((b, i) => {
                 const k = b.rowRef ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
-                const won = b.won && b.origin !== "MIRROR"; // a MIRROR listing is a comparison, never a winner
+                const won = !!b.won;
                 const vetoed = b.recommendation === "veto";
                 const edge = won ? "border-l-[3px] border-l-mint" : vetoed ? "border-l-[3px] border-l-coral" : "";
                 const struck = b.recommendation === "veto" ? "line-through text-muted" : "";

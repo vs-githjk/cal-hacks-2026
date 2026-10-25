@@ -1,6 +1,5 @@
 // The build panel: the planner's parts, sellers and total for one build, against the cap, with the owned parts kept.
 // Pure: give it a BuildResult (SAMPLE_BUILD until the market's build rounds are live) and it draws.
-// There are no win badges, so a MIRROR listing never shows as won.
 
 import { partRows, PART_NAMES, type BuildResult } from "@/lib/build";
 import { Card, Label, OriginChip, money } from "./ui";
