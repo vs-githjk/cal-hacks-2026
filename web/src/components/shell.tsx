@@ -46,7 +46,7 @@ export function AppHeader() {
         <div className="flex items-center gap-2.5">
           <span className="hidden lg:inline-flex"><LivePill on={conn.isActive} /></span>
           {path !== "/start" && !path.startsWith("/buyer") && (
-            <Link href="/start" className="btn inline-flex min-h-10 items-center rounded-xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-4 text-[14px] font-medium text-white shadow-[0_8px_20px_-8px_rgba(8,145,178,0.7)] hover:shadow-[0_10px_24px_-8px_rgba(8,145,178,0.8)]">
+            <Link href="/start" className="btn fm-btn inline-flex min-h-10 items-center rounded-xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-4 text-[14px] font-medium text-white">
               Start a goal
             </Link>
           )}

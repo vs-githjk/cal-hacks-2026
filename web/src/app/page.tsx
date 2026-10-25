@@ -9,6 +9,7 @@ import { DashboardPreview } from "@/components/DashboardPreview";
 import { FloorMini } from "@/components/FloorMini";
 import { HomeMore } from "@/components/HomeMore";
 import { ScrollProgress } from "@/components/ScrollProgress";
+import { Reveal } from "@/components/Reveal";
 import { OriginChip, README_URL, StatusPill } from "@/components/ui";
 import { proofStats } from "@/lib/scoreboard";
 import { SHIELD, SHIELD_LINE } from "@/lib/brand";
@@ -52,15 +53,15 @@ export default function Home() {
             <span className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-2 shadow-ring backdrop-blur">
               <span className="dot text-pulse" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
             </span>
-            <h1 className="mt-5 text-[40px] font-medium leading-[44px] tracking-[-0.025em] text-balance md:text-[60px] md:leading-[64px] md:tracking-[-0.03em]">
+            <h1 className="mt-5 text-[40px] font-semibold leading-[44px] tracking-[-0.03em] text-balance md:text-[62px] md:leading-[66px] md:tracking-[-0.035em]">
               The <span className="fm-headline-accent">secure agentic</span> marketplace.
             </h1>
             <p className="mt-5 max-w-[36ch] text-[18px] leading-[27px] text-ink-2 md:text-[20px] md:leading-[30px]">
               Where buyers and sellers thrive. {SHIELD_LINE}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/start" className="btn inline-flex min-h-12 items-center rounded-xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-6 text-[17px] font-medium text-white shadow-[0_8px_24px_-8px_rgba(8,145,178,0.7)] transition-transform motion-safe:hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(8,145,178,0.8)]">Start a goal</Link>
-              <Link href="/floor" className="btn inline-flex min-h-12 items-center rounded-xl bg-surface px-6 text-[17px] font-medium text-ink shadow-ring transition-transform motion-safe:hover:-translate-y-0.5 hover:bg-surface-2">Watch the floor</Link>
+              <Link href="/start" className="btn fm-btn inline-flex min-h-12 items-center rounded-2xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-6 text-[17px] font-medium text-white transition-transform motion-safe:hover:-translate-y-0.5">Start a goal</Link>
+              <Link href="/floor" className="btn fm-ghostbtn inline-flex min-h-12 items-center rounded-2xl px-6 text-[17px] font-medium text-ink transition-transform motion-safe:hover:-translate-y-0.5">Watch the floor</Link>
             </div>
           </div>
           <FloorMini className="rise" />
@@ -69,7 +70,7 @@ export default function Home() {
 
       {/* 2. Proof: three boxed numbers with their caveats. */}
       <section aria-label="Measured results" className="px-4">
-        <div className="mx-auto max-w-[1120px] pb-10 pt-0 md:px-4 md:pb-14 md:pt-0">
+        <Reveal className="mx-auto max-w-[1120px] pb-10 pt-0 md:px-4 md:pb-14 md:pt-0">
           <div className="grid gap-4 md:grid-cols-3">
             {PROOF.map((p) => (
               <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
@@ -83,24 +84,24 @@ export default function Home() {
             ))}
           </div>
           <p className="mt-4 text-[13px] leading-[18px] text-muted">Sandbox only. <a href={README_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">What is real</a></p>
-        </div>
+        </Reveal>
       </section>
 
       {/* 3. The product: the dashboard in miniature. */}
       <section aria-labelledby="dash" className="px-4">
-        <div className="mx-auto grid max-w-[1120px] gap-6 py-10 md:px-4 md:py-16">
+        <Reveal className="mx-auto grid max-w-[1120px] gap-6 py-10 md:px-4 md:py-16">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="dash" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">Your dashboard, in one glance.</h2>
+            <h2 id="dash" className="text-[28px] font-semibold leading-[34px] tracking-[-0.02em] md:text-[40px] md:leading-[44px] md:tracking-[-0.025em]">Your dashboard, in one glance.</h2>
             <Link href="/start" className="inline-flex min-h-11 items-center gap-1.5 text-[15px] font-medium text-pulse">Open yours <span aria-hidden>→</span></Link>
           </div>
           <DashboardPreview />
-        </div>
+        </Reveal>
       </section>
 
       {/* 4. How it works: four steps on one line. */}
       <section aria-labelledby="how" className="px-4">
-        <div className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
-          <h2 id="how" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">How it works</h2>
+        <Reveal className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
+          <h2 id="how" className="text-[28px] font-semibold leading-[34px] tracking-[-0.02em] md:text-[40px] md:leading-[44px] md:tracking-[-0.025em]">How it works</h2>
           <ol className="relative mt-8 grid gap-3 md:grid-cols-4 md:gap-4">
             {STEPS.map((s, i) => (
               <li key={s.title} className="fm-tile relative grid grid-cols-[44px_1fr] gap-x-3.5 gap-y-1 rounded-2xl p-4 md:grid-cols-1 md:gap-3 md:p-5">
@@ -119,35 +120,35 @@ export default function Home() {
             </summary>
             <HomeMore />
           </details>
-        </div>
+        </Reveal>
       </section>
 
       {/* 5 and 6. The floor, and the two guards, on ink. */}
       <section aria-labelledby="floor" className="relative px-4 py-[136px] text-floor-line [background:linear-gradient(180deg,#eef3f8_0px,#e8edf2_15px,#d6dde3_30px,#bdc4cc_45px,#9ea7b0_60px,#7c8792_75px,#5b6773_90px,#3c4a57_105px,#233140_120px,#112131_135px,#0b1b2b_150px,#0b1b2b_calc(100%-150px),#112131_calc(100%-135px),#233140_calc(100%-120px),#3c4a57_calc(100%-105px),#5b6773_calc(100%-90px),#7c8792_calc(100%-75px),#9ea7b0_calc(100%-60px),#bdc4cc_calc(100%-45px),#d6dde3_calc(100%-30px),#e8edf2_calc(100%-15px),#eef3f8_calc(100%-0px))]">
-        <div className="mx-auto grid max-w-[1120px] gap-10 md:px-4">
+        <Reveal className="mx-auto grid max-w-[1120px] gap-10 md:px-4">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
             <div>
               <span className="inline-flex items-center gap-2 text-[13px] font-medium uppercase tracking-[0.08em] text-ghost-1"><span className="dot text-[#4f8df7]" aria-hidden /> The floor</span>
               <h2 id="floor" className="mt-4 text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Every round, played live.</h2>
               <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ghost-1">Your agent eats the worst offer each round. Every move is a market row.</p>
             </div>
-            <Link href="/floor" className="btn inline-flex min-h-12 items-center gap-2 rounded-xl bg-floor-line px-6 text-[17px] font-medium text-floor-bg shadow-[0_8px_30px_-8px_rgba(34,211,238,0.6)] transition-transform motion-safe:hover:-translate-y-0.5">Watch the floor <span aria-hidden>→</span></Link>
+            <Link href="/floor" className="btn fm-btn inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#f6fafd,#dbe9f5)] px-6 text-[17px] font-medium text-floor-bg transition-transform motion-safe:hover:-translate-y-0.5">Watch the floor <span aria-hidden>→</span></Link>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <DarkCard eyebrow={SHIELD} title="Fishy listings never reach your agent.">Hidden instructions or a swapped payee: blocked, with the rules that fired.</DarkCard>
             <DarkCard eyebrow="Referee" title="One rule ranks every bid.">Sealed bids, one flat fee, no pay for rank.</DarkCard>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* 7. Payment. */}
       <section aria-labelledby="pay" className="px-4">
-        <div className="mx-auto grid max-w-[1120px] gap-8 pb-14 md:px-4 md:pb-20 lg:grid-cols-[1fr_1fr] lg:items-center">
+        <Reveal className="mx-auto grid max-w-[1120px] gap-8 pb-14 md:px-4 md:pb-20 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
             <h2 id="pay" className="text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Nothing pays without you.</h2>
             <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ink-2">We call. You say the code. Then a test charge and a receipt.</p>
           </div>
-          <div className="glass grid gap-4 p-6">
+          <div className="fm-glass grid gap-4 rounded-[22px] p-6">
             <div className="flex flex-wrap gap-2">
               <StatusPill tone="live" pulse>Calling you</StatusPill>
               <StatusPill tone="good">Approved</StatusPill>
@@ -160,14 +161,14 @@ export default function Home() {
             </div>
             <p className="text-[13px] leading-[18px] text-muted">One use, one deal. A wrong code pays nothing.</p>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* 8. Sellers, footer. */}
       <section aria-label="For sellers" className="border-t border-line px-4">
         <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-5 py-12 md:px-4 md:py-20">
           <p className="text-[22px] font-medium leading-7 tracking-[-0.015em] md:text-[28px] md:leading-[34px]">Sell here. Your agent bids, never below your floor.</p>
-          <Link href="/sell" className="btn inline-flex min-h-12 items-center rounded-xl bg-surface px-6 text-[17px] font-medium text-ink shadow-ring transition-transform motion-safe:hover:-translate-y-0.5 hover:bg-surface-2">List your shop</Link>
+          <Link href="/sell" className="btn fm-ghostbtn inline-flex min-h-12 items-center rounded-2xl px-6 text-[17px] font-medium text-ink transition-transform motion-safe:hover:-translate-y-0.5">List your shop</Link>
         </div>
       </section>
     </div>
@@ -176,8 +177,7 @@ export default function Home() {
 
 function DarkCard({ eyebrow, title, children }: { eyebrow: string; title: string; children: ReactNode }) {
   return (
-    <div className="relative grid gap-2 rounded-2xl border border-[rgba(214,235,253,0.19)] bg-floor-ground p-6">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[rgba(255,255,255,0.08)]" aria-hidden />
+    <div className="fm-glass-dark grid gap-2 rounded-2xl p-6">
       <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-shield">{eyebrow}</span>
       <span className="text-[20px] font-semibold leading-6 tracking-[-0.01em]">{title}</span>
       <span className="text-[15px] leading-[22px] text-ghost-1">{children}</span>
