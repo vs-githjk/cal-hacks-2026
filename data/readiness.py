@@ -206,7 +206,7 @@ def _check_page(url: str, html: str, at: str) -> dict:
         if wall:  # we were shown a challenge, not the listing: nothing is known about the page, so it is free (#353)
             return _unreadable(url, at, f"the store showed a bot check ({wall}) instead of the listing, so its page was not read",
                                "bot_wall")
-    product = ld_product(html, url) if how == "page JSON-LD" else None
+    product = ld_product(html, url) if how.startswith("page JSON-LD") else None
     offer = _offer(product) if product else {}
     if how != "no structured data":  # read the raw values ourselves: the claim check is lenient where an agent is not
         facts = dict(facts)

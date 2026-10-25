@@ -147,7 +147,9 @@ def _page_key(u, base):
     if not isinstance(u, str) or not u.strip():
         return None
     p = urlparse(urljoin(base, u.strip()))
-    return ((p.hostname or "").lower(), p.path.rstrip("/")) if p.hostname else None
+    host = (p.hostname or "").lower()
+    host = host[4:] if host.startswith("www.") else host  # #397: www.shop.example and shop.example are one store's page
+    return (host, p.path.rstrip("/")) if p.hostname else None
 
 
 def _names_another_page(node, url):
@@ -156,10 +158,11 @@ def _names_another_page(node, url):
     return there is not None and here is not None and there != here
 
 
-def ld_product(html, url=None):
-    """The schema.org Product node an agent reads: the one whose @id or url is this page, else the first with offers,
-    else the first; {} when there is none. With the page url given, a Product whose url is another page is never read
-    (#334). Raises ValueError for JSON-LD too deeply nested to parse."""
+def ld_product(html, url=None, notes=None):
+    """The schema.org Product node an agent reads: the one whose @id or url is this page (a leading www. ignored), else the
+    first with offers, else the first; {} when there is none. With the page url given, a Product whose url is another page
+    is not read when another Product is there (#334); when it is the only Product (a canonical on another path) it is kept
+    and a note is appended to `notes` (#397). Raises ValueError for JSON-LD too deeply nested to parse."""
     nodes = []
     for tag, body in script_blocks(html):
         if "application/ld+json" not in tag.translate(_ASCII_LOWER):
@@ -173,10 +176,17 @@ def ld_product(html, url=None):
         items = data if isinstance(data, list) else data.get("@graph", [data]) if isinstance(data, dict) else []
         nodes += [n for n in (items if isinstance(items, list) else [items]) if isinstance(n, dict) and _is_product(n)]
     if url:
+        here = _page_key(url, url)
         for n in nodes:
-            if _same_url(n.get("@id"), url) or _same_url(n.get("url"), url):
+            if _same_url(n.get("@id"), url) or _same_url(n.get("url"), url) or \
+                    (here is not None and here in (_page_key(n.get("@id"), url), _page_key(n.get("url"), url))):
                 return n
-        nodes = [n for n in nodes if not _names_another_page(n, url)]
+        kept = [n for n in nodes if not _names_another_page(n, url)]
+        if not kept and len(nodes) == 1:
+            if notes is not None:
+                notes.append(f"the only Product names another url ({str(nodes[0].get('url'))[:120]}), read as this listing")
+            return nodes[0]
+        nodes = kept
     return next((n for n in nodes if n.get("offers")), nodes[0] if nodes else {})
 
 
@@ -199,7 +209,8 @@ def page_facts(html, url=None):
             if wm is not None:
                 data["warranty_months"] = wm
         return data, "page listing JSON"
-    node = ld_product(html, url)
+    notes = []
+    node = ld_product(html, url, notes)
     if not node:
         return {}, "no structured data"
     offer = ld_offer(node)
@@ -210,7 +221,7 @@ def page_facts(html, url=None):
              "return_policy": _ld_returns(offer.get("hasMerchantReturnPolicy") or node.get("hasMerchantReturnPolicy")),
              "warranty_months": _ld_warranty(node.get("warranty") or offer.get("warranty"))
              if (node.get("warranty") or offer.get("warranty")) else _text_warranty(node.get("description"))}
-    return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD"
+    return {k: v for k, v in facts.items() if v is not None}, "page JSON-LD" + "".join(f"; {n}" for n in notes)
 
 
 def _return_days(days):

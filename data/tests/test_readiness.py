@@ -396,11 +396,9 @@ def _ld(*products):
     return "".join(f'<script type="application/ld+json">{json.dumps(p)}</script>' for p in products)
 
 
-def test_a_product_for_another_page_is_never_read():
+def test_a_product_for_another_page_is_never_read_when_this_page_has_its_own():
     related = {"@type": "Product", "name": "SIM Other Monitor", "url": "https://shop.example/other",
                "offers": {"price": 5, "priceCurrency": "USD"}}
-    r = check_page("https://shop.example/m27q", _ld(related), now=NOW)
-    assert r["read_from"] == "no structured data" and rules(r) == ["listing.no_structured_data"]
     mine = {"@type": "Product", "name": "SIM 27in Monitor M27Q", "offers": {"price": 299.99, "priceCurrency": "USD"}}
     r = check_page("https://shop.example/m27q", _ld(related, mine), now=NOW)
     assert r["facts_read"]["title"] == "SIM 27in Monitor M27Q" and r["facts_read"]["price"] == 299.99
@@ -679,3 +677,26 @@ def test_a_real_page_that_mentions_access_denied_or_loads_recaptcha_is_still_che
                  + "Access denied for expired coupon codes. Log in (captcha) to see deals.</body></html>")
     r = check_page("https://shop.example/x", long_page, now=NOW)
     assert r["status"] == "blocks" and rules(r) == ["listing.no_structured_data"]
+
+
+@pytest.mark.parametrize("page,product_url", [("https://shop.example/p/m27q", "https://www.shop.example/p/m27q"),
+                                              ("https://www.shop.example/p/m27q", "https://shop.example/p/m27q/")])
+def test_a_www_and_a_bare_host_are_the_same_page(page, product_url):  # #397 A1: a false no_structured_data, charged $0.02
+    p = {"@type": "Product", "name": "SIM 27in Monitor M27Q", "url": product_url, "offers": {"price": 299.99, "priceCurrency": "USD"}}
+    r = check_page(page, _ld(p), now=NOW)
+    assert "listing.no_structured_data" not in rules(r) and r["facts_read"]["price"] == 299.99 and r["read_from"] == "page JSON-LD"
+
+
+def test_the_sole_product_is_kept_with_a_note_when_its_url_is_another_path():  # #397 A1: a canonical on another path
+    p = {"@type": "Product", "name": "SIM 27in Monitor M27Q", "url": "https://shop.example/products/m27q-canonical",
+         "offers": {"price": 299.99, "priceCurrency": "USD"}}
+    r = check_page("https://shop.example/p/m27q", _ld(p), now=NOW)
+    assert "listing.no_structured_data" not in rules(r) and r["facts_read"]["title"] == "SIM 27in Monitor M27Q"
+    assert r["read_from"].startswith("page JSON-LD") and "the only Product names another url" in r["read_from"]
+
+
+def test_ld_product_prefers_this_pages_product_over_a_www_twin_of_another_page():
+    from data.claim_check import ld_product
+    other = {"@type": "Product", "name": "SIM Other", "url": "https://www.shop.example/other", "offers": {"price": 5}}
+    mine = {"@type": "Product", "name": "SIM Mine", "url": "https://www.shop.example/p/m27q", "offers": {"price": 9}}
+    assert ld_product(_ld(other, mine), "https://shop.example/p/m27q")["name"] == "SIM Mine"
