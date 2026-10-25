@@ -3,10 +3,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
+import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
 import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
+import { useConnectionState } from "./useConnectionState";
 import { BRAND } from "@/lib/brand";
 import { BrandMark, Wordmark } from "./BrandMark";
 
@@ -66,8 +67,8 @@ const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint-mark", mirro
 /** Footer: one honest line about what ran. Each service's dot comes from the origin tags on the floor events it wrote (lib/runMode.ts), never a hardcoded claim. */
 export function RunModeFooter() {
   const path = usePathname();
-  const conn = useSpacetimeDB();
-  const live = conn.isActive;
+  const state = useConnectionState();
+  const live = state === "live";
   const [events] = useTable(tables.floorEvent);
   const services = serviceStatuses(events, live);
   if (path === "/") return null; // the landing has no status line (#448, Vidyut); app screens keep it
@@ -75,8 +76,8 @@ export function RunModeFooter() {
     <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-glass px-4 py-2 font-mono text-[11.5px] text-muted backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1120px] items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] sm:flex-wrap md:px-4">
         <span className="flex shrink-0 items-center gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${live ? "bg-live" : "bg-slate opacity-60"}`} aria-hidden />
-          Market: {live ? "live" : "connecting"} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
+          <span className={`h-2 w-2 rounded-full ${live ? "bg-live" : state === "disconnected" ? "bg-coral" : "bg-slate opacity-60"}`} aria-hidden />
+          Market: {live ? "live" : state === "disconnected" ? "disconnected" : "connecting..."} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
         </span>
         {services.map((s) => (
           <span key={s.name} className="flex shrink-0 items-center gap-1.5">

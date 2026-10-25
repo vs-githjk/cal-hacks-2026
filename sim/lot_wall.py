@@ -2,7 +2,7 @@
 
     python3 -m sim.lot_wall            # writes web/public/lot.json (the /lot page reads it)
 
-Exactly one order is REAL: Vidyut's, read from demo/out/sample-run.json. The other 37 are SIM builders from the
+Exactly one order is REAL: the buyer's, read from demo/out/sample-run.json. The other 37 are SIM builders from the
 wind tunnel's own generator (sim.wind_tunnel.make_builders), deterministic with a seed. Every order carries its label.
 Nothing here is a market result: it shows demand a seller would see, not a sale.
 """
@@ -20,18 +20,18 @@ SAMPLE_RUN = ROOT / "demo" / "out" / "sample-run.json"
 LOT_JSON = ROOT / "web" / "public" / "lot.json"
 LOT_SIZE = 38
 SEED = 7
-STAGE_LINE = "This is one real request, Vidyut's. When many requests pool, this is what a seller sees."
+STAGE_LINE = "This is one scripted demo request, the buyer's (SIM). When many requests pool, this is what a seller sees."
 PRICE_POINTS = (1200, 1250, 1300, 1350, 1400, 1450, 1500)
 
 
 def _real_order() -> dict:
-    """Vidyut's order, taken field for field from the sample run's need and owned parts."""
+    """The buyer's order, taken field for field from the sample run's need and owned parts."""
     art = json.loads(SAMPLE_RUN.read_text())["artifacts"]
     need = art["need"]
     item = need["items"][0]
     owned = {p["id"]: p for p in art["owned_parts"]}
     return {
-        "id": "vidyut-5070ti", "label": "REAL", "origin": "SIM", "name": "Vidyut", "buyer_id": need["buyer_id"],
+        "id": "vidyut-5070ti", "label": "REAL", "origin": "SIM", "name": "the buyer", "buyer_id": need["buyer_id"],
         "need_id": need["id"], "sku_spec": item["sku_spec"], "quantity": item["quantity"], "cap": float(need["spend_limit"]),
         "conditions": list(item["allowed_conditions"]), "archetype": "real",
         "case_max_gpu_mm": owned["owned-case"]["attrs"]["max_gpu_length_mm"],

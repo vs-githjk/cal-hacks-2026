@@ -3,7 +3,7 @@
  "origin": "SIM",
  "seed": 7,
  "sku_spec": "rtx 5070 ti",
- "stage_line": "This is one real request, Vidyut's. When many requests pool, this is what a seller sees.",
+ "stage_line": "This is one scripted demo request, the buyer's (SIM). When many requests pool, this is what a seller sees.",
  "real_count": 1,
  "sim_count": 37,
  "orders": [
@@ -378,7 +378,7 @@
    "id": "vidyut-5070ti",
    "label": "REAL",
    "origin": "SIM",
-   "name": "Vidyut",
+   "name": "the buyer",
    "buyer_id": "vidyut",
    "need_id": "need-vidyut-5070ti",
    "sku_spec": "rtx 5070 ti",
