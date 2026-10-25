@@ -3,10 +3,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
-import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
+import { connectionState, serviceStatuses, type ServiceStatus } from "@/lib/runMode";
+
+/** Three states instead of a flipping boolean (lib/runMode.ts): neutral "connecting" until the first
+ * connect, then "live", then red "disconnected" only once a live connection actually drops. Matches the
+ * same rule the floor page already follows (app/floor/page.tsx). */
+function useConnectionState(isActive: boolean) {
+  const [everActive, setEverActive] = useState(false);
+  if (isActive && !everActive) setEverActive(true);
+  return connectionState(isActive, everActive);
+}
 
 const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/", label: "Home" },
@@ -20,6 +30,7 @@ const NAV: { href: string; label: string; match?: string }[] = [
 export function AppHeader() {
   const path = usePathname();
   const conn = useSpacetimeDB();
+  const state = useConnectionState(conn.isActive);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-glass backdrop-blur-md">
@@ -49,8 +60,8 @@ export function AppHeader() {
           </Link>
         )}
         <span className="hidden items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-muted md:flex">
-          <span className={`h-2 w-2 rounded-full ${conn.isActive ? "bg-ink" : "border border-ink bg-transparent"}`} aria-hidden />
-          {conn.isActive ? "market live" : "offline"}
+          <span className={`h-2 w-2 rounded-full ${state === "live" ? "bg-ink" : state === "disconnected" ? "bg-coral" : "border border-ink bg-transparent"}`} aria-hidden />
+          {state === "live" ? "market live" : state === "disconnected" ? "offline" : "connecting..."}
         </span>
       </nav>
     </header>
@@ -89,14 +100,15 @@ const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-mint", mirror: "b
 export function RunModeFooter() {
   const conn = useSpacetimeDB();
   const live = conn.isActive;
+  const state = useConnectionState(live);
   const [events] = useTable(tables.floorEvent);
   const services = serviceStatuses(events, live);
   return (
     <footer className="fixed inset-x-0 bottom-0 border-t border-line bg-panel px-4 py-2 font-mono text-[12px] text-muted">
       <div className="mx-auto flex max-w-[1360px] items-center gap-x-4 gap-y-1 overflow-x-auto whitespace-nowrap sm:flex-wrap">
         <span className="flex shrink-0 items-center gap-1.5">
-          <span className={`h-2 w-2 rounded-full ${live ? "bg-mint" : "bg-coral"}`} aria-hidden />
-          Market: {live ? "live" : "disconnected"} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
+          <span className={`h-2 w-2 rounded-full ${state === "live" ? "bg-mint" : state === "disconnected" ? "bg-coral" : "bg-slate opacity-40"}`} aria-hidden />
+          Market: {state === "live" ? "live" : state === "disconnected" ? "disconnected" : "connecting..."} ({STDB_DB} at {STDB_URI.replace(/^wss?:\/\//, "")})
         </span>
         {services.map((s) => (
           <span key={s.name} className="flex shrink-0 items-center gap-1.5">
