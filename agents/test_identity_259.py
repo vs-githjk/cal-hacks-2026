@@ -20,7 +20,7 @@ def test_display_names_match_agentverse_and_the_short_ones_are_under_20_characte
 
 
 @pytest.mark.parametrize("readme", ["advocate/AGENTVERSE.md", "SHIELD_AGENTVERSE.md", "caller/AGENTVERSE.md",
-                                    "buyer/AGENTVERSE.md", *[f"sellers/AGENTVERSE-seller_{i}.md" for i in range(1, 6)]])
+                                    "buyer/AGENTVERSE.md", *[f"sellers/AGENTVERSE-seller_{i}.md" for i in range(1, 7)]])
 def test_every_readme_has_the_five_sections(readme):
     text = (AGENTS / readme).read_text()
     assert all(s in text for s in SECTIONS), [s for s in SECTIONS if s not in text]
@@ -28,7 +28,7 @@ def test_every_readme_has_the_five_sections(readme):
 
 
 def test_one_png_avatar_per_agent_and_the_caller_is_pink():
-    names = {"buyer", "advocate", "shield", "caller", *(f"seller_{i}" for i in range(1, 6))}
+    names = {"buyer", "advocate", "shield", "caller", *(f"seller_{i}" for i in range(1, 7))}
     for n in names:
         data = (AGENTS / "avatars" / f"{n}.png").read_bytes()
         assert data[:8] == b"\x89PNG\r\n\x1a\n", n
