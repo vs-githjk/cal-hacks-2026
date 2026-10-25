@@ -22,8 +22,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Providers>
           <TopNav />
           {/* xl and up: a 392 px column on the right is kept free for the floating Fetch tile (360 px + 16 px gutter), so it never covers content. */}
-          <div className="xl:pr-[392px]"><main className="mx-auto w-full max-w-[1200px] px-4 py-5 lg:px-8 lg:py-6">{children}</main></div>
-          <RunModeFooter />
+          <div className="xl:pr-[392px]">
+            <main className="mx-auto w-full max-w-[1200px] px-4 py-5 lg:px-8 lg:py-6">{children}</main>
+            <RunModeFooter />
+          </div>
           <PwaRegister />
         </Providers>
         <AgentPip />
