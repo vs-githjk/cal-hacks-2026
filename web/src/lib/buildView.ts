@@ -39,6 +39,7 @@ function parsePart(p: unknown): BuildPart | null {
   if (!isObj(p) || !oneOf(p.part, PART_KEYS) || !str(p.label) || !oneOf(p.status, STATUSES) || !num(p.budget) || p.budget < 0) return null;
   const champion = p.champion === undefined ? undefined : parseChampion(p.champion);
   if (champion === null) return null; // a champion that is present but malformed drops the row
+  if (champion?.origin === "MIRROR") return null; // MIRROR prices are comparison only, never a winner
   if ((p.status === "locked" || p.status === "replanned") && !champion) return null;
   return {
     part: p.part, label: p.label, status: p.status, budget: p.budget,
@@ -103,6 +104,9 @@ export function toBuildResult(v: BuildView): BuildResult {
     steps,
     origin: v.origin,
     rejected: v.rejected,
+    partStatus: Object.fromEntries(bought.map((p) => [PANEL_KEY[p.part], p.status as NonNullable<BuildResult["partStatus"]>[string]])),
+    checks: v.checks.map((c) => ({ ...c, a: PANEL_KEY[c.a], b: PANEL_KEY[c.b] })),
+    approval: v.approval,
   };
 }
 

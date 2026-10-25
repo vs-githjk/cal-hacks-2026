@@ -24,13 +24,32 @@ test("Lane D's build sample parses, bad rows drop, and the panel reads parts, se
   assert.deepEqual(b.owned, { psu: "750 W PSU", case: "Case (305 mm GPU room)" });
   assert.equal(b.totalCents, 196800);
   assert.equal(b.capCents, 200000);
-  assert.equal(b.picks.gpu.origin, "MIRROR");
+  assert.equal(b.picks.gpu.origin, "SIM");
   assert.equal(b.picks.cpu.origin, "SIM");
   const rows = partRows(b);
   assert.deepEqual(rows.map((r) => r.part), ["gpu", "cpu", "motherboard", "memory", "storage", "cooler"]);
   assert.equal(rows.find((r) => r.part === "motherboard")!.state, "swapped");
-  assert.equal(rows.find((r) => r.part === "gpu")!.seller, "Central Computers (SF)");
+  assert.equal(rows.find((r) => r.part === "gpu")!.seller, "Micro Center");
   assert.deepEqual(planLines(b).map((s) => s.kind), ["plan", "clash", "swap", "locked"]);
+});
+
+test("a MIRROR champion is dropped and counted; checks and approval carry; a planned part reads Planned", () => {
+  const m = structuredClone(sample);
+  m.parts.find((p: { part: string }) => p.part === "gpu").champion.origin = "MIRROR";
+  const v = parseBuildView(m);
+  assert.equal(v.rejected, 1);
+  assert.ok(!v.parts.some((p) => p.part === "gpu"));
+
+  const b = toBuildResult(parseBuildView(sample));
+  assert.equal(b.checks!.length, 5);
+  assert.ok(b.checks!.some((c) => c.a === "motherboard" || c.b === "motherboard"));
+  assert.equal(b.approval!.state, "calling");
+
+  const p = structuredClone(sample);
+  const cpu = p.parts.find((x: { part: string }) => x.part === "cpu");
+  cpu.status = "planned";
+  delete cpu.champion;
+  assert.equal(partRows(toBuildResult(parseBuildView(p))).find((r) => r.part === "cpu")!.name, "Planned");
 });
 
 test("fetchBuild: 404 means no live build, a posted build is parsed", async () => {

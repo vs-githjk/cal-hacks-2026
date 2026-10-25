@@ -10,7 +10,7 @@ import { useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
 import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
 import { useLiveBuild } from "@/components/useLiveBuild";
-import { planLines, SAMPLE_BUILD, type BuildResult, type StepKind } from "@/lib/build";
+import { planLines, SAMPLE_BUILD, showBuildPlan, type BuildResult, type StepKind } from "@/lib/build";
 import {
   ASI_ONE_URL,
   NEXT_CORNER,
@@ -179,7 +179,7 @@ function AgentPipTile() {
       {prefs.open ? (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
-            <BuildPlan build={liveBuild ?? SAMPLE_BUILD} origin={liveBuild?.origin ?? "SIM"} />
+            {showBuildPlan(!!liveBuild, window.location.search) && <BuildPlan build={liveBuild ?? SAMPLE_BUILD} origin={liveBuild?.origin ?? "SIM"} />}
             {noFeed ? (
               <>
                 <p className="pt-2 text-muted">No live agent feed on this site. Each agent's public Agentverse profile:</p>
