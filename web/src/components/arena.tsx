@@ -7,7 +7,7 @@ export type QuestionProps = {
   bout?: number;
   of?: number;
   /** none: the market has no round yet (#398). */
-  status: "open" | "sealed" | "verdict" | "none";
+  status: "open" | "sealed" | "verdict" | "none" | "loading";
   /** A short line after the status word, like the round's name. */
   detail?: string;
   contenders?: number;
@@ -19,7 +19,8 @@ const Dot = ({ tone }: { tone: string }) => <span className={`h-1.5 w-1.5 shrink
 
 export function Question({ question, bout, of, status, detail, contenders, verdict, origin }: QuestionProps) {
   const state =
-    status === "none" ? { tone: "bg-muted", word: "No round yet" }
+    status === "loading" ? { tone: "bg-muted", word: "Connecting..." }
+    : status === "none" ? { tone: "bg-muted", word: "No round yet" }
     : status === "open" ? { tone: "bg-accent", word: "Open for bids" }
     : status === "sealed" ? { tone: "bg-muted", word: "Bids sealed" }
     : { tone: verdict?.kind === "knocked" ? "bg-coral" : verdict ? "bg-mint" : "bg-muted", word: "Decided" };

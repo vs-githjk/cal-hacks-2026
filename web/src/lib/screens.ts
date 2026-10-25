@@ -291,12 +291,14 @@ export function buildQuestion(): string {
   return "Who builds the best 1440p gaming PC under the buyer's cap?";
 }
 
-export interface HomeRound { status: "none" | "open" | "closed"; title: string; pill: string }
+export interface HomeRound { status: "loading" | "none" | "open" | "closed"; title: string; pill: string }
 
 /** What home says about the market (#398): from the newest real round, in words, never its raw id. No round means "no round yet", so the
  * page never shows a round as open while saying there is none. */
-export function homeRound<R extends RoundRow>(rounds: readonly R[]): HomeRound {
+export function homeRound<R extends RoundRow>(rounds: readonly R[], ready = true): HomeRound {
   const r = latestRound(rounds);
+  // Until the round table's subscription lands, an empty list means "not loaded", not "no round": say so neutrally.
+  if (!ready && !r) return { status: "loading", title: "Connecting...", pill: "connecting..." };
   if (!r) return { status: "none", title: "No round yet", pill: "no round yet" };
   const status = r.state === "open" ? "open" : "closed";
   const title = roundTitle(r.id) ?? "Latest round";
@@ -489,7 +491,7 @@ export function vetoFromRows(checks: readonly CheckRow[], results: readonly Resu
   };
 }
 
-/** The latest Shield block or quarantine in this round, with the rule ids the row stores. */
+/** The latest Smell Test (Shield) block or quarantine in this round, with the rule ids the row stores. */
 export function shieldFromRows(checks: readonly CheckRow[], roundId: string | undefined): ShieldView | null {
   const c = latestOf(checks.filter((x) => x.roundId === roundId && x.kind === "shield" && x.result !== "allow"));
   if (!c) return null;
