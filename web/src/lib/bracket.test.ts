@@ -150,3 +150,17 @@ test("no dash characters in any label or reason the bracket writes", () => {
   const text = JSON.stringify(b.stages.map((s) => [s.name, s.heats.map((h) => h.knocked.map((k) => k.reasonText))]));
   assert.doesNotMatch(text, /[\u2012\u2013\u2014\u2015]/);
 });
+
+test("a vetoed MIRROR bid that the referee rows rank first: who takes the champion slot", () => {
+  const mirror = row({ bidId: "bid-mirror", sellerId: "mirror", persona: "Central Computers", rank: 1, landed: 1000, origin: "MIRROR",
+    reasons: ["Advocate veto (mirror_not_orderable) [source: https://example.com/x]"] });
+  const sim = row({ bidId: "bid-sim", sellerId: "sim", persona: "Sim Seller", rank: 2, landed: 1100, origin: "SIM" });
+  const rows = [mirror, sim];
+  const champion = buildBracket(rows, "round-1").champion;
+  // Finding: bracket.ts ranks by `rank > 0` only and never reads the veto reasons, so if close_round ever wrote rank 1 on a
+  // non-orderable MIRROR row it would be crowned. Documented as is; the guard today is that close_round gives vetoed rows rank 0.
+  assert.equal(champion, "bid-mirror");
+  assert.equal(roundWinner(rows, "round-1", []), "bid-mirror");
+  // an auction_closed naming the SIM seller does not rescue it: roundWinner throws instead of picking the orderable bid
+  assert.throws(() => roundWinner(rows, "round-1", [{ kind: "auction_closed", refId: "round-1", sellerId: "sim" }]), /winner/);
+});

@@ -98,3 +98,13 @@ test("ssd final frame: Seller D is out, refused by the referee", () => {
   assert.ok(d);
   assert.equal(d.reason, "Refused by referee");
 });
+
+test("gpu final frame: Out cards carry the advocate's cited source, else the listing URL", () => {
+  const out = boardAt(scene, scene.beats.length).out;
+  const frankie = out.find((c) => c.sellerId === "seller_3");
+  const knock = scene.offers.find((o) => o.sellerId === "seller_3")!.knock;
+  assert.ok(frankie && knock?.sourceUrl);
+  assert.equal(frankie.sourceUrl, knock.sourceUrl);
+  const central = out.find((c) => c.sellerId === "seller_6");
+  assert.ok(central?.sourceUrl?.startsWith("https://www.centralcomputer.com/"));
+});

@@ -5,7 +5,7 @@ import { useReducedMotion } from "motion/react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Arena2D } from "@/components/Arena2D";
-import { Floor3D, hasWebGL } from "@/components/Floor3D";
+import dynamic from "next/dynamic";
 import { Card, Code, OriginChip, SourceLink } from "@/components/ui";
 import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
 import { FEED_ENV, POLL_MS, feedBase, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
@@ -15,6 +15,11 @@ import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorK
 import type { ReasonCode } from "@/lib/bracket";
 import { FIXED_ACTORS, actorFor } from "@/lib/floor";
 import { formatMoney } from "@/lib/money";
+import { hasWebGL } from "@/lib/webgl";
+
+const LOADING_FLOOR = <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>;
+// three.js loads only when the 3D view is picked; the 2D board never fetches it.
+const Floor3D = dynamic(() => import("@/components/Floor3D").then((m) => m.Floor3D), { ssr: false, loading: () => LOADING_FLOOR });
 
 type SampleName = keyof typeof SAMPLES;
 const LEAD_MS = 1200; // the sealed table holds this long before a close starts to play
@@ -42,9 +47,9 @@ export default function FloorPage() {
 
 const subscribeNever = () => () => {};
 let webglCache: boolean | undefined;
-/** null on the server and during hydration, then whether this browser can make a WebGL context (asked once). */
-function useWebGL(): boolean | null {
-  return useSyncExternalStore(subscribeNever, () => (webglCache ??= hasWebGL()), () => null);
+/** null on the server, during hydration, and while `enabled` is false (the 2D path never probes); then whether this browser can make a WebGL context (asked once). */
+function useWebGL(enabled: boolean): boolean | null {
+  return useSyncExternalStore(subscribeNever, () => (enabled ? (webglCache ??= hasWebGL()) : null), () => null);
 }
 
 function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | null; sampleBeat: number | null }) {
@@ -106,10 +111,10 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
   const [pickedState, setPickedState] = useState<{ roundId: string | null; key: string } | null>(null);
   const picked = pickedState && pickedState.roundId === scene.roundId ? pickedState.key : null;
   const setPicked = useCallback((key: string) => setPickedState({ roundId: scene.roundId, key }), [scene.roundId]);
-  const webgl = useWebGL();
   const [sceneView, setSceneView] = useState<"board" | "3d">(() => {
     try { return localStorage.getItem("floor.view") === "3d" ? "3d" : "board"; } catch { return "board"; }
   });
+  const webgl = useWebGL(sceneView === "3d");
   const pickView = (v: "board" | "3d") => {
     setSceneView(v);
     try { localStorage.setItem("floor.view", v); } catch { /* storage unavailable */ }
@@ -184,7 +189,7 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
           ) : webgl ? (
             <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
           ) : (
-            <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
+            LOADING_FLOOR
           )}
           {narration}
           {!board && corner}

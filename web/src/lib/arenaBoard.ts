@@ -22,6 +22,7 @@ export interface BoardCard {
   rank: number | null; // final frame only, survivors that are not the winner and have outcome "ranked": SceneOffer.rank; else null
   reason: string | null; // out cards only: "Blocked by Shield" | "Vetoed by Advocate" | "Claim check failed" | "Refused by referee"
   reasonText: string | null; // out cards only: the Knock's reasonText (the referee's sentence)
+  sourceUrl: string | null; // the advocate's cited source for a veto, or the offer's listing URL; safeUrl-checked upstream
 }
 export type OfficialKey = "advocate" | "shield" | "referee";
 export interface BoardState {
@@ -70,6 +71,7 @@ export function boardAt(scene: ArenaScene, beat: number): BoardState {
     color: looks[o.key]?.color ?? 0,
     price: opened ? formatMoney(o.landed) : null,
     condition: o.condition, state, rank: null, reason: null, reasonText: null,
+    sourceUrl: o.knock?.sourceUrl ?? o.sourceUrl ?? null,
   });
 
   if (b === 0 && !final) {
