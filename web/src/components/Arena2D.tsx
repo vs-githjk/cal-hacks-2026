@@ -61,6 +61,63 @@ function Envelope({ className = "" }: { className?: string }) {
   );
 }
 
+// Until lib/arenaBoard carries card.kind, the reason word splits the rail: a rank means outbid, anything else means caught.
+const isOutbid = (card: BoardCard) => /^(Ranked #\d+|Outranked)$/.test(card.reason ?? "");
+const OUT_GROUPS = [
+  { kind: "caught", title: "Caught" },
+  { kind: "outbid", title: "Outbid" },
+] as const;
+
+/** One knocked seller: caught rows are struck and muted with the red reason word; outbid rows stay neutral and show the condition. */
+function OutRow({ card, caught, selected, onPick }: { card: BoardCard; caught: boolean; selected: boolean; onPick: (key: string) => void }) {
+  const source = sourceOf(card);
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(card.key)}
+      aria-pressed={selected}
+      className={`terrace-walk grid min-h-[44px] min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5 rounded-lg px-1 py-1 text-left text-[13px] ${selected ? "ring-2 ring-accent" : ""}`}
+    >
+      <span className="row-span-2 pt-0.5"><Figure color={hex(card.color)} initial={card.initial} small dim={caught} /></span>
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+        <span className={`min-w-0 break-words ${caught ? "text-ink-2 line-through" : "font-medium text-ink"}`}>{card.name}</span>
+        <OriginChip origin={card.origin} />
+        {card.price && <span className={`font-mono tabular-nums ${caught ? "text-muted line-through" : "text-ink-2"}`}>{card.price}</span>}
+        {caught ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-soft px-2 text-[12px] font-semibold text-coral">
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-coral" />
+            {card.reason}
+          </span>
+        ) : (
+          <>
+            {card.condition && <span className="text-[12px] text-muted">{card.condition}</span>}
+            <span className="rounded-full bg-soft px-2 text-[12px] font-semibold text-ink">{card.reason}</span>
+          </>
+        )}
+      </span>
+      {(card.reasonText || source) && (
+        <span className="col-start-2 min-w-0 break-words text-[12px] leading-[1.3] text-ink-2">
+          {card.reasonText}
+          {source && (
+            <>
+              {card.reasonText ? " " : ""}
+              <a
+                href={source}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="-my-3 inline px-1 py-3 font-semibold text-sky underline underline-offset-2"
+              >
+                source
+              </a>
+            </>
+          )}
+        </span>
+      )}
+    </button>
+  );
+}
+
 function Word({ card }: { card: BoardCard }) {
   if (card.state === "winner") return <span className="text-[12.5px] font-bold text-gold-ink">Winner</span>;
   if (card.rank !== null) return <span className="rounded-full bg-soft px-2 text-[12px] font-semibold text-ink">Ranked #{card.rank}</span>;
@@ -117,46 +174,17 @@ export function Arena2D({ scene, beat, frozen, reducedMotion, selected, onPick, 
           </div>
 
           {b.out.length > 0 && (
-            <div className="grid min-w-0 max-w-full gap-1.5 rounded-xl bg-panel px-2.5 py-2 text-ink sm:justify-self-end">
-              <h3 className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-2">Out</h3>
-              <div className="grid min-w-0 gap-1">
-                {b.out.map((card) => (
-                  <button
-                    key={card.key}
-                    type="button"
-                    onClick={() => onPick(card.key)}
-                    aria-pressed={selected === card.key}
-                    className={`terrace-walk grid min-h-[44px] min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5 rounded-lg px-1 py-1 text-left text-[13px] ${selected === card.key ? "ring-2 ring-accent" : ""}`}
-                  >
-                    <span className="row-span-2 self-center"><Figure color={hex(card.color)} initial={card.initial} small dim /></span>
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="min-w-0 break-words text-ink-2 line-through">{card.name}</span>
-                      <OriginChip origin={card.origin} />
-                      {card.price && <span className="font-mono tabular-nums text-ink-2">{card.price}</span>}
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral-soft px-2 text-[12px] font-semibold text-coral">
-                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-coral" />
-                        {card.reason}
-                      </span>
-                    </span>
-                    {(card.reasonText || sourceOf(card)) && (
-                      <span className="col-start-2 flex min-w-0 flex-wrap items-center gap-x-2 text-[12px] leading-[1.3] text-ink-2">
-                        {card.reasonText && <span className="min-w-0 break-words">{card.reasonText}</span>}
-                        {sourceOf(card) && (
-                          <a
-                            href={sourceOf(card)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex min-h-[44px] items-center font-semibold text-sky underline underline-offset-2 sm:min-h-0"
-                          >
-                            source
-                          </a>
-                        )}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+            <div className="grid min-w-0 max-w-full gap-2 rounded-xl bg-panel px-2.5 py-2 text-ink sm:justify-self-end">
+              {OUT_GROUPS.map((g) => {
+                const rows = b.out.filter((c) => isOutbid(c) === (g.kind === "outbid"));
+                if (rows.length === 0) return null;
+                return (
+                  <div key={g.kind} className="grid min-w-0 gap-1">
+                    <h3 className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-2">{g.title}</h3>
+                    {rows.map((card) => <OutRow key={card.key} card={card} caught={g.kind === "caught"} selected={selected === card.key} onPick={onPick} />)}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
