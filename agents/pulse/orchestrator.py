@@ -39,6 +39,8 @@ for _p in (str(ROOT), str(ROOT / "agents")):
         sys.path.insert(0, _p)
 
 from agents.crs import CACHE_MAX_AGE  # noqa: E402
+from agents.pulse import coaching  # noqa: E402
+from agents.pulse import fair_band as FB  # noqa: E402
 from agents.pulse import market_pulse as MP  # noqa: E402
 from data.tiger import store, trends  # noqa: E402
 
@@ -57,10 +59,17 @@ TIGER_RECORD_SRC = "Tiger Data bid_ticks and loss_reports"
 TIGER_PRICE_SRC = "Tiger Data price_obs"
 SIM_SRC = "SIM fixture"
 NOTE_KEYS = {"seller_id", "round_id", "sku", "gap_band", "reason", "source_url", "action", "price_step", "what_to_change",
-             "what_to_change_origin", "market", "record", "lines"}
-HELP = ("I am Market Pulse. Ask me how a part is trending, for example \"how is the RTX 5070 Ti trending?\", or why a seller "
-        "keeps losing, for example \"why does seller_3 keep losing?\". I answer from Tiger Data, the CRS signals cache and "
-        "finished rounds, and I name the source of every number. I cannot place bids or approve purchases.")
+             "what_to_change_origin", "market", "record", "lines", "gap_pct", "fair_band"}
+BAND_KEYS = ("low", "median", "high", "n", "as_of", "source", "origin", "window_days")
+PRICE_WORDS = {"price", "prices", "pricing", "cost", "costs", "going", "worth", "fair", "much", "pay", "paying", "rate", "afford",
+               "cheap", "expensive", "deal", "market"}
+TREND_WORDS = {"trend", "trends", "trending", "week", "month", "history", "direction", "lately"}
+SKU_SHAPE = re.compile(r"^[a-z0-9][a-z0-9 .+/-]{0,39}$")
+MAX_BAND_SKUS = 20
+HELP = ("I am Market Pulse. Ask me the going price of a part, for example \"what's the going price for an RTX 5070 Ti?\", how a "
+        "part is trending, for example \"how is the RTX 5070 Ti trending?\", or why a seller keeps losing, for example \"why does "
+        "seller_3 keep losing?\". I answer from Tiger Data, dated MIRROR snapshots, the CRS signals cache and finished rounds, and "
+        "I name the source of every number. I cannot place bids or approve purchases.")
 
 
 class PulseError(ValueError):
@@ -499,13 +508,17 @@ class Pulse:
     """Holds a source, the seller catalog and the CRS cache path; turns a finished round into notes and answers chat."""
 
     def __init__(self, source: Optional[TigerSource] = None, *, catalog: Optional[dict] = None, crs_path: Optional[Path] = None,
-                 now: Optional[Callable[[], datetime]] = None, writer: Optional[Callable[[dict], Any]] = None):
+                 now: Optional[Callable[[], datetime]] = None, writer: Optional[Callable[[dict], Any]] = None,
+                 bands: Optional[FB.FairBands] = None):
         self.source = source or default_source()
         self.catalog = load_catalog() if catalog is None else catalog
         self.crs_path = crs_path
         self.now = now or (lambda: datetime.now(timezone.utc))
         self.writer = writer
+        # Tiger Data reads the band only for the real Tiger source; a fixture or fake source never reaches the network
+        self.bands = bands or FB.FairBands(tiger=type(self.source) is TigerSource, now=self.now)
         self.latest: dict = {}
+        self.latest_pulse: dict = {}
 
     # sellers listing a SKU: the catalog plus whoever bid on it this round
     def sellers_for(self, sku: str, rows: Optional[list[dict]] = None) -> list[str]:
@@ -515,15 +528,26 @@ class Pulse:
                 ids.append(r["seller_id"])
         return sorted(ids)
 
-    def seller_note(self, report: dict, sku: str) -> dict:
+    def band_for(self, sku: str) -> Optional[dict]:
+        """The sku's fair band, or None when reading it failed: a band never stops a note or an answer."""
+        try:
+            return self.bands.band(sku)
+        except Exception:  # noqa: BLE001
+            return None
+
+    def seller_note(self, report: dict, sku: str, gap_pct: Optional[float] = None) -> dict:
         d, c = self.source.demand(), self.source.coach(report["seller_id"])
         base = MP.note_for(report, sku, d, c, writer=self.writer)
         record = {str(w): record_block(self.source.record(report["seller_id"], w)) for w in WINDOWS}
+        band = self.band_for(sku)
+        gap = gap_pct if report["reason"] == "price" else None      # only a seller priced out has a gap to report
+        coach_line = coaching.coaching_line(gap, band) if gap is not None and band else None
         lines = [f"Round {report['round_id']}: {base['what_to_change']} [round {report['round_id']}]",
-                 *(record[str(w)]["line"] for w in WINDOWS)]
+                 *([coach_line] if coach_line else []), *(record[str(w)]["line"] for w in WINDOWS)]
         note = {k: base[k] for k in ("seller_id", "round_id", "gap_band", "reason", "source_url", "action", "price_step",
                                      "what_to_change", "what_to_change_origin", "market")}
-        note.update(sku=sku, record=record, lines=lines)
+        note.update(sku=sku, record=record, lines=lines, gap_pct=gap if coach_line else None,
+                    fair_band={k: band[k] for k in BAND_KEYS} if band else None)
         return note
 
     def buyer_trend(self, sku: str, rows: Optional[list[dict]] = None, signals: Any = "read") -> dict:
@@ -531,17 +555,20 @@ class Pulse:
         sig = read_crs(self.crs_path, self.now()) if signals == "read" else signals
         counts = crs_counts(self.sellers_for(sku, rows), sig)
         lines = [windows[str(w)]["line"] for w in WINDOWS] + [crs_line(counts)]
-        return {"sku": sku, "windows": windows, "crs": counts, "lines": lines}
+        band = self.band_for(sku)
+        return {"sku": sku, "windows": windows, "crs": counts, "lines": lines,
+                "fair_band": {k: band[k] for k in BAND_KEYS} if band else None}
 
     def process_round(self, rnd: dict) -> dict:
         """Notes for every losing seller and a trend for every SKU of the round. Remembers them for chat."""
         rows = rnd["rows"]
         sku_of = {r["seller_id"]: r["lines"][0]["sku_spec"] for r in rows}
         signals = read_crs(self.crs_path, self.now())
+        gaps = coaching.exact_gaps(rows)
         notes, skipped = [], list(rnd["skipped"])
         for rep in rnd["reports"]:
             try:
-                notes.append(self.seller_note(rep, sku_of.get(rep["seller_id"], skus_of(rows)[0])))
+                notes.append(self.seller_note(rep, sku_of.get(rep["seller_id"], skus_of(rows)[0]), gaps.get(rep["seller_id"])))
             except ValueError:
                 skipped.append({"seller_id": rep["seller_id"], "why": "unknown band or reason"})
         trends_ = [self.buyer_trend(s, rows, signals) for s in skus_of(rows)]
@@ -552,8 +579,39 @@ class Pulse:
 
     # ------------------------------------------------------------ chat
     def known_skus(self) -> list[str]:
+        """Every part this Pulse can speak about: the catalog's, and any part with a dated MIRROR snapshot."""
         skus = {s for c in self.catalog.values() for s in c["skus"]}
-        return sorted(skus)
+        try:
+            skus |= {str(r.get("sku", "")).strip().lower() for r in self.bands.snapshots() if r.get("kind") == "ask"} - {""}
+        except Exception:  # noqa: BLE001
+            pass
+        return sorted(s for s in skus if SKU_SHAPE.match(s))
+
+    def publish_before_round(self, skus: list[str], *, path: Optional[Path] = None) -> dict:
+        """Publish the fair band of every part of the coming round as one public, sourced pulse (a JSON file the Buyer can read,
+        and the answer to a PulseBandRequest). Remembers it for chat."""
+        self.latest_pulse = FB.publish_pulse(skus, path=path, bands=self.bands)
+        return self.latest_pulse
+
+    def price_answer(self, sku: str) -> str:
+        """The going price: the band's sentence with its source, when it was published (if it was), and Tiger's demand for the part."""
+        band = self.band_for(sku)
+        if band is None:
+            return f"{sku.upper()}: I could not read a price for this part right now. [Market Pulse; not available]"
+        lines = [band["label"]]
+        published = (self.latest_pulse.get("bands") or {}).get(sku)
+        if published and self.latest_pulse.get("published_at"):
+            lines.append(f"Published before the round at {self.latest_pulse['published_at']}.")
+        try:
+            demand = MP.market_facts(sku, self.source.demand(), {"status": "error"}).get("demand", {})
+        except Exception:  # noqa: BLE001
+            demand = {}
+        if "round_hours_24h" in demand:
+            hours = demand["round_hours_24h"]
+            lines.append(f"Demand: {hours} round-hour{'' if hours == 1 else 's'} with bids for this part in the last 24 hours. "
+                         f"[{demand['source']}; {demand['origin']}]" if hours else
+                         f"Demand: no rounds with bids for this part in the last 24 hours. [Tiger Data bid_curve_10s; no data]")
+        return "\n".join(lines)
 
     def answer(self, text: str, sender_allowed: Callable[[str], bool] = lambda seller_id: True) -> str:
         """A fixed-phrase answer to a chat question. The user's words only choose which known SKU or seller id to talk about;
@@ -566,6 +624,8 @@ class Pulse:
             if not sender_allowed(seller):
                 return "I only answer a seller's record to that seller's own agent."
             return self.seller_answer(seller)
+        if sku and set(words) & PRICE_WORDS and not set(words) & TREND_WORDS:
+            return self.price_answer(sku)
         if sku:
             return "\n".join([f"{sku.upper()}: the week and the month.", *self.buyer_trend(sku)["lines"]])
         if asks_losing:
@@ -641,6 +701,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     src.add_argument("--round-file", help="a JSON file: {round_result: [...], loss_reports?: [...]}")
     src.add_argument("--market-round", help="a closed round id to read from the market (needs --token-file)")
     src.add_argument("--serve", action="store_true", help="run the Market Pulse uAgent (long-running; not used by tests)")
+    src.add_argument("--publish-pulse", nargs="+", metavar="SKU",
+                     help="publish the fair band of these parts as the public pulse (PULSE_PUBLIC_PATH or .run/pulse/latest.json)")
     ap.add_argument("--token-file", help="an existing market identity file (never created here)")
     ap.add_argument("--crs-cache", help="path to crs-signals.json (default: CRS_SIGNAL_CACHE_PATH or .cache/crs-signals.json)")
     ap.add_argument("--no-sim", action="store_true", help="without Tiger Data, show 'not configured' instead of the SIM fixture")
@@ -649,6 +711,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     pulse = Pulse(default_source(sim_fallback=not args.no_sim), crs_path=Path(args.crs_cache) if args.crs_cache else None)
     if args.serve:
         build_agent(pulse).run()
+        return 0
+    if args.publish_pulse:
+        try:
+            out = pulse.publish_before_round([s.strip().lower() for s in args.publish_pulse])
+        except ValueError as e:
+            print(f"market pulse: {e}", file=sys.stderr)
+            return 2
+        for b in out["bands"].values():
+            print(b["label"])
+        print(f"published {len(out['bands'])} band(s) at {out['published_at']} to {FB.pulse_path()}")
         return 0
     try:
         if args.round_file:
@@ -707,6 +779,12 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
     class PulseNotes(Model):
         notes_json: str
 
+    class PulseBandRequest(Model):
+        skus_json: str           # ["rtx 5070 ti", "psu 750w"]: at most MAX_BAND_SKUS parts
+
+    class PulseBands(Model):
+        pulse_json: str          # the public pulse ({"kind": "market-pulse", "bands": {...}}) or {"error": "..."}
+
     own_addresses: dict[str, str] = {}
 
     def allowed(sender: str):
@@ -750,6 +828,37 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
             ctx.logger.warning(f"round not read: {e if isinstance(e, PulseError) else 'bad json'}")
             return
         await ctx.send(sender, PulseNotes(notes_json=json.dumps(result["seller_notes"])))
+        try:   # the next round's buyers read a fresh market: publish the pulse for the parts this round priced
+            pulse.publish_before_round([t["sku"] for t in result["buyer_trends"]])
+        except Exception:  # noqa: BLE001
+            ctx.logger.warning("pulse not refreshed after the round")
+
+    @agent.on_message(model=PulseBandRequest, replies=PulseBands)
+    async def on_band_request(ctx: Context, sender: str, msg: PulseBandRequest):
+        """Open to any sender: the pulse is the market's public price, with no seller, buyer or cap in it. Shield first, then a
+        fixed-shape request (a JSON list of known-shape part names); anything else gets a fixed error and runs nothing."""
+        import asyncio
+
+        def reply(body: dict) -> PulseBands:
+            return PulseBands(pulse_json=json.dumps(body))
+        verdict = await asyncio.to_thread(common.screen, f"pulse-band-{ctx.session}", sender, msg.skus_json)
+        if verdict.get("verdict") != "allow":
+            await ctx.send(sender, reply({"error": "shield_blocked"}))
+            return
+        try:
+            skus = json.loads(msg.skus_json)
+        except ValueError:
+            skus = None
+        ok = (isinstance(skus, list) and 0 < len(skus) <= MAX_BAND_SKUS
+              and all(isinstance(s, str) and SKU_SHAPE.match(s.strip().lower()) for s in skus))
+        if not ok:
+            await ctx.send(sender, reply({"error": "bad_request"}))
+            return
+        try:
+            body = await asyncio.to_thread(pulse.publish_before_round, [s.strip().lower() for s in skus])
+        except Exception:  # noqa: BLE001
+            body = {"error": "unavailable"}
+        await ctx.send(sender, reply(body))
 
     agent.include(chat, publish_manifest=True)
 
@@ -758,6 +867,7 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
         ctx.logger.info(f"Market Pulse {agent.address} ({'mailbox' if mailbox else 'local'}), Tiger source: {pulse.source.name}")
 
     agent.pulse_models = (PulseRound, PulseNotes)
+    agent.pulse_band_models = (PulseBandRequest, PulseBands)
     return agent
 
 

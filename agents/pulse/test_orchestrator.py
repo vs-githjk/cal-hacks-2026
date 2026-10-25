@@ -3,6 +3,7 @@ No network, no key, no agent started: Tiger Data is a fake source or a fake conn
 import asyncio
 import copy
 import json
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -89,8 +90,16 @@ def sig(sid, stability, at=NOW - timedelta(hours=1), source="sandbox"):
                                               "checked_at": at.strftime("%Y-%m-%dT%H:%M:%SZ")}, "reason": "x"}
 
 
+def fixed_bands():
+    """The fair band from five fixed Tiger-like rows: no network and no snapshot file, so a note is the same on every machine."""
+    from agents.pulse import fair_band as FB
+    rows = [{"price_cents": c, "ts": NOW - timedelta(days=1), "origin": "MIRROR"} for c in (120000, 125000, 127900, 130000, 135000)]
+    return FB.FairBands(tiger_rows=lambda sku, days: {"status": "ok", "rows": rows}, snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW)
+
+
 def pulse(tmp_path=None, source=None, cache=None):
-    return O.Pulse(source or FakeSource(), catalog=copy.deepcopy(CATALOG), crs_path=cache or (tmp_path / "none.json"), now=lambda: NOW)
+    return O.Pulse(source or FakeSource(), catalog=copy.deepcopy(CATALOG), crs_path=cache or (tmp_path / "none.json"), now=lambda: NOW,
+                   bands=fixed_bands())
 
 
 def rnd():
@@ -332,7 +341,9 @@ def test_no_seller_note_carries_a_rival_price_the_winning_price_or_the_cap(tmp_p
     text = json.dumps(out["seller_notes"])
     for needle in all_prices(r["rows"]) | {f"{CAP:.2f}", f"{CAP:,.2f}", "1234", "cap", "floor_by", "allowance", "landed", "rank", "bid-need", "persona"}:
         assert needle not in text, needle
-    assert "$" not in text and all(set(n) == O.NOTE_KEYS for n in out["seller_notes"])
+    # the only dollar figures in a note are the market's public band for the part, never a bid
+    assert set(re.findall(r"\$[\d,]+\.\d\d", text)) <= {"$1,250.00", "$1,279.00", "$1,300.00"}
+    assert all(set(n) == O.NOTE_KEYS for n in out["seller_notes"])
 
 
 def test_a_note_names_only_its_own_seller_and_never_another_sellers_id_or_record(tmp_path):
