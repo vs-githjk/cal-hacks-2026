@@ -36,6 +36,9 @@ from logic import advice_need_for, decide, make_order, sealed
 from data.mirror import not_partners  # common put the repo root on sys.path
 
 ADVICE_TIMEOUT_S = 15
+# #447: the published market ranks at close, so its round stays open this much longer than the bidding window: the
+# advocate's cards must be attached before the close for a veto or caution to count in the ranking.
+MARKET_REVIEW_S = ADVICE_TIMEOUT_S + 10
 RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs a phone-call approval
 CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
@@ -121,42 +124,24 @@ def _market_timestamp(value) -> float:
     return current.astimezone(timezone.utc).timestamp()
 
 
-def _review_candidates(referee_market, round_id: str) -> list[dict]:
-    candidates = referee_market.review_candidates(round_id)
-    originals = {bid["id"]: bid for bid in ROUND.get("received_bids", {}).values()}
-    selected = []
-    hashes = {}
-    for candidate in candidates:
-        bid = originals.get(candidate.get("bid_id"))
-        if (bid is None or candidate.get("round_id") != round_id
-                or candidate.get("need_id") != ROUND["need"]["id"]
-                or candidate.get("seller_id") != {"seller_1": "seller-a", "seller_2": "seller-b",
-                                                   "seller_3": "seller-c"}.get(bid["supplier_id"])
-                or candidate.get("origin") != bid.get("origin")):
-            raise MarketBridgeError("candidate_bid_binding_mismatch")
-        lines = candidate.get("lines")
-        metadata = candidate.get("line_metadata")
-        if not isinstance(lines, list) or not lines or not isinstance(metadata, list) or len(lines) != len(metadata):
+def _canonical_hash(value) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                                     allow_nan=False).encode()).hexdigest()
+
+
+def _review_candidates() -> list[dict]:
+    """#447: the bids to review are the Shield-allowed bids the sellers sent this agent (ROUND["bids"]); the published market
+    has no review_candidates view and the referee cannot read sealed bids. Each line keeps its index, listing id and a hash
+    of the seller's own line, and each bid a hash of the whole offer, so the winner is bound to exactly what was reviewed."""
+    selected, hashes = [], {}
+    for bid in ROUND.get("bids", []):
+        if not isinstance(bid.get("lines"), list) or not bid["lines"]:
             raise MarketBridgeError("candidate_lines_invalid")
-        projected = dict(bid, lines=[])
-        for row, meta in zip(lines, metadata):
-            index = row.get("line_index") if isinstance(row, dict) else None
-            if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(bid["lines"]):
-                raise MarketBridgeError("candidate_line_index_invalid")
-            original = bid["lines"][index]
-            line_hash = hashlib.sha256(json.dumps(original, sort_keys=True, separators=(",", ":"),
-                                               ensure_ascii=False, allow_nan=False).encode()).hexdigest()
-            if (meta.get("lineIndex") != index or meta.get("listingHash") != line_hash
-                    or meta.get("listingId") != (original.get("listing_id") or original.get("listing_url"))
-                    or row.get("sku_spec") != original.get("sku_spec")
-                    or row.get("unit_price") != original.get("unit_price")
-                    or row.get("quantity") != original.get("quantity")):
-                raise MarketBridgeError("candidate_line_binding_mismatch")
-            projected["lines"].append({**original, "line_index": index, "listing_id": meta["listingId"],
-                                       "listing_hash": meta["listingHash"]})
-        projected["candidate_binding_hash"] = candidate["binding_hash"]
-        selected.append(projected)
-        hashes[bid["id"]] = candidate["binding_hash"]
+        lines = [{**line, "line_index": index, "listing_id": line.get("listing_id") or line.get("listing_url"),
+                  "listing_hash": _canonical_hash(line)} for index, line in enumerate(bid["lines"])]
+        binding = _canonical_hash(bid)
+        selected.append(dict(bid, lines=lines, candidate_binding_hash=binding))
+        hashes[bid["id"]] = binding
     ROUND["candidate_hashes"] = hashes
     return selected
 
@@ -184,11 +169,13 @@ def _ensure_market_round_state(referee_market, round_id: str, *, expected: str, 
 def _begin_market_review() -> list[dict]:
     _buyer_market, referee_market = market_clients()
     round_id = ROUND["market_round_id"]
-    _ensure_market_round_state(referee_market, round_id, expected="review", transition_from="open")
+    # #447: review while the round is still open (the published market ranks at close); a closed round is too late
+    if referee_market.round_status(round_id).get("state") != "open":
+        raise MarketBridgeError("market_round_closed_before_review")
     for bid_id, check in ROUND.get("screened_bids", {}).items():
         referee_market.attach_verdict(bid_id=bid_id, verdict=check["verdict"],
                                       rule_ids=check["rule_ids"], origin=check["origin"])
-    return _review_candidates(referee_market, round_id)
+    return _review_candidates()
 
 
 def _record_market_reviews(cards: list[dict]) -> None:
@@ -240,7 +227,11 @@ async def _finish_market_round(ctx: Context):
         reviewed_cards = ROUND.get("cards", {})
         buyer_market, referee_market = market_clients()
         round_id = ROUND["market_round_id"]
-        _ensure_market_round_state(referee_market, round_id, expected="closed", transition_from="review")
+        status = referee_market.round_status(round_id)
+        if status.get("state") == "open" and _market_timestamp(status.get("deadline")) > business_now().timestamp():
+            ROUND["deadline"] = _market_timestamp(status.get("deadline"))  # #447: the market extended its round; wait for it
+            return
+        _ensure_market_round_state(referee_market, round_id, expected="closed", transition_from="open")
         winner = buyer_market.authoritative_winner(round_id, ROUND["need"]["items"])
         if winner is None:
             ROUND["market_winner"] = None
@@ -248,25 +239,27 @@ async def _finish_market_round(ctx: Context):
             local = next((bid for bid in ROUND.get("review_bids", []) if bid["id"] == winner.get("bid_id")), None)
             supplier = MARKET_SELLER_IDS.get(winner.get("seller_id"))
             if (local is None or supplier != local.get("supplier_id")
-                    or winner.get("binding_hash") != ROUND.get("candidate_hashes", {}).get(local["id"])):
+                    or ROUND.get("candidate_hashes", {}).get(local["id"]) != local.get("candidate_binding_hash")):
                 raise MarketBridgeError("market_winner_binding_mismatch")
             raw_offer = next((bid for bid in ROUND.get("received_bids", {}).values()
                               if bid.get("id") == local["id"]), None)
             if not isinstance(raw_offer, dict):
                 raise MarketBridgeError("original_offer_readback_missing")
-            by_index = {line["line_index"]: line for line in local["lines"]}
-            selected = []
+            # #447: the market's result lines carry no line index; bind each to one reviewed line by sku and unit price
+            # (and condition when both name one). The market's landed price is unit price x quantity, without shipping,
+            # and the mandate must equal it, so shipping is shown but never charged.
+            unused, selected = list(local["lines"]), []
             for result_line in winner["lines"]:
-                line = by_index.get(result_line.get("original_line_index"))
-                if (line is None or line.get("sku_spec") != result_line.get("sku_spec")
-                        or line.get("unit_price") != result_line.get("unit_price")
-                        or result_line.get("listing_id") != line.get("listing_id")
-                        or result_line.get("listing_hash") != line.get("listing_hash")):
+                line = next((l for l in unused if l.get("sku_spec") == result_line.get("sku_spec")
+                             and l.get("unit_price") == result_line.get("unit_price")
+                             and not (l.get("offered_condition") and result_line.get("offered_condition")
+                                      and l["offered_condition"] != result_line["offered_condition"])), None)
+                if line is None:
                     raise MarketBridgeError("market_winner_line_mismatch")
-                selected.append({**line, "quantity": result_line["quantity"],
-                                 "shipping": result_line["shipping"]})
+                unused.remove(line)
+                selected.append({**line, "quantity": result_line["quantity"]})
             ROUND["market_winner"] = dict(local, lines=selected, total_landed_price=winner["landed"],
-                                           market_binding_hash=winner["binding_hash"], market_seller_id=winner["seller_id"])
+                                           market_binding_hash=local["candidate_binding_hash"], market_seller_id=winner["seller_id"])
             ROUND["original_offer"] = copy.deepcopy(raw_offer)
             ROUND["bids"] = [ROUND["market_winner"]]
         if not ROUND.get("trace_written"):
@@ -401,6 +394,29 @@ async def emit(ctx: Context, cls: str, text: str):
 def set_state(state: str):
     if ROUND.get("goal"):
         ROUND["goal"]["state"] = state
+
+
+async def _release_held_units(transaction: dict, reason: str) -> None:
+    """The call failed or was denied and this deal is finished: tell the market so the held units go back on sale now, not at expiry.
+    Best effort and never blocks the failure path (the hold still expires by itself): a failure logs the exception type only."""
+    try:
+        await asyncio.to_thread(market_clients()[1].deny_approval, owner_approval.market_hash(transaction), reason)
+    except Exception as exc:
+        import logging
+        logging.getLogger("buyer_agent").warning(f"deal {transaction.get('deal_id')}: could not release the held units ({type(exc).__name__})")
+
+
+async def _report_web_goal(state: str, text: str) -> None:
+    """#449 item 3 PL-4: tell the market where a WEB buyer's goal stands, in plain words (their /buyer goal card shows it).
+    Best effort and never blocks a purchase: a failure logs the exception type only. A chat goal (it has an owner) is skipped."""
+    goal = ROUND.get("goal") or {}
+    if ROUND.get("owner") or not goal.get("id") or not goal.get("market_buyer_id"):
+        return
+    try:
+        await asyncio.to_thread(market_clients()[1].set_goal_state, goal["id"], state, text)
+    except Exception as exc:
+        import logging
+        logging.getLogger("buyer_agent").warning(f"web goal {goal['id']}: could not report {state} ({type(exc).__name__})")
 
 
 @chat.on_message(ChatMessage)
@@ -669,6 +685,13 @@ async def adopt_open_goal(ctx: Context) -> bool:
         ctx.logger.warning(f"Open goal {row.get('id')} has nothing left to buy; marked handled")
         _give_up(ctx, "has nothing to buy")
         return False
+    # #449 item 3 PL-9: first writer wins. A claimed goal leaves every agent's poll; a refused claim means another agent has it
+    # (or the market is unreachable, and the next poll tries again), so this agent hunts nothing.
+    try:
+        await asyncio.to_thread(market_clients()[1].claim_goal, row["id"])
+    except Exception as exc:
+        ctx.logger.warning(f"Open goal {row.get('id')} not claimed ({type(exc).__name__}); skipped")
+        return False
     ROUND.clear()
     ROUND.update(owner=None, owner_context=None, goal=goal, owned=[], need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={}, retired_need_ids=[], market_goal_posted=True, received_bids={})
@@ -676,6 +699,10 @@ async def adopt_open_goal(ctx: Context) -> bool:
     if started:
         GOAL_ATTEMPTS.pop(row["id"], None)
         _give_up(ctx, "hunted")
+    elif ROUND.get("phase") == "done":
+        # The goal is claimed, so no poll will offer it again: end it here instead of leaving it HUNTING for ever.
+        _give_up(ctx, "could not start")
+        await _report_web_goal("FAILED", "We could not start your search. Nothing was paid.")
     else:
         _failed()
     return started
@@ -709,7 +736,7 @@ async def start_round(ctx: Context, need: dict | None = None):
         market_need = dict(need, buyer_id=market_buyer_id)
         need_poster.post_need(market_need, buyer_id=market_buyer_id, goal_id=goal["id"])
         round_id = f"round-{need['id']}"
-        referee_market.open_round(round_id, need["id"], need["auction_window_s"])
+        referee_market.open_round(round_id, need["id"], need["auction_window_s"] + MARKET_REVIEW_S)  # #447
         if referee_market.round_status(round_id).get("state") != "open":
             raise MarketBridgeError("round_open_readback_invalid")
         ROUND.update(market_round_id=round_id)
@@ -746,6 +773,7 @@ async def fail_round(ctx: Context, why: str, *, always_notify: bool = False):
     set_state(state)
     if state == "PAUSED":
         ROUND["phase"] = "done"
+        await _report_web_goal("PAUSED", f"We paused your search after {ROUND['attempts']} rounds without a deal. Nothing was paid.")
         await tell_owner(ctx, f"{why} That was {ROUND['attempts']} rounds without a deal, so I paused this goal. "
                               f"Send your goal again to restart.")
         return
@@ -871,9 +899,9 @@ async def on_advice(ctx: Context, sender: str, msg: common.AdviceReply):
         _record_market_reviews(cards)
         _, referee_market = market_clients()
         status = referee_market.round_status(ROUND["market_round_id"])
-        if status.get("state") != "review":
+        if status.get("state") != "open":  # #447: the cards count only if they landed before the market closed
             raise MarketBridgeError("market_review_closed")
-        ROUND["deadline"] = _market_timestamp(status.get("review_deadline"))
+        ROUND["deadline"] = _market_timestamp(status.get("deadline"))
     except Exception as exc:
         ctx.logger.warning(f"Market review write failed: {type(exc).__name__}")
         await fail_round(ctx, "Market could not record the independent review. Nothing ordered.", always_notify=True)
@@ -901,6 +929,7 @@ async def tick(ctx: Context):
         set_state("EXPIRED")
         ROUND["phase"] = "done"
         ROUND["round_token"] = uuid4().hex
+        await _report_web_goal("EXPIRED", "Your deadline passed before a deal closed. Nothing was paid.")
         await tell_owner(ctx, f"Your deadline ({ROUND['goal']['deadline'][:10]}) passed before a deal closed. "
                               f"Goal EXPIRED; nothing ordered. Send it again with a new date to keep hunting.")
         return
@@ -914,8 +943,8 @@ async def tick(ctx: Context):
         try:
             review_bids = _begin_market_review()
             _, referee_market = market_clients()
-            review_deadline = _market_timestamp(referee_market.round_status(ROUND["market_round_id"])
-                                                 .get("review_deadline"))
+            market_deadline = _market_timestamp(referee_market.round_status(ROUND["market_round_id"])
+                                                 .get("deadline"))  # #447: the market round's own close
         except Exception as exc:
             ctx.logger.warning(f"Market review could not be opened: {type(exc).__name__}")
             await fail_round(ctx, "Market could not verify the sealed round cutoff. Nothing ordered.", always_notify=True)
@@ -923,7 +952,7 @@ async def tick(ctx: Context):
         ROUND["quoted_at"] = now
         ROUND["review_bids"] = review_bids
         ROUND["phase"] = "market_review_wait" if not review_bids else "advice"
-        ROUND["deadline"] = review_deadline if not review_bids else min(review_deadline, now + ADVICE_TIMEOUT_S)
+        ROUND["deadline"] = market_deadline if not review_bids else min(market_deadline, now + ADVICE_TIMEOUT_S)
         if not review_bids:
             return
         # The advocate sees the owned parts for fit checks, but not the cap.
@@ -1120,6 +1149,7 @@ def _is_web_buyer(buyer_id, owner) -> bool:
     return str(buyer_id or "").startswith("b_") or not owner
 
 
+
 async def _phone_approval(transaction: dict, send_private, client, service, buyer_name: str = "there"):
     """The only approval: the owner speaks a one-time code on a phone call (buyer.checkout.approve_offer).
     The private chat shows the code and the outcome; no chat text or typed code is ever accepted as approval."""
@@ -1135,10 +1165,8 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
             owner_approval.remember_code(owner_approval.market_hash(transaction), code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(owner_approval.market_hash(transaction), code)
         except Exception:
-            if web:
-                raise PermissionError("approval code could not be shown") from None
-            import logging
-            logging.getLogger("buyer_agent").warning(f"approval code not shown on /buyer for buyer {buyer_id}")
+            # #455: record_approval needs the code the market issued; without it no call can approve, so never ring (any buyer)
+            raise PermissionError("approval code could not be issued") from None
         if web:  # no chat: the market's own approval view shows the code on /buyer; never send it elsewhere
             import logging
             logging.getLogger("buyer_agent").info(f"web buyer {buyer_id}: code shown on /buyer")
@@ -1283,6 +1311,8 @@ async def _pay_web_purchase(ctx: Context, transaction: dict, mandate: dict, orde
     log.info(f"web buyer {transaction['buyer_id']}: paid deal {transaction['deal_id']}, receipt {charge_id} "
              f"({'Stripe test mode' if stripe_test else 'SIM stub, no money moved'})")
     ROUND.update(transaction=transaction, mandate=mandate, order=order, pending_hold=False, phase="done")
+    await _report_web_goal("DONE", f"Paid in Stripe test mode. Receipt {charge_id}." if stripe_test
+                           else f"Test purchase recorded, no money moved. Receipt {charge_id}.")
 
 
 async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: dict, *, web: bool = False) -> None:
@@ -1311,6 +1341,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             transaction["phase"] = "expired"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=None, pending_hold=False, phase="done")
+            await _release_held_units(transaction, "Approval calls are limited during the beta")
+            if web:
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT)  # #455: the web buyer is told on /buyer, not left ACTIVE
             await tell_owner(ctx, BETA_LIMIT_TEXT)
             return
         if client is None:
@@ -1320,8 +1353,13 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"
                 buyer_state.save_transaction(state_db(), transaction)
                 ROUND["transaction"] = None
+                await _release_held_units(transaction, "Phone approval is not set up")
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
+            if web:
+                has_phone = await asyncio.to_thread(lambda: bool((market_clients()[1].buyer_contact(transaction["buyer_id"]) or {}).get("phone")))
+                await _report_web_goal("FAILED", "We could not place the approval call. Nothing was paid." if has_phone else
+                                       "We could not call you: there is no phone number on your account. Nothing was paid.")
             return
         if delegation_allowed(transaction) and not web:
             result = await _delegated_approval(ctx, transaction, send_private, client, _approval_service(), buyer_name)
@@ -1333,7 +1371,17 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"  # terminal: recovery ignores it, so a restart cannot wedge the agent
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
-            if any(t.get("outcome") == "CallLimited" for t in (result.trace or [])):   # #449 item 1: rate cap hit, never re-dialled
+            limited = any(t.get("outcome") == "CallLimited" for t in (result.trace or []))   # #449 item 1: rate cap hit, never re-dialled
+            if web or limited or transaction["phase"] == "denied":   # finished deals only: a paused chat deal keeps its hold for a retry
+                await _release_held_units(transaction, "The approval call was denied" if transaction["phase"] == "denied"
+                                          else "The approval call could not be completed")
+            if web:
+                why = str(getattr(result, "reason", "") or "").split(":", 1)[0]
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT if limited
+                                       else "The code you said did not match. Nothing was paid." if why in ("wrong_code", "no_code")
+                                       else "The approval call was not approved. Nothing was paid." if transaction["phase"] == "denied"
+                                       else "We could not reach you for the approval call. Nothing was paid.")
+            if limited:
                 await tell_owner(ctx, BETA_LIMIT_TEXT)
                 return
             await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
@@ -1383,6 +1431,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             import logging
             logging.getLogger("buyer_agent").warning(
                 f"web buyer {transaction.get('buyer_id')}: approval failed ({type(exc).__name__}); round released")
+            receipt = transaction.get("payment_ref")
+            await _report_web_goal("FAILED", f"Your payment went through (receipt {receipt}) but we could not finish the order." if receipt
+                                   else "Something went wrong on our side. Nothing was paid.")
             return
         if transaction.get("phase") == "approved":
             transaction["phase"] = "uncertain"
@@ -1457,13 +1508,19 @@ def _build_pending_transaction(n: int, *, web: bool = False):
     """(transaction, blocking market create_mandate call): the call may run in a worker thread, the rest must not."""
     bid = ROUND["bids"][n - 1]
     card = ROUND["cards"][bid["id"]]
-    deal_id = f"deal-{uuid4().hex}"
     amount = bid["total_landed_price"]
-    seller = common.address(bid["supplier_id"])
     now = business_now()
-    mandate = payment.make_mandate(deal_id=deal_id, amount=amount, payee=seller,
-        buyer_id=ROUND["market_buyer_id"], within_allowance=False, goal_id=ROUND["goal"]["id"],
-        now=now, origin=bid.get("origin", "SIM"))
+    if web:  # #447: a web purchase has ONE mandate and it is the market's: deal-<round>:<bid>, payee = the winner's market seller id
+        mandate = owner_approval.build_market_mandate(payment.make_mandate, bid=bid, round_id=ROUND["market_round_id"],
+                                                      buyer_id=ROUND["market_buyer_id"], goal_id=ROUND["goal"]["id"], now=now,
+                                                      market_sellers=MARKET_SELLER_IDS)
+        deal_id, seller = mandate["deal_id"], mandate["payee"]
+    else:
+        deal_id = f"deal-{uuid4().hex}"
+        seller = common.address(bid["supplier_id"])
+        mandate = payment.make_mandate(deal_id=deal_id, amount=amount, payee=seller,
+            buyer_id=ROUND["market_buyer_id"], within_allowance=False, goal_id=ROUND["goal"]["id"],
+            now=now, origin=bid.get("origin", "SIM"))
     deal = {"id": deal_id, "goal_id": ROUND["goal"]["id"], "need_id": ROUND["need"]["id"],
         "bid_id": bid["id"], "amount": amount, "payee": seller, "owner_sender": ROUND["owner"],
         "market_round_id": ROUND["market_round_id"],
@@ -1513,6 +1570,7 @@ async def _auto_web_approval(ctx: Context, n: int) -> None:
     except Exception as exc:
         ctx.logger.warning(f"Web purchase approval could not be prepared: {type(exc).__name__}")
         ROUND["phase"] = "done"
+        await _report_web_goal("FAILED", "Something went wrong on our side. Nothing was paid.")
         return
     await _run_owner_approval(ctx, n, "", transaction, web=True)
     if ROUND.get("phase") == "pending_approval":  # not approved (no phone, denied, no answer): free the hunt for the next web goal
