@@ -1,4 +1,5 @@
 """Shared bits for every Lane A agent: contract checks, Shield screening, wire messages, agent seeds."""
+import inspect
 import json
 import os
 import sys
@@ -213,10 +214,19 @@ SELLERS = [*CATALOG_SELLERS, *_MIRROR_SEEDS]  # each its own uAgent; seller_6 on
 # tests stay): each only repeats a job above, which Fetch asked us not to show as separate agents.
 RETIRED_SELLERS = {"seller_2": "not run (same job as ReNew Refurb, seller_5)",
                    "seller_4": "not run (same job as Byte Bros Outlet, seller_1)"}
-SELLER_JOBS = {"seller_1": "learns from a loss report: steps its price, never below its floor",
-               "seller_3": "lies: the bid says new, its page says open-box, and the Advocate vetoes it with the source",
-               "seller_5": "bundles refurbished and open-box lines of one part in one bid, condition on every line",
-               "seller_6": "real store: bids a San Francisco store's dated listings (MIRROR) and can never be ordered or paid"}
+SELLER_JOBS = {"seller_1": "learner: steps its margin across rounds from its own losses and wins, never below its floor, and "
+                           "shows a strategy note",
+               "seller_3": "adaptive trickster: rotates a condition lie, a hidden fee, a fake warranty and an injection line, "
+                           "learns which got caught, and every trick stays catchable",
+               "seller_5": "honest refurbisher: labelled refurbished and open-box lines, the tradeoff in plain words, truthful "
+                           "answers to the Advocate",
+               "seller_6": "live mirror: bids a real store's dated listing as a price anchor, re-checked each round when a Bright "
+                           "Data key is set, and can never be ordered or paid"}
+
+
+def live_sellers() -> list[str]:
+    """The sellers that run: SELLERS without the retired ones (seller_6 only when its private seed is set)."""
+    return [s for s in SELLERS if s not in RETIRED_SELLERS]
 SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
                 "seller_6": 8016}
 BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)
@@ -304,8 +314,10 @@ def address(role: str) -> str:
     return Identity.from_seed(SEEDS[role], 0).address
 
 
-def include_profile_chat(agent, role_text: str):
-    """Discoverability chat explains the role; structured protocols do the work."""
+def include_profile_chat(agent, role_text: str, answer=None):
+    """Discoverability chat explains the role; structured protocols do the work. `answer(sender, text)`, when given (the
+    four named sellers), may return the reply in character (a str, or an awaitable of one); it runs only after Smell Test
+    allowed the message, and any failure or empty answer falls back to `role_text`. The chat still cannot act."""
     chat = Protocol(spec=chat_protocol_spec)
 
     @chat.on_message(ChatMessage)
@@ -313,6 +325,14 @@ def include_profile_chat(agent, role_text: str):
         verdict = screen(str(msg.msg_id), sender, msg.text())
         await ctx.send(sender, ChatAcknowledgement(acknowledged_msg_id=msg.msg_id))
         text = role_text if verdict.get("verdict") == "allow" else "Smell Test blocked this message. No action taken."
+        if answer is not None and verdict.get("verdict") == "allow":
+            try:
+                reply = answer(sender, msg.text())
+                reply = await reply if inspect.isawaitable(reply) else reply
+                if isinstance(reply, str) and reply.strip():
+                    text = reply
+            except Exception:  # noqa: BLE001  (the fixed role text is always a safe answer)
+                pass
         await ctx.send(sender, ChatMessage(content=[TextContent(text=text)]))
 
     @chat.on_message(ChatAcknowledgement)

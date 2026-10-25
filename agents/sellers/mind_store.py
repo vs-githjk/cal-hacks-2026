@@ -10,13 +10,18 @@ from typing import Callable
 from agents.sellers import learning
 
 
+def ensure(db: sqlite3.Connection) -> None:
+    """Create the mind table on a connection from learning.open_learning_state."""
+    db.execute("""CREATE TABLE IF NOT EXISTS seller_mind_state (
+        seller_id TEXT PRIMARY KEY, state_json TEXT NOT NULL)""")
+    db.commit()
+
+
 def open_store(path: str | Path | None = None) -> sqlite3.Connection:
     """The learning ledger's connection plus the mind table. Use it on the creating thread only."""
     db = learning.open_learning_state(path)
     try:
-        db.execute("""CREATE TABLE IF NOT EXISTS seller_mind_state (
-            seller_id TEXT PRIMARY KEY, state_json TEXT NOT NULL)""")
-        db.commit()
+        ensure(db)
         return db
     except Exception:
         db.close()
