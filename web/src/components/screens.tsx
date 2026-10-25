@@ -45,15 +45,15 @@ function Searches({ goals }: { goals: GoalView[] }) {
     return (
       <Card>
         <Label>Active searches</Label>
-        <p className="text-[22px] font-medium">No search yet.</p>
-        <p className="mt-1 text-muted">
-          Tell the buyer agent what you want in <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="border-b border-current text-sky">ASI:One</a>, for example <q>a 1 TB NVMe drive under $90 by Friday</q>. It appears here with the cap and the allowance.
+        <p className="text-[22px] font-medium leading-7 tracking-[-0.015em]">No search yet.</p>
+        <p className="mt-1.5 text-[15px] leading-[22px] text-muted">
+          Tell the buyer agent what you want in <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse underline decoration-pulse/30 underline-offset-2">ASI:One</a>, for example <q>a 1 TB NVMe drive under $90 by Friday</q>. It appears here with the cap and the allowance.
         </p>
       </Card>
     );
   }
   return (
-    <div className="grid gap-3.5">
+    <div className="grid gap-6">
       <GoalCard goal={goals[0]!} />
       {goals.slice(1).map((g) => (
         <Card key={g.id}>
@@ -71,47 +71,54 @@ function Searches({ goals }: { goals: GoalView[] }) {
 export function BuyerScreen(p: BuyerScreenProps) {
   const s = p.sample ?? {};
   const goal = p.goals[0] ?? null;
+  if (p.connecting) return <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />;
   return (
-    <div className="grid gap-3.5">
-      {p.connecting ? (
-        <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />
-      ) : (
-        <>
+    <div className="grid gap-6">
+      {p.review && <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid min-w-0 gap-6">
           {p.composer}
-          {p.review ? (
-            <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
-          ) : (
+          <Searches goals={p.goals} />
+        </div>
+        <aside className="grid min-w-0 gap-6" aria-label="Your rules and memory">
+          {!p.review && (
             <Card>
               <Label>Needs your attention</Label>
-              <p className="text-[18px] font-medium">Nothing is waiting for you.</p>
+              <p className="flex items-center gap-2.5 text-[15px] font-medium">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-mint-soft text-[12px] text-mint" aria-hidden>✓</span>
+                Nothing is waiting for you.
+              </p>
+              <p className="mt-1.5 text-[13px] text-muted">When a deal is above your allowance, the call and its code show up here first.</p>
             </Card>
           )}
-          <Searches goals={p.goals} />
-          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
-          <div className="grid gap-3.5 md:grid-cols-3">
-            {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
-            <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
-            <OwnedPartsPanel />
+          <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
+          {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
+          <OwnedPartsPanel />
+        </aside>
+      </div>
+      <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
+      {goal && (
+        <section className="grid gap-6" aria-labelledby="latest-round">
+          <div className="flex flex-wrap items-end justify-between gap-2 border-t border-line pt-6">
+            <h2 id="latest-round" className="text-[22px] font-semibold leading-7 tracking-[-0.01em]">Latest round</h2>
+            <p className="max-w-[62ch] text-[13px] text-muted">
+              The latest public round. It is not yet matched to a specific search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.
+            </p>
           </div>
-          {goal && (
-            <>
-              <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
-                The cards below show the latest public round. They are not yet matched to a specific search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.
-              </p>
-              <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
-              <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
-              <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
-                <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
-                <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-                {!p.review && <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>}
-              </div>
-              <div className="grid gap-3.5 lg:grid-cols-[8fr_4fr]">
-                <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>
-                <AgentFeed items={p.feed} />
-              </div>
-            </>
-          )}
-        </>
+          <div className="grid gap-6">
+            <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
+            <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
+          </div>
+          <div className={`grid items-start gap-6 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+            <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
+            <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
+            {!p.review && <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>}
+          </div>
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>
+            <AgentFeed items={p.feed} />
+          </div>
+        </section>
       )}
     </div>
   );
