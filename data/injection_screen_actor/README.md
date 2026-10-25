@@ -54,7 +54,7 @@ So use a **pass** as "no known pattern found", not as "this text is fine". Keep 
 
 ## Input
 
-- `listings`: one object per listing with any of `title`, `description`, `sellerNotes` (text), and optional `id`, `url` (shown in the row, never fetched) and `origin` (`LIVE`, `MIRROR` or `SIM`, your label for where the text came from; default `LIVE`).
+- `listings`: one object per listing with any of `title`, `description`, `sellerNotes` (text), and optional `id`, `url` (shown in the row, never fetched) and `origin` (`LIVE`, `MIRROR` or `SIM`, your label for where the text came from; a row with no origin, or an unknown one, is labelled `UNVERIFIED`: we do not assume `LIVE`).
 - `texts` (optional): one listing's full text per item.
 
 Up to 1,000 listings per run. The fields of a listing are screened together, so an instruction split between the title and the notes is read as one text.
