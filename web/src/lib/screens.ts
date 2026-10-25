@@ -445,6 +445,49 @@ export function linesFromRows(results: readonly ResultRow[], events: readonly Ev
   return [...out, ...refused];
 }
 
+export interface MarketKpis {
+  roundsRun: number;
+  openNow: number;
+  /** Bids in the latest round; the sealed count while it is open. */
+  bidsLatest: number;
+  latestOpen: boolean;
+  /** Distinct sellers in the latest round's results; null while it is open (bids are sealed). */
+  sellersLatest: number | null;
+  /** Rank 1 of the latest closed round; null when no round has closed or it has no winner. Never set from an open round. */
+  lastWinner: { seller: string; landed: number; roundId: string } | null;
+}
+
+/** KPI band for /market, derived only from the round and round_result rows. Prices appear only for closed rounds. */
+export function marketKpis(rounds: readonly RoundRow[], results: readonly ResultRow[]): MarketKpis {
+  const latest = latestRound(rounds);
+  const latestOpen = latest ? latest.state !== "closed" : false;
+  const inLatest = latest ? results.filter((r) => r.roundId === latest.id) : [];
+  const lastClosed = latestRound(rounds.filter((r) => r.state === "closed"));
+  const win = lastClosed ? results.find((r) => r.roundId === lastClosed.id && r.rank === 1) : undefined;
+  return {
+    roundsRun: rounds.length,
+    openNow: rounds.filter((r) => r.state !== "closed").length,
+    bidsLatest: !latest ? 0 : latestOpen ? latest.sealedCount : inLatest.length || latest.sealedCount,
+    latestOpen,
+    sellersLatest: !latest || latestOpen ? null : new Set(inLatest.map((r) => r.sellerId)).size,
+    lastWinner: win && lastClosed ? { seller: win.persona || win.sellerId, landed: win.landed, roundId: lastClosed.id } : null,
+  };
+}
+
+export interface RoundHistoryItem { id: string; state: "open" | "closed"; openedAt: Date; winner: { seller: string; landed: number } | null }
+
+/** Newest-first list of rounds; a winner (and its price) only for closed rounds. */
+export function roundHistory(rounds: readonly RoundRow[], results: readonly ResultRow[], max = 8): RoundHistoryItem[] {
+  return [...rounds]
+    .sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))
+    .slice(0, max)
+    .map((r) => {
+      const closed = r.state === "closed";
+      const w = closed ? results.find((x) => x.roundId === r.id && x.rank === 1) : undefined;
+      return { id: r.id, state: closed ? "closed" : "open", openedAt: d(r.openedAt), winner: w ? { seller: w.persona || w.sellerId, landed: w.landed } : null };
+    });
+}
+
 export function eventsFromRows(events: readonly EventRow[]): FloorEventView[] {
   return [...events]
     .sort((a, b) => (a.id < b.id ? 1 : -1))

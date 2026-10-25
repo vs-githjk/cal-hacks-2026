@@ -4,10 +4,9 @@ import { useMemo } from "react";
 import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { MarketScreen } from "@/components/screens";
-import { eventsFromRows, goalFromRows, latestRound, linesFromRows, originCounts, roundFromRows } from "@/lib/screens";
-import * as sample from "@/lib/sample";
+import { eventsFromRows, goalFromRows, latestRound, linesFromRows, marketKpis, originCounts, roundFromRows, roundHistory } from "@/lib/screens";
 
-/** The referee's floor: public market state. Empty tables fall back to a sample round, labelled as a sample; each row keeps its own origin (a MIRROR store stays MIRROR, scripted sellers are SIM). */
+/** The referee's floor: public market state. Only real rows are shown (no sample fallback); each row keeps its own origin (a MIRROR store stays MIRROR, scripted sellers are SIM). */
 export default function MarketPage() {
   const [rounds, roundsReady] = useTable(tables.round);
   const [results] = useTable(tables.roundResult);
@@ -20,24 +19,19 @@ export default function MarketPage() {
   const lines = useMemo(() => (r ? linesFromRows(results, events, r) : []), [r, results, events]);
   const floor = useMemo(() => eventsFromRows(events), [events]);
   const cap = goalFromRows(goals, goalItems, undefined)?.cap ?? null;
-  const sim = !round;
-  const shownLines = sim ? sample.sellerLines : lines;
-  const shownRound = sim ? sample.round : round;
+  const kpis = useMemo(() => marketKpis(rounds, results), [rounds, results]);
+  const history = useMemo(() => roundHistory(rounds, results), [rounds, results]);
 
-  // Loss reports and the learning diff have no market table yet (Lane A owns them): SIM sample.
   return (
-    <>
-      <MarketScreen
-        connecting={!roundsReady || !eventsReady}
-        round={shownRound}
-        cap={sim ? sample.goal.cap : cap}
-        lines={shownLines}
-        lossReports={sample.lossReports}
-        learning={sample.learning}
-        events={floor}
-        originCounts={originCounts(shownRound?.arrivals ?? [])}
-        sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
-      />
-    </>
+    <MarketScreen
+      connecting={!roundsReady || !eventsReady}
+      round={round}
+      cap={cap}
+      lines={lines}
+      kpis={kpis}
+      history={history}
+      events={floor}
+      originCounts={originCounts(round?.arrivals ?? [])}
+    />
   );
 }

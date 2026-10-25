@@ -1,14 +1,14 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import { buyerKpis, originMixLabel, roundTitle, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type LearningView, type LossReport, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
+import { buyerKpis, originMixLabel, roundTitle, type MarketKpis, type RoundHistoryItem, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
 import { AgentFeed, ApprovalCard, ReviewCard, HeroPrice, KpiCard, QuietOrigin, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
-import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
+import { FloorEvents, RefereeCard, RoundTimeline, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import type { BuildResult } from "@/lib/build";
-import { Card, Details, SampleOnly, money } from "./ui";
+import { Card, Details, money } from "./ui";
 
 
 export interface BuyerScreenProps {
@@ -163,19 +163,30 @@ export interface MarketScreenProps {
   round: RoundView | null;
   cap: number | null;
   lines: SellerLine[];
-  lossReports: LossReport[];
-  lossNote?: string;
-  learning: LearningView | null;
+  kpis: MarketKpis;
+  history: RoundHistoryItem[];
   events: FloorEventView[];
   originCounts: { LIVE: number; MIRROR: number; SIM: number };
   connecting?: boolean;
-  sample?: { round?: boolean; lines?: boolean; lossReports?: boolean; learning?: boolean };
+}
+
+function Kpi({ label, value, line, dot }: { label: string; value: string; line: string; dot?: { on: boolean; word: string } }) {
+  return (
+    <section className="card min-w-0 p-4">
+      <p className="text-[13px] leading-[18px] text-muted">{label}</p>
+      <p className="mt-1 truncate font-mono text-[24px]/[30px] font-medium tabular-nums">{value}</p>
+      <p className="mt-0.5 flex items-center gap-1.5 text-[13px] leading-[18px] text-muted">
+        {dot && <span className={`h-2 w-2 shrink-0 rounded-full ${dot.on ? "bg-live" : "bg-mint-mark"}`} aria-hidden />}
+        <span className="truncate">{dot ? `${dot.word} · ${line}` : line}</span>
+      </p>
+    </section>
+  );
 }
 
 export function MarketScreen(p: MarketScreenProps) {
   const c = p.originCounts;
   const mixLabel = originMixLabel(c);
-  const s = p.sample ?? {};
+  const k = p.kpis;
   return (
     <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -194,26 +205,58 @@ export function MarketScreen(p: MarketScreenProps) {
       </div>
       {p.connecting ? (
         <p className="text-muted">Connecting...</p>
-      ) : !p.round ? (
-        <section className="card p-[18px]">
-          <p className="text-[22px] font-medium">No rounds yet.</p>
-          <p className="mt-1 text-muted">When a buyer posts a request, a sealed round opens here and bids stay sealed until it closes.</p>
-        </section>
       ) : (
         <>
-          <SampleOnly on={!!s.lines}><RefereeCard round={p.round} lines={p.lines} /></SampleOnly>
-          <SampleOnly on={!!s.lines}><SellerLines lines={p.lines} cap={p.cap} /></SampleOnly>
-          <p className="text-[13px] leading-[18px] text-muted">Every bid carries its origin: {c.LIVE} LIVE · {c.MIRROR} MIRROR · {c.SIM} SIM.</p>
-          <Details summary="Round history: the timeline, why sellers lost, what they learned, every event" className="mt-0">
-            <div className="grid gap-6">
-              <SampleOnly on={!!s.round}><RoundTimeline round={p.round} /></SampleOnly>
-              <div className="grid items-start gap-6 lg:grid-cols-2">
-                <SampleOnly on={!!s.lossReports}><LossReports reports={p.lossReports} note={p.lossNote} /></SampleOnly>
-                <SampleOnly on={!!s.learning}><SellerLearns learning={p.learning} /></SampleOnly>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Kpi label="Rounds run" value={String(k.roundsRun)} line={`${k.openNow} open now`} />
+            <Kpi
+              label="Bids this round"
+              value={String(k.bidsLatest)}
+              line={k.latestOpen ? "prices stay sealed" : "latest round"}
+              dot={k.roundsRun === 0 ? undefined : { on: k.latestOpen, word: k.latestOpen ? "Open" : "Closed" }}
+            />
+            <Kpi label="Sellers who bid" value={k.sellersLatest === null ? (k.roundsRun === 0 ? "0" : "Sealed") : String(k.sellersLatest)} line={k.latestOpen ? "shown when the round closes" : "in the latest round"} />
+            <Kpi label="Last winner" value={k.lastWinner ? k.lastWinner.seller : "No winner yet"} line={k.lastWinner ? `${money(k.lastWinner.landed)} landed` : "shown when a round closes"} />
+          </div>
+          {!p.round ? (
+            <section className="card p-[18px]">
+              <p className="text-[22px] font-medium">No rounds yet.</p>
+              <p className="mt-1 text-muted">When a buyer posts a request, a sealed round opens here and bids stay sealed until it closes.</p>
+            </section>
+          ) : (
+            <>
+              <RefereeCard round={p.round} lines={p.lines} />
+              <SellerLines lines={p.lines} cap={p.cap} />
+              <p className="text-[13px] leading-[18px] text-muted">Every bid carries its origin: {c.LIVE} LIVE · {c.MIRROR} MIRROR · {c.SIM} SIM.</p>
+            </>
+          )}
+          {p.history.length > 0 && (
+            <section className="card min-w-0 p-4 md:p-6">
+              <h2 className="text-[15px] font-medium">Recent rounds</h2>
+              <ul className="mt-2">
+                {p.history.map((h) => (
+                  <li key={h.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line py-2.5 text-[14px] last:border-b-0">
+                    <span className="min-w-0 flex-1 font-medium text-ink [overflow-wrap:anywhere]">{roundTitle(h.id) ?? h.id}</span>
+                    <span className="flex items-center gap-1.5 text-muted">
+                      <span className={`h-2 w-2 rounded-full ${h.state === "closed" ? "bg-mint-mark" : "bg-live"}`} aria-hidden />
+                      {h.state === "closed" ? "closed" : "open"}
+                    </span>
+                    <span className="tabular-nums text-ink-2">{h.state === "open" ? "bids sealed" : h.winner ? `${h.winner.seller}, ${money(h.winner.landed)}` : "no winner"}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {p.round ? (
+            <Details summary="Round timeline and every floor event" className="mt-0">
+              <div className="grid gap-6">
+                <RoundTimeline round={p.round} />
+                <FloorEvents events={p.events} />
               </div>
-              <FloorEvents events={p.events} />
-            </div>
-          </Details>
+            </Details>
+          ) : (
+            p.events.length > 0 && <Details summary="Floor events" className="mt-0"><FloorEvents events={p.events} /></Details>
+          )}
         </>
       )}
     </div>
