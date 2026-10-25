@@ -33,16 +33,20 @@ const KPIS = [
 const secs = (ms: number) => (ms / 1000).toFixed(1);
 
 function Telemetry() {
-  // TODO(#374): useTable(tables.telemetry) / tables.telemetryAgent once bindings regenerate
-  const t = parseTelemetry(SIM_TELEMETRY);
-  const agents = parseAgentEvents(SIM_AGENT_EVENTS);
+  // Rows only reach the screen through the whitelist parser, so a money field added to the view never renders.
+  const [telemetryRows] = useTable(tables.telemetry);
+  const [agentRows] = useTable(tables.telemetryAgent);
+  const live = parseTelemetry(telemetryRows[0]);
+  const sim = !live;
+  const t = live ?? parseTelemetry(SIM_TELEMETRY);
+  const agents = parseAgentEvents(sim ? SIM_AGENT_EVENTS : agentRows);
   if (!t) return <p className="text-sm text-muted">Telemetry is unavailable.</p>;
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">Telemetry</h1>
         <p className="text-sm text-muted">as of {new Date().toLocaleTimeString()}</p>
-        <p className="text-sm text-muted">SIM. Sample counts until the market telemetry view is published.</p>
+        {sim && <p className="text-sm text-muted">SIM. Sample counts until the market telemetry view is published.</p>}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {KPIS.map(([label, key]) => (
