@@ -1542,6 +1542,15 @@ describe('#191 approval and mandate holes', () => {
     expect([...h.db.mandate.iter()]).toHaveLength(0);
   });
 
+  it('#389 (#396-1) create_mandate names a failed claim on the winning bid, not just a generic refusal', () => {
+    wonByA();
+    // attach_claim_check itself now refuses a bid in a closed round (see #325-2b below), so the only way a
+    // false claim still reaches an already-ranked rank 1 bid is a path outside that reducer, same as #325-2.
+    run(REF, (ctx) => ctx.db.bidCheck.insert({ id: 0n, bidId: 'bid-a', kind: 'claim', result: 'false', detail: 'card fits', evidenceUrl: 'https://x.test', origin: 'SIM', at: ctx.timestamp }));
+    expect(() => run(REF, (ctx) => m.createMandate(ctx, mandateArgs()))).toThrow(/failed claim/);
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+  });
+
   it('#325-2b attach_verdict and attach_claim_check refuse a bid in an already-closed round, like attach_advocate_card does', () => {
     wonByA();
     expect(() => run(REF, (ctx) => m.attachVerdict(ctx, { bidId: 'bid-a', verdict: 'block', ruleIds: ['shield.x'], origin: 'SIM' }))).toThrow(/already closed/);
