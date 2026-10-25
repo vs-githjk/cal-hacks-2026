@@ -11,14 +11,11 @@ import { FloorMini } from "@/components/FloorMini";
 import { HomeMore } from "@/components/HomeMore";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { OriginChip, README_URL, StatusPill } from "@/components/ui";
+import { proofStats } from "@/lib/scoreboard";
 import { BRAND, SHIELD, SHIELD_LINE, TAGLINE } from "@/lib/brand";
 
-// Measured results, copied from data/scoreboard.json (Oct 24 run) and the README. Update when the scoreboard is regenerated.
-const PROOF: { value: string; label: string; caveat: string }[] = [
-  { value: "39 of 39", label: "fit checks right", caveat: "tuned set" },
-  { value: "13 of 20", label: `attacks stopped by ${SHIELD}`, caveat: "held-out, rules only; 2 of 10 honest pages blocked" },
-  { value: "9 of 10", label: "voice attacks denied", caveat: "first run" },
-];
+// Measured results, computed from data/scoreboard.json (lib/scoreboard.ts). A test keeps the fixture copy identical to the file.
+const PROOF = proofStats(SHIELD);
 
 const STEPS: { title: string; text: string; icon: ReactNode }[] = [
   { title: "State a goal", text: "A part, a price cap and a date. Your agent does the hunting.", icon: <GoalIcon /> },
@@ -43,7 +40,8 @@ export default function Home() {
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}
-      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#d7eef9_0%,#d4edf8_45%,#eef3f8_100%)] px-4 pt-[84px] max-md:-mt-[132px] max-md:pt-[132px]">
+      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#d7eef9_0%,#d4edf8_40%,#eef3f8_100%)] px-4 pb-10 pt-[84px] max-md:-mt-[132px] max-md:pt-[132px]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,transparent,var(--color-canvas))]" aria-hidden />
         <div className="fm-caustic" aria-hidden />
         <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(34,211,238,0.22)]" aria-hidden />
         <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.12)]" aria-hidden />
@@ -63,7 +61,7 @@ export default function Home() {
               Where buyers and sellers thrive. {SHIELD_LINE}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/start" className="btn inline-flex min-h-12 items-center rounded-xl bg-pulse px-6 text-[17px] font-medium text-pulse-ink shadow-[0_8px_24px_-8px_rgba(30,78,216,0.6)] transition-transform motion-safe:hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(30,78,216,0.7)]">Start a goal</Link>
+              <Link href="/start" className="btn inline-flex min-h-12 items-center rounded-xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-6 text-[17px] font-medium text-white shadow-[0_8px_24px_-8px_rgba(8,145,178,0.7)] transition-transform motion-safe:hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(8,145,178,0.8)]">Start a goal</Link>
               <Link href="/floor" className="btn inline-flex min-h-12 items-center rounded-xl bg-surface px-6 text-[17px] font-medium text-ink shadow-ring transition-transform motion-safe:hover:-translate-y-0.5 hover:bg-surface-2">Watch the floor</Link>
             </div>
           </div>
@@ -78,7 +76,7 @@ export default function Home() {
             {PROOF.map((p) => (
               <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="text-[36px] font-medium leading-10 tracking-[-0.02em] tabular-nums md:text-[44px] md:leading-[48px]">{p.value}</span>
+                  <span className={`text-[36px] font-medium leading-10 tracking-[-0.02em] tabular-nums md:text-[44px] md:leading-[48px] ${p.measured ? "" : "text-muted"}`}>{p.value}</span>
                   <OriginChip origin="SIM" />
                 </div>
                 <p className="mt-2 text-[15px] font-medium leading-5">{p.label}</p>
@@ -102,7 +100,7 @@ export default function Home() {
       </section>
 
       {/* 4. How it works: four steps on one line. */}
-      <section aria-labelledby="how" className="px-4">
+      <section aria-labelledby="how" className="px-4 pb-32">
         <div className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
           <h2 id="how" className="text-[28px] font-medium leading-[34px] tracking-[-0.015em] md:text-[40px] md:leading-[44px]">How it works</h2>
           <ol className="relative mt-8 grid gap-3 md:grid-cols-4 md:gap-4">
@@ -127,7 +125,9 @@ export default function Home() {
       </section>
 
       {/* 5 and 6. The floor, and the two guards, on ink. */}
-      <section aria-labelledby="floor" className="mt-6 bg-floor-bg px-4 text-floor-line">
+      <section aria-labelledby="floor" className="relative mt-6 bg-floor-bg px-4 text-floor-line">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 -translate-y-full bg-[linear-gradient(180deg,transparent,var(--color-floor-bg))]" aria-hidden />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 translate-y-full bg-[linear-gradient(180deg,var(--color-floor-bg),transparent)]" aria-hidden />
         <div className="mx-auto grid max-w-[1120px] gap-10 py-14 md:px-4 md:py-20">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
             <div>
@@ -145,8 +145,8 @@ export default function Home() {
       </section>
 
       {/* 7. Payment. */}
-      <section aria-labelledby="pay" className="px-4">
-        <div className="mx-auto grid max-w-[1120px] gap-8 py-14 md:px-4 md:py-20 lg:grid-cols-[1fr_1fr] lg:items-center">
+      <section aria-labelledby="pay" className="px-4 pt-32">
+        <div className="mx-auto grid max-w-[1120px] gap-8 py-10 md:px-4 md:py-14 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
             <h2 id="pay" className="text-[32px] font-medium leading-[36px] tracking-[-0.02em] md:text-[48px] md:leading-[52px]">Nothing pays without you.</h2>
             <p className="mt-4 max-w-[40ch] text-[17px] leading-[26px] text-ink-2">We call. You say the code. Then a test charge and a receipt.</p>
