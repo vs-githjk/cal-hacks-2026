@@ -294,7 +294,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     # The payment is the SIM stub unless --live-call --stripe's charger replaces it after an approved call (#193).
     steps.append(Step("referee", "record_approval",
                       {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": buyer_id,
-                       "voice_approval_id": ""},   # #240: the call's VoiceApproval id, filled in by execute after an approved call
+                       "voice_approval_id": "", "code": ""},   # #240: the call's VoiceApproval id; #449 item 3: the code the call checked. Both filled in by execute after an approved call
                       pause=True, gate="approval_call",
                       say=("a real phone call: the buyer says the code from the screen and 'approve'; the referee relays the verified code"
                            if live_call else
@@ -433,6 +433,11 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                 paid = charger(s)
                 if paid.get("note"):
                     note(paid["note"])
+            if paid.get("uncertain"):   # #449 item 4 RT-10: never record_payment, never report paid; the run is not clean
+                if first:
+                    note(paid["say"])
+                    outcomes.append({"step": "payment", "approved": True, "uncertain": True, "reason": "charge_uncertain", "call_id": None})
+                continue
             s = replace(s, args={**s.args, **paid["args"]}, tag=paid["tag"], say=paid["say"] if first else s.say)
         say(s)
         if s.reducer == "create_mandate" and s.actor in clients:
@@ -462,7 +467,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                         note(f"deny_approval not recorded ({e}); the hold expires by itself after 2 minutes")
                 break
             note(f"live call APPROVED (call {outcome['call_id']}): the referee records the approval, then the payment")
-            s = replace(s, args={**s.args, "voice_approval_id": outcome.get("voice_approval_id") or ""})
+            s = replace(s, args={**s.args, "voice_approval_id": outcome.get("voice_approval_id") or "", "code": outcome.get("code") or ""})
         client = clients[s.actor]
         t_call = clock()
         if s.close:
@@ -787,11 +792,14 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
     from pay.replay import NonceStore
     from pay.voice_cartesia import CALL_CODE_TTL_S, run_approval_call
 
+    issued: dict = {}   # #449 item 3 RT-11: the code this call issued; record_approval repeats it. In memory, never printed.
+
     def outcome(approved: bool, reason: Optional[str], call_id: Optional[str] = None, voice_approval_id: Optional[str] = None) -> dict:
         return {"step": "approval_call", "approved": approved, "reason": reason, "call_id": call_id,
-                "voice_approval_id": voice_approval_id}
+                "voice_approval_id": voice_approval_id, "code": issued.get("code", "") if approved else ""}
 
     def to_screen(code: str) -> None:
+        issued["code"] = code
         on_code(code, gate.show_code(code))
 
     def approve(step: Step) -> dict:
@@ -848,6 +856,9 @@ def make_charger(gate: DealGate, env: Any, *, use_stripe: bool, stripe_test: Opt
 
     def charge(step: Optional[Step]) -> dict:
         ch, why = charge_or_stub(gate.mandate, env, use_stripe, stripe_test)
+        if ch.get("status") == "uncertain":   # #449 item 4 RT-10: no payment_ref exists, so nothing can be recorded as paid
+            return {"uncertain": True, "args": {}, "tag": SIM, "note": why,
+                    "say": "payment NOT recorded: the Stripe test charge is uncertain; check the Stripe dashboard (test mode)"}
         live = ch["mode"] == "Stripe test mode"
         return {"args": {"payment_ref": ch["id"], "mode": "stripe_test" if live else "sim"}, "tag": "LIVE" if live else SIM,
                 "say": f"payment recorded: {ch['id']} ({ch['mode']}" + (", no money moved)" if not live else ", Visa test card, no real money)"),
@@ -1151,7 +1162,7 @@ def _run_live(args, steps, run, out, say, approver=None, charger=None, gate=None
     out.blank()
     for g in NOT_BRIDGED:
         out.note("NOT BRIDGED: " + g)
-    return 1 if any(not o["approved"] for o in outcomes) else 0   # a run that ended at the gate is not a clean run
+    return 1 if any(not o["approved"] or o.get("uncertain") for o in outcomes) else 0   # a run that ended at the gate, or left a charge uncertain, is not clean
 
 
 if __name__ == "__main__":

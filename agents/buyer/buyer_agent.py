@@ -308,7 +308,7 @@ def recover_buyer_state() -> int:
     buyer_state.recover_on_start(db)
     recovered = nonce_store().recover_submitted_attempts()
     unresolved = db.execute("SELECT deal_id, buyer_id FROM transactions "
-                            "WHERE phase IN ('paused', 'approved', 'submitted', 'uncertain') ORDER BY rowid").fetchall()
+                            "WHERE phase IN ('paused', 'approved', 'submitted', 'uncertain', 'charging') ORDER BY rowid").fetchall()
     # Web (b_) buyers have no owner chat and their purchases end in a SIM/test-mode charge, no payment request: never hold the agent for them.
     unresolved = [(d, b) for d, b in unresolved if not str(b).startswith("b_")]
     held = None
@@ -335,6 +335,10 @@ async def buyer_startup(ctx: Context):
     except Exception as exc:
         ctx.logger.error(f"Buyer private state recovery failed: {type(exc).__name__}")
         raise
+    try:
+        await recover_web_charges(ctx)
+    except Exception as exc:  # never stop the agent: an unresolved charge stays in its row for the operator
+        ctx.logger.error(f"Web charge recovery failed: {type(exc).__name__}")
 
 
 class WebIn(Model):
@@ -403,6 +407,19 @@ def set_state(state: str):
         ROUND["goal"]["state"] = state
 
 
+async def _report_web_goal(state: str, text: str) -> None:
+    """#449 item 3 PL-4: tell the market where a WEB buyer's goal stands, in plain words (their /buyer goal card shows it).
+    Best effort and never blocks a purchase: a failure logs the exception type only. A chat goal (it has an owner) is skipped."""
+    goal = ROUND.get("goal") or {}
+    if ROUND.get("owner") or not goal.get("id") or not goal.get("market_buyer_id"):
+        return
+    try:
+        await asyncio.to_thread(market_clients()[1].set_goal_state, goal["id"], state, text)
+    except Exception as exc:
+        import logging
+        logging.getLogger("buyer_agent").warning(f"web goal {goal['id']}: could not report {state} ({type(exc).__name__})")
+
+
 @chat.on_message(ChatMessage)
 async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
     CHAT_DIAG.inbound(msg.msg_id, sender, ctx.session, ROUND.get("need", {}).get("id", ""))
@@ -458,7 +475,7 @@ def round_finished() -> bool:
     return ROUND.get("phase") == "done" or state in ("DONE", "EXPIRED", "PAUSED")
 
 
-HELD_PHASES = {"pending_approval", "paused", "approved", "submitted", "uncertain"}
+HELD_PHASES = {"pending_approval", "paused", "approved", "submitted", "uncertain", "charging"}  # #449 item 4 PL-10: charging
 STRANGER_TOLD: dict[str, float] = {}  # sender -> when they last got the sign-up reply (#449 item 2)
 STRANGER_REPLY_S = 600  # ASI:One's assistant recaps our replies back to us: never answer one sender in a loop
 STRANGER_REPLY = "I buy for my owner only. To shop with Fish Market, sign up at https://fishmarket.dev/start"
@@ -494,7 +511,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
             await tell(ctx, sender, "A buyer session is active. Try again later.")
         return
     tx = ROUND.get("transaction")
-    if isinstance(tx, dict) and tx.get("phase") in {"pending_approval", "paused", "approved", "submitted", "uncertain"}:
+    if isinstance(tx, dict) and tx.get("phase") in HELD_PHASES:
         if sender == ROUND.get("owner"):
             await tell(ctx, sender, "A purchase is pending approval or settlement. It remains held; no new goal can start.")
         else:
@@ -669,6 +686,13 @@ async def adopt_open_goal(ctx: Context) -> bool:
         ctx.logger.warning(f"Open goal {row.get('id')} has nothing left to buy; marked handled")
         _give_up(ctx, "has nothing to buy")
         return False
+    # #449 item 3 PL-9: first writer wins. A claimed goal leaves every agent's poll; a refused claim means another agent has it
+    # (or the market is unreachable, and the next poll tries again), so this agent hunts nothing.
+    try:
+        await asyncio.to_thread(market_clients()[1].claim_goal, row["id"])
+    except Exception as exc:
+        ctx.logger.warning(f"Open goal {row.get('id')} not claimed ({type(exc).__name__}); skipped")
+        return False
     ROUND.clear()
     ROUND.update(owner=None, owner_context=None, goal=goal, owned=[], need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={}, retired_need_ids=[], market_goal_posted=True, received_bids={})
@@ -676,6 +700,10 @@ async def adopt_open_goal(ctx: Context) -> bool:
     if started:
         GOAL_ATTEMPTS.pop(row["id"], None)
         _give_up(ctx, "hunted")
+    elif ROUND.get("phase") == "done":
+        # The goal is claimed, so no poll will offer it again: end it here instead of leaving it HUNTING for ever.
+        _give_up(ctx, "could not start")
+        await _report_web_goal("FAILED", "We could not start your search. Nothing was paid.")
     else:
         _failed()
     return started
@@ -746,6 +774,7 @@ async def fail_round(ctx: Context, why: str, *, always_notify: bool = False):
     set_state(state)
     if state == "PAUSED":
         ROUND["phase"] = "done"
+        await _report_web_goal("PAUSED", f"We paused your search after {ROUND['attempts']} rounds without a deal. Nothing was paid.")
         await tell_owner(ctx, f"{why} That was {ROUND['attempts']} rounds without a deal, so I paused this goal. "
                               f"Send your goal again to restart.")
         return
@@ -893,7 +922,7 @@ async def tick(ctx: Context):
     tx_phase = transaction.get("phase") if isinstance(transaction, dict) else None
     goal_state = goal.get("state") if isinstance(goal, dict) else None
     if (goal_state in {"DONE", "EXPIRED", "PAUSED"} or ROUND.get("pending_hold")
-            or tx_phase in {"pending_approval", "paused", "approved", "submitted", "uncertain"}):
+            or tx_phase in HELD_PHASES):
         # A purchase hold is governed by its durable transaction and exact seller ACK,
         # not the original hunt deadline. Terminal goals are never re-expired or restarted.
         return
@@ -901,6 +930,7 @@ async def tick(ctx: Context):
         set_state("EXPIRED")
         ROUND["phase"] = "done"
         ROUND["round_token"] = uuid4().hex
+        await _report_web_goal("EXPIRED", "Your deadline passed before a deal closed. Nothing was paid.")
         await tell_owner(ctx, f"Your deadline ({ROUND['goal']['deadline'][:10]}) passed before a deal closed. "
                               f"Goal EXPIRED; nothing ordered. Send it again with a new date to keep hunting.")
         return
@@ -1120,6 +1150,7 @@ def _is_web_buyer(buyer_id, owner) -> bool:
     return str(buyer_id or "").startswith("b_") or not owner
 
 
+
 async def _phone_approval(transaction: dict, send_private, client, service, buyer_name: str = "there"):
     """The only approval: the owner speaks a one-time code on a phone call (buyer.checkout.approve_offer).
     The private chat shows the code and the outcome; no chat text or typed code is ever accepted as approval."""
@@ -1135,10 +1166,8 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
             owner_approval.remember_code(owner_approval.market_hash(transaction), code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(owner_approval.market_hash(transaction), code)
         except Exception:
-            if web:
-                raise PermissionError("approval code could not be shown") from None
-            import logging
-            logging.getLogger("buyer_agent").warning(f"approval code not shown on /buyer for buyer {buyer_id}")
+            # #455: record_approval needs the code the market issued; without it no call can approve, so never ring (any buyer)
+            raise PermissionError("approval code could not be issued") from None
         if web:  # no chat: the market's own approval view shows the code on /buyer; never send it elsewhere
             import logging
             logging.getLogger("buyer_agent").info(f"web buyer {buyer_id}: code shown on /buyer")
@@ -1246,43 +1275,172 @@ async def _delegated_approval(ctx: Context, transaction: dict, send_private, dir
     return await _phone_approval(transaction, send_private, direct_client, service, buyer_name)
 
 
-async def _pay_web_purchase(ctx: Context, transaction: dict, mandate: dict, order: dict, bid: dict) -> None:
-    """A web buyer's phone-approved purchase: one sandbox charge, idempotent on the mandate, then OrderPlaced.
-    # ponytail: the owner RequestPayment path needs buyer-role reads a web buyer's agent cannot make, so charge directly."""
-    import logging
+_sleep = asyncio.sleep  # injectable for tests
+PAYMENT_ROW_TRIES = 3
+PAYMENT_ROW_BACKOFF_S = (0.5, 1.5)
+UNRECORDED_TEXT = "Payment taken in Stripe test mode but not recorded in the market; needs the operator"
+UNRECORDED_SIM_TEXT = "SIM payment not recorded in the market; needs the operator"
+# #449 item 4 PL-10: Stripe error codes that say the request may have been handled, so the outcome is unknown
+_UNKNOWN_OUTCOME_PREFIXES = ("http_5", "api_error", "api_connection_error", "rate_limit", "lock_timeout")
+
+
+def _stripe_outcome_unknown(exc: BaseException) -> bool:
+    """True when the Stripe call may have reached Stripe and charged (timeout, connection error, a 5xx, unreadable answer);
+    a clean refusal (card declined, a PaymentIntent that did not succeed) is False."""
+    if isinstance(exc, (OSError, ValueError)):
+        return True
+    return isinstance(exc, RuntimeError) and str(exc).startswith(_UNKNOWN_OUTCOME_PREFIXES)
+
+
+def _charge_web(mandate: dict) -> tuple[str, str]:
+    """(charge id, mode). One sandbox charge, idempotent on the mandate: the same call again returns the original, never a second charge."""
     from pay import mandate as pay_mandate, merchant_sim
     cents = payment._cents(mandate["amount"])
     if cents is None:
         raise ValueError("web purchase amount is not whole cents")
     key = os.environ.get("STRIPE_SECRET_KEY", "")
-    stripe_test = key.startswith("sk_test_")  # a live or restricted key is never used, only a labelled stub
-    if stripe_test:
-        meta = {"deal_id": mandate["deal_id"], "mandate_hash": mandate["hash"], "origin": "SIM"}
-        pi = await asyncio.to_thread(merchant_sim.StripeTestCharger(key).charge, amount_cents=cents, currency="USD",
-                                     idempotency_key=pay_mandate.idempotency_key(mandate), metadata=meta)
-        pi = pi if isinstance(pi, dict) else {}
-        charge_id = pi.get("id")
-        if pi.get("status") != "succeeded" or not isinstance(charge_id, str) or not charge_id.startswith(("pi_", "ch_")):
-            raise RuntimeError("stripe_test_charge_not_succeeded")
-    else:
-        charge_id = "ch_sim_" + mandate["hash"][:12]
-    mode = "stripe_test" if stripe_test else "sim"
+    if not key.startswith("sk_test_"):  # a live or restricted key is never used, only a labelled stub
+        return "ch_sim_" + mandate["hash"][:12], "sim"
+    meta = {"deal_id": mandate["deal_id"], "mandate_hash": mandate["hash"], "origin": "SIM"}
+    pi = merchant_sim.StripeTestCharger(key).charge(amount_cents=cents, currency="USD",
+                                                    idempotency_key=pay_mandate.idempotency_key(mandate), metadata=meta)
+    pi = pi if isinstance(pi, dict) else {}
+    charge_id = pi.get("id")
+    if pi.get("status") != "succeeded" or not isinstance(charge_id, str) or not charge_id.startswith(("pi_", "ch_")):
+        raise RuntimeError("stripe_test_charge_not_succeeded")
+    return charge_id, "stripe_test"
+
+
+def _mandate_expired(mandate: dict) -> bool:
+    """Unreadable or missing expiry counts as expired: recovery must never charge on a mandate it cannot prove is still valid."""
+    try:
+        return business_now() >= datetime.fromisoformat(mandate["expires_at"].replace("Z", "+00:00"))
+    except (KeyError, ValueError, TypeError, AttributeError):
+        return True
+
+
+def _find_web_charge(mandate: dict) -> tuple[str, str] | None:
+    """Read-only lookup of the original charge by mandate hash (Stripe search); None when none succeeded. Never creates a charge.
+    Without a test key there is no Stripe charge to find (a SIM stub is not settled for an expired mandate)."""
+    from pay import merchant_sim
+    key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not key.startswith("sk_test_"):
+        return None
+    pi = merchant_sim.StripeTestCharger(key).find_by_mandate_hash(mandate["hash"])
+    return (pi["id"], "stripe_test") if pi else None
+
+
+async def _record_web_payment(transaction: dict, mandate: dict, charge_id: str, mode: str) -> bool:
+    """#449 item 4 PL-10: the market payment row, tried up to 3 times. The charge already happened and is never undone; when the row
+    cannot be written the log says so at ERROR (ids only) and the referee posts one agent event so the operator sees it."""
+    import logging
+    log = logging.getLogger("buyer_agent")
+    referee = market_clients()[1]
+    for attempt in range(PAYMENT_ROW_TRIES):
+        try:
+            referee.record_payment(mandate_hash=mandate["hash"], payment_ref=charge_id, amount=mandate["amount"], mode=mode)
+            return True
+        except Exception:
+            if attempt + 1 < PAYMENT_ROW_TRIES:
+                await _sleep(PAYMENT_ROW_BACKOFF_S[min(attempt, len(PAYMENT_ROW_BACKOFF_S) - 1)])
+    log.error(f"web buyer {transaction['buyer_id']}: deal {transaction['deal_id']}: payment taken but the market payment row "
+              f"failed after {PAYMENT_ROW_TRIES} tries; needs the operator")
+    try:
+        referee.record_agent_event(agent_name="Tech Bazaar Buyer", address=common.address("buyer"),
+                                   text=UNRECORDED_TEXT if mode == "stripe_test" else UNRECORDED_SIM_TEXT, origin="SIM")
+    except Exception as exc:
+        log.error(f"web buyer {transaction['buyer_id']}: deal {transaction['deal_id']}: operator event not recorded ({type(exc).__name__})")
+    return False
+
+
+async def _settle_web_charge(ctx: Context, transaction: dict, mandate: dict, order: dict, charge_id: str, mode: str) -> None:
+    """A known charge: save it settled, record the market row (retried, never undone), send the order to the payee."""
+    import logging
     transaction["payment_ref"] = order["payment_ref"] = charge_id
     transaction["settlement_result"] = {"status": "charged", "charge_id": charge_id, "mandate_hash": mandate["hash"],
                                         "origin": "SIM", "mode": mode}
     order["status"], transaction["phase"] = "charged", "settled"
+    transaction["order"] = order
     buyer_state.save_transaction(state_db(), transaction)
-    log = logging.getLogger("buyer_agent")
+    await _record_web_payment(transaction, mandate, charge_id, mode)
+    await ctx.send(mandate["payee"], common.OrderPlaced(order_json=json.dumps(order), mandate_json=json.dumps(mandate)))
+    logging.getLogger("buyer_agent").info(
+        f"web buyer {transaction['buyer_id']}: paid deal {transaction['deal_id']}, receipt {charge_id} "
+        f"({'Stripe test mode' if mode == 'stripe_test' else 'SIM stub, no money moved'})")
+
+
+async def _pay_web_purchase(ctx: Context, transaction: dict, mandate: dict, order: dict, bid: dict) -> None:
+    """A web buyer's phone-approved purchase: one sandbox charge, idempotent on the mandate, then OrderPlaced.
+    # ponytail: the owner RequestPayment path needs buyer-role reads a web buyer's agent cannot make, so charge directly."""
+    import logging
+    if payment._cents(mandate["amount"]) is None:
+        raise ValueError("web purchase amount is not whole cents")
+    # #449 item 4 PL-10: a durable "charging" row first, so a crash or restart sees an in-flight charge instead of nothing
+    transaction["phase"] = "charging"
+    buyer_state.save_transaction(state_db(), transaction)
     try:
-        market_clients()[1].record_payment(mandate_hash=mandate["hash"], payment_ref=charge_id,
-                                           amount=mandate["amount"], mode=mode)
-    except Exception as exc:  # the charge already happened: do not undo it or hold back the order
-        log.warning(f"web buyer {transaction['buyer_id']}: payment recorded locally but the market row failed ({type(exc).__name__})")
-    await ctx.send(common.address(bid["supplier_id"]), common.OrderPlaced(
-        order_json=json.dumps(order), mandate_json=json.dumps(mandate)))
-    log.info(f"web buyer {transaction['buyer_id']}: paid deal {transaction['deal_id']}, receipt {charge_id} "
-             f"({'Stripe test mode' if stripe_test else 'SIM stub, no money moved'})")
+        charge_id, mode = await asyncio.to_thread(_charge_web, mandate)
+    except Exception as exc:
+        # unknown outcome (timeout, connection error, 5xx): "uncertain", so recovery looks it up by idempotency key; a clean refusal: "expired"
+        transaction["phase"] = "uncertain" if _stripe_outcome_unknown(exc) else "expired"
+        try:
+            buyer_state.save_transaction(state_db(), transaction)
+        except Exception:
+            pass
+        if transaction["phase"] == "uncertain":
+            logging.getLogger("buyer_agent").error(
+                f"web buyer {transaction['buyer_id']}: deal {transaction['deal_id']}: the Stripe test charge outcome is unknown "
+                f"({type(exc).__name__}); held for recovery by idempotency key")
+        raise
+    await _settle_web_charge(ctx, transaction, mandate, order, charge_id, mode)
     ROUND.update(transaction=transaction, mandate=mandate, order=order, pending_hold=False, phase="done")
+    await _report_web_goal("DONE", f"Paid in Stripe test mode. Receipt {charge_id}." if mode == "stripe_test"  # #457: no stripe_test name here
+                           else f"Test purchase recorded, no money moved. Receipt {charge_id}.")
+
+
+async def recover_web_charges(ctx: Context) -> int:
+    """#449 item 4 PL-10: a web purchase left "charging" or "uncertain" by a crash or an unknown Stripe outcome. Re-send the SAME
+    idempotent request (same key: Stripe returns the original PaymentIntent, never a second charge), then record it and send the order.
+    A charge that still cannot be resolved stays in its row with a log line (buyer and deal ids only). Never holds the agent."""
+    import logging
+    log = logging.getLogger("buyer_agent")
+    db = state_db()
+    rows = db.execute("SELECT deal_id, buyer_id FROM transactions WHERE phase IN ('charging', 'uncertain') ORDER BY rowid").fetchall()
+    resolved = 0
+    for deal_id, buyer_id in rows:
+        if not str(buyer_id).startswith("b_"):
+            continue  # chat buyers are held by recover_buyer_state
+        try:
+            transaction = buyer_state.load_transaction(db, deal_id, buyer_id)
+            mandate, order = transaction["mandate"], transaction.get("order")
+            if (not isinstance(order, dict) or mandate.get("status") != "approved" or transaction.get("payment_ref")
+                    or transaction.get("settlement_result")):
+                log.warning(f"web buyer {buyer_id}: deal {deal_id}: unresolved charge row cannot be recovered here; needs the operator")
+                continue
+        except Exception as exc:
+            log.warning(f"web buyer {buyer_id}: deal {deal_id}: unresolved charge row unreadable ({type(exc).__name__}); needs the operator")
+            continue
+        expired = _mandate_expired(mandate)
+        try:
+            # an unexpired mandate may replay the same idempotent request; an expired one is a read-only search, never a charge
+            found = (await asyncio.to_thread(_find_web_charge, mandate)) if expired else await asyncio.to_thread(_charge_web, mandate)
+        except Exception as exc:
+            transaction["phase"] = "uncertain" if (expired or _stripe_outcome_unknown(exc)) else "expired"
+            try:
+                buyer_state.save_transaction(db, transaction)
+            except Exception:
+                pass
+            log.warning(f"web buyer {buyer_id}: deal {deal_id}: charge lookup failed ({type(exc).__name__}); left {transaction['phase']}")
+            continue
+        if found is None:
+            # Stripe search can lag about a minute, so no match is not proof that no money moved: keep the row uncertain, never charge
+            log.warning(f"web buyer {buyer_id}: deal {deal_id}: mandate expired and no Stripe test charge found yet; not charged, "
+                        "left uncertain, needs the operator (check the Stripe dashboard by the mandate hash)")
+            continue
+        charge_id, mode = found
+        await _settle_web_charge(ctx, transaction, mandate, order, charge_id, mode)
+        resolved += 1
+    return resolved
 
 
 async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: dict, *, web: bool = False) -> None:
@@ -1311,6 +1469,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             transaction["phase"] = "expired"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=None, pending_hold=False, phase="done")
+            if web:
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT)  # #455: the web buyer is told on /buyer, not left ACTIVE
             await tell_owner(ctx, BETA_LIMIT_TEXT)
             return
         if client is None:
@@ -1322,6 +1482,10 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 ROUND["transaction"] = None
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
+            if web:
+                has_phone = await asyncio.to_thread(lambda: bool((market_clients()[1].buyer_contact(transaction["buyer_id"]) or {}).get("phone")))
+                await _report_web_goal("FAILED", "We could not place the approval call. Nothing was paid." if has_phone else
+                                       "We could not call you: there is no phone number on your account. Nothing was paid.")
             return
         if delegation_allowed(transaction) and not web:
             result = await _delegated_approval(ctx, transaction, send_private, client, _approval_service(), buyer_name)
@@ -1333,7 +1497,14 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"  # terminal: recovery ignores it, so a restart cannot wedge the agent
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
-            if any(t.get("outcome") == "CallLimited" for t in (result.trace or [])):   # #449 item 1: rate cap hit, never re-dialled
+            limited = any(t.get("outcome") == "CallLimited" for t in (result.trace or []))   # #449 item 1: rate cap hit, never re-dialled
+            if web:
+                why = str(getattr(result, "reason", "") or "").split(":", 1)[0]
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT if limited
+                                       else "The code you said did not match. Nothing was paid." if why in ("wrong_code", "no_code")
+                                       else "The approval call was not approved. Nothing was paid." if transaction["phase"] == "denied"
+                                       else "We could not reach you for the approval call. Nothing was paid.")
+            if limited:
                 await tell_owner(ctx, BETA_LIMIT_TEXT)
                 return
             await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
@@ -1365,6 +1536,12 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             owner_approval.record_owner_approval(referee_market, buyer_market, owner_approval.market_view(transaction),
                                                  transaction["buyer_id"], record["id"], market_approval_matches)
         if web:
+            # #449 item 4 RT-12: charge only what the market now shows as approved for this buyer by voice, for this exact mandate
+            row = await asyncio.to_thread(market_clients()[1].approval_row, mandate["hash"])
+            # the bridge's approval_row returns snake_case keys (agent_approvals columns: mandate_hash, approved_by), #457
+            if (not isinstance(row, dict) or row.get("method") != "voice_code" or row.get("mandate_hash") != mandate["hash"]
+                    or row.get("approved_by") != mandate.get("buyer_id") or not mandate.get("buyer_id")):
+                raise MarketBridgeError("web_approval_row_mismatch")
             await _pay_web_purchase(ctx, transaction, mandate, order, bid)
             return
         ROUND.update(transaction=transaction, mandate=mandate, order=order,
@@ -1374,7 +1551,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         await tell_owner(ctx, f"Approval recorded for deal {transaction['deal_id']}. The seller was asked to request payment; no charge is confirmed yet.")
     except Exception as exc:
         if web:  # web path: terminal "expired" (recovery ignores it); never leave the buyer agent held
-            transaction["phase"] = "expired"
+            if transaction.get("phase") not in ("uncertain", "settled"):  # #449 item 4 PL-10: an unknown charge or a paid one is never forgotten
+                transaction["phase"] = "expired"
             try:
                 buyer_state.save_transaction(state_db(), transaction)
             except Exception:
@@ -1383,6 +1561,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             import logging
             logging.getLogger("buyer_agent").warning(
                 f"web buyer {transaction.get('buyer_id')}: approval failed ({type(exc).__name__}); round released")
+            receipt = transaction.get("payment_ref")
+            await _report_web_goal("FAILED", f"Your payment went through (receipt {receipt}) but we could not finish the order." if receipt
+                                   else "Something went wrong on our side. Nothing was paid.")
             return
         if transaction.get("phase") == "approved":
             transaction["phase"] = "uncertain"
@@ -1513,6 +1694,7 @@ async def _auto_web_approval(ctx: Context, n: int) -> None:
     except Exception as exc:
         ctx.logger.warning(f"Web purchase approval could not be prepared: {type(exc).__name__}")
         ROUND["phase"] = "done"
+        await _report_web_goal("FAILED", "Something went wrong on our side. Nothing was paid.")
         return
     await _run_owner_approval(ctx, n, "", transaction, web=True)
     if ROUND.get("phase") == "pending_approval":  # not approved (no phone, denied, no answer): free the hunt for the next web goal

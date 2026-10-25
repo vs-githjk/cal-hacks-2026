@@ -197,3 +197,12 @@ def test_buyer_id_without_a_goal_and_no_goal_in_the_market_is_a_one_line_error(c
 def test_buyer_id_with_dry_run_says_to_use_a_plan_file(capsys):
     assert build.main(["--dry-run", "--buyer-id", "someone-else"]) == 1
     assert "--plan" in capsys.readouterr().err
+
+
+def test_a_claimed_hunting_build_goal_is_still_read():
+    # #455: claim_goal moves a goal from ACTIVE to HUNTING, and the build runner must still find it
+    m = SimMarket()
+    post(m, "claimed", cap=2100.0)
+    m.goal_state["claimed"] = "HUNTING"
+    goal, _items = build.read_buyer_goal(make_clients(m)["buyer"], "vidyut")
+    assert goal["id"] == "claimed"

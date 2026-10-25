@@ -383,3 +383,40 @@ def test_forged_within_allowance_above_the_limit_never_charges(world, limits):
         "method": "allowance", "approved_at": NOW.isoformat(), **limits}
     out = sim.handle(**signed(priv, receipt_priv, mandate), now=NOW)
     assert out["status"] == "refused" and not stripe.calls
+
+
+# ---- #449 item 4 PL-10: a lookup by mandate hash that can never create a charge
+
+class _Resp:
+    def __init__(self, body): self._b = body
+    def read(self): return self._b
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+
+
+def test_find_by_mandate_hash_is_a_get_search_that_returns_only_a_succeeded_intent():
+    import json
+    from urllib.parse import parse_qs, urlparse
+    from pay.merchant_sim import StripeTestCharger
+    seen = []
+
+    def opener(req, **kw):
+        seen.append(req)
+        return _Resp(json.dumps({"data": [{"id": "pi_a", "status": "requires_action"}, {"id": "pi_b", "status": "succeeded"}]}).encode())
+    h = "a" * 64
+    assert StripeTestCharger("sk_test_x").find_by_mandate_hash(h, opener=opener) == {"id": "pi_b", "status": "succeeded"}
+    (req,) = seen
+    assert req.get_method() == "GET" and req.data is None
+    url = urlparse(req.full_url)
+    assert url.path == "/v1/payment_intents/search" and parse_qs(url.query)["query"] == [f"metadata['mandate_hash']:'{h}'"]
+    none = lambda req, **kw: _Resp(b'{"data": []}')
+    assert StripeTestCharger("sk_test_x").find_by_mandate_hash(h, opener=none) is None
+
+
+def test_find_by_mandate_hash_refuses_a_non_test_key_and_a_non_hash():
+    import pytest
+    from pay.merchant_sim import StripeTestCharger
+    with pytest.raises(ValueError):
+        StripeTestCharger("sk_live_x")
+    with pytest.raises(ValueError):
+        StripeTestCharger("sk_test_x").find_by_mandate_hash("a' OR metadata['x']:'1", opener=lambda *a, **k: None)

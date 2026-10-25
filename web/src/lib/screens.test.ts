@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerRefIds, buyerSession, clusterArrivals, dealFromRows, payeeLabel, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import * as sample from "./sample.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerRefIds, buyerSession, clusterArrivals, dealFromRows, payeeLabel, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, stateLabel, livePendingApprovals, approvalForScreen } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -196,7 +197,7 @@ test("clusterArrivals on an empty round is empty, and a single arrival is its ow
 
 test("reviewFromRows shows the latest expiring code, with the origin normalized", () => {
   const row = (h: string, exp: number, amount = 780) => ({ mandateHash: h, mandateId: "m", amount, payee: "p", expiry: ts(exp), code: "c", failures: 0, locked: false, origin: "sim" });
-  const r = reviewFromRows([row("a", T0, 100), row("b", T0 + 1, 200)])!;
+  const r = reviewFromRows([row("a", T0, 100), row("b", T0 + 1, 200)], [], T0 - 1000)!;
   assert.equal(r.amount, 200);
   assert.equal(r.origin, "SIM");
   assert.equal(reviewFromRows([]), null);
@@ -204,15 +205,42 @@ test("reviewFromRows shows the latest expiring code, with the origin normalized"
 
 test("the whole-build code row (my_pending_approvals, no mandate yet) becomes the same review card, marked as the whole build", () => {
   const build = { mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0 + 300_000), code: "amber harbor", failures: 0, locked: false, origin: "LIVE" };
-  const r = reviewFromRows([build])!;
+  const r = reviewFromRows([build], [], T0)!;
   assert.equal(r.code, "amber harbor");
   assert.equal(r.amount, 3412.5);
   assert.equal(r.payee, "your whole build (8 parts from 4 sellers)");
   assert.equal(r.origin, "LIVE");
   assert.equal(isWholeBuild(r), true);
-  const deal = reviewFromRows([{ ...build, mandateHash: "h1", mandateId: "mdt-1", payee: "seller-c" }])!;
+  const deal = reviewFromRows([{ ...build, mandateHash: "h1", mandateId: "mdt-1", payee: "seller-c" }], [], T0)!;
   assert.equal(isWholeBuild(deal), false);
   assert.equal(reviewFromRows([]), null, "no row, no card: the screen says nothing is waiting");
+});
+
+// ---- #449 item 4 PL-12: no expired approval, and never the sample code, on a paired screen.
+
+test("an expired pending approval is never shown, and the card falls back to the next live one", () => {
+  const row = (h: string, exp: number) => ({ mandateHash: h, mandateId: "m", amount: 780, payee: "p", expiry: ts(exp), code: "c-" + h, failures: 0, locked: false, origin: "sim" });
+  const now = T0 + 60_000;
+  assert.equal(reviewFromRows([row("old", T0)], [], now), null, "the only row expired a minute ago");
+  assert.equal(reviewFromRows([row("edge", now)], [], now), null, "expiry equal to now is expired");
+  const r = reviewFromRows([row("old", T0), row("live", now + 1000)], [], now)!;
+  assert.equal(r.code, "c-live");   // PL-13: the card carries no mandate hash, so the live row is told by its own code
+  assert.deepEqual(livePendingApprovals([row("old", T0), row("live", now + 1000)], now).map((x) => x.mandateHash), ["live"]);
+});
+
+test("a paired screen never shows the sample approval code; an unpaired preview still shows it labelled SIM", () => {
+  const paired = approvalForScreen(null, "b_test1234", sample.approval);
+  assert.equal(paired.approval, null);
+  assert.equal(paired.sample, false);
+  assert.ok(!JSON.stringify(paired).includes("velvet falcon"));
+  const live = { ...sample.approval, wordPair: undefined, within: true };
+  assert.equal(approvalForScreen(live, "b_test1234", sample.approval).approval, live);
+  assert.equal(approvalForScreen(live, "b_test1234", sample.approval).sample, false);
+  for (const id of [null, undefined, ""]) {
+    const unpaired = approvalForScreen(null, id, sample.approval);
+    assert.equal(unpaired.sample, true);
+    assert.equal(unpaired.approval!.wordPair, "velvet falcon");
+  }
 });
 
 // ---- Task 1: the buyer app only ever shows the paired buyer's own goals.
@@ -415,7 +443,7 @@ test("#449 PL-13 the approval, receipt and review cards carry no buyer id, agent
   assert.equal(paid.receipt!.seller, "Fair Price PC (SIM)");
   assert.equal(paid.receipt!.receiptRef, "AbCdEf", "only the last 6 characters of the charge id");
   assert.equal(paid.approval!.attempts[0]!.said, "");
-  const review = reviewFromRows([{ mandateHash: HASH, mandateId: "mdt-1", amount: 780, payee: AGENT, expiry: ts(T0), code: "amber harbor", failures: 0, locked: false, origin: "SIM" }], results)!;
+  const review = reviewFromRows([{ mandateHash: HASH, mandateId: "mdt-1", amount: 780, payee: AGENT, expiry: ts(T0), code: "amber harbor", failures: 0, locked: false, origin: "SIM" }], results, T0 - 1000)!;
   assert.equal(review.payee, "Fair Price PC (SIM)");
   assert.equal(review.wholeBuild, false);
   for (const view of [paid.approval, paid.receipt, review]) {
@@ -430,7 +458,7 @@ test("#449 PL-13 the approval, receipt and review cards carry no buyer id, agent
 });
 
 test("#449 PL-13 the whole-build review keeps its readable payee line and is marked as the whole build", () => {
-  const r = reviewFromRows([{ mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0), code: "c", failures: 0, locked: false, origin: "LIVE" }], [])!;
+  const r = reviewFromRows([{ mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0), code: "c", failures: 0, locked: false, origin: "LIVE" }], [], T0 - 1000)!;
   assert.equal(r.payee, "your whole build (8 parts from 4 sellers)");
   assert.equal(r.wholeBuild, true);
   assert.equal(isWholeBuild(r), true);
@@ -444,4 +472,28 @@ test("#449 PL-13 the sample cards a customer can see carry no id either", async 
     assert.doesNotMatch(text, /mnd_|@pay\.|agent1q|b_[a-z0-9]{8}|aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633/);
   }
   assert.ok(!sample.feed.some((f) => /mnd_/.test(f.text)));
+});
+
+// ---- #449 item 3 PL-4: the goal card shows the goal's own state and its latest note, not ACTIVE forever.
+
+test("goalsForBuyer: each goal carries its own state and the text of the latest note written for that goal", () => {
+  const goals = [goalRow({ id: "g1", state: "HUNTING" }), goalRow({ id: "g2", state: "FAILED", createdAt: ts(T0 + 1000) })];
+  const notes = [
+    { id: 1n, goalId: "g1", text: "Goal set. The agent is hunting." },
+    { id: 3n, goalId: "g1", text: "Calling you now to approve." },
+    { id: 2n, goalId: "g2", text: "We could not call you: there is no phone number on your account. Nothing was paid." },
+    { id: 9n, goalId: "", text: "Approval denied elsewhere." },
+  ];
+  const [g1, g2] = goalsForBuyer(goals, [], undefined, "buyer-a", notes); // the open goal sorts first
+  assert.equal(g1.state, "HUNTING");
+  assert.equal(g1.latestNote, "Calling you now to approve.");
+  assert.equal(g2.state, "FAILED");
+  assert.match(g2.latestNote ?? "", /no phone number/);
+  assert.equal(goalsForBuyer(goals, [], undefined, "buyer-a")[0].latestNote, "", "no notes, no line");
+});
+
+test("stateLabel: FAILED and the other states read in plain words", () => {
+  assert.equal(stateLabel("FAILED"), "Could not finish");
+  assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
+  assert.equal(stateLabel("HUNTING"), "hunting");
 });

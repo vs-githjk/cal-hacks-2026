@@ -52,6 +52,15 @@ class World:
         return Client()
 
 
+class BridgeWithoutCode(MarketBridge):
+    """The referee bridge before #455: record_approval takes no `code` (with #455 merged, the real bridge takes one)."""
+
+    def record_approval(self, *, mandate_hash, method, approved_by, voice_approval_id=""):
+        self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=approved_by,
+                   voice_approval_id=voice_approval_id)
+        return {"mandate_hash": mandate_hash, "approval_method": method}
+
+
 class BridgeWithCode(MarketBridge):
     """The referee bridge after #455: record_approval takes the issued `code` and refuses to relay without it."""
 
@@ -77,7 +86,7 @@ def simple_matches(status, mandate):
 
 def test_the_old_path_really_fails_on_the_live_rules_and_the_referee_path_records():
     world = World()
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithoutCode("referee", client=world.client("referee"))
     with pytest.raises(MarketBridgeError):  # what main did: record through the buyer identity
         buyer.record_approval(mandate_hash=HASH, method="voice_code", approved_by="vidyut", voice_approval_id="va-1")
     assert world.approval is None
@@ -88,7 +97,7 @@ def test_the_old_path_really_fails_on_the_live_rules_and_the_referee_path_record
 
 def test_shape_before_455_the_bridge_takes_no_code_so_none_is_sent():
     world = World()
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithoutCode("referee", client=world.client("referee"))
     assert not OA.accepts_code(referee.record_approval)
     OA.remember_code(HASH, "amber falcon")
     OA.record_owner_approval(referee, buyer, MANDATE, "vidyut", "va-1", simple_matches)

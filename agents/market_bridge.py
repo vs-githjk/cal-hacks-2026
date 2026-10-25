@@ -22,6 +22,7 @@ if str(_SCRIPTS) not in sys.path:
 from stdb import Market  # noqa: E402
 
 # Agent-only buyer contact view; names are tentative until the market confirms them. Swap here only.
+GOAL_STATES = ("HUNTING", "HOLD_FOR_CALL", "DONE", "EXPIRED", "PAUSED", "FAILED")  # what set_goal_state accepts (#449 item 3)
 BUYER_CONTACT_VIEW = "agent_buyer_contact"
 BUYER_CONTACT_COLUMNS = ("buyer_id", "display_name", "phone")
 
@@ -452,6 +453,54 @@ class MarketBridge:
         return [dict(g, items=[{k: v for k, v in i.items() if k != "goal_id"} for i in items if i.get("goal_id") == g.get("id")])
                 for g in goals if g.get("id") and g.get("buyer_id")]
 
+    def claim_goal(self, goal_id: str) -> None:
+        """#449 item 3 PL-9: take an ACTIVE goal off every agent's poll (referee-only reducer). The first writer wins; a goal
+        already claimed or closed makes the reducer refuse, which is a MarketBridgeError here."""
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        self._call("claim_goal", goal_id=_safe_id(goal_id, "goal_id"))
+
+    def set_goal_state(self, goal_id: str, state: str, text: str) -> None:
+        """#449 item 3 PL-4: move a goal and tell its buyer in plain words (referee-only reducer; the text is cut to 200)."""
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        if state not in GOAL_STATES or not isinstance(text, str):
+            raise MarketBridgeError("goal_state_invalid")
+        self._call("set_goal_state", goal_id=_safe_id(goal_id, "goal_id"), state=state, text=text.strip()[:200])
+
+    def approval_row(self, mandate_hash: str) -> dict[str, Any] | None:
+        """#449 item 3: the approval row for a mandate from the referee-only agent_approvals view; None when there is none.
+        A read failure raises (never reads as 'no approval'), so the caller can tell 'refused' from 'could not look'."""
+        columns = ("mandate_hash", "method", "approved_by", "at", "voice_approval_id")
+        row = self._agent_row("agent_approvals", columns, mandate_hash)
+        if row is None:
+            return None
+        row["at"] = _timestamp_iso(row.get("at"))
+        return row
+
+    def payment_row(self, mandate_hash: str) -> dict[str, Any] | None:
+        """#449 item 3: the payment row for a mandate from the referee-only agent_payments view; None when there is none."""
+        columns = ("mandate_hash", "payment_ref", "amount", "mode", "at")
+        row = self._agent_row("agent_payments", columns, mandate_hash)
+        if row is None:
+            return None
+        row["amount"] = _finite(row.get("amount"), "payment_amount")
+        row["at"] = _timestamp_iso(row.get("at"))
+        return row
+
+    def _agent_row(self, view: str, columns: Sequence[str], mandate_hash: str) -> dict[str, Any] | None:
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        if not _HASH.fullmatch(str(mandate_hash)):
+            raise MarketBridgeError("mandate_hash_invalid")
+        rows = self._sql("SELECT " + ", ".join(columns) + " FROM " + view + " WHERE mandate_hash = " + _quote(mandate_hash))
+        if not rows:
+            return None
+        row = _project(rows[0], columns)
+        if len(rows) != 1 or row.get("mandate_hash") != mandate_hash or any(c not in row for c in columns):
+            raise MarketBridgeError("market_readback_invalid")
+        return {c: row[c] for c in columns}
+
     def issue_approval_code(self, mandate_hash: str, code: str) -> None:
         """Show the spoken approval code on the buyer's /buyer screen (referee-only reducer). Never logs the code."""
         if self.role != "referee" or not _HASH.fullmatch(str(mandate_hash)) or not isinstance(code, str) or not code:
@@ -546,21 +595,23 @@ class MarketBridge:
             return False
 
     def record_approval(self, *, mandate_hash: str, method: str, approved_by: str,
-                        voice_approval_id: str = "") -> dict[str, Any]:
+                        voice_approval_id: str = "", code: str = "") -> dict[str, Any]:
+        """`code` is the word pair issued for the call (#449 item 3 RT-11); the market compares it with its own row. Never logged."""
         if self.role not in {"buyer", "referee"} or method != "voice_code":
             raise MarketBridgeError("approval_binding_invalid")
         if self.role == "referee":
-            if not voice_approval_id:
+            if not voice_approval_id or not isinstance(code, str) or not code.strip():
                 raise MarketBridgeError("approval_binding_invalid")
             self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
-                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"))
+                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"), code=code)
             return {"mandate_hash": mandate_hash, "approval_method": method}
         before = self.purchase_status(mandate_hash)
         if before.get("approval_method") is not None or before.get("retired"):
             raise MarketBridgeError("approval_not_pending")
         try:
             self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
-                       **({"voice_approval_id": _safe_id(voice_approval_id, "voice_approval_id")} if voice_approval_id else {}))
+                       **({"voice_approval_id": _safe_id(voice_approval_id, "voice_approval_id")} if voice_approval_id else {}),
+                       code=code)
         except MarketBridgeError:
             after = self.purchase_status(mandate_hash)
             if after.get("approval_method") != method:
@@ -580,6 +631,15 @@ class MarketBridge:
         # The referee can mutate this row but cannot read the buyer-private confirmation view.
         # The caller must verify through its buyer-role client before proceeding.
         return {"recorded": True}
+
+    def record_agent_event(self, *, agent_name: str, address: str, text: str, origin: str = "SIM") -> None:
+        """#449 item 4 PL-10: one line on the Fetch agents tile (referee only), e.g. a payment the operator must look at."""
+        if self.role != "referee":
+            raise MarketBridgeError("market_role_mismatch")
+        if (not isinstance(agent_name, str) or not agent_name or not isinstance(address, str) or not address
+                or not isinstance(text, str) or not text or origin not in {"SIM", "MIRROR", "LIVE"}):
+            raise MarketBridgeError("agent_event_invalid")
+        self._call("record_agent_event", agent_name=agent_name, address=address, text=text, ts="", origin=origin)
 
     def settle_goal(self, *, goal_id: str, deal_id: str, mandate_hash: str, payment_ref: str) -> dict[str, Any]:
         if self.role != "buyer":

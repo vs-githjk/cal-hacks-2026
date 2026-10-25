@@ -129,7 +129,7 @@ def test_the_code_is_issued_then_the_referee_records_the_approval_for_the_same_m
     assert world.roles("issue_approval_code") == world.roles("record_approval") == ["referee"]
     assert list(world.issued) == [market_hash] and list(world.approvals) == [market_hash]
     assert world.approvals[market_hash]["approved_by"] == buyer.ROUND["transaction"]["buyer_id"]
-    assert "code" not in world.approvals[market_hash]  # today's bridge takes none
+    assert world.approvals[market_hash]["code"] == world.issued[market_hash]  # #455: the bridge now passes the issued code
 
 
 def test_after_455_the_issued_code_travels_with_the_approval_and_the_market_checks_it(runtime):
