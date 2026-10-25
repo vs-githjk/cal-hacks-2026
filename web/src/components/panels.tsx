@@ -85,17 +85,11 @@ export function ClearanceRuler({ cards, limitMm, told }: Clearance) {
 
 /** Owned parts. No approved buyer-private source exists yet, so unless cards are passed in this says so; nothing is inferred from text. */
 export function OwnedPartsPanel({ clearance }: { clearance?: Clearance }) {
+  if (!clearance) return null; // no approved buyer-private record yet: a card that only says unavailable is left out
   return (
     <Card>
       <Label>Already in your rig</Label>
-      {clearance ? (
-        <ClearanceRuler {...clearance} />
-      ) : (
-        <>
-          <p className="text-[18px] font-medium">Unavailable</p>
-          <p className="mt-1 text-[13px] text-muted">No approved buyer-private record of owned parts exists yet, so none are listed and no fit limit can be drawn.</p>
-        </>
-      )}
+      <ClearanceRuler {...clearance} />
     </Card>
   );
 }

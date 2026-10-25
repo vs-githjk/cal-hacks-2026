@@ -249,17 +249,12 @@ export function DecisionsView() {
 export function RecentPurchases() {
   const m = useBuyerMemory();
   const rows = selectMemory(m.entries, "purchase", "").filter(isPurchase).slice(0, 3);
+  if (m.state.status === "error") return null; // an unreadable history is left out, not shown as an "Unavailable" card
   return (
     <Card>
       <Label>Recent purchases</Label>
       {m.state.status === "loading" ? (
         <p className="text-[13px] text-muted">Loading recorded history...</p>
-      ) : m.state.status === "error" ? (
-        <>
-          <p className="text-[18px] font-medium">Unavailable</p>
-          <p className="mt-1 text-[13px] text-muted">{m.state.message}.</p>
-          <RetryButton reload={m.reload} />
-        </>
       ) : rows.length === 0 ? (
         <p className="text-[13px] text-muted">No purchases are recorded for you yet.</p>
       ) : (

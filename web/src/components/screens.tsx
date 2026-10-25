@@ -7,7 +7,7 @@ import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
-import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
+import { Card, Label, Pill, SampleOnly, money } from "./ui";
 
 
 export interface BuyerScreenProps {
@@ -84,7 +84,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
           )}
           <Searches goals={p.goals} />
           <div className="grid gap-3.5 md:grid-cols-3">
-            {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
+            {p.purchases}
             <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
             <OwnedPartsPanel />
           </div>

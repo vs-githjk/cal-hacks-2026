@@ -47,7 +47,7 @@ function loadPrefs(): Prefs {
   } catch {
     // storage blocked or corrupt: fall through to the default
   }
-  return { open: false, corner: window.matchMedia("(max-width: 639px)").matches ? "br" : "tr" };
+  return { open: false, corner: "br" };
 }
 
 function savePrefs(p: Prefs) {
@@ -115,7 +115,7 @@ function AgentPipTile() {
       }}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined}
       className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-line bg-panel text-[13px] shadow-lg ${CORNER_CLASS[prefs.corner]} ${
-        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px]"
+        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] max-sm:bottom-0 max-sm:right-0 max-sm:rounded-b-none max-sm:rounded-tr-none sm:w-[340px]"
       } ${drag ? "" : "transition-[width,height] duration-150 motion-reduce:transition-none"}`}
     >
       <div
