@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
-import { useSpacetimeDB, useTable } from "spacetimedb/react";
+import { useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { OriginChip, Label, clock } from "@/components/ui";
 import { Question } from "@/components/arena";
@@ -13,7 +12,6 @@ const PARTS = ["GPU", "CPU", "Motherboard", "RAM", "SSD", "Cooler"];
 
 /** Home: the first screen judges see. Every number on it is counted from live market rows. */
 export default function Home() {
-  const conn = useSpacetimeDB();
   const [rounds] = useTable(tables.round);
   const [results] = useTable(tables.roundResult);
   const [events] = useTable(tables.floorEvent);
@@ -33,36 +31,15 @@ export default function Home() {
   const ticker = useMemo(() => [...events].sort((a, b) => (a.id < b.id ? 1 : -1)).slice(0, 14), [events]);
 
   return (
-    <div className="grid gap-10 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-        <div>
-          <h1 className="font-display text-[32px] font-semibold tracking-[-0.02em] text-ink">Overview</h1>
-          <p className="mt-1 max-w-[60ch] text-[15px] text-ink-2">
-            Sellers bid in sealed rounds. Your agent vetoes traps with proof and calls you above your allowance.
-          </p>
-          <p className="mt-2 flex items-center gap-2 text-[13px] text-ink-2">
-            <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
-            {r ? `${r.id} is ${r.state === "closed" ? "closed" : "open"}` : "No round yet"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2.5">
-          <Link href="/buyer" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-4 font-medium text-accent-ink">
-            Open the buyer screen
-          </Link>
-          <Link href="/floor" className="inline-flex min-h-10 items-center rounded-lg bg-panel px-4 font-medium text-ink ring-1 ring-line-2 hover:bg-soft">
-            Watch the round
-          </Link>
-        </div>
-      </header>
-
+    <div className="grid gap-4">
       <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
 
-      <section aria-label="One round per part" className="grid gap-3">
-        <div className="flex items-center justify-between gap-2">
+      <section aria-label="This round" className="card p-4">
+        <div className="flex items-center justify-between gap-2 [&>h2]:mb-0">
           <Label>One sealed round per part</Label>
           <OriginChip origin="SIM" />
         </div>
-        <ol className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-6">
+        <ol className="mt-2 grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-6">
           {PARTS.map((p, i) => (
             <li key={p} className="border-t-2 border-line-2 pt-2.5">
               <span className="text-[12px] tabular-nums text-muted">{i + 1}</span>
@@ -70,17 +47,17 @@ export default function Home() {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section aria-label="This round in numbers" className="card grid grid-cols-2 sm:grid-cols-5 sm:divide-x sm:divide-line">
-        {stats.map((s) => (
-          <div key={s.label} className="px-4 py-4">
-            <div className="text-[28px] font-semibold leading-none tabular-nums text-ink">{s.value}</div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
-              {s.label} <OriginChip origin={s.origin} />
+        <div className="my-4 border-t border-line" />
+        <dl className="grid grid-cols-2 gap-y-4 sm:grid-cols-5 sm:divide-x sm:divide-line">
+          {stats.map((s) => (
+            <div key={s.label} className="px-1 sm:px-4 first:pl-0">
+              <dd className="text-[26px] font-semibold leading-none tabular-nums text-ink">{s.value}</dd>
+              <dt className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
+                {s.label} <OriginChip origin={s.origin} />
+              </dt>
             </div>
-          </div>
-        ))}
+          ))}
+        </dl>
       </section>
 
       {ticker.length > 0 && (

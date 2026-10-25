@@ -1,5 +1,7 @@
 # Arena UI v3: light dashboard around the diorama
 
+> **v3.1 (Sat ~20:40, user):** no sidebar and no bottom tabs. One navy band on top on every screen size; the active page is a cream folder tab cut out of the band (`.tab-on` in globals.css), so the page surface starts at the tab. The market and round status sit at the band's right end. The Overview has no heading, blurb or buttons: the Question card, then one card with the six-round strip and the stats, then the ticker. The run-mode line is a small footer at the end of every page.
+
 > **v3 (Sat ~19:40, user: full redesign, light mode, cream like the 3D, left sidebar dashboard, PWA).** Supersedes everything below where it differs. v2's restraint rules still hold (one memorable element, sentence case, dots not pills, red only as a dot or word).
 
 **Subject.** A buyer's agent buys PC parts in refereed sealed rounds; judges watch it work. The app is the calm, daylit room around the 3D diorama, not a marketing site.

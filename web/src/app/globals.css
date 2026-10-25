@@ -118,3 +118,11 @@ body {
 
 @keyframes orbit { to { transform: rotate(360deg) } }
 @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+
+/* The nav band is navy; the brand mark on it swaps to cream. */
+.on-navy { --accent: #FFF8EE; --accent-ink: #2F3E66; }
+/* Folder tab: the active nav link is the page itself, with the two inverse curves at its feet. */
+.tab-on { position: relative; background: var(--canvas); color: var(--ink); border-radius: 12px 12px 0 0; }
+.tab-on::before, .tab-on::after { content: ""; position: absolute; bottom: 0; width: 12px; height: 12px; pointer-events: none; }
+.tab-on::before { left: -12px; background: radial-gradient(circle at 0 0, transparent 12px, var(--canvas) 12.5px); }
+.tab-on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, var(--canvas) 12.5px); }
