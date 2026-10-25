@@ -131,7 +131,7 @@ export function Arena2D({ scene, beat, frozen, reducedMotion, selected, onPick, 
                     <span className="row-span-2 self-center"><Figure color={hex(card.color)} initial={card.initial} small dim /></span>
                     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span className="min-w-0 break-words text-accent-ink/75 line-through">{card.name}</span>
-                      <OriginChip origin={card.origin} />
+                      <span className="rounded bg-panel"><OriginChip origin={card.origin} /></span>
                       {card.price && <span className="font-mono tabular-nums text-accent-ink/75">{card.price}</span>}
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-panel px-2 text-[12px] font-semibold text-coral">
                         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-coral" />
