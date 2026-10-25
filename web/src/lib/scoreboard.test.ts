@@ -40,3 +40,10 @@ test("a missing or malformed file gives no tiles rather than a crash", () => {
   assert.deepEqual(scoreboardTiles(null), []);
   assert.deepEqual(scoreboardTiles({ tiles: "x" }), []);
 });
+
+test("the bundled fixture deep-equals the repo's data/scoreboard.json (no drift)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const read = (p: string) => JSON.parse(readFileSync(join(process.cwd(), p), "utf8"));
+  assert.deepEqual(read("src/lib/fixtures/scoreboard.json"), read("../data/scoreboard.json"));
+});
