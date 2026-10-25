@@ -1,19 +1,18 @@
 // web/src/components/screens.tsx
 // Page bodies. The pages in app/buyer and app/market keep their hooks and pairing logic and render these.
 // Both are pure: give them view models and they draw. See README for the hook-to-view mapping.
-import { originMixLabel, roundTitle, type MarketKpis, type RoundHistoryItem, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
+import { buyerKpis, originMixLabel, roundTitle, type MarketKpis, type RoundHistoryItem, type ApprovalView, type ReviewView, type FeedItem, type FloorEventView, type GoalView, type RankedBid, type ReceiptView, type RoundView, type SellerLine, type ShieldView, type VetoView } from "@/lib/screens";
 import type { ReactNode } from "react";
-import { ASI_ONE_URL } from "@/lib/agentFeed";
-import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
+import { AgentFeed, ApprovalCard, ReviewCard, HeroPrice, KpiCard, QuietOrigin, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, RefereeCard, RoundTimeline, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
-import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
-import { Card, Details, Label, SampleOnly, Unavailable, money } from "./ui";
+import type { BuildResult } from "@/lib/build";
+import { Card, Details, SampleOnly, money } from "./ui";
 
 
 export interface BuyerScreenProps {
-  /** The planner's build (parts, sellers, steps); the SIM sample run is shown, labelled, until build rounds are live. */
+  /** The planner's live build (parts, sellers, steps); the board shows only when a real one exists. */
   build?: BuildResult;
   /** This buyer's searches, open ones first; the first is the active one. */
   goals: GoalView[];
@@ -34,58 +33,53 @@ export interface BuyerScreenProps {
   /** Id of the latest round close event; a new one flips the bids open. */
   revealKey?: string;
   connecting?: boolean;
-  /** Cards fed from lib/sample.ts; each shows a SIM sample chip. */
-  sample?: { bids?: boolean; veto?: boolean; shield?: boolean; approval?: boolean; receipt?: boolean };
+  /** True while the latest round has not closed: the best-offer card then shows no price. */
+  roundOpen?: boolean;
+  /** True when every row is SIM: per-row SIM chips are left out (only a LIVE or MIRROR row shows its chip). */
+  quietOrigin?: boolean;
+  /** Paid receipts in myDeals. */
+  receiptsCount?: number;
 }
 
 const dayOf = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
 function Searches({ goals }: { goals: GoalView[] }) {
-  if (!goals.length) {
-    return (
-      <Card>
-        <Label>Searches</Label>
-        <p className="text-[22px] font-medium">No search yet.</p>
-        <p className="mt-1 text-muted">Post a goal above, or in <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">ASI:One</a>.</p>
-        <Details summary="Example"><p><q>A 1 TB NVMe drive under $90 by Friday.</q> It appears here with the cap and the allowance.</p></Details>
-      </Card>
-    );
-  }
+  if (!goals.length) return null;
   return (
-    <div className="grid gap-3.5">
-      <GoalCard goal={goals[0]!} />
-      {goals.slice(1).map((g) => (
-        <Card key={g.id}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="min-w-0 text-[15px] font-medium text-balance"><q>{g.text}</q></p>
-            <StatePill state={g.state} />
-          </div>
-          <p className="mt-1 text-[13px] tabular-nums text-muted">Cap {money(g.cap)} · due {dayOf(g.deadline)}</p>
-        </Card>
-      ))}
+    <div>
+      <h3 className="mb-1 text-[15px] font-semibold">Your searches</h3>
+      <ul className="divide-y divide-line border-y border-line">
+        {goals.map((g) => (
+              <li key={g.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
+                <span className="min-w-0 truncate text-[15px] font-medium"><q>{g.text}</q></span>
+                <span className="flex items-center gap-3 text-[13px] tabular-nums text-muted">
+                  <span>Cap {money(g.cap)}, due {dayOf(g.deadline)}</span>
+                  <StatePill state={g.state} />
+                </span>
+              </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-/** A journey step heading on the buyer dashboard: a number, a plain title and one muted line. */
-function Step({ n, title, hint, id }: { n: number; title: string; hint?: string; id?: string }) {
+function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <div id={id} className="flex scroll-mt-24 items-baseline gap-3 pt-4">
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ink font-mono text-[11px] text-canvas">{n}</span>
-      <div className="min-w-0">
-        <h2 className="text-[20px] font-semibold leading-6 tracking-[-0.015em]">{title}</h2>
-        {hint && <p className="mt-0.5 text-[13px] leading-[18px] text-muted">{hint}</p>}
-      </div>
-    </div>
+    <section id={id} className="grid scroll-mt-24 gap-5">
+      <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{title}</h2>
+      {children}
+    </section>
   );
 }
 
 export function BuyerScreen(p: BuyerScreenProps) {
-  const s = p.sample ?? {};
   const goal = p.goals[0] ?? null;
   if (p.connecting) return <PanelPreviews reason="Connecting to the market. Each panel fills in when it answers." />;
+  const kpis = buyerKpis(p.goals, p.bids, p.review ?? null, p.allowance, p.receiptsCount ?? 0, !!p.roundOpen);
+  const decided = [p.veto, p.shield, p.approval && !p.review ? p.approval : null, p.receipt].filter(Boolean).length;
   return (
-    <div className="grid gap-5">
+    <QuietOrigin.Provider value={!!p.quietOrigin}>
+    <div className="grid gap-6">
       {p.review && (
         <a href="#needs-you" className="card card-active flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
           <span className="flex items-center gap-2.5 text-[15px] font-semibold"><span className="dot text-live" aria-hidden /> Your approval is needed. Say the code on the call.</span>
@@ -93,54 +87,74 @@ export function BuyerScreen(p: BuyerScreenProps) {
         </a>
       )}
 
-      <Step n={1} title="What you asked for" hint={goal ? undefined : "Post a goal and your agent starts hunting."} />
-      {goal ? <Searches goals={p.goals} /> : p.composer}
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+        {kpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
+      </div>
 
-      {goal && (
-        <>
-          <Step n={2} title="What is happening now" hint="The latest round in the market. Bids stay sealed until it closes." />
-          <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
-          <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
-          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
-        </>
-      )}
-
-      <Step n={goal ? 3 : 2} id="needs-you" title="What needs you" hint="Above your allowance, we call you. The one-time code shows here and nowhere else." />
       {p.review ? (
-        <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
+        <Section id="needs-you" title="Needs you">
+          <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
+        </Section>
       ) : (
-        <Card>
-          <p className="flex items-center gap-2.5 text-[17px] font-semibold"><span className="h-2 w-2 rounded-full bg-mint-mark" aria-hidden /> Nothing needs you right now.</p>
-          <p className="mt-1 text-[13px] text-muted">When a deal is above your allowance, the call starts and your code appears here.</p>
-        </Card>
+        <span id="needs-you" className="scroll-mt-24" />
       )}
 
-      {goal && (
+      {goal ? (
         <>
-          <Step n={4} title="What was decided, and why" hint="Every veto and block comes with its reason and source." />
-          <div className={`grid items-start gap-5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
-            <SampleOnly on={!!s.veto}><VetoCard veto={p.veto} /></SampleOnly>
-            <SampleOnly on={!!s.shield}><ShieldCard shield={p.shield} /></SampleOnly>
-            {!p.review && <SampleOnly on={!!s.approval}><ApprovalCard approval={p.approval} /></SampleOnly>}
-          </div>
+      <Section id="bids" title="Live bids">
+        {p.bids.length > 0 ? (
+          <>
+            <HeroPrice bids={p.bids} cap={goal?.cap ?? null} />
+            <RankedBids bids={p.bids} revealKey={p.revealKey} />
+          </>
+        ) : (
+          <Card>
+            <p className="text-[17px] font-semibold">No bids yet for this search.</p>
+            <p className="mt-1 text-[13px] text-muted">Bids appear here when sellers answer, and stay sealed until the round closes.</p>
+          </Card>
+        )}
+        {p.build && <BuildBoard build={p.build} origin={p.build.origin ?? "SIM"} />}
+      </Section>
 
-          <Step n={5} title="What you bought" hint="One receipt per part, in Stripe test mode." />
-          <div className="grid items-start gap-5 lg:grid-cols-[7fr_5fr]">
-            <SampleOnly on={!!s.receipt}><ReceiptCard receipt={p.receipt} /></SampleOnly>
-            {p.purchases ?? <Unavailable title="Purchases">Not connected to this screen yet.</Unavailable>}
+      <Section id="decisions" title="What happened and why">
+        {decided === 0 ? (
+          <Card>
+            <p className="text-[17px] font-semibold">Nothing decided yet.</p>
+            <p className="mt-1 text-[13px] text-muted">Vetoes, Smell Test blocks and receipts appear here with their reason and source.</p>
+          </Card>
+        ) : (
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            {p.veto && <VetoCard veto={p.veto} />}
+            {p.shield && <ShieldCard shield={p.shield} />}
+            {p.approval && !p.review && <ApprovalCard approval={p.approval} />}
+            {p.receipt && <ReceiptCard receipt={p.receipt} />}
           </div>
+        )}
+        <AgentFeed items={p.feed} />
+      </Section>
+      <Section id="new-search" title="New search">
+        {p.composer}
+        <Searches goals={p.goals} />
+      </Section>
         </>
+      ) : (
+      <Section id="new-search" title="New search">
+        {p.composer}
+        <Searches goals={p.goals} />
+      </Section>
       )}
 
-      <Details summary="Your allowance, your rig and the agent log" className="mt-2">
-        <div className="grid gap-5 md:grid-cols-2">
-          <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
-          <OwnedPartsPanel />
-        </div>
-        <AgentFeed items={p.feed} />
-      </Details>
-      {goal && <Details summary="Start another goal" className="mt-0">{p.composer}</Details>}
+      <div id="allowance" className="scroll-mt-24">
+        <Details summary="Your allowance, your rig and the agent log" className="mt-2">
+          <div className="grid gap-5 md:grid-cols-2">
+            <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
+            <OwnedPartsPanel />
+          </div>
+          {p.purchases}
+        </Details>
+      </div>
     </div>
+    </QuietOrigin.Provider>
   );
 }
 

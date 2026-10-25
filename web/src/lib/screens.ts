@@ -9,6 +9,7 @@ export type Origin = "LIVE" | "MIRROR" | "SIM";
 export interface GoalView {
   id: string;
   text: string; // the buyer's own words
+  part?: string; // display name of the first part: the catalog label, else the sku title-cased
   type: "budget_cap" | "part_by_date" | "build_by_date";
   state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED" | "FAILED";
   latestNote?: string; // #449 item 3 PL-4: the newest notification text written for this goal ("" when none)
@@ -163,6 +164,8 @@ export interface FloorEventView { key: string; at: Date; kind: string; label: st
 
 import type { Timestamp } from "spacetimedb";
 import { formatMoney } from "./money.ts";
+import { CATALOG } from "./goalRequest.ts";
+import { SHIELD } from "./brand.ts";
 import { safeUrl } from "./url.ts";
 
 const d = (ts: Timestamp) => new Date(Number(ts.microsSinceUnixEpoch / BigInt(1000)));
@@ -198,6 +201,13 @@ function ownedPartLabel(id: string): string {
   return name.length <= 3 ? name.toUpperCase() : name;
 }
 
+/** "RTX 5070 Ti" for a catalog sku; otherwise the sku with each word capitalised; undefined when there is no sku. */
+export function partName(sku: string | undefined): string | undefined {
+  if (!sku) return undefined;
+  const hit = CATALOG.find((c) => c.sku === sku.toLowerCase());
+  return hit ? hit.label : sku.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: AllowanceRow | undefined): GoalView {
   const mine = items.filter((i) => i.goalId === g.id);
   const deadline = d(g.deadline);
@@ -206,6 +216,7 @@ function goalView(g: GoalRow, items: readonly GoalItemRow[], allowance: Allowanc
   const when = deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   return {
     id: g.id,
+    part: partName(mine[0]?.skuSpec),
     text: `${what}${conditions.length ? `, ${conditions.join(" or ")}` : ""}, under ${formatMoney(Math.round(g.cap))} by ${when}`,
     type: (["budget_cap", "part_by_date", "build_by_date"].includes(g.type) ? g.type : "budget_cap") as GoalView["type"],
     state: g.state as GoalView["state"],
@@ -338,7 +349,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
-        why: r.reasons.join("; ") || card?.label || "",
+        why: feedLabel(r.reasons.join("; ")) || card?.label || "",
         sourceUrl: safeUrl(r.source) ?? undefined,
         won: r.rank === 1 && card?.rec !== "veto",
         ...(held ? { heldBack: held } : {}),
@@ -349,6 +360,11 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
 
 const FEED_TITLE: Record<FeedKind, string> = { deal: "Deal found", bid: "Bid in", veto: "Veto", block: "Block", progress: "Progress" };
 const PROGRESS = ["goal_posted", "goal_state", "need_posted", "round_opened", "approval_recorded", "payment_recorded", "mandate_created"];
+
+/** The market writes "Bazaar Shield: block"; the product name for it is the Smell Test. */
+export function feedLabel(label: string): string {
+  return label.replace(/^(?:Bazaar Shield|Shield)\b/, SHIELD);
+}
 
 function classify(kind: string, label: string): FeedKind | null {
   if (kind === "bid_sealed") return "bid";
@@ -361,10 +377,11 @@ function classify(kind: string, label: string): FeedKind | null {
 
 interface NoteRow { id: bigint; klass: string; text: string; at: Timestamp }
 
-export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[]): FeedItem[] {
-  const fromEvents = events.flatMap((e): FeedItem[] => {
+/** `mine`: ids (goals, rounds, bids) that belong to this buyer; floor events whose ref is not in it are dropped. Omit to keep all. */
+export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[], mine?: ReadonlySet<string>): FeedItem[] {
+  const fromEvents = events.filter((e) => !mine || mine.has(e.refId)).flatMap((e): FeedItem[] => {
     const kind = classify(e.kind, e.label);
-    return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: e.label, origin: asOrigin(e.origin) }] : [];
+    return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: feedLabel(e.label), origin: asOrigin(e.origin) }] : [];
   });
   const fromNotes = notes.map((n): FeedItem => {
     const kind: FeedKind = n.klass === "veto" ? "veto" : "progress";
@@ -592,4 +609,54 @@ export function dealFromRows(deals: readonly DealRow[], allowance: number | null
       }
     : null;
   return { approval, receipt };
+}
+
+// ---- Buyer dashboard KPI band. Pure: every value comes from real rows passed in, never from lib/sample.
+
+export type KpiDot = "live" | "mint" | "muted";
+export interface BuyerKpi { id: "search" | "offer" | "needs" | "allowance"; label: string; value: string; line: string; dot?: KpiDot; word?: string; href: string }
+
+const kpiDay = (dt: Date) => dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const GOAL_DOT: Record<GoalView["state"], KpiDot> = { ACTIVE: "live", HUNTING: "live", HOLD_FOR_CALL: "live", DONE: "mint", EXPIRED: "muted", FAILED: "muted", PAUSED: "muted" };
+const ELIGIBLE: Recommendation[] = ["buy", "caution", "unchecked"];
+
+/**
+ * The four KPI cards. `bids` are the latest round's results; `roundOpen` is true while that round has not closed, and then
+ * no price is ever returned (bids stay sealed until close). Best offer is the lowest landed price among ranked, non-vetoed bids.
+ */
+export function buyerKpis(goals: readonly GoalView[], bids: readonly RankedBid[], review: ReviewView | null, allowance: GoalView["allowance"], receiptsCount: number, roundOpen = false): BuyerKpi[] {
+  const g = goals[0];
+  const search: BuyerKpi = g
+    ? { id: "search", label: "Current search", value: g.part ?? (g.text.length > 28 ? `${g.text.slice(0, 27).trimEnd()}...` : g.text), line: `${stateLabel(g.state)}, due ${kpiDay(g.deadline)}, cap ${formatMoney(g.cap)}`, dot: GOAL_DOT[g.state], word: stateLabel(g.state), href: "#new-search" }
+    : { id: "search", label: "Current search", value: "None yet", line: "Start a search below.", href: "#new-search" };
+
+  const eligible = bids.filter((b) => b.rank !== null && ELIGIBLE.includes(b.recommendation) && b.landed > 0);
+  let offer: BuyerKpi;
+  if (!bids.length) offer = { id: "offer", label: "Best offer", value: "No bids yet", line: "Sellers answer within a few seconds of a new search.", href: "#bids" };
+  else if (roundOpen) offer = { id: "offer", label: "Best offer", value: "Sealed", line: `${bids.length} ${bids.length === 1 ? "bid" : "bids"}, sealed until close`, dot: "live", word: "Open", href: "#bids" };
+  else if (!eligible.length) offer = { id: "offer", label: "Best offer", value: "None eligible", line: `${bids.length} ${bids.length === 1 ? "bid" : "bids"}, none passed the checks`, href: "#bids" };
+  else {
+    const best = eligible.reduce((a, b) => (b.landed < a.landed ? b : a));
+    offer = { id: "offer", label: "Best offer", value: formatMoney(best.landed), line: g ? `vs your cap ${formatMoney(g.cap)}` : `from ${best.seller}`, href: "#bids" };
+  }
+
+  const needs: BuyerKpi = review
+    ? { id: "needs", label: "Needs you", value: "Approve on the call", line: "Above your allowance, so we called you.", dot: "live", word: "Waiting", href: "#needs-you" }
+    : { id: "needs", label: "Needs you", value: "Nothing", line: "Above your allowance we call you.", dot: "mint", word: "Clear", href: "#needs-you" };
+
+  const allow: BuyerKpi = {
+    id: "allowance", label: "Allowance", value: allowance ? formatMoney(allowance.perPurchase) : "Not set",
+    line: (() => {
+      const n = receiptsCount > 0 ? `${receiptsCount} ${receiptsCount === 1 ? "purchase" : "purchases"}` : "";
+      if (allowance && allowance.perPurchase === 0) return n ? `Every purchase needs your OK · ${n}` : "Every purchase needs your OK";
+      return n || "No purchases yet";
+    })(), href: "#allowance",
+  };
+  return [search, offer, needs, allow];
+}
+
+/** Rounds this buyer took part in: those named by their own my_bid_checks rows (the server filters those to the buyer), newest first. */
+export function myRounds<R extends RoundRow>(rounds: readonly R[], checks: readonly { roundId: string }[]): R[] {
+  const ids = new Set(checks.map((c) => c.roundId));
+  return rounds.filter((r) => ids.has(r.id)).sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1));
 }

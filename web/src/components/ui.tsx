@@ -44,9 +44,9 @@ export function Card({ children, className = "", stripe, hero, tactile }: { chil
   return <section data-hero={hero || undefined} className={`card min-w-0 p-4 md:p-6${left}${feel} ${className}`}>{children}</section>;
 }
 
-/** Small uppercase section label. Headings inside cards are this, never a big heading; the big thing is the number. */
+/** Small sentence-case section label. Headings inside cards are this, never a big heading; the big thing is the number. */
 export function Label({ children }: { children: ReactNode }) {
-  return <h2 className="mb-3 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">{children}</h2>;
+  return <h2 className="mb-3 text-[13px]/[18px] font-medium text-muted">{children}</h2>;
 }
 
 export const README_URL = "https://github.com/vs-githjk/fish-market-nothing-fishy#readme";
