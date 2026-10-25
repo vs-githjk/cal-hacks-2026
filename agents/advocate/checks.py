@@ -93,11 +93,16 @@ RULE_PARTS = {"fit.cpu_socket": {"cpu", "motherboard"}, "fit.ram_type": {"mother
               "fit.storage": {"motherboard", "storage"}}
 
 
-def _fit_warnings(bid, owned):
+def fit_checks(bid, owned):
+    """(the checks that involve this bid's parts, the checker's whole result). Shared with qa.py for chat answers."""
     cards = _spec_cards(bid, owned)
     fit = check_fit(cards)
     bid_parts = {c["category"] for c in cards if not c["id"].startswith("owned-")}
-    checks = [c for c in fit["checks"] if RULE_PARTS.get(c["rule_id"], bid_parts) & bid_parts]
+    return [c for c in fit["checks"] if RULE_PARTS.get(c["rule_id"], bid_parts) & bid_parts], fit
+
+
+def _fit_warnings(bid, owned):
+    checks, fit = fit_checks(bid, owned)
     fails = [c for c in checks if c["verdict"] == "fail"]
     unsure = [c for c in checks if c["verdict"] == "uncertain"]
     url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""

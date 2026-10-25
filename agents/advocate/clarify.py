@@ -76,6 +76,11 @@ class Clarifier:
         self._clock = clock or (lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
         self._pending: dict[str, asyncio.Future] = {}
 
+    def is_waiting(self, sender: str) -> bool:
+        """True while a question to this address is open: its next chat message is the answer, not a conversation."""
+        fut = self._pending.get(sender)
+        return fut is not None and not fut.done()
+
     def offer(self, sender: str, text: str, allowed: bool = True) -> bool:
         """True when this message answered an open question (it is then consumed). allowed=False is Smell Test's block."""
         fut = self._pending.get(sender)
