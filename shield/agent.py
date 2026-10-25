@@ -24,7 +24,7 @@ MAX_FIELD = 200
 MAX_MANIFEST_CHARS = 20000
 NAME_KEYS = ("name", "title", "handle", "display_name")
 _PROTECTED = re.compile(
-    r"(?<![a-z0-9])(?:tech\s*bazaar|bazaar\s*shield|shield|advocate|buyer|marketplace\s*(?:admin|operator|support))(?![a-z0-9])")
+    r"(?<![a-z0-9])(?:fish\s*market|smell\s*test|tech\s*bazaar|bazaar\s*shield|shield|advocate|buyer|marketplace\s*(?:admin|operator|support))(?![a-z0-9])")
 _PRIVILEGED_ROLES = ("buyer", "advocate", "marketplace")
 
 UNREGISTERED = "shield.agent.unregistered"
@@ -108,7 +108,8 @@ def verify_agent(request: Any, registry: Registry) -> dict:
             if role in _PRIVILEGED_ROLES or any(_protected_hit(n) for n in names):
                 rules.append(IMPERSONATION)
         else:
-            own = {_plain(entry["name"]), _plain(entry.get("seller_of_record") or "")}
+            own = {_plain(entry["name"]), _plain(entry.get("seller_of_record") or ""),
+                   *(_plain(a) for a in entry.get("aliases") or [] if isinstance(a, str))}
             if any(_plain(n) not in own and _protected_hit(n) for n in names):
                 rules.append(IMPERSONATION)
             if role != entry["role"]:

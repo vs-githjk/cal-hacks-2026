@@ -21,7 +21,7 @@ LABELS = {
     "payment_complete": "payment acknowledged",
     "payment_reject": "payment rejected",
     "reply": "reply to owner",
-    "blocked": "message blocked by Shield",
+    "blocked": "message blocked by Smell Test",
 }
 ROLES = ("buyer", "advocate", "seller", "shield", "owner")
 _TOKEN = re.compile(r"[A-Za-z0-9_.-]{1,40}")

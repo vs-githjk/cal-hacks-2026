@@ -120,7 +120,7 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
     operator = operator_token if operator_token is not None else os.environ.get(OPERATOR_ENV, "")
     operator = operator.strip()   # a blank or whitespace token is unset: replace stays refused (#237)
     lock = threading.Lock()
-    app = FastAPI(title="Tech Bazaar Seller Kit", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Fish Market Seller Kit", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(BodyLimit)
     app.add_middleware(CORSMiddleware, allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$", allow_methods=["GET", "POST", "PUT"],
                        allow_headers=["content-type", OPERATOR_HEADER])

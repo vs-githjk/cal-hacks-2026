@@ -103,7 +103,7 @@ AUTH = _w(
     r"(?:legal|regulatory|regulation|audit|security|fraud|finance|treasury|risk)\s+(?:department|team|requirements?|reasons?|rules?|policy|audit|review|requires?|demands?)",
     r"by\s+order\s+of", r"on\s+the\s+orders?\s+of", r"under\s+(?:regulation|section|article|policy|law)",
     r"per\s+(?:regulation|policy|section|article|law|compliance)", r"required\s+by\s+(?:law|regulation|policy)",
-    r"(?:the\s+)?(?:management|executives?|ceo|cfo|head\s+office|headquarters|administrators?|admins?|supervisor|marketplace|platform|tech\s*bazaar|bazaar\s*shield)\s+(?:has|have|requires?|demands?|instructs?|orders?|authori[sz]es?|decided|ruled|needs?)",
+    r"(?:the\s+)?(?:management|executives?|ceo|cfo|head\s+office|headquarters|administrators?|admins?|supervisor|marketplace|platform|fish\s*market|smell\s*test|tech\s*bazaar|bazaar\s*shield)\s+(?:has|have|requires?|demands?|instructs?|orders?|authori[sz]es?|decided|ruled|needs?)",
     r"mandatory", r"official\s+(?:notice|instruction|directive|request)", r"security\s+audit", r"regulations?\s+\d+",
     r"cumplimiento", r"normativa", r"auditor\w+", r"por\s+orden\s+de", r"gerencia", r"regulaci\w+",
     r"compliance\s+ke\s+liye", r"sarkari\s+niyam", r"management\s+ka\s+aadesh", r"kanoon\w*",

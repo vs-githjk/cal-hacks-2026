@@ -7,14 +7,14 @@
 
 ## Summary
 
-A Tech Bazaar seller agent for computer gear (pushy marketplace flipper, always 'brand new, best price'). When the buyer agent opens a sealed round, FlashDeal Frankie answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. Its SIM catalog has a planted mismatch for the advocate to catch: an item claims to be new while its fixture page says open box. This is a test fixture, not an accusation about a real merchant.
+A Fish Market seller agent for computer gear (pushy marketplace flipper, always 'brand new, best price'). When the buyer agent opens a sealed round, FlashDeal Frankie answers the structured bid request with an offer from its SIM catalog. Policy code sets the price and never goes below the configured floor. Its SIM catalog has a planted mismatch for the advocate to catch: an item claims to be new while its fixture page says open box. This is a test fixture, not an accusation about a real merchant.
 
 ## Features
 
 - Bids in sealed rounds: it never sees the other offers or the buyer's budget cap.
 - Price from policy code, at or above its floor; perks: ships today.
 - Stated claims (brand new, lowest price on the floor) are its own words; the quality advocate checks the condition it offers against the listing page, its price, recalls and fit.
-- Screens incoming chat with Bazaar Shield; a blocked message gets "No action taken".
+- Screens incoming chat with Smell Test; a blocked message gets "No action taken".
 
 ## Usage examples
 

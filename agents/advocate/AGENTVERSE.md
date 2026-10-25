@@ -1,11 +1,11 @@
-# Tech Bazaar Quality Advocate
+# Fish Market Quality Advocate
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
 ## Summary
 
-Tech Bazaar's quality advocate for computer gear. It argues for the buyer: for each seller bid it checks hardware fit with code, compares the claimed condition with the listing, and looks at price history, recalls and the seller's record. It returns at most three warnings, each with a source, and can veto a bid that is a trap.
+Fish Market's quality advocate for computer gear. It argues for the buyer: for each seller bid it checks hardware fit with code, compares the claimed condition with the listing, and looks at price history, recalls and the seller's record. It returns at most three warnings, each with a source, and can veto a bid that is a trap.
 
 ## Features
 

@@ -1,11 +1,11 @@
-# Tech Bazaar Shield Client
+# Fish Market Smell Test
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
 ## Summary
 
-A chat front door to Tech Bazaar's Bazaar Shield screening service. Send it listing text or an agent message and it returns Shield's verdict (allow, quarantine or block) with the rules that fired. It never approves purchases or moves money.
+A chat front door to Fish Market's Smell Test screening service. Nothing fishy gets through. Send it listing text or an agent message and it returns Smell Test's verdict (allow, quarantine or block) with the rules that fired. It never approves purchases or moves money.
 
 ## Features
 

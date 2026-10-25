@@ -715,7 +715,7 @@ def stage_steps(placed: dict, survivors: list, rid: str, stage: int, *, delay: f
         if p.get("shield"):
             v = p["shield"]
             steps.append(bridge.Step("referee", "attach_verdict", {"bid_id": nid_, "verdict": v["verdict"], "rule_ids": list(v["rule_ids"]), "origin": SIM},
-                                     tag=SIM, pause=False, say=f"Bazaar Shield on {b['persona']}'s stage {stage} offer: {v['verdict']}"))
+                                     tag=SIM, pause=False, say=f"Smell Test on {b['persona']}'s stage {stage} offer: {v['verdict']}"))
         if p.get("card"):
             c = _cards_for_market([p["card"]], True)[0]
             why = c["call_reason"]
@@ -1772,7 +1772,7 @@ def main(argv: Optional[list] = None) -> int:
     if args.stripe and not args.live_call:
         ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (there is no scripted approval)")
     out = Narrator(True)
-    out.note("Tech Bazaar build: one goal, a sealed round per part, one call for the whole build (#345)")
+    out.note("Fish Market build: one goal, a sealed round per part, one call for the whole build (#345)")
     out.note("Sellers: SIM, plus the real dated MIRROR listings for the GPU. Payment is the SIM stub unless --live-call --stripe. Tags: [MIRROR] [SIM] [LIVE].")
     out.note(shield_mode_line())
     from_goal = args.buyer_id is not None and args.goal_id is None and args.plan is None   # #253: build from this buyer's own goal row

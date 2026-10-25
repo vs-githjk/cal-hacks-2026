@@ -79,6 +79,7 @@ def test_denylist_beats_the_allowlist():
 @pytest.mark.parametrize("name", [
     "Tech Bazaar Support", "Bazaar Shield Official", "Quality Advocate", "the buyer agent", "Tеch Bаzaar",  # Cyrillic e, a
     "T3ch B4zaar Admin", "marketplace admin", "S H I E L D",
+    "Fish Market Support", "Smell Test Official", "F1sh M4rket Admin",
 ])
 def test_impersonating_a_protected_name_is_blocked_for_unregistered_agents(client, name):
     out = verify(client, agent_address=STRANGER, claimed_role="seller", seller_of_record="acme", manifest={"name": name})
@@ -89,6 +90,9 @@ def test_a_registered_seller_cannot_rename_itself_into_a_protected_name(client):
     out = verify(client, agent_address=SELLER3, claimed_role="seller", seller_of_record="flashdeal-frankie",
                  manifest={"name": "Tech Bazaar Official Seller"})
     assert out["verdict"] == "block" and "shield.agent.impersonation" in out["rule_ids"]
+    out = verify(client, agent_address=SELLER3, claimed_role="seller", seller_of_record="flashdeal-frankie",
+                 manifest={"name": "Fish Market Official Seller"})
+    assert out["verdict"] == "block" and "shield.agent.impersonation" in out["rule_ids"]
     # its own registered name is fine
     ok = verify(client, agent_address=SELLER3, claimed_role="seller", seller_of_record="flashdeal-frankie",
                 manifest={"name": "FlashDeal Frankie", "description": "GPUs and CPUs, open box and new."})
@@ -97,6 +101,8 @@ def test_a_registered_seller_cannot_rename_itself_into_a_protected_name(client):
 
 def test_the_registered_buyer_may_use_its_own_name(client):
     out = verify(client, agent_address=BUYER, claimed_role="buyer", manifest={"name": "tech_bazaar_buyer"})
+    assert out["verdict"] == "allow"
+    out = verify(client, agent_address=BUYER, claimed_role="buyer", manifest={"name": "Fish Market Buyer"})
     assert out["verdict"] == "allow"
 
 

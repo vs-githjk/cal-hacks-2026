@@ -60,7 +60,7 @@ def page(seller, sku, lies, injected=False):
 .sim{{background:#fde68a;color:#111;padding:6px 10px;border-radius:6px;font-weight:600}}.price{{font-size:28px;font-weight:700}}
 dl{{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px}}dt{{color:#555}}@media(prefers-color-scheme:dark){{body{{background:#111;color:#eee}}dt{{color:#aaa}}}}</style>
 <script type="application/json" id="listing">{json.dumps(data)}</script></head><body>
-<p class="sim">SIM: simulated listing for a security demo, hosted by Tech Bazaar. Not a real store.{" Prompt-injection test page." if injected else ""} Lies: {"on" if lies else "off"} ({toggle})</p>
+<p class="sim">SIM: simulated listing for a security demo, hosted by Fish Market. Not a real store.{" Prompt-injection test page." if injected else ""} Lies: {"on" if lies else "off"} ({toggle})</p>
 <h1 data-field="title">{e(facts['title'])}</h1>
 <p data-field="headline"><strong>{e(facts['headline'])}</strong></p>
 {INJECTION if injected else ""}
@@ -89,7 +89,7 @@ def build():
     (SITE / "price_history.json").write_text(json.dumps({"origin": "SIM", "series": PRICE_HISTORY}, indent=1))
     (SITE / "sellers.json").write_text(json.dumps({"origin": "SIM", "sellers": SELLERS}, indent=1))
     links = "".join(f'<li><a href="{n}">{n}</a></li>' for n in out)
-    (SITE / "index.html").write_text(f'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Liar pages (SIM)</title><p>SIM test pages for Tech Bazaar claim checks and Shield. Not real stores.</p><ul>{links}</ul>')
+    (SITE / "index.html").write_text(f'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Liar pages (SIM)</title><p>SIM test pages for Fish Market claim checks and Shield. Not real stores.</p><ul>{links}</ul>')
     return out
 
 

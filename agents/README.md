@@ -3,22 +3,22 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-Fetch.ai uAgents for Tech Bazaar. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with five seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
+Fetch.ai uAgents for Fish Market. The agentic marketplace where buyers and sellers thrive. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with five seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
 
 ## Agents
 
 | Agent | Role | Agentverse address | Status |
 |---|---|---|---|
-| Tech Bazaar Buyer (@techbazaarbuyer) | Goal in ASI:One (Chat Protocol), ownership memory, sealed round, approval, Payment Protocol (buyer side) | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered on Agentverse (mailbox) |
-| Tech Bazaar Quality Advocate (@techbazaaradvocate) | Checks fit with Lane C's checker; compares condition fields and SIM price history, recall and seller-record fixtures. At most 3 warnings with sources; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered on Agentverse (mailbox) |
+| Fish Market Buyer (@techbazaarbuyer) | Goal in ASI:One (Chat Protocol), ownership memory, sealed round, approval, Payment Protocol (buyer side) | `agent1qwxhy93uzmw5prlqldm8a2mz9gsmc2563um6th2l6z0pudw63juej97nmj8` | Registered on Agentverse (mailbox) |
+| Fish Market Quality Advocate (@techbazaaradvocate) | Checks fit with Lane C's checker; compares condition fields and SIM price history, recall and seller-record fixtures. At most 3 warnings with sources; can veto the cheapest bid; never sees the fee | `agent1qvxvlletez0ywdcq7da76ufzz4lvh5xvtd4fxam22g6phqzr07kvjcmhv05` | Registered on Agentverse (mailbox) |
 | Byte Bros Outlet (@techbazaarseller1) | **Job: learns.** A loss report's banded gap becomes a price step, never below its floor (SIM) | `agent1qd3gvg54tsaezed0wzpgg34rza4y6kvvfd778nj6h27j20k99d38zd3et9m` | Registered on Agentverse (mailbox) |
 | Silicon Sally's Surplus (@techbazaarseller2) | Not run (same job as ReNew Refurb). Code and data kept for the web arena and tests | `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np` | Registered on Agentverse (mailbox) |
 | FlashDeal Frankie (@techbazaarseller3) | **Job: lies.** Its bid says new, its page says open-box; the Advocate vetoes it with the source (SIM, planted) | `agent1qdcrmqy2ra2tvshq2qhc8q5rvqzpr7du77st32qynwazy48gtuvyspdm26l` | Registered on Agentverse (mailbox) |
 | Bay Area PC Shop (@techbazaarseller4) | Not run (same job as Byte Bros Outlet). Code and data kept for the web arena and tests | not registered | Not run |
 | ReNew Refurb (@techbazaarseller5) | **Job: bundles.** Refurbished and open-box lines of one part in one bid, condition on every line (SIM), port 8015 | assigned when registered | Not registered yet: manual mailbox step, see below |
 | Central Comp MIRROR (seller_6) | **Job: real store.** Bids a real San Francisco store's dated listings (MIRROR) for comparison; never ordered, charged or paid. Port 8016 | assigned when registered | Not registered yet: needs a private SELLER_6_AGENT_SEED and `connect.py 8016` |
-| Tech Bazaar Shield Client (@techbazaarshield) | Chat front door to the existing Shield HTTP screening service; no purchases or payments | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered on Agentverse (mailbox) |
-| Bazaar Caller (@techbazaarcaller) | Places the one approval phone call for a mandate through pay/ (caller/relay.py) and returns a CallResult; requests only from the buyer, one call per mandate; approves and charges nothing itself. Port 8006 | assigned when registered | Runs locally (`python caller/caller_agent.py`); not registered yet: manual mailbox step with `CALLER_MAILBOX=1`, see docs/FETCH_DISCOVERABILITY.md |
+| Fish Market Smell Test (@techbazaarshield) | Chat front door to the existing Shield HTTP screening service; no purchases or payments | `agent1q0m2z43cf3hg4cfy87hatf69ulyqkvuylm6mjv53e6y05weqmhjj6k4lknp` | Registered on Agentverse (mailbox) |
+| Fish Market Caller (@techbazaarcaller) | Places the one approval phone call for a mandate through pay/ (caller/relay.py) and returns a CallResult; requests only from the buyer, one call per mandate; approves and charges nothing itself. Port 8006 | assigned when registered | Runs locally (`python caller/caller_agent.py`); not registered yet: manual mailbox step with `CALLER_MAILBOX=1`, see docs/FETCH_DISCOVERABILITY.md |
 | Market Pulse (@techbazaarpulse) | Answers price-trend and seller-record questions in chat from Tiger Data, the CRS cache and finished rounds; accepts a finished round only from PULSE_ROUND_SENDERS. Port 8018 | assigned when registered | Runs locally (`python pulse/orchestrator.py --serve`); not registered yet: manual mailbox step, see docs/FETCH_DISCOVERABILITY.md |
 
 **Sellers: four, each with one job (#398).** Byte Bros learns, FlashDeal Frankie lies and gets caught, ReNew Refurb bundles conditions, and the Central Comp MIRROR bids a real store's prices. `sellers/run_all.py` does not start Sally or Bay Area (`common.RETIRED_SELLERS`), and the buyer does not ask them. Caveat: ReNew and the MIRROR have no Market identity, so only Byte Bros and Frankie appear on the hosted board.
@@ -177,8 +177,8 @@ Live sandbox proof: the CRS login returned HTTP 200, and the operator-approved o
 
 ## Names and avatars (#259)
 
-Display names share one family: Tech Bazaar Buyer, Tech Bazaar Quality Advocate, Tech Bazaar Shield Client,
-Bazaar Caller, plus the five seller personas. A rename keeps the Agentverse address, because the address comes from
+Display names share one family: Fish Market Buyer, Fish Market Quality Advocate, Fish Market Smell Test,
+Fish Market Caller, plus the five seller personas. A rename keeps the Agentverse address, because the address comes from
 the agent's seed. Still to rename after the stacked Lane A PRs land (they edit the same files): seller_2 "Silicon
 Sally's Surplus" (23 characters). Avatars are in `avatars/` with the upload steps.
 

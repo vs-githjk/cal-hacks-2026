@@ -1,4 +1,4 @@
-# Tech Bazaar Buyer
+# Fish Market Buyer
 
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
@@ -25,11 +25,11 @@ Then it phones you to approve the bid it recommends: say the spoken code on the 
 
 Seller listings and prices in this demo are simulated (SIM). No real money moves: payments are Stripe test mode.
 
-Built at Cal Hacks 13.0 by the Tech Bazaar team.
+Built at Cal Hacks 13.0 by the Fish Market team.
 
 ## Summary
 
-Tech Bazaar's buying agent: one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves (by phone call only).
+Fish Market's buying agent (The agentic marketplace where buyers and sellers thrive): one goal in, sealed seller bids, an advocate's review with sources, and a purchase only after the buyer approves (by phone call only).
 
 ## Features
 
