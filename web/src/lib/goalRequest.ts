@@ -118,7 +118,7 @@ export function catalogSku(text: string): string | null {
 export function postGoalArgs(request: GoalRequest, buyerId: string, today: Date): PostGoalArgs | { error: string } {
   if (request.cap === null) return { error: "Add a top price so sellers know your cap." };
   const skuSpec = catalogSku(request.requestText);
-  if (skuSpec === null) return { error: "Sellers tonight don't carry that part. Pick one below: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case." };
+  if (skuSpec === null) return { error: "Sellers tonight don't carry that part. Tap one above: RTX 5070 Ti, RTX 4070 Super, RX 7800 XT, an 850W or 750W PSU, or a PC case." };
   const day = request.deadline ?? ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7));
   return {
     id: `g_${request.requestId.replace(/[^A-Za-z0-9]/g, "").slice(0, 12)}`,
