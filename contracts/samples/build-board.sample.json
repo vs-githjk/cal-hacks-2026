@@ -4,7 +4,7 @@
     {"part": "psu", "label": "750 W PSU", "status": "owned", "budget": 0},
     {"part": "case", "label": "Case (305 mm GPU room)", "status": "owned", "budget": 0},
     {"part": "gpu", "label": "RTX 5070 Ti", "status": "locked", "budget": 1260, "needId": "need-gpu", "roundId": "round-gpu",
-     "champion": {"bidId": "b-gpu-2", "sellerId": "central_computers_sf", "persona": "Central Computers (SF)", "landed": 1249.99, "origin": "MIRROR", "sourceUrl": "https://www.centralcomputer.com/"}},
+     "champion": {"bidId": "b-gpu-2", "sellerId": "seller_4", "persona": "Micro Center", "landed": 1249.99, "origin": "SIM", "sourceUrl": ""}},
     {"part": "cpu", "label": "8-core CPU", "status": "locked", "budget": 280, "needId": "need-cpu", "roundId": "round-cpu",
      "champion": {"bidId": "b-cpu-1", "sellerId": "seller_1", "persona": "Best Buy", "landed": 279.0, "origin": "SIM", "sourceUrl": ""}},
     {"part": "board", "label": "AM5 B650 board", "status": "replanned", "budget": 190, "needId": "need-board-2", "roundId": "round-board-2",
@@ -15,7 +15,7 @@
     {"part": "ssd", "label": "2 TB NVMe", "status": "locked", "budget": 120, "needId": "need-ssd", "roundId": "round-ssd",
      "champion": {"bidId": "b-ssd-1", "sellerId": "seller_1", "persona": "Best Buy", "landed": 119.0, "origin": "SIM", "sourceUrl": ""}},
     {"part": "cooler", "label": "Tower cooler", "status": "locked", "budget": 55, "needId": "need-cooler", "roundId": "round-cooler",
-     "champion": {"bidId": "b-cool-2", "sellerId": "central_computers_sf", "persona": "Central Computers (SF)", "landed": 52.0, "origin": "SIM", "sourceUrl": ""}}
+     "champion": {"bidId": "b-cool-2", "sellerId": "seller_2", "persona": "B&H", "landed": 52.0, "origin": "SIM", "sourceUrl": ""}}
   ],
   "checks": [
     {"a": "cpu", "b": "board", "rule": "socket", "state": "ok", "detail": "AM5 and AM5", "source": "fit.socket"},
