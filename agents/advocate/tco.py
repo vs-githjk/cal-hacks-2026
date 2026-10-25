@@ -36,7 +36,7 @@ def _num(v, minimum=0.0):
 
 
 def _seller(sid) -> str:
-    return f"Seller {sid}" if re.fullmatch(r"seller_\d{1,3}", str(sid)) else "This seller"
+    return f"Seller {sid}" if re.fullmatch(r"seller_\d{1,3}", str(sid)) else "this seller"
 
 
 def _norm(s) -> str:
@@ -142,7 +142,7 @@ def rank(need: dict, bids: list[dict], cards: list[dict], track: dict | None = N
     else:
         head += (f" That is ${top['landed'] - cheapest['landed']:.2f} more than the lowest landed price "
                  f"({cheapest['seller']}, ${cheapest['landed']:.2f}) but ${cheapest['tco'] - top['tco']:.2f} cheaper all in.")
-    notes = [_record_text(top)] + ([f"{top['seller']}: {', '.join(top['missing'])} not stated, so no credit was given"]
+    notes = [_record_text(top)] + ([f"no credit was given for {', '.join(top['missing'])}, which the bid does not state"]
                                    if top["missing"] else [])
     return {"ranking": ranked, "excluded": excluded, "advisory": True,
             "note": f"{head} {'. '.join(n[0].upper() + n[1:] for n in notes)}. Advisory only: the referee's ranking by landed price stays the rule."}
