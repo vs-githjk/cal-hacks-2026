@@ -90,7 +90,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
         </a>
       )}
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {kpis.map((k) => <KpiCard key={k.id} kpi={k} />)}
       </div>
 
@@ -102,6 +102,8 @@ export function BuyerScreen(p: BuyerScreenProps) {
         <span id="needs-you" className="scroll-mt-24" />
       )}
 
+      {goal ? (
+        <>
       <Section id="bids" title="Live bids">
         {p.bids.length > 0 ? (
           <>
@@ -133,11 +135,17 @@ export function BuyerScreen(p: BuyerScreenProps) {
         )}
         <AgentFeed items={p.feed} />
       </Section>
-
       <Section id="new-search" title="New search">
         {p.composer}
         <Searches goals={p.goals} />
       </Section>
+        </>
+      ) : (
+      <Section id="new-search" title="New search">
+        {p.composer}
+        <Searches goals={p.goals} />
+      </Section>
+      )}
 
       <div id="allowance" className="scroll-mt-24">
         <Details summary="Your allowance, your rig and the agent log" className="mt-2">

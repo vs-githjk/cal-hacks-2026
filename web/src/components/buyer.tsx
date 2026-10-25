@@ -66,9 +66,9 @@ export function StatePill({ state }: { state: GoalView["state"] }) {
 /** One KPI: a muted label, one bold value, one muted line and an optional status dot. The whole card links to its section. */
 export function KpiCard({ kpi }: { kpi: BuyerKpi }) {
   return (
-    <a href={kpi.href} className="card flex min-w-0 flex-col gap-1.5 p-4 transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-pulse md:p-5">
+    <a href={kpi.href} className="card flex min-w-0 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4 transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-pulse md:p-5">
       <span className="text-[13px] text-muted">{kpi.label}</span>
-      <span className="truncate text-[22px]/[28px] font-semibold tabular-nums tracking-[-0.01em] text-ink">{kpi.value}</span>
+      <span className="truncate text-[20px]/[26px] font-semibold tabular-nums tracking-[-0.01em] text-ink sm:text-[22px]/[28px]">{kpi.value}</span>
       <span className="text-[13px] leading-[18px] text-muted">{kpi.line}</span>
       {kpi.dot && kpi.word && <StatusDot dot={kpi.dot}>{kpi.word}</StatusDot>}
     </a>
@@ -232,7 +232,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
 }
 
 function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
-  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted ${right ? "text-right" : "text-left"}`}>{children}</th>;
+  return <th className={`whitespace-nowrap border-b border-line px-2.5 pb-2 pt-1.5 text-[12px]/[16px] font-medium text-muted ${right ? "text-right" : "text-left"}`}>{children}</th>;
 }
 function Td({ children, right, className = "" }: { children: React.ReactNode; right?: boolean; className?: string }) {
   return <td className={`border-b border-line p-2.5 align-top ${right ? "whitespace-nowrap text-right" : ""} ${className}`}>{children}</td>;
@@ -308,7 +308,7 @@ export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
       {approval.wordPair && (
         <>
           <div className="my-3 rounded-xl bg-surface-2 px-4 py-4 text-center">
-            <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+            <div className="mb-1 text-[12px] font-medium text-muted">Say this, then &quot;approve&quot;</div>
             <div className="font-mono text-[32px]/[36px] font-medium tracking-[0.04em] md:text-[40px]/[44px]">{approval.wordPair}</div>
           </div>
           <p className="text-[13px] text-muted">One use. {done ? "Expired" : "Expires"} {clock(approval.codeExpiresAt)}.</p>
@@ -346,7 +346,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
       </h3>
       <p className="text-[13px] tabular-nums text-muted">{allowance === null ? "No allowance set" : `Above your ${money(allowance)} allowance`}. We are calling you.</p>
       <div className="my-3 rounded-xl bg-surface-2 px-4 py-4 text-center">
-        <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+        <div className="mb-1 text-[12px] font-medium text-muted">Say this, then &quot;approve&quot;</div>
         <div className="font-mono text-[32px]/[36px] font-medium tracking-[0.04em] md:text-[40px]/[44px]">{review.code}</div>
       </div>
       <p className="text-[13px] font-semibold">Only the call approves. Nothing on this screen can.</p>
@@ -402,7 +402,7 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
             <li key={f.key} className="grid grid-cols-[72px_1fr] items-baseline gap-2.5 border-b border-line py-2 text-[14px] last:border-b-0">
               <span className="font-mono text-[12px] text-muted">{clock(f.at)}</span>
               <span className="min-w-0 [overflow-wrap:anywhere]">
-                <span className={`mb-px block text-[12px]/[16px] font-medium uppercase tracking-[0.04em] ${FEED_STYLE[f.kind]}`}>{f.title}</span>
+                <span className={`mb-px block text-[12px]/[16px] font-medium ${FEED_STYLE[f.kind]}`}>{f.title.charAt(0) + f.title.slice(1).toLowerCase()}</span>
                 {f.text} {f.origin && <OriginChip origin={f.origin} />}
               </span>
             </li>

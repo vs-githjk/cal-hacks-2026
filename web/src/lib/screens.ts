@@ -361,8 +361,9 @@ function classify(kind: string, label: string): FeedKind | null {
 
 interface NoteRow { id: bigint; klass: string; text: string; at: Timestamp }
 
-export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[]): FeedItem[] {
-  const fromEvents = events.flatMap((e): FeedItem[] => {
+/** `mine`: ids (goals, rounds, bids) that belong to this buyer; floor events whose ref is not in it are dropped. Omit to keep all. */
+export function feedFromRows(events: readonly EventRow[], notes: readonly NoteRow[], mine?: ReadonlySet<string>): FeedItem[] {
+  const fromEvents = events.filter((e) => !mine || mine.has(e.refId)).flatMap((e): FeedItem[] => {
     const kind = classify(e.kind, e.label);
     return kind ? [{ key: `e${e.id}`, at: d(e.at), kind, title: FEED_TITLE[kind], text: e.label, origin: asOrigin(e.origin) }] : [];
   });
@@ -586,7 +587,11 @@ export function buyerKpis(goals: readonly GoalView[], bids: readonly RankedBid[]
 
   const allow: BuyerKpi = {
     id: "allowance", label: "Allowance", value: allowance ? formatMoney(allowance.perPurchase) : "Not set",
-    line: receiptsCount > 0 ? `${receiptsCount} ${receiptsCount === 1 ? "purchase" : "purchases"}` : "No purchases yet", href: "#allowance",
+    line: (() => {
+      const n = receiptsCount > 0 ? `${receiptsCount} ${receiptsCount === 1 ? "purchase" : "purchases"}` : "";
+      if (allowance && allowance.perPurchase === 0) return n ? `Every purchase needs your OK · ${n}` : "Every purchase needs your OK";
+      return n || "No purchases yet";
+    })(), href: "#allowance",
   };
   return [search, offer, needs, allow];
 }

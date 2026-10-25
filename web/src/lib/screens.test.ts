@@ -431,3 +431,17 @@ test("buyerKpis: review, goal state, allowance and purchases", () => {
   assert.equal(k[3]!.value, "$120");
   assert.equal(k[3]!.line, "2 purchases");
 });
+
+test("feedFromRows with a scope drops events of another buyer's goal", () => {
+  const evs = [event({ id: 1n, kind: "goal_set", refTable: "goal", refId: "goal-mine", label: "A buyer set a goal" }), event({ id: 2n, kind: "goal_set", refTable: "goal", refId: "goal-other", label: "A buyer set a goal" })];
+  const all = feedFromRows(evs, []);
+  const scoped = feedFromRows(evs, [], new Set(["goal-mine"]));
+  assert.equal(scoped.length, all.length - 1);
+  assert.ok(scoped.every((f) => f.key !== "e2"));
+});
+
+test("buyerKpis: a zero allowance says every purchase needs your OK", () => {
+  const al = { perPurchase: 0, periodLimit: 0, period: "week", spent: 0, ladderStep: 0 };
+  assert.equal(buyerKpis([], [], null, al, 0)[3]!.line, "Every purchase needs your OK");
+  assert.equal(buyerKpis([], [], null, al, 2)[3]!.line, "Every purchase needs your OK · 2 purchases");
+});

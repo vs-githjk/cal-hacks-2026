@@ -27,7 +27,6 @@ export default function BuyerPage() {
   const goals = useMemo(() => goalsForBuyer(goalRows, goalItems, allowances[0], buyerId, notes), [goalRows, goalItems, allowances, buyerId, notes]);
   const allowance = useMemo(() => allowanceForBuyer(allowances, buyerId), [allowances, buyerId]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
-  const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
   // #449 item 4 PL-12: an expired code never shows (recomputed each second), and a paired screen never shows the sample code.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -36,6 +35,14 @@ export default function BuyerPage() {
   const veto = useMemo(() => vetoFromRows(checks, results, roundId), [checks, results, roundId]);
   const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);
   const deal = useMemo(() => dealFromRows(deals, goals[0]?.allowance?.perPurchase ?? null, results), [deals, goals, results]);
+  // Floor events are market-wide: keep only those that point at this buyer's goals, or at rounds and bids that belong to them.
+  const feed = useMemo(() => {
+    const mine = new Set<string>(goals.map((g) => g.id));
+    const myRounds = rounds.filter((r) => goals.some((g) => r.needId === g.id || r.needId.endsWith(g.id)));
+    for (const r of myRounds) mine.add(r.id);
+    for (const x of results) if (myRounds.some((r) => r.id === x.roundId)) mine.add(x.bidId);
+    return feedFromRows(events, notes, mine);
+  }, [goals, rounds, results, events, notes]);
   const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
   const roundOpen = (() => { const r = latestRound(rounds); return !!r && r.state !== "closed"; })();
   const receiptsCount = useMemo(() => deals.filter((x) => x.paidAt).length, [deals]);
