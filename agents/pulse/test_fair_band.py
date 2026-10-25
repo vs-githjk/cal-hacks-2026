@@ -235,9 +235,10 @@ def test_tiger_prices_reads_rows_for_one_sku_and_never_leaks_the_url(monkeypatch
 
     class Conn(FakeConn):
         def cursor(self):
-            return Cur([(125000, NOW - timedelta(hours=2), "MIRROR"), (None, NOW, "SIM")])
+            return Cur([(125000, NOW - timedelta(hours=2), "MIRROR", "https://shop.example/p/1"), (None, NOW, "SIM", None)])
     out = FB.tiger_prices(SKU, 30, connect=lambda: Conn([]))
-    assert out["status"] == "ok" and out["rows"] == [{"price_cents": 125000, "ts": NOW - timedelta(hours=2), "origin": "MIRROR"}]
+    assert out["status"] == "ok" and out["rows"] == [{"price_cents": 125000, "ts": NOW - timedelta(hours=2), "origin": "MIRROR",
+                                                      "url": "https://shop.example/p/1"}]
     assert seen["params"][0] == SKU and "in_stock" in seen["sql"] and "LIMIT" in seen["sql"]
 
 
@@ -265,3 +266,49 @@ def test_cli_tiger_check_says_whether_tiger_holds_rows(monkeypatch, capsys):
     monkeypatch.delenv(store.ENV, raising=False)
     assert FB.main(["--tiger-check"]) == 0
     assert "not_configured" in capsys.readouterr().out
+
+
+# ---- the buyer's advisory call: fair_band(sku) -> {low, high, as_of, source_url} or None -----------------------------
+
+def test_the_buyers_call_gets_low_high_as_of_and_a_source_url_from_dated_tiger_rows():
+    rows = [dict(trow(c, d), url=u) for c, d, u in ((120000, 3, "https://shop.example/old"), (125000, 1, "https://shop.example/new"),
+                                                    (130000, 2, ""))]
+    out = FB.fair_band(SKU, tiger_rows=tiger(rows), snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW)
+    assert {"low", "high", "as_of", "source_url"} <= set(out)
+    assert isinstance(out["low"], float) and isinstance(out["high"], float) and out["low"] <= out["high"]
+    assert out["as_of"] == "2026-10-24" and out["source_url"] == "https://shop.example/new"      # the newest price that names its page
+
+
+def test_the_buyers_call_takes_the_page_of_a_dated_snapshot_when_tiger_has_no_rows():
+    snaps = [snap(1250.0, url="https://www.bestbuy.com/p/1"), snap(1260.0, url="not a url"), snap(1270.0, observed="2026-10-23T05:00:00Z")]
+    out = FB.fair_band(SKU, tiger_rows=tiger([], "not_configured"), snapshots=lambda: snaps, catalog=lambda: [], now=lambda: NOW)
+    assert out["source_url"] == "https://www.bestbuy.com/p/1" and out["origin"] == "MIRROR" and out["as_of"] == "2026-10-24"
+
+
+def test_the_buyers_call_is_none_when_there_is_no_dated_data_even_if_sim_listings_exist():
+    none = dict(tiger_rows=tiger([], "not_configured"), snapshots=lambda: [], now=lambda: NOW)
+    assert FB.fair_band("unobtainium 9000", catalog=lambda: [], **none) is None
+    assert FB.fair_band(SKU, catalog=lambda: CATALOG, **none) is None                  # a SIM band is not dated price data
+    sim_rows = [trow(c, 1, "SIM") for c in (100000, 110000, 120000)]
+    assert FB.fair_band(SKU, tiger_rows=tiger(sim_rows), snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW) is None
+
+
+@pytest.mark.parametrize("bad", ["", "   ", None, 5, ["rtx"]])
+def test_the_buyers_call_never_raises_on_a_bad_sku(bad):
+    assert FB.fair_band(bad, tiger_rows=tiger([]), snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW) is None
+
+
+def test_the_buyers_call_is_deterministic_and_never_changes_its_inputs():
+    rows = [trow(c, 1) for c in (120000, 125000, 127900, 130000, 135000)]
+    snapshot = list(rows)
+    args = dict(tiger_rows=tiger(rows), snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW)
+    assert FB.fair_band(SKU, **args) == FB.fair_band(SKU, **args) and rows == snapshot
+
+
+def test_the_buyers_call_works_from_the_agents_folder_import_path_with_no_data():
+    import subprocess
+    code = "import sys; sys.path.insert(0, 'agents'); from pulse.fair_band import fair_band; print(fair_band('zzz unknown part'))"
+    out = subprocess.run([sys.executable, "-I", "-c", code], cwd=ROOT, capture_output=True, text=True,
+                         env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin"})
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "None"

@@ -2,7 +2,9 @@
 
     from agents.pulse.fair_band import fair_band          # or: from pulse.fair_band import fair_band (agents/ on sys.path)
     fair_band("rtx 5070 ti") -> {"low": 1250.0, "median": 1279.0, "high": 1300.0, "n": 12, "as_of": "2026-10-25",
-                                 "source": "Tiger Data price_obs, last 7 days (...)", ...}
+                                 "source": "Tiger Data price_obs, last 7 days (...)", "source_url": "https://...", ...}
+                                or None when there is no DATED price data (unknown part, only SIM prices). Advisory: it never ranks.
+    FairBands().band("rtx 5070 ti")   # the same, but never None: SIM and "no data" answers too (what Pulse chat uses)
 
 low, median and high are the 25th, 50th and 75th percentile of in-stock retail asks, in US dollars (a typical range, so one
 trap price or one gouger does not move it). n is how many prices they come from. as_of is the date of the newest one.
@@ -53,7 +55,7 @@ TIGER_SRC = "Tiger Data price_obs"
 SNAPSHOT_SRC = "MIRROR snapshots (data/baselines feed)"
 SIM_SRC = "SIM seller listings (agents/sellers/sellers.json)"
 
-_PRICES_SQL = ("SELECT price_cents, ts, origin FROM price_obs WHERE sku = %s AND in_stock "
+_PRICES_SQL = ("SELECT price_cents, ts, origin, url FROM price_obs WHERE sku = %s AND in_stock "
                "AND ts >= now() - make_interval(days => %s) ORDER BY ts DESC LIMIT " + str(MAX_ROWS))
 _COUNTS_SQL = "SELECT origin, count(*), max(ts) FROM price_obs GROUP BY origin"
 
@@ -106,16 +108,16 @@ def _dollars(v: float) -> float:
 
 def _stats(obs: list[tuple[datetime, float, str]], window: Optional[int]) -> dict:
     """The band block for observations (time, dollars, origin) already cut to the window."""
-    prices = sorted(p for _, p, _ in obs)
+    prices = sorted(o[1] for o in obs)
     block = {"window_days": window, "n": len(prices), "low": None, "median": None, "high": None, "days_of_data": 0, "as_of": None,
              "origins": []}
     if not prices:
         return block
-    times = [t for t, _, _ in obs]
+    times = [o[0] for o in obs]
     span = (max(times) - min(times)).days + 1
     block.update(low=_dollars(_percentile(prices, 0.25)), median=_dollars(_percentile(prices, 0.5)),
                  high=_dollars(_percentile(prices, 0.75)), as_of=_iso_day(max(times)),
-                 days_of_data=min(span, window) if window else span, origins=sorted({o for _, _, o in obs}))
+                 days_of_data=min(span, window) if window else span, origins=sorted({o[2] for o in obs}))
     return block
 
 
@@ -132,7 +134,7 @@ def _short(block: dict) -> str:
 # ---------------------------------------------------------------- the three sources
 
 def tiger_prices(sku: str, days: int, *, connect: Optional[Callable] = None) -> dict:
-    """{status, rows: [{price_cents, ts, origin}]} for one SKU's in-stock asks in the last `days`. Not configured and error
+    """{status, rows: [{price_cents, ts, origin, url}]} for one SKU's in-stock asks in the last `days`. Not configured and error
     answers carry no rows. The connection string is never in an answer."""
     def work(conn):
         with conn.cursor() as cur:
@@ -144,7 +146,7 @@ def tiger_prices(sku: str, days: int, *, connect: Optional[Callable] = None) -> 
         return {"status": "not_configured", "rows": []}
     except store.TigerError:
         return {"status": "error", "rows": []}
-    rows = [{"price_cents": int(c), "ts": ts, "origin": o} for c, ts, o in raw
+    rows = [{"price_cents": int(c), "ts": ts, "origin": o, "url": u if isinstance(u, str) else ""} for c, ts, o, u in raw
             if isinstance(c, (int, float)) and not isinstance(c, bool) and c > 0 and isinstance(ts, datetime)]
     return {"status": "ok", "rows": rows}
 
@@ -193,7 +195,11 @@ def default_catalog() -> list[dict]:
     return out
 
 
-def _snapshot_obs(rows: list[dict], sku: str) -> list[tuple[datetime, float, str]]:
+def _url(value: Any) -> str:
+    return value if isinstance(value, str) and value.startswith(("http://", "https://")) else ""
+
+
+def _snapshot_obs(rows: list[dict], sku: str) -> list[tuple[datetime, float, str, str]]:
     """Comparable observations of one SKU: retail asks in stock, new or condition unstated. Sold prices, marketplace asks, the
     local store's own listings and out-of-stock rows never enter (the baselines rule: an outlier must not set a fair price)."""
     out = []
@@ -203,7 +209,7 @@ def _snapshot_obs(rows: list[dict], sku: str) -> list[tuple[datetime, float, str
                 or not r.get("in_stock") or r.get("condition") not in COMPARABLE_CONDITIONS or at is None
                 or isinstance(price, bool) or not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 0):
             continue
-        out.append((at, float(price), _origin(r.get("origin"))))
+        out.append((at, float(price), _origin(r.get("origin")), _url(r.get("url"))))
     return out
 
 
@@ -226,7 +232,7 @@ class FairBands:
         except Exception:  # noqa: BLE001  (a provider that raises is an error answer, never a crash before a round)
             got = {"status": "error", "rows": []}
         status = got.get("status") if isinstance(got, dict) else "error"
-        tiger_obs = [(_aware(r["ts"]), r["price_cents"] / 100, _origin(r["origin"])) for r in (got.get("rows") or [])
+        tiger_obs = [(_aware(r["ts"]), r["price_cents"] / 100, _origin(r["origin"]), _url(r.get("url"))) for r in (got.get("rows") or [])
                      if isinstance(got, dict) and isinstance(r.get("ts"), datetime) and isinstance(r.get("price_cents"), int)]
         tiger_obs = _window_obs(tiger_obs, now, max(WINDOWS))
         if tiger_obs:
@@ -234,11 +240,11 @@ class FairBands:
         state = "no_rows" if status == "ok" else status if status in ("not_configured", "error") else "error"
         snaps = _window_obs(_snapshot_obs(self.snapshots(), sku), now, max(WINDOWS))
         if snaps:
-            dated = _iso_day(max(t for t, _, _ in snaps))
+            dated = _iso_day(max(o[0] for o in snaps))
             return self._windowed(sku, now, snaps, f"{SNAPSHOT_SRC}, dated {dated}", state, note=f"Tiger Data has no rows to use ({state.replace('_', ' ')})")
         sim = sorted(c["price"] for c in self.catalog() if c.get("sku") == sku)
         if sim:
-            block = _stats([(now, p, "SIM") for p in sim], None)
+            block = _stats([(now, p, "SIM", "") for p in sim], None)
             return self._result(sku, block, {}, SIM_SRC, "SIM", state,
                                 f"{sku.upper()}: simulated price from {len(sim)} SIM listing{'' if len(sim) == 1 else 's'}, "
                                 f"no price history yet [{SIM_SRC}; SIM]")
@@ -257,21 +263,34 @@ class FairBands:
                  f"({head['n']} price{'' if head['n'] == 1 else 's'}, last {head['window_days']} days{_short(head)}, "
                  f"as of {head['as_of']}) [{source}; {origin}]" + (" Thin: fewer than 3 prices." if head["n"] < MIN_N else "")
                  + (f" {note}." if note else ""))
-        return self._result(sku, head, windows, src, origin, tiger, label)
+        in_head = _window_obs(obs, now, head["window_days"])
+        newest = max((o for o in in_head if o[3]), key=lambda o: o[0], default=None)   # the newest price that names its page
+        return self._result(sku, head, windows, src, origin, tiger, label, newest[3] if newest else "")
 
     @staticmethod
-    def _result(sku: str, head: dict, windows: dict, source: str, origin: str, tiger: str, label: str) -> dict:
+    def _result(sku: str, head: dict, windows: dict, source: str, origin: str, tiger: str, label: str, source_url: str = "") -> dict:
         return {"sku": sku, "low": head["low"], "median": head["median"], "high": head["high"], "n": head["n"], "as_of": head["as_of"],
-                "source": source, "origin": origin, "label": label, "window_days": head["window_days"],
+                "source": source, "source_url": source_url, "origin": origin, "label": label, "window_days": head["window_days"],
                 "windows": {k: {kk: v[kk] for kk in ("window_days", "n", "low", "median", "high", "days_of_data", "as_of")}
                             for k, v in windows.items()},
                 "thin": 0 < head["n"] < MIN_N, "tiger": tiger}
 
 
-def fair_band(part_sku: str, **providers) -> dict:
-    """The fair-price band for one part: {low, median, high, n, as_of, source} plus origin, label, windows. `providers` are
-    FairBands' (tiger_rows, snapshots, catalog, now, tiger): the defaults read Tiger Data, the dated snapshots and the SIM catalog."""
-    return FairBands(**providers).band(part_sku)
+def fair_band(part_sku: str, **providers) -> Optional[dict]:
+    """The fair-price band of one part from DATED price data (Tiger Data rows, else dated MIRROR snapshots), or None when there is
+    none: an unknown part, a blank or non-text sku, or only simulated prices. Never raises, never ranks anything: it is advice.
+
+        {"low": 1250.0, "median": 1279.0, "high": 1300.0, "n": 12, "as_of": "2026-10-25", "source": "...", "source_url": "https://...",
+         "origin": "MIRROR", "label": "...", "window_days": 7, "windows": {...}, "thin": False, "tiger": "rows"}
+
+    low and high are the 25th and 75th percentile of in-stock retail asks, in dollars; source_url is the page of the newest price
+    in the window ("" when none names a page). The same inputs and the same clock give the same answer. `providers` are FairBands'
+    (tiger_rows, snapshots, catalog, now, tiger). For the full answer including SIM and "no data", use FairBands(...).band(sku)."""
+    try:
+        band = FairBands(**providers).band(part_sku)
+    except ValueError:
+        return None
+    return band if band["n"] and band["origin"] not in ("SIM", "no data") else None
 
 
 # ---------------------------------------------------------------- the public pulse

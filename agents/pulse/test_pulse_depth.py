@@ -254,7 +254,7 @@ def test_a_round_from_the_referee_refreshes_the_public_pulse_for_the_parts_it_pr
 
 def test_the_buyer_can_import_fair_band_from_the_agents_folder_path():
     import subprocess
-    code = "import sys; sys.path.insert(0, 'agents'); from pulse.fair_band import fair_band; print(sorted(fair_band('zzz unknown part')))"
+    code = "import sys; sys.path.insert(0, 'agents'); from pulse.fair_band import FairBands; print(sorted(FairBands().band('zzz unknown part')))"
     out = subprocess.run([sys.executable, "-I", "-c", code], cwd=ROOT, capture_output=True, text=True,
                          env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin"})
     assert out.returncode == 0, out.stderr
