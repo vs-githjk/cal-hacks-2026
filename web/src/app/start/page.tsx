@@ -1,5 +1,5 @@
 "use client";
-// Buyer sign-up: a name (and optional phone) creates the account, then the visitor lands on /buyer.
+// Buyer sign-up: a name and a phone (required, #449 PL-15: purchases are approved by a call to it) create the account, then the visitor lands on /buyer.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -86,7 +86,7 @@ export default function StartPage() {
           </label>
           <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
             Phone
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={`${field} text-[17px]`} />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} required={!code} type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 415 555 0100" className={`${field} text-[17px]`} />
             <span className="font-normal text-muted">We call you to approve purchases above your allowance.</span>
           </label>
           <label className="grid gap-1.5 text-[13px]/[18px] font-medium text-ink-2">
