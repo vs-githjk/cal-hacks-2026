@@ -1333,13 +1333,13 @@ describe('T11 contention: two buyers, one unit (stock holds)', () => {
 // ============================================================================================
 describe('handoffs: supplier_signal and missing items', () => {
   const sig = (over: Partial<Parameters<typeof m.recordSupplierSignal>[1]> = {}) =>
-    ({ supplierId: 'seller-a', stability: 'verified_stable', checkedAt: '2026-10-24T07:50:12Z', source: 'sandbox', ...over });
+    ({ supplierId: 'seller-a', stability: 'verified_stable', checkedAt: '2025-10-24T07:50:12Z', source: 'sandbox', ...over });
 
   it('record_supplier_signal: referee only, bands only, one public row per seller (latest wins)', () => {
     for (const who of [A, VIDYUT, STRANGER]) expect(() => run(who, (ctx) => m.recordSupplierSignal(ctx, sig()))).toThrow(/not allowed/);
     run(REF, (ctx) => m.recordSupplierSignal(ctx, sig()));
     run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ stability: 'not_verified', source: 'recorded' })));
-    expect([...h.db.supplierSignal.iter()]).toEqual([{ supplierId: 'seller-a', stability: 'not_verified', checkedAt: '2026-10-24T07:50:12Z', source: 'recorded' }]);
+    expect([...h.db.supplierSignal.iter()]).toEqual([{ supplierId: 'seller-a', stability: 'not_verified', checkedAt: '2025-10-24T07:50:12Z', source: 'recorded' }]);
   });
 
   it('record_supplier_signal refuses an unknown band or source and an unparseable time', () => {
@@ -1347,6 +1347,17 @@ describe('handoffs: supplier_signal and missing items', () => {
     expect(() => run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ source: 'crs-raw' })))).toThrow(/source/);
     expect(() => run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ checkedAt: 'yesterday' })))).toThrow(/checked_at/);
     expect([...h.db.supplierSignal.iter()]).toHaveLength(0);
+  });
+
+  it('#332 record_supplier_signal refuses a checked_at far in the future', () => {
+    expect(() => run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ checkedAt: '2099-01-01T00:00:00Z' })))).toThrow(/future/);
+    expect([...h.db.supplierSignal.iter()]).toHaveLength(0);
+  });
+
+  it('#332 a late relay of an older result never overwrites a newer one already on file', () => {
+    run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ stability: 'not_verified', checkedAt: '2025-10-24T08:00:00Z' })));
+    run(REF, (ctx) => m.recordSupplierSignal(ctx, sig({ stability: 'verified_stable', checkedAt: '2025-10-24T07:00:00Z' })));
+    expect(h.db.supplierSignal.supplierId.find('seller-a')).toMatchObject({ stability: 'not_verified', checkedAt: '2025-10-24T08:00:00Z' });
   });
 
   it('a partial bid on a multi-item need ranks with "missing: <items>" on its round_result row', () => {

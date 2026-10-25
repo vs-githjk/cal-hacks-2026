@@ -28,7 +28,8 @@ const day = (iso: string) => {
 };
 
 function formatValue(v: number, unit: string): string {
-  if (unit === "ratio") return `${Math.round(v * 100)}%`;
+  // #332: 0.996 must never read as "100%" when it has not reached 1.0.
+  if (unit === "ratio") return `${v < 1 ? Math.floor(v * 100) : Math.round(v * 100)}%`;
   if (unit === "USD") return formatMoney(v);
   if (unit === "points") return `${v > 0 ? "+" : ""}${v.toFixed(2)} pts`;
   return `${v} ${unit}`;
@@ -40,7 +41,8 @@ export function scoreboardTiles(file: unknown): TileView[] {
   return SCOREBOARD_IDS.flatMap((id) => {
     const t = (tiles as RawTile[]).find((x) => x?.id === id);
     if (!t) return [];
-    const has = typeof t.value === "number" && Number.isFinite(t.value);
+    // #332: a value only counts once the tile is actually measured; none_yet/not_quotable never show a leftover number.
+    const has = t.status === "measured" && typeof t.value === "number" && Number.isFinite(t.value);
     const from = day(t.date_range?.from ?? ""), to = day(t.date_range?.to ?? "");
     return [{
       id, title: t.title, value: has ? formatValue(t.value!, t.unit) : null, statusText: has ? null : STATUS_TEXT[t.status] ?? "No number",

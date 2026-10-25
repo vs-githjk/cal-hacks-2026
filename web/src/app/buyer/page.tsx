@@ -108,7 +108,7 @@ function BuyerView() {
   // veto, shield, approval and receipt rows (bid_check, mandate, approval, payment) are not public yet: those cards show the SIM sample.
   return (
     <BuyerScreen
-        crs={crs}
+      crs={crs}
       connecting={!goalsReady || !eventsReady}
       goal={goal}
       bids={sim ? asSim(sample.rankedBids) : liveBids}

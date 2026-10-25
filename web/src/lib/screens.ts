@@ -243,6 +243,7 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
       const ranked = r.rank > 0;
       const picked = r.lines[0];
       const refused = !ranked && r.reasons.some((x) => /floor/i.test(x));
+      const missing = ranked ? missingFrom(r.reasons) : null;
       return {
         rank: ranked ? r.rank : null,
         seller: r.persona || r.sellerId,
@@ -252,10 +253,12 @@ export function bidsFromRows(results: readonly ResultRow[], events: readonly Eve
         altLines: r.lines.slice(1).map((l) => ({ condition: cond(l.offeredCondition), unitPrice: l.unitPrice })),
         landed: r.landed,
         recommendation: card?.rec ?? (ranked ? "unchecked" : refused ? "refused" : "ineligible"),
-        why: r.reasons.join("; ") || card?.label || "",
+        // #332: a reason (eg. "missing: x") never silently drops the advocate's label; both show.
+        why: [r.reasons.join("; "), card?.label].filter(Boolean).join(" ") || "",
         sourceUrl: safeUrl(r.source) ?? undefined,
-        won: r.rank === 1 && card?.rec !== "veto",
-        ...(ranked && missingFrom(r.reasons) ? { missing: missingFrom(r.reasons)! } : {}),
+        // #332: a partial bid (missing items) is never shown as the winner, even at rank 1.
+        won: r.rank === 1 && card?.rec !== "veto" && !missing,
+        ...(missing ? { missing } : {}),
         rowRef: `round_result/${r.id}`,
       };
     });

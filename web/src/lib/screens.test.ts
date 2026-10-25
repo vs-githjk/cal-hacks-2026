@@ -166,3 +166,18 @@ test("Lane C #136: a partial bid (complete false) shows missing: <items> on /buy
   assert.equal(bidsFromRows(rows, [], "round-1").find((b) => b.seller === "GPU Only")!.missing, "psu-850w-atx3, case-nr200p");
   assert.deepEqual(linesFromRows(rows, [], round()).find((l) => l.seller === "GPU Only")!.outcome, { kind: "ranked", rank: 2, note: "missing: psu-850w-atx3, case-nr200p" });
 });
+
+// #332: when no complete bid exists, a partial bid can land at rank 1, but it is never shown as the winner.
+test("#332 a partial bid at rank 1 is never marked won, and its reason never drops the advocate's label", () => {
+  const rows = [result({ id: 1n, bidId: "bid-part", sellerId: "gpu-only", persona: "GPU Only", rank: 1, landed: 700, reasons: ["missing: psu-850w-atx3"] })];
+  const [b] = bidsFromRows(rows, [event({ kind: "advocate_card", refId: "bid-part", label: "Advocate: buy" })], "round-1");
+  assert.equal(b.rank, 1);
+  assert.equal(b.won, false);
+  assert.equal(b.missing, "psu-850w-atx3");
+  assert.match(b.why, /missing: psu-850w-atx3/);
+  assert.match(b.why, /Advocate: buy/); // the label is appended, not dropped, once there is a reason
+
+  // a complete, unflagged rank 1 bid is still won as before.
+  const [full] = bidsFromRows([result({ id: 2n, bidId: "bid-full", rank: 1, landed: 1500 })], [], "round-1");
+  assert.equal(full.won, true);
+});

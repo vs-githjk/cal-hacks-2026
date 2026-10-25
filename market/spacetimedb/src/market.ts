@@ -873,15 +873,21 @@ export function myBuyerProfileView(ctx: VCtx) {
 
 export const CRS_BANDS = ['verified_stable', 'caution', 'not_verified'];
 export const CRS_SOURCES = ['sandbox', 'recorded', 'live', 'mirror', 'simulated'];
+/** #332: a checked_at this far ahead of the server's clock cannot be real; refuse it rather than caching a forever-fresh row. */
+export const CRS_MAX_SKEW_MS = 5 * 60 * 1000;
 
-/** Referee only (Lane A's CRS adapter, relayed): store a seller's band. One row per seller; the latest check replaces it. */
+/** Referee only (Lane A's CRS adapter, relayed): store a seller's band. One row per seller; the latest check replaces it,
+ * but a late relay of an older result never overwrites a newer one already on file. */
 export function recordSupplierSignal(ctx: Ctx, a: { supplierId: string; stability: string; checkedAt: string; source: string }) {
   requireRole(ctx, 'record_supplier_signal', ['referee']);
   if (!a.supplierId) throw new SenderError('supplier id required');
   if (!CRS_BANDS.includes(a.stability)) throw new SenderError(`stability must be one of ${CRS_BANDS.join(', ')}`);
   if (!CRS_SOURCES.includes(a.source)) throw new SenderError(`source must be one of ${CRS_SOURCES.join(', ')}`);
   if (!/^\d{4}-\d{2}-\d{2}T/.test(a.checkedAt) || Number.isNaN(Date.parse(a.checkedAt))) throw new SenderError('checked_at must be an ISO time');
+  if (Date.parse(a.checkedAt) > ms(ctx.timestamp) + CRS_MAX_SKEW_MS) throw new SenderError('checked_at is too far in the future');
+  const existing = ctx.db.supplierSignal.supplierId.find(a.supplierId);
+  if (existing && Date.parse(a.checkedAt) < Date.parse(existing.checkedAt)) return; // a late relay of an older result: ignored, not an error
   const row = { supplierId: a.supplierId, stability: a.stability, checkedAt: a.checkedAt, source: a.source };
-  if (ctx.db.supplierSignal.supplierId.find(a.supplierId)) ctx.db.supplierSignal.supplierId.update(row);
+  if (existing) ctx.db.supplierSignal.supplierId.update(row);
   else ctx.db.supplierSignal.insert(row);
 }
