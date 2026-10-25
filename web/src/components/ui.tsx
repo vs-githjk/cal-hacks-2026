@@ -49,7 +49,7 @@ export function Label({ children }: { children: ReactNode }) {
   return <h2 className="mb-3 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">{children}</h2>;
 }
 
-export const README_URL = "https://github.com/vs-githjk/cal-hacks-2026#readme";
+export const README_URL = "https://github.com/vs-githjk/fish-market-nothing-fishy#readme";
 
 /** A part of Fish Market that only runs on your own machine, seen from the hosted site (#398): says so and links the README. The page fetches nothing. */
 export function RunsLocally({ what, children }: { what: string; children: ReactNode }) {

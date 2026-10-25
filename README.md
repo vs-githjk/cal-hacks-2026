@@ -74,16 +74,16 @@ Every bid, claim and screen carries a label driven by the `source` field in the 
 | CRS payee check | SANDBOX, env-gated | CRS sandbox with provided test identities. Run live on Oct 24 at 16:37 PDT: two simulated sellers came back verified_stable, one not_verified |
 | Approval call | LIVE | A real Cartesia outbound call to the buyer's own phone from sign-up |
 | Payment | SANDBOX | Stripe test mode only; every charging path refuses anything but an `sk_test_` key |
-| Request signing (Visa TAP) | LIVE code | Visa's Trusted Agent Protocol wire format (RFC 9421, Ed25519, nonce), verified against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/cal-hacks-2026/pull/387)). Used in the reference run and chat checkout. Not certified by Visa |
+| Request signing (Visa TAP) | LIVE code | Visa's Trusted Agent Protocol wire format (RFC 9421, Ed25519, nonce), verified against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/387)). Used in the reference run and chat checkout. Not certified by Visa |
 | Receipts | LIVE | In the build runner and in chat. The emailed receipt goes through ASI:One's Gmail connector from the buyer's own account, tested once live |
 | Price history (Tiger Data) | built, env-gated | Each round's bid prices are written when the service is set, never on the money path |
 | Market state (SpacetimeDB) | LIVE | Maincloud, database `tech-bazaar` |
 | Wind tunnel buyers | SIM | Simulated by design |
 
 **Known limits, stated once.**
-- The website's purchase step is being fixed: a goal posted on fishmarket.dev reaches a winner but not yet the call ([#447](https://github.com/vs-githjk/cal-hacks-2026/pull/447)). The full flow above runs through the build runner today.
+- The website's purchase step is being fixed: a goal posted on fishmarket.dev reaches a winner but not yet the call ([#447](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/447)). The full flow above runs through the build runner today.
 - The website path does not yet run the CRS payee gate, TAP signing or the Smell Test payment receipt at charge time. The build runner runs CRS; TAP runs in the reference run and chat checkout.
-- Phone verification and call limits for new sign-ups are on the fix list ([#449](https://github.com/vs-githjk/cal-hacks-2026/issues/449)).
+- Phone verification and call limits for new sign-ups are on the fix list ([#449](https://github.com/vs-githjk/fish-market-nothing-fishy/issues/449)).
 - Speech-to-text can miss the code in a noisy room. The answer is a new code, never a looser match.
 
 Full component table: [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md).
@@ -182,7 +182,7 @@ Components, contracts and trust boundaries: [docs/ARCHITECTURE.md](docs/ARCHITEC
 **Local**
 
 ```bash
-git clone https://github.com/vs-githjk/cal-hacks-2026.git fish-market && cd fish-market
+git clone https://github.com/vs-githjk/fish-market-nothing-fishy.git fish-market && cd fish-market
 cp .env.example .env                                  # your own sandbox keys; .env is gitignored
 python3 scripts/launch.py up --env-file .env          # preflight, then start every service that can start
 python3 scripts/launch.py status                      # service, port, pid, health
