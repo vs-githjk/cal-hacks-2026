@@ -11,7 +11,7 @@ import { gateRoute, pairCodeToSend } from "@/lib/signUp";
 import { GoalComposer } from "./GoalComposer";
 import { PanelPreviews } from "./panels";
 
-// Operator pairing (/buyer?pair=1): the screen pairs as Vidyut with the operator's code (SIM sign-in). A real account system replaces this.
+// Operator pairing (/buyer?pair=1): the screen pairs as the demo buyer with the operator's code (SIM sign-in). A real account system replaces this.
 const DEMO_BUYER = "vidyut";
 // Matches PAIR_MAX_FAILURES in market/spacetimedb/src/market.ts.
 const PAIR_MAX_FAILURES = 5;

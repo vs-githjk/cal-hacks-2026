@@ -13,7 +13,7 @@ const row = (key: string, text: string, atMs: number, id = 1n) => ({ id, address
 const NOW = 1_000_000;
 
 test("buyer, advocate and shield map to their Fetch.ai agents by key", () => {
-  assert.equal(agentFor("buyer", scene)!.name, "Tech Bazaar Buyer");
+  assert.equal(agentFor("buyer", scene)!.name, "Fish Market Buyer");
   assert.equal(agentFor("advocate", scene)!.handle, "@techbazaaradvocate");
   assert.equal(agentFor("shield", scene)!.key, "shield");
   assert.equal(agentFor("referee", scene), null);

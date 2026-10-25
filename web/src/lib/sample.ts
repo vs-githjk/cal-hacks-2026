@@ -1,7 +1,8 @@
 // web/src/lib/sample.ts
-// Vidyut's run from demo/out/sample-run.json (generated 2026-10-24T06:02:42Z = Oct 23, 11:02:42 PM PDT).
+// The buyer's recorded run from demo/out/sample-run.json (generated 2026-10-24T06:02:42Z = Oct 23, 11:02:42 PM PDT).
 // Every number below is copied from that file. The word-pair code is the one value the file redacts
 // (code_redacted: true); "velvet falcon" stands in and must be replaced by the code the mandate issues.
+import { SHIELD } from "./brand.ts";
 import type {
   ApprovalView, FeedItem, FloorEventView, GoalView, LearningView, LossReport, RankedBid, ReceiptView, RoundView, SellerLine, ShieldView, VetoView,
 } from "./screens";
@@ -169,8 +170,8 @@ export const learning: LearningView = {
 
 export const floorEvents: FloorEventView[] = [
   { key: "e7", at: at(66), kind: "payment_recorded", label: "Best Buy paid $1,249.99 under mandate", origin: "MIRROR", ref: "payment/1" },
-  { key: "e6", at: at(66), kind: "approval_recorded", label: "voice_code, approved by vidyut on try 3", origin: "SIM", ref: "approval/1" },
-  { key: "e5", at: at(17), kind: "verdict", label: "Shield blocked msg-shady-sam-injected: 9 rules", origin: "LIVE", ref: "bid_check/11" },
+  { key: "e6", at: at(66), kind: "approval_recorded", label: "voice_code, approved by the buyer on try 3", origin: "SIM", ref: "approval/1" },
+  { key: "e5", at: at(17), kind: "verdict", label: `${SHIELD} blocked msg-shady-sam-injected: 9 rules`, origin: "LIVE", ref: "bid_check/11" },
   { key: "e4", at: at(17), kind: "verdict", label: "Advocate vetoed bid shady-sam: advocate.condition", origin: "SIM", ref: "bid_check/7" },
   { key: "e3", at: at(17), kind: "auction_closed", label: "round-1 closed, winner best-buy, 11 sealed", origin: "SIM", ref: "round/round-1" },
   { key: "e2", at: at(7), kind: "bid_rejected", label: "lowball: below floor (reason kept private to the bidder)", origin: "SIM", ref: "bid/lowball" },
