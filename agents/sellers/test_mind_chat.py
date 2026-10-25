@@ -77,7 +77,9 @@ def test_the_mirror_quotes_what_its_last_round_read_including_a_live_price():
     anchor = {"source": "live", "state": "price_changed", "price": 1199.99, "quoted": 1249.99, "as_of": "02:30:04 UTC",
               "listing_url": "https://x", "label": "Re-checked live through Bright Data at 02:30:04 UTC: $1,199.99 (was $1,249.99 in the snapshot)."}
     annotate({}, anchor)
-    assert "Re-checked live through Bright Data at 02:30:04 UTC" in seller_chat.answer("seller_6", "offer for the 5070 Ti")
+    text = seller_chat.answer("seller_6", "offer for the 5070 Ti")
+    assert "Re-checked live through Bright Data at 02:30:04 UTC" in text
+    assert "at $1,199.99 before delivery" in text and "$1,249.99 before delivery" not in text
 
 
 def test_every_seller_answers_in_its_own_voice_with_a_price_for_the_part():

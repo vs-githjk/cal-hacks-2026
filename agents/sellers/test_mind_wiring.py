@@ -98,7 +98,7 @@ def test_byte_bros_learns_from_its_own_loss_reports_across_rounds_and_shows_the_
     REPORTS["rows"] = [loss("l1", "round-need-1", "seller-a", band="within10")]
     ctx, [(second, _)] = built["ask"](app, need("need-2"))
     assert second["lines"][0]["unit_price"] < first["lines"][0]["unit_price"]
-    assert second["strategy_note"].startswith("Lost 1 of 1, last by under 10%, stepping to 9.8% off list")
+    assert second["strategy_note"].startswith("Lost 1 of 1, last by under 10%, stepping toward 9.8% off list")
     assert second["strategy_note"] in second["decision_trace"]
     assert mind(built, "seller_1")["cut"] == 0.07
     REPORTS["rows"].append(loss("l2", "round-need-2", "seller-a", band="within5"))

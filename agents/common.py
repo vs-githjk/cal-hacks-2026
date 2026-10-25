@@ -227,6 +227,8 @@ SELLER_JOBS = {"seller_1": "learner: steps its margin across rounds from its own
 def live_sellers() -> list[str]:
     """The sellers that run: SELLERS without the retired ones (seller_6 only when its private seed is set)."""
     return [s for s in SELLERS if s not in RETIRED_SELLERS]
+
+
 SELLER_PORTS = {"seller_1": 8011, "seller_2": 8012, "seller_3": 8013, "seller_4": 8014, "seller_5": 8015,
                 "seller_6": 8016}
 BUILT_IN_ROLES = ("buyer", "advocate", "shield", *CATALOG_SELLERS, *MIRROR_SELLERS)

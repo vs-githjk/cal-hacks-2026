@@ -148,5 +148,5 @@ def note(state: dict, base_discount: float) -> str:
     else:
         tail = f", holding {total} off list"
     if state["at_floor"]:
-        tail += "; at my price limit, I cannot go lower"
+        tail = tail.replace("stepping to", "stepping toward") + "; at my price limit, I cannot go lower"
     return head + tail + coach + "."

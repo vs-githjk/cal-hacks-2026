@@ -100,7 +100,8 @@ def _offer(name: str, sku: str, state: dict | None) -> str:
         return f"I do not have an offer for {sku} right now."
     total = bid["total_landed_price"]
     if name == "seller_1":
-        pct = learner.total_discount(load_seller(name)["discount"], state or learner.fresh())
+        listed = load_seller(name)["listings"][sku]["price"]
+        pct = 1 - bid["lines"][0]["unit_price"] / listed   # the real cut, after the floor clamp
         return f"My offer for {sku}: ${total:,.2f} landed, new retail, sealed, free shipping, {pct:.1%} off list."
     if name == "seller_3":   # the item price and the shipping apart, so a price claim is checkable against the page
         line = bid["lines"][0]
@@ -108,7 +109,8 @@ def _offer(name: str, sku: str, state: dict | None) -> str:
     if name == "seller_5":
         return f"My offer for {sku}: ${total:,.2f} landed for my cheapest line. {bid['tradeoff'][0]}"
     line = bid["lines"][0]
-    return (f"The anchor for {sku}: {line.get('model_number', 'the listed card')} at ${line['unit_price']:,.2f} before "
+    price = extra["price"] if extra.get("price") is not None else line["unit_price"]   # what the last re-check read
+    return (f"The anchor for {sku}: {line.get('model_number', 'the listed card')} at ${price:,.2f} before "
             f"delivery. {extra['label']} Shown for comparison; I cannot be ordered or paid.")
 
 
@@ -124,7 +126,7 @@ def _topic(name: str, topic: str, sku: str, state: dict | None) -> str:
                             f"open-box a {refurb.warranty_words(t['open-box']['warranty_months'])} warranty.",
                 "returns": f"{t['refurbished']['returns_days']}-day returns on both refurbished and open-box.",
                 "condition": (f"Neither is new. Refurbished: {t['refurbished']['wear']}. "
-                              f"Open-box: {t['open-box']['wear']}. " + (_quote(name, sku, state)[0] or {"tradeoff": [""]})["tradeoff"][0]),
+                              f"Open-box: {t['open-box']['wear']}."),
                 "fees": f"Shipping is a flat ${load_seller(name)['shipping']:,.2f} for the basket and there are no other fees."}[topic]
     if name == "seller_3":
         trick = trickster.current_or_next(state or trickster.fresh())
@@ -143,7 +145,7 @@ def _topic(name: str, topic: str, sku: str, state: dict | None) -> str:
             "fees": "That is the listed price before delivery. I do not ship or charge anything."}[topic]
 
 
-OFFER_WORDS = ("offer", "quote", "how much", "price", "cost", "deal", "bid")
+OFFER_WORDS = ("offer", "quote", "how much", "price", "cost", "deal", "bid", "tradeoff", "trade-off", "difference", "cheaper")
 
 
 def answer(name: str, text: str, *, db_path: str | Path | None = None) -> str:
