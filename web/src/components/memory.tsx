@@ -282,9 +282,9 @@ export function RecentPurchases() {
   const rows = selectMemory(m.entries, "purchase", "").filter(isPurchase).slice(0, 3);
   return (
     <Card>
-      <Label>Recent purchases</Label>
+      <Label>Purchases</Label>
       {m.state.status === "loading" ? (
-        <p className="text-[13px] text-muted">Loading recorded history...</p>
+        <p className="text-[13px] text-muted">Loading...</p>
       ) : m.state.status === "offline" ? (
         <p className="text-[13px] text-muted">Recorded history comes from the operator demo feed, which is not reachable from this site.</p>
       ) : m.state.status === "error" ? (
@@ -294,7 +294,7 @@ export function RecentPurchases() {
           <RetryButton reload={m.reload} />
         </>
       ) : rows.length === 0 ? (
-        <p className="text-[13px] text-muted">No purchases are recorded for you yet.</p>
+        <p className="text-[13px] text-muted">No purchases yet.</p>
       ) : (
         <ul className="grid gap-2">
           {rows.map((e) => (
