@@ -5,6 +5,7 @@ import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally } from "@/co
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import { BRAND } from "@/lib/brand";
+import { draftToForm, type Vetted } from "@/lib/sellerDraft";
 import {
   CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
@@ -33,6 +34,24 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+const EXAMPLE = "I run a small repair shop in Oakland. I have three refurbished 4070 Supers and some 750W PSUs, 90-day warranty, and I won't go below $520 on the cards.";
+
+type DraftState = { kind: "idle" } | { kind: "busy" } | { kind: "note"; text: string } | { kind: "done"; vetted: Vetted };
+
+/** Ask Claude (through /api/seller-draft) for a draft. Any failure is the plain form with a one-line note. */
+async function askClaude(text: string): Promise<DraftState> {
+  try {
+    const r = await fetch("/api/seller-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+    const body: unknown = await r.json();
+    const b = body as { ok?: boolean; note?: string; error?: string; draft?: Vetted["draft"]; questions?: string[]; dropped?: string[] };
+    if (r.status === 400 && b.error) return { kind: "note", text: b.error };
+    if (b.ok && b.draft) return { kind: "done", vetted: { draft: b.draft, questions: b.questions ?? [], dropped: b.dropped ?? [] } };
+    return { kind: "note", text: b.note ?? "Claude is unavailable right now; fill in the form below." };
+  } catch {
+    return { kind: "note", text: "Claude is unavailable right now; fill in the form below." };
+  }
+}
+
 /** /sell: a form that turns a shop into a SellerConfig and sends it to the Seller Kit API (:8791). */
 export default function SellPage() {
   const [form, setForm] = useState<SellForm>(emptyForm);
@@ -43,6 +62,8 @@ export default function SellPage() {
   const [created, setCreated] = useState<Created | null>(null);
   const [shops, setShops] = useState<ShopRow[] | null>(null);
   const [needs, setNeeds] = useState<OpenNeed[] | null>(null);
+  const [chat, setChat] = useState("");
+  const [draft, setDraft] = useState<DraftState>({ kind: "idle" });
   const kit = useApiBase(SELLER_KIT_URL);
   // the hosted site shows the recorded SIM snapshot (#398); locally, what the kit answers
   const shownShops = kit.local ? parseShops(recorded.shops) : shops;
@@ -70,6 +91,21 @@ export default function SellPage() {
     setForm((f) => ({ ...f, rows: f.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) }));
   const margin = form.mode === "fixed_margin";
   const shownId = idTouched ? form.id : slugify(form.name);
+
+  const onDraft = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chat.trim()) return;
+    setDraft({ kind: "busy" });
+    const res = await askClaude(chat);
+    setDraft(res);
+    if (res.kind === "done") {
+      // Prefill the form below. The owner edits it and confirms; the Seller Kit still validates it and Smell Test still screens it.
+      setForm(draftToForm(res.vetted.draft));
+      setIdTouched(false);
+      setErrors([]);
+      setCreated(null);
+    }
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +161,63 @@ export default function SellPage() {
             Nothing was sent. Start it with <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.
           </p>
         </Card>
+      )}
+
+      <Card>
+        <form onSubmit={onDraft} className="grid gap-3">
+          <h2 className="text-[17px]/[22px] font-semibold">Create your seller agent with Claude</h2>
+          <p className="text-[14px]/[20px] text-muted">
+            Tell Claude about your shop in a few sentences. It fills in the form below. It only writes down what you say, and you decide every number.
+          </p>
+          <label className="block">
+            <span className="sr-only">Describe your shop</span>
+            <textarea
+              className={`${input} min-h-28`}
+              value={chat}
+              maxLength={2000}
+              placeholder={EXAMPLE}
+              onChange={(e) => setChat(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" className={button} disabled={draft.kind === "busy" || !chat.trim()}>
+              {draft.kind === "busy" ? "Drafting..." : "Draft with Claude"}
+            </button>
+            <button type="button" className="min-h-11 text-[14px] text-muted hover:text-ink" onClick={() => setChat(EXAMPLE)}>
+              Use an example
+            </button>
+          </div>
+          <div aria-live="polite">
+            {draft.kind === "note" && <p className="text-[14px] text-ink-2">{draft.text}</p>}
+            {draft.kind === "done" && (
+              <div className="grid gap-2 text-[14px]">
+                {draft.vetted.questions.length > 0 && (
+                  <div>
+                    <p className="text-ink-2">Claude needs {draft.vetted.questions.length === 1 ? "one more answer" : "two more answers"}. Add them to your text and draft again, or fill them in below.</p>
+                    <ul className="mt-1 list-disc pl-5">
+                      {draft.vetted.questions.map((q) => (
+                        <li key={q}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {draft.vetted.dropped.length > 0 && (
+                  <p className="text-muted">Left out because you did not say it: {draft.vetted.dropped.join("; ")}.</p>
+                )}
+                {draft.vetted.draft.lines.some((l) => l.quantity !== null) && (
+                  <p className="text-muted">
+                    Stock you named: {draft.vetted.draft.lines.filter((l) => l.quantity !== null).map((l) => `${l.quantity} x ${l.part}`).join(", ")}. The kit has no stock field, so it is not sent.
+                  </p>
+                )}
+                <p className="text-muted">Add the link to each listing page yourself. Then send: the Seller Kit validates it and Smell Test screens your text.</p>
+              </div>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {draft.kind === "done" && (
+        <p className="rounded-xl bg-pulse-soft px-4 py-2 text-[14px]/[20px] font-medium text-pulse-soft-ink">Drafted by Claude. Check every field.</p>
       )}
 
       <form onSubmit={onSubmit} className="grid gap-4" noValidate>
