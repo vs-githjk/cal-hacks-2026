@@ -182,6 +182,8 @@ class OrderPlaced(Model):
 class VoiceTransportRequest(Model):
     mandate_hash: str
     variables_json: str   # exactly buyer_name, deal_script, why_answer (pay.voice_cartesia.build_variables)
+    expires_at: str = ""  # RT-24: ISO 8601 with a zone, at most 10 minutes ahead; the Caller refuses a stale one (a missing one only
+    #                       once the operator sets CALLER_REQUIRE_EXPIRES=1, so a buyer that does not send it yet keeps working)
 
 
 class VoiceTransportResult(Model):

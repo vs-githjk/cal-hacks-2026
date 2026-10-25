@@ -16,7 +16,7 @@ from uagents import Agent, Context, Model, Protocol
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))         # agents/, for common
 sys.path.insert(1, str(Path(__file__).resolve().parents[2]))         # the repo root, for pay/
 import common  # noqa: E402
-from caller import relay  # noqa: E402
+from caller import explain, relay  # noqa: E402
 from caller.relay import market_has_typed_approval  # noqa: E402
 
 common.SEEDS.setdefault("caller", os.getenv("CALLER_AGENT_SEED") or "tech-bazaar-caller-dev")
@@ -27,6 +27,7 @@ class CallRequest(Model):
     mandate_json: str
     reason_json: str = ""
     deal_json: str = ""
+    expires_at: str = ""   # RT-24: ISO 8601 with a zone, at most 10 minutes ahead; a stale or missing one is refused
 
 
 class CallResult(Model):
@@ -54,8 +55,8 @@ def screen_sink():
 agent = Agent(**common.agent_args(
     "caller", 8006, name=NAME, handle=os.getenv("CALLER_AGENT_HANDLE", "techbazaarcaller"),
     readme_path=str(Path(__file__).with_name("AGENTVERSE.md")),
-    description="Places the one approval phone call for a Fish Market purchase: the buyer says the code on their screen "
-                "and approve. It approves and charges nothing itself."))
+    description="The second-factor agent: the buyer agent cannot approve its own spend, so I place the one approval phone call. "
+                "You say the code from your own screen, for that exact amount and seller. I approve and charge nothing myself."))
 protocol = Protocol(name="tech-bazaar-approval-call", version="0.1.0")
 SEEN: set = set()
 
@@ -65,7 +66,7 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
     # Only the buyer agent may ask, checked before Shield so a stranger costs no Shield call (#298). Then invariant 3:
     # every agent message goes through Shield first (fails closed when Shield is down), whole or not at all.
     text = " ".join((msg.mandate_json, msg.reason_json, msg.deal_json))
-    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"), expires_at=msg.expires_at)
     if refused:
         await ctx.send(sender, CallResult(approved=False, reason=refused))
         return
@@ -93,7 +94,7 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
     show = (lambda code: sink(code, mandate_hash)) if sink else None
     out = await asyncio.to_thread(relay.handle, sender, request, buyer_address=common.address("buyer"), client=client,
                                   show_code=show, seen=SEEN, unconfigured=unconfigured, secret=env.get(vc.SECRET_ENV),
-                                  buyer_name=env.get(vc.NAME_ENV) or "there")
+                                  buyer_name=env.get(vc.NAME_ENV) or "there", expires_at=msg.expires_at)
     ctx.logger.info(f"approval call for {str(mandate_hash)[:12]}: {'approved' if out['approved'] else 'not approved'}")
     await ctx.send(sender, CallResult(approved=out["approved"], reason=out["reason"] or "", call_id=out["call_id"] or "",
                                       voice_approval_id=out["voice_approval_id"] or ""))
@@ -104,7 +105,8 @@ async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequ
     """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
     what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate."""
     text = " ".join((msg.mandate_hash, msg.variables_json))
-    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
+    require = relay.expiry_required_for_transport()
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"), expires_at=msg.expires_at, require_expiry=require)
     if refused:
         await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error=refused))
         return
@@ -123,16 +125,15 @@ async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequ
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
     out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": msg.mandate_hash, "variables": variables},
-                                  buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured)
+                                  buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured,
+                                  expires_at=msg.expires_at, require_expiry=require)
     await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, call_id=out["call_id"] or "",
                                                        call_json=json.dumps(out["call"]) if out["call"] else "",
                                                        error=out["error"] or ""))
 
 
 agent.include(protocol, publish_manifest=True)
-common.include_profile_chat(agent, "I am Fish Market Caller, Fish Market's approval-call agent. I place one phone call when the buyer "
-                            "agent asks me to confirm a purchase, and I only take structured requests from it. I cannot approve "
-                            "or charge anything from this chat. Send buying goals to @techbazaarbuyer.")
+common.include_profile_chat(agent, explain.SECOND_FACTOR_TEXT)
 
 if __name__ == "__main__":
     agent.run()
