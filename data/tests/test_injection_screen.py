@@ -343,10 +343,26 @@ def test_the_readme_never_says_secure_and_has_no_dashes():
 def test_the_readme_is_long_enough_and_links_our_other_actors():
     assert len(README.split()) >= 300
     for slug in ("tech-bazaar-claim-check", "pc-build-compatibility-checker", "electronics-recall-checker",
-                 "seller-agent-readiness-report", "listing-injection-screen"):
+                 "seller-agent-readiness-report"):
         assert f"https://apify.com/anoopibrampur/{slug}" in README
-    for part in ("## Pricing", "## FAQ", "mcp.apify.com", "run-sync-get-dataset-items", "$0.001"):
+    for part in ("## Pricing", "## FAQ", "mcp.apify.com", "run-sync-get-dataset-items"):
         assert part in README
+
+
+def test_the_readme_says_it_is_private_and_not_on_the_store_and_prices_nothing():
+    """#449 RT-28: the Actor is private on Apify (docs/ACTORS.md): no Store page to link, no price in force."""
+    assert "https://apify.com/anoopibrampur/listing-injection-screen" not in README   # that page does not open for others
+    assert not re.search(r"Apify Store page", README, re.I)
+    intro = README.split("## What you get")[0]
+    assert "private" in intro.lower() and "not on the" in intro.lower() and "Store" in intro
+    pricing = README.split("## Pricing")[1].split("\n## ")[0]
+    assert "planned" in pricing.lower() and "no price is set" in pricing.lower()
+    assert "|" not in pricing                        # no price table
+    assert "$0.001" in pricing                       # named only as the planned price
+    assert README.count("$0.001") == 1               # nowhere else does the README quote a price
+    assert not re.search(r"\bpay(s)? \$|you pay", README, re.I)
+    actors = (REPO / "docs" / "ACTORS.md").read_text()
+    assert "private" in actors and "pzSsctJHHdNzrLJH8" in actors   # the doc this README must agree with
 
 
 def test_the_readme_numbers_match_results_md():

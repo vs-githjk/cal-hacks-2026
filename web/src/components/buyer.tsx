@@ -5,7 +5,7 @@
 import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
-import { Card, Code, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import { Card, Code, Details, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
 import { SHIELD } from "@/lib/brand";
 
@@ -74,7 +74,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
   return (
     <Card hero tactile className="flex flex-col justify-between">
       <div onPointerMove={spot} onPointerLeave={unspot}>
-        <Label>{win ? "Best verified price" : "Hunting"}</Label>
+        <Label>{win ? "Best price" : "Hunting"}</Label>
         {win ? (
           <>
             <div ref={field} className="relative -mx-2 px-2">
@@ -133,9 +133,10 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   return (
     <Card tactile>
-      <Label>{roundLabel} · ranked by quality-adjusted landed price</Label>
+      <Label>{roundLabel}</Label>
+      <Details summary="How bids are ranked" className="mb-3 mt-0"><p>Ranked by quality-adjusted landed price: the referee applies one fixed rule, ties break in a fixed order, and the seller fee never enters the ranking.</p></Details>
       {bids.length === 0 ? (
-        <p className="text-muted">Bids are sealed until the round closes. Nobody, not even you, sees them before then.</p>
+        <p className="text-muted">Sealed until the round closes.</p>
       ) : (
         <div className="-mx-[18px] overflow-x-auto px-[18px] [perspective:900px]">
           <table className="w-full border-collapse text-[14px] tabular-nums">
@@ -217,12 +218,12 @@ function Td({ children, right, className = "" }: { children: React.ReactNode; ri
 export function VetoCard({ veto }: { veto: VetoView | null }) {
   if (!veto) {
     return (
-      <Card stripe="coral"><Label>Advocate veto</Label><p className="text-muted">No veto yet. When the cheapest bid is a trap, the reason and its source land here.</p></Card>
+      <Card stripe="coral"><Label>Veto</Label><p className="text-muted">No veto yet. Traps land here with their source.</p></Card>
     );
   }
   return (
     <Card stripe="coral">
-      <Label>Advocate veto</Label>
+      <Label>Veto</Label>
       <h3 className="mb-1.5 text-[17px]/[22px] font-semibold tabular-nums">Bid vetoed: {veto.seller}{veto.landed ? `, ${money(veto.landed)}` : ""}</h3>
       <p className="text-[14px]">{veto.claim ? <>Listed as &quot;{veto.claim}&quot;. </> : null}{veto.finding}</p>
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
@@ -236,7 +237,7 @@ export function VetoCard({ veto }: { veto: VetoView | null }) {
 
 export function ShieldCard({ shield }: { shield: ShieldView | null }) {
   if (!shield) {
-    return <Card stripe="ink"><Label>{SHIELD}</Label><p className="text-muted">Every seller message is screened before the advocate reads it. Blocks show here with the rule that fired.</p></Card>;
+    return <Card stripe="ink"><Label>{SHIELD}</Label><p className="text-muted">Every listing is screened first. Blocks land here.</p></Card>;
   }
   const blocked = shield.verdict !== "allow";
   return (
@@ -272,35 +273,40 @@ export function ShieldCard({ shield }: { shield: ShieldView | null }) {
 
 export function ApprovalCard({ approval }: { approval: ApprovalView | null }) {
   if (!approval) {
-    return <Card stripe="amber"><Label>Approval call</Label><p className="text-muted">Any buy above your allowance calls you. The one-time code appears here, on this screen only.</p></Card>;
+    return <Card stripe="amber"><Label>Approval call</Label><p className="text-muted">Above your allowance, we call you. The code shows here.</p></Card>;
   }
   const done = approval.attempts.some((a) => a.approved);
   return (
     <Card stripe="amber">
       <Label>Approval call</Label>
       <h3 className="mb-1.5 text-[17px]/[22px] font-semibold tabular-nums">
-        {approval.within ? `${money(approval.amount)} to ${approval.payee}, within your allowance` : `${money(approval.amount)} is above your ${money(approval.allowance)} allowance, so it called`}
+        {approval.within ? `${money(approval.amount)}, within your allowance` : `${money(approval.amount)}, above your ${money(approval.allowance)} allowance`}
       </h3>
       {approval.wordPair && (
         <>
-          <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-            <span className="rounded-xl bg-surface-2 px-4 py-3 font-mono text-[28px]/[32px] font-medium tracking-[0.04em]">{approval.wordPair}</span>
-            <small className="text-[12px] text-muted">one-time code, this screen only · {done ? "expired" : "expires"} {clock(approval.codeExpiresAt)}</small>
+          <div className="my-3 rounded-xl bg-surface-2 px-4 py-4 text-center">
+            <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+            <div className="font-mono text-[32px]/[36px] font-medium tracking-[0.04em] md:text-[40px]/[44px]">{approval.wordPair}</div>
           </div>
-          <p className="text-[13px] font-semibold">We never ask for anything but the code on this screen.</p>
+          <p className="text-[13px] text-muted">One use. {done ? "Expired" : "Expires"} {clock(approval.codeExpiresAt)}.</p>
         </>
       )}
-      {approval.whyAnswer && <p className="mt-1.5 text-[14px]">You asked &quot;why not the cheaper one?&quot; It answered: {approval.whyAnswer}</p>}
-      <p className="mt-1.5 text-[13px] text-muted">{CAP_RULE}</p>
-      <ol className="mt-2.5 grid gap-1.5 text-[13px]">
-        {approval.attempts.map((a, i) => (
-          <li key={i} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-2.5">
-            <span className="font-mono text-[12px] text-muted">{clock(a.at)}</span>
-            <span className={`font-semibold ${a.approved ? "text-mint" : "text-coral"}`}>{a.label}</span>
-            <span>{a.said}</span>
-          </li>
-        ))}
-      </ol>
+      <Details summary="Details">
+        <p>To {approval.payee}. We never ask for anything but the code on this screen.</p>
+        {approval.whyAnswer && <p>You asked &quot;why not the cheaper one?&quot; It answered: {approval.whyAnswer}</p>}
+        <p>{CAP_RULE}</p>
+        {approval.attempts.length > 0 && (
+          <ol className="grid gap-1.5">
+            {approval.attempts.map((a, i) => (
+              <li key={i} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-2.5">
+                <span className="font-mono text-[12px] text-muted">{clock(a.at)}</span>
+                <span className={`font-semibold ${a.approved ? "text-mint" : "text-coral"}`}>{a.label}</span>
+                <span>{a.said}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </Details>
     </Card>
   );
 }
@@ -311,50 +317,50 @@ export const CAP_RULE = "Goal cap is the ceiling to hunt under. Allowance is wha
 export function ReviewCard({ review, allowance }: { review: ReviewView; allowance: number | null }) {
   return (
     <Card stripe="amber">
-      <Label>Review and approve</Label>
+      <Label>Approve by phone</Label>
       <h3 className="mb-1.5 text-[17px]/[22px] font-semibold tabular-nums">
         {money(review.amount)} to {review.payee} <OriginChip origin={review.origin} />
       </h3>
-      <p className="text-[13px] tabular-nums text-muted">
-        {isWholeBuild(review) ? "One call approves the whole build" : <>Mandate <Code>{review.mandateId}</Code></>} · {allowance === null ? "no allowance set" : `above your ${money(allowance)} allowance`}, so it calls you · expires {clock(review.expiry)}
-      </p>
-      <div className="my-2.5 flex flex-wrap items-baseline gap-2.5">
-        <span className="rounded-xl bg-surface-2 px-4 py-3 font-mono text-[28px]/[32px] font-medium tracking-[0.04em]">{review.code}</span>
-        <small className="text-[12px] text-muted">one-time code for {isWholeBuild(review) ? "this call" : "this mandate"}, this screen only</small>
+      <p className="text-[13px] tabular-nums text-muted">{allowance === null ? "No allowance set" : `Above your ${money(allowance)} allowance`}. We are calling you.</p>
+      <div className="my-3 rounded-xl bg-surface-2 px-4 py-4 text-center">
+        <div className="mb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-muted">Say this, then &quot;approve&quot;</div>
+        <div className="font-mono text-[32px]/[36px] font-medium tracking-[0.04em] md:text-[40px]/[44px]">{review.code}</div>
       </div>
-      <p className="text-[13px] font-semibold">Say this code on the call. Only the call approves; nothing on this screen can.</p>
-      <p className="mt-1 text-[13px] text-muted">{CAP_RULE}</p>
+      <p className="text-[13px] font-semibold">Only the call approves. Nothing on this screen can.</p>
+      <Details summary="Details">
+        <p>{isWholeBuild(review) ? "One call approves the whole build." : <>Mandate <Code>{review.mandateId}</Code>.</>} One-time code, this screen only. Expires {clock(review.expiry)}.</p>
+        <p>{CAP_RULE}</p>
+      </Details>
     </Card>
   );
 }
 
 export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
   if (!receipt) {
-    return <Card stripe="mint"><Label>Receipt</Label><p className="text-muted">Nothing is paid until you approve. The signed mandate and charge show here.</p></Card>;
+    return <Card stripe="mint"><Label>Receipt</Label><p className="text-muted">Nothing paid yet. Receipts land here.</p></Card>;
   }
   return (
     <Card stripe="mint">
       <Label>Receipt</Label>
       <div className="flex flex-wrap items-center gap-2">
         <span className="motion-safe:animate-[pop_.4s_ease-out] inline-flex size-6 items-center justify-center rounded-full bg-mint-soft text-[13px] font-semibold text-mint" aria-hidden>✓</span>
-        <h3 className="m-0 text-[17px] font-semibold tracking-[-0.01em]">Paid under a signed mandate</h3>
+        <h3 className="m-0 text-[17px] font-semibold tracking-[-0.01em]">Paid</h3>
         <OriginChip origin={receipt.chargeOrigin ?? "SIM"} label={receipt.chargeStatus} />
+        <Tag>Test mode</Tag>
       </div>
-      <div className="mt-2 grid gap-3.5 md:grid-cols-2">
-        <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 text-[14px] tabular-nums">
-          <div>{[receipt.seller, receipt.item, receipt.condition].filter(Boolean).join(" · ")}</div><div>{money(receipt.amount)}</div>
-          {receipt.shipping !== undefined && <><div className="text-muted">Shipping</div><div className="text-muted">{money(receipt.shipping)}</div></>}
-          <div className="border-t border-line pt-2 text-[18px] font-semibold">Charged</div><div className="border-t border-line pt-2 font-mono text-[18px] font-medium">{money(receipt.amount + (receipt.shipping ?? 0))}</div>
-          <div className="text-[13px] text-muted">{receipt.paymentMethod} · {receipt.chargeId}</div><div className="text-[13px] text-muted">{clock(receipt.paidAt)}</div>
-        </dl>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
+      <p className="mt-2 font-mono text-[40px]/[44px] font-medium tracking-[-0.02em] tabular-nums">{money(receipt.amount + (receipt.shipping ?? 0))}</p>
+      <p className="mt-1 text-[15px] text-ink-2">{[receipt.item, receipt.seller, receipt.condition].filter(Boolean).join(" · ")}</p>
+      <Details summary="Proof">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <dt className="text-muted">Item</dt><dd className="tabular-nums">{money(receipt.amount)}{receipt.shipping !== undefined ? ` + ${money(receipt.shipping)} shipping` : ""}</dd>
+          <dt className="text-muted">Charge</dt><dd className="min-w-0 [overflow-wrap:anywhere]">{receipt.paymentMethod} · <Code>{receipt.chargeId}</Code> · {clock(receipt.paidAt)}</dd>
           <dt className="text-muted">Mandate</dt><dd className="min-w-0 [overflow-wrap:anywhere]"><Code>{receipt.mandateId}</Code> · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
           <dt className="text-muted">Hash</dt><dd><Code>{receipt.mandateHash.slice(0, 8)}…{receipt.mandateHash.slice(-6)}</Code></dd>
           {receipt.signature && <><dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd></>}
           {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> same mandate sent twice; second charge rejected</> : "not tested"}</dd></>}
           <dt className="text-muted">Allowance</dt><dd>unchanged until the receiving check passes</dd>
         </dl>
-      </div>
+      </Details>
     </Card>
   );
 }
@@ -366,7 +372,7 @@ export function AgentFeed({ items, max = 40 }: { items: FeedItem[]; max?: number
     <Card>
       <Label>What the agent did</Label>
       {items.length === 0 ? (
-        <p className="text-muted">Nothing yet. Every step the agent takes shows up here.</p>
+        <p className="text-muted">Nothing yet.</p>
       ) : (
         <ol className="grid">
           {items.slice(0, max).map((f) => (

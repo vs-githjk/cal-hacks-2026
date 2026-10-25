@@ -12,9 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "market" / "spacetimedb" / "src"
 BRIDGE = ROOT / "agents" / "market_bridge.py"
 
-# Lane A follow-ups: used only by the chat (ASI:One) purchase path, which needs a buyer-role status view and a settle
-# reducer that main's module does not have. Kept explicit so they are never silently forgotten; the web path avoids them.
-CHAT_ONLY = {"reducer:settle_goal", "table:my_purchase_status"}
+# Nothing is allow-listed: every reducer and view the bridge uses must exist in market/spacetimedb on main. The owner-chat purchase
+# used my_purchase_status and settle_goal, which main's module (published to Maincloud) does not have; it now uses the web path's
+# referee views (agent_approvals, agent_payments) and reducers (record_approval, record_payment, set_goal_state).
+CHAT_ONLY: set = set()
 
 
 def _snake(name: str) -> str:
@@ -169,6 +170,16 @@ def test_every_bridge_call_and_query_matches_the_market_module():
     assert contract_problems() == []
 
 
-def test_chat_only_gaps_are_still_real_and_listed():
+def test_nothing_is_allow_listed_and_the_missing_pieces_stay_missing():
     reducers, columns = module_reducers(), module_columns()
-    assert "settle_goal" not in reducers and "my_purchase_status" not in columns
+    assert CHAT_ONLY == set()
+    assert "settle_goal" not in reducers and "my_purchase_status" not in columns  # if these ever land, this test says so
+    assert {"agent_approvals", "agent_payments"} <= set(columns) and {"record_payment", "set_goal_state", "record_approval"} <= set(reducers)
+
+
+def test_the_chat_purchase_path_never_reads_my_purchase_status_or_calls_settle_goal():
+    forbidden = re.compile(r"\.purchase_status\(|\.settle_goal\(|FROM my_purchase_status|_call\(\"settle_goal\"|def purchase_status|def settle_goal")
+    paths = [BRIDGE] + [ROOT / "agents" / "buyer" / name for name in ("buyer_agent.py", "owner_approval.py", "purchases.py", "checkout.py")]
+    hits = [f"{path.name}:{n}: {line.strip()}" for path in paths for n, line in enumerate(path.read_text().splitlines(), 1)
+            if forbidden.search(line)]
+    assert hits == []

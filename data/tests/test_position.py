@@ -72,7 +72,8 @@ def test_a_tie_at_rank_one_is_said_and_names_the_other_listing():
     rows = BASE + [row("microcenter", 1299.99, ASUS, url="https://microcenter.example/prime")]
     out = price_position(SKU, 1299.99, "new", AS_OF, subject_url="https://bestbuy.example/1299.99", rows=rows)
     assert out["rank"] == 1 and out["sentence"].startswith("Tied cheapest fitting new card of 4 listings at 3 stores")
-    assert out["tied_with"] == [{"store": "microcenter", "url": "https://microcenter.example/prime"}]
+    assert out["tied_with"] == [{"store": "microcenter", "url": "https://microcenter.example/prime", "price": 1299.99,
+                                 "observed_at": "2026-10-24T05:00:00+00:00"}]
     assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE)["tied_with"] == []
     assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE)["sentence"].startswith("Cheapest fitting")
     assert not price_position(SKU, 1349.0, "new", AS_OF, rows=rows)["sentence"].startswith("Tied")
@@ -85,3 +86,91 @@ def test_unknown_length_listings_change_the_sentence_at_rank_one():  # #155
     assert "cheapest of the listings we can confirm fit; 2 of unknown length not counted" in out["sentence"]
     assert "Cheapest" not in out["sentence"]
     assert price_position(SKU, 1500.0, "new", AS_OF, rows=rows)["sentence"].startswith("4th cheapest")  # not rank 1: unchanged
+
+
+# PL-26: each price carries its own capture time; a listing missing from its store's newest capture is not counted.
+BB_URL = "https://bestbuy.example/prime"
+NEWEST = "2026-10-24T08:00:00+00:00"
+
+
+def test_every_counted_price_carries_its_own_capture_time():
+    rows = [row("bestbuy", 1299.99, ASUS, url=BB_URL, at="2026-10-24T05:00:00+00:00"),
+            row("microcenter", 1299.99, ASUS, url="https://microcenter.example/prime", at="2026-10-24T08:30:00+00:00"),
+            row("bh", 1349.0, VENTUS, at="2026-10-24T07:00:00+00:00")]
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url=BB_URL, rows=rows)
+    assert out["rank"] == 1 and out["cheapest_fitting"]["store"] == "bestbuy"   # a tie: the first by capture time
+    assert out["cheapest_fitting"]["observed_at"] == "2026-10-24T05:00:00+00:00"
+    assert out["tied_with"] == [{"store": "microcenter", "url": "https://microcenter.example/prime", "price": 1299.99,
+                                 "observed_at": "2026-10-24T08:30:00+00:00"}]
+    assert {x["store"]: x["observed_at"] for x in out["listings"]} == {"microcenter": "2026-10-24T08:30:00+00:00",
+                                                                       "bh": "2026-10-24T07:00:00+00:00",
+                                                                       "bestbuy": "2026-10-24T05:00:00+00:00"}
+    assert out["subject"] == {"store": "bestbuy", "price": 1299.99, "url": BB_URL, "observed_at": "2026-10-24T05:00:00+00:00",
+                              "newest_capture": "2026-10-24T05:00:00+00:00", "in_newest_capture": True}
+
+
+def stale_prime_rows():
+    """The Oct 25 case: Best Buy was captured again and the ASUS Prime was not in that capture."""
+    return [row("bestbuy", 1299.99, ASUS, url=BB_URL, at="2026-10-24T05:00:00+00:00"),
+            row("bestbuy", 1400.0, VENTUS, url="https://bestbuy.example/ventus", at=NEWEST),
+            row("microcenter", 1299.99, ASUS, url="https://microcenter.example/prime", at="2026-10-24T08:30:00+00:00"),
+            row("bh", 1349.0, VENTUS, at="2026-10-24T08:30:00+00:00")]
+
+
+def test_a_listing_missing_from_its_stores_newest_capture_is_not_counted_and_is_marked_with_its_own_time():
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url=BB_URL, rows=stale_prime_rows())
+    assert out["of_n"] == 3 and {x["url"] for x in out["listings"]} == {"https://bestbuy.example/ventus", "https://microcenter.example/prime",
+                                                                         "https://bh.example/1349.0"}
+    assert out["left_out"] == [{"store": "bestbuy", "url": BB_URL, "price": 1299.99, "last_seen": "2026-10-24T05:00:00+00:00",
+                                "newest_capture": NEWEST}]
+    assert out["subject"] == {"store": "bestbuy", "price": 1299.99, "url": BB_URL, "observed_at": "2026-10-24T05:00:00+00:00",
+                              "newest_capture": NEWEST, "in_newest_capture": False}
+    assert "last seen Oct 24 05:00 UTC" in out["sentence"] and "not in Best Buy's newest capture (Oct 24 08:00 UTC)" in out["sentence"]
+
+
+def test_the_stale_listing_never_stands_in_for_the_winner_when_it_alone_made_the_tie():
+    rows = [r for r in stale_prime_rows() if r["store"] != "microcenter"]
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url=BB_URL, rows=rows)
+    assert out["tied_with"] == [] and all(x["url"] != BB_URL for x in out["listings"])
+    assert out["rank"] == 1 and out["of_n"] == 2
+
+
+def test_a_listing_only_one_provider_saw_is_not_dropped_by_another_providers_newer_capture():
+    a = row("bestbuy", 1299.99, ASUS, url=BB_URL, at="2026-10-24T05:00:00+00:00")
+    b = row("bestbuy", 1400.0, VENTUS, url="https://bestbuy.example/ventus", at=NEWEST, provider="apify-b")
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url=BB_URL, rows=[a, b])
+    assert out["of_n"] == 2 and out["left_out"] == [] and out["subject"]["in_newest_capture"] is True
+
+
+def test_a_provider_that_saw_the_listing_before_and_captured_the_store_later_without_it_drops_it():
+    a = row("bestbuy", 1299.99, ASUS, url=BB_URL, at="2026-10-24T05:00:00+00:00")
+    b_old = row("bestbuy", 1299.99, ASUS, url=BB_URL, at="2026-10-24T04:00:00+00:00", provider="apify-b")
+    b_new = row("bestbuy", 1400.0, VENTUS, url="https://bestbuy.example/ventus", at=NEWEST, provider="apify-b")
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url=BB_URL, rows=[a, b_old, b_new])
+    assert [x["url"] for x in out["listings"]] == ["https://bestbuy.example/ventus"] and out["left_out"][0]["url"] == BB_URL
+
+
+def test_a_newer_out_of_stock_capture_of_a_url_beats_an_older_in_stock_one():
+    old = row("newegg", 1100.0, ASUS, url="https://newegg.example/x", at="2026-10-24T05:00:00+00:00")
+    new = row("newegg", 1100.0, ASUS, stock=False, url="https://newegg.example/x", at=NEWEST)
+    out = price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + [old, new])
+    assert out["of_n"] == 3 and out["rank"] == 1 and all(x["url"] != "https://newegg.example/x" for x in out["listings"])
+    assert price_position(SKU, 1299.99, "new", AS_OF, rows=BASE + [old])["rank"] == 2   # without the newer capture it still counts
+
+
+def test_captures_after_as_of_do_not_hide_listings_as_of_then():
+    later = row("bestbuy", 1400.0, VENTUS, url="https://bestbuy.example/ventus", at="2026-10-24T12:00:00+00:00")
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url=BB_URL, rows=stale_prime_rows()[:1] + [later])
+    assert out["of_n"] == 1 and out["subject"]["in_newest_capture"] is True and out["left_out"] == []
+
+
+def test_an_unknown_subject_url_has_no_capture_time_and_no_stale_clause():
+    out = price_position(SKU, 1299.99, "new", AS_OF, subject_url="https://bestbuy.example/never-seen", rows=BASE)
+    assert out["subject"]["observed_at"] is None and out["subject"]["in_newest_capture"] is None
+    assert "last seen" not in out["sentence"]
+
+
+def test_the_day_label_follows_the_counted_listings_not_the_as_of_clock():
+    rows = [row("bestbuy", 1299.99, ASUS, at="2026-10-23T23:00:00+00:00"), row("bh", 1349.0, VENTUS, at="2026-10-24T08:30:00+00:00")]
+    out = price_position(SKU, 1299.99, "new", AS_OF, rows=rows)
+    assert out["sentence"] == "Cheapest fitting new card of 2 listings at 2 stores, Oct 23 to Oct 24"

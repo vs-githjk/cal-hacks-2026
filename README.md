@@ -72,7 +72,7 @@ Every bid, claim and screen carries a label driven by the `source` field in the 
 | Claim checks | LIVE code | On real listings it has found no false claims so far; the condition lie in the demo is on a page we host (SIM) |
 | Bright Data re-check | built, env-gated | Runs when `BRIGHT_DATA_API_KEY` is set; without it, the dated MIRROR price stays and the line says so |
 | CRS payee check | SANDBOX, env-gated | CRS sandbox with provided test identities. Run live on Oct 24 at 16:37 PDT: two simulated sellers came back verified_stable, one not_verified |
-| Approval call | LIVE | A real Cartesia outbound call to the buyer's own phone from sign-up |
+| Approval call | LIVE | A real Cartesia outbound call to the buyer's own phone from sign-up. Calls ring only numbers on `APPROVAL_CALL_ALLOWLIST` when it is set, at most 1 per number per 5 minutes and 20 per day (`pay/voice_cartesia.py`, [#451](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/451)) |
 | Payment | SANDBOX | Stripe test mode only; every charging path refuses anything but an `sk_test_` key |
 | Request signing (Visa TAP) | built, not on the live purchase path | Visa's Trusted Agent Protocol wire format (RFC 9421, Ed25519, nonce), verified against a port of Visa's reference verifier ([#387](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/387)). Code and tests: `pay/tap.py`, `pay/merchant_sim.py`, `pay/tests/test_tap.py`, `pay/tests/test_tap_conformance.py`. It runs in the scripted reference run (`demo/run_demo.py`, beat 4). The live web purchase charges Stripe test mode after the phone approval without it. Not certified by Visa |
 | Smell Test payment receipt | built, not on the live purchase path | `POST /v1/shield/screen-payment` returns a signed allow receipt that the checkout verifies before it charges (`shield/receipt.py`, `shield/tests/test_receipt.py`, `shield/tests/test_payment_receipt_api.py`, `agents/buyer/test_runtime_checkout.py`). In the buyer agent the keys and the screen callback start unset and nothing sets them outside tests, so the chat checkout refuses. The live web purchase does not ask for a receipt |
@@ -84,7 +84,7 @@ Every bid, claim and screen carries a label driven by the `source` field in the 
 **Known limits, stated once.**
 - The website's purchase step is being fixed: a goal posted on fishmarket.dev reaches a winner but not yet the call ([#447](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/447)). The full flow above runs through the build runner today.
 - The website path does not yet run the CRS payee gate, TAP signing or the Smell Test payment receipt at charge time. It charges Stripe test mode right after the phone approval (`_pay_web_purchase` in `agents/buyer/buyer_agent.py`). In that file `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS` and `SHIELD_PAYMENT_SCREEN` start unset, so the chat checkout that uses them refuses to pay. The build runner runs CRS; TAP signing runs only in the scripted reference run. Check: `grep -n "^TAP_PRIVATE_KEY\|^MERCHANT_SIM" agents/buyer/buyer_agent.py`.
-- Phone verification and call limits for new sign-ups are on the fix list ([#449](https://github.com/vs-githjk/fish-market-nothing-fishy/issues/449)).
+- Phone verification for new sign-ups is on the fix list ([#449](https://github.com/vs-githjk/fish-market-nothing-fishy/issues/449)). Call limits are in ([#451](https://github.com/vs-githjk/fish-market-nothing-fishy/pull/451)): at most 1 call per number per 5 minutes and 20 a day, and `APPROVAL_CALL_ALLOWLIST` limits which numbers can be called; blank means no allowlist, only the rate cap.
 - Speech-to-text can miss the code in a noisy room. The answer is a new code, never a looser match.
 
 Full component table: [docs/REAL_VS_SIMULATED.md](docs/REAL_VS_SIMULATED.md).
@@ -99,16 +99,16 @@ Every number below comes from a command in this repo. Headlines are first runs; 
 | Fit checker (rerun 2026-10-25) | 39 of 39 right on builds whose every part was checked on a maker page; 48 of 49 decided on all 50 builds, 1 uncertain; 0 false OK. Tuned once, so not held out | `python3 -m data.fit_checker.eval_builds` |
 | Voice approval attacks | 9 of 10 denied on the first run; 10 of 10 after one fix (not blind). The suite passes, 68 tests | `python3 -m pytest pay/tests/test_voice_attacks.py -q` |
 | Purchasing controls, blind planted errors | 26 of 27 caught on the first run; 2 of 7 clean cases falsely flagged | `python3 -m hyphenate.scenarios.blind_run` |
-| Seller learning lift (rerun 2026-10-25) | No lift: the learner beats the field-median control on 0 of 4 held-out buyer types (the bar is 2) | `python3 -m sim.wind_tunnel --builders 48 --seeds 3` |
+| Seller learning lift (rerun 2026-10-25 09:17 UTC) | No headline lift: the learner beats the field-median control on 0 of 4 held-out archetypes; the gate needs 2. The same command printed 1 of 4 on 2026-10-24 (`sff_open_box`) | `python3 -m sim.wind_tunnel --builders 48 --seeds 3` (the 2026-10-24 run is saved in `sim/RESULTS-2026-10-24-b48x3.md`; the 2026-10-25 run in `sim/out/wind_tunnel-2026-10-25-b48x3.json`) |
 | Verified savings | None yet. The price reference is ready (median $1,279.99 for an RTX 5070 Ti across 8 in-stock retail asks from 2 providers), but no verified purchase is recorded | `python3 -m data.baselines` |
 
-Smell Test stops 30 of 30 on its development set, but its rules were written against that set, so we never pool it with the held-out result. "Secure" is the goal we build toward, not a claim the numbers support yet. The wind tunnel writes `sim/RESULTS-<date>-b48x3.md`; the published scoreboard is [data/scoreboard.json](data/scoreboard.json).
+Smell Test stops 30 of 30 on its development set, but its rules were written against that set, so we never pool it with the held-out result. "Secure" is the goal we build toward, not a claim the numbers support yet. The wind tunnel writes `sim/RESULTS-<date>-b48x3.md`; the published scoreboard is [data/scoreboard.json](data/scoreboard.json). Its seller learning tile reads the largest saved run, 48 builders by 5 seeds on 2026-10-24, which found 1 of 4; it has not been rebuilt from the 2026-10-25 run.
 
 ## Sponsor integrations
 
 | Sponsor | What we use | Where | Status |
 |---|---|---|---|
-| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol, ASI:One Gmail connector | `agents/` | LIVE: six agents registered on Agentverse |
+| Fetch.ai | uAgents, Agentverse, ASI:One, Agent Chat Protocol, ASI:One Gmail connector | `agents/` | LIVE: five agents registered on Agentverse, plus one retired seller profile (profiles checked Oct 23, [agents/README.md](agents/README.md)) |
 | Cartesia | Voice agent, outbound calls, dynamic variables, call transcripts | `pay/voice_cartesia.py` | LIVE |
 | Apify | Store Actors for listing mirrors, plus five Actors of our own | `data/mirror/`, `data/*actor*` | LIVE: four public on the Store, one private |
 | Bright Data | Scraper API, the live price re-check before the call | `demo/recheck.py`, `data/baselines/brightdata.py` | built, env-gated |
@@ -138,7 +138,7 @@ Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com
 | Fish Market Caller | Places the one approval call for a mandate; approves and charges nothing itself | @techbazaarcaller | assigned when registered | Runs locally |
 | Market Pulse | Answers price-trend and seller-record questions from Tiger Data, the CRS cache and finished rounds | @techbazaarpulse | assigned when registered | Runs locally |
 
-Silicon Sally's Surplus (`agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np`) stays registered but is retired: every seller now has one distinct job. The buyer includes the Payment Protocol, but a payment request in chat is refused on purpose: above the allowance, money moves only after the phone approval. The handles, the `tech-bazaar` database and one Actor URL keep the project's original name because they are live identifiers. Setup and profile checks: [agents/README.md](agents/README.md).
+At most four Fetch.ai seller agents run (Byte Bros Outlet, FlashDeal Frankie, ReNew Refurb and Central Comp MIRROR), each with one distinct job. Two sellers are retired and not run (`RETIRED_SELLERS` in `agents/common.py`): Silicon Sally's Surplus (seller_2) and Bay Area PC Shop (seller_4). Sally's old profile (@techbazaarseller2, `agent1qw9dvuwgnh570wyk8uukp0w48a03tdpmtuv8csm3qxy6t3udl3ahs2264np`) was registered on Agentverse and may still be listed there; it is not a working seller. Bay Area was never registered. The buyer includes the Payment Protocol, but a payment request in chat is refused on purpose: above the allowance, money moves only after the phone approval. The handles, the `tech-bazaar` database and one Actor URL keep the project's original name because they are live identifiers. Setup and profile checks: [agents/README.md](agents/README.md).
 
 <!-- VIDEO: cartesia -->
 

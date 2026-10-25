@@ -9,7 +9,7 @@ import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, Sel
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
 import { BuildBoard } from "./BuildBoard";
 import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
-import { Card, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
+import { Card, Details, Label, Pill, SampleOnly, Unavailable, money } from "./ui";
 
 
 export interface BuyerScreenProps {
@@ -44,11 +44,10 @@ function Searches({ goals }: { goals: GoalView[] }) {
   if (!goals.length) {
     return (
       <Card>
-        <Label>Active searches</Label>
+        <Label>Searches</Label>
         <p className="text-[22px] font-medium">No search yet.</p>
-        <p className="mt-1 text-muted">
-          Tell the buyer agent what you want in <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="border-b border-current text-sky">ASI:One</a>, for example <q>a 1 TB NVMe drive under $90 by Friday</q>. It appears here with the cap and the allowance.
-        </p>
+        <p className="mt-1 text-muted">Post a goal above, or in <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="font-medium text-pulse">ASI:One</a>.</p>
+        <Details summary="Example"><p><q>A 1 TB NVMe drive under $90 by Friday.</q> It appears here with the cap and the allowance.</p></Details>
       </Card>
     );
   }
@@ -82,22 +81,20 @@ export function BuyerScreen(p: BuyerScreenProps) {
             <ReviewCard review={p.review} allowance={p.allowance?.perPurchase ?? null} />
           ) : (
             <Card>
-              <Label>Needs your attention</Label>
-              <p className="text-[18px] font-medium">Nothing is waiting for you.</p>
+              <Label>Your attention</Label>
+              <p className="text-[18px] font-medium">Nothing waiting.</p>
             </Card>
           )}
           <Searches goals={p.goals} />
           <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
           <div className="grid gap-3.5 md:grid-cols-3">
-            {p.purchases ?? <Unavailable title="Recent purchases">Recorded purchases are not connected to this screen yet.</Unavailable>}
+            {p.purchases ?? <Unavailable title="Purchases">Not connected to this screen yet.</Unavailable>}
             <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />
             <OwnedPartsPanel />
           </div>
           {goal && (
             <>
-              <p className="rounded-[10px] border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">
-                The cards below show the latest public round. They are not yet matched to a specific search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.
-              </p>
+              <Details summary="About the round below" className="mt-0"><p>The latest public round. It is not yet matched to one search, because a round carries a need id and not a goal id. Sample cards are labelled SIM.</p></Details>
               <SampleOnly on={!!s.bids}><HeroPrice bids={p.bids} cap={null} /></SampleOnly>
               <SampleOnly on={!!s.bids}><RankedBids bids={p.bids} revealKey={p.revealKey} /></SampleOnly>
               <div className={`grid gap-3.5 ${p.review ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
