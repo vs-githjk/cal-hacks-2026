@@ -273,6 +273,27 @@ export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undef
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
+export interface RecentRound { id: string; needId: string; closedAt: Date; bids: number; origin: Origin; winner?: { seller: string; landed: number; origin: Origin } }
+
+/** Closed rounds, newest first, each with its winner if one was named: the public record of what sold. */
+export function recentRounds(rounds: readonly RoundRow[], results: readonly ResultRow[], events: readonly EventRow[], limit = 6): RecentRound[] {
+  return rounds
+    .filter((r): r is RoundRow & { closedAt: Timestamp } => r.state === "closed" && !!r.closedAt)
+    .sort((a, b) => (a.closedAt.microsSinceUnixEpoch < b.closedAt.microsSinceUnixEpoch ? 1 : a.closedAt.microsSinceUnixEpoch > b.closedAt.microsSinceUnixEpoch ? -1 : 0))
+    .slice(0, limit)
+    .map((r) => {
+      const w = winningBid(bidsFromRows(results, events, r.id));
+      return {
+        id: r.id,
+        needId: r.needId,
+        closedAt: d(r.closedAt),
+        bids: r.sealedCount,
+        origin: asOrigin(r.origin),
+        ...(w ? { winner: { seller: w.seller, landed: w.landed, origin: w.origin } } : {}),
+      };
+    });
+}
+
 const PART_WORD: Record<string, string> = { board: "Motherboard", gpu: "Graphics card", cpu: "Processor", ram: "Memory", ssd: "Storage", cooler: "CPU cooler", psu: "Power supply", case: "Case" };
 
 /** "Motherboard, round 2" for a build round id like round-goal-build-1-board-2; null when the id is not a build round. */

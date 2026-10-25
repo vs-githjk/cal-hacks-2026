@@ -39,7 +39,7 @@ export function BuildPanel({ build: b, origin = "SIM" }: { build: BuildResult; o
       </div>
       <div role="img" aria-label={`${money(total)} of the ${money(cap)} cap`} className="mt-3 mb-4 flex h-3 gap-[2px] overflow-hidden rounded-[3px] bg-soft">
         {rows.map((r) => r.price !== null && (
-          <div key={r.part} className={r.state === "swapped" ? "bg-accent/70" : "bg-accent"} style={{ width: `${(r.price * 100) / cap}%` }} title={`${r.label} ${money(r.price)}`} />
+          <div key={r.part} className={r.state === "swapped" ? "bg-gold/60" : "bg-gold"} style={{ width: `${(r.price * 100) / cap}%` }} title={`${r.label} ${money(r.price)}`} />
         ))}
       </div>
       <ul className="divide-y divide-line border-y border-line">

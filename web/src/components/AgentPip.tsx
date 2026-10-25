@@ -6,11 +6,11 @@
 // reachable feed configured (a deployed site) it lists the Agentverse profile links instead.
 
 import Link from "next/link";
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { OriginChip } from "@/components/ui";
 import { AgentAvatar, AgentProfiles, useAgents } from "@/components/useAgents";
 import { useLiveBuild } from "@/components/useLiveBuild";
-import { planLines, SAMPLE_BUILD, showBuildPlan, type BuildResult, type StepKind } from "@/lib/build";
+import { buildAt, planLines, SAMPLE_BUILD, type BuildResult, type BuildStep, type StepKind } from "@/lib/build";
 import {
   ASI_ONE_URL,
   NEXT_CORNER,
@@ -28,31 +28,58 @@ import {
 
 // A new key: the first version defaulted to the bottom right on every screen, and a saved corner would keep that.
 const PREFS_KEY = "tb-agent-pip-2";
-// Bottom corners clear the fixed run-mode footer, top corners clear the header.
+// Corners sit 16px from the viewport edge; the sidebar and run-mode services are in flow, so nothing fixed to clear on desktop.
 // On a phone the collapsed tile sits in the page flow after the content, so it never covers anything; opening it overlays.
 const CORNER_CLASS: Record<Corner, string> = {
-  br: "bottom-12 right-3",
-  bl: "bottom-12 left-3",
-  tr: "top-[64px] right-3",
-  tl: "top-[64px] left-3",
+  br: "bottom-4 right-4",
+  bl: "bottom-4 left-4",
+  tr: "top-[72px] right-4",
+  tl: "top-[72px] left-4",
 };
 // Plan and re-plan lines: the clash is the one red line, the swap and the lock are green, a budget move is amber.
 const PLAN_TONE: Partial<Record<StepKind, string>> = { plan: "text-ink-2", clash: "text-coral", knockout: "text-coral", swap: "text-accent", locked: "text-mint", reallocate: "text-accent", blocked: "text-coral" };
 const PLAN_LABEL: Partial<Record<StepKind, string>> = { plan: "Plan", clash: "Clash", swap: "Re-plan", reallocate: "Budget", locked: "Locked", blocked: "Blocked" };
 
-/** The buyer agent's build plan and re-plans, above the agent rows. The live build (useLiveBuild); SAMPLE_BUILD, labelled SIM, only while none is posted. */
-function BuildPlan({ build, origin }: { build: BuildResult; origin: string }) {
+const STEP_MS = 1200;
+const subscribeMotion = (cb: () => void) => {
+  const m = window.matchMedia("(prefers-reduced-motion: reduce)");
+  m.addEventListener("change", cb);
+  return () => m.removeEventListener("change", cb);
+};
+
+/** The plan lines to show. Live: the whole plan. Not live (the SIM sample): replayed one step per STEP_MS, all at once under reduced motion. */
+function usePlanReplay(build: BuildResult, live: boolean) {
+  const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia("(prefers-reduced-motion: reduce)").matches, () => false);
+  const total = build.steps.length;
+  const [upTo, setUpTo] = useState(1);
+  const replaying = !live && !reduced;
+  useEffect(() => {
+    if (!replaying || upTo >= total) return;
+    const t = setTimeout(() => setUpTo((n) => n + 1), STEP_MS);
+    return () => clearTimeout(t);
+  }, [replaying, upTo, total]);
+  const lines = planLines(replaying ? buildAt(build, upTo) : build);
+  return { lines, finished: !replaying || upTo >= total, replay: () => setUpTo(1) };
+}
+
+/** The buyer agent's build plan and re-plans, above the agent rows. The live build (useLiveBuild); SAMPLE_BUILD, labelled SIM and replayed, only while none is posted. */
+function BuildPlan({ lines, origin, live, finished, onReplay }: { lines: BuildStep[]; origin: string; live: boolean; finished: boolean; onReplay: () => void }) {
   return (
     <section aria-label="Build plan" className="border-b border-line pb-2">
       <div className="flex items-center gap-2 py-1">
         <span className="flex-1 font-semibold">Buyer agent: build plan</span>
+        {!live && finished && (
+          <button type="button" onClick={onReplay} className="text-[11px] text-muted hover:text-ink">
+            replay
+          </button>
+        )}
         <OriginChip origin={origin} />
       </div>
       <ol className="grid gap-1">
-        {planLines(build).map((s, i) => (
+        {lines.map((s, i) => (
           <li key={i} className="grid grid-cols-[52px_1fr] gap-2">
             <span className={`text-[11px] font-bold uppercase tracking-[0.04em] ${PLAN_TONE[s.kind] ?? "text-muted"}`}>{PLAN_LABEL[s.kind]}</span>
-            <span className="min-w-0 text-ink-2">{s.line}</span>
+            <span className={`min-w-0 ${i === lines.length - 1 ? "text-ink" : "text-ink-2"}`}>{s.line}</span>
           </li>
         ))}
       </ol>
@@ -74,7 +101,7 @@ function loadPrefs(): Prefs {
   } catch {
     // storage blocked or corrupt: fall through to the default
   }
-  return { open: false, corner: window.matchMedia("(max-width: 639px)").matches ? "br" : "tr" };
+  return { open: window.matchMedia("(min-width: 640px)").matches, corner: "br" }; // wide screens start open; top right would sit on every page title
 }
 
 function savePrefs(p: Prefs) {
@@ -114,7 +141,10 @@ function AgentPipTile() {
   const pending = rows === undefined;
   const latest = latestActivity(shown);
   const fresh = !!latest && !isStale(latest.at, now);
-  const head = noFeed ? "Fetch agents on Agentverse" : headline(rows ? shown : rows, now);
+  const plan = usePlanReplay(liveBuild ?? SAMPLE_BUILD, !!liveBuild);
+  const planHead = plan.lines.at(-1)?.line;
+  const feedEmpty = noFeed || offline || (!!rows && shown.length === 0);
+  const head = planHead && feedEmpty ? planHead : noFeed ? "Fetch agents on Agentverse" : headline(rows ? shown : rows, now);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
@@ -143,7 +173,7 @@ function AgentPipTile() {
       }}
       style={drag ? { transform: `translate(${drag.dx}px, ${drag.dy}px)` } : undefined}
       className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-line bg-panel text-[13px] shadow-lg ${CORNER_CLASS[prefs.corner]} ${
-        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px] max-sm:static max-sm:mx-4 max-sm:mb-16 max-sm:max-w-none"
+        prefs.open ? "h-[360px] max-h-[60vh] w-[min(360px,calc(100vw-24px))]" : "w-auto max-w-[calc(100vw-24px)] sm:w-[340px] max-sm:static max-sm:mx-4 max-sm:mb-4 max-sm:max-w-none"
       } ${drag ? "" : "transition-[width,height] duration-150 motion-reduce:transition-none"}`}
     >
       <div
@@ -157,6 +187,7 @@ function AgentPipTile() {
         <span className="min-w-0 flex-1 truncate font-semibold" aria-live="polite">
           {head}
         </span>
+        {head === planHead && <OriginChip origin={liveBuild?.origin ?? "SIM"} />}
         <button
           type="button"
           onClick={() => update({ corner: NEXT_CORNER[prefs.corner] })}
@@ -180,7 +211,7 @@ function AgentPipTile() {
       {prefs.open ? (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
-            {showBuildPlan(!!liveBuild, window.location.search) && <BuildPlan build={liveBuild ?? SAMPLE_BUILD} origin={liveBuild?.origin ?? "SIM"} />}
+            <BuildPlan lines={plan.lines} origin={liveBuild?.origin ?? "SIM"} live={!!liveBuild} finished={plan.finished} onReplay={plan.replay} />
             {noFeed ? (
               <>
                 <p className="pt-2 text-muted">No live agent feed on this site. Each agent&apos;s public Agentverse profile:</p>

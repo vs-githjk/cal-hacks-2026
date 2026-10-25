@@ -167,14 +167,14 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                       initial={play ? { rotateX: -90, opacity: 0 } : false}
                       animate={
                         play && won
-                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(255,255,255,0)", "inset 0 0 0 2px rgba(255,255,255,0.55)", "inset 0 0 0 0 rgba(255,255,255,0)"] }
+                          ? { rotateX: 0, opacity: 1, boxShadow: ["inset 0 0 0 0 rgba(47,62,102,0)", "inset 0 0 0 2px rgba(47,62,102,0.45)", "inset 0 0 0 0 rgba(47,62,102,0)"] }
                           : { rotateX: 0, opacity: 1 }
                       }
                       transition={{ delay: play ? i * 0.06 : 0, duration: 0.28, ease: "easeOut", boxShadow: { delay: bids.length * 0.06 + 0.3, duration: 0.9 } }}
                       className={`cursor-pointer outline-none transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${won ? "bg-mint-soft" : `hover:bg-soft ${out ? "text-muted" : ""}`}`}
                     >
                       <Td className={`font-mono font-semibold ${edge} ${won ? "text-mint" : "text-muted"}`}>{b.rank ?? (b.recommendation === "refused" ? "ref" : "out")}</Td>
-                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} />{won && <> <Tag>Winner</Tag></>}</Td>
+                      <Td><span className="font-semibold text-ink">{b.seller}</span> <OriginChip origin={b.origin} />{won && <> <span className="inline-flex items-center rounded-md bg-gold-soft px-1.5 py-0.5 text-[12px] font-semibold text-gold-ink ring-1 ring-inset ring-gold">Winner</span></>}</Td>
                       <Td>
                         <Tag>{b.condition}</Tag>
                         {b.altLines?.map((l) => <span key={l.condition} className="ml-1.5 text-[13px] tabular-nums text-muted">{l.condition} {money(l.unitPrice)}</span>)}

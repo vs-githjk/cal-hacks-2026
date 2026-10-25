@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { Card, Code, Label, OriginChip, Pill, SourceLink, clock } from "@/components/ui";
+import { Card, Code, Label, OriginChip, Pill, SampleOnly, SourceLink, clock } from "@/components/ui";
+import { LossReports as SampleLossReports, SellerLearns } from "@/components/market";
+import * as sample from "@/lib/sample";
+import { asSim } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const BAND: Record<string, string> = { within5: "within 5%", within10: "within 10%", within20: "within 20%", over20: "over 20%" };
@@ -38,6 +41,8 @@ export default function SellerPage() {
         <>
           <PooledLot />
           {paired ? <LossReports sellerId={id} /> : <SellerPair sellerId={id} />}
+          {!paired && <SampleOnly on><SampleLossReports reports={asSim(sample.lossReports)} /></SampleOnly>}
+          <SampleOnly on><SellerLearns learning={asSim(sample.learning)} /></SampleOnly>
         </>
       )}
     </div>
@@ -48,7 +53,8 @@ function PooledLot() {
   const [needs] = useTable(tables.sellerNeeds);
   return (
     <Card>
-      <Label>Pooled lot · what sellers see</Label>
+      <Label>Pooled lot</Label>
+      <p className="mb-2.5 text-[13px] text-muted">What every seller sees before bidding.</p>
       {needs.length === 0 ? (
         <p className="text-muted">No open request right now. When a buyer posts a need, it shows here as SKU, quantity, ceiling band and deadline only.</p>
       ) : (

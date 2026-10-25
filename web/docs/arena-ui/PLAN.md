@@ -1,3 +1,53 @@
+# Arena UI v3: light dashboard around the diorama
+
+> **v3.1 (Sat ~20:40, user):** no sidebar and no bottom tabs. One navy band on top on every screen size; the active page is a cream folder tab cut out of the band (`.tab-on` in globals.css), so the page surface starts at the tab. The market and round status sit at the band's right end. The Overview has no heading, blurb or buttons: the Question card, then one card with the six-round strip and the stats, then the ticker. The run-mode line is a small footer at the end of every page.
+
+> **v3 (Sat ~19:40, user: full redesign, light mode, cream like the 3D, left sidebar dashboard, PWA).** Supersedes everything below where it differs. v2's restraint rules still hold (one memorable element, sentence case, dots not pills, red only as a dot or word).
+
+**Subject.** A buyer's agent buys PC parts in refereed sealed rounds; judges watch it work. The app is the calm, daylit room around the 3D diorama, not a marketing site.
+
+**Palette** (taken from the 3D scene: step tops, banners, gold trim, wax seal)
+
+| token | value | role |
+|---|---|---|
+| canvas | `#FBF5EC` | paper cream page (the diorama's step top) |
+| canvas-2 / soft | `#F3E7D6` | linen: sidebar, insets, table zebra if any |
+| panel | `#FFFDF9` | cards |
+| ink / ink-2 / muted | `#2B2A33` / `#55505A` / `#8A7F72` | text (the scene's nameplate ink) |
+| line / line-2 | `#EADFCF` / `#DCCBB4` | hairlines |
+| accent | `#2F3E66` | navy, the scene's banners: primary buttons, active nav, focus |
+| accent-ink | `#FFF8EE` | text on navy |
+| gold | `#B98A2E` | the budget bar only (the scene's gold trim, darkened for contrast) |
+| mint | `#4E8A5B` | sage: won, approved, LIVE |
+| coral | `#C8553D` | the wax seal: failures, as a dot or a word only |
+| amber | `#A8742F` | bronze: SIM, caution |
+| sky | `#3E6F8E` | MIRROR, links |
+
+No serif display, no terracotta, no all-caps, no mono for labels (mono only for codes, ids, hashes).
+
+**Type.** Bricolage Grotesque (Google, OFL) for page titles and the one big number per screen: friendly and chunky like the toy figures. Geist for everything else. Scale: 13 / 15 / 18 / 24 / 32 / 44.
+
+**Layout.**
+```
+desktop (lg+)                                   phone
++-----------+--------------------------------+  +--------------------+
+| [mark]    | Overview          [buttons]    |  | [mark] Tech Bazaar ●|
+| Tech      |                                |  |--------------------|
+| Bazaar    | [ the question card ........ ] |  | page content       |
+|           | [ build 7fr ]  [ timeline 5fr ]|  |                    |
+| Overview  |                                |  | services (inline)  |
+| Buyer     |                                |  |--------------------|
+| Market    |                                |  | tab tab tab tab tab|  <- fixed bottom tab bar
+| Floor     |                                |  +--------------------+
+| Seller    |                                |
+| --------- |                                |
+| ● Market live / services, small            |
++-----------+--------------------------------+
+```
+Sidebar 240px, linen, sticky full height, hairline right edge. Content left aligned, max 1200px, 32px padding. The run-mode footer moves into the sidebar bottom (desktop) and inline at the end of the page (phone).
+
+**Principles.** The 3D diorama is the hero of the product; the dashboard frames it and stays quiet. Navy is the only "brand" color; gold appears once (budget bar). Cards are flat cream-white with a hairline and no drop shadow except the floating Fetch tile.
+
 # Arena UI: "Colosseum at night"
 
 > **v2, restraint (Sat 19:10, after review: "looks AI generated, too red").** This supersedes the motif and component notes below where they differ.

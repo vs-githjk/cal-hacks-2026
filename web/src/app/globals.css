@@ -1,42 +1,44 @@
-/* Tech Bazaar design tokens: the team reference artifact (dark first, Ledger structure).
+/* Tech Bazaar v3: light cream dashboard around the 3D diorama. Navy is the one brand color, gold only for the budget bar.
    Tailwind v4: the @theme inline block turns every token into a utility (bg-panel, text-muted, border-line, font-display, ...). */
 @import "tailwindcss";
 
 
-/* Colosseum at night: warm stone, gold for the house, laurel green for a win, Pompeian red for a knockout,
-   Tyrian purple only for the referee. Hue now carries meaning, but never alone: every colored state also says its word
-   (WON, KNOCKED OUT, VETOED, LIVE, MIRROR, SIM). */
+/* Palette taken from the 3D scene: cream steps, linen sidebar, navy banners, gold trim, wax seal red. */
 :root {
-  --canvas: #0d0a08;
-  --canvas-2: #120e0b;
-  --panel: #17120e;
-  --soft: #211a14;
-  --glass: rgba(13, 10, 8, 0.78);
-  --ink: #f3e9d7;
-  --ink-2: #d6c8b0;
-  --muted: #9a8b75;
-  --line: #2b231b;
-  --line-2: #43372a;
-  --accent: #e9b949;
-  --accent-2: #f2cc6b;
-  --accent-ink: #1a1208;
-  --accent-soft: rgba(233, 185, 73, 0.12);
-  --coral: #de5b41; /* Pompeian red: veto, knocked out, clash, error */
-  --coral-soft: rgba(222, 91, 65, 0.14);
-  --mint: #6dbf7e; /* laurel green: won, approved, LIVE */
-  --mint-soft: rgba(109, 191, 126, 0.14);
-  --amber: #c8925a; /* bronze: SIM, caution */
-  --amber-soft: rgba(200, 146, 90, 0.12);
-  --sky: #93b4c8; /* marble blue: MIRROR, source links */
-  --sky-soft: rgba(147, 180, 200, 0.12);
-  --royal: #9b4a86; /* Tyrian purple: the referee only */
-  --royal-soft: rgba(155, 74, 134, 0.16);
-  --slate: #8a7d6b;
-  --slate-soft: rgba(138, 125, 107, 0.14);
-  --grid: rgba(233, 185, 73, 0.05);
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
-  --radius: 16px;
-  color-scheme: dark;
+  --canvas: #f5efe6;
+  --canvas-2: #efe4d3;
+  --panel: #fffdf8;
+  --soft: #efe4d3;
+  --glass: rgba(245, 239, 230, 0.85);
+  --ink: #2b2a33;
+  --ink-2: #55505a;
+  --muted: #8a7f72;
+  --line: #eadfcf;
+  --line-2: #dccbb4;
+  --accent: #2f3e66;
+  --accent-2: #3d4f80;
+  --accent-ink: #fff8ee;
+  --accent-soft: rgba(47, 62, 102, 0.08);
+  --gold: #b98a2e; /* the budget bar fill only */
+  --gold-soft: rgba(185, 138, 46, 0.14);
+  --gold-ink: #8a6a22; /* gold as text */
+  --teal: #2f6f6a; /* the buyer's color in the 3D scene */
+  --coral: #a8432f; /* wax seal: failures, readable as text */
+  --coral-soft: rgba(168, 67, 47, 0.1);
+  --mint: #3e7049; /* sage: won, approved, LIVE, readable as text */
+  --mint-soft: rgba(62, 112, 73, 0.1);
+  --amber: #a8742f; /* bronze: SIM, caution */
+  --amber-soft: rgba(168, 116, 47, 0.1);
+  --sky: #3e6f8e; /* MIRROR, links */
+  --sky-soft: rgba(62, 111, 142, 0.1);
+  --royal: #7a4a86; /* the referee only */
+  --royal-soft: rgba(122, 74, 134, 0.1);
+  --slate: #8a7f72;
+  --slate-soft: rgba(138, 127, 114, 0.1);
+  --grid: transparent;
+  --shadow: 0 12px 32px rgba(43, 42, 51, 0.12);
+  --radius: 14px;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -64,6 +66,10 @@
   --color-amber-soft: var(--amber-soft);
   --color-sky: var(--sky);
   --color-sky-soft: var(--sky-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-ink: var(--gold-ink);
+  --color-teal: var(--teal);
   --color-royal: var(--royal);
   --color-royal-soft: var(--royal-soft);
   --color-slate: var(--slate);
@@ -71,7 +77,7 @@
   --radius-card: var(--radius);
   /* next/font sets these variables on <html>; see fonts.ts */
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-cinzel), ui-serif, Georgia, serif;
+  --font-display: var(--font-bricolage), var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -90,6 +96,7 @@ body {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: none;
 }
 
 :focus-visible {
@@ -106,30 +113,16 @@ body {
   to { transform: scale(1); opacity: 1 }
 }
 
-/* Colonnade: a faint row of arches across the top of every page, fading out. Decorative only. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle at 50% 100%, transparent 0 28px, var(--grid) 29px 31px, transparent 32px);
-  background-size: 72px 36px;
-  background-repeat: repeat-x;
-  background-position: 0 0;
-  mask-image: linear-gradient(to bottom, black, transparent 40%);
-}
-main, header, footer { position: relative; z-index: 1; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
 
-@keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 @keyframes orbit { to { transform: rotate(360deg) } }
-@keyframes beacon { 0%, 100% { opacity: .35; transform: scale(1) } 50% { opacity: .9; transform: scale(1.08) } }
+@keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 
-/* One gold pulse for "in the arena now". */
-@keyframes torch {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(233, 185, 73, 0); opacity: .85 }
-  50% { box-shadow: 0 0 12px 2px rgba(233, 185, 73, 0.45); opacity: 1 }
-}
-.torch { animation: torch 1.8s ease-in-out infinite; }
+/* The nav band is navy; the brand mark on it swaps to cream. */
+.on-navy { --accent: #FFF8EE; --accent-ink: #2F3E66; }
+/* Folder tab: the active nav link is the page itself, with the two inverse curves at its feet. */
+.tab-on { position: relative; background: var(--canvas); color: var(--ink); border-radius: 12px 12px 0 0; }
+.tab-on::before, .tab-on::after { content: ""; position: absolute; bottom: 0; width: 12px; height: 12px; pointer-events: none; }
+.tab-on::before { left: -12px; background: radial-gradient(circle at 0 0, transparent 12px, var(--canvas) 12.5px); }
+.tab-on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, var(--canvas) 12.5px); }

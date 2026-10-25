@@ -10,7 +10,7 @@ import { AGENTVERSE_URL, shortAddress, type AgentInfo } from "@/lib/agents";
 import { FEED_ENV, POLL_MS, feedBase, fetchAgents, type AgentStatus } from "@/lib/agentFeed";
 import { agentFor, bubbleText, bubblesFrom, type AgentEventLike } from "@/lib/arenaAgents";
 import { SAMPLES, SAMPLE_AGENT_LINES } from "@/lib/arenaFixture";
-import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorKey, type ArenaRows, type ArenaScene, type Playback, type PlaybackAction, type SceneOffer, type Story } from "@/lib/arenaScene";
+import { IDLE, isEmptyMarket, playback, projectArenaScene, storyFor, type ActorKey, type ArenaRows, type ArenaScene, type Playback, type PlaybackAction, type SceneOffer } from "@/lib/arenaScene";
 import type { ReasonCode } from "@/lib/bracket";
 import { FIXED_ACTORS, actorFor } from "@/lib/floor";
 import { formatMoney } from "@/lib/money";
@@ -132,33 +132,55 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
   const story = storyFor(scene, view);
   const reveal = revealAt(scene, view.beat);
 
-  const top = <StoryTop story={story} sample={sample !== null} deadline={scene.phase === "open" ? scene.deadline : null} />;
+  const narration = <p role="status" className="sr-only">{story.caption}</p>;
+  const countdown = scene.phase === "open" && scene.deadline ? <ClosesIn deadline={scene.deadline} sample={sample !== null} /> : null;
+  const knockedCount = scene.offers.filter((o) => o.outcome === "knocked" && reveal.shown(o)).length;
+  const summary =
+    scene.phase === "waiting"
+      ? "No round yet"
+      : scene.phase === "open" || scene.phase === "closing" || !reveal.opened
+        ? `${scene.sealedCount} sealed bids`
+        : `${scene.offers.length} bids${knockedCount > 0 ? `, ${knockedCount} out` : ""}`;
   const controls = <Controls pb={view} scene={scene} act={act} />;
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3.5">
-        <div className="text-[18px] font-bold tracking-[-0.01em]">
-          Floor <span className="font-medium text-muted">every motion is a market row</span>
-        </div>
-        <div className="text-[14px] text-muted">{sample ? "Sample run" : scene.roundId ? `Round ${scene.roundId}` : "No round"}</div>
-      </div>
       {flat ? (
         <div className="grid min-w-0 content-start gap-3.5">
-          {top}
+          {narration}
+          {countdown}
           {controls}
           <ActorList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
+        <div className="overflow-hidden rounded-[24px] shadow-[0_18px_48px_rgba(110,70,30,0.16)] ring-1 ring-[#E2D3BE]">
           <div className="relative flex min-w-0 flex-col sm:block">
             {webgl ? (
               <Floor3D scene={scene} beat={view.beat} frozen={frozen} reducedMotion={!!reduced} selected={picked} onPick={setPicked} bubbles={bubbles} onUnavailable={() => setUnavailable(true)} />
             ) : (
               <div className="grid h-[440px] place-items-center bg-[#F6E2CC] text-[#2B2A33]/60 lg:h-[600px]">Loading the floor...</div>
             )}
-            {/* phones: the story sits above the scene so it never covers the figures; wider screens overlay it */}
-            <div className="pointer-events-none z-20 bg-[#FFF6EA] p-4 max-sm:order-first max-sm:[&_.story-card]:bg-transparent max-sm:[&_.story-card]:p-0 max-sm:[&_.story-card]:shadow-none max-sm:[&_.story-card]:ring-0 sm:absolute sm:inset-x-0 sm:top-0 sm:bg-transparent sm:p-6">{top}</div>
+            {narration}
+            {/* Top right: the countdown while open, and a SIM chip whenever the scene is a sample (audit #253 item 4: samples are always labelled). */}
+            {(countdown || sample !== null) && (
+              <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-2">
+                {sample !== null && <span title="Sample run, not this market" className="rounded-full bg-white/95 px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.06em] text-[#2B2A33]/75 shadow-[0_2px_8px_rgba(60,40,30,0.15)]">SIM</span>}
+                {countdown}
+              </div>
+            )}
+            {/* a small collapsible window: top left over the scene on wider screens, below the scene on phones */}
+            <details className="group pointer-events-auto z-20 w-[min(340px,calc(100%-2rem))] rounded-2xl bg-white/95 text-[#2B2A33] shadow-[0_8px_24px_rgba(60,40,30,0.16)] ring-1 ring-black/5 backdrop-blur-md sm:absolute sm:left-4 sm:top-4 max-sm:m-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[14px] font-medium [&::-webkit-details-marker]:hidden">
+                <span>{summary}</span>
+                <span className="flex items-center gap-2">
+                  {sample !== null && <span className="rounded border border-dashed border-[#2B2A33]/40 px-1.5 font-mono text-[10.5px] text-[#2B2A33]/70">SIM</span>}
+                  <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
+                </span>
+              </summary>
+              <div className="max-h-[50vh] overflow-y-auto border-t border-black/5 px-2 pb-2">
+                <OffersList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
+              </div>
+            </details>
             {disconnected && (
               <div className="absolute inset-0 z-30 grid place-items-center bg-canvas/70">
                 {everActive ? (
@@ -169,18 +191,12 @@ function FloorView({ sample: sampleParam, sampleBeat }: { sample: SampleName | n
               </div>
             )}
           </div>
-          <div className="border-t border-white/10 bg-[#17120E] px-4 py-3 sm:px-6">{controls}</div>
+          <div className="border-t border-[#E8DCCB] bg-[#FFFDF8] px-4 py-3 sm:px-6">{controls}</div>
         </div>
       )}
-      <div className="grid gap-3.5 lg:grid-cols-[7fr_5fr]">
-        <Card className="content-start">
-          <Label>Offers</Label>
-          <OffersList scene={scene} reveal={reveal} picked={picked} onPick={setPicked} />
-        </Card>
-        <Card className="content-start">
-          <Details scene={scene} reveal={reveal} events={rows.events} agentRows={agentRows} sample={sample} picked={picked} />
-        </Card>
-      </div>
+      <Card className="content-start">
+        <Details scene={scene} reveal={reveal} events={rows.events} agentRows={agentRows} sample={sample} picked={picked} />
+      </Card>
     </div>
   );
 }
@@ -202,31 +218,11 @@ function ClosesIn({ deadline, sample }: { deadline: Date; sample: boolean }) {
   return <p className={PILL}>Closes in {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}</p>;
 }
 
-/** Top left: the status line, the hero, the one-sentence caption and the quiet knockout note. Top right: the countdown while open. */
-function StoryTop({ story, sample, deadline }: { story: Story; sample: boolean; deadline: Date | null }) {
-  return (
-    <div className="flex items-start justify-between gap-3 text-[#2B2A33]">
-      <div className="story-card min-w-0 max-w-[46ch] rounded-2xl bg-white/90 p-4 shadow-[0_8px_24px_rgba(60,40,30,0.16)] ring-1 ring-black/5 backdrop-blur-md sm:p-5">
-        {story.hero && <p className="font-display text-[28px] font-bold leading-[1.08] tracking-[-0.02em] sm:text-[36px]">{story.hero}</p>}
-        <p role="status" className="mt-1 text-[16px] leading-snug text-[#2B2A33]/85 sm:text-[18px]">{story.caption}</p>
-        {story.note && <p className="mt-1.5 text-[13px] leading-snug text-[#2B2A33]/65">{story.note}</p>}
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-2">
-        <p className="flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-[14px] text-[#2B2A33]/75 shadow-[0_2px_8px_rgba(60,40,30,0.15)] backdrop-blur-md">
-          {story.status}
-          {sample && <span className="rounded-md border border-dashed border-[#2B2A33]/50 px-1.5 py-0.5 font-mono text-[11px] font-semibold leading-[1.5] tracking-[0.06em]">SIM</span>}
-        </p>
-        {deadline && <ClosesIn deadline={deadline} sample={sample} />}
-      </div>
-    </div>
-  );
-}
-
 const BUTTON =
-  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] font-medium text-white hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9B949] disabled:cursor-not-allowed disabled:opacity-40";
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#2B2A33]/15 bg-white px-4 text-[15px] font-medium text-[#2B2A33] shadow-[0_1px_2px_rgba(60,40,30,0.08)] hover:bg-[#F6F1EA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66] disabled:cursor-not-allowed disabled:opacity-50";
 
 const PRIMARY =
-  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-[15px] font-semibold text-[#17120E] hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9B949]";
+  "pointer-events-auto inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2F3E66] px-4 text-[15px] font-semibold text-white hover:bg-[#26335A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F3E66]";
 
 const STEPS = ["Request", "Sealed bids", "Rounds", "Winner"] as const;
 
@@ -252,29 +248,29 @@ function Controls({ pb, scene, act }: { pb: Playback; scene: ArenaScene; act: (a
   const done = pb.beat >= total;
   const at = stepOf(scene, pb.beat);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-white">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 text-[#2B2A33]">
       <ol className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         {STEPS.map((name, i) => {
           const state = i < at || (i === at && done && total > 0 && i === 3) ? "done" : i === at ? "now" : "next";
           const seekable = total > 0 && i >= 1 && state !== "next";
           return (
             <li key={name} className="flex items-center gap-2">
-              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#E9B949]" : "bg-white/20"}`} />}
+              {i > 0 && <span aria-hidden="true" className={`hidden h-px w-8 sm:block ${i <= at ? "bg-[#2F3E66]" : "bg-[#2B2A33]/20"}`} />}
               <button
                 type="button"
                 disabled={!seekable}
                 onClick={() => act({ type: "seek", beat: seekFor(scene, i) })}
                 aria-current={state === "now" ? "step" : undefined}
-                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E9B949]"
+                className="flex min-h-11 items-center gap-2 rounded-full px-1.5 text-[14px] disabled:cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2F3E66]"
               >
-                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#E9B949] bg-[#E9B949] shadow-[0_0_0_4px_rgba(233,185,73,0.22)]" : state === "done" ? "border-[#E9B949] bg-[#E9B949]/15" : "border-white/25"}`}>
+                <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${state === "now" ? "border-[#2F3E66] bg-[#2F3E66] shadow-[0_0_0_4px_rgba(47,62,102,0.18)]" : state === "done" ? "border-[#2F3E66] bg-[#2F3E66]/10" : "border-[#2B2A33]/25"}`}>
                   {state === "done" && (
-                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#E9B949]" aria-hidden="true">
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 text-[#2F3E66]" aria-hidden="true">
                       <path d="M2.5 6.5 5 9l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </span>
-                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-white/50" : ""}>{name}</span>
+                <span className={state === "now" ? "font-semibold" : state === "next" ? "text-[#2B2A33]/55" : ""}>{name}</span>
               </button>
             </li>
           );
@@ -309,7 +305,7 @@ function outcomeWord(o: SceneOffer): string {
   if (o.outcome === "winner") return "Winner";
   if (o.outcome === "ranked") return `Ranked #${o.rank}`;
   const code: ReasonCode | undefined = o.knock?.reasonCode;
-  return code === "shield_block" ? "Blocked" : code === "advocate_veto" || code === "claim_false" ? "Vetoed" : "Refused";
+  return code === "shield_block" ? "Blocked by Shield" : code === "advocate_veto" ? "Vetoed by Advocate" : code === "claim_false" ? "Claim check failed" : "Refused by referee";
 }
 
 /** How much of a closing round the side card may show at this beat, so it never gets ahead of the story: prices open with the offers,
@@ -325,20 +321,20 @@ function revealAt(scene: ArenaScene, beat: number): Reveal {
   };
 }
 
-const sealedLine = (n: number) => `${n === 0 ? "No sealed offers yet" : `${n} sealed offer${n === 1 ? "" : "s"}`}. Prices stay sealed until the round closes.`;
+const sealedLine = () => "Prices stay sealed until the round closes.";
 
-/** The Offers card body: sealed envelopes before close, the referee's order after. */
+/** The bids window body: sealed envelopes before close, the referee's order after. */
 function OffersList({ scene, reveal, picked, onPick }: { scene: ArenaScene; reveal: Reveal; picked: string | null; onPick: (key: string) => void }) {
   if (scene.phase === "waiting") return <p className="text-muted">No round yet.</p>;
-  if (scene.phase === "open" || scene.phase === "closing") return <p className="text-muted">{sealedLine(scene.sealedCount)}</p>;
-  if (!reveal.opened) return <p className="text-muted">{scene.sealedCount} sealed offer{scene.sealedCount === 1 ? "" : "s"}. Prices appear as the referee opens them.</p>;
+  if (scene.phase === "open" || scene.phase === "closing") return <p className="text-muted">{sealedLine()}</p>;
+  if (!reveal.opened) return <p className="text-muted">Prices appear as the referee opens them.</p>;
   if (scene.offers.length === 0) {
-    return <p className="text-muted">{scene.phase === "inconsistent" ? "The result rows disagree, so no winner is shown." : "No offer passed the checks, so nobody won this round."}</p>;
+    return <p className="text-muted">{scene.phase === "inconsistent" ? "The result rows disagree, so no winner is shown." : "No bid passed the checks."}</p>;
   }
   return (
     <>
       {scene.phase === "inconsistent" && <p className="mb-2 text-muted">The result rows disagree, so no winner is shown.</p>}
-      <p className="mb-1 text-[12px] text-muted">Prices are before sales tax.</p>
+      <p className="mb-1 px-2 text-[12px] text-muted">Prices are before sales tax.</p>
       <ul className="grid gap-1">
         {scene.offers.map((o) => {
           const shown = reveal.shown(o);

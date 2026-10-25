@@ -7,8 +7,8 @@ import { safeUrl } from "@/lib/url";
 export type Origin = "LIVE" | "MIRROR" | "SIM";
 
 const ORIGIN_STYLE: Record<Origin, string> = {
-  LIVE: "bg-mint/15 text-mint",
-  MIRROR: "bg-sky/15 text-sky",
+  LIVE: "bg-mint/10 text-mint",
+  MIRROR: "bg-sky/10 text-sky",
   SIM: "bg-soft text-muted ring-1 ring-inset ring-line-2",
 };
 const ORIGIN_TITLE: Record<Origin, string> = {
@@ -38,7 +38,7 @@ export function Tag({ children }: { children: ReactNode }) {
 /** tactile: hover lifts 2px with a deeper shadow, press scales to 0.99 (150 ms; none when motion is reduced). */
 export function Card({ children, className = "", stripe, hero, tactile }: { children: ReactNode; className?: string; stripe?: "coral" | "ink" | "amber" | "mint"; hero?: boolean; tactile?: boolean }) {
   const left = stripe ? ` border-l-4 ${{ coral: "border-l-coral", ink: "border-l-ink", amber: "border-l-amber", mint: "border-l-mint" }[stripe]}` : "";
-  const feel = tactile ? " motion-safe:transition-[transform,box-shadow] motion-safe:duration-150 motion-safe:ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(233,185,73,0.08)] motion-safe:active:scale-[0.99]" : "";
+  const feel = tactile ? " motion-safe:transition-[transform,box-shadow] motion-safe:duration-150 motion-safe:ease-out motion-safe:hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(43,42,51,0.08)] motion-safe:active:scale-[0.99]" : "";
   return <section data-hero={hero || undefined} className={`card min-w-0 p-[18px]${left}${feel} ${className}`}>{children}</section>;
 }
 
