@@ -1,0 +1,138 @@
+{
+ "actorSpecification": 1,
+ "fields": {
+  "type": "object",
+  "properties": {
+   "build_id": {
+    "type": "string",
+    "description": "Which build this check belongs to"
+   },
+   "build_verdict": {
+    "type": "string",
+    "enum": [
+     "pass",
+     "partial",
+     "fail",
+     "uncertain"
+    ],
+    "description": "The whole build: any fail is fail, else any uncertain is uncertain; pass only when every part was given (partial when parts are missing)"
+   },
+   "rule_id": {
+    "type": "string",
+    "description": "The rule, for example fit.gpu_length"
+   },
+   "verdict": {
+    "type": "string",
+    "enum": [
+     "pass",
+     "fail",
+     "uncertain"
+    ],
+    "description": "This rule's result. Unknown specs give uncertain, never a guess"
+   },
+   "reason": {
+    "type": "string",
+    "description": "Plain explanation with the numbers used"
+   },
+   "parts": {
+    "type": "array",
+    "description": "The parts this rule compared",
+    "items": {
+     "type": "string"
+    }
+   },
+   "sources": {
+    "type": "array",
+    "description": "Maker spec pages behind the specs we filled in (empty when every spec came from your input)",
+    "items": {
+     "type": "string"
+    }
+   },
+   "origin": {
+    "type": "string",
+    "description": "Where this row's numbers came from: MIRROR (dated maker data, Oct 24 2026) or your input"
+   },
+   "complete": {
+    "type": "boolean",
+    "description": "True when every part was given and read"
+   },
+   "missing_parts": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Parts not given, so their rules did not run"
+   }
+  },
+  "required": [
+   "build_id",
+   "rule_id",
+   "verdict",
+   "reason"
+  ]
+ },
+ "views": {
+  "checks": {
+   "title": "Compatibility checks",
+   "transformation": {
+    "fields": [
+     "build_id",
+     "verdict",
+     "rule_id",
+     "reason",
+     "parts",
+     "sources",
+     "origin",
+     "build_verdict",
+     "complete",
+     "missing_parts"
+    ]
+   },
+   "display": {
+    "component": "table",
+    "properties": {
+     "build_id": {
+      "label": "Build",
+      "format": "text"
+     },
+     "verdict": {
+      "label": "Result",
+      "format": "text"
+     },
+     "rule_id": {
+      "label": "Rule",
+      "format": "text"
+     },
+     "reason": {
+      "label": "Why",
+      "format": "text"
+     },
+     "parts": {
+      "label": "Parts",
+      "format": "array"
+     },
+     "sources": {
+      "label": "Maker sources",
+      "format": "array"
+     },
+     "build_verdict": {
+      "label": "Build result",
+      "format": "text"
+     },
+     "origin": {
+      "label": "Numbers from",
+      "format": "text"
+     },
+     "complete": {
+      "label": "All parts given",
+      "format": "boolean"
+     },
+     "missing_parts": {
+      "label": "Parts not given",
+      "format": "array"
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,9 @@
+# Exact versions from the successful Apify build vsy9qbdFeLUmuPUi5 (pip freeze). Unpinned, the SDK crashed on import:
+# newer pydantic breaks crawlee (default and default_factory), newer browserforge drops DATA_FILES.
+apify==2.7.3
+apify_client==1.12.2
+apify_shared==1.5.0
+crawlee==0.6.12
+pydantic==2.11.10
+pydantic_core==2.33.2
+browserforge==1.2.3

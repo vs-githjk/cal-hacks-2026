@@ -14,6 +14,7 @@
         "properties": {
           "sku_spec": {"type": "string"},
           "condition": {"type": "string"},
+          "allowed_conditions": {"type": "array", "items": {"type": "string", "enum": ["new", "open-box", "refurbished", "used"]}},
           "variant": {"type": "string"},
           "quantity": {"type": "number"},
           "skipped_owned_part_id": {"type": "string", "description": "Set when ownership memory dropped this line; the card cites that OwnedPart."}
@@ -26,7 +27,9 @@
     "state": {"type": "string", "enum": ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "DONE", "EXPIRED", "PAUSED"]},
     "reserved_amount": {"type": "number"},
     "po_number": {"type": "string"},
-    "created_at": {"type": "string"}
+    "created_at": {"type": "string"},
+    "parent_goal_id": {"type": "string", "description": "Private local relation to the parent build goal; omitted on parent goals."},
+    "parent_part": {"type": "string", "description": "Exact SKU of the parent build item represented by this child; omitted on parent goals."}
   },
   "required": ["id", "buyer_id", "type", "items", "cap", "deadline", "state", "reserved_amount", "created_at"]
 }

@@ -69,6 +69,14 @@ def good_sql(query):
     raise AssertionError(query)
 
 
+@pytest.fixture(autouse=True)
+def memory_in_tmp(tmp_path, monkeypatch):
+    """The end-of-rehearsal memory snapshot (#189) goes to a temp dir, never to demo/out."""
+    from demo import memory
+    monkeypatch.setattr(memory, "OUT_DIR", tmp_path / "memory")
+    return tmp_path / "memory"
+
+
 def no_shots(url, path):
     return True, ""
 
@@ -246,6 +254,16 @@ def test_dry_run_prints_the_plan_and_touches_nothing(tmp_path, capsys):
         assert needle in text
 
 
+def test_dry_run_says_what_the_approval_does_with_and_without_a_live_call(tmp_path, capsys):
+    """#251: no scripted approval, so the plan says whether each run rings the phone or ends at the approval gate."""
+    boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("dry run must not touch the stack"))  # noqa: E731
+    rehearse.main(["--dry-run", "--out", str(tmp_path / "a")], probe=boom, sql=boom, shoot=boom)
+    assert "no --live-call, so each run ends at beat 4's approval gate" in capsys.readouterr().out
+    rehearse.main(["--dry-run", "--stage-cmd", "python3 demo/stage.py --auto --live-call", "--out", str(tmp_path / "b")],
+                  probe=boom, sql=boom, shoot=boom)
+    assert "ONE real approval phone call" in capsys.readouterr().out
+
+
 def test_beat_parser_accepts_the_stage_and_bridge_shapes():
     assert rehearse.parse_beat("  BEAT 4 of 5: Approval") == 4
     assert rehearse.parse_beat("BEAT 2: Shield") == 2
@@ -282,3 +300,29 @@ def test_unflushed_stage_output_still_gives_real_beat_times_and_spread_out_scree
     assert all(v >= 0.25 for v in r["beats"].values()), r["beats"]
     assert len(shot_times) == 10
     assert max(shot_times) - min(shot_times) >= 0.9, "screenshots must be taken as the beats happen, not all at the end"
+
+
+
+def test_a_rehearsal_saves_the_market_rows_for_the_memory_panel(tmp_path, memory_in_tmp):
+    say = []
+    out = tmp_path / "out"
+    code = rehearse.main(["--stage-cmd", stage(tmp_path, "ok.py", OK_STAGE), "--out", str(out), "--runs", "1"],
+                         probe=up, sql=good_sql, shoot=no_shots, say=say.append)
+    snaps = list(memory_in_tmp.glob("market-memory-*.json"))
+    assert code == 0 and len(snaps) == 1
+    assert any(line.startswith("memory: market-memory-") for line in say)
+
+
+
+def test_a_failed_memory_snapshot_never_changes_the_rehearsal_result(tmp_path, monkeypatch):
+    from demo import memory
+
+    def boom(*a, **k):
+        raise OSError("disk full")
+    monkeypatch.setattr(memory, "snapshot", boom)
+    say = []
+    out = tmp_path / "out"
+    code = rehearse.main(["--stage-cmd", stage(tmp_path, "ok.py", OK_STAGE), "--out", str(out), "--runs", "1"],
+                         probe=up, sql=good_sql, shoot=no_shots, say=say.append)
+    assert code == 0 and (out / "REPORT.md").exists()
+    assert any("snapshot not saved (OSError: disk full)" in line for line in say)

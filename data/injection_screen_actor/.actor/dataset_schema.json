@@ -1,0 +1,213 @@
+{
+ "actorSpecification": 1,
+ "fields": {
+  "type": "object",
+  "properties": {
+   "id": {
+    "type": "string",
+    "description": "Row id in this run"
+   },
+   "listing_id": {
+    "type": "string",
+    "description": "Your listing id, or the row id when you gave none"
+   },
+   "url": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "The listing URL you gave (never fetched)"
+   },
+   "verdict": {
+    "type": "string",
+    "enum": [
+     "block",
+     "flag",
+     "pass",
+     "skipped"
+    ],
+    "description": "block (Shield block), flag (Shield quarantine: hold for a person), pass (Shield allow: no rule fired) or skipped (no text: not screened, free)"
+   },
+   "summary": {
+    "type": "string",
+    "description": "One line in plain words"
+   },
+   "rule_ids": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Every Shield rule that fired"
+   },
+   "first_rule": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "The first rule id that fired"
+   },
+   "first_reason": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "What that rule looks for"
+   },
+   "findings": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "rule_id": {
+       "type": "string"
+      },
+      "reason": {
+       "type": "string"
+      },
+      "matches": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "field": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "start": {
+          "type": "integer"
+         },
+         "end": {
+          "type": "integer"
+         },
+         "excerpt": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "field",
+         "start",
+         "end",
+         "excerpt"
+        ]
+       }
+      }
+     },
+     "required": [
+      "rule_id",
+      "reason",
+      "matches"
+     ]
+    },
+    "description": "Per rule: rule_id, reason, and the matched text (field, start, end, excerpt; long numbers and keys hidden)"
+   },
+   "fields_screened": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "Which fields had text: title, description, seller_notes"
+   },
+   "screened": {
+    "type": "boolean",
+    "description": "True when Shield read the text (charged); false when skipped, too long or an internal error (free)"
+   },
+   "shield_verdict": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Shield's own word: block, quarantine or allow"
+   },
+   "severity": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Shield severity: none, low, medium, high or critical"
+   },
+   "screener": {
+    "type": [
+     "string",
+     "null"
+    ],
+    "description": "Shield version; rules only, classifier off"
+   },
+   "checked_at": {
+    "type": "string",
+    "description": "When the listing was screened (UTC)"
+   },
+   "origin": {
+    "type": "string",
+    "enum": [
+     "LIVE",
+     "MIRROR",
+     "SIM",
+     "UNVERIFIED"
+    ],
+    "description": "The label you gave the listing (LIVE, MIRROR or SIM). UNVERIFIED: the caller gave no LIVE, MIRROR or SIM label, so we do not assume LIVE. Your text, screened at checked_at"
+   }
+  },
+  "required": [
+   "id",
+   "listing_id",
+   "verdict",
+   "summary",
+   "rule_ids",
+   "findings",
+   "screened",
+   "checked_at",
+   "origin"
+  ]
+ },
+ "views": {
+  "screen": {
+   "title": "Screen results",
+   "transformation": {
+    "fields": [
+     "listing_id",
+     "verdict",
+     "summary",
+     "rule_ids",
+     "first_reason",
+     "origin",
+     "checked_at"
+    ]
+   },
+   "display": {
+    "component": "table",
+    "properties": {
+     "listing_id": {
+      "label": "Listing",
+      "format": "text"
+     },
+     "verdict": {
+      "label": "Verdict",
+      "format": "text"
+     },
+     "summary": {
+      "label": "Summary",
+      "format": "text"
+     },
+     "rule_ids": {
+      "label": "Rules fired",
+      "format": "array"
+     },
+     "first_reason": {
+      "label": "First reason",
+      "format": "text"
+     },
+     "origin": {
+      "label": "Origin",
+      "format": "text"
+     },
+     "checked_at": {
+      "label": "Screened at",
+      "format": "text"
+     }
+    }
+   }
+  }
+ }
+}

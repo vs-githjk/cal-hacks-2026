@@ -18,13 +18,14 @@ SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 _VALIDATOR = Draft202012Validator(SCHEMA)
 
 SKU_RE = re.compile(r"^[a-z0-9][a-z0-9 .+/-]{0,79}$")
-# Ports already used by the repo's services and agents; custom sellers start looking at 8016.
-RESERVED_PORTS = {3000, 3100, 8001, 8003, 8004, 8010, 8011, 8012, 8013, 8014, 8015,
+# Ports already used by the repo's services and agents; custom sellers start looking at 8016 and skip these.
+RESERVED_PORTS = {3000, 3100, 8001, 8003, 8004, 8010, 8011, 8012, 8013, 8014, 8015, 8016,
                   8787, 8788, 8789, 8790, 8791}
 # What each reserved port is for, so a refused config says which service it would collide with.
 PORT_OWNERS = {3000: "SpacetimeDB", 3100: "the web app", 8001: "the buyer agent", 8003: "the advocate agent",
                8010: "the seller Bureau", 8011: "seller_1", 8012: "seller_2",
-               8013: "seller_3", 8014: "seller_4", 8015: "seller_5", 8787: "the shield service"}
+               8013: "seller_3", 8014: "seller_4", 8015: "seller_5",
+               8016: "seller_6 (Central Computers MIRROR)", 8787: "the shield service"}
 # Ids of the Tech Bazaar agents; a custom seller must not sign with their keys. Hardcoded so factory stays uagents-free.
 RESERVED_IDS = {"buyer", "advocate", "shield"}
 SELLER_ID_RE = re.compile(r"^seller_\d+$")

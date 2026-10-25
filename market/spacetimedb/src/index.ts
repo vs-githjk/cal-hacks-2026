@@ -82,14 +82,11 @@ export const create_mandate = spacetimedb.reducer(
 );
 
 export const record_approval = spacetimedb.reducer(
-  { mandateHash: t.string(), method: t.string(), approvedBy: t.string() },
+  { mandateHash: t.string(), method: t.string(), approvedBy: t.string(), voiceApprovalId: t.string() },
   (ctx, a) => m.recordApproval(ctx, a),
 );
 
 export const issue_approval_code = spacetimedb.reducer({ mandateHash: t.string(), code: t.string() }, (ctx, a) => m.issueApprovalCode(ctx, a));
-export const approve_typed = spacetimedb.reducer({ mandateHash: t.string(), code: t.string() }, (ctx, a) => {
-  m.approveTyped(ctx, a);
-});
 
 export const record_loss_report = spacetimedb.reducer(
   {
@@ -154,5 +151,16 @@ const PendingApprovalRow = t.object('PendingApprovalRow', {
   failures: t.u32(), locked: t.bool(), issuedAt: t.timestamp(), origin: t.string(),
 });
 export const my_pending_approvals = spacetimedb.view({ name: 'my_pending_approvals', public: true }, t.array(PendingApprovalRow), (ctx) => m.myPendingApprovalsView(ctx));
+const BidCheckRow = t.object('BidCheckRow', {
+  id: t.u64(), bidId: t.string(), roundId: t.string(), sellerId: t.string(), persona: t.string(), bidOrigin: t.string(), kind: t.string(),
+  result: t.string(), detail: t.string(), evidenceUrl: t.string(), origin: t.string(), at: t.timestamp(),
+});
+export const my_bid_checks = spacetimedb.view({ name: 'my_bid_checks', public: true }, t.array(BidCheckRow), (ctx) => m.myBidChecksView(ctx));
+const DealRow = t.object('DealRow', {
+  mandateHash: t.string(), mandateId: t.string(), dealId: t.string(), amount: t.f64(), payee: t.string(), expiry: t.timestamp(),
+  withinAllowance: t.bool(), origin: t.string(), approvalMethod: t.string(), voiceApprovalId: t.string(), approvedAt: t.option(t.timestamp()),
+  paymentRef: t.string(), paymentMode: t.string(), paidAt: t.option(t.timestamp()),
+});
+export const my_deals = spacetimedb.view({ name: 'my_deals', public: true }, t.array(DealRow), (ctx) => m.myDealsView(ctx));
 export const my_loss_reports = spacetimedb.view({ name: 'my_loss_reports', public: true }, t.array(lossReport.rowType), (ctx) => m.myLossReportsView(ctx));
 export const my_buyer_profile = spacetimedb.view({ name: 'my_buyer_profile', public: true }, t.array(buyerProfile.rowType), (ctx) => m.myBuyerProfileView(ctx));

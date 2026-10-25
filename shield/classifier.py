@@ -11,6 +11,8 @@ import json
 import os
 import ssl
 import threading
+import time
+import urllib.error
 import urllib.request
 from typing import Any, Mapping, Optional, Protocol
 
@@ -18,9 +20,11 @@ from shield.rules.secret_ask import REASON_CODES, SECRET_ASK_RULE
 
 SUSPICIOUS_RULE = "shield.classifier.suspicious"
 UNAVAILABLE_RULE = "shield.classifier.unavailable"
-MAX_CHARS = 4000
+MAX_CHARS = 20000  # the same window as shield.core.MAX_CHARS (#196): the classifier sees what the rules see
 TIMEOUT_S = 1.5  # per socket operation (connect, send, each read), not for the whole call
 DEADLINE_S = 4.0  # the whole call, however slowly the bytes arrive; past it the caller fails closed
+RETRY_MIN_LEFT_S = 0.5  # one retry only when at least this much of the deadline is left
+RETRY_HTTP = (429, 500, 502, 503, 504, 529)  # rate limit and server-side trouble; other 4xx are real failures
 API_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-haiku-5-5"  # verified live Sat 09:07; set SHIELD_MODEL to change it
 
@@ -80,6 +84,22 @@ def _with_deadline(fn, deadline: float):
     return box["ok"]
 
 
+def _transient(exc: BaseException) -> bool:
+    """True for a failure worth one more try: a stalled or dropped connection, a 429 or a 5xx. A 400, 401, 403 or 404
+    (bad request, key or model) and anything else is real and fails closed at once."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in RETRY_HTTP
+    return isinstance(exc, (TimeoutError, urllib.error.URLError, ConnectionError))
+
+
+def _text_of(data: Mapping) -> str:
+    """The first text block of a reply. A reply may lead with an empty "thinking" block, so content[0] is not it."""
+    for block in data["content"]:
+        if isinstance(block, Mapping) and isinstance(block.get("text"), str):
+            return block["text"]
+    raise ValueError("no text answer")
+
+
 def _ssl_context() -> ssl.SSLContext:
     """TLS context for the API call. Python builds from python.org on macOS ship no CA bundle, so use certifi's
     when it is installed and fall back to the system default."""
@@ -104,22 +124,33 @@ class ClaudeClassifier:
         self._timeout = timeout
 
     def _send(self, req: urllib.request.Request) -> Any:
+        """One request. A transient failure (one stalled read, a 429 or a 5xx) is tried once more while the SAME total
+        deadline still has RETRY_MIN_LEFT_S to spare, so the worst case stays DEADLINE_S. The classifier only reads, so
+        a repeat is safe. Anything else, or a second failure, raises and the caller fails closed."""
         def call():
             with urllib.request.urlopen(req, timeout=self._timeout, context=_ssl_context()) as r:
                 return json.loads(r.read())
-        return _with_deadline(call, self._deadline)
+        started = time.monotonic()
+        try:
+            return _with_deadline(call, self._deadline)
+        except Exception as exc:
+            left = self._deadline - (time.monotonic() - started)
+            if not _transient(exc) or left < RETRY_MIN_LEFT_S:
+                raise
+        return _with_deadline(call, left)
 
     def classify(self, message: str, context: Mapping) -> str:
         body = json.dumps({
             "model": self._model,
-            "max_tokens": 5,
+            "max_tokens": 10,  # "SUSPICIOUS" plus its trailing newlines came to 10 tokens live; at 5 it was cut to "SUSPIC"
+            "thinking": {"type": "disabled"},  # a leading empty thinking block used up the budget
             "system": _SYSTEM,
             "messages": [{"role": "user", "content": _untrusted(message)}],
         }).encode()
         req = urllib.request.Request(API_URL, data=body, method="POST", headers={
             "content-type": "application/json", "x-api-key": self._key, "anthropic-version": "2023-06-01"})
         data = self._send(req)
-        return data["content"][0]["text"]
+        return _text_of(data)
 
     def classify_secret_ask(self, text: str, context: Mapping) -> Mapping:
         """Closed schema {ask_for_secret: bool, reason_code}. Raises when the model does not answer through the

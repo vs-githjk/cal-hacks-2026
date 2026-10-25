@@ -323,12 +323,61 @@ def test_fit_unconfirmed_veto_speaks_the_fit_unknown_template():
 
 
 def test_buyer_advice_need_carries_in_cap_ids_only():
-    import os
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "buyer"))
     from logic import advice_need_for
     need = {**NEED, "spend_limit": 1400}
     bids = [bid("b1", "seller_1", 1500), bid("b2", "seller_2", 1239.99)]
     out = advice_need_for(need, {}, bids)
     assert out["in_cap_bid_ids"] == ["b2"]
     assert "spend_limit" not in out and "1400" not in str(out)
+
+
+def test_price_caution_only_bid_is_not_a_confirmed_fit():
+    # a bid with no fit check at all (no attrs) has no fit-ok signal, even though it has no fit warning
+    cheap = bid("b1", "seller_1", 1299.99, attrs={})
+    ebay = bid("b2", "seller_2", 1239.99, attrs={"category": "gpu", "chipset": "RTX 4070 SUPER"})
+    cards = run115([cheap, ebay], in_cap=["b1", "b2"])
+    assert cards[1]["recommendation"] != "veto"
+
+
+# #308: a page that does not state the condition (Central Computers, MIRROR) is unverified, never new
+@pytest.mark.parametrize("offered,page", [("unknown", "unknown"), ("unknown", None), (None, "unknown"),
+                                          ("", "not stated")])
+def test_an_unknown_condition_is_unverified_never_shown_or_treated_as_new(offered, page):
+    import json
+    card = run([bid("b1", "seller_1", 590, offered=offered, page=page)])[0]
+    assert card["recommendation"] == "caution"  # not "buy" (as if new), and not a mismatch veto against a real store
+    [w] = [w for w in card["warnings"] if w["kind"] == "unverified"]
+    assert "unverified" in w["text"] and "new" not in w["text"].lower()
+    assert w["source_url"] == "https://example.com/listing/b1" and w["rule_id"] == "advocate.unsourced"
+    assert card["rule_id"] == "advocate.unsourced" and card["reason"] == checks.CALL_SUMMARIES["advocate.unsourced"]
+    assert not {"condition", "spec"} & {x["kind"] for x in card["warnings"]}
+    assert "new" not in json.dumps({k: card[k] for k in ("reason", "warnings", "call_reason")}).lower()
+
+
+def test_a_stated_condition_still_gets_the_old_checks():
+    assert run([bid("b1", "seller_1", 590, offered="new", page="new")])[0]["recommendation"] == "buy"
+    assert run([bid("b1", "seller_1", 540, offered="new", page="open-box")])[0]["recommendation"] == "veto"
+
+
+
+# #333 item 2: an unstated side never turns a real mismatch into a caution. One concrete side against a different
+# (or unstated) other side keeps main's condition veto; only "nothing concrete on either side" is unverified.
+@pytest.mark.parametrize("offered,page", [("new", "unknown"), ("unknown", "used"), ("unknown", "new"),
+                                          ("open-box", "not stated"), ("unverified", "refurbished")])
+def test_one_concrete_side_against_an_unstated_side_is_still_a_mismatch_veto(offered, page):
+    card = run([bid("b1", "seller_1", 590, offered=offered, page=page)])[0]
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.condition"
+    assert "condition" in {w["kind"] for w in card["warnings"]}
+    assert "unverified" not in {w["kind"] for w in card["warnings"]}
+
+
+# #333 item 1: a bid from a mirrored store that never joined is a veto, whatever its other checks say
+def test_a_bid_from_a_store_that_never_joined_is_vetoed_as_not_orderable():
+    from data.mirror import not_partners
+    b = dict(bid("b1", "seller_1", 590), supplier_id="central_computers_sf", origin="MIRROR")
+    card = run([b, bid("b2", "seller_2", 640)])[0]
+    assert card["recommendation"] == "veto" and card["rule_id"] == "advocate.mirror_not_orderable"
+    assert not_partners.NOT_ORDERABLE in card["warnings"][0]["text"]
+    assert checks.best_bid([b], [card]) is None
+    flagged = dict(bid("b3", "seller_3", 590), orderable=False)
+    assert run([flagged])[0]["recommendation"] == "veto"

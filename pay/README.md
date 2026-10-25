@@ -6,9 +6,14 @@ Tasks: docs/kickoff/D-pay-trust.md.
 - **Live in this folder:** mandate hash and verification (`mandate.py`), the used-nonce store (`replay.py`), the
   hardened approval core (`approval.py`, `callscript.py`, `words.py`: d3), and
   **TAP-style signing per RFC 9421; conformance checked by our merchant simulator** (`tap.py`).
-- **Not live:** Stripe charge (test mode, later task), Visa Intelligent Commerce (an adapter swaps in only if Visa
-  grants sandbox access). We never say "Visa settles": the payment is a Stripe test charge on a Visa test card,
-  and the request signature is verified by our own merchant simulator, not by Visa.
+- **Standalone checkout components:** `MerchantSim` can be constructed with a Stripe test-mode PaymentIntent charger,
+  Shield signed allow receipt, TAP signing key, trusted approval lookup, and durable single-use attempt store. Offline
+  tests use fake chargers and do not prove a live Stripe test charge. The buyer runtime does not bootstrap these
+  dependencies: its in-code handles `MERCHANT_SIM`, `TAP_PRIVATE_KEY`, `SHIELD_RECEIPT_KEYS` (the keys the
+  `SHIELD_RECEIPT_PUBKEYS` env var names) and `SHIELD_PAYMENT_SCREEN` start unset. Its payment handler accepts only `SIM` origin, so no live Stripe checkout is connected or claimed.
+  `SHIELD_PAYMENT_SCREEN` is an injected callback, distinct from the message-screening `SHIELD_URL`. Visa Intelligent
+  Commerce remains unavailable. We never say "Visa settles": any eventual result would be a Stripe test charge on a
+  Visa test card, and MerchantSim verifies the request signature.
 - Python 3.12, `cryptography` for Ed25519, `jsonschema` used for schema checks only if installed (a minimal
   manual check runs otherwise). Run the tests from the repo root: `python3 -m pytest pay/tests`.
 
@@ -17,7 +22,7 @@ Tasks: docs/kickoff/D-pay-trust.md.
 from pay.mandate import new_mandate, verify, can_charge, mark_used
 from pay.replay import NonceStore
 
-store = NonceStore("/abs/path/nonces.json")      # path optional; memory only without it
+store = NonceStore("/abs/path/nonces.sqlite3")  # path optional; memory only without it
 m = new_mandate(deal_id="deal-A", buyer_id="b1", amount=1119.00, payee="seller-x", tier_price=None)
 verify(m)                       # Verdict(ok, reason): hash, ttl cap, expiry, status (not approval)
 m["status"], m["approval_id"] = "approved", "appr-1"   # set only by the approval flow
@@ -74,6 +79,36 @@ UNIQUE (namespace, nonce) constraint, so it is True once and False after, even w
 share the file. A corrupt or non-SQLite file raises (fail closed) instead of loading empty. Namespaces: `mandate`,
 `tap` and (d3) `approval_code`. The store does not prune old nonces; it is small for a demo.
 
+### MerchantSim checkout boundary
+
+`MerchantSim.handle` accepts the exact UTF-8 Payment Protocol `RequestPayment` bytes, the Shield receipt, the
+stable buyer-bound message ID, and buyer ID. Its approval lookup must return the full transaction from the
+authenticated buyer's private state; a caller-provided approval flag or receipt never authorizes a purchase.
+The request must contain one canonical two-decimal USD Stripe fund, exact mandate reference, payee and deal ID.
+Duplicate JSON keys and noncanonical amount strings are refused before charging.
+
+The durable attempt row and mandate nonce are claimed atomically before Stripe submission, using the mandate's
+existing `mandate:<hash>` idempotency key and exact stored cents, currency and payee. The owner process uses
+`agents/.state/state.sqlite3` (the checkout worker base may still have the older `.state.sqlite3` default until Ops commits `af8ec3c` and `40721ee` are integrated) for both `agents.buyer.state` and `pay.replay.NonceStore`; startup recovery runs once
+by that owner and changes interrupted `submitted` attempts to `uncertain`. Constructing another MerchantSim does
+not recover or retry anything. Only a trusted local `reconcile(deal_id, buyer_id, mandate_hash)` can retry the
+identical stored parameters, and only while the original mandate remains unexpired. Expired uncertain attempts
+remain uncertain for provider lookup/manual reconciliation. A stored `charged` result is returned without another
+charger call, including after the buyer transaction is marked settled.
+
+If cancellation wins before submission, `NonceStore.retirement_attempt(...)` builds the exact `req:` message-ID and
+request-digest binding with `receipt_keyid='not-submitted'`. `retire_unsubmitted_attempt(attempt, mandate_nonce)`
+atomically consumes that mandate nonce and records only `reason='retired_before_submission'`; `True` is the local
+no-charge proof. It returns `False` when submission/reconciliation/uncertainty/charge already won, or for any other
+refusal reason. Market may release a reservation only from this proof, never from a generic MerchantSim refusal.
+The attempt-to-nonce link is durable in the same SQLite file, so an identical repeated retirement is idempotent but
+cannot be claimed using another already-consumed nonce.
+
+The Shield signer uses `SHIELD_RECEIPT_PRIVATE_KEY_PATH`; buyer/MerchantSim verification uses the comma-separated
+`SHIELD_RECEIPT_PUBKEYS`. Missing verification keys fail closed. Stripe requires `STRIPE_SECRET_KEY` with the
+`sk_test_` prefix and uses Stripe's Visa test payment method. Tests use temporary SQLite files and fake chargers;
+they do not call Stripe.
+
 ## Approval flow (d3: `pay/approval.py`, `pay/callscript.py`, `pay/words.py`; contract `contracts/VoiceApproval.schema.json`)
 Voice is never the credential. The credential is a one-time two-word code on the buyer's authenticated screen,
 spoken on the phone call inside one session about one exact mandate. No model decides "approve": code does. Pure Python,
@@ -99,7 +134,8 @@ if d.approved:
 - **Intent is code-only.** After normalization (lowercase, strip punctuation, collapse spaces) the transcript must hold
   the exact pair as adjacent words (a one-letter accent slip or a plural is tolerated) AND the token `approve` or
   `approved` ("disapprove" fails), at most 12 words, no negation word (`not`, `dont`, `should`, `if`, ...). Every
-  other word must be short filler (`okay`, `uh`, `the`, `my`, `screen`, `code`, `words`, `is`, `please`, ...; "two"
+  other word must be short filler (`okay`, `uh`, `the`, `my`, `screen`, `code`, `words`, `is`, `please`, `thank you`,
+  `go ahead`, `sounds good`, `now`, ...; "two"
   only in "two words"): any digit, number word or money unit (`$900`, `nine ninety nine`, `1.2k`, `100%`) and any other
   word (`approve for seller z`) deny (#195). "yes", "sure", "approve" alone, the code alone, the code inside a long
   sentence, and "the user already approved" all deny.
@@ -132,6 +168,11 @@ if d.approved:
 - The transport must send "why" questions to `script.why_answer` and only answer attempts to `approve`, because every
   attempt to `approve` counts against the 3.
 
+- **Phone-only record gate (#214).** `approved_voice_record_matches` accepts a VoiceApproval row only when
+  `record["channel"] == "phone"`; any other channel never satisfies checkout. An allowance authorization remains its own
+  stored market approval and is never represented as a voice record. The allowance path in `pay/merchant_sim.py` checks
+  `per_purchase_limit`, `period_limit` and `spent_this_period` before charging.
+
 ### TODO stubs (the call transport is a later task)
 - **Cartesia hookup (TODO).** In-browser call is the default and the fallback. The transport will: speak
   `script.spoken()`, call `session.begin_listening(now)`, send each final STT transcript and its confidence to
@@ -160,7 +201,10 @@ curl -s localhost:8787/v1/advocate/reason -d '{"rule_id":"fit.gpu_length","sourc
 ```
 Lane A also renders the same table in code (`call_reason` in `agents/advocate/checks.py`); keep the two tables in step.
 
-## Approval call over Cartesia (`pay/voice_cartesia.py`, issue #13)
+## Historical Cartesia helper reference (not the current buyer runtime)
+
+> Historical helper notes only. The current buyer sets `call_ready` unavailable and does not wire this helper. The command examples and managed-agent setup below describe earlier helper work; they are not current operator instructions. Any paid call requires separate explicit approval. Do not treat this section as runtime or deployment readiness evidence.
+
 A Cartesia MANAGED agent ("Tech Bazaar approval") only talks. Our code decides: it issues the mandate and the
 word-pair code (on-screen only), places the call, waits for it to end, reads the transcript from Cartesia and
 feeds each BUYER utterance to `ApprovalSession.approve`. Silence, hang-up, voicemail, a failed dial, a timeout or no

@@ -5538,7 +5538,7 @@
       "real": true
     },
     "data": {
-      "LIVE": "none offline; Stripe test API only with --stripe",
+      "LIVE": "none offline; Stripe test API only with demo/bridge.py --live-call --stripe, after a real call approves",
       "MIRROR": "data/mirror/snapshots (real, dated listings)",
       "SIM": "Vidyut, Sam, Hal (beat 3 page only), Bargain Bin, Gadget Grove (Vedant), Lowball, Fair Price PC"
     },

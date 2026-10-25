@@ -49,7 +49,7 @@ export default function Home() {
           </p>
           <h1 className="max-w-[16ch] text-[clamp(34px,5.5vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance">
             The refereed arena for{" "}
-            <span className="bg-gradient-to-r from-ink via-ink-2 to-muted bg-clip-text text-transparent">agent commerce.</span>
+            <span className="text-ink">agent commerce.</span>
           </h1>
           <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
             Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
@@ -64,8 +64,6 @@ export default function Home() {
           </div>
         </div>
         <div className="relative order-1 grid place-items-center md:order-2">
-          <DotPattern width={18} height={18} cx={1.4} cy={1.4} cr={1.4} className="fill-accent/25 [mask-image:radial-gradient(circle_at_center,white,transparent_65%)]" />
-          <span className="absolute h-[260px] w-[260px] rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)] motion-safe:animate-[beacon_4s_ease-in-out_infinite] md:h-[440px] md:w-[440px]" aria-hidden />
           <span className="hidden md:block"><Mark size={300} spin /></span>
           <span className="md:hidden"><Mark size={160} spin /></span>
         </div>

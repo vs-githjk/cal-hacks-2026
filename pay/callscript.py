@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, Overflow
 from typing import Any, Mapping, Optional
 from urllib.parse import urlsplit
 
@@ -81,12 +81,15 @@ def _cents(amount: Any) -> int:
         d = Decimal(str(amount))
     except InvalidOperation as e:
         raise ScriptError("amount must be a number") from e
-    if not d.is_finite() or d <= 0:
-        raise ScriptError("amount must be positive")
-    cents = d * 100
-    if cents != cents.to_integral_value():
-        raise ScriptError("amount must be a whole number of cents")
-    return int(cents)
+    if not d.is_finite() or d <= 0 or d.adjusted() > 11:
+        raise ScriptError("amount must be positive and within the supported read-back range")
+    try:
+        cents = d * 100
+        if cents <= 0 or cents != cents.to_integral_value():
+            raise ScriptError("amount must be a whole number of cents")
+        return int(cents)
+    except (InvalidOperation, Overflow, OverflowError, ValueError) as e:
+        raise ScriptError("amount must be a finite whole number of cents") from e
 
 
 def amount_words(amount: Any) -> str:
@@ -160,14 +163,53 @@ def _host(url: str) -> Optional[str]:
     return host[4:] if host.startswith("www.") else host
 
 
+_LEET = str.maketrans("034579", "oeastg")   # "0fficial", "4pprove"; a "1" is tried as both i and l below
+_SINGLES = re.compile(r"(?<![a-z0-9])[a-z0-9](?: [a-z0-9](?![a-z0-9])){2,}")   # "a p p r o v e"
+
+
+def _steers(v: str, blocked: frozenset) -> bool:
+    """True when v holds a blocked word, also behind leetspeak ("Offic1al"), letter spacing ("a p p r o v e"), a split
+    ("of ficial") or a run-on ("alreadyagreed") (#237). The run-on and split check is for words of 7 or more letters,
+    so short words ("pin", "now") inside honest names ("Spinner", "Snowblind") stay allowed."""
+    low = _SINGLES.sub(lambda m: m.group(0).replace(" ", ""), v.lower())
+    for one in ("i", "l"):
+        folded = low.translate(_LEET).replace("1", one)
+        tokens = re.findall(r"[a-z]+", folded)
+        if set(tokens) & blocked:
+            return True
+        joined = "".join(tokens)
+        if any(len(w) >= 7 and w in joined for w in blocked):
+            return True
+    return False
+
+
 def _plain(value: Any, pattern: "re.Pattern[str]", blocked: frozenset = _SUMMARY_BLOCKED) -> Optional[str]:
     """The value when it is a short plain string that passes `pattern` and holds no steering word, else None."""
     if not isinstance(value, str):
         return None
     v = " ".join(value.split())
-    if not pattern.fullmatch(v) or set(re.findall(r"[a-z]+", v.lower())) & blocked:
+    if not pattern.fullmatch(v) or _steers(v, blocked):
         return None
     return v
+
+
+CRS_LINES = {
+    "verified": "The seller was checked with CRS and verified",
+    "sim_seller": "This is a simulated seller, not checked with CRS",
+}
+
+
+MAX_BUILD_COUNT = 99   # parts or sellers in one build call; anything else is not a build we read aloud
+
+
+def _count(n: str, noun: str) -> str:
+    return f"{n} {noun}" if n == "1" else f"{n} {noun}s"
+
+
+PRICE_LINES = {
+    "live": "The price was checked live just now",
+    "mirror": "The price is from a dated listing snapshot",
+}
 
 
 def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
@@ -181,7 +223,13 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
         return kept, dropped
     if not isinstance(deal, Mapping):
         return kept, ["deal"]
-    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller")]
+    dropped += [str(k) for k in deal if k not in ("item", "condition", "seller", "crs", "price", "parts", "sellers")]
+    if "parts" in deal or "sellers" in deal:   # #345: a whole build, read as "N parts from M sellers"; both counts or neither
+        counts = [deal.get(k) for k in ("parts", "sellers")]
+        if all(isinstance(c, int) and not isinstance(c, bool) and 1 <= c <= MAX_BUILD_COUNT for c in counts):
+            kept["parts"], kept["sellers"] = str(counts[0]), str(counts[1])
+        else:
+            dropped += [k for k in ("parts", "sellers") if k in deal]
     for key, pattern in (("item", _ITEM_RE), ("seller", _SELLER_RE)):
         if key in deal:
             v = _plain(deal[key], pattern, _FACTS_BLOCKED)
@@ -189,6 +237,18 @@ def clean_deal_facts(deal: Any) -> tuple[dict[str, str], list[str]]:
                 dropped.append(key)
             else:
                 kept[key] = v
+    if "crs" in deal:   # our own CRS result (#257), a fixed phrase per value; nothing the seller wrote is read
+        line = CRS_LINES.get(deal["crs"]) if isinstance(deal["crs"], str) else None
+        if line is None:
+            dropped.append("crs")
+        else:
+            kept["crs"] = line
+    if "price" in deal:   # our own Bright Data re-check (#269), a fixed phrase per value
+        line = PRICE_LINES.get(deal["price"]) if isinstance(deal["price"], str) else None
+        if line is None:
+            dropped.append("price")
+        else:
+            kept["price"] = line
     if "condition" in deal:
         c = CONDITIONS.get(str(deal["condition"]).strip().lower()) if isinstance(deal["condition"], str) else None
         if c is None:
@@ -229,11 +289,20 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
     payee = clean_payee(mandate.get("payee"))
     words, digits = amount_words(amount), amount_digits(amount)
     facts, deal_dropped = clean_deal_facts(deal)
-    deal_line = (f"One {facts['item']}" if "item" in facts else "One purchase")
-    if "condition" in facts:
-        deal_line += f", {facts['condition']}"
-    deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
-    deal_line += f", for {words}"
+    build = "parts" in facts   # #345: one call for the whole build; the counts come from our own market rows
+    if build:
+        build_text = f"{_count(facts['parts'], 'part')} from {_count(facts['sellers'], 'seller')}"
+        deal_line = f"Your whole build, {build_text}, for {words}"
+    else:
+        deal_line = (f"One {facts['item']}" if "item" in facts else "One purchase")
+        if "condition" in facts:
+            deal_line += f", {facts['condition']}"
+        deal_line += f", from {facts['seller']}" if "seller" in facts else f", {SELLER_FALLBACK}"
+        deal_line += f", for {words}"
+    if "crs" in facts:
+        deal_line += f". {facts['crs']}"
+    if "price" in facts:
+        deal_line += f". {facts['price']}"
     kept, dropped = clean_advocate_reason(advocate_reason)
     parts = []
     if "rule_id" in kept or "summary" in kept:
@@ -254,7 +323,8 @@ def script_for(mandate: Mapping[str, Any], advocate_reason: Any = None, deal: An
         deal_line=deal_line,
         ask_line=ASK,
         why_answer=why,
-        approved_line=f"Approved. One payment of {words}, written {digits}, to {payee}. Nothing else is authorized",
+        approved_line=(f"Approved. Your build, {build_text}, {words}, written {digits}. Nothing else is authorized" if build else
+                       f"Approved. One payment of {words}, written {digits}, to {payee}. Nothing else is authorized"),
         denied_line="Not approved. Nothing was paid",
         amount_read_back=amount,
         payee_read_back=payee,

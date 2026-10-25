@@ -11,17 +11,19 @@ from urllib.parse import urlsplit
 
 import common  # noqa: F401  (puts the repo root on sys.path for data.*)
 from data.fit_checker import check_fit
+from data.mirror import not_partners
 
 PRICE_TOLERANCE = 0.10
 FLOOR_URL = "https://example.com/price-floor/simulated"
 MAX_WARNINGS = 3
-VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller"}
+VETO_KINDS = {"condition", "fit", "fit_unconfirmed", "recall", "same_seller", "mirror_not_orderable"}
 INFO_KINDS = {"note"}  # shown, but never change the recommendation
 REPO = "https://github.com/vs-githjk/cal-hacks-2026/blob/main"
 # Code-owned sources for warnings whose evidence is our own rules, used when no listing URL is given.
 CODE_SOURCES = {"fit": f"{REPO}/data/fit_checker/README.md", "fit_unconfirmed": f"{REPO}/data/fit_checker/README.md", "fit_unknown": f"{REPO}/data/fit_checker/README.md",
                 "note": f"{REPO}/data/fit_checker/README.md", "same_seller": f"{REPO}/agents/advocate/checks.py", "record": f"{REPO}/agents/advocate/checks.py",
-                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py"}
+                "floor": FLOOR_URL, "unsourced": f"{REPO}/agents/advocate/checks.py",
+                "mirror_not_orderable": f"{REPO}/data/mirror/not_partners.py"}
 
 # Closed-schema reason for the voice call: summary comes only from this table, never from seller text or a model.
 # Every summary must pass pay.callscript.clean_advocate_reason (tested).
@@ -35,6 +37,7 @@ CALL_SUMMARIES = {
     "advocate.same_seller": "Another bid in this round comes from the same seller",
     "advocate.unsourced": "A claim on this bid could not be checked against its listing",
     "advocate.fit_unknown": "Fit could not be confirmed from the listing details",
+    "advocate.mirror_not_orderable": "This store is shown for comparison only and cannot be bought from here",
     "fit.gpu_length": "The card is longer than your case allows",
     "fit.psu_wattage": "Your power supply is below what this card needs",
     "fit.gpu_connectors": "Your power supply lacks the connectors this card needs",
@@ -100,6 +103,8 @@ def _fit_warnings(bid, owned):
         out.append(_warn("fit", f"Does not fit: {summary}.", url, bid["total_landed_price"], rule_id=rid))
     elif unsure:
         out.append(_warn("fit_unknown", f"Fit not confirmed: {CALL_SUMMARIES['advocate.fit_unknown']}.", url, 0))
+    elif checks:  # explicit positive signal (internal, stripped in advise): a relevant check ran and all passed
+        out.append(_warn("fit_ok", "", url, 0))
     if fit["notes"]:
         out.append(_warn("note", "The fit checker returned a non-blocking note.", url, 0))
     return out
@@ -108,11 +113,12 @@ def _fit_warnings(bid, owned):
 # #89: seller-supplied strings never reach card text. Conditions map to this closed set, item names come from the
 # buyer's own need, seller ids must match our pattern, and fit text comes from the rule templates.
 CONDITIONS = {"new", "open box", "refurbished", "used"}
+UNSTATED = {"unknown", "not stated", "unverified"}  # the listing page gives no condition (#308)
 
 
 def _cond(value) -> str:
     v = _norm(value)
-    return v if v in CONDITIONS else "an unrecognized condition"
+    return v if v in CONDITIONS else "not stated" if v in UNSTATED else "an unrecognized condition"
 
 
 def _item(sku, wanted) -> str:
@@ -130,14 +136,22 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
         total = line["unit_price"] * line["quantity"]
         url = line.get("listing_url", "")
 
+        offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
+        # #308: a page that does not state the condition (MIRROR Central Computers) proves nothing either way.
+        # It is unverified (a caution, never shown or treated as new) only when neither side states anything concrete.
+        # #333: one concrete side against an unstated or different other side is still a mismatch veto, as before.
+        unstated = bool(UNSTATED & {offered, page}) and {offered, page} <= UNSTATED | {""}
+
         # an honest offer of a different condition than asked for: caution, not a veto
         asked = _norm((wanted or {}).get(line["sku_spec"]))
-        if asked and _norm(line.get("offered_condition")) not in ("", asked):
+        if asked and not unstated and offered not in ("", asked):
             out.append(_warn("spec", f"You asked for {_cond(asked)}; this offer is {_cond(line['offered_condition'])}.",
                              url, 0))
 
-        offered, page = _norm(line.get("offered_condition")), _norm(line.get("page_condition"))
-        if offered and page and offered != page:
+        if unstated:
+            out.append(_warn("unverified", f"{sku}: the listing does not state a condition, so the condition is "
+                             "unverified, not confirmed as asked.", url, 0, rule_id="advocate.unsourced"))
+        elif offered and page and offered != page:
             offered, page = _cond(offered), _cond(page)
             out.append(_warn("condition", f"{sku} is listed as {offered}, the page says {page}. "
                              "The condition claim did not match the listing.", url, total))
@@ -158,6 +172,12 @@ def _card_warnings(bid, owned, baseline, records, recalls, wanted=None):
     if rec and rec["record"] != "good":
         out.append(_warn("record", f"{_seller(bid['supplier_id'])} has a '{_norm(rec['record'])}' record.",
                          rec.get("source_url", ""), 0))
+
+    # #333: a real store we mirror that never joined is shown for comparison only. Never orderable, so a veto.
+    if not not_partners.orderable(bid):
+        url = (bid.get("lines") or [{}])[0].get("listing_url", "")
+        out.append(_warn("mirror_not_orderable", f"{not_partners.NOT_ORDERABLE} This MIRROR listing is from a real "
+                         "store that never joined, so it is never ordered, charged or paid.", url, 0))
 
     if not bid.get("floor_check_passed", True):
         out.append(_warn("floor", "Bid did not pass the price floor check; the price may not hold.", FLOOR_URL, 0))
@@ -245,12 +265,12 @@ def advise(need: dict, bids: list[dict], baseline: dict, records: dict, recalls:
             warnings.append(_warn("same_seller", f"Same seller as {kept['supplier_id']}: shares {key_type}. "
                                   f"Seller ids: {bid['supplier_id']} and {kept['supplier_id']}.",
                                   (kept.get("lines") or [{}])[0].get("listing_url", ""), 0))
-        staged.append((bid, warnings))
+        staged.append((bid, [w for w in warnings if w["kind"] != "fit_ok"], any(w["kind"] == "fit_ok" for w in warnings)))
     # #115: a bid inside the cap with a confirmed fit outranks any bid whose fit is unknown
     # a bid vetoed for any other reason is not a confirmed fit; a missing id list never vetoes
     confirmed = in_cap is not None and any(
-        b["id"] in in_cap and not ({"fit", "fit_unknown"} | VETO_KINDS) & {w["kind"] for w in ws} for b, ws in staged)
-    for bid, warnings in staged:
+        b["id"] in in_cap and ok and not VETO_KINDS & {w["kind"] for w in ws} for b, ws, ok in staged)
+    for bid, warnings, _ in staged:
         if confirmed and any(w["kind"] == "fit_unknown" for w in warnings) and not any(w["kind"] == "fit" for w in warnings):
             url = bid["lines"][0].get("listing_url", "") if bid["lines"] else ""
             warnings.append(_warn("fit_unconfirmed", "Fit not confirmed, and another offer in your cap has a confirmed fit.",
