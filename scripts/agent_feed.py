@@ -12,6 +12,11 @@ and a part's Tiger Data history keeps only {state, origin, windows [{days, low, 
 GET /v1/memory -> {entries: [MemoryEntry], sources, note} for the dashboard memory panel (#189, demo/memory.py):
 past goals, purchases, vetoes and seller lessons from demo/out (MEMORY_DIR overrides). ?kind=, ?limit=, ?sample=1.
 
+GET /chat?limit=N (also /v1/chat) -> [{at, who, name, text, kind}] oldest first, the live ASI:One chat for the floor tile (web/src/lib/chatFeed.ts
+parseChat). Source: the AGENT_CHAT lines the agents write to .run/logs/*.log (agents/chatlog.py, which masks 6+ digit runs, payment ids, keys
+and approval code words before writing and again here). limit defaults to 30, at most 100, junk gives the default. Open like /v1/agents; with
+AGENT_FEED_TOKEN set it is still served to localhost pages (the hosted site never calls it, RT-17) but only the owner's own lines go out.
+
 AGENT_FEED_TOKEN (optional, #449 PL-17). /v1/memory and /v1/build carry every buyer's goals, caps, spend and payees, and the web
 client only filters them for display. Unset: today's behaviour, open to whoever can reach the port; the launcher binds only
 127.0.0.1, so on a single-user machine that is the operator's own pages. Set: both routes need `Authorization: Bearer <token>` (constant-time
@@ -80,6 +85,11 @@ SELLERS_JSON = REPO / "agents" / "sellers" / "sellers.json"
 ORIGINS = ("LIVE", "MIRROR", "SIM")
 BUILD_VIEW_FILE = "build-view.json"   # the name demo.build.VIEW_FILE writes (tested equal); the path comes from demo.build.OUT_DIR
 MAX_BUILD_VIEW_BYTES = 2_000_000
+CHAT_DEFAULT, CHAT_MAX = 30, 100
+CHAT_TAIL_BYTES = 1_500_000   # the end of each log: the newest lines are the ones the tile shows
+CHAT_NAMES = {"owner": "You", "buyer": DEFAULT_NAMES["buyer"], "advocate": DEFAULT_NAMES["advocate"], "shield": "Smell Test",
+              "pulse": "Market Pulse", "caller": "Fish Market Caller"}
+_CHATLOG = None
 BUILD_EVENT_KINDS = ("plan", "round_open", "knockout", "locked", "clash", "replan")  # no call, approved, denied or receipt lines
 
 
@@ -234,6 +244,84 @@ def agent_rows(run_dir: Path | str) -> list[dict]:
     return rows
 
 
+def _chatlog():
+    """agents/chatlog.py loaded by path (stdlib only, no sibling imports), so the feed shares the writer's own parser and masking."""
+    global _CHATLOG
+    if _CHATLOG is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("agent_chatlog", REPO / "agents" / "chatlog.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _CHATLOG = mod
+    return _CHATLOG
+
+
+def chat_limit(raw: object) -> int:
+    try:
+        n = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return CHAT_DEFAULT
+    return CHAT_DEFAULT if n < 1 else min(n, CHAT_MAX)
+
+
+def _seller_name(who: str) -> str:
+    try:
+        sellers = json.loads(SELLERS_JSON.read_text(encoding="utf-8")).get("sellers", {})
+        name = sellers.get(who, {}).get("name")
+        if isinstance(name, str) and name:
+            return name
+    except (OSError, ValueError, AttributeError):
+        pass
+    return who.replace("_", " ").capitalize()
+
+
+def _tail(path: Path) -> str | None:
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - CHAT_TAIL_BYTES))
+            raw = f.read()
+    except OSError:
+        return None
+    text = raw.decode("utf-8", errors="replace")
+    return text.split("\n", 1)[1] if size > CHAT_TAIL_BYTES and "\n" in text else text   # drop the cut first line
+
+
+def chat_rows(run_dir: Path | str, limit: int = CHAT_DEFAULT, owner_only: bool = False) -> list[dict]:
+    """The newest `limit` chat lines across the agents' logs, oldest first. A log line with no readable time takes its file's modification
+    time. Nothing is invented: no logs, no AGENT_CHAT lines, no rows."""
+    cl = _chatlog()
+    rows: list[tuple[str, int, dict]] = []
+    n = 0
+    logs = Path(run_dir) / "logs"
+    try:
+        files = sorted(p for p in logs.glob("*.log") if not p.name.startswith("setup-"))
+    except OSError:
+        files = []
+    for path in files:
+        text = _tail(path)
+        if text is None:
+            continue
+        fallback = _mtime_iso(str(path)) or ""
+        for line in text.splitlines():
+            if "AGENT_CHAT " not in line:
+                continue
+            rec = cl.parse_line(line)
+            if rec is None or (owner_only and rec["who"] != "owner"):
+                continue
+            at = rec["at"]
+            try:
+                at = datetime.fromisoformat(at).astimezone(timezone.utc).isoformat()
+            except ValueError:
+                at = fallback
+            name = rec["name"] or CHAT_NAMES.get(rec["who"]) or (_seller_name(rec["who"]) if rec["who"].startswith("seller") else rec["who"])
+            rows.append((at, n, {"at": at, "who": rec["who"], "name": name, "text": rec["text"], "kind": rec["kind"]}))
+            n += 1
+    rows.sort(key=lambda r: (r[0], r[1]))
+    return [r[2] for r in rows[-limit:]]
+
+
 def default_build_dir() -> Path:
     """The folder demo/build.py writes build-view.json to by default (its own OUT_DIR, not a copy of the path)."""
     from demo.build import OUT_DIR
@@ -372,6 +460,14 @@ def create_app(run_dir: Path | str | None = None, memory_dir: Path | str | None 
     @app.get("/v1/agents")
     def agents() -> list[dict]:
         return agent_rows(run)
+
+    @app.get("/chat")
+    @app.get("/v1/chat")
+    def chat(request: Request):
+        # Open like /v1/agents, even with a token set: a localhost page cannot hold the token, and the hosted site never calls this. A set
+        # token narrows it to the owner's own lines instead of closing it.
+        return JSONResponse(chat_rows(run, chat_limit(request.query_params.get("limit")), owner_only=bool(secret)),
+                            headers={"Cache-Control": "no-store"})
 
     mem = Path(memory_dir or os.environ.get("MEMORY_DIR") or REPO / "demo" / "out")
 

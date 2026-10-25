@@ -518,36 +518,9 @@ class MarketBridge:
             raise MarketBridgeError("approval_denial_invalid")
         self._call("deny_approval", mandate_hash=mandate_hash, reason=reason.strip()[:200])
 
-    def purchase_status(self, mandate_hash: str) -> dict[str, Any]:
-        """Read the exact buyer-private purchase projection; never query raw money tables."""
-        if self.role != "buyer" or not _HASH.fullmatch(str(mandate_hash)):
-            raise MarketBridgeError("purchase_status_binding_invalid")
-        columns = ("mandate_hash", "mandate_id", "deal_id", "goal_id", "need_id", "amount", "payee",
-                   "expiry", "origin", "within_allowance", "retired", "reservation_matches", "settled",
-                   "approval_method", "approved_at", "payment_ref", "payment_amount", "payment_mode", "paid_at")
-        rows = self._sql("SELECT " + ", ".join(columns) + " FROM my_purchase_status WHERE mandate_hash = "
-                         + _quote(mandate_hash))
-        if len(rows) != 1:
-            raise MarketBridgeError("purchase_status_readback_missing")
-        row = _project(rows[0], columns)
-        for field in ("approval_method", "approved_at", "payment_ref", "payment_amount", "payment_mode", "paid_at"):
-            row[field] = _option_value(row.get(field))
-        for field in ("expiry", "approved_at", "paid_at"):
-            if row.get(field) is not None:
-                row[field] = _timestamp_iso(row[field])
-        if (row.get("mandate_hash") != mandate_hash or not isinstance(row.get("mandate_id"), str)
-                or not isinstance(row.get("deal_id"), str) or not isinstance(row.get("goal_id"), str)
-                or not isinstance(row.get("need_id"), str) or _decimal_cents(row.get("amount"), "purchase_amount") <= 0
-                or not isinstance(row.get("payee"), str) or not row["payee"]
-                or row.get("origin") not in {"SIM", "MIRROR", "LIVE"}
-                or any(not isinstance(row.get(k), bool) for k in
-                       ("within_allowance", "retired", "reservation_matches", "settled"))):
-            raise MarketBridgeError("purchase_status_readback_invalid")
-        return row
-
     def create_mandate(self, mandate: Mapping[str, Any], *, need_id: str, buyer_id: str,
                        requested_by: str = "", now: datetime) -> dict[str, Any]:
-        if self.role not in {"buyer", "referee"} or not isinstance(mandate, Mapping):
+        if self.role != "referee" or not isinstance(mandate, Mapping):
             raise MarketBridgeError("market_role_mismatch")
         required = ("hash", "id", "deal_id", "buyer_id", "payee", "nonce", "expires_at", "origin", "goal_id")
         if (any(not isinstance(mandate.get(k), str) or not mandate[k] for k in required)
@@ -572,65 +545,21 @@ class MarketBridge:
                 "payee": mandate["payee"], "expiry_minutes": max(1, min(10, int(remaining // 60))),
                 "nonce": mandate["nonce"], "requested_by": requested_by, "origin": mandate["origin"],
                 }  # #447: the module's create_mandate takes no goal_id or need_id
-        if self.role == "referee":  # the buyer-private status view is not readable by the referee: the reducer is the check
-            self._call("create_mandate", **args)
-            return {"mandate_hash": mandate["hash"]}
-        try:
-            self._call("create_mandate", **args)
-        except MarketBridgeError:
-            status = self.purchase_status(mandate["hash"])
-            if not self._mandate_matches(status, mandate, need_id, current):
-                raise
-            return status
-        status = self.purchase_status(mandate["hash"])
-        if not self._mandate_matches(status, mandate, need_id, current):
-            raise MarketBridgeError("mandate_readback_mismatch")
-        return status
-
-    @staticmethod
-    def _mandate_matches(row: Mapping[str, Any], mandate: Mapping[str, Any], need_id: str,
-                         now: datetime) -> bool:
-        try:
-            server_expiry = datetime.fromisoformat(_timestamp_iso(row.get("expiry")).replace("Z", "+00:00"))
-            local_expiry = datetime.fromisoformat(mandate["expires_at"].replace("Z", "+00:00"))
-            current = now.astimezone(timezone.utc)
-            return (row.get("mandate_hash") == mandate.get("hash") and row.get("mandate_id") == mandate.get("id")
-                    and row.get("deal_id") == mandate.get("deal_id")
-                    and row.get("goal_id") == mandate.get("goal_id") and row.get("need_id") == need_id
-                    and _decimal_cents(row.get("amount"), "purchase_amount") == _decimal_cents(mandate.get("amount"), "mandate_amount")
-                    and row.get("payee") == mandate.get("payee") and row.get("origin") == mandate.get("origin")
-                    and row.get("reservation_matches") is True and row.get("retired") is False
-                    and row.get("settled") is False and row.get("within_allowance") is False
-                    and current < server_expiry <= local_expiry)
-        except (MarketBridgeError, ValueError, TypeError, OverflowError):
-            return False
+        # The market only creates a mandate through the referee, and the reducer is the check (it binds the winner, payee and amount);
+        # the referee cannot read a buyer-private row, and main's module has none (no my_purchase_status).
+        self._call("create_mandate", **args)
+        return {"mandate_hash": mandate["hash"]}
 
     def record_approval(self, *, mandate_hash: str, method: str, approved_by: str,
                         voice_approval_id: str = "", code: str = "") -> dict[str, Any]:
         """`code` is the word pair issued for the call (#449 item 3 RT-11); the market compares it with its own row. Never logged."""
-        if self.role not in {"buyer", "referee"} or method != "voice_code":
+        if self.role != "referee" or method != "voice_code":
             raise MarketBridgeError("approval_binding_invalid")
-        if self.role == "referee":
-            if not voice_approval_id or not isinstance(code, str) or not code.strip():
-                raise MarketBridgeError("approval_binding_invalid")
-            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
-                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"), code=code)
-            return {"mandate_hash": mandate_hash, "approval_method": method}
-        before = self.purchase_status(mandate_hash)
-        if before.get("approval_method") is not None or before.get("retired"):
-            raise MarketBridgeError("approval_not_pending")
-        try:
-            self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
-                       voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"), code=code)
-        except MarketBridgeError:
-            after = self.purchase_status(mandate_hash)
-            if after.get("approval_method") != method:
-                raise
-            return after
-        after = self.purchase_status(mandate_hash)
-        if after.get("approval_method") != method or not after.get("approved_at") or after.get("retired"):
-            raise MarketBridgeError("approval_readback_mismatch")
-        return after
+        if not voice_approval_id or not isinstance(code, str) or not code.strip():
+            raise MarketBridgeError("approval_binding_invalid")
+        self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=_safe_id(approved_by, "buyer_id"),
+                   voice_approval_id=_safe_id(voice_approval_id, "voice_approval_id"), code=code)
+        return {"mandate_hash": mandate_hash, "approval_method": method}
 
     def record_payment(self, *, mandate_hash: str, payment_ref: str, amount: float, mode: str) -> dict[str, Any]:
         if self.role != "referee" or mode not in {"sim", "stripe_test"}:
@@ -638,8 +567,7 @@ class MarketBridge:
         args = {"mandate_hash": mandate_hash, "payment_ref": _safe_id(payment_ref, "payment_ref"),
                 "amount": _finite(amount, "payment_amount", minimum=0.000000001), "mode": mode}
         self._call("record_payment", **args)
-        # The referee can mutate this row but cannot read the buyer-private confirmation view.
-        # The caller must verify through its buyer-role client before proceeding.
+        # The caller confirms with payment_row (the referee-only agent_payments view) before it goes on.
         return {"recorded": True}
 
     def record_agent_event(self, *, agent_name: str, address: str, text: str, origin: str = "SIM") -> None:
@@ -650,16 +578,6 @@ class MarketBridge:
                 or not isinstance(text, str) or not text or origin not in {"SIM", "MIRROR", "LIVE"}):
             raise MarketBridgeError("agent_event_invalid")
         self._call("record_agent_event", agent_name=agent_name, address=address, text=text, ts="", origin=origin)
-
-    def settle_goal(self, *, goal_id: str, deal_id: str, mandate_hash: str, payment_ref: str) -> dict[str, Any]:
-        if self.role != "buyer":
-            raise MarketBridgeError("market_role_mismatch")
-        self._call("settle_goal", goal_id=_safe_id(goal_id, "goal_id"), deal_id=_safe_id(deal_id, "deal_id"),
-                   mandate_hash=mandate_hash, payment_ref=_safe_id(payment_ref, "payment_ref"))
-        status = self.purchase_status(mandate_hash)
-        if not status.get("settled") or status.get("payment_ref") != payment_ref:
-            raise MarketBridgeError("goal_settlement_readback_mismatch")
-        return status
 
     def publish_bid(self, *, bid_id: str, round_id: str, seller_id: str, persona: str, lines: Sequence[Mapping[str, Any]],
                     line_metadata: Sequence[Mapping[str, Any]], stated_total: float = 0.0,

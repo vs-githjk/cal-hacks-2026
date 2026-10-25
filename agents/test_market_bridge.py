@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
+import os
+
 import pytest
 
 from market_bridge import MarketBridge, MarketBridgeError
@@ -285,53 +287,6 @@ def test_incomplete_or_nonwinning_result_never_becomes_order(mutation):
         ]) is None
 
 
-def _purchase_status(*, mandate=None, mandate_id="md-1", amount=40.0, payee="seller-a", expiry=None,
-                     reserved=True, retired=False, settled=False, approval=None,
-                     payment_ref=None, payment_amount=None, payment_mode=None):
-    now = datetime(2026, 10, 24, tzinfo=timezone.utc)
-    expiry = expiry or now + timedelta(minutes=9)
-    if isinstance(expiry, str):
-        expiry = datetime.fromisoformat(expiry.replace("Z", "+00:00"))
-    micros = int(expiry.timestamp()) * 1_000_000
-    return {"mandateHash": mandate or "a" * 64, "mandateId": mandate_id, "dealId": "deal-1",
-        "goalId": "goal-1", "needId": "need-1", "amount": amount, "payee": payee,
-        "expiry": [micros], "origin": "SIM", "withinAllowance": False, "retired": retired,
-        "reservationMatches": reserved, "settled": settled,
-        "approvalMethod": {"0": approval} if approval is not None else {"1": []},
-        "approvedAt": {"0": [micros]} if approval is not None else {"1": []},
-        "paymentRef": {"0": payment_ref} if payment_ref is not None else {"1": []},
-        "paymentAmount": {"0": payment_amount} if payment_amount is not None else {"1": []},
-        "paymentMode": {"0": payment_mode} if payment_mode is not None else {"1": []},
-        "paidAt": {"1": []}}
-
-
-def test_purchase_status_is_buyer_private_and_normalizes_sats_fields():
-    market = FakeMarket(sql_rows=[[_purchase_status(approval="typed_code", payment_ref="ch_test",
-        payment_amount=40.0, payment_mode="sim")]])
-    bridge = MarketBridge("buyer", client=market)
-    row = bridge.purchase_status("a" * 64)
-    assert row["approval_method"] == "typed_code"
-    assert row["payment_ref"] == "ch_test" and row["payment_mode"] == "sim"
-    assert row["expiry"] == "2026-10-24T00:09:00Z"
-    assert "FROM my_purchase_status" in market.queries[0]
-    assert "SELECT *" not in market.queries[0]
-    with pytest.raises(MarketBridgeError, match="purchase_status_binding_invalid"):
-        MarketBridge("referee", client=FakeMarket()).purchase_status("a" * 64)
-    with pytest.raises(MarketBridgeError, match="purchase_status_binding_invalid"):
-        bridge.purchase_status("x" * 64)
-
-
-def test_purchase_status_rejects_missing_foreign_and_malformed_rows():
-    with pytest.raises(MarketBridgeError, match="purchase_status_readback_missing"):
-        MarketBridge("buyer", client=FakeMarket()).purchase_status("a" * 64)
-    foreign = _purchase_status(mandate="b" * 64)
-    with pytest.raises(MarketBridgeError, match="purchase_status_readback_invalid"):
-        MarketBridge("buyer", client=FakeMarket(sql_rows=[[foreign]])).purchase_status("a" * 64)
-    malformed = _purchase_status() | {"expiry": [True]}
-    with pytest.raises(MarketBridgeError, match="market_timestamp_invalid"):
-        MarketBridge("buyer", client=FakeMarket(sql_rows=[[malformed]])).purchase_status("a" * 64)
-
-
 def test_seller_loss_report_projection_is_role_checked_and_normalizes_timestamp():
     row = {"id": "loss-1", "roundId": "round-1", "sellerId": "seller-a", "won": False,
         "gapBand": "within5", "reason": "price", "sourceUrl": "https://example.test/listing",
@@ -348,36 +303,32 @@ def test_seller_loss_report_projection_is_role_checked_and_normalizes_timestamp(
         MarketBridge("buyer", client=FakeMarket()).my_loss_reports()
 
 
-@pytest.mark.parametrize("change", [
-    {"mandateHash": "b" * 64}, {"amount": 41.0}, {"payee": "seller-b"},
-    {"reservationMatches": False}, {"retired": True}, {"withinAllowance": True},
-])
-def test_create_mandate_requires_exact_private_readback(change):
+def test_create_mandate_is_referee_only_and_the_reducer_is_the_check():
     from pay.mandate import new_mandate
     now = datetime(2026, 10, 24, tzinfo=timezone.utc)
     mandate = new_mandate(deal_id="deal-1", buyer_id="vidyut", goal_id="goal-1", amount=40.0,
         payee="seller-a", within_allowance=False, origin="SIM", now=now)
-    status = _purchase_status(mandate=mandate["hash"], mandate_id=mandate["id"],
-                              expiry=mandate["expires_at"]) | change
-    market = FakeMarket(sql_rows=[[status]])
-    bridge = MarketBridge("buyer", client=market)
-    with pytest.raises(MarketBridgeError):
-        bridge.create_mandate(mandate, need_id="need-1", buyer_id="vidyut", now=now)
-    assert market.calls[0][0] == "create_mandate"
-    assert market.calls[0][1] == {"hash": mandate["hash"], "id": mandate["id"], "deal_id": "deal-1",
+    market = FakeMarket()
+    assert MarketBridge("referee", client=market).create_mandate(
+        mandate, need_id="need-1", buyer_id="vidyut", now=now) == {"mandate_hash": mandate["hash"]}
+    assert market.calls == [("create_mandate", {"hash": mandate["hash"], "id": mandate["id"], "deal_id": "deal-1",
         "buyer_id": "vidyut", "amount": 40.0, "payee": "seller-a", "expiry_minutes": 10,
-        "nonce": mandate["nonce"], "requested_by": "", "origin": "SIM"}  # #447: no goal_id or need_id on the module's reducer
+        "nonce": mandate["nonce"], "requested_by": "", "origin": "SIM"})]  # #447: no goal_id or need_id on the module's reducer
+    for role in ("buyer", "seller"):  # the module's create_mandate is referee-only, and it has no buyer-private status view to read back
+        other = FakeMarket()
+        with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
+            MarketBridge(role, client=other).create_mandate(mandate, need_id="need-1", buyer_id="vidyut", now=now)
+        assert other.calls == [] and other.queries == []
+    with pytest.raises(MarketBridgeError, match="market_reducer_failed"):
+        MarketBridge("referee", client=FakeMarket(fail_call="create_mandate")).create_mandate(
+            mandate, need_id="need-1", buyer_id="vidyut", now=now)
 
 
-def test_create_mandate_accepts_exact_buyer_private_readback():
-    from pay.mandate import new_mandate
-    now = datetime(2026, 10, 24, tzinfo=timezone.utc)
-    mandate = new_mandate(deal_id="deal-1", buyer_id="vidyut", goal_id="goal-1", amount=40.0,
-        payee="seller-a", within_allowance=False, origin="SIM", now=now)
-    status = _purchase_status(mandate=mandate["hash"], mandate_id=mandate["id"],
-                              expiry=mandate["expires_at"])
-    bridge = MarketBridge("buyer", client=FakeMarket(sql_rows=[[status]]))
-    assert bridge.create_mandate(mandate, need_id="need-1", buyer_id="vidyut", now=now)["mandate_hash"] == mandate["hash"]
+def test_the_bridge_has_no_buyer_private_purchase_view_or_settle_goal():
+    # main's market module has neither: the chat path uses agent_approvals, agent_payments and set_goal_state through the referee
+    assert not hasattr(MarketBridge, "purchase_status") and not hasattr(MarketBridge, "settle_goal")
+    source = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "market_bridge.py")).read()
+    assert "my_purchase_status" not in source.replace("no my_purchase_status", "")
 
 
 @pytest.mark.parametrize("mode", ["sim", "stripe_test"])
@@ -404,8 +355,8 @@ def test_referee_record_approval_forwards_voice_approval_id_and_refuses_empty():
 def test_referee_record_agent_event_forwards_one_line_and_other_roles_are_refused():
     market = FakeMarket()
     bridge = MarketBridge("referee", client=market)
-    bridge.record_agent_event(agent_name="Tech Bazaar Buyer", address="agent1q" + "a" * 30, text="needs the operator")
-    assert market.calls == [("record_agent_event", {"agent_name": "Tech Bazaar Buyer", "address": "agent1q" + "a" * 30,
+    bridge.record_agent_event(agent_name="Fish Market Buyer", address="agent1q" + "a" * 30, text="needs the operator")
+    assert market.calls == [("record_agent_event", {"agent_name": "Fish Market Buyer", "address": "agent1q" + "a" * 30,
                                                     "text": "needs the operator", "ts": "", "origin": "SIM"})]
     with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
         MarketBridge("buyer", client=FakeMarket()).record_agent_event(agent_name="x", address="agent1q" + "a" * 30, text="t")

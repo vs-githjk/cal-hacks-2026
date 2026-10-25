@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
+import { cloneElement, useCallback, useEffect, useState } from "react";
+import { Card, Code, Details, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import { BRAND } from "@/lib/brand";
@@ -23,12 +23,13 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactElement<{ placeholder?: string }> }) {
+  // The hint is the input's placeholder (#448: fewer words on screen; the example is still there while the field is empty).
+  const input = hint && !children.props.placeholder ? cloneElement(children, { placeholder: hint }) : children;
   return (
     <label className="block min-w-0">
-      <span className="mb-1.5 block text-[13px]/[18px] font-medium text-ink-2">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-[12px]/[16px] text-muted">{hint}</span>}
+      <span className="mb-1 block text-[13px] font-medium">{label}</span>
+      {input}
     </label>
   );
 }
@@ -102,10 +103,8 @@ export default function SellPage() {
         <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[22px]/[28px] font-semibold tracking-[-0.01em]">
           Sell on {BRAND} <OriginChip origin="SIM" />
         </h1>
-        <p className="mt-2 text-[15px]/[20px] text-ink-2">
-          Describe your shop once. The Seller Kit checks it and writes a config your own seller agent runs from. Everything here is a simulation:
-          the kit cannot verify a real shop, so shops it writes are SIM.
-        </p>
+        <p className="mt-2 text-[15px]/[20px] text-ink-2">Describe your shop once. Your agent bids from it, never below your floor.</p>
+        <Details summary="What this does"><p>The Seller Kit checks your shop and writes a config your own seller agent runs from. It cannot verify a real shop, so every shop it writes is SIM.</p></Details>
       </header>
 
       {kit.local ? (
@@ -121,9 +120,8 @@ export default function SellPage() {
       {offline && (
         <Card>
           <p className="flex items-center gap-2 font-medium"><span aria-hidden className="size-2 rounded-full bg-coral-mark" />Seller Kit offline.</p>
-          <p className="mt-1 text-muted">
-            Nothing was sent. Start it with <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.
-          </p>
+          <p className="mt-1 text-muted">Nothing was sent.</p>
+          <Details summary="How to start it"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
         </Card>
       )}
 
@@ -137,7 +135,7 @@ export default function SellPage() {
             <Field label="Owner (optional)">
               <input className={input} value={form.owner} maxLength={60} onChange={(e) => set("owner", e.target.value)} />
             </Field>
-            <Field label="What kind of shop" hint="For example: local shop, refurbisher, online reseller.">
+            <Field label="Kind of shop" hint="Local shop, refurbisher, online reseller.">
               <input className={input} value={form.archetype} maxLength={200} required onChange={(e) => set("archetype", e.target.value)} />
             </Field>
             <Field label="Agent id" hint="Lowercase letters, digits, - and _. Also the config file name.">
@@ -174,10 +172,8 @@ export default function SellPage() {
 
         <Card>
           <Step n={3}>What you sell</Step>
-          <p className="mb-3 text-[13px] text-muted">
-            One row per part and condition. The floor is the lowest unit price your agent will ever bid, so it never goes under it. Add a second row with
-            the same part and another condition to offer both in one bid.
-          </p>
+          <p className="mb-3 text-[13px] text-muted">One row per part and condition. Your agent never bids under the floor.</p>
+          <Details summary="About floors and conditions" className="mb-3 mt-0"><p>The floor is the lowest unit price your agent will ever bid. Add a second row with the same part and another condition to offer both in one bid.</p></Details>
           <div className="grid gap-4">
             {form.rows.map((r, i) => (
               <fieldset key={i} className="grid gap-3 rounded-xl bg-surface-2 p-3 sm:grid-cols-2">
@@ -229,10 +225,10 @@ export default function SellPage() {
         <Card>
           <Step n={4}>Perks and claims</Step>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Perks (one per line)" hint="For example: 30-day returns, free local pickup.">
+            <Field label="Perks, one per line" hint="30-day returns, local pickup.">
               <textarea className={`${input} min-h-24`} value={form.perks} onChange={(e) => set("perks", e.target.value)} />
             </Field>
-            <Field label="Claims about your parts (one per line)" hint="For example: new, sealed. A buyer can hold you to these.">
+            <Field label="Claims, one per line" hint="New, sealed. Buyers can hold you to these.">
               <textarea className={`${input} min-h-24`} value={form.claims} onChange={(e) => set("claims", e.target.value)} />
             </Field>
           </div>
@@ -286,17 +282,18 @@ export default function SellPage() {
               )}
             </>
           )}
-          <p className="mt-3 text-[13px] font-medium">What happens next</p>
-          <ol className="mt-1 list-decimal pl-5 text-[14px] text-muted">
-            <li>Run the command above on a machine with this repo and its agents environment. It starts your seller agent on a free port from 8016.</li>
-            <li>The buyer agent only asks the sellers on its list. Your agent bids once the buyer is told its address; that is not automatic yet.</li>
-            <li>In a sealed round your agent bids from your listings and never below your floor. All of this is SIM.</li>
-          </ol>
+          <Details summary="What happens next">
+            <ol className="list-decimal pl-5">
+              <li>Run the command above on a machine with this repo and its agents environment. It starts your seller agent on a free port from 8016.</li>
+              <li>The buyer agent only asks the sellers on its list. Your agent bids once the buyer is told its address; that is not automatic yet.</li>
+              <li>In a sealed round your agent bids from your listings and never below your floor. All of this is SIM.</li>
+            </ol>
+          </Details>
         </Card>
       )}
 
       <Card>
-        <Label>Shops written so far</Label>
+        <Label>Shops written</Label>
         {shownShops === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
         ) : shownShops.length === 0 ? (
@@ -316,7 +313,7 @@ export default function SellPage() {
       </Card>
 
       <Card>
-        <Label>Open needs you could bid on</Label>
+        <Label>Open needs</Label>
         {shownNeeds === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
         ) : shownNeeds.length === 0 ? (
@@ -335,7 +332,7 @@ export default function SellPage() {
             ))}
           </ul>
         )}
-        <p className="mt-2 text-[12px] text-muted">The buyer&apos;s spending cap is never shown to sellers.</p>
+        <p className="mt-2 text-[12px] text-muted">Buyer caps are never shown.</p>
       </Card>
     </div>
   );

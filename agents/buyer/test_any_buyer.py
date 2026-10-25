@@ -973,3 +973,21 @@ def test_a_stranger_is_answered_once_not_in_a_loop(runtime):
     for _ in range(3):
         asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
     assert len(ctx.sent) == 1 and not buyer.ROUND
+
+
+def _chat_lines(ctx):
+    return [c.args[0] for c in ctx.logger.info.call_args_list if c.args and str(c.args[0]).startswith("AGENT_CHAT ")]
+
+
+def test_owner_goal_and_buyer_replies_reach_the_chat_feed_but_a_strangers_text_never_does(runtime):
+    import chatlog
+    buyer, _db = runtime
+    stranger_ctx = Context()
+    asyncio.run(buyer.handle_text(stranger_ctx, STRANGER, GOAL_TEXT + " secret-stranger-words"))
+    assert _chat_lines(stranger_ctx) == []   # neither the stranger's goal nor the sign-up reply is a chat line
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "owner", GOAL_TEXT + ", call me on 415-555-1234"))
+    recs = [chatlog.parse_line(line) for line in _chat_lines(ctx)]
+    assert recs[0]["who"] == "owner" and recs[0]["text"].startswith(GOAL_TEXT) and "415" not in recs[0]["text"]
+    assert any(r["who"] == "buyer" and r["kind"] == "thinking" for r in recs)
+    assert any(r["who"] == "buyer" and r["kind"] == "message" for r in recs)

@@ -29,6 +29,8 @@ class MarketWorld:
     def __init__(self, require_code=False, fail_issue=False):
         self.fail_issue = fail_issue
         self.require_code, self.mandates, self.issued, self.approvals, self.calls = require_code, {}, {}, {}, []
+        self.payments, self.goal_states, self.fail_record_payment, self.approved_by_override = {}, [], False, None
+        self.queries = []
         self.goal_id = self.need_id = ""  # the market derives these from the round's need; wire() reads them from the buyer
 
     def client(self, role):
@@ -65,21 +67,38 @@ class MarketWorld:
                     if world.require_code and a.get("code") != world.issued.get(a["mandate_hash"]):
                         raise RuntimeError("the code does not match the one issued")
                     world.approvals[a["mandate_hash"]] = a
+                elif reducer == "record_payment":
+                    if role != "referee":
+                        raise RuntimeError(f"record_payment needs referee; caller is {role} vidyut")
+                    if world.fail_record_payment or a["mandate_hash"] not in world.approvals:
+                        raise RuntimeError("no approval row for this mandate hash; payment refused")
+                    if a["mandate_hash"] in world.payments:
+                        raise RuntimeError("second payment for the same mandate refused")
+                    world.payments[a["mandate_hash"]] = a
+                elif reducer == "set_goal_state":
+                    if role != "referee":
+                        raise RuntimeError(f"set_goal_state needs referee; caller is {role} vidyut")
+                    world.goal_states.append(a)
+                elif reducer == "settle_goal":
+                    raise RuntimeError("no such reducer: settle_goal")  # main's module has none
 
             def sql(self, query):
-                assert role == "buyer" and "my_purchase_status" in query
+                # main's module: the referee reads agent_approvals and agent_payments; there is no my_purchase_status
+                world.queries.append(query)
+                if "my_purchase_status" in query:
+                    raise RuntimeError("no such table: my_purchase_status")
+                assert role == "referee"
                 h = re.search(r"mandate_hash = '([0-9a-f]+)'", query).group(1)
-                m = world.mandates.get(h)
-                if not m:
-                    return []
-                ok = h in world.approvals
-                return [{"mandateHash": h, "mandateId": m["id"], "dealId": m["deal_id"], "goalId": world.goal_id,
-                         "needId": world.need_id, "amount": m["amount"], "payee": m["payee"],
-                         "expiry": "2099-01-01T00:00:00Z", "origin": m["origin"], "withinAllowance": False,
-                         "retired": False, "reservationMatches": True, "settled": False,
-                         "approvalMethod": {"some": "voice_code"} if ok else OPTION_NONE,
-                         "approvedAt": {"some": "2026-10-25T10:00:00Z"} if ok else OPTION_NONE,
-                         "paymentRef": OPTION_NONE, "paymentAmount": OPTION_NONE, "paymentMode": OPTION_NONE, "paidAt": OPTION_NONE}]
+                if "FROM agent_approvals" in query:
+                    a = world.approvals.get(h)
+                    return [] if a is None else [{"mandateHash": h, "method": a["method"],
+                                                  "approvedBy": world.approved_by_override or a["approved_by"],
+                                                  "at": "2026-10-25T10:00:00Z", "voiceApprovalId": a["voice_approval_id"]}]
+                if "FROM agent_payments" in query:
+                    p = world.payments.get(h)
+                    return [] if p is None else [{"mandateHash": h, "paymentRef": p["payment_ref"], "amount": p["amount"],
+                                                  "mode": p["mode"], "at": "2026-10-25T10:01:00Z"}]
+                raise AssertionError(f"unexpected query: {query}")
         return Client()
 
     def wire(self, buyer, referee_class=MarketBridge):
@@ -214,7 +233,7 @@ def test_the_old_chat_call_shape_is_what_the_live_market_refuses():
     assert not world.mandates
 
 
-def test_payment_record_and_settlement_name_the_market_mandate_not_the_local_one(runtime):
+def test_payment_record_and_goal_close_name_the_market_mandate_not_the_local_one(runtime):
     from uagents_core.contrib.protocols.payment import CompletePayment
     from test_runtime_checkout import Context, charged_transaction
     buyer, db = runtime
@@ -223,13 +242,12 @@ def test_payment_record_and_settlement_name_the_market_mandate_not_the_local_one
     assert market["hash"] != tx["mandate"]["hash"]
     state.save_transaction(db, dict(tx, market_mandate=market))
     buyer.ROUND["transaction"] = dict(tx, market_mandate=market)
-    paid = {"approval_method": "voice_code", "retired": False, "reservation_matches": True, "payment_ref": "ch_simulated_runtime",
-            "payment_mode": "sim", "payment_amount": 582.0}
-    buyer.MARKET_BUYER.purchase_status.side_effect = [
-        {"payment_ref": None, "payment_mode": None, "payment_amount": None}, paid]
-    buyer.MARKET_BUYER.settle_goal.return_value = {"settled": True}
+    world = MarketWorld()
+    buyer.MARKET_BUYER = MarketBridge("buyer", client=world.client("buyer"))
+    buyer.MARKET_REFEREE = MarketBridge("referee", client=world.client("referee"))
+    world.approvals["d" * 64] = {"method": "voice_code", "approved_by": tx["buyer_id"], "voice_approval_id": "va-1"}
     asyncio.run(buyer.on_complete(Context(), tx["mandate"]["payee"], CompletePayment(transaction_id="ch_simulated_runtime")))
-    assert [c.args[0] for c in buyer.MARKET_BUYER.purchase_status.call_args_list] == ["d" * 64, "d" * 64]
-    assert buyer.MARKET_REFEREE.record_payment.call_args.kwargs["mandate_hash"] == "d" * 64
-    assert buyer.MARKET_BUYER.settle_goal.call_args.kwargs["mandate_hash"] == "d" * 64
+    assert list(world.payments) == ["d" * 64] and world.roles("record_payment") == ["referee"]
+    assert world.goal_states[0]["goal_id"] == tx["goal_id"] and world.goal_states[0]["state"] == "DONE"
+    assert "settle_goal" not in [r for _role, r, _a in world.calls]
     assert state.load_transaction(db, tx["deal_id"], tx["buyer_id"])["phase"] == "settled"
