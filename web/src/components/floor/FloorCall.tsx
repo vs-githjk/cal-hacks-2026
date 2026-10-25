@@ -27,6 +27,8 @@ const WHITE: CSSProperties = {
   borderRadius: 18,
 };
 const CARD_MAX = 720;
+/** The swapped chat card is a fixed height that fits the reference round's full conversation (never taller than the viewport minus 160 px). */
+const FULL_CHAT_H = 560;
 
 function cornerStyle(c: Corner): CSSProperties {
   return { [c.startsWith("t") ? "top" : "bottom"]: INSET, [c.endsWith("l") ? "left" : "right"]: INSET };
@@ -41,7 +43,7 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const [frameW, setFrameW] = useState(960);
-  const [bigH, setBigH] = useState(560);
+  const [viewH, setViewH] = useState(900);
   const { swapped, corner, unread } = call;
 
   const ids = lines.map((l) => l.id).join("\n");
@@ -57,14 +59,12 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
     return () => ro.disconnect();
   }, []);
 
-  // Remember the floor's natural height so the frame keeps its size while the chat is the big pane.
   useEffect(() => {
-    const el = floorPane.current;
-    if (!el || swapped) return;
-    const ro = new ResizeObserver(([e]) => e && e.contentRect.height > 0 && setBigH(Math.round(e.contentRect.height)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [swapped]);
+    const on = () => setViewH(window.innerHeight);
+    on();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -94,7 +94,7 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   const left = wide ? Math.max(0, corner.endsWith("l") ? Math.max(room / 2, tileW + INSET * 2) : Math.min(room / 2, room - tileW - INSET * 2)) : room / 2;
   const stack = wide ? 0 : Math.max(0, tileH + INSET + 12 - 24);
   const bigChat: MotionStyle = {
-    position: "relative", width: cardW, height: bigH, marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
+    position: "relative", width: cardW, height: Math.min(FULL_CHAT_H, Math.max(240, viewH - 160)), marginLeft: left, zIndex: 0, overflow: "hidden", ...WHITE,
     marginTop: corner.startsWith("t") ? stack : 0, marginBottom: corner.startsWith("b") ? stack : 0,
   };
 
