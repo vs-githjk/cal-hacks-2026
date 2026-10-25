@@ -607,8 +607,9 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     // The lines are the picked alternatives (the cheapest allowed line per SKU), the ones the rank is about.
     // adjusted_total is the real score rankBids sorted on (equal to landed when nothing adjusted it).
     const pickedLines = x.picked.map((i) => x.bid.lines[i]!);
+    const reasons = [...(heldBack.has(b.id) ? [heldBack.get(b.id)!] : []), ...(x.complete ? [] : [`missing: ${x.missing.join(', ')}`])];
     ctx.db.roundResult.insert({
-      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons,
       lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
       adjustedTotal: x.score, adjustmentReason: adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality),
     });
@@ -1038,6 +1039,29 @@ export function myBuyerProfileView(ctx: VCtx) {
   const id = myBuyerId(ctx);
   const row = id ? ctx.db.buyerProfile.buyerId.find(id) : undefined;
   return row ? [row] : [];
+}
+
+// ---------------------------------------------------------------- CRS supplier signal (docs/changes/0033)
+
+export const CRS_BANDS = ['verified_stable', 'caution', 'not_verified'];
+export const CRS_SOURCES = ['sandbox', 'recorded', 'live', 'mirror', 'simulated'];
+/** #332: a checked_at this far ahead of the server's clock cannot be real; refuse it rather than caching a forever-fresh row. */
+export const CRS_MAX_SKEW_MS = 5 * 60 * 1000;
+
+/** Referee only (Lane A's CRS adapter, relayed): store a seller's band. One row per seller; the latest check replaces it,
+ * but a late relay of an older result never overwrites a newer one already on file. */
+export function recordSupplierSignal(ctx: Ctx, a: { supplierId: string; stability: string; checkedAt: string; source: string }) {
+  requireRole(ctx, 'record_supplier_signal', ['referee']);
+  if (!a.supplierId) throw new SenderError('supplier id required');
+  if (!CRS_BANDS.includes(a.stability)) throw new SenderError(`stability must be one of ${CRS_BANDS.join(', ')}`);
+  if (!CRS_SOURCES.includes(a.source)) throw new SenderError(`source must be one of ${CRS_SOURCES.join(', ')}`);
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(a.checkedAt) || Number.isNaN(Date.parse(a.checkedAt))) throw new SenderError('checked_at must be an ISO time');
+  if (Date.parse(a.checkedAt) > ms(ctx.timestamp) + CRS_MAX_SKEW_MS) throw new SenderError('checked_at is too far in the future');
+  const existing = ctx.db.supplierSignal.supplierId.find(a.supplierId);
+  if (existing && Date.parse(a.checkedAt) < Date.parse(existing.checkedAt)) return; // a late relay of an older result: ignored, not an error
+  const row = { supplierId: a.supplierId, stability: a.stability, checkedAt: a.checkedAt, source: a.source };
+  if (existing) ctx.db.supplierSignal.supplierId.update(row);
+  else ctx.db.supplierSignal.insert(row);
 }
 
 // ---------------------------------------------------------------- #374 public telemetry

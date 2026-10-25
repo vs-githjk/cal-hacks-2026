@@ -55,6 +55,7 @@ import RecordApprovalReducer from "./record_approval_reducer";
 import RecordLossReportReducer from "./record_loss_report_reducer";
 import RecordPaymentReducer from "./record_payment_reducer";
 import RecordReceivingReducer from "./record_receiving_reducer";
+import RecordSupplierSignalReducer from "./record_supplier_signal_reducer";
 import ReissuePairCodeReducer from "./reissue_pair_code_reducer";
 import ReissueSellerScreenCodeReducer from "./reissue_seller_screen_code_reducer";
 import ResetDemoReducer from "./reset_demo_reducer";
@@ -91,6 +92,7 @@ import RoundRow from "./round_table";
 import RoundResultRow from "./round_result_table";
 import SellerNeedsRow from "./seller_needs_table";
 import StockHoldRow from "./stock_hold_table";
+import SupplierSignalRow from "./supplier_signal_table";
 import TelemetryRow from "./telemetry_table";
 import TelemetryAgentRow from "./telemetry_agent_table";
 
@@ -193,6 +195,17 @@ const tablesSchema = __schema({
       { name: 'stock_hold_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, StockHoldRow),
+  supplierSignal: __table({
+    name: 'supplier_signal',
+    indexes: [
+      { accessor: 'supplierId', name: 'supplier_signal_supplier_id_idx_btree', algorithm: 'btree', columns: [
+        'supplierId',
+      ] },
+    ],
+    constraints: [
+      { name: 'supplier_signal_supplier_id_key', constraint: 'unique', columns: ['supplierId'] },
+    ],
+  }, SupplierSignalRow),
   agentBuyerContact: __table({
     name: 'agent_buyer_contact',
     indexes: [
@@ -344,6 +357,7 @@ const reducersSchema = __reducers(
   __reducerSchema("record_loss_report", RecordLossReportReducer),
   __reducerSchema("record_payment", RecordPaymentReducer),
   __reducerSchema("record_receiving", RecordReceivingReducer),
+  __reducerSchema("record_supplier_signal", RecordSupplierSignalReducer),
   __reducerSchema("reissue_pair_code", ReissuePairCodeReducer),
   __reducerSchema("reissue_seller_screen_code", ReissueSellerScreenCodeReducer),
   __reducerSchema("reset_demo", ResetDemoReducer),

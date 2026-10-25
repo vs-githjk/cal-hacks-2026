@@ -6,6 +6,7 @@ import { tables } from "@/module_bindings";
 import { MarketScreen } from "@/components/screens";
 import { asSim, eventsFromRows, goalFromRows, latestRound, linesFromRows, originCounts, roundFromRows } from "@/lib/screens";
 import * as sample from "@/lib/sample";
+import { crsFor } from "@/lib/crs";
 
 /** The referee's floor: public market state. Empty tables fall back to the recorded sample run, labelled SIM. */
 export default function MarketPage() {
@@ -14,6 +15,8 @@ export default function MarketPage() {
   const [events, eventsReady] = useTable(tables.floorEvent);
   const [goals] = useTable(tables.myGoals); // only a paired buyer screen sees a goal; otherwise the cap is unknown here
   const [goalItems] = useTable(tables.myGoalItems);
+  const [signals] = useTable(tables.supplierSignal);
+  const crs = (sellerId: string) => crsFor(signals, sellerId, Date.now()); // bands only (docs/changes/0033)
 
   const r = latestRound(rounds);
   const round = useMemo(() => (r ? roundFromRows(r, events, results) : null), [r, events, results]);
@@ -28,6 +31,7 @@ export default function MarketPage() {
   return (
     <>
       <MarketScreen
+        crs={crs}
         connecting={!roundsReady || !eventsReady}
         round={shownRound}
         cap={sim ? sample.goal.cap : cap}
