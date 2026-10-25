@@ -205,6 +205,7 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
     assert len(projected["lines"]) == 2
     assert buyer.ROUND["original_offer"] == raw
     assert projected["lines"][0].get("listing_hash") == chosen_hash
+    assert projected["market_seller_id"] == "seller-a"  # the web mandate pays the market's own seller id (PL-1)
 
     buyer.ROUND.update(phase="requote", pick=1, deadline=NOW.timestamp() + 60,
                        quoted_at=NOW.timestamp())

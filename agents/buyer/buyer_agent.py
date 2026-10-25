@@ -265,7 +265,7 @@ async def _finish_market_round(ctx: Context):
                 selected.append({**line, "quantity": result_line["quantity"],
                                  "shipping": result_line["shipping"]})
             ROUND["market_winner"] = dict(local, lines=selected, total_landed_price=winner["landed"],
-                                           market_binding_hash=winner["binding_hash"])
+                                           market_binding_hash=winner["binding_hash"], market_seller_id=winner["seller_id"])
             ROUND["original_offer"] = copy.deepcopy(raw_offer)
             ROUND["bids"] = [ROUND["market_winner"]]
         if not ROUND.get("trace_written"):
@@ -1404,9 +1404,17 @@ def _build_pending_transaction(n: int, *, web: bool = False):
     """(transaction, blocking market create_mandate call): the call may run in a worker thread, the rest must not."""
     bid = ROUND["bids"][n - 1]
     card = ROUND["cards"][bid["id"]]
-    deal_id = f"deal-{uuid4().hex}"
     amount = bid["total_landed_price"]
-    seller = common.address(bid["supplier_id"])
+    if web:
+        # The market's create_mandate finds the winner from the deal id (bidIdOfDeal: deal-<round>:<bid>) and pays only that
+        # bid's market seller id (seller-a), never an agent address; a random deal id or an agent1q payee is always refused (PL-1).
+        seller = bid.get("market_seller_id")
+        if not seller or MARKET_SELLER_IDS.get(seller) != bid["supplier_id"]:
+            raise MarketBridgeError("market_seller_missing")
+        deal_id = f"deal-{ROUND['market_round_id']}:{bid['id']}"
+    else:
+        deal_id = f"deal-{uuid4().hex}"
+        seller = common.address(bid["supplier_id"])
     mandate = payment.make_mandate(deal_id=deal_id, amount=amount, payee=seller,
         buyer_id=ROUND["market_buyer_id"], within_allowance=False, goal_id=ROUND["goal"]["id"],
         now=business_now(), origin=bid.get("origin", "SIM"))
