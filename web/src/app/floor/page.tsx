@@ -10,6 +10,8 @@ type View = "ring" | "arena";
 export default function FloorPage() {
   // Read once on mount from window.location (the page only mounts in the browser, see Providers).
   const [view, setView] = useState<View>(() => (new URLSearchParams(window.location.search).get("view") === "arena" ? "arena" : "ring"));
+  // Recording mode: /floor?replay=reference loops the built-in reference run full screen, for the demo video.
+  const [replay] = useState(() => new URLSearchParams(window.location.search).get("replay") === "reference");
   const pick = (v: View) => {
     setView(v);
     const u = new URL(window.location.href);
@@ -28,6 +30,7 @@ export default function FloorPage() {
       {label}
     </button>
   );
+  if (replay) return <RingFloor replay />;
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">

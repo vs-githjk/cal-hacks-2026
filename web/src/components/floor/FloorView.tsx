@@ -11,7 +11,7 @@ import { ASI_ONE_URL, latestActivity, realRows } from "@/lib/agentFeed";
 import type { ArenaRows } from "@/lib/arenaScene";
 import { formatMoney } from "@/lib/money";
 import { FLOOR as C } from "./floorTokens";
-import { hudText, planFromRows, type FloorPhase, type FloorPlan, type SellerView } from "./floorPhases";
+import { hudText, planFromRows, referencePlan, type FloorPhase, type FloorPlan, type SellerView } from "./floorPhases";
 import { FloorRing, type FloorTheme } from "./FloorRing";
 import { BRAND } from "./brand";
 
@@ -19,19 +19,29 @@ const LOOP_GAP_MS = 2500;
 const sans = { fontFamily: C.fontSans } as const;
 const mono = { fontFamily: C.fontMono, letterSpacing: "0.04em" } as const;
 
-export function RingFloor() {
+/** replay: the recording mode (/floor?replay=reference): the built-in reference run on a loop, bigger text, no controls, never live rows. */
+export function RingFloor({ replay = false }: { replay?: boolean }) {
   const [rounds] = useTable(tables.round);
   const [needs] = useTable(tables.sellerNeeds);
   const [results] = useTable(tables.roundResult);
   const [events] = useTable(tables.floorEvent);
   const rows = useMemo<ArenaRows>(() => ({ rounds, needs, results, events }), [rounds, needs, results, events]);
-  const plan = useMemo(() => planFromRows(rows), [rows]);
+  const plan = useMemo(() => (replay ? referencePlan() : planFromRows(rows)), [rows, replay]);
   // A new plan (new round, new result) restarts the show from its first phase.
   const sig = `${plan.origin}|${plan.part}|${plan.phases.length}|${plan.winnerKey}|${plan.phases[0]?.sellers.map((s) => s.name).join(",")}|${plan.phases.at(-1)?.sellers.map((s) => s.price).join(",")}`;
-  return <Player key={sig} plan={plan} />;
+  return <Player key={sig} plan={plan} replay={replay} />;
 }
 
-function Player({ plan }: { plan: FloorPlan }) {
+function Player({ plan, replay }: { plan: FloorPlan; replay: boolean }) {
+  // Recording mode shows only the stage: hide the app header and the run-mode footer (which prints the market address) while mounted.
+  useEffect(() => {
+    if (!replay) return;
+    const el = document.createElement("style");
+    el.textContent = "body > header, header.sticky, body footer.fixed, nav[aria-label] { display: none !important; } body { padding-bottom: 0 !important; overflow: hidden; }";
+    document.head.appendChild(el);
+    return () => el.remove();
+  }, [replay]);
+  const zoom = replay ? ({ zoom: 1.7 } as const) : undefined; // recording mode: text that reads at 25 percent zoom
   const reduced = !!useReducedMotion();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -53,8 +63,8 @@ function Player({ plan }: { plan: FloorPlan }) {
   useEffect(() => {
     if (paused || phHold) return;
     if (atEnd) {
-      if (!sample) return; // a real round rests on its deal card
-      const t = setTimeout(() => go(0), LOOP_GAP_MS + phMs);
+      if (!sample) return; // a real round rests on its deal card (a SIM or replay loops)
+      const t = setTimeout(() => go(0), (replay ? 1200 : LOOP_GAP_MS) + phMs);
       return () => clearTimeout(t);
     }
     if (reduced) {
@@ -70,14 +80,14 @@ function Player({ plan }: { plan: FloorPlan }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [index, paused, reduced, phMs, phHold, atEnd, sample, go]);
+  }, [index, paused, reduced, phMs, phHold, atEnd, sample, replay, go]);
 
   const live = useAgents();
   const agentLine = useMemo(() => {
-    if (plan.sample || !live.rows) return null;
+    if (plan.sample || replay || !live.rows) return null;
     const row = latestActivity(realRows(live.rows));
     return row?.last_message ? `${row.name}: ${row.last_message}` : null;
-  }, [plan.sample, live.rows]);
+  }, [plan.sample, replay, live.rows]);
 
   const chat = useMemo(() => {
     const lines = phases.slice(0, index + 1).map((p) => p.pip).filter((x): x is string => !!x);
@@ -87,10 +97,14 @@ function Player({ plan }: { plan: FloorPlan }) {
   const label = `Ring view, step ${index + 1} of ${phases.length}. ${hudText(ph.hud)}`;
 
   return (
-    <div className="grid gap-3">
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-[20px]" style={{ background: C.stage, boxShadow: C.shadowGlass, color: C.line }}>
+    <div className={replay ? "fixed inset-0 z-[100] grid place-items-center" : "grid gap-3"} style={replay ? { background: C.stage } : undefined}>
+      <div
+        className={`relative w-full overflow-hidden rounded-2xl sm:mx-auto sm:rounded-[20px] ${replay ? "!rounded-none" : "sm:max-w-[max(640px,calc((100svh_-_250px)_*_16/9))]"}`}
+        style={{ background: C.stage, boxShadow: replay ? "none" : C.shadowGlass, color: C.line, ...(replay ? { maxWidth: "calc(100vh * 16 / 9)" } : {}) }}
+      >
         {/* HUD: on phones above the stage, on wider screens over it and clear of the PiP by its width plus 36 px */}
-        <div data-testid="floor-hud" className="pointer-events-none relative z-10 grid content-start gap-1.5 px-3 pb-1 pt-3 sm:absolute sm:left-5 sm:right-[calc(22%+36px)] sm:top-[18px] sm:p-0" style={sans}>
+        <div data-testid="floor-hud" className={`pointer-events-none relative z-10 px-3 pb-1 pt-3 sm:absolute sm:left-5 sm:top-[18px] sm:p-0 ${replay ? "sm:right-[calc(26%+36px)]" : "sm:right-[calc(22%+36px)]"}`} style={sans}>
+         <div className="grid content-start gap-1.5" style={zoom}>
           <p className="text-[12px] uppercase leading-4" style={{ ...mono, color: C.muted }}>
             Live from the {BRAND} floor · refereed by <b className="font-medium" style={{ color: C.referee }}>CRS</b>
             <Origin plan={plan} />
@@ -104,13 +118,14 @@ function Player({ plan }: { plan: FloorPlan }) {
               <span className="min-w-0">{ph.call}</span>
             </div>
           )}
+         </div>
         </div>
-        <FloorRing phases={phases} index={index} elapsed={elapsed} reduced={reduced} label={label} theme={theme} />
-        <ChatPip lines={agentLine ? [...chat.slice(-1), agentLine] : chat} sample={plan.sample} />
-        {ph.end && <DealCard card={ph.end} />}
-        <Ledger sellers={ph.sellers} winner={plan.winnerKey} ph={ph} />
+        <FloorRing phases={phases} index={index} elapsed={elapsed} reduced={reduced} label={label} theme={theme} textScale={replay ? 1.4 : 1} />
+        <ChatPip lines={agentLine ? [...chat.slice(-1), agentLine] : chat} sample={plan.sample} zoom={zoom} wide={replay} />
+        {ph.end && <DealCard card={ph.end} zoom={zoom} />}
+        <Ledger sellers={ph.sellers} winner={plan.winnerKey} ph={ph} zoom={zoom} />
       </div>
-      <Controls index={index} total={phases.length} paused={paused} atEnd={atEnd} hold={ph.hold} reduced={reduced} onPrev={() => go(index - 1)} onNext={() => go(index + 1)} onToggle={() => setPaused((p) => !p)} onReplay={() => { setPaused(false); go(0); }} theme={theme} onTheme={() => setTheme((t) => (t === "fish" ? "ghosts" : "fish"))} />
+      {!replay && <Controls index={index} total={phases.length} paused={paused} atEnd={atEnd} hold={ph.hold} reduced={reduced} onPrev={() => go(index - 1)} onNext={() => go(index + 1)} onToggle={() => setPaused((p) => !p)} onReplay={() => { setPaused(false); go(0); }} theme={theme} onTheme={() => setTheme((t) => (t === "fish" ? "ghosts" : "fish"))} />}
     </div>
   );
 }
@@ -132,14 +147,15 @@ function Origin({ plan }: { plan: FloorPlan }) {
 }
 
 /** FaceTime-style tile: the ASI:One chat as the buyer's agent talks the round through. Top right over the stage, in flow below it on phones. */
-function ChatPip({ lines, sample }: { lines: string[]; sample: boolean }) {
+function ChatPip({ lines, sample, zoom, wide }: { lines: string[]; sample: boolean; zoom?: React.CSSProperties; wide: boolean }) {
   return (
     <aside
       data-testid="floor-pip"
       aria-label="ASI:One chat"
-      className="relative z-10 mx-3 mt-2 overflow-hidden rounded-2xl sm:absolute sm:right-5 sm:top-[18px] sm:m-0 sm:w-[22%] sm:min-w-[150px] sm:max-w-[220px]"
+      className={`relative z-10 mx-3 mt-2 overflow-hidden rounded-2xl sm:absolute sm:right-5 sm:top-[18px] sm:m-0 ${wide ? "sm:w-[26%] sm:max-w-[520px]" : "sm:w-[22%] sm:min-w-[150px] sm:max-w-[220px]"}`}
       style={{ background: C.pipBg, boxShadow: C.shadowGlass, ...sans }}
     >
+     <div style={zoom}>
       <div className="flex items-center gap-2 border-b px-3 py-2 text-[11px] uppercase leading-[14px]" style={{ ...mono, borderColor: C.pipLine, color: C.muted }}>
         <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: C.live, boxShadow: `0 0 0 3px ${C.shieldSoft}` }} />
         <span className="min-w-0 truncate">ASI:One · the buyer</span>
@@ -157,26 +173,36 @@ function ChatPip({ lines, sample }: { lines: string[]; sample: boolean }) {
         })}
       </ul>
       <a href={ASI_ONE_URL} target="_blank" rel="noreferrer" className="block px-3 pb-2 text-[11px] underline" style={{ color: C.pulse }}>Open ASI:One</a>
+     </div>
     </aside>
   );
 }
 
-function DealCard({ card }: { card: NonNullable<FloorPhase["end"]> }) {
+function DealCard({ card, zoom }: { card: NonNullable<FloorPhase["end"]>; zoom?: React.CSSProperties }) {
   const deal = card.title === "DEAL";
   return (
     <div data-testid="floor-deal" aria-live="polite" className="pointer-events-none relative z-10 mx-3 mt-2 rounded-[20px] px-5 py-4 text-center sm:absolute sm:left-[38%] sm:top-[52%] sm:m-0 sm:w-[min(420px,calc(100%-40px))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:px-6 sm:py-5" style={{ background: C.dealBg, boxShadow: C.shadowGlass, ...sans }}>
+     <div style={zoom}>
       <p className="text-[12px] uppercase leading-4" style={{ ...mono, color: deal ? C.mintText : C.amberText }}>{deal ? "Deal" : "No deal"}</p>
       <p className="mt-1.5 text-[28px] font-medium leading-8 tracking-[-0.02em] tabular-nums sm:text-[40px] sm:leading-[44px]">{card.price ?? "No part"}</p>
       <p className="mt-1 text-[15px] leading-5">{card.part || "The part"}</p>
       <p className="mt-2.5 text-[12px] leading-4" style={{ ...mono, color: C.muted }}>{card.line}</p>
+      {card.badges.length > 0 && (
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          {card.badges.map((b) => (
+            <span key={b} className="rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ ...mono, textTransform: "uppercase", background: b.startsWith("Paid") ? C.refereeSoft : "#0f9d7633", color: b.startsWith("Paid") ? C.referee : C.mintText }}>{b}</span>
+          ))}
+        </div>
+      )}
+     </div>
     </div>
   );
 }
 
-function Ledger({ sellers, winner, ph }: { sellers: SellerView[]; winner: string | null; ph: FloorPhase }) {
+function Ledger({ sellers, winner, ph, zoom }: { sellers: SellerView[]; winner: string | null; ph: FloorPhase; zoom?: React.CSSProperties }) {
   const n = Math.min(Math.max(sellers.length, 1), 5);
   return (
-    <ul data-testid="floor-ledger" aria-label="Sellers" className="relative z-10 grid grid-cols-2 gap-2 px-3 pb-3 pt-2 sm:absolute sm:inset-x-5 sm:bottom-4 sm:p-0 sm:[grid-template-columns:var(--cols)]" style={{ "--cols": `repeat(${n}, minmax(0, 1fr))` } as React.CSSProperties}>
+    <ul data-testid="floor-ledger" aria-label="Sellers" className="relative z-10 grid grid-cols-2 gap-2 px-3 pb-3 pt-2 sm:absolute sm:inset-x-5 sm:bottom-3 sm:p-0 sm:[grid-template-columns:var(--cols)]" style={{ "--cols": `repeat(${n}, minmax(0, 1fr))` } as React.CSSProperties}>
       {sellers.map((s) => {
         const out = s.status === "eaten" || s.status === "blocked";
         const won = s.key === winner && (s.status === "winner" || ph.kind === "end");
@@ -184,7 +210,7 @@ function Ledger({ sellers, winner, ph }: { sellers: SellerView[]; winner: string
         const color = out ? C.coralText : won || s.tone === "good" ? C.mintText : s.tone === "warn" ? C.amberText : C.muted;
         const dot = s.tint === "slate" ? C.slate : s.tint === "coral" ? C.coral : s.tint === "amber" ? C.amber : s.tint === "sky" ? C.sky : C.mint;
         return (
-          <li key={s.key} className="min-w-0 rounded-xl border px-2.5 py-2" style={{ background: C.ledgerBg, borderColor: won ? C.mint : C.ledgerLine, opacity: out ? 0.55 : 1 }}>
+          <li key={s.key} className="min-w-0 rounded-xl border px-2.5 py-2 sm:py-1.5" style={{ background: C.ledgerBg, borderColor: won ? C.mint : C.ledgerLine, opacity: out ? 0.55 : 1, ...zoom }}>
             <div className="flex items-center gap-1.5 truncate text-[11px] uppercase leading-[14px]" style={{ ...mono, color: C.muted }}>
               <i aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} />
               <span className="min-w-0 truncate">{s.name}</span>
@@ -192,6 +218,7 @@ function Ledger({ sellers, winner, ph }: { sellers: SellerView[]; winner: string
             </div>
             <p className="mt-0.5 text-[15px] leading-5 tabular-nums" style={{ fontFamily: C.fontMono, color: s.price === null ? C.muted : C.line }}>{s.price === null ? "Sealed" : formatMoney(s.price)}</p>
             <p className="mt-0.5 truncate text-[10px] uppercase leading-[14px]" style={{ ...mono, color }}>{word}</p>
+            {s.recheck && <p className="truncate text-[10px] leading-[14px]" style={{ ...mono, color: C.muted }}>{s.recheckBy ? `${s.recheckBy} ` : ""}{s.recheck}</p>}
           </li>
         );
       })}

@@ -13,6 +13,14 @@ const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const lerpPt = (a: Pt, b: Pt, t: number): Pt => ({ u: lerp(a.u, b.u, t), v: lerp(a.v, b.v, t) });
 const TINT: Record<Tint, string> = { slate: C.slate, coral: C.coral, amber: C.amber, mint: C.mint, sky: C.sky, sand: C.sand };
+function hex(c: string): [number, number, number] {
+  const n = parseInt(c.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function mix(a: string, b: string, t: number): string {
+  const x = hex(a), y = hex(b);
+  return `rgb(${Math.round(lerp(x[0], y[0], t))},${Math.round(lerp(x[1], y[1], t))},${Math.round(lerp(x[2], y[2], t))})`;
+}
 /** Depth: nearer is bigger. */
 const dz = (v: number) => 0.85 + 0.3 * v;
 /** Ice-bed flecks on the mat, fixed so the picture is the same every frame. */
@@ -32,8 +40,9 @@ function tweenMs(p: FloorPhase): number {
   }
 }
 
+let TS = 1; // text scale: 1, or larger in recording mode so labels read at 25 percent zoom
 function text(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, color: string, font: string, align: CanvasTextAlign = "center") {
-  ctx.font = `500 ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "middle";
+  ctx.font = `500 ${size * TS}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "middle";
   ctx.fillText(s.toUpperCase(), x, y);
 }
 
@@ -45,11 +54,13 @@ export interface RingProps {
   reduced: boolean;
   label: string;
   theme: FloorTheme;
+  /** recording mode: bigger labels */
+  textScale?: number;
 }
 
-export function FloorRing({ phases, index, elapsed, reduced, label, theme }: RingProps) {
+export function FloorRing({ phases, index, elapsed, reduced, label, theme, textScale = 1 }: RingProps) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const props = useRef({ phases, index, reduced, theme });
+  const props = useRef({ phases, index, reduced, theme, textScale });
   const redraw = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -67,7 +78,8 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
     resize();
 
     function draw(now: number) {
-      const { phases: ps, index: i, reduced: red, theme: th0 } = props.current;
+      const { phases: ps, index: i, reduced: red, theme: th0, textScale: ts0 } = props.current;
+      TS = ts0;
       const ph = ps[Math.min(i, ps.length - 1)];
       const c = ctx;
       if (!ph || !c) return;
@@ -114,7 +126,7 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
       };
       const boost = k < 0.6 ? 1.5 : 1; // phone: pieces stay readable at 366 px
       const at = (x: number, y: number, s: number, f: () => void) => () => { c.save(); c.translate(x, y); c.scale(s * boost, s * boost); f(); c.restore(); };
-      const labelSize = (n: number) => Math.max(n, 9 / k);
+      const labelSize = (n: number) => Math.max(n, 9 / (k * boost * TS)); // never under 9 px on screen
 
       // referee
       const rx = px(REFEREE_AT.u, REFEREE_AT.v), ry = py(REFEREE_AT.v);
@@ -145,8 +157,10 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
         const eating = s.status === "eaten" && ph.kind === "chomp";
         const alpha = s.status === "eaten" ? (eating ? 1 - clamp01(el / T.chomp) : 0) : 1;
         if (alpha <= 0) return;
+        if (s.status === "winner" && (ph.kind === "end" || ph.kind === "paid")) return; // walked out
+        const walking = s.status === "winner" && ph.kind === "walkout";
         const x = px(pos.u, pos.v), y = py(pos.v);
-        tops.push(y - (56 + 22 + 40) * sc * dz(pos.v) * boost);
+        tops.push(y - (56 + ((k < 0.6 || TS > 1) && s.slot % 2 === 0 ? 24 : 0) + 22 + (s.recheck && k >= 0.6 ? 20 : 0) + 40) * sc * dz(pos.v) * boost);
         const look = Math.sign(ph.buyer.u - pos.u) || 1;
         items.push({ y, draw: at(x, y, sc * dz(pos.v), () => {
           c.globalAlpha = alpha;
@@ -154,7 +168,7 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
           if (th0 === "fish") {
             const bob = red ? 0 : Math.sin(now / 420 + n * 1.3) * 1.8;
             c.save(); c.translate(0, bob); c.scale(look, 1);
-            const col = TINT[s.tint];
+            const col = s.status === "winner" ? mix(C.mint, C.pulse, ph.kind === "winner" ? tt : 1) : TINT[s.tint];
             c.fillStyle = col;
             c.beginPath(); c.moveTo(-20, -34); c.lineTo(-42, -50); c.quadraticCurveTo(-35, -34, -42, -18); c.closePath(); c.fill(); // tail
             c.beginPath(); c.moveTo(-8, -48); c.quadraticCurveTo(2, -62, 12, -48); c.closePath(); c.fill(); // dorsal fin
@@ -170,25 +184,34 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
             c.beginPath(); c.moveTo(-22, 0); c.lineTo(-22, -28); c.arc(0, -28, 22, Math.PI, 0); c.lineTo(22, 0); c.closePath(); c.fill();
             for (const ex of [-8, 8]) { disc(ex, -28, 5, C.tagBg); disc(ex + look * 2, -28, 2.4, C.tagInk); }
           }
-          if (s.ring) { c.strokeStyle = C.mint; c.lineWidth = 2; c.globalAlpha = alpha * clamp01(el / 300); c.beginPath(); c.arc(0, -22, 40, 0, 7); c.stroke(); c.globalAlpha = alpha; }
+          if (s.ring) { c.strokeStyle = C.pulse; c.lineWidth = 2; c.globalAlpha = alpha * clamp01(el / 300); c.beginPath(); c.arc(0, -22, 40, 0, 7); c.stroke(); c.globalAlpha = alpha; }
           // tag: Sealed or the price (a price exists only after close, see floorPhases)
           const label = s.price === null ? "Sealed" : formatMoney(s.price);
+          if (walking) { c.globalAlpha = 1; return; }
           const fs = labelSize(11);
-          c.font = `500 ${fs}px ${mono}`;
-          const tw = Math.max(s.price === null ? 64 : 80, c.measureText(label.toUpperCase()).width + 14 / k), th = Math.max(22, fs + 8);
+          c.font = `500 ${fs * TS}px ${mono}`;
+          // phones: tickets of alternate fish ride higher so neighbours never overlap
+          const lift = (k < 0.6 || TS > 1) && s.slot % 2 === 0 ? 24 : 0;
+          const extra = s.recheck && k >= 0.6 ? Math.max(12, fs * TS * 0.85 + 5) : 0;
+          const priceW = c.measureText(label.toUpperCase()).width + 14 / k;
+          let tw = Math.max((s.price === null ? 64 : 80) * TS, priceW);
+          if (extra) { c.font = `500 ${Math.max(8, fs * 0.72) * TS}px ${mono}`; tw = Math.max(tw, c.measureText(s.recheck!.toUpperCase()).width + 22); c.font = `500 ${fs * TS}px ${mono}`; }
+          const th = Math.max(22, fs * TS + 8), thT = th + extra, top = -56 - lift - thT;
           if (th0 === "fish") {
             // a paper price ticket on a string: pointed left end with a punched hole
-            const x0 = -tw / 2, y0 = -56 - th;
-            c.strokeStyle = "rgba(238,243,248,0.55)"; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -52); c.lineTo(0, -56); c.stroke();
+            const x0 = -tw / 2;
+            c.strokeStyle = "rgba(238,243,248,0.55)"; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -52); c.lineTo(0, -56 - lift); c.stroke();
             c.fillStyle = C.paper; c.strokeStyle = C.paperEdge; c.lineWidth = 1;
-            c.beginPath(); c.moveTo(x0 + 9, y0); c.lineTo(-x0, y0); c.lineTo(-x0, -56); c.lineTo(x0 + 9, -56); c.lineTo(x0, y0 + th / 2); c.closePath(); c.fill(); c.stroke();
-            c.fillStyle = C.ground; c.beginPath(); c.arc(x0 + 10, y0 + th / 2, 2.2, 0, 7); c.fill();
-          } else { c.fillStyle = C.tagBg; c.beginPath(); c.roundRect(-tw / 2, -56 - th, tw, th, 6); c.fill(); }
-          text(c, label, th0 === "fish" ? 4 : 0, -56 - th / 2 + 0.5, fs, C.tagInk, mono);
-          if (k >= 0.6) text(c, s.name, 0, -56 - th - 10, 10, TINT[s.tint] === C.slate ? C.muted : TINT[s.tint], mono);
+            c.beginPath(); c.moveTo(x0 + 9, top); c.lineTo(-x0, top); c.lineTo(-x0, -56 - lift); c.lineTo(x0 + 9, -56 - lift); c.lineTo(x0, top + thT / 2); c.closePath(); c.fill(); c.stroke();
+            c.fillStyle = C.ground; c.beginPath(); c.arc(x0 + 10, top + thT / 2, 2.2, 0, 7); c.fill();
+          } else { c.fillStyle = C.tagBg; c.beginPath(); c.roundRect(-tw / 2, top, tw, thT, 6); c.fill(); }
+          const px0 = th0 === "fish" ? 4 : 0;
+          text(c, label, px0, top + th / 2 + 0.5, fs, C.tagInk, mono);
+          if (extra) text(c, s.recheck!, px0, -56 - lift - extra / 2 + 1, Math.max(8, fs * 0.72), "#4a5a6c", mono);
+          if (k >= 0.6 && s.status !== "winner") text(c, s.name, 0, 17, 10, TINT[s.tint] === C.slate ? C.muted : TINT[s.tint], mono); // under the fish, clear of the referee and the tickets
           // status word stacks above the name label, so nothing sits between the ghost and the buyer
-          if (s.statusLine && k >= 0.5) text(c, s.statusLine, 0, -56 - th - (k >= 0.6 ? 24 : 10), labelSize(10), s.tone === "bad" ? C.coralText : s.tone === "good" ? C.mintText : C.amberText, mono);
-          if (s.injection) bubbles.push({ x, top: y - (56 + th + 40) * sc * dz(pos.v) * boost });
+          if (s.statusLine && k >= 0.5) text(c, s.statusLine, 0, top - 10, labelSize(10), s.tone === "bad" ? C.coralText : s.tone === "good" ? C.mintText : C.amberText, mono);
+          if (s.injection) bubbles.push({ x, top: y - (56 + lift + thT + 40) * sc * dz(pos.v) * boost });
           c.globalAlpha = 1;
         }) });
       });
@@ -210,7 +233,7 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
       // the buyer: two half-discs that chomp, an eye, a label
       const bp = lerpPt(prev.buyer, ph.buyer, tt);
       const jaw = red ? 16 : 15 + 9 * Math.sin((now / 600) * Math.PI);
-      items.push({ y: py(bp.v), draw: at(px(bp.u, bp.v), py(bp.v), dz(bp.v), () => {
+      if (ph.kind !== "end" && ph.kind !== "paid") items.push({ y: py(bp.v), draw: at(px(bp.u, bp.v), py(bp.v), dz(bp.v), () => {
         shadow(26, 7);
         c.save(); c.scale(ph.buyer.face, 1); c.translate(0, -26);
         c.fillStyle = C.pac;
@@ -250,9 +273,9 @@ export function FloorRing({ phases, index, elapsed, reduced, label, theme }: Rin
   }, [elapsed]);
 
   useEffect(() => {
-    props.current = { phases, index, reduced, theme };
+    props.current = { phases, index, reduced, theme, textScale };
     if (reduced) redraw.current?.();
-  }, [reduced, index, phases, theme]);
+  }, [reduced, index, phases, theme, textScale]);
 
   return <canvas ref={ref} role="img" aria-label={label} className="block aspect-video w-full" />;
 }

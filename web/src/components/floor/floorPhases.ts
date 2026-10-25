@@ -100,7 +100,7 @@ const PLAIN: Record<ReasonCode, string> = {
 
 /** Home spot for slot i of n: spread across the mat; the outer seats stand nearer the front, as in the reference run. */
 export function homeOf(i: number, n: number): Pt {
-  const u = n === 1 ? 0 : -0.815 + (1.63 * i) / (n - 1);
+  const u = n === 1 ? 0 : n === 4 ? [-0.815, -0.375, 0.375, 0.815][i]! : -0.815 + (1.63 * i) / (n - 1); // four seats as in the reference run
   const v = u === 0 ? 0.66 : 0.3 + 0.24 * Math.min(1, Math.max(0, (Math.abs(u) - 0.375) / 0.44));
   return { u, v };
 }
