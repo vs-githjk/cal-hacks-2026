@@ -740,6 +740,8 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
         if mandate is None:
             return outcome(False, "no_mandate: the market's rank 1 was not read")
         if client is None:
+            if (unconfigured or "").startswith("no_phone"):
+                return outcome(False, unconfigured)
             return outcome(False, f"not_configured: {unconfigured or 'no Cartesia client'}")
         if gate.price_check is not None:   # #269: the winner's price, read live right before the call
             from demo import recheck as R
@@ -963,9 +965,12 @@ def live_approver_for(args, run: dict, gate: DealGate, out) -> tuple[Callable[[S
             out.note(f"SCREEN CODE: {code}   (/buyer could not show it: {why_not}. Say it, then say approve)")
 
     try:
-        client = vc.CartesiaClient.from_env(env)
+        client = vc.client_for_buyer(getattr(args, "buyer_id", DB_BUYER_ID), env)   # #374: this buyer's own phone, never another buyer's
         where = f"live call: ONE call to {vc.mask_number(client.approval_call_to)} at the approval beat (Cartesia configured)"
         unconfigured = None
+    except vc.NoPhone as e:
+        client, unconfigured = None, f"no_phone: {e}"
+        where = f"live call: NO PHONE on file ({e}), so the approval beat will be DENIED: no call, nothing is paid"
     except vc.CartesiaError as e:
         client, unconfigured = None, str(e)
         where = f"live call: Cartesia NOT configured ({unconfigured}; names {', '.join(vc.ENV_NAMES[:3])}), so the approval beat will be DENIED and nothing is paid"

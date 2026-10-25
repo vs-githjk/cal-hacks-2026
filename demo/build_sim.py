@@ -40,6 +40,7 @@ class SimMarket:
         self.allowance_readable, self.deals_readable, self.events_readable = True, True, True
         self.swallow_approval, self.never_close, self.knockout = False, False, set()
         self.goals = {}
+        self.buyer_id = "vidyut"   # whose allowance the buyer client reads back (my_allowance)
 
     def post_goal(self, a):
         # market.ts GOAL_TYPES, which is also the enum of contracts/Goal.schema.json
@@ -269,7 +270,7 @@ class _Client:
             if self.name != "buyer" or not m.allowance_readable:
                 raise RuntimeError("sql failed (400)")
             a = m.allow
-            return [("vidyut", "USD", a["per"], a["period_limit"], a["period"], a["spent"], 0, "t")]
+            return [(m.buyer_id, "USD", a["per"], a["period_limit"], a["period"], a["spent"], 0, "t")]
         if query == "SELECT * FROM my_deals":          # buyer only: hash, id, deal, amount, payee, expiry, within, origin, method, voice id, ...
             if self.name != "buyer" or not m.deals_readable:
                 raise RuntimeError("sql failed (400)")

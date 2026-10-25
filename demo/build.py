@@ -664,8 +664,9 @@ class BuildRun:
                  recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True,
                  stagger: Optional[float] = None, knockout: bool = False, max_stages: int = MAX_STAGES, replan: bool = True,
                  replan_catalog: Optional[Callable] = None, publisher: Optional[Callable[[str, str], None]] = None,
-                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None):
+                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None, no_call_reason: str = "not_configured"):
         self.plan, self.clients, self.allowance = plan, clients, allowance
+        self.no_call_reason = no_call_reason   # why `cartesia` is None: "not_configured" (no setup) or "no_phone" (this buyer has no number)
         self.catalog = catalog or default_catalog
         self.replan_catalog = replan_catalog or default_replan_catalog
         self.stagger, self.knockout, self.max_stages, self.replan = stagger, knockout, min(MAX_STAGES, max(1, int(max_stages))), replan
@@ -1256,7 +1257,7 @@ class BuildRun:
         agg = new_mandate(deal_id=f"build-{gid}", buyer_id=self.plan.buyer_id, amount=total, payee=f"build-{gid}", goal_id=gid,
                           within_allowance=False, origin=_weakest([c["origin"] for c in champs.values()]))
         if self.cartesia is None:
-            return self._deny("not_configured", f"{denial_line('not_configured')} The phone call is the only approval above the allowance.")
+            return self._deny(self.no_call_reason, f"{denial_line(self.no_call_reason)} The phone call is the only approval above the allowance.")
         self.approval["state"] = "calling"
         self._event("call", f"Calling {self.buyer_name} for the whole build: {len(champs)} parts from {sellers} sellers, {money(total)}")
         self.publish()
@@ -1462,6 +1463,22 @@ def preview_steps(plan: BuildPlan, allowance: Optional[dict], *, catalog: Option
     return steps
 
 
+def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None]) -> tuple[Any, str]:
+    """(the Cartesia client for this buyer's approval phone, "") or (None, why): "no_phone" for a buyer with no number (the call is the only
+    approval, so a build above the allowance is denied), "not_configured" for a setup that is missing or wrong. One masked note either way."""
+    from pay import voice_cartesia as vc
+    try:
+        client = vc.client_for_buyer(buyer_id, env)
+    except vc.NoPhone as e:
+        note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
+        return None, "no_phone"
+    except vc.CartesiaError as e:
+        note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
+        return None, "not_configured"
+    note(f"live call: ONE call to {vc.mask_number(client.approval_call_to)} for the whole build, only above the allowance")
+    return client, ""
+
+
 def main(argv: Optional[list] = None) -> int:
     import argparse
     from demo import bridge
@@ -1524,7 +1541,7 @@ def main(argv: Optional[list] = None) -> int:
     from demo import market_target
     from demo.run_demo import DEFAULT_ENV_FILE
     approver_env = args.env_file or DEFAULT_ENV_FILE
-    cartesia, price_check = None, None
+    cartesia, price_check, no_call_reason = None, None, "not_configured"
     if args.live_call or args.recheck:
         from demo import sponsors_live as S
         S.load_sponsor_env(approver_env)
@@ -1535,11 +1552,7 @@ def main(argv: Optional[list] = None) -> int:
         from pay import voice_cartesia as vc
         env = vc.load_env(approver_env)
         buyer_name, secret = env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME, env.get(vc.SECRET_ENV)
-        try:
-            cartesia = vc.CartesiaClient.from_env(env)
-            out.note(f"live call: ONE call to {vc.mask_number(cartesia.approval_call_to)} for the whole build, only above the allowance")
-        except vc.CartesiaError as e:
-            out.note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
+        cartesia, no_call_reason = cartesia_for(args.buyer_id, env, out.note)
     else:
         out.note("No --live-call: a build above the allowance stops before any call. Nothing is paid.")
     target = bridge.live_target(args)
@@ -1574,7 +1587,7 @@ def main(argv: Optional[list] = None) -> int:
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
                        env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=out_dir, say=say,
                        note=out.note, delay=args.step_delay, bid_window=args.bid_window, stagger=stagger, knockout=knockout,
-                       publisher=publisher)
+                       publisher=publisher, no_call_reason=no_call_reason)
         clock_of["run"] = run
         res = run.run()
     except RuntimeError as e:
