@@ -134,6 +134,11 @@ listings in the snapshots run $1,239.99 to $1,489.00. One or two bids are real, 
 - **Best Buy (MIRROR) wins at $1,249.99**, its real new listing. The advocate marks it CAUTION: the snapshot has no card length, so fit is "not confirmed", said and not guessed.
 - One more real bid is inside the cap (an eBay seller, open-box $1,239.99, ranked last). The other real listings are over the cap or state no condition (Micro Center, Amazon), and are out.
 - **Shady Sam (SIM) bids $757.44**, far under the market, and is vetoed by Lane A's real advocate: his page shows open-box while he claims new, and his "was $1,099" does not match the price history (highest recorded $829.00). Both cite his page.
+  With `SHIELD_CLASSIFIER=1` and a key, the classifier quarantines his page first (`shield.classifier.suspicious`). Option C (locked Oct 24): Shield screens every round and
+  records the catch, a caught bid is never ranked, never the winner and never payable, but the advocate still judges it, so beat 2 prints
+  "Caught by Shield in round N" with the same veto card and cited sources (`caught: {by, rule, round}` on the card; `beats.2.caught` and `artifacts.verdicts.caught` in the JSON).
+  The beat 2 check passes when the cheapest bid is vetoed, ranked (keyless) or caught-and-vetoed (keyed); `beat2_caught_listing_never_ranked_or_payable` appears only when something was caught.
+  A classifier that could not answer holds a bid closed and is labelled "Held by Shield (classifier unavailable)", never "Caught". The market bridge reads the same Shield verdicts, so it quarantines the caught bid and needs no change.
 - **Bargain Bin (SIM)** is vetoed by the real fit checker (336 mm card, 305 mm case). **Lowball (SIM)** bids under its floor and the referee rejects it before anyone sees it.
 - **Gadget Grove (Vedant)** (a SIM seller, Vedant is the learner seller) is one seller with two condition lines, new and open-box. **Fair Price PC (SIM)** is the static control.
 - Honest Hal's page is used by beat 3 only (the clean control). At $789 his honest listing would undercut every real seller, so he does not bid in the market round.
@@ -195,3 +200,15 @@ reports validate against `contracts/` (all on main); the tests check all of them
 - Not checked: a real Cartesia call, a real merchant simulator, the TypeScript market rules themselves (parity is by shared fixtures only), and Lane A's agents running
   under uagents (only their pure functions run).
 - The Shield, fit and claim wording is the real code's output; the quality-adjustment weights are SIM.
+
+## CRS signals into the market (`python3 -m demo.crs_relay`)
+```
+python3 -m demo.crs_relay --dry-run     # list the record_supplier_signal calls from .cache/crs-signals.json, touch nothing
+python3 -m demo.crs_relay               # send them as the referee (needs the market to have record_supplier_signal, Lane B PR 320)
+```
+Reads the sanitized cache `agents/crs.py --live` writes (override with `--cache PATH` or `CRS_SIGNAL_CACHE_PATH`). Mapping, in one place
+(`MARKET_SELLER`): seller_1 to seller-a, seller_2 to seller-b, seller_3 to seller-c. Only a signal with exactly the four fields, a known
+band, source sandbox or recorded, and a time within the last 24 hours (not in the future) is sent; the rest are skipped with the reason, so
+a seller with no signal has no row and is never shown as verified. If the market lacks the reducer the relay says so and sends nothing.
+`demo/bridge.py` and `demo/build.py` run it right before each round opens, best effort (a problem is one note and the round opens anyway).
+Exit 0 all sent, 1 a call was refused, 2 nothing sent.

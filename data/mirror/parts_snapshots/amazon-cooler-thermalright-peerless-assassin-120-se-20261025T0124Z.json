@@ -1,0 +1,156 @@
+[
+ {
+  "id": "amazon:3e0d6bed96f5",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE ARGB White CPU Air Cooler, 6 Heat Pipes CPU Cooler, Dual 120mm TL-C12CW-S PWM Fan, AGHP Technology, for AMD AM4/AM5/Intel LGA1700/115X/1851/1155/1200",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 34.73,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B09P4KH7QK",
+  "snapshot_id": "amazon-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:09+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B09P4KH7QK",
+   "price": 34.73,
+   "was_price": 38.59,
+   "shipping": "Thursday, October 29",
+   "seller": "Thermalright Direct 2",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "amazon:001119875f6e",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE CPU Cooler, 6 Heat Pipes AGHP Technology, Dual 120mm PWM Fans, 1550RPM Speed, for AMD:AM4 AM5/Intel LGA 1700/1150/1151/1200/1851,PC Cooler",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 31.41,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B09LGY38L4",
+  "snapshot_id": "amazon-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:09+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B09LGY38L4",
+   "price": 31.41,
+   "was_price": 34.9,
+   "shipping": "Thursday, October 29",
+   "seller": "Thermalright Direct 2",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": "Peerless Assassin 120 SE"
+ },
+ {
+  "id": "amazon:401d120d347e",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE Black CPU Air Cooler, 6 Heat Pipes Heatsink Dual Towers Cooler, with Dual PWM Fans, 1550RPM Speed, Desktop CPU Cooler for Intel 1700/1851/1150/1151/1200;AM4 AM5",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {
+   "height_mm": 155,
+   "sockets": [
+    "AM4",
+    "AM5",
+    "LGA1700",
+    "LGA1851",
+    "LGA1200",
+    "LGA1151"
+   ]
+  },
+  "price": 29.42,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0D8S22BCW",
+  "snapshot_id": "amazon-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:09+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0D8S22BCW",
+   "price": 29.42,
+   "was_price": 32.69,
+   "shipping": "Thursday, October 29",
+   "seller": "THERMALRIGHT.EUR",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": "Peerless Assassin 120 SE"
+ },
+ {
+  "id": "amazon:289573464c51",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE V2 CPU Cooler, Dual Tower, 1850RPM",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 39.9,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B0DP23NF7T",
+  "snapshot_id": "amazon-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:09+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B0DP23NF7T",
+   "price": 39.9,
+   "shipping": "Thursday, October 29",
+   "seller": "IHTP",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "amazon:d0eda19b3628",
+  "category": "cooler",
+  "name": "Thermalright Peerless Assassin 120 SE ARGB CPU Air Cooler,6 Heat Pipes CPU Cooler, Dual TL-C12C-S PWM Fan, Aluminium Heatsink Cover,AGHP Technology,for AMD AM4/AM5/Intel LGA1700/115X/1155/1200/1851",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 33.21,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.amazon.com/dp/B09P4M4C7K",
+  "snapshot_id": "amazon-cooler-thermalright-peerless-assassin-120-se-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:09+00:00",
+  "listing": {
+   "url": "https://www.amazon.com/dp/B09P4M4C7K",
+   "price": 33.21,
+   "was_price": 36.9,
+   "shipping": "Thursday, October 29",
+   "seller": "Thermalright Direct 2",
+   "stock": true,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in stock"
+  },
+  "maker_model": null
+ }
+]

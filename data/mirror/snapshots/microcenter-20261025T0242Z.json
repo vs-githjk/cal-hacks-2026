@@ -1,0 +1,77 @@
+[
+ {
+  "id": "microcenter:2630d713e79e",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 5070 Ti PRIME Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": "800102",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+  "snapshot_id": "microcenter-20261025T0242Z",
+  "snapshot_date": "2026-10-25T02:42:11+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/690048/asus-nvidia-geforce-rtx-5070-ti-prime-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "price": 1299.99,
+   "stock": "21 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "21 IN STOCK"
+  }
+ },
+ {
+  "id": "microcenter:50b1c0004391",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 5070 Ti Overclocked Triple Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": "805200",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+  "snapshot_id": "microcenter-20261025T0242Z",
+  "snapshot_date": "2026-10-25T02:42:11+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "price": 1199.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  }
+ },
+ {
+  "id": "microcenter:37d71e27504e",
+  "category": "gpu",
+  "name": "NVIDIA GeForce RTX 5070 Ti SOLID SFF Overclocked Triple-Fan 16GB GDDR7 PCIe 5.0 Graphics Card",
+  "model_number": "985101",
+  "condition": "unknown",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/706503/zotac-nvidia-geforce-rtx-5070-ti-solid-sff-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+  "snapshot_id": "microcenter-20261025T0242Z",
+  "snapshot_date": "2026-10-25T02:42:11+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/706503/zotac-nvidia-geforce-rtx-5070-ti-solid-sff-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "price": 1449.99,
+   "stock": "7 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "7 IN STOCK"
+  }
+ }
+]

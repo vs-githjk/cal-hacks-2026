@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:ecce1e97cda6",
+  "category": "cooler",
+  "name": "Assassin X120 Refined SE ARGB CPU Air Cooler",
+  "model_number": "959387",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 26.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/704467/thermalright-assassin-x120-refined-se-argb-cpu-air-cooler",
+  "snapshot_id": "microcenter-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:17+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/704467/thermalright-assassin-x120-refined-se-argb-cpu-air-cooler",
+   "price": 26.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:363b75d2c6c2",
+  "category": "cooler",
+  "name": "Aqua Elite 360 V3 360mm All in One Liquid CPU Cooling Kit - Black",
+  "model_number": "915652",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/700295/thermalright-aqua-elite-360-v3-360mm-all-in-one-liquid-cpu-cooling-kit-black",
+  "snapshot_id": "microcenter-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:17+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/700295/thermalright-aqua-elite-360-v3-360mm-all-in-one-liquid-cpu-cooling-kit-black",
+   "price": 79.99,
+   "stock": "16 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "16 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:0938dc66de78",
+  "category": "cooler",
+  "name": "Assassin X 120R Digital CPU Air Cooler - Black",
+  "model_number": "959528",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 32.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/704481/thermalright-assassin-x-120r-digital-cpu-air-cooler-black",
+  "snapshot_id": "microcenter-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:17+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/704481/thermalright-assassin-x-120r-digital-cpu-air-cooler-black",
+   "price": 32.99,
+   "stock": "11 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "11 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:c6b957746e16",
+  "category": "cooler",
+  "name": "Frozen Infinity ARGB 360mm All in One Liquid CPU Cooling Kit - Black",
+  "model_number": "025239",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/710162/thermalright-frozen-infinity-argb-360mm-all-in-one-liquid-cpu-cooling-kit-black",
+  "snapshot_id": "microcenter-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:17+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/710162/thermalright-frozen-infinity-argb-360mm-all-in-one-liquid-cpu-cooling-kit-black",
+   "price": 79.99,
+   "stock": "8 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "8 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:91e7f392327b",
+  "category": "cooler",
+  "name": "EXPLORE DE360 360mm All in One Liquid CPU Cooling Kit - Black",
+  "model_number": "999318",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/708067/darkflash-explore-de360-360mm-all-in-one-liquid-cpu-cooling-kit-black",
+  "snapshot_id": "microcenter-cooler-deepcool-ak400-20261025T0124Z",
+  "snapshot_date": "2026-10-25T01:24:17+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/708067/darkflash-explore-de360-360mm-all-in-one-liquid-cpu-cooling-kit-black",
+   "price": 99.99,
+   "stock": "2 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "2 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

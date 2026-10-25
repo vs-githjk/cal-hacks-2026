@@ -1,0 +1,133 @@
+[
+ {
+  "title": "Micro Center AMD Ryzen 7 9700X Processor with MSI PRO B850-P WF Motherboard",
+  "url": "https://www.amazon.com/dp/B0F99BG4ZN",
+  "price": {
+   "value": 529.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": null,
+  "shippingPrice": null,
+  "delivery": "November 5 - 10",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "Micro Center",
+   "id": "A1UVTGP6WV0D1P",
+   "url": "https://www.amazon.com/sp?seller=A1UVTGP6WV0D1P",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "AMD Ryzen 7 7700X 8-Core, 16-Thread Unlocked Desktop Processor",
+  "url": "https://www.amazon.com/dp/B0BBHHT8LY",
+  "price": {
+   "value": 229,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 284,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "AMD Ryzen\u2122 9 9900X 12-Core, 24-Thread Unlocked Desktop Processor",
+  "url": "https://www.amazon.com/dp/B0D6NN87T8",
+  "price": {
+   "value": 326.65,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 499,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "Byte-TechDirect",
+   "id": "A1O0U555LGMKGB",
+   "url": "https://www.amazon.com/sp?seller=A1O0U555LGMKGB",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "AMD Ryzen\u2122 5 9600X 6-Core, 12-Thread Unlocked Desktop Processor",
+  "url": "https://www.amazon.com/dp/B0D6NN6TM7",
+  "price": {
+   "value": 179.59,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 220,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "AMD Ryzen\u2122 7 9700X 8-Core, 16-Thread Unlocked Desktop Processor",
+  "url": "https://www.amazon.com/dp/B0D6NMDNNX",
+  "price": {
+   "value": 307.95,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 339,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "October 30 - November 5",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "Joes Tech Shop Inc",
+   "id": "A2KTA1SDADMGAB",
+   "url": "https://www.amazon.com/sp?seller=A2KTA1SDADMGAB",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ }
+]

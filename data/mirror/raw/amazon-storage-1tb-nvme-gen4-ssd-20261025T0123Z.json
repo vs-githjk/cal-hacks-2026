@@ -1,0 +1,133 @@
+[
+ {
+  "title": "Fanxiang 1TB NVMe SSD PCIe Gen4 M.2 Internal Gaming SSD for PS5, Up to 4800 MB/s, 3D NAND SLC Cache Solid State Drive Upgrade Storage for PC/Laptops S690Q",
+  "url": "https://www.amazon.com/dp/B0CM8RVVG1",
+  "price": {
+   "value": 151.19,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 167.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "LDCEMS",
+   "id": "AE749B70128C7",
+   "url": "https://www.amazon.com/sp?seller=AE749B70128C7",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "Acer Predator GM7 1TB SSD: M.2 2280 PCIe Gen 4 x4 NVMe 2.0, Read Speed Up to 7400 MB/s, Internal PC Solid State Drive for Laptop, Desktop and PS5 - BL.9BWWR.118",
+  "url": "https://www.amazon.com/dp/B0C3ZJ8T6F",
+  "price": {
+   "value": 179.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 189.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "BIWIN Tech",
+   "id": "A37TNC2POOX0TX",
+   "url": "https://www.amazon.com/sp?seller=A37TNC2POOX0TX",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "Kingston NV3 1TB M.2 2280 NVMe SSD | PCIe 4.0 Gen 4x4 | Up to 6000 MB/s | SNV3S/1000G",
+  "url": "https://www.amazon.com/dp/B0DBR3DZWG",
+  "price": {
+   "value": 156.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 215.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ },
+ {
+  "title": "Patriot P400 Lite 1TB PCIe Gen 4 x4 SSD",
+  "url": "https://www.amazon.com/dp/B0BTDP6P7Y",
+  "price": {
+   "value": 149.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": null,
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "name": "Official Patriot Memory Store",
+   "id": "A26PVB3960EU85",
+   "url": "https://www.amazon.com/sp?seller=A26PVB3960EU85",
+   "reviewsCount": null,
+   "averageRating": null
+  }
+ },
+ {
+  "title": "Samsung Internal SSD 990 1TB, Read/Write Speeds Up to 7,150/6,450 MB/s",
+  "url": "https://www.amazon.com/dp/B0H1NH99GX",
+  "price": {
+   "value": 189.99,
+   "currency": "$"
+  },
+  "inStock": true,
+  "listPrice": {
+   "value": 229.99,
+   "currency": "$"
+  },
+  "shippingPrice": null,
+  "delivery": "Thursday, October 29",
+  "condition": null,
+  "returnPolicy": null,
+  "seller": {
+   "id": null,
+   "url": "https://www.amazon.com",
+   "name": "Amazon.com",
+   "businessName": "Amazon.com, Inc.",
+   "phone": "1-206-266-1000",
+   "address": [
+    "410 Terry Ave N",
+    "Seattle",
+    "WA",
+    "98109",
+    "US"
+   ]
+  }
+ }
+]

@@ -100,6 +100,9 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
 
 
 agent.include(protocol, publish_manifest=True)
+common.include_profile_chat(agent, "I am Bazaar Caller, Tech Bazaar's approval-call agent. I place one phone call when the buyer "
+                            "agent asks me to confirm a purchase, and I only take structured requests from it. I cannot approve "
+                            "or charge anything from this chat. Send buying goals to @techbazaarbuyer.")
 
 if __name__ == "__main__":
     agent.run()

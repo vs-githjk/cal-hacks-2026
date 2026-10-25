@@ -22,6 +22,7 @@ from pathlib import Path
 from . import check_fit
 from .depth import _find
 from .normalize import gpu_key
+from .part_specs import maker as part_maker
 from .power import _chipset
 from .tables import GPU_POWER
 
@@ -89,11 +90,12 @@ def _gpu_maker(name: str) -> dict:
 def _maker(cat: str, name: str) -> dict:
     if cat == "gpu":
         return _gpu_maker(name)
+    found = part_maker(cat, name)  # an exact maker row (part_specs.json) first; its figures cite the maker page and date
     if cat not in DEPTH_FIELDS:
-        return {}
+        return found
     table, fields = DEPTH_FIELDS[cat]
     row = _find(_load("depth_data.json")[table], name)
-    return {f: (row[f], row["source"]) for f in fields if row and row.get(f) is not None}
+    return {**{f: (row[f], row["source"]) for f in fields if row and row.get(f) is not None}, **found}
 
 
 def _clean(attrs: dict, problems: list, cat: str) -> dict:
