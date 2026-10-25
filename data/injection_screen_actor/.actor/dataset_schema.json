@@ -143,9 +143,10 @@
     "enum": [
      "LIVE",
      "MIRROR",
-     "SIM"
+     "SIM",
+     "UNVERIFIED"
     ],
-    "description": "The label you gave the listing (MIRROR or SIM), else LIVE: your text, screened at checked_at"
+    "description": "The label you gave the listing (LIVE, MIRROR or SIM). UNVERIFIED: the caller gave no LIVE, MIRROR or SIM label, so we do not assume LIVE. Your text, screened at checked_at"
    }
   },
   "required": [
