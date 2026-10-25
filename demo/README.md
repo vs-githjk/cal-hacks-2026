@@ -195,3 +195,15 @@ reports validate against `contracts/` (all on main); the tests check all of them
 - Not checked: a real Cartesia call, a real merchant simulator, the TypeScript market rules themselves (parity is by shared fixtures only), and Lane A's agents running
   under uagents (only their pure functions run).
 - The Shield, fit and claim wording is the real code's output; the quality-adjustment weights are SIM.
+
+## CRS signals into the market (`python3 -m demo.crs_relay`)
+```
+python3 -m demo.crs_relay --dry-run     # list the record_supplier_signal calls from .cache/crs-signals.json, touch nothing
+python3 -m demo.crs_relay               # send them as the referee (needs the market to have record_supplier_signal, Lane B PR 320)
+```
+Reads the sanitized cache `agents/crs.py --live` writes (override with `--cache PATH` or `CRS_SIGNAL_CACHE_PATH`). Mapping, in one place
+(`MARKET_SELLER`): seller_1 to seller-a, seller_2 to seller-b, seller_3 to seller-c. Only a signal with exactly the four fields, a known
+band, source sandbox or recorded, and a time within the last 24 hours (not in the future) is sent; the rest are skipped with the reason, so
+a seller with no signal has no row and is never shown as verified. If the market lacks the reducer the relay says so and sends nothing.
+`demo/bridge.py` and `demo/build.py` run it right before each round opens, best effort (a problem is one note and the round opens anyway).
+Exit 0 all sent, 1 a call was refused, 2 nothing sent.

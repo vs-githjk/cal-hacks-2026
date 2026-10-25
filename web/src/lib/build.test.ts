@@ -12,6 +12,12 @@ test("partRows lists the six parts in plan order with the swapped board marked",
   assert.equal(rows.find((r) => r.part === "gpu")!.state, "locked");
 });
 
+test("a bought psu lists a row; owned parts stay out", () => {
+  const b = { ...SAMPLE_BUILD, budgets: { ...SAMPLE_BUILD.budgets, psu: 9000 }, picks: { ...SAMPLE_BUILD.picks, psu: SAMPLE_BUILD.picks.cooler } };
+  assert.ok(partRows(b).some((r) => r.part === "psu"));
+  assert.deepEqual(partRows(SAMPLE_BUILD).map((r) => r.part), ["gpu", "cpu", "motherboard", "memory", "storage", "cooler"]);
+});
+
 test("a part with no pick stays open, and overBy is in dollars", () => {
   const b = { ...SAMPLE_BUILD, picks: { ...SAMPLE_BUILD.picks, cooler: undefined as never } };
   delete (b.picks as Record<string, unknown>).cooler;

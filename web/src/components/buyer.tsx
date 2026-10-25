@@ -52,7 +52,7 @@ export function StatePill({ state }: { state: GoalView["state"] }) {
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */
 export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | null }) {
-  const win = bids.find((b) => b.won);
+  const win = bids.find((b) => b.won && b.origin !== "MIRROR"); // a MIRROR listing is a comparison, never the deal
   const vetoed = bids.filter((b) => b.recommendation === "veto").length;
   const ineligible = bids.filter((b) => b.recommendation === "ineligible").length;
   const refused = bids.filter((b) => b.recommendation === "refused").length;

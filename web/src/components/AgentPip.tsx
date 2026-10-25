@@ -183,7 +183,7 @@ function AgentPipTile() {
             {showBuildPlan(!!liveBuild, window.location.search) && <BuildPlan build={liveBuild ?? SAMPLE_BUILD} origin={liveBuild?.origin ?? "SIM"} />}
             {noFeed ? (
               <>
-                <p className="pt-2 text-muted">No live agent feed on this site. Each agent's public Agentverse profile:</p>
+                <p className="pt-2 text-muted">No live agent feed on this site. Each agent&apos;s public Agentverse profile:</p>
                 <AgentProfiles />
               </>
             ) : offline || pending || shown.length === 0 ? (
