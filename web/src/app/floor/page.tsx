@@ -10,11 +10,11 @@ import { FRAME, FloorHud } from "@/components/floor/FloorHud";
 import { FloorAquariumPixel } from "@/components/floor/FloorAquariumPixel";
 import { FloorCall } from "@/components/floor/FloorCall";
 import { useChatFeed } from "@/components/floor/useChatFeed";
-import { REFERENCE, floorScript, type FloorPhase, type FloorScript } from "@/components/floor/floorPhases";
+import { SIM_RUN, floorScript, type FloorPhase, type FloorScript } from "@/components/floor/floorPhases";
 import { useFloorClock } from "@/components/floor/useFloorClock";
 
 /** The signature screen: a calm pixel-art Pac-Man aquarium where agents buy a real build. Reads the market tables, turns them into a
- * FloorScript, and plays it. `?replay=reference` is the 1920 x 1080 video frame (REFERENCE run, no chrome, loops from 0)
+ * FloorScript, and plays it. `?replay=reference` is the 1920 x 1080 video frame (SIM_RUN, the gpu sample, no chrome, loops from 0)
  * and `?sample=gpu|gpu-open|ssd` swaps the tables for a labelled SIM round. */
 
 type SampleName = keyof typeof SAMPLES;
@@ -57,13 +57,13 @@ function Stage({ script, phase, reducedMotion, width, frame = false, follow = fa
   );
 }
 
-/** The video frame: fixed 1920 x 1080, scaled to fit the window, nothing else on the page, REFERENCE run from 0 on a loop. */
+/** The video frame: fixed 1920 x 1080, scaled to fit the window, nothing else on the page, SIM_RUN from 0 on a loop. */
 function ReplayView({ t }: { t: number }) {
   const size = useSyncExternalStore(subscribeResize, windowSize, () => "1920x1080");
   const [w, h] = size.split("x").map(Number) as [number, number];
   const k = Math.min(w / 1920, h / 1080);
-  const { phase, seconds } = useFloorClock(REFERENCE, { replay: true, reducedMotion: false, initial: t });
-  const chat = useChatFeed(REFERENCE, seconds, { replay: true });
+  const { phase, seconds } = useFloorClock(SIM_RUN, { replay: true, reducedMotion: false, initial: t });
+  const chat = useChatFeed(SIM_RUN, seconds, { replay: true });
   useEffect(() => {  // the video frame: the site header and status footer must not draw over it
     document.documentElement.dataset.replay = "1";
     return () => { delete document.documentElement.dataset.replay; };
@@ -71,7 +71,7 @@ function ReplayView({ t }: { t: number }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 2147483000, background: INK, color: TEXT, overflow: "hidden" }}>
       <div style={{ position: "absolute", left: "50%", top: "50%", width: 1920, height: 1080, transform: `translate(-50%, -50%) scale(${k})`, transformOrigin: "50% 50%" }}>
-        <FloorCall lines={chat.lines} live={chat.live} reducedMotion={false} floor={(follow) => <Stage script={REFERENCE} phase={phase} reducedMotion={false} width={1920} frame follow={follow} />} />
+        <FloorCall lines={chat.lines} live={chat.live} reducedMotion={false} floor={(follow) => <Stage script={SIM_RUN} phase={phase} reducedMotion={false} width={1920} frame follow={follow} />} />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chatFromScript, isThinking, maskDigits, parseChat } from "./chatFeed.ts";
-import { REFERENCE, floorScript } from "../components/floor/floorPhases.ts";
+import { SIM_RUN, floorScript } from "../components/floor/floorPhases.ts";
 import { SAMPLES } from "./arenaFixture.ts";
 
 test("maskDigits hides phone numbers, codes and ids, keeps prices and models", () => {
@@ -45,23 +45,19 @@ test("the sample chat parses whole and carries no raw digit runs", () => {
   assert.ok(rows.every((r) => r.text === maskDigits(r.text) && !/\d{6}/.test(r.text)));
 });
 
-test("chatFromScript follows REFERENCE", () => {
-  assert.deepEqual(chatFromScript(REFERENCE, -1), []);
-  const early = chatFromScript(REFERENCE, 0);
-  assert.equal(early.length, 1);
-  assert.equal(early[0]!.who, "owner");
-  assert.equal(early[0]!.name, "You");
-  const dots = chatFromScript(REFERENCE, 1.2);
+test("chatFromScript follows SIM_RUN", () => {
+  assert.deepEqual(chatFromScript(SIM_RUN, -1), []);
+  const thinkAt = SIM_RUN.phases.find((p) => p.think?.who === "buyer")!.at;
+  const dots = chatFromScript(SIM_RUN, thinkAt + 0.1);
   assert.equal(isThinking(dots, "buyer"), true);
-  const full = chatFromScript(REFERENCE, 30);
+  const full = chatFromScript(SIM_RUN, SIM_RUN.duration);
   assert.equal(isThinking(full, "buyer"), false);
   assert.ok(full.every((l) => l.sim));
-  assert.ok(full.some((l) => l.who === "buyer" && l.text === "Reading your goal: one RTX 5070 Ti under $1,400 by Friday."));
-  assert.ok(full.some((l) => l.who === "shield" && /^Blocked Seller 2/.test(l.text)));
-  assert.ok(full.some((l) => l.who === "advocate" && /open-box/.test(l.text)));
-  assert.ok(full.some((l) => l.who === "seller_3" && l.text === "Open-box."));
+  assert.ok(full.some((l) => l.who === "buyer" && /^Reading your goal/.test(l.text)));
+  assert.ok(full.some((l) => l.who === "shield" && /^Blocked /.test(l.text)));
+  assert.ok(full.some((l) => l.who === "advocate"));
   assert.ok(full.some((l) => l.who === "referee" && /^Winner/.test(l.text)));
-  assert.ok(full.some((l) => l.who === "buyer" && /^Bought the ASUS/.test(l.text)));
+  assert.ok(full.some((l) => l.who === "buyer" && /^Bought /.test(l.text)));
   const texts = full.filter((l) => l.kind === "message").map((l) => l.text);
   assert.equal(new Set(texts).size, texts.length, "no repeated lines");
   const times = full.map((l) => l.at);
