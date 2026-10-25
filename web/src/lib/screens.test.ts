@@ -1,8 +1,9 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import type { Timestamp } from "spacetimedb";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { BUILD_CAP_CENTS, allowanceForBuyer, buildQuestion, homeRound, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -289,4 +290,39 @@ test("roundTitle turns a build round id into a readable name", () => {
   assert.equal(roundTitle("round-goal-build-3-gpu-1"), "Graphics card, round 1");
   assert.equal(roundTitle("round-1"), null);
   assert.equal(roundTitle("round-goal-build-1-board-x"), null);
+});
+
+// ---------------------------------------------------------------- #398 item 2: home reads the real market, never contradicts itself
+
+const homeRow = (id: string, state: string, openedMs: number) =>
+  ({ id, needId: "n", openedAt: ts(openedMs), deadline: ts(openedMs + 60_000), extensions: 0, state, sealedCount: 3, origin: "SIM" });
+
+test("homeRound with no round says no round yet, so nothing below it claims one is open", () => {
+  const h = homeRound([]);
+  assert.equal(h.status, "none");
+  assert.equal(h.pill, "no round yet");
+});
+
+test("homeRound names the newest build round in words and its real state, never the raw id", () => {
+  const rows = [homeRow("round-goal-build-1-gpu-1", "closed", 1000), homeRow("round-goal-build-1-board-2", "open", 2000)];
+  const h = homeRound(rows);
+  assert.equal(h.status, "open");
+  assert.equal(h.title, "Motherboard, round 2");
+  assert.equal(h.pill, "Motherboard, round 2, open");
+  assert.ok(!h.pill.includes("round-goal"));
+});
+
+test("homeRound on a round id that is not a build round says latest round, never round-1", () => {
+  const h = homeRound([homeRow("round-1", "closed", 1000)]);
+  assert.equal(h.status, "closed");
+  assert.equal(h.pill, "Latest round, closed");
+  assert.ok(!h.pill.includes("round-1"));
+});
+
+test("the home question uses the build's own cap, the one demo/build.py plans with", () => {
+  const py = readFileSync(new URL("../../../demo/build.py", import.meta.url), "utf8");
+  const m = /^PLANNER_CAP_CENTS = ([\d_]+)/m.exec(py);
+  assert.ok(m, "PLANNER_CAP_CENTS not found in demo/build.py");
+  assert.equal(BUILD_CAP_CENTS, Number(m[1]!.replaceAll("_", "")));
+  assert.equal(buildQuestion(BUILD_CAP_CENTS), "Who builds the best 1440p gaming PC under $2,100?");
 });

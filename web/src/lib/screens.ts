@@ -273,6 +273,26 @@ export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undef
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
+/** The demo build's cap: demo/build.py PLANNER_CAP_CENTS, which the market's build rounds are planned with (a test keeps them equal). SIM. */
+export const BUILD_CAP_CENTS = 210_000;
+
+/** The home question, worded with the build's cap in whole dollars. */
+export function buildQuestion(capCents: number): string {
+  return `Who builds the best 1440p gaming PC under $${Math.round(capCents / 100).toLocaleString("en-US")}?`;
+}
+
+export interface HomeRound { status: "none" | "open" | "closed"; title: string; pill: string }
+
+/** What home says about the market (#398): from the newest real round, in words, never its raw id. No round means "no round yet", so the
+ * page never shows a round as open while saying there is none. */
+export function homeRound<R extends RoundRow>(rounds: readonly R[]): HomeRound {
+  const r = latestRound(rounds);
+  if (!r) return { status: "none", title: "No round yet", pill: "no round yet" };
+  const status = r.state === "open" ? "open" : "closed";
+  const title = roundTitle(r.id) ?? "Latest round";
+  return { status, title, pill: `${title}, ${status}` };
+}
+
 const PART_WORD: Record<string, string> = { board: "Motherboard", gpu: "Graphics card", cpu: "Processor", ram: "Memory", ssd: "Storage", cooler: "CPU cooler", psu: "Power supply", case: "Case" };
 
 /** "Motherboard, round 2" for a build round id like round-goal-build-1-board-2; null when the id is not a build round. */

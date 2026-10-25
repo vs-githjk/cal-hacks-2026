@@ -7,11 +7,11 @@ import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
 import { OriginChip, Label, clock } from "@/components/ui";
 import { Question } from "@/components/arena";
-import { asOrigin, latestRound } from "@/lib/screens";
+import { BUILD_CAP_CENTS, asOrigin, buildQuestion, homeRound, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
 
 const ROUTES: { href: string; path: string; title: string; text: string; chips: string[] }[] = [
-  { href: "/buyer", path: "/buyer", title: "Buyer", text: "Vidyut's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
+  { href: "/buyer", path: "/buyer", title: "Buyer", text: "The buyer's goal, ranked bids, the veto with its source, the call and the receipt.", chips: ["MIRROR", "SIM"] },
   { href: "/market", path: "/market", title: "Market", text: "The referee's floor: sealed round, every seller line, loss reports, floor events.", chips: ["MIRROR", "SIM"] },
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
@@ -27,6 +27,7 @@ export default function Home() {
   const [events] = useTable(tables.floorEvent);
 
   const r = latestRound(rounds);
+  const home = homeRound(rounds);
   const stats = useMemo(() => {
     const mine = results.filter((x) => x.roundId === r?.id);
     const by = (o: string) => mine.filter((x) => asOrigin(x.origin) === o).length;
@@ -46,7 +47,7 @@ export default function Home() {
         <div className="relative z-10 order-2 md:order-1">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
             <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
-            {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
+            {home.pill}
           </p>
           <h1 className="max-w-[18ch] font-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.08] tracking-[0.01em] text-balance">
             The arena answers one question at a time.
@@ -72,7 +73,12 @@ export default function Home() {
         </div>
       </section>
 
-      <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
+      <Question
+        question={buildQuestion(BUILD_CAP_CENTS)}
+        status={home.status === "none" ? "none" : home.status === "open" ? "open" : "verdict"}
+        detail={home.status === "none" ? undefined : home.title}
+        origin="SIM"
+      />
 
       <section aria-label="One round per part" className="grid gap-3">
         <div className="flex items-center justify-between gap-2">
@@ -89,6 +95,11 @@ export default function Home() {
         </ol>
       </section>
 
+      {!r ? (
+        <p className="rounded-[var(--radius)] border border-line bg-panel px-4 py-4 text-[14px] text-muted">
+          No round has run on the live market yet. Its sealed bids, listings and floor events are counted here when one does.
+        </p>
+      ) : (
       <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
         {stats.map((s) => (
           <div key={s.label} className="bg-panel px-4 py-4">
@@ -99,6 +110,7 @@ export default function Home() {
           </div>
         ))}
       </section>
+      )}
 
       {ticker.length > 0 && (
         <section aria-label="Latest floor events" className="-mx-4 overflow-hidden border-y border-line bg-canvas-2 py-2.5">

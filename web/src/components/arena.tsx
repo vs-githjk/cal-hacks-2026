@@ -6,7 +6,10 @@ export type QuestionProps = {
   question: string;
   bout?: number;
   of?: number;
-  status: "open" | "sealed" | "verdict";
+  /** none: the market has no round yet (#398). */
+  status: "open" | "sealed" | "verdict" | "none";
+  /** A short line after the status word, like the round's name. */
+  detail?: string;
   contenders?: number;
   verdict?: { kind: "won" | "knocked"; text: string };
   origin?: string;
@@ -14,9 +17,10 @@ export type QuestionProps = {
 
 const Dot = ({ tone }: { tone: string }) => <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tone}`} aria-hidden />;
 
-export function Question({ question, bout, of, status, contenders, verdict, origin }: QuestionProps) {
+export function Question({ question, bout, of, status, detail, contenders, verdict, origin }: QuestionProps) {
   const state =
-    status === "open" ? { tone: "bg-accent", word: "Open for bids" }
+    status === "none" ? { tone: "bg-muted", word: "No round yet" }
+    : status === "open" ? { tone: "bg-accent", word: "Open for bids" }
     : status === "sealed" ? { tone: "bg-muted", word: "Bids sealed" }
     : { tone: verdict?.kind === "knocked" ? "bg-coral" : verdict ? "bg-mint" : "bg-muted", word: "Decided" };
   return (
@@ -26,6 +30,7 @@ export function Question({ question, bout, of, status, contenders, verdict, orig
           <Dot tone={state.tone} />
           {state.word}
           {bout !== undefined && <span className="text-muted">Round {bout}{of !== undefined ? ` of ${of}` : ""}</span>}
+          {detail && <span className="text-muted">{detail}</span>}
         </span>
         {origin && <OriginChip origin={origin} />}
       </div>
