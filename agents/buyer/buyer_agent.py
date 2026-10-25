@@ -997,6 +997,13 @@ def delegate_call_enabled() -> bool:
     return os.getenv("BUYER_DELEGATE_CALL") == "1"
 
 
+def delegation_allowed(transaction: dict) -> bool:
+    """Delegate the voice only when it is switched on and the buyer is not a web sign-up (a `b_` id from the market's
+    sign_up reducer): a web buyer always gets the buyer's own direct call (#405 review)."""
+    buyer_id = str(transaction.get("buyer_id") or "")
+    return delegate_call_enabled() and bool(buyer_id) and not buyer_id.startswith("b_")
+
+
 def market_approval_matches(status, mandate: dict) -> bool:
     """The market's own record of this purchase, re-read after record_approval: a voice approval for exactly the
     mandate the buyer issued (hash, amount, payee), not retired. Any mismatch means no payment."""
@@ -1044,14 +1051,15 @@ async def on_voice_transport(ctx: Context, sender: str, msg: common.VoiceTranspo
 
 
 async def _delegated_approval(ctx: Context, transaction: dict, send_private, direct_client, service):
-    """The same approval as _phone_approval, with the voice carried by Bazaar Caller. Anything but an approval the buyer
-    itself verified (a Caller timeout or error, a reply that fails the checks, or a spoken answer that is not the code and
-    approve) makes the buyer place its own direct call once. Nothing is ever retried through the Caller."""
+    """The same approval as _phone_approval, with the voice carried by Bazaar Caller. Only a call that never reached the
+    owner falls back to the buyer's own direct call, once: the Caller timed out or failed (transport_failed), or its reply
+    failed the buyer's checks (refused). A finished call the buyer judged that is not an approval (a no, a wrong code, the
+    code without approve) is final: the owner answered, so the phone never rings again. Nothing is retried through the Caller."""
     from buyer.delegate import DelegatedVoiceClient
     delegated = DelegatedVoiceClient(transaction["mandate"]["hash"], _transport_request(ctx, asyncio.get_running_loop()),
                                      USED_CALL_IDS)
     result = await _phone_approval(transaction, send_private, delegated, service)
-    if result.approved:
+    if result.approved or not (delegated.transport_failed or delegated.refused):
         return result
     ctx.logger.warning("Bazaar Caller did not deliver a usable call; placing the approval call directly")
     return await _phone_approval(transaction, send_private, direct_client, service)
@@ -1081,7 +1089,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
             return
-        if delegate_call_enabled():
+        if delegation_allowed(transaction):
             result = await _delegated_approval(ctx, transaction, send_private, client, _approval_service())
         else:
             result = await _phone_approval(transaction, send_private, client, _approval_service())
@@ -1113,7 +1121,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
                 or not market_status.get("approved_at")):
             raise MarketBridgeError("market_approval_readback_mismatch")
-        if delegate_call_enabled() and not market_approval_matches(buyer_market.purchase_status(mandate["hash"]), mandate):
+        if delegation_allowed(transaction) and not market_approval_matches(buyer_market.purchase_status(mandate["hash"]), mandate):
             raise MarketBridgeError("market_approval_readback_mismatch")  # #398: re-read before anything can be paid
         ROUND.update(transaction=transaction, mandate=mandate, order=order,
                      pending_hold=True, phase="approved")

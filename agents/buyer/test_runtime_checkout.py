@@ -950,7 +950,7 @@ def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_rea
     assert any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
 
 
-@pytest.mark.parametrize("forge", ["guessed_code", "wrong_mandate", "replayed_call_id", "unfinished_call"])
+@pytest.mark.parametrize("forge", ["wrong_mandate", "replayed_call_id", "unfinished_call"])
 def test_a_forged_caller_reply_never_approves_and_the_direct_call_decides(runtime, monkeypatch, forge):
     buyer, _db = runtime
     ready_for_requote(buyer)
@@ -958,8 +958,6 @@ def test_a_forged_caller_reply_never_approves_and_the_direct_call_decides(runtim
     ctx = CodeCapturingContext(direct)
     good = FakeCaller(direct)
     replies = {
-        "guessed_code": lambda h: {**good(h, {}), "call": {**good(h, {})["call"], "transcript": [
-            {"role": "user", "text": "alpha bravo approve", "start_timestamp": 1.0}]}},
         "wrong_mandate": lambda h: {**good(h, {}), "mandate_hash": "f" * 64},
         "replayed_call_id": lambda h: good(h, {}),
         "unfinished_call": lambda h: {**good(h, {}), "call": {**good(h, {})["call"], "status": "in_progress"}},
@@ -971,8 +969,55 @@ def test_a_forged_caller_reply_never_approves_and_the_direct_call_decides(runtim
     held = _run(buyer, ctx)
     assert held["phase"] != "approved" and held["order"] is None
     assert len(caller.requests) == 1                          # never retried through the Caller
-    assert direct.calls == 1   # anything the buyer did not verify falls back to its own direct call, once
+    assert direct.calls == 1   # a refused reply (it fails the buyer's checks) falls back to its own direct call, once
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+
+
+@pytest.mark.parametrize("says", ["alpha bravo approve", "{code} no", "{code}"])
+def test_a_finished_delegated_call_that_is_not_an_approval_is_final_and_never_rings_again(runtime, monkeypatch, says):
+    """A guessed code, a spoken no, or the code without approve: the call reached the owner and finished, so the answer
+    stands. The buyer never rings again, through the Caller or directly (#405 review)."""
+    buyer, _db = runtime
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    good = FakeCaller(direct)
+
+    def reply(h):
+        r = good(h, {})
+        text = says.format(code=direct.code)
+        return {**r, "call": {**r["call"], "transcript": [{"role": "user", "text": text, "start_timestamp": 1.0}]}}
+    caller = FakeCaller(direct, reply=reply)
+    _delegate(buyer, monkeypatch, caller, direct)
+    held = _run(buyer, ctx)
+    assert held["phase"] != "approved" and held["order"] is None
+    assert len(caller.requests) == 1 and direct.calls == 0
+    assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)
+
+
+def test_a_web_buyer_never_delegates_and_gets_the_direct_call(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "b_web12345")
+    ready_for_requote(buyer)
+    direct = FakeVoiceClient()
+    ctx = CodeCapturingContext(direct)
+    caller = FakeCaller(direct)
+    _delegate(buyer, monkeypatch, caller, direct)
+    approved = _run(buyer, ctx)
+    assert approved["buyer_id"] == "b_web12345"
+    assert approved["phase"] == "approved" and direct.calls == 1 and caller.requests == []
+    assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
+
+
+def test_only_a_non_web_buyer_may_delegate(runtime, monkeypatch):
+    buyer, _db = runtime
+    delegation_allowed = buyer.delegation_allowed
+    monkeypatch.setenv("BUYER_DELEGATE_CALL", "1")
+    assert delegation_allowed({"buyer_id": "vidyut"})
+    assert not delegation_allowed({"buyer_id": "b_ab12cd34"})
+    assert not delegation_allowed({})
+    monkeypatch.delenv("BUYER_DELEGATE_CALL")
+    assert not delegation_allowed({"buyer_id": "vidyut"})
 
 
 def test_a_caller_timeout_falls_back_to_the_direct_call_once(runtime, monkeypatch):

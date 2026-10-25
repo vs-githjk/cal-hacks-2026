@@ -4,8 +4,8 @@ DelegatedVoiceClient stands where the Cartesia client stands in pay.voice_cartes
 ApprovalService issues the code (shown only in the owner's private chat), judges the transcript and writes the record,
 exactly as on the direct path. The Caller only dials and returns what was said; it never sees the code or the secret.
 A reply that does not match this mandate, reuses a call id, or is not a finished call is refused (`refused`), and a
-missing reply is `transport_failed`. Either way the buyer falls back to its own direct call once; a refused reply is
-never retried through the Caller.
+missing reply is `transport_failed`. Only then does the buyer fall back to its own direct call, once; a refused reply
+is never retried through the Caller. A finished call that is not an approval is final.
 """
 from __future__ import annotations
 
