@@ -101,6 +101,26 @@ export function Pill({ tone, children }: { tone: "done" | "hold" | "hunting"; ch
   );
 }
 
+/** A v2 status chip for any state word (LIVE, SEALED, APPROVED, PAID, TEST MODE, ...). The word is always shown; colour never carries it alone. */
+export type Tone = "live" | "sealed" | "bad" | "good" | "caution" | "referee" | "action";
+const TONE: Record<Tone, string> = {
+  live: "bg-live-soft text-ink",
+  sealed: "bg-slate-soft text-slate",
+  bad: "bg-coral-soft text-coral",
+  good: "bg-mint-soft text-mint",
+  caution: "bg-amber-soft text-amber",
+  referee: "bg-referee-soft text-referee",
+  action: "bg-pulse-soft text-pulse-soft-ink",
+};
+export function StatusPill({ tone, children, pulse }: { tone: Tone; children: ReactNode; pulse?: boolean }) {
+  return (
+    <span className={`inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium ${TONE[tone]}`}>
+      {pulse && <span className={`dot ${tone === "live" ? "text-live" : "text-current"}`} aria-hidden />}
+      {children}
+    </span>
+  );
+}
+
 export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="min-w-0 rounded-xl bg-surface-2 px-3 py-2.5">
