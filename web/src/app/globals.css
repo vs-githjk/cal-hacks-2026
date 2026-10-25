@@ -247,3 +247,18 @@ main, header, footer { position: relative; z-index: 1; }
   50% { opacity: 1 }
 }
 .torch { animation: torch 1.8s ease-in-out infinite; }
+
+/* Landing (#448): one animated gradient zone in the hero, a ticker into the floor, and the floor miniature. All pause under reduced motion. */
+@keyframes fm-orb-a { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(6%, 10%, 0) scale(1.12); } }
+@keyframes fm-orb-b { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(-8%, -6%, 0) scale(0.94); } }
+@keyframes fm-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fm-ring { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
+@keyframes fm-lap { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+@keyframes fm-line { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fm-orb { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; will-change: transform; }
+.fm-orb-a { animation: fm-orb-a 16s ease-in-out infinite; }
+.fm-orb-b { animation: fm-orb-b 18s ease-in-out infinite; }
+.fm-ticker { animation: fm-ticker 40s linear infinite; }
+.fm-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--color-shield); animation: fm-ring 2.4s ease-out infinite; }
+.fm-ghost { position: absolute; top: 0; left: 0; offset-path: path("M 40 28 H 280 V 132 H 40 Z"); offset-rotate: 0deg; animation: fm-lap var(--lap, 9s) linear infinite; animation-delay: var(--delay, 0s); }
+.fm-line { animation: fm-line 220ms var(--ease-out) both; }
