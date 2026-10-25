@@ -168,6 +168,14 @@ def _ensure_market_round_state(referee_market, round_id: str, *, expected: str, 
     return status
 
 
+# Sellers answer through Agentverse mailboxes in the live stack, which takes longer than the 12 s local default.
+AUCTION_WINDOW_S = max(5, int(os.environ.get("BUYER_AUCTION_WINDOW_S", "12")))
+
+
+def _need_for(goal: dict) -> dict:
+    return dict(need_from_goal(goal), auction_window_s=AUCTION_WINDOW_S)
+
+
 def _begin_market_review() -> list[dict]:
     _buyer_market, referee_market = market_clients()
     round_id = ROUND["market_round_id"]
@@ -283,7 +291,7 @@ async def _finish_market_round(ctx: Context):
         if ROUND.get("market_winner"):
             ROUND["cards"] = {ROUND["market_winner"]["id"]: reviewed_cards[ROUND["market_winner"]["id"]]}
     except Exception as exc:
-        ctx.logger.warning(f"Authoritative Market result unavailable: {type(exc).__name__}")
+        ctx.logger.warning(f"Authoritative Market result unavailable: {type(exc).__name__}: {str(exc)[:200]}")
         await fail_round(ctx, "Market could not verify the round result. Nothing ordered.", always_notify=True)
         return
     if ROUND.get("round_token") != token or ROUND.get("need", {}).get("id") != need_id:
@@ -601,7 +609,7 @@ async def handle_text(ctx: Context, sender: str, text: str):
         ctx.logger.warning(f"Private buyer state unavailable: {type(exc).__name__}")
         await tell(ctx, sender, "Private buyer state is unavailable. Nothing was ordered.")
         return
-    need = need_from_goal(goal)
+    need = _need_for(goal)
     retired_need_ids = list(ROUND.get("retired_need_ids", []))
     old_need_id = ROUND.get("need", {}).get("id")
     if old_need_id and old_need_id != need["id"]:
@@ -693,7 +701,7 @@ async def adopt_open_goal(ctx: Context) -> bool:
 
     try:
         goal = _web_goal(row)
-        need = need_from_goal(goal)
+        need = _need_for(goal)
     except Exception as exc:
         ctx.logger.warning(f"Open goal {row.get('id')} skipped: {type(exc).__name__}")
         _failed()
@@ -727,7 +735,7 @@ async def adopt_open_goal(ctx: Context) -> bool:
 
 async def start_round(ctx: Context, need: dict | None = None):
     """Open a sealed round. A retry gets a fresh Need id so stale bids from the last round cannot count."""
-    need = need or need_from_goal(ROUND["goal"])
+    need = need or _need_for(ROUND["goal"])
     retired_need_ids = list(ROUND.get("retired_need_ids", []))
     old_need_id = ROUND.get("need", {}).get("id")
     if old_need_id and old_need_id != need["id"]:
