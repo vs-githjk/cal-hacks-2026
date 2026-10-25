@@ -42,7 +42,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from data.mirror import not_partners  # noqa: E402
-from demo.common import LIVE, MIRROR, SIM, money  # noqa: E402
+from demo.common import LIVE, MIRROR, SIM, money, shield_mode_line  # noqa: E402
 
 OUT_DIR = ROOT / "demo" / "out"
 VIEW_FILE = "build-view.json"          # the latest BuildView, rewritten at every step
@@ -1667,6 +1667,7 @@ def main(argv: Optional[list] = None) -> int:
     out = Narrator(True)
     out.note("Tech Bazaar build: one goal, a sealed round per part, one call for the whole build (#345)")
     out.note("Sellers: SIM, plus the real dated MIRROR listings for the GPU. Payment is the SIM stub unless --live-call --stripe. Tags: [MIRROR] [SIM] [LIVE].")
+    out.note(shield_mode_line())
     from_goal = args.buyer_id is not None and args.goal_id is None and args.plan is None   # #253: build from this buyer's own goal row
     args.buyer_id = args.buyer_id or bridge.DB_BUYER_ID
     args.goal_id = args.goal_id or "goal-build-1"
