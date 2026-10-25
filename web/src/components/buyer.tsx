@@ -38,7 +38,7 @@ export function GoalCard({ goal }: { goal: GoalView }) {
         <Stat label="Reserved" value={money(goal.reserved)} sub={goal.state === "DONE" ? "released after payment" : undefined} />
       </dl>
       {goal.skipped.map((s) => (
-        <p key={s} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the PSU.</b> {s}</p>
+        <p key={s.part} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the {s.part}.</b> {s.text}</p>
       ))}
     </Card>
   );

@@ -290,3 +290,17 @@ test("roundTitle turns a build round id into a readable name", () => {
   assert.equal(roundTitle("round-1"), null);
   assert.equal(roundTitle("round-goal-build-1-board-x"), null);
 });
+
+// ---- The skipped-owned-part line names the part that was skipped, not always the PSU (rehearsal 22:17).
+
+test("goalsForBuyer: each skipped owned part is named by its own id, so the case is never called the PSU", () => {
+  const items = [
+    { ...goalItemRow("goal-a1", "750 w psu"), skippedOwnedPartId: "owned-psu" },
+    { ...goalItemRow("goal-a1", "case (305 mm gpu room)"), skippedOwnedPartId: "owned-case" },
+    { ...goalItemRow("goal-a1", "rtx 5070 ti"), skippedOwnedPartId: "" },
+  ];
+  const [g] = goalsForBuyer([goalRow()], items, undefined, "buyer-a");
+  assert.deepEqual(g!.skipped.map((s) => s.part), ["PSU", "case"]);
+  assert.equal(g!.skipped[0]!.text, "You already own the PSU, so it is not in this hunt.");
+  assert.equal(g!.skipped[1]!.text, "You already own the case, so it is not in this hunt.");
+});

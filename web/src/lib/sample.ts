@@ -20,7 +20,7 @@ export const goal: GoalView = {
   conditions: ["new", "open-box"],
   variant: "retail",
   origin: "SIM",
-  skipped: ["You already own a 750 W PSU with a native 16-pin cable (told Oct 15). Case clearance 305 mm and 32 GB DDR5 are also on file."],
+  skipped: [{ part: "PSU", text: "You already own a 750 W PSU with a native 16-pin cable (told Oct 15). Case clearance 305 mm and 32 GB DDR5 are also on file." }],
   allowance: { perPurchase: 250, periodLimit: 500, period: "month", spent: 120, ladderStep: 1 },
 };
 
