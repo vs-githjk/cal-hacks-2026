@@ -68,3 +68,47 @@ def record_owner_approval(referee: Any, buyer: Any, mandate: dict, buyer_id: str
     if not isinstance(status, dict) or status.get("approval_method") != METHOD or not matches(status, mandate):
         raise MarketBridgeError("market_approval_readback_mismatch")
     return status
+
+
+# ---- the market's own mandate for a chat purchase
+#
+# The market creates a mandate only through the referee, only for the closed round's rank 1 bid, named by the deal id
+# "deal-<round>:<bid>" (market.ts bidIdOfDeal), paid to that bid's MARKET seller id ("seller-a"), never an agent address.
+# The chat payment protocol (seller RequestPayment, MerchantSim, the seller agent) is bound to the seller's agent address
+# as payee and to a local deal id, and stays exactly as it is. So a chat purchase holds two mandates for one deal: the
+# local one (phone gate, payment protocol) and the market's (create, approval, payment record, settlement). They share
+# the buyer, goal, amount and expiry; the market one is stored on the transaction as `market_mandate`. A web purchase
+# has only one mandate, which is already the market's, so `market_view` falls back to it.
+
+def market_view(transaction: dict) -> dict:
+    return transaction.get("market_mandate") or transaction["mandate"]
+
+
+def market_hash(transaction: dict) -> str:
+    return market_view(transaction)["hash"]
+
+
+def market_deal_id(round_id: str, bid_id: str) -> str:
+    return f"deal-{round_id}:{bid_id}"
+
+
+def build_market_mandate(make_mandate: Callable[..., dict], *, bid: dict, round_id: str, buyer_id: str, goal_id: str,
+                         now: Any, market_sellers: dict) -> dict:
+    """The market's mandate for the round's winner: its deal id, its market seller id as payee, its landed price."""
+    seller = bid.get("market_seller_id")
+    if not seller or market_sellers.get(seller) != bid.get("supplier_id"):
+        raise MarketBridgeError("market_seller_missing")
+    return make_mandate(deal_id=market_deal_id(round_id, bid["id"]), amount=bid["total_landed_price"], payee=seller,
+                        buyer_id=buyer_id, within_allowance=False, goal_id=goal_id, now=now, origin=bid.get("origin", "SIM"))
+
+
+def pending_matches(status: Any, mandate: dict) -> bool:
+    """The buyer-private row after create_mandate: this exact mandate, its reservation held, not retired or settled."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        same_amount = Decimal(str(status.get("amount"))).quantize(Decimal("0.01")) == Decimal(str(mandate.get("amount"))).quantize(Decimal("0.01"))
+    except (InvalidOperation, AttributeError, TypeError, ValueError):
+        return False
+    return (isinstance(status, dict) and status.get("mandate_hash") == mandate.get("hash") and status.get("payee") == mandate.get("payee")
+            and same_amount and status.get("reservation_matches") is True and status.get("within_allowance") is False
+            and status.get("retired") is False and status.get("settled") is not True)
