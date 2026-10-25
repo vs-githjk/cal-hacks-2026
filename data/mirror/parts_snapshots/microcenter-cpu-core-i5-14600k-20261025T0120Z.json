@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:9b4ab5d8f18b",
+  "category": "cpu",
+  "name": "Core Ultra 7 270K Plus Arrow Lake 3.7GHz Twenty Four-Core LGA 1851 Boxed Processor - Heatsink Not Included",
+  "model_number": "994327",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/707437/intel-core-ultra-7-270k-plus-arrow-lake-37ghz-twenty-four-core-lga-1851-boxed-processor-heatsink-not-included",
+  "snapshot_id": "microcenter-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:33+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/707437/intel-core-ultra-7-270k-plus-arrow-lake-37ghz-twenty-four-core-lga-1851-boxed-processor-heatsink-not-included",
+   "price": 299.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:d01991ff8764",
+  "category": "cpu",
+  "name": "Core Ultra 5 250K Plus Arrow Lake 4.2GHz Eighteen-Core LGA 1851 Boxed Processor - Heatsink Not Included",
+  "model_number": "994293",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/707438/intel-core-ultra-5-250k-plus-arrow-lake-42ghz-eighteen-core-lga-1851-boxed-processor-heatsink-not-included",
+  "snapshot_id": "microcenter-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:33+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/707438/intel-core-ultra-5-250k-plus-arrow-lake-42ghz-eighteen-core-lga-1851-boxed-processor-heatsink-not-included",
+   "price": 199.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:ddfdc8cb5907",
+  "category": "cpu",
+  "name": "Core i9-14900K Raptor Lake-S Refresh 3.2GHz Twenty Four-Core LGA 1700 Boxed Processor - Heatsink Not Included",
+  "model_number": "614867",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 429.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/670841/intel-core-i9-14900k-raptor-lake-s-refresh-32ghz-twenty-four-core-lga-1700-boxed-processor-heatsink-not-included",
+  "snapshot_id": "microcenter-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:33+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/670841/intel-core-i9-14900k-raptor-lake-s-refresh-32ghz-twenty-four-core-lga-1700-boxed-processor-heatsink-not-included",
+   "price": 429.99,
+   "stock": "5 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "5 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:03cedf54040c",
+  "category": "cpu",
+  "name": "G460 Gaming PC",
+  "model_number": "077065",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/714653/powerspec-g460-gaming-pc",
+  "snapshot_id": "microcenter-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:33+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/714653/powerspec-g460-gaming-pc",
+   "price": 1899.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:c6e9b8a1f0a4",
+  "category": "cpu",
+  "name": "Core Ultra 9 285K Arrow Lake Twenty Four-Core LGA 1851 Boxed Processor - Heatsink Not Included",
+  "model_number": "761098",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/685300/intel-core-ultra-9-285k-arrow-lake-twenty-four-core-lga-1851-boxed-processor-heatsink-not-included",
+  "snapshot_id": "microcenter-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:33+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/685300/intel-core-ultra-9-285k-arrow-lake-twenty-four-core-lga-1851-boxed-processor-heatsink-not-included",
+   "price": 449.99,
+   "stock": "16 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "16 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:9f569ddc7af0",
+  "category": "motherboard",
+  "name": "B650 Gaming X AX V2 AMD AM5 ATX Motherboard",
+  "model_number": "660753",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 184.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/676262/gigabyte-b650-gaming-x-ax-v2-amd-am5-atx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:14+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/676262/gigabyte-b650-gaming-x-ax-v2-amd-am5-atx-motherboard",
+   "price": 184.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:8125b8927456",
+  "category": "motherboard",
+  "name": "B650-A ROG Strix Gaming WiFi AMD AM5 ATX Motherboard",
+  "model_number": "513747",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/659715/asus-b650-a-rog-strix-gaming-wifi-amd-am5-atx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:14+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/659715/asus-b650-a-rog-strix-gaming-wifi-amd-am5-atx-motherboard",
+   "price": 189.99,
+   "stock": "1 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "1 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:bdcc71cbddb2",
+  "category": "motherboard",
+  "name": "B650 Eagle AX AMD AM5 ATX Motherboard",
+  "model_number": "693358",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/677068/gigabyte-b650-eagle-ax-amd-am5-atx-motherboard",
+  "snapshot_id": "microcenter-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:14+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/677068/gigabyte-b650-eagle-ax-amd-am5-atx-motherboard",
+   "price": 179.99,
+   "stock": "2 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "2 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:c7b48710f863",
+  "category": "motherboard",
+  "name": "B650 Gaming X AX V2 AMD AM5 ATX Motherboard (Refurbished)",
+  "model_number": "747949",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 79.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/685029/gigabyte-b650-gaming-x-ax-v2-amd-am5-atx-motherboard-(refurbished)",
+  "snapshot_id": "microcenter-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:14+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/685029/gigabyte-b650-gaming-x-ax-v2-amd-am5-atx-motherboard-(refurbished)",
+   "price": 79.99,
+   "stock": "3 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "3 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:11871de47ee6",
+  "category": "motherboard",
+  "name": "B650 AORUS ELITE AX ICE AMD AM5 ATX Motherboard",
+  "model_number": "650184",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 234.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/674899/gigabyte-b650-aorus-elite-ax-ice-amd-am5-atx-motherboard?ob=1",
+  "snapshot_id": "microcenter-motherboard-b650-motherboard-20261025T0121Z",
+  "snapshot_date": "2026-10-25T01:21:14+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/674899/gigabyte-b650-aorus-elite-ax-ice-amd-am5-atx-motherboard?ob=1",
+   "price": 234.99,
+   "stock": "0 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "0 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

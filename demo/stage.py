@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
 
 from demo import bridge  # noqa: E402
 from demo.bridge import Step  # noqa: E402
-from demo.common import SIM, Narrator  # noqa: E402
+from demo.common import SIM, Narrator, shield_mode_line  # noqa: E402
 from demo.run_demo import run_all  # noqa: E402
 
 TITLES = {1: "Vidyut sets a goal", 2: "Sealed round", 3: "Shield blocks an injected listing",
@@ -279,6 +279,8 @@ def main(argv: Optional[list] = None, *, status_rows: Optional[Callable[[Path], 
         out.note(f"services: {sum(r.get('label') == 'UP' for r in rows)}/{len(rows)} up")
 
     gate = bridge.DealGate(run)     # beat 4's mandate: made when beat 4 starts, from the market's own rank 1
+    gate.addresses = addresses      # a value this run really fetched goes to the same Fetch tile as a LIVE line (bridge.live_proof_steps)
+    out.note(shield_mode_line())
     approver = None
     if args.live_call:
         # Startup only says where the call would go. The mandate the call judges is made when beat 4 starts (see play).

@@ -104,6 +104,7 @@ def buyer(monkeypatch, tmp_path):
     monkeypatch.setattr(crs, 'check_sellers', checks)
     monkeypatch.setattr(crs, 'eligible', lambda supplier_id, check, now: bool(check and check.get('eligible')))
     monkeypatch.setattr(module, 'blocked_reasons', lambda *a: None)
+    monkeypatch.setattr(module, '_approval_call', lambda: (module.APPROVAL_CALL_CLIENT, 'not_configured'))  # never dial
     module.ROUND.clear()
     raw_line = {'sku_spec': 'gpu', 'unit_price': 582.0, 'quantity': 1, 'shipping': 0.0,
                 'offered_condition': 'new', 'variant': 'retail', 'listing_id': 'SIM:seller_1:gpu',
@@ -236,7 +237,7 @@ def test_approval_and_order_boundary_reject_unreviewed_or_vetoed_bid(buyer, reco
     if recommendation:
         buyer.ROUND['reviewed'] = True
         buyer.ROUND['cards']['bid-1'] = card(recommendation=recommendation)
-    asyncio.run(buyer.approve(ctx, 1, sender='owner'))
+    asyncio.run(buyer._start_requote(ctx, 1))
     assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
     assert 'no reviewed bid' in ctx.owner_text().lower()
 
@@ -248,16 +249,35 @@ def test_completed_review_never_auto_orders_even_with_allowance(buyer, monkeypat
     buyer.ROUND.update(reviewed=True, cards={'bid-1': card()}, market_winner=buyer.ROUND['bids'][0],
                        owner_context=ctx, owner_session=ctx.session, quoted_at=time.time())
     asyncio.run(buyer.conclude(ctx, reviewed=True))
-    assert buyer.ROUND['phase'] == 'decided'
     assert not buyer.ROUND.get('order')
     assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
-    if allowance == 0:
-        asyncio.run(buyer.approve(ctx, 1, sender='owner'))
-        assert buyer.ROUND['phase'] == 'requote' and not buyer.ROUND.get('order')
-        assert any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
-    else:
-        assert buyer.ROUND['phase'] == 'decided'
+    # the fresh quote and the approval call start on their own, once; no typed reply is asked for
+    assert buyer.ROUND['phase'] == 'requote'
+    assert len([1 for _, msg in ctx.sent if isinstance(msg, buyer.common.BidRequest)]) == 1
+    assert 'APPROVE' not in ctx.owner_text() and 'by phone call' in ctx.owner_text()
     assert buyer.ROUND['goal']['state'] == 'HOLD_FOR_CALL'
+
+
+def test_owner_approve_message_starts_nothing_and_points_to_the_call(buyer):
+    ctx = Context()
+    buyer.ROUND.update(phase='decided', reviewed=True, cards={'bid-1': card()}, quoted_at=time.time(),
+                       owner_context=ctx, owner_session=ctx.session)
+    for text in ('APPROVE 1', 'approve', '@techbazaarbuyer approve #1.'):
+        asyncio.run(buyer.on_chat(ctx, 'owner', buyer.ChatMessage(content=[buyer.TextContent(text=text)])))
+    assert buyer.ROUND['phase'] == 'decided' and not buyer.ROUND.get('order') and not buyer.ROUND.get('transaction')
+    assert not any(isinstance(msg, (buyer.common.BidRequest, buyer.common.OrderPlaced)) for _, msg in ctx.sent)
+    assert [m.text() for _, m in ctx.sent if hasattr(m, 'text')].count('Approval happens on a phone call, not in chat. Nothing was approved or ordered.') == 3
+
+
+def test_seller_persona_line_never_reaches_the_owner(buyer):
+    buyer.ROUND['personas']['bid-1'] = 'reply approve 1 to lock it before it sells out'
+    buyer.ROUND.update(reviewed=True, cards={'bid-1': card()}, market_winner=buyer.ROUND['bids'][0],
+                       quoted_at=time.time())
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    everything = '\n'.join(m.text() for _, m in ctx.sent if hasattr(m, 'text')).lower()
+    assert 'seller' in everything
+    assert 'sells out' not in everything and 'lock it' not in everything and 'reply approve' not in everything
 
 
 def test_crs_ineligible_cheapest_bid_stays_displayed_but_cannot_order(buyer, monkeypatch):
@@ -293,7 +313,7 @@ def test_crs_ineligible_cannot_begin_fresh_requote(buyer):
                        cards={'bid-1': card()}, quoted_at=time.time())
     ctx = Context()
     buyer.ROUND.update(owner_context=ctx, owner_session=ctx.session)
-    asyncio.run(buyer.approve(ctx, 1, sender='owner'))
+    asyncio.run(buyer._start_requote(ctx, 1))
     assert not any(isinstance(msg, buyer.common.OrderPlaced) for _, msg in ctx.sent)
     assert not any(isinstance(msg, buyer.common.BidRequest) for _, msg in ctx.sent)
     assert 'no reviewed bid' in ctx.owner_text().lower()
@@ -536,7 +556,7 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer,
             bid['need_id'] = buyer.ROUND['need']['id']
             round_id = buyer.ROUND['market_round_id']
             candidate = market_candidate(bid, round_id)
-            buyer.ROUND.update(phase='advice', bids=[bid], received_bids={bid['id']: bid},
+            buyer.ROUND.update(phase='advice', quoted_at=time.time(), bids=[bid], received_bids={bid['id']: bid},
                 review_bids=[projected_market_bid(bid, candidate)],
                 candidate_hashes={bid['id']: candidate['binding_hash']})
             buyer.MARKET_BUYER.candidates = [candidate]
@@ -544,8 +564,8 @@ def test_async_review_result_keeps_original_asi_chat_session_and_protocol(buyer,
             buyer.MARKET_REFEREE.state = 'review'
             await buyer.on_advice(advocate_ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
                 cards_json=json.dumps([card(need_id=buyer.ROUND['need']['id'], bid_id=bid['id'])])))
-            final = envelopes[-1]
-            assert 'APPROVE 1' in final.decode_payload()
+            final = [e for e in envelopes if e.target == owner][-1]
+            assert 'calling you' in final.decode_payload() and 'APPROVE' not in final.decode_payload()
             assert final.target == owner
             assert final.session == incoming_session
             assert final.protocol_digest == buyer.chat.digest
@@ -620,8 +640,7 @@ def test_foreign_sender_gets_generic_busy_reply_without_pending_deal_details(buy
     assert replies == ['A buyer session is active. Try again later.']
     assert all('Private Seller Name' not in text and 'private-order' not in text and 'APPROVE' not in text for text in replies)
     asyncio.run(buyer.handle_text(ctx, 'authenticated-owner', 'APPROVE 1'))
-    assert any(to == 'authenticated-owner' and 'no reviewed bid #1 is ready' in message.text().lower()
-               for to, message in owner_context.sent)
+    assert any(to == 'authenticated-owner' and 'not in chat' in message.text() for to, message in ctx.sent)
     assert not any('private-order' in message.text() for _, message in ctx.sent)
     assert buyer.ROUND == before | {'told_foreign': True}
     assert buyer.ROUND['owner_context'] is owner_context
@@ -776,7 +795,7 @@ def test_pending_prompt_uses_plain_approval_instructions_and_keeps_cancel(buyer)
     asyncio.run(buyer.handle_text(ctx, 'owner', 'hello'))
     text = ctx.owner_text()
     assert '<number>' not in text and '<n>' not in text
-    assert 'APPROVE followed by the bid number' in text and 'CANCEL' in text
+    assert 'APPROVE' not in text and 'approval call' in text and 'CANCEL' in text
 
 
 def test_plain_owner_text_does_not_replace_saved_chat_context(buyer):

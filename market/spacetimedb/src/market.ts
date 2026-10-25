@@ -189,6 +189,44 @@ export function issuePairCode(ctx: Ctx, buyerId: string) {
   else ctx.db.pairCode.insert(fresh);
 }
 
+// ---------------------------------------------------------------- #374 open buyer sign-up
+
+export const SIGNUP_MAX = 30;
+export const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
+const ID_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;
+
+/**
+ * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
+ * (every deal needs their call). One sign-up per identity; 30 per 10 minutes across the market.
+ */
+export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: string; phone?: string }) {
+  const had = roleOf(ctx);
+  if (isOwner(ctx) || had) throw new SenderError(`already signed up: this identity is ${had ? `a ${had.role}` : 'the owner'}`);
+  const name = displayName.trim().slice(0, 60);
+  if (!name) throw new SenderError('display name required');
+  const ph = (phone ?? '').trim().replace(/[ ()-]/g, '');
+  if (ph && !PHONE_RE.test(ph)) throw new SenderError('phone must start with + and a country code, like +14155550100');
+  const now = ms(ctx.timestamp);
+  const th = ctx.db.signupThrottle.id.find(0);
+  const fresh = !th || now - ms(th.windowStart) >= SIGNUP_WINDOW_MS;
+  if (!fresh && th.count >= SIGNUP_MAX) throw new SenderError('sign-ups are busy right now, try again in a few minutes');
+  const next = { id: 0, windowStart: fresh ? ctx.timestamp : th.windowStart, count: fresh ? 1 : th.count + 1 };
+  if (th) ctx.db.signupThrottle.id.update(next);
+  else ctx.db.signupThrottle.insert(next);
+  let buyerId = '';
+  do {
+    let raw = '';
+    for (let i = 0; i < 8; i++) raw += ID_CHARS[ctx.random.integerInRange(0, ID_CHARS.length - 1)];
+    buyerId = `b_${raw}`;
+  } while ([...ctx.db.role.subjectId.filter(buyerId)].length || ctx.db.buyerProfile.buyerId.find(buyerId) || ctx.db.allowance.buyerId.find(buyerId));
+  ctx.db.role.insert({ identity: ctx.sender, role: 'buyer', subjectId: buyerId });
+  ctx.db.buyerProfile.insert({ buyerId, displayName: name, origin: 'SIM', phone: ph });
+  ctx.db.allowance.insert(fromRule({ ...newAllowance(buyerId, now), per_purchase_limit: 0 }));
+  event(ctx, 'buyer_signed_up', 'buyer_profile', buyerId, 'A new buyer signed up');
+  return buyerId;
+}
+
 // ---------------------------------------------------------------- allowance (D's shape, rules/allowance)
 
 type AllowanceRow = NonNullable<ReturnType<Ctx['db']['allowance']['buyerId']['find']>>;
@@ -241,8 +279,14 @@ export interface PostNeedArgs {
   items: { skuSpec: string; condition: string; allowedConditions: string[]; variant: string; quantity: number; unit: string }[];
 }
 
+/** The referee path is for the buyer agent acting for a self-signed-up buyer, and only against that buyer's active goal. */
 export function postNeed(ctx: Ctx, a: PostNeedArgs) {
-  requireRole(ctx, 'post_need', ['buyer'], a.buyerId);
+  const who = requireRole(ctx, 'post_need', ['buyer', 'referee'], a.buyerId);
+  if (who.role === 'referee') {
+    const g = ctx.db.goal.id.find(a.goalId);
+    if (!g || g.buyerId !== a.buyerId) throw new SenderError(`not allowed: the referee posts a need only for one of that buyer's goals; ${a.goalId || 'no goal'} is not ${a.buyerId}'s`);
+    if (g.state !== 'ACTIVE') throw new SenderError(`not allowed: goal ${a.goalId} is not active`);
+  }
   allowanceFor(ctx, a.buyerId);
   if (ctx.db.need.id.find(a.id)) throw new SenderError(`need ${a.id} already exists`);
   if (!a.items.length) throw new SenderError('a need has at least one item');
@@ -773,9 +817,12 @@ function myBuyerId(ctx: VCtx) {
   return r?.role === 'buyer' ? r.subjectId : undefined;
 }
 
+/** The caller's role row; the owner has none, so it gets a synthetic one (the /admin page gates on role owner or referee). */
 export function myRoleView(ctx: VCtx) {
   const r = roleOf(ctx);
-  return r ? [r] : [];
+  if (r) return [r];
+  const o = ctx.db.owner.id.find(0);
+  return o && o.identity.isEqual(ctx.sender) ? [{ identity: ctx.sender, role: 'owner', subjectId: '' }] : [];
 }
 
 export function myGoalsView(ctx: VCtx) {
@@ -924,8 +971,9 @@ export function setBuyerProfile(ctx: Ctx, { buyerId, displayName }: { buyerId: s
   requireRole(ctx, 'set_buyer_profile', ['referee', 'owner']);
   const name = displayName.trim();
   if (!name) throw new SenderError('display name required');
-  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM' };
-  if (ctx.db.buyerProfile.buyerId.find(buyerId)) ctx.db.buyerProfile.buyerId.update(row);
+  const existing = ctx.db.buyerProfile.buyerId.find(buyerId);
+  const row = { buyerId, displayName: name.slice(0, 60), origin: 'SIM', phone: existing?.phone ?? '' };
+  if (existing) ctx.db.buyerProfile.buyerId.update(row);
   else ctx.db.buyerProfile.insert(row);
 }
 
@@ -933,4 +981,72 @@ export function myBuyerProfileView(ctx: VCtx) {
   const id = myBuyerId(ctx);
   const row = id ? ctx.db.buyerProfile.buyerId.find(id) : undefined;
   return row ? [row] : [];
+}
+
+// ---------------------------------------------------------------- #374 public telemetry
+// Counts only. No amounts, prices, payees, phones or names; nothing per user.
+
+const pct = (sorted: number[], p: number) => (sorted.length ? sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]! : 0);
+
+export function telemetryView(ctx: AVCtx) {
+  const count = (it: Iterable<unknown>) => { let n = 0; for (const _ of it) n++; return n; };
+  const durations: number[] = [];
+  let roundsOpened = 0, roundsClosed = 0;
+  for (const r of ctx.db.round.iter()) {
+    roundsOpened++;
+    if (r.state === 'closed' && r.closedAt) { roundsClosed++; durations.push(Math.max(0, ms(r.closedAt) - ms(r.openedAt))); }
+  }
+  durations.sort((a, b) => a - b);
+  let accountsCreated = 0;
+  for (const p of ctx.db.buyerProfile.iter()) if (p.buyerId.startsWith('b_')) accountsCreated++; // self sign-ups
+  let shieldCatches = 0;
+  for (const c of ctx.db.bidCheck.iter()) if (c.kind === 'shield' && c.result !== 'allow') shieldCatches++; // Shield quarantine or block
+  let denials = 0, errors = 0;
+  for (const x of ctx.db.rejectedAttempt.iter()) {
+    if (x.kind === 'approval' && x.reason.startsWith('Approval denied')) denials++; // deny_approval writes this row
+    else errors++; // every other refused attempt
+  }
+  return [{
+    accountsCreated,
+    goalsPosted: count(ctx.db.goal.iter()), // goal rows
+    roundsOpened, // round rows
+    roundsClosed, // rounds with state closed and a close time
+    bids: count(ctx.db.bid.iter()), // bid rows
+    shieldCatches,
+    callsPlaced: count(ctx.db.approvalCode.iter()), // approval_code rows: one per approval call issued
+    approvals: count(ctx.db.approval.iter()), // approval rows
+    denials,
+    errors,
+    roundP50Ms: pct(durations, 50), // closedAt minus openedAt, nearest rank
+    roundP95Ms: pct(durations, 95),
+  }];
+}
+
+/** One row per agent name in agent_event, sorted by name. */
+export function telemetryAgentView(ctx: AVCtx) {
+  const by = new Map<string, number>();
+  for (const e of ctx.db.agentEvent.iter()) by.set(e.agentName, (by.get(e.agentName) ?? 0) + 1);
+  return [...by].map(([agent, events]) => ({ agent, events })).sort((a, b) => (a.agent < b.agent ? -1 : a.agent > b.agent ? 1 : 0));
+}
+
+// ---------------------------------------------------------------- #374 referee-only views for the buyer and caller agents
+// The agents act for every buyer through the referee identity; my_* views show only the caller's own rows.
+
+const isReferee = (ctx: VCtx) => roleOf(ctx)?.role === 'referee';
+
+/** Referee only: who to call for each buyer. */
+export function agentBuyerContactView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.buyerProfile.iter()].map((p) => ({ buyerId: p.buyerId, displayName: p.displayName, phone: p.phone }));
+}
+
+/** Referee only: goals still open. Open means state ACTIVE, the only state postGoal writes. */
+export function agentOpenGoalsView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.goal.iter()].filter((g) => g.state === 'ACTIVE');
+}
+
+/** Referee only: the items of the open goals. */
+export function agentGoalItemsView(ctx: VCtx) {
+  return agentOpenGoalsView(ctx).flatMap((g) => [...ctx.db.goalItem.goalId.filter(g.id)]);
 }

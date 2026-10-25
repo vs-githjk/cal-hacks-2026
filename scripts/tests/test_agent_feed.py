@@ -474,3 +474,108 @@ def test_memory_endpoint_survives_a_lone_surrogate(tmp_path, where):
         (tmp_path / "run-1.json").write_text(_json.dumps(sample))
     r = TestClient(F.create_app(tmp_path / "run", memory_dir=tmp_path)).get("/v1/memory")
     assert r.status_code == 200 and "entries" in r.json()
+
+
+# ---------------------------------------------------------------- GET /v1/build (the live BuildView for the /buyer panel)
+
+HASH = "0x" + "ab" * 32
+PRIVATE_BITS = (HASH, "Payee Seller LLC", "pay-ref-9", "voice_code", "approval-code-4821", "allowance", "+15551230000")
+
+
+def _full_view() -> dict:
+    """A BuildView as demo/build.py writes it to demo/out/build-view.json, with every private field filled in."""
+    champ = {"bidId": "bid-1", "sellerId": "seller-1", "persona": "Micro Center", "landed": 1299.0, "origin": "MIRROR",
+             "sourceUrl": "https://example.test/gpu", "mandateHash": HASH, "phone": "+15551230000",
+             "liveCheck": {"state": "ok", "price": 1299.0}}
+    return {"goalId": "goal-build-1", "buyerId": "vidyut", "budget": 2100.0, "spent": 1299.0, "origin": "MIRROR", "secret": "x",
+            "parts": [{"part": "gpu", "label": "RTX 5070 Ti", "status": "locked", "budget": 1329.0, "origin": "MIRROR",
+                       "champion": champ, "payee": "Payee Seller LLC"}],
+            "checks": [{"a": "gpu", "b": "psu", "rule": "power", "state": "ok", "detail": "750 W is enough", "source": "fit.psu_wattage"}],
+            "events": [{"at": "t1", "kind": "locked", "text": "RTX 5070 Ti: Micro Center locked at $1,299.00", "parts": ["gpu"], "origin": "MIRROR"},
+                       {"at": "t2", "kind": "call", "text": "Calling Vidyut at +15551230000, code approval-code-4821", "parts": [], "origin": "SIM"},
+                       {"at": "t3", "kind": "approved", "text": "Inside your allowance: $1,299.00", "parts": [], "origin": "SIM"},
+                       {"at": "t4", "kind": "receipt", "text": "Payment recorded: pay-ref-9", "parts": ["gpu"], "origin": "SIM"}],
+            "approval": {"state": "approved", "total": 1299.0, "sellers": 1, "method": "voice_code", "reason": "allowance rule",
+                         "mandates": [{"sellerId": "Payee Seller LLC", "amount": 1299.0, "mandateHash": HASH, "part": "gpu"}]}}
+
+
+def _build_client(tmp_path, text: str | None = None):
+    from fastapi.testclient import TestClient
+    if text is not None:
+        (tmp_path / "build-view.json").write_text(text, encoding="utf-8")
+    return TestClient(F.create_app(tmp_path / "run", build_dir=tmp_path))
+
+
+def test_build_endpoint_serves_the_latest_view_without_private_fields(tmp_path):
+    r = _build_client(tmp_path, json.dumps(_full_view())).get("/v1/build")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["goalId"] == "goal-build-1" and body["origin"] == "MIRROR"
+    assert body["parts"][0]["champion"]["persona"] == "Micro Center" and body["parts"][0]["champion"]["origin"] == "MIRROR"
+    assert body["approval"] == {"state": "approved", "total": 1299.0, "sellers": 1}
+    assert [e["kind"] for e in body["events"]] == ["locked"]
+    for bit in PRIVATE_BITS:
+        assert bit not in r.text
+    for key in ("mandates", "mandateHash", "phone", "payee", "secret", "liveCheck", "method", "reason"):
+        assert f'"{key}"' not in r.text
+
+
+def test_build_endpoint_is_404_until_a_run_wrote_a_view(tmp_path):
+    r = _build_client(tmp_path).get("/v1/build")
+    assert r.status_code == 404
+
+
+@pytest.mark.parametrize("text", ['{"goalId": "goal-1", "parts": [{"part": "gp', "", "[]", "null", '{"goalId": 7}',
+                                  '{"goalId": "g", "parts": "no", "checks": [], "events": []}', r'"\ud800"', '{"a": ' * 3000])
+def test_build_endpoint_never_500s_on_a_half_written_or_odd_file(tmp_path, text):
+    r = _build_client(tmp_path, text).get("/v1/build")
+    assert r.status_code in (404, 503), r.status_code
+
+
+def test_build_endpoint_survives_a_lone_surrogate_inside_a_valid_view(tmp_path):
+    view = _full_view()
+    view["parts"][0]["champion"]["persona"] = "\ud800"
+    r = _build_client(tmp_path, json.dumps(view)).get("/v1/build")  # json.dumps escapes it, so the file itself is valid
+    assert r.status_code in (200, 503)
+
+
+def test_build_endpoint_skips_rows_of_the_wrong_type(tmp_path):
+    view = _full_view()
+    view["parts"].append("junk")
+    view["events"].append(5)
+    view["checks"].append(None)
+    r = _build_client(tmp_path, json.dumps(view)).get("/v1/build")
+    assert r.status_code == 200 and len(r.json()["parts"]) == 1
+
+
+def test_build_endpoint_dir_comes_from_BUILD_VIEW_DIR(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    (tmp_path / "build-view.json").write_text(json.dumps(_full_view()), encoding="utf-8")
+    monkeypatch.setenv("BUILD_VIEW_DIR", str(tmp_path))
+    assert TestClient(F.create_app(tmp_path / "run")).get("/v1/build").status_code == 200
+
+
+def test_build_endpoint_default_dir_is_the_one_build_py_writes():
+    from demo import build as B
+    spec_dir = F.default_build_dir()
+    assert spec_dir == B.OUT_DIR and F.BUILD_VIEW_FILE == B.VIEW_FILE
+
+
+def test_build_endpoint_serves_a_real_dry_run_view_the_panel_can_parse(tmp_path):
+    """demo/build.py --dry-run --out-dir writes the real BuildView offline; the feed serves it stripped, and the committed web
+    fixture (web/src/lib/fixtures/build-feed.served.json, parsed by web/src/lib/buildView.test.ts) is that shape."""
+    import subprocess
+    root = SCRIPTS.parent
+    done = subprocess.run([sys.executable, str(root / "demo" / "build.py"), "--dry-run", "--out-dir", str(tmp_path)],
+                          cwd=root, capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stderr[-500:]
+    raw = json.loads((tmp_path / "build-view.json").read_text())
+    r = _build_client(tmp_path).get("/v1/build")
+    assert r.status_code == 200
+    body = r.json()
+    assert body == F.buyer_view(raw)
+    assert body["goalId"] == raw["goalId"] and len(body["parts"]) == len(raw["parts"])
+    assert "mandates" not in body["approval"]
+    fixture = json.loads((root / "web" / "src" / "lib" / "fixtures" / "build-feed.served.json").read_text())
+    assert F.buyer_view(fixture) == fixture  # the web test's fixture is exactly what the feed serves
+    assert set(fixture) == set(body)

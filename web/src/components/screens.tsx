@@ -7,10 +7,14 @@ import { ASI_ONE_URL } from "@/lib/agentFeed";
 import { AgentFeed, ApprovalCard, ReviewCard, GoalCard, HeroPrice, RankedBids, ReceiptCard, ShieldCard, StatePill, VetoCard } from "./buyer";
 import { FloorEvents, LossReports, RefereeCard, RoundTimeline, SellerLearns, SellerLines } from "./market";
 import { AllowancePanel, OwnedPartsPanel, PanelPreviews } from "./panels";
+import { BuildBoard } from "./BuildBoard";
+import { SAMPLE_BUILD, type BuildResult } from "@/lib/build";
 import { Card, Label, Pill, SampleOnly, money } from "./ui";
 
 
 export interface BuyerScreenProps {
+  /** The planner's build (parts, sellers, steps); the SIM sample run is shown, labelled, until build rounds are live. */
+  build?: BuildResult;
   /** This buyer's searches, open ones first; the first is the active one. */
   goals: GoalView[];
   /** The buyer's spending rule; shown even before the first goal. */
@@ -83,6 +87,7 @@ export function BuyerScreen(p: BuyerScreenProps) {
             </Card>
           )}
           <Searches goals={p.goals} />
+          <SampleOnly on={!p.build}><BuildBoard build={p.build ?? SAMPLE_BUILD} origin={p.build?.origin ?? "SIM"} /></SampleOnly>
           <div className="grid gap-3.5 md:grid-cols-3">
             {p.purchases}
             <AllowancePanel allowance={p.allowance} cap={goal?.cap ?? null} />

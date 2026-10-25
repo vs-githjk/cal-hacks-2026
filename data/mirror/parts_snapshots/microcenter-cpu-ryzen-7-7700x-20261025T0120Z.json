@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:dd38edbcdcc7",
+  "category": "cpu",
+  "name": "G732 Gaming PC",
+  "model_number": "049585",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/712043/powerspec-g732-gaming-pc",
+  "snapshot_id": "microcenter-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:30+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/712043/powerspec-g732-gaming-pc",
+   "price": 1699.99,
+   "stock": "2 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "2 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:f6f8f558824d",
+  "category": "cpu",
+  "name": "B739 Desktop Computer",
+  "model_number": "049668",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1099.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/712044/powerspec-b739-desktop-computer",
+  "snapshot_id": "microcenter-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:30+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/712044/powerspec-b739-desktop-computer",
+   "price": 1099.99,
+   "stock": "2 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "2 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:225e31dac874",
+  "category": "cpu",
+  "name": "G740 Gaming PC",
+  "model_number": "072140",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/714230/powerspec-g740-gaming-pc",
+  "snapshot_id": "microcenter-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:30+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/714230/powerspec-g740-gaming-pc",
+   "price": 1699.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:0c7a1a9e4951",
+  "category": "cpu",
+  "name": "Ryzen 7 7800X3D Raphael AM5 4.2GHz 8-Core Boxed Processor - Heatsink Not Included",
+  "model_number": "643718",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 329.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/674503/amd-ryzen-7-7800x3d-raphael-am5-42ghz-8-core-boxed-processor-heatsink-not-included",
+  "snapshot_id": "microcenter-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:30+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/674503/amd-ryzen-7-7800x3d-raphael-am5-42ghz-8-core-boxed-processor-heatsink-not-included",
+   "price": 329.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:c3133c81d182",
+  "category": "cpu",
+  "name": "AMD Ryzen 7 7800X3D, ASUS B650E Max Gaming WiFi AM5, G.Skill Flare X5 Series 32GB DDR5-6000 Kit, Computer Build Bundle",
+  "model_number": "999999",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 749.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/5007508/amd-ryzen-7-7800x3d,-asus-b650e-max-gaming-wifi-am5,-gskill-flare-x5-series-32gb-ddr5-6000-kit,-computer-build-bundle",
+  "snapshot_id": "microcenter-cpu-ryzen-7-7700x-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:30+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/5007508/amd-ryzen-7-7800x3d,-asus-b650e-max-gaming-wifi-am5,-gskill-flare-x5-series-32gb-ddr5-6000-kit,-computer-build-bundle",
+   "price": 749.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ }
+]
