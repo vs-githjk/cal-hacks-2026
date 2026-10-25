@@ -20,7 +20,7 @@ export const viewport: Viewport = { themeColor: "#eef3f8" };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`h-full antialiased ${fontVars}`}>
-      <body className="min-h-full pb-12">
+      <body className="min-h-full pb-24 sm:pb-12">
         <Providers>
           <AppHeader />
           <main className="mx-auto max-w-[1360px] px-4 py-6">{children}</main>
