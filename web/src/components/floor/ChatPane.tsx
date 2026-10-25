@@ -8,14 +8,18 @@ import type { ChatLine } from "@/lib/chatFeed";
  * Sizes use container query units so the same pane reads at 390 px, 960 px and on the 1920 x 1080 frame. */
 
 const INK = "#0b1b2b";
-const PANEL = "#0e2236";
-const TEXT = "#eef3f8";
-const MUTED = "#8fa0b2";
-const LIVE = "#34d399";
+const PANEL = "#ffffff";
+const TEXT = "#0b1b2b";
+const MUTED = "#5b6b7c";
+const HAIR = "#e6eaef";
+const BUBBLE = "#f1f4f7";
+const BLUE = "#1e4ed8";
+const LIVE = "#22c55e";
 const SANS: CSSProperties = { fontFamily: "var(--font-geist), Geist, ui-sans-serif, system-ui, sans-serif" };
 const MONO: CSSProperties = { fontFamily: "var(--font-geist-mono), 'Geist Mono', ui-monospace, Menlo, Consolas, monospace" };
 
 const SELLER_COLORS: Record<string, string> = { "1": "#e5484d", "2": "#f38ba8", "3": "#22d3ee", "4": "#f59e0b" };
+const FALLBACK_AVATAR = "#9aa7b4";
 
 /** Avatar colour by agent: buyer yellow, shield cyan, advocate mint, referee periwinkle, sellers by slot, others muted. */
 export function agentColor(who: string): string {
@@ -24,36 +28,38 @@ export function agentColor(who: string): string {
   if (who === "advocate") return "#34d399";
   if (who === "referee" || who === "caller") return "#c7d4ff";
   const m = /^seller_?(\d+)$/.exec(who);
-  if (m) return SELLER_COLORS[m[1]!] ?? MUTED;
-  return MUTED;
+  if (m) return SELLER_COLORS[m[1]!] ?? FALLBACK_AVATAR;
+  return FALLBACK_AVATAR;
 }
 
 const css = `
-.cp { container-type: inline-size; position: relative; width: 100%; height: 100%; background: ${PANEL}; color: ${TEXT}; overflow: hidden; display: flex; flex-direction: column; }
+.cp { container-type: inline-size; position: relative; width: 100%; height: 100%; background: ${PANEL}; color: ${TEXT}; overflow: hidden; display: flex; flex-direction: column; border-radius: 18px; }
+.cp-full { height: auto; min-height: inherit; max-height: inherit; }
 .cp * { box-sizing: border-box; min-width: 0; }
-.cp-head { display: flex; align-items: center; gap: 6px; flex: none; padding: max(4px, 2.4cqw) max(8px, 3.2cqw); border-bottom: 1px solid #eef3f81f; font-size: max(9px, 3.6cqw); line-height: 1.3; color: ${MUTED}; }
-.cp-full .cp-head { padding: 12px 20px; font-size: clamp(12px, 1.05cqw, 22px); }
-.cp-dot { width: max(6px, 1.8cqw); height: max(6px, 1.8cqw); border-radius: 50%; flex: none; background: ${MUTED}; }
+.cp-head { display: flex; align-items: center; gap: 6px; flex: none; padding: max(4px, 2.4cqw) max(8px, 3.2cqw); background: #ffffff; border-bottom: 1px solid ${HAIR}; font-size: max(9px, 3.6cqw); line-height: 1.3; color: ${MUTED}; }
+.cp-full .cp-head { padding: 12px 20px; font-size: 13px; }
+.cp-dot { width: max(6px, 1.8cqw); height: max(6px, 1.8cqw); border-radius: 50%; flex: none; background: #b4bfcb; }
+.cp-full .cp-dot { width: 8px; height: 8px; }
 .cp-dot.live { background: ${LIVE}; }
 .cp-title { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cp-sim { flex: none; padding: 0 0.45em; border: 1px dashed ${MUTED}; border-radius: 4px; color: ${TEXT}; letter-spacing: 0.06em; }
-.cp-unread { flex: none; min-width: 1.6em; padding: 0 0.4em; text-align: center; border-radius: 999px; background: #22d3ee; color: ${INK}; font-weight: 600; }
+.cp-sim { flex: none; padding: 0 0.45em; border: 1px solid #cfd6de; border-radius: 4px; background: #f7f9fb; color: ${MUTED}; letter-spacing: 0.06em; }
+.cp-unread { flex: none; min-width: 1.6em; padding: 0 0.4em; text-align: center; border-radius: 999px; background: ${BLUE}; color: #ffffff; font-weight: 600; }
 .cp-tilebody { position: relative; flex: 1 1 auto; overflow: hidden; }
 .cp-latest { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: max(6px, 3cqw) max(8px, 3.4cqw); }
 .cp-who { font-size: max(9px, 3.4cqw); line-height: 1.25; color: ${MUTED}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cp-text { font-size: max(10px, 4.6cqw); line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.cp-text { font-size: max(10px, 4.6cqw); line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; color: ${TEXT}; }
 .cp-empty { color: ${MUTED}; }
-.cp-scroll { flex: 1 1 auto; overflow-y: auto; padding: 16px clamp(12px, 2.4cqw, 48px); display: flex; flex-direction: column; gap: clamp(10px, 1.1cqw, 22px); }
-.cp-row { display: flex; gap: clamp(8px, 0.8cqw, 16px); align-items: flex-start; max-width: min(100%, 46em); font-size: clamp(14px, 1.25cqw, 26px); line-height: 1.4; }
+.cp-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+.cp-row { display: flex; gap: 10px; align-items: flex-start; max-width: min(100%, 36em); font-size: 15px; line-height: 1.4; }
 .cp-row.me { align-self: flex-end; flex-direction: row-reverse; }
 .cp-av { width: 2em; height: 2em; border-radius: 50%; flex: none; display: grid; place-items: center; color: ${INK}; font-weight: 600; font-size: 0.8em; }
 .cp-col { display: grid; gap: 2px; justify-items: start; }
 .cp-row.me .cp-col { justify-items: end; }
 .cp-name { font-size: 0.8em; color: ${MUTED}; }
-.cp-bub { padding: 0.5em 0.85em; border-radius: 1em; background: #16304a; overflow-wrap: anywhere; white-space: pre-wrap; }
-.cp-row.me .cp-bub { background: #22d3ee; color: ${INK}; }
+.cp-bub { padding: 0.5em 0.85em; border-radius: 1em; background: ${BUBBLE}; color: ${TEXT}; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cp-row.me .cp-bub { background: ${BLUE}; color: #ffffff; }
 .cp-dots { display: inline-flex; gap: 0.3em; align-items: center; height: 1.1em; }
-.cp-dots i { width: 0.45em; height: 0.45em; border-radius: 50%; background: ${MUTED}; display: block; animation: cp-dot 1.1s ease-in-out infinite; }
+.cp-dots i { width: 0.45em; height: 0.45em; border-radius: 50%; background: #9aa7b4; display: block; animation: cp-dot 1.1s ease-in-out infinite; }
 .cp-dots i:nth-child(2) { animation-delay: 0.15s; } .cp-dots i:nth-child(3) { animation-delay: 0.3s; }
 .cp-calm .cp-dots i { animation: none; opacity: 0.7; }
 @keyframes cp-dot { 0%, 80%, 100% { opacity: 0.3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-0.2em); } }

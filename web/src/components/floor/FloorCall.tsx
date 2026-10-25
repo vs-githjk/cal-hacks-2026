@@ -21,6 +21,14 @@ const GLASS: CSSProperties = {
   borderRadius: 18,
 };
 
+const WHITE: CSSProperties = {
+  background: "#ffffff",
+  boxShadow: "0 0 0 1px #e6eaef, 0 8px 28px 2px #00000047, 0 30px 60px -30px #00000080",
+  borderRadius: 18,
+};
+const CARD_MAX = 720;
+const CARD_MIN = 260;
+
 function cornerStyle(c: Corner): CSSProperties {
   return { [c.startsWith("t") ? "top" : "bottom"]: INSET, [c.endsWith("l") ? "left" : "right"]: INSET };
 }
@@ -72,8 +80,20 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
 
   const transition = { duration: reducedMotion ? 0 : SWAP_MS, ease: [0.32, 0.72, 0, 1] as const };
   const tileWidth = frameW < PHONE ? "34%" : "24%";
-  const tileBase: MotionStyle = { position: "absolute", width: tileWidth, aspectRatio: "16 / 10", zIndex: 20, overflow: "hidden", touchAction: "none", ...GLASS, ...cornerStyle(corner), x, y };
-  const bigBase: MotionStyle = { position: swapped ? "absolute" : "relative", inset: swapped ? 0 : undefined, width: "100%", zIndex: 0, overflow: "hidden" };
+  const tileBase: MotionStyle = { position: "absolute", width: tileWidth, aspectRatio: "16 / 10", zIndex: 20, overflow: "hidden", touchAction: "none", ...cornerStyle(corner), x, y };
+  const floorTile: MotionStyle = { ...tileBase, ...GLASS };
+  const chatTile: MotionStyle = { ...tileBase, ...WHITE };
+  const bigFloor: MotionStyle = { position: "relative", width: "100%", zIndex: 0, overflow: "hidden" };
+  // The big chat is a card sized to its content: centred, at most 720 px wide, at least 260 px tall, growing with the messages up to the stage height, then it scrolls.
+  // It steps out of the way of the floor tile (below it on narrow frames, beside it otherwise).
+  const tileW = frameW * (frameW < PHONE ? 0.34 : 0.24);
+  const cardW = Math.min(CARD_MAX, frameW);
+  const clear = (frameW - cardW) / 2 >= tileW + INSET * 1.5;
+  const shift = clear ? 0 : tileW * 0.625 + INSET * 2;
+  const bigChat: MotionStyle = {
+    position: "relative", width: cardW, minHeight: CARD_MIN, maxHeight: bigH, margin: "0 auto", zIndex: 0, overflow: "hidden", ...WHITE,
+    marginTop: corner.startsWith("t") ? shift : 0, marginBottom: corner.startsWith("b") ? shift : 0,
+  };
 
   const onDragEnd = () => {
     const f = frame.current?.getBoundingClientRect();
@@ -108,12 +128,12 @@ export function FloorCall({ floor, lines, live, reducedMotion }: { floor: (follo
   } as const;
 
   return (
-    <div ref={frame} className="relative w-full min-w-0 max-w-full" style={{ height: swapped ? bigH : undefined }}>
-      <motion.div ref={floorPane} layout layoutId="call-floor" transition={transition} style={swapped ? tileBase : bigBase} {...(swapped ? tileProps : {})}>
+    <div ref={frame} className="relative w-full min-w-0 max-w-full">
+      <motion.div ref={floorPane} layout layoutId="call-floor" transition={transition} style={swapped ? floorTile : bigFloor} {...(swapped ? tileProps : {})}>
         {floor(swapped)}
         {swapped && swapButton("Show floor full screen")}
       </motion.div>
-      <motion.div ref={chatPane} layout layoutId="call-chat" transition={transition} style={swapped ? bigBase : tileBase} {...(swapped ? {} : { ...tileProps })}>
+      <motion.div ref={chatPane} layout layoutId="call-chat" transition={transition} style={swapped ? bigChat : chatTile} {...(swapped ? {} : { ...tileProps })}>
         <ChatPane lines={lines} live={live} mode={swapped ? "full" : "tile"} unread={unread} reducedMotion={reducedMotion} />
         {!swapped && swapButton("Show chat full screen")}
       </motion.div>

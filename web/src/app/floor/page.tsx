@@ -56,7 +56,7 @@ const isAquarium = () => new URLSearchParams(window.location.search).get("scene"
 function Stage({ script, phase, theme, reducedMotion, width, frame = false, follow = false }: { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number; frame?: boolean; follow?: boolean }) {
   const fr = frame && !follow;
   return (
-    <FloorHud script={script} phase={phase} width={width} frame={fr} reducedMotion={reducedMotion} bare={follow}>
+    <FloorHud script={script} phase={phase} width={width} frame={fr} reducedMotion={reducedMotion} bare={follow} scene={isAquarium() ? "aquarium" : "ring"}>
       {isAquarium()
         ? <FloorAquariumPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={fr ? FRAME.stageW : width} follow={follow} />
         : <FloorRingPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={fr ? FRAME.stageW : width} follow={follow} />}

@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { BRAND } from "@/components/floor/brand";
 import type { FloorPhase, FloorScript, SellerView } from "@/components/floor/floorPhases";
+import { FISH, fishColors, runs } from "@/components/floor/pixelArt";
 
 /** The HUD around the stage: top-left lines and referee call, the seller ledger and the deal card.
  * Pure presentational: everything comes from the script and the current phase. The ledger is always in flow BELOW the stage.
@@ -16,6 +17,7 @@ const usd = (n: number) => USD.format(n);
 const SLOT_COLOR: Record<number, string> = { 1: "#e5484d", 2: "#f38ba8", 3: "#22d3ee", 4: "#f59e0b" };
 
 const COMPACT_BELOW = 640;
+const TWO_COLS_AT = 1024;
 const SHIELD = "#22d3ee";
 const REFEREE = "#c7d4ff";
 const MUTED = "#8fa0b2";
@@ -47,22 +49,27 @@ const css = `
 .fh-call span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: calc(8px * var(--s)); max-width: 100%; min-height: calc(30px * var(--s)); padding: calc(4px * var(--s)) calc(16px * var(--s)); border-radius: calc(15px * var(--s)); border: 1px solid #c7d4ff99; font-size: calc(12px * var(--s)); line-height: 1.3; }
 .fh-call span b { color: ${REFEREE}; font-weight: 600; font-size: calc(13px * var(--s)); }
 .fh-call span i { font-style: normal; }
-.fh-over .fh-flow .fh-flow .fh-ledger { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(8px * var(--s)); }
-.fh-over .fh-ledger { padding: calc(10px * var(--s)) calc(20px * var(--s)) calc(14px * var(--s)); }
-.fh-frame .fh-ledger { height: calc(90px * var(--s)); padding-top: calc(8px * var(--s)); padding-bottom: 0; overflow: hidden; }
-.fh-flow .fh-ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px 12px 12px; }
-.fh-card { background: #112437; border: 1px solid #eef3f824; border-radius: calc(12px * var(--s)); padding: calc(8px * var(--s)) calc(10px * var(--s)); min-width: 0; transition: opacity 500ms, border-color 500ms; }
-.fh-flow .fh-card { border-radius: 12px; padding: 8px 10px; }
-.fh-card.out { opacity: 0.55; }
-.fh-card.win { border-color: #0f9d76; }
-.fh-name { display: flex; align-items: center; gap: calc(6px * var(--s)); font-size: calc(11px * var(--s)); line-height: 1.3; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: ${MUTED}; white-space: nowrap; overflow: hidden; }
-.fh-name i { width: calc(8px * var(--s)); height: calc(8px * var(--s)); border-radius: 50%; flex: none; }
-.fh-name span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.fh-name u { text-decoration: none; margin-left: auto; padding-left: 0.4em; opacity: 0.8; }
-.fh-price { margin-top: calc(2px * var(--s)); font-size: calc(15px * var(--s)); line-height: 1.35; font-weight: 500; font-variant-numeric: tabular-nums; }
-.fh-price.sealed { color: ${MUTED}; }
-.fh-word { margin-top: calc(2px * var(--s)); font-size: calc(11px * var(--s)); line-height: 1.3; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: ${MUTED}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fh-word.bad { color: #e5484d; } .fh-word.warn { color: #fcd34d; } .fh-word.good { color: #0f9d76; } .fh-word.shield { color: ${SHIELD}; }
+.fh-simchip { position: absolute; z-index: 3; left: calc(20px * var(--s)); top: calc(16px * var(--s)); padding: 0 0.55em; border: 1px solid #eef3f866; border-radius: 4px; background: #0b1b2b99; color: #eef3f8; font-size: calc(10px * var(--s)); line-height: 1.7; letter-spacing: 0.08em; pointer-events: none; }
+.fh-ledger { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(6px * var(--u)); padding: calc(10px * var(--u)) calc(20px * var(--s)) calc(14px * var(--u)); }
+.fh-two .fh-ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fh-flow .fh-ledger { padding: 8px 12px 12px; gap: 6px; }
+.fh-frame .fh-ledger { height: calc(90px * var(--s)); padding-top: calc(8px * var(--s)); padding-bottom: 0; overflow: hidden; gap: calc(4px * var(--s)); }
+.fh-row { position: relative; display: flex; align-items: center; gap: calc(10px * var(--u)); min-height: calc(56px * var(--u)); padding: calc(6px * var(--u)) calc(12px * var(--u)) calc(6px * var(--u)) calc(14px * var(--u)); background: #112437; border: 1px solid #eef3f824; border-radius: calc(12px * var(--u)); transition: opacity 400ms, background 400ms; }
+.fh-frame .fh-row { min-height: calc(38px * var(--s)); padding-top: calc(3px * var(--s)); padding-bottom: calc(3px * var(--s)); }
+.fh-row::before { content: ""; position: absolute; left: 0; top: calc(8px * var(--u)); bottom: calc(8px * var(--u)); width: calc(3px * var(--u)); border-radius: 2px; background: var(--c); opacity: 0; transition: opacity 300ms; }
+.fh-row.on { background: #16304a; }
+.fh-row.on::before { opacity: 1; }
+.fh-row.out:not(.on) { opacity: 0.72; }
+.fh-fish { flex: none; width: calc(36px * var(--u)); height: calc(28px * var(--u)); display: block; }
+.fh-main { flex: 1 1 auto; display: grid; gap: calc(1px * var(--u)); }
+.fh-top { display: flex; align-items: center; gap: calc(8px * var(--u)); }
+.fh-nm { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(13px * var(--u)); line-height: 1.3; font-weight: 600; }
+.fh-chip { flex: none; text-decoration: none; padding: 0 0.5em; border: 1px solid #eef3f833; border-radius: 4px; color: ${MUTED}; font-size: calc(9.5px * var(--u)); line-height: 1.6; letter-spacing: 0.06em; }
+.fh-pr { flex: none; margin-left: auto; font-size: calc(13px * var(--u)); line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; }
+.fh-pr.sealed { color: ${MUTED}; font-weight: 400; }
+.fh-why { font-size: calc(12px * var(--u)); line-height: 1.3; color: ${MUTED}; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.fh-frame .fh-why { -webkit-line-clamp: 1; }
+.fh-why.bad { color: #f0777b; } .fh-why.warn { color: #fcd34d; } .fh-why.good { color: #34d399; } .fh-why.shield { color: ${SHIELD}; } .fh-why.live { color: #eef3f8; }
 .fh-deal { position: absolute; z-index: 3; right: 3%; top: 50%; transform: translateY(-50%); width: min(40%, calc(320px * var(--s))); padding: calc(18px * var(--s)) calc(22px * var(--s)); border-radius: calc(14px * var(--s)); background: #0e2236; border: 1px solid #eef3f833; }
 .fh-flow .fh-deal { position: static; transform: none; width: auto; margin: 8px 12px 0; padding: 16px; border-radius: 14px; }
 .fh-deal-in { animation: fh-deal 500ms ease-out both; }
@@ -112,18 +119,55 @@ function Top({ script, phase }: { script: FloorScript; phase: FloorPhase }) {
   );
 }
 
-function Ledger({ script, phase }: { script: FloorScript; phase: FloorPhase }) {
+/** One plain line about a seller right now, from its state, ledger and reason. */
+function explain(v: SellerView): string {
+  if (v.state === "winner") return "Winner";
+  if (v.state === "sealed") return "Bid is in, price sealed";
+  if (v.state === "open") return /^Fit OK/.test(v.ledger) ? `Still in. ${v.ledger.replace(/ · /g, ", ")}` : "Still in";
+  switch (v.reason) {
+    case "shield_block": return "Blocked by Shield: hidden instructions aimed at the buying agent";
+    case "outranked": return v.ledger.startsWith("Outranked · ") ? `Outranked: ${v.ledger.slice("Outranked · ".length)}` : "Outranked";
+    case "refused": return "Refused: below this seller's floor price";
+    case "advocate_veto": return "Vetoed by Advocate: the listing did not match the condition";
+    case "highest_price": return "Out: the highest price";
+    case "failed_fit": return `Out: ${v.ledger.replace(/^Out · /, "")}`;
+    default: return v.ledger;
+  }
+}
+
+function FishIcon({ color, out }: { color: string; out: boolean }) {
+  const colors = fishColors(color, out);
   return (
-    <div className="fh-ledger fh-mono">
+    <svg className="fh-fish" viewBox="0 0 36 28" shapeRendering="crispEdges" aria-hidden="true">
+      {runs(FISH).map((r, i) => (colors[r.ch] ? <rect key={i} x={r.x * 2} y={r.y * 2} width={r.w * 2} height={2} fill={colors[r.ch]} /> : null))}
+    </svg>
+  );
+}
+
+function Ledger({ script, phase }: { script: FloorScript; phase: FloorPhase }) {
+  const focus = phase.shieldAt ?? phase.checkerAt ?? phase.buyerAt;
+  const live = phase.callText ?? (phase.think && phase.think.who !== "buyer" ? phase.think.text : null);
+  return (
+    <div className="fh-ledger" aria-label="Sellers">
       {script.sellers.map((s) => {
         const v = phase.sellers[s.id];
         if (!v) return null;
-        const word = v.state === "sealed" && v.ledger === "Sealed" ? "bid in" : v.ledger;
+        const on = s.id === focus;
+        const out = v.state === "eaten";
+        const text = on && live ? live : explain(v);
+        const tone = on && live ? "live" : wordClass(v);
+        const color = SLOT_COLOR[s.slot] ?? MUTED;
         return (
-          <div key={s.id} className={`fh-card${v.state === "eaten" ? " out" : ""}${v.state === "winner" ? " win" : ""}`}>
-            <div className="fh-name"><i style={{ background: SLOT_COLOR[s.slot] }} /><span>{s.name}</span><u>{s.origin}</u></div>
-            <div className={`fh-price${v.price === null ? " sealed" : ""}`}>{v.price === null ? "Sealed" : usd(v.price)}</div>
-            <div className={`fh-word ${wordClass(v)}`} title={word}>{word}</div>
+          <div key={s.id} className={`fh-row${on ? " on" : ""}${out ? " out" : ""}`} style={{ "--c": color } as CSSProperties}>
+            <FishIcon color={color} out={out} />
+            <div className="fh-main">
+              <div className="fh-top">
+                <span className="fh-nm">{s.name}</span>
+                <u className="fh-chip fh-mono">{s.origin}</u>
+                <b className={`fh-pr fh-mono${v.price === null ? " sealed" : ""}`}>{v.price === null ? "Sealed" : usd(v.price)}</b>
+              </div>
+              <div className={`fh-why ${tone}`} title={text}><span key={text} className="fh-in">{text}</span></div>
+            </div>
           </div>
         );
       })}
@@ -155,22 +199,26 @@ export const FRAME = { w: 1920, h: 1080, stageW: 1600 } as const;
 
 /** Wraps the renderer (children) with the HUD. `width` is the stage's CSS width; the stage keeps a 16:9 box and the ledger sits below it.
  * `frame` lays the whole thing out in exactly FRAME.w x FRAME.h (the stage is then FRAME.stageW wide). */
-export function FloorHud({ script, phase, width, frame = false, reducedMotion = false, bare = false, children }: { script: FloorScript; phase: FloorPhase; width: number; frame?: boolean; reducedMotion?: boolean; bare?: boolean; children: ReactNode }) {
+export function FloorHud({ script, phase, width, frame = false, reducedMotion = false, bare = false, scene = "ring", children }: { script: FloorScript; phase: FloorPhase; width: number; frame?: boolean; reducedMotion?: boolean; bare?: boolean; scene?: "ring" | "aquarium"; children: ReactNode }) {
   const compact = !frame && width < COMPACT_BELOW;
   const s = frame ? FRAME.w / 960 : compact ? 1 : Math.max(0.5, width / 960);
   const stageW = frame ? FRAME.stageW : width;
-  const vars = { "--s": s, "--r": compact ? 0.8 : 1, ...(frame ? { width: FRAME.w, height: FRAME.h } : {}) } as CSSProperties;
+  const aqua = scene === "aquarium";
+  const showTop = !bare && !aqua;
+  const two = frame || width >= TWO_COLS_AT;
+  const vars = { "--s": s, "--u": frame ? 2 : 1, "--r": compact ? 0.8 : 1, ...(frame ? { width: FRAME.w, height: FRAME.h } : {}) } as CSSProperties;
   const stage = (
     <div className="fh-stage" style={{ width: frame ? stageW : "100%", height: bare ? undefined : (stageW * 9) / 16 }}>
       {children}
-      {!compact && !bare && <Top script={script} phase={phase} />}
+      {!compact && showTop && <Top script={script} phase={phase} />}
+      {aqua && !bare && script.sim && <span className="fh-simchip fh-mono">SIM</span>}
       {!compact && !bare && phase.deal && <Deal deal={phase.deal} part={script.part} />}
     </div>
   );
   return (
-    <div className={`fh ${compact ? "fh-flow" : "fh-over"}${frame ? " fh-frame" : ""}${bare ? " fh-bare" : ""}${reducedMotion ? " fh-calm" : ""}`} style={vars}>
+    <div className={`fh ${compact ? "fh-flow" : "fh-over"}${two ? " fh-two" : ""}${frame ? " fh-frame" : ""}${bare ? " fh-bare" : ""}${reducedMotion ? " fh-calm" : ""}`} style={vars}>
       <style>{css}</style>
-      {compact && !bare && <Top script={script} phase={phase} />}
+      {compact && showTop && <Top script={script} phase={phase} />}
       {stage}
       {compact && !bare && phase.deal && <Deal deal={phase.deal} part={script.part} />}
       {!bare && <Ledger script={script} phase={phase} />}

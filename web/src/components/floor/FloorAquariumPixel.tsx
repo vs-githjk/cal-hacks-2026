@@ -9,15 +9,22 @@ import type { FloorRendererProps } from "./FloorRingPixel.tsx";
 import { POCKET_IDS, findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
 import { followBox } from "./callState.ts";
 import { useFollowViewBox } from "./followCam.ts";
-import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, MAZE_TILE as T, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
+import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, productKind, runs, sandCells, type Grid, type ProductKind } from "./pixelArt.ts";
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
-const TANK = { x: 40, y: 150, w: 880, h: 360 };
-const WATER_Y = 172;
-const SAND_Y = 490;
+// The tank fills the 960 x 540 stage edge to edge (12 px margin). The maze is stretched to it: tile width from the tank width and the grid columns,
+// tile height from the water line to the sand, so every pocket, path and sprite position derives from TW and TH.
+const TANK = { x: 12, y: 12, w: 936, h: 516 };
+const WATER_Y = 34;
+const SAND_Y = 508;
+const TW = TANK.w / (MAZE[0]?.length ?? 21);
+const TH = (SAND_Y - WATER_Y) / MAZE.length;
+const OX = TANK.x;
+const OY = WATER_Y;
+const WALL_TF = `translate(${OX} ${OY}) scale(${TW / 40} ${TH / 40}) translate(${-MAZE_ORIGIN.x} ${-MAZE_ORIGIN.y})`;
 const FC = 4; // sprite cell size before the cast scale
-const S = 0.85; // fish, Pac-Man and the support agents: fish 61 x 48, Pac-Man 44
+const S = 0.9; // fish, Pac-Man and the support agents (they scale with the tile): fish 65 x 50, Pac-Man 47
 const PC = 4;
 const PW = 13 * PC * S;
 const PIP_X = 700; // no sign above stage y 200 right of this
@@ -28,10 +35,10 @@ const ACT_AT = 700; // an agent has arrived and starts to act
 
 const START = findTile(MAZE, "S") ?? ([7, 10] as Tile);
 const LOOPS: Tile[][] = POCKET_IDS.map((d) => patrolLoop(MAZE, d));
-const px = (t: Tile) => ({ x: MAZE_ORIGIN.x + t[1] * T + T / 2, y: MAZE_ORIGIN.y + t[0] * T + T / 2 });
+const px = (t: Tile) => ({ x: OX + t[1] * TW + TW / 2, y: OY + t[0] * TH + TH / 2 });
 const rectCentre = (ch: string) => {
   const r = pocketRect(MAZE, ch);
-  return r ? { x: MAZE_ORIGIN.x + ((r.c0 + r.c1 + 1) / 2) * T, y: MAZE_ORIGIN.y + ((r.r0 + r.r1 + 1) / 2) * T } : { x: 480, y: 400 };
+  return r ? { x: OX + ((r.c0 + r.c1 + 1) / 2) * TW, y: OY + ((r.r0 + r.r1 + 1) / 2) * TH } : { x: 480, y: 400 };
 };
 const POCKETS = POCKET_IDS.map(rectCentre);
 const WIN_RECT = pocketRect(MAZE, "9");
@@ -42,8 +49,8 @@ const PELLETS: Tile[] = [];
 MAZE.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === ".") PELLETS.push([r, c]); }));
 const WALLS = mazeWallPaths();
 const SAND = sandCells(TANK.w - 2, 20);
-const PEBBLES: ReadonlyArray<readonly [number, number, number]> = [[100, 496, 8], [230, 500, 5], [370, 494, 6], [505, 500, 8], [650, 495, 5], [780, 499, 6], [890, 495, 5]];
-const WEEDS: ReadonlyArray<readonly [number, number]> = [[56, 0], [330, 1.3], [902, 2.1]];
+const PEBBLES: ReadonlyArray<readonly [number, number, number]> = [[100, 514, 8], [230, 518, 5], [370, 512, 6], [505, 518, 8], [650, 513, 5], [780, 517, 6], [890, 513, 5]];
+const WEEDS: ReadonlyArray<readonly [number, number]> = [[30, 0], [330, 1.3], [915, 2.1]];
 const CSS = [
   "@keyframes aq-sway{0%,100%{transform:rotate(-3.5deg)}50%{transform:rotate(3.5deg)}}",
   "@keyframes aq-rise{0%{transform:translateY(0);opacity:0}15%{opacity:.3}100%{transform:translateY(calc(-1 * var(--rise,120px)));opacity:0}}",
@@ -274,7 +281,7 @@ const SHARDS = Array.from({ length: 26 }, (_, k) => {
 });
 const SPRAY = Array.from({ length: 7 }, (_, k) => { const a = -0.3 - (k * Math.PI * 0.9) / 7; return { dx: Math.round(Math.cos(a) * (50 + k * 12)), dy: Math.round(Math.sin(a) * (60 + (k % 3) * 20)) }; });
 /** The tank's front frame with a jagged gap in the top centre (after the glass has shattered). */
-const BROKEN_FRAME = "M562 150H912a8 8 0 0 1 8 8V502a8 8 0 0 1-8 8H48a8 8 0 0 1-8-8V158a8 8 0 0 1 8-8H398M398 150l6 7-4 6M562 150l-6 8 4 6";
+const BROKEN_FRAME = "M562 12H940a8 8 0 0 1 8 8V520a8 8 0 0 1-8 8H20a8 8 0 0 1-8-8V20a8 8 0 0 1 8-8H398M398 12l6 7-4 6M562 12l-6 8 4 6";
 
 const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}...` : s);
 
@@ -394,7 +401,7 @@ function place(c: Cand, e: number, phase: FloorPhase, reduced: boolean, continui
   };
 }
 
-export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width, follow = false }: FloorRendererProps): JSX.Element {
+export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow = false }: FloorRendererProps): JSX.Element {
   const uid = useId().replace(/:/g, "");
   const [tick, setTick] = useState(0);
   const [clock, setClock] = useState<{ p: FloorPhase | null; ms: number }>({ p: null, ms: 0 });
@@ -560,11 +567,11 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width,
 
   const followVb = useFollowViewBox(follow ? followBox(pc.x, pc.y, 960, 540) : null, reducedMotion);
   return (
-    <svg viewBox={followVb ?? (width < 640 ? "30 130 900 390" : "0 0 960 540")} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
+    <svg viewBox={followVb ?? "0 0 960 540"} width="100%" role="img" aria-label={summary(script, phase)} style={{ display: "block", height: "auto" }}>
       <style>{CSS}</style>
       <defs>
         <linearGradient id={`${uid}w`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={AQUA.top} /><stop offset="1" stopColor={AQUA.bottom} /></linearGradient>
-        <clipPath id={`${uid}c`}><rect x={TANK.x + 2} y={100} width={TANK.w - 4} height={TANK.y + TANK.h - 102} /></clipPath>
+        <clipPath id={`${uid}c`}><rect x={TANK.x + 2} y={0} width={TANK.w - 4} height={TANK.y + TANK.h - 2} /></clipPath>
       </defs>
       <rect width={960} height={540} rx={18} fill={PAL.ink} />
       <g aria-hidden="true">
@@ -576,8 +583,8 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width,
             {SAND.map(([x, y]) => <rect key={`${x}-${y}`} x={TANK.x + 1 + x} y={SAND_Y + y} width={10} height={10} fill={AQUA.sandB} opacity={0.55} />)}
             {PEBBLES.map(([x, y, s]) => <rect key={x} x={x} y={y} width={s} height={s - 2} fill={PAL.muted} opacity={0.5} />)}
           </g>
-          {reducedMotion ? null : <><Bubbles x={165} y={488} n={3} rise={260} dur={9} /><Bubbles x={705} y={488} n={3} rise={260} dur={11} /></>}
-          <g shapeRendering="crispEdges" opacity={0.7}>
+          {reducedMotion ? null : <><Bubbles x={165} y={SAND_Y - 2} n={3} rise={400} dur={9} /><Bubbles x={705} y={SAND_Y - 2} n={3} rise={400} dur={11} /></>}
+          <g shapeRendering="crispEdges" opacity={0.7} transform={WALL_TF}>
             <path d={WALLS.coralA} fill={REEF.coralA} /><path d={WALLS.coralB} fill={REEF.coralB} /><path d={WALLS.rock} fill={REEF.rock} />
             <path d={WALLS.light} fill="#fff" fillOpacity={0.14} /><path d={WALLS.dark} fill="#000" fillOpacity={0.2} />
           </g>
