@@ -399,6 +399,19 @@ def set_state(state: str):
         ROUND["goal"]["state"] = state
 
 
+async def _report_web_goal(state: str, text: str) -> None:
+    """#449 item 3 PL-4: tell the market where a WEB buyer's goal stands, in plain words (their /buyer goal card shows it).
+    Best effort and never blocks a purchase: a failure logs the exception type only. A chat goal (it has an owner) is skipped."""
+    goal = ROUND.get("goal") or {}
+    if ROUND.get("owner") or not goal.get("id") or not goal.get("market_buyer_id"):
+        return
+    try:
+        await asyncio.to_thread(market_clients()[1].set_goal_state, goal["id"], state, text)
+    except Exception as exc:
+        import logging
+        logging.getLogger("buyer_agent").warning(f"web goal {goal['id']}: could not report {state} ({type(exc).__name__})")
+
+
 @chat.on_message(ChatMessage)
 async def on_chat(ctx: Context, sender: str, msg: ChatMessage):
     CHAT_DIAG.inbound(msg.msg_id, sender, ctx.session, ROUND.get("need", {}).get("id", ""))
@@ -663,6 +676,13 @@ async def adopt_open_goal(ctx: Context) -> bool:
         ctx.logger.warning(f"Open goal {row.get('id')} has nothing left to buy; marked handled")
         _give_up(ctx, "has nothing to buy")
         return False
+    # #449 item 3 PL-9: first writer wins. A claimed goal leaves every agent's poll; a refused claim means another agent has it
+    # (or the market is unreachable, and the next poll tries again), so this agent hunts nothing.
+    try:
+        await asyncio.to_thread(market_clients()[1].claim_goal, row["id"])
+    except Exception as exc:
+        ctx.logger.warning(f"Open goal {row.get('id')} not claimed ({type(exc).__name__}); skipped")
+        return False
     ROUND.clear()
     ROUND.update(owner=None, owner_context=None, goal=goal, owned=[], need=need, bids=[], personas={}, cards={},
                  attempts=0, last_sent={}, retired_need_ids=[], market_goal_posted=True, received_bids={})
@@ -670,6 +690,10 @@ async def adopt_open_goal(ctx: Context) -> bool:
     if started:
         GOAL_ATTEMPTS.pop(row["id"], None)
         _give_up(ctx, "hunted")
+    elif ROUND.get("phase") == "done":
+        # The goal is claimed, so no poll will offer it again: end it here instead of leaving it HUNTING for ever.
+        _give_up(ctx, "could not start")
+        await _report_web_goal("FAILED", "We could not start your search. Nothing was paid.")
     else:
         _failed()
     return started
@@ -740,6 +764,7 @@ async def fail_round(ctx: Context, why: str, *, always_notify: bool = False):
     set_state(state)
     if state == "PAUSED":
         ROUND["phase"] = "done"
+        await _report_web_goal("PAUSED", f"We paused your search after {ROUND['attempts']} rounds without a deal. Nothing was paid.")
         await tell_owner(ctx, f"{why} That was {ROUND['attempts']} rounds without a deal, so I paused this goal. "
                               f"Send your goal again to restart.")
         return
@@ -895,6 +920,7 @@ async def tick(ctx: Context):
         set_state("EXPIRED")
         ROUND["phase"] = "done"
         ROUND["round_token"] = uuid4().hex
+        await _report_web_goal("EXPIRED", "Your deadline passed before a deal closed. Nothing was paid.")
         await tell_owner(ctx, f"Your deadline ({ROUND['goal']['deadline'][:10]}) passed before a deal closed. "
                               f"Goal EXPIRED; nothing ordered. Send it again with a new date to keep hunting.")
         return
@@ -1108,6 +1134,9 @@ def _is_web_buyer(buyer_id, owner) -> bool:
     return str(buyer_id or "").startswith("b_") or not owner
 
 
+ISSUED_APPROVAL_CODES: dict[str, str] = {}  # mandate hash -> the code issued for its call; never stored, logged or sent
+
+
 async def _phone_approval(transaction: dict, send_private, client, service, buyer_name: str = "there"):
     """The only approval: the owner speaks a one-time code on a phone call (buyer.checkout.approve_offer).
     The private chat shows the code and the outcome; no chat text or typed code is ever accepted as approval."""
@@ -1119,6 +1148,7 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
     web = _is_web_buyer(buyer_id, (transaction.get("deal") or {}).get("owner_sender"))
 
     def on_code(code: str) -> None:
+        ISSUED_APPROVAL_CODES[transaction["mandate"]["hash"]] = code  # #449 item 3 RT-11: record_approval repeats it. In memory only.
         try:  # every buyer: the market shows the code on /buyer. Never log the code.
             market_clients()[1].issue_approval_code(transaction["mandate"]["hash"], code)
         except Exception:
@@ -1270,6 +1300,8 @@ async def _pay_web_purchase(ctx: Context, transaction: dict, mandate: dict, orde
     log.info(f"web buyer {transaction['buyer_id']}: paid deal {transaction['deal_id']}, receipt {charge_id} "
              f"({'Stripe test mode' if stripe_test else 'SIM stub, no money moved'})")
     ROUND.update(transaction=transaction, mandate=mandate, order=order, pending_hold=False, phase="done")
+    await _report_web_goal("DONE", f"Paid in Stripe test mode. Receipt {charge_id}." if stripe_test
+                           else f"Test purchase recorded, no money moved. Receipt {charge_id}.")
 
 
 async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: dict, *, web: bool = False) -> None:
@@ -1309,6 +1341,10 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 ROUND["transaction"] = None
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
+            if web:
+                has_phone = await asyncio.to_thread(lambda: bool((market_clients()[1].buyer_contact(transaction["buyer_id"]) or {}).get("phone")))
+                await _report_web_goal("FAILED", "We could not place the approval call. Nothing was paid." if has_phone else
+                                       "We could not call you: there is no phone number on your account. Nothing was paid.")
             return
         if delegation_allowed(transaction) and not web:
             result = await _delegated_approval(ctx, transaction, send_private, client, _approval_service(), buyer_name)
@@ -1320,7 +1356,14 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"  # terminal: recovery ignores it, so a restart cannot wedge the agent
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
-            if any(t.get("outcome") == "CallLimited" for t in (result.trace or [])):   # #449 item 1: rate cap hit, never re-dialled
+            limited = any(t.get("outcome") == "CallLimited" for t in (result.trace or []))   # #449 item 1: rate cap hit, never re-dialled
+            if web:
+                why = str(getattr(result, "reason", "") or "").split(":", 1)[0]
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT if limited
+                                       else "The code you said did not match. Nothing was paid." if why in ("wrong_code", "no_code")
+                                       else "The approval call was not approved. Nothing was paid." if transaction["phase"] == "denied"
+                                       else "We could not reach you for the approval call. Nothing was paid.")
+            if limited:
                 await tell_owner(ctx, BETA_LIMIT_TEXT)
                 return
             await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
@@ -1344,7 +1387,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         method = "voice_code"
         market_status = buyer_market.record_approval(mandate_hash=mandate["hash"], method=method,
                                                        approved_by=transaction["buyer_id"],
-                                                       voice_approval_id=record["id"])
+                                                       voice_approval_id=record["id"],
+                                                       code=ISSUED_APPROVAL_CODES.get(mandate["hash"], ""))
         if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
                 or (not web and not market_status.get("approved_at"))):  # the referee cannot read the buyer view back
             raise MarketBridgeError("market_approval_readback_mismatch")
@@ -1369,6 +1413,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             import logging
             logging.getLogger("buyer_agent").warning(
                 f"web buyer {transaction.get('buyer_id')}: approval failed ({type(exc).__name__}); round released")
+            receipt = transaction.get("payment_ref")
+            await _report_web_goal("FAILED", f"Your payment went through (receipt {receipt}) but we could not finish the order." if receipt
+                                   else "Something went wrong on our side. Nothing was paid.")
             return
         if transaction.get("phase") == "approved":
             transaction["phase"] = "uncertain"
@@ -1380,6 +1427,7 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         ctx.logger.warning(f"Private approval or Market readback failed: {type(exc).__name__}")
         await tell_owner(ctx, "The approval result could not be confirmed safely. This deal remains held; no new purchase will start.")
     finally:
+        ISSUED_APPROVAL_CODES.pop(transaction["mandate"]["hash"], None)
         if ROUND.get("approval_wait_key") == key:
             ROUND.pop("approval_wait_key", None)
 
@@ -1493,6 +1541,7 @@ async def _auto_web_approval(ctx: Context, n: int) -> None:
     except Exception as exc:
         ctx.logger.warning(f"Web purchase approval could not be prepared: {type(exc).__name__}")
         ROUND["phase"] = "done"
+        await _report_web_goal("FAILED", "Something went wrong on our side. Nothing was paid.")
         return
     await _run_owner_approval(ctx, n, "", transaction, web=True)
     if ROUND.get("phase") == "pending_approval":  # not approved (no phone, denied, no answer): free the hunt for the next web goal

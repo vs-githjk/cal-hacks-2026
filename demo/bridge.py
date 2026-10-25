@@ -294,7 +294,7 @@ def plan(run: dict, *, delay: float = 2.0, buyer_id: str = DB_BUYER_ID, rounds: 
     # The payment is the SIM stub unless --live-call --stripe's charger replaces it after an approved call (#193).
     steps.append(Step("referee", "record_approval",
                       {"mandate_hash": m["hash"], "method": "voice_code", "approved_by": buyer_id,
-                       "voice_approval_id": ""},   # #240: the call's VoiceApproval id, filled in by execute after an approved call
+                       "voice_approval_id": "", "code": ""},   # #240: the call's VoiceApproval id; #449 item 3: the code the call checked. Both filled in by execute after an approved call
                       pause=True, gate="approval_call",
                       say=("a real phone call: the buyer says the code from the screen and 'approve'; the referee relays the verified code"
                            if live_call else
@@ -462,7 +462,7 @@ def execute(steps: list[Step], clients: dict, *, delay: float, say: Callable[[St
                         note(f"deny_approval not recorded ({e}); the hold expires by itself after 2 minutes")
                 break
             note(f"live call APPROVED (call {outcome['call_id']}): the referee records the approval, then the payment")
-            s = replace(s, args={**s.args, "voice_approval_id": outcome.get("voice_approval_id") or ""})
+            s = replace(s, args={**s.args, "voice_approval_id": outcome.get("voice_approval_id") or "", "code": outcome.get("code") or ""})
         client = clients[s.actor]
         t_call = clock()
         if s.close:
@@ -787,11 +787,14 @@ def make_live_approver(gate: DealGate, client: Any, *, unconfigured: Optional[st
     from pay.replay import NonceStore
     from pay.voice_cartesia import CALL_CODE_TTL_S, run_approval_call
 
+    issued: dict = {}   # #449 item 3 RT-11: the code this call issued; record_approval repeats it. In memory, never printed.
+
     def outcome(approved: bool, reason: Optional[str], call_id: Optional[str] = None, voice_approval_id: Optional[str] = None) -> dict:
         return {"step": "approval_call", "approved": approved, "reason": reason, "call_id": call_id,
-                "voice_approval_id": voice_approval_id}
+                "voice_approval_id": voice_approval_id, "code": issued.get("code", "") if approved else ""}
 
     def to_screen(code: str) -> None:
+        issued["code"] = code
         on_code(code, gate.show_code(code))
 
     def approve(step: Step) -> dict:

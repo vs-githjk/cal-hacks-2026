@@ -818,6 +818,7 @@ class BuildRun:
         self.buyer_name, self.use_stripe, self.env, self.stripe_test = buyer_name, use_stripe, env or {}, stripe_test
         self.out_dir, self._say, self.note, self.sleep, self.clock, self.now = out_dir, say, note, sleep, clock, now
         self.delay, self.bid_window, self.on_code = delay, bid_window, on_code
+        self._call_code = ""   # the code the approval call judged (#449 item 3), set when it is issued
         self.recheck_timeout, self.call_timing, self.real_gpu_round = recheck_timeout, call_timing or {}, real_gpu_round
         self.relay_signals = relay_signals   # demo/crs_relay.py, run right before each round opens (best effort); None in tests
         self.plan_events = list(plan_events or [])
@@ -1470,6 +1471,7 @@ class BuildRun:
         shown: dict[str, bool] = {}
 
         def on_code(code: str) -> None:
+            self._call_code = code   # #449 item 3 RT-11: kept in memory so each mandate's approval can repeat it; never printed or stored
             shown["on_screen"] = self._code_to_buyer_screen(agg, code, total, len(champs), sellers)
             console(code)
         try:
@@ -1554,8 +1556,12 @@ class BuildRun:
             self._full.append(m)
             self.mandates.append({"hash": m["hash"], "dealId": m["deal_id"], "amount": m["amount"], "payee": m["payee"], "part": spec.part})
             if voice_id is not None:
+                # #449 item 3 RT-11: the market checks the code on every approval. The build's one code was issued under the aggregate
+                # hash and is off /buyer now, so it is issued again for this mandate, then the approval repeats it.
+                code = self._call_code
+                referee.call("issue_approval_code", mandate_hash=m["hash"], code=code)
                 referee.call("record_approval", mandate_hash=m["hash"], method="voice_code", approved_by=self.plan.buyer_id,
-                             voice_approval_id=voice_id)
+                             voice_approval_id=voice_id, code=code)
             self.publish()
 
     def _pay(self) -> None:
