@@ -43,12 +43,10 @@ def test_hunt_and_handoff_carry_the_fresh_buyer_id(runtime, monkeypatch):
     buyer.MARKET_BUYER.reset_mock()
     ready_for_requote(buyer)
     buyer.ROUND.update(market_buyer_id=BID)
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_k: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True, "within_allowance": False, "retired": False}
     asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
     tx = buyer.ROUND["transaction"]
     assert tx["buyer_id"] == BID
-    assert buyer.MARKET_BUYER.create_mandate.call_args.kwargs["buyer_id"] == BID
+    assert buyer.MARKET_REFEREE.create_mandate.call_args.kwargs["buyer_id"] == BID  # the referee creates it, never the buyer identity
     assert tx["mandate"]["buyer_id"] == BID
     calls = repr(buyer.MARKET_BUYER.mock_calls) + repr(tx)
     assert "vidyut" not in calls.lower()
@@ -181,9 +179,21 @@ def test_open_web_goal_is_adopted_and_need_posted_by_referee_on_that_goal(runtim
     assert asyncio.run(buyer.adopt_open_goal(Context())) is False  # a round is in progress; the goal is handled
 
 
-def _approval_row(buyer_id=BID, method="voice_code", **over):
-    """#449 item 4 RT-12: the referee's read-back of the stored approval row (camelCase columns)."""
-    return lambda mandate_hash: {"mandateHash": mandate_hash, "method": method, "approvedBy": buyer_id, **over}
+def _approval_row(buyer_id=BID, method="voice_code", mandate_hash=None):
+    """#449 item 4 RT-12: the referee's read-back of the stored approval row, through the REAL bridge's approval_row over an
+    agent_approvals SQL row, so the agent sees exactly the keys production returns (snake_case: mandate_hash, approved_by)."""
+    from market_bridge import MarketBridge
+
+    class _Client:
+        def __init__(self, row): self.row = row
+        def sql(self, _query): return [self.row]
+        def call(self, *_a, **_k): raise AssertionError("no reducer call in a read-back")
+
+    def read(h):
+        row = {"mandateHash": mandate_hash or h, "method": method, "approvedBy": buyer_id, "at": [1], "voiceApprovalId": "va-1"}
+        return MarketBridge("referee", client=_Client(row)).approval_row(h) if (mandate_hash or h) == h else {
+            "mandate_hash": mandate_hash, "method": method, "approved_by": buyer_id, "at": [1], "voice_approval_id": "va-1"}
+    return read
 
 
 def _web_approval(buyer, monkeypatch, issue_error=None, voice=None, approval_row=None):
@@ -230,7 +240,7 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
     assert referee.create_mandate.call_args.kwargs["buyer_id"] == BID
     referee.issue_approval_code.assert_called_once_with(mandate_hash, "424242")
     assert referee.record_approval.call_args.kwargs == {"mandate_hash": mandate_hash, "method": "voice_code", "approved_by": BID,
-                                                        "voice_approval_id": "va-1"}
+                                                        "voice_approval_id": "va-1", "code": "424242"}  # the code issued for this call
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
     assert not any(isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no owner chat message at all
@@ -451,7 +461,7 @@ def test_chat_goal_during_web_round_does_not_wipe_it(runtime):
     assert _adopt(buyer) is True
     buyer.ROUND["phase"] = "waiting"
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, "agent1qchat", "a new GPU under $800 by Friday"))
+    asyncio.run(buyer.handle_text(ctx, "owner", "a new GPU under $800 by Friday"))
     assert buyer.ROUND["goal"]["id"] == "goal-web1" and buyer.ROUND["owner"] is None
     assert buyer.ROUND["phase"] == "waiting"
 
@@ -475,7 +485,9 @@ def _two_goal_rows(buyer):
     return [_open_goal_row(buyer), {**_open_goal_row(buyer), "id": "goal-web2"}]
 
 
-def test_one_always_refused_goal_is_given_up_after_three_tries_and_the_next_goal_is_adopted(runtime):
+def test_one_refused_goal_is_given_up_at_once_reported_failed_and_the_next_goal_is_adopted(runtime):
+    # #449 item 3 PL-9: the claim took the goal off every poll, so it cannot be retried; it is ended and the buyer is told.
+    # (Before, a refused post_need was retried on three polls; that test pinned the old ACTIVE-forever behaviour.)
     buyer, db = runtime
     referee = buyer.MARKET_REFEREE
     referee.open_goals.return_value = _two_goal_rows(buyer)
@@ -486,10 +498,10 @@ def test_one_always_refused_goal_is_given_up_after_three_tries_and_the_next_goal
             raise MarketBridgeError("refused")
 
     referee.post_need.side_effect = post_need
-    for _ in range(3):
-        assert _adopt(buyer) is False
-    assert [c.kwargs["goal_id"] for c in referee.post_need.call_args_list] == ["goal-web1"] * 3
+    assert _adopt(buyer) is False
+    assert [c.kwargs["goal_id"] for c in referee.post_need.call_args_list] == ["goal-web1"]
     assert buyer.buyer_state.goal_handled(db, "goal-web1")
+    assert _state_calls(buyer) == [("goal-web1", "FAILED", "We could not start your search. Nothing was paid.")]
     assert _adopt(buyer) is True
     assert referee.post_need.call_args.kwargs["goal_id"] == "goal-web2"
 
@@ -529,7 +541,7 @@ def test_web_referee_record_failure_frees_the_agent(runtime, monkeypatch, caplog
     assert "424242" not in caplog.text and "+1415" not in caplog.text
     assert _next_web_goal_adopted(buyer, db) is True
     ctx = Context()
-    asyncio.run(buyer.handle_text(ctx, "agent1qchat", "a new GPU under $800 by Friday"))
+    asyncio.run(buyer.handle_text(ctx, "owner", "a new GPU under $800 by Friday"))
     texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
     assert "A buyer session is active" not in texts and "held" not in texts
 
@@ -553,3 +565,337 @@ def test_web_buyer_without_phone_frees_the_agent(runtime, monkeypatch):
     assert not buyer.ROUND.get("pending_hold")
     assert _stored_phases(db) == ["expired"]
     assert _next_web_goal_adopted(buyer, db) is True
+
+
+# ---- #449 item 3: claim before adopting, plain goal-state outcomes, and the issued code on record_approval
+
+def _state_calls(buyer):
+    return [c.args for c in buyer.MARKET_REFEREE.set_goal_state.call_args_list]
+
+
+def test_poller_claims_the_goal_before_adopting_it(runtime):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    assert _adopt(buyer) is True
+    names = [c[0] for c in buyer.MARKET_REFEREE.mock_calls]
+    buyer.MARKET_REFEREE.claim_goal.assert_called_once_with("goal-web1")
+    assert names.index("claim_goal") < names.index("post_need")
+
+
+def test_poller_skips_a_goal_whose_claim_fails_and_hunts_nothing(runtime):
+    buyer, db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+    buyer.MARKET_REFEREE.claim_goal.side_effect = MarketBridgeError("market_reducer_failed")
+    assert _adopt(buyer) is False
+    assert not buyer.MARKET_REFEREE.post_need.called and not buyer.MARKET_REFEREE.open_round.called
+    assert not buyer.ROUND.get("goal")
+    assert not buyer.buyer_state.goal_handled(db, "goal-web1")  # a flaky claim is retried on the next poll
+
+
+def test_a_claimed_goal_whose_round_cannot_start_is_reported_as_failed(runtime):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.open_goals.return_value = [_open_goal_row(buyer)]
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "closed"}  # round_open_readback_invalid
+    assert _adopt(buyer) is False
+    (goal_id, state, text), = _state_calls(buyer)
+    assert (goal_id, state) == ("goal-web1", "FAILED") and "Nothing was paid" in text
+
+
+def test_web_no_phone_reports_a_terminal_state_in_plain_words(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b="": (None, "not_configured", "there"))
+    buyer.MARKET_REFEREE.buyer_contact.side_effect = lambda *_a: {"display_name": "Web", "phone": None}
+    _web_approval(buyer, monkeypatch)
+    (goal_id, state, text), = _state_calls(buyer)
+    assert goal_id == buyer.ROUND["goal"]["id"] and state == "FAILED"
+    assert text == "We could not call you: there is no phone number on your account. Nothing was paid."
+    assert not buyer.MARKET_REFEREE.record_payment.called
+
+
+@pytest.mark.parametrize("kind,text", [("denied", "The approval call was not approved. Nothing was paid."),
+                                        ("paused", "We could not reach you for the approval call. Nothing was paid.")])
+def test_web_denied_or_unanswered_call_reports_failed(runtime, monkeypatch, kind, text):
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch, voice=_voice(kind))
+    assert _state_calls(buyer) == [(buyer.ROUND["goal"]["id"], "FAILED", text)]
+
+
+def test_web_wrong_code_reports_failed_in_plain_words(runtime, monkeypatch):
+    from pay.voice_cartesia import VoiceResult
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch, voice=VoiceResult(False, "wrong_code", record={"id": "va-3", "channel": "phone", "result": "denied"}))
+    (_gid, state, text), = _state_calls(buyer)
+    assert state == "FAILED" and text == "The code you said did not match. Nothing was paid."
+
+
+def test_web_market_failure_reports_failed(runtime, monkeypatch):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.record_approval.side_effect = MarketBridgeError("down")
+    _web_approval(buyer, monkeypatch)
+    (_gid, state, text), = _state_calls(buyer)
+    assert state == "FAILED" and text == "Something went wrong on our side. Nothing was paid."
+
+
+def test_web_paid_purchase_reports_done_with_only_the_receipt(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    _fake_stripe(monkeypatch)
+    _web_approval(buyer, monkeypatch)
+    assert _state_calls(buyer) == [(buyer.ROUND["goal"]["id"], "DONE", "Paid in Stripe test mode. Receipt pi_test_1.")]
+
+
+def test_web_goal_state_report_is_best_effort_and_logs_only_the_type(runtime, monkeypatch, caplog):
+    buyer, db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    _fake_stripe(monkeypatch)
+    buyer.MARKET_REFEREE.set_goal_state.side_effect = MarketBridgeError("secret endpoint response")
+    with caplog.at_level("WARNING", logger="buyer_agent"):
+        ctx, _used, _make = _web_approval(buyer, monkeypatch)
+    assert len(_orders(buyer, ctx)) == 1 and _stored_phases(db) == ["settled"]  # never blocks the purchase
+    assert "MarketBridgeError" in caplog.text and "secret endpoint" not in caplog.text
+
+
+def test_chat_goals_never_report_a_goal_state(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_x")
+    _fake_stripe(monkeypatch)
+    ready_for_requote(buyer)
+    buyer.ROUND["goal"]["state"] = "HUNTING"
+    asyncio.run(buyer._report_web_goal("DONE", "x"))  # ROUND has an owner: a chat goal
+    assert not buyer.MARKET_REFEREE.set_goal_state.called
+
+
+def test_web_paused_after_three_rounds_reports_paused(runtime):
+    buyer, _db = runtime
+    buyer.ROUND.update(goal={"id": "goal-web1", "market_buyer_id": BID, "state": "HUNTING"}, owner=None, attempts=2)
+    asyncio.run(buyer.fail_round(Context(), "No eligible bid."))
+    assert _state_calls(buyer) == [("goal-web1", "PAUSED", "We paused your search after 3 rounds without a deal. Nothing was paid.")]
+
+
+# ---- #449 item 1: approval calls are limited to an allowlist during the beta ----
+def _beta_env(monkeypatch, allow="+14155550999"):
+    monkeypatch.setattr("pay.voice_cartesia.load_env", lambda *a, **k: {"APPROVAL_CALL_ALLOWLIST": allow})
+
+
+def test_profile_phone_off_the_allowlist_builds_no_client_and_logs_no_digits(runtime, monkeypatch, caplog):
+    buyer, _db = runtime
+    monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "")
+    buyer.MARKET_REFEREE.buyer_contact.return_value = {"display_name": "Asha", "phone": "+14155550111"}
+    _beta_env(monkeypatch)
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make, caplog.at_level("INFO"):
+        assert buyer._approval_call(BID) == (None, "beta_limited", "Asha")
+    assert not make.called
+    assert BID in caplog.text and not re.search(r"\d{7,}", caplog.text.replace(BID, ""))
+    _beta_env(monkeypatch, "+14155550111")
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client):
+        assert buyer._approval_call(BID)[1] == ""
+
+
+def test_web_buyer_off_the_allowlist_gets_no_call_and_frees_the_agent(runtime, monkeypatch, caplog):
+    buyer, db = runtime
+    from buyer import checkout
+    called = []
+    monkeypatch.setattr(checkout, "approve_offer", lambda *a, **k: called.append(1))
+    ready_for_requote(buyer)
+    buyer.ROUND.update(owner=None, market_buyer_id=BID)
+    buyer.ROUND["goal"]["market_buyer_id"] = BID
+    referee = buyer.MARKET_REFEREE
+    referee.buyer_contact.return_value = {"display_name": "Web", "phone": "+14155550111"}
+    referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    monkeypatch.setattr(buyer, "_approval_service", lambda: object())
+    _beta_env(monkeypatch)
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make, caplog.at_level("INFO"):
+        asyncio.run(buyer._auto_web_approval(Context(), 1))
+    assert not called and not make.called
+    assert buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None and not buyer.ROUND.get("pending_hold")
+    assert _stored_phases(db) == ["expired"]
+    assert not re.search(r"\d{7,}", caplog.text.replace(BID, "")) and "4155550111" not in caplog.text
+    assert [c[1:] for c in _state_calls(buyer)] == [("FAILED", buyer.BETA_LIMIT_TEXT)]  # #455: the web buyer is told
+    assert _next_web_goal_adopted(buyer, db) is True
+
+
+def test_chat_owner_off_the_allowlist_is_told_the_beta_limit(runtime, monkeypatch):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    buyer.ROUND["market_buyer_id"] = BID
+    buyer.MARKET_REFEREE.buyer_contact.return_value = {"display_name": "Asha", "phone": "+14155550111"}
+    monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "")
+    monkeypatch.setattr(buyer, "_approval_service", lambda: object())
+    _beta_env(monkeypatch)
+    ctx = Context()
+    with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make:
+        transaction = buyer._create_pending_transaction(1)
+        asyncio.run(buyer._run_owner_approval(ctx, 1, buyer.ROUND["owner"], transaction))
+    texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+    assert "limited during the beta" in texts and "Nothing was paid" in texts and "4155550111" not in texts
+    assert not make.called and buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None
+    assert _stored_phases(db) == ["expired"]
+
+
+def _real_service(buyer, monkeypatch):
+    from buyer import state
+    from pay.approval import ApprovalService
+    from pay.replay import NonceStore
+    service = ApprovalService("throwaway-test-secret-0123456789", store=NonceStore(str(state.DEFAULT_DB_PATH)))
+    monkeypatch.setattr(buyer, "_approval_service", lambda: service)
+
+
+class _Limited:
+    approval_call_to = "+14155550111"
+
+    def __init__(self):
+        self.attempts = []
+
+    def create_call(self, to, variables):
+        from pay.voice_cartesia import CallLimited
+        self.attempts.append(to)
+        raise CallLimited("rate_limited")
+
+
+def test_a_rate_limited_dial_is_final_and_not_retried_on_the_web_path(runtime, monkeypatch):
+    buyer, db = runtime
+    limited = _Limited()
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b: (limited, "", "Web"))
+    _real_service(buyer, monkeypatch)
+    ready_for_requote(buyer)
+    buyer.ROUND.update(owner=None, market_buyer_id=BID)
+    buyer.ROUND["goal"]["market_buyer_id"] = BID
+    asyncio.run(buyer._auto_web_approval(Context(), 1))
+    assert len(limited.attempts) == 1
+    assert not buyer.MARKET_REFEREE.record_approval.called
+    assert buyer.ROUND["phase"] == "done" and _stored_phases(db) == ["expired"]
+    assert [c[1:] for c in _state_calls(buyer)] == [("FAILED", buyer.BETA_LIMIT_TEXT)]  # #455: the web buyer is told
+
+
+def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, monkeypatch):
+    buyer, db = runtime
+    limited = _Limited()
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b: (limited, "", "Asha"))
+    _real_service(buyer, monkeypatch)
+    ready_for_requote(buyer)
+    buyer.ROUND["market_buyer_id"] = BID
+    ctx = Context()
+    transaction = buyer._create_pending_transaction(1)
+    asyncio.run(buyer._run_owner_approval(ctx, 1, buyer.ROUND["owner"], transaction))
+    texts = " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+    assert len(limited.attempts) == 1 and "limited during the beta" in texts and "Nothing was paid" in texts
+    assert not buyer.MARKET_REFEREE.record_approval.called
+
+def test_a_chat_call_is_never_dialled_when_its_code_cannot_be_issued(runtime, monkeypatch):
+    # #455: record_approval needs the code the market issued; without that row the call could never approve, so never ring
+    buyer, _db = runtime
+    dialled = _Limited()
+    monkeypatch.setattr(buyer, "_approval_call", lambda _b: (dialled, "", "Asha"))
+    _real_service(buyer, monkeypatch)
+    ready_for_requote(buyer)   # the chat owner (market buyer "vidyut", a pinned owner), not a b_ web buyer
+    buyer.MARKET_REFEREE.issue_approval_code.side_effect = RuntimeError("market down")
+    transaction = buyer._create_pending_transaction(1)
+    asyncio.run(buyer._run_owner_approval(Context(), 1, buyer.ROUND["owner"], transaction))
+    assert dialled.attempts == [] and not buyer.MARKET_REFEREE.record_approval.called
+
+
+STRANGER = "agent1qstranger"
+GOAL_TEXT = "a new RTX 4070 Super under $800 by Friday"  # a named card: a bare GPU gets a question (RT-15)
+
+
+@pytest.fixture(autouse=True)
+def _forget_strangers():
+    mod = sys.modules.get("buyer_agent")
+    if mod is not None and hasattr(mod, "STRANGER_TOLD"):
+        mod.STRANGER_TOLD.clear()
+
+
+def _texts(ctx):
+    return " ".join(getattr(m.content[0], "text", "") for _to, m in ctx.sent if hasattr(m, "content"))
+
+
+def test_non_owner_chat_goal_gets_one_friendly_reply_and_touches_nothing(runtime):
+    """#449 item 2: a stranger's complete goal never posts a goal or need, opens a round or changes ROUND."""
+    buyer, db = runtime
+    before = dict(buyer.ROUND)
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
+    assert "fishmarket.dev/start" in _texts(ctx) and "owner only" in _texts(ctx)
+    assert len(ctx.sent) == 1
+    assert not buyer.MARKET_BUYER.mock_calls and not buyer.MARKET_REFEREE.mock_calls
+    assert buyer.ROUND == before == {}
+    assert db.execute("SELECT COUNT(*) FROM goals").fetchone()[0] == 0
+
+
+def test_non_owner_is_refused_even_while_a_round_or_hold_is_live_and_never_told_it_is_busy(runtime):
+    buyer, _db = runtime
+    buyer.ROUND.update(owner="owner", phase="bidding", pending_hold=True, goal={"state": "HUNTING"})
+    before = dict(buyer.ROUND)
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
+    assert "fishmarket.dev/start" in _texts(ctx) and "session is active" not in _texts(ctx)
+    assert buyer.ROUND == before and not buyer.MARKET_BUYER.mock_calls and not buyer.MARKET_REFEREE.mock_calls
+
+
+def test_non_owner_chat_is_acknowledged_then_refused_by_on_chat(runtime):
+    buyer, _db = runtime
+    ctx = Context()
+    msg = buyer.ChatMessage(content=[buyer.TextContent(type="text", text=GOAL_TEXT)])
+    asyncio.run(buyer.on_chat(ctx, STRANGER, msg))
+    assert any(isinstance(m, buyer.ChatAcknowledgement) for _to, m in ctx.sent)
+    assert "fishmarket.dev/start" in _texts(ctx) and not buyer.ROUND
+
+
+def test_unpinned_owner_env_refuses_every_chat_sender_but_not_the_web_chat(runtime, monkeypatch):
+    buyer, _db = runtime
+    monkeypatch.delenv("MARKET_BUYER_OWNER_SENDER")
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "owner", GOAL_TEXT))
+    assert "fishmarket.dev/start" in _texts(ctx) and not buyer.ROUND
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    asyncio.run(buyer.handle_text(Context(), buyer.WEB, GOAL_TEXT))
+    assert buyer.ROUND["owner"] == buyer.WEB  # the local web chat path is exempt
+
+
+def test_owner_chat_goal_still_starts_a_round(runtime):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.round_status.return_value = {"state": "open"}
+    buyer.MARKET_BUYER_ID = BID
+    ctx = Context()
+    asyncio.run(buyer.handle_text(ctx, "owner", GOAL_TEXT))
+    assert buyer.ROUND["owner"] == "owner" and buyer.ROUND["phase"] == "bidding"
+    assert "fishmarket.dev/start" not in _texts(ctx)
+
+
+def test_web_goal_is_adopted_at_once_right_after_a_refused_stranger_goal(runtime):
+    buyer, db = runtime
+    asyncio.run(buyer.handle_text(Context(), STRANGER, GOAL_TEXT))
+    assert not buyer.ROUND  # the stranger never took the round
+    assert _next_web_goal_adopted(buyer, db) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def test_unconfigured_owner_approval_refusal_is_terminal_and_frees_the_next_web_goal(runtime, monkeypatch):
+    """#449 item 2: the refusal used to leave phase 'decided', which round_finished() never counts as finished."""
+    buyer, db = runtime
+    monkeypatch.delenv("MARKET_BUYER_OWNER_SENDER")
+    ready_for_requote(buyer)
+    asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
+    assert buyer.ROUND["phase"] == "done" and buyer.round_finished() is True
+    assert not buyer.ROUND.get("transaction") and not buyer.ROUND.get("pending_hold")
+    assert _next_web_goal_adopted(buyer, db) is True
+    assert buyer.MARKET_REFEREE.post_need.call_args.kwargs["goal_id"] == "goal-web2"
+
+
+def test_never_joined_store_refusal_at_requote_is_terminal_and_frees_the_next_web_goal(runtime, monkeypatch):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    monkeypatch.setattr(buyer.not_partners, "orderable", lambda _bid: False)
+    asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
+    assert buyer.ROUND["phase"] == "done" and buyer.round_finished() is True
+    assert not buyer.MARKET_BUYER.create_mandate.called
+    assert _next_web_goal_adopted(buyer, db) is True
+
+
+def test_a_stranger_is_answered_once_not_in_a_loop(runtime):
+    buyer, _db = runtime
+    ctx = Context()
+    for _ in range(3):
+        asyncio.run(buyer.handle_text(ctx, STRANGER, GOAL_TEXT))
+    assert len(ctx.sent) == 1 and not buyer.ROUND

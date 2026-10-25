@@ -426,7 +426,8 @@ def read_buyer_goal(client: Any, buyer_id: str) -> tuple[dict, list[dict]]:
     mine = [r for r in rows if r[1] == buyer_id]
     if rows and not mine:
         raise GoalNotFound(f"the goals this client can read belong to {rows[0][1]}, not {buyer_id}: pass the identity token of {buyer_id} with --buyer-token")
-    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] == "ACTIVE"), key=lambda r: _iso(r[6]), reverse=True)
+    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] in ("ACTIVE", "HUNTING")),  # #455: claim_goal makes it HUNTING
+                  key=lambda r: _iso(r[6]), reverse=True)
     if not live:
         why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE build_by_date goal"
         raise GoalNotFound(f"no goal to build from for {buyer_id}: {why}")
@@ -818,6 +819,7 @@ class BuildRun:
         self.buyer_name, self.use_stripe, self.env, self.stripe_test = buyer_name, use_stripe, env or {}, stripe_test
         self.out_dir, self._say, self.note, self.sleep, self.clock, self.now = out_dir, say, note, sleep, clock, now
         self.delay, self.bid_window, self.on_code = delay, bid_window, on_code
+        self._call_code = ""   # the code the approval call judged (#449 item 3), set when it is issued
         self.recheck_timeout, self.call_timing, self.real_gpu_round = recheck_timeout, call_timing or {}, real_gpu_round
         self.relay_signals = relay_signals   # demo/crs_relay.py, run right before each round opens (best effort); None in tests
         self.plan_events = list(plan_events or [])
@@ -1473,6 +1475,7 @@ class BuildRun:
         shown: dict[str, bool] = {}
 
         def on_code(code: str) -> None:
+            self._call_code = code   # #449 item 3 RT-11: kept in memory so each mandate's approval can repeat it; never printed or stored
             shown["on_screen"] = self._code_to_buyer_screen(agg, code, total, len(champs), sellers)
             console(code)
         try:
@@ -1557,8 +1560,12 @@ class BuildRun:
             self._full.append(m)
             self.mandates.append({"hash": m["hash"], "dealId": m["deal_id"], "amount": m["amount"], "payee": m["payee"], "part": spec.part})
             if voice_id is not None:
+                # #449 item 3 RT-11: the market checks the code on every approval. The build's one code was issued under the aggregate
+                # hash and is off /buyer now, so it is issued again for this mandate, then the approval repeats it.
+                code = self._call_code
+                referee.call("issue_approval_code", mandate_hash=m["hash"], code=code)
                 referee.call("record_approval", mandate_hash=m["hash"], method="voice_code", approved_by=self.plan.buyer_id,
-                             voice_approval_id=voice_id)
+                             voice_approval_id=voice_id, code=code)
             self.publish()
 
     def _pay(self) -> bool:
@@ -1730,6 +1737,9 @@ def cartesia_for(buyer_id: str, env: dict, note: Callable[[str], None], lookup: 
     except vc.NoPhone as e:
         note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
         return None, "no_phone"
+    except vc.CallLimited as e:   # #449 item 1
+        note(f"live call: {e}, so a build above the allowance is DENIED: no call, no mandate, nothing is paid")
+        return None, "call_limited"
     except vc.CartesiaError as e:
         note(f"live call: Cartesia NOT configured ({e}), so a build above the allowance is DENIED and nothing is paid")
         return None, "not_configured"

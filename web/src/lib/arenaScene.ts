@@ -7,6 +7,7 @@ import { formatMoney } from "./money.ts";
 import { safeUrl } from "./url.ts";
 import { asOrigin, type Origin } from "./screens.ts";
 import { buildBracket, roundWinner, type Bracket, type Knock } from "./bracket.ts";
+import { SHIELD } from "./brand.ts";
 
 type Ts = { microsSinceUnixEpoch: bigint }; // spacetimedb Timestamp, structurally, so node tests need no runtime import
 
@@ -188,7 +189,7 @@ function beatsOf(bracket: Bracket, offers: readonly SceneOffer[], winner: string
     i += 1;
     beats.push({ kind, name: `Round ${i}`, focus: [...lead, o.key], advancing: [], knocked: [knock], caption: caption(i), ms: MS.round });
   };
-  for (const o of shielded) round(o, "gate", ["shield"], o.knock!, (r) => `Round ${r}: Bazaar Shield blocks ${o.name}.`);
+  for (const o of shielded) round(o, "gate", ["shield"], o.knock!, (r) => `Round ${r}: ${SHIELD} blocks ${o.name}.`);
   for (const o of refused) round(o, "gate", ["referee"], o.knock!, (r) => `Round ${r}: ${o.name} is out, ${lower(o.knock!.reasonText)}.`);
   for (const o of vetoed) round(o, "advocate", ["advocate"], o.knock!, (r) => `Round ${r}: the advocate vetoes ${o.name}${o.knock!.sourceUrl ? ", with a cited source" : ""}.`);
   for (const o of losers) {

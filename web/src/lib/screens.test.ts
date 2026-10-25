@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -370,4 +370,28 @@ test("sealed rounds: a knocked-out row held back mid-round (rank 0, landed 0, no
   assert.equal(bids[0]!.recommendation, "ineligible");
   assert.equal(bids[0]!.why, "knocked out: last placed this stage");
   assert.deepEqual(linesFromRows([held], [], round({ state: "open", closedAt: undefined })), []);
+});
+
+// ---- #449 item 3 PL-4: the goal card shows the goal's own state and its latest note, not ACTIVE forever.
+
+test("goalsForBuyer: each goal carries its own state and the text of the latest note written for that goal", () => {
+  const goals = [goalRow({ id: "g1", state: "HUNTING" }), goalRow({ id: "g2", state: "FAILED", createdAt: ts(T0 + 1000) })];
+  const notes = [
+    { id: 1n, goalId: "g1", text: "Goal set. The agent is hunting." },
+    { id: 3n, goalId: "g1", text: "Calling you now to approve." },
+    { id: 2n, goalId: "g2", text: "We could not call you: there is no phone number on your account. Nothing was paid." },
+    { id: 9n, goalId: "", text: "Approval denied elsewhere." },
+  ];
+  const [g1, g2] = goalsForBuyer(goals, [], undefined, "buyer-a", notes); // the open goal sorts first
+  assert.equal(g1.state, "HUNTING");
+  assert.equal(g1.latestNote, "Calling you now to approve.");
+  assert.equal(g2.state, "FAILED");
+  assert.match(g2.latestNote ?? "", /no phone number/);
+  assert.equal(goalsForBuyer(goals, [], undefined, "buyer-a")[0].latestNote, "", "no notes, no line");
+});
+
+test("stateLabel: FAILED and the other states read in plain words", () => {
+  assert.equal(stateLabel("FAILED"), "Could not finish");
+  assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
+  assert.equal(stateLabel("HUNTING"), "hunting");
 });

@@ -1,6 +1,6 @@
 // Module entry: registers reducers and views. Bodies live in market.ts (tested in market.test.ts).
 import { t } from 'spacetimedb/server';
-import spacetimedb, { AgentBuyerContactRow, BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
+import spacetimedb, { AgentApprovalRow, AgentBuyerContactRow, AgentPaymentRow, BidLine, GoalItemArg, NeedItemArg, StrategyStep, TelemetryAgentRow, TelemetryRow, allowance, bid, buyerProfile, goal, goalItem, lossReport, notification, pairAttempt, role, roundTimer } from './schema';
 import * as m from './market';
 
 export default spacetimedb;
@@ -44,6 +44,9 @@ export const post_goal = spacetimedb.reducer(
   },
   (ctx, a) => m.postGoal(ctx, a),
 );
+
+export const claim_goal = spacetimedb.reducer({ goalId: t.string() }, (ctx, a) => m.claimGoal(ctx, a));
+export const set_goal_state = spacetimedb.reducer({ goalId: t.string(), state: t.string(), text: t.string() }, (ctx, a) => m.setGoalState(ctx, a));
 
 export const open_round = spacetimedb.reducer({ roundId: t.string(), needId: t.string(), windowS: t.u32() }, (ctx, a) => m.openRound(ctx, a));
 
@@ -92,7 +95,7 @@ export const create_mandate = spacetimedb.reducer(
 );
 
 export const record_approval = spacetimedb.reducer(
-  { mandateHash: t.string(), method: t.string(), approvedBy: t.string(), voiceApprovalId: t.string() },
+  { mandateHash: t.string(), method: t.string(), approvedBy: t.string(), voiceApprovalId: t.string(), code: t.string() },
   (ctx, a) => m.recordApproval(ctx, a),
 );
 
@@ -186,5 +189,7 @@ export const telemetry_agent = spacetimedb.anonymousView({ name: 'telemetry_agen
 
 /** #374: referee only (the agents' identity); empty for everyone else. */
 export const agent_buyer_contact = spacetimedb.view({ name: 'agent_buyer_contact', public: true }, t.array(AgentBuyerContactRow), (ctx) => m.agentBuyerContactView(ctx));
+export const agent_approvals = spacetimedb.view({ name: 'agent_approvals', public: true }, t.array(AgentApprovalRow), (ctx) => m.agentApprovalsView(ctx));
+export const agent_payments = spacetimedb.view({ name: 'agent_payments', public: true }, t.array(AgentPaymentRow), (ctx) => m.agentPaymentsView(ctx));
 export const agent_open_goals = spacetimedb.view({ name: 'agent_open_goals', public: true }, t.array(goal.rowType), (ctx) => m.agentOpenGoalsView(ctx));
 export const agent_goal_items = spacetimedb.view({ name: 'agent_goal_items', public: true }, t.array(goalItem.rowType), (ctx) => m.agentGoalItemsView(ctx));

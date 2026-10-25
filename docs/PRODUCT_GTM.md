@@ -1,10 +1,10 @@
-# Tech Bazaar: product, ICP, demo and go-to-market (PC direction)
+# Fish Market: product, ICP, demo and go-to-market (PC direction)
 
 Rewritten Fri Oct 23 2026, about 21:05 PDT for the pivot from restaurants to PC upgraders and builders. The restaurant version is in git history and docs/RESEARCH_RESTAURANTS.md. Every fact below comes from plan/research-pc.md (team plan folder), docs/kickoff/00-shared.md or plan/decisions.md. Anything not sourced is marked as an assumption or OPEN. No number is given for research time, incompatibility rate or return rate: none were found.
 
 ## 1. The product and its job
 
-**One sentence (working line; the final pitch line is OPEN, Vidyut decides):** Tech Bazaar is the buying agent for PC builders. Tell it your parts and budget: sellers bid, it checks every part fits and every price is real, and you get the best verified deal.
+**One sentence (working line; the final pitch line is OPEN, Vidyut decides):** Fish Market is the buying agent for PC builders. Tell it your parts and budget: sellers bid, it checks every part fits and every price is real, and you get the best verified deal.
 
 **The job:** an upgrader who already owns a rig wants one scarce part (a GPU or RAM) inside an allowance. The agent knows what they own, gets sellers to bid in a sealed round, throws out parts that do not fit, used parts sold as new and price claims that did not match the price history, buys inside the allowance, and calls the builder by voice for anything above it. At delivery it checks photos against the spec.
 

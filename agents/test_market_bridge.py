@@ -380,9 +380,9 @@ def test_referee_records_only_canonical_payment_mode(mode):
 def test_referee_record_approval_forwards_voice_approval_id_and_refuses_empty():
     market = FakeMarket()
     bridge = MarketBridge("referee", client=market)
-    bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1", voice_approval_id="va-1")
+    bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1", voice_approval_id="va-1", code="amber falcon")
     assert market.calls == [("record_approval", {"mandate_hash": "a" * 64, "method": "voice_code",
-                                                 "approved_by": "b_1", "voice_approval_id": "va-1"})]
+                                                 "approved_by": "b_1", "voice_approval_id": "va-1", "code": "amber falcon"})]
     with pytest.raises(MarketBridgeError, match="approval_binding_invalid"):
         bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1")
 
@@ -395,3 +395,88 @@ def test_referee_record_agent_event_forwards_one_line_and_other_roles_are_refuse
                                                     "text": "needs the operator", "ts": "", "origin": "SIM"})]
     with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
         MarketBridge("buyer", client=FakeMarket()).record_agent_event(agent_name="x", address="agent1q" + "a" * 30, text="t")
+
+
+# ---- #449 item 3: claim_goal, set_goal_state, the approval code, and the referee's approval and payment reads
+
+def test_referee_claims_a_goal_and_a_failed_claim_is_a_bridge_error():
+    market = FakeMarket()
+    MarketBridge("referee", client=market).claim_goal("goal-1")
+    assert market.calls == [("claim_goal", {"goal_id": "goal-1"})]
+    for role in ("buyer", "seller"):
+        with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
+            MarketBridge(role, client=FakeMarket()).claim_goal("goal-1")
+    with pytest.raises(MarketBridgeError, match="market_reducer_failed"):
+        MarketBridge("referee", client=FakeMarket(fail_call="claim_goal")).claim_goal("goal-1")
+    with pytest.raises(MarketBridgeError):
+        MarketBridge("referee", client=FakeMarket()).claim_goal("")
+
+
+def test_referee_sets_a_goal_state_with_trimmed_plain_text_and_refuses_unknown_states():
+    market = FakeMarket()
+    bridge = MarketBridge("referee", client=market)
+    bridge.set_goal_state("goal-1", "FAILED", "  We could not call you. Nothing was paid.  ")
+    bridge.set_goal_state("goal-1", "DONE", "x" * 500)
+    assert market.calls[0] == ("set_goal_state", {"goal_id": "goal-1", "state": "FAILED",
+                                                  "text": "We could not call you. Nothing was paid."})
+    assert len(market.calls[1][1]["text"]) == 200
+    for bad in ("ACTIVE", "done", "", "SOLD"):
+        with pytest.raises(MarketBridgeError, match="goal_state_invalid"):
+            bridge.set_goal_state("goal-1", bad, "hello")
+    with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
+        MarketBridge("buyer", client=FakeMarket()).set_goal_state("goal-1", "DONE", "hello")
+    with pytest.raises(MarketBridgeError, match="market_reducer_failed"):
+        MarketBridge("referee", client=FakeMarket(fail_call="set_goal_state")).set_goal_state("goal-1", "DONE", "hello")
+
+
+def test_referee_record_approval_forwards_the_issued_code_and_refuses_without_one():
+    market = FakeMarket()
+    bridge = MarketBridge("referee", client=market)
+    bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1", voice_approval_id="va-1",
+                           code="amber falcon")
+    assert market.calls == [("record_approval", {"mandate_hash": "a" * 64, "method": "voice_code", "approved_by": "b_1",
+                                                 "voice_approval_id": "va-1", "code": "amber falcon"})]
+    with pytest.raises(MarketBridgeError, match="approval_binding_invalid"):
+        bridge.record_approval(mandate_hash="a" * 64, method="voice_code", approved_by="b_1", voice_approval_id="va-1")
+
+
+APPROVAL_ROW = {"mandateHash": "a" * 64, "method": "voice_code", "approvedBy": "b_1", "at": "2026-10-25T01:00:00Z",
+                "voiceApprovalId": "va-1"}
+PAYMENT_ROW = {"mandateHash": "a" * 64, "paymentRef": "ch_1", "amount": 780.0, "mode": "stripe_test",
+               "at": "2026-10-25T01:01:00Z"}
+
+
+def test_referee_reads_the_approval_row_and_none_when_absent():
+    market = FakeMarket(sql_rows=[[APPROVAL_ROW], []])
+    bridge = MarketBridge("referee", client=market)
+    row = bridge.approval_row("a" * 64)
+    assert row == {"mandate_hash": "a" * 64, "method": "voice_code", "approved_by": "b_1",
+                   "at": "2026-10-25T01:00:00Z", "voice_approval_id": "va-1"}
+    assert "FROM agent_approvals" in market.queries[0] and "a" * 64 in market.queries[0]
+    assert bridge.approval_row("b" * 64) is None
+
+
+def test_referee_reads_the_payment_row_and_none_when_absent():
+    market = FakeMarket(sql_rows=[[PAYMENT_ROW], []])
+    bridge = MarketBridge("referee", client=market)
+    row = bridge.payment_row("a" * 64)
+    assert row == {"mandate_hash": "a" * 64, "payment_ref": "ch_1", "amount": 780.0, "mode": "stripe_test",
+                   "at": "2026-10-25T01:01:00Z"}
+    assert "FROM agent_payments" in market.queries[0]
+    assert bridge.payment_row("b" * 64) is None
+
+
+def test_approval_and_payment_reads_fail_loudly_not_as_none():
+    class Down(FakeMarket):
+        def sql(self, query):
+            raise RuntimeError("secret endpoint response must not escape")
+
+    for name in ("approval_row", "payment_row"):
+        with pytest.raises(MarketBridgeError, match="market_readback_failed"):
+            getattr(MarketBridge("referee", client=Down()), name)("a" * 64)
+        with pytest.raises(MarketBridgeError, match="market_role_mismatch"):
+            getattr(MarketBridge("buyer", client=FakeMarket()), name)("a" * 64)
+        with pytest.raises(MarketBridgeError):
+            getattr(MarketBridge("referee", client=FakeMarket()), name)("not-a-hash")
+    with pytest.raises(MarketBridgeError, match="market_readback_invalid"):
+        MarketBridge("referee", client=FakeMarket(sql_rows=[[{"mandateHash": "c" * 64}]])).approval_row("a" * 64)

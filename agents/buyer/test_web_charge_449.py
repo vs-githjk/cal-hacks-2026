@@ -145,7 +145,7 @@ def test_recovery_that_still_cannot_reach_stripe_leaves_it_uncertain_and_logs(na
 # ---- RT-12: read the approval back before charging
 
 @pytest.mark.parametrize("row", [lambda h: None, lambda h: {}, _approval_row(method="typed"), _approval_row(buyer_id="b_other"),
-                                 lambda h: {"mandateHash": "0" * 64, "method": "voice_code", "approvedBy": BID},
+                                 _approval_row(mandate_hash="0" * 64),
                                  Mock(side_effect=RuntimeError("down"))])
 def test_a_missing_or_mismatched_approval_row_means_no_charge(napped, monkeypatch, caplog, row):
     buyer, db, _slept = napped

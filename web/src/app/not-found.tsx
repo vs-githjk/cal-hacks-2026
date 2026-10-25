@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Card } from "@/components/ui";
+import { BRAND } from "@/lib/brand";
 
 const WAYS: { href: string; label: string; text: string }[] = [
-  { href: "/", label: "Home", text: "What Tech Bazaar is, and the market right now." },
+  { href: "/", label: "Home", text: `What ${BRAND} is, and the market right now.` },
   { href: "/start", label: "Start as a buyer", text: "Set a goal and let your agent shop for it." },
   { href: "/market", label: "Market", text: "The referee's floor: the sealed round and every bid." },
 ];
