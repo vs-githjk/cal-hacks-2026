@@ -1,0 +1,538 @@
+{
+ "_note": "Demo round 1 from the repo's own deterministic run (demo/run_demo.py): SIM sellers and MIRROR listings, converted to market round_result rows. loss_reports are the referee's reports for the same round.",
+ "loss_reports": [
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-amazon-direct",
+   "reason": "condition",
+   "round_id": "round-1",
+   "seller_id": "amazon-direct",
+   "source_url": "https://www.amazon.com/dp/B0DXL8NFLF",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within20",
+   "id": "lr-round-1-ebay-020083",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-020083",
+   "source_url": "https://www.ebay.com/itm/327385020083?_skw=RTX+5070+Ti+new&hash=item4c39aaf6b3:g:QsEAAeSwmh9qv-tE",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-ebay-072531",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-072531",
+   "source_url": "https://www.ebay.com/itm/407307072531?_skw=RTX+5070+Ti+new&epid=2355139091&hash=item5ed564b413:g:bR4AAeSwGflq2SHv",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within20",
+   "id": "lr-round-1-ebay-082384",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-082384",
+   "source_url": "https://www.ebay.com/itm/327392082384?_skw=RTX+5070+Ti+new&hash=item4c3a16b9d0:g:fq4AAeSwLDZqxVT-",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within20",
+   "id": "lr-round-1-ebay-263900",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-263900",
+   "source_url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within20",
+   "id": "lr-round-1-ebay-405699",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-405699",
+   "source_url": "https://www.ebay.com/itm/900035405699?_skw=RTX+5070+Ti+new&epid=13080533205&hash=itemd18e4a6783:g:1ygAAeSwsEpq24uL",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within10",
+   "id": "lr-round-1-ebay-442526",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-442526",
+   "source_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-ebay-801385",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-801385",
+   "source_url": "https://www.ebay.com/itm/940033801385?_skw=RTX+5070+Ti+new&hash=itemdade617ca9:g:TCYAAeSwfahq2lph",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-micro-center",
+   "reason": "condition",
+   "round_id": "round-1",
+   "seller_id": "micro-center",
+   "source_url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-fair-price-pc",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "fair-price-pc",
+   "source_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-shady-sam",
+   "reason": "advocate_veto",
+   "round_id": "round-1",
+   "seller_id": "shady-sam",
+   "source_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-ebay-235887",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "ebay-235887",
+   "source_url": "https://www.ebay.com/itm/298319235887?_skw=RTX+5070+Ti+new&epid=14075342780&hash=item4575364b2f:g:bOUAAeSwur5qBpOU",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-bargain-bin",
+   "reason": "fit",
+   "round_id": "round-1",
+   "seller_id": "bargain-bin",
+   "source_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-ebay-824742",
+   "reason": "fit",
+   "round_id": "round-1",
+   "seller_id": "ebay-824742",
+   "source_url": "https://www.gigabyte.com/Graphics-Card/GV-N507TGAMING-OC-16GD/sp",
+   "won": false
+  },
+  {
+   "created_at": "2026-10-25T00:15:12Z",
+   "gap_band": "within5",
+   "id": "lr-round-1-gadget-grove",
+   "reason": "price",
+   "round_id": "round-1",
+   "seller_id": "gadget-grove",
+   "source_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
+   "won": false
+  }
+ ],
+ "round_id": "round-1",
+ "round_result": [
+  {
+   "adjusted_total": 757.44,
+   "bid_id": "bid-need-vidyut-5070ti-shady-sam",
+   "landed": 757.44,
+   "lines": [
+    {
+     "listing_url": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 757.44
+    }
+   ],
+   "origin": "SIM",
+   "persona": "Shady Sam's Deals (SIM)",
+   "rank": 1,
+   "reasons": [],
+   "round_id": "round-1",
+   "seller_id": "shady-sam",
+   "source": "http://127.0.0.1:8765/shady-sam-gpu-5070ti-lies.html"
+  },
+  {
+   "adjusted_total": 1070.98,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-235887",
+   "landed": 1049.98,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/298319235887?_skw=RTX+5070+Ti+new&epid=14075342780&hash=item4575364b2f:g:bOUAAeSwur5qBpOU",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1036.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...235887 (handle not captured)",
+   "rank": 2,
+   "reasons": [],
+   "round_id": "round-1",
+   "seller_id": "ebay-235887",
+   "source": "https://www.ebay.com/itm/298319235887?_skw=RTX+5070+Ti+new&epid=14075342780&hash=item4575364b2f:g:bOUAAeSwur5qBpOU"
+  },
+  {
+   "adjusted_total": 1199.0,
+   "bid_id": "bid-need-vidyut-5070ti-bargain-bin",
+   "landed": 1199.0,
+   "lines": [
+    {
+     "listing_url": "https://example.com/sim/bargain-bin/rtx-5070-ti",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1199.0
+    }
+   ],
+   "origin": "SIM",
+   "persona": "Bargain Bin Hardware (SIM)",
+   "rank": 3,
+   "reasons": [],
+   "round_id": "round-1",
+   "seller_id": "bargain-bin",
+   "source": "https://example.com/sim/bargain-bin/rtx-5070-ti"
+  },
+  {
+   "adjusted_total": 1314.39,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-824742",
+   "landed": 1239.99,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY",
+     "offered_condition": "open-box",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1239.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...824742 (handle not captured)",
+   "rank": 4,
+   "reasons": [],
+   "round_id": "round-1",
+   "seller_id": "ebay-824742",
+   "source": "https://www.ebay.com/itm/800825824742?_skw=rtx+5070+ti&hash=itemba74f055e6:g:zbwAAeSwl6dq2ivY"
+  },
+  {
+   "adjusted_total": 1325.99,
+   "bid_id": "bid-need-vidyut-5070ti-best-buy",
+   "landed": 1299.99,
+   "lines": [
+    {
+     "listing_url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1299.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "Best Buy",
+   "rank": 5,
+   "reasons": [],
+   "round_id": "round-1",
+   "seller_id": "best-buy",
+   "source": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742"
+  },
+  {
+   "adjusted_total": 1337.46,
+   "bid_id": "bid-need-vidyut-5070ti-gadget-grove",
+   "landed": 1286.02,
+   "lines": [
+    {
+     "listing_url": "https://example.com/sim/gadget-grove/rtx-5070-ti",
+     "offered_condition": "open-box",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1286.02
+    }
+   ],
+   "origin": "SIM",
+   "persona": "Gadget Grove (Vedant)",
+   "rank": 6,
+   "reasons": [],
+   "round_id": "round-1",
+   "seller_id": "gadget-grove",
+   "source": "https://example.com/sim/gadget-grove/rtx-5070-ti"
+  },
+  {
+   "adjusted_total": 1299.99,
+   "bid_id": "bid-need-vidyut-5070ti-amazon-direct",
+   "landed": 1299.99,
+   "lines": [
+    {
+     "listing_url": "https://www.amazon.com/dp/B0DXL8NFLF",
+     "offered_condition": "unknown",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1299.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "Amazon.com (sells direct)",
+   "rank": 0,
+   "reasons": [
+    "condition: offered unknown, the goal allows new/open-box (the snapshot states no condition and the advocate will not guess)"
+   ],
+   "round_id": "round-1",
+   "seller_id": "amazon-direct",
+   "source": "https://www.amazon.com/dp/B0DXL8NFLF"
+  },
+  {
+   "adjusted_total": 1349.98,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-020083",
+   "landed": 1349.98,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/327385020083?_skw=RTX+5070+Ti+new&hash=item4c39aaf6b3:g:QsEAAeSwmh9qv-tE",
+     "offered_condition": "used",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1329.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...020083 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "condition: offered used, the goal allows new/open-box",
+    "price: landed $1,349.98 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-020083",
+   "source": "https://www.ebay.com/itm/327385020083?_skw=RTX+5070+Ti+new&hash=item4c39aaf6b3:g:QsEAAeSwmh9qv-tE"
+  },
+  {
+   "adjusted_total": 1328.95,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-072531",
+   "landed": 1328.95,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/407307072531?_skw=RTX+5070+Ti+new&epid=2355139091&hash=item5ed564b413:g:bR4AAeSwGflq2SHv",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1299.0
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...072531 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,328.95 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-072531",
+   "source": "https://www.ebay.com/itm/407307072531?_skw=RTX+5070+Ti+new&epid=2355139091&hash=item5ed564b413:g:bR4AAeSwGflq2SHv"
+  },
+  {
+   "adjusted_total": 1449.0,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-082384",
+   "landed": 1449.0,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/327392082384?_skw=RTX+5070+Ti+new&hash=item4c3a16b9d0:g:fq4AAeSwLDZqxVT-",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1449.0
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...082384 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,449.00 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-082384",
+   "source": "https://www.ebay.com/itm/327392082384?_skw=RTX+5070+Ti+new&hash=item4c3a16b9d0:g:fq4AAeSwLDZqxVT-"
+  },
+  {
+   "adjusted_total": 1489.0,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-263900",
+   "landed": 1489.0,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1489.0
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...263900 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,489.00 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-263900",
+   "source": "https://www.ebay.com/itm/900035263900?_skw=rtx+5070+ti&epid=13095116910&hash=itemd18e483d9c:g:wecAAeSwOZxq23kf"
+  },
+  {
+   "adjusted_total": 1399.0,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-405699",
+   "landed": 1399.0,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/900035405699?_skw=RTX+5070+Ti+new&epid=13080533205&hash=itemd18e4a6783:g:1ygAAeSwsEpq24uL",
+     "offered_condition": "open-box",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1399.0
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...405699 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,399.00 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-405699",
+   "source": "https://www.ebay.com/itm/900035405699?_skw=RTX+5070+Ti+new&epid=13080533205&hash=itemd18e4a6783:g:1ygAAeSwsEpq24uL"
+  },
+  {
+   "adjusted_total": 1399.99,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-442526",
+   "landed": 1399.99,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1399.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...442526 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,399.99 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-442526",
+   "source": "https://www.ebay.com/itm/298743442526?_skw=rtx+5070+ti&hash=item458e7f2c5e:g:pLUAAeSwA-tqx-2c"
+  },
+  {
+   "adjusted_total": 1349.99,
+   "bid_id": "bid-need-vidyut-5070ti-ebay-801385",
+   "landed": 1349.99,
+   "lines": [
+    {
+     "listing_url": "https://www.ebay.com/itm/940033801385?_skw=RTX+5070+Ti+new&hash=itemdade617ca9:g:TCYAAeSwfahq2lph",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1349.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "eBay seller of item ...801385 (handle not captured)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,349.99 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "ebay-801385",
+   "source": "https://www.ebay.com/itm/940033801385?_skw=RTX+5070+Ti+new&hash=itemdade617ca9:g:TCYAAeSwfahq2lph"
+  },
+  {
+   "adjusted_total": 1329.0,
+   "bid_id": "bid-need-vidyut-5070ti-fair-price-pc",
+   "landed": 1329.0,
+   "lines": [
+    {
+     "listing_url": "https://example.com/sim/fair-price-pc/rtx-5070-ti",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1329.0
+    }
+   ],
+   "origin": "SIM",
+   "persona": "Fair Price PC (SIM)",
+   "rank": 0,
+   "reasons": [
+    "price: landed $1,329.00 is over the goal cap"
+   ],
+   "round_id": "round-1",
+   "seller_id": "fair-price-pc",
+   "source": "https://example.com/sim/fair-price-pc/rtx-5070-ti"
+  },
+  {
+   "adjusted_total": 1090.0,
+   "bid_id": "bid-need-vidyut-5070ti-lowball",
+   "landed": 1090.0,
+   "lines": [
+    {
+     "listing_url": "https://example.com/sim/lowball/rtx-5070-ti",
+     "offered_condition": "new",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1090.0
+    }
+   ],
+   "origin": "SIM",
+   "persona": "Lowball Direct (SIM)",
+   "rank": 0,
+   "reasons": [
+    "referee: rtx 5070 ti new: $1,090.00 is below this seller's floor"
+   ],
+   "round_id": "round-1",
+   "seller_id": "lowball",
+   "source": "https://example.com/sim/lowball/rtx-5070-ti"
+  },
+  {
+   "adjusted_total": 1199.99,
+   "bid_id": "bid-need-vidyut-5070ti-micro-center",
+   "landed": 1199.99,
+   "lines": [
+    {
+     "listing_url": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card",
+     "offered_condition": "unknown",
+     "quantity": 1,
+     "sku_spec": "rtx 5070 ti",
+     "unit_price": 1199.99
+    }
+   ],
+   "origin": "MIRROR",
+   "persona": "Micro Center",
+   "rank": 0,
+   "reasons": [
+    "condition: offered unknown, the goal allows new/open-box (the snapshot states no condition and the advocate will not guess)"
+   ],
+   "round_id": "round-1",
+   "seller_id": "micro-center",
+   "source": "https://www.microcenter.com/product/690475/pny-nvidia-geforce-rtx-5070-ti-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card"
+  }
+ ]
+}
