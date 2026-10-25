@@ -117,7 +117,7 @@ function SellerG({ r, reduced, bob }: { r: Row; reduced: boolean; bob: boolean }
   );
 }
 
-const REASON_TEXT: Record<OutReason, string> = { highest_price: "eaten, highest price", shield_block: "blocked by Shield", failed_fit: "rejected, fit", advocate_veto: "rejected, condition", refused: "refused" };
+const REASON_TEXT: Record<OutReason, string> = { highest_price: "eaten, highest price", outranked: "eaten, outranked", shield_block: "blocked by Shield", failed_fit: "rejected, fit", advocate_veto: "rejected, condition", refused: "refused" };
 
 function summary(script: FloorScript, phase: FloorPhase): string {
   const parts: string[] = [];
@@ -160,7 +160,7 @@ export function FloorRingPixel({ script, phase, theme, reducedMotion, width }: F
     const r = v.reason;
     const win = finale && v.state === "winner";
     const newly = kind === "eat" && v.state === "eaten" && r != null && focusOf(r) === s.id;
-    const eatsUp = r === "highest_price" || r === "refused";
+    const eatsUp = r === "highest_price" || r === "outranked" || r === "refused";
     const priced: Sg = v.price == null ? { label: "???", sub: "sealed", tone: PAL.line }
       : win ? { label: usd.format(v.price), sub: "Winner", tone: PAL.pac }
         : { label: usd.format(v.price), sub: v.checkedAgo != null ? `re-checked ${v.checkedAgo}s ago` : null, tone: PAL.line };

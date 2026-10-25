@@ -207,3 +207,45 @@ export const REFEREE_UP: Grid = [
   "...CCCCCC.HH", "..CCCCCCCC.H", "..HHHHHHHH.H", "..HEHHHHEH.H", "..HHHHHHHH.H", "...HHHHHH.HH", "..KKKKKKKKH.",
   ".HWWWWWWWW..", ".HKKKKKKKK..", ".HWWWWWWWW..", "..KKKKKKKK..", "..KK....KK..", "..KK....KK..", ".KKK....KKK.",
 ];
+
+// ---- Aquarium product card icons (additions only) ----
+// 16x12 icons. B body, K dark, A accent, G gold pins; each kind has its own colour map in PRODUCT_COLORS.
+export type ProductKind = "gpu" | "cpu" | "ssd" | "ram" | "box";
+export const PRODUCT_ICONS: Record<ProductKind, Grid> = {
+  gpu: [
+    "BBBBBBBBBBBBBBBB", "BKKKKKKBKKKKKKBB", "BKAAAAKBKAAAAKBB", "BKAKKAKBKAKKAKBB", "BKAKKAKBKAKKAKBB", "BKAAAAKBKAAAAKBB",
+    "BKKKKKKBKKKKKKBB", "BBBBBBBBBBBBBBBB", "BBBBBBBBBBBBBBBB", "..GGG.GGGGGG.GG.", "..GGG.GGGGGG.GG.", "................",
+  ],
+  cpu: [
+    "...G.G.G.G.G.G..", "..BBBBBBBBBBBB..", "GGBKKKKKKKKKKBGG", "..BKKAAAAAAKKB..", "GGBKKAKKKKAKKBGG", "..BKKAKKKKAKKB..",
+    "GGBKKAAAAAAKKBGG", "..BKKKKKKKKKKB..", "GGBKKKKKKKKKKBGG", "..BBBBBBBBBBBB..", "...G.G.G.G.G.G..", "................",
+  ],
+  ssd: [
+    "................", "................", "BBBBBBBBBBBBBBBB", "BKKKKBKKKKBKKKBB", "BKKKKBKKKKBKKKBB", "BKKKKBKKKKBKKKBB",
+    "BKKKKBKKKKBKKKBB", "BBBBBBBBBBBBBBBB", "BBBBBBBBBBBBBBBB", "GG.GG.GG.GG.GG.G", "GG.GG.GG.GG.GG.G", "................",
+  ],
+  ram: [
+    "................", "BBBBBBBBBBBBBBBB", "BKKKBKKKBKKKBKKB", "BKKKBKKKBKKKBKKB", "BKKKBKKKBKKKBKKB", "BKKKBKKKBKKKBKKB",
+    "BBBBBBBBBBBBBBBB", "BBBBBBBBBBBBBBBB", "GGGGGG..GGGGGGGG", "GGGGGG..GGGGGGGG", "................", "................",
+  ],
+  box: [
+    "................", "KKKKKKKKKKKKKKKK", "KBBBBBBAABBBBBBK", "KBBBBBBAABBBBBBK", "KKKKKKKKKKKKKKKK", "KBBBBBBAABBBBBBK",
+    "KBBBBBBAABBBBBBK", "KBBBBBBAABBBBBBK", "KBBBBBBAABBBBBBK", "KBBBBBBAABBBBBBK", "KBBBBBBAABBBBBBK", "KKKKKKKKKKKKKKKK",
+  ],
+};
+export const PRODUCT_COLORS: Record<ProductKind, Record<string, string>> = {
+  gpu: { B: "#4b6b85", K: "#1d3b57", A: PAL.cyan, G: PAL.pac },
+  cpu: { B: "#8fa0b2", K: "#1d3b57", A: PAL.mint, G: PAL.pac },
+  ssd: { B: "#4b6b85", K: "#1d3b57", A: PAL.cyan, G: PAL.pac },
+  ram: { B: "#2f7a5b", K: "#1d3b57", A: PAL.mint, G: PAL.pac },
+  box: { B: AQUA.sandA, K: "#7a6540", A: "#e8d9b0" },
+};
+/** Which icon a part gets: GPU, CPU, SSD and RAM have their own; motherboard, cooler, PSU, case and anything else get the generic box. */
+export function productKind(part: string): ProductKind {
+  const p = part.toLowerCase();
+  if (/\b(gpu|graphics|rtx|gtx|radeon|geforce|video card)\b/.test(p)) return "gpu";
+  if (/\b(cpu|processor|ryzen|core i\d)\b/.test(p)) return "cpu";
+  if (/\b(ssd|nvme|m\.2|storage|hard drive)\b/.test(p)) return "ssd";
+  if (/\b(ram|memory|ddr\d?|dimm)\b/.test(p)) return "ram";
+  return "box";
+}

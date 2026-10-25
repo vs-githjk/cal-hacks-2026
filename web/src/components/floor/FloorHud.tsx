@@ -103,7 +103,7 @@ function wordClass(v: SellerView): string {
   if (v.state === "winner" || v.ledger.startsWith("Fit OK")) return "good";
   if (v.reason === "shield_block") return "shield";
   if (v.reason === "failed_fit") return "warn";
-  if (v.reason === "highest_price" || v.reason === "advocate_veto" || v.reason === "refused") return "bad";
+  if (v.reason === "highest_price" || v.reason === "outranked" || v.reason === "advocate_veto" || v.reason === "refused") return "bad";
   return "";
 }
 

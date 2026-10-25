@@ -7,7 +7,7 @@ import { projectArenaScene, type ArenaRows, type SceneOffer } from "../../lib/ar
 export type Theme = "ghosts" | "fish";
 export type Slot = 1 | 2 | 3 | 4; // colour slot: ghost-1..4
 export type SellerState = "sealed" | "open" | "eaten" | "winner";
-export type OutReason = "highest_price" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";
+export type OutReason = "highest_price" | "outranked" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";
 export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot }
 export interface SellerView { state: SellerState; price: number | null; ledger: string; reason: OutReason | null; checkedAgo: number | null } // ledger: "Sealed" | "$1,329.00" | "Eaten · highest price" | "Blocked · Shield" | "Out · fit uncertain" | "Fit OK · 304 mm · no recall" | "Winner"; checkedAgo: Bright Data re-check age in seconds, null if unknown
 export type PhaseKind = "sealed" | "reveal" | "call" | "inject" | "shield" | "check" | "eat" | "crown" | "deal" | "paid";
@@ -30,6 +30,7 @@ const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigi
 
 const LEDGER: Record<OutReason, string> = {
   highest_price: "Eaten · highest price",
+  outranked: "Outranked",
   failed_fit: "Out · fit uncertain",
   shield_block: "Blocked · Shield",
   advocate_veto: "Out · advocate veto",
@@ -105,11 +106,12 @@ function buildReference(): FloorScript {
 export const REFERENCE: FloorScript = buildReference();
 
 const STEP = 3;
-const reasonOf = (o: SceneOffer, fallback: OutReason): OutReason => {
-  const code = String(o.knock?.reasonCode ?? "");
+/** `strictTop`: this offer's landed price is strictly the highest among the offers still in. Only then is an outranking "highest_price". */
+const reasonOf = (o: SceneOffer, fallback: OutReason, strictTop = false, knocked?: string): OutReason => {
+  const code = String(knocked ?? o.knock?.reasonCode ?? "");
   if (code === "shield_block") return "shield_block";
   if (code === "advocate_veto") return "advocate_veto";
-  if (code === "outranked") return "highest_price";
+  if (code === "outranked") return strictTop ? "highest_price" : "outranked";
   return fallback;
 };
 
@@ -186,10 +188,12 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
         b.eat(id, reason);
         b.push(next(), "eat", { buyerAt: id, checkerAt: id, callText: `${o.name} is out: advocate veto` });
       } else {
-        const reason = reasonOf(o, "refused");
-        const text = reason === "highest_price" ? `Highest price is out: ${money(o.landed)}, ${o.name}` : `${o.name} is out`;
+        const stillIn = offers.filter((x) => b.views[x.bidId]!.state !== "eaten");
+        const strictTop = stillIn.every((x) => x.bidId === id || x.landed < o.landed);
+        const reason = reasonOf(o, "refused", strictTop, knocked?.reasonCode);
+        const text = reason === "highest_price" ? `Highest price is out: ${money(o.landed)}, ${o.name}` : reason === "outranked" ? (knocked?.reasonText ?? o.knock?.reasonText ?? `${o.name} is out`) : `${o.name} is out`;
         b.push(next(), "call", { buyerAt: id, callText: text });
-        b.eat(id, reason);
+        b.eat(id, reason, reason === "outranked" ? (o.condition ? `Outranked · ${o.condition}` : `Outranked · ranked #${o.rank ?? "?"}`) : undefined);
         b.push(next(), "eat", { buyerAt: id, callText: text });
       }
     }

@@ -102,3 +102,35 @@ test("phaseAt wraps and clamps", () => {
   assert.equal(phaseAt(REFERENCE, -5), REFERENCE.phases[0]);
   assert.equal(phaseAt(REFERENCE, Number.NaN), REFERENCE.phases[0]);
 });
+
+test("an outranked offer is not called the highest price (gpu sample), and REFERENCE keeps its true highest-price call", () => {
+  const s = floorScript(SAMPLES.gpu);
+  const renew = s.sellers.find((x) => /ReNew/i.test(x.name))!;
+  assert.ok(renew);
+  const end = endState(s)[renew.id]!;
+  assert.equal(end.reason, "outranked");
+  assert.match(end.ledger, /^Outranked · /);
+  for (const p of s.phases) if (p.callText && p.callText.includes(renew.name)) assert.ok(!/Highest price/.test(p.callText), p.callText);
+  const call = s.phases.find((p) => p.kind === "call" && p.callText?.includes("ahead"));
+  assert.ok(call, "an outranked call carries the referee's reason text");
+  const ref = REFERENCE.phases.find((p) => p.kind === "call")!;
+  assert.equal(ref.callText, "Highest price is out: $1,329.00, Seller 1");
+  assert.equal(endState(REFERENCE).s1!.reason, "highest_price");
+});
+
+test("highest_price is used only when the eaten offer is strictly the priciest still in", () => {
+  for (const sample of Object.values(SAMPLES)) {
+    const s = floorScript(sample);
+    const price = new Map<string, number>();
+    for (const p of s.phases) for (const [id, v] of Object.entries(p.sellers)) if (v.price != null) price.set(id, v.price);
+    const out = new Set<string>();
+    for (const p of s.phases) {
+      if (p.kind !== "eat") continue;
+      for (const [id, v] of Object.entries(p.sellers)) {
+        if (v.state !== "eaten" || out.has(id)) continue;
+        if (v.reason === "highest_price") for (const [oid, ov] of Object.entries(p.sellers)) if (oid !== id && !out.has(oid) && ov.state !== "eaten") assert.ok(price.get(oid)! < price.get(id)!, `${id} vs ${oid}`);
+        out.add(id);
+      }
+    }
+  }
+});

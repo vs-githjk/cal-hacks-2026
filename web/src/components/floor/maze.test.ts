@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CHECKER, MAZE, MAZE_ORIGIN, MAZE_TILE, PUFFER, REFEREE, REFEREE_UP, mazeWallPaths } from "./pixelArt.ts";
+import { CHECKER, MAZE, MAZE_ORIGIN, MAZE_TILE, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REFEREE, REFEREE_UP, mazeWallPaths, productKind, type ProductKind } from "./pixelArt.ts";
 import { POCKET_IDS, adjacent, emptyBlock, findTile, heading, isWalk, loopTile, mazePath, mod, patrolLoop, sameTile, type Tile } from "./maze.ts";
 
 const walkable: Tile[] = [];
@@ -116,4 +116,18 @@ test("mazeWallPaths builds ridge paths for every colour", () => {
   const w = mazeWallPaths();
   for (const k of ["coralA", "coralB", "rock", "light", "dark"] as const) assert.ok(w[k].length > 0, k);
   assert.ok(!/NaN|undefined/.test(Object.values(w).join("")));
+});
+
+test("product icons are 16 x 12 and the part picks an icon", () => {
+  for (const [k, g] of Object.entries(PRODUCT_ICONS)) {
+    assert.equal(g.length, 12, k);
+    assert.ok(g.every((row) => row.length === 16), k);
+    for (const ch of new Set(g.join("").replace(/\./g, ""))) assert.ok(PRODUCT_COLORS[k as ProductKind][ch], `${k} colour ${ch}`);
+  }
+  assert.equal(productKind("GPU"), "gpu");
+  assert.equal(productKind("RTX 5070 Ti"), "gpu");
+  assert.equal(productKind("CPU"), "cpu");
+  assert.equal(productKind("NVMe SSD"), "ssd");
+  assert.equal(productKind("RAM"), "ram");
+  for (const p of ["motherboard", "cooler", "PSU", "case", "Part", ""]) assert.equal(productKind(p), "box");
 });

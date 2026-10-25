@@ -7,7 +7,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type JSX, type 
 import type { FloorPhase, FloorScript, OutReason, SellerView } from "./floorPhases.ts";
 import type { FloorRendererProps } from "./FloorRingPixel.tsx";
 import { POCKET_IDS, findTile, heading, loopTile, mazePath, patrolLoop, pocketRect, type Tile } from "./maze.ts";
-import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, MAZE_TILE as T, PAC, PAC_CLOSED, PAL, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, runs, sandCells, type Grid } from "./pixelArt.ts";
+import { AQUA, AUDIT, CHECKER, FISH, GHOST, GHOST_COLORS, GHOST_SCARED, MAZE, MAZE_ORIGIN, MAZE_TILE as T, PAC, PAC_CLOSED, PAL, PRODUCT_COLORS, PRODUCT_ICONS, PUFFER, REEF, REFEREE, REFEREE_UP, WEED_OFFSETS, fishColors, mazeWallPaths, mix, productKind, runs, sandCells, type Grid } from "./pixelArt.ts";
 
 const MONO = "var(--font-geist-mono, ui-monospace, monospace)";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -48,6 +48,11 @@ const CSS = [
   "@keyframes aq-pop{from{transform:translate(0,0);opacity:.5}to{transform:translate(var(--dx),var(--dy));opacity:0}}",
   "@keyframes aq-in{from{transform:translate(var(--dx),var(--dy));opacity:0}to{transform:translate(0,0);opacity:1}}",
   "@keyframes aq-out{from{transform:translate(0,0);opacity:1}to{transform:translate(var(--dx),var(--dy));opacity:0}}",
+  "@keyframes aq-jx{from{transform:translateX(var(--dx))}to{transform:translateX(0)}}",
+  "@keyframes aq-jy{from{transform:translateY(var(--dy))}to{transform:translateY(0)}}",
+  "@keyframes aq-dissolve{from{opacity:1}to{opacity:0}}",
+  "@keyframes aq-appear{from{opacity:0}to{opacity:1}}",
+  "@keyframes aq-drop{0%{transform:translate(0,0);opacity:.9}60%{transform:translate(calc(var(--dx) * .8),var(--dy));opacity:.9}100%{transform:translate(var(--dx),calc(var(--dy) * .4));opacity:0}}",
   "@keyframes fr-stamp{from{opacity:0;transform:scale(1.4)}}",
 ].join("");
 const mono = (size: number, extra?: CSSProperties): CSSProperties => ({ fontFamily: MONO, fontSize: size, ...extra });
@@ -225,7 +230,77 @@ function AgentG({ a, reduced, leaving }: { a: Placed; reduced: boolean; leaving:
   );
 }
 
-const REASON_TEXT: Record<OutReason, string> = { highest_price: "eaten, highest price", shield_block: "blocked by Shield", failed_fit: "rejected, fit", advocate_veto: "rejected, condition", refused: "refused" };
+// Finale (deal and paid): the winner fish and Pac-Man jump out over the top glass, land above the tank (left of x 560), the fish becomes a product card.
+const JUMP_MS = 700;
+const DISSOLVE_MS = 500;
+// The HUD owns the top 130 units of the stage, so nothing in the finale is drawn above y 130: the icon stands on the tank's top glass (y 150),
+// its text sits on a dark plate just inside the tank, and Pac-Man stands beside it astride the glass.
+const ICON_CELL = 3; // 16 x 12 icon = 48 x 36, bottom on the glass (y 150), top y 114
+const CARD_CX = 380;
+const GLASS_Y = TANK.y;
+const PLATE = { x: 308, y: 156, w: 144, h: 52 };
+const PAC_LAND = { x: 486, y: GLASS_Y + 2 }; // Pac-Man's centre: top at y 130
+const DROPS: ReadonlyArray<readonly [number, number]> = [[-15, -20], [-6, -28], [5, -26], [14, -18]];
+
+function Jumper({ at, from, reduced, children }: { at: { x: number; y: number }; from: { x: number; y: number }; reduced: boolean; children: ReactNode }): JSX.Element {
+  return (
+    <g transform={`translate(${at.x} ${at.y})`}>
+      <g style={{ ["--dx" as string]: `${from.x - at.x}px`, animation: reduced ? undefined : `aq-jx ${JUMP_MS}ms linear both` }}>
+        <g style={{ ["--dy" as string]: `${from.y - at.y}px`, animation: reduced ? undefined : `aq-jy ${JUMP_MS}ms cubic-bezier(.15,.6,.35,1) both` }}>{children}</g>
+      </g>
+    </g>
+  );
+}
+
+function Splash({ x, delay }: { x: number; delay: number }): JSX.Element {
+  return (
+    <g shapeRendering="crispEdges">
+      {DROPS.map(([dx, dy], k) => (
+        <rect key={k} x={x - 2} y={WATER_Y - 2} width={4} height={4} fill="#cfe8ff" opacity={0}
+          style={{ ["--dx" as string]: `${dx}px`, ["--dy" as string]: `${dy}px`, animation: `aq-drop 600ms ease-out ${delay + k * 30}ms forwards` }} />
+      ))}
+    </g>
+  );
+}
+
+function FinaleG({ w, part, paid, from, pacFrom, reduced }: { w: Row; part: string; paid: boolean; from: { x: number; y: number }; pacFrom: { x: number; y: number }; reduced: boolean }): JSX.Element {
+  const kindIcon = productKind(part);
+  const fishAt = { x: CARD_CX - w.W / 2, y: PLATE.y + 20 - w.H / 2 };
+  const pacAt = { x: PAC_LAND.x - PW / 2, y: PAC_LAND.y - PW / 2 };
+  const price = w.sign && w.sign.sub === "Winner" ? w.sign.label : "";
+  const name = w.name.length > 20 ? `${w.name.slice(0, 19)}...` : w.name;
+  const cardMotion = reduced ? undefined : `aq-appear ${DISSOLVE_MS}ms steps(5, end) ${JUMP_MS}ms both`;
+  const splashX = (a: number, b: number) => a + (b - a) * 0.9;
+  return (
+    <g aria-hidden="true">
+      {reduced ? null : (
+        <>
+          <Splash x={splashX(from.x + w.W / 2, fishAt.x + w.W / 2)} delay={380} />
+          <Splash x={splashX(pacFrom.x + PW / 2, pacAt.x + PW / 2)} delay={330} />
+          <Jumper at={fishAt} from={{ x: from.x, y: from.y }} reduced={false}>
+            <g style={{ animation: `aq-dissolve ${DISSOLVE_MS}ms steps(5, end) ${JUMP_MS}ms both` }}>
+              <g transform={`scale(${S})`}><Sprite grid={w.grid} colors={w.colors} cell={FC} flip={w.flip} /></g>
+              <text x={w.cx} y={w.H + 13} textAnchor="middle" fill={w.color} style={label()}>{name}</text>
+            </g>
+          </Jumper>
+        </>
+      )}
+      <g style={{ animation: cardMotion }}>
+        <rect x={PLATE.x} y={PLATE.y} width={PLATE.w} height={PLATE.h} rx={6} fill={PAL.ink} fillOpacity={0.85} />
+        <g transform={`translate(${CARD_CX - 8 * ICON_CELL} ${GLASS_Y - 12 * ICON_CELL})`}><g shapeRendering="crispEdges"><Sprite grid={PRODUCT_ICONS[kindIcon]} colors={PRODUCT_COLORS[kindIcon]} cell={ICON_CELL} /></g></g>
+        {price ? <text x={CARD_CX} y={PLATE.y + 20} textAnchor="middle" fill={PAL.line} style={mono(15, { fontWeight: 500 })}>{price}</text> : null}
+        <text x={CARD_CX} y={PLATE.y + 35} textAnchor="middle" fill={PAL.muted} style={mono(10)}>{name}</text>
+        {paid ? <text x={CARD_CX} y={PLATE.y + 47} textAnchor="middle" fill={PAL.mint} style={mono(10)}>Paid · Stripe test mode</text> : null}
+      </g>
+      <Jumper at={pacAt} from={pacFrom} reduced={reduced}>
+        <g transform={`scale(${S})`}><Sprite grid={PAC} colors={{ X: PAL.pac }} cell={PC} flip /></g>
+        <text x={PW / 2} y={PW + 13} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
+      </Jumper>
+    </g>
+  );
+}
+
+const REASON_TEXT: Record<OutReason, string> = { highest_price: "eaten, highest price", outranked: "eaten, outranked", shield_block: "blocked by Shield", failed_fit: "rejected, fit", advocate_veto: "rejected, condition", refused: "refused" };
 
 function summary(script: FloorScript, phase: FloorPhase): string {
   const parts: string[] = [];
@@ -305,7 +380,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
         if (!v) return;
         const eat = phase.kind === "eat" && v.state === "eaten" && v.reason != null && focusOf(phase, v.reason) === s.id;
         if ((phase.shieldAt === s.id || phase.checkerAt === s.id || eat) && frozen[s.id] === undefined) frozen[s.id] = tickRef.current;
-        if (eat && (v.reason === "highest_price" || v.reason === "refused")) eaterAt = fishTile(i, frozen[s.id] ?? tickRef.current);
+        if (eat && (v.reason === "highest_price" || v.reason === "outranked" || v.reason === "refused")) eaterAt = fishTile(i, frozen[s.id] ?? tickRef.current);
         if (v.state === "winner" && (phase.kind === "crown" || phase.kind === "deal" || phase.kind === "paid")) winnerHere = true;
       });
       let path: Tile[] = [prev.tile];
@@ -345,7 +420,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
     const r = v.reason;
     const win = finale && v.state === "winner";
     const newly = kind === "eat" && v.state === "eaten" && r != null && focusOf(phase, r) === s.id;
-    const eatsUp = r === "highest_price" || r === "refused";
+    const eatsUp = r === "highest_price" || r === "outranked" || r === "refused";
     const priced: Sg = v.price == null ? { label: "???", sub: "sealed", tone: PAL.line }
       : win ? { label: usd.format(v.price), sub: "Winner", tone: PAL.pac }
         : { label: usd.format(v.price), sub: v.checkedAgo != null ? `re-checked ${v.checkedAgo}s ago` : null, tone: PAL.line };
@@ -423,6 +498,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
   }
 
   const winner = rows.find((r) => r.win);
+  const jumped = (kind === "deal" || kind === "paid") && !!winner;
   const eater = rows.find((r) => r.newly && r.shrink);
 
   // Pac-Man on his tile, facing his last horizontal step; at the fish he faces it
@@ -462,16 +538,19 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, width 
             <path d={WALLS.light} fill="#fff" fillOpacity={0.14} /><path d={WALLS.dark} fill="#000" fillOpacity={0.2} />
           </g>
           <path d={pelletPath} fill={PAL.line} fillOpacity={0.5} shapeRendering="crispEdges" />
-          <ellipse cx={WIN_AT.x} cy={WIN_AT.y} rx={46} ry={30} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
-          {sorted.map((r) => <SellerG key={r.id} r={r} reduced={reducedMotion} />)}
-          <g aria-hidden="true" style={{ transform: `translate(${pc.x - PW / 2}px, ${pc.y - PW / 2}px)`, transition: reducedMotion ? "none" : `transform ${STEP_MS + 10}ms linear` }}>
-            <g transform={`scale(${S})`}><Sprite grid={open ? PAC : PAC_CLOSED} colors={{ X: PAL.pac }} cell={PC} flip={face < 0} /></g>
-            <text x={PW / 2} y={PW + 13} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
-          </g>
+          <ellipse cx={WIN_AT.x} cy={WIN_AT.y} rx={46} ry={30} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner && !jumped ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
+          {sorted.filter((r) => !(jumped && r.win)).map((r) => <SellerG key={r.id} r={r} reduced={reducedMotion} />)}
+          {jumped ? null : (
+            <g aria-hidden="true" style={{ transform: `translate(${pc.x - PW / 2}px, ${pc.y - PW / 2}px)`, transition: reducedMotion ? "none" : `transform ${STEP_MS + 10}ms linear` }}>
+              <g transform={`scale(${S})`}><Sprite grid={open ? PAC : PAC_CLOSED} colors={{ X: PAL.pac }} cell={PC} flip={face < 0} /></g>
+              <text x={PW / 2} y={PW + 13} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
+            </g>
+          )}
           {agent ? <AgentG key={agent.key} a={agent} reduced={reducedMotion} leaving={!placed} /> : null}
         </g>
         <g fill="#fff"><rect x={TANK.x + 1} y={WATER_Y} width={TANK.w - 2} height={2} opacity={0.18} /><rect x={220} y={WATER_Y + 4} width={60} height={2} opacity={0.1} /><rect x={560} y={WATER_Y + 4} width={90} height={2} opacity={0.1} /></g>
         <rect x={TANK.x} y={TANK.y} width={TANK.w} height={TANK.h} rx={8} fill="none" stroke={PAL.line} strokeOpacity={0.35} strokeWidth={2} />
+        {jumped && winner ? <FinaleG w={winner} part={script.part} paid={kind === "paid"} from={{ x: WIN_AT.x - winner.W / 2, y: WIN_AT.y - winner.H / 2 }} pacFrom={{ x: px(WIN_PAC).x - PW / 2, y: px(WIN_PAC).y - PW / 2 }} reduced={reducedMotion} /> : null}
       </g>
     </svg>
   );
