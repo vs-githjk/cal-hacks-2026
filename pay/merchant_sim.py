@@ -24,7 +24,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from pay.approval import approved_voice_record_matches
 from pay.mandate import can_charge, idempotency_key, parse_ts, verify as verify_mandate
 from pay.replay import NonceStore
-from pay.tap import keyring, verify_request
+from pay.tap import keyring, tap_status, verify_request
 from shield.receipt import parse_unique_json, verify_allow_receipt
 
 STRIPE_API = "https://api.stripe.com/v1/payment_intents"
@@ -160,6 +160,7 @@ class MerchantSim:
 
         verdict = verify_request(method=method, url=url, headers=headers, body=body, keys=self.keys,
                                  store=self.store, now=now, expected_mandate_hash=record.get("hash"), mandate=record)
+        out["tap"] = tap_status(verdict)  # the approval card shows tap["label"]
         if not verdict:
             return refuse(verdict.reason, verdict.detail)
         cents = _whole_cents(record.get("amount"))

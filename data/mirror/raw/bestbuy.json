@@ -10,7 +10,7 @@
   "savingsPercent": null,
   "onSale": false,
   "rating": 4.9,
-  "reviewCount": 378,
+  "reviewCount": 379,
   "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-ti-16g-gaming-trio-oc-16gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TXRPQX/sku/6631085",
   "imageUrl": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/6fac0ad2-dfa0-4b4f-94b3-46f74ecec110.jpg",
   "availability": null,
@@ -18,7 +18,7 @@
   "condition": "new",
   "openBoxCondition": null,
   "source": "bestbuy",
-  "scrapedAt": "2026-10-24T09:36:32.962714+00:00"
+  "scrapedAt": "2026-10-25T02:41:20.643094+00:00"
  },
  {
   "skuId": "6618884",
@@ -39,27 +39,27 @@
   "condition": "new",
   "openBoxCondition": null,
   "source": "bestbuy",
-  "scrapedAt": "2026-10-24T09:36:33.050022+00:00"
+  "scrapedAt": "2026-10-25T02:41:20.749846+00:00"
  },
  {
-  "skuId": "6614742",
-  "title": "ASUS - PRIME NVIDIA GeForce RTX 5070 Ti OC Edition 16GB GDDR7 PCI Express 5.0 Graphics Card - Black",
-  "brand": "ASUS",
-  "modelNumber": "PRIME-RTX5070TI-O16G",
-  "price": 1299.99,
-  "originalPrice": 1299.99,
+  "skuId": "6616903",
+  "title": "PNY - NVIDIA GeForce RTX 5080 Overclocked 16GB GDDR7 PCI Express 5.0 Graphics Card with Triple Fan - Black",
+  "brand": "PNY",
+  "modelNumber": "VCG508016TFXPB1-O",
+  "price": 1849.99,
+  "originalPrice": 1849.99,
   "savings": 0,
   "savingsPercent": null,
   "onSale": false,
-  "rating": 4.7,
-  "reviewCount": 72,
-  "url": "https://www.bestbuy.com/product/asus-prime-nvidia-geforce-rtx-5070-ti-oc-edition-16gb-gddr7-pci-express-5-0-graphics-card-black/JJGGLHJX4K/sku/6614742",
-  "imageUrl": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/96505925-44c6-4d24-a571-3ae1c981e0c2.png",
+  "rating": 4.8,
+  "reviewCount": 411,
+  "url": "https://www.bestbuy.com/product/pny-nvidia-geforce-rtx-5080-overclocked-16gb-gddr7-pci-express-5-0-graphics-card-with-triple-fan-black/JXF2C46ZZH/sku/6616903",
+  "imageUrl": "https://pisces.bbystatic.com/image2/BestBuy_US/images/products/692070a8-5d8d-4547-89f0-623b4d034ce3.jpg",
   "availability": null,
   "isSponsored": null,
   "condition": "new",
   "openBoxCondition": null,
   "source": "bestbuy",
-  "scrapedAt": "2026-10-24T09:36:33.072291+00:00"
+  "scrapedAt": "2026-10-25T02:41:20.780180+00:00"
  }
 ]
