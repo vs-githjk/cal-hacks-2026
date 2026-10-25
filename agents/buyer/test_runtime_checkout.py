@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from advocate.checks import CALL_SUMMARIES
 from buyer import checkout, state
+from owner_approval import market_view
 from goal import need_from_goal, parse_goal
 from payment import payment_request
 from pay.approval import ApprovalService, VOICE_CODE_TTL_SECONDS, approved_voice_record_matches
@@ -83,6 +84,38 @@ def reviewed_card(need_id="need-1", bid_id="bid-1"):
             "rule_id": "advocate.ok", "reason": reason, "source_url": source}
 
 
+def _wire_market_mandates(buyer):
+    """The market as it behaves: create_mandate only through the REFEREE (the buyer identity is refused), and the buyer's own
+    purchase row then shows that pending mandate (market.ts requireRole create_mandate, ['referee'])."""
+    created = {}
+
+    def create(mandate, **_kwargs):
+        created[mandate["hash"]] = mandate
+        return {"mandate_hash": mandate["hash"]}
+
+    def status(mandate_hash):
+        m = created[mandate_hash]
+        return {"mandate_hash": mandate_hash, "amount": m["amount"], "payee": m["payee"], "reservation_matches": True,
+                "within_allowance": False, "retired": False, "settled": False, "approval_method": None, "approved_at": None}
+
+    def refused(*_a, **_k):
+        raise buyer.MarketBridgeError("market_reducer_failed")  # create_mandate needs referee; caller is buyer
+    buyer.MARKET_REFEREE.create_mandate.side_effect = create
+    buyer.MARKET_BUYER.purchase_status.side_effect = status
+    buyer.MARKET_BUYER.create_mandate.side_effect = refused
+
+
+def _readbacks(buyer, row_fn):
+    """The first buyer-side read is create_mandate's own readback (the pending row from _wire_market_mandates); every later
+    read is what the test wants the market to show."""
+    pending, reads = buyer.MARKET_BUYER.purchase_status.side_effect, []
+
+    def status(mandate_hash):
+        reads.append(mandate_hash)
+        return pending(mandate_hash) if len(reads) == 1 else row_fn(mandate_hash)
+    buyer.MARKET_BUYER.purchase_status.side_effect = status
+
+
 def ready_for_requote(buyer):
     goal, _ = parse_goal("a new GPU under $800 by Friday", "owner", now=NOW)
     state.save_goal(buyer.STATE_DB, goal)
@@ -94,13 +127,11 @@ def ready_for_requote(buyer):
     line_hash = hashlib.sha256(json.dumps(raw_line, sort_keys=True, separators=(",", ":"),
                                          ensure_ascii=False, allow_nan=False).encode()).hexdigest()
     bid = {"id": "bid-1", "supplier_id": "seller_1", "total_landed_price": 582.0,
-           "persona": "Seller", "source": "SIM", "origin": "SIM", "need_id": need["id"],
+           "persona": "Seller", "source": "SIM", "origin": "SIM", "need_id": need["id"], "market_seller_id": "seller-a",
            "lines": [raw_line], "candidate_binding_hash": "c" * 64, "market_binding_hash": "c" * 64,
            "quoted_at": NOW.isoformat(), "expires_at": (NOW + timedelta(seconds=600)).isoformat(),
            "listing_hash": line_hash}
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_kwargs: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True,
-        "within_allowance": False, "retired": False}
+    _wire_market_mandates(buyer)
     buyer.ROUND.update(owner="owner", owner_context=None, phase="requote", pick=1,
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
         bids=[bid], cards={"bid-1": reviewed_card()}, reviewed=True,
@@ -138,7 +169,7 @@ def test_missing_owner_pin_prevents_creating_a_pending_purchase(runtime, monkeyp
 
     assert db.execute("SELECT COUNT(*) FROM transactions").fetchone()[0] == 0
     assert not buyer.ROUND.get("transaction")
-    assert not buyer.MARKET_BUYER.create_mandate.called
+    assert not buyer.MARKET_REFEREE.create_mandate.called and not buyer.MARKET_BUYER.create_mandate.called
     assert not any(isinstance(message, buyer.common.OrderPlaced) for _, message in ctx.sent)
 
 
@@ -188,9 +219,7 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
             "listing_hash": metadata[index]["listingHash"], "quantity": line["quantity"],
             "shipping": line["shipping"]} for index, line in enumerate(chosen)]}
     buyer.MARKET_BUYER, buyer.MARKET_REFEREE = market, referee
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_kwargs: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True,
-        "within_allowance": False, "retired": False}
+    _wire_market_mandates(buyer)
     state.save_goal(db, goal)
     buyer.ROUND.update(owner="owner", owner_context=None, phase="market_review_wait", pick=1,
         deadline=NOW.timestamp() + 60, quoted_at=NOW.timestamp(), need=need, goal=goal,
@@ -211,7 +240,7 @@ def test_raw_multi_alternative_bid_survives_market_projection_and_requote(runtim
     requote_ctx = Context()
     asyncio.run(buyer.on_requote(requote_ctx, dict(raw)))
     assert buyer.ROUND.get("transaction") and buyer.ROUND["transaction"]["phase"] == "pending_approval", repr(
-        (buyer.ROUND.get("phase"), buyer.MARKET_BUYER.create_mandate.call_args_list,
+        (buyer.ROUND.get("phase"), buyer.MARKET_REFEREE.create_mandate.call_args_list,
          buyer.ROUND.get("original_offer") == raw, buyer.ROUND.get("candidate_hashes"),
          buyer.ROUND.get("market_winner"), requote_ctx.logger.warning.call_args_list,
          [message.text() for _, message in requote_ctx.sent if hasattr(message, "text")]))
@@ -265,10 +294,10 @@ def _wire_voice(buyer, client, secret):
 def _market_shows_the_approval(buyer):
     """What the real market's buyer-private row shows once the referee has recorded the approval for this mandate."""
     def status(mandate_hash):
-        m = buyer.ROUND["transaction"]["mandate"]
+        m = market_view(buyer.ROUND["transaction"])
         return {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": mandate_hash,
                 "amount": m["amount"], "payee": m["payee"], "retired": False}
-    buyer.MARKET_BUYER.purchase_status.side_effect = status
+    _readbacks(buyer, status)
 
 
 def test_requote_starts_the_phone_call_on_its_own_and_only_once(runtime):
@@ -311,16 +340,16 @@ def test_owner_chat_never_orders_unless_the_referee_recorded_this_exact_mandate(
     ready_for_requote(buyer)
     if failure == "referee_refuses":
         buyer.MARKET_REFEREE.record_approval.side_effect = buyer.MarketBridgeError("market_reducer_failed")
-        buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: {"approval_method": None, "approved_at": None}
+        _readbacks(buyer, lambda h: {"approval_method": None, "approved_at": None})
     else:
         buyer.MARKET_REFEREE.record_approval.return_value = {"approval_method": "voice_code"}
 
         def status(mandate_hash):
-            m = buyer.ROUND["transaction"]["mandate"]
+            m = market_view(buyer.ROUND["transaction"])
             row = {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": mandate_hash,
                    "amount": m["amount"], "payee": m["payee"], "retired": False}
             return {**row, "approval_method": None, "approved_at": None} if failure == "market_row_missing" else {**row, "amount": 1.0}
-        buyer.MARKET_BUYER.purchase_status.side_effect = status
+        _readbacks(buyer, status)
     client = FakeVoiceClient()
     _wire_voice(buyer, client, "buyer-runtime-voice-approval-secret")
     owner_ctx = CodeCapturingContext(client)
@@ -946,7 +975,7 @@ def _delegate(buyer, monkeypatch, caller, direct):
 
 
 def _market_row(buyer, **override):
-    m = buyer.ROUND["transaction"]["mandate"]
+    m = market_view(buyer.ROUND["transaction"])
     return {"approval_method": "voice_code", "approved_at": NOW.isoformat(), "mandate_hash": m["hash"],
             "amount": m["amount"], "payee": m["payee"], "retired": False, **override}
 
@@ -970,7 +999,7 @@ def test_delegation_is_off_by_default_and_today_s_direct_call_runs(runtime, monk
     assert _run(buyer, ctx)["phase"] == "approved" and client.calls == 1
     assert not any(isinstance(m, buyer.common.VoiceTransportRequest) for _, m in ctx.sent)
     assert buyer.MARKET_REFEREE.record_approval.call_count == 1  # recorded by the referee, then re-read once by the buyer
-    assert buyer.MARKET_BUYER.purchase_status.call_count == 1
+    assert buyer.MARKET_BUYER.purchase_status.call_count == 2  # create_mandate's readback, then the approval's
 
 
 def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_reads_the_market(runtime, monkeypatch):
@@ -980,7 +1009,7 @@ def test_delegation_approves_on_the_spoken_code_verified_by_the_buyer_and_re_rea
     ctx = CodeCapturingContext(direct)
     caller = FakeCaller(direct)
     _delegate(buyer, monkeypatch, caller, direct)
-    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer)
+    _readbacks(buyer, lambda h: _market_row(buyer))
     approved = _run(buyer, ctx)
     assert approved["phase"] == "approved" and direct.calls == 0 and len(caller.requests) == 1
     assert approved["voice_approval"]["recording_ref"] == "cartesia:caller-call-1"
@@ -1096,7 +1125,7 @@ def test_a_caller_timeout_falls_back_to_the_direct_call_once(runtime, monkeypatc
     ctx = CodeCapturingContext(direct)
     caller = FakeCaller(direct, raise_=TimeoutError())
     _delegate(buyer, monkeypatch, caller, direct)
-    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer)
+    _readbacks(buyer, lambda h: _market_row(buyer))
     approved = _run(buyer, ctx)
     assert approved["phase"] == "approved" and direct.calls == 1 and len(caller.requests) == 1
 
@@ -1109,7 +1138,7 @@ def test_a_market_re_read_mismatch_blocks_the_order_and_payment(runtime, monkeyp
     direct = FakeVoiceClient()
     ctx = CodeCapturingContext(direct)
     _delegate(buyer, monkeypatch, FakeCaller(direct), direct)
-    buyer.MARKET_BUYER.purchase_status.side_effect = lambda h: _market_row(buyer, **{field: value})
+    _readbacks(buyer, lambda h: _market_row(buyer, **{field: value}))
     held = _run(buyer, ctx)
     assert held["phase"] == "uncertain"
     assert not any(isinstance(m, buyer.common.OrderPlaced) for _, m in ctx.sent)

@@ -43,12 +43,10 @@ def test_hunt_and_handoff_carry_the_fresh_buyer_id(runtime, monkeypatch):
     buyer.MARKET_BUYER.reset_mock()
     ready_for_requote(buyer)
     buyer.ROUND.update(market_buyer_id=BID)
-    buyer.MARKET_BUYER.create_mandate.side_effect = lambda mandate, **_k: {
-        "mandate_hash": mandate["hash"], "reservation_matches": True, "within_allowance": False, "retired": False}
     asyncio.run(buyer.on_requote(Context(), dict(buyer.ROUND["bids"][0])))
     tx = buyer.ROUND["transaction"]
     assert tx["buyer_id"] == BID
-    assert buyer.MARKET_BUYER.create_mandate.call_args.kwargs["buyer_id"] == BID
+    assert buyer.MARKET_REFEREE.create_mandate.call_args.kwargs["buyer_id"] == BID  # the referee creates it, never the buyer identity
     assert tx["mandate"]["buyer_id"] == BID
     calls = repr(buyer.MARKET_BUYER.mock_calls) + repr(tx)
     assert "vidyut" not in calls.lower()
@@ -591,7 +589,6 @@ def test_chat_owner_off_the_allowlist_is_told_the_beta_limit(runtime, monkeypatc
     ready_for_requote(buyer)
     buyer.ROUND["market_buyer_id"] = BID
     buyer.MARKET_REFEREE.buyer_contact.return_value = {"display_name": "Asha", "phone": "+14155550111"}
-    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
     monkeypatch.setattr(buyer, "MARKET_BUYER_ID", "")
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
     _beta_env(monkeypatch)
@@ -633,7 +630,6 @@ def test_a_rate_limited_dial_is_final_and_not_retried_on_the_web_path(runtime, m
     ready_for_requote(buyer)
     buyer.ROUND.update(owner=None, market_buyer_id=BID)
     buyer.ROUND["goal"]["market_buyer_id"] = BID
-    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
     asyncio.run(buyer._auto_web_approval(Context(), 1))
     assert len(limited.attempts) == 1
     assert not buyer.MARKET_REFEREE.record_approval.called
@@ -647,7 +643,6 @@ def test_a_rate_limited_dial_tells_the_chat_owner_about_the_beta_limit(runtime, 
     _real_service(buyer, monkeypatch)
     ready_for_requote(buyer)
     buyer.ROUND["market_buyer_id"] = BID
-    buyer.MARKET_REFEREE.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
     ctx = Context()
     transaction = buyer._create_pending_transaction(1)
     asyncio.run(buyer._run_owner_approval(ctx, 1, buyer.ROUND["owner"], transaction))
