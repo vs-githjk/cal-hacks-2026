@@ -1,7 +1,7 @@
 // Run with: npm test --prefix web (node --test, no extra dependency).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanSignUp, gateRoute, signUpErrorText } from "./signUp.ts";
+import { cleanSignUp, gateRoute, pairCodeToSend, signUpErrorText } from "./signUp.ts";
 
 const buyer = [{ role: "buyer", subjectId: "b-1" }];
 const seller = [{ role: "seller", subjectId: "s-1" }];
@@ -61,4 +61,16 @@ test("cleanSignUp: US numbers become E.164, other countries need a plus", () => 
 
 test("signUpErrorText: the market's E.164 phone refusal reads plainly", () => {
   assert.match(signUpErrorText("phone must start with + and a country code, like +14155550100"), /country code/);
+});
+
+test("pairCodeToSend uppercases, drops inner spaces and keeps the hyphen", () => {
+  assert.equal(pairCodeToSend("DJAAG-FRM3M"), "DJAAG-FRM3M");
+  assert.equal(pairCodeToSend("djaag-frm3m"), "DJAAG-FRM3M");
+  assert.equal(pairCodeToSend(" djaag frm3m "), "DJAAGFRM3M");
+});
+
+test("pairCodeToSend returns null when nothing is left after the market's normalization", () => {
+  assert.equal(pairCodeToSend(""), null);
+  assert.equal(pairCodeToSend("   "), null);
+  assert.equal(pairCodeToSend("--"), null);
 });

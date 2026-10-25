@@ -41,3 +41,9 @@ export function cleanSignUp(name: string, phone: string): { displayName: string;
   if (/^1[0-9]{10}$/.test(cleaned)) return { displayName, phone: `+${cleaned}` };
   return ask;
 }
+
+/** The pairing code to send, or null when the market would see nothing (it keeps only 0-9 and A-Z, so an empty try must not count as a failure). */
+export function pairCodeToSend(raw: string): string | null {
+  const code = raw.trim().toUpperCase().replace(/\s+/g, "");
+  return code.toUpperCase().replace(/[^0-9A-Z]/g, "") ? code : null;
+}

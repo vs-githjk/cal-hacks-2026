@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { useRouter } from "next/navigation";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { gateRoute } from "@/lib/signUp";
+import { gateRoute, pairCodeToSend } from "@/lib/signUp";
 import { GoalComposer } from "./GoalComposer";
 import { PanelPreviews } from "./panels";
 
@@ -37,15 +37,20 @@ function PairScreen() {
     <section className="card mx-auto max-w-md p-6">
       <h1 className="mb-2 text-lg font-semibold">Pair this screen with the buyer</h1>
       <p className="mb-4 text-sm text-muted">
-        Enter the pairing code from the demo operator. Sellers can never pair.
+        Enter the pairing code from the operator, like DJAAG-FRM3M. Sellers can never pair.
       </p>
       <form
         className="flex gap-2"
         onSubmit={async (e) => {
           e.preventDefault();
           setError("");
+          const toSend = pairCodeToSend(code);
+          if (!toSend) {
+            setError("Type the pairing code first.");
+            return;
+          }
           try {
-            await pair({ buyerId: DEMO_BUYER, code: code.trim() });
+            await pair({ buyerId: DEMO_BUYER, code: toSend });
             setTried(true);
           } catch (err) {
             setError(err instanceof Error ? err.message : "Pairing failed");
@@ -55,10 +60,14 @@ function PairScreen() {
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          inputMode="numeric"
-          placeholder="6-digit code"
+          inputMode="text"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="off"
+          placeholder="Like DJAAG-FRM3M"
           aria-label="Pairing code"
-          className="flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono"
+          className="w-full min-w-0 flex-1 min-h-11 rounded-lg border border-line bg-soft px-3 py-2 font-mono"
         />
         <button className="min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink">Pair</button>
       </form>
