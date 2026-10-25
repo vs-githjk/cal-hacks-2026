@@ -1,0 +1,65 @@
+[
+ {
+  "name": "Lexar 2TB NM790 PCIe 4.0 x4 NVMe M.2 Internal SSD",
+  "price": 329.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1846007-REG/lexar_lnm790x002t_rnnnu_nm790_m_2_2280_pcie.html",
+  "sku": 1846007,
+  "mpn": "LNM790X002T-RNNNU",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_EXPEDITED",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Samsung Ark 2nd Gen 55\" 4K Curved Monitor & 2TB 990 PRO M.2 SSD with Heatsink Kit",
+  "price": 3278.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1811432-REG/samsung_ark_2nd_gen_55.html",
+  "sku": 1811432,
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": true,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_TWO_DAY_DELIVERY",
+   "shippingLongMessageType": "FREE_EXPEDITED",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "Lenovo 16\" ThinkPad P16s Gen 4 Multi-Touch Laptop",
+  "price": 6412.83,
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1922535-REG/lenovo_21qv002rus_16_thinkpad_p16s_gen.html",
+  "sku": 1922535,
+  "mpn": "21QV002RUS",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipTime": "6-8  Weeks",
+   "shipsAlone": true,
+   "shipTimeMessageType": "EXPECTED_AVAILABLITY_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ }
+]

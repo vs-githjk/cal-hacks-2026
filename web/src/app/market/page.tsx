@@ -24,7 +24,6 @@ export default function MarketPage() {
   const shownLines = sim ? asSim(sample.sellerLines) : lines;
   const shownRound = sim ? asSim(sample.round) : round;
 
-  // Loss reports and the learning diff have no market table yet (Lane A owns them): SIM sample.
   return (
     <>
       <MarketScreen
@@ -32,11 +31,9 @@ export default function MarketPage() {
         round={shownRound}
         cap={sim ? sample.goal.cap : cap}
         lines={shownLines}
-        lossReports={asSim(sample.lossReports)}
-        learning={asSim(sample.learning)}
         events={floor}
         originCounts={originCounts(shownRound?.arrivals ?? [])}
-        sample={{ round: sim, lines: sim, lossReports: true, learning: true }}
+        sample={{ round: sim, lines: sim }}
       />
     </>
   );

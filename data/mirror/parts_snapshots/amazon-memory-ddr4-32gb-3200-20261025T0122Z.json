@@ -1,0 +1,23 @@
+[
+ {
+  "id": "amazon:74c171f84112",
+  "category": "memory",
+  "name": "",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": null,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "amazon",
+  "snapshot_id": "amazon-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:42+00:00",
+  "listing": {
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": null
+  },
+  "maker_model": null
+ }
+]

@@ -1,0 +1,47 @@
+[
+ {
+  "productTitle": "B760-P Pro WiFi DDR4 Intel LGA 1700 ATX Motherboard",
+  "sku": "536656",
+  "url": "https://www.microcenter.com/product/662290/msi-b760-p-pro-wifi-ddr4-intel-lga-1700-atx-motherboard",
+  "mpn": null,
+  "price": 149.99,
+  "in_stock": true,
+  "availability": "3 IN STOCK"
+ },
+ {
+  "productTitle": "B760M-P Pro Intel LGA 1700 microATX Motherboard",
+  "sku": "606210",
+  "url": "https://www.microcenter.com/product/670067/msi-b760m-p-pro-intel-lga-1700-microatx-motherboard",
+  "mpn": null,
+  "price": 109.99,
+  "in_stock": true,
+  "availability": "1 IN STOCK"
+ },
+ {
+  "productTitle": "B760M-AYW WIFI D4 II Intel LGA 1700 microATX Motherboard",
+  "sku": "065656",
+  "url": "https://www.microcenter.com/product/713412/asus-b760m-ayw-wifi-d4-ii-intel-lga-1700-microatx-motherboard",
+  "mpn": null,
+  "price": 119.99,
+  "in_stock": true,
+  "availability": "2 IN STOCK"
+ },
+ {
+  "productTitle": "Z790-Plus TUF Gaming WiFi D5 Intel LGA 1700 ATX Motherboard",
+  "sku": "536334",
+  "url": "https://www.microcenter.com/product/662599/asus-z790-plus-tuf-gaming-wifi-d5-intel-lga-1700-atx-motherboard",
+  "mpn": null,
+  "price": 249.99,
+  "in_stock": true,
+  "availability": "1 IN STOCK"
+ },
+ {
+  "productTitle": "Z890 EAGLE WIFI7 PLUS Intel LGA 1851 ATX Motherboard",
+  "sku": "024745",
+  "url": "https://www.microcenter.com/product/709507/gigabyte-z890-eagle-wifi7-plus-intel-lga-1851-atx-motherboard",
+  "mpn": null,
+  "price": 239.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ }
+]

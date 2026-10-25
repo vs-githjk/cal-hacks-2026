@@ -1,0 +1,47 @@
+[
+ {
+  "title": "G.skil Trident Neo Z5 RGB DDR5 6000MHz CL30",
+  "soldPrice": "565.00",
+  "shippingPrice": null,
+  "endedAt": "2026-10-24",
+  "url": "https://www.ebay.com/itm/227558770272?nordt=true",
+  "shippingType": "free",
+  "condition": "Brand New"
+ },
+ {
+  "title": "Corsair Vengeance RGB 64GB (2x32GB) DDR5-6000 CL30 CM64GX5M2B6000C30",
+  "soldPrice": "829.99",
+  "shippingPrice": "9.99",
+  "endedAt": "2026-09-30",
+  "url": "https://www.ebay.com/itm/198664841515?nordt=true",
+  "shippingType": "paid",
+  "condition": "Brand New"
+ },
+ {
+  "title": "Corsair Vengeance RGB DDR5 32GB (2x16GB) 6000MHz CL30 AMD EXPO",
+  "soldPrice": "535.00",
+  "shippingPrice": "6.18",
+  "endedAt": "2026-10-24",
+  "url": "https://www.ebay.com/itm/287675662868?nordt=true",
+  "shippingType": "paid",
+  "condition": "Open Box"
+ },
+ {
+  "title": "Corsair Vengeance RGB DDR5 32GB (2x16GB) 6000MHz CL30 AMD EXPO",
+  "soldPrice": "535.00",
+  "shippingPrice": "6.18",
+  "endedAt": "2026-10-24",
+  "url": "https://www.ebay.com/itm/287643943329?nordt=true",
+  "shippingType": "paid",
+  "condition": "Open Box"
+ },
+ {
+  "title": "Corsair Vengeance RGB DDR5 64GB (2x32) 6000MHz CL30 DIMM AMD EXPO XMP",
+  "soldPrice": "550.00",
+  "shippingPrice": "6.18",
+  "endedAt": "2026-10-24",
+  "url": "https://www.ebay.com/itm/820273421029?nordt=true",
+  "shippingType": "paid",
+  "condition": "Pre-Owned"
+ }
+]

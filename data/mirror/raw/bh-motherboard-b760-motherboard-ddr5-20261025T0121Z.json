@@ -1,0 +1,88 @@
+[
+ {
+  "name": "MSI PRO B760M-P DDR5 LGA 1700 Micro-ATX Motherboard",
+  "price": 109.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1901080-REG/msi_pro_b760m_p_ddr5_motherboard.html",
+  "sku": 1901080,
+  "mpn": "PRO B760M-P",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "MSI B760 GAMING PLUS WIFI ATX LGA 1700 Motherboard",
+  "price": 189.54,
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1764872-REG/msi_b760_gaming_plus_wifi.html",
+  "sku": 1764872,
+  "mpn": "B760 GAMING PLUS WIFI",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipTime": "2-4  Weeks",
+   "shipsAlone": false,
+   "shipTimeMessageType": "EXPECTED_AVAILABLITY_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "ASUS TUF GAMING B760-PLUS WIFI LGA1700 ATX Motherboard",
+  "price": 169.99,
+  "in_stock": false,
+  "stock_availability": "special_order",
+  "url": "https://www.bhphotovideo.com/c/product/1757906-REG/asus_tuf_gaming_b760_plus_wifi.html",
+  "sku": 1757906,
+  "mpn": "TUF GAMING B760-PLUS WIFI",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipTime": "2-4  Weeks",
+   "shipsAlone": false,
+   "shipTimeMessageType": "EXPECTED_AVAILABLITY_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ },
+ {
+  "name": "ASUS Pro B760M-CT-CSM LGA 1700 Micro-ATX Motherboard",
+  "price": 135.99,
+  "in_stock": false,
+  "stock_availability": "out_of_stock",
+  "url": "https://www.bhphotovideo.com/c/product/1742990-REG/asus_pro_b760m_ct_csm_lga_1700.html",
+  "sku": 1742990,
+  "mpn": "PRO B760M-CT-CSM",
+  "shipping": {
+   "cutoffs": {
+    "cutoff": 1793052000000
+   },
+   "shipsAlone": false,
+   "shipTimeMessageType": "NO_MESSAGE",
+   "shipTimeLongMessageType": "NO_MESSAGE",
+   "shippingMessageType": "FREE_STANDARD",
+   "shippingLongMessageType": "FREE_STANDARD",
+   "promotionalShippingMessageType": "NO_MESSAGE",
+   "promotionalShippingLongMessageType": "NO_MESSAGE"
+  }
+ }
+]

@@ -10,9 +10,9 @@ def obs(provider, store, price, at="2026-10-24T05:08:00+00:00", stock=True, cond
 
 def test_sold_and_out_of_stock_never_enter_the_retail_median():
     rows = [obs("apify", "bestbuy", 1249.99), obs("apify", "microcenter", 1299.99), obs("apify", "bh", 999.0, stock=False),
-            obs("ebay-sold", "ebay_sold", 640.0, sold=True)]
+            obs("ebay-sold", "ebay_sold", 640.0, sold=True), {**obs("ebay-sold", "ebay_sold", 640.0, sold=True), "url": "https://ebay.example/2"}]
     b = baseline("rtx 5070 ti", AT, rows=rows)
-    assert b["n"] == 2 and b["ask_median"] == 1274.99 and b["median"] == 1274.99 and b["sold"]["n"] == 1 and b["sold"]["median"] == 640.0
+    assert b["n"] == 2 and b["ask_median"] == 1274.99 and b["median"] == 1274.99 and b["sold"]["n"] == 2 and b["sold"]["median"] == 640.0
 
 
 def test_one_provider_is_not_enough():
@@ -32,7 +32,8 @@ def test_negative_utc_offset_parses():
 
 
 def test_two_providers_within_24h_make_a_baseline():
-    rows = [obs("apify", "bestbuy", 1249.99), obs("brightdata", "newegg", 1269.99, at="2026-10-23T09:00:00+00:00")]
+    rows = [obs("apify", "bestbuy", 1249.99), obs("apify", "microcenter", 1249.99),
+            obs("brightdata", "newegg", 1269.99, at="2026-10-23T09:00:00+00:00"), obs("brightdata", "bh", 1269.99, at="2026-10-23T09:00:00+00:00")]
     b = baseline("rtx 5070 ti", AT, rows=rows)
     assert b["status"] == "ok" and b["providers"] == ["apify", "brightdata"] and b["median"] == 1259.99
     assert b["from"] == "2026-10-23T09:00:00+00:00" and b["to"] == "2026-10-24T05:08:00+00:00"
@@ -76,11 +77,20 @@ def sold_obs(price, sold_date, url="https://ebay.example/1"):
 
 
 def test_two_owners_make_a_baseline_and_the_two_medians_stay_apart():  # #124
-    rows = [obs("apify", "bestbuy", 1249.99), obs("apify", "microcenter", 1299.99), sold_obs(640.0, "2026-10-23")]
+    rows = [obs("apify", "bestbuy", 1249.99), obs("apify", "microcenter", 1299.99), sold_obs(640.0, "2026-10-23"),
+            sold_obs(640.0, "2026-10-22", "https://ebay.example/2")]
     b = baseline("rtx 5070 ti", AT, rows=rows)
     assert b["status"] == "ok" and b["owners"] == ["eBay sold", "retailer listings (Apify)"]
     assert b["ask_median"] == 1274.99 == b["median"] and b["sold"]["median"] == 640.0
-    assert baseline("rtx 5070 ti", AT, rows=rows + [sold_obs(100.0, "2026-10-22", "https://ebay.example/2")])["ask_median"] == 1274.99
+    assert baseline("rtx 5070 ti", AT, rows=rows + [sold_obs(100.0, "2026-10-22", "https://ebay.example/3")])["ask_median"] == 1274.99
+
+
+def test_one_observation_from_an_owner_is_a_thin_baseline_not_a_median():  # #291: one ask plus one sold row is n=1 per owner
+    rows = [obs("apify", "bestbuy", 1249.99), sold_obs(640.0, "2026-10-23")]
+    b = baseline("rtx 5070 ti", AT, rows=rows)
+    assert b["status"] == "thin" and b["median"] is None and set(b["thin_owners"]) == {"eBay sold", "retailer listings (Apify)"}
+    b = baseline("rtx 5070 ti", AT, rows=rows + [obs("apify", "microcenter", 1299.99)])
+    assert b["status"] == "thin" and b["thin_owners"] == ["eBay sold"] and b["median"] is None
 
 
 def test_two_apify_families_on_the_same_urls_are_one_owner():

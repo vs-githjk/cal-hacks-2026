@@ -11,9 +11,9 @@ import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
 
 const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/", label: "Overview" },
+  { href: "/floor", label: "Floor" },
   { href: "/buyer", label: "Buyer" },
   { href: "/market", label: "Market" },
-  { href: "/floor", label: "Floor" },
   { href: "/seller/seller-a", label: "Seller", match: "/seller" },
 ];
 
@@ -59,7 +59,7 @@ export function TopNav() {
             <span className={`h-2 w-2 rounded-full ${live ? "bg-accent-ink" : "border border-accent-ink/70 bg-transparent"}`} aria-hidden />
             {status}
           </span>
-          {/* The one entry point for a stranger: /start comes with #385. Once #379 lands, a paired buyer sees "Continue as <name>" to /buyer here instead. */}
+          {/* The one entry point for a stranger: /start and the signed-in state come with #379; once it lands, a paired buyer sees "Continue as <name>" to /buyer here instead. */}
           <Link href="/start" className="inline-flex h-9 items-center rounded-full bg-accent-ink px-3.5 text-[13px] font-semibold text-accent hover:bg-accent-ink/90">
             Start<span className="hidden sm:inline">&nbsp;as a buyer</span>
           </Link>

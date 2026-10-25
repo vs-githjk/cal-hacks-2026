@@ -102,11 +102,25 @@ def landed(listing, price):
             "landed_price": round(price + cost, 2) if ok else None, "availability": avail}
 
 
-def to_spec_card(store, item, snapshot_id, snapshot_date):
+def part_attrs(part, title, model_number):
+    """(category, attrs, maker model) for a CPU, board, memory, storage or cooler listing (#342). The category is the search's,
+    the attrs come only from the maker row for this EXACT model (model number first, then a strict title rule), never from
+    the listing text; a model with no maker row has no attrs and no maker model, so it can never bid."""
+    from data.fit_checker import part_specs   # local: the GPU path and the Actors that bundle this file never need it
+    row = part_specs.find(part, model_number, title)
+    return part, {a: v for a, (v, _) in part_specs.specs(part, row).items()}, (row or {}).get("model_number")
+
+
+def to_spec_card(store, item, snapshot_id, snapshot_date, part=None):
+    """`part` (cpu, motherboard, memory, storage, cooler) makes the card category-aware; without it the GPU rules apply as before."""
     item = strip_private(store, item)
     f = {k: first(item, paths) for k, paths in FIELDS.items()}
     title = str(f["title"] or "")
-    cat, attrs = attrs_from_title(title)
+    maker_model = None
+    if part:
+        cat, attrs, maker_model = part_attrs(part, title, f["model_number"])
+    else:
+        cat, attrs = attrs_from_title(title)
     seller = f["seller"]
     listing = {
         "url": f["url"], "price": money(f["price"]), "was_price": money(f["was_price"]),
@@ -116,7 +130,7 @@ def to_spec_card(store, item, snapshot_id, snapshot_date):
         "return_policy": f["return_policy"], "stock": f["stock"], "sold_date": f["date"],
     }
     key = f"{store}:{f['url'] or title}"
-    return {
+    card = {
         "id": f"{store}:{hashlib.sha1(key.encode()).hexdigest()[:12]}", "category": cat, "name": title,
         "model_number": str(f["model_number"]) if f["model_number"] else None,
         "condition": condition(f["condition"], title) if f["condition"] else "unknown",
@@ -124,3 +138,6 @@ def to_spec_card(store, item, snapshot_id, snapshot_date):
         "source": f["url"] or store, "snapshot_id": snapshot_id, "snapshot_date": snapshot_date,
         "listing": {**{k: v for k, v in listing.items() if v is not None}, **landed(listing, listing["price"])},
     }
+    if part:
+        card["maker_model"] = maker_model
+    return card

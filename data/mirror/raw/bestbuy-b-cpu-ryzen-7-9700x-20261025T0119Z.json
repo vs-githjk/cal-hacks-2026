@@ -1,0 +1,37 @@
+[
+ {
+  "name": "AMD - Ryzen 7 9700X 8-Core - 16-Thread 3.8 GHz (5.5 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "url": "https://www.bestbuy.com/product/amd-ryzen-7-9700x-8-core-16-thread-3-8-ghz-5-5-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH5XFW/sku/6589136",
+  "price": 341,
+  "regularPrice": 359,
+  "condition": "new"
+ },
+ {
+  "name": "AMD - Ryzen 7 9800X3D 8-Core - 16-Thread 4.7 GHz (5.2 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "url": "https://www.bestbuy.com/product/amd-ryzen-7-9800x3d-8-core-16-thread-4-7-ghz-5-2-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH5XSR/sku/6606318",
+  "price": 479,
+  "regularPrice": 479,
+  "condition": "new"
+ },
+ {
+  "name": "AMD - Ryzen 7 7700X 8-Core - 16-Thread 4.5GHz (5.4 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "url": "https://www.bestbuy.com/product/amd-ryzen-7-7700x-8-core-16-thread-4-5ghz-5-4-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52C2/sku/6519477",
+  "price": 261,
+  "regularPrice": 399.99,
+  "condition": "new"
+ },
+ {
+  "name": "AMD - Ryzen 5 7600X 6-Core - 12-Thread 4.7GHz (5.3 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "url": "https://www.bestbuy.com/product/amd-ryzen-5-7600x-6-core-12-thread-4-7ghz-5-3-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52CT/sku/6519479",
+  "price": 184,
+  "regularPrice": 299.99,
+  "condition": "new"
+ },
+ {
+  "name": "AMD - Ryzen 9 7900X 12-Core - 24-Thread 4.7 GHz (5.6 GHz Max Boost) Socket AM5 PCI Express 5.0 Unlocked Desktop Processor - Silver",
+  "url": "https://www.bestbuy.com/product/amd-ryzen-9-7900x-12-core-24-thread-4-7-ghz-5-6-ghz-max-boost-socket-am5-pci-express-5-0-unlocked-desktop-processor-silver/JXKQHH52GL/sku/11013307",
+  "price": 333.99,
+  "regularPrice": 549.99,
+  "condition": "new"
+ }
+]

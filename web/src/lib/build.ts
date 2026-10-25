@@ -29,11 +29,6 @@ export interface BuildResult {
   comparisons?: { part: string; seller: string; priceCents: number; origin: "MIRROR"; note: string }[];
 }
 
-/** The Fetch tile shows a build plan only when it is real: live, or a ?sample preview. */
-export function showBuildPlan(live: boolean, search: string): boolean {
-  return live || new URLSearchParams(search).has("sample");
-}
-
 /** Width of the cap bar in percent; 0 when there is no cap. */
 export function capPercent(totalCents: number, capCents: number): number {
   return capCents <= 0 ? 0 : Math.min(100, (totalCents / capCents) * 100);

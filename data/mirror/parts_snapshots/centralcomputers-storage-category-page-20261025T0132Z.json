@@ -1,0 +1,3370 @@
+[
+ {
+  "id": "centralcomputers:cf1352231e18",
+  "category": "storage",
+  "name": "SanDisk Extreme Portable SSD 1TB SDSSDE61-1T00-G25USB-C USB 3.2",
+  "model_number": "SDSSDE61-1T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-extreme-portable-ssd-1tb-sdssde61-1t00-g25usb-c-usb-3-2.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-extreme-portable-ssd-1tb-sdssde61-1t00-g25usb-c-usb-3-2.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN611T0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 9,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 9
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 10
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 26
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "9 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:2bb7446502bc",
+  "category": "storage",
+  "name": "SanDisk Optimus GX PRO 8100 2TB NVMe PCIe 5.0 M.2 Internal SSD M.2 2280 Form Factor Reads 14900 MB/s Writes up to 14000MB/s Up to 1200 TB TBW",
+  "model_number": "SDSP82200TAN-000E0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 429.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-optimus-gx-pro-8100-2tb-nvme-pcie-5-0-m-2-internal-ssd-m-2-2280-form-factor-reads-14900-mb-s-writes-up-to-14000mb-s-up-to-1200-tb-tbw.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-optimus-gx-pro-8100-2tb-nvme-pcie-5-0-m-2-internal-ssd-m-2-2280-form-factor-reads-14900-mb-s-writes-up-to-14000mb-s-up-to-1200-tb-tbw.html",
+   "price": 429.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN81002R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:bda3ac40b9c3",
+  "category": "storage",
+  "name": "Crucial CT4000BX500SSD1 BX500 4TB 2.5in Solid State Drive SATA 3 Reads up to 540MB/s Writes up to 500MB/s",
+  "model_number": "CT4000BX500SSD1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 549.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct4000bx500ssd1-bx500-4tb-2-5-solid-state-drive-sata-3-reads-up-to-540mb-s-writes-up-to-500mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct4000bx500ssd1-bx500-4tb-2-5-solid-state-drive-sata-3-reads-up-to-540mb-s-writes-up-to-500mb-s.html",
+   "price": 549.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRUBX4TBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 6
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ff1305df9c3d",
+  "category": "storage",
+  "name": "SanDisk Optimus GX PRO 8100 8TB NVMe PCIe 5.0 M.2 Internal SSD M.2 2280 Form Factor Reads 14900 MB/s Writes up to 13200 MB/s Up to 4800TB TBW",
+  "model_number": "SDSP82800TAN-000E0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2149.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-optimus-gx-pro-8100-8tb-nvme-pcie-5-0-m-2-internal-ssd-m-2-2280-form-factor-reads-14900-mb-s-writes-up-to-13200-mb-s-up-to-4800tb-tbw.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-optimus-gx-pro-8100-8tb-nvme-pcie-5-0-m-2-internal-ssd-m-2-2280-form-factor-reads-14900-mb-s-writes-up-to-13200-mb-s-up-to-4800tb-tbw.html",
+   "price": 2149.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISAN81008R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 15
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:78438f71d60e",
+  "category": "storage",
+  "name": "OWC OWCUS4EXP1M2 Express 1M2 USB4 (40Gb/s) Bus-PowExpress 1M2 USB4 (40Gb/s) Bus-Powered Portable NVMe M.2",
+  "model_number": "OWCUS4EXP1M2",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/owc-owcus4exp1m2-express-1m2-usb4-40gb-s-bus-powexpress-1m2-usb4-40gb-s-bus-powered-portable-nvme-m-2.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/owc-owcus4exp1m2-express-1m2-usb4-40gb-s-bus-powexpress-1m2-usb4-40gb-s-bus-powered-portable-nvme-m-2.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIOWC4EX1MR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6a264d8ed46c",
+  "category": "storage",
+  "name": "OWC OWCUS4EXP4M2 Express 4M2 USB4 (40Gb/s) Four-Slot NVMe M.2 Enclosure Up to 3200MB/s - 4x NVMe M.2 2230/42/80 Slots -Software RAID Compatible - 2 Year Limited Warranty",
+  "model_number": "OWCUS4EXP4M2",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/owc-owcus4exp4m2-express-4m2-usb4-40gb-s-four-slot-nvme-m-2-enclosure-up-to-3200mb-s-4x-nvme-m-2-2230-42-80-slots-software-raid-compatible-2-year-limited-warranty.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/owc-owcus4exp4m2-express-4m2-usb4-40gb-s-four-slot-nvme-m-2-enclosure-up-to-3200mb-s-4x-nvme-m-2-2230-42-80-slots-software-raid-compatible-2-year-limited-warranty.html",
+   "price": 239.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIOWCS4EX4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c63f0f3a3abb",
+  "category": "storage",
+  "name": "OWC OWCUS4V2EXP1M2 Express 1M2 80G Drive Enclosure PCI Express NVMe - USB4 Host Interface - UASP Support Portable - Silver",
+  "model_number": "OWCUS4V2EXP1M2",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 219.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/owc-owcus4v2exp1m2-express-1m2-80g-drive-enclosure-pci-express-nvme-usb4-host-interface-uasp-support-portable-silver.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/owc-owcus4v2exp1m2-express-1m2-80g-drive-enclosure-pci-express-nvme-usb4-host-interface-uasp-support-portable-silver.html",
+   "price": 219.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIOWC4V2E1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:fe4e8a3ec4ea",
+  "category": "storage",
+  "name": "SanDisk SDSSDE31-500G-G25 500GB Portable SSD (V3) - speeds up to 1000 MB/s up to 2-meter drop protection External - Black",
+  "model_number": "SDSSDE31-500G-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdssde31-500g-g25-500gb-portable-ssd-v3-speeds-up-to-1000-mb-s-up-to-2-meter-drop-protection-external-black.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdssde31-500g-g25-500gb-portable-ssd-v3-speeds-up-to-1000-mb-s-up-to-2-meter-drop-protection-external-black.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN315G0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 5
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 29
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b95d9b9ec1b3",
+  "category": "storage",
+  "name": "SanDisk SDSSDE31-2T00-G25 2TB Portable SSD (V3) - speeds up to 1000 MB/s up to 2-meter drop protection External - Black",
+  "model_number": "SDSSDE31-2T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdssde31-2t00-g25-2tb-portable-ssd-v3-speeds-up-to-1000-mb-s-up-to-2-meter-drop-protection-external-black.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdssde31-2t00-g25-2tb-portable-ssd-v3-speeds-up-to-1000-mb-s-up-to-2-meter-drop-protection-external-black.html",
+   "price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN312T0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 9
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 5
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6593a6f14aa6",
+  "category": "storage",
+  "name": "SanDisk SDSSDE31-1T00-G25 1TB Portable SSD (V3) - speeds up to 1000 MB/s up to 2-meter drop protection External - Black",
+  "model_number": "SDSSDE31-1T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 159.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdssde31-1t00-g25-1tb-portable-ssd-v3-speeds-up-to-1000-mb-s-up-to-2-meter-drop-protection-external-black.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdssde31-1t00-g25-1tb-portable-ssd-v3-speeds-up-to-1000-mb-s-up-to-2-meter-drop-protection-external-black.html",
+   "price": 159.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN311T0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 14,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 14
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 14
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 29
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 15
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 18
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "14 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:9e71444d6d72",
+  "category": "storage",
+  "name": "M.2 NGFF B-key & mSATA SSD to 2.5in SATA III Adapter Converter with Frame Bracket",
+  "model_number": null,
+  "condition": "unknown",
+  "attrs": {},
+  "price": 15.95,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/m-2-ngff-b-key-msata-ssd-to-2-5in-sata-iii-adapter-converter-with-frame-bracket.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/m-2-ngff-b-key-msata-ssd-to-2-5in-sata-iii-adapter-converter-with-frame-bracket.html",
+   "price": 15.95,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "IOC-SATAMP21",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 10,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 10
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 10
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 10
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 9
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 10
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "10 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a7de05964616",
+  "category": "storage",
+  "name": "Sandisk 520 1TB SATA SSD 2.5in SDSS51100TAB 7mmInternal SATA Reads 560MB/s Writes 525MB/s",
+  "model_number": "SDSS51100TAB-000G0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 199.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-520-1tb-sata-ssd-2-5in-sdss51100tab-7mminternal-sata-reads-560mb-s-writes-525mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-520-1tb-sata-ssd-2-5in-sdss51100tab-7mminternal-sata-reads-560mb-s-writes-525mb-s.html",
+   "price": 199.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN521T0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 21,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 21
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 21
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 50
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 23
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 17
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "21 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:01b09708dd8e",
+  "category": "storage",
+  "name": "SanDisk DSSDE10-500G-G25 500GB Portable SSD USB-C 3.2 Gen 2 Up to 600MB/s External Solid State Drive",
+  "model_number": "DSSDE10-500G-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-dssde10-500g-g25-500gb-portable-ssd-usb-c-3-2-gen-2-up-to-600mb-s-external-solid-state-drive.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-dssde10-500g-g25-500gb-portable-ssd-usb-c-3-2-gen-2-up-to-600mb-s-external-solid-state-drive.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN1050GR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 13,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 13
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 7
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 13
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 10
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 8
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "13 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:3f87992ddd7a",
+  "category": "storage",
+  "name": "SanDisk SDSSDE10-1T00-G25 1TB Portable SSD USB-C 3.2 Gen 2 Up to 600MB/s External Solid State Drive",
+  "model_number": "SDSSDE10-1T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 129.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdssde10-1t00-g25-1tb-portable-ssd-usb-c-3-2-gen-2-up-to-600mb-s-external-solid-state-drive.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdssde10-1t00-g25-1tb-portable-ssd-usb-c-3-2-gen-2-up-to-600mb-s-external-solid-state-drive.html",
+   "price": 129.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN101T0R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 5
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:661c9a21b773",
+  "category": "storage",
+  "name": "Solidigm SSDPF2KX038T11Z D7 Series D7-P5520 3.84TB Internal 2.5in Solid State Drive U.2 PCIe 4.0 x4 NVMe",
+  "model_number": "SSDPF2KX038T11Z",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2799.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/solidigm-ssdpf2kx038t11z-d7-series-d7-p5520-3-84tb-internal-2-5in-solid-state-drive-u-2-pcie-4-0-x4-nvme.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/solidigm-ssdpf2kx038t11z-d7-series-d7-p5520-3-84tb-internal-2-5in-solid-state-drive-u-2-pcie-4-0-x4-nvme.html",
+   "price": 2799.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISOL2KX04R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 7
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e5a27ede4599",
+  "category": "storage",
+  "name": "SanDisk SDSP71200TAT-000E0 Optimus GX 7100M NVMe 2TB Solid State Drive Read Speeds up to 7250MB/s Write Speeds up to6900 MB/s",
+  "model_number": "SDSP71200TAT-000E0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 449.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdsp71200tat-000e0-optimus-gx-7100m-nvme-2tb-solid-state-drive-read-speeds-up-to-7250mb-s-write-speeds-up-to6900-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdsp71200tat-000e0-optimus-gx-7100m-nvme-2tb-solid-state-drive-read-speeds-up-to-7250mb-s-write-speeds-up-to6900-mb-s.html",
+   "price": 449.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN712TAR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 4
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:80778c439eb0",
+  "category": "storage",
+  "name": "Samsung MZQL23T8HCLS-00A07 PM9A3 3.84TB 2.5in U.2 Datacenter Solid State Drive 4000 MB/s Write 6800 MB/s Read",
+  "model_number": "MZQL23T8HCLS-00A07",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mzql23t8hcls-00a07-pm9a3-3-84tb-2-5-u-2-datacenter-solid-state-drive-4000-mb-s-write-6800-mb-s-read.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mzql23t8hcls-00a07-pm9a3-3-84tb-2-5-u-2-datacenter-solid-state-drive-4000-mb-s-write-6800-mb-s-read.html",
+   "price": 2299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISAM23T8HR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 7
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7e4e8ca53b73",
+  "category": "storage",
+  "name": "Samsung MZWL63T8HFLT-00AW7 PM9D3a 3.84 TB 2.5in U.2 PCIe 5.0 x4 Datacenter SSD 3500 MB/s Write 12000 MB/s Read",
+  "model_number": "MZWL63T8HFLT-00AW7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mzwl63t8hflt-00aw7-pm9d3a-3-84-tb-2-5in-u-2-pcie-5-0-x4-datacenter-ssd-3500-mb-s-write-12000-mb-s-read.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mzwl63t8hflt-00aw7-pm9d3a-3-84-tb-2-5in-u-2-pcie-5-0-x4-datacenter-ssd-3500-mb-s-write-12000-mb-s-read.html",
+   "price": 2599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISAM9D3A4R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d883b83b0b29",
+  "category": "storage",
+  "name": "SanDisk SDSS51500GAB-000G0 520 500GB 2.5in SATA SSD Internal  2.5in 7mm up to 560 MB s read speeds",
+  "model_number": "SDSS51500GAB-000G0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdss51500gab-000g0-520-500gb-2-5in-sata-ssd-internal-2-5in-7mm-up-to-560-mb-s-read-speeds.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdss51500gab-000g0-520-500gb-2-5in-sata-ssd-internal-2-5in-7mm-up-to-560-mb-s-read-speeds.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN5250GR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1a924c42def6",
+  "category": "storage",
+  "name": "Samsung MZWLR15THBLA-00A07 PM1733a 15.36TB SSD 2.5in Internal U.2 PCI Express NVMe 4.0 x4",
+  "model_number": "MZWLR15THBLA-00A07",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 7499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mzwlr15thbla-00a07-pm1733a-15-36tb-ssd-2-5in-internal-u-2-pci-express-nvme-4-0-x4.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mzwlr15thbla-00a07-pm1733a-15-36tb-ssd-2-5in-internal-u-2-pci-express-nvme-4-0-x4.html",
+   "price": 7499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISAM1715TR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ea4e284bed70",
+  "category": "storage",
+  "name": "SanDisk SDSP51500GAN-000E0 Optimus 5100 NVMe 500GB Solid State Drive Read Speeds up to 6600MB/s Write Speeds up to 5600 MB/s",
+  "model_number": "SDSP51500GAN-000E0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 99.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdsp51500gan-000e0-optimus-5100-nvme-500gb-solid-state-drive-read-speeds-up-to-6600mb-s-write-speeds-up-to-5600-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdsp51500gan-000e0-optimus-5100-nvme-500gb-solid-state-drive-read-speeds-up-to-6600mb-s-write-speeds-up-to-5600-mb-s.html",
+   "price": 99.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN515GAR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 9,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 9
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 8
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 12
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 15
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 7
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "9 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c0126fcb1b4f",
+  "category": "storage",
+  "name": "SanDisk SDSP71100TAT-000E0 Optimus GX 7100M NVMe 1TB Solid State Drive Read Speeds up to 7250MB/s Write Speeds up to6900 MB/s",
+  "model_number": "SDSP71100TAT-000E0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 229.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdsp71100tat-000e0-optimus-gx-7100m-nvme-1tb-solid-state-drive-read-speeds-up-to-7250mb-s-write-speeds-up-to6900-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdsp71100tat-000e0-optimus-gx-7100m-nvme-1tb-solid-state-drive-read-speeds-up-to-7250mb-s-write-speeds-up-to6900-mb-s.html",
+   "price": 229.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN711TAR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 15,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 15
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 15
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 30
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 19
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 20
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "15 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e1ed83eb627d",
+  "category": "storage",
+  "name": "Solidigm SB5PH27X038T001 D7-PS1010 Series 3.84TB 2.5in SSD PCIe 5.0 x4 Hynix V7 TLC",
+  "model_number": "SB5PH27X038T001",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/solidigm-sb5ph27x038t001-d7-ps1010-series-3-84tb-2-5in-ssd-pcie-5-0-x4-hynix-v7-tlc.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/solidigm-sb5ph27x038t001-d7-ps1010-series-3-84tb-2-5in-ssd-pcie-5-0-x4-hynix-v7-tlc.html",
+   "price": 2899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISOL27X03R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:fbbc4476859c",
+  "category": "storage",
+  "name": "SanDisk SDSP71500GAN-000E0 Optimus GX 7100 NVMe500GB Solid State Drive Read Speeds up to 7250MB/s Write Speeds up to6900 MB/s",
+  "model_number": "SDSP71500GAN-000E0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-sdsp71500gan-000e0-optimus-gx-7100-nvme500gb-solid-state-drive-read-speeds-up-to-7250mb-s-write-speeds-up-to6900-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-sdsp71500gan-000e0-optimus-gx-7100-nvme500gb-solid-state-drive-read-speeds-up-to-7250mb-s-write-speeds-up-to6900-mb-s.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN71500R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 13,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 13
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 15
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 71
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 15
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "13 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f1cdcd400d8b",
+  "category": "storage",
+  "name": "WD WDS200T5B0E Blue SN5100 2TB NVMe Solid State Drive M.2 2280 7100MB/s Reads 6700MB/s Writes PCIe Gen 4 x4",
+  "model_number": "WDS200T5B0E-00CPE0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/wd-wds200t5b0e-blue-sn5100-2tb-nvme-solid-state-drive-m-2-2280-7100mb-s-reads-6700mb-s-writes-pcie-gen-4-x4.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/wd-wds200t5b0e-blue-sn5100-2tb-nvme-solid-state-drive-m-2-2280-7100mb-s-reads-6700mb-s-writes-pcie-gen-4-x4.html",
+   "price": 299.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIWD-512T5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 8
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:020f07d59f87",
+  "category": "storage",
+  "name": "Kingston SA400S37/960G 960GB A400 SATA3 2.5in Internal SSD",
+  "model_number": "SA400S37/960G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-sa400s37-960g-960gb-a400-sata3-2-5-internal-ssd.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-sa400s37-960g-960gb-a400-sata3-2-5-internal-ssd.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIKIN37960R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 4,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 4
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 6
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 4
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 7
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "4 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8928cd9dec0f",
+  "category": "storage",
+  "name": "High Point Rocket 7638D 1x CDFP Port and 2x MCIO Port to PCIe 5.0 x16 NVMe Adapter",
+  "model_number": "R7638D",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/high-point-rocket-7638d-1x-cdfp-port-and-2x-mcio-port-to-pcie-5-0-x16-nvme-adapter.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/high-point-rocket-7638d-1x-cdfp-port-and-2x-mcio-port-to-pcie-5-0-x16-nvme-adapter.html",
+   "price": 1599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "special_order",
+   "sku": "CONHP-7638DR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": null,
+   "store_inventory": [],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:60ca9bc3cc34",
+  "category": "storage",
+  "name": "High Point Rocket 7634D 1x CDFP Port to PCIe 5.0 x x16 NVMe Adapter",
+  "model_number": "R7634D",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/high-point-rocket-7634d-1x-cdfp-port-to-pcie-5-0-x16-nvme-adapter.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/high-point-rocket-7634d-1x-cdfp-port-to-pcie-5-0-x16-nvme-adapter.html",
+   "price": 999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "special_order",
+   "sku": "CONHP-7634DR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": null,
+   "store_inventory": [],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:776902f4beaa",
+  "category": "storage",
+  "name": "Micron 9550 PRO 7.50 TB Solid State Drive - Internal - U.2 PCIe (NVMe) (PCI Express NVMe 5.0) MTFDLAL7T6THA-1BK1DABYYR",
+  "model_number": "MTFDLAL7T6THA-1BK1DABYYR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 6899.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-9550-pro-7-50-tb-solid-state-drive-internal-u-2-pcie-nvme-pci-express-nvme-5-0-mtfdlal7t6tha-1bk1dabyyr.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-9550-pro-7-50-tb-solid-state-drive-internal-u-2-pcie-nvme-pci-express-nvme-5-0-mtfdlal7t6tha-1bk1dabyyr.html",
+   "price": 6899.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIMIC95P76R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1dce5165f9df",
+  "category": "storage",
+  "name": "Crucial CT1000T500SSD5 T500 1TB with Heatsink NVMe PCIe 4 NVMe M.2 Solid State Drive  7300MB/s Reads 6800 MB/s Writes 600TBW",
+  "model_number": "CT1000T500SSD5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 189.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct1000t500ssd5-t500-1tb-pcie-gen4-nvme-m-2-solid-state-drive-with-heatsink-7300mb-s-reads-6800-mb-s-writes-600tbw.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct1000t500ssd5-t500-1tb-pcie-gen4-nvme-m-2-solid-state-drive-with-heatsink-7300mb-s-reads-6800-mb-s-writes-600tbw.html",
+   "price": 189.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRICRU1T5S5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:ab8a363d7306",
+  "category": "storage",
+  "name": "Kingston SA400S37/480G 480GB A400 Sata3 2.5in Internal SSD",
+  "model_number": "SA400S37/480G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-sa400s37-480g-480gb-a400-sata3-2-5-internal-ssd.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-sa400s37-480g-480gb-a400-sata3-2-5-internal-ssd.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIKIN37480R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 5,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 5
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "5 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6a7cc8105593",
+  "category": "storage",
+  "name": "Kingston SNV3S/500G NV3 500GB M.2 2280 NVMe PCIe Internal Solid State Drive Gen 4x4 NVMe",
+  "model_number": "SNV3S/500G",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/kingston-snv3s-500g-nv3-500gb-m-2-2280-nvme-pcie-internal-solid-state-drive-gen-4x4-nvme.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/kingston-snv3s-500g-nv3-500gb-m-2-2280-nvme-pcie-internal-solid-state-drive-gen-4x4-nvme.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIKIN3S5GBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 9
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 15
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:18eb9484a76e",
+  "category": "storage",
+  "name": "Crucial CT1000T710SSD5 T710 1TB PCIe Gen5 NVMe M.2 Solid State Drive 14900 MB/s Reads 13800 MB/s Writes 600TB TBW",
+  "model_number": "CT1000T710SSD5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 229.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct1000t710ssd5-t710-1tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes-600tb-tbw.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct1000t710ssd5-t710-1tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes-600tb-tbw.html",
+   "price": 229.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRU711T5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 3
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:09ff463e037b",
+  "category": "storage",
+  "name": "Crucial CT1000P510SSD5 P510 1TB PCIe 5.0 NVMe 3D NAND Internal Solid State Drive M.2 2280 Reads 11000MB/s Writes 9500MB/s",
+  "model_number": "CT1000P510SSD5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 179.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct1000p510ssd5-p510-1tb-pcie-5-0-nvme-3d-nand-internal-solid-state-drive-m-2-2280-reads-11000mb-s-writes-9500mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct1000p510ssd5-p510-1tb-pcie-5-0-nvme-3d-nand-internal-solid-state-drive-m-2-2280-reads-11000mb-s-writes-9500mb-s.html",
+   "price": 179.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRU1T515R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 8,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 8
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 53
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 26
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 59
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 41
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "8 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7f43ca5a2c0d",
+  "category": "storage",
+  "name": "Micron 7600 Pro 1.92T Nvme U.2 2.5in Enterprise SSD PCIe 5.0 x4 - MTFDLAL1T9THG-1BP1DFCYYR",
+  "model_number": "MTFDLAL1T9THG-1BP1DFCYYR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 1499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-7600-pro-1-92t-nvme-u-2-2-5in-enterprise-ssd-pcie-5-0-x4-mtfdlal1t9thg-1bp1dfcyyr.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-7600-pro-1-92t-nvme-u-2-2-5in-enterprise-ssd-pcie-5-0-x4-mtfdlal1t9thg-1bp1dfcyyr.html",
+   "price": 1499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIMIC76P19R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d20dedf9463e",
+  "category": "storage",
+  "name": "Crucial CT4000T710SSD5 T710 4TB PCIe Gen5 NVMe M.2 Solid State Drive 14900 MB/s Reads 13800 MB/s Writes 2400TB TBW",
+  "model_number": "CT4000T710SSD5",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 659.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct4000t710ssd5-t710-4tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes-2400tb-tbw.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct4000t710ssd5-t710-4tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes-2400tb-tbw.html",
+   "price": 659.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRU714T5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:4933f9cf21c6",
+  "category": "storage",
+  "name": "Crucial CT1000T710SSD8 T710 1TB PCIe Gen5 NVMe M.2 Solid State Drive 14900 MB/s Reads 13800 MB/s Writes 2400TB TBW",
+  "model_number": "CT1000T710SSD8",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 229.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct1000t710ssd8-t710-1tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes-2400tb-tbw.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct1000t710ssd8-t710-1tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes-2400tb-tbw.html",
+   "price": 229.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRU711T8R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 23,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 23
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 35
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 49
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 36
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 25
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "23 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:bc2fe113d981",
+  "category": "storage",
+  "name": "Crucial CT480E100SSD8 E100 480GB Solid State Drive M.2 2280 Internal PCI Express NVMe (PCI Express NVMe 4.0) 60 TB TBW - 4700 MB/s Maximum Read Transfer Rate",
+  "model_number": "CT480E100SSD8",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 89.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct480e100ssd8-e100-480gb-solid-state-drive-m-2-2280-internal-pci-express-nvme-pci-express-nvme-4-0-60-tb-tbw-4700-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct480e100ssd8-e100-480gb-solid-state-drive-m-2-2280-internal-pci-express-nvme-pci-express-nvme-4-0-60-tb-tbw-4700-mb-s.html",
+   "price": 89.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRU48E18R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 19,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 19
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 11
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 58
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 33
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 17
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "19 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f44bd21c6e01",
+  "category": "storage",
+  "name": "OWC OWCMEQCTJB000 Mercury Elite Pro Quad USB-C (10Gb/s) RAID Storage Enclosure - 4x SATA Drive Bays for 2.5-inch/3.5-inch HDD or SSD - Software RAID Compatible - RAID 0/1/4/5/1+0 (10)/JBOD - 1 Year Limited",
+  "model_number": "OWCMEQCTJB000",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 219.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/owc-owcmeqctjb000-mercury-elite-pro-quad-usb-c-10gb-s-raid-storage-enclosure-4x-sata-drive-bays-for-2-5-inch-3-5-inch-hdd.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/owc-owcmeqctjb000-mercury-elite-pro-quad-usb-c-10gb-s-raid-storage-enclosure-4x-sata-drive-bays-for-2-5-inch-3-5-inch-hdd.html",
+   "price": 219.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIOWCMEQCTR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:bd5776893519",
+  "category": "storage",
+  "name": "Samsung MZ-77Q4T0B/AM 4TB 870 QVO SATA III 2.5in Solid State Drive Reads 560 MB/s Writes 530 MB/s",
+  "model_number": "MZ-77Q4T0B/AM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mz-77q4t0b-am-4tb-870-qvo-sata-iii-2-5-solid-state-drive-reads-560-mb-s-writes-530-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mz-77q4t0b-am-4tb-870-qvo-sata-iii-2-5-solid-state-drive-reads-560-mb-s-writes-530-mb-s.html",
+   "price": 699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAM4TBQVR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c4b1ee51fc1a",
+  "category": "storage",
+  "name": "Samsung MZWLR7T6HBLA-00A07 PM1733a 7.68TB SSD 2.5in Internal U.2 PCI Express NVMe 4.0 x4",
+  "model_number": "MZWLR7T6HBLA-00A07",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3799.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mzwlr7t6hbla-00a07-pm1733a-7-68tb-ssd-2-5-internal-u-2-pci-express-nvme-4-0-x4.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mzwlr7t6hbla-00a07-pm1733a-7-68tb-ssd-2-5-internal-u-2-pci-express-nvme-4-0-x4.html",
+   "price": 3799.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISAM1738TR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:405d5c03f545",
+  "category": "storage",
+  "name": "Crucial CT4000T710SSD8 T710 4TB PCIe Gen5 NVMe M.2 Solid State Drive 14900 MB/s Reads 13800 MB/s Writes",
+  "model_number": "CT4000T710SSD8",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct4000t710ssd8-t710-4tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct4000t710ssd8-t710-4tb-pcie-gen5-nvme-m-2-solit-state-drive-14900-mb-s-reads-13800-mb-s-writes.html",
+   "price": 699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRU754T8R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 3
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 4
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:8bc0f94f450c",
+  "category": "storage",
+  "name": "Crucial CT2000BX500SSD1 BX500 2TB 2.5in Solid State Drive SATA 3 Reads up to 540MB/s Writes up to 500MB/s",
+  "model_number": "CT2000BX500SSD1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/crucial-ct2000bx500ssd1-bx500-2tb-2-5-solid-state-drive-sata-3-reads-up-to-540mb-s-writes-up-to-500mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/crucial-ct2000bx500ssd1-bx500-2tb-2-5-solid-state-drive-sata-3-reads-up-to-540mb-s-writes-up-to-500mb-s.html",
+   "price": 259.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRICRUBX2TBR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 42,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 42
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 25
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 144
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 11
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 31
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "42 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6ac3274581f8",
+  "category": "storage",
+  "name": "Micron 7600 Pro 3.84TB Nvme U.2 2.5in Enterprise SSD PCIe 5.0 x4 - MTFDLAL3T8THG-1BP1DFCYYR",
+  "model_number": "MTFDLAL3T8THG-1BP1DFCYYR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 3599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-7600-pro-3-84t-nvme-u-2-2-5-enterprise-ssd-pcie-5-0-x4-mtfdlal3t8thg-1bp1dfcyyr.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-7600-pro-3-84t-nvme-u-2-2-5-enterprise-ssd-pcie-5-0-x4-mtfdlal3t8thg-1bp1dfcyyr.html",
+   "price": 3599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIMIC76P38R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 5
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a0821f9a9f59",
+  "category": "storage",
+  "name": "Micron 7600 Pro 7.68T Nvme U.2 2.5in Enterprise SSD PCIe 5.0 x4 - MTFDLAL7T6THG-1BP1DFCYYR",
+  "model_number": "MTFDLAL7T6THG-1BP1DFCYYR",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 5699.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/micron-7600-pro-7-68t-nvme-u-2-2-5-enterprise-ssd-pcie-5-0-x4-mtfdlal7t6thg-1bp1dfcyyr.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/micron-7600-pro-7-68t-nvme-u-2-2-5-enterprise-ssd-pcie-5-0-x4-mtfdlal7t6thg-1bp1dfcyyr.html",
+   "price": 5699.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIMIC76P76R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 8
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c9de43a9958b",
+  "category": "storage",
+  "name": "WD Blue SN5100 WDS500G5B0E 500GB Solid State Drive M.2 2280 Internal PCI Express 4.0 x4 Maximum Read Transfer Rate 6600 MB/sMaximum Write Transfer Rate 6000 MB/s",
+  "model_number": "WDS500G4B0E-00CNZ0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 119.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/wd-blue-sn5100-wds500g5b0e-500gb-solid-state-drive-m-2-2280-internal-pci-express-4-0-x4-maximum-read-transfer-rate-6600-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/wd-blue-sn5100-wds500g5b0e-500gb-solid-state-drive-m-2-2280-internal-pci-express-4-0-x4-maximum-read-transfer-rate-6600-mb-s.html",
+   "price": 119.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRIWD-500G5R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 11
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:a526ad58b309",
+  "category": "storage",
+  "name": "SanDisk 1TB Creator Phone SSD SDSSDE62C-1T00-G25 - Up to 1000 MB/s - Compatible with MagSafe for Your USB-C Smartphone",
+  "model_number": "SDSSDE62C-1T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 224.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-1tb-creator-phone-ssd-sdssde62c-1t00-g25-up-to-1000-mb-s-compatible-with-magsafe-for-your-usb-c-smartphone.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-1tb-creator-phone-ssd-sdssde62c-1t00-g25-up-to-1000-mb-s-compatible-with-magsafe-for-your-usb-c-smartphone.html",
+   "price": 224.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISANE62C2R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e9d351c4b72d",
+  "category": "storage",
+  "name": "Corsair CSSD-F2000GBMP600MCR2 MP600 Micro 2TB M.2 2242 SSD PCIe 4.0 x4 (NVMe) Handheld Gaming Console Tablet Device Supported - 450 TB TBW - 256-bit AES",
+  "model_number": "CSSD-F2000GBMP600MCR2",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/corsair-cssd-f2000gbmp600mcr2-mp600-micro-2tb-m-2-2242-ssd-pcie-4-0-x4-nvme.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/corsair-cssd-f2000gbmp600mcr2-mp600-micro-2tb-m-2-2242-ssd-pcie-4-0-x4-nvme.html",
+   "price": 499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRICORF2MP6R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 0
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:38a9e9cfa9cb",
+  "category": "storage",
+  "name": "Samsung MZ-VAP8T0B/AM 9100 PRO 8TB SSD NVMePCIe 5.0x4 M.2 2280 Read Speeds Up to 14800MB/s",
+  "model_number": "MZ-VAP8T0B/AM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 2719.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mz-vap8t0b-am-9100-pro-8tb-ssd-nvmepcie-5-0x4-m-2-2280-read-speeds-up-to-14800mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mz-vap8t0b-am-9100-pro-8tb-ssd-nvmepcie-5-0x4-m-2-2280-read-speeds-up-to-14800mb-s.html",
+   "price": 2719.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAM8TB0BR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 2,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 2
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 2
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 30
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "2 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:f203e512cd45",
+  "category": "storage",
+  "name": "SanDisk 2TB Creator Phone SSD SDSSDE62C-2T00-G25",
+  "model_number": "SDSSDE62C-2T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-2tb-creator-phone-ssd-sdssde62c-2t00-g25.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-2tb-creator-phone-ssd-sdssde62c-2t00-g25.html",
+   "price": 399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISANE62C1R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 3,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 3
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 3
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "3 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:73a628f810dd",
+  "category": "storage",
+  "name": "Samsung MZWL615THBLF-00AW7 PM9D3a 15.36TB Solid State Drive - 2.5in Internal - U.2 (PCI Express NVMe 5.0 x4)",
+  "model_number": "MZWL615THBLF-00AW7",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 8499.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mzwl615thblf-00aw7-pm9d3a-15-36tb-solid-state-drive-2-5-internal-u-2-pci-express-nvme-5-0-x4.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mzwl615thblf-00aw7-pm9d3a-15-36tb-solid-state-drive-2-5-internal-u-2-pci-express-nvme-5-0-x4.html",
+   "price": 8499.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "not_in_sf_store",
+   "sku": "DRISAM615THR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 0,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 0
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 0
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 0
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 0
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "not in stock at the SF store"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:7c08f39b946a",
+  "category": "storage",
+  "name": "Western Digital WDS400T4X0E WD\\_Black 4TB SN7100NVMe Internal SSD PCIe Gen 4 M.2 2280 7250MB/s Reads",
+  "model_number": "WDS400T4X0E-00CJA0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 599.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/western-digital-wds400t4x0e-wd-black-4tb-sn7100nvme-internal-ssd-pcie-gen-4-m-2-2280-7250mb-s-reads.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/western-digital-wds400t4x0e-wd-black-4tb-sn7100nvme-internal-ssd-pcie-gen-4-m-2-2280-7250mb-s-reads.html",
+   "price": 599.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIWD-4TB4XR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 14,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 14
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 10
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 133
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 26
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 7
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "14 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:e5e989e08534",
+  "category": "storage",
+  "name": "Western Digital WDS400T1X0M Black SN8100 NVMe 4TBM.2 2280 PCI-Express 5.0 x4 3D NAND Internal Solid State Drive Seq. Read Speeds Up to 14900 MB/s 2400 TB TBW - 5 Year Warranty",
+  "model_number": "WDS400T1X0M-00CMT0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 789.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/western-digital-wds400t1x0m-black-sn8100-nvme-4tbm-2-2280-pci-express-5-0-x4-3d-nand-internal-solid-state-drive.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/western-digital-wds400t1x0m-black-sn8100-nvme-4tbm-2-2280-pci-express-5-0-x4-3d-nand-internal-solid-state-drive.html",
+   "price": 789.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIWD-SN814R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 34
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 13
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 9
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:6be9ee99b3a0",
+  "category": "storage",
+  "name": "Western Digital WDS100T1X0M Black SN8100 NVMe 1TBM.2 2280 PCI-Express 5.0 x4 3D NAND Internal Solid State Drive Seq. Read Speeds Up to 14900 MB/s 600 TB TBW - 5 Year Warranty",
+  "model_number": "WDS100T1X0M",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 259.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/western-digital-wds100t1x0m-black-sn8100-nvme-1tbm-2-2280-pci-express-5-0-x4-3d-nand-internal-solid-state-drive.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/western-digital-wds100t1x0m-black-sn8100-nvme-1tbm-2-2280-pci-express-5-0-x4-3d-nand-internal-solid-state-drive.html",
+   "price": 259.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIWD-SN811R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 23,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 23
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 25
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 39
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 27
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 24
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "23 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:c5bb23161079",
+  "category": "storage",
+  "name": "Western Digital WDS200T1X0M-00CM BLACK SN8100 2TBNVMe Internal SSD PCIe Gen 5 M.2 2280 14900MB/s Reads14000MB/s Writes",
+  "model_number": "WDS200T1X0M-00CMT0",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/western-digital-wds200t1x0m-00cm-black-sn8100-2tbnvme-internal-ssd-pcie-gen-5-m-2-2280-14900mb-s-reads.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/western-digital-wds200t1x0m-00cm-black-sn8100-2tbnvme-internal-ssd-pcie-gen-5-m-2-2280-14900mb-s-reads.html",
+   "price": 399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRIWD-SN810R",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 6,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 6
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 3
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 14
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 8
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "6 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:b1f55fc7a545",
+  "category": "storage",
+  "name": "SanDisk 1TB Fortnite Portable SSD Peely Ed USB-C Up to 800MB/s USB 3.2 Gen 2 SDSSDE30-1T00-G25F",
+  "model_number": "SDSSDE30-1T00-G25F",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 169.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-1tb-fortnite-portable-ssd-peely-ed-usb-c-up-to-800mb-s-usb-3-2-gen-2-sdssde30-1t00-g25f.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-1tb-fortnite-portable-ssd-peely-ed-usb-c-up-to-800mb-s-usb-3-2-gen-2-sdssde30-1t00-g25f.html",
+   "price": 169.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAN301TFR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 1
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 1
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 1
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:d8ffe6d8614e",
+  "category": "storage",
+  "name": "Samsung MZ-VAP4T0B/AM  9100 PRO 4TB NVMe Solid State Drive PCIe 5x4 M.2 2280 Reads Up to 14700 MB/s Writes Up to 13300 MB/s",
+  "model_number": "MZ-VAP4T0B/AM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 999.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mz-vap4t0b-am-9100-pro-4tb-nvme-solid-state-drive-pcie-5x4-m-2-2280-reads-up-to-14700-mb-s-writes-up-to-13300-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mz-vap4t0b-am-9100-pro-4tb-nvme-solid-state-drive-pcie-5x4-m-2-2280-reads-up-to-14700-mb-s-writes-up-to-13300-mb-s.html",
+   "price": 999.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAM91P4TR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 30,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 30
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 23
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 34
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 29
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 48
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "30 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:846bb4bf5684",
+  "category": "storage",
+  "name": "Samsung MZ-VAP2T0B/AM  9100 PRO 2TB NVMe Solid State Drive PCIe 5x4 M.2 2280 Reads Up to 14700 MB/s Writes Up to 13300 MB/s",
+  "model_number": "MZ-VAP2T0B/AM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 399.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mz-vap2t0b-am-9100-pro-2tb-nvme-solid-state-drive-pcie-5x4-m-2-2280-reads-up-to-14700-mb-s-writes-up-to-13300-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mz-vap2t0b-am-9100-pro-2tb-nvme-solid-state-drive-pcie-5x4-m-2-2280-reads-up-to-14700-mb-s-writes-up-to-13300-mb-s.html",
+   "price": 399.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAM91P2TR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 44,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 44
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 53
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 167
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 85
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 118
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "44 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:1b71ab9bc4d9",
+  "category": "storage",
+  "name": "Samsung MZ-VAP1T0B/AM 9100 PRO 1TB NVMe Solid State Drive PCIe 5x4 M.2 2280 Reads Up to 14700 MB/s Writes Up to 13300 MB/s",
+  "model_number": "MZ-VAP1T0B/AM",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/samsung-mz-vap1t0b-am-9100-pro-1tb-nvme-solid-state-drive-pcie-5x4-m-2-2280-reads-up-to-14700-mb-s-writes-up-to-13300-mb-s.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/samsung-mz-vap1t0b-am-9100-pro-1tb-nvme-solid-state-drive-pcie-5x4-m-2-2280-reads-up-to-14700-mb-s-writes-up-to-13300-mb-s.html",
+   "price": 249.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISAM91P1TR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 48,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 48
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 55
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 123
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 111
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 43
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "48 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "centralcomputers:975746a5347c",
+  "category": "storage",
+  "name": "SanDisk Extreme Portable SSD 2TB SDSSDE61-2T00-G25USB-C USB 3.2",
+  "model_number": "SDSSDE61-2T00-G25",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 329.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.centralcomputer.com/sandisk-extreme-portable-ssd-2tb-sdssde61-2t00-g25usb-c-usb-3-2.html",
+  "snapshot_id": "centralcomputers-storage-category-page-20261025T0132Z",
+  "snapshot_date": "2026-10-25T01:32:56+00:00",
+  "listing": {
+   "url": "https://www.centralcomputer.com/sandisk-extreme-portable-ssd-2tb-sdssde61-2t00-g25usb-c-usb-3-2.html",
+   "price": 329.99,
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "in_stock_sf_store",
+   "sku": "DRISANSSD2TR",
+   "seller": "Central Computers",
+   "seller_location": "837 Howard St, San Francisco, CA 94103",
+   "sf_store_qty": 1,
+   "store_inventory": [
+    {
+     "address": "837 Howard Street, CA 94103",
+     "phone": "415-495-5888",
+     "qty": 1
+    },
+    {
+     "address": "2727 S. El Camino Real, CA 94403",
+     "phone": "650-345-5888",
+     "qty": 1
+    },
+    {
+     "address": "510 Lawrence Expressway, Suite 107, CA 94085",
+     "phone": "650-964-5888",
+     "qty": 2
+    },
+    {
+     "address": "3777 Stevens Creek Blvd., CA 95051",
+     "phone": "408-248-5888",
+     "qty": 2
+    },
+    {
+     "address": "5990 Mowry Ave., CA 94560",
+     "phone": "510-792-5888",
+     "qty": 2
+    }
+   ],
+   "source_page": "https://www.centralcomputer.com/all-products/hardware/hard-drives-ssd/ssds.html",
+   "apify_actor": "apify/website-content-crawler",
+   "stock": "1 in stock at SF store (837 Howard St)"
+  },
+  "maker_model": null
+ }
+]

@@ -24,13 +24,15 @@ Money rules this module keeps:
 from __future__ import annotations
 
 import concurrent.futures as cf
+import heapq
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -48,8 +50,30 @@ STEPS_FILE = "build-view.steps.jsonl"  # one BuildView per line, in order: the b
 PARTS = ("gpu", "cpu", "board", "ram", "ssd", "cooler", "psu", "case")
 PLANNER_PART = {"gpu": "gpu", "cpu": "cpu", "motherboard": "board", "memory": "ram", "storage": "ssd", "cooler": "cooler",
                 "psu": "psu", "case": "case"}   # the planner's part ids (agents/buyer/planner.py) -> the board's
-DEFAULT_LABELS = {"gpu": "RTX 5070 Ti", "cpu": "8-core CPU", "board": "AM5 B650 board", "ram": "32 GB DDR5", "ssd": "2 TB NVMe",
+DEFAULT_LABELS = {"gpu": "RTX 5070 Ti", "cpu": "8-core CPU", "board": "ATX motherboard", "ram": "32 GB DDR5", "ssd": "2 TB NVMe",
                   "cooler": "Tower cooler", "psu": "750 W PSU", "case": "Case (305 mm GPU room)"}
+CHECK_KEY = {v: k for k, v in PLANNER_PART.items()}   # the board's part ids -> data.fit_checker.build_check's category keys
+# data.fit_checker rule id -> (the board's rule, part a, part b). Rules outside the board's five (RAM form and slots, storage) are not shown.
+FIT_RULES = {"fit.cpu_socket": ("socket", "cpu", "board"), "fit.cooler_socket": ("socket", "cpu", "cooler"), "fit.ram_type": ("ddr", "board", "ram"),
+             "fit.gpu_length": ("case_room", "gpu", "case"), "fit.form_factor": ("case_room", "board", "case"),
+             "fit.psu_form_factor": ("case_room", "psu", "case"), "fit.psu_wattage": ("power", "gpu", "psu"),
+             "fit.gpu_connectors": ("power", "gpu", "psu"), "fit.cooler_height": ("cooler_height", "cooler", "case")}
+FIT_STATE = {"pass": "ok", "fail": "clash", "uncertain": "unknown"}
+CHECK_STATES_BAD = {"ok": 0, "unknown": 1, "clash": 2}   # which of two states for one line wins: the worse
+# what the buyer already owns, in the planner's shape (the specs the fit checker reads): #358's OWNED in agents/buyer/build_plan_demo.py
+DEMO_OWNED = {"psu": {"name": "750 W PSU", "wattage": 750, "form_factor": "ATX", "pcie_16pin": 1},
+              "case": {"name": "Case (305 mm GPU room)", "max_gpu_length_mm": 305, "max_cooler_height_mm": 160,
+                       "motherboard_form_factors": ["ATX", "Micro ATX"], "psu_form_factors": ["ATX"]}}
+PLANNER_CAP_CENTS = 210_000   # the demo's $2,100 cap: the planner's 1250/1975 GPU share is about $1,329, above the real GPU listings' $1,300
+STAGGER_S = 2.0               # default gap between part rounds opening: six parts open within 10 s
+CLOSE_GAP_S = 1.0             # staggered rounds close at least this far apart, in part order
+CLOSE_RETRIES = 11            # a refused close_stage is retried this often, one second apart (bridge.execute's own count)
+CLOSE_MARGIN_S = 0.5         # a close is scheduled this long after its deadline (the market's clock starts when its open call lands)
+REPLAN_WINDOW_S = 20          # a re-plan round is short: the demo beat is 90 s
+STAGE_BID_S = 1.0             # a knockout stage's improved offers go in this long after the stage opens
+MAX_STAGES = 3
+MIN_STAGE_WINDOW_S = 15       # bridge.MIN_BID_WINDOW_S: the shortest sealed window the steps fit in
+STAGE_DROP = 0.97             # a survivor's improved offer: 3 percent under its last one, never under its floor
 CHECK_STATES = ("ok", "clash", "unknown")
 ORIGINS = (SIM, MIRROR, LIVE)
 HELD_BACK = "held back"                 # the market's own reason prefix on a rank 1 whose card is a caution (#240)
@@ -104,6 +128,34 @@ def champion_of(results: list[dict]) -> tuple[Optional[dict], str]:
     if not _cents_ok(r.get("landed")):
         return None, "no eligible bid: the best bid has no usable landed price"
     return r, ""
+
+
+def fit_checks(owned: list, picks: dict) -> list[dict]:
+    """The BuildView's `checks`: data.fit_checker.build_check (Lane C, #342) over the parts the buyer owns and the locked champions.
+    `owned` is [PartSpec] (its attrs are the specs the buyer gave); `picks` is {part: {"name", "attrs"}} for the parts that have a champion.
+    One line per rule that ran, between the two parts it compares: state ok (pass), clash (fail) or unknown (the checker could not judge:
+    never ok), detail the checker's reason, source its rule id. Nothing here decides a fit."""
+    from data.fit_checker.build_check import check_build
+    if not picks:
+        return []
+    cards: dict[str, Any] = {CHECK_KEY[o.part]: {"name": o.label, **o.attrs} for o in owned}
+    cards.update({CHECK_KEY[part]: {"name": p["name"], **p["attrs"]} for part, p in picks.items()})
+    if "storage" in cards:
+        cards["storage"] = [cards["storage"]]
+    lines: dict[tuple, dict] = {}
+    for c in check_build(cards)["checks"]:
+        rule = FIT_RULES.get(c["rule_id"])
+        if rule is None:
+            continue
+        line = {"a": rule[1], "b": rule[2], "rule": rule[0], "state": FIT_STATE.get(c["verdict"], "unknown"),
+                "detail": str(c.get("reason") or ""), "source": c["rule_id"]}
+        key = (line["a"], line["b"], line["rule"])   # two checker rules can speak for one pair (PSU watts and 16-pin): one line, the worse state
+        old = lines.get(key)
+        if old is None or CHECK_STATES_BAD[line["state"]] > CHECK_STATES_BAD[old["state"]]:
+            lines[key] = line
+        elif line["state"] == old["state"]:
+            old["detail"] += "; " + line["detail"]
+    return list(lines.values())
 
 
 def _out_reason(results: list[dict]) -> str:
@@ -229,6 +281,7 @@ class PartSpec:
     part: str
     label: str
     budget: float          # dollars: the ceiling of this part's round (the need's spend limit)
+    attrs: dict = field(default_factory=dict)   # an owned part's specs, as the buyer gave them (the fit checker reads them)
 
     @property
     def sku(self) -> str:
@@ -243,6 +296,7 @@ class BuildPlan:
     parts: list[PartSpec]
     owned: list[PartSpec] = field(default_factory=list)   # no round: the buyer already has them (budget is 0)
     deadline: str = ""
+    plan_line: str = ""    # the planner's own one-line plan (its first "plan" step), shown as the plan event when it has one
 
 
 def _money_cents(cents: Any, what: str) -> float:
@@ -275,17 +329,43 @@ def plan_from_planner(plan: dict, *, goal_id: str = "goal-build-1", buyer_id: st
         part = PLANNER_PART.get(key)
         if part is None:
             raise ValueError(f"unknown owned part: {key!r}")
-        name = info.get("name") if isinstance(info, dict) else None
-        owned.append(PartSpec(part, name if isinstance(name, str) and name.strip() else names[part], 0.0))
-    return BuildPlan(goal_id, buyer_id, cap, parts, owned, deadline or "")
+        info = info if isinstance(info, dict) else {}
+        name = info.get("name")
+        owned.append(PartSpec(part, name if isinstance(name, str) and name.strip() else names[part], 0.0,
+                              {k: v for k, v in info.items() if k != "name"}))
+    line = next((s.get("line") for s in plan.get("steps") or [] if isinstance(s, dict) and s.get("kind") == "plan" and isinstance(s.get("line"), str)), "")
+    return BuildPlan(goal_id, buyer_id, cap, parts, owned, deadline or "", line or "")
 
 
 def demo_plan(*, goal_id: str = "goal-build-1", buyer_id: str = "vidyut") -> BuildPlan:
     """SIM: six parts to buy, PSU and case owned, a $2,100 cap. The GPU budget ($1,300) is the cap of the demo's own GPU goal, so the real
     GPU round (demo.round, the bridge's cast) has confirmed-fit bids inside it; the others are the board sample's numbers."""
     budgets = {"gpu": 1300.0, "cpu": 285.0, "board": 170.0, "ram": 100.0, "ssd": 120.0, "cooler": 55.0}
-    return BuildPlan(goal_id, buyer_id, 2100.0, [PartSpec(p, DEFAULT_LABELS[p], b) for p, b in budgets.items()],
-                     [PartSpec("psu", DEFAULT_LABELS["psu"], 0.0), PartSpec("case", DEFAULT_LABELS["case"], 0.0)])
+    owned = [PartSpec(PLANNER_PART[k], DEFAULT_LABELS[PLANNER_PART[k]], 0.0, {a: v for a, v in info.items() if a != "name"})
+             for k, info in DEMO_OWNED.items()]
+    return BuildPlan(goal_id, buyer_id, 2100.0, [PartSpec(p, DEFAULT_LABELS[p], b) for p, b in budgets.items()], owned)
+
+
+def planned_build(*, planner: Any = "auto", note: Callable[[str], None] = lambda text: None, goal_id: str = "goal-build-1",
+                  buyer_id: str = "vidyut") -> tuple[BuildPlan, str]:
+    """(the plan the build runs, "planner" or "default"). With `planner` "auto" the planner of #358 (agents.buyer.planner.plan) is used when it
+    is importable; a main without it, or a planner whose output cannot be read, gives the default demo plan and says why. The adapter reads
+    the planner's documented output (plan_from_planner); nothing of the planner is copied here."""
+    fn = planner
+    if planner == "auto":
+        try:
+            from agents.buyer.planner import plan as fn   # noqa: F811
+        except ImportError:
+            note("planner: agents.buyer.planner is not on this branch, so the default plan runs")
+            fn = None
+    if fn is None:
+        return demo_plan(goal_id=goal_id, buyer_id=buyer_id), "default"
+    try:
+        owned = {k: dict(v) for k, v in DEMO_OWNED.items()}
+        return plan_from_planner(fn(PLANNER_CAP_CENTS, owned), goal_id=goal_id, buyer_id=buyer_id), "planner"
+    except (ValueError, KeyError, TypeError) as e:
+        note(f"planner: its plan could not be used ({type(e).__name__}: {e}), so the default plan runs")
+        return demo_plan(goal_id=goal_id, buyer_id=buyer_id), "default"
 
 
 # ---------------------------------------------------------------- the sellers (SIM, plus the real MIRROR listings where data/ has them)
@@ -296,21 +376,34 @@ CASE_CLEARANCE_MM = 305              # the owned case's GPU room (the buyer shar
 TRAP_LENGTH_MM = 336                 # the SIM GPU line too long for that case: the advocate vetoes it, with the fit rule
 
 
-def default_catalog(spec: PartSpec, index: int, *, mirror: bool = True) -> list:
+AM5_BOARD = {"socket": "AM5", "memory_type": "DDR5", "memory_form": "DIMM", "memory_slots": 4, "form_factor": "ATX", "m2_slots": 2}
+# the specs a SIM listing states, in the fit checker's names (a real listing's specs would come from its page; data/ holds none but the GPU's)
+SIM_FIT_ATTRS = {"gpu": {"chipset": "RTX 5070 Ti"}, "cpu": {"socket": "AM5", "tdp_w": 105, "vendor": "AMD"}, "board": AM5_BOARD,
+                 "ram": {"type": "DDR5", "memory_type": "DDR5", "memory_form": "DIMM", "modules": 2},
+                 "ssd": {"interface": "NVMe"}, "cooler": {"height_mm": 155, "sockets": ["AM5"]}}
+TRAP_SOCKET = "LGA1700"      # the cheapest SIM board is an Intel LGA1700 board: right size and price, wrong socket for the CPU the build locked
+
+
+def default_catalog(spec: PartSpec, index: int, *, mirror: bool = True, trap: bool = True) -> list:
     """The sellers that bid on one part. SIM sellers for every part, priced inside the part's budget, with a rotating cheapest one;
     for the GPU, with `mirror`, the bridge's own cast (demo.sellers.all_sellers: the real dated MIRROR listings in data/mirror/snapshots
     plus the planted SIM sellers), judged by the real demo round; without it, a SIM GPU line too long for the owned case. data/ holds no
-    other part's listings, so every other part is SIM and says so. Central Computers (not a partner) never bids here."""
+    other part's listings, so every other part is SIM and says so. Central Computers (not a partner) never bids here.
+    With `trap` the cheapest SIM board is an LGA1700 board: the advocate has no CPU to compare it with while the rounds run side by side, so
+    it wins its round and the fit check finds the clash once the CPU is locked (the re-plan). A re-plan round (default_replan_catalog) has no trap."""
     from demo.sellers import Line, Seller
     sellers = []
     for j, (sid, name) in enumerate(SIM_SELLERS):
         price = round(spec.budget * PRICE_FACTORS[(j + index) % 3], 2)
         url = f"https://example.com/sim/{sid}/{spec.part}"
-        attrs = {"category": spec.part}
+        attrs = {"category": spec.part, **SIM_FIT_ATTRS.get(spec.part, {})}
         if spec.part == "gpu":
             attrs["length_mm"] = TRAP_LENGTH_MM if sid == "bargain-bin" else 303
         if spec.part == "gpu" and sid == "bargain-bin":
             price = round(spec.budget * 0.88, 2)      # the cheapest card is the trap
+        if spec.part == "board" and sid == "bargain-bin" and trap:
+            attrs["socket"] = TRAP_SOCKET
+            price = round(spec.budget * 0.88, 2)      # the cheapest board is the trap
         line = Line("new", price, round(price * 0.9, 2), url, SIM, page_condition="new", attrs=attrs,
                     basis=f"SIM listing priced inside the {spec.label} budget")
         sellers.append(Seller(sid, name, SIM, [line], 0.0, 30, payee=f"{sid}@pay.example.test", shipping_captured=True,
@@ -320,6 +413,12 @@ def default_catalog(spec: PartSpec, index: int, *, mirror: bool = True) -> list:
         # the bridge's own cast: the real dated MIRROR listings plus the planted SIM sellers (a liar, a too-long card, a rogue under its floor)
         return [x for x in all_sellers()[0] if not not_partners.label({"seller_id": x.id})]
     return sellers
+
+
+def default_replan_catalog(spec: PartSpec, index: int, clash: dict) -> list:
+    """The sellers of a re-plan round: the same SIM sellers, now bidding on the part the need describes (the new need names what must fit), so
+    no seller carries the trap. The clash line is what the planner asked about; the default catalog needs nothing from it."""
+    return default_catalog(spec, index, mirror=False, trap=False)
 
 
 def advocate_card(spec: PartSpec, bid: dict, clearance_mm: int = CASE_CLEARANCE_MM) -> dict:
@@ -396,13 +495,18 @@ def _demo_gpu_round(spec: PartSpec, sellers: list, nid: str, now: datetime) -> d
 
 
 def part_steps(plan: BuildPlan, spec: PartSpec, index: int, sellers: list, *, now: datetime, delay: float,
-               bid_window: Optional[int] = None, real_gpu_round: bool = False) -> tuple[list, dict]:
+               bid_window: Optional[int] = None, real_gpu_round: bool = False, attempt: int = 1, knockout: bool = False,
+               max_stages: int = MAX_STAGES) -> tuple[list, dict]:
     """One part's need and sealed round: post_need, then bridge.round_steps (open, every seller's bid, Shield and advocate results, close).
     With `real_gpu_round` the GPU runs the bridge's own round (_demo_gpu_round) and `sellers` must be demo.sellers' cast.
+    `attempt` 2 is the re-plan: a second need and round (ids end in -2) for the same part. With `knockout` (the market has #363's reducers)
+    the round opens with open_knockout_round (stage_window_s = the sealed window, max_stages) and its stage 1 closes with close_stage; the
+    later stages are driven by the BuildRun from the market's own results (stage_steps).
     Returns (steps, ledger) where the ledger maps each bid id to what this run placed (seller, persona, origin, listing, snapshot date,
-    the advocate card, None when the round did not judge it): the driver only mandates a champion it can find here."""
+    the advocate card, None when the round did not judge it, and what a later stage needs: the bid, its floor, the Shield verdict, the
+    listing's specs): the driver only mandates a champion it can find here."""
     from demo import bridge
-    nid, rid = need_id(plan.goal_id, spec.part), round_id(plan.goal_id, spec.part)
+    nid, rid = need_id(plan.goal_id, spec.part, attempt), round_id(plan.goal_id, spec.part, attempt)
     r = (_demo_gpu_round if real_gpu_round and spec.part == "gpu" else _simple_round)(spec, sellers, nid, now)
     by_id = {s.id: s for s in sellers}
     steps = [bridge.Step("buyer", "post_need",
@@ -412,14 +516,88 @@ def part_steps(plan: BuildPlan, spec: PartSpec, index: int, sellers: list, *, no
     steps += bridge.round_steps(
         round_no=1, need_id=nid, bids=r["bids"], ranking=r["ranking"],
         sellers={s.id: {"lines": [{"floor": l.floor} for l in s.lines]} for s in sellers}, shield=r["shield"], claims=r["claims"],
-        cards=r["cards"], delay=delay, pace=0.5, window_s=bid_window, round_id=rid, label=f"{spec.label} round")
+        cards=_cards_for_market(r["cards"], knockout), delay=delay, pace=0.5, window_s=bid_window, round_id=rid, label=f"{spec.label} round")
+    if knockout:
+        steps = [_knockout_step(s, max_stages) for s in steps]
     cards = {c["bid_id"]: c for c in r["cards"]}
+    verdicts = {v["bid_id"]: v for v in r["shield"]}
     ledger = {}
     for b in r["bids"]:
         line = by_id[b["seller_id"]].lines[_cheapest(b)]
         ledger[b["id"]] = {"sellerId": b["seller_id"], "persona": b["persona"], "origin": b["origin"], "listingUrl": line.listing_url,
-                           "snapshotDate": line.snapshot_date, "card": cards.get(b["id"])}
+                           "snapshotDate": line.snapshot_date, "card": cards.get(b["id"]), "bid": b, "floor": min(l.floor for l in by_id[b["seller_id"]].lines),
+                           "shield": verdicts.get(b["id"]), "attrs": {k: v for k, v in line.attrs.items() if k != "category"}, "part": spec.part,
+                           "label": spec.label}
     return steps, ledger
+
+
+def _cards_for_market(cards: list, knockout: bool) -> list:
+    """The advocate cards as the market is sent them. A plain round holds a `caution` back by itself (#240). #363's closeStageInner ranks by price and
+    never fills heldBack, so a cautioned bid (an unknown fit) would lead a knockout stage and could be crowned: in a knockout round a caution is
+    sent as a veto worded "held back (caution)", which the market knocks out with that reason, visibly. The ledger keeps the real card."""
+    if not knockout:
+        return cards
+    out = []
+    for c in cards:
+        if c["recommendation"] == "caution":
+            why = c["call_reason"]
+            c = {**c, "recommendation": "veto", "call_reason": {**why, "summary": f"held back (caution): {why['summary']}"}}
+        out.append(c)
+    return out
+
+
+def _knockout_step(s, max_stages: int):
+    """A sealed round's opener and closer as #363's reducers (docs/changes/1633-B-knockout-rounds.md): open_knockout_round(round_id, need_id,
+    stage_window_s, max_stages) and close_stage(round_id). Every other step is the plain round's."""
+    if s.reducer == "open_round":
+        return replace(s, reducer="open_knockout_round", args={"round_id": s.args["round_id"], "need_id": s.args["need_id"],
+                                                               "stage_window_s": s.args["window_s"], "max_stages": max_stages},
+                       say=s.say.replace("opens sealed for", "opens as a knockout, stage 1 sealed for"))
+    if s.reducer == "close_round":
+        return replace(s, reducer="close_stage", say=s.say.replace("closes at its deadline", "closes stage 1 at its deadline"))
+    return s
+
+
+def stage_steps(placed: dict, survivors: list, rid: str, stage: int, *, delay: float) -> list:
+    """The steps of knockout stage `stage` (2 or 3): each surviving seller's improved sealed offer (strictly below its own last one, never below
+    its floor; none when it has no room, and the market then keeps its last offer), the same Shield verdict and advocate card on the new bid,
+    then close_stage. `placed` is the run's ledger, `survivors` the bid ids the market marked advancing in the stage before."""
+    from demo import bridge
+    steps = []
+    for bid_id in sorted(survivors):
+        p = placed[bid_id]
+        b = p["bid"]
+        i = _cheapest(b)
+        line = b["lines"][i]
+        last = float(placed[bid_id].get("last", line["unit_price"]))
+        new = round(max(float(p["floor"]), last * STAGE_DROP), 2)
+        if new >= last:
+            continue
+        nid_ = f"{b['id']}-s{stage}"
+        placed[nid_] = {**p, "last": new, "bidId": nid_}
+        sku = line["sku_spec"]
+        steps.append(bridge.Step(f"seller:{b['seller_id']}", "place_bid",
+                                 {"id": nid_, "round_id": rid, "persona": b["persona"],
+                                  "lines": [{"sku_spec": sku, "offered_spec": "", "offered_condition": line["offered_condition"], "unit_price": new,
+                                             "quantity": line["quantity"]}],
+                                  "stated_total": new * line["quantity"], "perks": list(b["perks"]), "claims": list(b["claims"]),
+                                  "origin": b["origin"], "source": line["listing_url"]},
+                                 tag=b["origin"], pause=True, pace=0.5,
+                                 say=f"{b['persona']} improves its sealed offer for stage {stage}: {money(new)}"))
+        if p.get("shield"):
+            v = p["shield"]
+            steps.append(bridge.Step("referee", "attach_verdict", {"bid_id": nid_, "verdict": v["verdict"], "rule_ids": list(v["rule_ids"]), "origin": SIM},
+                                     tag=SIM, pause=False, say=f"Bazaar Shield on {b['persona']}'s stage {stage} offer: {v['verdict']}"))
+        if p.get("card"):
+            c = _cards_for_market([p["card"]], True)[0]
+            why = c["call_reason"]
+            steps.append(bridge.Step("referee", "attach_advocate_card",
+                                     {"bid_id": nid_, "recommendation": c["recommendation"], "rule_id": why["rule_id"], "text": why["summary"],
+                                      "source_url": why["source_url"], "origin": b["origin"]},
+                                     tag=b["origin"], pause=False, say=f"advocate on {b['persona']}'s stage {stage} offer: {c['recommendation'].upper()}"))
+    steps.append(bridge.Step("referee", "close_stage", {"round_id": rid}, close=True, tag=SIM, pause=True,
+                             say=f"stage {stage} closes at its deadline: the market knocks out the last place and every rule-breaker"))
+    return steps
 
 
 # ---------------------------------------------------------------- the driver
@@ -437,11 +615,34 @@ def result_dicts(rows: list, ledger: dict, round_ids: set) -> list[dict]:
             continue
         placed = ledger.get(r[2]) or {}
         origin = _origin(r[9]) if len(r) > 9 else _origin(placed.get("origin"))
+        reasons = [str(x) for x in r[7]] if len(r) > 7 and isinstance(r[7], (list, tuple)) else []
+        card = placed.get("card") or {}
+        if card.get("recommendation") in ("caution", "veto") and r[5] >= 1 and not any(x.startswith(HELD_BACK) for x in reasons):
+            # the market's knockout close (#363, closeStageInner) never fills heldBack, so it can crown a bid the advocate only cautioned
+            # (an unknown fit): this run read that card itself, and a bid it cautioned or vetoed is held back here, never a champion
+            why = card.get("call_reason") or {}
+            reasons = [f"{HELD_BACK}: advocate {card['recommendation']} ({why.get('rule_id', '')}: {why.get('summary', '')})", *reasons]
         out.append({"roundId": r[1], "bidId": r[2], "sellerId": r[3], "persona": r[4], "rank": r[5], "landed": float(r[6]),
-                    "reasons": [str(x) for x in r[7]] if len(r) > 7 and isinstance(r[7], (list, tuple)) else [], "origin": origin,
+                    "reasons": reasons, "origin": origin,
                     "status": str(r[14]) if len(r) > 14 and r[14] is not None else "",   # #363: '' | knocked_out | advancing | champion
                     "sourceUrl": placed.get("listingUrl", "") if origin == MIRROR else ""})
     return out
+
+
+def default_plan_line(plan: BuildPlan) -> str:
+    owned = [o.part.upper() if len(o.part) <= 3 else o.part for o in plan.owned]
+    return f"Plan: {len(plan.parts)} parts to buy" + (f", {_and(owned)} owned" if owned else "") + f", budget ${plan.cap:,.0f}"
+
+
+@dataclass
+class _Round:
+    """One part's round in the timeline: its stage (a knockout round goes on to 2 and 3) and sealed window (the stage window)."""
+    spec: PartSpec
+    index: int
+    attempt: int        # 1, or 2 for the re-plan
+    rid: str
+    window: int
+    stage: int = 1
 
 
 class BuildRun:
@@ -461,9 +662,24 @@ class BuildRun:
                  now: Callable[[], datetime] = lambda: datetime.now(timezone.utc), delay: float = 2.0, bid_window: Optional[int] = None,
                  plan_events: Optional[list] = None, checks: Optional[list] = None, on_code: Optional[Callable[[str], None]] = None,
                  recheck_timeout: float = RECHECK_TIMEOUT_S, call_timing: Optional[dict] = None, real_gpu_round: bool = True,
-                 relay_signals: Optional[Callable[[], Any]] = None):
+                 stagger: Optional[float] = None, knockout: bool = False, max_stages: int = MAX_STAGES, replan: bool = True,
+                 replan_catalog: Optional[Callable] = None, publisher: Optional[Callable[[str, str], None]] = None,
+                 publish_interval: float = 1.0, relay_signals: Optional[Callable[[], Any]] = None):
         self.plan, self.clients, self.allowance = plan, clients, allowance
         self.catalog = catalog or default_catalog
+        self.replan_catalog = replan_catalog or default_replan_catalog
+        self.stagger, self.knockout, self.max_stages, self.replan = stagger, knockout, min(MAX_STAGES, max(1, int(max_stages))), replan
+        self.publisher, self.publish_interval = publisher, publish_interval
+        self._last_sent = None
+        self.schedule_s = 0.0          # the timeline's last scheduled second (virtual: the plan of the pacing, not what the clock read)
+        self._last_close = None        # the previous part's close second, so staggered rounds close in part order
+        self._need_part: dict[str, str] = {}
+        self._stage: dict[str, int] = {}      # round id -> the stage a knockout round is in
+        self._latest: dict[str, tuple] = {}   # part -> (need id, round id, attempt) of its newest round
+        self._replans: dict[str, dict] = {}
+        self._heap: list = []
+        self._seq = 0
+        self._t0 = 0.0
         self.price_check, self.crs_check, self.cartesia, self.secret = price_check, crs_check, cartesia, secret
         self.buyer_name, self.use_stripe, self.env, self.stripe_test = buyer_name, use_stripe, env or {}, stripe_test
         self.out_dir, self._say, self.note, self.sleep, self.clock, self.now = out_dir, say, note, sleep, clock, now
@@ -500,8 +716,23 @@ class BuildRun:
     def view(self) -> dict:
         return build_view(self.snapshot(), self.plan_events, self.checks)
 
-    def publish(self) -> dict:
-        """Write the latest BuildView to out_dir/build-view.json (atomic) and one line to build-view.steps.jsonl. A failed write is one note."""
+    def _send(self, v: dict, throttled: bool) -> None:
+        """Hand the view to the publisher (the market's publish_build_view, for the hosted board), at most once per `publish_interval` seconds
+        for the per-step views; every other view (a champion, the call, a mandate, a receipt, the end) always goes. A publisher never raises into the run."""
+        if self.publisher is None:
+            return
+        now = self.clock()
+        if throttled and self._last_sent is not None and now - self._last_sent < self.publish_interval:
+            return
+        self._last_sent = now
+        try:
+            self.publisher(v["goalId"], json.dumps(public_view(v), sort_keys=True, separators=(",", ":")))   # no money or identity leaves this Mac
+        except Exception as e:  # noqa: BLE001  (the board's copy is optional: nothing here may stop a build)
+            self.note(f"BuildView not published ({type(e).__name__}); the run goes on")
+
+    def publish(self, throttled: bool = False) -> dict:
+        """Write the latest BuildView to out_dir/build-view.json (atomic) and one line to build-view.steps.jsonl, and hand it to the publisher
+        when there is one. A failed write is one note."""
         v = self.view()
         if self.out_dir is not None:
             try:
@@ -515,6 +746,7 @@ class BuildRun:
                 if not self._warned:
                     self._warned = True
                     self.note(f"BuildView not written to {self.out_dir} ({type(e).__name__}); the run goes on")
+        self._send(v, throttled)
         self.step_no += 1
         return v
 
@@ -525,16 +757,15 @@ class BuildRun:
         if step.reducer == "post_goal":
             self.goal_posted = True
             self._start_steps_file()
-            if not any(e.get("kind") == "plan" for e in self.plan_events):   # the planner's own plan line (phase 2) wins
-                self.plan_events.append({"at": at, "kind": "plan", "text": self._plan_line(), "parts": [], "origin": SIM})
+            if not any(e.get("kind") == "plan" for e in self.plan_events):   # the planner's own plan line wins
+                self.plan_events.append({"at": at, "kind": "plan", "text": self.plan.plan_line or self._plan_line(), "parts": [], "origin": SIM})
         elif step.reducer == "post_need":
             a = step.args
-            part = next(s.part for s in self.plan.parts if need_id(self.plan.goal_id, s.part) == a["id"])
-            self.needs.append({"id": a["id"], "goalId": a["goal_id"], "part": part, "spendLimit": a["spend_limit"], "origin": SIM})
-        elif step.reducer == "open_round":
+            self.needs.append({"id": a["id"], "goalId": a["goal_id"], "part": self._need_part[a["id"]], "spendLimit": a["spend_limit"], "origin": SIM})
+        elif step.reducer in ("open_round", "open_knockout_round"):
             self.rounds.append({"id": step.args["round_id"], "needId": step.args["need_id"], "state": "open", "openedAt": at,
                                 "closedAt": "", "origin": SIM})
-        self.publish()
+        self.publish(throttled=True)
 
     def _start_steps_file(self) -> None:
         """A new run starts the replay file over; the latest-view file is rewritten at every step anyway."""
@@ -546,29 +777,206 @@ class BuildRun:
                 pass   # publish() says so once
 
     def _plan_line(self) -> str:
-        owned = [o.part.upper() if len(o.part) <= 3 else o.part for o in self.plan.owned]
-        return (f"Plan: {len(self.plan.parts)} parts to buy" + (f", {_and(owned)} owned" if owned else "")
-                + f", budget ${self.plan.cap:,.0f}")
+        return default_plan_line(self.plan)
 
     # ---- rounds
 
-    def _execute(self, steps: list) -> None:
+    def _execute(self, steps: list, delay: Optional[float] = None) -> None:
         from demo import bridge
-        bridge.execute(steps, self.clients, delay=self.delay, say=self._hook, sleep=self.sleep, clock=self.clock, note=self.note,
-                       before_round=self.relay_signals)
+        bridge.execute(steps, self.clients, delay=self.delay if delay is None else delay, say=self._hook, sleep=self.sleep, clock=self.clock,
+                       note=self.note, before_round=self.relay_signals)
 
-    def _run_part(self, index: int, spec: PartSpec) -> None:
-        steps, ledger = part_steps(self.plan, spec, index, self.catalog(spec, index), now=self.now(), delay=self.delay,
-                                   bid_window=self.bid_window, real_gpu_round=self.real_gpu_round)
+    # ---- the timeline: every part's steps at their scheduled second
+    #
+    # With `stagger` the part rounds open `stagger` seconds apart (six parts open within 10 s at the default 2 s) and close in part order, each
+    # at least CLOSE_GAP_S after the one before; without it each part runs after the one before it (phase 1). Either way the reducer calls
+    # are made one at a time, in time order, so the market sees exactly the calls the sequential run makes, only interleaved.
+
+    def _at(self, t: float, fn: Callable[[float], None]) -> None:
+        heapq.heappush(self._heap, (t, self._seq, fn))
+        self._seq += 1
+
+    def _times(self, steps: list, t0: float, deadline: Optional[float] = None) -> list[tuple[float, Any]]:
+        """[(second, step)]: bridge.execute's own pacing (a pause after a paused step, a close waits for the round's deadline), as a schedule."""
+        t, out = t0, []
+        for s in steps:
+            if s.close and deadline is not None:
+                t = max(t, deadline + CLOSE_MARGIN_S)
+            out.append((t, s))
+            if s.window_s:
+                deadline = t + s.window_s
+            if s.pause and self.delay > 0:
+                t += self.delay * s.pace
+        return out
+
+    def _schedule(self, timed: list) -> None:
+        for t, s in timed:
+            self._at(t, lambda _t, step=s: self._run_step(step))
+
+    def _run_step(self, step) -> None:
+        if step.reducer == "close_stage":
+            return self._close_stage(step)
+        self._execute([step], delay=0)
+
+    def _stage_closed(self, rid: str, stage: int) -> bool:
+        """True when the market has closed `stage` of round `rid` (the round is closed, or it has results for that stage): its own deadline
+        scheduler (closeRoundOnDeadline -> closeStageInner) does this at the deadline, usually before the referee's call arrives."""
+        referee = self.clients["referee"]
+        if any(r[0] == rid and len(r) > 5 and r[5] == "closed" for r in referee.sql("SELECT * FROM round")):
+            return True
+        return any(r[1] == rid and len(r) > 13 and isinstance(r[13], int) and r[13] >= stage for r in referee.sql("SELECT * FROM round_result"))
+
+    def _close_stage(self, step) -> None:
+        """close_stage for a knockout stage. The real market closes a stage by itself at its deadline, so the referee's call can be refused
+        ("round is still open until its deadline" once the next stage has opened, "round already closed" after the last): that is not a failure
+        when the market's own rows show the stage closed. A refusal while the stage is really still open is retried a few times, then raised."""
+        rid = step.args["round_id"]
+        stage = self._stage.get(rid, 1)
+        try:
+            self._execute([replace(step, close=False)], delay=0)
+            return
+        except RuntimeError as e:
+            err = e
+        for _ in range(CLOSE_RETRIES):
+            msg = str(err)
+            if "already closed" in msg:
+                return
+            if "still open" not in msg:
+                raise err
+            if self._stage_closed(rid, stage):
+                return
+            self.sleep(1.0)
+            try:
+                self.clients["referee"].call("close_stage", round_id=rid)
+                return
+            except RuntimeError as e:
+                err = e
+        if "already closed" in str(err) or self._stage_closed(rid, stage):
+            return
+        raise err
+
+    def _begin_round(self, spec: PartSpec, index: int, attempt: int, t: float, clash: Optional[dict] = None) -> None:
+        sellers = self.catalog(spec, index) if attempt == 1 else self.replan_catalog(spec, index, clash or {})
+        window = self.bid_window if attempt == 1 else min(self.bid_window or REPLAN_WINDOW_S, REPLAN_WINDOW_S)
+        if window is None and self.knockout:
+            window = MIN_STAGE_WINDOW_S    # three stages must fit the beat: each is a short sealed window
+        steps, ledger = part_steps(self.plan, spec, index, sellers, now=self.now(), delay=self.delay, bid_window=window,
+                                   real_gpu_round=self.real_gpu_round and attempt == 1, attempt=attempt, knockout=self.knockout,
+                                   max_stages=self.max_stages)
+        timed = self._times(steps, t)
+        close_t = timed[-1][0]
+        if self.stagger is not None and attempt == 1 and self._last_close is not None and close_t < self._last_close + CLOSE_GAP_S:
+            extra = math.ceil(self._last_close + CLOSE_GAP_S - close_t)   # a longer window, so this round closes after the one before it
+            opener = steps[1]
+            key = "stage_window_s" if self.knockout else "window_s"
+            wide = opener.args[key] + extra
+            steps[1] = replace(opener, args={**opener.args, key: wide}, window_s=wide, say=re.sub(r"for \d+ s", f"for {wide} s", opener.say))
+            timed = self._times(steps, t)
+            close_t = timed[-1][0]
+        if attempt == 1:
+            self._last_close = close_t
+        nid, rid = need_id(self.plan.goal_id, spec.part, attempt), round_id(self.plan.goal_id, spec.part, attempt)
+        self._need_part[nid] = spec.part
+        self._stage[rid] = 1
+        self._latest[spec.part] = (nid, rid, attempt)
         self.ledger.update(ledger)
-        self._execute(steps)
-        rid = round_id(self.plan.goal_id, spec.part)
+        ps = _Round(spec, index, attempt, rid, steps[1].window_s)
+        self._schedule(timed)
+        self._at(close_t, lambda t_, ps=ps: self._closed(ps, t_))
+
+    def _start_part(self, index: int, t: float) -> None:
+        if index >= len(self.plan.parts):
+            return
+        self._begin_round(self.plan.parts[index], index, 1, t)
+        if self.stagger is not None and index + 1 < len(self.plan.parts):
+            self._at((index + 1) * self.stagger, lambda t_, j=index + 1: self._start_part(j, t_))
+
+    def _part_done(self, ps: "_Round", t: float) -> None:
+        if self.stagger is None:
+            self._start_part(ps.index + 1, t)
+
+    def _closed(self, ps: "_Round", t: float) -> None:
+        """A round's last step ran: read what the market made of it. A knockout round the market still reports open goes on to its next stage."""
+        rid = ps.rid
         results, closed = self._read_results({rid})
         self.results = [r for r in self.results if r["roundId"] != rid] + results
+        if self.knockout and rid not in closed and ps.stage < self.max_stages:
+            return self._next_stage(ps, t)
         for r in self.rounds:
             if r["id"] == rid and rid in closed:   # closed only when the market says so: a close that did not happen is not a result
                 r["state"], r["closedAt"] = "closed", _stamp(self.now())
         self.publish()
+        self._finished(ps, t)
+
+    def _next_stage(self, ps: "_Round", t: float) -> None:
+        """Stage k+1 of a knockout round: the survivors the market marked advancing make their improved sealed offers, then the next close_stage."""
+        rows = self.clients["referee"].sql("SELECT * FROM round_result")
+        alive = [r[2] for r in rows if r[1] == ps.rid and len(r) > 14 and r[13] == ps.stage and r[14] == "advancing" and r[2] in self.ledger]
+        ps.stage += 1
+        self._stage[ps.rid] = ps.stage
+        steps = stage_steps(self.ledger, alive, ps.rid, ps.stage, delay=self.delay)
+        timed = self._times(steps, t + STAGE_BID_S, deadline=t + ps.window)
+        self._schedule(timed)
+        self._at(timed[-1][0], lambda t_, ps=ps: self._closed(ps, t_))
+
+    def _picks(self) -> dict:
+        """{part: {"name", "attrs", "champion"}} for each part whose newest round is closed with an eligible champion this run bid."""
+        got = {}
+        for spec in self.plan.parts:
+            rid = self._rid(spec.part)
+            row = next((r for r in self.rounds if r["id"] == rid), None)
+            if row is None or row["state"] != "closed":
+                continue
+            champ, _why = champion_of([r for r in self.results if r["roundId"] == rid])
+            if champ is not None and champ["bidId"] in self.ledger:
+                placed = self.ledger[champ["bidId"]]
+                got[spec.part] = {"name": placed["label"], "attrs": placed["attrs"], "champion": champ}
+        return got
+
+    def _rid(self, part: str) -> str:
+        return self._latest[part][1] if part in self._latest else round_id(self.plan.goal_id, part)
+
+    def _plan_event(self, kind: str, text: str, parts: list, origin: str = SIM) -> None:
+        self.plan_events.append({"at": _stamp(self.now()), "kind": kind, "text": text, "parts": parts, "origin": _origin(origin)})
+
+    def _finished(self, ps: "_Round", t: float) -> None:
+        """A part's round is closed: re-run the fit check on everything locked so far (the owned parts count). A clash on this part's pick
+        opens ONE re-plan, a second need and round for the part; a green re-check after a swap is an event of its own."""
+        part = ps.spec.part
+        picks = self._picks()
+        lines = fit_checks(self.plan.owned, picks)
+        self.checks = lines
+        self.publish()
+        if part in picks:
+            clash = [c for c in lines if c["state"] == "clash" and part in (c["a"], c["b"])]
+            if clash and ps.attempt == 1 and self.replan:
+                return self._replan(ps, clash[0], picks, t)
+            if not clash and ps.attempt == 2:
+                rule = self._replans[part]["rule"]
+                other = self._replans[part]["other"]
+                for c in lines:
+                    if c["rule"] == rule and part in (c["a"], c["b"]) and c["state"] == "ok":
+                        self._plan_event("locked", f"{ps.spec.label}: fit re-check green, {c['detail']}", [part, other], picks[part]["champion"]["origin"])
+                self.publish()
+        self._part_done(ps, t)
+
+    def _replan(self, ps: "_Round", clash: dict, picks: dict, t: float) -> None:
+        """The pick breaks a fit rule against a part already locked: say so (red), swap by opening a new need and round for the part that names
+        what must fit (green after it locks). The market still decides the winner of the new round."""
+        part, spec = ps.spec.part, ps.spec
+        other = clash["b"] if clash["a"] == part else clash["a"]
+        every = {x.part: x for x in [*self.plan.owned, *self.plan.parts]}
+        other_label = every[other].label
+        other_attrs = picks[other]["attrs"] if other in picks else every[other].attrs
+        champ = picks[part]["champion"]
+        socket = other_attrs.get("socket") if clash["rule"] == "socket" else None
+        wants = f"{spec.label} for {socket}" if socket else f"{spec.label} that fits the {other_label}"
+        nid2 = need_id(self.plan.goal_id, part, 2)
+        self._plan_event("clash", f"Clash: {champ['persona']}'s {spec.label} vs the {other_label}: {clash['detail']}", [part, other], champ["origin"])
+        self.publish()   # red: the pick is locked in and the check says no
+        self._plan_event("replan", f"Re-plan: {spec.label}: {champ['persona']} is out, a new round for {wants} ({nid2})", [part], champ["origin"])
+        self._replans[part] = {"rule": clash["rule"], "other": other, "need": nid2}
+        self._begin_round(PartSpec(part, wants, spec.budget), ps.index, 2, t, clash)
 
     def _read_results(self, round_ids: set) -> tuple[list[dict], set]:
         """(the round_result rows of closed rounds as dicts, the ids of the rounds the market reports closed). Rows of a round that is not
@@ -578,13 +986,25 @@ class BuildRun:
         rows = referee.sql("SELECT * FROM round_result")
         return result_dicts(rows, self.ledger, closed), closed
 
+    def run_rounds(self) -> None:
+        """The goal, then every part's need and sealed round (and the re-plan of a part whose pick does not fit), in time order. Nothing is
+        bought here: this is everything before the settle step, and what `--dry-run` runs on the in-memory market."""
+        self._execute(goal_steps(self.plan, self.allowance))
+        self._t0 = self.clock()
+        self._at(0.0, lambda t: self._start_part(0, t))
+        while self._heap:
+            t, _seq, fn = heapq.heappop(self._heap)
+            wait = t - (self.clock() - self._t0)
+            if wait > 0:
+                self.sleep(wait)
+            self.schedule_s = max(self.schedule_s, t)
+            fn(t)
+
     def run(self) -> dict:
         """The whole build. Returns {"status": "paid" | "denied" | "failed", "reason", "view"}. A reducer refusal raises RuntimeError with the
         market's own message, after the view is written."""
         try:
-            self._execute(goal_steps(self.plan, self.allowance))
-            for i, spec in enumerate(self.plan.parts):
-                self._run_part(i, spec)
+            self.run_rounds()
             return self.settle()
         finally:
             self.publish()
@@ -592,11 +1012,11 @@ class BuildRun:
     # ---- champions
 
     def champions(self) -> tuple[dict, dict]:
-        """({part: champion row}, {part: why none}) from the market's rank 1 of each part's closed round. A champion this run did not
-        bid, held back, vetoed, or from a seller that never joined is never one."""
+        """({part: champion row}, {part: why none}) from the market's rank 1 of each part's newest closed round (a re-plan's second round
+        replaces the first). A champion this run did not bid, held back, vetoed, or from a seller that never joined is never one."""
         got, bad = {}, {}
         for spec in self.plan.parts:
-            rid = round_id(self.plan.goal_id, spec.part)
+            rid = self._rid(spec.part)
             row = next((r for r in self.rounds if r["id"] == rid), None)
             champ, why = (None, "no eligible bid: its round is not closed") if row is None or row["state"] != "closed" else \
                 champion_of([r for r in self.results if r["roundId"] == rid])
@@ -692,6 +1112,10 @@ class BuildRun:
         champs, bad = self.champions()
         if bad:
             return self._deny("no_eligible_bid", "No call: " + "; ".join(f"{label[p]}: {w}" for p, w in bad.items()) + ". Nothing was paid.")
+        self.checks = fit_checks(self.plan.owned, self._picks())   # the picks as they stand now: a part that still does not fit stops the build
+        clash = next((c for c in self.checks if c["state"] == "clash"), None)
+        if clash is not None:
+            return self._deny("fit_clash", f"No call: the picked parts do not fit ({clash['detail']}). Nothing was paid.")
         checks = self.recheck(champs)
         stops = self._stop_reasons(checks, champs)
         if stops:
@@ -850,7 +1274,7 @@ class BuildRun:
         if not voice_id:   # #240 keeps the VoiceApproval id on every approval row; an approval with none is not recorded
             return self._deny("no_voice_approval_id", "The call approved but left no VoiceApproval record, so nothing was paid.")
         try:
-            now_results, _closed = self._read_results({round_id(gid, s.part) for s in self.plan.parts})
+            now_results, _closed = self._read_results({self._rid(s.part) for s in self.plan.parts})
             before, self.results = self.results, now_results
             again, bad = self.champions()
             self.results = before
@@ -928,6 +1352,103 @@ class _Refused(Exception):
         self.code = code
 
 
+# ---------------------------------------------------------------- publishing the view for the hosted board
+
+MARKET_INDEX = ROOT / "market" / "spacetimedb" / "src" / "index.ts"
+
+
+def market_has_reducer(name: str, module: Path = MARKET_INDEX) -> bool:
+    """True when the market module exports reducer `name` (bridge.market_has_typed_approval reads the module the same way). Feature detection
+    for reducers a later market adds (open_knockout_round of #363, publish_build_view): an unreadable module says no."""
+    try:
+        text = Path(module).read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return re.search(rf"export\s+const\s+{re.escape(name)}\s*=\s*spacetimedb\.reducer\b", text) is not None
+
+
+def deployed_has_reducer(client: Any, name: str, **probe_args: Any) -> bool:
+    """True when the DEPLOYED market has reducer `name`, probed with a call that cannot do anything (arguments naming no real row, so a market
+    that has the reducer refuses with its own message): an HTTP 404 "No such procedure" means the module was not republished. The module
+    SOURCE can be ahead of Maincloud; this asks the one that will actually take the calls. An unreachable market says no."""
+    try:
+        client.call(name, **probe_args)
+    except RuntimeError as e:
+        msg = str(e)
+        return not ("(404)" in msg or "No such procedure" in msg or "no such procedure" in msg)
+    except OSError:
+        return False
+    return True
+
+
+def resolve_knockout(mode: str, clients: dict, note: Callable[[str], None], module: Path = MARKET_INDEX) -> bool:
+    """Whether the rounds are sealed knockouts. "on"/"off" are taken as given. "auto" needs the module source to have open_knockout_round AND the
+    deployed market to answer close_stage (probed as the referee): otherwise the build runs plain one-stage rounds and says so, instead of
+    stopping after the goal on a 404."""
+    if mode != "auto":
+        return mode == "on"
+    if not market_has_reducer("open_knockout_round", module):
+        return False
+    if not deployed_has_reducer(clients["referee"], "close_stage", round_id="probe-no-such-round"):
+        note("knockout: the module source has open_knockout_round but the deployed market does not (not republished), so the rounds are plain one-stage rounds")
+        return False
+    return True
+
+
+def public_view(v: dict) -> dict:
+    """The copy of a BuildView that goes to the hosted board. Admins and other users never see a buyer's spend or payment details, so it
+    carries no mandate, hash, payee, amount, buyer id, budget or total: parts (status, origin, a champion's persona, landed price and source
+    after the round closed), the fit checks, the events that are not about money (plan without its budgets, rounds, knockouts, locks, clash,
+    re-plan) and `approval.state`. demo/out keeps the full view locally."""
+    parts = []
+    for p in v.get("parts") or []:
+        q = {k: p[k] for k in ("part", "label", "status", "origin", "needId", "roundId", "reason") if k in p}
+        if p.get("champion"):
+            q["champion"] = {k: p["champion"][k] for k in ("persona", "landed", "origin", "sourceUrl") if k in p["champion"]}
+        parts.append(q)
+    buying = [p for p in parts if p["status"] != "owned"]
+    events = []
+    for e in v.get("events") or []:
+        if e["kind"] not in PUBLIC_EVENT_KINDS or (e["kind"] == "locked" and not e.get("parts")):
+            continue   # the call, the approval, receipts, a denial's reason and "Build ready" (the total) are spend and payment details
+        text = e["text"]
+        if e["kind"] == "plan":
+            text = f"Plan: {len(buying)} parts to buy" + (f", {len(parts) - len(buying)} owned" if len(parts) > len(buying) else "")
+        events.append({**{k: e[k] for k in ("at", "kind", "parts", "origin")}, "text": text})
+    return {"goalId": v.get("goalId", ""), "origin": v.get("origin", SIM), "parts": parts, "checks": list(v.get("checks") or []), "events": events,
+            "approval": {"state": (v.get("approval") or {}).get("state", "waiting")}}
+
+
+PUBLIC_EVENT_KINDS = ("plan", "round_open", "knockout", "locked", "clash", "replan")
+
+
+class ViewPublisher:
+    """Sends each BuildView to the market's referee reducer publish_build_view(goal_id, json), so a hosted board can read it from the public
+    build_view table (docs/changes/1800-D-publish-build-view.md). Optional: a market without the reducer never gets a call (make_publisher),
+    and a failing one is noted once and dropped after MAX_FAILURES, never an error in the build. The view carries no secret: it is the
+    same object demo/out/build-view.json holds."""
+    MAX_FAILURES = 3
+
+    def __init__(self, referee: Any, *, note: Callable[[str], None] = lambda text: None):
+        self.referee, self.note, self.failures = referee, note, 0
+
+    def __call__(self, goal_id: str, text: str) -> None:
+        if self.failures >= self.MAX_FAILURES:
+            return
+        try:
+            self.referee.call("publish_build_view", goal_id=goal_id, json=text)
+        except (RuntimeError, OSError) as e:
+            self.failures += 1
+            if self.failures == 1:
+                self.note(f"publish_build_view failed ({e}); the hosted board's copy may be stale and the build goes on. "
+                          f"It stops asking after {self.MAX_FAILURES} failures.")
+
+
+def make_publisher(clients: dict, *, note: Callable[[str], None] = lambda text: None, module: Path = MARKET_INDEX) -> Optional[ViewPublisher]:
+    """A ViewPublisher when the market module has publish_build_view, else None (the files in demo/out are then the only copy)."""
+    return ViewPublisher(clients["referee"], note=note) if market_has_reducer("publish_build_view", module) else None
+
+
 # ---------------------------------------------------------------- the CLI
 
 def preview_steps(plan: BuildPlan, allowance: Optional[dict], *, catalog: Optional[Callable] = None, delay: float = 2.0,
@@ -961,31 +1482,45 @@ def main(argv: Optional[list] = None) -> int:
     ap.add_argument("--no-assign-roles", action="store_true", help="skip the owner assign_role step for seller identities")
     ap.add_argument("--server", default=None, help="spacetime -s server (default from the env or the Lane D env file)")
     ap.add_argument("--bid-window", type=bridge.bid_window_arg, default=None, help="seconds each part's sealed round stays open")
-    ap.add_argument("--out-dir", type=Path, default=OUT_DIR, help="where build-view.json is written at every step")
+    ap.add_argument("--out-dir", type=Path, default=None,
+                    help="where build-view.json and build-view.steps.jsonl are written at every step (default demo/out; a dry run writes nothing unless given)")
+    ap.add_argument("--stagger", type=float, default=STAGGER_S,
+                    help=f"seconds between part rounds opening, so a six-part build fits a 90 s beat: all open within 5 x this (default {STAGGER_S:g}); "
+                         "rounds close in part order")
+    ap.add_argument("--sequential", action="store_true", help="one part's round at a time (phase 1 pacing), no stagger")
+    ap.add_argument("--planner", choices=("auto", "default"), default="auto",
+                    help="auto: use agents.buyer.planner.plan (#358) when it is on this branch; default: the built-in demo plan")
+    ap.add_argument("--knockout", choices=("auto", "on", "off"), default="auto",
+                    help="sealed knockout stages (#363, max 3): auto = when the market module has open_knockout_round; off = one-stage rounds")
+    ap.add_argument("--no-publish", action="store_true", help="never send the BuildView to the market's publish_build_view reducer")
     args = ap.parse_args(argv)
     if args.stripe and not args.live_call:
         ap.error("--stripe needs --live-call: a Stripe test charge runs only after a real phone call approves (there is no scripted approval)")
-    plan = demo_plan(goal_id=args.goal_id, buyer_id=args.buyer_id)
-    plan.deadline = _stamp(datetime.now(timezone.utc) + timedelta(days=7))
-    allowance = {"per_purchase_limit": args.per_buy, "period_limit": args.period_limit, "period": "month"}
     out = Narrator(True)
     out.note("Tech Bazaar build: one goal, a sealed round per part, one call for the whole build (#345)")
     out.note("Sellers: SIM, plus the real dated MIRROR listings for the GPU. Payment is the SIM stub unless --live-call --stripe. Tags: [MIRROR] [SIM] [LIVE].")
+    plan, source = planned_build(planner="auto" if args.planner == "auto" else None, note=out.note, goal_id=args.goal_id, buyer_id=args.buyer_id)
+    plan.deadline = _stamp(datetime.now(timezone.utc) + timedelta(days=7))
+    allowance = {"per_purchase_limit": args.per_buy, "period_limit": args.period_limit, "period": "month"}
+    knockout = market_has_reducer("open_knockout_round") if args.knockout == "auto" else args.knockout == "on"
+    stagger = None if args.sequential else args.stagger
+    out.note(f"plan from the {source}: {plan.plan_line or default_plan_line(plan)}")
+    out.note(f"rounds: {'sealed knockout, up to ' + str(MAX_STAGES) + ' stages' if knockout else 'one sealed stage'}; "
+             f"{'staggered ' + format(stagger, 'g') + ' s apart, closing in part order' if stagger is not None else 'one part at a time'}")
+    clock_of: dict[str, Any] = {"run": None}
 
     def say(s) -> None:
         if s.reducer == "set_floor":
             return
         who = "buyer" if s.actor == "buyer" else "referee" if s.actor == "referee" else s.actor.replace("seller:", "seller ")
-        out.line(s.tag if s.tag in bridge.LIVE_TAGS else SIM, f"{who:<26}{s.reducer:<22}{s.say}")
+        run = clock_of["run"]
+        at = f"+{run.schedule_s:5.1f}s " if run is not None and run.goal_posted else ""
+        out.line(s.tag if s.tag in bridge.LIVE_TAGS else SIM, f"{at}{who:<26}{s.reducer:<22}{s.say}")
 
-    steps = preview_steps(plan, allowance, delay=args.step_delay, bid_window=args.bid_window)
     if args.dry_run:
-        for s in steps:
-            say(s)
-        out.blank()
-        out.note(f"then, once every part has a champion: re-check prices, and above {money(args.per_buy)} ONE call for the whole build "
-                 f"(inside it: no call, method allowance), a mandate per part's rank 1, a payment and a receipt per part")
-        return 0
+        return _dry_run(args, plan, allowance, knockout, stagger, out, say, clock_of)
+    steps = preview_steps(plan, allowance, delay=args.step_delay, bid_window=args.bid_window)   # only to learn the seller ids
+    out_dir = args.out_dir or OUT_DIR
     from demo import market_target
     from demo.run_demo import DEFAULT_ENV_FILE
     approver_env = args.env_file or DEFAULT_ENV_FILE
@@ -1030,10 +1565,17 @@ def main(argv: Optional[list] = None) -> int:
             time.sleep(1)
         from demo import crs_relay
         from demo.run_demo import stripe_env
-        run = BuildRun(plan, clients, relay_signals=lambda: crs_relay.relay_best_effort(clients["referee"], note=out.note), allowance=allowance, price_check=price_check, crs_check=bridge.default_crs_check, cartesia=cartesia,
+        knockout = resolve_knockout(args.knockout, clients, out.note)   # the deployed market must answer close_stage, not only the source say so
+        publisher = None if args.no_publish else make_publisher(clients, note=out.note)
+        out.note("BuildView: " + (f"also sent to the market's publish_build_view for the hosted board, and written to {out_dir / VIEW_FILE}" if publisher
+                                  else f"written to {out_dir / VIEW_FILE}; the market has no publish_build_view reducer, so no hosted copy"))
+        run = BuildRun(plan, clients, relay_signals=lambda: crs_relay.relay_best_effort(clients["referee"], note=out.note), allowance=allowance,
+                       price_check=price_check, crs_check=bridge.default_crs_check, cartesia=cartesia,
                        secret=secret, buyer_name=buyer_name, use_stripe=args.stripe,
-                       env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=args.out_dir, say=say,
-                       note=out.note, delay=args.step_delay, bid_window=args.bid_window)
+                       env={**os.environ, **stripe_env(DEFAULT_ENV_FILE)} if args.stripe else {}, out_dir=out_dir, say=say,
+                       note=out.note, delay=args.step_delay, bid_window=args.bid_window, stagger=stagger, knockout=knockout,
+                       publisher=publisher)
+        clock_of["run"] = run
         res = run.run()
     except RuntimeError as e:
         out.blank()
@@ -1046,8 +1588,44 @@ def main(argv: Optional[list] = None) -> int:
     out.blank()
     v = res["view"]
     out.note(f"build {res['status']}: {v['approval']['total']:,.2f} for {len([p for p in v['parts'] if p['status'] != 'owned'])} parts from "
-             f"{v['approval']['sellers']} sellers; BuildView in {args.out_dir / VIEW_FILE}")
+             f"{v['approval']['sellers']} sellers; BuildView in {out_dir / VIEW_FILE}")
     return 0 if res["status"] == "paid" else 1
+
+
+def _dry_run(args, plan: BuildPlan, allowance: dict, knockout: bool, stagger: Optional[float], out, say, clock_of: dict) -> int:
+    """Everything before the call, on demo.build_sim's in-memory market (no market, no network, no call, nothing paid): the goal, a sealed
+    round per part on the timeline, the fit checks after each lock, the re-plan, and the BuildView at the end."""
+    from demo.build_sim import SimMarket, make_clients
+    run = BuildRun(plan, make_clients(SimMarket()), allowance=allowance, out_dir=args.out_dir, say=say, note=out.note, delay=args.step_delay,
+                   bid_window=args.bid_window, stagger=stagger, knockout=knockout, sleep=lambda s: None, clock=lambda: 0.0)
+    clock_of["run"] = run
+    run.run_rounds()
+    v = run.publish()
+    out.blank()
+    out.note("BuildView after the rounds (dry run, in-memory market):")
+    for p in v["parts"]:
+        if p["status"] == "owned":
+            out.line(SIM, f"{p['label']:<30}owned")
+        else:
+            c = p.get("champion")
+            out.line(c["origin"] if c else SIM, f"{p['label']:<30}{p['status']:<10}"
+                     + (f"{c['persona']} {money(c['landed'])}" + (f"  ({p['reason']})" if p.get("reason") else "") if c else p.get("reason", "")))
+    out.blank()
+    out.note(f"fit checks (data.fit_checker.build_check over the locked parts and what you own): {len(v['checks'])}")
+    for c in v["checks"]:
+        out.line(SIM, f"{c['a']:>7} / {c['b']:<7}{c['rule']:<14}{c['state']:<8}{c['source']:<20}{c['detail']}")
+    out.blank()
+    out.note("event log:")
+    for e in v["events"]:
+        if e["kind"] in ("plan", "clash", "replan", "knockout") or (e["kind"] == "locked" and e["parts"]):
+            out.line(e["origin"], f"{e['kind']:<10}{e['text']}")
+    out.blank()
+    out.note(f"pacing: the rounds are scheduled over {run.schedule_s:.0f} s ("
+             + (f"parts open {stagger:g} s apart, all within {stagger * (len(plan.parts) - 1):g} s, and close in order" if stagger is not None
+                else "one part at a time") + ")")
+    out.note(f"then, once every part has a champion: re-check prices, and above {money(args.per_buy)} ONE call for the whole build "
+             f"(inside it: no call, method allowance), a mandate per part's rank 1, a payment and a receipt per part. No call was placed: dry run, nothing was paid.")
+    return 0
 
 
 if __name__ == "__main__":
