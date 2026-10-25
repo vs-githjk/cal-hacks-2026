@@ -64,7 +64,7 @@ const CSS = [
   "@keyframes fr-stamp{from{opacity:0;transform:scale(1.4)}}",
 ].join("");
 const mono = (size: number, extra?: CSSProperties): CSSProperties => ({ fontFamily: MONO, fontSize: size, ...extra });
-const label = (extra?: CSSProperties): CSSProperties => mono(10, { paintOrder: "stroke", stroke: PAL.ink, strokeWidth: 3, strokeLinejoin: "round", ...extra });
+const label = (extra?: CSSProperties): CSSProperties => mono(12, { fontWeight: 500, paintOrder: "stroke", stroke: PAL.ink, strokeWidth: 3, strokeLinejoin: "round", ...extra });
 
 const focusOf = (phase: FloorPhase, r: OutReason | null) => (r === "shield_block" ? phase.shieldAt : r === "failed_fit" || r === "advocate_veto" ? phase.checkerAt : phase.buyerAt);
 const fishTile = (i: number, tick: number): Tile => loopTile(LOOPS[i % 8] ?? [], tick + 2 * i) ?? START;
@@ -137,7 +137,7 @@ function SellerG({ r, reduced }: { r: Row; reduced: boolean }): JSX.Element {
     <g aria-hidden="true" style={{ transform: `translate(${r.pos.x}px, ${r.pos.y}px)`, transition: reduced ? "none" : r.win ? "transform 900ms ease-in-out" : `transform ${PATROL_MS}ms linear` }}>
       <g style={{ opacity: r.gone ? 0 : 1, transform: `scale(${r.gone && r.shrink ? 0 : 1})`, transformBox: "fill-box", transformOrigin: "center", transition: fade }}>
         <g transform={`scale(${S})`}><Sprite grid={r.grid} colors={r.colors} cell={FC} flip={r.flip} /></g>
-        <text x={cx} y={r.H + 13} textAnchor="middle" fill={r.color} style={label()}>{r.name.length > 24 ? `${r.name.slice(0, 23)}...` : r.name}</text>
+        <text x={cx} y={r.H + 15} textAnchor="middle" fill={PAL.line} style={label()}>{r.name.length > 24 ? `${r.name.slice(0, 23)}...` : r.name}</text>
       </g>
       <g transform={`translate(${cx} ${r.H / 2})`}>
         <polygon points={spikyPoints(fieldR, 7, 18)} fill={PAL.cyan} fillOpacity={0.12} stroke={PAL.cyan} strokeOpacity={0.8} strokeDasharray="4 3" strokeLinejoin="round"
@@ -219,7 +219,7 @@ function AgentG({ a, reduced, leaving }: { a: Placed; reduced: boolean; leaving:
     <g aria-hidden="true" transform={`translate(${a.x} ${a.y})`}>
       <g style={{ ["--dx" as string]: `${a.from.x - a.x}px`, ["--dy" as string]: `${a.from.y - a.y}px`, animation: motion }}>
         {body}
-        <text x={side ? -4 : cx} y={side ? cy : a.h + 13} textAnchor={side ? "end" : "middle"} fill={PAL.line} style={label(nameStyle)}>{name}</text>
+        <text x={side ? -4 : cx} y={side ? cy : a.h + 15} textAnchor={side ? "end" : "middle"} fill={PAL.line} style={label(nameStyle)}>{name}</text>
         {reduced ? null : (
           <g key={leaving ? "o" : "i"}>
             {[0, 1, 2].map((k) => (
@@ -728,7 +728,7 @@ export function FloorAquariumPixel({ script, phase, reducedMotion, follow = fals
           <g style={{ opacity: jumped ? fade(1) : undefined }}>
             <g aria-hidden="true" style={{ transform: `translate(${pc.x - PW / 2}px, ${pc.y - PW / 2}px)`, transition: reducedMotion ? "none" : `transform ${STEP_MS + 10}ms linear` }}>
               <g transform={`scale(${S})`}><Sprite grid={open ? PAC : PAC_CLOSED} colors={{ X: PAL.pac }} cell={PC} flip={face < 0} /></g>
-              <text x={PW / 2} y={PW + 13} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
+              <text x={PW / 2} y={PW + 15} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
             </g>
           </g>
           {agent ? <AgentG key={agent.key} a={agent} reduced={reducedMotion} leaving={!placed} /> : null}
