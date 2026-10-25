@@ -8,7 +8,7 @@
     "start": "next start -p 3100",
     "demo": "next build && next start -p 3100",
     "lint": "eslint",
-    "test": "node --test src/lib/*.test.ts"
+    "test": "node --test src/lib/*.test.ts src/components/floor/*.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

@@ -1,50 +1,24 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useReducedMotion } from "motion/react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { SAMPLES } from "@/lib/arenaFixture";
 import type { ArenaRows } from "@/lib/arenaScene";
-import { FloorHud } from "@/components/floor/FloorHud";
-import { FloorRingSvg } from "@/components/floor/FloorRingSvg";
+import { FRAME, FloorHud } from "@/components/floor/FloorHud";
+import { FloorRingPixel } from "@/components/floor/FloorRingPixel";
 import { REFERENCE, floorScript, type FloorPhase, type FloorScript, type Theme } from "@/components/floor/floorPhases";
 import { useFloorClock } from "@/components/floor/useFloorClock";
 
-/** The signature screen: a 2.5D Pac-Man ring where agents buy a real build. Reads the market tables, turns them into a FloorScript,
- * and plays it. `?replay=reference` is the 1920 x 1080 video frame (REFERENCE run, no chrome, loops from 0), `?theme=ghosts|fish`,
- * `?renderer=svg` forces the fallback and `?sample=gpu|gpu-open|ssd` swaps the tables for a labelled SIM round. */
+/** The signature screen: a calm pixel-art Pac-Man boxing ring where agents buy a real build. Reads the market tables, turns them into a
+ * FloorScript, and plays it. `?replay=reference` is the 1920 x 1080 video frame (REFERENCE run, no chrome, loops from 0), `?theme=ghosts|fish`
+ * and `?sample=gpu|gpu-open|ssd` swaps the tables for a labelled SIM round. */
 
 type SampleName = keyof typeof SAMPLES;
 const MAX_STAGE = 1200;
 const INK = "#0b1b2b";
 const TEXT = "#eef3f8";
-
-interface StageProps { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number }
-const StageCtx = createContext<StageProps | null>(null);
-
-/** Shown while the 3D chunk loads: the SVG stage, so the ring never pops in empty. */
-function SvgWhileLoading() {
-  const p = useContext(StageCtx);
-  return p ? <FloorRingSvg {...p} /> : null;
-}
-const FloorRing3D = dynamic(() => import("@/components/floor/FloorRing3D").then((m) => m.FloorRing3D), { ssr: false, loading: () => <SvgWhileLoading /> });
-
-const subscribeNever = () => () => {};
-let webglCache: boolean | undefined;
-function probeWebGL(): boolean {
-  try {
-    const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
-/** null during hydration, then whether this browser can make a WebGL context (asked once). */
-function useWebGL(): boolean | null {
-  return useSyncExternalStore(subscribeNever, () => (webglCache ??= probeWebGL()), () => null);
-}
 
 const subscribeResize = (cb: () => void) => {
   window.addEventListener("resize", cb);
@@ -60,38 +34,33 @@ export default function FloorPage() {
     return {
       replay: q.get("replay") === "reference",
       theme: (q.get("theme") === "fish" ? "fish" : "ghosts") as Theme,
-      svgOnly: q.get("renderer") === "svg",
+      t: Number.isFinite(Number(q.get("t"))) && q.get("t") !== null ? Math.max(0, Number(q.get("t"))) : 0,
+      paused: q.get("paused") === "1",
       sample: sample !== null && Object.hasOwn(SAMPLES, sample) ? (sample as SampleName) : null,
     };
   });
-  return params.replay ? <ReplayView theme={params.theme} svgOnly={params.svgOnly} /> : <FloorView theme={params.theme} svgOnly={params.svgOnly} sample={params.sample} />;
+  return params.replay ? <ReplayView theme={params.theme} t={params.t} /> : <FloorView theme={params.theme} sample={params.sample} t={params.t} paused={params.paused} />;
 }
 
-/** Picks the renderer and draws the stage inside the HUD. */
-function Stage({ script, phase, theme, reducedMotion, width, svgOnly }: StageProps & { svgOnly: boolean }) {
-  const webgl = useWebGL();
-  const [unavailable, setUnavailable] = useState(false);
-  const useSvg = reducedMotion || svgOnly || webgl === false || unavailable;
-  const props: StageProps = { script, phase, theme, reducedMotion, width };
+/** The pixel ring inside the HUD. */
+function Stage({ script, phase, theme, reducedMotion, width, frame = false }: { script: FloorScript; phase: FloorPhase; theme: Theme; reducedMotion: boolean; width: number; frame?: boolean }) {
   return (
-    <FloorHud script={script} phase={phase} width={width} reducedMotion={reducedMotion}>
-      <StageCtx.Provider value={props}>
-        {useSvg || webgl === null ? <FloorRingSvg {...props} /> : <FloorRing3D {...props} onUnavailable={() => setUnavailable(true)} />}
-      </StageCtx.Provider>
+    <FloorHud script={script} phase={phase} width={width} frame={frame} reducedMotion={reducedMotion}>
+      <FloorRingPixel script={script} phase={phase} theme={theme} reducedMotion={reducedMotion} width={frame ? FRAME.stageW : width} />
     </FloorHud>
   );
 }
 
 /** The video frame: fixed 1920 x 1080, scaled to fit the window, nothing else on the page, REFERENCE run from 0 on a loop. */
-function ReplayView({ theme, svgOnly }: { theme: Theme; svgOnly: boolean }) {
+function ReplayView({ theme, t }: { theme: Theme; t: number }) {
   const size = useSyncExternalStore(subscribeResize, windowSize, () => "1920x1080");
   const [w, h] = size.split("x").map(Number) as [number, number];
   const k = Math.min(w / 1920, h / 1080);
-  const { phase } = useFloorClock(REFERENCE, { replay: true, reducedMotion: false });
+  const { phase } = useFloorClock(REFERENCE, { replay: true, reducedMotion: false, initial: t });
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: INK, color: TEXT, overflow: "hidden" }}>
       <div style={{ position: "absolute", left: "50%", top: "50%", width: 1920, height: 1080, transform: `translate(-50%, -50%) scale(${k})`, transformOrigin: "50% 50%" }}>
-        <Stage script={REFERENCE} phase={phase} theme={theme} reducedMotion={false} width={1920} svgOnly={svgOnly} />
+        <Stage script={REFERENCE} phase={phase} theme={theme} reducedMotion={false} width={1920} frame />
       </div>
     </div>
   );
@@ -99,7 +68,7 @@ function ReplayView({ theme, svgOnly }: { theme: Theme; svgOnly: boolean }) {
 
 const BTN = "inline-flex min-h-11 items-center rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] font-medium text-[#eef3f8] hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8fb0ff]";
 
-function FloorView({ theme: initialTheme, svgOnly, sample }: { theme: Theme; svgOnly: boolean; sample: SampleName | null }) {
+function FloorView({ theme: initialTheme, sample, t, paused }: { theme: Theme; sample: SampleName | null; t: number; paused: boolean }) {
   const conn = useSpacetimeDB();
   const [rounds] = useTable(tables.round);
   const [needs] = useTable(tables.sellerNeeds);
@@ -110,9 +79,9 @@ function FloorView({ theme: initialTheme, svgOnly, sample }: { theme: Theme; svg
 
   const reduced = !!useReducedMotion();
   const [theme, setTheme] = useState<Theme>(initialTheme);
-  const clock = useFloorClock(script, { reducedMotion: reduced });
+  const clock = useFloorClock(script, { reducedMotion: reduced, initial: t, startPaused: paused });
 
-  // The stage fills the column up to 1200 px; the width is measured, not guessed, so both renderers get a real CSS width.
+  // The stage fills the column up to 1200 px; the width is measured so the HUD scales with it.
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(960);
   useEffect(() => {
@@ -124,17 +93,17 @@ function FloorView({ theme: initialTheme, svgOnly, sample }: { theme: Theme; svg
   }, []);
 
   return (
-    <div className="grid gap-4 rounded-[24px] p-4 sm:p-6" style={{ background: INK, color: TEXT }}>
+    <div className="grid w-full min-w-0 max-w-full gap-4 overflow-hidden rounded-[24px] p-4 sm:p-6" style={{ background: INK, color: TEXT }}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-white/10 pb-3">
         <h1 className="text-[18px] font-bold tracking-[-0.01em]">Floor</h1>
         <p className="text-[14px] text-[#8fa0b2]">
           {!sample && !conn.isActive ? "Connecting to the market..." : script.sim ? "A labelled SIM round, until the market has bids." : "The market, live."}
         </p>
       </div>
-      <div ref={box} className="mx-auto w-full" style={{ maxWidth: MAX_STAGE }}>
-        <Stage script={script} phase={clock.phase} theme={theme} reducedMotion={reduced} width={width} svgOnly={svgOnly} />
+      <div ref={box} className="mx-auto w-full min-w-0 max-w-full" style={{ maxWidth: MAX_STAGE }}>
+        <Stage script={script} phase={clock.phase} theme={theme} reducedMotion={reduced} width={width} />
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-2">
         <button type="button" className={BTN} onClick={clock.playing ? clock.pause : clock.play} aria-pressed={!clock.playing}>{clock.playing ? "Pause" : "Play"}</button>
         <button type="button" className={BTN} onClick={clock.restart}>Restart</button>
         <div role="group" aria-label="Characters" className="inline-flex overflow-hidden rounded-xl border border-white/15">
