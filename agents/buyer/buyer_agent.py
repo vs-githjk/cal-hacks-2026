@@ -37,7 +37,7 @@ from data.mirror import not_partners  # common put the repo root on sys.path
 ADVICE_TIMEOUT_S = 15
 RETIRED_NEED_HISTORY = 8
 ALLOWANCE = float(os.getenv("BUYER_ALLOWANCE", "0"))  # $0: every order needs a phone-call approval
-CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified."
+CRS_NOT_CONFIGURED_NOTICE = "CRS not configured; seller eligibility was not verified, so those sellers are held, not orderable."
 SELLER_ADDRS = {common.address(s): s for s in common.SELLERS}
 WEB = "web"  # owner id for the local web chat (web_chat.py); its replies queue in WEB_OUTBOX
 
@@ -954,6 +954,7 @@ async def conclude(ctx: Context, reviewed: bool):
     not_configured_suppliers = {
         b["supplier_id"] for b in bids
         if crs.to_crs_check(b["supplier_id"], seller_checks.get(b["supplier_id"])).get("origin") == "NOT_CONFIGURED"
+        and not crs.sim_labelled(b["supplier_id"])   # #449 RT-25: only an explicit SIM label exempts a seller
     }
     if not_configured_suppliers and not ROUND.get("crs_notice_sent"):
         ROUND["crs_notice_sent"] = True
@@ -973,7 +974,7 @@ async def conclude(ctx: Context, reviewed: bool):
         supplier_not_configured = b["supplier_id"] in not_configured_suppliers
         reason = ("Seller eligibility was not verified."
                   if supplier_not_configured
-                  else "Trusted individual seller; CRS check exempt."
+                  else "Trusted individual or SIM seller; CRS check exempt."
                   if b["supplier_id"] in eligible_suppliers and not signal
                   else check.get("reason") or crs.REASON_UNAVAILABLE)
         if signal:

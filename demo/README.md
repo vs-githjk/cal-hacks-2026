@@ -100,10 +100,10 @@ answer, dial failure, expired mandate) or a missing Cartesia setup prints the de
 Before the call, the winning seller gets one CRS identity check (#257, `agents/crs.py` `check_payee`, cached per
 seller for 10 minutes). A business seller (an approved business profile in `CRS_TEST_IDENTITIES_PATH`) needs a
 verified check, and that check's id is bound into the mandate and checked again before the charge. A failed check,
-CRS not configured, or an unreadable profile file holds the payee gate: no mandate, no call, nothing paid. When CRS
+CRS not configured (also: no profile for the seller), or an unreadable profile file holds the payee gate: no mandate, no call, nothing paid. When CRS
 does not answer, the adapter may use its own recorded result for that seller if it is under 24 hours old (labelled
-cached on the console); with none, the gate holds. A seller with no business profile is a SIM seller and is said to
-be unchecked. Only a verified answer is reused, for 10 minutes; consent is read again every time. The call reads the result ("checked with CRS and
+cached on the console); with none, the gate holds. A seller the profile file explicitly labels `sim` (or `individual`) is a SIM seller and is said to
+be unchecked; a seller with no profile file or no entry is not configured for CRS, and the gate holds (#449 RT-25). Only a verified answer is reused, for 10 minutes; consent is read again every time. The call reads the result ("checked with CRS and
 verified" or "a simulated seller, not checked with CRS"), and the console prints it.
 On `--live-call` the bridge also loads `BRIGHT_DATA_API_KEY` and `TIGER_DATA_SERVICE_URL` from the same env file
 as the call (the process environment wins; values are never printed) (#269). Right before the call, Bright Data

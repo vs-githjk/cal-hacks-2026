@@ -13,6 +13,14 @@ from buyer import hunt
 
 
 NOW = datetime(2026, 10, 24, 8, tzinfo=timezone.utc)
+CACHE_SECRET = "cache-secret-for-tests-0123456789"
+
+
+@pytest.fixture(autouse=True)
+def _cache_secret(monkeypatch):
+    """#449 RT-25: the cache is used only with a valid tag keyed by CRS_CACHE_SECRET; these tests are about everything else
+    (test_crs_449.py covers the unsigned, forged and no-secret cases)."""
+    monkeypatch.setenv("CRS_CACHE_SECRET", CACHE_SECRET)
 
 
 def test_optional_signal_cache_path_override(monkeypatch, tmp_path):
@@ -118,7 +126,7 @@ def test_missing_token_returns_safe_unavailable_without_request(monkeypatch, tmp
     monkeypatch.setattr(crs, "_request", lambda *args: (_ for _ in ()).throw(AssertionError("called")))
     result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
     assert result == {"signal": None, "reason": crs.REASON_NOT_CONFIGURED}
-    assert crs.eligible("seller_1", result, NOW)
+    assert not crs.eligible("seller_1", result, NOW)       # #449 RT-25: a business payee CRS is not configured for is held
 
 
 def test_request_uses_fixed_sandbox_endpoint_and_requires_http_200(monkeypatch):
@@ -180,6 +188,7 @@ def test_invalid_cache_entries_never_grant_fallback(monkeypatch, tmp_path):
                 {**valid, "signal": {**valid["signal"], "checked_at": (NOW - timedelta(hours=25)).isoformat()}},
                 {**valid, "signal": {**valid["signal"], "checked_at": (NOW + timedelta(seconds=1)).isoformat()}}]
     for entry in variants:
+        entry = crs.sign_entry("seller_1", entry) if isinstance(entry, dict) else entry   # signed: only its content is invalid
         cache_path.write_text("{bad" if entry == "{broken" else json.dumps({"seller_1": entry}) if entry else "{}")
         result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
         assert result["signal"] is None
@@ -377,21 +386,28 @@ def test_malformed_empty_check_never_looks_not_configured(monkeypatch, tmp_path,
     assert projected["reason_codes"] == ["CRS_INVALID"]
 
 
-def test_absent_crs_config_is_nonblocking_but_adverse_check_denies(monkeypatch, tmp_path):
+def test_absent_crs_config_holds_a_business_payee_and_only_a_sim_label_passes(monkeypatch, tmp_path):
+    """#449 RT-25: this used to pass every seller when CRS was absent (the old "nonblocking" default)."""
     setup_profile(monkeypatch, tmp_path, auth_stub=False)
     monkeypatch.delenv("CRS_API_KEY", raising=False)
     monkeypatch.delenv("CRS_USERNAME", raising=False)
     monkeypatch.delenv("CRS_PASSWORD", raising=False)
     check = asyncio.run(crs.check_sellers(NOW))["seller_1"]
-    eligible_suppliers = {"seller_1"} if crs.eligible("seller_1", check, NOW) else set()
-    assert eligible_suppliers == {"seller_1"}
+    assert not crs.eligible("seller_1", check, NOW)
     bids = [{"id": "cheap", "supplier_id": "seller_1", "total_landed_price": 10}]
-    assert hunt.pick_best(bids, {"cheap": {"recommendation": "buy"}}, eligible_suppliers) == 1
+    cards = {"cheap": {"recommendation": "buy"}}
+    assert hunt.pick_best(bids, cards, set()) is None
+    setup_profile(monkeypatch, tmp_path, seller_type="sim", auth_stub=False)         # the operator labels it a SIM seller
+    for name in ("CRS_API_KEY", "CRS_USERNAME", "CRS_PASSWORD"):
+        monkeypatch.delenv(name, raising=False)
+    labelled = asyncio.run(crs.check_sellers(NOW))["seller_1"]
+    eligible_suppliers = {"seller_1"} if crs.eligible("seller_1", labelled, NOW) else set()
+    assert eligible_suppliers == {"seller_1"} and hunt.pick_best(bids, cards, eligible_suppliers) == 1
     monkeypatch.setenv("CRS_USERNAME", "configured-user")
     monkeypatch.setenv("CRS_PASSWORD", "configured-password")
-    assert not crs.eligible("seller_1", check, NOW)
+    assert crs.eligible("seller_1", labelled, NOW)                                    # a label does not depend on CRS config
     monkeypatch.setattr(crs, "_paths", lambda: (None, tmp_path / "cache.json"))
-    assert crs.eligible("seller_1", None, NOW)
+    assert not crs.eligible("seller_1", None, NOW)                                    # no profile file: never a SIM pass
     adverse = {"signal": {"supplier_id": "seller_1", "stability": "not_verified",
                            "checked_at": NOW.isoformat(), "source": "sandbox"}}
     assert not crs.eligible("seller_1", adverse, NOW)
@@ -530,10 +546,10 @@ def test_configured_login_failure_can_use_fresh_cache_but_stays_latched(monkeypa
     monkeypatch.setenv("CRS_USERNAME", "user")
     monkeypatch.setenv("CRS_PASSWORD", "password")
     cache = tmp_path / "cache.json"
-    cache.write_text(json.dumps({"seller_1": {"persona_ref": "official-a", "signal": {
+    cache.write_text(json.dumps({"seller_1": crs.sign_entry("seller_1", {"persona_ref": "official-a", "signal": {
         "supplier_id": "seller_1", "stability": "verified_stable",
         "checked_at": NOW.isoformat(), "source": "sandbox"},
-        "reason": crs.REASON_VERIFIED}}), encoding="utf-8")
+        "reason": crs.REASON_VERIFIED})}), encoding="utf-8")
     calls = []
     monkeypatch.setattr(crs, "_open_request", lambda request: (calls.append(request) or _Reply(401, {})))
     result = asyncio.run(crs.check_sellers(NOW))["seller_1"]
@@ -603,12 +619,24 @@ def test_check_payee_not_configured_is_said_so(monkeypatch, tmp_path, fresh_paye
     assert out["business"] is True and out["check"]["verified"] is False and out["check"]["origin"] == "NOT_CONFIGURED"
 
 
-def test_a_payee_with_no_business_profile_is_a_sim_seller_with_no_request(monkeypatch, tmp_path, fresh_payee_cache):
+def test_a_payee_with_no_profile_is_not_configured_and_makes_no_request(monkeypatch, tmp_path, fresh_payee_cache):
     setup_profile(monkeypatch, tmp_path)
     calls = []
     monkeypatch.setattr(crs, "_request", lambda *a: calls.append(a))
     out = asyncio.run(crs.check_payee("best-buy", NOW))
-    assert out["business"] is False and out["check"] is None and calls == [] and "no business CRS profile" in out["sim_reason"]
+    assert out["business"] is True and calls == [] and out["check"]["origin"] == "NOT_CONFIGURED"   # #449 RT-25: not SIM by default
+
+
+def test_a_payee_the_file_labels_sim_has_no_request(monkeypatch, tmp_path, fresh_payee_cache):
+    setup_profile(monkeypatch, tmp_path)
+    path = tmp_path / "private.json"
+    data = json.loads(path.read_text())
+    data["sellers"]["best-buy"] = {"seller_type": "sim"}
+    path.write_text(json.dumps(data))
+    calls = []
+    monkeypatch.setattr(crs, "_request", lambda *a: calls.append(a))
+    out = asyncio.run(crs.check_payee("best-buy", NOW))
+    assert out["business"] is False and out["check"] is None and calls == [] and "sim" in out["sim_reason"]
 
 
 def test_check_payee_never_logs_the_key(monkeypatch, tmp_path, fresh_payee_cache, capsys, caplog):
@@ -647,7 +675,7 @@ def test_a_sim_outcome_is_not_cached_and_withdrawn_consent_beats_the_cache(monke
     setup_profile(monkeypatch, tmp_path, consent=False)
     out = asyncio.run(crs.check_payee("seller_1", NOW + timedelta(minutes=1)))
     assert out["cached"] is False and out["check"]["verified"] is False
-    assert asyncio.run(crs.check_payee("best-buy", NOW))["business"] is False and "best-buy" not in crs._payee_cache
+    assert asyncio.run(crs.check_payee("best-buy", NOW))["business"] is True and "best-buy" not in crs._payee_cache
 
 
 
@@ -659,7 +687,7 @@ def test_a_present_profile_that_is_not_individual_is_checked_and_held(monkeypatc
     assert out["business"] is True and out["check"]["verified"] is False
 
 
-def test_only_an_individual_profile_is_a_sim_seller(monkeypatch, tmp_path, fresh_payee_cache):
+def test_only_a_sim_or_individual_profile_is_a_sim_seller(monkeypatch, tmp_path, fresh_payee_cache):
     setup_profile(monkeypatch, tmp_path, seller_type="Individual")
     out = asyncio.run(crs.check_payee("seller_1", NOW))
     assert out["business"] is False and "individual" in out["sim_reason"]
@@ -674,10 +702,10 @@ def test_duplicate_or_odd_entries_make_the_file_unreadable(monkeypatch, tmp_path
         asyncio.run(crs.check_payee("s1", NOW))
 
 
-def test_no_profile_file_says_so(monkeypatch, fresh_payee_cache):
+def test_no_profile_file_is_not_configured_never_sim(monkeypatch, fresh_payee_cache):
     monkeypatch.setattr(crs, "_paths", lambda: (None, Path("/nonexistent/cache.json")))
     out = asyncio.run(crs.check_payee("best-buy", NOW))
-    assert out["business"] is False and "CRS_TEST_IDENTITIES_PATH" in out["sim_reason"]
+    assert out["business"] is True and out["check"]["origin"] == "NOT_CONFIGURED" and "sim_reason" not in out
 
 
 # ---------------------------------------------------------------- #398: a payee's CRS status from local files only
@@ -691,22 +719,23 @@ def no_network(monkeypatch):
 
 def recorded(tmp_path, supplier_id, stability, checked_at, persona="official-a"):
     signal = {"supplier_id": supplier_id, "stability": stability, "checked_at": checked_at, "source": "sandbox"}
-    (tmp_path / "cache.json").write_text(json.dumps({supplier_id: {"persona_ref": persona, "signal": signal, "reason": "x"}}))
+    entry = crs.sign_entry(supplier_id, {"persona_ref": persona, "signal": signal, "reason": "x"})   # #449 RT-25: signed
+    (tmp_path / "cache.json").write_text(json.dumps({supplier_id: entry}))
 
 
-def test_status_with_no_profile_file_is_sim_and_says_why(monkeypatch):
+def test_status_with_no_profile_file_is_not_configured_and_says_why(monkeypatch):
     no_network(monkeypatch)
     monkeypatch.setattr(crs, "_paths", lambda: (None, Path("/nonexistent/cache.json")))
     out = crs.payee_status("fair-price-pc", NOW)
-    assert out["state"] == "sim" and "CRS_TEST_IDENTITIES_PATH" in out["reason"] and out["band"] is None
+    assert out["state"] == "not_configured" and "CRS_TEST_IDENTITIES_PATH" in out["reason"] and out["band"] is None
 
 
-def test_status_of_an_individual_or_unlisted_seller_is_sim(monkeypatch, tmp_path):
+def test_status_of_an_individual_seller_is_sim_and_an_unlisted_one_is_not_configured(monkeypatch, tmp_path):
     no_network(monkeypatch)
     setup_profile(monkeypatch, tmp_path, seller_type="individual")
     assert crs.payee_status("seller_1", NOW)["state"] == "sim"
     out = crs.payee_status("gadget-grove", NOW)
-    assert out["state"] == "sim" and out["reason"] == "no business CRS profile for this seller"
+    assert out["state"] == "not_configured" and out["reason"] == "no CRS profile for this seller"
 
 
 def test_status_of_a_business_with_no_recorded_result_is_not_checked(monkeypatch, tmp_path):

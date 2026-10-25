@@ -29,7 +29,21 @@ def entry(signal, persona="P01"):
     return {"persona_ref": persona, "signal": signal, "reason": "fixed text"}
 
 
+SECRET = "cache-secret-for-tests-0123456789"
+
+
+@pytest.fixture(autouse=True)
+def _cache_secret(monkeypatch):
+    monkeypatch.setenv("CRS_CACHE_SECRET", SECRET)
+
+
 def cache_of(*signals):
+    """A cache as agents/crs.py writes it with CRS_CACHE_SECRET set: every entry carries its tag (#449 RT-25)."""
+    crs = bridge.crs_module()
+    return {s["supplier_id"]: crs.sign_entry(s["supplier_id"], entry(s)) for s in signals}
+
+
+def unsigned_cache_of(*signals):
     return {s["supplier_id"]: entry(s) for s in signals}
 
 
@@ -294,3 +308,36 @@ def test_build_run_passes_its_relay_to_the_bridge_and_defaults_to_none(monkeypat
     build.BuildRun(plan, {}, out_dir=None, relay_signals=lambda: called.append(1))._execute([])
     seen["before_round"]()
     assert called == [1]
+
+
+# ---------------------------------------------------------------- #449 RT-25: only a cache entry with a valid tag is relayed
+
+def test_a_cache_entry_without_a_valid_tag_is_not_relayed_when_the_tag_is_checked():
+    crs = bridge.crs_module()
+    good = cache_of(sig("seller_1"))
+    forged = unsigned_cache_of(sig("seller_2"))
+    edited = cache_of(sig("seller_3", stability="not_verified"))
+    edited["seller_3"]["signal"]["stability"] = "verified_stable"          # edited after it was signed
+    calls, skipped = crs_relay.plan({**good, **forged, **edited}, now=NOW, verify=crs.entry_verified)
+    assert [c["supplier_id"] for c in calls] == ["seller-a"]
+    assert {k for k, why in skipped} == {"seller_2", "seller_3"} and all("tag" in why for _, why in skipped)
+
+
+def test_without_a_verifier_plan_is_unchanged_for_the_pure_tests():
+    calls, _ = crs_relay.plan(unsigned_cache_of(sig("seller_1")), now=NOW)
+    assert len(calls) == 1
+
+
+def test_the_best_effort_relay_and_the_command_check_the_tag(tmp_path, monkeypatch):
+    cache = tmp_path / "c.json"
+    cache.write_text(json.dumps(unsigned_cache_of(sig("seller_1"))), encoding="utf-8")
+    market, notes = FakeMarket(), []
+    out = crs_relay.relay_best_effort(market, note=notes.append, cache_path=cache, reducers=WITH, now=NOW)
+    assert market.calls == [] and out["status"] == "nothing" and any("tag" in n for n in notes)
+    cache.write_text(json.dumps(cache_of(sig("seller_1"))), encoding="utf-8")
+    market2 = FakeMarket()
+    assert crs_relay.relay_best_effort(market2, note=notes.append, cache_path=cache, reducers=WITH, now=NOW)["status"] == "sent"
+    monkeypatch.delenv("CRS_CACHE_SECRET")
+    market3 = FakeMarket()
+    assert crs_relay.relay_best_effort(market3, note=notes.append, cache_path=cache, reducers=WITH, now=NOW)["status"] == "nothing"
+    assert market3.calls == []

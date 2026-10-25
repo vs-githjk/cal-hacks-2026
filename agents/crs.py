@@ -1,6 +1,7 @@
 """CRS sandbox identity signals for approved synthetic representative requests only."""
 import asyncio
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -17,6 +18,9 @@ LOGIN_PATH = "/users/login"
 ENDPOINT_PATH = "/transunion/identity-manager-verification/basic"
 ENDPOINT = f"{DEFAULT_BASE_URL}{ENDPOINT_PATH}"
 CACHE_MAX_AGE = timedelta(hours=24)
+CACHE_SECRET_ENV = "CRS_CACHE_SECRET"
+MIN_CACHE_SECRET = 16               # a shorter secret counts as none: the cache is then ignored (#449 RT-25)
+SIM_LABELS = {"sim", "individual"}  # the explicit labels in the operator's profile file that make a seller a SIM seller
 PAYEE_TTL = timedelta(minutes=10)   # #257: one check per payee at the payment gate, reused for this long
 REASON_VERIFIED = "Synthetic representative identity verified by CRS sandbox."
 REASON_CAUTION = "CRS sandbox returned a fraud alert; additional proof is required."
@@ -129,6 +133,12 @@ def _profiles():
         return {}
 
 
+def _is_sim_profile(profile):
+    """True for a profile that explicitly labels the seller a SIM seller: seller_type "sim" or "individual" (any case)."""
+    kind = profile.get("seller_type") if isinstance(profile, dict) else None
+    return isinstance(kind, str) and kind.strip().lower() in SIM_LABELS
+
+
 def _approved(profile):
     if not isinstance(profile, dict) or profile.get("seller_type") != "business":
         return None
@@ -140,6 +150,41 @@ def _approved(profile):
     if _canonical_hash(body) != APPROVED_PERSONAS[ref]:
         return None
     return body
+
+
+def _cache_secret():
+    value = (os.environ.get(CACHE_SECRET_ENV) or "").strip()
+    return value.encode("utf-8") if len(value) >= MIN_CACHE_SECRET else None
+
+
+def _cache_tag(supplier_id, entry, secret):
+    body = {"domain": "crs-signal-cache-v1", "supplier_id": supplier_id, "persona_ref": entry.get("persona_ref"),
+            "signal": entry.get("signal"), "reason": entry.get("reason")}
+    raw = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hmac.new(secret, raw, hashlib.sha256).hexdigest()
+
+
+def sign_entry(supplier_id, entry):
+    """#449 RT-25: the cache entry with an HMAC-SHA256 `mac` over its content (supplier key, persona, signal, reason),
+    keyed by CRS_CACHE_SECRET. Without a usable secret (16+ characters) the entry is returned unsigned: it stays
+    readable for display, but no check here will ever use it."""
+    secret = _cache_secret()
+    if secret is None or not isinstance(entry, dict):
+        return dict(entry) if isinstance(entry, dict) else entry
+    plain = {k: v for k, v in entry.items() if k != "mac"}
+    return {**plain, "mac": _cache_tag(supplier_id, plain, secret)}
+
+
+def entry_verified(supplier_id, entry):
+    """True only when CRS_CACHE_SECRET is set and the entry's `mac` matches its content for this supplier key. A
+    missing, wrong or foreign tag, or no secret, is False: the unsigned cache file is never trusted (fail closed)."""
+    secret = _cache_secret()
+    if secret is None or not isinstance(entry, dict) or not isinstance(entry.get("mac"), str):
+        return False
+    try:
+        return hmac.compare_digest(entry["mac"].encode("ascii"), _cache_tag(supplier_id, entry, secret).encode("ascii"))
+    except (UnicodeEncodeError, TypeError, ValueError):
+        return False
 
 
 def _cache_read(path):
@@ -157,7 +202,9 @@ def _reason(stability):
 
 def _cached(supplier_id, profile, now, cache):
     entry = cache.get(supplier_id)
-    if not isinstance(entry, dict) or entry.get("persona_ref") != profile.get("persona_ref"):
+    if not entry_verified(supplier_id, entry):   # #449 RT-25: an unsigned or forged cache file grants nothing
+        return None
+    if entry.get("persona_ref") != profile.get("persona_ref"):
         return None
     signal = entry.get("signal")
     if not isinstance(signal, dict) or set(signal) != {"supplier_id", "stability", "checked_at", "source"}:
@@ -178,13 +225,10 @@ def _cached(supplier_id, profile, now, cache):
 
 def eligible(supplier_id: str, check: dict | None, now: datetime) -> bool:
     """Fail-closed gate using current trusted consent/profile and a fresh sandbox signal."""
-    profiles = _profiles()
-    profile = profiles.get(supplier_id)
-    missing_auth = not _configured()
-    empty_not_configured = _is_empty_not_configured(check)
-    if (missing_auth or not profiles) and empty_not_configured:
-        return True
-    if isinstance(profile, dict) and profile.get("seller_type") == "individual":
+    profile = _profiles().get(supplier_id)
+    # #449 RT-25: only an explicit SIM label in the operator's profile file exempts a seller. "CRS not configured" no
+    # longer passes anyone: an unconfigured business payee falls through to the checks below and is held.
+    if _is_sim_profile(profile):
         return True
     if not isinstance(profile, dict) or profile.get("consent") is not True or _approved(profile) is None:
         return False
@@ -397,7 +441,7 @@ async def check_sellers(now: datetime, only: set[str] | None = None) -> dict[str
                 result = {"signal": signal, "reason": _reason(signal["stability"])}
                 _issued_personas[id(result)] = (result, profile["persona_ref"], _canonical_hash(signal))
                 # Fresh adverse results supersede old passes; transport/parse failures do not.
-                cache[supplier_id] = {"persona_ref": profile["persona_ref"], **result}
+                cache[supplier_id] = sign_entry(supplier_id, {"persona_ref": profile["persona_ref"], **result})
                 try:
                     _cache_write(cache_path, cache)
                 except OSError:
@@ -446,17 +490,19 @@ def _payee_profile(supplier_id: str):
 
 
 def sim_reason(supplier_id: str) -> str | None:
-    """Why this payee is a SIM seller, or None when it must be checked as a business. Only no profile file, no profile
-    for the seller, or a profile that says "individual" is SIM; any other profile (an odd or missing seller_type too) is
-    checked, and check_sellers holds it if it is not an approved business. Raises ProfilesUnreadable."""
-    if _paths()[0] is None:
-        return "no CRS profile file is configured (CRS_TEST_IDENTITIES_PATH)"
+    """Why this payee is an explicitly labelled SIM seller, or None when it must be checked as a business. #449 RT-25:
+    only a profile in the operator's file that says seller_type "sim" or "individual" makes a SIM seller. No profile file,
+    no profile for the seller, or any other seller_type is NOT SIM: CRS must have checked it, and a payee CRS is not
+    configured for is held (check_payee). Raises ProfilesUnreadable."""
     profile = _payee_profile(supplier_id)
-    if profile is None:
-        return "no business CRS profile for this seller"
-    if str(profile.get("seller_type", "")).strip().lower() == "individual":
-        return "its CRS profile is an individual seller"
-    return None
+    if not _is_sim_profile(profile):
+        return None
+    return f"its CRS profile labels it {str(profile['seller_type']).strip().lower()} (a SIM seller)"
+
+
+def sim_labelled(supplier_id: str) -> bool:
+    """True when the operator's profile file explicitly labels this seller SIM (the id as written, like eligible())."""
+    return _is_sim_profile(_profiles().get(supplier_id))
 
 
 def is_business(supplier_id: str) -> bool:
@@ -466,8 +512,10 @@ def is_business(supplier_id: str) -> bool:
 def payee_status(supplier_id: str, now: datetime) -> dict:
     """#398: a payee's CRS status from local files only (the profile file and the sanitized cache), for a dry run.
     It never logs in or calls the sandbox: a failed login locks the shared account. Returns {"state", "reason", "band",
-    "checked_at", "persona_ref"}: state "sim" (no business profile), "business" (band and checked_at set only for a fresh
-    recorded result of the same persona), or "unknown" (the profile file is unreadable). None of these is a pass."""
+    "checked_at", "persona_ref"}: state "sim" (explicitly labelled SIM), "not_configured" (no profile file or no profile
+    for the seller: not a SIM seller, so the payee gate holds), "business" (band and checked_at set only for a fresh
+    recorded result of the same persona that carries a valid cache tag), or "unknown" (the profile file is unreadable).
+    None of these is a pass."""
     out = {"state": "sim", "reason": None, "band": None, "checked_at": None, "persona_ref": None}
     try:
         why_sim = sim_reason(supplier_id)
@@ -476,6 +524,10 @@ def payee_status(supplier_id: str, now: datetime) -> dict:
         return {**out, "state": "unknown", "reason": str(e)}
     if why_sim is not None:
         return {**out, "reason": why_sim}
+    if profile is None:
+        why = ("no CRS profile file is configured (CRS_TEST_IDENTITIES_PATH)" if _paths()[0] is None
+               else "no CRS profile for this seller")
+        return {**out, "state": "not_configured", "reason": why}
     key = next((k for k in _profiles() if isinstance(k, str) and k.strip().lower() == str(supplier_id).strip().lower()),
                supplier_id)
     hit = _cached(key, profile, now, _cache_read(_paths()[1]))
@@ -487,11 +539,18 @@ def payee_status(supplier_id: str, now: datetime) -> dict:
 async def check_payee(supplier_id: str, now: datetime) -> dict:
     """#257: one CRS check of the payee at the payment gate, cached per payee for PAYEE_TTL.
     Returns {"business", "check", "cached"}: `check` is the CrsCheck (pay.crs_gate judges it) for a business payee,
-    None for a SIM seller (no business profile, so no request). A transport failure is never cached."""
+    None for a seller explicitly labelled SIM (no request). #449 RT-25: a payee with no profile file or no profile of its
+    own is a business payee CRS is not configured for: a NOT_CONFIGURED check that the gate holds (crs_not_configured),
+    never a SIM pass. A transport failure is never cached."""
     why_sim = sim_reason(supplier_id)            # read every time: a changed profile or consent is never cached over
     if why_sim is not None:
         _payee_cache.pop(supplier_id, None)
         return {"business": False, "check": None, "cached": False, "sim_reason": why_sim}
+    if _payee_profile(supplier_id) is None:
+        _payee_cache.pop(supplier_id, None)
+        return {"business": True, "cached": False, "check": {
+            "seller_id": supplier_id, "product": "tu_identity", "verified": False, "reason_codes": ["CRS_NOT_CONFIGURED"],
+            "origin": "NOT_CONFIGURED", "checked_at": now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")}}
     hit = _payee_cache.get(supplier_id)
     consent = (_payee_profile(supplier_id) or {}).get("consent") is True
     if hit is not None and now < hit[0] and consent:

@@ -462,7 +462,7 @@ def test_trusted_individual_output_uses_exemption_reason(buyer):
     ctx = Context()
     asyncio.run(buyer.on_advice(ctx, buyer.common.address('advocate'), buyer.common.AdviceReply(
         cards_json=json.dumps([card()]))))
-    assert 'CRS: exempt - Trusted individual seller; CRS check exempt.' in ctx.owner_text()
+    assert 'CRS: exempt - Trusted individual or SIM seller; CRS check exempt.' in ctx.owner_text()
     assert 'Approved synthetic representative profile is unavailable' not in ctx.owner_text()
 
 
@@ -1044,3 +1044,35 @@ def test_concluded_round_owner_message_has_trace_once(buyer, monkeypatch):
     text = ctx.owner_text()
     assert text.count('Round: asked seller_1, seller_2; recommended seller_1 at $582.00.') == 1
     assert text.count('asked seller_1') == 1
+
+
+def test_a_seller_the_profile_file_labels_sim_is_exempt_even_when_crs_is_not_configured(buyer, monkeypatch):
+    """#449 RT-25: not configured holds a business seller, but an explicit SIM label is still exempt and not told as unverified."""
+    for name in ('CRS_API_KEY', 'CRS_USERNAME', 'CRS_PASSWORD'):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(crs, 'eligible', REAL_ELIGIBLE)
+    monkeypatch.setattr(crs, '_profiles', lambda: {'seller_1': {'seller_type': 'sim'}})
+    monkeypatch.setattr(crs, '_paths', lambda: (None, Path(__file__).with_name('missing-crs-cache-test.json')))
+    buyer.ROUND.update(phase='advice', seller_checks={}, cards={'bid-1': card()},
+                       bids=[dict(buyer.ROUND['bids'][0], supplier_id='seller_1')])
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    text = ctx.owner_text()
+    assert 'CRS: exempt - Trusted individual or SIM seller; CRS check exempt.' in text
+    assert 'CRS not configured' not in text and 'CRS: not configured' not in text
+
+
+def test_an_unlabelled_seller_with_no_crs_config_is_held_and_never_offered(buyer, monkeypatch):
+    for name in ('CRS_API_KEY', 'CRS_USERNAME', 'CRS_PASSWORD'):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(crs, 'eligible', REAL_ELIGIBLE)
+    monkeypatch.setattr(crs, '_profiles', lambda: {})
+    monkeypatch.setattr(crs, '_paths', lambda: (None, Path(__file__).with_name('missing-crs-cache-test.json')))
+    buyer.ROUND.update(phase='advice', seller_checks={}, cards={'bid-1': card()},
+                       bids=[dict(buyer.ROUND['bids'][0], supplier_id='seller_1')])
+    ctx = Context()
+    asyncio.run(buyer.conclude(ctx, reviewed=True))
+    text = ctx.owner_text()
+    assert text.count('CRS not configured') == 1 and 'CRS: not configured' in text and 'CRS: exempt' not in text
+    assert 'Reply APPROVE 1' not in text and not buyer.ROUND.get('order')
+    assert not buyer.eligible_for_order(1)

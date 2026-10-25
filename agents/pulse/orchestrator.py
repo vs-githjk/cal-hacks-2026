@@ -38,7 +38,7 @@ for _p in (str(ROOT), str(ROOT / "agents")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from agents.crs import CACHE_MAX_AGE  # noqa: E402
+from agents.crs import CACHE_MAX_AGE, entry_verified  # noqa: E402
 from agents.pulse import market_pulse as MP  # noqa: E402
 from data.tiger import store, trends  # noqa: E402
 
@@ -362,10 +362,11 @@ def _utc(value: str) -> datetime:
     return t.astimezone(timezone.utc)
 
 
-def read_crs(path: Optional[Path] = None, now: Optional[datetime] = None) -> Optional[dict]:
+def read_crs(path: Optional[Path] = None, now: Optional[datetime] = None, verify: Any = entry_verified) -> Optional[dict]:
     """{seller_id: signal} for every fresh, well-formed signal in the CRS cache (same checks as agents/crs.py: exactly the four
     SupplierSignal fields, a known stability and source, not older than CACHE_MAX_AGE, not from the future). None when the
-    cache cannot be read. An entry that fails a check is left out: it counts as "no current check", never as verified."""
+    cache cannot be read. An entry that fails a check is left out: it counts as "no current check", never as verified.
+    #449 RT-25: an entry without a valid CRS_CACHE_SECRET tag (agents/crs.py entry_verified) fails too; `verify` None skips it."""
     path = path or crs_cache_path()
     now = now or datetime.now(timezone.utc)
     try:
@@ -376,6 +377,8 @@ def read_crs(path: Optional[Path] = None, now: Optional[datetime] = None) -> Opt
         return None
     out = {}
     for sid, entry in data.items():
+        if verify is not None and not verify(sid, entry):
+            continue
         signal = entry.get("signal") if isinstance(entry, dict) else None
         if not isinstance(signal, dict) or set(signal) != {"supplier_id", "stability", "checked_at", "source"}:
             continue

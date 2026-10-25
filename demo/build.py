@@ -1910,7 +1910,10 @@ def crs_payee_lines(champs: dict, now: datetime) -> list[tuple[str, str]]:
         if s["state"] == "unknown":
             text = f"CRS unknown, {s['reason']}; a business payee would hold the payee gate"
         elif s["state"] == "sim":
-            text = f"no CRS profile: {s['reason']}; identity not checked (the payee gate asks CRS only about a business profile)"
+            text = f"labelled SIM: {s['reason']}; identity not checked (the payee gate asks CRS only about a business payee)"
+        elif s["state"] == "not_configured":   # #449 RT-25: not a SIM seller until the profile file labels it one
+            text = (f"CRS not configured, {s['reason']}; this payee is not labelled SIM, so the payee gate would hold "
+                    "(a business profile or a \"sim\" label in the profile file clears it)")
         elif s["band"] is None:
             text = f"business CRS profile ({s['persona_ref']}), not checked: a dry run makes no CRS call; a live run checks it at the payee gate"
         else:

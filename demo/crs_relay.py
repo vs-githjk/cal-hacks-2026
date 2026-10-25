@@ -57,8 +57,10 @@ def _time(value: Any) -> Optional[datetime]:
     return dt.astimezone(timezone.utc) if dt.tzinfo is not None else None   # a time without a zone is not trusted
 
 
-def plan(cache: Any, *, now: datetime) -> tuple[list[dict], list[tuple[str, str]]]:
-    """(reducer arguments to send, [(cache key, why it was skipped)]). Pure: no market, no clock but `now`."""
+def plan(cache: Any, *, now: datetime, verify: Optional[Callable[[str, Any], bool]] = None) -> tuple[list[dict], list[tuple[str, str]]]:
+    """(reducer arguments to send, [(cache key, why it was skipped)]). Pure: no market, no clock but `now`. `verify`
+    (agents/crs.py entry_verified, #449 RT-25) is asked about every entry: one without a valid CRS_CACHE_SECRET tag is
+    skipped, so a forged or hand-edited cache file never puts a band on the market. None means no check (the pure tests)."""
     calls: list[dict] = []
     skipped: list[tuple[str, str]] = []
     if not isinstance(cache, dict):
@@ -69,6 +71,9 @@ def plan(cache: Any, *, now: datetime) -> tuple[list[dict], list[tuple[str, str]
             skipped.append((key, "no market seller id for it"))
             continue
         entry = cache[key]
+        if verify is not None and not verify(key, entry):
+            skipped.append((key, "cache entry has no valid CRS_CACHE_SECRET tag (run agents/crs.py --live with the secret set)"))
+            continue
         signal = entry.get("signal") if isinstance(entry, dict) else None
         if not isinstance(signal, dict):
             skipped.append((key, "no signal in the cache entry"))
@@ -134,12 +139,18 @@ NO_REDUCER = (f"CRS relay skipped: this market has no {REDUCER} yet (Lane B PR 3
               "until it is deployed")
 
 
+def tag_verifier() -> Callable[[str, Any], bool]:
+    """agents/crs.py entry_verified, from the one shared loader (demo/bridge.py crs_module)."""
+    from demo import bridge
+    return bridge.crs_module().entry_verified
+
+
 def relay(client: Any, cache: Any, *, reducers: Optional[set], now: datetime, note: Callable[[str], None] = print,
-          dry_run: bool = False) -> dict:
+          dry_run: bool = False, verify: Optional[Callable[[str, Any], bool]] = None) -> dict:
     """Send every usable signal. `reducers` is the market's reducer names, or None when unknown (then a 404 from the first call
     says the reducer is missing). Returns {status, sent, failed, skipped}; status is one of dry_run, nothing, no_reducer, sent,
     partial, failed. One refused seller never stops the others."""
-    calls, skipped = plan(cache, now=now)
+    calls, skipped = plan(cache, now=now, verify=verify)
     report: dict = {"status": "nothing", "sent": [], "failed": [], "skipped": skipped}
     for key, why in skipped:
         note(f"CRS relay: {key} not relayed, {why}")
@@ -183,7 +194,7 @@ def relay_best_effort(client: Any, *, note: Callable[[str], None] = print, cache
             h, d = (http, db) if http and db else _env_market()
             reducers = detect_reducers(h, d)
         return relay(client, read_cache(cache_path or resolve_cache_path()), reducers=reducers,
-                     now=now or datetime.now(timezone.utc), note=note)
+                     now=now or datetime.now(timezone.utc), note=note, verify=tag_verifier())
     except Exception as e:  # noqa: BLE001
         try:
             note(f"CRS relay skipped ({type(e).__name__}); the round opens anyway")
@@ -216,11 +227,11 @@ def main(argv: Optional[list] = None) -> int:
     cache = read_cache(resolve_cache_path(args.cache))
     now = datetime.now(timezone.utc)
     if args.dry_run:
-        report = relay(None, cache, reducers=None, now=now, dry_run=True)
+        report = relay(None, cache, reducers=None, now=now, dry_run=True, verify=tag_verifier())
         return 0 if report["status"] == "dry_run" else 2
     client = referee_client(args.tokens_dir)
     http, db = _env_market()
-    report = relay(client, cache, reducers=detect_reducers(http, db), now=now)
+    report = relay(client, cache, reducers=detect_reducers(http, db), now=now, verify=tag_verifier())
     return {"sent": 0, "partial": 1, "failed": 1}.get(report["status"], 2)
 
 

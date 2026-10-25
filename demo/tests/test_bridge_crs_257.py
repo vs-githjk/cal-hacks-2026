@@ -1,10 +1,12 @@
 """#257: one real CRS check of the winning payee at the payment gate, before the call and the charge.
 
 A business payee needs a verified CrsCheck (pay.crs_gate.payee_ok), and the mandate carries that check's id
-(crs_check_id, inside the mandate hash); bound_ok runs again before the charge. A SIM seller (no business CRS
-profile) is said to be unchecked. The result is read on the call. The CRS adapter is faked; no network."""
+(crs_check_id, inside the mandate hash); bound_ok runs again before the charge. A SIM seller (one the operator's profile
+file labels sim, #449 RT-25) is said to be unchecked; a payee with no profile is "not configured" and held. The result is
+read on the call. The CRS adapter is faked; no network."""
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -131,3 +133,35 @@ def test_an_unreadable_profile_file_holds_the_gate_through_the_default_checker(r
     log, outcomes, _, client = go(run, gate)
     assert not outcomes[0]["approved"] and "unreadable" in outcomes[0]["reason"] and client.calls == []
     assert "record_payment" not in kinds(log)
+
+
+# ---- #449 RT-25: through the default checker, no profile file is "not configured" and held; only a "sim" label passes ----
+def test_with_no_profile_file_the_default_checker_holds_the_gate_as_not_configured(run, monkeypatch):
+    monkeypatch.delenv("CRS_TEST_IDENTITIES_PATH", raising=False)
+    gate = bridge.DealGate(run)
+    gate.typed_approval_present = lambda: False
+    log, outcomes, _, client = go(run, gate)
+    assert not outcomes[0]["approved"] and "crs_not_configured" in outcomes[0]["reason"] and client.calls == []
+    assert "record_payment" not in kinds(log) and "record_approval" not in kinds(log)
+
+
+def test_a_profile_file_that_does_not_name_the_winner_holds_the_gate_as_not_configured(run, tmp_path, monkeypatch):
+    other = tmp_path / "private.json"
+    other.write_text(json.dumps({"sellers": {"somebody-else": {"seller_type": "sim"}}}))
+    monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(other))
+    gate = bridge.DealGate(run)
+    gate.typed_approval_present = lambda: False
+    log, outcomes, _, client = go(run, gate)
+    assert not outcomes[0]["approved"] and "crs_not_configured" in outcomes[0]["reason"] and client.calls == []
+
+
+def test_a_winner_the_profile_file_labels_sim_passes_unchecked_and_says_so(run, tmp_path, monkeypatch):
+    winner = market_rows(run)[0][3]
+    labelled = tmp_path / "private.json"
+    labelled.write_text(json.dumps({"sellers": {winner: {"seller_type": "sim"}}}))
+    monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(labelled))
+    gate = bridge.DealGate(run)
+    gate.typed_approval_present = lambda: False
+    log, outcomes, notes, client = go(run, gate)
+    assert outcomes[0]["approved"] is True and "crs_check_id" not in gate.mandate
+    assert any("SIM seller" in n for n in notes)

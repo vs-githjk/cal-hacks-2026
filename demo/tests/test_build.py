@@ -694,15 +694,17 @@ def crs_offline(monkeypatch, tmp_path, profile=None):
         monkeypatch.setenv("CRS_TEST_IDENTITIES_PATH", str(path))
 
 
-def test_dry_run_with_no_profile_file_says_no_crs_profile_for_every_payee(capsys, tmp_path, monkeypatch):
+def test_dry_run_with_no_profile_file_says_crs_not_configured_and_the_gate_would_hold_for_every_payee(capsys, tmp_path, monkeypatch):
+    """#449 RT-25: no profile file no longer makes a payee a SIM seller; the dry run says the payee gate would hold."""
     monkeypatch.chdir(tmp_path)
     crs_offline(monkeypatch, tmp_path)
     assert build.main(["--dry-run"]) == 0
     lines = crs_lines(capsys.readouterr().out)
     for sid in ("gadget-grove", "fair-price-pc", "bargain-bin"):
         mine = [l for l in lines if f"({sid})" in l]
-        assert len(mine) == 1 and "no CRS profile" in mine[0] and "[SIM]" in mine[0]
-    assert all("no CRS profile" in l for l in lines) and len(lines) >= 3
+        assert len(mine) == 1 and "CRS not configured" in mine[0] and "[SIM]" in mine[0]
+        assert "the payee gate would hold" in mine[0] and "identity not checked" not in mine[0]
+    assert all("CRS not configured" in l for l in lines) and len(lines) >= 3
 
 
 def test_dry_run_names_a_business_payee_as_not_checked_and_an_individual_as_sim(capsys, tmp_path, monkeypatch):
@@ -715,7 +717,10 @@ def test_dry_run_names_a_business_payee_as_not_checked_and_an_individual_as_sim(
     fair = [l for l in lines if "(fair-price-pc)" in l]
     assert len(fair) == 1 and "business CRS profile (P01)" in fair[0] and "not checked" in fair[0]
     grove = [l for l in lines if "(gadget-grove)" in l]
-    assert len(grove) == 1 and "no CRS profile: its CRS profile is an individual seller" in grove[0]
+    assert len(grove) == 1 and "labelled SIM: its CRS profile labels it individual (a SIM seller)" in grove[0]
+    assert "identity not checked" in grove[0] and "payee gate would hold" not in grove[0]
+    bin_ = [l for l in lines if "(bargain-bin)" in l]
+    assert len(bin_) == 1 and "CRS not configured, no CRS profile for this seller" in bin_[0] and "payee gate would hold" in bin_[0]
 
 
 def test_dry_run_shows_a_recorded_band_with_its_time_never_as_live(capsys, tmp_path, monkeypatch):
@@ -724,12 +729,24 @@ def test_dry_run_shows_a_recorded_band_with_its_time_never_as_live(capsys, tmp_p
     crs_offline(monkeypatch, tmp_path, {"sellers": {
         "bargain-bin": {"seller_type": "business", "consent": True, "persona_ref": "P12", "request": {"field": "synthetic"}}}})
     at = (datetime.now(timezone.utc) - timedelta(hours=1)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    (tmp_path / "cache.json").write_text(json.dumps({"bargain-bin": {"persona_ref": "P12", "reason": "x", "signal": {
-        "supplier_id": "bargain-bin", "stability": "not_verified", "checked_at": at, "source": "sandbox"}}}))
+    entry = {"persona_ref": "P12", "reason": "x", "signal": {
+        "supplier_id": "bargain-bin", "stability": "not_verified", "checked_at": at, "source": "sandbox"}}
+    (tmp_path / "cache.json").write_text(json.dumps({"bargain-bin": entry}))
+    assert build.main(["--dry-run"]) == 0       # an unsigned cache entry is never shown as a recorded band (#449 RT-25)
+    line = next(l for l in crs_lines(capsys.readouterr().out) if "(bargain-bin)" in l)
+    assert "CRS band" not in line and "not checked" in line
+    monkeypatch.setenv("CRS_CACHE_SECRET", "cache-secret-for-tests-0123456789")
+    signed = bridge_mod_for_tests().sign_entry("bargain-bin", entry)
+    (tmp_path / "cache.json").write_text(json.dumps({"bargain-bin": signed}))
     assert build.main(["--dry-run"]) == 0
     line = next(l for l in crs_lines(capsys.readouterr().out) if "(bargain-bin)" in l)
     assert "CRS band not_verified" in line and f"recorded {at}" in line and "[LIVE]" not in line
     assert "the payee gate would hold" in line
+
+
+def bridge_mod_for_tests():
+    from demo import bridge
+    return bridge.crs_module()
 
 
 def test_dry_run_with_an_unreadable_profile_file_says_unknown_never_no_profile(capsys, tmp_path, monkeypatch):

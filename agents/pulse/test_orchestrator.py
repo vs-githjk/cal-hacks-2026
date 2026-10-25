@@ -78,8 +78,20 @@ class FakeSource(O.TigerSource):
         return {"status": "ok", "seller_id": seller_id, "rounds_bid": 9, "rounds_lost": 7, "rows": []}
 
 
-def crs_file(tmp_path, entries):
+CRS_CACHE_SECRET = "cache-secret-for-tests-0123456789"
+
+
+@pytest.fixture(autouse=True)
+def _crs_cache_secret(monkeypatch):
+    """#449 RT-25: Pulse counts a CRS band only from a cache entry whose tag verifies with CRS_CACHE_SECRET."""
+    monkeypatch.setenv("CRS_CACHE_SECRET", CRS_CACHE_SECRET)
+
+
+def crs_file(tmp_path, entries, signed=True):
     path = tmp_path / "crs-signals.json"
+    if signed and isinstance(entries, dict):
+        from agents import crs as agents_crs
+        entries = {k: agents_crs.sign_entry(k, v) if isinstance(v, dict) else v for k, v in entries.items()}
     path.write_text(json.dumps(entries))
     return path
 
@@ -761,3 +773,15 @@ def test_seller_chat_is_open_only_when_the_operator_sets_it_open(tmp_path, monke
 def test_the_agentverse_readme_says_seller_chat_is_own_by_default():
     text = (ROOT / "agents" / "pulse" / "AGENTVERSE.md").read_text()
     assert "PULSE_SELLER_CHAT=open" in text and "PULSE_SELLER_CHAT=own" not in text and "PULSE_ROUND_SENDERS" in text
+
+
+def test_an_unsigned_or_wrongly_signed_cache_entry_is_never_counted_as_verified(tmp_path, monkeypatch):
+    """#449 RT-25: the cache file is only trusted with a valid HMAC; without one the seller has no current check."""
+    t = pulse(tmp_path, cache=crs_file(tmp_path, {"seller_4": sig("seller_4", "verified_stable")}, signed=False)).buyer_trend("rtx 5070 ti")["crs"]
+    assert t["verified"] == 0
+    cache = crs_file(tmp_path, {"seller_4": sig("seller_4", "verified_stable")})
+    assert pulse(tmp_path, cache=cache).buyer_trend("rtx 5070 ti")["crs"]["verified"] == 1
+    monkeypatch.delenv("CRS_CACHE_SECRET")
+    assert pulse(tmp_path, cache=cache).buyer_trend("rtx 5070 ti")["crs"]["verified"] == 0       # no secret, no trust
+    monkeypatch.setenv("CRS_CACHE_SECRET", CRS_CACHE_SECRET + "-other")
+    assert pulse(tmp_path, cache=cache).buyer_trend("rtx 5070 ti")["crs"]["verified"] == 0       # another secret
