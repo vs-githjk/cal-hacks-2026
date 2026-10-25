@@ -1,0 +1,32 @@
+<!-- @dsCard group="Outside" height=160 subtitle="Wordmark is a token: swap the text in one place when the name lands" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .nav { display:flex; align-items:center; justify-content:space-between; gap:16px; height:60px; padding:0 20px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); }
+  .mark { display:flex; align-items:center; gap:10px; font:600 16px/20px var(--font-sans); letter-spacing:-0.01em; color:var(--ink); text-decoration:none; }
+  .mark .m { width:22px; height:22px; border-radius:6px; background:var(--ink); position:relative; overflow:hidden; }
+  .mark .m::after { content:""; position:absolute; left:5px; top:5px; width:12px; height:12px; border-radius:50%; background:var(--pulse); clip-path: polygon(50% 50%, 100% 15%, 100% 100%, 0 100%, 0 0, 100% 0, 100% 15%); }
+  .links { display:flex; gap:4px; }
+  .links a { color:var(--ink-2); text-decoration:none; font:500 14px/20px var(--font-sans); padding:10px 12px; border-radius:var(--radius-sm); min-height:44px; display:inline-flex; align-items:center; }
+  .links a[aria-current] { color:var(--ink); background:var(--surface-2); }
+  .links a:hover { color:var(--ink); }
+  .right { display:flex; align-items:center; gap:10px; }
+  @media (max-width:640px) { .links { display:none; } }
+</style></head>
+<body>
+<div class="tb">
+  <nav class="nav" aria-label="Main">
+    <a class="mark" href="#"><span class="m" aria-hidden="true"></span><span data-wordmark>Tech Bazaar</span></a>
+    <div class="links">
+      <a href="#" aria-current="page">Buyer</a><a href="#">Market</a><a href="#">Floor</a><a href="#">Sell</a>
+    </div>
+    <div class="right">
+      <span class="pill pill-live"><span class="dot"></span>Floor live</span>
+      <a class="btn btn-primary" href="#" style="min-height:40px;padding:0 16px">Start a goal</a>
+    </div>
+  </nav>
+  <div class="sm muted">Mobile: the links collapse into a bottom tab bar (Buyer, Decisions, Purchases, Agents) inside the buyer app shell; the landing keeps only the wordmark and the one button.</div>
+</div>
+</body>
+</html>

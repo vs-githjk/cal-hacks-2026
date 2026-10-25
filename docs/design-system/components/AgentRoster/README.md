@@ -1,0 +1,1 @@
+The nine-agent roster for /buyer/agents and the three-row teaser on the landing. The consumer provides name, job, initials or avatar path (agents/avatars/<role>.png), ring colour token, heartbeat text and idle flag. LIVE rows pulse in pulse; SIM, MIRROR and env-gated rows show a still slate dot. Under 640 px the heartbeat drops under the job line.

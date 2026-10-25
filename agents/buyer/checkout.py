@@ -116,7 +116,7 @@ def _advocate_reason(card: Mapping[str, Any]) -> dict | None:
 
 
 def approve_offer(transaction: Mapping[str, Any], client: Any, service: Any, *,
-                  on_code: Callable[[str], Any], buyer_name: str = "Vidyut",
+                  on_code: Callable[[str], Any], buyer_name: str = "there",
                   now: Callable[[], datetime] | None = None) -> VoiceResult:
     """Run the existing real voice approval flow for one stored pending transaction.
 

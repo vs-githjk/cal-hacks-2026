@@ -1,5 +1,5 @@
 // Client side of the Lot Wall (sim/lot_wall.py writes web/public/lot.json). Pure parsers and helpers plus one fetch.
-// A bad file gives no wall, never made up bricks. REAL means Vidyut's own order; every other order is SIM.
+// A bad file gives no wall, never made up bricks. REAL means the buyer's own order; every other order is SIM.
 
 export const LOT_URL = "/lot.json";
 export const STAGE_LINE = "This is one real request, the buyer's. When many requests pool, this is what a seller sees.";

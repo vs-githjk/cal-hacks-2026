@@ -1,0 +1,43 @@
+<!-- @dsCard group="Outside" height=460 subtitle="/sell: Seller Kit onboarding in four steps, ending in an agent config and the start command" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .kit { display:grid; grid-template-columns: 1fr 1fr; gap:16px; max-width:960px; }
+  .steps { display:grid; gap:0; }
+  .step { display:grid; grid-template-columns: 28px 1fr; gap:12px; padding:12px 0; border-top:1px solid var(--line); }
+  .step:first-child { border-top:0; }
+  .step .n { width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font:500 12px/1 var(--font-mono); background:var(--surface-2); color:var(--ink-2); }
+  .step.done .n { background:var(--mint-soft); color:var(--mint); }
+  .step.now .n { background:var(--pulse); color:var(--pulse-ink); }
+  .step small { display:block; color:var(--muted); font-size:13px; line-height:18px; }
+  pre { margin:0; font:400 12px/18px var(--font-mono); background:var(--surface-2); border-radius:var(--radius-sm); padding:12px 14px; overflow:auto; color:var(--ink); }
+  @media (max-width:640px) { .kit { grid-template-columns:1fr; } }
+</style></head>
+<body>
+<div class="tb">
+  <div class="kit">
+    <div class="card">
+      <div class="spread" style="margin-bottom:8px"><span style="font:600 24px/30px var(--font-sans);letter-spacing:-0.01em">Seller Kit</span><span class="pill pill-sim">Shops made here are SIM</span></div>
+      <div class="sm ink2" style="margin-bottom:8px">A shop enters its store, pricing, perks and a floor per condition, and gets a seller agent config and the command to start it. The kit cannot verify a real shop, so the label says SIM.</div>
+      <div class="steps">
+        <div class="step done"><span class="n">1</span><div>Store <small>Name, city, what you sell. Publishes a UCP profile (draft spec, not certified).</small></div></div>
+        <div class="step done"><span class="n">2</span><div>Pricing and perks <small>List price source, discount step, a perk line per condition.</small></div></div>
+        <div class="step now"><span class="n">3</span><div>Floors <small>One floor per condition. The referee enforces it: no bid lands below, even from a compromised agent.</small></div></div>
+        <div class="step"><span class="n">4</span><div>Start the agent <small>Copy the config and the command. Loss reports arrive after every round you lose.</small></div></div>
+      </div>
+    </div>
+    <div class="card" style="display:grid;gap:12px;align-content:start">
+      <div class="cap">Step 3 · floors</div>
+      <label style="display:grid;gap:6px;font:500 13px/18px var(--font-sans);color:var(--ink-2)">New<input class="field mono" value="$1,290.00"></label>
+      <label style="display:grid;gap:6px;font:500 13px/18px var(--font-sans);color:var(--ink-2)">Open-box<input class="field mono" value="$1,190.00"></label>
+      <div class="cap">What you get</div>
+      <pre>seller_kit/out/gadget-grove.json
+python3 -m seller_kit.run --config gadget-grove.json</pre>
+      <div class="well sm">A loss report never shows a rival's price or the buyer's cap: a banded gap, the reason and its source.</div>
+      <button class="btn btn-primary" type="button">Continue</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

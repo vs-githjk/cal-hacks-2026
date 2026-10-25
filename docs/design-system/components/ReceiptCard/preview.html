@@ -1,0 +1,36 @@
+<!-- @dsCard group="Outside" height=520 subtitle="/buyer/purchases: one receipt per part, after the charge and again at settlement" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  .rc { max-width: 560px; }
+  .line { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-top:1px solid var(--line); font-size:14px; line-height:20px; }
+  .line:first-child { border-top:0; }
+  .line .k { color:var(--muted); }
+  .line .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align:right; }
+  .total { font: 400 56px/60px var(--font-serif); }
+  .steps { display:flex; gap:8px; flex-wrap:wrap; }
+</style></head>
+<body>
+<div class="tb">
+  <div class="card rc" style="display:grid;gap:14px">
+    <div class="spread"><span class="cap">Receipt · GPU · order 1 of 1</span><span class="pill pill-paid">Paid · test mode</span></div>
+    <div class="total">$1,299.99</div>
+    <div class="ink2">ASUS Prime RTX 5070 Ti OC Edition · Best Buy listing <span class="pill pill-mirror" style="height:20px">MIRROR</span></div>
+    <div class="steps">
+      <span class="pill pill-approved">Approved by phone</span><span class="pill pill-referee">CRS verified_stable</span><span class="pill pill-verified">Fit · no recall</span>
+    </div>
+    <div>
+      <div class="line"><span class="k">Charge</span><span class="v">ch_test_3QxK…  Stripe test mode</span></div>
+      <div class="line"><span class="k">Mandate</span><span class="v">9f2c…  one seller, cap, expiry, nonce</span></div>
+      <div class="line"><span class="k">Signature</span><span class="v">RFC 9421 sig2 · Ed25519 (TAP style, not Visa certified)</span></div>
+      <div class="line"><span class="k">Settled</span><span class="v">pending · second receipt at settlement</span></div>
+      <div class="line"><span class="k">Shipping</span><span class="v">carrier and tracking · SIM</span></div>
+    </div>
+    <div class="well sm">No real money moved. A replayed or altered mandate fails; a retry cannot charge twice. Also sent to your ASI:One chat and, once, by Gmail.</div>
+    <div class="cap">Empty state</div>
+    <div class="sm muted">"No purchases yet. Receipts land here after the first charge." No illustration, one ghost link back to the goal.</div>
+  </div>
+</div>
+</body>
+</html>

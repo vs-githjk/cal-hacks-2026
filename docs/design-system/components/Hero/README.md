@@ -1,0 +1,1 @@
+The landing hero: one Instrument Serif headline with one italic word in pulse, a lead, two buttons and three measured numbers from data/scoreboard.json. The mock card on the right is the real decision card seeded with the reference round. At 390 it stacks and the headline drops to display-lg. The consumer provides the three numbers and the mock data; never hard-code them.

@@ -1,0 +1,1 @@
+Measured results and the wind tunnel. Every number comes from data/scoreboard.json with its caveat line (first run, not held out, no lift to quote). The consumer provides the scoreboard rows; the bar is mint when the result is a pass on its own terms, pulse for a partial, amber for none yet. Never pool the Shield dev set with the held-out set.

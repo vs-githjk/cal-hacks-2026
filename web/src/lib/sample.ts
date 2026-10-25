@@ -181,7 +181,7 @@ export const learning: LearningView = {
 
 export const floorEvents: FloorEventView[] = [
   { key: "e7", at: at(66), kind: "payment_recorded", label: "Best Buy paid $1,249.99 under mandate", origin: "MIRROR", ref: "payment/1" },
-  { key: "e6", at: at(66), kind: "approval_recorded", label: "voice_code, approved by vidyut on try 3", origin: "SIM", ref: "approval/1" },
+  { key: "e6", at: at(66), kind: "approval_recorded", label: "voice_code, approved by the buyer on try 3", origin: "SIM", ref: "approval/1" },
   { key: "e5", at: at(17), kind: "verdict", label: "Shield blocked msg-shady-sam-injected: 9 rules", origin: "LIVE", ref: "bid_check/11" },
   { key: "e4", at: at(17), kind: "verdict", label: "Advocate vetoed bid shady-sam: advocate.condition", origin: "SIM", ref: "bid_check/7" },
   { key: "e3", at: at(17), kind: "auction_closed", label: "round-1 closed, winner best-buy, 11 sealed", origin: "SIM", ref: "round/round-1" },

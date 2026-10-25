@@ -18,6 +18,13 @@ per brand for 24 hours (data.recalls.brand_items). How a recall is matched, stri
             hit; a size such as 20000mAh, a year such as 2024 and spec words such as 3-in-1, 2-pack, USB3.0 or Qi2 are never a
             product signal; a UPC that is not listed rules out nothing, since recalls rarely list one), or the lookup failed.
             Never "none" on a failure or on a brand alone.
+A graphics card (a GPU word in the product name, such as RTX or GeForce) is matched by its exact model instead (#291, #412): the
+brand AND a GPU word in a recall's product names AND ONE product name that holds every model token of the product (tokens with a
+digit, such as 5070) with the same variant words (Ti, Super, XT, XTX, GRE) is "recalled" (the only match that may veto); the same
+brand with some model token but another model or variant (a 4070 Ti recall against a 4070 Super) is "possible", a caution; a laptop
+or monitor recall, or one with no model token, matches nothing. A card with no model token in its name is "unverified".
+The advocate (agents/advocate/real_data.py) and the Recall Checker Actor (data/recall_checker_actor/src/main.py) both call
+check_product, so they cannot disagree.
 "none" covers U.S. CPSC recalls only; it does not mean the product was never recalled anywhere.
 """
 from __future__ import annotations
@@ -26,6 +33,9 @@ import re
 from datetime import datetime, timezone
 
 from data.recalls import API, brand_in, brand_items
+
+GPU_TERMS = ("graphics card", "video card", "gpu", "geforce", "rtx", "radeon")
+VARIANTS = ("ti", "super", "xt", "xtx", "gre")  # a model is not the same model without the same variant words
 
 GENERIC = {"power", "bank", "banks", "pro", "max", "plus", "mini", "ultra", "wireless", "portable", "charger", "charging", "smart",
            "phone", "black", "white", "edition", "series", "model", "with", "and", "for", "the", "new", "case", "cable", "battery",
@@ -152,6 +162,34 @@ def _upcs(item: dict) -> set[str]:
     return out
 
 
+def _words(text: str, terms) -> set[str]:
+    return {t for t in terms if re.search(rf"\b{re.escape(t)}\b", text)}
+
+
+def _gpu_tokens(product: str, brand: str) -> set[str]:
+    """Tokens that name a graphics card model: they contain a digit (5070, gv-n507tgaming). Capacity and memory words do not."""
+    skip = re.compile(r"\d+gb|gddr\d+x?|\d+\.\d+|pcie.*")
+    return {t for t in re.findall(r"[a-z0-9][a-z0-9\-]*", product.lower()) if re.search(r"\d", t) and len(t) >= 4 and not skip.fullmatch(t)} \
+        - set(brand.lower().split())
+
+
+def _gpu_match(item: dict, brand: str, product: str, tokens: set[str]) -> str | None:
+    """-> "full", "partial" or None for a graphics card. Brand AND a GPU word in the recall's product names, then: one product name
+    with every model token and the same variant words is "full"; any model token alone is "partial". Generic words never match."""
+    names = [str(item.get("Title") or "")] + [str(p.get("Name") or "") for p in _prods(item)]
+    makers = [str(m.get("Name") or "") for m in item.get("Manufacturers") or [] if isinstance(m, dict)]
+    if not brand_in(brand, " ".join(names + makers).lower()):
+        return None
+    product_text = " ".join(names).lower()
+    if not _words(product_text, GPU_TERMS) or not _words(product_text, tokens):
+        return None
+    variants = _words(product.lower(), VARIANTS)
+    for name in (n.lower() for n in names):
+        if _words(name, tokens) == tokens and _words(name, VARIANTS) == variants:
+            return "full"
+    return "partial"
+
+
 def _first(item: dict, key: str) -> str:
     rows = item.get(key) or []
     return str((rows[0] or {}).get("Name") or "").strip() if rows and isinstance(rows[0], dict) else ""
@@ -190,7 +228,9 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
     model, strong, weak = _parse(product, brand)
     line = strong | weak
     names = _names(product, brand)
-    generic_only = not (model or strong or names)  # a size, a year or spec words alone are not a product signal (#314, #331)
+    gpu = bool(_words(product.lower(), GPU_TERMS))
+    gpu_tokens = _gpu_tokens(product, brand) if gpu else set()
+    generic_only = not (gpu_tokens if gpu else (model or strong or names))  # a size, a year or spec words alone are not a product signal (#314, #331)
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -198,6 +238,13 @@ def check_product(product: str, brand: str, upc: str | None = None, fetch=None, 
         hit_upc = next((c for c in codes if c.lstrip("0") in listed), None)
         if hit_upc:  # a listed UPC is this product, whatever the recall's text says about brands
             out["matches"].append(_recall(item, f"UPC {hit_upc}"))
+            continue
+        if gpu:  # a graphics card is matched by its exact model and variant, nothing looser (#291, #412)
+            kind = _gpu_match(item, brand, product, gpu_tokens)
+            if kind == "full":
+                out["matches"].append(_recall(item, f"model {' '.join(sorted(gpu_tokens)).upper()} with the same variant"))
+            elif kind:
+                out["possible"].append(_recall(item, "a similar model (same brand, another model or variant)"))
             continue
         if not _brand_of(item, brand):
             continue

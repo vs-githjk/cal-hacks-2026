@@ -1,6 +1,6 @@
 "use client";
-// Lot Wall: Vidyut's one order on the left, the seller's view of a pooled lot as a wall of bricks on the right.
-// One brick is REAL (Vidyut's, gold, labelled); the rest are SIM builders (grey, labelled). Reads only lib/lot.ts.
+// Lot Wall: the buyer's one order on the left, the seller's view of a pooled lot as a wall of bricks on the right.
+// One brick is REAL (the buyer's, gold, labelled); the rest are SIM builders (grey, labelled). Reads only lib/lot.ts.
 import { useState } from "react";
 import { conditionsText, deadlineText, demandText, realOrder, STAGE_LINE, type Lot, type LotOrder } from "@/lib/lot";
 import { Card, Code, Label, OriginChip, Stat, Tag, money } from "./ui";

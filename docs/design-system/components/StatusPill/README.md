@@ -1,0 +1,1 @@
+Status pills name every round, deal and honesty state with a word beside its colour. The consumer passes a kind (live, sealed, eaten, blocked, vetoed, approved, paid, denied, verified, sim, caution, mirror, referee) and the text; pass pulse only for LIVE. Height 24, radius-pill, caption type. Never invent a kind from a colour; derive it from the source and status fields.

@@ -93,10 +93,40 @@ async def on_call(ctx: Context, sender: str, msg: CallRequest):
     show = (lambda code: sink(code, mandate_hash)) if sink else None
     out = await asyncio.to_thread(relay.handle, sender, request, buyer_address=common.address("buyer"), client=client,
                                   show_code=show, seen=SEEN, unconfigured=unconfigured, secret=env.get(vc.SECRET_ENV),
-                                  buyer_name=env.get(vc.NAME_ENV) or vc.DEFAULT_BUYER_NAME)
+                                  buyer_name=env.get(vc.NAME_ENV) or "there")
     ctx.logger.info(f"approval call for {str(mandate_hash)[:12]}: {'approved' if out['approved'] else 'not approved'}")
     await ctx.send(sender, CallResult(approved=out["approved"], reason=out["reason"] or "", call_id=out["call_id"] or "",
                                       voice_approval_id=out["voice_approval_id"] or ""))
+
+
+@protocol.on_message(common.VoiceTransportRequest, replies=common.VoiceTransportResult)
+async def on_transport(ctx: Context, sender: str, msg: common.VoiceTransportRequest):
+    """#398 item 3: voice only. The buyer owns the code, the nonce and the record; this places the call and returns
+    what was said. Same gates as on_call: only the buyer, Shield first, one call per mandate."""
+    text = " ".join((msg.mandate_hash, msg.variables_json))
+    refused = relay.precheck(sender, text, buyer_address=common.address("buyer"))
+    if refused:
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error=refused))
+        return
+    verdict = await asyncio.to_thread(common.screen, f"voice-{abs(hash(msg.mandate_hash)) % 10**12}", sender, text)
+    if verdict.get("verdict") != "allow":
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error="shield_blocked"))
+        return
+    try:
+        variables = json.loads(msg.variables_json)
+    except Exception:  # noqa: BLE001
+        await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, error="bad_request"))
+        return
+    from pay import voice_cartesia as vc
+    try:
+        client, unconfigured = vc.CartesiaClient.from_env(vc.load_env(vc.DEFAULT_ENV_FILE)), None
+    except vc.CartesiaError as e:
+        client, unconfigured = None, str(e)
+    out = await asyncio.to_thread(relay.transport, sender, {"mandate_hash": msg.mandate_hash, "variables": variables},
+                                  buyer_address=common.address("buyer"), client=client, seen=SEEN, unconfigured=unconfigured)
+    await ctx.send(sender, common.VoiceTransportResult(mandate_hash=msg.mandate_hash, call_id=out["call_id"] or "",
+                                                       call_json=json.dumps(out["call"]) if out["call"] else "",
+                                                       error=out["error"] or ""))
 
 
 agent.include(protocol, publish_manifest=True)
