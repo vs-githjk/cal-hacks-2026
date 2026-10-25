@@ -5,7 +5,7 @@
 // v in [0, 1] back to front. A price is null (shown SEALED) until the round has closed: while a round is open or closing the plan holds
 // on sealed envelopes and carries no price at all.
 import { formatMoney } from "../../lib/money.ts";
-import { SAMPLES } from "../../lib/arenaFixture.ts";
+import { REFERENCE_RUN } from "./referenceRun.ts";
 import { isEmptyMarket, projectArenaScene, type ArenaRows, type ArenaScene, type SceneOffer } from "../../lib/arenaScene.ts";
 import type { ReasonCode } from "../../lib/bracket.ts";
 import { T, type Tint } from "./floorTokens.ts";
@@ -13,7 +13,7 @@ import { T, type Tint } from "./floorTokens.ts";
 export type PhaseKind =
   | "sealed" | "reveal" | "injection" | "shield" | "check" | "referee" | "dash" | "chomp"
   | "winner" | "end" | "hold";
-export type Reason = "price" | "failed_fit" | "shield";
+export type Reason = "price" | "failed_fit" | "shield" | "refused";
 export type SellerStatus = "sealed" | "revealed" | "blocked" | "eaten" | "checking" | "fit_ok" | "winner";
 export type Tone = "neutral" | "bad" | "good" | "warn";
 export interface Pt { u: number; v: number }
@@ -26,14 +26,15 @@ export interface SellerView {
   price: number | null; // null until the round has closed
   status: SellerStatus;
   reason: Reason | null;
-  tag: string; // "SEALED", "$1,299.99", "EATEN · PRICE", "BLOCKED · SHIELD"
-  statusLine: string | null; // "FIT OK", "WINNER", "SHIELD BLOCKED", "FIT FAILED"
+  tag: string; // "SEALED", "$1,299.99", "EATEN · PRICE", "BLOCKED · SMELL TEST"
+  statusLine: string | null; // "FIT OK", "WINNER", "SMELL TEST FAILED", "FIT FAILED"
   tone: Tone;
   pos: Pt;
   scale: number;
   tint: Tint; // by outcome: mint winner, coral Shield block, amber failed fit, slate otherwise
   ring: boolean; // the winner's mint ring
   injection: boolean; // the hidden-instruction bubble is up
+  origin: string; // LIVE, MIRROR or SIM, per seller
 }
 export interface EndCard { title: "DEAL" | "NO DEAL"; part: string; price: string | null; line: string }
 export interface Hud { round: number; rounds: number; part: string; sellers: number; state: "sealed" | "revealed" | "checking" | "deal"; price: string | null }
@@ -75,14 +76,15 @@ export const BUYER_HOME: Pt = { u: 0, v: 0.86 };
 export const CHECKER_HOME: Pt = { u: 1.26, v: 0.46 };
 export const REFEREE_AT: Pt = { u: 0, v: 0.158 };
 
-const REASON_WORD: Record<Reason, string> = { price: "PRICE", failed_fit: "FAILED FIT", shield: "SHIELD" };
+const REASON_WORD: Record<Reason, string> = { price: "PRICE", failed_fit: "FAILED FIT", shield: "SMELL TEST", refused: "NOT ORDERABLE" };
 export function reasonKind(code: ReasonCode): Reason {
   if (code === "shield_block") return "shield";
   if (code === "advocate_veto" || code === "claim_false" || code === "off_need") return "failed_fit";
+  if (code === "refused" || code === "sold_out") return "refused";
   return "price";
 }
 const PLAIN: Record<ReasonCode, string> = {
-  shield_block: "Shield blocked an instruction hidden in the listing.",
+  shield_block: "The Smell Test caught an instruction hidden in the listing.",
   below_floor: "The bid sat below the seller's own floor, so it was refused.",
   over_cap: "The price was over the buyer's cap.",
   off_need: "The listing did not fit what the buyer asked for.",
@@ -104,16 +106,16 @@ function sellerName(o: SceneOffer, i: number): string {
   return !o.name || o.name === o.sellerId ? `Seller ${i + 1}` : o.name;
 }
 
-function blank(i: number, n: number, name: string): SellerView {
+function blank(i: number, n: number, name: string, origin: string): SellerView {
   return {
     key: `s${i}`, name, slot: i, price: null, status: "sealed", reason: null, tag: "SEALED", statusLine: null, tone: "neutral",
-    pos: homeOf(i, n), scale: 1, tint: "slate", ring: false, injection: false,
+    pos: homeOf(i, n), scale: 1, tint: "slate", ring: false, injection: false, origin,
   };
 }
 
 /** A plan that holds on sealed envelopes: a round that is open, closing, waiting or inconsistent. It carries no price. */
 function holdPlan(count: number, part: string, origin: string, sample: boolean, call: string | null): FloorPlan {
-  const sellers = Array.from({ length: count }, (_, i) => blank(i, count, `Seller ${i + 1}`));
+  const sellers = Array.from({ length: count }, (_, i) => blank(i, count, `Seller ${i + 1}`, origin));
   const phase: FloorPhase = {
     index: 0, kind: "hold", ms: 0, hold: true, round: 1, rounds: 1,
     hud: { round: 1, rounds: 1, part, sellers: count, state: "sealed", price: null }, call, pip: call ?? "Sealed round open. Prices stay hidden until it closes.",
@@ -134,11 +136,11 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
   const n = offers.length;
   const names = offers.map((o, i) => sellerName(o, i));
   const idx = new Map(offers.map((o, i) => [o.bidId, i]));
-  const sellers = offers.map((_, i) => blank(i, n, names[i]!));
+  const sellers = offers.map((o, i) => blank(i, n, names[i]!, o.origin));
   // Tint by outcome, as the reference run does: mint the winner, coral the Shield block, amber a failed fit, slate the rest.
   offers.forEach((o, i) => {
     const code = o.knock?.reasonCode;
-    sellers[i]!.tint = o.bidId === scene.winnerBidId ? "mint" : code && reasonKind(code) === "shield" ? "coral" : code && reasonKind(code) === "failed_fit" ? "amber" : "slate";
+    sellers[i]!.tint = o.bidId === scene.winnerBidId ? "mint" : code && reasonKind(code) === "shield" ? "coral" : code && reasonKind(code) === "failed_fit" ? "amber" : o.rank === 2 ? "sky" : "slate";
   });
   const knocks = scene.beats.flatMap((b) => b.knocked);
   const rounds = Math.max(knocks.length, 1);
@@ -179,7 +181,7 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
     const s = sellers[i]!;
     const o = offers[i]!;
     const reason = reasonKind(k.reasonCode);
-    const plain = k.reasonCode === "outranked" ? `Ranked #${o.rank ?? "?"} by the referee.` : PLAIN[k.reasonCode];
+    const plain = k.reasonCode === "outranked" ? `Ranked #${o.rank ?? "?"} by the referee.` : k.reasonCode === "refused" ? `${k.reasonText.replace(/\.$/, "")}.` : PLAIN[k.reasonCode];
     const call = `${s.name} is out at ${formatMoney(o.landed)}. ${plain}`;
     buyer = { ...BUYER_HOME, face: 1, chomp: false };
 
@@ -187,8 +189,8 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
       s.injection = true;
       push("injection", 1400, { pip: `${s.name}'s listing hides an instruction aimed at shopping agents.` });
       shield = { u: (BUYER_HOME.u + s.pos.u) / 2, v: (BUYER_HOME.v + s.pos.v) / 2 };
-      s.status = "blocked"; s.statusLine = "SHIELD BLOCKED"; s.tag = "BLOCKED · SHIELD"; s.tone = "bad"; s.reason = "shield";
-      push("shield", 1400, { pip: `Shield blocked ${s.name}: override attempt in the listing.` });
+      s.status = "blocked"; s.statusLine = "SMELL TEST FAILED"; s.tag = "BLOCKED · SMELL TEST"; s.tone = "bad"; s.reason = "shield";
+      push("shield", 1400, { pip: `The Smell Test caught ${s.name}: override attempt in the listing.` });
       s.injection = false;
     } else if (reason === "failed_fit") {
       checker = { u: s.pos.u + 0.14, v: s.pos.v + 0.08 };
@@ -200,7 +202,7 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
     buyer = { u: s.pos.u + side * 0.16, v: Math.min(s.pos.v + 0.08, 0.97), face: side === -1 ? 1 : -1, chomp: false };
     push("dash", T.dash);
     buyer = { ...buyer, chomp: true };
-    s.status = "eaten"; s.reason = reason; s.tone = "bad"; s.tag = reason === "shield" ? "BLOCKED · SHIELD" : `EATEN · ${REASON_WORD[reason]}`;
+    s.status = "eaten"; s.reason = reason; s.tone = "bad"; s.tag = reason === "shield" ? "BLOCKED · SMELL TEST" : `EATEN · ${REASON_WORD[reason]}`;
     push("chomp", T.chomp);
     buyer = { ...buyer, chomp: false };
     shield = null;
@@ -223,7 +225,7 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
     const call = `Winner: ${w.name} at ${winPrice}, before sales tax.`;
     push("winner", 1500, { call, arms: true, pip: call });
     push("end", 4000, {
-      end: { title: "DEAL", part: part || o.product, price: winPrice, line: `${w.name} · ranked 1 of ${n} by the referee · screened by Shield · fit checked` },
+      end: { title: "DEAL", part: part || o.product, price: winPrice, line: `${w.name} · ranked 1 of ${n} by the referee · passed the Smell Test · fit checked` },
       pip: "Deal. The buyer has its part.",
     });
   } else {
@@ -236,7 +238,7 @@ export function planFromScene(scene: ArenaScene): FloorPlan {
 /** Market rows in, phases out. An empty market plays the built-in reference scenario, labelled SIM. */
 export function planFromRows(rows: ArenaRows, opts: { sample?: boolean } = {}): FloorPlan {
   const scene = projectArenaScene(rows, { sample: opts.sample });
-  if (!opts.sample && (isEmptyMarket(rows) || scene.phase === "waiting")) return planFromScene(projectArenaScene(SAMPLES.gpu, { sample: true }));
+  if (!opts.sample && (isEmptyMarket(rows) || scene.phase === "waiting")) return planFromScene(projectArenaScene(REFERENCE_RUN, { sample: true }));
   return planFromScene(scene);
 }
 

@@ -18,7 +18,7 @@ for (const [name, w, h] of [["desktop", 1440, 900], ["phone", 390, 844]]) {
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForSelector('[data-testid="floor-hud"]');
   const seen = new Set();
-  const shots = new Set(["Round 1 of", "revealed", "SHIELD BLOCKED", "WINNER"]);
+  const shots = new Set(["Round 1 of", "revealed", "is out at", "WINNER"]);
   let overlaps = 0, samples = 0, sealedPrice = false;
   const t0 = Date.now();
   while (Date.now() - t0 < 60_000) {
@@ -32,7 +32,7 @@ for (const [name, w, h] of [["desktop", 1440, 900], ["phone", 390, 844]]) {
       const ledger = await page.locator('[data-testid="floor-ledger"]').innerText();
       if (/\$\d/.test(ledger)) sealedPrice = true;
     }
-    for (const k of shots) if (!seen.has(k) && text.toLowerCase().includes(k.toLowerCase())) { seen.add(k); if (k === "SHIELD BLOCKED") await page.waitForTimeout(1000); await page.screenshot({ path: `${OUT}/${name}-${k.replace(/\W+/g, "-")}.png` }); }
+    for (const k of shots) if (!seen.has(k) && text.toLowerCase().includes(k.toLowerCase())) { seen.add(k); if (k === "is out at") { await page.waitForTimeout(600); await page.screenshot({ path: `${OUT}/direction-${w}.png` }); } await page.screenshot({ path: `${OUT}/${name}-${k.replace(/\W+/g, "-")}.png` }); }
     if (await page.locator('[data-testid="floor-deal"]').count()) {
       seen.add("DEAL"); await page.waitForTimeout(600);
       await page.screenshot({ path: `${OUT}/${name}-DEAL.png` });
@@ -42,7 +42,7 @@ for (const [name, w, h] of [["desktop", 1440, 900], ["phone", 390, 844]]) {
   }
   const noScroll = await page.evaluate(() => document.scrollingElement.scrollWidth <= window.innerWidth);
   check(seen.has("DEAL"), `${name}: full build played to the end card (${[...seen].join(", ")})`);
-  check(seen.has("SHIELD BLOCKED"), `${name}: Shield block shown`);
+  check(seen.has("is out at"), `${name}: referee call and the eaten reason shown`);
   check(overlaps === 0, `${name}: HUD never overlapped the PiP over ${samples} samples`);
   check(!sealedPrice, `${name}: no price in the ledger while sealed`);
   check(noScroll, `${name}: no horizontal scroll`);

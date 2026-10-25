@@ -56,7 +56,7 @@ test("the Shield block, the failed fit and the price reasons all appear in the r
   assert.ok(reasons.has("shield") && reasons.has("failed_fit") && reasons.has("price"));
   const sh = p.phases.find((ph) => ph.kind === "shield")!;
   assert.ok(sh.shield);
-  assert.ok(sh.sellers.some((s) => s.statusLine === "SHIELD BLOCKED"));
+  assert.ok(sh.sellers.some((s) => s.statusLine === "SMELL TEST FAILED"));
   assert.ok(p.phases.some((ph) => ph.kind === "injection" && ph.sellers.some((s) => s.injection)));
 });
 
@@ -110,4 +110,21 @@ test("reason mapping", () => {
   assert.equal(reasonKind("advocate_veto"), "failed_fit");
   assert.equal(reasonKind("outranked"), "price");
   assert.equal(reasonKind("below_floor"), "price");
+});
+
+test("the reference run: the 4 current sellers, true labels, Byte Bros wins at $1,299.99, the MIRROR store is refused", () => {
+  const p = planFromRows(EMPTY);
+  const last = p.phases.at(-1)!;
+  assert.equal(p.sellerCount, 4);
+  assert.deepEqual(last.sellers.map((s) => s.name).sort(), ["Byte Bros Outlet", "Central Comp", "FlashDeal Frankie", "ReNew Refurb"]);
+  assert.equal(last.end?.price, "$1,299.99");
+  assert.equal(p.winnerKey, last.sellers.find((s) => s.name === "Byte Bros Outlet")!.key);
+  const central = last.sellers.find((s) => s.name === "Central Comp")!;
+  assert.equal(central.origin, "MIRROR");
+  assert.equal(central.status, "eaten");
+  assert.equal(central.reason, "refused");
+  assert.ok(last.sellers.filter((s) => s.origin === "SIM").length === 3);
+  const text = JSON.stringify(p, (_, v) => (typeof v === "bigint" ? String(v) : v));
+  assert.doesNotMatch(text, /Silicon|Bay Area|127\.0\.0\.1|localhost|example\.com|Shield/);
+  assert.equal(p.phases[0]!.hud.rounds, 3);
 });

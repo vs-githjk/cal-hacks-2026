@@ -12,7 +12,8 @@ import type { ArenaRows } from "@/lib/arenaScene";
 import { formatMoney } from "@/lib/money";
 import { FLOOR as C } from "./floorTokens";
 import { hudText, planFromRows, type FloorPhase, type FloorPlan, type SellerView } from "./floorPhases";
-import { FloorRing } from "./FloorRing";
+import { FloorRing, type FloorTheme } from "./FloorRing";
+import { BRAND } from "./brand";
 
 const LOOP_GAP_MS = 2500;
 const sans = { fontFamily: C.fontSans } as const;
@@ -34,6 +35,8 @@ function Player({ plan }: { plan: FloorPlan }) {
   const reduced = !!useReducedMotion();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Fish by default; ghosts stay behind the switch (or ?theme=ghosts). Read once on mount: the page only mounts in the browser.
+  const [theme, setTheme] = useState<FloorTheme>(() => (new URLSearchParams(window.location.search).get("theme") === "ghosts" ? "ghosts" : "fish"));
   const elapsed = useRef(0);
   const phases = plan.phases;
   const last = phases.length - 1;
@@ -89,7 +92,7 @@ function Player({ plan }: { plan: FloorPlan }) {
         {/* HUD: on phones above the stage, on wider screens over it and clear of the PiP by its width plus 36 px */}
         <div data-testid="floor-hud" className="pointer-events-none relative z-10 grid content-start gap-1.5 px-3 pb-1 pt-3 sm:absolute sm:left-5 sm:right-[calc(22%+36px)] sm:top-[18px] sm:p-0" style={sans}>
           <p className="text-[12px] uppercase leading-4" style={{ ...mono, color: C.muted }}>
-            Live from the Tech Bazaar floor · refereed by <b className="font-medium" style={{ color: C.referee }}>CRS</b>
+            Live from the {BRAND} floor · refereed by <b className="font-medium" style={{ color: C.referee }}>CRS</b>
             <Origin plan={plan} />
           </p>
           <p className="text-[13px] font-medium leading-5 tracking-[-0.01em] sm:text-[15px]" data-testid="floor-round">
@@ -102,12 +105,12 @@ function Player({ plan }: { plan: FloorPlan }) {
             </div>
           )}
         </div>
-        <FloorRing phases={phases} index={index} elapsed={elapsed} reduced={reduced} label={label} />
+        <FloorRing phases={phases} index={index} elapsed={elapsed} reduced={reduced} label={label} theme={theme} />
         <ChatPip lines={agentLine ? [...chat.slice(-1), agentLine] : chat} sample={plan.sample} />
         {ph.end && <DealCard card={ph.end} />}
         <Ledger sellers={ph.sellers} winner={plan.winnerKey} ph={ph} />
       </div>
-      <Controls index={index} total={phases.length} paused={paused} atEnd={atEnd} hold={ph.hold} reduced={reduced} onPrev={() => go(index - 1)} onNext={() => go(index + 1)} onToggle={() => setPaused((p) => !p)} onReplay={() => { setPaused(false); go(0); }} />
+      <Controls index={index} total={phases.length} paused={paused} atEnd={atEnd} hold={ph.hold} reduced={reduced} onPrev={() => go(index - 1)} onNext={() => go(index + 1)} onToggle={() => setPaused((p) => !p)} onReplay={() => { setPaused(false); go(0); }} theme={theme} onTheme={() => setTheme((t) => (t === "fish" ? "ghosts" : "fish"))} />
     </div>
   );
 }
@@ -179,12 +182,13 @@ function Ledger({ sellers, winner, ph }: { sellers: SellerView[]; winner: string
         const won = s.key === winner && (s.status === "winner" || ph.kind === "end");
         const word = s.statusLine ?? (s.status === "eaten" ? s.tag : s.status === "sealed" ? "Sealed" : "In the round");
         const color = out ? C.coralText : won || s.tone === "good" ? C.mintText : s.tone === "warn" ? C.amberText : C.muted;
-        const dot = s.tint === "slate" ? C.slate : s.tint === "coral" ? C.coral : s.tint === "amber" ? C.amber : C.mint;
+        const dot = s.tint === "slate" ? C.slate : s.tint === "coral" ? C.coral : s.tint === "amber" ? C.amber : s.tint === "sky" ? C.sky : C.mint;
         return (
           <li key={s.key} className="min-w-0 rounded-xl border px-2.5 py-2" style={{ background: C.ledgerBg, borderColor: won ? C.mint : C.ledgerLine, opacity: out ? 0.55 : 1 }}>
             <div className="flex items-center gap-1.5 truncate text-[11px] uppercase leading-[14px]" style={{ ...mono, color: C.muted }}>
               <i aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} />
               <span className="min-w-0 truncate">{s.name}</span>
+              {s.origin !== "LIVE" && <span className="ml-auto shrink-0 rounded-full px-1.5 text-[9px]" style={{ background: s.origin === "MIRROR" ? C.refereeSoft : "#92400e4d", color: s.origin === "MIRROR" ? C.referee : C.amberText }}>{s.origin}</span>}
             </div>
             <p className="mt-0.5 text-[15px] leading-5 tabular-nums" style={{ fontFamily: C.fontMono, color: s.price === null ? C.muted : C.line }}>{s.price === null ? "Sealed" : formatMoney(s.price)}</p>
             <p className="mt-0.5 truncate text-[10px] uppercase leading-[14px]" style={{ ...mono, color }}>{word}</p>
@@ -195,7 +199,7 @@ function Ledger({ sellers, winner, ph }: { sellers: SellerView[]; winner: string
   );
 }
 
-function Controls(p: { index: number; total: number; paused: boolean; atEnd: boolean; hold: boolean; reduced: boolean; onPrev: () => void; onNext: () => void; onToggle: () => void; onReplay: () => void }) {
+function Controls(p: { index: number; total: number; paused: boolean; atEnd: boolean; hold: boolean; reduced: boolean; onPrev: () => void; onNext: () => void; onToggle: () => void; onReplay: () => void; theme: FloorTheme; onTheme: () => void }) {
   const btn = "inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[#e3e8ef] bg-white px-4 text-[13px] font-medium text-[#2a3440] shadow-[0_1px_2px_rgba(11,27,43,.06)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e4ed8] disabled:opacity-40";
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -203,6 +207,7 @@ function Controls(p: { index: number; total: number; paused: boolean; atEnd: boo
       <button type="button" className={btn} aria-pressed={p.paused} onClick={p.onToggle} disabled={p.hold}>{p.paused ? "Play" : "Pause"}</button>
       <button type="button" className={btn} onClick={p.onNext} disabled={p.atEnd || p.hold}>Next</button>
       <button type="button" className={btn} onClick={p.onReplay} disabled={p.hold}>Replay</button>
+      <button type="button" className={btn} aria-pressed={p.theme === "ghosts"} onClick={p.onTheme}>{p.theme === "fish" ? "Ghosts" : "Fish"}</button>
       <span className="ml-1 text-[12px] uppercase text-[#5b6b7c]" style={mono} aria-live="off">
         {p.hold ? "Waiting for the round to close" : `Step ${p.index + 1} of ${p.total}`}
         {p.reduced ? " · reduced motion" : ""}
