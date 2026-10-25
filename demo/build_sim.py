@@ -45,6 +45,7 @@ class SimMarket:
         self.buyer_id = "vidyut"   # whose allowance the buyer client reads back (my_allowance)
         self.goal_reader = "vidyut"   # the buyer role the buyer client holds: my_goals returns this buyer's goals only
         self.goal_state = {}          # goal id -> state (default ACTIVE)
+        self.codes = {}               # mandate hash -> the normalised approval code issued for it (#449 item 3)
 
     def post_goal(self, a):
         # market.ts GOAL_TYPES, which is also the enum of contracts/Goal.schema.json
@@ -231,9 +232,17 @@ class SimMarket:
             self.allow = {**al, "spent": round(al["spent"] + a["amount"], 2)}
             self.floor_events.append(("approval_recorded", a["hash"], "Approved within the allowance"))
 
+    def issue_approval_code(self, a):
+        if a["mandate_hash"] not in self.mandates:
+            raise RuntimeError("no mandate with that hash")
+        self.codes[a["mandate_hash"]] = " ".join(a["code"].lower().split())
+
     def record_approval(self, a):
         if a["mandate_hash"] not in self.mandates:
             raise RuntimeError("no mandate with that hash")
+        # #449 item 3 RT-11: a voice approval repeats the code issued for that mandate (the market compares it with its own row)
+        if a["method"] == "voice_code" and " ".join(str(a.get("code", "")).lower().split()) != self.codes.get(a["mandate_hash"]):
+            raise RuntimeError("the approval code does not match")
         if a["method"] == "allowance":
             raise RuntimeError("this deal is over the allowance; only the call approves it")
         if a["method"] == "voice_code" and not a["voice_approval_id"].strip():

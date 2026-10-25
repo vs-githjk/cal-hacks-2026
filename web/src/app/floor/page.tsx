@@ -64,8 +64,12 @@ function ReplayView({ t }: { t: number }) {
   const k = Math.min(w / 1920, h / 1080);
   const { phase, seconds } = useFloorClock(REFERENCE, { replay: true, reducedMotion: false, initial: t });
   const chat = useChatFeed(REFERENCE, seconds, { replay: true });
+  useEffect(() => {  // the video frame: the site header and status footer must not draw over it
+    document.documentElement.dataset.replay = "1";
+    return () => { delete document.documentElement.dataset.replay; };
+  }, []);
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: INK, color: TEXT, overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 2147483000, background: INK, color: TEXT, overflow: "hidden" }}>
       <div style={{ position: "absolute", left: "50%", top: "50%", width: 1920, height: 1080, transform: `translate(-50%, -50%) scale(${k})`, transformOrigin: "50% 50%" }}>
         <FloorCall lines={chat.lines} live={chat.live} reducedMotion={false} floor={(follow) => <Stage script={REFERENCE} phase={phase} reducedMotion={false} width={1920} frame follow={follow} />} />
       </div>

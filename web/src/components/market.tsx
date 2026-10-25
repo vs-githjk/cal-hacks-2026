@@ -115,11 +115,11 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
       {lines.length === 0 ? (
         <p className="text-muted">No lines yet. Each seller may bid several condition lines (new, open-box) for the same SKU.</p>
       ) : (
-        <div className="-mx-[18px] overflow-x-auto px-[18px]">
-          <table className="w-full border-collapse text-[14px] tabular-nums">
+        <div className="-mx-[18px] px-[18px]">
+          <table className="w-full border-collapse text-[13px] tabular-nums sm:text-[14px]">
             <thead>
               <tr>
-                <Th>Seller</Th><Th>Line</Th><Th right>Landed</Th><Th className="w-[28%]">vs cap</Th><Th>Referee</Th><Th>Advocate</Th><Th>#</Th>
+                <Th>Seller</Th><Th className="max-sm:hidden">Line</Th><Th right>Landed</Th><Th className="w-[28%]">vs cap</Th><Th className="max-sm:hidden">Referee</Th><Th>Advocate</Th><Th className="max-sm:hidden">#</Th>
               </tr>
             </thead>
             <tbody>
@@ -130,15 +130,15 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                 return (
                   <tr key={i} className={o.kind === "won" ? "bg-mint-soft" : dim ? "text-muted" : ""}>
                     <Td><span className="font-semibold text-ink">{l.seller}</span> <OriginChip origin={l.origin} />{o.kind === "won" && <> <Tag>Winner</Tag></>}</Td>
-                    <Td><Tag>{l.condition}</Tag>{o.kind === "alt" && <span className="ml-1.5 text-[13px] text-muted">alt</span>}</Td>
+                    <Td className="max-sm:hidden"><Tag>{l.condition}</Tag>{o.kind === "alt" && <span className="ml-1.5 text-[13px] text-muted">alt</span>}</Td>
                     <Td right className="tabular-nums">{o.kind === "refused" && l.landed === 0 ? "·" : o.kind === "won" ? <b>{money(l.landed)}</b> : money(l.landed)}</Td>
                     <Td>
-                      <div className="relative h-2.5 min-w-[120px] rounded-[5px] bg-soft">
+                      <div className="relative h-2.5 min-w-[56px] rounded-[5px] bg-soft sm:min-w-[120px]">
                         <b className={`absolute inset-y-0 left-0 rounded-[5px] ${fill}`} style={{ width: `${Math.min(100, (l.landed / scale) * 100)}%` }} />
                         {cap !== null && l.landed > cap && <i className="absolute -top-[3px] h-4 w-0.5 bg-ink" style={{ left: "100%" }} title="over cap" />}
                       </div>
                     </Td>
-                    <Td>{l.referee === "passed" ? "passed" : <><Verdict kind="veto">refused</Verdict> <span className="text-[13px] text-muted">{l.refereeReason}</span></>}</Td>
+                    <Td className="max-sm:hidden">{l.referee === "passed" ? "passed" : <><Verdict kind="veto">refused</Verdict> <span className="text-[13px] text-muted">{l.refereeReason}</span></>}</Td>
                     <Td>
                       {o.kind === "won" && <Verdict kind="buy">won</Verdict>}
                       {o.kind === "ranked" && <Verdict kind="buy">buy</Verdict>}
@@ -147,7 +147,7 @@ export function SellerLines({ lines, cap }: { lines: SellerLine[]; cap: number |
                       {(o.kind === "ineligible" || o.kind === "alt") && <span className="text-[13px] text-muted">{o.kind === "alt" ? o.note : `ineligible, ${o.note}`}</span>}
                       {o.kind === "refused" && <span className="text-[13px] text-muted">never seen</span>}
                     </Td>
-                    <Td className="font-mono font-semibold text-muted">{o.rank ? `${o.rank}${o.kind === "won" ? ", won" : ""}` : o.kind === "ineligible" ? "out" : "·"}</Td>
+                    <Td className="font-mono font-semibold text-muted max-sm:hidden">{o.rank ? `${o.rank}${o.kind === "won" ? ", won" : ""}` : o.kind === "ineligible" ? "out" : "·"}</Td>
                   </tr>
                 );
               })}

@@ -38,6 +38,22 @@ export const FEED_URL = FEED_ENV ?? LOCAL_FEED;
 export const ASI_ONE_URL = "https://asi1.ai/";
 export const POLL_MS = 2000;
 
+const LONG_ADDRESS = /agent1[a-z0-9]{20,100}/g;
+const MAX_MESSAGE = 160;
+
+/** A log line from the launcher is not agent speech. Transport errors become one plain status, the AGENT_MSG log prefix is dropped, long
+ * addresses are shortened and the line is capped, so a judge never reads a stack of raw errors. Ordinary speech passes through. */
+export function cleanMessage(raw: string | null | undefined): string | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  if (/failed to retrieve messages|upstream connect error|connection termination|mailbox not found/i.test(t)) return "Waiting for the Agentverse mailbox.";
+  if (/^no valid reply\b/i.test(t)) return "Waiting for a reply.";
+  if (/^ignored \w+ from agent1/i.test(t)) return "Skipped a bid request.";
+  const text = /^AGENT_MSG\b.*?\btext=(.*)$/s.exec(t)?.[1]?.trim() || t;
+  const short = text.replace(LONG_ADDRESS, (a) => `${a.slice(0, 7)}…${a.slice(-4)}`);
+  return short.length > MAX_MESSAGE ? short.slice(0, MAX_MESSAGE) : short;
+}
+
 const STATUSES: readonly string[] = ["agentverse", "local", "down"];
 
 /** Keep only well formed rows. Anything else in the payload is dropped, so a bad feed shows fewer rows, never made up ones. */
@@ -53,7 +69,7 @@ export function parseAgents(json: unknown): AgentRow[] | null {
       role: o.role,
       address: typeof o.address === "string" ? o.address : null,
       status: o.status as AgentStatus,
-      last_message: typeof o.last_message === "string" ? o.last_message : null,
+      last_message: typeof o.last_message === "string" ? cleanMessage(o.last_message) : null,
       at: typeof o.at === "string" ? o.at : null,
       origin: typeof o.origin === "string" ? o.origin : "SIM",
       avatar: typeof o.avatar === "string" ? safeUrl(o.avatar) : null,

@@ -23,6 +23,14 @@ except ImportError:  # common.py loaded by file path (demo/bridge.py), so its fo
     sys.modules["smell_memory"] = smell_memory
     _spec.loader.exec_module(smell_memory)
 
+try:  # one-line structured chat records for the floor's chat tile (agents/chatlog.py); same loading rule as smell_memory
+    import chatlog
+except ImportError:
+    _cspec = _util.spec_from_file_location("chatlog", Path(__file__).with_name("chatlog.py"))
+    chatlog = _util.module_from_spec(_cspec)
+    sys.modules["chatlog"] = chatlog
+    _cspec.loader.exec_module(chatlog)
+
 # Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
 _ENV = Path(__file__).resolve().parent / ".env"
 if _ENV.exists():
@@ -44,6 +52,10 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+# Smell Test can call the Claude classifier, which takes longer than the 1.5 s local default; the live stack raises it.
+SHIELD_TIMEOUT_S = max(0.5, float(os.getenv("SHIELD_TIMEOUT_S", "1.5")))
+
+
 def _open_shield(req, timeout: float):
     return urllib.request.build_opener(_NoRedirect()).open(req, timeout=timeout)
 
@@ -58,7 +70,16 @@ def shield_context(sender: str, payee_of_record: str | None = None, price_histor
             "sender_role": role}
 
 
-def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
+def _shield_headers() -> dict:
+    """#449 RT-26: the bearer token when SHIELD_API_TOKEN is set (shield/api.py then requires it), nothing otherwise."""
+    headers = {"Content-Type": "application/json"}
+    token = (os.getenv("SHIELD_API_TOKEN") or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
     """Invariant 3: every agent-to-agent message goes through Shield before we act on it.
     Calls Lane D at SHIELD_URL and fails closed when Shield is unavailable."""
     context = context or shield_context(sender)
@@ -72,9 +93,9 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
     req = urllib.request.Request(f"{url.rstrip('/')}/screen", method="POST",
                                  data=json.dumps({"message_id": message_id, "sender_agent": sender, "text": text,
                                                   "context": context}).encode(),
-                                 headers={"Content-Type": "application/json"})
+                                 headers=_shield_headers())
     try:
-        with _open_shield(req, timeout=1.5) as r:
+        with _open_shield(req, timeout=SHIELD_TIMEOUT_S) as r:
             if r.status != 200:
                 raise ValueError("non-200 Shield response")
             result = json.loads(r.read())
@@ -125,6 +146,17 @@ def _structured_payee_mismatch(text: str, record: str) -> bool:
                 if isinstance(value, str) and value.strip().lower() != record:
                     return True
     return False
+
+
+def screen(message_id: str, sender: str, text: str, context: dict | None = None) -> dict:
+    """_screen plus one Smell Test chat line (rule ids and a reason cut to 80 characters, never the screened text) when it blocks."""
+    result = _screen(message_id, sender, text, context)
+    try:
+        if isinstance(result, dict) and result.get("verdict") in ("block", "quarantine"):
+            chatlog.emit(None, "shield", "message", chatlog.block_text(result.get("rule_ids") or [], result.get("reasons") or []))
+    except Exception:  # noqa: BLE001  (the chat line never changes a verdict)
+        pass
+    return result
 
 
 def screen_bid(message_id: str, sender: str, bid_json: str, persona_line: str, references: dict) -> dict:
@@ -298,6 +330,46 @@ def mailbox_ready(role: str) -> bool:
     """False only when mailbox mode is on for this role and it still has the public dev seed (agent_args would exit).
     Multi-agent runners use it to skip that one agent instead of losing the whole process."""
     return not (mailbox_on(role) and public_seed(role))
+
+
+def trusted_sellers() -> list[str]:
+    """The sellers whose address the buyer accepts as a sender (#449 RT-27). Locally every seller; in mailbox mode only
+    those with a private seed: a public *-dev seed is in the repo, so anyone could bid, or take an order, as that seller."""
+    return [s for s in SELLERS if mailbox_ready(s)]
+
+
+def seller_address(seller_id: str) -> str | None:
+    """The address of a seller we may trust as a sender (Market Pulse gives a seller its own record to that address), or None:
+    an unknown seller, or one on a public *-dev seed in mailbox mode (#449 RT-27)."""
+    if seller_id in SELLERS and seller_id not in trusted_sellers():
+        return None
+    try:
+        return address(seller_id)
+    except (KeyError, ValueError):
+        return None
+
+
+def peer_roles(role: str) -> list[str]:
+    """The built-in agents whose addresses `role` derives from SEEDS and trusts (#449 RT-27). The buyer's sellers are
+    handled by trusted_sellers(); Smell Test and Market Pulse trust no agent address."""
+    if role in ("shield", "pulse"):
+        return []
+    if role == "buyer":
+        return ["advocate", *(["caller"] if os.getenv("BUYER_DELEGATE_CALL") == "1" else [])]
+    return ["buyer"]
+
+
+def require_peer_seeds(role: str) -> None:
+    """#449 RT-27: in production mode (this role runs on the Agentverse mailbox, e.g. AGENTS_MAILBOX=1) a peer whose seed
+    is missing falls back to a public *-dev default, and that address is open to anyone. Raise at startup instead of
+    silently trusting it. Local mode keeps the dev defaults. Names only the env vars, never a seed."""
+    if not mailbox_on(role):
+        return
+    missing = [p for p in peer_roles(role) if not SEEDS.get(p, "").strip() or public_seed(p)]
+    if missing:
+        names = ", ".join(f"{p.upper()}_AGENT_SEED" for p in missing)
+        raise RuntimeError(f"{role} is on Agentverse (production mode) but {names} is not a private seed, so the "
+                           f"{', '.join(missing)} address it trusts is the public dev one. Set it in agents/.env first.")
 
 
 AVATARS = Path(__file__).resolve().parent / "avatars"

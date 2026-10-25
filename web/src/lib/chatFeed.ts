@@ -46,7 +46,7 @@ const BUYER_NAME = "Fish Market Buyer";
 const THINK_DWELL = 0.8; // seconds the dots show before the thinking agent's line lands (at most half the hold)
 
 function pipWho(text: string): { who: string; name: string } {
-  if (/^Shield\b/.test(text)) return { who: "shield", name: "Shield" };
+  if (/^(Shield|Smell Test)\b/.test(text)) return { who: "shield", name: "Smell Test" };
   if (/^Winner\b/.test(text)) return { who: "referee", name: "Referee" };
   return { who: "buyer", name: BUYER_NAME };
 }

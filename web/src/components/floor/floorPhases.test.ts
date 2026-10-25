@@ -146,7 +146,7 @@ test("REFERENCE thinking beats: four beats in order, within their ceilings", () 
     ["shield", "Blocked Seller 2: hidden instructions aimed at the buying agent."],
     ["advocate", "Is it new, open-box, refurbished or used?"],
     ["seller_3", "Open-box."],
-    ["buyer", "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by the Shield, and one failed the fit check. Approved by your phone code."],
+    ["buyer", "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by Smell Test, and one failed the fit check. Approved by your phone code."],
   ]);
   const ceil = [2.5, 1.2, 2.5, 2.5, 5];
   beats.forEach((b, i) => assert.ok(b.hold > 0 && b.hold <= ceil[i]! + 1e-9, `beat ${i} holds ${b.hold}`));

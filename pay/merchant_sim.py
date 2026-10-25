@@ -76,6 +76,20 @@ class StripeTestCharger:
             raise RuntimeError(f"payment_intent_{pi.get('status')}")
         return {"id": pi["id"], "status": pi["status"]}
 
+    def find_by_mandate_hash(self, mandate_hash: str, *, opener: Callable = urllib.request.urlopen) -> Optional[dict]:
+        """#449 item 4 PL-10: a read-only GET search for a succeeded test PaymentIntent whose metadata carries this mandate hash.
+        It can never create a charge. None when nothing succeeded matches; any transport or parse failure raises."""
+        if not isinstance(mandate_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", mandate_hash):
+            raise ValueError("mandate hash must be 64 lowercase hex characters")
+        query = urllib.parse.urlencode({"query": f"metadata['mandate_hash']:'{mandate_hash}'", "limit": "10"})
+        req = urllib.request.Request(STRIPE_API + "/search?" + query, method="GET", headers={"Authorization": f"Bearer {self._key}"})
+        with opener(req, timeout=30, context=_ctx()) as r:
+            body = json.loads(r.read())
+        for pi in body.get("data") or []:
+            if isinstance(pi, dict) and pi.get("status") == "succeeded" and isinstance(pi.get("id"), str):
+                return {"id": pi["id"], "status": "succeeded"}
+        return None
+
 
 def _whole_cents(amount: Any) -> Optional[int]:
     """Exact cents, or None when the amount is not a positive whole number of cents (19.995 is refused)."""

@@ -8,7 +8,7 @@ export type Slot = 1 | 2 | 3 | 4; // colour slot: ghost-1..4
 export type SellerState = "sealed" | "open" | "eaten" | "winner";
 export type OutReason = "highest_price" | "outranked" | "failed_fit" | "shield_block" | "advocate_veto" | "refused";
 export interface FloorSeller { id: string; name: string; origin: "LIVE" | "MIRROR" | "SIM"; slot: Slot; agent?: string } // agent: the offer's sellerId, which picks the avatar (REFERENCE and sealed sellers have none and stay fish)
-export interface SellerView { state: SellerState; price: number | null; ledger: string; reason: OutReason | null; checkedAgo: number | null } // ledger: "Sealed" | "$1,329.00" | "Eaten · highest price" | "Blocked · Shield" | "Out · fit uncertain" | "Fit OK · 304 mm · no recall" | "Winner"; checkedAgo: Bright Data re-check age in seconds, null if unknown
+export interface SellerView { state: SellerState; price: number | null; ledger: string; reason: OutReason | null; checkedAgo: number | null } // ledger: "Sealed" | "$1,329.00" | "Eaten · highest price" | "Blocked · Smell Tesd" | "Out · fit uncertain" | "Fit OK · 304 mm · no recall" | "Winner"; checkedAgo: Bright Data re-check age in seconds, null if unknown
 export type PhaseKind = "sealed" | "reveal" | "call" | "inject" | "shield" | "check" | "eat" | "crown" | "deal" | "paid" | "think";
 export interface FloorPhase {
   at: number;            // seconds from the start of the loop
@@ -27,9 +27,9 @@ export interface FloorPhase {
 /** Hold ceilings in seconds for the thinking beats. */
 export const THINK_CEIL = { buyer: 2.5, shield: 1.2, advocate: 2.5, summary: 5 } as const;
 const BUYER = { who: "buyer", name: "Fish Market Buyer" };
-const SHIELD = { who: "shield", name: "Shield" };
+const SHIELD = { who: "shield", name: "Smell Test" };
 const ADVOCATE = { who: "advocate", name: "Advocate" };
-const SUMMARY = "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by the Shield, and one failed the fit check. Approved by your phone code.";
+const SUMMARY = "Bought the ASUS Prime RTX 5070 Ti OC from Best Buy for $1,299.99 before tax. Two offers were out on price, one was blocked by Smell Test, and one failed the fit check. Approved by your phone code.";
 
 export interface FloorScript { sim: boolean; part: string; sellers: FloorSeller[]; phases: FloorPhase[]; duration: number }
 
@@ -39,7 +39,7 @@ const LEDGER: Record<OutReason, string> = {
   highest_price: "Eaten · highest price",
   outranked: "Outranked",
   failed_fit: "Out · fit uncertain",
-  shield_block: "Blocked · Shield",
+  shield_block: "Blocked · Smell Test",
   advocate_veto: "Out · advocate veto",
   refused: "Out · refused",
 };
@@ -179,7 +179,7 @@ export function floorScript(rows: ArenaRows | null | undefined): FloorScript {
         b.pip.push(`Winner ${money(w.landed)}. The deal goes to the buyer for approval.`);
         const outs = offers.filter((x) => b.views[x.bidId]!.state === "eaten");
         const blocked = outs.filter((x) => b.views[x.bidId]!.reason === "shield_block").length;
-        const summary = `Bought ${w.product || part} from ${w.name} for ${money(w.landed)} before tax. ${outs.length} other ${outs.length === 1 ? "offer was" : "offers were"} out${blocked > 0 ? `, ${blocked} blocked by the Shield` : ""}. The deal goes to you for approval.`;
+        const summary = `Bought ${w.product || part} from ${w.name} for ${money(w.landed)} before tax. ${outs.length} other ${outs.length === 1 ? "offer was" : "offers were"} out${blocked > 0 ? `, ${blocked} blocked by Smell Test` : ""}. The deal goes to you for approval.`;
         b.push(next(), "crown", { buyerAt: w.bidId, callText: `Winner: ${w.name} at ${money(w.landed)}` });
         b.push(next(), "deal", { buyerAt: w.bidId, deal: { price: w.landed, part: w.product || part, lines: [w.condition ? `Condition: ${w.condition}` : "Checked by the referee", "Price before sales tax"], approvedByPhone: false, stripeTest: false } });
         b.push(hold(THINK_CEIL.summary), "think", { buyerAt: w.bidId, think: { ...BUYER, text: summary }, deal: b.phases[b.phases.length - 1]!.deal });

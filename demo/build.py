@@ -419,16 +419,17 @@ def _iso(value: Any) -> str:
 
 
 def read_buyer_goal(client: Any, buyer_id: str) -> tuple[dict, list[dict]]:
-    """X's latest ACTIVE build_by_date goal and its goal_items, read with the buyer's own client through the my_goals and my_goal_items views.
+    """X's latest live (ACTIVE or HUNTING) build_by_date goal and its goal_items, read with the buyer's own client through the my_goals and my_goal_items views.
     Only the buyer's own identity sees its goals (the tables are private and the views answer the caller's buyer role only: the referee reads
     none), so a client that is not this buyer's finds nothing and the error says so."""
     rows = [r for r in client.sql(GOALS_SQL) if len(r) >= 7]
     mine = [r for r in rows if r[1] == buyer_id]
     if rows and not mine:
         raise GoalNotFound(f"the goals this client can read belong to {rows[0][1]}, not {buyer_id}: pass the identity token of {buyer_id} with --buyer-token")
-    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] == "ACTIVE"), key=lambda r: _iso(r[6]), reverse=True)
+    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] in ("ACTIVE", "HUNTING")),  # #455: claim_goal makes it HUNTING
+                  key=lambda r: _iso(r[6]), reverse=True)
     if not live:
-        why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE build_by_date goal"
+        why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE or HUNTING build_by_date goal"
         raise GoalNotFound(f"no goal to build from for {buyer_id}: {why}")
     g = live[0]
     items = [{"sku_spec": str(r[1]), "condition": str(r[2]), "variant": str(r[3]), "quantity": r[4], "skipped_owned_part_id": str(r[5])}
@@ -818,6 +819,7 @@ class BuildRun:
         self.buyer_name, self.use_stripe, self.env, self.stripe_test = buyer_name, use_stripe, env or {}, stripe_test
         self.out_dir, self._say, self.note, self.sleep, self.clock, self.now = out_dir, say, note, sleep, clock, now
         self.delay, self.bid_window, self.on_code = delay, bid_window, on_code
+        self._call_code = ""   # the code the approval call judged (#449 item 3), set when it is issued
         self.recheck_timeout, self.call_timing, self.real_gpu_round = recheck_timeout, call_timing or {}, real_gpu_round
         self.relay_signals = relay_signals   # demo/crs_relay.py, run right before each round opens (best effort); None in tests
         self.plan_events = list(plan_events or [])
@@ -1151,7 +1153,7 @@ class BuildRun:
             fn(t)
 
     def run(self) -> dict:
-        """The whole build. Returns {"status": "paid" | "denied" | "failed", "reason", "view"}. A reducer refusal raises RuntimeError with the
+        """The whole build. Returns {"status": "paid" | "denied" | "uncertain" | "failed", "reason", "view"}. A reducer refusal raises RuntimeError with the
         market's own message, after the view is written."""
         try:
             self.run_rounds()
@@ -1351,7 +1353,10 @@ class BuildRun:
         if voice_id is None:
             self._event("approved", f"Inside your allowance: {money(total)} for {len(champs)} parts, no call", origin=SIM)
             self.approval.update(state="approved", method="allowance")
-        self._pay()
+        if self._pay():   # #449 item 4 RT-10: a charge Stripe left uncertain is not paid; no payment row was written for it
+            self.approval.update(state="uncertain", reason="A Stripe test charge is uncertain; nothing is reported paid. Check the Stripe dashboard (test mode).")
+            self.publish()
+            return {"status": "uncertain", "reason": "charge_uncertain", "view": self.view()}
         return {"status": "paid", "reason": "", "view": self.view()}
 
     # ---- the market's allowance, and approvals read back
@@ -1453,6 +1458,7 @@ class BuildRun:
         from pay.mandate import can_charge, new_mandate
         from pay.replay import NonceStore
         from pay.voice_cartesia import CALL_CODE_TTL_S, denial_line, run_approval_call
+        from demo.bridge import CodeNotOnScreen
         gid = self.plan.goal_id
         agg = new_mandate(deal_id=f"build-{gid}", buyer_id=self.plan.buyer_id, amount=total, payee=f"build-{gid}", goal_id=gid,
                           within_allowance=False, origin=_weakest([c["origin"] for c in champs.values()]))
@@ -1470,11 +1476,16 @@ class BuildRun:
         shown: dict[str, bool] = {}
 
         def on_code(code: str) -> None:
+            self._call_code = code   # #449 item 3 RT-11: kept in memory so each mandate's approval can repeat it; never printed or stored
             shown["on_screen"] = self._code_to_buyer_screen(agg, code, total, len(champs), sellers)
+            if not shown["on_screen"]:   # record_approval repeats a code the market holds: no code there means no call, nothing is dialled
+                raise CodeNotOnScreen("the code could not be put on /buyer")
             console(code)
         try:
             res = run_approval_call(agg, self._why(), self.cartesia, service, deal=deal, buyer_name=self.buyer_name, on_code=on_code,
                                     **self.call_timing)
+        except CodeNotOnScreen:
+            return self._deny("code_not_on_screen", "The approval code could not be put on your /buyer card, so no call was placed. Nothing was paid.")
         finally:
             if shown.get("on_screen"):
                 self._take_code_off_buyer_screen(agg)
@@ -1504,11 +1515,11 @@ class BuildRun:
     def _code_to_buyer_screen(self, agg: dict, code: str, total: float, parts: int, sellers: int) -> bool:
         """Put the whole-build code on the paired buyer's own /buyer card for the call (issue_build_approval_code, keyed by the aggregate
         mandate hash: the build makes its mandates only after the call). Private to that buyer in the market; never in the BuildView.
-        True when it is on screen. Never raises: a code that cannot be shown is one console line saying so, and the call still judges it."""
+        True when it is on screen. Never raises: a code that cannot be shown is one console line saying so, and the caller then refuses to dial."""
         from demo.bridge import market_has_typed_approval
         from pay.voice_cartesia import CALL_CODE_TTL_S
         if market_has_typed_approval():
-            self.note("approval code is NOT on /buyer: the market module still has approve_typed (typed-code approval, #191), so it is kept off the screen. It is on this console.")
+            self.note("approval code is NOT on /buyer: the market module still has approve_typed (typed-code approval, #191), so it is kept off the screen. The call is NOT placed.")
             return False
         try:
             self.clients["referee"].call(
@@ -1518,7 +1529,7 @@ class BuildRun:
             text = str(e)
             why = ("the deployed market has not been republished with issue_build_approval_code" if "(404)" in text or "o such procedure" in text
                    else f"the market refused it ({text[:120]})")
-            self.note(f"approval code is NOT on /buyer: {why}. It is on this console only; read it, then say approve.")
+            self.note(f"approval code is NOT on /buyer: {why}. The call is NOT placed.")
             return False
         self.note("approval code is on /buyer now (the card 'Review and approve'); read it there, then say approve")
         return True
@@ -1554,11 +1565,15 @@ class BuildRun:
             self._full.append(m)
             self.mandates.append({"hash": m["hash"], "dealId": m["deal_id"], "amount": m["amount"], "payee": m["payee"], "part": spec.part})
             if voice_id is not None:
+                # #449 item 3 RT-11: the market checks the code on every approval. The build's one code was issued under the aggregate
+                # hash and is off /buyer now, so it is issued again for this mandate, then the approval repeats it.
+                code = self._call_code
+                referee.call("issue_approval_code", mandate_hash=m["hash"], code=code)
                 referee.call("record_approval", mandate_hash=m["hash"], method="voice_code", approved_by=self.plan.buyer_id,
-                             voice_approval_id=voice_id)
+                             voice_approval_id=voice_id, code=code)
             self.publish()
 
-    def _pay(self) -> None:
+    def _pay(self) -> bool:
         """One payment and one receipt per part, through the same charger the bridge uses (the SIM stub, or a Stripe TEST charge)."""
         from demo.approval_flow import charge_or_stub
         referee = self.clients["referee"]
@@ -1568,6 +1583,11 @@ class BuildRun:
             ch, why = charge_or_stub(m, self.env, self.use_stripe, self.stripe_test)
             if why:
                 self.note(why)
+            if ch.get("status") == "uncertain":   # #449 item 4 RT-10: no id, no payment row, never reported as paid
+                self._event("uncertain", f"The Stripe test charge for {row['part']} is uncertain, so no payment was recorded. "
+                                         "Check the Stripe dashboard (test mode).", [row["part"]])
+                self.publish()
+                return True
             test = ch["mode"] == "Stripe test mode"
             cents = int(round(m["amount"] * 100))
             try:
@@ -1583,6 +1603,7 @@ class BuildRun:
                                   "text": f"{'stripe_test' if test else 'SIM'} payment confirmed for deal {m['deal_id']}: "
                                           f"${cents // 100}.{cents % 100:02d}, reference {ch['id']}, mandate {m['hash'][:12]}."})
             self.publish()
+        return False
 
 
 class _Refused(Exception):

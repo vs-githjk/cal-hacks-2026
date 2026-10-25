@@ -184,7 +184,7 @@ function AgentG({ a, reduced, leaving }: { a: Placed; reduced: boolean; leaving:
   let name = "";
   let nameStyle: CSSProperties = {};
   if (a.kind === "shield") {
-    name = "Shield";
+    name = "Smell Test";
     nameStyle = { transform: `translateY(${a.puffed ? a.h * 0.08 : 0}px)`, transition: tr };
     body = (
       <g transform={`translate(${cx} ${cy})`}>
@@ -482,7 +482,7 @@ function FinaleG({ w, product, price, kindIcon, paid, phone, fishAt, pacAt, vt, 
   );
 }
 
-const REASON_TEXT: Record<OutReason, string> = { highest_price: "eaten, highest price", outranked: "eaten, outranked", shield_block: "blocked by Shield", failed_fit: "rejected, fit", advocate_veto: "rejected, condition", refused: "refused" };
+const REASON_TEXT: Record<OutReason, string> = { highest_price: "eaten, highest price", outranked: "eaten, outranked", shield_block: "blocked by Smell Test", failed_fit: "rejected, fit", advocate_veto: "rejected, condition", refused: "refused" };
 
 function summary(script: FloorScript, phase: FloorPhase): string {
   const parts: string[] = [];
@@ -603,7 +603,7 @@ export function FloorAquariumPixel({ script, phase, reducedMotion, follow = fals
     const priced: Sg = v.price == null ? { label: "???", sub: "sealed", tone: PAL.line }
       : win ? { label: usd.format(v.price), sub: "Winner", tone: PAL.pac }
         : { label: usd.format(v.price), sub: v.checkedAgo != null ? `re-checked ${v.checkedAgo}s ago` : null, tone: PAL.line };
-    const blocked: Sg = { label: "Blocked by Shield", sub: v.state === "eaten" ? v.ledger : "hidden instructions", tone: PAL.cyan };
+    const blocked: Sg = { label: "Blocked by Smell Test", sub: v.state === "eaten" ? v.ledger : "hidden instructions", tone: PAL.cyan };
     const bite = arrive + 100; // the fish is eaten once Pac-Man is beside it
     let gone = (v.state === "eaten" && !newly) || (finale && !win);
     let scared = false;

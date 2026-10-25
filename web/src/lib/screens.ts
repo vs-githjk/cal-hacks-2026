@@ -10,7 +10,8 @@ export interface GoalView {
   id: string;
   text: string; // the buyer's own words
   type: "budget_cap" | "part_by_date" | "build_by_date";
-  state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED";
+  state: "ACTIVE" | "HUNTING" | "HOLD_FOR_CALL" | "DONE" | "EXPIRED" | "PAUSED" | "FAILED";
+  latestNote?: string; // #449 item 3 PL-4: the newest notification text written for this goal ("" when none)
   cap: number;
   reserved: number;
   deadline: Date;
@@ -237,21 +238,43 @@ export function goalFromRows(goals: readonly GoalRow[], items: readonly GoalItem
   return g ? goalView(g, items, allowance) : null;
 }
 
-const OPEN_GOAL_STATES = ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "PAUSED"];
+const OPEN_GOAL_STATES = ["ACTIVE", "HUNTING", "HOLD_FOR_CALL", "PAUSED"]; // DONE, EXPIRED and FAILED are closed
+
+/** Plain words for the goal pill. FAILED is "Could not finish" so a buyer never reads an error code. */
+export function stateLabel(state: GoalView["state"]): string {
+  if (state === "DONE") return "Done";
+  if (state === "HOLD_FOR_CALL") return "Hold for call";
+  if (state === "FAILED") return "Could not finish";
+  return state.toLowerCase().replaceAll("_", " ");
+}
+
+interface GoalNoteRow { id: bigint; goalId: string; klass: string; text: string }
+
+/** The text of the newest state note (highest id, klass "state") for each goal id. Veto and other notes are feed lines, not the card's
+ * state. Notes with no goal id belong to no card. */
+function latestNotes(notes: readonly GoalNoteRow[]): Map<string, string> {
+  const best = new Map<string, GoalNoteRow>();
+  for (const n of notes) {
+    const cur = best.get(n.goalId);
+    if (n.goalId && n.klass === "state" && (!cur || cur.id < n.id)) best.set(n.goalId, n);
+  }
+  return new Map([...best].map(([k, v]) => [k, v.text]));
+}
 
 /**
  * One buyer's goals, open searches first and newest first within each group. Rows owned by anyone else (a stale
  * cache from a previous identity) and another buyer's allowance are dropped. Display hygiene only: the market's
  * my_* views are what authorize, this just keeps a stale row from rendering.
  */
-export function goalsForBuyer(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined, buyerId: string): GoalView[] {
+export function goalsForBuyer(goals: readonly GoalRow[], items: readonly GoalItemRow[], allowance: AllowanceRow | undefined, buyerId: string, notes: readonly GoalNoteRow[] = []): GoalView[] {
   if (!buyerId) return [];
+  const latest = latestNotes(notes);
   const mine = allowance?.buyerId === buyerId ? allowance : undefined;
   const open = (g: GoalRow) => (OPEN_GOAL_STATES.includes(g.state) ? 0 : 1);
   return goals
     .filter((g) => g.buyerId === buyerId)
     .sort((a, b) => open(a) - open(b) || (a.createdAt.microsSinceUnixEpoch < b.createdAt.microsSinceUnixEpoch ? 1 : -1))
-    .map((g) => goalView(g, items, mine));
+    .map((g) => ({ ...goalView(g, items, mine), latestNote: latest.get(g.id) ?? "" }));
 }
 
 interface RoleRow { role: string; subjectId: string }
@@ -445,9 +468,27 @@ export function clusterArrivals(arrivals: readonly Arrival[], totalMs: number, g
 
 interface PendingRow { mandateHash: string; mandateId: string; amount: number; payee: string; expiry: Timestamp; code: string; failures: number; locked: boolean; origin: string }
 
-export function reviewFromRows(rows: readonly PendingRow[]): ReviewView | null {
-  const r = [...rows].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
+/**
+ * #449 item 4 PL-12: pending rows that have not expired. The market keeps an expired code row until it is cleared, so the client
+ * drops it itself. A denial is NOT visible here: my_pending_approvals and my_deals carry no denial flag (a denial is only a
+ * notification text with no mandate hash), so expiry is the only filter this screen can apply.
+ */
+export function livePendingApprovals<T extends { expiry: Timestamp }>(rows: readonly T[], now: number = Date.now()): T[] {
+  return rows.filter((r) => Number(r.expiry.microsSinceUnixEpoch / 1000n) > now);
+}
+
+export function reviewFromRows(rows: readonly PendingRow[], now: number = Date.now()): ReviewView | null {
+  const r = [...livePendingApprovals(rows, now)].sort((a, b) => (a.expiry.microsSinceUnixEpoch < b.expiry.microsSinceUnixEpoch ? 1 : -1))[0];
   return r ? { ...r, expiry: d(r.expiry), origin: asOrigin(r.origin) } : null;
+}
+
+/**
+ * #449 item 4 PL-12: the approval card for a screen. A paired screen (a buyer id is known) shows the live approval or the empty
+ * "waiting for your call" card, never the sample one-time code; only an unpaired preview gets the sample, labelled SIM.
+ */
+export function approvalForScreen(live: ApprovalView | null, buyerId: string | null | undefined, sampleApproval: ApprovalView): { approval: ApprovalView | null; sample: boolean } {
+  if (buyerId) return { approval: live, sample: false };
+  return live ? { approval: live, sample: false } : { approval: asSim(sampleApproval), sample: true };
 }
 
 // ---- #191-5: live veto, Shield, approval and receipt cards (my_bid_checks, my_deals). Only what the rows hold; nothing filled in.

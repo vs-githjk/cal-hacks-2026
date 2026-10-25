@@ -84,7 +84,7 @@ function explain(v: SellerView): string {
   if (v.state === "sealed") return "Bid is in, price sealed";
   if (v.state === "open") return /^Fit OK/.test(v.ledger) ? `Still in. ${v.ledger.replace(/ · /g, ", ")}` : "Still in";
   switch (v.reason) {
-    case "shield_block": return "Blocked by Shield: hidden instructions aimed at the buying agent";
+    case "shield_block": return "Blocked by Smell Test: hidden instructions aimed at the buying agent";
     case "outranked": return v.ledger.startsWith("Outranked · ") ? `Outranked: ${v.ledger.slice("Outranked · ".length)}` : "Outranked";
     case "refused": return "Refused: below this seller's floor price";
     case "advocate_veto": return "Vetoed by Advocate: the listing did not match the condition";

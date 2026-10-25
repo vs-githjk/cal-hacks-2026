@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Card, Code, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
+import { cloneElement, useCallback, useEffect, useState } from "react";
+import { Card, Code, Details, Label, OriginChip, RecordedBanner, RunsLocally } from "@/components/ui";
 import recorded from "@/lib/fixtures/sell-recorded.json";
 import { useApiBase } from "@/lib/useApiBase";
 import { BRAND } from "@/lib/brand";
+import { draftToForm, type Vetted } from "@/lib/sellerDraft";
 import {
   CONDITIONS, SELLER_KIT_URL, buildConfig, emptyForm, emptyRow, fetchNeeds, fetchShops, parseNeeds, parseShops, slugify, submitConfig,
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
@@ -23,14 +24,33 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactElement<{ placeholder?: string }> }) {
+  // The hint is the input's placeholder (#448: fewer words on screen; the example is still there while the field is empty).
+  const input = hint && !children.props.placeholder ? cloneElement(children, { placeholder: hint }) : children;
   return (
     <label className="block min-w-0">
-      <span className="mb-1.5 block text-[13px]/[18px] font-medium text-ink-2">{label}</span>
-      {children}
-      {hint && <span className="mt-1 block text-[12px]/[16px] text-muted">{hint}</span>}
+      <span className="mb-1 block text-[13px] font-medium">{label}</span>
+      {input}
     </label>
   );
+}
+
+const EXAMPLE = "I run a small repair shop in Oakland. I have three refurbished 4070 Supers and some 750W PSUs, 90-day warranty, and I won't go below $520 on the cards.";
+
+type DraftState = { kind: "idle" } | { kind: "busy" } | { kind: "note"; text: string } | { kind: "done"; vetted: Vetted };
+
+/** Ask Claude (through /api/seller-draft) for a draft. Any failure is the plain form with a one-line note. */
+async function askClaude(text: string): Promise<DraftState> {
+  try {
+    const r = await fetch("/api/seller-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+    const body: unknown = await r.json();
+    const b = body as { ok?: boolean; note?: string; error?: string; draft?: Vetted["draft"]; questions?: string[]; dropped?: string[] };
+    if (r.status === 400 && b.error) return { kind: "note", text: b.error };
+    if (b.ok && b.draft) return { kind: "done", vetted: { draft: b.draft, questions: b.questions ?? [], dropped: b.dropped ?? [] } };
+    return { kind: "note", text: b.note ?? "Claude is unavailable right now; fill in the form below." };
+  } catch {
+    return { kind: "note", text: "Claude is unavailable right now; fill in the form below." };
+  }
 }
 
 /** /sell: a form that turns a shop into a SellerConfig and sends it to the Seller Kit API (:8791). */
@@ -43,6 +63,8 @@ export default function SellPage() {
   const [created, setCreated] = useState<Created | null>(null);
   const [shops, setShops] = useState<ShopRow[] | null>(null);
   const [needs, setNeeds] = useState<OpenNeed[] | null>(null);
+  const [chat, setChat] = useState("");
+  const [draft, setDraft] = useState<DraftState>({ kind: "idle" });
   const kit = useApiBase(SELLER_KIT_URL);
   // the hosted site shows the recorded SIM snapshot (#398); locally, what the kit answers
   const shownShops = kit.local ? parseShops(recorded.shops) : shops;
@@ -71,6 +93,21 @@ export default function SellPage() {
   const margin = form.mode === "fixed_margin";
   const shownId = idTouched ? form.id : slugify(form.name);
 
+  const onDraft = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chat.trim()) return;
+    setDraft({ kind: "busy" });
+    const res = await askClaude(chat);
+    setDraft(res);
+    if (res.kind === "done") {
+      // Prefill the form below. The owner edits it and confirms; the Seller Kit still validates it and Smell Test still screens it.
+      setForm(draftToForm(res.vetted.draft));
+      setIdTouched(false);
+      setErrors([]);
+      setCreated(null);
+    }
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreated(null);
@@ -97,15 +134,14 @@ export default function SellPage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
+    <div className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-6 pt-2 md:px-4 md:pt-6">
       <header>
-        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[22px]/[28px] font-semibold tracking-[-0.01em]">
+        <p className="text-[13px] leading-[18px] text-muted">Seller Kit</p>
+        <h1 className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[28px] font-medium leading-[34px] tracking-[-0.015em]">
           Sell on {BRAND} <OriginChip origin="SIM" />
         </h1>
-        <p className="mt-2 text-[15px]/[20px] text-ink-2">
-          Describe your shop once. The Seller Kit checks it and writes a config your own seller agent runs from. Everything here is a simulation:
-          the kit cannot verify a real shop, so shops it writes are SIM.
-        </p>
+        <p className="mt-2 text-[15px]/[20px] text-ink-2">Describe your shop once. Your agent bids from it, never below your floor.</p>
+        <Details summary="What this does"><p>The Seller Kit checks your shop and writes a config your own seller agent runs from. It cannot verify a real shop, so every shop it writes is SIM.</p></Details>
       </header>
 
       {kit.local ? (
@@ -121,10 +157,66 @@ export default function SellPage() {
       {offline && (
         <Card>
           <p className="flex items-center gap-2 font-medium"><span aria-hidden className="size-2 rounded-full bg-coral-mark" />Seller Kit offline.</p>
-          <p className="mt-1 text-muted">
-            Nothing was sent. Start it with <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.
-          </p>
+          <p className="mt-1 text-muted">Nothing was sent.</p>
+          <Details summary="How to start it"><p>Run <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.</p></Details>
         </Card>
+      )}
+
+      <Card>
+        <form onSubmit={onDraft} className="grid gap-3">
+          <h2 className="text-[17px]/[22px] font-semibold">Create your seller agent with Claude</h2>
+          <p className="text-[14px]/[20px] text-muted">
+            Tell Claude about your shop in a few sentences. It fills in the form below. It only writes down what you say, and you decide every number.
+          </p>
+          <label className="block">
+            <span className="sr-only">Describe your shop</span>
+            <textarea
+              className={`${input} min-h-28`}
+              value={chat}
+              maxLength={2000}
+              placeholder={EXAMPLE}
+              onChange={(e) => setChat(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" className={button} disabled={draft.kind === "busy" || !chat.trim()}>
+              {draft.kind === "busy" ? "Drafting..." : "Draft with Claude"}
+            </button>
+            <button type="button" className="min-h-11 text-[14px] text-muted hover:text-ink" onClick={() => setChat(EXAMPLE)}>
+              Use an example
+            </button>
+          </div>
+          <div aria-live="polite">
+            {draft.kind === "note" && <p className="text-[14px] text-ink-2">{draft.text}</p>}
+            {draft.kind === "done" && (
+              <div className="grid gap-2 text-[14px]">
+                {draft.vetted.questions.length > 0 && (
+                  <div>
+                    <p className="text-ink-2">Claude needs {draft.vetted.questions.length === 1 ? "one more answer" : "two more answers"}. Add them to your text and draft again, or fill them in below.</p>
+                    <ul className="mt-1 list-disc pl-5">
+                      {draft.vetted.questions.map((q) => (
+                        <li key={q}>{q}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {draft.vetted.dropped.length > 0 && (
+                  <p className="text-muted">Left out because you did not say it: {draft.vetted.dropped.join("; ")}.</p>
+                )}
+                {draft.vetted.draft.lines.some((l) => l.quantity !== null) && (
+                  <p className="text-muted">
+                    Stock you named: {draft.vetted.draft.lines.filter((l) => l.quantity !== null).map((l) => `${l.quantity} x ${l.part}`).join(", ")}. The kit has no stock field, so it is not sent.
+                  </p>
+                )}
+                <p className="text-muted">Add the link to each listing page yourself. Then send: the Seller Kit validates it and Smell Test screens your text.</p>
+              </div>
+            )}
+          </div>
+        </form>
+      </Card>
+
+      {draft.kind === "done" && (
+        <p className="rounded-xl bg-pulse-soft px-4 py-2 text-[14px]/[20px] font-medium text-pulse-soft-ink">Drafted by Claude. Check every field.</p>
       )}
 
       <form onSubmit={onSubmit} className="grid gap-4" noValidate>
@@ -137,7 +229,7 @@ export default function SellPage() {
             <Field label="Owner (optional)">
               <input className={input} value={form.owner} maxLength={60} onChange={(e) => set("owner", e.target.value)} />
             </Field>
-            <Field label="What kind of shop" hint="For example: local shop, refurbisher, online reseller.">
+            <Field label="Kind of shop" hint="Local shop, refurbisher, online reseller.">
               <input className={input} value={form.archetype} maxLength={200} required onChange={(e) => set("archetype", e.target.value)} />
             </Field>
             <Field label="Agent id" hint="Lowercase letters, digits, - and _. Also the config file name.">
@@ -174,10 +266,8 @@ export default function SellPage() {
 
         <Card>
           <Step n={3}>What you sell</Step>
-          <p className="mb-3 text-[13px] text-muted">
-            One row per part and condition. The floor is the lowest unit price your agent will ever bid, so it never goes under it. Add a second row with
-            the same part and another condition to offer both in one bid.
-          </p>
+          <p className="mb-3 text-[13px] text-muted">One row per part and condition. Your agent never bids under the floor.</p>
+          <Details summary="About floors and conditions" className="mb-3 mt-0"><p>The floor is the lowest unit price your agent will ever bid. Add a second row with the same part and another condition to offer both in one bid.</p></Details>
           <div className="grid gap-4">
             {form.rows.map((r, i) => (
               <fieldset key={i} className="grid gap-3 rounded-xl bg-surface-2 p-3 sm:grid-cols-2">
@@ -229,10 +319,10 @@ export default function SellPage() {
         <Card>
           <Step n={4}>Perks and claims</Step>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Perks (one per line)" hint="For example: 30-day returns, free local pickup.">
+            <Field label="Perks, one per line" hint="30-day returns, local pickup.">
               <textarea className={`${input} min-h-24`} value={form.perks} onChange={(e) => set("perks", e.target.value)} />
             </Field>
-            <Field label="Claims about your parts (one per line)" hint="For example: new, sealed. A buyer can hold you to these.">
+            <Field label="Claims, one per line" hint="New, sealed. Buyers can hold you to these.">
               <textarea className={`${input} min-h-24`} value={form.claims} onChange={(e) => set("claims", e.target.value)} />
             </Field>
           </div>
@@ -286,17 +376,18 @@ export default function SellPage() {
               )}
             </>
           )}
-          <p className="mt-3 text-[13px] font-medium">What happens next</p>
-          <ol className="mt-1 list-decimal pl-5 text-[14px] text-muted">
-            <li>Run the command above on a machine with this repo and its agents environment. It starts your seller agent on a free port from 8016.</li>
-            <li>The buyer agent only asks the sellers on its list. Your agent bids once the buyer is told its address; that is not automatic yet.</li>
-            <li>In a sealed round your agent bids from your listings and never below your floor. All of this is SIM.</li>
-          </ol>
+          <Details summary="What happens next">
+            <ol className="list-decimal pl-5">
+              <li>Run the command above on a machine with this repo and its agents environment. It starts your seller agent on a free port from 8016.</li>
+              <li>The buyer agent only asks the sellers on its list. Your agent bids once the buyer is told its address; that is not automatic yet.</li>
+              <li>In a sealed round your agent bids from your listings and never below your floor. All of this is SIM.</li>
+            </ol>
+          </Details>
         </Card>
       )}
 
       <Card>
-        <Label>Shops written so far</Label>
+        <Label>Shops written</Label>
         {shownShops === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
         ) : shownShops.length === 0 ? (
@@ -316,7 +407,7 @@ export default function SellPage() {
       </Card>
 
       <Card>
-        <Label>Open needs you could bid on</Label>
+        <Label>Open needs</Label>
         {shownNeeds === null ? (
           <p className="text-muted">{offline ? "Seller Kit offline." : "Loading..."}</p>
         ) : shownNeeds.length === 0 ? (
@@ -335,7 +426,7 @@ export default function SellPage() {
             ))}
           </ul>
         )}
-        <p className="mt-2 text-[12px] text-muted">The buyer&apos;s spending cap is never shown to sellers.</p>
+        <p className="mt-2 text-[12px] text-muted">Buyer caps are never shown.</p>
       </Card>
     </div>
   );

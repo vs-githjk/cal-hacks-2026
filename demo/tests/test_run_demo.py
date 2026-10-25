@@ -436,7 +436,7 @@ def test_stripe_http_error_shows_stripe_error_type_never_the_key():
                                      io.BytesIO(json.dumps({"error": {"type": "invalid_request_error", "code": "api_key_invalid"}}).encode()))
     with mock.patch.object(approval_flow, "stripe_charge_test", boom):
         ch, note = approval_flow.charge_or_stub(_mandate(), {STRIPE_ENV: key}, use_stripe=True)
-    assert ch["mode"] == "SIM stub" and "HTTP 401, invalid_request_error/api_key_invalid" in note
+    assert ch["status"] == "uncertain" and ch["id"] is None and "HTTP 401, invalid_request_error/api_key_invalid" in note  # #449 item 4 RT-10
     assert key not in note and key not in json.dumps(ch)
 
 
