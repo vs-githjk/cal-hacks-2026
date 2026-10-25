@@ -183,6 +183,20 @@ Shield on its development set stops 30 of 30, but its rules were written against
 
 Public data: the CPSC recalls API and [docyx/pc-part-dataset](https://github.com/docyx/pc-part-dataset) (MIT) for compatibility fields.
 
+### Our Apify Actors
+
+IDs and run ids read from the Apify account on Oct 24 2026 (anoopibrampur). Four are public; the fifth is built but not published yet.
+
+| Actor | Actor ID | `username/actor-name` | URL | Pricing (pay per event) | Last successful run |
+|---|---|---|---|---|---|
+| Listing Claim Checker | `U4g8XPRpuGhDa97cM` | `anoopibrampur/tech-bazaar-claim-check` | https://apify.com/anoopibrampur/tech-bazaar-claim-check | $0.01 per `claim-checked` (only verified or false claims), $0.00005 per `apify-actor-start` | `T0ASSKGvCUf8DclZ5` (Oct 24 19:53 UTC) |
+| PC Build Compatibility Checker | `djo1yhWs81xud1DkO` | `anoopibrampur/pc-build-compatibility-checker` | https://apify.com/anoopibrampur/pc-build-compatibility-checker | $0.005 per `build-checked`, $0.00005 per `apify-actor-start` | `oNgFAznvcXn3RCO7H` (Oct 24 20:04 UTC) |
+| Electronics Recall Checker | `uMK7F4tqYnnbBkknU` | `anoopibrampur/electronics-recall-checker` | https://apify.com/anoopibrampur/electronics-recall-checker | $0.002 per `product-checked`, $0.00005 per `apify-actor-start` | `ItvSaUKtsjwhXd5jg` (Oct 24 22:48 UTC) |
+| Seller Agent-Readiness Report | `whYB0iBdGanGPVv05` | `anoopibrampur/seller-agent-readiness-report` | https://apify.com/anoopibrampur/seller-agent-readiness-report | $0.02 per `listing-reported` (unreadable pages are free); default run 1 GB and 300 s | `Ug5TASTEbVcwSeCnV` (Oct 24 22:47 UTC) |
+| Listing Injection Screen | none yet: **not on Apify** (the API returns 404 for `anoopibrampur/listing-injection-screen`) | `anoopibrampur/listing-injection-screen` (planned) | code: `data/injection_screen_actor/` (run `sh bundle.sh`, then publish) | not set | none |
+
+How useful each one is, and which are thin: [docs/ACTORS.md](docs/ACTORS.md).
+
 ## Fetch.ai agents
 
 | Agent name | Role | Agentverse address |

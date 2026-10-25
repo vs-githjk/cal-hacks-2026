@@ -14,6 +14,18 @@ Written Sat Oct 24 2026 (Lane C). Purpose: say honestly which Actors earn their 
 
 Rating key: 5 = the product's decisions depend on this logic and it is checked against maker or government data; 4 = the logic is in the product and sound, but we have no real-world catch yet; 3 = real but thin (a wrapper on logic that lives elsewhere, or not on the demo path); 2 = mostly there for the count; 1 = for the count only.
 
+## Actor IDs (for Apify)
+
+| Actor | Actor ID | `username/actor-name` | URL | Pricing (pay per event) | Last successful run |
+|---|---|---|---|---|---|
+| Listing Claim Checker | `U4g8XPRpuGhDa97cM` | `anoopibrampur/tech-bazaar-claim-check` | https://apify.com/anoopibrampur/tech-bazaar-claim-check | $0.01 per `claim-checked` (only verified or false claims), $0.00005 per `apify-actor-start` | `T0ASSKGvCUf8DclZ5` (Oct 24 19:53 UTC) |
+| PC Build Compatibility Checker | `djo1yhWs81xud1DkO` | `anoopibrampur/pc-build-compatibility-checker` | https://apify.com/anoopibrampur/pc-build-compatibility-checker | $0.005 per `build-checked`, $0.00005 per `apify-actor-start` | `oNgFAznvcXn3RCO7H` (Oct 24 20:04 UTC) |
+| Electronics Recall Checker | `uMK7F4tqYnnbBkknU` | `anoopibrampur/electronics-recall-checker` | https://apify.com/anoopibrampur/electronics-recall-checker | $0.002 per `product-checked`, $0.00005 per `apify-actor-start` | `ItvSaUKtsjwhXd5jg` (Oct 24 22:48 UTC) |
+| Seller Agent-Readiness Report | `whYB0iBdGanGPVv05` | `anoopibrampur/seller-agent-readiness-report` | https://apify.com/anoopibrampur/seller-agent-readiness-report | $0.02 per `listing-reported` (unreadable pages are free); default run 1 GB and 300 s | `Ug5TASTEbVcwSeCnV` (Oct 24 22:47 UTC) |
+| Listing Injection Screen | none yet: **not on Apify** (the API returns 404 for `anoopibrampur/listing-injection-screen`) | `anoopibrampur/listing-injection-screen` (planned) | code: `data/injection_screen_actor/` (run `sh bundle.sh`, then publish) | not set | none |
+
+The Apify account API on Oct 24 shows no Actor named `listing-injection-screen`, so it has no ID or run yet. Publishing it (`sh bundle.sh` in its folder, then the publish script) creates a private Actor; that step was blocked in this session and needs Anoop's go-ahead.
+
 ## Reading the table honestly
 
 - **Two Actors are substantial (1 and 2).** They package the logic the product itself runs. If the Actors vanished tomorrow, the product would lose its compatibility checks and its claim checks, so these are not padding.
