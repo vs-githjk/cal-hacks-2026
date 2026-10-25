@@ -212,6 +212,11 @@ function beatsOf(bracket: Bracket, offers: readonly SceneOffer[], winner: string
   return beats;
 }
 
+/** True when the market has at most one row in total, so there is nothing worth watching yet. */
+export function isEmptyMarket(rows: ArenaRows): boolean {
+  return rows.rounds.length + rows.needs.length + rows.results.length + rows.events.length <= 1;
+}
+
 /** The scene for the latest round (by openedAt). Pure and deterministic. */
 export function projectArenaScene(rows: ArenaRows, opts: { sample?: boolean } = {}): ArenaScene {
   const sample = opts.sample === true;

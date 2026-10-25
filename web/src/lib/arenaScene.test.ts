@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  IDLE, MAX_SEQUENCE_MS, offerKey, playback, projectArenaScene, storyFor,
+  IDLE, MAX_SEQUENCE_MS, isEmptyMarket, offerKey, playback, projectArenaScene, storyFor,
   type ArenaRows, type ArenaScene, type EventRow, type LineRow, type NeedRow, type Playback, type ResultRow, type RoundRow,
 } from "./arenaScene.ts";
 import { SAMPLES } from "./arenaFixture.ts";
@@ -747,4 +747,10 @@ test("story: no text uses em or en dashes", () => {
       assert.doesNotMatch(JSON.stringify(storyFor(scene, pbAt(scene, k))), dashes);
     }
   }
+});
+
+test("isEmptyMarket is true for 0 or 1 rows in total and false for 2", () => {
+  assert.equal(isEmptyMarket(rows()), true);
+  assert.equal(isEmptyMarket(rows({ rounds: [round()] })), true);
+  assert.equal(isEmptyMarket(rows({ rounds: [round()], needs: [need()] })), false);
 });

@@ -1054,7 +1054,7 @@ export function Floor3D({ scene, beat, frozen, reducedMotion, selected, onPick, 
               className={`flex flex-col items-center whitespace-nowrap rounded-lg bg-white px-2.5 py-[3px] text-[13px] font-semibold leading-[17px] text-[#2B2A33] shadow-[0_4px_12px_rgba(60,40,30,0.18)] ${selected === p.key ? "ring-2 ring-[#2F6F6A]" : ""} ${p.struck ? "opacity-75" : ""} ${p.word === "Winner" ? "bg-[#FFF6DD] ring-2 ring-[#D4A548]" : ""}`}
             >
               <span className="flex items-center gap-1.5">
-                <span className={`max-w-[10rem] truncate ${p.struck ? "line-through" : ""}`}>{p.name}</span>
+                <span className={`max-w-[6.5rem] truncate sm:max-w-[10rem] ${p.struck ? "line-through" : ""}`}>{p.name}</span>
                 <Chip origin={p.origin} />
               </span>
               {(p.price || p.word) && (
