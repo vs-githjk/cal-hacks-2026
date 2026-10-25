@@ -33,7 +33,7 @@ def seller(sid, name, price, origin=SIM, url=None, length=303, snap=""):
 
 
 def sim_catalog(spec, index):
-    return build.default_catalog(spec, index, mirror=False)
+    return build.default_catalog(spec, index, mirror=False, trap=False)
 
 
 def run_build(m=None, *, allowance=None, cartesia="default", says=None, tmp_path=None, catalog=sim_catalog, plan=None, real_gpu=False, **kw):
@@ -526,9 +526,7 @@ def test_a_champion_this_run_never_bid_is_never_mandated(tmp_path):
     m = FakeMarket()
     r = build.BuildRun(build.demo_plan(), make_clients(m), catalog=sim_catalog, cartesia=FakeCartesia("x"), out_dir=tmp_path, delay=0,
                        sleep=lambda x: None, clock=lambda: 0.0, real_gpu_round=False)
-    r._execute(build.goal_steps(r.plan, None))
-    for i, spec in enumerate(r.plan.parts):
-        r._run_part(i, spec)
+    r.run_rounds()
     r.ledger.pop(r.champions()[0]["gpu"]["bidId"])      # the market's rank 1 is not one of ours
     champs, bad = r.champions()
     assert "gpu" in bad and "not placed by this build" in bad["gpu"] and "gpu" not in champs
@@ -666,4 +664,4 @@ def test_dry_run_prints_the_steps_touches_nothing_and_exits_zero(capsys, tmp_pat
     monkeypatch.chdir(tmp_path)
     assert build.main(["--dry-run"]) == 0
     out = capsys.readouterr().out
-    assert "post_goal" in out and out.count("post_need") == 6 and out.count("open_round") == 6 and "create_mandate" not in out
+    assert "post_goal" in out and out.count("post_need") == 7 and out.count("open_round") == 7 and "create_mandate" not in out   # six parts and the board's re-plan
