@@ -5,7 +5,9 @@ import { useMemo } from "react";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { Mark } from "@/components/shell";
-import { OriginChip, clock } from "@/components/ui";
+import { OriginChip, Label, clock } from "@/components/ui";
+import { Question, BoutBadge } from "@/components/arena";
+import { roman } from "@/lib/roman";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { asOrigin, latestRound } from "@/lib/screens";
 import { toDate } from "@/lib/stdb";
@@ -16,6 +18,8 @@ const ROUTES: { href: string; path: string; title: string; text: string; chips: 
   { href: "/floor", path: "/floor", title: "3D floor", text: "Every character moves only when a market row names it. Click one to see its row.", chips: ["SIM"] },
   { href: "/seller/seller-a", path: "/seller/[id]", title: "Seller", text: "One seller's view: the pooled lot as a band, its own loss reports, what to change.", chips: ["SIM"] },
 ];
+
+const PARTS = ["GPU", "CPU", "Motherboard", "RAM", "SSD", "Cooler"];
 
 /** Home: the first screen judges see. Every number on it is counted from live market rows. */
 export default function Home() {
@@ -46,9 +50,8 @@ export default function Home() {
             <span className={`h-1.5 w-1.5 rounded-full ${conn.isActive ? "bg-mint" : "bg-coral"}`} aria-hidden />
             {r ? `${r.id} · ${r.state === "closed" ? "closed" : "open"}` : "no round yet"}
           </p>
-          <h1 className="max-w-[16ch] text-[clamp(34px,5.5vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance">
-            The refereed arena for{" "}
-            <span className="bg-gradient-to-r from-ink via-ink-2 to-muted bg-clip-text text-transparent">agent commerce.</span>
+          <h1 className="max-w-[18ch] font-display text-[clamp(30px,5vw,56px)] font-semibold leading-[1.08] tracking-[0.01em] text-balance">
+            The arena answers one question at a time.
           </h1>
           <p className="mt-5 max-w-[52ch] text-[16px] text-ink-2">
             Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
@@ -70,10 +73,28 @@ export default function Home() {
         </div>
       </section>
 
+      <Question question="Who builds the best 1440p gaming PC under $2,000?" bout={1} of={6} status="open" origin="SIM" />
+
+      <section aria-label="The program" className="grid gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <Label>The program</Label>
+          <OriginChip origin="SIM" />
+        </div>
+        <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {PARTS.map((p, i) => (
+            <li key={p} className="card flex flex-col items-start gap-2 p-4">
+              <span className="font-display text-[32px] font-semibold leading-none text-accent">{roman(i + 1)}</span>
+              <span className="text-[14px] font-medium text-ink">{p}</span>
+              <BoutBadge status="waiting" />
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <section aria-label="This round in numbers" className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-5">
         {stats.map((s) => (
           <div key={s.label} className="bg-panel px-4 py-4">
-            <div className="font-mono text-[clamp(26px,3vw,36px)] font-medium leading-none tracking-[-0.04em] tabular-nums">{s.value}</div>
+            <div className="font-display text-[clamp(26px,3vw,36px)] font-semibold leading-none tabular-nums text-ink">{s.value}</div>
             <div className="mt-2 flex items-center gap-1.5 text-[12px] text-muted">
               {s.label} <OriginChip origin={s.origin} />
             </div>
@@ -110,7 +131,7 @@ export default function Home() {
                 {t.path}
                 <span className="text-muted transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
               </div>
-              <div className="mt-2 text-[17px] font-semibold tracking-[-0.01em]">{t.title}</div>
+              <div className="mt-2 font-display text-[17px] font-semibold tracking-[0.04em]">{t.title}</div>
               <p className="mt-1 text-[13px] text-muted">{t.text}</p>
             </div>
             <div className="mt-3 flex gap-1.5">
