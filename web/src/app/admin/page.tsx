@@ -3,6 +3,7 @@
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { SIM_AGENT_EVENTS, SIM_TELEMETRY, canSeeAdmin, parseAgentEvents, parseTelemetry } from "@/lib/admin";
+import { SHIELD } from "@/lib/brand";
 
 /** Operator only: telemetry counts, no money, price, phone or name. Telemetry is not mounted (nothing fetched) unless the role allows it. */
 export default function AdminPage() {
@@ -26,7 +27,7 @@ export default function AdminPage() {
 
 const KPIS = [
   ["Accounts", "accounts_created"], ["Goals", "goals_posted"], ["Rounds opened", "rounds_opened"], ["Rounds closed", "rounds_closed"],
-  ["Bids", "bids"], ["Shield catches", "shield_catches"], ["Calls", "calls_placed"], ["Approvals", "approvals"],
+  ["Bids", "bids"], [`${SHIELD} catches`, "shield_catches"], ["Calls", "calls_placed"], ["Approvals", "approvals"],
   ["Denials", "denials"], ["Errors", "errors"],
 ] as const;
 

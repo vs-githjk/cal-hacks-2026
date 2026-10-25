@@ -12,17 +12,37 @@ const BY_KEY: Record<AgentInfo["key"], EdgeId> = {
   seller3: "sellers-shield",
 };
 
-// Names the AGENTS registry lacks: demo/bridge.py AGENT_NAMES (the buyer agent is already registered).
-const ALIASES: Record<string, EdgeId> = { "bazaar advocate": "buyer-advocate", "bazaar shield": "shield-buyer", "smell test": "shield-buyer" };
+// Names the AGENTS registry lacks, each mapped to the registered agent it is: demo/bridge.py AGENT_NAMES, and the names the
+// agents carried before the Fish Market rename (#438, #448), which the bridge still emits.
+const ALIASES: Record<string, AgentInfo["key"]> = {
+  "tech bazaar buyer": "buyer",
+  "bazaar advocate": "advocate",
+  "quality advocate": "advocate",
+  "tech bazaar quality advocate": "advocate",
+  "bazaar shield": "shield",
+  "shield client": "shield",
+  "tech bazaar shield client": "shield",
+  "smell test": "shield",
+  "smell test client": "shield",
+};
 
-const EDGE_BY_NAME = new Map<string, EdgeId>([
-  ...AGENTS.map((a): [string, EdgeId] => [a.name.toLowerCase(), BY_KEY[a.key]]),
+const KEY_BY_NAME = new Map<string, AgentInfo["key"]>([
+  ...AGENTS.map((a): [string, AgentInfo["key"]] => [a.name.toLowerCase(), a.key]),
   ...Object.entries(ALIASES),
 ]);
 
-/** The edge for a registered agent or demo bridge name (exact, case-insensitive). Any other name, or an empty one, lights nothing. */
+const norm = (name: string) => name.trim().toLowerCase();
+
+/** The edge for a registered agent, a demo bridge name or a pre-rename name (exact, case-insensitive). Any other name, or an empty one, lights nothing. */
 export function edgeForAgent(agentName: string): EdgeId | null {
-  return EDGE_BY_NAME.get(agentName.trim().toLowerCase()) ?? null;
+  const key = KEY_BY_NAME.get(norm(agentName));
+  return key ? BY_KEY[key] : null;
+}
+
+/** The name to show for an agent_event row: the registry's current name when the row's name is one of ours (or an old one), else the raw name. */
+export function displayNameFor(agentName: string): string {
+  const key = KEY_BY_NAME.get(norm(agentName));
+  return key ? AGENTS.find((a) => a.key === key)!.name : agentName;
 }
 
 interface EventLike {
