@@ -24,6 +24,21 @@
         "all items new retail, sealed"
       ],
       "listings": {
+        "rtx 5070 ti": {
+          "price": 1299.99,
+          "floor_by_condition": {
+            "new": 1239.0
+          },
+          "condition": "new",
+          "page_condition": "new",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/byte-bros/rtx-5070-ti",
+          "attrs": {
+            "category": "gpu",
+            "chipset": "RTX 5070 Ti",
+            "length_mm": 303
+          }
+        },
         "rtx 4070 super 12gb": {
           "price": 599.99,
           "floor_by_condition": {
@@ -204,6 +219,21 @@
         "brand new, lowest price on the floor"
       ],
       "listings": {
+        "rtx 5070 ti": {
+          "price": 1249.0,
+          "floor_by_condition": {
+            "new": 1209.0
+          },
+          "condition": "new",
+          "page_condition": "open-box",
+          "variant": "retail",
+          "listing_url": "https://example.com/sim/frankie/rtx-5070-ti-deal",
+          "attrs": {
+            "category": "gpu",
+            "chipset": "RTX 5070 Ti",
+            "length_mm": 303
+          }
+        },
         "rtx 4070 super 12gb": {
           "price": 529.0,
           "floor_by_condition": {
