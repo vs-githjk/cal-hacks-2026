@@ -1,0 +1,122 @@
+[
+ {
+  "id": "microcenter:e89fa30da8b2",
+  "category": "storage",
+  "name": "CRAS C910G 2TB 3D TLC NAND Flash PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "model_number": "971572",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/705544/klevv-cras-c910g-2tb-3d-tlc-nand-flash-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "snapshot_id": "microcenter-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:23+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/705544/klevv-cras-c910g-2tb-3d-tlc-nand-flash-pcie-gen-4-x4-nvme-m2-internal-ssd",
+   "price": 299.99,
+   "stock": "19 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "19 IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:f7c04de90ce2",
+  "category": "storage",
+  "name": "9100 PRO 2TB Samsung V NAND TLC NAND (V8) PCIe Gen 5 x4 and PCIe Gen 5 x4 NVMe M.2 Internal SSD",
+  "model_number": "815258",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 419.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/691300/samsung-9100-pro-2tb-samsung-v-nand-tlc-nand-(v8)-pcie-gen-5-x4-and-pcie-gen-5-x4-nvme-m2-internal-ssd",
+  "snapshot_id": "microcenter-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:23+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/691300/samsung-9100-pro-2tb-samsung-v-nand-tlc-nand-(v8)-pcie-gen-5-x4-and-pcie-gen-5-x4-nvme-m2-internal-ssd",
+   "price": 419.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:97755a962366",
+  "category": "storage",
+  "name": "990 PRO 2TB Samsung V NAND 3-bit MLC PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "model_number": "516120",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 409.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/660429/samsung-990-pro-2tb-samsung-v-nand-3-bit-mlc-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "snapshot_id": "microcenter-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:23+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/660429/samsung-990-pro-2tb-samsung-v-nand-3-bit-mlc-pcie-gen-4-x4-nvme-m2-internal-ssd",
+   "price": 409.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:8878b46340c0",
+  "category": "storage",
+  "name": "QN450 2TB SSD 3D QLC NAND PCIe Gen 4 x4 NVMe M.2 2280 Internal Solid State Drive",
+  "model_number": "701813",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 299.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/680086/inland-qn450-2tb-ssd-3d-qlc-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+  "snapshot_id": "microcenter-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:23+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/680086/inland-qn450-2tb-ssd-3d-qlc-nand-pcie-gen-4-x4-nvme-m2-2280-internal-solid-state-drive",
+   "price": 299.99,
+   "stock": "25+ IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "25+ IN STOCK"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "microcenter:a6522339acd0",
+  "category": "storage",
+  "name": "BLACK SN850X 2TB 112-Layer BiCS5 TLC NAND PCIe Gen 4 x4 NVMe M.2 Internal SSD",
+  "model_number": "691840",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 389.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.microcenter.com/product/679348/wd-black-sn850x-2tb-112-layer-bics5-tlc-nand-pcie-gen-4-x4-nvme-m2-internal-ssd",
+  "snapshot_id": "microcenter-storage-2tb-nvme-gen4-ssd-20261025T0123Z",
+  "snapshot_date": "2026-10-25T01:23:23+00:00",
+  "listing": {
+   "url": "https://www.microcenter.com/product/679348/wd-black-sn850x-2tb-112-layer-bics5-tlc-nand-pcie-gen-4-x4-nvme-m2-internal-ssd",
+   "price": 389.99,
+   "stock": "18 IN STOCK",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "18 IN STOCK"
+  },
+  "maker_model": null
+ }
+]

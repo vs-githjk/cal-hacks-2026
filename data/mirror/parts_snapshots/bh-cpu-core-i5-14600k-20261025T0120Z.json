@@ -1,0 +1,26 @@
+[
+ {
+  "id": "bh:b988028fb775",
+  "category": "cpu",
+  "name": "Intel Core i5-14600K 3.5 GHz 14-Core LGA 1700 Processor",
+  "model_number": "BX8071514600K",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 249.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1781465-REG/intel_bx8071514600k_core_i5_14600k_14_core_lga.html",
+  "snapshot_id": "bh-cpu-core-i5-14600k-20261025T0120Z",
+  "snapshot_date": "2026-10-25T01:20:31+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1781465-REG/intel_bx8071514600k_core_i5_14600k_14_core_lga.html",
+   "price": 249.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

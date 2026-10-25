@@ -1,0 +1,98 @@
+[
+ {
+  "id": "bh:944ebcff3946",
+  "category": "memory",
+  "name": "Crucial 32GB Laptop DDR4 3200 MHz SODIMM Memory Kit (2 x 16GB)",
+  "model_number": "CT2K16G4SFRA32A",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 224.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1576450-REG/crucial_ct2k16g4sfra32a_32gb_kit_16gb_x.html",
+  "snapshot_id": "bh-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:37+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1576450-REG/crucial_ct2k16g4sfra32a_32gb_kit_16gb_x.html",
+   "price": 224.99,
+   "stock": "discontinued",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "discontinued"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:ff24a1928d6d",
+  "category": "memory",
+  "name": "PNY 32GB Performance DDR4 3200 MHz Memory Kit (2 x 16GB)",
+  "model_number": "MD32GK2D43200-TB",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 239.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1975132-REG/pny_md32gk2d43200_tb_performance_32gb_ddr4_ram.html",
+  "snapshot_id": "bh-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:37+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1975132-REG/pny_md32gk2d43200_tb_performance_32gb_ddr4_ram.html",
+   "price": 239.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:3a1312e7e18f",
+  "category": "memory",
+  "name": "Silicon Power 32GB DDR4 3200 MT/s UDIMM Memory Kit (2 x 16GB)",
+  "model_number": "SP032GXLZU320BDA",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 209.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1973436-REG/silicon_power_sp032gxlzu320bda_32gb_xpower_turbine_3200mhz.html",
+  "snapshot_id": "bh-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:37+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1973436-REG/silicon_power_sp032gxlzu320bda_32gb_xpower_turbine_3200mhz.html",
+   "price": 209.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ },
+ {
+  "id": "bh:4afb3db313cf",
+  "category": "memory",
+  "name": "PNY 32GB XLR8 3200 MHz DDR4 Low-Profile Desktop Memory Kit (2 x 16GB)",
+  "model_number": "MD32GK2D4320016LP-V1",
+  "condition": "unknown",
+  "attrs": {},
+  "price": 229.99,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.bhphotovideo.com/c/product/1670682-REG/pny_technologies_md32gk2d4320016lp_32gb_2x16gb_xlr8_gaming.html",
+  "snapshot_id": "bh-memory-ddr4-32gb-3200-20261025T0122Z",
+  "snapshot_date": "2026-10-25T01:22:37+00:00",
+  "listing": {
+   "url": "https://www.bhphotovideo.com/c/product/1670682-REG/pny_technologies_md32gk2d4320016lp_32gb_2x16gb_xlr8_gaming.html",
+   "price": 229.99,
+   "stock": "out_of_stock",
+   "shipping_cost": null,
+   "shipping_captured": false,
+   "landed_price": null,
+   "availability": "out_of_stock"
+  },
+  "maker_model": null
+ }
+]

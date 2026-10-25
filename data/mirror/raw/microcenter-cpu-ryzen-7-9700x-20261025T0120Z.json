@@ -1,0 +1,47 @@
+[
+ {
+  "productTitle": "Ryzen 7 9700X Granite Ridge AM5 3.80GHz 8-Core Boxed Processor - Heatsink Not Included",
+  "sku": "721217",
+  "url": "https://www.microcenter.com/product/682199/amd-ryzen-7-9700x-granite-ridge-am5-380ghz-8-core-boxed-processor-heatsink-not-included",
+  "mpn": null,
+  "price": 289.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "AMD Ryzen 7 9700X, Gigabyte B650 Gaming X AX V2 AM5, G.Skill Flare X5 Series 32GB DDR5-6000 Kit, Computer Build Bundle",
+  "sku": "999999",
+  "url": "https://www.microcenter.com/product/5007477/amd-ryzen-7-9700x,-gigabyte-b650-gaming-x-ax-v2-am5,-gskill-flare-x5-series-32gb-ddr5-6000-kit,-computer-build-bundle",
+  "mpn": null,
+  "price": 699.99,
+  "in_stock": true,
+  "availability": "25+ IN STOCK"
+ },
+ {
+  "productTitle": "AMD Ryzen 7 9700X, Gigabyte B650 Gaming X AX V2 AM5, Corsair Vengeance 32GB DDR5-6000 Kit, Computer Build Bundle",
+  "sku": "999999",
+  "url": "https://www.microcenter.com/product/5007670/amd-ryzen-7-9700x,-gigabyte-b650-gaming-x-ax-v2-am5,-corsair-vengeance-32gb-ddr5-6000-kit,-computer-build-bundle",
+  "mpn": null,
+  "price": 699.99,
+  "in_stock": true,
+  "availability": "17 IN STOCK"
+ },
+ {
+  "productTitle": "AMD Ryzen 7 9700X, Gigabyte B850 Gaming X WiFi6E AM5, G.Skill Flare X5 Series 32GB DDR5-6000 Kit, Computer Build Bundle",
+  "sku": "999999",
+  "url": "https://www.microcenter.com/product/5007667/amd-ryzen-7-9700x,-gigabyte-b850-gaming-x-wifi6e-am5,-gskill-flare-x5-series-32gb-ddr5-6000-kit,-computer-build-bundle",
+  "mpn": null,
+  "price": 959.97,
+  "in_stock": true,
+  "availability": "22 IN STOCK"
+ },
+ {
+  "productTitle": "AMD Ryzen 7 9700X, Gigabyte B850 Gaming X WiFi6E AM5, Corsair Vengeance 32GB DDR5-6000 Kit, Computer Build Bundle",
+  "sku": "999999",
+  "url": "https://www.microcenter.com/product/5007676/amd-ryzen-7-9700x,-gigabyte-b850-gaming-x-wifi6e-am5,-corsair-vengeance-32gb-ddr5-6000-kit,-computer-build-bundle",
+  "mpn": null,
+  "price": 729.99,
+  "in_stock": true,
+  "availability": "17 IN STOCK"
+ }
+]
