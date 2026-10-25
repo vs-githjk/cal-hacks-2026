@@ -70,6 +70,17 @@ def _origin(offer):
     return o if o in ("LIVE", "MIRROR", "SIM") else "SIM"
 
 
+def _early(offer):
+    """The early knockout for an offer as (rule_id, reason), or None: bad price, not orderable, no spec."""
+    if not _good_price(offer):
+        return ("offer.bad_price", "has no real price")
+    if offer.get("orderable") is False:
+        return ("offer.not_orderable", "cannot be ordered")
+    if not offer.get("spec"):
+        return ("offer.no_spec", "has no part details to check")
+    return None
+
+
 def resolve(p, offers):
     """Pick one offer per part, cheapest first, from each round's offers {part: [{seller, price_cents, spec, source?}]}.
 
@@ -92,22 +103,14 @@ def resolve(p, offers):
         for offer in sorted(offers.get(part) or [], key=lambda o: o["price_cents"] if _good_price(o) else 0):
             spec, price, seller = _spec(part, offer), offer.get("price_cents"), offer.get("seller", "?")
             origin = _origin(offer)
-            early = None
-            if not _good_price(offer):
-                early = ("offer.bad_price", "has no real price")
-            elif origin == "MIRROR":
-                early = ("offer.mirror", "is a real store listing, shown for comparison only; it cannot be ordered")
-            elif offer.get("orderable") is False:
-                early = ("offer.not_orderable", "cannot be ordered")
-            elif not offer.get("spec"):
-                early = ("offer.no_spec", "has no part details to check")
+            early = _early(offer)
             if early:
                 knockouts.append({"part": part, "seller": seller, "rule_id": early[0], "reason": early[1], "origin": origin})
                 steps.append({"kind": "knockout", "part": part, "rule_id": early[0],
                               "line": f"{NAMES[part]}: {seller} out, {early[1]}."})
                 continue
             later = parts[parts.index(part) + 1:]
-            floor = sum(min((o["price_cents"] for o in offers.get(k) or [] if _good_price(o)), default=0) for k in later)
+            floor = sum(min((o["price_cents"] for o in offers.get(k) or [] if not _early(o)), default=0) for k in later)
             if price > budgets[part] and spent + price + floor > p["cap_cents"]:
                 reason = f"{dollars(price)} is over the {dollars(budgets[part])} {NAMES[part]} budget and the cap leaves no room"
                 knockouts.append({"part": part, "seller": seller, "rule_id": "budget.over", "reason": reason, "origin": origin})

@@ -120,15 +120,32 @@ def test_origin_is_carried_and_defaults_to_sim():
     assert _one_gpu(o)["picks"]["gpu"]["origin"] == "SIM"
 
 
-def test_mirror_and_not_orderable_offers_never_win():
-    cheap = {**offer("Mirror store", 900, **GPU), "origin": "MIRROR"}
-    nope = {**offer("FlashDeal Frankie", 1000, **GPU), "orderable": False}
-    r = _one_gpu(cheap, nope, offer("Byte Bros Outlet", 1200, **GPU))
+def test_not_orderable_offer_never_wins_even_when_mirror_and_cheapest():
+    cheap = {**offer("Mirror store", 900, **GPU), "origin": "MIRROR", "orderable": False}
+    r = _one_gpu(cheap, offer("Byte Bros Outlet", 1200, **GPU))
     assert r["picks"]["gpu"]["seller"] == "Byte Bros Outlet"
-    assert [k["rule_id"] for k in r["knockouts"]][:2] == ["offer.mirror", "offer.not_orderable"]
-    assert r["knockouts"][0]["reason"] == "is a real store listing, shown for comparison only; it cannot be ordered"
-    assert r["knockouts"][1]["reason"] == "cannot be ordered"
-    assert [k["part"] for k in r["knockouts"]][:2] == ["gpu", "gpu"]
+    assert r["knockouts"][0]["rule_id"] == "offer.not_orderable" and r["knockouts"][0]["origin"] == "MIRROR"
+    assert r["knockouts"][0]["reason"] == "cannot be ordered"
+
+
+def test_fitting_mirror_offer_can_win_and_keeps_its_origin():
+    cheap = {**offer("Mirror store", 900, **GPU), "origin": "MIRROR"}
+    r = _one_gpu(cheap, offer("Byte Bros Outlet", 1200, **GPU))
+    assert r["status"] == "locked" and r["picks"]["gpu"]["seller"] == "Mirror store"
+    assert r["picks"]["gpu"]["origin"] == "MIRROR"
+    assert not [k for k in r["knockouts"] if k["rule_id"] == "offer.mirror"]
+
+
+def test_floor_ignores_a_later_cheapest_offer_that_is_not_orderable():
+    base = offers()
+    bad_cpu = {**offer("FlashDeal Frankie", 1, name="cheap cpu"), "orderable": False}
+    later = {**base, "cpu": base["cpu"] + [bad_cpu]}
+    naive = sum(min(o["price_cents"] for o in later[k]) for k in ("cpu", "motherboard", "memory", "storage", "cooler"))
+    price = 200_000 - naive  # fits only if the unorderable offer counted toward the floor
+    p = plan(200_000, OWNED)
+    assert price > next(x["budget_cents"] for x in p["parts"] if x["part"] == "gpu")
+    r = resolve(p, {**later, "gpu": [{**offer("Big GPU", price, **GPU), "price_cents": price}]})
+    assert r["knockouts"][0]["rule_id"] == "budget.over" and r["status"] == "blocked"
 
 
 @pytest.mark.parametrize("price", [0, -5, 12.5, "100", None, True])
