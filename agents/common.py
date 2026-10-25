@@ -14,6 +14,14 @@ from uagents_core.contrib.protocols.chat import ChatAcknowledgement, ChatMessage
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = ROOT / "contracts"
 sys.path.insert(0, str(ROOT))  # so agents can import other lanes' code, e.g. `from data.fit_checker import check_fit`
+try:  # the shared quarantine list screen() reads; a sibling of common.py
+    import smell_memory
+except ImportError:  # common.py loaded by file path (demo/bridge.py), so its folder is not on sys.path
+    import importlib.util as _util
+    _spec = _util.spec_from_file_location("smell_memory", Path(__file__).with_name("smell_memory.py"))
+    smell_memory = _util.module_from_spec(_spec)
+    sys.modules["smell_memory"] = smell_memory
+    _spec.loader.exec_module(smell_memory)
 
 # Load agents/.env (gitignored) without overriding real environment variables. Empty values are skipped.
 _ENV = Path(__file__).resolve().parent / ".env"
@@ -88,7 +96,8 @@ def screen(message_id: str, sender: str, text: str, context: dict | None = None)
             if record and result["verdict"] == "allow" and _structured_payee_mismatch(text, record):
                 result.update(verdict="quarantine", reasons=["shield.payee.swap"],
                               rule_ids=["shield.payee.swap"], attack_type="payee_swap")
-            return result
+            memory = smell_memory.default()  # the shared quarantine list: a trick caught once is flagged for every agent
+            return memory.apply(text, result, context) if memory is not None else result
     except Exception:  # fail closed without echoing response bodies or transport details
         return {"message_id": message_id, "sender_agent": sender, "verdict": "block",
                 "reasons": ["shield.unavailable"], "attack_type": "unknown",
