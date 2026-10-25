@@ -28,7 +28,7 @@ export function AppHeader() {
         key={n.href}
         href={n.href}
         aria-current={on ? "page" : undefined}
-        className={`btn inline-flex min-h-10 shrink-0 items-center rounded-xl px-4 text-[15px] font-medium transition-[background-color,box-shadow,transform] ${on ? "bg-ink text-canvas shadow-[0_6px_16px_-6px_rgba(11,27,43,0.5)]" : "text-ink-2 hover:bg-white/70 hover:text-ink hover:shadow-ring"}`}
+        className={`btn inline-flex min-h-10 shrink-0 items-center rounded-xl px-3.5 text-[15px] font-medium transition-[background-color,box-shadow,transform] ${on ? "bg-ink text-canvas shadow-[0_6px_16px_-6px_rgba(11,27,43,0.5)]" : "text-ink-2 hover:bg-white/70 hover:text-ink hover:shadow-ring"}`}
       >
         {n.label}
       </Link>
@@ -39,11 +39,12 @@ export function AppHeader() {
     <header className="sticky top-0 z-40 border-b border-white/50 bg-[rgba(214,236,247,0.55)] backdrop-blur-xl">
       <nav aria-label="Main" className="relative mx-auto flex h-[60px] max-w-[1120px] items-center justify-between gap-4 px-4 md:px-8">
         <Link href="/" aria-label={`${BRAND} home`} className="inline-flex min-h-11 shrink-0 items-center">
-          <Wordmark />
+          <Wordmark showName={false} />
+          <span className="ml-2 hidden text-[16px] font-medium tracking-[-0.02em] text-ink lg:inline">{BRAND}</span>
         </Link>
-        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-2xl border border-white/70 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_-12px_rgba(11,27,43,0.25)] backdrop-blur-xl md:flex">{links}</div>
+        <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 rounded-2xl border border-white/70 bg-white/45 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_-12px_rgba(11,27,43,0.25)] backdrop-blur-xl sm:flex">{links}</div>
         <div className="flex items-center gap-2.5">
-          <LivePill on={conn.isActive} />
+          <span className="hidden lg:inline-flex"><LivePill on={conn.isActive} /></span>
           {path !== "/start" && !path.startsWith("/buyer") && (
             <Link href="/start" className="btn inline-flex min-h-10 items-center rounded-xl bg-[linear-gradient(135deg,#1e4ed8,#0891b2)] px-4 text-[14px] font-medium text-white shadow-[0_8px_20px_-8px_rgba(8,145,178,0.7)] hover:shadow-[0_10px_24px_-8px_rgba(8,145,178,0.8)]">
               Start a goal
@@ -51,7 +52,7 @@ export function AppHeader() {
           )}
         </div>
       </nav>
-      <div className="mx-3 mb-2 flex gap-1 overflow-x-auto rounded-2xl border border-white/70 bg-white/45 p-1 [scrollbar-width:none] md:hidden">{links}</div>
+      <div className="mx-auto mb-2 flex w-max max-w-full gap-0.5 overflow-x-auto rounded-2xl border border-white/70 bg-white/45 p-1 [scrollbar-width:none] sm:hidden">{links}</div>
     </header>
   );
 }
