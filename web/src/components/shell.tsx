@@ -1,12 +1,14 @@
 "use client";
 // The header and the run mode footer for every page.
 
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSpacetimeDB, useTable } from "spacetimedb/react";
 import { tables } from "@/module_bindings";
 import { STDB_DB, STDB_URI } from "@/lib/stdb";
 import { serviceStatuses, type ServiceStatus } from "@/lib/runMode";
+import { navEdges, scrollToShow } from "@/lib/navScroll";
 
 const NAV: { href: string; label: string; match?: string }[] = [
   { href: "/", label: "Home" },
@@ -28,7 +30,7 @@ export function AppHeader() {
           <Badge />
           <span data-wordmark="Tech Bazaar" className="hidden sm:inline">Tech Bazaar</span>
         </Link>
-        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto p-0 [scrollbar-width:none]">
+        <NavScroll path={path}>
           {NAV.map((n) => {
             const on = n.match ? path.startsWith(n.match) : path === n.href;
             return (
@@ -36,13 +38,13 @@ export function AppHeader() {
                 key={n.href}
                 href={n.href}
                 aria-current={on ? "page" : undefined}
-                className={`btn inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg px-3 text-[14px]/[20px] font-medium ${on ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`}
+                className={`btn inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg px-2 min-[480px]:px-3 text-[14px]/[20px] font-medium ${on ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`}
               >
                 {n.label}
               </Link>
             );
           })}
-        </div>
+        </NavScroll>
         {path !== "/start" && !path.startsWith("/buyer") && (
           <Link href="/start" className="btn hidden min-h-11 shrink-0 items-center rounded-xl bg-pulse px-5 text-[15px] font-medium text-pulse-ink sm:inline-flex">
             Start as a buyer
@@ -54,6 +56,41 @@ export function AppHeader() {
         </span>
       </nav>
     </header>
+  );
+}
+
+/** The nav links. On a narrow phone they scroll sideways; a fade on the edge that hides more links says so (#449 RT-33),
+ * and the current page's link is scrolled into view. The fade is a CSS mask driven by data-more-left / data-more-right. */
+function NavScroll({ path, children }: { path: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const measure = useCallback(() => {
+    const el = box.current;
+    if (el) setEdges(navEdges(el));
+  }, []);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const observer = new ResizeObserver(measure);   // also fires once on observe(), which sets the first state
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measure]);
+  useEffect(() => {
+    const el = box.current;
+    const current = el?.querySelector<HTMLElement>("[aria-current='page']");
+    if (el && current) el.scrollLeft = scrollToShow(el, current);
+  }, [path]);
+  return (
+    <div
+      ref={box}
+      onScroll={measure}
+      data-nav-scroll
+      data-more-left={edges.left}
+      data-more-right={edges.right}
+      className="relative flex min-w-0 flex-1 gap-1 overflow-x-auto p-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {children}
+    </div>
   );
 }
 
@@ -81,7 +118,7 @@ export function Mark({ size = 24, spin = false }: { size?: number; spin?: boolea
   );
 }
 
-const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-live", mirror: "bg-slate", sim: "bg-amber", none: "bg-slate opacity-40" };
+const DOT: Record<ServiceStatus["tone"], string> = { live: "bg-live", mirror: "bg-slate", sandbox: "bg-mint-mark", sim: "bg-amber", none: "bg-slate opacity-40" };
 
 /** Footer: one honest line about what ran. Each service's dot comes from the origin tags on the floor events it wrote (lib/runMode.ts), never a hardcoded claim. */
 export function RunModeFooter() {

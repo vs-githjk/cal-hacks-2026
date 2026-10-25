@@ -54,7 +54,7 @@ export default function Home() {
           The arena answers one question at a time.
         </h1>
         <p className="mx-auto mt-1 max-w-[56ch] text-[19px] text-ink-2">
-          Sellers bid in a sealed round. Your agent vetoes traps with proof. Above your allowance, it calls you. Nothing is paid until the condition matches.
+          Sellers bid in a sealed round. Your agent vetoes traps with proof. Inside your allowance it can pay on its own; above it, it calls you.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <Link href="/market" className="btn inline-flex min-h-14 items-center gap-2 rounded-full bg-accent px-8 text-[17px] font-semibold text-accent-ink shadow-[var(--shadow)]">

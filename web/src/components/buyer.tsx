@@ -328,7 +328,7 @@ export function ReviewCard({ review, allowance }: { review: ReviewView; allowanc
 
 export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
   if (!receipt) {
-    return <Card stripe="mint"><Label>Receipt</Label><p className="text-muted">Nothing is paid until you approve. The signed mandate and charge show here.</p></Card>;
+    return <Card stripe="mint"><Label>Receipt</Label><p className="text-muted">Inside your allowance a deal can pay on its own; above it, nothing is paid until you approve by phone. The signed mandate and charge show here.</p></Card>;
   }
   return (
     <Card stripe="mint">

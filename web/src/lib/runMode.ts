@@ -1,6 +1,8 @@
 // What each service is doing right now, read from the market's own public floor events (never hardcoded).
 // A service that has written no event yet says so; one that has says which origin tag its events carry.
 
+import { asChipOrigin } from "./origin.ts";
+
 export interface EventLike {
   kind: string;
   origin: string;
@@ -13,22 +15,22 @@ const SERVICES: { name: string; kind: string }[] = [
   { name: "Payments", kind: "payment_recorded" },
 ];
 
-const ORDER = ["LIVE", "MIRROR", "SIM"];
+const ORDER = ["LIVE", "MIRROR", "SANDBOX", "SIM"];  // SANDBOX (a vendor test mode, #449 RT-32) is more real than SIM, less than LIVE
 
 export interface ServiceStatus {
   name: string;
   text: string;
   /** Dot color: the most real origin seen. live only when a LIVE event exists. */
-  tone: "live" | "mirror" | "sim" | "none";
+  tone: "live" | "mirror" | "sandbox" | "sim" | "none";
 }
 
-/** "SIM (6)", "MIRROR + SIM (10)", or "no events yet". Anything not LIVE or MIRROR counts as SIM. */
+/** "SIM (6)", "MIRROR + SIM (10)", "SANDBOX (1)" or "no events yet". Anything not LIVE, MIRROR or SANDBOX counts as SIM. */
 export function serviceStatuses(events: readonly EventLike[], connected: boolean): ServiceStatus[] {
   return SERVICES.map(({ name, kind }) => {
     if (!connected) return { name, text: "unknown", tone: "none" };
     const mine = events.filter((e) => e.kind === kind);
     if (mine.length === 0) return { name, text: "no events yet", tone: "none" };
-    const origins = ORDER.filter((o) => mine.some((e) => (e.origin === "LIVE" || e.origin === "MIRROR" ? e.origin : "SIM") === o));
+    const origins = ORDER.filter((o) => mine.some((e) => asChipOrigin(e.origin) === o));
     return { name, text: `${origins.join(" + ")} (${mine.length})`, tone: origins[0].toLowerCase() as ServiceStatus["tone"] };
   });
 }
