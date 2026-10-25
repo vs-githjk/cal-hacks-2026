@@ -5,14 +5,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useSpacetimeDB } from "spacetimedb/react";
-import { BrandMark } from "@/components/BrandMark";
 import { DashboardPreview } from "@/components/DashboardPreview";
 import { FloorMini } from "@/components/FloorMini";
 import { HomeMore } from "@/components/HomeMore";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { OriginChip, README_URL, StatusPill } from "@/components/ui";
 import { proofStats } from "@/lib/scoreboard";
-import { BRAND, SHIELD, SHIELD_LINE, TAGLINE } from "@/lib/brand";
+import { SHIELD, SHIELD_LINE } from "@/lib/brand";
 
 // Measured results, computed from data/scoreboard.json (lib/scoreboard.ts). A test keeps the fixture copy identical to the file.
 const PROOF = proofStats(SHIELD);
@@ -40,15 +39,15 @@ export default function Home() {
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}
-      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#9fd3f3_0%,#bfe2f7_38%,#dceef9_72%,#eef3f8_100%)] px-4 pt-[84px] max-sm:-mt-[132px] max-sm:pt-[132px]">
+      <section className="relative -mt-[84px] overflow-hidden bg-[linear-gradient(180deg,#cfe4fb_0%,#d9eafc_45%,#e7f0fa_80%,#eef3f8_100%)] px-4 pt-[84px] max-sm:-mt-[132px] max-sm:pt-[132px]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-48 bg-[linear-gradient(180deg,rgba(238,243,248,0)_0%,rgba(238,243,248,0.6)_55%,#eef3f8_100%)]" aria-hidden />
         <div className="fm-caustic" aria-hidden />
         <div className="fm-orb fm-orb-a left-[-8%] top-[-20%] h-[420px] w-[520px] bg-[rgba(255,255,255,0.55)]" aria-hidden />
-        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.16)]" aria-hidden />
-        <div className="fm-orb fm-orb-a bottom-[-30%] left-[40%] h-[260px] w-[360px] bg-[rgba(255,122,69,0.12)]" aria-hidden />
+        <div className="fm-orb fm-orb-b right-[-6%] top-[0%] h-[360px] w-[420px] bg-[rgba(30,78,216,0.14)]" aria-hidden />
         {BUBBLES.map((b) => (
           <span key={b.left} className="fm-bubble" style={{ left: b.left, width: b.size, height: b.size, ["--rise" as string]: b.rise, ["--delay" as string]: b.delay }} aria-hidden />
         ))}
-        <div className="relative mx-auto grid max-w-[1120px] items-center gap-10 pb-12 pt-14 md:px-4 md:pb-16 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+        <div className="relative z-[2] mx-auto grid max-w-[1120px] items-center gap-10 pb-16 pt-14 md:px-4 md:pb-24 md:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-surface/70 px-3 py-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-ink-2 shadow-ring backdrop-blur">
               <span className="dot text-pulse" aria-hidden /> {conn.isActive ? "Market live" : "Sandbox"}
@@ -70,7 +69,7 @@ export default function Home() {
 
       {/* 2. Proof: three boxed numbers with their caveats. */}
       <section aria-label="Measured results" className="px-4">
-        <div className="mx-auto max-w-[1120px] pb-10 pt-2 md:px-4 md:pb-14 md:pt-4">
+        <div className="mx-auto max-w-[1120px] pb-10 pt-0 md:px-4 md:pb-14 md:pt-0">
           <div className="grid gap-4 md:grid-cols-3">
             {PROOF.map((p) => (
               <div key={p.value} className="fm-tile rounded-2xl p-5 md:p-6">
@@ -166,19 +165,11 @@ export default function Home() {
 
       {/* 8. Sellers, footer. */}
       <section aria-label="For sellers" className="border-t border-line px-4">
-        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-5 py-12 md:px-4 md:py-16">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-5 py-12 md:px-4 md:py-20">
           <p className="text-[22px] font-medium leading-7 tracking-[-0.015em] md:text-[28px] md:leading-[34px]">Sell here. Your agent bids, never below your floor.</p>
           <Link href="/sell" className="btn inline-flex min-h-12 items-center rounded-xl bg-surface px-6 text-[17px] font-medium text-ink shadow-ring transition-transform motion-safe:hover:-translate-y-0.5 hover:bg-surface-2">List your shop</Link>
         </div>
       </section>
-      <footer className="border-t border-line px-4">
-        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-6 gap-y-4 py-10 pb-20 text-[15px] text-muted md:px-4">
-          <span className="inline-flex items-center gap-2 font-medium text-ink"><BrandMark /> {BRAND}</span>
-          <span>{TAGLINE}</span>
-          <StatusPill tone="caution">Test mode: no real money moves</StatusPill>
-          <a href="https://github.com/vs-githjk/cal-hacks-2026" target="_blank" rel="noreferrer" className="font-medium text-pulse">GitHub</a>
-        </div>
-      </footer>
     </div>
   );
 }
