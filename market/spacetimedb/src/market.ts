@@ -753,6 +753,11 @@ export function myNotificationsView(ctx: VCtx) {
 
 export function resetDemoChecked(ctx: Ctx) {
   requireRole(ctx, 'reset_demo', ['owner', 'referee']);
+  // #313: reset_demo deletes mandate and payment rows; on a database holding a real charge that would let a
+  // fresh mandate and a second record_payment go through for the same deal. Refuse while one exists.
+  if ([...ctx.db.payment.iter()].some((p) => p.mode !== 'sim')) {
+    throw new SenderError('reset_demo refused: a non-SIM payment exists; this database has taken real money');
+  }
   resetDemo(ctx);
 }
 

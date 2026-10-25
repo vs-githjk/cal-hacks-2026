@@ -1367,4 +1367,36 @@ describe('#293 Maincloud: seed, reset and init stay safe on an already-live data
     expect([...h.db.need.iter()]).toHaveLength(0); // the reset itself still clears demo state
     expect([...h.db.bid.iter()]).toHaveLength(0);
   });
+
+  it('#313 reset_demo wipes mandate, approval, payment and allowance, not only need and bid', () => {
+    run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId: 'vidyut', perPurchaseLimit: 600, periodLimit: 1500, period: 'month' }));
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs())); // 780 is over the per-buy limit: needs the call
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_test_1', amount: 780, mode: 'sim' }));
+    expect([...h.db.mandate.iter()]).toHaveLength(1);
+    expect([...h.db.payment.iter()]).toHaveLength(1);
+    expect([...h.db.allowance.iter()]).toHaveLength(1);
+    run(OWNER, (ctx) => m.resetDemoChecked(ctx));
+    expect([...h.db.mandate.iter()]).toHaveLength(0);
+    expect([...h.db.approval.iter()]).toHaveLength(0);
+    expect([...h.db.payment.iter()]).toHaveLength(0);
+    expect([...h.db.allowance.iter()]).toHaveLength(0);
+    expect([...h.db.round.iter()]).toHaveLength(0);
+  });
+
+  it('#313 reset_demo refuses while a non-SIM payment row exists', () => {
+    setupRound();
+    run(A, (ctx) => m.placeBid(ctx, bidArgs('bid-a', [line(780)])));
+    advance(16_000);
+    run(REF, (ctx) => m.closeRound(ctx, { roundId: 'round-1' }));
+    run(REF, (ctx) => m.createMandate(ctx, mandateArgs()));
+    run(REF, (ctx) => m.recordApproval(ctx, { mandateHash: 'h1', method: 'voice_code', approvedBy: 'vidyut', voiceApprovalId: 'va-1' }));
+    run(REF, (ctx) => m.recordPayment(ctx, { mandateHash: 'h1', paymentRef: 'pi_live_1', amount: 780, mode: 'stripe_test' }));
+    expect(() => run(OWNER, (ctx) => m.resetDemoChecked(ctx))).toThrow(/non-SIM payment/);
+    expect([...h.db.payment.iter()]).toHaveLength(1); // untouched: the refusal happened before any delete
+  });
 });
