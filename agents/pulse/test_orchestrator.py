@@ -343,6 +343,7 @@ def test_no_seller_note_carries_a_rival_price_the_winning_price_or_the_cap(tmp_p
         assert needle not in text, needle
     # the only dollar figures in a note are the market's public band for the part, never a bid
     assert set(re.findall(r"\$[\d,]+\.\d\d", text)) <= {"$1,250.00", "$1,279.00", "$1,300.00"}
+    assert not re.search(r"\d+\.\d+\s?%", text) and "gap_pct" not in text            # a banded gap only, never an exact one
     assert all(set(n) == O.NOTE_KEYS for n in out["seller_notes"])
 
 

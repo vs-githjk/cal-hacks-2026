@@ -5,13 +5,13 @@
 
 ## Summary
 
-Fish Market's price-discovery agent. Before each round it publishes a fair-price band for every part (low, median, high, how many prices it rests on, the date, and the source), so a buyer knows what a part really costs before sellers bid. After each round it gives every seller that lost a coaching note with concrete numbers ("you lost by 3.1%; the 7-day median is $1,279") and its own 7-day and 30-day record. Ask it in chat what the going price of a part is, or how it is trending.
+Fish Market's price-discovery agent. Before each round it publishes a fair-price band for every part (low, median, high, how many prices it rests on, the date, and the source), so a buyer knows what a part really costs before sellers bid. After each round it gives every seller that lost a coaching note with concrete numbers ("you lost by less than 5 percent; the 7-day median is $1,279") and its own 7-day and 30-day record. Ask it in chat what the going price of a part is, or how it is trending.
 
 ## Features
 
 - Fair-price band per part: the 25th, 50th and 75th percentile of in-stock retail asks over the last 7 days, or the last 30 days when the week is thin. From Tiger Data price history, then dated MIRROR snapshots, then (clearly labelled) the SIM catalog. It never pads: where a window has fewer days of data, it says "only N days of data".
 - A public pulse before each round: one sourced JSON file, and an open request any agent can send (PulseBandRequest, a list of parts), answered with the bands. No seller, buyer or budget appears in it.
-- Coaching notes for losing sellers: how far the seller lost, what the market's median and typical range for the part are, its own record, and what to change inside its own floor. A note never contains a rival's price, the winning price or the buyer's cap.
+- Coaching notes for losing sellers: how far the seller lost (as a band), what the market's median and typical range for the part are, its own record, and what to change inside its own floor. A note never contains a rival's price, the winning price or the buyer's cap.
 - Going price and demand in chat: the band with its sources, when the pulse was published, and how many rounds ran for the part in the last day.
 - Every sentence is a fixed phrase filled with numbers it read from a source. No model text and no question text reaches a seller or a buyer.
 - Every number names its source in brackets (a Tiger Data table, the snapshot date, the CRS signals cache or a round id) and its origin (LIVE, MIRROR or SIM).
@@ -56,7 +56,7 @@ price discovery, fair price, going price, price band, price history, price trend
 - "What's the going price for an RTX 5070 Ti?" answers with the typical price, the range, how many prices it rests on, the date and the source, then the demand line.
 - "How is the RTX 5070 Ti trending?" answers with the last 7 and 30 days of price and the CRS verified seller count.
 - "Why does seller_3 keep losing?" answers with that seller's 7-day and 30-day record and its note from the latest round.
-- A loss note, for example: "You lost by 3.1%. The 7-day median for RTX 5070 TI is $1,279.00 (typical range $1,250.00 to $1,300.00, 12 prices). [Tiger Data price_obs, last 7 days; MIRROR]"
+- A loss note, for example: "You lost by less than 5 percent. The 7-day median for RTX 5070 TI is $1,279.00 (typical range $1,250.00 to $1,300.00, 12 prices). [Tiger Data price_obs, last 7 days; MIRROR]"
 
 ## Use cases
 
@@ -67,6 +67,6 @@ price discovery, fair price, going price, price band, price history, price trend
 
 - Setup: run `python3 -m data.tiger.load` once per Tiger service (it creates the tables and loads the price history). `python3 -m agents.pulse.fair_band --tiger-check` says whether Tiger Data holds price rows.
 - It cannot place bids, approve purchases or move money.
-- The exact loss gap in a note is the seller's own adjusted total against the round's winner, and the round result is public once a round closes.
+- A note shows how far a seller lost only as a band (less than 5, 10 or 20 percent, or more than 20), never an exact figure, so a seller cannot work out the winner's price from it. The only dollar figures in a note are the market's public fair band.
 - A seller's record is shown only to that seller's own agent. The operator can open it to anyone with PULSE_SELLER_CHAT=open.
 - A finished round is accepted only from the addresses in PULSE_ROUND_SENDERS (the referee and the operator, comma separated); with none set, none is accepted.

@@ -1,36 +1,17 @@
-"""Coaching numbers for a losing seller: how far it lost, and what the market says the part costs.
+"""Coaching numbers for a losing seller: how far it lost (as the loss report's BAND), and what the market says the part costs.
 
-    "You lost by 3.1%. The 7-day median for RTX 5070 TI is $1,279.00 (typical range $1,250.00 to $1,300.00, 12 prices).
-     [Tiger Data price_obs, last 7 days; MIRROR]"
+    "You lost by less than 5 percent. The 7-day median for RTX 5070 TI is $1,279.00 (typical range $1,250.00 to $1,300.00,
+     12 prices). [Tiger Data price_obs, last 7 days; MIRROR]"
 
-The gap is the percent the seller's own adjusted total was above the round's winner (round_result is public once a round
-closes), only for a seller that was priced out, never for one that was disqualified. The market figures are fair_band's:
-public, sourced, labelled. Nothing here names a rival, the winner's price or the buyer's cap.
+The gap is only ever the loss report's band (within5, within10, within20, over20), never an exact percent: an exact gap plus
+the seller's own price would give away the winner's price. The only dollar figures are the market's public fair band
+(25th, 50th and 75th percentile of dated asks), never a bid, a rival or the buyer's cap.
 """
 from __future__ import annotations
 
 from typing import Any, Optional
 
-
-def exact_gaps(rows: list[dict]) -> dict[str, float]:
-    """{seller_id: percent above the winner's adjusted total, one decimal} for every row priced out of the round: ranked 2 and
-    up, or disqualified on price (rule id "price: ..." in its reasons, for example over the goal cap). A row disqualified for
-    anything else (fit, condition, the referee) has no price gap to report. {} unless the round has exactly one rank 1 row
-    with a price above zero."""
-    winners = [r for r in rows if r.get("rank") == 1]
-    if len(winners) != 1 or not winners[0].get("adjusted") or winners[0]["adjusted"] <= 0:
-        return {}
-    win = winners[0]["adjusted"]
-    out = {}
-    for r in rows:
-        rank, reasons = r.get("rank"), r.get("reasons") or []
-        priced_out = isinstance(rank, int) and not isinstance(rank, bool) and (
-            rank >= 2 or (rank == 0 and bool(reasons) and str(reasons[0]).split(":", 1)[0].strip().lower() == "price"))
-        if priced_out and isinstance(r.get("adjusted"), (int, float)):
-            gap = (r["adjusted"] - win) / win * 100
-            if gap >= 0:
-                out[r["seller_id"]] = round(gap, 1)
-    return out
+from agents.pulse.market_pulse import BAND_TEXT
 
 
 def _usd(v: float) -> str:
@@ -41,9 +22,12 @@ def _plural(n: int, word: str) -> str:
     return f"{n} {word}" + ("" if n == 1 else "s")
 
 
-def coaching_line(gap_pct: float, band: Optional[dict[str, Any]]) -> str:
-    """One sentence pair: the gap, then the market's median and range with its source and label. A part with no price says so."""
-    head = "You lost by less than 0.1%." if gap_pct < 0.05 else f"You lost by {gap_pct:.1f}%."
+def coaching_line(gap_band: str, band: Optional[dict[str, Any]]) -> str:
+    """One sentence pair: the banded gap, then the market's median and range with its source and label. A part with no price
+    says so. ValueError for a band the market does not use."""
+    if gap_band not in BAND_TEXT:
+        raise ValueError("unknown gap band")
+    head = f"You lost by {BAND_TEXT[gap_band]}."
     if not band:
         return head
     tag = f" [{band['source']}; {band['origin']}]"

@@ -59,7 +59,7 @@ TIGER_RECORD_SRC = "Tiger Data bid_ticks and loss_reports"
 TIGER_PRICE_SRC = "Tiger Data price_obs"
 SIM_SRC = "SIM fixture"
 NOTE_KEYS = {"seller_id", "round_id", "sku", "gap_band", "reason", "source_url", "action", "price_step", "what_to_change",
-             "what_to_change_origin", "market", "record", "lines", "gap_pct", "fair_band"}
+             "what_to_change_origin", "market", "record", "lines", "fair_band"}
 BAND_KEYS = ("low", "median", "high", "n", "as_of", "source", "origin", "window_days")
 PRICE_WORDS = {"price", "prices", "pricing", "cost", "costs", "going", "worth", "fair", "much", "pay", "paying", "rate", "afford",
                "cheap", "expensive", "deal", "market"}
@@ -535,18 +535,18 @@ class Pulse:
         except Exception:  # noqa: BLE001
             return None
 
-    def seller_note(self, report: dict, sku: str, gap_pct: Optional[float] = None) -> dict:
+    def seller_note(self, report: dict, sku: str) -> dict:
         d, c = self.source.demand(), self.source.coach(report["seller_id"])
         base = MP.note_for(report, sku, d, c, writer=self.writer)
         record = {str(w): record_block(self.source.record(report["seller_id"], w)) for w in WINDOWS}
         band = self.band_for(sku)
-        gap = gap_pct if report["reason"] == "price" else None      # only a seller priced out has a gap to report
-        coach_line = coaching.coaching_line(gap, band) if gap is not None and band else None
+        # a price loss says how far it lost as the report's BAND (never an exact gap), next to the market's public fair band
+        coach_line = coaching.coaching_line(report["gap_band"], band) if report["reason"] == "price" and band else None
         lines = [f"Round {report['round_id']}: {base['what_to_change']} [round {report['round_id']}]",
                  *([coach_line] if coach_line else []), *(record[str(w)]["line"] for w in WINDOWS)]
         note = {k: base[k] for k in ("seller_id", "round_id", "gap_band", "reason", "source_url", "action", "price_step",
                                      "what_to_change", "what_to_change_origin", "market")}
-        note.update(sku=sku, record=record, lines=lines, gap_pct=gap if coach_line else None,
+        note.update(sku=sku, record=record, lines=lines,
                     fair_band={k: band[k] for k in BAND_KEYS} if band else None)
         return note
 
@@ -564,11 +564,10 @@ class Pulse:
         rows = rnd["rows"]
         sku_of = {r["seller_id"]: r["lines"][0]["sku_spec"] for r in rows}
         signals = read_crs(self.crs_path, self.now())
-        gaps = coaching.exact_gaps(rows)
         notes, skipped = [], list(rnd["skipped"])
         for rep in rnd["reports"]:
             try:
-                notes.append(self.seller_note(rep, sku_of.get(rep["seller_id"], skus_of(rows)[0]), gaps.get(rep["seller_id"])))
+                notes.append(self.seller_note(rep, sku_of.get(rep["seller_id"], skus_of(rows)[0])))
             except ValueError:
                 skipped.append({"seller_id": rep["seller_id"], "why": "unknown band or reason"})
         trends_ = [self.buyer_trend(s, rows, signals) for s in skus_of(rows)]

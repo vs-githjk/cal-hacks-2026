@@ -33,44 +33,47 @@ def pulse_with(tmp_path, bands=None, source=None):
     return p
 
 
-def adjusted_gap(rows, seller_id):
-    win = next(r["adjusted"] for r in rows if r["rank"] == 1)
-    mine = next(r["adjusted"] for r in rows if r["seller_id"] == seller_id)
-    return round((mine - win) / win * 100, 1)
+# ---- coaching notes: the loss report's BAND next to the market's public fair band ---------------
 
-
-# ---- coaching notes with concrete numbers --------------------------------------
-
-def test_a_price_loss_note_says_how_far_you_lost_and_the_seven_day_median(tmp_path):
+def test_a_price_loss_note_says_how_far_you_lost_as_a_band_and_the_seven_day_median(tmp_path):
     r = rnd()
     out = pulse_with(tmp_path).process_round(r)
     note = next(n for n in out["seller_notes"] if n["seller_id"] == "ebay-072531")
-    gap = adjusted_gap(r["rows"], "ebay-072531")
+    assert note["gap_band"] == "within5"
     line = next(x for x in note["lines"] if x.startswith("You lost by"))
-    assert line.startswith(f"You lost by {gap}%. The 7-day median for RTX 5070 TI is $1,279.00 (typical range $1,250.00 to $1,300.00, 5 prices).")
+    assert line.startswith("You lost by less than 5 percent. The 7-day median for RTX 5070 TI is $1,279.00 "
+                           "(typical range $1,250.00 to $1,300.00, 5 prices).")
     assert line.endswith("[Tiger Data price_obs, last 7 days; MIRROR]")
-    assert note["gap_pct"] == gap and note["fair_band"]["median"] == 1279.0 and note["fair_band"]["n"] == 5
+    assert note["fair_band"]["median"] == 1279.0 and note["fair_band"]["n"] == 5
 
 
-def test_the_coaching_line_reads_like_the_brief_for_a_three_point_one_percent_loss():
-    band = fake_bands().band(SKU)
-    text = C.coaching_line(3.1, band)
-    assert text.startswith("You lost by 3.1%. The 7-day median for RTX 5070 TI is $1,279")
+@pytest.mark.parametrize("band,words", [("within5", "less than 5 percent"), ("within10", "less than 10 percent"),
+                                        ("within20", "less than 20 percent"), ("over20", "more than 20 percent")])
+def test_the_gap_is_always_one_of_the_loss_report_bands(band, words):
+    text = C.coaching_line(band, fake_bands().band(SKU))
+    assert text.startswith(f"You lost by {words}. The 7-day median for RTX 5070 TI is $1,279")
+
+
+def test_an_exact_or_unknown_gap_is_refused_not_printed():
+    for bad in (3.1, "3.1%", "within7", None, ""):
+        with pytest.raises((ValueError, TypeError)):
+            C.coaching_line(bad, fake_bands().band(SKU))
 
 
 def test_a_loss_that_was_not_on_price_gets_no_gap_line(tmp_path):
     out = pulse_with(tmp_path).process_round(rnd())
     note = next(n for n in out["seller_notes"] if n["seller_id"] == "amazon-direct")
-    assert note["reason"] == "condition" and note["gap_pct"] is None
+    assert note["reason"] == "condition"
     assert not any(x.startswith("You lost by") for x in note["lines"])
 
 
-def test_a_note_carries_only_the_markets_prices_never_a_rival_the_winner_or_the_cap(tmp_path):
+def test_a_note_carries_no_exact_gap_and_only_the_markets_public_dollar_figures(tmp_path):
     r = rnd()
     out = pulse_with(tmp_path).process_round(r)
     text = json.dumps(out["seller_notes"])
-    band = {f"${v:,.2f}" for v in (1250.0, 1279.0, 1300.0)}
-    assert set(MONEY.findall(text)) <= band
+    assert set(MONEY.findall(text)) <= {f"${v:,.2f}" for v in (1250.0, 1279.0, 1300.0)}   # the 25th, 50th and 75th percentile
+    assert not re.search(r"\d+\.\d+\s?%", text)                                          # no exact percent anywhere
+    assert not any("gap_pct" in n for n in out["seller_notes"])
     rivals = set()
     for row in r["rows"]:
         for x in (row["landed"], row["adjusted"]):
@@ -79,32 +82,20 @@ def test_a_note_carries_only_the_markets_prices_never_a_rival_the_winner_or_the_
     assert all(set(n) == O.NOTE_KEYS for n in out["seller_notes"])
 
 
-def test_exact_gaps_only_for_sellers_priced_out_and_never_negative():
-    def row(sid, rank, adj, reasons=()):
-        return {"seller_id": sid, "rank": rank, "adjusted": adj, "reasons": list(reasons)}
-    gaps = C.exact_gaps([row("w", 1, 1000.0), row("a", 2, 1031.0), row("b", 3, 1500.0), row("dq", 0, 900.0, ["fit: too long"]),
-                         row("cap", 0, 1100.0, ["price: landed $1,100.00 is over the goal cap"]), row("none", 0, 1200.0)])
-    assert gaps == {"a": 3.1, "b": 50.0, "cap": 10.0}
-    assert C.exact_gaps([row("a", 2, 10.0)]) == {} and C.exact_gaps([row("w", 1, 0.0), row("a", 2, 5.0)]) == {}
-
-
-def test_a_gap_under_a_tenth_of_a_percent_is_said_so_not_shown_as_zero():
-    assert C.coaching_line(0.0, fake_bands().band(SKU)).startswith("You lost by less than 0.1%.")
-
-
 def test_with_no_price_for_the_part_the_note_says_so_and_invents_nothing(tmp_path):
     b = FB.FairBands(tiger_rows=lambda s, d: {"status": "not_configured", "rows": []}, snapshots=lambda: [], catalog=lambda: [], now=lambda: NOW)
-    line = C.coaching_line(3.1, b.band(SKU))
-    assert line.startswith("You lost by 3.1%. I have no price history for RTX 5070 TI yet") and "$" not in line and "[no source; no data]" in line
+    line = C.coaching_line("within5", b.band(SKU))
+    assert line.startswith("You lost by less than 5 percent. I have no price history for RTX 5070 TI yet")
+    assert "$" not in line and "[no source; no data]" in line
 
 
 def test_a_sim_band_is_called_a_simulation_in_the_note():
     b = fake_bands(origin="SIM").band(SKU)
-    assert "SIM" in C.coaching_line(3.1, b) and "not a real market price" in C.coaching_line(3.1, b)
+    assert "SIM" in C.coaching_line("within5", b) and "not a real market price" in C.coaching_line("within5", b)
 
 
 def test_a_thin_band_in_a_note_says_how_few_prices_it_has():
-    assert "only 2 prices" in C.coaching_line(3.1, fake_bands(cents=(120000, 130000)).band(SKU))
+    assert "only 2 prices" in C.coaching_line("within5", fake_bands(cents=(120000, 130000)).band(SKU))
 
 
 def test_a_failing_band_never_stops_a_note(tmp_path):
