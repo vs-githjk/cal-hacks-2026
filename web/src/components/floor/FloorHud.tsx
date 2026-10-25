@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { BRAND } from "@/components/floor/brand";
+import { BRAND } from "@/lib/brand";
 import type { FloorPhase, FloorScript, SellerView } from "@/components/floor/floorPhases";
 import { AVATAR_GRIDS, avatarColors, avatarFor, runs } from "@/components/floor/pixelArt";
 
