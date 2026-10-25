@@ -88,6 +88,9 @@ def test_a_stripe_call_that_may_have_reached_stripe_is_saved_uncertain_not_expir
     ctx, _u, _m = _web_approval(buyer, monkeypatch)
     assert _stored_phases(db) == ["uncertain"] and not _orders(buyer, ctx) and not buyer.MARKET_REFEREE.record_payment.called
     assert buyer.ROUND["phase"] == "done" and not buyer.ROUND.get("pending_hold") and buyer.ROUND.get("transaction") is None
+    # #457 review: the money may have moved, so never tell the buyer "Nothing was paid"
+    told = [c.args[1:] for c in buyer.MARKET_REFEREE.set_goal_state.call_args_list]
+    assert told == [("FAILED", "We could not confirm your test payment. Do not pay again; we will confirm it.")]
 
 
 def test_a_declined_card_is_still_expired(napped, monkeypatch):
@@ -123,7 +126,9 @@ def test_recovery_resends_the_same_idempotency_key_then_records_and_orders(nappe
     assert again[0]["idempotency_key"] == first[0]["idempotency_key"] == "mandate:" + mandate["hash"]
     assert buyer.MARKET_REFEREE.record_payment.call_args.kwargs["payment_ref"] == "pi_test_1"
     (to, placed), = _orders(buyer, ctx)
-    assert to == mandate["payee"] and json.loads(placed.order_json)["payment_ref"] == "pi_test_1"
+    # #457 review: the payee is the market seller id (seller-a); the order goes to that seller's agent (seller_1)
+    assert mandate["payee"] == "seller-a" and to == buyer.common.address("seller_1")
+    assert json.loads(placed.order_json)["payment_ref"] == "pi_test_1"
     assert _stored_phases(db) == ["settled"]
     asyncio.run(buyer.recover_web_charges(Context()))   # a second pass finds nothing: never a second charge
     assert len(again) == 1

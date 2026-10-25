@@ -3,7 +3,7 @@
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 ![tag:hackathon](https://img.shields.io/badge/hackathon-5F43F1)
 
-Fetch.ai uAgents for Fish Market. The agentic marketplace where buyers and sellers thrive. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with five seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
+Fetch.ai uAgents for Fish Market. The agentic marketplace where buyers and sellers thrive. The buyer takes a goal in ASI:One ("a GPU for 1440p that fits my case and PSU, under $800, by Friday"), remembers what the buyer already owns, runs a sealed round with up to four seller agents, has the Quality Advocate check every bid, and asks for approval before any payment.
 
 ## Agents
 
@@ -31,9 +31,9 @@ Public profile verification on October 23, 2026 at 23:46 PDT: Agentverse's `GET 
 
 ## Seller Kit core (sellers 4 and 5, custom sellers)
 
-Note for Abhinav: `seller_4` and `seller_5` are in `common.SELLERS` and run in `sellers/run_all.py`, so the buyer now asks five sellers. Putting them on Agentverse is a manual mailbox step that needs you: set `SELLER_4_AGENT_SEED` and `SELLER_5_AGENT_SEED` in `agents/.env` (private values; the dev defaults are public and the agent refuses to start with them in mailbox mode), run each with `SELLERS_MAILBOX=1`, then `connect.py 8014` and `connect.py 8015`, and add their addresses to the table above. Until the seeds are set, `sellers/run_all.py` in mailbox mode skips them (it prints `seller_4 skipped: set SELLER_4_AGENT_SEED`) and sellers 1 to 3 keep running; without mailbox mode all five bid locally. Their READMEs are `sellers/AGENTVERSE-seller_4.md` and `AGENTVERSE-seller_5.md`.
+Note for Abhinav: `seller_5` is in `common.SELLERS` and runs in `sellers/run_all.py`. `seller_4` is retired (`common.RETIRED_SELLERS`): `run_all.py` does not start it and the buyer does not ask it, so the buyer asks at most four sellers (`seller_1`, `seller_3`, `seller_5` and, with its private seed, `seller_6`). Putting `seller_5` on Agentverse is a manual mailbox step that needs you: set `SELLER_5_AGENT_SEED` in `agents/.env` (a private value; the dev default is public and the agent refuses to start with it in mailbox mode), run it with `SELLERS_MAILBOX=1`, then `connect.py 8015`, and add its address to the table above. Until the seed is set, `sellers/run_all.py` in mailbox mode skips it (it prints `seller_5 skipped: set SELLER_5_AGENT_SEED`) and the other sellers keep running; without mailbox mode they all bid locally. Its profile is `sellers/AGENTVERSE-seller_5.md`.
 
-Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json](../contracts/SellerConfig.schema.json); change note in `docs/changes/0130-D-seller-config.md`). `sellers/sellers.json` holds all five as configs, and `sellers/factory.py` refuses a bad config (negative floor, floor above price, unknown condition, non-http listing URL) with field errors. A custom seller runs from its own file, from `agents/`:
+Every seller is described by a SellerConfig ([contracts/SellerConfig.schema.json](../contracts/SellerConfig.schema.json); change note in `docs/changes/0130-D-seller-config.md`). `sellers/sellers.json` holds all five catalog sellers as configs (two are retired), and `sellers/factory.py` refuses a bad config (negative floor, floor above price, unknown condition, non-http listing URL) with field errors. A custom seller runs from its own file, from `agents/`:
 
 ```bash
 .venv/bin/python sellers/seller_agent.py --config sellers/custom/<id>.json

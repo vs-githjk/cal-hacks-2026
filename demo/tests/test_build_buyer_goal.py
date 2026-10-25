@@ -42,7 +42,7 @@ def test_only_an_active_build_by_date_goal_counts():
     m.goal_state["closed"] = "DONE"
     with pytest.raises(build.GoalNotFound) as e:
         build.read_buyer_goal(make_clients(m)["buyer"], "vidyut")
-    assert "no ACTIVE build_by_date goal" in str(e.value) and "vidyut" in str(e.value)
+    assert "no ACTIVE or HUNTING build_by_date goal" in str(e.value) and "vidyut" in str(e.value)
 
 
 def test_no_goal_at_all_is_a_clear_error_that_names_the_identity_rule():

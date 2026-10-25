@@ -1,4 +1,4 @@
-"""Owner-chat approvals record through the REFEREE (market.ts record_approval is referee-only), shape-compatible with #455."""
+"""Owner-chat approvals record through the REFEREE (market.ts record_approval is referee-only) and carry the issued code (#455)."""
 import os
 import sys
 
@@ -52,26 +52,6 @@ class World:
         return Client()
 
 
-class BridgeWithoutCode(MarketBridge):
-    """The referee bridge before #455: record_approval takes no `code` (with #455 merged, the real bridge takes one)."""
-
-    def record_approval(self, *, mandate_hash, method, approved_by, voice_approval_id=""):
-        self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=approved_by,
-                   voice_approval_id=voice_approval_id)
-        return {"mandate_hash": mandate_hash, "approval_method": method}
-
-
-class BridgeWithCode(MarketBridge):
-    """The referee bridge after #455: record_approval takes the issued `code` and refuses to relay without it."""
-
-    def record_approval(self, *, mandate_hash, method, approved_by, voice_approval_id="", code=""):
-        if not voice_approval_id or not code.strip():
-            raise MarketBridgeError("approval_binding_invalid")
-        self._call("record_approval", mandate_hash=mandate_hash, method=method, approved_by=approved_by,
-                   voice_approval_id=voice_approval_id, code=code)
-        return {"mandate_hash": mandate_hash, "approval_method": method}
-
-
 @pytest.fixture(autouse=True)
 def _clean():
     OA.ISSUED_CODES.clear()
@@ -86,28 +66,35 @@ def simple_matches(status, mandate):
 
 def test_the_old_path_really_fails_on_the_live_rules_and_the_referee_path_records():
     world = World()
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithoutCode("referee", client=world.client("referee"))
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
     with pytest.raises(MarketBridgeError):  # what main did: record through the buyer identity
-        buyer.record_approval(mandate_hash=HASH, method="voice_code", approved_by="vidyut", voice_approval_id="va-1")
+        buyer.record_approval(mandate_hash=HASH, method="voice_code", approved_by="vidyut", voice_approval_id="va-1", code="amber falcon")
     assert world.approval is None
+    OA.remember_code(HASH, "amber falcon")
     status = OA.record_owner_approval(referee, buyer, MANDATE, "vidyut", "va-1", simple_matches)
     assert status["approval_method"] == "voice_code" and world.approval["approved_by"] == "vidyut"
+    assert world.approval["code"] == "amber falcon"
     assert [r for role, r, _ in world.calls if role == "referee"] == ["record_approval"]
 
 
-def test_shape_before_455_the_bridge_takes_no_code_so_none_is_sent():
+def test_the_referee_bridge_requires_the_code_so_a_relay_without_one_sends_nothing():
     world = World()
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithoutCode("referee", client=world.client("referee"))
-    assert not OA.accepts_code(referee.record_approval)
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
+    assert OA.accepts_code(referee.record_approval)
+    with pytest.raises(MarketBridgeError, match="approval_binding_invalid"):
+        referee.record_approval(mandate_hash=HASH, method="voice_code", approved_by="vidyut", voice_approval_id="va-1")
+    with pytest.raises(MarketBridgeError):  # no code remembered for this mandate: the relay fails closed before any call
+        OA.record_owner_approval(referee, buyer, MANDATE, "vidyut", "va-1", simple_matches)
+    assert world.approval is None and not [c for c in world.calls if c[1] == "record_approval"]
     OA.remember_code(HASH, "amber falcon")
     OA.record_owner_approval(referee, buyer, MANDATE, "vidyut", "va-1", simple_matches)
-    assert "code" not in world.approval and world.approval["voice_approval_id"] == "va-1"
+    assert world.approval["code"] == "amber falcon" and world.approval["voice_approval_id"] == "va-1"
     assert HASH not in OA.ISSUED_CODES  # one call, one code
 
 
 def test_shape_after_455_the_issued_code_is_passed_and_the_market_checks_it():
     world = World(require_code=True)
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithCode("referee", client=world.client("referee"))
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
     assert OA.accepts_code(referee.record_approval)
     world.client("referee").call("issue_approval_code", mandate_hash=HASH, code="amber falcon")
     OA.remember_code(HASH, "amber falcon")
@@ -117,7 +104,7 @@ def test_shape_after_455_the_issued_code_is_passed_and_the_market_checks_it():
 
 def test_after_455_without_the_issued_code_nothing_is_recorded_and_nothing_can_be_paid():
     world = World(require_code=True)
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithCode("referee", client=world.client("referee"))
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
     with pytest.raises(MarketBridgeError):  # no code remembered (e.g. an agent restart mid-call): fail closed
         OA.record_owner_approval(referee, buyer, MANDATE, "vidyut", "va-1", simple_matches)
     assert world.approval is None
@@ -125,7 +112,7 @@ def test_after_455_without_the_issued_code_nothing_is_recorded_and_nothing_can_b
 
 def test_a_wrong_code_is_refused_by_the_market_and_never_accepted_as_recorded():
     world = World(require_code=True)
-    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), BridgeWithCode("referee", client=world.client("referee"))
+    buyer, referee = MarketBridge("buyer", client=world.client("buyer")), MarketBridge("referee", client=world.client("referee"))
     world.client("referee").call("issue_approval_code", mandate_hash=HASH, code="amber falcon")
     OA.remember_code(HASH, "other words")
     with pytest.raises(MarketBridgeError):

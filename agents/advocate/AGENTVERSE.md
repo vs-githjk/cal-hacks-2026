@@ -5,7 +5,7 @@
 
 ## Summary
 
-Fish Market's quality advocate for computer gear. It argues for the buyer: for each seller bid it checks hardware fit with code, compares the claimed condition with the listing, and looks at price history, recalls and the seller's record. It returns at most three warnings, each with a source, and can veto a bid that is a trap.
+Fish Market's quality advocate for computer gear. It argues for the buyer: for each seller bid it checks hardware fit with code, compares the claimed condition with the listing, and checks the price against dated baselines and the CPSC recall database. It returns at most three warnings, each with a source, and can veto a bid that is a trap.
 
 ## Features
 
@@ -31,7 +31,7 @@ Fish Market's quality advocate for computer gear. It argues for the buyer: for e
 
 ## Limitations
 
-- Condition fields, price history, recall and seller-record checks use SIM fixtures in this demo; listing pages are fixture copies.
+- Price baselines are MIRROR (dated retail asks from two data owners) and recalls come from the CPSC public API, cached per brand for 24 hours. A lookup that fails or has no data gets a note saying it is unverified, never a silent pass. We hold no real seller records yet, so it makes no seller-record warning. Listing pages for the SIM sellers are pages we host (SIM); MIRROR listings are dated copies of real store pages.
 - Warranty, return window and the seller track record are used only when the bid or a local track file states them; a missing term earns no credit and is listed as missing. The cost weights are our own assumptions, written in agents/advocate/tco.py.
 - A seller can answer the clarifying question only if its own chat handler replies in plain words (new, open-box, refurbished or used); a seller that only sends its profile text counts as silent.
 - It cannot approve or pay; it only advises the buyer agent, and its only contact with a seller is the one question above.

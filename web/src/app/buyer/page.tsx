@@ -40,7 +40,7 @@ export default function BuyerPage() {
   const deal = useMemo(() => dealFromRows(deals, goals[0]?.allowance?.perPurchase ?? null, results), [deals, goals, results]);
   const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
   const approvalCard = approvalForScreen(deal.approval, buyerId, sample.approval);
-  const liveBuild = useLiveBuild();
+  const liveBuild = useLiveBuild(buyerId);
   // #191-5: veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows the SIM sample only while its row is missing.
   return (
     <BuyerScreen

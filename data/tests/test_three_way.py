@@ -68,7 +68,7 @@ def test_bad_delivery_quantity_is_missing():
 
 def test_sim_liar_page_against_a_po_for_new():
     html = (Path(__file__).resolve().parents[1] / "liar_pages" / "site" / "renew-refurb-gpu-5070ti-lies.html").read_text()
-    facts, _ = page_facts(html)
+    facts, _ = page_facts(html, "http://localhost:8765/renew-refurb-gpu-5070ti-lies.html")   # RT-20: the listing block is read on our own pages only
     out = three_way_match({**PO, "price": 719.0}, {"url": "https://liar.example/renew", "page": facts, "claims": []}, DELIVERY, origin="SIM")
     assert out["result"] == "mismatch" and "condition_page" in codes(out)
     assert "page says refurbished" in out["mismatches"][0]["detail"]

@@ -179,6 +179,32 @@ def test_open_web_goal_is_adopted_and_need_posted_by_referee_on_that_goal(runtim
     assert asyncio.run(buyer.adopt_open_goal(Context())) is False  # a round is in progress; the goal is handled
 
 
+def _reducer_create_mandate(rounds):
+    """create_mandate with the market reducer's own checks (market/spacetimedb/src/market.ts bidIdOfDeal :526-529 and
+    createMandate :855-873): the winning bid is found from the deal id, it must be rank 1 of a closed round, the payee must
+    be that bid's market seller id and the amount its landed price. `rounds` maps round id -> {bid id: (seller id, landed)}."""
+    def create(mandate, **_k):
+        deal = mandate["deal_id"][5:] if mandate["deal_id"].startswith("deal-") else mandate["deal_id"]
+        bid_id = deal[deal.rfind(":") + 1:]
+        won = next((bids[bid_id] for bids in rounds.values() if bid_id in bids), None)
+        if won is None:
+            raise MarketBridgeError("market_reducer_failed")  # 'a mandate needs the rank 1 bid of a closed round'
+        seller_id, landed = won
+        if mandate["payee"] != seller_id or abs(mandate["amount"] - landed) > 1e-9:
+            raise MarketBridgeError("market_reducer_failed")  # 'payee must be the winning seller' / amount
+        return {"mandate_hash": mandate["hash"]}
+    return create
+
+
+def _as_market_winner(buyer, seller_id="seller-a"):
+    """The web winner as _finish_market_round leaves it (with its market seller id), and a referee whose create_mandate
+    behaves like the real reducer for that closed round."""
+    bid = buyer.ROUND["bids"][0]
+    bid["market_seller_id"] = seller_id
+    buyer.MARKET_REFEREE.create_mandate.side_effect = _reducer_create_mandate(
+        {buyer.ROUND["market_round_id"]: {bid["id"]: ("seller-a", bid["total_landed_price"])}})
+
+
 def _approval_row(buyer_id=BID, method="voice_code", mandate_hash=None):
     """#449 item 4 RT-12: the referee's read-back of the stored approval row, through the REAL bridge's approval_row over an
     agent_approvals SQL row, so the agent sees exactly the keys production returns (snake_case: mandate_hash, approved_by)."""
@@ -205,7 +231,7 @@ def _web_approval(buyer, monkeypatch, issue_error=None, voice=None, approval_row
     referee = buyer.MARKET_REFEREE
     referee.buyer_contact.return_value = {"display_name": "Web", "phone": "+14155550111"}
     referee.issue_approval_code.side_effect = issue_error
-    referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    _as_market_winner(buyer)
     referee.record_approval.return_value = {"approval_method": "voice_code"}
     referee.approval_row.side_effect = approval_row or _approval_row()
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
@@ -244,6 +270,32 @@ def test_web_winner_goes_mandate_code_call_approval_on_referee_without_owner_cha
     assert len(used) == 1 and used[0].to == "+14155550111"
     assert not buyer.MARKET_BUYER.mock_calls
     assert not any(isinstance(m, buyer.ChatMessage) for _to, m in ctx.sent)  # no owner chat message at all
+
+
+def test_web_mandate_names_the_market_winner_and_pays_its_market_seller(runtime, monkeypatch):
+    # PL-1: a random deal-<uuid> and the seller agent's agent1q address were both refused by the real reducer.
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch)
+    mandate = buyer.MARKET_REFEREE.create_mandate.call_args.args[0]
+    assert mandate["deal_id"] == "deal-round-need-1:bid-1" and mandate["payee"] == "seller-a"
+    assert buyer.MARKET_REFEREE.record_approval.called  # the call and approval went ahead
+
+
+@pytest.mark.parametrize("seller_id", [None, "", "seller-b", "agent1qnotamarketseller"])
+def test_web_winner_without_its_own_market_seller_id_fails_closed(runtime, monkeypatch, seller_id):
+    buyer, db = runtime
+    ready_for_requote(buyer)
+    buyer.ROUND.update(owner=None, market_buyer_id=BID)
+    buyer.ROUND["goal"]["market_buyer_id"] = BID
+    _as_market_winner(buyer)
+    if seller_id is None:
+        del buyer.ROUND["bids"][0]["market_seller_id"]
+    else:
+        buyer.ROUND["bids"][0]["market_seller_id"] = seller_id
+    asyncio.run(buyer._auto_web_approval(Context(), 1))
+    assert not buyer.MARKET_REFEREE.create_mandate.called
+    assert buyer.ROUND["phase"] == "done" and buyer.ROUND.get("transaction") is None
+    assert _stored_phases(db) == []
 
 
 def test_web_buyer_fails_closed_when_the_code_cannot_be_issued(runtime, monkeypatch):
@@ -556,7 +608,7 @@ def test_web_buyer_without_phone_frees_the_agent(runtime, monkeypatch):
     buyer.ROUND["goal"]["market_buyer_id"] = BID
     referee = buyer.MARKET_REFEREE
     referee.buyer_contact.return_value = {"display_name": "Web"}
-    referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    _as_market_winner(buyer)
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
     monkeypatch.setattr("pay.voice_cartesia.load_env", lambda *a, **k: {})
     asyncio.run(buyer._auto_web_approval(Context(), 1))
@@ -619,6 +671,27 @@ def test_web_denied_or_unanswered_call_reports_failed(runtime, monkeypatch, kind
     buyer, _db = runtime
     _web_approval(buyer, monkeypatch, voice=_voice(kind))
     assert _state_calls(buyer) == [(buyer.ROUND["goal"]["id"], "FAILED", text)]
+
+
+def test_web_denied_or_unanswered_call_releases_the_held_units(runtime, monkeypatch):
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch, voice=_voice("denied"))
+    (mandate_hash, reason), = [c.args for c in buyer.MARKET_REFEREE.deny_approval.call_args_list]
+    assert mandate_hash == buyer.MARKET_REFEREE.create_mandate.call_args.args[0]["hash"] and reason
+    assert not buyer.MARKET_REFEREE.record_approval.called and not buyer.MARKET_REFEREE.record_payment.called
+
+
+def test_a_failed_release_never_blocks_the_failed_report(runtime, monkeypatch):
+    buyer, _db = runtime
+    buyer.MARKET_REFEREE.deny_approval.side_effect = MarketBridgeError("market_reducer_failed")
+    _web_approval(buyer, monkeypatch, voice=_voice("paused"))
+    assert _state_calls(buyer)[0][1] == "FAILED"
+
+
+def test_an_approved_call_never_denies_the_approval(runtime, monkeypatch):
+    buyer, _db = runtime
+    _web_approval(buyer, monkeypatch)
+    assert not buyer.MARKET_REFEREE.deny_approval.called
 
 
 def test_web_wrong_code_reports_failed_in_plain_words(runtime, monkeypatch):
@@ -702,7 +775,7 @@ def test_web_buyer_off_the_allowlist_gets_no_call_and_frees_the_agent(runtime, m
     buyer.ROUND["goal"]["market_buyer_id"] = BID
     referee = buyer.MARKET_REFEREE
     referee.buyer_contact.return_value = {"display_name": "Web", "phone": "+14155550111"}
-    referee.create_mandate.side_effect = lambda mandate, **_k: {"mandate_hash": mandate["hash"]}
+    _as_market_winner(buyer)
     monkeypatch.setattr(buyer, "_approval_service", lambda: object())
     _beta_env(monkeypatch)
     with patch("pay.voice_cartesia.CartesiaClient.from_env", side_effect=_Client) as make, caplog.at_level("INFO"):
@@ -761,6 +834,7 @@ def test_a_rate_limited_dial_is_final_and_not_retried_on_the_web_path(runtime, m
     ready_for_requote(buyer)
     buyer.ROUND.update(owner=None, market_buyer_id=BID)
     buyer.ROUND["goal"]["market_buyer_id"] = BID
+    _as_market_winner(buyer)
     asyncio.run(buyer._auto_web_approval(Context(), 1))
     assert len(limited.attempts) == 1
     assert not buyer.MARKET_REFEREE.record_approval.called
