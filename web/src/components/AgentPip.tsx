@@ -154,7 +154,7 @@ function AgentPipTile() {
           <div className="min-h-0 flex-1 overflow-y-auto border-t border-line px-3 py-2">
             {noFeed ? (
               <>
-                <p className="pt-2 text-muted">No live agent feed on this site. Each agent's public Agentverse profile:</p>
+                <p className="pt-2 text-muted">No live agent feed on this site. Each agent&apos;s public Agentverse profile:</p>
                 <AgentProfiles />
               </>
             ) : offline || pending || shown.length === 0 ? (
