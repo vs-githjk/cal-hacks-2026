@@ -151,5 +151,14 @@ async def on_expiring_transport(ctx: Context, sender: str, msg: common.ExpiringV
 agent.include(protocol, publish_manifest=True)
 common.include_profile_chat(agent, explain.SECOND_FACTOR_TEXT)
 
+def require_private_buyer_seed(seed: str | None = None) -> None:
+    """#449 PL-22: exit with a clear message unless BUYER_AGENT_SEED is set and private. The Caller obeys only the address
+    that seed derives; common.SEEDS falls back to a public *-dev default, which anyone could sign as."""
+    problem = relay.buyer_seed_problem(os.getenv("BUYER_AGENT_SEED") if seed is None else seed)
+    if problem:
+        sys.exit(problem)
+
+
 if __name__ == "__main__":
+    require_private_buyer_seed()
     agent.run()

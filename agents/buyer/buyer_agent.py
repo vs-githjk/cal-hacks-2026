@@ -8,7 +8,7 @@ import sys
 import time
 import asyncio
 import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -1239,7 +1239,7 @@ def market_approval_matches(row, mandate: dict, buyer_id: str, voice_approval_id
 
 
 def _transport_request(ctx: Context, loop):
-    """request(mandate_hash, variables) for DelegatedVoiceClient: send one VoiceTransportRequest to the Caller and wait
+    """request(mandate_hash, variables) for DelegatedVoiceClient: send one ExpiringVoiceTransportRequest to the Caller and wait
     for its VoiceTransportResult (runs in the approval worker thread)."""
     import concurrent.futures
     from buyer.delegate import DELEGATE_TIMEOUT_S
@@ -1248,8 +1248,12 @@ def _transport_request(ctx: Context, loop):
         future = concurrent.futures.Future()
         PENDING_TRANSPORT[mandate_hash] = future
         try:
-            asyncio.run_coroutine_threadsafe(ctx.send(common.address("caller"), common.VoiceTransportRequest(
-                mandate_hash=mandate_hash, variables_json=json.dumps(variables))), loop).result(timeout=10.0)
+            # #449 RT-24: the Caller refuses a request past this time (the real clock, as the Caller reads its own), so a
+            # request still queued after we fell back to our direct call never rings a second time. The expiring message
+            # is separate from VoiceTransportRequest, whose schema digest is pinned (caller/test_expiry.py).
+            expires_at = (datetime.now(timezone.utc) + timedelta(seconds=DELEGATE_TIMEOUT_S)).isoformat()
+            asyncio.run_coroutine_threadsafe(ctx.send(common.address("caller"), common.ExpiringVoiceTransportRequest(
+                mandate_hash=mandate_hash, variables_json=json.dumps(variables), expires_at=expires_at)), loop).result(timeout=10.0)
             return future.result(timeout=DELEGATE_TIMEOUT_S)
         finally:
             PENDING_TRANSPORT.pop(mandate_hash, None)

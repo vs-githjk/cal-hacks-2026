@@ -206,3 +206,50 @@ def test_transport_only_for_the_buyer_and_one_call_per_mandate():
 def test_the_existing_call_request_path_is_unchanged():
     out, _ = call()
     assert out["approved"] is True and set(out) == {"approved", "reason", "call_id", "voice_approval_id"}
+
+
+# ---- #449 PL-22: the Caller never trusts a public dev seed for the buyer address ----------------------------------------
+@pytest.mark.parametrize("seed", [None, "", "   ", "tech-bazaar-buyer-dev", "my-own-private-thing-dev", "short"])
+def test_a_missing_or_public_or_short_buyer_seed_is_a_problem(seed):
+    problem = relay.buyer_seed_problem(seed)
+    assert problem and "BUYER_AGENT_SEED" in problem
+
+
+def test_a_private_buyer_seed_is_fine():
+    assert relay.buyer_seed_problem("a-private-seed-of-24-chars!") is None
+
+
+def _load_caller_agent(run_name):
+    """Execute caller_agent.py with uagents.Agent faked (no event loop, no network, nothing can start): (globals, fake)."""
+    import runpy
+    from unittest.mock import patch
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    with patch("uagents.Agent") as fake_class:
+        try:
+            return runpy.run_module("caller.caller_agent", run_name=run_name), fake_class.return_value, None
+        except SystemExit as e:
+            return None, fake_class.return_value, e
+
+
+def _run_as_main(monkeypatch, seed):
+    monkeypatch.delenv("AGENTS_MAILBOX", raising=False)
+    monkeypatch.delenv("CALLER_MAILBOX", raising=False)
+    if seed is None:
+        monkeypatch.delenv("BUYER_AGENT_SEED", raising=False)
+    else:
+        monkeypatch.setenv("BUYER_AGENT_SEED", seed)
+    _, agent, exit_ = _load_caller_agent("__main__")
+    return agent.run, exit_
+
+
+@pytest.mark.parametrize("seed", [None, "tech-bazaar-buyer-dev"])
+def test_the_caller_exits_at_start_without_a_private_buyer_seed(monkeypatch, seed):
+    run, exit_ = _run_as_main(monkeypatch, seed)
+    assert exit_ is not None and "BUYER_AGENT_SEED" in str(exit_.code)
+    run.assert_not_called()
+
+
+def test_the_caller_starts_with_a_private_buyer_seed(monkeypatch):
+    run, exit_ = _run_as_main(monkeypatch, "a-private-seed-of-24-chars!")
+    assert exit_ is None
+    run.assert_called_once()
