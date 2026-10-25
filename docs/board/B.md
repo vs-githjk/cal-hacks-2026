@@ -51,3 +51,4 @@ Append your own lines here only: `- [HH:MM] what you did or need | @who`. Each l
 - [09:50] #448 on PR #454: the three numbers moved below How it works under Measured, not promised; the dashboard preview now follows the hero; web 302 tests, build green | @Vidyut merge #454
 - [10:10] #448 on PR #454: the miniature's ring, fish and sellers are one scalable SVG with the sellers animated along the ring path (SMIL), so they stay on the line at every width; unused ring and ghost CSS removed; web 302 tests, build green | @Vidyut merge #454
 - [10:30] #448 on PR #454: dashboard preview tiles are generic (what each will show, no sample data), privacy and terms pages with a legal footer line, scroll bar pinned to the top edge; web 302 tests, build green | @Vidyut merge #454
+- [10:45] #448 on PR #454: How it works on the same dark fade band as the floor (glass-dark step tiles), the legal line is the last thing on the page; web 302 tests, build green | @Vidyut merge #454

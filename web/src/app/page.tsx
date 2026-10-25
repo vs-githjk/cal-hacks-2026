@@ -34,7 +34,7 @@ const BUBBLES = [
 
 export default function Home() {
   return (
-    <div className="-mx-4 grid grid-cols-[minmax(0,1fr)]">
+    <div className="-mx-4 -mb-[72px] grid grid-cols-[minmax(0,1fr)]">
       <ScrollProgress />
 
       {/* 1. Hero: the aquarium. */}
@@ -75,33 +75,33 @@ export default function Home() {
       </section>
 
       {/* 4. How it works: four steps on one line. */}
-      <section aria-labelledby="how" className="px-4">
-        <Reveal className="mx-auto max-w-[1120px] py-10 md:px-4 md:py-16">
+      <section aria-labelledby="how" className="relative px-4 py-[136px] text-floor-line [background:linear-gradient(180deg,#eef3f8_0px,#e8edf2_15px,#d6dde3_30px,#bdc4cc_45px,#9ea7b0_60px,#7c8792_75px,#5b6773_90px,#3c4a57_105px,#233140_120px,#112131_135px,#0b1b2b_150px,#0b1b2b_calc(100%-150px),#112131_calc(100%-135px),#233140_calc(100%-120px),#3c4a57_calc(100%-105px),#5b6773_calc(100%-90px),#7c8792_calc(100%-75px),#9ea7b0_calc(100%-60px),#bdc4cc_calc(100%-45px),#d6dde3_calc(100%-30px),#e8edf2_calc(100%-15px),#eef3f8_calc(100%-0px))]">
+        <Reveal className="mx-auto max-w-[1120px] md:px-4">
           <h2 id="how" className="text-[28px] font-semibold leading-[34px] tracking-[-0.02em] md:text-[40px] md:leading-[44px] md:tracking-[-0.025em]">How it works</h2>
           <ol className="relative mt-8 grid gap-3 md:grid-cols-4 md:gap-4">
             {STEPS.map((s, i) => (
-              <li key={s.title} className="fm-tile relative grid grid-cols-[44px_1fr] gap-x-3.5 gap-y-1 rounded-2xl p-4 md:grid-cols-1 md:gap-3 md:p-5">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-pulse-soft text-pulse-soft-ink md:h-12 md:w-12">{s.icon}</span>
-                <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-ink font-mono text-[11px] text-canvas md:right-5 md:top-5">{i + 1}</span>
+              <li key={s.title} className="fm-glass-dark relative grid grid-cols-[44px_1fr] gap-x-3.5 gap-y-1 rounded-2xl p-4 md:grid-cols-1 md:gap-3 md:p-5">
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/10 text-white md:h-12 md:w-12">{s.icon}</span>
+                <span className="absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full bg-white font-mono text-[11px] text-ink md:right-5 md:top-5">{i + 1}</span>
                 <div className="col-start-2 md:col-start-1">
                   <p className="text-[16px] font-semibold leading-5">{s.title}</p>
-                  <p className="mt-1 text-[13px] leading-[18px] text-ink-2">{s.text}</p>
+                  <p className="mt-1 text-[13px] leading-[18px] text-ghost-1">{s.text}</p>
                 </div>
               </li>
             ))}
           </ol>
           <details className="group mt-6">
-            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[15px] font-medium text-pulse [&::-webkit-details-marker]:hidden">
-              More: the five beats, the auction, this round in numbers <span className="text-muted transition-transform group-open:rotate-45" aria-hidden>+</span>
+            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[15px] font-medium text-shield [&::-webkit-details-marker]:hidden">
+              More: the five beats, the auction, this round in numbers <span className="text-ghost-1 transition-transform group-open:rotate-45" aria-hidden>+</span>
             </summary>
-            <HomeMore />
+            <div className="text-ink"><HomeMore /></div>
           </details>
         </Reveal>
       </section>
 
       {/* 4b. Proof: three measured numbers with their caveats, once the visitor knows what the product is. */}
       <section aria-label="Measured results" className="px-4">
-        <Reveal className="mx-auto max-w-[1120px] pb-10 md:px-4 md:pb-14">
+        <Reveal className="mx-auto max-w-[1120px] py-6 md:px-4 md:py-10">
           <h2 className="mb-6 text-[28px] font-semibold leading-[34px] tracking-[-0.02em] md:text-[40px] md:leading-[44px] md:tracking-[-0.025em]">Measured, not promised.</h2>
           <div className="grid gap-4 md:grid-cols-3">
             {PROOF.map((p) => (
@@ -168,7 +168,7 @@ export default function Home() {
         </div>
       </section>
       <footer className="border-t border-line px-4">
-        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-5 gap-y-2 py-6 pb-20 text-[13px] text-muted md:px-4">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-5 gap-y-2 py-6 text-[13px] text-muted md:px-4">
           <span>&copy; 2026 {BRAND}</span>
           <Link href="/privacy" className="hover:text-ink">Privacy</Link>
           <Link href="/terms" className="hover:text-ink">Terms</Link>
