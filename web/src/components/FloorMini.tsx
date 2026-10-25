@@ -42,7 +42,7 @@ export function FloorMini({ className = "" }: { className?: string }) {
         {GHOSTS.map((g) => (
           <span
             key={g.color}
-            className="fm-ghost h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-t-full rounded-b-[4px]"
+            className="fm-ghost h-6 w-6 rounded-t-full rounded-b-[5px] shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
             style={{ background: g.color, ["--lap" as string]: g.lap, ["--delay" as string]: g.delay }}
           />
         ))}
