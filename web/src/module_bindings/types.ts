@@ -10,6 +10,16 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const AgentBuyerContact = __t.object("AgentBuyerContact", {});
+export type AgentBuyerContact = __Infer<typeof AgentBuyerContact>;
+
+export const AgentBuyerContactRow = __t.object("AgentBuyerContactRow", {
+  buyerId: __t.string(),
+  displayName: __t.string(),
+  phone: __t.string(),
+});
+export type AgentBuyerContactRow = __Infer<typeof AgentBuyerContactRow>;
+
 export const AgentEvent = __t.object("AgentEvent", {
   id: __t.u64(),
   agentName: __t.string(),
@@ -19,6 +29,12 @@ export const AgentEvent = __t.object("AgentEvent", {
   origin: __t.string(),
 });
 export type AgentEvent = __Infer<typeof AgentEvent>;
+
+export const AgentGoalItems = __t.object("AgentGoalItems", {});
+export type AgentGoalItems = __Infer<typeof AgentGoalItems>;
+
+export const AgentOpenGoals = __t.object("AgentOpenGoals", {});
+export type AgentOpenGoals = __Infer<typeof AgentOpenGoals>;
 
 export const Allowance = __t.object("Allowance", {
   buyerId: __t.string(),

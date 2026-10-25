@@ -1644,3 +1644,28 @@ describe('#374 telemetry', () => {
     }
   });
 });
+
+describe('#374 agent views', () => {
+  const views = (who: Auth) => {
+    const v = h.viewContext(who) as any;
+    return [m.agentBuyerContactView(v), m.agentOpenGoalsView(v), m.agentGoalItemsView(v)];
+  };
+  let NEW: Auth, buyerId: string;
+  beforeEach(() => {
+    NEW = as('agent-new');
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+1 415 555 0100' }));
+    run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ buyerId, id: 'goal-n' })));
+  });
+
+  it('the referee sees contacts, open goals and their items', () => {
+    const [contacts, goals, items] = views(REF);
+    expect(contacts).toContainEqual({ buyerId, displayName: 'Ana', phone: '+14155550100' });
+    expect(goals.map((g: any) => g.id)).toContain('goal-n');
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i: any) => goals.some((g: any) => g.id === i.goalId))).toBe(true);
+  });
+
+  it('everyone else gets nothing, the owner and the buyer included', () => {
+    for (const who of [STRANGER, VIDYUT, NEW, OWNER]) for (const v of views(who)) expect(v).toEqual([]);
+  });
+});

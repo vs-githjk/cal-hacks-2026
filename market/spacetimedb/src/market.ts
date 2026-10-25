@@ -1022,3 +1022,25 @@ export function telemetryAgentView(ctx: AVCtx) {
   for (const e of ctx.db.agentEvent.iter()) by.set(e.agentName, (by.get(e.agentName) ?? 0) + 1);
   return [...by].map(([agent, events]) => ({ agent, events })).sort((a, b) => (a.agent < b.agent ? -1 : a.agent > b.agent ? 1 : 0));
 }
+
+// ---------------------------------------------------------------- #374 referee-only views for the buyer and caller agents
+// The agents act for every buyer through the referee identity; my_* views show only the caller's own rows.
+
+const isReferee = (ctx: VCtx) => roleOf(ctx)?.role === 'referee';
+
+/** Referee only: who to call for each buyer. */
+export function agentBuyerContactView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.buyerProfile.iter()].map((p) => ({ buyerId: p.buyerId, displayName: p.displayName, phone: p.phone }));
+}
+
+/** Referee only: goals still open. Open means state ACTIVE, the only state postGoal writes. */
+export function agentOpenGoalsView(ctx: VCtx) {
+  if (!isReferee(ctx)) return [];
+  return [...ctx.db.goal.iter()].filter((g) => g.state === 'ACTIVE');
+}
+
+/** Referee only: the items of the open goals. */
+export function agentGoalItemsView(ctx: VCtx) {
+  return agentOpenGoalsView(ctx).flatMap((g) => [...ctx.db.goalItem.goalId.filter(g.id)]);
+}
