@@ -273,6 +273,14 @@ export function latestRound<R extends RoundRow>(rounds: readonly R[]): R | undef
   return [...rounds].sort((a, b) => (a.openedAt.microsSinceUnixEpoch < b.openedAt.microsSinceUnixEpoch ? 1 : -1))[0];
 }
 
+const PART_WORD: Record<string, string> = { board: "Motherboard", gpu: "Graphics card", cpu: "Processor", ram: "Memory", ssd: "Storage", cooler: "CPU cooler", psu: "Power supply", case: "Case" };
+
+/** "Motherboard, round 2" for a build round id like round-goal-build-1-board-2; null when the id is not a build round. */
+export function roundTitle(roundId: string): string | null {
+  const m = /-([a-z]+)-([1-9]\d*)$/.exec(roundId);
+  return m && Object.hasOwn(PART_WORD, m[1]!) ? `${PART_WORD[m[1]!]}, round ${m[2]}` : null;
+}
+
 const cond = (c: string) => c || "as asked";
 
 export function bidsFromRows(results: readonly ResultRow[], events: readonly EventRow[], roundId: string | undefined): RankedBid[] {
