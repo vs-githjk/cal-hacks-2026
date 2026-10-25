@@ -988,6 +988,75 @@ async def _phone_approval(transaction: dict, send_private, client, service):
     return result
 
 
+# ---- #398 item 3: Bazaar Caller carries the voice only (off unless BUYER_DELEGATE_CALL=1) ----------------------------
+PENDING_TRANSPORT: dict = {}   # mandate hash -> concurrent.futures.Future waiting for the Caller's VoiceTransportResult
+USED_CALL_IDS: set = set()     # a call id the Caller already reported is never accepted again (replay)
+
+
+def delegate_call_enabled() -> bool:
+    return os.getenv("BUYER_DELEGATE_CALL") == "1"
+
+
+def market_approval_matches(status, mandate: dict) -> bool:
+    """The market's own record of this purchase, re-read after record_approval: a voice approval for exactly the
+    mandate the buyer issued (hash, amount, payee), not retired. Any mismatch means no payment."""
+    from decimal import Decimal, InvalidOperation
+    try:
+        same_amount = Decimal(str(status.get("amount"))).quantize(Decimal("0.01")) == \
+            Decimal(str(mandate.get("amount"))).quantize(Decimal("0.01"))
+    except (InvalidOperation, AttributeError, TypeError, ValueError):
+        return False
+    return (isinstance(status, dict) and status.get("approval_method") == "voice_code" and bool(status.get("approved_at"))
+            and status.get("mandate_hash") == mandate.get("hash") and status.get("payee") == mandate.get("payee")
+            and same_amount and not status.get("retired"))
+
+
+def _transport_request(ctx: Context, loop):
+    """request(mandate_hash, variables) for DelegatedVoiceClient: send one VoiceTransportRequest to the Caller and wait
+    for its VoiceTransportResult (runs in the approval worker thread)."""
+    import concurrent.futures
+    from buyer.delegate import DELEGATE_TIMEOUT_S
+
+    def request(mandate_hash: str, variables: dict) -> dict:
+        future = concurrent.futures.Future()
+        PENDING_TRANSPORT[mandate_hash] = future
+        try:
+            asyncio.run_coroutine_threadsafe(ctx.send(common.address("caller"), common.VoiceTransportRequest(
+                mandate_hash=mandate_hash, variables_json=json.dumps(variables))), loop).result(timeout=10.0)
+            return future.result(timeout=DELEGATE_TIMEOUT_S)
+        finally:
+            PENDING_TRANSPORT.pop(mandate_hash, None)
+    return request
+
+
+@agent.on_message(common.VoiceTransportResult)
+async def on_voice_transport(ctx: Context, sender: str, msg: common.VoiceTransportResult):
+    if sender != common.address("caller"):
+        return   # only Bazaar Caller can answer a delegated call
+    future = PENDING_TRANSPORT.get(msg.mandate_hash)
+    if future is None or future.done():
+        return
+    try:
+        call = json.loads(msg.call_json) if msg.call_json else None
+    except Exception:  # noqa: BLE001
+        call = None
+    future.set_result({"mandate_hash": msg.mandate_hash, "call_id": msg.call_id, "call": call, "error": msg.error})
+
+
+async def _delegated_approval(ctx: Context, transaction: dict, send_private, direct_client, service):
+    """The same approval as _phone_approval, with the voice carried by Bazaar Caller. Anything but an approval the buyer
+    itself verified (a Caller timeout or error, a reply that fails the checks, or a spoken answer that is not the code and
+    approve) makes the buyer place its own direct call once. Nothing is ever retried through the Caller."""
+    from buyer.delegate import DelegatedVoiceClient
+    delegated = DelegatedVoiceClient(transaction["mandate"]["hash"], _transport_request(ctx, asyncio.get_running_loop()),
+                                     USED_CALL_IDS)
+    result = await _phone_approval(transaction, send_private, delegated, service)
+    if result.approved:
+        return result
+    ctx.logger.warning("Bazaar Caller did not deliver a usable call; placing the approval call directly")
+    return await _phone_approval(transaction, send_private, direct_client, service)
+
+
 async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: dict) -> None:
     owner = ROUND.get("owner")
     if (not _configured_market_owner_matches(owner)
@@ -1012,7 +1081,10 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             await send_private("Phone approval is not set up, so I could not place the call. "
                                "Nothing was approved, nothing was ordered and nothing was paid.")
             return
-        result = await _phone_approval(transaction, send_private, client, _approval_service())
+        if delegate_call_enabled():
+            result = await _delegated_approval(ctx, transaction, send_private, client, _approval_service())
+        else:
+            result = await _phone_approval(transaction, send_private, client, _approval_service())
         if not result.approved or not isinstance(result.record, dict) or result.record.get("channel") != "phone":
             transaction["phase"] = "denied" if result.record and result.record.get("result") == "denied" else "paused"
             buyer_state.save_transaction(state_db(), transaction)
@@ -1041,6 +1113,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
         if (not isinstance(market_status, dict) or market_status.get("approval_method") != method
                 or not market_status.get("approved_at")):
             raise MarketBridgeError("market_approval_readback_mismatch")
+        if delegate_call_enabled() and not market_approval_matches(buyer_market.purchase_status(mandate["hash"]), mandate):
+            raise MarketBridgeError("market_approval_readback_mismatch")  # #398: re-read before anything can be paid
         ROUND.update(transaction=transaction, mandate=mandate, order=order,
                      pending_hold=True, phase="approved")
         await ctx.send(common.address(bid["supplier_id"]), common.OrderPlaced(
