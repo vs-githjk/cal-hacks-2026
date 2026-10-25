@@ -41,9 +41,6 @@ const rectCentre = (ch: string) => {
   return r ? { x: OX + ((r.c0 + r.c1 + 1) / 2) * TW, y: OY + ((r.r0 + r.r1 + 1) / 2) * TH } : { x: 480, y: 400 };
 };
 const POCKETS = POCKET_IDS.map(rectCentre);
-const WIN_RECT = pocketRect(MAZE, "9");
-const WIN_AT = rectCentre("9"); // the winner stands in the middle of the centre pocket; Pac-Man waits at its left end
-const WIN_PAC: Tile = WIN_RECT ? [WIN_RECT.r1, WIN_RECT.c0 - 1] : START;
 const tkey = (t: Tile) => `${t[0]},${t[1]}`;
 const PELLETS: Tile[] = [];
 MAZE.forEach((row, r) => [...row].forEach((ch, c) => { if (ch === ".") PELLETS.push([r, c]); }));
@@ -57,15 +54,14 @@ const CSS = [
   "@keyframes aq-pop{from{transform:translate(0,0);opacity:.5}to{transform:translate(var(--dx),var(--dy));opacity:0}}",
   "@keyframes aq-in{from{transform:translate(var(--dx),var(--dy));opacity:0}to{transform:translate(0,0);opacity:1}}",
   "@keyframes aq-out{from{transform:translate(0,0);opacity:1}to{transform:translate(var(--dx),var(--dy));opacity:0}}",
-  "@keyframes aq-swimfront{from{transform:translate(var(--dx),var(--dy)) scale(1)}to{transform:translate(0,0) scale(1.25)}}",
-  "@keyframes aq-flash{0%{opacity:0}40%{opacity:.35}100%{opacity:0}}",
+  "@keyframes aq-move{from{transform:translate(0,0)}to{transform:translate(var(--mx),var(--my))}}",
+  "@keyframes aq-popcard{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}",
   "@keyframes aq-crack{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}",
   "@keyframes aq-shard{0%{transform:translate(0,0) rotate(0);opacity:.6}40%{transform:translate(calc(var(--dx) * .6),var(--up)) rotate(calc(var(--rot) * .4));opacity:.6}100%{transform:translate(var(--dx),var(--fall)) rotate(var(--rot));opacity:0}}",
   "@keyframes aq-msg{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}",
   "@keyframes aq-dim{from{opacity:1}to{opacity:.6}}",
   "@keyframes aq-dissolve{from{opacity:1}to{opacity:0}}",
   "@keyframes aq-appear{from{opacity:0}to{opacity:1}}",
-  "@keyframes aq-drop{0%{transform:translate(0,0);opacity:.9}60%{transform:translate(calc(var(--dx) * .8),var(--dy));opacity:.9}100%{transform:translate(var(--dx),calc(var(--dy) * .4));opacity:0}}",
   "@keyframes fr-stamp{from{opacity:0;transform:scale(1.4)}}",
 ].join("");
 const mono = (size: number, extra?: CSSProperties): CSSProperties => ({ fontFamily: MONO, fontSize: size, ...extra });
@@ -243,107 +239,118 @@ function AgentG({ a, reduced, leaving }: { a: Placed; reduced: boolean; leaving:
   );
 }
 
-// Finale (deal and paid): the winner fish and Pac-Man swim at the front glass, it cracks and shatters, and they dissolve into one chat box.
-// Timeline from the start of "deal" (CSS animations keyed on mount, so "paid" continues without replaying). Nothing is drawn above y 130 (HUD).
-const IMPACT = { x: 480, y: 330 };
-const FRONT_MS = 500; // swim at the glass, scale 1 -> 1.25
-const FLASH_MS = 150;
-const CRACK_MS = 250;
-const SHATTER_AT = FRONT_MS + CRACK_MS; // 750
-const SHARD_MS = 900;
+// Finale (deal and paid). Timeline in ms from the start of "deal" (CSS animations keyed on mount, so "paid" continues without replaying):
+//   0 to 300     hole 1 breaks in the glass in front of the winner fish; 150 to 450 hole 2 in front of Pac-Man (both stay for the rest of the loop)
+//   300 to 650   the fish dissolves into the PRODUCT card, which pops at the hole (scale 0.6, 1.08, 1.0 over 350 ms)
+//   450 to 800   Pac-Man dissolves into the PRICE card, which pops the same way
+//   900 to 1700  both cards move together (ease-in-out) to the buyer's chat box at the middle of the tank; the tank behind dims to 60 percent
+//   1700 to 2200 the cards dissolve into the chat box (white, dark text). "paid" adds its follow-up message below as before.
+const HOLE_AT = [0, 150] as const;
+const HOLE_MS = 300;
+const CRACK_MS = 120; // radial cracks draw first, then the jagged opening appears
+const POP_AT = [300, 450] as const;
+const POP_MS = 350;
+const MOVE_AT = 900;
+const MOVE_MS = 800;
+const CHAT_AT = MOVE_AT + MOVE_MS; // 1700
 const DISSOLVE_MS = 500;
 const SANS = "var(--font-geist-sans, system-ui, sans-serif)";
-const CHAT = { x: 270, y: 250, w: 340, h: 132 }; // left of the deal card (x ~600+); centre x 440
-const FISH_END = { x: 452, y: IMPACT.y }; // centres where the fish and Pac-Man hit the glass
-const PAC_END = { x: 512, y: IMPACT.y };
+const CHAT = { x: 270, y: 250, w: 340, h: 132 }; // left of the deal card (x ~600+); centre (440, 316)
+const CHAT_C = { x: CHAT.x + CHAT.w / 2, y: CHAT.y + CHAT.h / 2 };
+const CARD_DX = 90; // the two cards end side by side at the chat box centre, 160 wide each
 const DEAL_ICON_CELL = 3; // 48 x 36
+const HOLE_R = 35; // the opening is ~70 units wide
+const INK_TEXT = "#0b1b2b";
+const SUB_TEXT = "#5b6b7c";
 const lcg = (n: number) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-/** Jagged crack lines from the impact: 8 branches of 4 segments each. */
-const CRACKS = Array.from({ length: 8 }, (_, k) => {
-  let a = (k * Math.PI) / 4 + 0.25, x = IMPACT.x, y = IMPACT.y;
-  let d = `M${x} ${y}`;
-  for (let j = 0; j < 4; j++) {
-    a += (lcg(k * 9 + j) - 0.5) * 0.8;
-    const len = 26 + lcg(k * 5 + j * 3) * 20;
-    x += Math.cos(a) * len; y += Math.sin(a) * len;
-    d += `L${x.toFixed(0)} ${y.toFixed(0)}`;
-  }
+/** The jagged, roughly circular opening: 16 points alternating between the outer and inner radius, with a little jitter. */
+const holePoints = (seed: number) => Array.from({ length: 16 }, (_, k) => {
+  const a = (k * Math.PI * 2) / 16, r = (k % 2 ? HOLE_R - 7 : HOLE_R) + (lcg(seed * 31 + k) - 0.5) * 6;
+  return `${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)}`;
+}).join(" ");
+/** Short radial cracks reaching out of the opening: 7 branches of 2 segments. */
+const holeCracks = (seed: number) => Array.from({ length: 7 }, (_, k) => {
+  let a = (k * Math.PI * 2) / 7 + lcg(seed + k) * 0.4;
+  let d = `M${(Math.cos(a) * (HOLE_R - 8)).toFixed(0)} ${(Math.sin(a) * (HOLE_R - 8)).toFixed(0)}`;
+  let r = HOLE_R - 8;
+  for (let j = 0; j < 2; j++) { a += (lcg(seed * 7 + k * 3 + j) - 0.5) * 0.6; r += 9 + lcg(seed + k + j * 5) * 8; d += `L${(Math.cos(a) * r).toFixed(0)} ${(Math.sin(a) * r).toFixed(0)}`; }
   return d;
 });
-const SHARDS = Array.from({ length: 26 }, (_, k) => {
-  const a = ((k * 137.5) % 360) * (Math.PI / 180);
-  const d = 90 + ((k * 53) % 200);
-  return {
-    x: IMPACT.x + Math.cos(a) * (6 + (k % 5) * 8), y: IMPACT.y + Math.sin(a) * (6 + (k % 5) * 6),
-    dx: Math.round(Math.cos(a) * d), up: Math.round(-(20 + ((k * 11) % 50)) + Math.sin(a) * d * 0.3), fall: 150 + ((k * 29) % 120),
-    rot: (k % 2 ? 1 : -1) * (120 + ((k * 37) % 200)), s: 5 + ((k * 7) % 9), tri: k % 3 === 0, delay: SHATTER_AT + (k % 4) * 20,
-  };
-});
-const SPRAY = Array.from({ length: 7 }, (_, k) => { const a = -0.3 - (k * Math.PI * 0.9) / 7; return { dx: Math.round(Math.cos(a) * (50 + k * 12)), dy: Math.round(Math.sin(a) * (60 + (k % 3) * 20)) }; });
-/** The tank's front frame with a jagged gap in the top centre (after the glass has shattered). */
-const BROKEN_FRAME = "M562 12H940a8 8 0 0 1 8 8V520a8 8 0 0 1-8 8H20a8 8 0 0 1-8-8V20a8 8 0 0 1 8-8H398M398 12l6 7-4 6M562 12l-6 8 4 6";
+const HOLES = [{ cracks: holeCracks(1), pts: holePoints(1) }, { cracks: holeCracks(2), pts: holePoints(2) }];
 
 const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}...` : s);
 
-function FinaleG({ w, product, price, kindIcon, paid, phone, fishFrom, pacFrom, reduced }: {
-  w: Row; product: string; price: number | null; kindIcon: ProductKind; paid: boolean; phone: boolean;
-  fishFrom: { x: number; y: number }; pacFrom: { x: number; y: number }; reduced: boolean;
-}): JSX.Element {
-  const swim = (from: { x: number; y: number }, end: { x: number; y: number }, size: { w: number; h: number }, kids: ReactNode) => {
-    const at = { x: end.x - size.w / 2, y: end.y - size.h / 2 };
-    const start = { x: from.x - size.w / 2, y: from.y - size.h / 2 };
-    return (
-      <g transform={`translate(${at.x} ${at.y})`}>
-        <g style={{ ["--dx" as string]: `${start.x - at.x}px`, ["--dy" as string]: `${start.y - at.y}px`, transformBox: "fill-box", transformOrigin: "center", transform: reduced ? "scale(1.25)" : undefined, animation: reduced ? undefined : `aq-swimfront ${FRONT_MS}ms ease-in both` }}>
-          <g style={{ animation: reduced ? undefined : `aq-dissolve ${DISSOLVE_MS}ms steps(5, end) ${SHATTER_AT}ms both`, opacity: reduced ? 0 : undefined }}>{kids}</g>
-        </g>
+/** One hole in the glass at (x, y): radial cracks, the jagged opening and a few shards falling below it. */
+function HoleG({ x, y, i, reduced }: { x: number; y: number; i: 0 | 1; reduced: boolean }): JSX.Element {
+  const at = HOLE_AT[i];
+  const h = HOLES[i]!;
+  return (
+    <g aria-hidden="true" transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
+      <g fill="none" stroke="#eef3f8" strokeOpacity={0.7} strokeWidth={1.5} strokeLinecap="square" shapeRendering="crispEdges">
+        {h.cracks.map((d, k) => <path key={k} d={d} pathLength={1} strokeDasharray={1} strokeDashoffset={reduced ? 0 : 1} style={{ animation: reduced ? undefined : `aq-crack ${CRACK_MS}ms linear ${at}ms both` }} />)}
       </g>
-    );
-  };
-  const appear = reduced ? undefined : `aq-appear ${DISSOLVE_MS}ms steps(5, end) ${SHATTER_AT}ms both`;
+      <polygon points={h.pts} fill={PAL.ink} fillOpacity={0.35} stroke="#eef3f8" strokeOpacity={0.7} strokeWidth={2} strokeLinejoin="miter" shapeRendering="crispEdges"
+        style={{ animation: reduced ? undefined : `aq-appear ${HOLE_MS - CRACK_MS}ms steps(3, end) ${at + CRACK_MS}ms both` }} />
+      {reduced ? null : (
+        <g shapeRendering="crispEdges">
+          {[0, 1, 2, 3, 4].map((k) => (
+            <rect key={k} x={-22 + k * 11} y={HOLE_R - 4} width={5 + (k % 3) * 2} height={4} fill="#cfe3ef" opacity={0}
+              style={{ ["--dx" as string]: `${(k - 2) * 7}px`, ["--up" as string]: "-4px", ["--fall" as string]: `${36 + k * 11}px`, ["--rot" as string]: `${(k % 2 ? 1 : -1) * (90 + k * 30)}deg`, animation: `aq-shard 700ms ease-in ${at + CRACK_MS + k * 30}ms forwards` }} />
+          ))}
+        </g>
+      )}
+    </g>
+  );
+}
+
+/** A card that pops out of its hole (scale 0.6, 1.08, 1.0), rides to the chat box and dissolves into it. Drawn centred on (0, 0). */
+function CardG({ x, y, to, i, reduced, children }: { x: number; y: number; to: { x: number; y: number }; i: 0 | 1; reduced: boolean; children: ReactNode }): JSX.Element | null {
+  if (reduced) return null;
+  return (
+    <g aria-hidden="true" transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
+      <g style={{ ["--mx" as string]: `${(to.x - x).toFixed(1)}px`, ["--my" as string]: `${(to.y - y).toFixed(1)}px`, animation: `aq-move ${MOVE_MS}ms ease-in-out ${MOVE_AT}ms both, aq-dissolve ${DISSOLVE_MS}ms steps(5, end) ${CHAT_AT}ms forwards` }}>
+        <g style={{ transformBox: "fill-box", transformOrigin: "center", animation: `aq-popcard ${POP_MS}ms ease-out ${POP_AT[i]}ms both` }}>{children}</g>
+      </g>
+    </g>
+  );
+}
+
+function FinaleG({ w, product, price, kindIcon, paid, phone, fishAt, pacAt, reduced }: {
+  w: Row; product: string; price: number | null; kindIcon: ProductKind; paid: boolean; phone: boolean;
+  fishAt: { x: number; y: number }; pacAt: { x: number; y: number }; reduced: boolean;
+}): JSX.Element {
+  const appear = reduced ? undefined : `aq-appear ${DISSOLVE_MS}ms steps(5, end) ${CHAT_AT}ms both`;
   const lines = [trunc(`Buying ${product}`, 30), trunc(`from ${w.name}`, 30)];
   const px0 = CHAT.x + 16, tx = px0 + 48 + 14;
+  const card = { fill: "#ffffff", stroke: "#e6eaef", strokeWidth: 1 } as const;
   return (
     <g aria-hidden="true">
-      {reduced ? null : (
-        <>
-          <rect x={TANK.x} y={TANK.y} width={TANK.w} height={TANK.h} fill="#fff" opacity={0} style={{ animation: `aq-flash ${FLASH_MS}ms ease-out ${FRONT_MS}ms forwards` }} />
-          <g shapeRendering="crispEdges">
-            {SHARDS.map((sh, k) => (
-              <g key={k} transform={`translate(${sh.x.toFixed(1)} ${sh.y.toFixed(1)})`}>
-                <g style={{ ["--dx" as string]: `${sh.dx}px`, ["--up" as string]: `${sh.up}px`, ["--fall" as string]: `${sh.fall}px`, ["--rot" as string]: `${sh.rot}deg`, opacity: 0, animation: `aq-shard ${SHARD_MS}ms ease-in ${sh.delay}ms forwards` }}>
-                  {sh.tri ? <polygon points={`0,0 ${sh.s},0 0,${sh.s}`} fill="#cfe3ef" /> : <rect width={sh.s} height={Math.max(3, Math.round(sh.s * 0.7))} fill="#cfe3ef" />}
-                </g>
-              </g>
-            ))}
-            {SPRAY.map((d, k) => (
-              <rect key={k} x={IMPACT.x - 2 + (k - 3) * 6} y={IMPACT.y - 2} width={4} height={4} fill="#cfe3ef" opacity={0}
-                style={{ ["--dx" as string]: `${d.dx}px`, ["--dy" as string]: `${d.dy}px`, animation: `aq-drop 700ms ease-out ${SHATTER_AT + 10 + k * 15}ms forwards` }} />
-            ))}
-          </g>
-        </>
-      )}
-      <g style={{ animation: reduced ? undefined : `aq-dissolve 150ms steps(3, end) ${SHATTER_AT}ms forwards` }}>
-        <g fill="none" stroke="#eef3f8" strokeOpacity={0.8} strokeWidth={2.5} strokeLinecap="square" strokeLinejoin="miter" shapeRendering="crispEdges">
-          {CRACKS.map((d, k) => <path key={k} d={d} pathLength={1} strokeDasharray={1} strokeDashoffset={reduced ? 0 : 1} style={{ animation: reduced ? undefined : `aq-crack ${CRACK_MS}ms linear ${FRONT_MS}ms both` }} />)}
-        </g>
-      </g>
-      {swim(fishFrom, FISH_END, { w: w.W, h: w.H }, <g transform={`scale(${S})`}><Sprite grid={w.grid} colors={w.colors} cell={FC} flip={w.flip} /></g>)}
-      {swim(pacFrom, PAC_END, { w: PW, h: PW }, <g transform={`scale(${S})`}><Sprite grid={PAC} colors={{ X: PAL.pac }} cell={PC} flip /></g>)}
+      <HoleG x={fishAt.x} y={fishAt.y} i={0} reduced={reduced} />
+      <HoleG x={pacAt.x} y={pacAt.y} i={1} reduced={reduced} />
+      <CardG x={fishAt.x} y={fishAt.y} to={{ x: CHAT_C.x - CARD_DX, y: CHAT_C.y }} i={0} reduced={reduced}>
+        <rect x={-80} y={-46} width={160} height={92} rx={10} {...card} />
+        <g transform="translate(-24 -38)"><g shapeRendering="crispEdges"><Sprite grid={PRODUCT_ICONS[kindIcon]} colors={PRODUCT_COLORS[kindIcon]} cell={DEAL_ICON_CELL} /></g></g>
+        <text x={0} y={34} textAnchor="middle" fill={INK_TEXT} style={{ fontFamily: SANS, fontSize: 11, fontWeight: 500 }}>{trunc(product, 26)}</text>
+      </CardG>
+      <CardG x={pacAt.x} y={pacAt.y} to={{ x: CHAT_C.x + CARD_DX, y: CHAT_C.y }} i={1} reduced={reduced}>
+        <rect x={-80} y={-22} width={160} height={44} rx={10} {...card} />
+        <g transform="translate(-70 -10)"><Sprite grid={PAC} colors={{ X: PAL.pac }} cell={1.5} /></g>
+        <text x={-44} y={8} fill={INK_TEXT} style={mono(22, { fontWeight: 500 })}>{price != null ? usd.format(price) : ""}</text>
+      </CardG>
       <g style={{ animation: appear }}>
-        <rect x={CHAT.x} y={CHAT.y} width={CHAT.w} height={CHAT.h} rx={14} fill="#0e2236" fillOpacity={0.95} stroke="#eef3f8" strokeOpacity={0.2} strokeWidth={1} />
+        <rect x={CHAT.x} y={CHAT.y} width={CHAT.w} height={CHAT.h} rx={14} fill="#ffffff" stroke="#e6eaef" strokeWidth={1} />
         <g transform={`translate(${px0} ${CHAT.y + 12})`}><Sprite grid={PAC} colors={{ X: PAL.pac }} cell={1.5} /></g>
-        <text x={px0 + 26} y={CHAT.y + 26} fill={PAL.muted} style={mono(11)}>the buyer&apos;s agent</text>
+        <text x={px0 + 26} y={CHAT.y + 26} fill={SUB_TEXT} style={mono(11)}>the buyer&apos;s agent</text>
         <g transform={`translate(${px0} ${CHAT.y + 50})`}><g shapeRendering="crispEdges"><Sprite grid={PRODUCT_ICONS[kindIcon]} colors={PRODUCT_COLORS[kindIcon]} cell={DEAL_ICON_CELL} /></g></g>
-        <text x={tx} y={CHAT.y + 62} fill={PAL.line} style={{ fontFamily: SANS, fontSize: 14, fontWeight: 500 }}>{lines[0]}</text>
-        <text x={tx} y={CHAT.y + 80} fill={PAL.muted} style={{ fontFamily: SANS, fontSize: 13 }}>{lines[1]}</text>
-        {price != null ? <text x={tx} y={CHAT.y + 116} fill={PAL.line} style={mono(24, { fontWeight: 500 })}>{usd.format(price)}</text> : null}
+        <text x={tx} y={CHAT.y + 62} fill={INK_TEXT} style={{ fontFamily: SANS, fontSize: 14, fontWeight: 500 }}>{lines[0]}</text>
+        <text x={tx} y={CHAT.y + 80} fill={SUB_TEXT} style={{ fontFamily: SANS, fontSize: 13 }}>{lines[1]}</text>
+        {price != null ? <text x={tx} y={CHAT.y + 116} fill={INK_TEXT} style={mono(24, { fontWeight: 500 })}>{usd.format(price)}</text> : null}
       </g>
       {paid ? (
         <g style={{ animation: reduced ? undefined : "aq-msg 250ms ease-out both" }}>
-          <rect x={CHAT.x} y={CHAT.y + CHAT.h + 8} width={CHAT.w} height={phone ? 58 : 36} rx={14} fill="#0e2236" fillOpacity={0.95} stroke="#eef3f8" strokeOpacity={0.2} strokeWidth={1} />
-          {phone ? <text x={px0} y={CHAT.y + CHAT.h + 31} fill={PAL.muted} style={{ fontFamily: SANS, fontSize: 13 }}>Approved by phone</text> : null}
-          <text x={px0} y={CHAT.y + CHAT.h + (phone ? 52 : 31)} fill={PAL.mint} style={mono(13)}>Paid · Stripe test mode</text>
+          <rect x={CHAT.x} y={CHAT.y + CHAT.h + 8} width={CHAT.w} height={phone ? 58 : 36} rx={14} fill="#ffffff" stroke="#e6eaef" strokeWidth={1} />
+          {phone ? <text x={px0} y={CHAT.y + CHAT.h + 31} fill={SUB_TEXT} style={{ fontFamily: SANS, fontSize: 13 }}>Approved by phone</text> : null}
+          <text x={px0} y={CHAT.y + CHAT.h + (phone ? 52 : 31)} fill="#0f9d76" style={mono(13)}>Paid · Stripe test mode</text>
         </g>
       ) : null}
     </g>
@@ -424,18 +431,15 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
       const frozen: Record<string, number> = phase.kind === "sealed" ? {} : { ...prev.frozen };
       const eaten0 = new Set<string>(phase.at === 0 ? [] : prev.eaten);
       let eaterAt: Tile | null = null;
-      let winnerHere = false;
       script.sellers.slice(0, 8).forEach((s, i) => {
         const v: SellerView | undefined = phase.sellers[s.id];
         if (!v) return;
         const eat = phase.kind === "eat" && v.state === "eaten" && v.reason != null && focusOf(phase, v.reason) === s.id;
-        if ((phase.shieldAt === s.id || phase.checkerAt === s.id || eat) && frozen[s.id] === undefined) frozen[s.id] = tickRef.current;
+        if ((phase.shieldAt === s.id || phase.checkerAt === s.id || eat || (v.state === "winner" && (phase.kind === "crown" || phase.kind === "deal" || phase.kind === "paid"))) && frozen[s.id] === undefined) frozen[s.id] = tickRef.current;
         if (eat && (v.reason === "highest_price" || v.reason === "outranked" || v.reason === "refused")) eaterAt = fishTile(i, frozen[s.id] ?? tickRef.current);
-        if (v.state === "winner" && (phase.kind === "crown" || phase.kind === "deal" || phase.kind === "paid")) winnerHere = true;
       });
       let path: Tile[] = [prev.tile];
       if (eaterAt) { const full = mazePath(MAZE, prev.tile, eaterAt); if (full && full.length > 1) path = full.slice(0, -1); }
-      else if (winnerHere) path = mazePath(MAZE, prev.tile, WIN_PAC) ?? path;
       else if (phase.kind === "sealed") path = mazePath(MAZE, prev.tile, START) ?? path;
       const all = new Set(eaten0);
       path.forEach((t) => all.add(tkey(t)));
@@ -498,7 +502,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
     const grid = fish ? FISH : scared ? GHOST_SCARED : GHOST;
     const W = gridW(grid), H = gridH(grid);
     const t = frozenNow[s.id] ?? tick;
-    const centre = win ? WIN_AT : reducedMotion ? (POCKETS[i % 8] ?? WIN_AT) : px(fishTile(i, t));
+    const centre = reducedMotion ? (POCKETS[i % 8] ?? px(START)) : px(fishTile(i, t));
     rows.push({
       id: s.id, name: s.name, sx: centre.x - W / 2, sy: centre.y - H / 2, cx: W / 2, W, H, color, win, newly, gone, shrink: eatsUp, burst, sign, stamp, grid, reason: r, ctag: null,
       flip: fish && !win && !reducedMotion && heading(LOOPS[i % 8] ?? [], t + 2 * i) > 0,
@@ -576,7 +580,7 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
       <rect width={960} height={540} rx={18} fill={PAL.ink} />
       <g aria-hidden="true">
         <rect x={TANK.x + 1} y={WATER_Y} width={TANK.w - 2} height={TANK.y + TANK.h - WATER_Y - 1} fill={`url(#${uid}w)`} />
-        <g clipPath={`url(#${uid}c)`} style={jumped ? { opacity: reducedMotion ? 0.6 : undefined, animation: reducedMotion ? undefined : `aq-dim 300ms ease-out ${SHATTER_AT}ms forwards` } : undefined}>
+        <g clipPath={`url(#${uid}c)`} style={jumped ? { opacity: reducedMotion ? 0.6 : undefined, animation: reducedMotion ? undefined : `aq-dim 300ms ease-out ${MOVE_AT}ms forwards` } : undefined}>
           {WEEDS.map(([x, d]) => <Weed key={x} x={x} delay={d} reduced={reducedMotion} />)}
           <g shapeRendering="crispEdges">
             <rect x={TANK.x + 1} y={SAND_Y} width={TANK.w - 2} height={20} fill={AQUA.sandA} opacity={0.55} />
@@ -589,24 +593,21 @@ export function FloorAquariumPixel({ script, phase, theme, reducedMotion, follow
             <path d={WALLS.light} fill="#fff" fillOpacity={0.14} /><path d={WALLS.dark} fill="#000" fillOpacity={0.2} />
           </g>
           <path d={pelletPath} fill={PAL.line} fillOpacity={0.5} shapeRendering="crispEdges" />
-          <ellipse cx={WIN_AT.x} cy={WIN_AT.y} rx={46} ry={30} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner && !jumped ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
-          {sorted.filter((r) => !(jumped && r.win)).map((r) => <SellerG key={r.id} r={r} reduced={reducedMotion} />)}
-          {jumped ? null : (
+          <ellipse cx={winner ? winner.sx + winner.W / 2 : 0} cy={winner ? winner.sy + winner.H / 2 : 0} rx={46} ry={30} fill="none" stroke={PAL.cyan} strokeWidth={2} style={{ opacity: finale && winner && !jumped ? 1 : 0, transition: reducedMotion ? "none" : "opacity 500ms ease-in-out" }} />
+          {sorted.map((r) => (r.win ? (
+            <g key={r.id} style={{ opacity: jumped && reducedMotion ? 0 : undefined, animation: jumped && !reducedMotion ? `aq-dissolve 150ms steps(3, end) ${POP_AT[0]}ms forwards` : undefined }}><SellerG r={r} reduced={reducedMotion} /></g>
+          ) : <SellerG key={r.id} r={r} reduced={reducedMotion} />))}
+          <g style={{ opacity: jumped && reducedMotion ? 0 : undefined, animation: jumped && !reducedMotion ? `aq-dissolve 150ms steps(3, end) ${POP_AT[1]}ms forwards` : undefined }}>
             <g aria-hidden="true" style={{ transform: `translate(${pc.x - PW / 2}px, ${pc.y - PW / 2}px)`, transition: reducedMotion ? "none" : `transform ${STEP_MS + 10}ms linear` }}>
               <g transform={`scale(${S})`}><Sprite grid={open ? PAC : PAC_CLOSED} colors={{ X: PAL.pac }} cell={PC} flip={face < 0} /></g>
               <text x={PW / 2} y={PW + 13} textAnchor="middle" fill={PAL.line} style={label()}>the buyer</text>
             </g>
-          )}
+          </g>
           {agent ? <AgentG key={agent.key} a={agent} reduced={reducedMotion} leaving={!placed} /> : null}
         </g>
         <g fill="#fff"><rect x={TANK.x + 1} y={WATER_Y} width={TANK.w - 2} height={2} opacity={0.18} /><rect x={220} y={WATER_Y + 4} width={60} height={2} opacity={0.1} /><rect x={560} y={WATER_Y + 4} width={90} height={2} opacity={0.1} /></g>
-        {jumped ? (
-          <>
-            {reducedMotion ? null : <rect x={TANK.x} y={TANK.y} width={TANK.w} height={TANK.h} rx={8} fill="none" stroke={PAL.line} strokeOpacity={0.35} strokeWidth={2} style={{ animation: `aq-dissolve 1ms steps(1, end) ${SHATTER_AT}ms forwards` }} />}
-            <path d={BROKEN_FRAME} fill="none" stroke={PAL.line} strokeOpacity={0.35} strokeWidth={2} strokeLinejoin="round" style={{ animation: reducedMotion ? undefined : `aq-appear 1ms steps(1, end) ${SHATTER_AT}ms both` }} />
-          </>
-        ) : <rect x={TANK.x} y={TANK.y} width={TANK.w} height={TANK.h} rx={8} fill="none" stroke={PAL.line} strokeOpacity={0.35} strokeWidth={2} />}
-        {jumped && winner ? <FinaleG w={winner} product={(phase.deal?.part ?? script.part).split(" · ")[0]!} price={phase.deal?.price ?? null} kindIcon={productKind(script.part)} paid={kind === "paid"} phone={!!phase.deal?.approvedByPhone} fishFrom={{ x: WIN_AT.x, y: WIN_AT.y }} pacFrom={{ x: px(WIN_PAC).x, y: px(WIN_PAC).y }} reduced={reducedMotion} /> : null}
+        <rect x={TANK.x} y={TANK.y} width={TANK.w} height={TANK.h} rx={8} fill="none" stroke={PAL.line} strokeOpacity={0.35} strokeWidth={2} />
+        {jumped && winner ? <FinaleG w={winner} product={(phase.deal?.part ?? script.part).split(" · ")[0]!} price={phase.deal?.price ?? null} kindIcon={productKind(script.part)} paid={kind === "paid"} phone={!!phase.deal?.approvedByPhone} fishAt={{ x: winner.sx + winner.W / 2, y: winner.sy + winner.H / 2 }} pacAt={{ x: pc.x, y: pc.y }} reduced={reducedMotion} /> : null}
       </g>
     </svg>
   );
