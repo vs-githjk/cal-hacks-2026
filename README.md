@@ -23,7 +23,13 @@ Secure is the goal we build toward, not a claim the numbers support yet. The mea
 
 </div>
 
-<!-- VIDEO: walkthrough -->
+<div align="center">
+
+[![Watch the Fish Market demo](https://img.youtube.com/vi/FWOXxhP5-w8/maxresdefault.jpg)](https://youtu.be/FWOXxhP5-w8)
+
+**[Watch the demo (3 min)](https://youtu.be/FWOXxhP5-w8)**
+
+</div>
 
 <!-- IMG: floor -->
 
