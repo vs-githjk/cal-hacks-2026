@@ -446,6 +446,87 @@ def test_a_run_stops_at_its_time_budget_without_charging_the_rest(monkeypatch):
     assert mod.summary(got, len(urls), stopped, counts).endswith("170 not checked: the run time limit of 15 minutes was reached")
 
 
+# --- #449 RT-29: URLs past the cap are counted, and the run budget leaves room for OUTPUT --------------------------------
+def test_urls_past_the_cap_are_counted_in_the_status_line_and_the_summary(monkeypatch):
+    urls = [f"https://shop.example/gone{i}" for i in range(205)]            # all unreadable: free, quick
+    a, mod = run(monkeypatch, {"listingUrls": urls})
+    note = "5 URL(s) over the 200-listing limit were not checked"
+    assert len(a.rows) == mod.MAX_LISTINGS == 200
+    assert a.status[-1][0].endswith(note) and a.status[-1][0].startswith("200 listing(s):")
+    out = a.kv["OUTPUT"]
+    assert out["summary"] == a.status[-1][0] and out["dropped"] == 5 and out["total"] == 200 and out["checked"] == 200
+
+
+def test_duplicates_are_not_counted_as_dropped_and_a_small_run_says_nothing(monkeypatch):
+    urls = [f"https://shop.example/gone{i % 195}" for i in range(205)]     # 195 distinct, 10 repeats
+    a, mod = run(monkeypatch, {"listingUrls": urls})
+    assert a.kv["OUTPUT"]["dropped"] == 0 and "over the" not in a.status[-1][0]
+    assert mod.urls_and_dropped({"listingUrls": [f"https://a.example/{i}" for i in range(500)]})[1] == 300
+    assert mod.urls_and_dropped({"listingUrls": "https://a.example/1"}) == (["https://a.example/1"], 0)
+    assert mod.urls_and_dropped("junk") == ([], 0)
+
+
+def test_the_summary_adds_dropped_after_a_stop_note(monkeypatch):
+    _, mod = run(monkeypatch, {"listingUrls": []})
+    rows = [{"status": "ready"}] * 3
+    text = mod.summary(rows, 5, "your charge limit was reached", None, dropped=7)
+    assert text == ("3 listing(s): 0 blocks, 0 warns, 3 ready, 0 unreadable; 2 not checked: your charge limit was reached; "
+                    "7 URL(s) over the 200-listing limit were not checked")
+
+
+def test_the_budget_sits_a_safe_margin_under_the_default_timeout_the_docs_name(monkeypatch):
+    """The Console default run timeout is 300 s (docs/ACTORS.md; actor.json has no defaultRunOptions). A budget of 15
+    minutes meant a big run was killed before it wrote OUTPUT."""
+    _, mod = run(monkeypatch, {"listingUrls": []})
+    docs = (ACTOR.parents[1] / "docs" / "ACTORS.md").read_text()
+    row = next(line for line in docs.splitlines() if line.startswith("| Seller Agent-Readiness Report |"))
+    assert f"{mod.DEFAULT_TIMEOUT_S} s" in row                                  # one number, in the code and in the doc
+    assert mod.RUN_BUDGET_S + mod.OUTPUT_RESERVE_S == mod.DEFAULT_TIMEOUT_S
+    assert mod.OUTPUT_RESERVE_S >= 30 + 30      # one page fetch still running (30 s cap) plus time to write OUTPUT
+    assert 0 < mod.RUN_BUDGET_S < 300
+
+
+def test_a_run_of_slow_pages_ends_and_writes_output_before_the_default_timeout(monkeypatch):
+    _, mod = run(monkeypatch, {"listingUrls": []})
+    clock, rows = [0.0], []
+
+    def slow_check(url):
+        clock[0] += 30                                  # every page takes the full fetch deadline
+        return check_page(url, page(), now=NOW)
+
+    async def push(row):
+        rows.append(row)
+
+    async def charge(event_name, count):
+        return types.SimpleNamespace(event_charge_limit_reached=False, charged_count=count)
+    urls = [f"https://shop.example/{i}" for i in range(200)]
+    got, stopped, _ = asyncio.run(mod.run_listings(urls, slow_check, push, charge, clock=lambda: clock[0]))
+    assert stopped and len(got) < 200
+    assert clock[0] <= mod.RUN_BUDGET_S + 30            # the last page started inside the budget and took its full 30 s
+    assert clock[0] <= mod.DEFAULT_TIMEOUT_S - 30       # so at least 30 s were left to write OUTPUT before the kill
+
+
+def test_the_platforms_own_timeout_moves_the_budget(monkeypatch):
+    _, mod = run(monkeypatch, {"listingUrls": []})
+    from datetime import timedelta
+    now = datetime(2026, 10, 25, 12, 0, 0, tzinfo=timezone.utc)
+    at = lambda s: {"ACTOR_TIMEOUT_AT": (now + timedelta(seconds=s)).isoformat().replace("+00:00", "Z")}  # noqa: E731
+    assert mod.run_budget_s(at(3600), now) == 3600 - mod.OUTPUT_RESERVE_S         # a longer run timeout gets a longer budget
+    assert mod.run_budget_s({"APIFY_TIMEOUT_AT": at(600)["ACTOR_TIMEOUT_AT"]}, now) == 600 - mod.OUTPUT_RESERVE_S
+    assert mod.run_budget_s(at(100), now) == 100 - mod.OUTPUT_RESERVE_S           # a shorter one, a shorter budget
+    assert mod.run_budget_s(at(10), now) == 0 and mod.run_budget_s(at(-500), now) == 0
+    for bad in ({}, {"ACTOR_TIMEOUT_AT": ""}, {"ACTOR_TIMEOUT_AT": "soon"}, {"ACTOR_TIMEOUT_AT": "2026-10-25T12:00:00"}):
+        assert mod.run_budget_s(bad, now) == mod.RUN_BUDGET_S, bad              # unknown or naive: the default, never crash
+
+
+def test_main_uses_the_platform_deadline_and_still_writes_output(monkeypatch):
+    monkeypatch.setenv("ACTOR_TIMEOUT_AT", "2020-01-01T00:00:00Z")             # already past: no time to check any page
+    a, _ = run(monkeypatch, {"listingUrls": [REAL_URL, "https://shop.example/ok"]})
+    assert a.rows == [] and a.charges == []
+    assert "2 not checked: the run time limit of 0 minutes was reached" in a.status[-1][0]
+    assert a.kv["OUTPUT"]["total"] == 2 and a.kv["OUTPUT"]["checked"] == 0
+
+
 def test_a_server_that_drips_its_headers_hits_the_deadline(monkeypatch):
     """A real local socket (the guard refuses loopback, so _request is called directly): one header byte every 50 ms
     for 10 s, never a single socket timeout, but the hop must stop at its 0.5 s deadline."""

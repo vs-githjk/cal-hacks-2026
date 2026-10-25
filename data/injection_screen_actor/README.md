@@ -4,11 +4,11 @@ AI shopping agents read seller text: the title, the description, the seller note
 
 It runs the deterministic rules of **Smell Test**, the screen built for [Fish Market](https://github.com/vs-githjk/cal-hacks-2026), a market where buyer agents compare seller offers. Shield's rules are used unchanged. **Rules only:** the optional Shield classifier is off in this Actor, so no LLM is called, no API key is needed, and the same text always gets the same answer.
 
-Apify Store page: [anoopibrampur/listing-injection-screen](https://apify.com/anoopibrampur/listing-injection-screen).
+**This Actor is private on Apify.** It is not on the public Apify Store, so there is no Store page to open, and only the Apify account that owns it can run it.
 
 ## What you get
 
-| Verdict | Shield's word | What it means | Charged |
+| Verdict | Shield's word | What it means | Counts as a screened listing |
 |---|---|---|---|
 | `block` | block | A blocking rule fired, such as an instruction to override the agent or to skip the buyer's approval | yes |
 | `flag` | quarantine | A holding rule fired, such as a payee change or a request for private data: hold the listing for a person to read | yes |
@@ -65,18 +65,11 @@ One dataset row per listing: `verdict`, `summary`, `rule_ids`, `first_rule`, `fi
 
 ## Pricing
 
-**$0.001 per listing screened** (pay per event `listing-screened`, configured in the Apify Console, not in this repo). Apify platform usage is included.
-
-| You screen | You pay |
-|---|---|
-| 1 listing | $0.001 |
-| 100 listings | $0.10 |
-| 1,000 listings | $1.00 |
-| A listing with no text, a non-text field, text over 20,000 characters, or an internal error | free |
-
-Each run also has Apify's run start event of $0.00005. A listing is charged before its row is delivered. When your spending limit is reached, the run stops and the status line says how many listings were not screened. If the charge itself fails, the run stops rather than deliver an unpaid row. A restarted run never charges a listing twice.
+**No price is set.** The Actor is private and has no per-listing price: its owner pays only Apify's own platform usage for a run. Pay-per-event charging is built into the code (one `listing-screened` event per listing Shield read, charged before the row is delivered), but no price is configured in the Apify Console. A price of **$0.001 per listing screened** is planned for the day it is published to the Store; until then treat it as a plan, not a rate. A listing with no text, a non-text field, text over 20,000 characters, or an internal error would stay free.
 
 ## Use it from your code or an AI agent
+
+Because the Actor is private, these calls work with the owner's Apify token only.
 
 **API (one call, results in the response):**
 

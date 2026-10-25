@@ -45,7 +45,7 @@ The facts come from the page's schema.org Product JSON-LD. A page with no struct
 
 ## Input
 
-`listingUrls`: your product page URLs, one per line, up to 200 per run. Each page is fetched once, from public addresses only, with a 2 MB cap and 30 seconds per page. A run stops after 15 minutes; the listings left are not checked and not charged, and the status line says how many.
+`listingUrls`: your product page URLs, one per line, up to 200 per run. Each page is fetched once, from public addresses only, with a 2 MB cap and 30 seconds per page. A run stops checking a minute before its run timeout (4 minutes with the default 300 second timeout; raise the run timeout for a big batch), so the results are always written; the listings left are not checked and not charged, and the status line says how many. URLs past the 200 limit are not checked either, and the status line counts them.
 
 ## Output
 
