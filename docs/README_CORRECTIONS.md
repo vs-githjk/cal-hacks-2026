@@ -51,7 +51,7 @@ Updated with every merge. States: **planned**, **in progress**, **built**, **bui
 | Ownership memory | built for the demo goal (a scripted SIM rig) | `demo/goal.py` |
 | Seller bids from Apify mirrors | built in the demo runner (MIRROR listings, SIM bidders); the Agentverse sellers use SIM listings | `demo/sellers.py`, `data/mirror` |
 | Fit checker | built | `data/fit_checker` |
-| Quality advocate with cited warnings | built as code, not a model; recalls and seller records are SIM fixtures | `agents/advocate/checks.py` |
+| Quality advocate with cited warnings | built as code, not a model; prices against a MIRROR dated baseline (retail asks within 24 h, two data owners; stale or thin gives an unverified note) and the live CPSC recall API (24 h cache per brand, brand from our data only, unverified fallback); no seller records yet (no record warning, no SIM table) | `agents/advocate/checks.py`, `agents/advocate/real_data.py` |
 | Claim-check Actor | built | `data/claim_check` |
 | Shield screen, verify-agent, verify-mandate, check-claim | built | `shield/api.py`, `shield/product.py` |
 | Shield signed verdict receipts and adaptive attack set | planned | none yet |
@@ -114,9 +114,10 @@ Voice is the trust step: above the allowance, a call asks for a one-time word-pa
 
 ## 6. Real vs simulated (changes to the table)
 
-The two rows that change in the README table are below; the full working copy is docs/REAL_VS_SIMULATED.md.
+The rows that change in the README table are below; the full working copy is docs/REAL_VS_SIMULATED.md.
 
-- Price history and baseline: "MIRROR or SIM. Dated sources where they work; a labelled seeded series where they do not. Bright Data is built, env-gated and not run live (no key in the run; one smoke call passed Sat 02:55)."
+- Price history and baseline: "MIRROR. A dated baseline: in-stock new retail asks seen within 24 h before the check, from two data owners (retailer listings via Apify and eBay sold), at least 2 prices each. Stale, thin or one-owner gives an unverified note on the card and no price comparison, never a seeded price. Bright Data is built, env-gated and not run live (no key in the run; one smoke call passed Sat 02:55)."
+- CPSC recalls: "LIVE. The CPSC public recall API, cached per brand for 24 h, with the brand taken from our data only; a failed or slow lookup is an unverified note, never 'no recall'."
 - CRS seller stability: "built, env-gated, not run live. The adapter is Abhinav's client (#121, #128); `pay/crs_gate.py` is the payee gate, not yet called before the charge."
 
 ## 7. Guidance: checks the README should keep passing

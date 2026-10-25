@@ -1,0 +1,136 @@
+[
+ {
+  "id": "ebay_sold:b894a15af306",
+  "category": "gpu",
+  "name": "MSI Gaming GeForce RTX 5070 Ti 16GB GDDR7 PCI Express 5.0 Video Card RTX 5070 Ti",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1035.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/267822907231?nordt=true",
+  "snapshot_id": "ebay_sold-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:28+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/267822907231?nordt=true",
+   "price": 1035.0,
+   "shipping_type": "free",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 0.0,
+   "shipping_captured": true,
+   "landed_price": 1035.0,
+   "availability": null
+  }
+ },
+ {
+  "id": "ebay_sold:63a2541527d1",
+  "category": "gpu",
+  "name": "MSI Gaming Trio GeForce RTX 5070 Ti 16GB GDDR7 Ray Tracing HDMI/DP",
+  "model_number": null,
+  "condition": "used",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 875.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/336861050051?nordt=true",
+  "snapshot_id": "ebay_sold-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:28+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/336861050051?nordt=true",
+   "price": 875.0,
+   "shipping_type": "paid",
+   "shipping": "7.03",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 7.03,
+   "shipping_captured": true,
+   "landed_price": 882.03,
+   "availability": null
+  }
+ },
+ {
+  "id": "ebay_sold:95a42d4f7df5",
+  "category": "gpu",
+  "name": "MSI GeForce RTX 5070 Ti 16GB GAMING TRIO OC WHITE GDDR7 Graphics Card 4K Gaming",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1680.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/137852620757?nordt=true",
+  "snapshot_id": "ebay_sold-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:28+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/137852620757?nordt=true",
+   "price": 1680.0,
+   "shipping_type": "paid",
+   "shipping": "15.72",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 15.72,
+   "shipping_captured": true,
+   "landed_price": 1695.72,
+   "availability": null
+  }
+ },
+ {
+  "id": "ebay_sold:7456a8628c9e",
+  "category": "gpu",
+  "name": "MSI GeForce RTX 5070 Ti OC Edition Frieren Beyond Journey's End 16GB GDDR7",
+  "model_number": null,
+  "condition": "open-box",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 995.0,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/920070231772?nordt=true",
+  "snapshot_id": "ebay_sold-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:28+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/920070231772?nordt=true",
+   "price": 995.0,
+   "shipping_type": "paid",
+   "shipping": "10.32",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 10.32,
+   "shipping_captured": true,
+   "landed_price": 1005.32,
+   "availability": null
+  }
+ },
+ {
+  "id": "ebay_sold:75f3b4855f66",
+  "category": "gpu",
+  "name": "NEW Gigabyte RTX 5070 Ti WINDFORCE SFF 16GB GDDR7 [SEALED] [3-Year Warranty]",
+  "model_number": null,
+  "condition": "new",
+  "attrs": {
+   "chipset": "RTX 5070 Ti"
+  },
+  "price": 1249.73,
+  "currency": "USD",
+  "origin": "MIRROR",
+  "source": "https://www.ebay.com/itm/168519085195?nordt=true",
+  "snapshot_id": "ebay_sold-20261025T0241Z",
+  "snapshot_date": "2026-10-25T02:41:28+00:00",
+  "listing": {
+   "url": "https://www.ebay.com/itm/168519085195?nordt=true",
+   "price": 1249.73,
+   "shipping_type": "paid",
+   "shipping": "21.42",
+   "sold_date": "2026-10-24",
+   "shipping_cost": 21.42,
+   "shipping_captured": true,
+   "landed_price": 1271.15,
+   "availability": null
+  }
+ }
+]
