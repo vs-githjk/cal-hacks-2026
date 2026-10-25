@@ -1052,6 +1052,9 @@ def _approval_service():
     return APPROVAL_SERVICE
 
 
+BETA_LIMIT_TEXT = "Approval calls are limited during the beta. Nothing was paid."
+
+
 def _approval_call(buyer_id: str = ""):
     """(client, reason, buyer_name) for the approval phone call. Approval is only ever the spoken code on that call,
     so with no client configured the buyer fails closed: no approval, no payment. The number is the buyer's own
@@ -1073,6 +1076,12 @@ def _approval_call(buyer_id: str = ""):
         import logging
         logging.getLogger("buyer_agent").warning(f"approval call refused for buyer {buyer_id}: no phone on file")
         return None, "not_configured", name
+    from pay.voice_cartesia import ALLOW_ENV, on_allowlist, parse_allowlist
+    target = phone or env.get(TO_ENV)
+    if target and not on_allowlist(target, parse_allowlist(env.get(ALLOW_ENV))):  # #449 item 1: beta allowlist, no client, no digits logged
+        import logging
+        logging.getLogger("buyer_agent").warning(f"approval call refused for buyer {buyer_id}: not on the beta allowlist")
+        return None, "beta_limited", name
     try:
         return CartesiaClient.from_env({**env, TO_ENV: phone} if phone else env), "", name
     except CartesiaError:
@@ -1269,6 +1278,13 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
     try:
         ROUND["phase"] = "approval"
         client, unavailable, buyer_name = await asyncio.to_thread(_approval_call, transaction["buyer_id"])
+        if client is None and unavailable == "beta_limited":
+            # #449 item 1: terminal for web and chat alike (this number can never be called), so nothing stays held
+            transaction["phase"] = "expired"
+            buyer_state.save_transaction(state_db(), transaction)
+            ROUND.update(transaction=None, pending_hold=False, phase="done")
+            await tell_owner(ctx, BETA_LIMIT_TEXT)
+            return
         if client is None:
             # Fail closed: no approval without the phone call. The transaction is left as it was.
             ROUND["phase"] = "pending_approval"
@@ -1289,6 +1305,9 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
                 transaction["phase"] = "expired"  # terminal: recovery ignores it, so a restart cannot wedge the agent
             buyer_state.save_transaction(state_db(), transaction)
             ROUND["phase"] = "pending_approval"
+            if any(t.get("outcome") == "CallLimited" for t in (result.trace or [])):   # #449 item 1: rate cap hit, never re-dialled
+                await tell_owner(ctx, BETA_LIMIT_TEXT)
+                return
             await tell_owner(ctx, "The approval call failed or was not approved. Nothing was paid and no order was placed; "
                                   "the deal remains held until it expires.")
             return
