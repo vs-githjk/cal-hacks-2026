@@ -11,6 +11,7 @@ is SIM: the kit cannot verify a real shop, so origin LIVE is refused. Nothing he
 """
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 import os
@@ -20,6 +21,7 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Any, Callable
 
 from fastapi import FastAPI, Request
@@ -38,6 +40,10 @@ from factory import ConfigError, validate_config  # noqa: E402
 
 from shield.api import BodyLimit  # noqa: E402  (413 before any parsing, same limit as the other local APIs)
 from seller_kit import ucp  # noqa: E402
+# #398: the Listing Injection Screen Actor's own code (Shield's rules, classifier off, no network) screens every new shop
+from data.injection_screen_actor.src.screen import screen_text  # noqa: E402
+# #398: the Seller Agent-Readiness Report Actor's own code reads each new listing page for the /sell result
+from data.readiness import check_listing  # noqa: E402
 
 # SIM sample needs shown when no real source is wired in. Same SKUs the demo sellers list.
 SIM_NEEDS: list[dict] = [
@@ -102,6 +108,87 @@ OPERATOR_ENV = "SELLER_KIT_OPERATOR_TOKEN"
 OPERATOR_HEADER = "x-operator-token"
 
 
+SCREEN_NAME = "the Listing Injection Screen"
+
+
+def listing_text(norm: dict) -> str:
+    """Every word a shop gives that a shopping agent will read: name, owner, kind of shop, perks, claims, part names,
+    listing pages and attrs (keys and values), one per line. Only id and origin are left out (the kit sets or checks them)."""
+    out: list[str] = []
+
+    def walk(v):
+        if isinstance(v, str):
+            out.append(v)
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                walk(k)
+                walk(x)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x)
+    walk({k: v for k, v in norm.items() if k not in ("id", "origin")})
+    return "\n".join(out)
+
+
+def screen_shop(norm: dict):
+    """(screen, None) when the shop's text passed, else (None, error response). Fail closed: a block or flag is refused
+    (422), and a screen that raised or did not read the text refuses too (503); nothing is written either way."""
+    try:
+        v = screen_text(listing_text(norm))
+    except Exception as e:  # noqa: BLE001
+        return None, _one(503, "listing_text", f"{SCREEN_NAME} could not run ({type(e).__name__}), so nothing was written")
+    if not isinstance(v, dict) or not v.get("screened"):
+        return None, _one(503, "listing_text", f"{SCREEN_NAME} could not read the shop's text, so nothing was written")
+    if v.get("verdict") != "pass":
+        why = "; ".join(dict.fromkeys((v.get("reasons") or {}).values())) or "a rule fired"
+        return None, _one(422, "listing_text", f"{SCREEN_NAME} says {v.get('verdict')}: {why}. Remove that text and send it again")
+    return {"verdict": "pass", "screener": v.get("screener"), "rule_ids": list(v.get("rule_ids") or [])}, None
+
+
+READINESS_BUDGET_S = 8.0   # all listing pages together; a page not read by then is unreadable, never a wait on the shop
+READINESS_MAX_PAGES = 5
+READINESS_STATUSES = {"blocks", "warns", "ready", "unreadable"}
+
+
+def _readiness_row(url: str, r) -> dict:
+    """The report as the /sell result shows it: status, summary and per finding what an AI shopper sees and the fix."""
+    if not isinstance(r, dict) or r.get("status") not in READINESS_STATUSES:
+        return {"url": url, "status": "unreadable", "summary": "The page could not be read, so nothing is known about it.", "findings": []}
+    findings = [{"severity": str(f.get("severity") or ""), "what_an_agent_sees": str(f.get("what_an_agent_sees") or ""),
+                 "fix": str(f.get("fix") or "")} for f in (r.get("findings") or []) if isinstance(f, dict)]
+    return {"url": url, "status": r["status"], "summary": str(r.get("summary") or ""), "findings": findings}
+
+
+def readiness_for(urls: list[str]) -> list[dict]:
+    """data.readiness.check_listing for each listing page, in parallel, within READINESS_BUDGET_S. A page that fails or is
+    not read in time is unreadable: the report never holds up or blocks the shop, which is already written."""
+    urls = list(dict.fromkeys(u for u in urls if isinstance(u, str)))[:READINESS_MAX_PAGES]
+    if not urls:
+        return []
+    pool = ThreadPoolExecutor(max_workers=min(4, len(urls)))
+    futures = [(u, pool.submit(check_listing, u)) for u in urls]
+    done, _ = wait([f for _, f in futures], timeout=READINESS_BUDGET_S)
+    pool.shutdown(wait=False, cancel_futures=True)
+    out = []
+    for u, f in futures:
+        if f not in done:
+            out.append({"url": u, "status": "unreadable", "summary": f"The page was not read in time ({READINESS_BUDGET_S:g} s).", "findings": []})
+        elif f.exception() is not None:
+            out.append({"url": u, "status": "unreadable", "summary": "The page could not be read, so nothing is known about it.", "findings": []})
+        else:
+            out.append(_readiness_row(u, f.result()))
+    return out
+
+
+def listing_urls(norm: dict) -> list[str]:
+    urls = []
+    for ls in (norm.get("listings") or {}).values():
+        if isinstance(ls, dict):
+            urls.append(ls.get("listing_url"))
+            urls += [a.get("listing_url") for a in ls.get("alt_lines") or [] if isinstance(a, dict)]
+    return urls
+
+
 def fold_id(seller_id: str) -> str:
     """The id as seeds and agent names see it (agents/sellers/factory.py): - becomes _ and a trailing _agent goes."""
     return seller_id.replace("-", "_").removesuffix("_agent")
@@ -149,9 +236,17 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
             given = request.headers.get(OPERATOR_HEADER) or ""
             if not operator or not hmac.compare_digest(given.encode(), operator.encode()):
                 return _one(403, "replace", f"replace=true needs the operator token ({OPERATOR_HEADER} header, set by {OPERATOR_ENV})")
-        return _write(norm, replace)
+        screened, refused = screen_shop(norm)
+        if refused is not None:
+            return refused
+        written = _write(norm, replace, screened)
+        if written.status_code != 201:
+            return written
+        body = json.loads(written.body)
+        body["readiness"] = await asyncio.to_thread(readiness_for, listing_urls(norm))
+        return JSONResponse(body, status_code=201)
 
-    def _write(norm: dict, replace: bool):
+    def _write(norm: dict, replace: bool, screened: dict):
         path = folder / f"{norm['id']}.json"
         with lock:
             if path.parent != folder or path.is_symlink():
@@ -179,7 +274,7 @@ def create_app(custom_dir: Path | str | None = None, needs_source: Callable[[], 
                     pass
                 raise
         return JSONResponse({"id": norm["id"], "name": norm["name"], "origin": norm["origin"], "config_path": str(path),
-                             "run_command": run_command(path)}, status_code=201)
+                             "run_command": run_command(path), "screen": screened}, status_code=201)
 
     @app.get("/v1/sellers")
     def list_sellers() -> list[dict]:

@@ -4,8 +4,8 @@ baseline_for(skus, as_of=None)  -> (baseline, notes)   price baselines in the sh
 recalls_for_bids(bids, ...)     -> (recalls, notes)    CPSC recall entries in the shape checks.advise reads
 with_notes(cards, notes)        -> cards               adds one labelled "note" warning per unverified lookup
 
-Real means: price from data.baselines.baseline (dated retail asks from two data owners), recalls from data.recalls
-(the CPSC public API), and a source_url that is a real page. A lookup that fails, is stale or has no data is "unverified":
+Real means: price from data.baselines.baseline (dated retail asks from two data owners), recalls from
+data.recall_checker.check_product (the Electronics Recall Checker Actor's own matcher over the CPSC public API, #398), and a source_url that is a real page. A lookup that fails, is stale or has no data is "unverified":
 there is no price or recall check for that SKU, and every card says so in a note, never a silent pass. The notes are
 INFO warnings, so they never change a recommendation. Nothing falls back to mock_data: a SKU with no real data has no price
 check and a "price baseline unavailable" note. Tests use fakes only; nothing here calls the network unless a fetch is passed or CPSC is reached.
@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # the repo root, for data.* (no uagents needed, so it tests anywhere)
 from data import baselines as price_baselines
+from data import recall_checker
 from data import recalls as cpsc
 from advocate import checks  # CALL_SUMMARIES, the closed set of spoken reasons
 
@@ -197,13 +198,27 @@ def brand_of(line: dict) -> str | None:
     return sorted(brands)[0] if brands else None
 
 
+RECALL_STATUS = {"recalled": "found", "possible": "partial", "none": "none"}   # check_product -> the shape recalls_for_bids reads
+
+
 def _lookup_brand(brand, skus, fetch, now, cache_dir) -> dict:
-    """All recall answers for one brand, in one thread (the first call fills the per-brand cache for the rest)."""
+    """All recall answers for one brand, in one thread (the first call fills the per-brand cache for the rest), from
+    data.recall_checker.check_product: the same code the Electronics Recall Checker Actor runs (#398). recalled (a UPC or
+    a model code on the recall) is a veto. possible is a lead: a GPU name such as "rtx 4070 super" has no model code, so
+    the Actor cannot tell it from a 4070 Ti, and the advocate's exact model phrase rule (data.recalls.recalls_for, same
+    per-brand cache, no second fetch) decides veto or caution. Anything else, unverified included, is unverified."""
     out = {}
     for sku in skus:
         try:
-            out[sku] = cpsc.recalls_for(f"{brand} {sku}", brand, fetch=fetch, now=now, cache_dir=cache_dir)
-        except Exception as e:  # anything escaping recalls_for is unverified, never a crash that drops every card
+            r = recall_checker.check_product(f"{brand} {sku}", brand, fetch=fetch, now=now, cache_dir=cache_dir)
+            status = RECALL_STATUS.get(r.get("status"), "unverified")
+            out[sku] = {"status": status, "recalls": list(r.get("matches") or []), "partial": list(r.get("possible") or []),
+                        "reason": r.get("summary") if status == "unverified" else None, "source_url": r.get("source_url")}
+            if status == "partial":
+                exact = cpsc.recalls_for(f"{brand} {sku}", brand, fetch=fetch, now=now, cache_dir=cache_dir)
+                if exact.get("status") == "found" and exact.get("recalls"):
+                    out[sku] = {**out[sku], "status": "found", "recalls": list(exact["recalls"])}
+        except Exception as e:  # anything escaping check_product is unverified, never a crash that drops every card
             out[sku] = {"status": "unverified", "reason": f"the CPSC lookup failed ({type(e).__name__})", "source_url": None}
     return out
 

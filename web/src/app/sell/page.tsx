@@ -7,6 +7,7 @@ import {
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
+const READINESS_WORD: Record<string, string> = { blocks: "Blocks:", warns: "Warns:", ready: "Ready:", unreadable: "Unreadable:" };
 const input = "min-h-11 w-full rounded-lg border border-line bg-panel px-3 py-2 text-[14px]";
 const button = "min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink disabled:opacity-60";
 
@@ -238,6 +239,36 @@ export default function SellPage() {
           <p>
             <strong>{created.name}</strong> <OriginChip origin={created.origin} /> is saved as <Code>{created.config_path}</Code>.
           </p>
+          {created.screen === "pass" && (
+            <p className="mt-2 text-[13px] text-muted">
+              Screened by the Listing Injection Screen before it was saved: no rule fired on your shop&apos;s text.
+            </p>
+          )}
+          {created.readiness.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[13px] font-medium">What an AI shopper sees on your listing pages</p>
+              <p className="text-[12px] text-muted">The Seller Agent-Readiness Report, read from each page just now.</p>
+              <ul className="mt-1 grid gap-2">
+                {created.readiness.map((r) => (
+                  <li key={r.url} className="rounded-lg border border-line p-2.5 text-[13px]">
+                    <p className="break-all font-mono text-[12px] text-muted">{r.url}</p>
+                    <p className="mt-1">
+                      <strong>{READINESS_WORD[r.status]}</strong> {r.summary}
+                    </p>
+                    {r.findings.length > 0 && (
+                      <ul className="mt-1 list-disc pl-5 text-muted">
+                        {r.findings.map((f, i) => (
+                          <li key={i}>
+                            {f.what_an_agent_sees} {f.fix && <span className="text-ink-2">Fix: {f.fix}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="mt-3 text-[13px] font-medium">Run your agent</p>
           <pre className="mt-1 overflow-x-auto rounded-lg bg-soft p-3 font-mono text-[12px]">{created.run_command}</pre>
           <p className="mt-3 text-[13px] font-medium">What happens next</p>

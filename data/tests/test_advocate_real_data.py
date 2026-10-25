@@ -362,3 +362,29 @@ def test_a_non_dict_line_is_unverified_not_a_type_error(rd, tmp_path):  # #330 i
     assert found == [] and any(n["rule_id"] == "advocate.recall_unverified" and "could not be read" in n["text"] for n in notes)
     base, records, recalls, notes = rd.real_data.advice_inputs(NEED, [junk], as_of=AT, rows=ROWS, fetch=lambda u: b"[]", cache_dir=tmp_path)
     assert "rtx 5070 ti" in base and recalls == []
+
+
+def test_the_advocate_s_recall_check_runs_through_the_recall_checker_actor_code(rd, tmp_path, monkeypatch):  # #398 item 3
+    """The advocate asks data.recall_checker.check_product, the Electronics Recall Checker Actor's own matcher, and maps its
+    answer: recalled vetoes, possible cautions, unverified is a note. A failed lookup is never a pass."""
+    from data import recall_checker
+    calls = []
+    hit = {"title": "MSI Recalls GeForce RTX 5070 Ti Graphics Cards (SIM fixture)", "date": "2026-09-01",
+           "url": "https://www.cpsc.gov/Recalls/2026/msi-5070-ti"}
+
+    def answer(status):
+        def check_product(product, brand, upc=None, fetch=None, now=None, cache_dir=None):
+            calls.append((product, brand))
+            return {"status": status, "matches": [hit] if status == "recalled" else [], "possible": [hit] if status == "possible" else [],
+                    "summary": "the CPSC lookup failed (SIM)", "source_url": "https://www.cpsc.gov/Recalls"}
+        return check_product
+    monkeypatch.setattr(recall_checker, "check_product", answer("recalled"))
+    card = advise(rd, [bid(1275.0)], cache_dir=tmp_path)[0]
+    assert calls and calls[0][1] == "msi" and card["recommendation"] == "veto"
+    assert next(w for w in card["warnings"] if w["kind"] == "recall")["source_url"] == hit["url"]
+    monkeypatch.setattr(recall_checker, "check_product", answer("possible"))
+    card = advise(rd, [bid(1275.0)], cache_dir=tmp_path)[0]
+    assert card["recommendation"] == "caution" and any(w["kind"] == "recall_partial" for w in card["warnings"])
+    monkeypatch.setattr(recall_checker, "check_product", answer("unverified"))
+    card = advise(rd, [bid(1275.0)], cache_dir=tmp_path)[0]
+    assert card["recommendation"] != "veto" and any(w["rule_id"] == "advocate.recall_unverified" for w in card["warnings"])

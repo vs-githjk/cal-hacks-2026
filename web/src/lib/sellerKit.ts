@@ -37,12 +37,25 @@ export interface FieldError {
   message: string;
 }
 
+export type ReadinessStatus = "blocks" | "warns" | "ready" | "unreadable";
+
+/** The Seller Agent-Readiness Report for one listing page (#398): what an AI shopper sees there, with a fix per finding. */
+export interface Readiness {
+  url: string;
+  status: ReadinessStatus;
+  summary: string;
+  findings: { severity: string; what_an_agent_sees: string; fix: string }[];
+}
+
 export interface Created {
   id: string;
   name: string;
   origin: string;
   config_path: string;
   run_command: string;
+  /** "pass" when the Listing Injection Screen read the shop's text and no rule fired; null when the kit did not say. */
+  screen: "pass" | null;
+  readiness: Readiness[];
 }
 
 export interface ShopRow {
@@ -139,11 +152,26 @@ export function parseErrors(body: unknown): FieldError[] {
   );
 }
 
+const READINESS: readonly string[] = ["blocks", "warns", "ready", "unreadable"];
+const str = (v: unknown) => (typeof v === "string" ? v : "");
+
+/** One report row, or null when it names no page. An unknown status is unreadable, never ready. */
+function parseReadiness(r: unknown): Readiness | null {
+  if (!isObj(r) || typeof r.url !== "string" || !r.url) return null;
+  const status = (READINESS.includes(str(r.status)) ? r.status : "unreadable") as ReadinessStatus;
+  const findings = Array.isArray(r.findings)
+    ? r.findings.filter(isObj).map((f) => ({ severity: str(f.severity), what_an_agent_sees: str(f.what_an_agent_sees), fix: str(f.fix) }))
+    : [];
+  return { url: r.url, status, summary: str(r.summary), findings };
+}
+
 export function parseCreated(body: unknown): Created | null {
   if (!isObj(body)) return null;
   const { id, name, origin, config_path, run_command } = body;
   if (typeof id !== "string" || typeof name !== "string" || typeof config_path !== "string" || typeof run_command !== "string") return null;
-  return { id, name, origin: typeof origin === "string" ? origin : "SIM", config_path, run_command };
+  const screen = isObj(body.screen) && body.screen.verdict === "pass" ? "pass" : null;
+  const readiness = Array.isArray(body.readiness) ? body.readiness.map(parseReadiness).filter((r): r is Readiness => r !== null) : [];
+  return { id, name, origin: typeof origin === "string" ? origin : "SIM", config_path, run_command, screen, readiness };
 }
 
 export function parseShops(body: unknown): ShopRow[] {
