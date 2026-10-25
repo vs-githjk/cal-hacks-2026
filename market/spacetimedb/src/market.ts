@@ -199,7 +199,7 @@ const PHONE_RE = /^\+[1-9][0-9]{6,14}$/;
 
 /**
  * Anyone without a role: becomes a new buyer b_<8> bound to the caller, with a $0 per-buy allowance
- * (every deal needs their call). One sign-up per identity; 300 per 10 minutes across the market.
+ * (every deal needs their call). One sign-up per identity; 60 per 10 minutes across the market.
  */
 export function signUpBuyer(ctx: Ctx, { displayName, phone }: { displayName: string; phone?: string }) {
   const had = roleOf(ctx);

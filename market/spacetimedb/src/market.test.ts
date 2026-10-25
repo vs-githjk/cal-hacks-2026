@@ -2214,7 +2214,7 @@ describe('#449 item 3 PL-9 claim_goal', () => {
   let NEW: Auth, buyerId: string;
   beforeEach(() => {
     NEW = as('claim-new');
-    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-c', buyerId })));
   });
   const claim = (who: Auth, goalId = 'goal-c') => run(who, (ctx) => m.claimGoal(ctx, { goalId }));
@@ -2263,7 +2263,7 @@ describe('#449 item 3 PL-4 set_goal_state', () => {
   let NEW: Auth, buyerId: string;
   beforeEach(() => {
     NEW = as('state-new');
-    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-s', buyerId })));
     run(REF, (ctx) => m.claimGoal(ctx, { goalId: 'goal-s' }));
   });
@@ -2395,8 +2395,8 @@ describe('#449 item 3 RT-14 sign-up ceiling', () => {
   it('SIGNUP_MAX is 60 per 10 minutes and a second sign-up by one identity still throws', () => {
     expect(m.SIGNUP_MAX).toBe(60);
     const who = as('once');
-    run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
-    expect(() => run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }))).toThrow(/already/);
+    run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
+    expect(() => run(who, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }))).toThrow(/already/);
   });
 });
 
@@ -2419,7 +2419,7 @@ describe('#449 item 3 RT-31 the server sets origin for buyer posts', () => {
 
   it('the referee keeps the origin it passes for a need', () => {
     const NEW = as('origin-new');
-    const buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    const buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-o', buyerId })));
     run(REF, (ctx) => m.postNeed(ctx, needArgs({ id: 'need-o', buyerId, goalId: 'goal-o', origin: 'MIRROR' })));
     expect(h.db.need.id.find('need-o')!.origin).toBe('MIRROR');
@@ -2429,7 +2429,7 @@ describe('#449 item 3 RT-31 the server sets origin for buyer posts', () => {
 describe('#449 item 3 PL-16 no buyer id on the public floor', () => {
   it('sign-up, allowance set and allowance raised write no event whose refId is a buyer id', () => {
     const NEW = as('pl16-new');
-    const buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana' }));
+    const buyerId = run(NEW, (ctx) => m.signUpBuyer(ctx, { displayName: 'Ana', phone: '+14155550100' }));
     run(REF, (ctx) => m.setAllowanceChecked(ctx, { buyerId, perPurchaseLimit: 600, periodLimit: 1500, period: 'week' }));
     run(NEW, (ctx) => m.postGoal(ctx, goalArgs({ id: 'goal-p', buyerId })));
     const w = win(780, C, 'seller-c', NEW, buyerId);

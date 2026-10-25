@@ -1139,6 +1139,7 @@ def _is_web_buyer(buyer_id, owner) -> bool:
     return str(buyer_id or "").startswith("b_") or not owner
 
 
+
 async def _phone_approval(transaction: dict, send_private, client, service, buyer_name: str = "there"):
     """The only approval: the owner speaks a one-time code on a phone call (buyer.checkout.approve_offer).
     The private chat shows the code and the outcome; no chat text or typed code is ever accepted as approval."""
@@ -1153,10 +1154,9 @@ async def _phone_approval(transaction: dict, send_private, client, service, buye
         try:  # every buyer: the market shows the code on /buyer. Never log the code.
             owner_approval.remember_code(owner_approval.market_hash(transaction), code)  # memory only, for record_approval
             market_clients()[1].issue_approval_code(owner_approval.market_hash(transaction), code)
-        except Exception:  # web and chat alike: record_approval needs this code on the market, so no code there means no call
-            import logging
-            logging.getLogger("buyer_agent").warning(f"approval code not shown on /buyer for buyer {buyer_id}")
-            raise PermissionError("approval code could not be shown") from None
+        except Exception:
+            # #455: record_approval needs the code the market issued; without it no call can approve, so never ring (any buyer)
+            raise PermissionError("approval code could not be issued") from None
         if web:  # no chat: the market's own approval view shows the code on /buyer; never send it elsewhere
             import logging
             logging.getLogger("buyer_agent").info(f"web buyer {buyer_id}: code shown on /buyer")
@@ -1331,8 +1331,8 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             transaction["phase"] = "expired"
             buyer_state.save_transaction(state_db(), transaction)
             ROUND.update(transaction=None, pending_hold=False, phase="done")
-            if web:  # the web goal card must show the terminal state, not stay on HUNTING
-                await _report_web_goal("FAILED", BETA_LIMIT_TEXT)
+            if web:
+                await _report_web_goal("FAILED", BETA_LIMIT_TEXT)  # #455: the web buyer is told on /buyer, not left ACTIVE
             await tell_owner(ctx, BETA_LIMIT_TEXT)
             return
         if client is None:

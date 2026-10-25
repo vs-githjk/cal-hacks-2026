@@ -35,14 +35,6 @@ def test_the_latest_active_build_goal_of_the_buyer_is_read_with_its_items():
     assert [i["sku_spec"] for i in items] == ["rtx 5070 ti", "psu 750w", "case"] and items[1]["skipped_owned_part_id"] == "owned-1"
 
 
-def test_a_hunting_goal_is_live_too_because_the_buyer_agent_sets_it_on_adoption():
-    m = SimMarket()
-    post(m, "hunt")
-    m.goal_state["hunt"] = "HUNTING"
-    goal, _items = build.read_buyer_goal(make_clients(m)["buyer"], "vidyut")
-    assert goal["id"] == "hunt"
-
-
 def test_only_an_active_build_by_date_goal_counts():
     m = SimMarket()
     post(m, "p", typ="part_by_date")
@@ -205,3 +197,12 @@ def test_buyer_id_without_a_goal_and_no_goal_in_the_market_is_a_one_line_error(c
 def test_buyer_id_with_dry_run_says_to_use_a_plan_file(capsys):
     assert build.main(["--dry-run", "--buyer-id", "someone-else"]) == 1
     assert "--plan" in capsys.readouterr().err
+
+
+def test_a_claimed_hunting_build_goal_is_still_read():
+    # #455: claim_goal moves a goal from ACTIVE to HUNTING, and the build runner must still find it
+    m = SimMarket()
+    post(m, "claimed", cap=2100.0)
+    m.goal_state["claimed"] = "HUNTING"
+    goal, _items = build.read_buyer_goal(make_clients(m)["buyer"], "vidyut")
+    assert goal["id"] == "claimed"

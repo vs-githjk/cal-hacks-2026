@@ -426,7 +426,8 @@ def read_buyer_goal(client: Any, buyer_id: str) -> tuple[dict, list[dict]]:
     mine = [r for r in rows if r[1] == buyer_id]
     if rows and not mine:
         raise GoalNotFound(f"the goals this client can read belong to {rows[0][1]}, not {buyer_id}: pass the identity token of {buyer_id} with --buyer-token")
-    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] in ("ACTIVE", "HUNTING")), key=lambda r: _iso(r[6]), reverse=True)
+    live = sorted((r for r in mine if r[2] == "build_by_date" and r[5] in ("ACTIVE", "HUNTING")),  # #455: claim_goal makes it HUNTING
+                  key=lambda r: _iso(r[6]), reverse=True)
     if not live:
         why = "this client can read no goal at all (only the buyer's own identity can)" if not rows else "it has no ACTIVE or HUNTING build_by_date goal"
         raise GoalNotFound(f"no goal to build from for {buyer_id}: {why}")
