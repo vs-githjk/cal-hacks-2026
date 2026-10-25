@@ -5,7 +5,7 @@
 import { Fragment, createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { type ApprovalView, type BuyerKpi, type FeedItem, type KpiDot, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
-import { Card, Code, Details, Label, OriginChip, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import { Card, Code, Details, Label, OriginChip, SourceLink, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
 import { SHIELD } from "@/lib/brand";
 
@@ -17,42 +17,7 @@ function Chip({ origin, label }: { origin: string; label?: string }) {
   return <OriginChip origin={origin} label={label} />;
 }
 
-const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", part_by_date: "part by date", build_by_date: "build by date" };
 
-export function GoalCard({ goal }: { goal: GoalView }) {
-  const a = goal.allowance;
-  return (
-    <Card>
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-[13px] text-muted">Current search</span>
-        <StatePill state={goal.state} />
-      </div>
-      <p className="mb-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">
-        <q>{goal.text}</q>
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        {goal.conditions.map((c) => <Tag key={c}>{c}</Tag>)}
-        {goal.variant && <Tag>{goal.variant}</Tag>}
-        <OriginChip origin={goal.origin} />
-        <span className="text-[13px] text-muted">{GOAL_TYPE[goal.type]}</span>
-      </div>
-      <dl className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        <Stat label="Cap" value={money(goal.cap)} />
-        <Stat
-          label="Allowance per buy"
-          value={a ? money(a.perPurchase) : money(0)}
-          sub={a && a.perPurchase > 0 ? `${money(a.spent)} of ${money(a.periodLimit)} this ${a.period}, step ${a.ladderStep}` : "every buy calls you first"}
-        />
-        <Stat label="Deadline" value={goal.deadline.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} />
-        <Stat label="Reserved" value={money(goal.reserved)} sub={goal.state === "DONE" ? "released after payment" : undefined} />
-      </dl>
-      {goal.latestNote && <p className="mt-2.5 text-[13px] text-muted">{goal.latestNote}</p>}
-      {goal.skipped.map((s) => (
-        <p key={s.part} className="mt-2.5 text-[13px] text-muted"><b className="font-semibold text-ink">Skipped the {s.part}.</b> {s.text}</p>
-      ))}
-    </Card>
-  );
-}
 
 const DOT_CLASS = { live: "bg-live", mint: "bg-mint-mark", muted: "bg-muted" } as const;
 
