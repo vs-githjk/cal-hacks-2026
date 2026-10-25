@@ -27,7 +27,7 @@ class StrictReferee:
     """The referee as #240's module sees it: refuses what createMandate and recordApproval refuse."""
 
     def __init__(self, log, rows):
-        self.log, self.rows, self.mandates = log, rows, {}
+        self.log, self.rows, self.mandates, self.codes = log, rows, {}, {}
 
     def sql(self, query):
         assert query == "SELECT * FROM round_result"
@@ -46,8 +46,13 @@ class StrictReferee:
             if not (isinstance(a["expiry_minutes"], int) and 1 <= a["expiry_minutes"] <= MAX_EXPIRY_MIN):
                 raise RuntimeError("expiry must be 1 to 10 minutes")
             self.mandates[a["hash"]] = a
+        if reducer == "issue_approval_code":
+            self.codes[a["mandate_hash"]] = " ".join(a["code"].lower().split())
         if reducer == "record_approval":
-            assert set(a) == {"mandate_hash", "method", "approved_by", "voice_approval_id"}, sorted(a)
+            assert set(a) == {"mandate_hash", "method", "approved_by", "voice_approval_id", "code"}, sorted(a)
+            # #449 item 3 RT-11: the code must be the one issued for this mandate (the one shown on /buyer and spoken on the call)
+            if a["method"] == "voice_code" and " ".join(str(a["code"]).lower().split()) != self.codes.get(a["mandate_hash"], None):
+                raise RuntimeError("the approval code does not match")
             if a["method"] not in APPROVAL_METHODS:
                 raise RuntimeError(f"method must be one of {', '.join(APPROVAL_METHODS)}")
             if a["method"] == "voice_code" and not str(a["voice_approval_id"]).strip():
@@ -153,7 +158,7 @@ def test_the_planned_approval_is_never_a_scripted_method(run):
     """No scripted approval (#251, Vidyut 12:15): the only method the plan can name is the real call's, with an id slot for it."""
     for live_call in (False, True):
         appr = next(s for s in bridge.plan(run, delay=0, rounds=1, live_call=live_call) if s.reducer == "record_approval")
-        assert set(appr.args) == {"mandate_hash", "method", "approved_by", "voice_approval_id"}
+        assert set(appr.args) == {"mandate_hash", "method", "approved_by", "voice_approval_id", "code"}
         assert appr.args["method"] == "voice_code" and appr.args["voice_approval_id"] == ""
     assert "sim_script" not in repr(bridge.plan(run, delay=0, rounds=2)) and "sim_script" not in repr(bridge.plan(run, delay=0, rounds=2, live_call=True))
 
