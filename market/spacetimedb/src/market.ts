@@ -350,9 +350,25 @@ export function openRound(ctx: Ctx, { roundId, needId, windowS }: { roundId: str
   if (!n) throw new SenderError(`no need ${needId}`);
   if (ctx.db.round.id.find(roundId)) throw new SenderError(`round ${roundId} already exists`);
   const deadline = tsFromMs(ms(ctx.timestamp) + windowS * 1000);
-  ctx.db.round.insert({ id: roundId, needId, openedAt: ctx.timestamp, deadline, extensions: 0, state: 'open', sealedCount: 0, closedAt: undefined, origin: n.origin });
+  ctx.db.round.insert({ id: roundId, needId, openedAt: ctx.timestamp, deadline, extensions: 0, state: 'open', sealedCount: 0, closedAt: undefined, origin: n.origin, stage: 1, maxStages: 1, stageWindowS: 0 });
   scheduleClose(ctx, roundId, deadline);
   event(ctx, 'round_opened', 'round', roundId, `Sealed round open for ${windowS} s`, '', n.origin);
+}
+
+/** #336: a sealed knockout round, up to maxStages best-and-final-offer stages. */
+export function openKnockoutRound(ctx: Ctx, { roundId, needId, stageWindowS, maxStages = 3 }: { roundId: string; needId: string; stageWindowS: number; maxStages?: number }) {
+  requireRole(ctx, 'open_round', ['referee']);
+  const n = ctx.db.need.id.find(needId);
+  if (!n) throw new SenderError(`no need ${needId}`);
+  if (ctx.db.round.id.find(roundId)) throw new SenderError(`round ${roundId} already exists`);
+  if (!(maxStages >= 2)) throw new SenderError('a knockout round needs at least 2 stages');
+  const deadline = tsFromMs(ms(ctx.timestamp) + stageWindowS * 1000);
+  ctx.db.round.insert({
+    id: roundId, needId, openedAt: ctx.timestamp, deadline, extensions: 0, state: 'open', sealedCount: 0, closedAt: undefined,
+    origin: n.origin, stage: 1, maxStages, stageWindowS,
+  });
+  scheduleClose(ctx, roundId, deadline);
+  event(ctx, 'round_opened', 'round', roundId, `Knockout stage 1 of ${maxStages} open for ${stageWindowS} s`, '', n.origin);
 }
 
 // A bid source is a listing URL or a plain label ("sim:fixture"). Anything starting like a URL must have a host, so "https://"
@@ -382,7 +398,22 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
     }
   }
   if (ctx.db.bid.id.find(a.id)) throw new SenderError(`bid ${a.id} already exists`);
-  for (const b of ctx.db.bid.roundId.filter(a.roundId)) if (b.sellerId === me.sellerId) throw new SenderError('one sealed bid per seller per round');
+  for (const b of ctx.db.bid.roundId.filter(a.roundId)) {
+    if (b.sellerId === me.sellerId && b.stage === r.stage) throw new SenderError('one offer per seller per stage');
+  }
+  // #336: a stage > 1 knockout round. Only a seller the previous stage marked "advancing" may offer again,
+  // and strictly below its own previous offer on any SKU it already bid (its floor still applies as below).
+  if (r.stage > 1) {
+    const prevResult = [...ctx.db.roundResult.roundId.filter(a.roundId)].find((x) => x.stage === r.stage - 1 && x.sellerId === me.sellerId);
+    if (!prevResult || prevResult.status !== 'advancing') throw new SenderError('not a surviving seller in this round');
+    const priorBid = [...ctx.db.bid.roundId.filter(a.roundId)].filter((b) => b.sellerId === me.sellerId).sort((x, y) => y.stage - x.stage)[0];
+    if (priorBid) {
+      for (const l of a.lines) {
+        const pl = priorBid.lines.find((p: Line) => p.skuSpec === l.skuSpec);
+        if (pl && !(l.unitPrice < pl.unitPrice)) throw new SenderError('a later-stage offer must be strictly below your own previous offer');
+      }
+    }
+  }
   const timing = tryBid(clockOf(r), ms(ctx.timestamp));
   if (!timing.accepted) throw new SenderError(timing.reason);
 
@@ -397,7 +428,7 @@ export function placeBid(ctx: Ctx, a: PlaceBidArgs) {
   ctx.db.bid.insert({
     id: a.id, roundId: a.roundId, needId: r.needId, sellerId: me.sellerId, bidder: ctx.sender, persona: a.persona, lines: a.lines,
     statedTotal: a.statedTotal, perks: a.perks, claims: a.claims, floorCheckPassed: fc.ok, rejectReason: fc.ok ? '' : fc.reasons.join('; '),
-    origin: a.origin, source: a.source, sealedAt: ctx.timestamp, lineRejects: fc.lineRejects,
+    origin: a.origin, source: a.source, sealedAt: ctx.timestamp, lineRejects: fc.lineRejects, stage: r.stage,
   });
   const deadline = tsFromMs(timing.auction.deadline_ms);
   ctx.db.round.id.update({ ...r, sealedCount: r.sealedCount + 1, extensions: timing.auction.extensions, deadline });
@@ -541,7 +572,15 @@ export function closeRound(ctx: Ctx, { roundId }: { roundId: string }) {
 /** Body of the scheduled reducer: only the module itself (the scheduler) may run it. */
 export function closeRoundOnDeadline(ctx: Ctx, roundId: string) {
   requireRole(ctx, 'close_round_on_deadline (the deadline scheduler)', ['scheduler']);
+  const r = ctx.db.round.id.find(roundId);
+  if (r && r.maxStages > 1) return closeStageInner(ctx, roundId, true);
   return closeRoundInner(ctx, roundId, true);
+}
+
+/** #336: close the current stage of a knockout round (referee) or let the scheduler do it on deadline. */
+export function closeStage(ctx: Ctx, { roundId }: { roundId: string }) {
+  requireRole(ctx, 'close_stage', ['referee']);
+  return closeStageInner(ctx, roundId, false);
 }
 
 function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
@@ -610,7 +649,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     ctx.db.roundResult.insert({
       id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
       lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
-      adjustedTotal: x.score, adjustmentReason: adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality),
+      adjustedTotal: x.score, adjustmentReason: adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality), stage: 1, status: '',
     });
   }
   for (const d of ranked.disqualified) {
@@ -618,7 +657,7 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
     // Never ranked, so there is no adjusted score to show: adjusted_total stays the landed price.
     ctx.db.roundResult.insert({
       id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons,
-      lines: b.lines, origin: b.origin, source: b.source, adjustedTotal: d.landed, adjustmentReason: '',
+      lines: b.lines, origin: b.origin, source: b.source, adjustedTotal: d.landed, adjustmentReason: '', stage: 1, status: '',
     });
   }
   ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
@@ -641,6 +680,162 @@ function closeRoundInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
   event(ctx, 'auction_closed', 'round', roundId, top ? `Round closed: ${ranked.ranked.length} ranked, ${ranked.disqualified.length} out` : 'Round closed: no eligible bid', top?.bid.seller_id ?? '', r.origin);
 }
 
+/**
+ * #336: close one stage of a knockout round. Knocks out every rule-breaker (Shield block, failed claim,
+ * advocate veto, below floor) plus the single last-placed clean survivor. One left: champion at once, closing
+ * the round. None left: the round closes with no deal. More than one at the final stage: the best of them wins
+ * outright. More than one before the final stage: the rest advance to the next stage.
+ */
+function closeStageInner(ctx: Ctx, roundId: string, fromTimer: boolean) {
+  const r = ctx.db.round.id.find(roundId);
+  if (!r) throw new SenderError(`no round ${roundId}`);
+  if (r.maxStages <= 1) throw new SenderError('not a knockout round; use close_round');
+  if (r.state === 'closed') {
+    if (fromTimer) return;
+    throw new SenderError('round already closed');
+  }
+  if (!isClosed(clockOf(r), ms(ctx.timestamp))) {
+    if (fromTimer) return scheduleClose(ctx, roundId, r.deadline);
+    throw new SenderError('round is still open until its deadline');
+  }
+
+  const stage = r.stage;
+  const needItems = new Map<string, NeedItem>();
+  for (const i of ctx.db.needItem.needId.filter(r.needId)) {
+    needItems.set(i.skuSpec, {
+      sku_spec: i.skuSpec, condition: i.condition as Condition, allowed_conditions: i.allowedConditions as Condition[],
+      variant: i.variant, quantity: i.quantity, unit: i.unit,
+    });
+  }
+  const allBids = [...ctx.db.bid.roundId.filter(roundId)];
+  const thisStageBids = allBids.filter((b) => b.stage === stage);
+  const survivorIds = stage === 1
+    ? [...new Set(thisStageBids.map((b) => b.sellerId))]
+    : [...ctx.db.roundResult.roundId.filter(roundId)].filter((x) => x.stage === stage - 1 && x.status === 'advancing').map((x) => x.sellerId);
+
+  // A survivor who placed no new offer this stage keeps competing on its most recent earlier offer.
+  const bySeller = new Map<string, BidRow>();
+  for (const b of thisStageBids) bySeller.set(b.sellerId, b);
+  for (const sid of survivorIds) {
+    if (bySeller.has(sid)) continue;
+    const prior = allBids.filter((b) => b.sellerId === sid && b.stage < stage).sort((x, y) => y.stage - x.stage)[0];
+    if (prior) bySeller.set(sid, prior);
+  }
+  const rows = survivorIds.map((sid) => bySeller.get(sid)).filter((b): b is BidRow => !!b);
+
+  if (rows.length === 0) {
+    ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+    event(ctx, 'auction_closed', 'round', roundId, 'Round closed: no eligible bid', '', r.origin);
+    return;
+  }
+
+  const rejections = new Map<string, string[]>();
+  const heldBack = new Map<string, string>();
+  const verified = new Map<string, number>();
+  for (const b of rows) {
+    const reasons: string[] = [];
+    if (!b.floorCheckPassed) reasons.push('below this seller floor');
+    for (const c of ctx.db.bidCheck.bidId.filter(b.id)) {
+      if (c.kind === 'shield' && c.result !== 'allow') reasons.push(`Bazaar Shield ${c.result}: ${c.detail}`);
+      if (c.kind === 'claim' && c.result === 'false') reasons.push(`claim did not match the page: ${c.detail}`);
+      if (c.kind === 'claim' && c.result === 'verified') verified.set(b.id, (verified.get(b.id) ?? 0) + 1);
+      if (c.kind === 'advocate' && c.result === 'veto') reasons.push(`Advocate veto (${c.detail}) [source: ${c.evidenceUrl}]`);
+    }
+    // #266: a caution bid (fit unconfirmed) must be held back here too, or it can be crowned champion on price alone.
+    const cards = [...ctx.db.bidCheck.bidId.filter(b.id)].filter((c) => c.kind === 'advocate').sort((x, y) => (x.id < y.id ? -1 : 1));
+    const card = cards[cards.length - 1];
+    if (card?.result === 'caution') heldBack.set(b.id, `held back: advocate caution (${card.detail})`);
+    if (reasons.length) rejections.set(b.id, reasons);
+  }
+  const spendLimit = ctx.db.need.id.find(r.needId)?.spendLimit;
+  const lineRejects = new Map(rows.map((b) => [b.id, b.lineRejects]));
+  const ranked = rankBids(rows.map(toBid), {
+    needItems, rejections, lineRejects, spendLimit, heldBack, quality: MARKET_CONFIG.quality, verifiedClaims: (b) => verified.get(b.id) ?? 0,
+  });
+  const byId = new Map(rows.map((b) => [b.id, b]));
+  const nowMs = ms(ctx.timestamp);
+  const condOfLine = (l: Line) => l.offeredCondition || needItems.get(l.skuSpec)?.condition || 'new';
+  const needQtyOf = (sku: string) => needItems.get(sku)?.quantity ?? 1;
+
+  for (const d of ranked.disqualified) {
+    const b = byId.get(d.bid.id)!;
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: d.landed, reasons: d.reasons,
+      lines: b.lines, origin: b.origin, source: b.source, adjustedTotal: d.landed, adjustmentReason: '', stage, status: 'knocked_out',
+    });
+    event(ctx, 'knockout', 'bid', b.id, `Seller knocked out (stage ${stage})`, b.sellerId, b.origin);
+  }
+
+  // Among the clean (non-rule-breaking) bids, the last-placed one also goes out, unless only one remains.
+  const clean = ranked.ranked;
+  const lastPlaced = clean.length > 1 ? clean[clean.length - 1]!.bid.id : undefined;
+  if (lastPlaced) {
+    const x = clean[clean.length - 1]!;
+    const b = byId.get(lastPlaced)!;
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: x.rank, landed: x.landed,
+      reasons: ['knocked out: last placed this stage'], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
+      adjustedTotal: x.score, adjustmentReason: '', stage, status: 'knocked_out',
+    });
+    event(ctx, 'knockout', 'bid', b.id, `Seller knocked out (stage ${stage})`, b.sellerId, b.origin);
+  }
+
+  const survivors = clean.filter((x) => x.bid.id !== lastPlaced);
+  if (survivors.length === 0) {
+    ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+    event(ctx, 'auction_closed', 'round', roundId, 'Round closed: no eligible bid', '', r.origin);
+    return;
+  }
+
+  const atFinalStage = stage >= r.maxStages;
+  const championId = survivors.length === 1 ? survivors[0]!.bid.id : atFinalStage ? survivors[0]!.bid.id : undefined;
+
+  if (championId) {
+    for (const x of survivors) {
+      const b = byId.get(x.bid.id)!;
+      const isChamp = x.bid.id === championId;
+      const pickedLines = x.picked.map((i) => x.bid.lines[i]!);
+      ctx.db.roundResult.insert({
+        id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: isChamp ? 1 : x.rank + 1, landed: x.landed,
+        reasons: isChamp ? (heldBack.has(b.id) ? [heldBack.get(b.id)!] : []) : ['did not advance: final stage'], lines: x.picked.map((i) => b.lines[i]!), origin: b.origin, source: b.source,
+        adjustedTotal: x.score, adjustmentReason: isChamp ? adjustmentReason(x.bid, pickedLines, needItems, MARKET_CONFIG.quality) : '',
+        stage, status: isChamp ? 'champion' : 'knocked_out',
+      });
+      if (!isChamp) event(ctx, 'knockout', 'bid', b.id, `Seller knocked out (stage ${stage})`, b.sellerId, b.origin);
+    }
+    ctx.db.round.id.update({ ...r, state: 'closed', closedAt: ctx.timestamp });
+    const champX = survivors.find((x) => x.bid.id === championId)!;
+    const champ = byId.get(championId)!;
+    for (const i of champX.picked) {
+      const l = champ.lines[i]!;
+      ctx.db.stockHold.insert({
+        id: 0n, sellerId: champ.sellerId, skuSpec: l.skuSpec, condition: condOfLine(l), qty: needQtyOf(l.skuSpec), roundId, bidId: champ.id,
+        expiresAt: tsFromMs(nowMs + HOLD_TTL_MS), state: 'held',
+      });
+      event(ctx, 'stock_held', 'stock_hold', champ.id, 'A unit is held for the round winner during the approval call', champ.sellerId, r.origin);
+    }
+    event(ctx, 'auction_closed', 'round', roundId, `Round closed: champion after stage ${stage}`, champ.sellerId, r.origin);
+    return;
+  }
+
+  // #266/#363: round_result is public; a mid-round 'advancing' row must never reveal a still-live seller's price
+  // (landed, lines, adjusted_total) or relative standing (rank) to a role-less reader before the round actually
+  // closes. Only who is still in, and why, is public; the sealed bid table (private) keeps the real numbers and
+  // ranking until a stage crowns a champion.
+  for (const x of survivors) {
+    const b = byId.get(x.bid.id)!;
+    ctx.db.roundResult.insert({
+      id: 0n, roundId, bidId: b.id, sellerId: b.sellerId, persona: b.persona, rank: 0, landed: 0, reasons: heldBack.has(b.id) ? [heldBack.get(b.id)!] : [],
+      lines: [], origin: b.origin, source: b.source, adjustedTotal: 0, adjustmentReason: '',
+      stage, status: 'advancing',
+    });
+  }
+  const nextDeadline = tsFromMs(nowMs + r.stageWindowS * 1000);
+  ctx.db.round.id.update({ ...r, stage: stage + 1, deadline: nextDeadline, extensions: 0 });
+  scheduleClose(ctx, roundId, nextDeadline);
+  event(ctx, 'round_opened', 'round', roundId, `Knockout stage ${stage + 1} of ${r.maxStages} open for ${r.stageWindowS} s`, '', r.origin);
+}
+
 // ---------------------------------------------------------------- mandate, approval, payment
 
 export const MANDATE_MAX_EXPIRY_MIN = 10;
@@ -658,8 +853,14 @@ export function createMandate(
   if (ctx.db.mandate.hash.find(a.hash)) throw new SenderError('mandate hash already exists');
   // #191: a mandate exists only for the round's real winner, paid to that seller, at its landed price, for minutes.
   const bid = ctx.db.bid.id.find(bidIdOfDeal(a.dealId));
-  const won = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].find((r) => r.bidId === bid.id) : undefined;
-  if (!bid || !won || won.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
+  const round = bid ? ctx.db.round.id.find(bid.roundId) : undefined;
+  // #336: a knockout round can carry a seller's bid id forward across stages, so take its latest-stage result.
+  const myResults = bid ? [...ctx.db.roundResult.roundId.filter(bid.roundId)].filter((r) => r.bidId === bid.id) : [];
+  const won = myResults.length ? myResults.reduce((a, b) => (b.stage > a.stage ? b : a)) : undefined;
+  // #266: a knockout stage's rank-1 'advancing' row is not a win yet; only round.state closed and, for a
+  // knockout round, status champion actually crowns a winner. A stale advancing row must never get a mandate.
+  const actuallyWon = won && round?.state === 'closed' && (round.maxStages <= 1 || won.status === 'champion');
+  if (!bid || !round || !actuallyWon || won!.rank !== 1) throw new SenderError('a mandate needs the rank 1 bid of a closed round');
   // #325: a Shield block, a failed claim check or an advocate veto attached to the winning bid (even after the
   // round closed) must still refuse the mandate; the ranking having run before the card arrived is not a defense.
   const lateChecks = [...ctx.db.bidCheck.bidId.filter(bid.id)];
@@ -822,6 +1023,26 @@ export function sellerNeedsView(ctx: VCtx | AVCtx) {
 
 export function myBidsView(ctx: VCtx) {
   return [...ctx.db.bid.iter()].filter((b) => b.bidder.isEqual(ctx.sender));
+}
+
+/** #336: a seller's own knockout standing, per round. Never another seller's price or standing. */
+export function myStandingView(ctx: VCtx) {
+  const r = roleOf(ctx);
+  if (r?.role !== 'seller') return [];
+  const sellerId = r.subjectId;
+  const roundIds = new Set([...ctx.db.bid.iter()].filter((b) => b.sellerId === sellerId).map((b) => b.roundId));
+  const out: { roundId: string; stillIn: boolean; reason: string; lastOfferSkuSpec: string; lastOfferPrice: number }[] = [];
+  for (const roundId of roundIds) {
+    const mine = [...ctx.db.bid.roundId.filter(roundId)].filter((b) => b.sellerId === sellerId).sort((a, b) => a.stage - b.stage);
+    const last = mine[mine.length - 1];
+    if (!last) continue;
+    const results = [...ctx.db.roundResult.roundId.filter(roundId)].filter((x) => x.sellerId === sellerId).sort((a, b) => a.stage - b.stage);
+    const latest = results[results.length - 1];
+    const stillIn = !latest || latest.status === 'advancing' || latest.status === 'champion';
+    const l = last.lines[0];
+    out.push({ roundId, stillIn, reason: stillIn ? '' : (latest!.reasons[0] ?? ''), lastOfferSkuSpec: l?.skuSpec ?? '', lastOfferPrice: l?.unitPrice ?? 0 });
+  }
+  return out;
 }
 
 function myBuyerId(ctx: VCtx) {
