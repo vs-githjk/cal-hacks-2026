@@ -147,7 +147,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
             </thead>
             <tbody>
               {bids.map((b, i) => {
-                const k = b.rowRef ?? `${b.seller}|${b.condition}`;
+                const k = b.rowKey ?? `${b.seller}|${b.condition}`;
                 const out = b.rank === null;
                 const won = !!b.won;
                 const vetoed = b.recommendation === "veto";
@@ -191,8 +191,8 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
                         <td colSpan={6} className="border-b border-line px-2.5 pb-3 pt-1 text-[13px]">
                           <p>{b.why || "No reason recorded."}</p>
                           <p className="mt-1 text-muted">
-                            {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /> · </> : "No source link · "}
-                            {b.rowRef ? <>market row <Code>{b.rowRef}</Code></> : <>sample row, not from this market <OriginChip origin="SIM" /></>}
+                            {b.sourceUrl ? <>Source <SourceLink href={b.sourceUrl} /></> : "No source link"}
+                            {!b.rowKey && <> · sample row, not from this market <OriginChip origin="SIM" /></>}
                           </p>
                         </td>
                       </tr>
@@ -353,9 +353,8 @@ export function ReceiptCard({ receipt }: { receipt: ReceiptView | null }) {
       <Details summary="Proof">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           <dt className="text-muted">Item</dt><dd className="tabular-nums">{money(receipt.amount)}{receipt.shipping !== undefined ? ` + ${money(receipt.shipping)} shipping` : ""}</dd>
-          <dt className="text-muted">Charge</dt><dd className="min-w-0 [overflow-wrap:anywhere]">{receipt.paymentMethod} · <Code>{receipt.chargeId}</Code> · {clock(receipt.paidAt)}</dd>
-          <dt className="text-muted">Approval record</dt><dd className="min-w-0 [overflow-wrap:anywhere]"><Code>{receipt.mandateId}</Code> · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
-          <dt className="text-muted">Hash</dt><dd><Code>{receipt.mandateHash.slice(0, 8)}…{receipt.mandateHash.slice(-6)}</Code></dd>
+          <dt className="text-muted">Charge</dt><dd className="min-w-0 [overflow-wrap:anywhere]">{receipt.paymentMethod}{receipt.receiptRef && <> · Receipt <Code>{receipt.receiptRef}</Code></>} · {clock(receipt.paidAt)}</dd>
+          <dt className="text-muted">Approval record</dt><dd className="min-w-0 [overflow-wrap:anywhere]">signed · expires {clock(receipt.mandateExpires)} · <OriginChip origin={receipt.mandateOrigin} /></dd>
           {receipt.signature && <><dt className="text-muted">Signature</dt><dd>{receipt.signature}</dd></>}
           {receipt.replayRefused !== undefined && <><dt className="text-muted">Replay</dt><dd>{receipt.replayRefused ? <><Verdict kind="veto">Refused</Verdict> the same approval sent twice; second charge rejected</> : "not tested"}</dd></>}
           <dt className="text-muted">Allowance</dt><dd>unchanged until the receiving check passes</dd>

@@ -33,7 +33,7 @@ export default function BuyerPage() {
   // #449 item 4 PL-12: an expired code never shows (recomputed each second), and a paired screen never shows the sample code.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-  const review = useMemo(() => reviewFromRows(pending, now), [pending, now]);
+  const review = useMemo(() => reviewFromRows(pending, results, now), [pending, results, now]);
   const roundId = latestRound(rounds)?.id;
   const veto = useMemo(() => vetoFromRows(checks, results, roundId), [checks, results, roundId]);
   const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);

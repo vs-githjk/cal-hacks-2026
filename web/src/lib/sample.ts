@@ -77,7 +77,7 @@ export const shield: ShieldView = {
 
 export const approval: ApprovalView = {
   amount: 1249.99,
-  payee: "best-buy@pay.example.test",
+  payee: "Best Buy",
   allowance: 250,
   wordPair: "velvet falcon",
   codeExpiresAt: new Date("2026-10-24T06:04:42Z"),
@@ -85,7 +85,7 @@ export const approval: ApprovalView = {
   attempts: [
     { at: at(4), label: "Wrong code", said: 'said "copper marble approve"', approved: false },
     { at: at(35), label: "No approve", said: 'said the code without "approve"', approved: false },
-    { at: at(66), label: "Approved", said: "code plus \"approve\"; amount read back $1,249.99 to best-buy@pay.example.test", approved: true },
+    { at: at(66), label: "Approved", said: "code plus \"approve\"; amount read back $1,249.99 to Best Buy", approved: true },
   ],
 };
 
@@ -96,11 +96,9 @@ export const receipt: ReceiptView = {
   amount: 1249.99,
   shipping: 0,
   paymentMethod: "Visa test card, pm_card_visa",
-  chargeId: "ch_sim_aa27d82369bb",
+  receiptRef: "2369bb",
   chargeStatus: "SIM stub, no money moved",
   paidAt: at(66),
-  mandateId: "mnd_37c1665096e240dc",
-  mandateHash: "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633",
   mandateExpires: new Date("2026-10-24T06:12:42Z"),
   mandateOrigin: "MIRROR",
   signature: "Ed25519 over Content-Digest and Mandate-Hash (Trusted Agent Protocol style), verified",
@@ -108,7 +106,7 @@ export const receipt: ReceiptView = {
 };
 
 export const feed: FeedItem[] = [
-  { key: "f1", at: at(66), kind: "deal", title: "Deal found", text: "Paid Best Buy $1,249.99 under mandate mnd_37c1…", origin: "MIRROR" },
+  { key: "f1", at: at(66), kind: "deal", title: "Deal found", text: "Paid Best Buy $1,249.99 under a signed mandate", origin: "MIRROR" },
   { key: "f2", at: at(66), kind: "progress", title: "Progress", text: "Goal DONE, $1,249.99 released from reserve" },
   { key: "f3", at: at(17), kind: "progress", title: "Progress", text: "HOLD_FOR_CALL, reserved $1,249.99" },
   { key: "f4", at: at(17), kind: "veto", title: "Veto", text: "Shady Sam's Deals: condition mismatch, source attached", origin: "SIM" },

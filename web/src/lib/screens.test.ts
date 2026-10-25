@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, payeeLabel } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -59,7 +59,9 @@ test("bidsFromRows ranks 1, 2, then unranked; filters to the round; the advocate
   assert.equal(bids[0]!.won, false);
   assert.equal(bids[1]!.recommendation, "unchecked");
   assert.equal(bids[2]!.recommendation, "refused");
-  assert.equal(bids[0]!.rowRef, "round_result/1");
+  // #449 PL-13: the key is neutral; the table row name round_result/N never reaches a customer.
+  assert.equal(bids[0]!.rowKey, "row-1");
+  assert.ok(!JSON.stringify(bids).includes("round_result/"));
 });
 
 test("latestRound picks the most recently opened round", () => {
@@ -151,22 +153,22 @@ test("clusterArrivals on an empty round is empty, and a single arrival is its ow
 });
 
 test("reviewFromRows shows the latest expiring code, with the origin normalized", () => {
-  const row = (h: string, exp: number) => ({ mandateHash: h, mandateId: "m", amount: 780, payee: "p", expiry: ts(exp), code: "c", failures: 0, locked: false, origin: "sim" });
-  const r = reviewFromRows([row("a", T0), row("b", T0 + 1)], T0 - 1000)!;
-  assert.equal(r.mandateHash, "b");
+  const row = (h: string, exp: number, amount = 780) => ({ mandateHash: h, mandateId: "m", amount, payee: "p", expiry: ts(exp), code: "c", failures: 0, locked: false, origin: "sim" });
+  const r = reviewFromRows([row("a", T0, 100), row("b", T0 + 1, 200)], [], T0 - 1000)!;
+  assert.equal(r.amount, 200);
   assert.equal(r.origin, "SIM");
   assert.equal(reviewFromRows([]), null);
 });
 
 test("the whole-build code row (my_pending_approvals, no mandate yet) becomes the same review card, marked as the whole build", () => {
   const build = { mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0 + 300_000), code: "amber harbor", failures: 0, locked: false, origin: "LIVE" };
-  const r = reviewFromRows([build], T0)!;
+  const r = reviewFromRows([build], [], T0)!;
   assert.equal(r.code, "amber harbor");
   assert.equal(r.amount, 3412.5);
   assert.equal(r.payee, "your whole build (8 parts from 4 sellers)");
   assert.equal(r.origin, "LIVE");
   assert.equal(isWholeBuild(r), true);
-  const deal = reviewFromRows([{ ...build, mandateHash: "h1", mandateId: "mdt-1", payee: "seller-c" }], T0)!;
+  const deal = reviewFromRows([{ ...build, mandateHash: "h1", mandateId: "mdt-1", payee: "seller-c" }], [], T0)!;
   assert.equal(isWholeBuild(deal), false);
   assert.equal(reviewFromRows([]), null, "no row, no card: the screen says nothing is waiting");
 });
@@ -176,10 +178,10 @@ test("the whole-build code row (my_pending_approvals, no mandate yet) becomes th
 test("an expired pending approval is never shown, and the card falls back to the next live one", () => {
   const row = (h: string, exp: number) => ({ mandateHash: h, mandateId: "m", amount: 780, payee: "p", expiry: ts(exp), code: "c-" + h, failures: 0, locked: false, origin: "sim" });
   const now = T0 + 60_000;
-  assert.equal(reviewFromRows([row("old", T0)], now), null, "the only row expired a minute ago");
-  assert.equal(reviewFromRows([row("edge", now)], now), null, "expiry equal to now is expired");
-  const r = reviewFromRows([row("old", T0), row("live", now + 1000)], now)!;
-  assert.equal(r.mandateHash, "live");
+  assert.equal(reviewFromRows([row("old", T0)], [], now), null, "the only row expired a minute ago");
+  assert.equal(reviewFromRows([row("edge", now)], [], now), null, "expiry equal to now is expired");
+  const r = reviewFromRows([row("old", T0), row("live", now + 1000)], [], now)!;
+  assert.equal(r.code, "c-live");
   assert.deepEqual(livePendingApprovals([row("old", T0), row("live", now + 1000)], now).map((x) => x.mandateHash), ["live"]);
 });
 
@@ -312,11 +314,11 @@ test("#191-5 my_deals: approval shows only once the call approved it, the receip
   const approved = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000) })], 250);
   assert.equal(approved.approval!.attempts[0]!.label, "Approved on the call");
   assert.equal(approved.receipt, null);
-  const paid = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000), paymentRef: "ch_sim_1", paymentMode: "sim", paidAt: ts(T0 + 2000) })], 250);
-  assert.equal(paid.receipt!.chargeId, "ch_sim_1");
+  const paid = dealFromRows([deal({ approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000), paymentRef: "ch_sim_1", paymentMode: "sim", paidAt: ts(T0 + 2000) })], 250, [result({ sellerId: "best-buy", persona: "Best Buy" })]);
+  assert.equal(paid.receipt!.receiptRef, "_sim_1");
   assert.equal(paid.receipt!.chargeStatus, "SIM stub, no money moved");
   assert.equal(paid.receipt!.amount, 1299.99);
-  assert.equal(paid.receipt!.seller, "best-buy");
+  assert.equal(paid.receipt!.seller, "Best Buy"); // #449 PL-13: the persona, not the seller id
 });
 
 test("winningBid returns the winner even when it is a MIRROR bid", () => {
@@ -395,4 +397,61 @@ test("stateLabel: FAILED and the other states read in plain words", () => {
   assert.equal(stateLabel("FAILED"), "Could not finish");
   assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
   assert.equal(stateLabel("HUNTING"), "hunting");
+});
+
+// ---- #449 PL-13: no raw ids on the customer path. Fixtures carry every id shape the market hands the screen.
+
+const HASH = "aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633";
+const AGENT = "agent1q" + "w".repeat(30);
+const RAW_ID = /b_[a-z0-9]{8}|agent1q|seller_\d|round_result\/|VoiceApproval|mdt-|ch_|bid-a|va-1/;
+
+test("#449 PL-13 payeeLabel: a seller id becomes the persona from the round results, else the seller; a readable label stays", () => {
+  const rows = [result({ sellerId: AGENT, persona: "Fair Price PC (SIM)" }), result({ sellerId: "seller_4", persona: "" })];
+  assert.equal(payeeLabel(AGENT, rows), "Fair Price PC (SIM)");
+  assert.equal(payeeLabel("seller_4", rows), "the seller", "a result row with no persona is not a name");
+  assert.equal(payeeLabel("seller_9", rows), "the seller");
+  assert.equal(payeeLabel("", rows), "the seller");
+  assert.equal(payeeLabel("your whole build (8 parts from 4 sellers)", rows), "your whole build (8 parts from 4 sellers)");
+});
+
+test("#449 PL-13 the approval, receipt and review cards carry no buyer id, agent address, mandate id or hash, or VoiceApproval id", () => {
+  const results = [result({ bidId: "bid-a", sellerId: AGENT, persona: "Fair Price PC (SIM)" })];
+  const paid = dealFromRows(
+    [deal({ mandateHash: HASH, mandateId: "mdt-1", payee: AGENT, approvalMethod: "voice_code", voiceApprovalId: "va-1", approvedAt: ts(T0 + 1000), paymentRef: "ch_3QxYz1AbCdEf", paymentMode: "sim", paidAt: ts(T0 + 2000) })],
+    250,
+    results,
+  );
+  assert.equal(paid.approval!.payee, "Fair Price PC (SIM)");
+  assert.equal(paid.receipt!.seller, "Fair Price PC (SIM)");
+  assert.equal(paid.receipt!.receiptRef, "AbCdEf", "only the last 6 characters of the charge id");
+  assert.equal(paid.approval!.attempts[0]!.said, "");
+  const review = reviewFromRows([{ mandateHash: HASH, mandateId: "mdt-1", amount: 780, payee: AGENT, expiry: ts(T0), code: "amber harbor", failures: 0, locked: false, origin: "SIM" }], results, T0 - 1000)!;
+  assert.equal(review.payee, "Fair Price PC (SIM)");
+  assert.equal(review.wholeBuild, false);
+  for (const view of [paid.approval, paid.receipt, review]) {
+    const text = JSON.stringify(view);
+    assert.ok(!text.includes(HASH), "no mandate hash");
+    assert.doesNotMatch(text, RAW_ID);
+  }
+  // No seller name to be had: the card says "the seller", never the id.
+  const anon = dealFromRows([deal({ payee: AGENT, approvalMethod: "allowance", approvedAt: ts(T0), paymentRef: "ch_3QxYz1AbCdEf", paymentMode: "sim", paidAt: ts(T0 + 1) })], 250, []);
+  assert.equal(anon.approval!.payee, "the seller");
+  assert.equal(anon.receipt!.seller, "the seller");
+});
+
+test("#449 PL-13 the whole-build review keeps its readable payee line and is marked as the whole build", () => {
+  const r = reviewFromRows([{ mandateHash: "agg-hash-1", mandateId: WHOLE_BUILD_ID, amount: 3412.5, payee: "your whole build (8 parts from 4 sellers)", expiry: ts(T0), code: "c", failures: 0, locked: false, origin: "LIVE" }], [], T0 - 1000)!;
+  assert.equal(r.payee, "your whole build (8 parts from 4 sellers)");
+  assert.equal(r.wholeBuild, true);
+  assert.equal(isWholeBuild(r), true);
+  assert.ok(!JSON.stringify(r).includes("agg-hash-1"));
+});
+
+test("#449 PL-13 the sample cards a customer can see carry no id either", async () => {
+  const sample = await import("./sample.ts");
+  for (const view of [sample.approval, sample.receipt]) {
+    const text = JSON.stringify(view);
+    assert.doesNotMatch(text, /mnd_|@pay\.|agent1q|b_[a-z0-9]{8}|aa27d82369bb16415318ff7a7447fc2083f44e61ba14a50de349edf782c8b633/);
+  }
+  assert.ok(!sample.feed.some((f) => /mnd_/.test(f.text)));
 });

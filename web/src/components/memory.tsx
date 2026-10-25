@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, selectMemory, sourceUrl, type MemoryEntry, type MemoryResponse } from "@/lib/memory";
+import { approvalLabel, entryDate, fetchMemory, memoryFeed, memoryForBuyer, paymentModeLabel, plainName, selectMemory, shortReceipt, sourceUrl, type MemoryEntry, type MemoryResponse } from "@/lib/memory";
 import { useBuyerId } from "./BuyerGate";
 import { Card, Code, Label, OriginChip, SourceLink, Tag, Verdict, clock, money } from "./ui";
 
@@ -144,14 +144,11 @@ function PurchaseCard({ e }: { e: Purchase }) {
       <p className="mt-3 text-[44px]/[48px] font-medium tracking-[-0.02em] tabular-nums md:text-[48px]/[52px]">{amountLabel(d)}</p>
       <p className="mt-1 text-[15px]/[20px] text-ink-2 text-balance">{e.summary}</p>
       <dl className="mt-4">
-        <Fact label="Payee">{text(d.payee)}</Fact>
-        <Fact label="Seller">{text(e.seller_id)}</Fact>
+        <Fact label="Seller">{plainName(d.payee || e.seller_id)}</Fact>
         <Fact label="Recorded">{when(e)}</Fact>
         <Fact label="Payment">{paymentModeLabel(d.payment_mode)}</Fact>
-        <Fact label="Payment reference"><Code>{text(d.payment_ref)}</Code></Fact>
+        <Fact label="Receipt"><Code>{text(shortReceipt(d.payment_ref))}</Code></Fact>
         <Fact label="Approval">{approvalLabel(d.approval_method)}</Fact>
-        <Fact label="Approval record"><Code>{text(d.mandate_id)}</Code></Fact>
-        <Fact label="Deal"><Code>{text(d.deal_id)}</Code></Fact>
       </dl>
     </Card>
   );
@@ -201,7 +198,7 @@ function DecisionCard({ e }: { e: MemoryEntry }) {
         <div className="mt-4">
           <LedgerRow dot="bg-coral-mark">
             <p className="flex flex-wrap items-center gap-2 text-ink-2">
-              Seller {text(e.seller_id)} · rule <Code>{text(e.detail.rule_id)}</Code>
+              Seller {plainName(e.seller_id)} · rule <Code>{text(e.detail.rule_id)}</Code>
               {e.buyer_id === "" && <span className="text-muted">· not tied to a buyer</span>}
             </p>
             <Reason e={e} reason={e.detail.reason} />
@@ -216,14 +213,14 @@ function DecisionCard({ e }: { e: MemoryEntry }) {
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Verdict kind={d.won ? "buy" : "out"}>{d.won ? "Won" : "Lost"} round <Code>{text(d.round_id)}</Code></Verdict>
+        <Verdict kind={d.won ? "buy" : "out"}>{d.won ? "Won" : "Lost"} the round</Verdict>
         <span className="flex items-center gap-2 text-[13px] text-muted">{when(e)} <OriginChip origin={e.origin} /></span>
       </div>
       <p className="mt-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">{e.summary}</p>
       <div className="mt-4">
         <LedgerRow dot={d.won ? "bg-mint-mark" : "bg-ghost-1"}>
           <div className="flex flex-wrap items-center gap-2">
-            <Tag>seller {text(e.seller_id)}</Tag>
+            <Tag>seller {plainName(e.seller_id)}</Tag>
             {!e.buyer_id && <Tag>seller lesson, not tied to a buyer</Tag>}
             {!d.won && <Tag>{BAND[d.gap_band]}</Tag>}
           </div>

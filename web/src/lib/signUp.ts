@@ -58,3 +58,9 @@ export function isTokenRejected(err: unknown): boolean {
   const e = err as { name?: string; status?: number } | null;
   return e?.name === "WebSocketTokenError" && (e.status === 401 || e.status === 403);
 }
+
+/** #449 PL-13: the start page's button when this browser already has an account: the display name, never the b_ id. */
+export function continueLabel(displayName: string | undefined): string {
+  const name = (displayName ?? "").trim();
+  return name && !/^b_[a-z0-9]{8}$/.test(name) ? `Continue as ${name}` : "Continue to your account";
+}

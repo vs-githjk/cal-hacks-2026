@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useReducer, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { reducers, tables } from "@/module_bindings";
-import { cleanSignUp, gateRoute, pairCodeToSend, signUpErrorText } from "@/lib/signUp";
+import { cleanSignUp, continueLabel, gateRoute, pairCodeToSend, signUpErrorText } from "@/lib/signUp";
 import { Tag } from "@/components/ui";
 
 // Operator pairing: the same demo buyer BuyerGate pairs as (SIM sign-in).
@@ -33,9 +33,6 @@ export default function StartPage() {
   useEffect(() => {
     if (route === "buyer" && submitted) router.replace("/buyer");
   }, [route, submitted, router]);
-
-  const buyerId = roles.find((r) => r.role === "buyer")?.subjectId ?? "";
-  const shown = profiles[0]?.displayName || buyerId;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +73,7 @@ export default function StartPage() {
         <div className="grid gap-3">
           <p className="text-[15px]/[20px] text-muted">This browser already has an account.</p>
           <Link href="/buyer" className={primary}>
-            Continue as {shown}
+            {continueLabel(profiles[0]?.displayName)}
           </Link>
         </div>
       ) : (

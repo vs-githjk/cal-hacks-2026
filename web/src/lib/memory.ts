@@ -189,3 +189,20 @@ export function paymentModeLabel(m: PurchaseDetail["payment_mode"]): string {
 export function approvalLabel(method: string): string {
   return ({ voice_code: "Approved by phone code", allowance: "Within allowance", sim_script: "Scripted SIM approval", typed_code: "Typed code (retired)", none: "No approval method recorded" } as Record<string, string>)[method] ?? "Unavailable";
 }
+
+// ---- #449 PL-13: no raw ids on the customer path (/buyer/purchases and /buyer/decisions)
+
+const RAW_ID = /^(agent1q|seller[_-]?\d|b_[a-z0-9]{4,}|mdt|ch_|pi_|deal[-_]|round[_-]|bid[-_]|va-)|^[0-9a-f]{12,}$|\d{3,}/i;
+
+/** A seller or payee as a person would say it: a readable name stays; a slug becomes words; an id, address or hash becomes "the seller". */
+export function plainName(id: string): string {
+  const s = id.trim();
+  if (!s || RAW_ID.test(s)) return "the seller";
+  if (/\s/.test(s)) return s;
+  return s.split(/[-_]+/).filter(Boolean).map((w) => w[0]!.toUpperCase() + w.slice(1)).join(" ") || "the seller";
+}
+
+/** The last 6 characters of a payment reference, the only part of it a customer sees ("" when there is none). */
+export function shortReceipt(ref: string): string {
+  return ref.trim().slice(-6);
+}
