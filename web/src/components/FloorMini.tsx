@@ -18,6 +18,9 @@ const BUBBLES = [
   { left: "93%", size: 3, rise: "9s", delay: "-6s" },
 ];
 
+// The ring as a path: the sellers follow it exactly (SMIL animateMotion scales with the viewBox).
+const RING_PATH = "M 70 36 H 410 A 22 22 0 0 1 432 58 V 182 A 22 22 0 0 1 410 204 H 70 A 22 22 0 0 1 48 182 V 58 A 22 22 0 0 1 70 36 Z";
+
 const GHOSTS = [
   { color: "var(--color-ghost-1)", lap: "9s", delay: "0s" },
   { color: "var(--color-ghost-2)", lap: "11s", delay: "-3s" },
@@ -47,20 +50,27 @@ export function FloorMini({ className = "" }: { className?: string }) {
         <span className="inline-flex items-center gap-2"><span className="dot text-white" aria-hidden /> The floor</span>
         <span className="inline-flex items-center gap-2">Round 1 of 3 <OriginChip origin="SIM" /></span>
       </div>
-      <div className="relative mx-auto mt-6 h-[240px] w-[480px] max-w-full" aria-hidden>
-        <div className="absolute inset-x-[48px] inset-y-[36px] rounded-[22px] border border-white/30" />
-        <div className="absolute inset-x-[96px] inset-y-[76px] rounded-[16px] border border-dashed border-white/15" />
-        <div className="fm-ring absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full">
-          <svg viewBox="0 0 24 24" className="h-10 w-10 text-pac"><path d={FISH_PATH} fill="currentColor" /><circle cx="16.3" cy="8.6" r="1.6" fill="var(--koi)" /></svg>
-        </div>
-        {GHOSTS.map((g) => (
-          <span
-            key={g.color}
-            className="fm-ghost h-6 w-6 rounded-t-full rounded-b-[5px] shadow-[0_2px_6px_rgba(0,0,0,0.35)]"
-            style={{ background: g.color, ["--lap" as string]: g.lap, ["--delay" as string]: g.delay }}
-          />
+      {/* The ring, the buyer and the four sellers in one SVG, so the sellers ride the same line at every width. */}
+      <svg className="relative mx-auto mt-6 block w-full max-w-[520px]" viewBox="0 0 480 240" aria-hidden>
+        <rect x="48" y="36" width="384" height="168" rx="22" fill="none" stroke="rgba(255,255,255,0.3)" />
+        <rect x="96" y="76" width="288" height="88" rx="16" fill="none" stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+        <g transform="translate(240 120)">
+          <circle r="20" fill="none" stroke="#22d3ee" strokeWidth="2" opacity="0.6">
+            {!reduce && <animate attributeName="r" values="20;44" dur="2.4s" repeatCount="indefinite" />}
+            {!reduce && <animate attributeName="opacity" values="0.6;0" dur="2.4s" repeatCount="indefinite" />}
+          </circle>
+          <circle r="20" fill="none" stroke="#22d3ee" strokeWidth="2" />
+          <g transform="translate(-14 -14) scale(1.17)">
+            <path d={FISH_PATH} fill="#eef3f8" />
+            <circle cx="16.3" cy="8.6" r="1.6" fill="var(--koi)" />
+          </g>
+        </g>
+        {GHOSTS.map((g, i) => (
+          <path key={g.color} d="M -12 12 V 0 A 12 12 0 0 1 12 0 V 12 Q 12 14 10 14 H -10 Q -12 14 -12 12 Z" fill={g.color} style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))" }} transform={reduce ? `translate(${[70, 432, 410, 48][i]} ${[36, 120, 204, 120][i]})` : undefined}>
+            {!reduce && <animateMotion dur={g.lap} begin={g.delay} repeatCount="indefinite" path={RING_PATH} />}
+          </path>
         ))}
-      </div>
+      </svg>
       <ol className="relative mt-6 grid grid-cols-4 gap-2" aria-label="Round progress">
         {LINES.map((l, i) => {
           const done = i < shown - 1; const now = i === shown - 1;
