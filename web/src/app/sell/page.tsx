@@ -9,20 +9,30 @@ import {
   type Created, type FieldError, type ListingRow, type OpenNeed, type SellForm, type ShopRow,
 } from "@/lib/sellerKit";
 
-const input = "min-h-11 w-full rounded-lg border border-line bg-panel px-3 py-2 text-[14px]";
-const button = "min-h-11 rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink disabled:opacity-60";
+const input = "min-h-11 w-full rounded-xl bg-surface px-4 py-2 text-[15px]/[20px] shadow-ring placeholder:text-muted";
+const button = "btn min-h-11 rounded-xl bg-pulse px-5 py-2 font-medium text-pulse-ink hover:shadow-card disabled:opacity-60";
+
+/** A numbered section heading, like the Seller Kit steps: a small mono disc, then the title. */
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-3 flex items-center gap-3 text-[17px]/[22px] font-semibold">
+      <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 font-mono text-[12px] font-medium text-ink-2">{n}</span>
+      {children}
+    </h2>
+  );
+}
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block min-w-0">
-      <span className="mb-1 block text-[13px] font-medium">{label}</span>
+      <span className="mb-1.5 block text-[13px]/[18px] font-medium text-ink-2">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[12px] text-muted">{hint}</span>}
+      {hint && <span className="mt-1 block text-[12px]/[16px] text-muted">{hint}</span>}
     </label>
   );
 }
 
-/** /sell: a plain form that turns a shop into a SellerConfig and sends it to the Seller Kit API (:8791). No styling work here: Vedant owns the UI. */
+/** /sell: a form that turns a shop into a SellerConfig and sends it to the Seller Kit API (:8791). */
 export default function SellPage() {
   const [form, setForm] = useState<SellForm>(emptyForm);
   const [idTouched, setIdTouched] = useState(false);
@@ -88,10 +98,10 @@ export default function SellPage() {
   return (
     <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6">
       <header>
-        <h1 className="text-[22px] font-semibold">
+        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[22px]/[28px] font-semibold tracking-[-0.01em]">
           Sell on Tech Bazaar <OriginChip origin="SIM" />
         </h1>
-        <p className="mt-1 text-muted">
+        <p className="mt-2 text-[15px]/[20px] text-ink-2">
           Describe your shop once. The Seller Kit checks it and writes a config your own seller agent runs from. Everything here is a simulation:
           the kit cannot verify a real shop, so shops it writes are SIM.
         </p>
@@ -108,8 +118,8 @@ export default function SellPage() {
       ) : (
       <>
       {offline && (
-        <Card stripe="coral">
-          <p className="font-medium">Seller Kit offline.</p>
+        <Card>
+          <p className="flex items-center gap-2 font-medium"><span aria-hidden className="size-2 rounded-full bg-coral-mark" />Seller Kit offline.</p>
           <p className="mt-1 text-muted">
             Nothing was sent. Start it with <Code>python3 scripts/launch.py up --only seller-kit</Code> and reload.
           </p>
@@ -118,7 +128,7 @@ export default function SellPage() {
 
       <form onSubmit={onSubmit} className="grid gap-4" noValidate>
         <Card>
-          <Label>Your shop</Label>
+          <Step n={1}>Your shop</Step>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Store name">
               <input className={input} value={form.name} maxLength={60} required onChange={(e) => set("name", e.target.value)} />
@@ -144,7 +154,7 @@ export default function SellPage() {
         </Card>
 
         <Card>
-          <Label>Pricing</Label>
+          <Step n={2}>Pricing</Step>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="How you price">
               <select className={input} value={form.mode} onChange={(e) => set("mode", e.target.value as SellForm["mode"])}>
@@ -162,15 +172,15 @@ export default function SellPage() {
         </Card>
 
         <Card>
-          <Label>What you sell</Label>
+          <Step n={3}>What you sell</Step>
           <p className="mb-3 text-[13px] text-muted">
             One row per part and condition. The floor is the lowest unit price your agent will ever bid, so it never goes under it. Add a second row with
             the same part and another condition to offer both in one bid.
           </p>
           <div className="grid gap-4">
             {form.rows.map((r, i) => (
-              <fieldset key={i} className="grid gap-3 rounded-lg border border-line p-3 sm:grid-cols-2">
-                <legend className="px-1 text-[12px] text-muted">Listing {i + 1}</legend>
+              <fieldset key={i} className="grid gap-3 rounded-xl bg-surface-2 p-3 sm:grid-cols-2">
+                <legend className="px-1 text-[12px]/[16px] font-medium uppercase tracking-[0.04em] text-muted">Listing {i + 1}</legend>
                 <Field label="Part" hint="Lowercase, like: rtx 5070 ti or psu 750w">
                   <input className={input} value={r.sku} maxLength={80} required onChange={(e) => setRow(i, { sku: e.target.value })} />
                 </Field>
@@ -208,7 +218,7 @@ export default function SellPage() {
           </div>
           <button
             type="button"
-            className="mt-3 min-h-11 rounded-lg border border-line px-4 py-2 text-[14px] font-medium"
+            className="btn mt-3 min-h-11 rounded-xl bg-pulse-soft px-5 py-2 text-[14px] font-medium text-pulse-soft-ink"
             onClick={() => set("rows", [...form.rows, emptyRow()])}
           >
             Add a listing
@@ -216,7 +226,7 @@ export default function SellPage() {
         </Card>
 
         <Card>
-          <Label>Perks and claims</Label>
+          <Step n={4}>Perks and claims</Step>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Perks (one per line)" hint="For example: 30-day returns, free local pickup.">
               <textarea className={`${input} min-h-24`} value={form.perks} onChange={(e) => set("perks", e.target.value)} />
@@ -228,8 +238,9 @@ export default function SellPage() {
         </Card>
 
         {errors.length > 0 && (
-          <Card stripe="coral">
-            <p role="alert" className="font-medium">
+          <Card>
+            <p role="alert" className="flex items-center gap-2 font-medium">
+              <span aria-hidden className="size-2 shrink-0 rounded-full bg-coral-mark" />
               Not sent. Fix {errors.length === 1 ? "this" : `these ${errors.length}`}:
             </p>
             <ul className="mt-2 list-disc pl-5 text-[14px]">
@@ -252,13 +263,13 @@ export default function SellPage() {
       )}
 
       {created && (
-        <Card stripe="mint">
+        <Card>
           <Label>Config written</Label>
           <p>
             <strong>{created.name}</strong> <OriginChip origin={created.origin} /> is saved as <Code>{created.config_path}</Code>.
           </p>
           <p className="mt-3 text-[13px] font-medium">Run your agent</p>
-          <pre className="mt-1 overflow-x-auto rounded-lg bg-soft p-3 font-mono text-[12px]">{created.run_command}</pre>
+          <pre className="mt-1 overflow-x-auto rounded-lg bg-surface-2 p-3 font-mono text-[12px]/[18px]">{created.run_command}</pre>
           {created.readiness && (
             <>
               <p className="mt-3 text-[13px] font-medium">Readiness</p>
@@ -290,9 +301,9 @@ export default function SellPage() {
         ) : shownShops.length === 0 ? (
           <p className="text-muted">None yet.</p>
         ) : (
-          <ul className="grid gap-2">
+          <ul>
             {shownShops.map((s) => (
-              <li key={s.id} className="text-[14px]">
+              <li key={s.id} className="border-t border-line py-2.5 text-[14px] first:border-t-0">
                 <strong>{s.name}</strong> <OriginChip origin={s.origin} />{" "}
                 <span className="text-muted">
                   {s.archetype}: {s.skus.join(", ")}
@@ -310,9 +321,9 @@ export default function SellPage() {
         ) : shownNeeds.length === 0 ? (
           <p className="text-muted">No open needs.</p>
         ) : (
-          <ul className="grid gap-2">
+          <ul>
             {shownNeeds.map((n) => (
-              <li key={n.id} className="text-[14px]">
+              <li key={n.id} className="border-t border-line py-2.5 text-[14px] first:border-t-0">
                 {n.quantity} x <strong>{n.sku_spec}</strong>{" "}
                 <span className="text-muted">
                   ({n.allowed_conditions.join(" or ")}
