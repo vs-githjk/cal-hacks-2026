@@ -70,6 +70,7 @@ MERCHANT_SIM = None
 TAP_PRIVATE_KEY = None
 SHIELD_RECEIPT_KEYS = None
 SHIELD_PAYMENT_SCREEN = None
+STRIPE_TEST_CHARGER = None  # injectable for offline tests; production builds a StripeTestCharger from an sk_test_ key
 MARKET_BUYER_ID = os.environ.get("MARKET_BUYER_ID", "")
 MARKET_SELLER_IDS = {"seller-a": "seller_1", "seller-b": "seller_2", "seller-c": "seller_3"}
 
@@ -1315,6 +1316,125 @@ async def _pay_web_purchase(ctx: Context, transaction: dict, mandate: dict, orde
                            else f"Test purchase recorded, no money moved. Receipt {charge_id}.")
 
 
+def _stripe_test_charger():
+    """The Stripe test-mode charger, or None when there is no sk_test_ key (a live or restricted key is never used)."""
+    if STRIPE_TEST_CHARGER is not None:
+        return STRIPE_TEST_CHARGER
+    key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not key.startswith("sk_test_"):
+        return None
+    from pay import merchant_sim
+    return merchant_sim.StripeTestCharger(key)
+
+
+def _stripe_test_checkout_applies() -> bool:
+    """The owner-chat purchase pays in Stripe test mode only when the full TAP/MerchantSim checkout is entirely unconfigured
+    (none of its three keys is set; a partial setup stays on that path and fails closed) and a test key exists."""
+    return (TAP_PRIVATE_KEY is None and MERCHANT_SIM is None and not SHIELD_RECEIPT_KEYS
+            and _stripe_test_charger() is not None)
+
+
+async def _pay_chat_purchase(ctx: Context, transaction: dict, mandate: dict, order: dict, bid: dict) -> None:
+    """Owner chat, Stripe test mode: after the referee recorded the phone approval for the MARKET mandate, charge once (the
+    Stripe idempotency key is that mandate's hash), record the payment and settle the goal on the market, then send the owner
+    the receipt. No charge unless the market's own row shows a voice_code approval for this hash, payee and amount, unpaid."""
+    import logging
+    from pay import mandate as pay_mandate
+    log = logging.getLogger("buyer_agent")
+    market = owner_approval.market_view(transaction)
+    owner = transaction["deal"]["owner_sender"]
+    # One charge per mandate: only an approved, unpaid transaction may start, and the phase flips before anything awaits.
+    if (transaction.get("phase") != "approved" or transaction.get("payment_ref") or transaction.get("settlement_result")
+            or not isinstance(transaction.get("voice_approval"), dict)
+            or transaction["voice_approval"].get("mandate_hash") != mandate.get("hash")):
+        log.info(f"chat deal {transaction.get('deal_id')}: not charged, it is not an approved unpaid purchase")
+        return
+    cents = payment._cents(market.get("amount"))
+    if cents is None or cents != payment._cents(mandate.get("amount")) or cents != payment._cents(bid.get("total_landed_price")):
+        raise PermissionError("chat_amount_mismatch")
+    charger = _stripe_test_charger()
+    if charger is None:
+        raise PermissionError("stripe_test_key_unavailable")
+    buyer_market, referee_market = market_clients()
+    status_now = await asyncio.to_thread(buyer_market.purchase_status, market["hash"])  # the market's own row, read just before charging
+    now_ts = business_now().timestamp()
+    if (not market_approval_matches(status_now, market) or status_now.get("payment_ref") is not None
+            or status_now.get("settled") is True or status_now.get("reservation_matches") is not True
+            or now_ts >= _market_timestamp(status_now.get("expiry"))):
+        raise PermissionError("market_purchase_not_approved")
+    transaction["phase"] = "submitted"  # persisted before the charge: a crash from here on restarts as uncertain, never as unpaid
+    buyer_state.save_transaction(state_db(), transaction)
+    ROUND.update(transaction=transaction, mandate=mandate, order=order, pending_hold=True, phase="submitted")
+    ROUND.setdefault("events", []).append(
+        f"Approval recorded on the market. Charging ${float(market['amount']):.2f} in Stripe test mode now (no real money moves).")
+    meta = {"deal_id": market["deal_id"], "mandate_hash": market["hash"], "origin": "SIM"}
+    try:
+        pi = await asyncio.to_thread(charger.charge, amount_cents=cents, currency="USD",
+                                     idempotency_key=pay_mandate.idempotency_key(market), metadata=meta)
+        pi = pi if isinstance(pi, dict) else {}
+        charge_id = pi.get("id")
+        if pi.get("status") != "succeeded" or not isinstance(charge_id, str) or not charge_id.startswith(("pi_", "ch_")):
+            raise RuntimeError("stripe_test_charge_not_succeeded")
+    except Exception as exc:
+        log.warning(f"chat deal {transaction['deal_id']}: Stripe test charge did not complete ({type(exc).__name__})")
+        transaction["phase"] = "uncertain"
+        buyer_state.save_transaction(state_db(), transaction)
+        ROUND.update(transaction=transaction, pending_hold=True, phase="uncertain")
+        await tell_owner(ctx, "The Stripe test charge did not complete, so no receipt exists. Nothing is confirmed as paid; "
+                              "this deal stays held and nothing will be charged again automatically.")
+        return
+    transaction["payment_ref"] = order["payment_ref"] = charge_id
+    transaction["settlement_result"] = {"status": "charged", "charge_id": charge_id, "mandate_hash": market["hash"],
+                                        "origin": "SIM", "mode": "stripe_test"}
+    order["status"] = "charged"
+    transaction["order"] = order
+    buyer_state.save_transaction(state_db(), transaction)  # the charge is durable before any market write
+    receipt = (f"Paid in Stripe test mode. Receipt {charge_id}. Part: {purchases.part_names(bid)}. "
+               f"Landed price: ${float(market['amount']):.2f} from {bid['persona']}. Test charge only, no real money moved.")
+    try:
+        def settle_on_market():
+            status = buyer_market.purchase_status(market["hash"])
+            if status.get("payment_ref") is None:
+                if status.get("payment_mode") is not None or status.get("payment_amount") is not None or status.get("settled") is True:
+                    raise MarketBridgeError("market_payment_readback_mismatch")
+                referee_market.record_payment(mandate_hash=market["hash"], payment_ref=charge_id,
+                                              amount=market["amount"], mode="stripe_test")
+                status = buyer_market.purchase_status(market["hash"])
+            if (status.get("payment_ref") != charge_id or status.get("payment_mode") != "stripe_test"
+                    or payment._cents(status.get("payment_amount")) != cents):
+                raise MarketBridgeError("market_payment_readback_mismatch")
+            settled = buyer_market.settle_goal(goal_id=transaction["goal_id"], deal_id=transaction["deal_id"],
+                                               mandate_hash=market["hash"], payment_ref=charge_id)
+            if not isinstance(settled, dict) or settled.get("settled") is not True:
+                raise MarketBridgeError("market_settlement_readback_mismatch")
+        await asyncio.to_thread(settle_on_market)
+        goal = buyer_state.load_goal(state_db(), transaction["goal_id"], owner)
+        if not isinstance(goal, dict):
+            raise ValueError("private goal state is unavailable")
+        transaction["phase"], order["status"] = "settled", "paid"
+        goal.update(state="DONE", po_number=transaction["deal_id"], reserved_amount=0)
+        buyer_state.save_goal(state_db(), goal)
+        buyer_state.save_transaction(state_db(), transaction)
+        purchases.record(state_db(), owner, ROUND.get("bids", []), transaction)  # a settled payment only; never raises
+        ROUND.update(transaction=transaction, goal=goal, pending_hold=False, phase="done", order=None, mandate=None,
+                     payment_commit=None)
+    except Exception as exc:  # the money moved and the receipt exists: say so, keep the deal held, remember nothing
+        log.warning(f"chat deal {transaction['deal_id']}: charged but the market settlement failed ({type(exc).__name__})")
+        ROUND.update(transaction=transaction, pending_hold=True, phase="uncertain")
+        await tell_owner(ctx, f"Paid in Stripe test mode. Receipt {charge_id}. The market could not confirm the settlement, "
+                              "so this purchase stays held and is not marked bought.")
+        return
+    try:
+        await ctx.send(common.address(bid["supplier_id"]), common.OrderPlaced(
+            order_json=json.dumps(order), mandate_json=json.dumps(mandate)))
+    except Exception as exc:  # the seller notice is informational; the purchase is settled
+        log.warning(f"chat deal {transaction['deal_id']}: seller notice failed ({type(exc).__name__})")
+    try:
+        await tell_owner(ctx, f"{receipt} Deal {transaction['deal_id']} is settled and recorded.")
+    except Exception as exc:
+        log.warning(f"chat deal {transaction['deal_id']}: receipt notice failed ({type(exc).__name__})")
+
+
 async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: dict, *, web: bool = False) -> None:
     owner = ROUND.get("owner")
     # web: a market web buyer has no owner chat; the referee client records the approval after the phone call.
@@ -1417,6 +1537,11 @@ async def _run_owner_approval(ctx: Context, n: int, sender: str, transaction: di
             return
         ROUND.update(transaction=transaction, mandate=mandate, order=order,
                      pending_hold=True, phase="approved")
+        if _stripe_test_checkout_applies():
+            # The TAP/MerchantSim checkout has no keys here, so the seller's RequestPayment could never be paid: charge in
+            # Stripe test mode now, against the market mandate the referee just recorded the approval for.
+            await _pay_chat_purchase(ctx, transaction, mandate, order, bid)
+            return
         await ctx.send(common.address(bid["supplier_id"]), common.OrderPlaced(
             order_json=json.dumps(order), mandate_json=json.dumps(mandate)))
         await tell_owner(ctx, f"Approval recorded for deal {transaction['deal_id']}. The seller was asked to request payment; no charge is confirmed yet.")

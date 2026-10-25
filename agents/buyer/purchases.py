@@ -35,6 +35,16 @@ def sku_of(part: dict) -> str:
     return rest if rest and catalog.category_of(rest) == head else stored
 
 
+def part_names(bid: dict) -> str:
+    """Plain names of the catalog lines of a bid ('RTX 4070 Super 12GB'), for the receipt the owner reads in chat."""
+    names = []
+    for line in (bid or {}).get("lines", []):
+        sku = line.get("sku_spec")
+        if isinstance(sku, str) and sku.strip() and catalog.category_of(sku) is not None:
+            names.append(catalog.label(sku))
+    return ", ".join(names) or "your order"
+
+
 def record(db, buyer_id: str, bids: list, tx: dict, now: datetime | None = None) -> list[dict]:
     """Remember the lines of a settled purchase. Returns what was stored; any failure returns [] (never raises)."""
     try:

@@ -52,7 +52,7 @@ def runtime(monkeypatch, tmp_path):
     for name, value in {
         "ROUND": {}, "WEB_OUTBOX": [], "GOAL_ATTEMPTS": {},
         "APPROVAL_SERVICE": None, "APPROVAL_CALL_CLIENT": None, "MERCHANT_SIM": None,
-        "TAP_PRIVATE_KEY": None, "SHIELD_RECEIPT_KEYS": None, "SHIELD_PAYMENT_SCREEN": None,
+        "TAP_PRIVATE_KEY": None, "SHIELD_RECEIPT_KEYS": None, "SHIELD_PAYMENT_SCREEN": None, "STRIPE_TEST_CHARGER": None,
         "MARKET_BUYER": Mock(), "MARKET_REFEREE": Mock(), "STATE_DB": None, "NONCE_STORE": None,
     }.items():
         if hasattr(buyer, name):
