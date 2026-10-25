@@ -8,8 +8,7 @@ import { GoalComposer } from "@/components/GoalComposer";
 import { useLiveBuild } from "@/components/useLiveBuild";
 import { RecentPurchases } from "@/components/memory";
 import { BuyerScreen } from "@/components/screens";
-import { allowanceForBuyer, asSim, bidsFromRows, dealFromRows, feedFromRows, approvalForScreen, goalsForBuyer, latestRound, reviewFromRows, shieldFromRows, vetoFromRows } from "@/lib/screens";
-import * as sample from "@/lib/sample";
+import { allowanceForBuyer, bidsFromRows, dealFromRows, feedFromRows, goalsForBuyer, latestRound, reviewFromRows, shieldFromRows, vetoFromRows } from "@/lib/screens";
 
 /** The dashboard. BuyerGate (app/buyer/layout.tsx) has already proved who this screen is paired as. */
 export default function BuyerPage() {
@@ -29,7 +28,6 @@ export default function BuyerPage() {
   const allowance = useMemo(() => allowanceForBuyer(allowances, buyerId), [allowances, buyerId]);
   const liveBids = useMemo(() => bidsFromRows(results, events, latestRound(rounds)?.id), [results, events, rounds]);
   const feed = useMemo(() => feedFromRows(events, notes), [events, notes]);
-  const sim = liveBids.length === 0;
   // #449 item 4 PL-12: an expired code never shows (recomputed each second), and a paired screen never shows the sample code.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -39,9 +37,10 @@ export default function BuyerPage() {
   const shield = useMemo(() => shieldFromRows(checks, roundId), [checks, roundId]);
   const deal = useMemo(() => dealFromRows(deals, goals[0]?.allowance?.perPurchase ?? null, results), [deals, goals, results]);
   const closeKey = useMemo(() => events.filter((e) => e.kind === "auction_closed").reduce<string | undefined>((k, e) => (k === undefined || BigInt(k) < e.id ? String(e.id) : k), undefined), [events]);
-  const approvalCard = approvalForScreen(deal.approval, buyerId, sample.approval);
+  const roundOpen = (() => { const r = latestRound(rounds); return !!r && r.state !== "closed"; })();
+  const receiptsCount = useMemo(() => deals.filter((x) => x.paidAt).length, [deals]);
   const liveBuild = useLiveBuild(buyerId);
-  // #191-5: veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows the SIM sample only while its row is missing.
+  // Veto, Shield, approval and receipt come from my_bid_checks and my_deals; a card shows only when its row exists. No sample data on this page.
   return (
     <BuyerScreen
       build={liveBuild ?? undefined}
@@ -50,15 +49,16 @@ export default function BuyerPage() {
       allowance={allowance}
       composer={<GoalComposer buyerId={buyerId} />}
       purchases={<RecentPurchases />}
-      bids={sim ? asSim(sample.rankedBids) : liveBids}
-      veto={veto ?? asSim(sample.veto)}
-      shield={shield ?? asSim(sample.shield)}
-      approval={approvalCard.approval}
+      bids={liveBids}
+      veto={veto}
+      shield={shield}
+      approval={deal.approval}
       review={review}
-      receipt={deal.receipt ?? asSim(sample.receipt)}
+      receipt={deal.receipt}
+      roundOpen={roundOpen}
+      receiptsCount={receiptsCount}
       feed={feed}
       revealKey={closeKey}
-      sample={{ bids: sim, veto: !veto, shield: !shield, approval: !review && approvalCard.sample, receipt: !deal.receipt }}
     />
   );
 }

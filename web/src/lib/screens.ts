@@ -550,3 +550,43 @@ export function dealFromRows(deals: readonly DealRow[], allowance: number | null
     : null;
   return { approval, receipt };
 }
+
+// ---- Buyer dashboard KPI band. Pure: every value comes from real rows passed in, never from lib/sample.
+
+export type KpiDot = "live" | "mint" | "muted";
+export interface BuyerKpi { id: "search" | "offer" | "needs" | "allowance"; label: string; value: string; line: string; dot?: KpiDot; word?: string; href: string }
+
+const kpiDay = (dt: Date) => dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+const GOAL_DOT: Record<GoalView["state"], KpiDot> = { ACTIVE: "live", HUNTING: "live", HOLD_FOR_CALL: "live", DONE: "mint", EXPIRED: "muted", FAILED: "muted", PAUSED: "muted" };
+const ELIGIBLE: Recommendation[] = ["buy", "caution", "unchecked"];
+
+/**
+ * The four KPI cards. `bids` are the latest round's results; `roundOpen` is true while that round has not closed, and then
+ * no price is ever returned (bids stay sealed until close). Best offer is the lowest landed price among ranked, non-vetoed bids.
+ */
+export function buyerKpis(goals: readonly GoalView[], bids: readonly RankedBid[], review: ReviewView | null, allowance: GoalView["allowance"], receiptsCount: number, roundOpen = false): BuyerKpi[] {
+  const g = goals[0];
+  const search: BuyerKpi = g
+    ? { id: "search", label: "Current search", value: g.text.length > 28 ? `${g.text.slice(0, 27).trimEnd()}...` : g.text, line: `${stateLabel(g.state)}, due ${kpiDay(g.deadline)}, cap ${formatMoney(g.cap)}`, dot: GOAL_DOT[g.state], word: stateLabel(g.state), href: "#new-search" }
+    : { id: "search", label: "Current search", value: "None yet", line: "Start a search below.", href: "#new-search" };
+
+  const eligible = bids.filter((b) => b.rank !== null && ELIGIBLE.includes(b.recommendation) && b.landed > 0);
+  let offer: BuyerKpi;
+  if (!bids.length) offer = { id: "offer", label: "Best offer", value: "No bids yet", line: "Sellers answer within a few seconds of a new search.", href: "#bids" };
+  else if (roundOpen) offer = { id: "offer", label: "Best offer", value: "Sealed", line: `${bids.length} ${bids.length === 1 ? "bid" : "bids"}, sealed until close`, dot: "live", word: "Open", href: "#bids" };
+  else if (!eligible.length) offer = { id: "offer", label: "Best offer", value: "None eligible", line: `${bids.length} ${bids.length === 1 ? "bid" : "bids"}, none passed the checks`, href: "#bids" };
+  else {
+    const best = eligible.reduce((a, b) => (b.landed < a.landed ? b : a));
+    offer = { id: "offer", label: "Best offer", value: formatMoney(best.landed), line: g ? `vs your cap ${formatMoney(g.cap)}` : `from ${best.seller}`, href: "#bids" };
+  }
+
+  const needs: BuyerKpi = review
+    ? { id: "needs", label: "Needs you", value: "Approve on the call", line: "Above your allowance, so we called you.", dot: "live", word: "Waiting", href: "#needs-you" }
+    : { id: "needs", label: "Needs you", value: "Nothing", line: "Above your allowance we call you.", dot: "mint", word: "Clear", href: "#needs-you" };
+
+  const allow: BuyerKpi = {
+    id: "allowance", label: "Allowance", value: allowance ? formatMoney(allowance.perPurchase) : "Not set",
+    line: receiptsCount > 0 ? `${receiptsCount} ${receiptsCount === 1 ? "purchase" : "purchases"}` : "No purchases yet", href: "#allowance",
+  };
+  return [search, offer, needs, allow];
+}

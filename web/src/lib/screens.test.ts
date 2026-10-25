@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Timestamp } from "spacetimedb";
 import * as sample from "./sample.ts";
-import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid } from "./screens.ts";
+import { allowanceForBuyer, asOrigin, asSim, bidsFromRows, buyerSession, clusterArrivals, dealFromRows, feedFromRows, goalsForBuyer, stateLabel, latestRound, linesFromRows, originCounts, originMixLabel, reviewFromRows, livePendingApprovals, approvalForScreen, WHOLE_BUILD_ID, isWholeBuild, roundFromRows, roundTitle, shieldFromRows, vetoFromRows, winningBid, buyerKpis } from "./screens.ts";
 
 const ts = (msSinceEpoch: number) => ({ microsSinceUnixEpoch: BigInt(msSinceEpoch) * 1000n }) as unknown as Timestamp;
 const T0 = Date.UTC(2026, 9, 24, 9, 0, 0);
@@ -395,4 +395,39 @@ test("stateLabel: FAILED and the other states read in plain words", () => {
   assert.equal(stateLabel("FAILED"), "Could not finish");
   assert.equal(stateLabel("HOLD_FOR_CALL"), "Hold for call");
   assert.equal(stateLabel("HUNTING"), "hunting");
+});
+
+const goalV = (over: Record<string, unknown> = {}) => ({ id: "g1", text: "A 1 TB NVMe drive", type: "part_by_date", state: "HUNTING", cap: 90, reserved: 0, deadline: new Date(T0), conditions: [], variant: "", origin: "SIM", skipped: [], allowance: null, ...over }) as unknown as Parameters<typeof buyerKpis>[0][number];
+const bidV = (over: Record<string, unknown> = {}) => ({ rank: 1, seller: "A", origin: "SIM", condition: "new", landed: 80, recommendation: "buy", why: "", won: false, ...over }) as unknown as Parameters<typeof buyerKpis>[1][number];
+
+test("buyerKpis: empty inputs give the empty-state values", () => {
+  const k = buyerKpis([], [], null, null, 0);
+  assert.deepEqual(k.map((x) => x.value), ["None yet", "No bids yet", "Nothing", "Not set"]);
+  assert.equal(k[0]!.line, "Start a search below.");
+  assert.equal(k[3]!.line, "No purchases yet");
+  assert.equal(k[2]!.dot, "mint");
+});
+
+test("buyerKpis: best offer is the lowest landed live bid, skipping vetoed and unranked", () => {
+  const bids = [bidV({ landed: 95 }), bidV({ landed: 70, recommendation: "veto" }), bidV({ landed: 60, rank: null, recommendation: "ineligible" }), bidV({ landed: 82 })];
+  const k = buyerKpis([goalV()], bids, null, null, 0);
+  assert.equal(k[1]!.value, "$82");
+  assert.equal(k[1]!.line, "vs your cap $90");
+});
+
+test("buyerKpis: a sealed open round never exposes a price", () => {
+  const k = buyerKpis([goalV()], [bidV({ landed: 75 })], null, null, 0, true);
+  assert.equal(k[1]!.value, "Sealed");
+  assert.ok(!/\d{2}/.test(k[1]!.value) && !k[1]!.line.includes("$75"));
+});
+
+test("buyerKpis: review, goal state, allowance and purchases", () => {
+  const rv = { mandateHash: "h" } as unknown as Parameters<typeof buyerKpis>[2];
+  const al = { perPurchase: 120, periodLimit: 500, period: "week", spent: 0, ladderStep: 1 };
+  const k = buyerKpis([goalV({ state: "DONE" })], [], rv, al, 2);
+  assert.equal(k[0]!.dot, "mint");
+  assert.equal(k[2]!.value, "Approve on the call");
+  assert.equal(k[2]!.dot, "live");
+  assert.equal(k[3]!.value, "$120");
+  assert.equal(k[3]!.line, "2 purchases");
 });

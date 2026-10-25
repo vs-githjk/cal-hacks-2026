@@ -2,10 +2,10 @@
 // web/src/components/buyer.tsx
 // Cards for the buyer screen. Each takes a view model from lib/screens.ts; none reads SpacetimeDB directly,
 // so the page can feed them from hooks today and from the sample run where a table is not public yet.
-import { Fragment, useEffect, useRef, useState, type PointerEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { type ApprovalView, type FeedItem, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
-import { Card, Code, Details, Label, OriginChip, Pill, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
+import { type ApprovalView, type BuyerKpi, type FeedItem, type KpiDot, type GoalView, type RankedBid, type ReceiptView, type ReviewView, type ShieldView, type VetoView, isWholeBuild, stateLabel, winningBid } from "@/lib/screens";
+import { Card, Code, Details, Label, OriginChip, SourceLink, Stat, Tag, Verdict, clock, money } from "./ui";
 import { commas, underCap } from "@/lib/money";
 import { SHIELD } from "@/lib/brand";
 
@@ -14,9 +14,9 @@ const GOAL_TYPE: Record<GoalView["type"], string> = { budget_cap: "budget cap", 
 export function GoalCard({ goal }: { goal: GoalView }) {
   const a = goal.allowance;
   return (
-    <Card tactile>
+    <Card>
       <div className="flex items-start justify-between gap-2">
-        <Label>Goal</Label>
+        <span className="text-[13px] text-muted">Current search</span>
         <StatePill state={goal.state} />
       </div>
       <p className="mb-3 text-[22px]/[28px] font-semibold tracking-[-0.01em] text-balance">
@@ -46,10 +46,33 @@ export function GoalCard({ goal }: { goal: GoalView }) {
   );
 }
 
+const DOT_CLASS = { live: "bg-live", mint: "bg-mint-mark", muted: "bg-muted" } as const;
+
+/** A status as a small dot and a plain word, never a filled pill. */
+export function StatusDot({ dot, children }: { dot: KpiDot; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
+      <span className={`size-2 shrink-0 rounded-full ${DOT_CLASS[dot]}`} aria-hidden />
+      {children}
+    </span>
+  );
+}
+
 export function StatePill({ state }: { state: GoalView["state"] }) {
-  if (state === "DONE") return <Pill tone="done">{stateLabel(state)}</Pill>;
-  if (state === "HOLD_FOR_CALL" || state === "FAILED") return <Pill tone="hold">{stateLabel(state)}</Pill>;
-  return <Pill tone="hunting">{stateLabel(state)}</Pill>;
+  const dot: KpiDot = state === "DONE" ? "mint" : state === "EXPIRED" || state === "FAILED" || state === "PAUSED" ? "muted" : "live";
+  return <StatusDot dot={dot}>{stateLabel(state)}</StatusDot>;
+}
+
+/** One KPI: a muted label, one bold value, one muted line and an optional status dot. The whole card links to its section. */
+export function KpiCard({ kpi }: { kpi: BuyerKpi }) {
+  return (
+    <a href={kpi.href} className="card flex min-w-0 flex-col gap-1.5 p-4 transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-pulse md:p-5">
+      <span className="text-[13px] text-muted">{kpi.label}</span>
+      <span className="truncate text-[22px]/[28px] font-semibold tabular-nums tracking-[-0.01em] text-ink">{kpi.value}</span>
+      <span className="text-[13px] leading-[18px] text-muted">{kpi.line}</span>
+      {kpi.dot && kpi.word && <StatusDot dot={kpi.dot}>{kpi.word}</StatusDot>}
+    </a>
+  );
 }
 
 /** The one hero number on the buyer screen. Empty state when no round has closed yet. */
@@ -72,7 +95,7 @@ export function HeroPrice({ bids, cap }: { bids: RankedBid[]; cap?: number | nul
     field.current?.style.removeProperty("--my");
   };
   return (
-    <Card hero tactile className="flex flex-col justify-between">
+    <Card hero className="flex flex-col justify-between">
       <div onPointerMove={spot} onPointerLeave={unspot}>
         <Label>{win ? "Best price" : "Hunting"}</Label>
         {win ? (
@@ -132,7 +155,7 @@ export function RankedBids({ bids, roundLabel = "Sealed round 1", revealKey }: {
   }, [revealKey, reduce]);
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   return (
-    <Card tactile>
+    <Card>
       <Label>{roundLabel}</Label>
       <Details summary="How bids are ranked" className="mb-3 mt-0"><p>Ranked by quality-adjusted landed price: the referee applies one fixed rule, ties break in a fixed order, and the seller fee never enters the ranking.</p></Details>
       {bids.length === 0 ? (
