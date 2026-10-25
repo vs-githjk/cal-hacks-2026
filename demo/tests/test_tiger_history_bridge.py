@@ -91,6 +91,26 @@ def test_the_round_ticks_carry_the_origin_of_each_market_row(run):
     assert written and all(t["origin"] in ("LIVE", "MIRROR", "SIM") for t in written[0]) and len(written[0]) == len(rows)
 
 
+def test_a_hung_bounded_call_times_out_on_a_daemon_thread_that_cannot_hold_process_exit():
+    import concurrent.futures as cf
+    import threading
+    release = threading.Event()
+    before = {t for t in threading.enumerate()}
+    with pytest.raises(cf.TimeoutError):
+        S._bounded(lambda: release.wait(30), 0.1)
+    hung = [t for t in threading.enumerate() if t not in before]
+    try:
+        assert hung and all(t.daemon for t in hung)
+    finally:
+        release.set()
+
+
+def test_a_bounded_call_returns_its_value_and_reraises_its_error():
+    assert S._bounded(lambda: 41 + 1, 1.0) == 42
+    with pytest.raises(KeyError):
+        S._bounded(lambda: {}["x"], 1.0)
+
+
 def test_main_wires_both_writers_when_tiger_is_in_the_environment(monkeypatch):
     seen = {}
     monkeypatch.setenv("TIGER_DATA_SERVICE_URL", "postgres://u:p@h/db")

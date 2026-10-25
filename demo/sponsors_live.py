@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import concurrent.futures as cf
 import logging
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
@@ -42,11 +43,24 @@ def load_sponsor_env(path: Optional[Path]) -> list[str]:
 
 
 def _bounded(fn: Callable, timeout: float):
-    pool = cf.ThreadPoolExecutor(max_workers=1)
-    try:
-        return pool.submit(fn).result(timeout=timeout)
-    finally:
-        pool.shutdown(wait=False)
+    """fn() within `timeout` seconds: its value, its own exception, or cf.TimeoutError. It runs on a daemon thread, so a hung
+    network call or database statement can never hold the process at exit (an executor's threads are joined at exit)."""
+    box: dict = {}
+
+    def run() -> None:
+        try:
+            box["value"] = fn()
+        except BaseException as e:  # noqa: BLE001  (handed to the caller below, on its own thread)
+            box["error"] = e
+
+    worker = threading.Thread(target=run, daemon=True, name="sponsor-bounded")
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        raise cf.TimeoutError()
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
 
 
 def price_recheck(listing: dict, *, fetch: Optional[Callable] = None, timeout: float = RECHECK_TIMEOUT_S,

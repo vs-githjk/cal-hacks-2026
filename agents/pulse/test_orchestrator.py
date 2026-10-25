@@ -621,3 +621,126 @@ def test_rows_that_state_no_origin_read_as_sim_and_the_fixture_stays_sim(tmp_pat
     assert O.record_origin({**record(7, 7), "origins": []}, sim=False) == "SIM"
     assert O.record_origin(record(7, 7), sim=True) == "SIM"
     assert O.SimSource().record("seller_3", 7)["origins"] == ["SIM"]
+
+
+# ---- the real market's row shapes (SpacetimeDB sql) --------------------------------------------------------------
+
+def test_the_market_query_has_no_order_by_and_rows_are_sorted_in_python():
+    rows = [["r9", "b3", "c", 3, 12.0, [], [["psu 750w", "", "new", 12.0, 1.0]], "SIM", 12.0],
+            ["r9", "b1", "a", 1, 10.0, [], [["psu 750w", "", "new", 10.0, 1.0]], "SIM", 10.0],
+            ["r9", "b2", "b", 2, 11.0, [], [["psu 750w", "", "new", 11.0, 1.0]], "SIM", 11.0]]
+    m = FakeMarket(rows)
+    r = O.round_from_market("r9", m)
+    assert "ORDER BY" not in m.queries[0].upper()
+    assert [x["rank"] for x in r["rows"]] == [1, 2, 3] and [x["seller_id"] for x in r["rows"]] == ["a", "b", "c"]
+
+
+def test_a_positional_bid_line_maps_index_0_to_the_sku():
+    # SpacetimeDB returns a BidLine as [sku_spec, offered_spec, offered_condition, unit_price, quantity]
+    row = ["r9", "b1", "a", 1, 10.0, [], [["PSU 750W", "", "new", 10.0, 1.0]], "SIM", 10.0]
+    r = O.round_from_market("r9", FakeMarket([row, ["r9", "b2", "b", 2, 11.0, [], [("psu 750w", "", "new", 11.0, 1.0)], "SIM", 11.0]]))
+    assert O.skus_of(r["rows"]) == ["psu 750w"] and r["rows"][0]["lines"][0]["listing_url"] == ""
+
+
+@pytest.mark.parametrize("line", [[], [None], [""], [5], "psu", 7])
+def test_an_unreadable_positional_line_still_raises(line):
+    with pytest.raises(O.PulseError):
+        O._line(line)
+
+
+# ---- who may feed the agent a round, and who may ask for a seller's record ---------------------------------------
+
+def _round_handler(agent):
+    for fn in agent._protocol._signed_message_handlers.values():
+        if fn.__name__ == "on_round":
+            return fn
+    raise AssertionError("no round handler")
+
+
+def _feed(tmp_path, monkeypatch, sender, senders_env, verdict="allow"):
+    import asyncio
+    monkeypatch.delenv("PULSE_MAILBOX", raising=False)
+    monkeypatch.delenv("AGENTS_MAILBOX", raising=False)
+    if senders_env is None:
+        monkeypatch.delenv("PULSE_ROUND_SENDERS", raising=False)
+    else:
+        monkeypatch.setenv("PULSE_ROUND_SENDERS", senders_env)
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    p = pulse(tmp_path)
+    agent = O.build_agent(p, port=8922)
+    import common
+    monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": verdict, "reasons": []})
+    data = json.loads(FIXTURE.read_text())
+    ctx = FakeCtx()
+    ctx.session = "s"
+    ctx.logger = type("L", (), {"warning": lambda self, *a: None, "info": lambda self, *a: None})()
+    asyncio.run(_round_handler(agent)(ctx, sender, agent.pulse_models[0](round_json=json.dumps(data))))
+    return p, ctx
+
+
+def test_a_round_from_an_address_that_is_not_the_operators_is_ignored(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    p, ctx = _feed(tmp_path, monkeypatch, "agent1qstranger", "agent1qreferee,agent1qoperator")
+    assert p.latest == {} and ctx.sent == []
+
+
+def test_a_round_from_the_configured_referee_is_processed_and_answered(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    p, ctx = _feed(tmp_path, monkeypatch, "agent1qreferee", "agent1qreferee, agent1qoperator")
+    assert p.latest["round_id"] == "round-1" and len(ctx.sent) == 1 and ctx.sent[0][0] == "agent1qreferee"
+
+
+def test_with_no_configured_sender_no_round_is_accepted(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    p, ctx = _feed(tmp_path, monkeypatch, "agent1qreferee", None)
+    assert p.latest == {} and ctx.sent == []
+
+
+def test_a_configured_sender_still_goes_through_shield(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    p, ctx = _feed(tmp_path, monkeypatch, "agent1qreferee", "agent1qreferee", verdict="block")
+    assert p.latest == {} and ctx.sent == []
+
+
+def test_round_senders_parse_commas_and_spaces_and_drop_blanks(monkeypatch):
+    monkeypatch.setenv("PULSE_ROUND_SENDERS", " agent1qa ,, agent1qb  ")
+    assert O.round_senders() == {"agent1qa", "agent1qb"}
+    monkeypatch.delenv("PULSE_ROUND_SENDERS")
+    assert O.round_senders() == set()
+
+
+def _seller_chat(tmp_path, monkeypatch, mode):
+    import asyncio
+
+    from uagents_core.contrib.protocols.chat import ChatMessage, TextContent
+    monkeypatch.delenv("PULSE_MAILBOX", raising=False)
+    monkeypatch.delenv("AGENTS_MAILBOX", raising=False)
+    if mode is None:
+        monkeypatch.delenv("PULSE_SELLER_CHAT", raising=False)
+    else:
+        monkeypatch.setenv("PULSE_SELLER_CHAT", mode)
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    agent = O.build_agent(pulse(tmp_path), port=8923)
+    import common
+    monkeypatch.setattr(common, "screen", lambda *a, **k: {"verdict": "allow", "reasons": []})
+    ctx = FakeCtx()
+    asyncio.run(_chat_handler(agent)(ctx, "agent1qasker", ChatMessage(content=[TextContent(text="why does seller_3 keep losing?")])))
+    return ctx.sent[1][1].text()
+
+
+def test_seller_chat_defaults_to_own_agent_only(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    text = _seller_chat(tmp_path, monkeypatch, None)
+    assert text == "I only answer a seller's record to that seller's own agent." and "Last 7" not in text
+
+
+def test_seller_chat_is_open_only_when_the_operator_sets_it_open(tmp_path, monkeypatch):
+    pytest.importorskip("uagents")
+    assert "Last 7 days" in _seller_chat(tmp_path, monkeypatch, "open")
+    assert "Last 7" not in _seller_chat(tmp_path, monkeypatch, "own")
+    assert "Last 7" not in _seller_chat(tmp_path, monkeypatch, "anything else")
+
+
+def test_the_agentverse_readme_says_seller_chat_is_own_by_default():
+    text = (ROOT / "agents" / "pulse" / "AGENTVERSE.md").read_text()
+    assert "PULSE_SELLER_CHAT=open" in text and "PULSE_SELLER_CHAT=own" not in text and "PULSE_ROUND_SENDERS" in text

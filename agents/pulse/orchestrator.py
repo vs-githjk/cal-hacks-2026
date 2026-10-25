@@ -74,8 +74,12 @@ def _snake(key: str) -> str:
 
 
 def _line(raw: Any) -> dict:
+    """One bid line: an object (sku_spec or skuSpec) or, as SpacetimeDB sql returns it, the positional array
+    [sku_spec, offered_spec, offered_condition, unit_price, quantity], of which only index 0 is read."""
+    if isinstance(raw, (list, tuple)):
+        raw = {"sku_spec": raw[0]} if raw else {}
     if not isinstance(raw, Mapping):
-        raise PulseError("a bid line is not an object")
+        raise PulseError("a bid line is not an object or a row")
     line = {_snake(k): v for k, v in raw.items()}
     sku = line.get("sku_spec")
     if not isinstance(sku, str) or not sku.strip():
@@ -200,7 +204,7 @@ def round_from_rows(rows: Any, reports: Any = None) -> dict:
 
 
 _RESULT_SQL = ("SELECT round_id, bid_id, seller_id, rank, landed, reasons, lines, origin, adjusted_total "
-               "FROM round_result WHERE round_id = '{}' ORDER BY rank ASC")
+               "FROM round_result WHERE round_id = '{}'")        # no ORDER BY: SpacetimeDB sql answers 400 Unsupported
 _RESULT_COLS = ("round_id", "bid_id", "seller_id", "rank", "landed", "reasons", "lines", "origin", "adjusted_total")
 
 
@@ -226,6 +230,8 @@ def round_from_market(round_id: str, client: Any) -> dict:
         rows.append(row)
     if not rows:
         raise PulseError("no round_result rows for that round: is the round closed?")
+    rows.sort(key=lambda r: (r.get("rank") if isinstance(r.get("rank"), int) and not isinstance(r.get("rank"), bool) else 1 << 30,
+                             str(r.get("seller_id"))))
     return round_from_rows(rows)
 
 
@@ -665,6 +671,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 # ---------------------------------------------------------------- the uAgent
 
+def round_senders() -> set[str]:
+    """Agent addresses allowed to send a PulseRound (PULSE_ROUND_SENDERS, comma separated: the referee and the operator).
+    Unset means nobody: a round replaces what chat answers about, so an unknown sender never gets to send one."""
+    return {a.strip() for a in os.environ.get("PULSE_ROUND_SENDERS", "").split(",") if a.strip()}
+
+
 def build_agent(pulse: Pulse, *, port: int = 8018):
     """The Market Pulse uAgent. uagents is imported here only, so the rest of this module runs without it. Local by default;
     PULSE_MAILBOX=1 (or AGENTS_MAILBOX=1) uses a mailbox and refuses the public dev seed. Nothing is registered by building it."""
@@ -696,7 +708,7 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
 
     def allowed(sender: str):
         def check(seller_id: str) -> bool:
-            if os.environ.get("PULSE_SELLER_CHAT") != "own":
+            if os.environ.get("PULSE_SELLER_CHAT") == "open":     # the default is own: a record goes to its own seller agent
                 return True
             if seller_id not in own_addresses:
                 try:
@@ -721,6 +733,9 @@ def build_agent(pulse: Pulse, *, port: int = 8018):
 
     @agent.on_message(model=PulseRound, replies=PulseNotes)
     async def on_round(ctx: Context, sender: str, msg: PulseRound):
+        if sender not in round_senders():       # only the referee or operator may feed a round: it replaces `latest`
+            ctx.logger.warning(f"round from {sender} ignored: not in PULSE_ROUND_SENDERS")
+            return
         verdict = common.screen(f"pulse-{ctx.session}", sender, msg.round_json)
         if verdict.get("verdict") != "allow":
             ctx.logger.warning(f"shield {verdict.get('verdict')} from {sender}")

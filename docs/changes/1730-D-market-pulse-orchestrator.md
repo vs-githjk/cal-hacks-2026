@@ -26,3 +26,9 @@ The first run on the real Tiger service found no tables and nothing writing `bid
 - `lost_by_cents` is the loser's landed price minus the champion's, in whole cents, never below 0; None when the loser or the champion has no row in the market's `round_result`.
 - `data.tiger.load` now prints each optional statement it skipped with the server's reason ("optional, skipped (plan does not support columnstore)" when the reason names the plan; otherwise the server's own words, redacted).
 - Labels: a record or price line from a real Tiger read carries the origin of the rows it was built from; a real read that found none says "no data" (it used to say SIM).
+
+## Review fixes (market reads, who may feed or ask)
+- `round_from_market`: SpacetimeDB sql refuses `ORDER BY` (HTTP 400 "Unsupported"), so rows are sorted by rank in Python; a bid line comes back as the positional array `[sku_spec, offered_spec, offered_condition, unit_price, quantity]`, of which index 0 is read.
+- A `PulseRound` is accepted only from the addresses in `PULSE_ROUND_SENDERS` (comma separated: the referee and the operator). With none set, none is accepted. Anyone else cannot replace what chat answers about.
+- A seller's record in chat goes only to that seller's own agent by default. `PULSE_SELLER_CHAT=open` opens it to anyone.
+- `demo.sponsors_live._bounded` (the Tiger and Bright Data time limit) runs on a daemon thread, so a hung statement cannot hold process exit.
